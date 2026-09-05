@@ -156,14 +156,33 @@ def it_tempo_to_bpm(tempo: int, speed: int, rows_per_beat: int = 4) -> float:
     return _IT_TEMPO_FACTOR * tempo / (speed * rows_per_beat)
 
 # IT effect commands (letter = number)
-FX_SET_SPEED = 1       # Axx - set speed (ticks per row)
 FX_VOLUME_SLIDE = 4    # Dxy - volume slide (x=up, y=down)
-FX_PITCH_DOWN = 5      # Exx - pitch slide down
-FX_PITCH_UP = 6        # Fxx - pitch slide up
 FX_PORTAMENTO = 7      # Gxx - tone portamento (slide to note)
 FX_VIBRATO = 8         # Hxy - vibrato (x=speed, y=depth)
+FX_ARPEGGIO = 10       # Jxy - cycle note / note+x / note+y semitones per tick
+FX_RETRIGGER = 17      # Qxy - retrigger note every y ticks (x = volume change)
 FX_TREMOLO = 18        # Rxy - tremolo (x=speed, y=depth)
-FX_SET_TEMPO = 20      # Txx - set tempo (BPM)
+FX_SPECIAL = 19        # Sxy - command group; SDx delays the note by x ticks
+FX_SET_TEMPO = 20      # Txx - set tempo
+
+# Sub-command of Sxy: note delay. Parameter is 0xD0 | ticks.
+S_NOTE_DELAY = 0xD0
+
+
+def arpeggio_param(played_note: int, chord_notes: list[int]) -> int:
+    """Jxy parameter that voices chord_notes upward from played_note.
+
+    J cycles the channel between the note, note+x and note+y semitones once
+    per tick, which is how a chip with few channels fakes a whole chord on
+    one of them. Offsets are taken modulo an octave from whatever note the
+    voice actually landed on, so inversions arpeggiate correctly too.
+    """
+    base = played_note % 12
+    offsets = sorted({(n % 12 - base) % 12 for n in chord_notes})
+    upper = [o for o in offsets if o != 0][:2]
+    while len(upper) < 2:
+        upper.append(0)
+    return ((upper[0] & 0x0F) << 4) | (upper[1] & 0x0F)
 
 
 def write_it_file(

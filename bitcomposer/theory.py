@@ -174,6 +174,31 @@ DRUM_FILLS = [
 ]
 
 
+def add_chord_color(progression: list[tuple[int, str]],
+                    chance: float = 0.4) -> list[tuple[int, str]]:
+    """Enrich some triads into 7ths and sus4s.
+
+    PROGRESSIONS only ever spelled major, minor and power, so 7th, sus4, dim
+    and aug were defined in CHORD_INTERVALS and reached the output never. The
+    turnaround chord takes a 7th, which is where a dominant seventh belongs;
+    elsewhere a sus4 stands in occasionally, and it sits over either quality
+    because it has no third.
+    """
+    if not progression:
+        return progression
+
+    out = []
+    last = len(progression) - 1
+    for i, (degree, chord_type) in enumerate(progression):
+        if random.random() < chance:
+            if i == last and chord_type == "major":
+                chord_type = "7th"
+            elif chord_type in ("major", "minor"):
+                chord_type = "sus4"
+        out.append((degree, chord_type))
+    return out
+
+
 def random_drum_fill() -> dict[str, list[int]]:
     """Pick a random drum fill pattern."""
     return random.choice(DRUM_FILLS)
@@ -199,14 +224,6 @@ def note_name(midi_note: int) -> str:
     return f"{name}{octave}"
 
 
-def note_from_name(name: str) -> int:
-    """Convert note name like 'C5' or 'D#3' to MIDI note number."""
-    for i, n in enumerate(NOTE_NAMES):
-        if name.startswith(n) and name[len(n):].lstrip("-").isdigit():
-            octave = int(name[len(n):])
-            return (octave + 1) * 12 + i
-    raise ValueError(f"Invalid note name: {name}")
-
 
 def build_scale(root: int, scale_name: str, octaves: int = 2) -> list[int]:
     """Build a scale across multiple octaves from a root MIDI note."""
@@ -224,15 +241,6 @@ def build_chord(root: int, chord_type: str) -> list[int]:
     """Build a chord from a root note."""
     return [root + i for i in CHORD_INTERVALS[chord_type] if root + i <= 127]
 
-
-def get_chord_for_degree(scale_notes: list[int], degree: int,
-                         chord_type: str, octave_root: int) -> list[int]:
-    """Get chord notes for a scale degree."""
-    if degree < len(scale_notes):
-        root = octave_root + (scale_notes[degree] - scale_notes[0])
-    else:
-        root = octave_root
-    return build_chord(root, chord_type)
 
 
 def random_key() -> int:
@@ -273,15 +281,6 @@ def random_alternate_progression(scale_name: str,
     # If no alternate, rotate the main progression
     return main_prog[1:] + main_prog[:1]
 
-
-def passing_chord(chord_root: int, next_root: int, chord_type: str) -> tuple[int, str]:
-    """Generate a passing/transitional chord between two chord roots."""
-    # Chromatic approach: half step below the target
-    if abs(next_root - chord_root) > 2:
-        passing_root = next_root - 1 if next_root > chord_root else next_root + 1
-        return (passing_root, "dim")  # Diminished passing chord
-    # Otherwise use a sus4 on the current root
-    return (chord_root, "sus4")
 
 
 def random_drum_pattern() -> dict[str, list[int]]:

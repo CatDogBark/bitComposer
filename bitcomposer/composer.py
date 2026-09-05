@@ -24,6 +24,7 @@ from .pattern import (
     apply_portamento, apply_harmony_fade, apply_fade,
     apply_drums_to_pattern, generate_drums,
     apply_sustain_safety_net, silence_inactive_channels,
+    apply_chord_arpeggio, apply_retrigger,
 )
 from .melody import (
     generate_motif, vary_motif, generate_melody,
@@ -174,7 +175,7 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                      bass_weight, use_bass_porta, porta_speed,
                      arp_style, drum_pattern, drum_density,
                      fill_pattern, section_prog, is_ending, ending_style,
-                     swing_amount, is_intro) -> ITPattern:
+                     swing_amount, speed, is_intro) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -241,12 +242,20 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                         volume=humanize_volume(vol, 4),
                         humanize=True,
                     )
+                    # A lone voice cannot state a chord on its own, so let J
+                    # arpeggiate it into one. With three voices the real
+                    # stack already does the job.
+                    if num_harmony_voices == 1:
+                        apply_chord_arpeggio(pat, ch, voice_notes, chord_notes)
                     apply_harmony_fade(pat, ch, voice_notes)
 
     # ── Bass ──
     if layers["bass"]:
+        # Keep the bass present but not relentless: even at full energy a few
+        # off-beats drop out, and quiet sections thin further.
         bass = generate_bass(chord_root, chord_type, ROWS_PER_PATTERN, section_bass,
-                             weight=bass_weight)
+                             weight=bass_weight,
+                             density=0.6 + 0.35 * section_energy)
         bass_vol = {"heavy": 255, "medium": 150, "light": 100}.get(bass_weight, 255)
         if use_bass_porta and len(bass) > 1:
             apply_portamento(
@@ -296,7 +305,14 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                 added = [fill_start + h for h in fill_hits.get(drum_name, [])]
                 drum_hits[drum_name] = kept + added
 
-        apply_drums_to_pattern(pat, drum_hits, sample_map, swing=swing_amount)
+        apply_drums_to_pattern(pat, drum_hits, sample_map, swing=swing_amount,
+                               speed=speed)
+
+        # Retrigger the fill's snares into a roll — what Q is for.
+        if fill_pattern and is_last_chord and not is_ending:
+            apply_retrigger(pat, CH_SNARE,
+                            [r for r in drum_hits.get("snare", [])
+                             if r >= ROWS_PER_PATTERN - ROWS_PER_BAR])
 
         for r in range(pat.rows):
             note = pat.data[r][CH_HIHAT]
@@ -435,6 +451,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
     # ── Progression variation ──
     alt_progression = theory.random_alternate_progression(scale_name, progression)
+    # Colour the triads so 7ths and sus4s actually reach the output.
+    progression = theory.add_chord_color(progression)
+    alt_progression = theory.add_chord_color(alt_progression)
     use_alt_chorus = random.random() < 0.5
     modulate_chorus = random.random() < 0.25
     modulation_semitones = 1 if modulate_chorus else 0
@@ -551,7 +570,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 drum_pattern=drum_pattern, drum_density=drum_density,
                 fill_pattern=fill_pattern, section_prog=section_prog,
                 is_ending=is_ending, ending_style=ending_style,
-                swing_amount=swing_amount, is_intro=is_intro,
+                swing_amount=swing_amount, speed=speed, is_intro=is_intro,
             )
 
             pattern_cache[cache_key] = len(patterns)

@@ -10,6 +10,7 @@ from . import structure as struct
 from .it_format import (
     ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
     FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE,
+    FX_ARPEGGIO, FX_RETRIGGER, FX_SPECIAL, S_NOTE_DELAY, arpeggio_param,
 )
 
 
@@ -38,15 +39,6 @@ ROWS_PER_BEAT = 4
 ROWS_PER_BAR = 16
 ROWS_PER_STEP = 1
 BARS_PER_PATTERN = ROWS_PER_PATTERN // ROWS_PER_BAR
-
-# Map layer keys to the channels they control
-LAYER_CHANNELS = {
-    "melody":  [CH_MELODY],
-    "harmony": [CH_HARMONY, CH_HARMONY2, CH_HARMONY3],
-    "bass":    [CH_BASS],
-    "arp":     [CH_ARP],
-    "drums":   [CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT],
-}
 
 # Tonal channels that can ring (drums naturally stop)
 TONAL_CHANNELS = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP]
@@ -91,19 +83,59 @@ def apply_notes_to_pattern(pattern: ITPattern, channel: int,
 # ── Effects ──
 
 def apply_vibrato(pattern: ITPattern, channel: int,
-                  note_list: list[tuple[int, int]], speed: int = 4, depth: int = 3):
-    """Add vibrato continuation to rows after note-on events."""
+                  note_list: list[tuple[int, int]], speed: int = 4, depth: int = 3,
+                  onset_delay: int = 3):
+    """Add vibrato to a note once it has been held for onset_delay rows.
+
+    Starting on the row straight after the note-on put vibrato on 62% of every
+    melody row, so each note wobbled from the instant it sounded and short
+    notes wobbled too. Real playing lets a note speak first and only sustained
+    ones get vibrato, so delay the onset and leave short notes clean.
+    """
     vibrato_val = ((speed & 0x0F) << 4) | (depth & 0x0F)
-    for i, (row, _) in enumerate(note_list):
-        # Get duration until next note or end of pattern
+    for i, (row, midi_note) in enumerate(note_list):
+        # Note-cuts silence the channel, so there is nothing to modulate after
+        # one — writing vibrato there was decorating silence.
+        if midi_note == -1:
+            continue
         next_row = note_list[i + 1][0] if i + 1 < len(note_list) else pattern.rows
-        # Add vibrato on rows after the note-on (note-on row already has effect from apply_notes)
-        for r in range(row + 1, min(next_row, pattern.rows)):
+        for r in range(row + 1 + onset_delay, min(next_row, pattern.rows)):
             if pattern.data[r][channel].note == 0:  # Don't overwrite note events
                 pattern.data[r][channel] = ITNote(
                     effect=FX_VIBRATO,
                     effect_val=vibrato_val,
                 )
+
+
+def apply_chord_arpeggio(pattern: ITPattern, channel: int,
+                         note_list: list[tuple[int, int]],
+                         chord_notes: list[int]):
+    """Give single-voice harmony the Jxy arpeggio so it sounds like a chord.
+
+    J is the defining tracker/chiptune effect — one channel cycling through
+    chord tones fast enough to read as a chord — and the generator emitted
+    none at all. Applied where the harmony is thin, so a lone voice still
+    states the full harmony.
+    """
+    for row, midi_note in note_list:
+        if midi_note == -1 or not (0 <= row < pattern.rows):
+            continue
+        cell = pattern.data[row][channel]
+        if cell.note == 0 or cell.effect != 0:
+            continue
+        cell.effect = FX_ARPEGGIO
+        cell.effect_val = arpeggio_param(midi_note, chord_notes)
+
+
+def apply_retrigger(pattern: ITPattern, channel: int, rows: list[int],
+                    ticks: int = 3):
+    """Retrigger drum hits (Qxy) to turn single notes into a roll."""
+    for row in rows:
+        if 0 <= row < pattern.rows:
+            cell = pattern.data[row][channel]
+            if cell.note != 0 and cell.effect == 0:
+                cell.effect = FX_RETRIGGER
+                cell.effect_val = ticks & 0x0F
 
 
 def apply_portamento(pattern: ITPattern, channel: int,
@@ -195,12 +227,16 @@ def generate_drums(drum_pattern: dict[str, list[int]],
 
 def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
                            sample_map: dict[str, int],
-                           swing: int = 0):
-    """Write drum hits into pattern. swing>0 delays off-beat hats (shuffle).
+                           swing: int = 0, speed: int = 6):
+    """Write drum hits into pattern. swing>0 shuffles the off-beat hats.
 
-    The off-beat eighth sits on row 2 of each 4-row beat, so a one-row delay
-    is the largest shift that still swings — +2 would land on the next beat.
-    Finer (triplet) swing needs the SDx note-delay effect for sub-row timing.
+    Swing is applied with the SDx note-delay effect rather than by moving the
+    hit to a later row. A row is the smallest unit the pattern grid can
+    express, and delaying the off-beat eighth by a whole row overshoots badly
+    — real shuffle sits about a third of a beat late. SDx delays the note by
+    ticks instead, and there are `speed` ticks to a row, so a two-thirds-of-a-
+    row delay is expressible and light and heavy swing become genuinely
+    different rather than both clamping to the same one-row shift.
     """
     drum_channels = {
         "kick": CH_KICK, "snare": CH_SNARE, "hihat": CH_HIHAT,
@@ -216,16 +252,21 @@ def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
         if ch is None or inst is None:
             continue
         for row in hits:
-            actual_row = row
-            # Apply swing to off-beat hihat hits
+            if not (0 <= row < pattern.rows):
+                continue
+            effect = effect_val = 0
+            # Shuffle the off-beat eighth, which sits on row 2 of each beat.
             if (swing > 0 and drum in ("hihat", "hat")
                     and row % ROWS_PER_BEAT == 2 * ROWS_PER_STEP):
-                actual_row = min(row + ROWS_PER_STEP, pattern.rows - 1)
-            if 0 <= actual_row < pattern.rows:
-                pattern.data[actual_row][ch] = ITNote(
-                    note=drum_note,
-                    instrument=inst,
-                )
+                # light ~1/3 of a row late, heavy ~2/3.
+                delay = max(1, min(speed - 1, round(speed * swing / 3)))
+                effect, effect_val = FX_SPECIAL, S_NOTE_DELAY | delay
+            pattern.data[row][ch] = ITNote(
+                note=drum_note,
+                instrument=inst,
+                effect=effect,
+                effect_val=effect_val,
+            )
 
 
 # ── Sustain management ──

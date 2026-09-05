@@ -10,8 +10,15 @@ from .pattern import ROWS_PER_BAR, ROWS_PER_BEAT
 
 def generate_bass(root: int, chord_type: str,
                   rows: int, style: str = "steady",
-                  weight: str = "heavy") -> list[tuple[int, int]]:
-    """Generate a bass line. Returns [(row, midi_note), ...]."""
+                  weight: str = "heavy",
+                  density: float = 1.0) -> list[tuple[int, int]]:
+    """Generate a bass line. Returns [(row, midi_note), ...].
+
+    density (0..1) thins the off-beat notes. The line previously played every
+    slot its style produced, unconditionally, for every pattern in the song —
+    the same "never rests" problem the arp had. Bar downbeats are always kept,
+    since the bass has to state the chord.
+    """
     # Register depends on weight
     if weight == "light":
         # Octave 3-4 (MIDI 48-71) — punchier, more melodic
@@ -66,6 +73,12 @@ def generate_bass(root: int, chord_type: str,
         step = int(2 * step_scale)
         for row in range(0, rows, step):
             notes.append((row, bass_root))
+
+    if density < 1.0:
+        notes = [
+            (row, note) for row, note in notes
+            if row % ROWS_PER_BAR == 0 or random.random() < density
+        ]
 
     return notes
 
