@@ -11,6 +11,21 @@ import random
 FORMS = ["standard", "aaba", "rondo", "short", "linear"]
 
 
+def reuse_group(section_key: str) -> str:
+    """Sections that should play the same music.
+
+    Repeats of one formal section (verse1/verse2, chorus1/chorus2/chorus3,
+    theme1/theme2) share a content group so the hook actually returns.
+    Contrasting sections that merely share a prefix must NOT: rondo episodes
+    are the B and C of A-B-A-C-A, and linear sections are through-composed by
+    definition, so both keep their own identity.
+    """
+    for prefix in ("verse", "chorus", "theme"):
+        if section_key.startswith(prefix):
+            return prefix
+    return section_key
+
+
 def section_type(section_key: str) -> str:
     """Map detailed section keys (verse1, chorus2, etc.) to base types."""
     if section_key.startswith("verse"):
@@ -206,17 +221,21 @@ def get_section_progression(section: str, progression: list, alt_progression: li
     return progression
 
 
-def build_orders(structure: list[str], pattern_cache: dict,
+def build_orders(structure: list[str], pattern_index_for: dict,
                  progression: list, alt_progression: list,
                  use_alt_chorus: bool) -> list[int]:
-    """Build the order list from the song structure and pattern cache."""
+    """Build the order list from the song structure.
+
+    pattern_index_for maps (section, chord_idx) to a pattern index. Sections
+    that share content and rendering map to the same index, so the order list
+    replays one pattern instead of carrying a near-duplicate.
+    """
     orders = []
     for section in structure:
         section_prog = get_section_progression(
             section, progression, alt_progression, use_alt_chorus)
         for chord_idx in range(len(section_prog)):
-            cache_key = (section, chord_idx)
-            orders.append(pattern_cache[cache_key])
+            orders.append(pattern_index_for[(section, chord_idx)])
     return orders
 
 

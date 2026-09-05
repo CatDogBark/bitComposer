@@ -6,6 +6,7 @@ and pattern generation into playable Impulse Tracker modules.
 """
 
 import random
+import zlib
 
 from . import theory
 from . import samples as smp
@@ -18,7 +19,7 @@ from .it_format import (
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
     CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT,
-    NUM_CHANNELS, ROWS_PER_PATTERN, STEPS_PER_ROW,
+    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
     apply_portamento, apply_harmony_fade, apply_fade,
     apply_drums_to_pattern, generate_drums,
@@ -30,6 +31,25 @@ from .melody import (
 )
 from .harmony import generate_harmony
 from .bass import generate_bass, generate_arpeggio, pick_section_bass
+
+
+def _content_seed(song_salt: int, group: str, chord_idx: int) -> int:
+    """Stable per-(reuse group, chord) seed so repeats generate the same music.
+
+    crc32 rather than hash() because str hashing is salted per process, which
+    would make -s deterministic within a run but not across runs.
+    """
+    return song_salt ^ zlib.crc32(f"{group}:{chord_idx}".encode())
+
+
+def _energy_tier(energy: float) -> int:
+    """Bucket section energy to 0.2-wide tiers.
+
+    Sections a hair apart on the energy curve (chorus at 0.85 and 0.90) render
+    close enough to share a pattern; a final chorus at 1.0 lands in its own
+    tier and gets its own louder copy of the same music.
+    """
+    return round(energy * 5)
 
 
 def _pick_instruments(prefer_fm: bool | None = None,
@@ -263,17 +283,15 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
 
         is_last_chord = chord_idx == len(section_prog) - 1
         if fill_pattern and is_last_chord and not is_ending:
-            fill_hits = generate_drums(fill_pattern, ROWS_PER_PATTERN)
-            half = ROWS_PER_PATTERN // 2
-            for drum_name, hits in fill_hits.items():
-                fill_rows = [h for h in hits if h >= half]
-                if fill_rows:
-                    if drum_name not in drum_hits:
-                        drum_hits[drum_name] = []
-                    drum_hits[drum_name] = [h for h in drum_hits.get(drum_name, []) if h < half]
-                    drum_hits[drum_name].extend(fill_rows)
-            if "crash" not in drum_hits:
-                drum_hits["crash"] = []
+            # A fill replaces the groove for the final bar only, so the
+            # preceding bars keep their pattern and the fill reads as a
+            # one-bar lead-in to the next section.
+            fill_start = ROWS_PER_PATTERN - ROWS_PER_BAR
+            fill_hits = generate_drums(fill_pattern, ROWS_PER_BAR)
+            for drum_name in set(drum_hits) | set(fill_hits):
+                kept = [h for h in drum_hits.get(drum_name, []) if h < fill_start]
+                added = [fill_start + h for h in fill_hits.get(drum_name, [])]
+                drum_hits[drum_name] = kept + added
 
         apply_drums_to_pattern(pat, drum_hits, sample_map, swing=swing_amount)
 
@@ -421,12 +439,20 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     alt_lead_sample_idx = None
 
     # ── Generate patterns ──
+    # Content is keyed by reuse group, so every chorus draws the same melody,
+    # harmony and bass from the same seed and the hook comes back. Rendering
+    # (energy, layers, lead instrument) still varies, and where those happen to
+    # match as well the order list points at a single shared pattern.
     patterns = []
-    pattern_cache = {}
+    pattern_cache = {}       # render identity -> pattern index
+    pattern_index_for = {}   # (section, chord_idx) -> pattern index
+    song_salt = random.randrange(2 ** 31)
 
     for section in song_structure:
         layers = section_layers_map.get(section, section_layers_map.get("verse1"))
         sec_type = struct.section_type(section)
+        group = struct.reuse_group(section)
+        layers_key = tuple(sorted(layers.items()))
         is_intro = section == "intro"
         is_ending = section in ("outro", "tag")
         base_energy = energy_curve.get(section, 0.7)
@@ -443,13 +469,16 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             else:
                 section_energy = base_energy
 
+            # Snap energy to its tier before anything downstream reads it, so
+            # two sections sharing a cache key render byte-identically instead
+            # of differing by a volume point. The curve still shapes the song,
+            # just in 0.2 steps; apply_fade does the fine-grained work.
+            energy_tier = _energy_tier(section_energy)
+            section_energy = energy_tier / 5
+
             section_density = melody_density * section_energy
             if is_ending:
                 section_density = max(section_density, 0.45)
-            section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
-            cache_key = (section, chord_idx)
-            if cache_key in pattern_cache:
-                continue
 
             chord_root = key + (scale_notes[degree] - scale_notes[0]) if degree < len(scale_notes) else key
             if modulate_chorus and sec_type == "chorus":
@@ -472,6 +501,19 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                     alt_lead_sample_idx = len(samples)
                 melody_sample = alt_lead_sample_idx
 
+            # Two sections render to the same bytes only if the group, the
+            # chord, the dynamics tier, the active layers and the lead all
+            # agree — then they can share one pattern outright.
+            cache_key = (group, chord_idx, energy_tier, layers_key, melody_sample)
+            if cache_key in pattern_cache:
+                pattern_index_for[(section, chord_idx)] = pattern_cache[cache_key]
+                continue
+
+            # Reseed per content group so a returning chorus is the same music,
+            # not a fresh roll of the dice.
+            random.seed(_content_seed(song_salt, group, chord_idx))
+
+            section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
             section_motif = _pick_section_motif(
                 sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif)
 
@@ -495,11 +537,13 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             )
 
             pattern_cache[cache_key] = len(patterns)
+            pattern_index_for[(section, chord_idx)] = len(patterns)
             patterns.append(pat)
 
     # ── Build orders ──
     orders = struct.build_orders(
-        song_structure, pattern_cache, progression, alt_progression, use_alt_chorus)
+        song_structure, pattern_index_for, progression, alt_progression,
+        use_alt_chorus)
 
     # ── Silence channels at section boundaries ──
     silence_inactive_channels(orders, patterns)

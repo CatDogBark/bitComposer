@@ -125,6 +125,37 @@ It is also nearly inaudible — 28 harmony note events across 104 bars in seed 4
 
 ---
 
+## 2b. Tier 0 results
+
+Fixed on branch `tier0-fixes`; baseline preserved at tag `pre-tier0`.
+
+20 seeds, default settings, drum hits per bar:
+
+| | before | after | healthy range |
+|---|---|---|---|
+| kick | 0.77 | **2.88** | 2–4 |
+| snare | 0.44 | **1.67** | ~2 |
+| hat | 1.95 | **6.59** | 4–8 |
+
+6 seeds per form, `--harmony-voicing full`:
+
+| form | order reuse | melody uniqueness | motif reuse | voicings |
+|---|---|---|---|---|
+| standard | 6.4 → **19.3** | 100 → **66.0** | 20.5 → **70.9** | 4.0 → **6.5** |
+| aaba | 4.5 → **15.7** | 99.3 → **43.2** | 24.5 → **81.6** | 2.3 → **4.0** |
+| rondo | 0.0 → **14.2** | 100 → **71.3** | 19.3 → **64.5** | 3.3 → **5.8** |
+| short | 0.0 → 0.0 | 99.0 → **77.8** | 22.9 → **55.1** | 2.8 → **5.2** |
+| linear | 0.0 → 0.0 | 99.3 → 97.9 | 24.2 → 24.7 | 2.3 → **4.0** |
+
+`linear` is deliberately almost unchanged — it is through-composed, so it
+*should* not repeat. That it held still while every other form moved is the
+check that the reuse change is targeted rather than a blanket flattening.
+
+Voice motion between consecutive patterns fell 4.4 → 2.6 semitones, i.e. the
+harmony now steps rather than leaping between root positions.
+
+Seeded output remains byte-identical run to run.
+
 ## 3. Tier 1 — design ceilings
 
 Not bugs, but hard limits on how good the output can get.

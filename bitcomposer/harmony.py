@@ -24,6 +24,44 @@ HARMONY_VOICINGS = {
 }
 
 
+# Fixed register anchors for the harmony voices, roughly a fifth apart and an
+# octave under the melody's 60-83 range.
+VOICE_ANCHORS_BASE = 52
+VOICE_ANCHOR_SPREAD = 7
+
+# Playable window for harmony pitches. The ceiling keeps the top voice below
+# the melody's 60-83 range so harmony stays underneath the lead.
+HARMONY_LOW, HARMONY_HIGH = 45, 72
+
+
+def voice_chord(chord_notes: list[int], num_voices: int) -> list[int]:
+    """Place num_voices chord tones near fixed register anchors.
+
+    Picking the chord tone nearest a constant anchor, rather than always
+    stacking root position, is what produces voice leading: because the
+    anchors do not move between chords, consecutive chords in a progression
+    keep their common tones and shift the rest by a step or two. It also
+    yields inversions for free, so a song stops being four root triads.
+    """
+    pitches = sorted({
+        pc + 12 * octave
+        for pc in {cn % 12 for cn in chord_notes}
+        for octave in range(3, 7)
+        if HARMONY_LOW <= pc + 12 * octave <= HARMONY_HIGH
+    })
+    if not pitches:
+        return []
+
+    chosen: list[int] = []
+    for i in range(num_voices):
+        target = VOICE_ANCHORS_BASE + VOICE_ANCHOR_SPREAD * i
+        remaining = [p for p in pitches if p not in chosen]
+        if not remaining:
+            break
+        chosen.append(min(remaining, key=lambda p: abs(p - target)))
+    return sorted(chosen)
+
+
 def generate_harmony(chord_notes: list[int], rows: int,
                      voicing: str = "stabs",
                      num_voices: int = 2) -> list[list[tuple[int, int]]]:
@@ -31,7 +69,7 @@ def generate_harmony(chord_notes: list[int], rows: int,
     Generate harmony parts for multiple channels.
 
     Returns a list of note lists, one per voice: [[(row, midi_note), ...], ...]
-    Voice 0 = highest, Voice N = lowest (within the chord voicing range).
+    Voice 0 = lowest, Voice N = highest.
     Note-cut events are included as (row, -1) tuples.
     """
     # Get voicing config
@@ -39,35 +77,9 @@ def generate_harmony(chord_notes: list[int], rows: int,
     interval = config["interval"]
     cut_after = config["cut_after"]
 
-    # Build voiced chord notes in octave 3-4 range (MIDI 48-72)
-    # One octave below melody range so harmony sits underneath
-    voiced = []
-    for cn in chord_notes[:4]:  # Max 4 chord tones
-        note = cn
-        while note < 48:
-            note += 12
-        while note > 72:
-            note -= 12
-        voiced.append(note)
-    voiced.sort()
-
-    # Ensure we have enough voices
-    num_voices = min(num_voices, len(voiced))
-    if num_voices == 0:
+    voice_notes = voice_chord(chord_notes, num_voices)
+    if not voice_notes:
         return []
-
-    # Spread voices across available chord tones
-    voice_notes = []
-    if num_voices == 1:
-        voice_notes = [voiced[0]]
-    elif num_voices == 2:
-        voice_notes = [voiced[0], voiced[-1]]
-    else:
-        # Pick evenly spaced tones
-        step = max(1, len(voiced) // num_voices)
-        for i in range(num_voices):
-            idx = min(i * step, len(voiced) - 1)
-            voice_notes.append(voiced[idx])
 
     # Generate note events for each voice
     result = []

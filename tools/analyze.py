@@ -171,17 +171,20 @@ def analyze(path):
                                    for i in range(len(stack) - 1)))
     out["distinct_voicings"] = len(voicings)
 
-    # Harmony voices that never change pitch within a pattern (100% = metronome).
-    static = moving = 0
-    for oi in real:
+    # Voice leading: mean absolute semitone motion of each harmony voice from
+    # one pattern to the next. This is the metric that shows whether chords are
+    # voiced smoothly. Note that "does a voice hold its pitch WITHIN a pattern"
+    # is not a defect — a pattern carries a single chord, so holding is correct.
+    # 0 means the harmony never moves; a large value means it leaps between
+    # root positions. Smooth voice leading sits around 1-3 semitones.
+    motion = []
+    for a, b in zip(real, real[1:]):
         for ch in CH_HARMONY:
-            ns = [n for _, n in m.notes_on(oi, ch)]
-            if len(ns) >= 2:
-                if len(set(ns)) == 1:
-                    static += 1
-                else:
-                    moving += 1
-    out["harm_static_pct"] = 100.0 * static / max(static + moving, 1)
+            na = m.notes_on(a, ch)
+            nb = m.notes_on(b, ch)
+            if na and nb:
+                motion.append(abs(nb[0][1] - na[0][1]))
+    out["voice_motion"] = float(statistics.mean(motion)) if motion else 0.0
 
     # Melodic rhythm variety, and the IT effect vocabulary that reached the file.
     iois = []
@@ -231,7 +234,7 @@ def grid(path, pat_idx=None, rows=64):
 
 
 KEYS = ["orders", "patterns", "order_reuse_pct", "mel_uniq_pct", "odd_row_pct",
-        "offgrid_pct", "motif_reuse_pct", "distinct_voicings", "harm_static_pct",
+        "offgrid_pct", "motif_reuse_pct", "distinct_voicings", "voice_motion",
         "distinct_ioi", "n_fx"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar"]
 
