@@ -1,0 +1,18 @@
+{
+    "KPlugin": {
+        "Id": "org.kde.plasma.cyberpunkchiptune",
+        "Name": "Cyberpunk Chiptune Player",
+        "Description": "16-bit chiptune music player with cyberpunk styling",
+        "Icon": "audio-headphones",
+        "Authors": [
+            {
+                "Name": "Troy",
+                "Email": ""
+            }
+        ],
+        "Category": "Multimedia",
+        "License": "GPL-3.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "KPackageStructure": "Plasma/Applet"
+}

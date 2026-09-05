@@ -1,13 +1,27 @@
 # Companion install — daemon, widget, helper scripts
 
-The bitComposer repo is only the Python package. The player stack around it —
-a D-Bus daemon, a KDE Plasma widget, and two helper scripts — lives outside the
-repo and is not versioned here yet (see `PORTABILITY.md` for that open question).
+The player stack around the generator — a D-Bus daemon, a KDE Plasma widget, and
+two helper scripts — is vendored in `companion/` and installed with:
 
-Sources for the unversioned parts are on Ragnarok, and a bundle of the
-**installed** (authoritative) copies was taken 2026-09-04. Ragnarok's dev copies
-under `~/Projects/cyberpunk-hud/plasmoids/chiptune-player/` are stale — behind
-the installed versions by ~61 lines of daemon and ~250 lines of QML.
+```bash
+./companion/install.sh              # install everything
+./companion/install.sh --check      # report what is installed, change nothing
+./companion/install.sh --uninstall  # remove everything except generated music
+```
+
+Idempotent, so re-run it to pick up changes. Start with `--check` on an existing
+machine; it verifies dependencies, installed components, the Python import path
+and daemon status without touching anything.
+
+**Generated music is not part of this repo and never goes in it.** Tracks live in
+`~/Music/Chiptune` (override with `$BITCOMPOSER_MUSIC_DIR`). The installer
+creates that directory and otherwise never reads, writes or clears it —
+including on `--uninstall`.
+
+The vendored copies came from this laptop's **installed** files, which are
+authoritative. Ragnarok's dev copies under
+`~/Projects/cyberpunk-hud/plasmoids/chiptune-player/` are stale — behind by ~61
+lines of daemon and ~250 lines of QML. Do not sync from them.
 
 ---
 
@@ -57,39 +71,45 @@ as a fallback for the daemon specifically.
 
 ---
 
-## Install
+## What the installer does
 
-```bash
-V=~/bitcomposer-vendor   # or wherever the bundle is
+| From `companion/` | Installs to |
+|---|---|
+| `bin/bitcomposer-generate.sh` | `~/.local/bin/` (0755) |
+| `bin/bitcomposer-master.sh` | `~/.local/bin/` (0755) |
+| `daemon/cyberpunk-chiptune-daemon.py` | `~/.local/bin/` (0755) |
+| `daemon/cyberpunk-chiptune-daemon.service` | `~/.config/systemd/user/` (0644) |
+| `plasmoid/` | `~/.local/share/plasma/plasmoids/org.kde.plasma.cyberpunkchiptune/` |
+| — | writes the `.pth` described above |
+| — | `mkdir -p` the music dir, then leaves it alone |
 
-install -Dm755 $V/bin/bitcomposer-generate.sh          ~/.local/bin/bitcomposer-generate.sh
-install -Dm755 $V/bin/bitcomposer-master.sh            ~/.local/bin/bitcomposer-master.sh
-install -Dm755 $V/daemon/cyberpunk-chiptune-daemon.py  ~/.local/bin/cyberpunk-chiptune-daemon.py
-install -Dm644 $V/daemon/cyberpunk-chiptune-daemon.service ~/.config/systemd/user/cyberpunk-chiptune-daemon.service
-mkdir -p ~/Music/Chiptune
-cp -r $V/plasmoid/. ~/.local/share/plasma/plasmoids/org.kde.plasma.cyberpunkchiptune/
-systemctl --user daemon-reload
-systemctl --user enable --now cyberpunk-chiptune-daemon.service
-```
+It then reloads systemd, enables and starts the daemon, and re-checks the import.
+
+`main.qml` hardcodes the music dir at line 116 — the only hardcoded `/home/troy`
+in the whole stack, since the daemon and both scripts use `$HOME`/`expanduser`.
+The installer rewrites that line to match `$MUSIC_DIR`, so a different username
+or a `$BITCOMPOSER_MUSIC_DIR` override works without hand-editing.
 
 Then add the widget: right-click panel → Add Widgets → "Cyberpunk Chiptune
 Player". After editing `main.qml` on an already-running shell:
 `systemctl --user restart plasma-plasmashell`.
 
 `~/.local/bin` must be on PATH — the widget shells out to the helper scripts by
-bare name, and it inherits plasmashell's PATH, not a login shell's.
+bare name, and it inherits plasmashell's PATH, not a login shell's. `--check`
+verifies this.
 
-> **Do not blindly overwrite the service unit on a machine that already has one.**
-> On this laptop it is the single locally-modified file, carrying the
-> `Environment=PYTHONPATH` line. Copying Ragnarok's version reverts that.
+The vendored service unit includes the `Environment=PYTHONPATH` fallback, so it
+is no longer a local-only modification that a reinstall would silently revert.
 
 ---
 
 ## Runtime dependencies
 
+`./companion/install.sh --check` tests all of these.
+
 | Dependency | Notes |
 |---|---|
-| `libopenmpt.so.0` | loaded via raw `ctypes.CDLL`, so the SONAME must match exactly. Stock on Debian trixie; elsewhere check `ldconfig -p \| grep openmpt` |
+| `libopenmpt.so.0` | loaded via raw `ctypes.CDLL`, so the SONAME must match exactly. Stock on Debian trixie. Test with `python3 -c "import ctypes; ctypes.CDLL('libopenmpt.so.0')"` — **not** `ldconfig -p`, which lives in `/sbin` and is absent from a normal user PATH, so it fails silently and reports a false negative |
 | `python3-dbus`, `python3-gi` | apt |
 | `paplay` (pulseaudio-utils) | audio path is raw PCM 48k/16-bit stereo piped to `paplay --raw` |
 | `qdbus6` (qt6-tools) | the QML widget shells out to this for every call |

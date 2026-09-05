@@ -1,0 +1,17 @@
+[Unit]
+Description=Cyberpunk Chiptune Player Daemon
+After=pipewire.service
+
+[Service]
+Type=simple
+# The daemon's autogen shells out to "python3 -m bitcomposer.cli". bitcomposer
+# is not installed (PEP 668 blocks a system pip install on Debian 13), so point
+# the import path at the working copy. Autogen then follows whichever git branch
+# is checked out, which makes A/B testing generator changes a checkout away.
+Environment=PYTHONPATH=%h/bitComposer
+ExecStart=/usr/bin/python3 %h/.local/bin/cyberpunk-chiptune-daemon.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

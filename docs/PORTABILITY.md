@@ -1,4 +1,19 @@
-# Portability — open decision
+# Portability — decided
+
+> **Resolved 2026-09-04: Option C, minus Option A's output change.**
+>
+> The player stack is vendored in `companion/` with an `install.sh`, so a clone
+> can reproduce a working machine. Generated music deliberately stays *out* of
+> the repo, in `~/Music/Chiptune` — the "default output into `<repo>/output/`"
+> idea from Option A was dropped. `cli.py` keeps its current behaviour of
+> writing to the working directory, and the helper scripts keep passing an
+> explicit `-o` into the music dir.
+>
+> `docs/INSTALL.md` is the operational reference. What follows is kept as the
+> record of how the decision was reached.
+
+---
+
 
 **Status:** 2026-09-04. Originals received from Ragnarok at `~/bitcomposer-vendor`
 (not versioned here). Both helper scripts are installed and verified, and the
