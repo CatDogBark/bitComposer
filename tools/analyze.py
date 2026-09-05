@@ -32,7 +32,8 @@ CH_MELODY, CH_BASS, CH_ARP = 0, 4, 5
 CH_HARMONY = (1, 2, 3)
 DRUM_NAMES = {6: "kick", 7: "snare", 8: "hat", 9: "tom", 10: "crash", 11: "ohat"}
 
-ROWS_PER_BAR = 16  # 4 rows per quarter note at IT's standard speed/tempo pairing
+ROWS_PER_BEAT = 4  # rows to a quarter note
+ROWS_PER_BAR = 16  # 4 beats of 4 rows
 
 
 def note_str(n):
@@ -131,6 +132,13 @@ def analyze(path):
     tonal = (CH_MELODY,) + CH_HARMONY + (CH_BASS, CH_ARP)
     out = {"name": path.rsplit("/", 1)[-1],
            "orders": len(real), "patterns": len(m.patterns)}
+
+    # Audible tempo, not the stored field. IT's tempo byte only equals BPM at
+    # speed 6: a row lasts 2.5 * speed / tempo seconds, so with ROWS_PER_BEAT
+    # rows to a quarter note the real tempo is 24 * tempo / (speed * rows per
+    # beat). Choosing speed independently of tempo once pushed songs to 212 BPM
+    # while the CLI cheerfully reported "141".
+    out["bpm"] = 24.0 * m.tempo / (m.speed * ROWS_PER_BEAT)
 
     # How much of the song replays earlier material? 0 = through-composed.
     counts = Counter(real)
@@ -233,9 +241,9 @@ def grid(path, pat_idx=None, rows=64):
             print(f"{labels[ch]} {line}")
 
 
-KEYS = ["orders", "patterns", "order_reuse_pct", "mel_uniq_pct", "odd_row_pct",
-        "offgrid_pct", "motif_reuse_pct", "distinct_voicings", "voice_motion",
-        "distinct_ioi", "n_fx"]
+KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
+        "odd_row_pct", "offgrid_pct", "motif_reuse_pct", "distinct_voicings",
+        "voice_motion", "distinct_ioi", "n_fx"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar"]
 
 

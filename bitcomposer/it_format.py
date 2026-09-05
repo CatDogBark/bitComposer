@@ -119,6 +119,24 @@ def midi_to_it_note(midi_note: int) -> int:
 NOTE_CUT = 254
 NOTE_OFF = 255
 
+# IT stores a "tempo" byte that is only the real BPM at speed 6. A row lasts
+# 2.5 * speed / tempo seconds, so with rows_per_beat rows to a quarter note the
+# musical tempo is 24 * tempo / (speed * rows_per_beat) — the 24 being 60
+# seconds over 2.5. Treating the field as BPM while choosing speed separately
+# scales the whole song by up to 1.5x.
+_IT_TEMPO_FACTOR = 24
+
+
+def bpm_to_it_tempo(bpm: float, speed: int, rows_per_beat: int = 4) -> int:
+    """Convert a musical BPM to the value to store in the IT tempo field."""
+    raw = round(bpm * speed * rows_per_beat / _IT_TEMPO_FACTOR)
+    return max(32, min(255, raw))
+
+
+def it_tempo_to_bpm(tempo: int, speed: int, rows_per_beat: int = 4) -> float:
+    """Actual musical tempo of a module — inverse of bpm_to_it_tempo."""
+    return _IT_TEMPO_FACTOR * tempo / (speed * rows_per_beat)
+
 # IT effect commands (letter = number)
 FX_SET_SPEED = 1       # Axx - set speed (ticks per row)
 FX_VOLUME_SLIDE = 4    # Dxy - volume slide (x=up, y=down)

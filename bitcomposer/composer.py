@@ -13,13 +13,13 @@ from . import samples as smp
 from . import structure as struct
 from .it_format import (
     ITSample, ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
-    write_it_file,
+    write_it_file, bpm_to_it_tempo, it_tempo_to_bpm,
     FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE, FX_TREMOLO, FX_SET_TEMPO,
 )
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
     CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT,
-    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR,
+    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
     apply_portamento, apply_harmony_fade, apply_fade,
     apply_drums_to_pattern, generate_drums,
@@ -269,7 +269,10 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
 
     # ── Arpeggio ──
     if layers["arp"]:
-        arp = generate_arpeggio(chord_notes, ROWS_PER_PATTERN, arp_style)
+        # Tie arp density to section energy so it thins out in verses and
+        # intros instead of running at full tilt through the whole song.
+        arp = generate_arpeggio(chord_notes, ROWS_PER_PATTERN, arp_style,
+                                density=section_energy)
         apply_notes_to_pattern(
             pat, CH_ARP, arp, sample_map["arp"],
             volume=arp_vol, humanize=True,
@@ -368,16 +371,24 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     drum_pattern = theory.random_drum_pattern()
 
     if tempo_pref == "slow":
-        tempo = random.randint(80, 110)
+        target_bpm = random.randint(80, 110)
     elif tempo_pref == "medium":
-        tempo = random.randint(110, 140)
+        target_bpm = random.randint(110, 140)
     elif tempo_pref == "fast":
-        tempo = random.randint(140, 180)
+        target_bpm = random.randint(140, 180)
     else:
-        tempo = theory.random_tempo()
+        target_bpm = theory.random_tempo()
 
     scale_notes = theory.build_scale(key, scale_name, octaves=4)
+
+    # Ticks per row. Higher means more ticks for per-tick effects (vibrato,
+    # volume slides) to run in, so they sound smoother.
     speed = random.choice([4, 5, 6])
+
+    # Derive the stored tempo from the target BPM and the chosen speed. Picking
+    # both independently scaled the song by up to 1.5x, so a "slow" song at
+    # speed 4 ran at 165 BPM and a "fast" one reached 270.
+    tempo = bpm_to_it_tempo(target_bpm, speed, ROWS_PER_BEAT)
 
     # ── Instruments ──
     if style_pref == "genesis":
@@ -556,7 +567,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     info = {
         "key": key_name,
         "scale": scale_name,
-        "tempo": tempo,
+        # The audible tempo, not the raw IT field — reporting the field as BPM
+        # is what hid the speed/tempo interaction for so long.
+        "tempo": round(it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)),
+        "it_tempo": tempo,
         "speed": speed,
         "bass_style": bass_style,
         "bass_weight": bass_weight,

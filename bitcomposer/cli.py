@@ -162,7 +162,8 @@ def main():
 
         if args.verbose:
             print(f"  Key:         {info['key']} {info['scale']}")
-            print(f"  Tempo:       {info['tempo']} BPM (speed {info['speed']})")
+            print(f"  Tempo:       {info['tempo']} BPM "
+                  f"(speed {info['speed']}, IT tempo {info['it_tempo']})")
             print(f"  Bass:        {info['bass_style']} ({info['bass_weight']})")
             print(f"  Arpeggio:    {info['arp_style']}")
             print(f"  Density:     {info['melody_density']}")

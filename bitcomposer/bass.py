@@ -5,6 +5,7 @@ Bass and arpeggio generation.
 import random
 
 from . import theory
+from .pattern import ROWS_PER_BAR, ROWS_PER_BEAT
 
 
 def generate_bass(root: int, chord_type: str,
@@ -70,8 +71,16 @@ def generate_bass(root: int, chord_type: str,
 
 
 def generate_arpeggio(chord_notes: list[int], rows: int,
-                      style: str = "up") -> list[tuple[int, int]]:
-    """Generate an arpeggio pattern. Returns [(row, midi_note), ...]."""
+                      style: str = "up",
+                      density: float = 1.0) -> list[tuple[int, int]]:
+    """Generate an arpeggio pattern. Returns [(row, midi_note), ...].
+
+    density (0..1) controls how much of the pattern the arp actually plays.
+    It previously ran flat out on every row of every pattern regardless of
+    section, which made it roughly four times denser than the melody it is
+    meant to sit behind — the arp became the track and the melody decoration.
+    Gating whole bars keeps the figure recognisable while letting it breathe.
+    """
     # Arp in octave 4-5
     arp_notes = []
     for n in chord_notes:
@@ -84,21 +93,36 @@ def generate_arpeggio(chord_notes: list[int], rows: int,
     if not arp_notes:
         return []
 
+    if style == "down":
+        seq = list(reversed(arp_notes))
+    elif style == "updown" and len(arp_notes) > 2:
+        seq = arp_notes + list(reversed(arp_notes[1:-1]))
+    else:
+        seq = arp_notes
+
+    density = max(0.0, min(1.0, density))
+    # Eighths only when there is energy for them; quarters when there is not.
+    step = 2 if density > 0.6 else 4
+
     notes = []
-    if style == "up":
-        for i, row in enumerate(range(0, rows, 2)):
-            notes.append((row, arp_notes[i % len(arp_notes)]))
-    elif style == "down":
-        arp_notes_rev = list(reversed(arp_notes))
-        for i, row in enumerate(range(0, rows, 2)):
-            notes.append((row, arp_notes_rev[i % len(arp_notes_rev)]))
-    elif style == "updown":
-        seq = arp_notes + list(reversed(arp_notes[1:-1])) if len(arp_notes) > 2 else arp_notes
-        for i, row in enumerate(range(0, rows, 2)):
-            notes.append((row, seq[i % len(seq)]))
-    elif style == "random":
-        for row in range(0, rows, 2):
-            notes.append((row, random.choice(arp_notes)))
+    idx = 0
+    for bar_start in range(0, rows, ROWS_PER_BAR):
+        if random.random() > density:
+            continue  # this bar rests
+        # Even in a busy bar, drop the last beat often enough that the figure
+        # has somewhere to land instead of running continuously into the next.
+        bar_len = ROWS_PER_BAR
+        if random.random() < 0.35:
+            bar_len -= ROWS_PER_BEAT
+        for offset in range(0, bar_len, step):
+            row = bar_start + offset
+            if row >= rows:
+                break
+            if style == "random":
+                notes.append((row, random.choice(arp_notes)))
+            else:
+                notes.append((row, seq[idx % len(seq)]))
+                idx += 1
 
     return notes
 
