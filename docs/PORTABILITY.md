@@ -1,6 +1,8 @@
 # Portability — open decision
 
-**Status:** parked 2026-09-04, pending helper-script originals from Ragnarok.
+**Status:** 2026-09-04. Originals received from Ragnarok at `~/bitcomposer-vendor`
+(not versioned here). `bitcomposer-master.sh` is installed and verified working.
+Open: the import mechanism (see "The import gap"), then the A/B/C scope choice.
 
 Goal: `git clone` and it works, on any machine, without the KDE desktop stack.
 Today the generator writes wherever you happen to be standing, and the player
@@ -62,6 +64,12 @@ Three things the project depends on that are not versioned anywhere:
 | chiptune daemon | `~/.local/bin/cyberpunk-chiptune-daemon.py` | MPRIS2 over D-Bus, libopenmpt playback |
 | Plasma widget | `~/.local/share/plasma/plasmoids/org.kde.plasma.cyberpunkchiptune/` | ported from Ragnarok |
 | systemd unit | `~/.config/systemd/user/cyberpunk-chiptune-daemon.service` | carries the PYTHONPATH fix below |
+| helper scripts | `~/.local/bin/bitcomposer-{generate,master}.sh` | originals in `~/bitcomposer-vendor/bin/` |
+
+The daemon, `main.qml` and `metadata.json` on this machine are md5-identical to
+Ragnarok's (verified 2026-09-04). The **service unit is not** — it is the one
+locally modified file, carrying the `Environment=PYTHONPATH` line below. Do not
+overwrite it from a bundle; that would silently break autogen.
 
 `~/Music/Chiptune/` is hardcoded in **two** places — `MUSIC_DIR` in the daemon
 and `musicDir` in the widget QML. The daemon scans with `rglob`, so
@@ -83,73 +91,120 @@ generates**. Note `AUTOGEN_MAX = 10` in the daemon, which hard-deletes the oldes
 
 ---
 
-## Recovered contracts
+## Helper script contracts
 
-Both helper scripts are referenced by the widget and **neither exists on this
-machine**. The widget QML specifies them well enough to rebuild.
+Both are referenced by the widget. Originals arrived from Ragnarok in
+`~/bitcomposer-vendor/bin/`. An earlier version of this document reconstructed
+them from the QML and got the broad shape right but the details wrong — what
+follows is from the actual scripts.
 
-### `bitcomposer-master.sh` — fully specified
-
-Writes the mastering panel's channel volumes into an existing `.it` file.
+### `bitcomposer-master.sh` — installed and verified
 
 ```
-bitcomposer-master.sh <path.it> v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11
+bitcomposer-master.sh <path.it> v0 v1 ... v11
 ```
 
-13 arguments: file path plus 12 channel volumes, each 0–64. It must write those
-12 bytes at **offset 128** of the file.
+13 arguments: file path plus 12 channel volumes, each clamped to 0–64. Channel
+order is melody, harm 1–3, bass, arp, kick, snare, hihat, tom, crash, open hat.
 
-Three independent sources agree on this, so there is no guesswork:
+Two details the reconstruction missed:
 
-1. QML comment: *"Channel volumes for mastering (0-64, matches IT header bytes
-   128-191)"*.
-2. The **read** path needs no script and pins the format exactly — the QML runs
-   `python3 -c "f=open(path,'rb');f.seek(128);d=f.read(12);..."`.
-3. `channel_volumes` in `composer.py`, the QML `channelVolumes` default, and
-   bytes 128–139 of a generated file all read
-   `[13, 25, 25, 25, 8, 33, 36, 36, 36, 36, 36, 36]`.
+- It writes the **full 64-byte channel-volume block** at offset 128, zero-padding
+  channels 12–63 — not just 12 bytes. This matches what `write_it_file` already
+  emits for unused channels, so a 12-byte write would have worked by accident,
+  but it is not what the script does.
+- It does not only patch bytes. Afterwards it **stops, rescans and replays the
+  current track** over D-Bus, taking the index from `GetState` field 12, so the
+  edit is audible immediately.
 
-Channel order is melody, harm 1–3, bass, arp, kick, snare, hihat, tom, crash,
-open hat.
+Prints `OK` on success, `ERROR` to stderr on bad input. It imports nothing from
+bitcomposer — stdlib file I/O plus `qdbus6` — which is why it works today while
+`generate.sh` does not.
 
-### `bitcomposer-generate.sh` — mostly specified
+Verified 2026-09-04 on a copy: bytes written correctly, patched file still
+decodes clean through libopenmpt, daemon left healthy.
+
+### `bitcomposer-generate.sh` — not yet installed, blocked on the import gap
 
 ```
 bitcomposer-generate.sh [--auto] <bitcomposer CLI flags>
 ```
 
-Flags come from `_buildSettingsFlags()` in the QML and are all real, existing
-CLI options (`--tempo`, `--energy`, `--scale`, `--style`, `--drum-density`,
-`--no-fills`, `--swing`, `--melody`, `--harmony-voicing`, `--harmony-mode`,
-`--bass-weight`, `--form`). The widget drives them from ten presets — MEGA
-DRIVE, CASTLEVANIA, BOSS FIGHT, OVERWORLD, CHILL WAVE, DUNGEON, CREDITS, STREET
-FIGHT, CYBER NOIR, RANDOM.
+Flags come from `_buildSettingsFlags()` in the QML and are all real CLI options
+(`--tempo`, `--energy`, `--scale`, `--style`, `--drum-density`, `--no-fills`,
+`--swing`, `--melody`, `--harmony-voicing`, `--harmony-mode`, `--bass-weight`,
+`--form`), driven by ten widget presets — MEGA DRIVE, CASTLEVANIA, BOSS FIGHT,
+OVERWORLD, CHILL WAVE, DUNGEON, CREDITS, STREET FIGHT, CYBER NOIR, RANDOM.
 
-It must generate into `~/Music/Chiptune/` and then make the daemon aware of the
-new file, since the QML's completion handler ignores stdout entirely and only
-re-polls `GetPlaylist` — so the script itself has to call the daemon's `Rescan`
-over D-Bus.
+`--auto` is now settled: it selects the `bitcomposer_auto_<ts>.it` filename
+instead of `bitcomposer_<ts>.it`, **and the script prunes to 10 itself**. So
+auto-file pruning is implemented twice — here and in the daemon's
+`_prune_autogen` — both capped at 10, both hard `rm`. Worth consolidating.
 
-**Open question:** what `--auto` does. Best guess is that it writes with the
-`bitcomposer_auto_` prefix so `AUTOGEN_MAX` pruning applies, but that is
-inference, not documentation.
+It writes into `~/Music/Chiptune/`, calls `Rescan`, then locates the new file in
+`GetPlaylist` and calls `PlayIndex`. The QML completion handler ignores stdout
+and only re-polls `GetPlaylist`, so the script must do that work itself.
 
 ---
 
-## Needed from Ragnarok
+## The import gap
 
-In priority order:
+`generate.sh` calls `python3 -m bitcomposer.cli` with no import path of its own,
+and bitcomposer is not installed (PEP 668 blocks a system pip install on Debian
+13). The widget launches it from **plasmashell**, not from a login shell:
 
-1. **`bitcomposer-generate.sh`** — settles the `--auto` semantics, the only
-   genuine unknown.
-2. **Any daemon or widget install notes** — more valuable than either script,
-   since the daemon and plasmoid are the parts not versioned anywhere and Option
-   C depends on them.
-3. **`bitcomposer-master.sh`** — reconstructible from the spec above, but worth
-   a look to confirm it does not do something extra such as backing up the file
-   before patching it.
+```
+plasmashell PATH includes ~/.local/bin : yes
+plasmashell PYTHONPATH                 : unset
+```
+
+So neither a shell-profile `export` nor the daemon's `Environment=PYTHONPATH`
+reaches it — that unit only covers the daemon's own autogen. Installing
+`generate.sh` as-is leaves the GENERATE button throwing `ModuleNotFoundError`.
+
+Options, undecided:
+
+- **`.pth` file** — one line in `~/.local/lib/python3.13/site-packages/`
+  pointing at the repo. No pip, no PEP 668 argument, importable by every
+  `python3` this user runs, still tracks the checked-out branch, reversible by
+  deleting one file. Would make the systemd `Environment=` line redundant.
+  Caveat: version-pathed, so a Debian Python bump breaks it silently.
+- **Editable install** (`pip install --break-system-packages -e .`) — same
+  branch-tracking property, same version-path caveat, needs the PEP 668 override.
+- **Plain install** (`pip install --break-system-packages .`) — what Ragnarok's
+  `INSTALL.md` says. Static copy, so autogen would stop following the checked-out
+  branch and one-command A/B testing is lost.
+- **PYTHONPATH inside `generate.sh`** — works, but hardcodes the repo location,
+  which is the thing this document exists to remove.
+
+---
+
+## Also learned from the bundle
+
+- **The installed daemon has no file monitor.** The dev copy used
+  `Gio.File.monitor_directory`; the installed (newer) one dropped `Gio` entirely,
+  so rescans happen *only* via explicit `Rescan()`. That is why both helper
+  scripts call it. Monitor code is on Ragnarok at
+  `~/Projects/cyberpunk-hud/plasmoids/chiptune-player/daemon/...` lines ~754–767.
+- **Ragnarok's dev copies are stale** — installed is ahead (daemon +61 lines,
+  QML 1188 → 1436 lines). Vendor the *installed* versions, and push them back to
+  `cyberpunk-hud` so that repo stops being misleading.
+- **Daemon D-Bus surface**: standard MPRIS2 plus `GetState() -> s` (pipe
+  delimited, 13 fields: status, position, duration, channels, title, artist,
+  type, file, patterns, shuffle, playlistCount, currentIndex, autoGen),
+  `GetPlaylist() -> as`, `PlayIndex(i)`, `Rescan()`,
+  `SetAutoGenerate(b, s)`.
+- **Runtime deps** beyond Python: `libopenmpt.so.0` via raw `ctypes.CDLL` (SONAME
+  must match exactly), `python3-dbus`, `python3-gi`, `paplay` from
+  pulseaudio-utils (audio is raw 48k/16-bit stereo piped to `paplay --raw`), and
+  `qdbus6` from qt6-tools.
+- Ragnarok keeps the repo at `~/Projects/bitComposer`; this machine uses
+  `~/bitComposer`. Nothing outside the QML hardcodes a path — the daemon and both
+  scripts use `$HOME` / `expanduser`.
 
 ## Next step
 
-Pick A, B, or C, then implement. Option A is independent of the Ragnarok
-material and can start at any time.
+Decide the import mechanism, install `generate.sh`, then pick A, B or C. The
+bundle makes **Option C** more realistic than when it was first proposed, since
+Ragnarok's `INSTALL.md` is most of an install script already. Option A remains
+independent of all of this and can start at any time.
