@@ -127,6 +127,24 @@ NOTE_OFF = 255
 _IT_TEMPO_FACTOR = 24
 
 
+# Stereo placement by musical role, not by channel index. The previous layout
+# spread pan linearly across the channel number, which put the lead hard left
+# and every drum on the right — the whole rhythm section in one ear.
+# Order matches bitcomposer.pattern: melody, harmony x3, bass, arp, then drums.
+DEFAULT_CHANNEL_PANS = [
+    32,          # melody   — the lead belongs in the middle
+    20, 32, 44,  # harmony  — spread the chord around it
+    32,          # bass     — centred, like the kick
+    40,          # arp      — off to one side so it does not fight the lead
+    32,          # kick     — centre
+    32,          # snare    — centre, it anchors the backbeat with the kick
+    38,          # hihat    — slightly right
+    26,          # tom      — slightly left
+    24,          # crash    — wide, it is an accent
+    42,          # open hat — mirrors the closed hat
+] + [32] * 52
+
+
 def bpm_to_it_tempo(bpm: float, speed: int, rows_per_beat: int = 4) -> int:
     """Convert a musical BPM to the value to store in the IT tempo field."""
     raw = round(bpm * speed * rows_per_beat / _IT_TEMPO_FACTOR)
@@ -160,6 +178,7 @@ def write_it_file(
     mix_volume: int = 80,
     num_channels: int = 8,
     channel_volumes: list[int] | None = None,
+    channel_pans: list[int] | None = None,
 ) -> None:
     """Write a complete .it module file."""
 
@@ -236,13 +255,11 @@ def write_it_file(
     f.extend(struct.pack("<I", 0))                 # MsgOff
     f.extend(struct.pack("<I", 0))                 # Reserved
 
-    # Channel pan (64 bytes) — alternate L/R for stereo spread
+    # Channel pan (64 bytes). 0 = hard left, 32 = centre, 64 = hard right.
     for ch in range(64):
         if ch < num_channels:
-            # Spread channels across stereo field
-            pan = 16 + (ch * 32 // max(num_channels - 1, 1))
-            pan = max(0, min(64, pan))
-            f.append(pan)
+            pan = channel_pans[ch] if channel_pans else DEFAULT_CHANNEL_PANS[ch]
+            f.append(max(0, min(64, pan)))
         else:
             f.append(32 | 128)  # Center + disabled
 
