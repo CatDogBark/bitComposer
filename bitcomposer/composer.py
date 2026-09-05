@@ -347,7 +347,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     if drum_swing == "random":
         drum_swing = random.choice(["off", "light", "heavy"])
     if melody_style == "random":
-        melody_style = random.choice(["phrased", "simple"])
+        # Weighted toward phrased: it is the path with motifs, so it is the one
+        # that produces a recognisable hook. simple is an unstructured random
+        # walk, which is what "noodling" sounds like. Both stay available
+        # explicitly via --melody.
+        melody_style = random.choices(["phrased", "simple"], weights=[3, 1], k=1)[0]
     if harmony_voicing == "random":
         harmony_voicing = random.choice(["full", "thin"])
     if harmony_mode == "random":
@@ -487,7 +491,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             energy_tier = _energy_tier(section_energy)
             section_energy = energy_tier / 5
 
-            section_density = melody_density * section_energy
+            # Floor the density. melody_density starts at 0.40 and the energy
+            # tier can be 0.4, which multiplied out to 0.16 — under one note a
+            # bar, so the section read as empty rather than sparse.
+            section_density = max(0.35, melody_density * section_energy)
             if is_ending:
                 section_density = max(section_density, 0.45)
 

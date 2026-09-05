@@ -4,10 +4,13 @@ Melody generation: motifs, contours, counter-melody, and note-cuts.
 
 import random
 
+from .pattern import ROWS_PER_BAR
+
 
 # ── Motif-based melody system ──
 
-# Rhythmic templates: list of row offsets within a 32-row half-phrase
+# Rhythmic templates: row offsets within a single bar. Placed once per bar by
+# _generate_melody_phrased — see the note there about why.
 RHYTHM_TEMPLATES = [
     [0, 4, 8, 12],                     # Quarter notes
     [0, 4, 8, 14],                     # Dotted ending
@@ -213,29 +216,47 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
         start_note = random.choice(melody_notes)
     start_idx = melody_notes.index(start_note)
 
+    # State the motif once per bar rather than once per half-phrase.
+    #
+    # The rhythm templates are commented as spanning a 32-row half-phrase, but
+    # their offsets stop at 16 — they are one-bar figures. Placing one in each
+    # 32-row half therefore left the back bar of each half silent, and the
+    # melody averaged 1.7 notes per bar with two-bar holes in the middle.
+    #
+    # Four bars gives the classic antecedent/consequent shape: statement,
+    # variation, statement, variation resolving to a chord tone.
     all_notes = []
-    half = rows // 2
+    bars = max(1, rows // ROWS_PER_BAR)
+    cur_idx = start_idx
 
-    # Question phrase: first half, doesn't resolve
-    q_motif = motif if not is_answer else vary_motif(motif, 0.2)
-    q_notes, end_idx = _realize_motif(
-        q_motif, scale_notes, chord_notes,
-        start_row=0, start_note_idx=start_idx,
-        resolve_to_chord=False, rows=half,
-    )
-    all_notes.extend(q_notes)
+    for bar in range(bars):
+        is_last = bar == bars - 1
 
-    # Rest gap between phrases (density-dependent)
-    gap = 4 if density > 0.5 else 8
+        # Continuation bars are the ones that thin out first, so a low-density
+        # section keeps the original sparse call-and-response feel.
+        if bar % 2 == 1 and not is_last and random.random() > density + 0.3:
+            continue
 
-    # Answer phrase: second half, resolves to chord tone
-    a_motif = vary_motif(motif, 0.3)
-    a_notes, _ = _realize_motif(
-        a_motif, scale_notes, chord_notes,
-        start_row=half + gap, start_note_idx=end_idx,
-        resolve_to_chord=True, rows=rows,
-    )
-    all_notes.extend(a_notes)
+        if bar == 0:
+            bar_motif = motif if not is_answer else vary_motif(motif, 0.2)
+        else:
+            # Odd bars answer the statement, so they vary more.
+            bar_motif = vary_motif(motif, 0.35 if bar % 2 else 0.2)
+
+        bar_notes, cur_idx = _realize_motif(
+            bar_motif, scale_notes, chord_notes,
+            start_row=bar * ROWS_PER_BAR, start_note_idx=cur_idx,
+            resolve_to_chord=is_last, rows=rows,
+        )
+        all_notes.extend(bar_notes)
+
+    # A motif offset of 16 lands on the next bar's downbeat, where that bar's
+    # own opening note replaces it. Drop the duplicates so note counts and
+    # cut placement stay honest.
+    seen_rows = {}
+    for row, note in all_notes:
+        seen_rows[row] = note
+    all_notes = sorted(seen_rows.items())
 
     # Add passing tones between phrases based on density
     if density > 0.5 and len(all_notes) > 0:

@@ -63,21 +63,36 @@ LAYERS = {
 
 
 def _build_layers(structure: list[str]) -> dict[str, dict]:
-    """Build per-section layer map from a structure list."""
+    """Build per-section layer map from a structure list.
+
+    Numbered sections resolve to their own base entry before falling back to
+    the broader section type. Without that step episode1/episode2 resolved via
+    section_type() to "bridge", which carries no melody, so every rondo lost
+    its lead through both episodes — 12 of 20 patterns silent in one measured
+    song. It also left LAYERS["episode"], ["episode_light"] and ["bridge_mel"]
+    unreachable despite existing precisely to carry a melody there.
+    """
     layers = {}
     verse_count = 0
     for section in structure:
         st = section_type(section)
+        base = section.rstrip("0123456789")
+
         if st == "verse":
             verse_count += 1
-            if verse_count > 1:
-                layers[section] = dict(LAYERS["verse_full"])
-            else:
-                layers[section] = dict(LAYERS["verse"])
+            key = "verse_full" if verse_count > 1 else "verse"
+        elif base == "bridge":
+            # Dropping the lead for a whole bridge is a real arrangement
+            # device, but not every time — that is a lot of dead air.
+            key = random.choice(["bridge", "bridge_mel", "bridge_mel"])
+        elif base in LAYERS:
+            key = base
         elif section in LAYERS:
-            layers[section] = dict(LAYERS[section])
+            key = section
         else:
-            layers[section] = dict(LAYERS.get(st, LAYERS["verse"]))
+            key = st if st in LAYERS else "verse"
+
+        layers[section] = dict(LAYERS[key])
     return layers
 
 
