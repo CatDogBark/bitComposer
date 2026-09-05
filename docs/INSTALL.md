@@ -37,8 +37,12 @@ This machine uses a `.pth` file:
 ```bash
 SITE=$(python3 -m site --user-site)     # ~/.local/lib/python3.13/site-packages
 mkdir -p "$SITE"
-echo "$HOME/bitComposer" > "$SITE/bitcomposer.pth"
+echo "/path/to/your/bitComposer" > "$SITE/bitcomposer.pth"
 ```
+
+`companion/install.sh` writes this for you, using the location of the checkout
+it is run from — the path is not fixed, and differs per machine (`~/bitComposer`
+on one, `~/Projects/bitComposer` on another).
 
 One line, no pip, no PEP 668 override. Every `python3` this user runs picks it
 up — shell, daemon, and the widget via plasmashell alike. It points at the
@@ -65,9 +69,12 @@ file.
 > (non-editable) install is immune — but that is a static copy, so it gives up
 > the branch-tracking property above.
 
-The systemd unit also carries `Environment=PYTHONPATH=%h/bitComposer`. That is
-now redundant with the `.pth` but harmless, and it is deliberately left in place
-as a fallback for the daemon specifically.
+The systemd unit also carries `Environment=PYTHONPATH`, written as the
+placeholder `@REPO@` in the repo and substituted by `install.sh` with the real
+checkout path. That is redundant with the `.pth` but harmless, and is left in
+place as a fallback for the daemon specifically. Do not `cp` the unit into
+place by hand — an unsubstituted `@REPO@` gives the daemon a PYTHONPATH that
+does not exist.
 
 ---
 
@@ -83,7 +90,11 @@ as a fallback for the daemon specifically.
 | — | writes the `.pth` described above |
 | — | `mkdir -p` the music dir, then leaves it alone |
 
-It then reloads systemd, enables and starts the daemon, and re-checks the import.
+It then reloads systemd, enables the daemon, and `try-restart`s it before
+starting it. `enable --now` alone would only *start* a stopped unit, so
+re-running the installer on a machine where the daemon is already up would leave
+the old process holding the old `daemon.py` and the old `Environment=` — a green
+install that changed nothing. Finally it re-checks the import.
 
 `main.qml` hardcodes the music dir at line 116 — the only hardcoded `/home/troy`
 in the whole stack, since the daemon and both scripts use `$HOME`/`expanduser`.
@@ -158,8 +169,11 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 ## Verifying an install
 
 ```bash
-# import works with no PYTHONPATH, from any directory
-cd / && env -u PYTHONPATH python3 -c "import bitcomposer; print('ok')"
+# import resolves to the CHECKOUT, with no PYTHONPATH, from any directory.
+# Print the path — a bare `import` succeeding proves nothing, because a
+# pip-installed copy in site-packages shadows the .pth and imports fine.
+cd / && env -u PYTHONPATH python3 -c \
+  "import bitcomposer, os; print(os.path.dirname(os.path.dirname(bitcomposer.__file__)))"
 
 # generator end to end (widget-like environment)
 env -u PYTHONPATH bitcomposer-generate.sh --form standard --harmony-voicing full

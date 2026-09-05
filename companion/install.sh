@@ -32,6 +32,35 @@ PTH_FILE="$(python3 -m site --user-site)/bitcomposer.pth"
 say()  { printf '  %s\n' "$*"; }
 head_() { printf '\n== %s\n' "$*"; }
 
+# Where does the system python3 actually resolve bitcomposer from? Run from /
+# with PYTHONPATH cleared, so neither the caller's cwd nor its environment can
+# mask a broken install.
+#
+# A successful import is NOT enough to report success: a pip-installed copy in
+# site-packages silently shadows the .pth, because .pth paths are appended to
+# sys.path *after* the site directory that contains them. That produces a green
+# check while the daemon generates with stale code.
+check_import() {
+    local got
+    got="$(cd / && env -u PYTHONPATH python3 -c \
+        'import bitcomposer, os; print(os.path.dirname(os.path.dirname(bitcomposer.__file__)))' \
+        2>/dev/null)" || got=""
+
+    if [ -z "$got" ]; then
+        say "import bitcomposer  FAILS — GENERATE button and autogen will not work"
+        return 1
+    elif [ "$got" = "$REPO" ]; then
+        say "import bitcomposer -> $got  ok"
+        return 0
+    else
+        say "import bitcomposer -> $got"
+        say "  WRONG SOURCE — expected $REPO"
+        say "  a pip install shadows the .pth; remove it with:"
+        say "    python3 -m pip uninstall -y --break-system-packages bitcomposer"
+        return 1
+    fi
+}
+
 # ── Checks ────────────────────────────────────────────────────────────────────
 
 check_deps() {
@@ -88,11 +117,7 @@ do_check() {
     else
         say ".pth  missing"
     fi
-    if (cd / && env -u PYTHONPATH python3 -c "import bitcomposer" 2>/dev/null); then
-        say "import bitcomposer (no PYTHONPATH, from /)  ok"
-    else
-        say "import bitcomposer  FAILS — GENERATE button and autogen will not work"
-    fi
+    check_import || true
 
     head_ "Daemon"
     systemctl --user is-enabled "$SERVICE" 2>/dev/null | sed 's/^/  enabled: /' || say "enabled: no"
@@ -116,8 +141,13 @@ do_install() {
     # The unit carries Environment=PYTHONPATH as a fallback for the daemon
     # specifically. It is redundant with the .pth below but harmless, and having
     # it in the repo means this file is no longer a local-only modification.
-    install -Dm644 "$HERE/daemon/$SERVICE" "$UNIT_DIR/$SERVICE"
-    say "$SERVICE -> $UNIT_DIR"
+    # The path is substituted rather than hardcoded: the checkout is at
+    # ~/bitComposer on one machine and ~/Projects/bitComposer on another, and a
+    # wrong path leaves the daemon with no fallback at all, silently.
+    mkdir -p "$UNIT_DIR"
+    sed "s|@REPO@|$REPO|g" "$HERE/daemon/$SERVICE" > "$UNIT_DIR/$SERVICE"
+    chmod 644 "$UNIT_DIR/$SERVICE"
+    say "$SERVICE -> $UNIT_DIR  (PYTHONPATH=$REPO)"
 
     mkdir -p "$PLASMOID_DIR"
     cp -r "$HERE/plasmoid/." "$PLASMOID_DIR/"
@@ -139,15 +169,17 @@ do_install() {
 
     head_ "Starting daemon"
     systemctl --user daemon-reload
-    systemctl --user enable --now "$SERVICE"
+    systemctl --user enable "$SERVICE"
+    # enable --now only *starts* a stopped unit; it will not restart a running
+    # one, so re-running this script would leave the old process holding the old
+    # daemon.py and the old Environment=. try-restart restarts it if running and
+    # no-ops if not, so a first install still needs the start below.
+    systemctl --user try-restart "$SERVICE"
+    systemctl --user start "$SERVICE"
     say "$(systemctl --user is-active "$SERVICE")"
 
     head_ "Verify"
-    if (cd / && env -u PYTHONPATH python3 -c "import bitcomposer" 2>/dev/null); then
-        say "import bitcomposer  ok"
-    else
-        say "import bitcomposer  FAILS — check $PTH_FILE"
-    fi
+    check_import || true
 
     cat <<EOF
 

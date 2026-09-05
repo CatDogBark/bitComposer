@@ -8,7 +8,10 @@ Type=simple
 # is not installed (PEP 668 blocks a system pip install on Debian 13), so point
 # the import path at the working copy. Autogen then follows whichever git branch
 # is checked out, which makes A/B testing generator changes a checkout away.
-Environment=PYTHONPATH=%h/bitComposer
+# @REPO@ is filled in by companion/install.sh with the real checkout path; do
+# not install this file directly or the daemon gets a PYTHONPATH that does not
+# exist. See docs/INSTALL.md.
+Environment=PYTHONPATH=@REPO@
 ExecStart=/usr/bin/python3 %h/.local/bin/cyberpunk-chiptune-daemon.py
 Restart=on-failure
 RestartSec=3
