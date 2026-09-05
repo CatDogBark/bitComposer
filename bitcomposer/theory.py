@@ -110,16 +110,19 @@ DRUM_PATTERNS = [
     },
 ]
 
-# Sparse variants for intros/breakdowns (less busy)
+# Sparse variants for breakdowns and low-density sections (less busy).
+# These keep a half-time backbeat on beat 3: intro and outro sections disable
+# drums entirely via LAYERS, so anything reaching here is a main section that
+# still needs a pulse. Leaving the snare row empty gave whole songs no snare.
 DRUM_PATTERNS_SPARSE = [
     {
         "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
         "hat":   [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
     },
     {
         "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
         "hat":   [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0],
     },
 ]

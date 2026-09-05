@@ -30,7 +30,14 @@ CH_OPEN_HAT = 11
 
 NUM_CHANNELS = 12
 ROWS_PER_PATTERN = 64
-STEPS_PER_ROW = 4  # 16 steps = 64 rows / 4 rows per step
+
+# Timing grid. IT plays 4 rows per quarter note at the speed/tempo pairing we
+# write, so one bar of 4/4 is 16 rows and a 64-row pattern holds 4 bars.
+# Drum templates are 16 steps of one 16th note each — one step per row.
+ROWS_PER_BEAT = 4
+ROWS_PER_BAR = 16
+ROWS_PER_STEP = 1
+BARS_PER_PATTERN = ROWS_PER_PATTERN // ROWS_PER_BAR
 
 # Map layer keys to the channels they control
 LAYER_CHANNELS = {
@@ -166,14 +173,22 @@ def apply_fade(pattern: ITPattern, channel: int, fade_in: bool = False,
 
 def generate_drums(drum_pattern: dict[str, list[int]],
                    rows: int) -> dict[str, list[int]]:
-    """Expand a 16-step drum pattern to fill the given number of rows."""
-    rows_per_step = rows // 16
+    """Tile a one-bar, 16-step drum pattern across the given number of rows.
+
+    The templates in theory.py are written as a single bar of 16th notes
+    (kick on 1/2/3/4, snare on 2 and 4, hats on 8ths), so one step is one
+    row and the bar repeats every ROWS_PER_BAR rows. Spreading the 16 steps
+    over the whole 64-row pattern instead would play everything at quarter
+    speed — one kick per bar and a snare every other bar.
+    """
     expanded = {}
     for drum, pattern in drum_pattern.items():
         hits = []
-        for step, hit in enumerate(pattern):
-            if hit:
-                hits.append(step * rows_per_step)
+        for bar_start in range(0, rows, ROWS_PER_BAR):
+            for step, hit in enumerate(pattern):
+                row = bar_start + step * ROWS_PER_STEP
+                if hit and row < rows:
+                    hits.append(row)
         expanded[drum] = hits
     return expanded
 
@@ -181,7 +196,12 @@ def generate_drums(drum_pattern: dict[str, list[int]],
 def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
                            sample_map: dict[str, int],
                            swing: int = 0):
-    """Write drum hits into pattern. swing=0-3 shifts off-beat hats late."""
+    """Write drum hits into pattern. swing>0 delays off-beat hats (shuffle).
+
+    The off-beat eighth sits on row 2 of each 4-row beat, so a one-row delay
+    is the largest shift that still swings — +2 would land on the next beat.
+    Finer (triplet) swing needs the SDx note-delay effect for sub-row timing.
+    """
     drum_channels = {
         "kick": CH_KICK, "snare": CH_SNARE, "hihat": CH_HIHAT,
         "hat": CH_HIHAT, "tom": CH_TOM, "crash": CH_CRASH,
@@ -198,8 +218,9 @@ def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
         for row in hits:
             actual_row = row
             # Apply swing to off-beat hihat hits
-            if swing > 0 and drum in ("hihat", "hat") and row % 8 == 4:
-                actual_row = min(row + swing, pattern.rows - 1)
+            if (swing > 0 and drum in ("hihat", "hat")
+                    and row % ROWS_PER_BEAT == 2 * ROWS_PER_STEP):
+                actual_row = min(row + ROWS_PER_STEP, pattern.rows - 1)
             if 0 <= actual_row < pattern.rows:
                 pattern.data[actual_row][ch] = ITNote(
                     note=drum_note,

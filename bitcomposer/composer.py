@@ -18,7 +18,7 @@ from .it_format import (
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
     CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT,
-    NUM_CHANNELS, ROWS_PER_PATTERN, STEPS_PER_ROW,
+    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
     apply_portamento, apply_harmony_fade, apply_fade,
     apply_drums_to_pattern, generate_drums,
@@ -263,17 +263,15 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
 
         is_last_chord = chord_idx == len(section_prog) - 1
         if fill_pattern and is_last_chord and not is_ending:
-            fill_hits = generate_drums(fill_pattern, ROWS_PER_PATTERN)
-            half = ROWS_PER_PATTERN // 2
-            for drum_name, hits in fill_hits.items():
-                fill_rows = [h for h in hits if h >= half]
-                if fill_rows:
-                    if drum_name not in drum_hits:
-                        drum_hits[drum_name] = []
-                    drum_hits[drum_name] = [h for h in drum_hits.get(drum_name, []) if h < half]
-                    drum_hits[drum_name].extend(fill_rows)
-            if "crash" not in drum_hits:
-                drum_hits["crash"] = []
+            # A fill replaces the groove for the final bar only, so the
+            # preceding bars keep their pattern and the fill reads as a
+            # one-bar lead-in to the next section.
+            fill_start = ROWS_PER_PATTERN - ROWS_PER_BAR
+            fill_hits = generate_drums(fill_pattern, ROWS_PER_BAR)
+            for drum_name in set(drum_hits) | set(fill_hits):
+                kept = [h for h in drum_hits.get(drum_name, []) if h < fill_start]
+                added = [fill_start + h for h in fill_hits.get(drum_name, [])]
+                drum_hits[drum_name] = kept + added
 
         apply_drums_to_pattern(pat, drum_hits, sample_map, swing=swing_amount)
 
