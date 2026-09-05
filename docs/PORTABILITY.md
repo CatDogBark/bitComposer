@@ -1,8 +1,9 @@
 # Portability — open decision
 
 **Status:** 2026-09-04. Originals received from Ragnarok at `~/bitcomposer-vendor`
-(not versioned here). `bitcomposer-master.sh` is installed and verified working.
-Open: the import mechanism (see "The import gap"), then the A/B/C scope choice.
+(not versioned here). Both helper scripts are installed and verified, and the
+import gap is closed with a `.pth` file — see `INSTALL.md`, which is now the
+operational reference. **Still open: the A/B/C scope choice below.**
 
 Goal: `git clone` and it works, on any machine, without the KDE desktop stack.
 Today the generator writes wherever you happen to be standing, and the player
@@ -147,7 +148,7 @@ and only re-polls `GetPlaylist`, so the script must do that work itself.
 
 ---
 
-## The import gap
+## The import gap — resolved with a `.pth`
 
 `generate.sh` calls `python3 -m bitcomposer.cli` with no import path of its own,
 and bitcomposer is not installed (PEP 668 blocks a system pip install on Debian
@@ -159,23 +160,20 @@ plasmashell PYTHONPATH                 : unset
 ```
 
 So neither a shell-profile `export` nor the daemon's `Environment=PYTHONPATH`
-reaches it — that unit only covers the daemon's own autogen. Installing
-`generate.sh` as-is leaves the GENERATE button throwing `ModuleNotFoundError`.
+reaches it — that unit only covers the daemon's own autogen.
 
-Options, undecided:
+**Chosen:** a `.pth` file at `~/.local/lib/python3.13/site-packages/
+bitcomposer.pth` containing the repo path. No pip, no PEP 668 override,
+importable by every `python3` this user runs, and it still points at the working
+tree so autogen follows the checked-out branch. Rejected alternatives were an
+editable install (same effect, needs the PEP 668 override), a plain install
+(static copy, loses branch tracking), and setting PYTHONPATH inside the script
+(hardcodes the repo location, which is what this document exists to remove).
 
-- **`.pth` file** — one line in `~/.local/lib/python3.13/site-packages/`
-  pointing at the repo. No pip, no PEP 668 argument, importable by every
-  `python3` this user runs, still tracks the checked-out branch, reversible by
-  deleting one file. Would make the systemd `Environment=` line redundant.
-  Caveat: version-pathed, so a Debian Python bump breaks it silently.
-- **Editable install** (`pip install --break-system-packages -e .`) — same
-  branch-tracking property, same version-path caveat, needs the PEP 668 override.
-- **Plain install** (`pip install --break-system-packages .`) — what Ragnarok's
-  `INSTALL.md` says. Static copy, so autogen would stop following the checked-out
-  branch and one-command A/B testing is lost.
-- **PYTHONPATH inside `generate.sh`** — works, but hardcodes the repo location,
-  which is the thing this document exists to remove.
+The cost, documented at length in `INSTALL.md`: the path contains the Python
+minor version, so a Debian bump to 3.14 silently breaks the widget's GENERATE
+button and the daemon's autogen while playback keeps working. An editable
+install shares that failure mode; only a plain install is immune.
 
 ---
 
@@ -204,7 +202,7 @@ Options, undecided:
 
 ## Next step
 
-Decide the import mechanism, install `generate.sh`, then pick A, B or C. The
-bundle makes **Option C** more realistic than when it was first proposed, since
-Ragnarok's `INSTALL.md` is most of an install script already. Option A remains
-independent of all of this and can start at any time.
+Pick A, B or C. The bundle makes **Option C** more realistic than when it was
+first proposed — `INSTALL.md` in this directory is now most of an install script
+already, and the daemon and plasmoid are the only pieces still unversioned.
+Option A is independent of all of it and can start at any time.
