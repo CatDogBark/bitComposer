@@ -132,10 +132,15 @@ is no longer a local-only modification that a reinstall would silently revert.
 Bus `org.mpris.MediaPlayer2.CyberpunkChiptune`, path `/org/mpris/MediaPlayer2`.
 Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
 
-- `GetState() -> s` — pipe-delimited, **13 fields**, 1-indexed for `cut -d'|'`:
+- `GetState() -> s` — pipe-delimited, **14 fields**, 1-indexed for `cut -d'|'`:
   1 status, 2 position, 3 duration, 4 channels, 5 title, 6 artist, 7 type,
-  8 file, 9 patterns, 10 shuffle, 11 playlistCount, 12 currentIndex, 13 autoGen.
+  8 file, 9 patterns, 10 shuffle, 11 playlistCount, 12 currentIndex, 13 autoGen,
+  14 volume (linear gain, `1.00` = unity).
   Free-text fields have `|` replaced so a module title cannot shift the columns.
+- `Properties.Set Player Volume <0..3>` — linear gain; above 1.0 boosts with a
+  soft limiter on the output. Volume and Shuffle persist in
+  `~/.config/cyberpunk-chiptune/state.json`. Boolean and numeric variants may
+  arrive as strings (qdbus6 sends them that way) and are parsed.
 - `GetPlaylist() -> as`
 - `PlayIndex(i)` — `i` is a position in `GetPlaylist`, with or without shuffle.
   `currentIndex` in `GetState` uses the same numbering; shuffle only changes
@@ -147,7 +152,7 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
 
 Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 `EXTENSIONS={.mod,.xm,.it,.s3m,.mptm}`, `AUTOGEN_PREFIX="bitcomposer_auto_"`,
-`AUTOGEN_MAX=10`.
+`AUTOGEN_MAX=10`, `VOLUME_MAX=3.0`, `STATE_FILE=~/.config/cyberpunk-chiptune/state.json`.
 
 ---
 

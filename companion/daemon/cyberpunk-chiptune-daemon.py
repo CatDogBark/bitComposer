@@ -5,6 +5,8 @@ Plays .mod/.xm/.it/.s3m tracker files via libopenmpt, exposes MPRIS2 over D-Bus.
 """
 
 import ctypes
+import json
+import math
 import os
 import random
 import shlex
@@ -23,7 +25,16 @@ import subprocess as _subprocess
 # ─── Configuration ────────────────────────────────────────────────────────────
 
 MUSIC_DIR = os.path.expanduser("~/Music/Chiptune")
+STATE_FILE = os.path.expanduser("~/.config/cyberpunk-chiptune/state.json")
 SAMPLE_RATE = 48000
+
+# Volume is a linear gain. 1.0 is unity; anything above it is boost, soft-
+# limited so peaks round off instead of clipping. Generated modules peak
+# around -6 to -9 dBFS, which is why the player sounded quiet next to
+# everything else, so the ceiling leaves room to bring them up to level.
+VOLUME_MAX = 3.0
+_LIMIT_KNEE = 20000.0   # soft limiting starts here (of 32767)
+_LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 CHANNELS = 2
 FRAMES_PER_BUFFER = 2048
 EXTENSIONS = {".mod", ".xm", ".it", ".s3m", ".mptm"}
@@ -161,6 +172,48 @@ class OpenMPTModule:
         self.destroy()
 
 
+# ─── Gain ─────────────────────────────────────────────────────────────────────
+
+def _soft_limit(y: float) -> int:
+    """Round off a sample above the knee instead of clipping it."""
+    a = abs(y)
+    if a <= _LIMIT_KNEE:
+        return int(y)
+    lim = _LIMIT_KNEE + _LIMIT_SPAN * math.tanh((a - _LIMIT_KNEE) / _LIMIT_SPAN)
+    return int(lim) if y > 0 else -int(lim)
+
+
+def _apply_gain(raw: bytes, n: int, gain: float) -> bytes:
+    """Scale n int16 samples by gain. Only touches the limiter when a buffer
+    actually exceeds the knee, so unity-ish gains stay cheap."""
+    samples = struct.unpack(f"<{n}h", raw)
+    scaled = [s * gain for s in samples]
+    if gain > 1.0 and max(map(abs, scaled)) > _LIMIT_KNEE:
+        out = [_soft_limit(y) for y in scaled]
+    else:
+        out = [max(-32768, min(32767, int(y))) for y in scaled]
+    return struct.pack(f"<{n}h", *out)
+
+
+def _load_state() -> dict:
+    try:
+        with open(STATE_FILE) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_state(state: dict):
+    try:
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(state, fh)
+        os.replace(tmp, STATE_FILE)
+    except OSError as e:
+        print(f"[STATE] Could not save: {e}")
+
+
 # ─── Player Engine ────────────────────────────────────────────────────────────
 
 AUTOGEN_PREFIX = "bitcomposer_auto_"
@@ -178,6 +231,15 @@ class ChiptunePlayer:
         self.module = None
         self.status = "Stopped"  # "Playing", "Paused", "Stopped"
         self.volume = 1.0
+
+        # Volume and shuffle survive restarts; a quiet player that resets to
+        # unity on every login is the complaint that added the gain control.
+        saved = _load_state()
+        try:
+            self.volume = max(0.0, min(VOLUME_MAX, float(saved.get("volume", 1.0))))
+        except (TypeError, ValueError):
+            pass
+        self.shuffle = bool(saved.get("shuffle", False))
 
         self._lock = threading.Lock()
         self._pw_proc = None
@@ -298,12 +360,8 @@ class ChiptunePlayer:
             raw = bytes(self._buf)[:frames_read * CHANNELS * 2]
 
             # Apply volume
-            if self.volume < 1.0:
-                samples = struct.unpack(f"<{frames_read * CHANNELS}h", raw)
-                raw = struct.pack(
-                    f"<{frames_read * CHANNELS}h",
-                    *[max(-32768, min(32767, int(s * self.volume))) for s in samples]
-                )
+            if self.volume != 1.0:
+                raw = _apply_gain(raw, frames_read * CHANNELS, self.volume)
 
             try:
                 self._pw_proc.stdin.write(raw)
@@ -505,13 +563,18 @@ class ChiptunePlayer:
         if self._load_track(new_index) and was_playing:
             self.play()
 
+    def _persist(self):
+        _save_state({"volume": round(self.volume, 3), "shuffle": self.shuffle})
+
     def set_shuffle(self, enabled):
         self.shuffle = enabled
         if enabled:
             self._rebuild_shuffle()
+        self._persist()
 
     def set_volume(self, vol):
-        self.volume = max(0.0, min(1.0, vol))
+        self.volume = max(0.0, min(VOLUME_MAX, vol))
+        self._persist()
 
     def seek_to(self, seconds):
         with self._lock:
@@ -659,13 +722,15 @@ class MPRISService(dbus.service.Object):
     def GetState(self):
         """Return compact state as a parseable string for the plasmoid.
 
-        13 pipe-delimited fields; see docs/INSTALL.md. Free-text fields have
+        14 pipe-delimited fields; see docs/INSTALL.md. Free-text fields have
         the delimiter stripped so a module titled "A|B" cannot shift them.
         """
         meta = self.player.get_metadata()
         ag = int(self.player.auto_generate)
+        vol = f"{self.player.volume:.2f}"
         if not meta:
-            return f"Stopped|0|0|0||||||{int(self.player.shuffle)}|{len(self.player.playlist)}|{self.player.current_index}|{ag}"
+            return (f"Stopped|0|0|0||||||{int(self.player.shuffle)}"
+                    f"|{len(self.player.playlist)}|{self.player.current_index}|{ag}|{vol}")
         clean = lambda v: str(v).replace("|", "/").replace("\n", " ")
         return (
             f"{self.player.status}"
@@ -681,6 +746,7 @@ class MPRISService(dbus.service.Object):
             f"|{len(self.player.playlist)}"
             f"|{self.player.current_index}"
             f"|{ag}"
+            f"|{vol}"
         )
 
     @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
@@ -769,7 +835,10 @@ class MPRISService(dbus.service.Object):
                 self.player.set_shuffle(self._as_bool(value))
                 self._emit_props_changed()
             elif prop == "Volume":
-                self.player.set_volume(float(value))
+                try:
+                    self.player.set_volume(float(value))
+                except (TypeError, ValueError):
+                    return
                 self._emit_props_changed()
 
     @dbus.service.signal(DBUS_PROPS_IFACE, signature="sa{sv}as")

@@ -28,6 +28,8 @@ PlasmoidItem {
     property int playlistCount: 0
     property int currentIndex: -1
     property var playlistNames: []
+    property real volumeGain: 1.0      // 1.0 = unity, up to maxGain (boost)
+    readonly property real maxGain: 3.0
 
     // ── Colors ──
     readonly property color accentGreen: "#00ff88"
@@ -88,6 +90,14 @@ PlasmoidItem {
         cmdSource.connectSource("qdbus6 " + busName + " " + busPath
             + " org.freedesktop.DBus.Properties.Set " + playerIface
             + " Shuffle " + root.shuffleOn)
+    }
+    function dbusSetVolume(gain) {
+        gain = Math.max(0, Math.min(maxGain, gain))
+        root.volumeGain = gain
+        startCooldown()
+        cmdSource.connectSource("qdbus6 " + busName + " " + busPath
+            + " org.freedesktop.DBus.Properties.Set " + playerIface
+            + " Volume " + gain.toFixed(2))
     }
     function dbusPlayIndex(idx) {
         root.currentIndex = idx
@@ -314,6 +324,10 @@ PlasmoidItem {
             root.playlistCount = parseInt(parts[10]) || 0
             root.currentIndex = parseInt(parts[11]) || 0
             if (parts.length > 12) root.autoGenerate = parts[12] === "1"
+            if (parts.length > 13) {
+                var g = parseFloat(parts[13])
+                if (!isNaN(g)) root.volumeGain = g
+            }
         }
     }
 
@@ -686,6 +700,82 @@ PlasmoidItem {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // ── Gain ──
+            // Linear gain into the daemon's output stage. Past 1.0 it boosts,
+            // with the daemon soft-limiting peaks; generated modules sit around
+            // -6 to -9 dBFS, so unity sounded quiet next to everything else.
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Text {
+                    text: "GAIN"
+                    color: root.dimText
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 9
+                    font.letterSpacing: 1
+                }
+                Item {
+                    id: gainTrack
+                    Layout.fillWidth: true
+                    height: 16
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
+                        height: 6
+                        radius: 3
+                        color: root.tileBg
+                        border.width: 1
+                        border.color: gainMouse.containsMouse ? root.accentGreen : root.tileBorder
+                        Rectangle {
+                            width: parent.width * Math.min(1, root.volumeGain / root.maxGain)
+                            height: parent.height
+                            radius: 3
+                            color: root.volumeGain > 1.0 ? root.accentPink : root.accentGreen
+                        }
+                        // unity mark
+                        Rectangle {
+                            x: parent.width / root.maxGain - width / 2
+                            width: 2
+                            height: parent.height + 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.dimText
+                        }
+                    }
+                    MouseArea {
+                        id: gainMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        preventStealing: true
+                        function _set(mx) {
+                            var ratio = Math.max(0, Math.min(1, mx / width))
+                            var g = Math.round(ratio * root.maxGain * 20) / 20   // 0.05 steps
+                            // snap to unity when close
+                            if (Math.abs(g - 1.0) < 0.06) g = 1.0
+                            root.dbusSetVolume(g)
+                        }
+                        onPressed: function(mouse) { _set(mouse.x) }
+                        onPositionChanged: function(mouse) { if (pressed) _set(mouse.x) }
+                        onWheel: function(wheel) {
+                            root.dbusSetVolume(root.volumeGain + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))
+                        }
+                    }
+                }
+                Text {
+                    Layout.preferredWidth: 34
+                    text: Math.round(root.volumeGain * 100) + "%"
+                    color: root.volumeGain > 1.0 ? root.accentPink : root.textColor
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 9
+                    horizontalAlignment: Text.AlignRight
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.dbusSetVolume(1.0)   // click the number to reset
                     }
                 }
             }
