@@ -154,13 +154,16 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
 - `PlayIndex(i)` — `i` is a position in `GetPlaylist`, with or without shuffle.
   `currentIndex` in `GetState` uses the same numbering; shuffle only changes
   the order Next/Previous step through.
-- `Rescan()` — also prunes `bitcomposer_auto_*.it` down to `AUTOGEN_MAX`
-  (never the loaded track) and keeps `currentIndex` on the loaded file.
+- `Rescan()` — also prunes auto-generated tracks (`*(auto).it`, and the
+  older `bitcomposer_auto_*.it`) down to `AUTOGEN_MAX`, never the loaded
+  track, and keeps `currentIndex` on the loaded file.
 - `SetAutoGenerate(b enabled, s cliFlags)` — flags are split with `shlex` and
-  passed to the CLI as arguments, not through a shell.
+  passed to the CLI as arguments, not through a shell. Only an off→on switch
+  while stopped starts a generation; re-sending with new flags just updates
+  them. Switching off mid-generation keeps the file but does not play it.
 
 Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
-`EXTENSIONS={.mod,.xm,.it,.s3m,.mptm}`, `AUTOGEN_PREFIX="bitcomposer_auto_"`,
+`EXTENSIONS={.mod,.xm,.it,.s3m,.mptm}`, `AUTOGEN_SUFFIX=" (auto)"`,
 `AUTOGEN_MAX=10`, `VOLUME_MAX=3.0`, `STATE_FILE=~/.config/cyberpunk-chiptune/state.json`.
 
 ---
@@ -172,11 +175,14 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
   into `~/Music/Chiptune/` will not surface it until something calls that; both
   helper scripts do. Monitor code is on Ragnarok at
   `~/Projects/cyberpunk-hud/plasmoids/chiptune-player/daemon/...` lines ~754–767.
-- **Auto-file pruning is hard deletion.** The daemon prunes
-  `bitcomposer_auto_*.it` to `AUTOGEN_MAX` (10) on every `Rescan()`, with
-  `unlink()` and no trash. It is the single place pruning happens
-  (`bitcomposer-generate.sh` used to prune independently). Rename a track you
-  want to keep so it loses the `bitcomposer_auto_` prefix.
+- **File names are song titles.** The CLI names output after the module
+  title ("Haunted Orchard.it", with " 2", " 3" on a clash) unless `-o` or
+  `--name timestamp` is given, so the player's playlist and the folder agree.
+- **Auto-file pruning is hard deletion.** The daemon prunes auto-generated
+  tracks — `<Title> (auto).it`, and the older `bitcomposer_auto_*.it` — to
+  `AUTOGEN_MAX` (10) on every `Rescan()`, with `unlink()` and no trash. It is
+  the single place pruning happens. Use KEEP in the widget (or `KeepTrack`)
+  to rename one out of the set.
 - **Default music dir in the QML.** `main.qml` has `/home/troy/Music/Chiptune/`
   as a fallback; the installer patches it and the daemon overrides it live.
 - **Mastering restarts the track.** `bitcomposer-master.sh` stops, rescans and

@@ -12,6 +12,9 @@ Type=simple
 # not install this file directly or the daemon gets a PYTHONPATH that does not
 # exist. See docs/INSTALL.md.
 Environment=PYTHONPATH=@REPO@
+# Unbuffered so the daemon's log lines reach journalctl as they happen rather
+# than in one burst when the process exits.
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 %h/.local/bin/cyberpunk-chiptune-daemon.py
 Restart=on-failure
 RestartSec=3

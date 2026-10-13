@@ -273,7 +273,10 @@ PlasmoidItem {
     // panel is closed. The preset name if one is active, otherwise every
     // setting that is not left to chance.
     function settingsSummary() {
-        if (activePreset && activePreset !== "ANY") return activePreset
+        var prefix = ""
+        if (autoGenerate)
+            prefix = (playbackStatus === "Playing" ? "AUTO: next track generates when this one ends" : "AUTO: generates when playback stops") + "   |   "
+        if (activePreset && activePreset !== "ANY") return prefix + activePreset
         var parts = []
         if (settTempo !== "random") parts.push(settTempo)
         if (settEnergy !== "random") parts.push(settEnergy)
@@ -287,7 +290,7 @@ PlasmoidItem {
         if (settHarmonyMode !== "random") parts.push(settHarmonyMode)
         if (settBassWeight !== "random") parts.push(settBassWeight + " bass")
         if (settForm !== "random") parts.push(settForm + " form")
-        return parts.length ? parts.join("  ·  ") : "any  ·  everything left to chance"
+        return prefix + (parts.length ? parts.join("  ·  ") : "any  ·  everything left to chance")
     }
 
     function refreshPlaylist() {
@@ -315,7 +318,14 @@ PlasmoidItem {
         generateSource.connectSource(cmd)
     }
 
+    // A second click within the debounce window is ignored: a bounce or an
+    // impatient re-click used to flip it straight back off.
+    property bool _autoDebounce: false
+    Timer { id: autoDebounceTimer; interval: 500; onTriggered: root._autoDebounce = false }
     function toggleAutoGenerate() {
+        if (root._autoDebounce) return
+        root._autoDebounce = true
+        autoDebounceTimer.restart()
         root.autoGenerate = !root.autoGenerate
         startCooldown()
         var flags = _buildSettingsFlags()
@@ -898,8 +908,10 @@ PlasmoidItem {
                 Rectangle {
                     width: 36
                     height: 36
+                    Layout.preferredWidth: 36
+                    Layout.preferredHeight: 36
                     radius: 4
-                    color: autoGenMouse.containsMouse ? "#142018" : root.tileBg
+                    color: root.autoGenerate ? "#3a0f1e" : (autoGenMouse.containsMouse ? "#142018" : root.tileBg)
                     border.width: 1
                     border.color: root.autoGenerate ? root.accentPink :
                         (autoGenMouse.containsMouse ? root.accentGreen : root.tileBorder)
@@ -918,21 +930,13 @@ PlasmoidItem {
                         font.bold: root.autoGenerate
 
                         Behavior on color { ColorAnimation { duration: 100 } }
-
-                        SequentialAnimation on opacity {
-                            loops: root.autoGenerate ? Animation.Infinite : 0
-                            running: root.autoGenerate
-                            NumberAnimation { to: 0.4; duration: 1200 }
-                            NumberAnimation { to: 1.0; duration: 1200 }
-                            onRunningChanged: if (!running) parent.opacity = 1
-                        }
                     }
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 2
-                        text: "AUTO"
+                        text: root.autoGenerate ? "ON" : "AUTO"
                         color: root.autoGenerate ? root.accentPink : root.dimText
                         font.family: "JetBrains Mono"
                         font.pixelSize: 7
@@ -952,6 +956,8 @@ PlasmoidItem {
                 Rectangle {
                     width: 36
                     height: 36
+                    Layout.preferredWidth: 36
+                    Layout.preferredHeight: 36
                     radius: 4
                     color: settingsMouse.containsMouse ? "#142018" : root.tileBg
                     border.width: 1
@@ -997,6 +1003,8 @@ PlasmoidItem {
                 Rectangle {
                     width: 36
                     height: 36
+                    Layout.preferredWidth: 36
+                    Layout.preferredHeight: 36
                     radius: 4
                     color: masterBtnMouse.containsMouse ? "#142018" : root.tileBg
                     border.width: 1

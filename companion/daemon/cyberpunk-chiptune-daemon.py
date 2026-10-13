@@ -225,7 +225,11 @@ def _save_state(state: dict):
 
 # ─── Player Engine ────────────────────────────────────────────────────────────
 
-AUTOGEN_PREFIX = "bitcomposer_auto_"
+# Auto-generated tracks are "<Title> (auto).it"; the suffix is what marks them
+# for pruning and what KeepTrack strips. Files from before titles existed were
+# "bitcomposer_auto_<timestamp>.it" and are still recognised.
+AUTOGEN_SUFFIX = " (auto)"
+AUTOGEN_LEGACY_PREFIX = "bitcomposer_auto_"
 AUTOGEN_MAX = 10
 
 
@@ -402,11 +406,6 @@ class ChiptunePlayer:
 
     def _do_generate(self, settings):
         """Background thread: run bitcomposer, then schedule playlist update on main loop."""
-        import time as _time
-        ts = int(_time.time())
-        filename = f"{AUTOGEN_PREFIX}{ts}.it"
-        outpath = os.path.join(MUSIC_DIR, filename)
-
         # argv, not a shell string: settings arrive over D-Bus from any client,
         # and the music dir can contain spaces.
         try:
@@ -414,8 +413,11 @@ class ChiptunePlayer:
         except ValueError as e:
             print(f"[AUTOGEN] Bad settings {settings!r}: {e}")
             flags = []
-        cmd = ["python3", "-m", "bitcomposer.cli", *flags, "-o", outpath]
-        print(f"[AUTOGEN] Generating: {filename}")
+        # The CLI names the file after the song's title; we only add the
+        # (auto) suffix and read the chosen path back from its output.
+        cmd = ["python3", "-m", "bitcomposer.cli", *flags,
+               "-d", MUSIC_DIR, "--suffix", AUTOGEN_SUFFIX]
+        print("[AUTOGEN] Generating...")
         try:
             result = _subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
@@ -430,7 +432,17 @@ class ChiptunePlayer:
             GLib.idle_add(self.next)
             return
 
-        print(f"[AUTOGEN] Generated: {filename}")
+        outpath = ""
+        for line in result.stdout.splitlines():
+            if line.startswith("Generated: "):
+                outpath = line[len("Generated: "):].strip()
+        if not outpath or not os.path.exists(outpath):
+            print(f"[AUTOGEN] Could not find output in: {result.stdout!r}")
+            self._generating = False
+            GLib.idle_add(self.next)
+            return
+
+        print(f"[AUTOGEN] Generated: {os.path.basename(outpath)}")
         # Schedule playlist rescan (which prunes) and play on main thread
         GLib.idle_add(self._autogen_play, outpath)
 
@@ -443,7 +455,8 @@ class ChiptunePlayer:
         """
         music = Path(MUSIC_DIR)
         autogen_files = sorted(
-            [f for f in music.glob(f"{AUTOGEN_PREFIX}*.it") if f.is_file()],
+            [f for f in music.rglob("*") if f.is_file()
+             and f.suffix.lower() in EXTENSIONS and self.is_autogen(str(f))],
             key=lambda f: f.stat().st_mtime
         )
         playing = self.module.filepath if self.module else None
@@ -465,15 +478,20 @@ class ChiptunePlayer:
                 self.current_index = self.playlist.index(self.module.filepath)
 
     def _autogen_play(self, filepath):
-        """Main thread callback: rescan, find the new file, play it."""
+        """Main thread callback: rescan, find the new file, play it.
+
+        If auto-generate was switched off while the track was being made,
+        keep the file but do not start it — the user just said stop."""
         self.scan_music_dir()
-        # Find the new file in playlist
-        for i, f in enumerate(self.playlist):
-            if f == filepath:
-                self.stop_playback()
-                if self._load_track(i):
-                    self.play()
-                break
+        if self.auto_generate:
+            for i, f in enumerate(self.playlist):
+                if f == filepath:
+                    self.stop_playback()
+                    if self._load_track(i):
+                        self.play()
+                    break
+        else:
+            print(f"[AUTOGEN] Switched off mid-generation; {os.path.basename(filepath)} kept, not played")
         self._generating = False
         return False
 
@@ -604,7 +622,8 @@ class ChiptunePlayer:
         return title
 
     def is_autogen(self, path):
-        return os.path.basename(path).startswith(AUTOGEN_PREFIX)
+        stem = Path(path).stem
+        return stem.endswith(AUTOGEN_SUFFIX) or stem.startswith(AUTOGEN_LEGACY_PREFIX)
 
     def keep_track(self, index):
         """Rename an auto-generated track so pruning leaves it alone.
@@ -614,11 +633,16 @@ class ChiptunePlayer:
         path = self.playlist[index]
         if not self.is_autogen(path):
             return os.path.basename(path)
-        base = os.path.basename(path)[len(AUTOGEN_PREFIX):]
-        new_path = os.path.join(os.path.dirname(path), "bitcomposer_" + base)
-        if os.path.exists(new_path):
-            stem, ext = os.path.splitext(new_path)
-            new_path = f"{stem}_kept{ext}"
+        stem, ext = os.path.splitext(os.path.basename(path))
+        if stem.endswith(AUTOGEN_SUFFIX):
+            stem = stem[:-len(AUTOGEN_SUFFIX)]
+        elif stem.startswith(AUTOGEN_LEGACY_PREFIX):
+            stem = "bitcomposer_" + stem[len(AUTOGEN_LEGACY_PREFIX):]
+        new_path = os.path.join(os.path.dirname(path), stem + ext)
+        n = 2
+        while os.path.exists(new_path):
+            new_path = os.path.join(os.path.dirname(path), f"{stem} {n}{ext}")
+            n += 1
         try:
             os.rename(path, new_path)
         except OSError as e:
@@ -884,13 +908,22 @@ class MPRISService(dbus.service.Object):
 
     @dbus.service.method(MPRIS_BUS_NAME, in_signature="bs")
     def SetAutoGenerate(self, enabled, settings):
-        """Toggle auto-generate mode. settings = CLI flags string."""
+        """Toggle auto-generate mode. settings = CLI flags string.
+
+        Only a real off->on switch while stopped kicks off a generation. The
+        widget re-sends this call with the current flags on every settings
+        change, and it used to start a fresh track each time — so with the
+        player stopped, every chip click began playing something.
+        """
+        was_on = self.player.auto_generate
         self.player.auto_generate = self._as_bool(enabled)
         self.player.auto_generate_settings = str(settings)
         self.player._persist()
-        print(f"[AUTOGEN] {'ON' if self.player.auto_generate else 'OFF'} settings: {settings}")
-        if self.player.auto_generate and self.player.status != "Playing":
-            # Kick off the first generation immediately
+        if self.player.auto_generate != was_on:
+            print(f"[AUTOGEN] {'ON' if self.player.auto_generate else 'OFF'} settings: {settings}")
+        if (self.player.auto_generate and not was_on
+                and self.player.status != "Playing" and not self.player._generating):
+            # Nothing is playing, so start the radio now.
             self.player._auto_generate_next()
         self._emit_props_changed()
 
