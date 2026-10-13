@@ -37,6 +37,11 @@ _LIMIT_KNEE = 20000.0   # soft limiting starts here (of 32767)
 _LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 CHANNELS = 2
 FRAMES_PER_BUFFER = 2048
+# Audio queued ahead of the speakers. Without a request PipeWire handed paplay
+# a 2.0 s buffer, so seeks and gain changes were heard two seconds late. The
+# decoder fills 43 ms per buffer, so 150 ms is comfortable with headroom for
+# a brief stall (autogen kicking off, say) without a dropout.
+OUTPUT_LATENCY_MS = 150
 EXTENSIONS = {".mod", ".xm", ".it", ".s3m", ".mptm"}
 
 # ─── libopenmpt ctypes bindings ───────────────────────────────────────────────
@@ -322,6 +327,7 @@ class ChiptunePlayer:
                     "--rate=" + str(SAMPLE_RATE),
                     "--channels=" + str(CHANNELS),
                     "--raw",
+                    f"--latency-msec={OUTPUT_LATENCY_MS}",
                     "--stream-name=Cyberpunk Chiptune Player",
                 ],
                 stdin=_subprocess.PIPE,
@@ -576,10 +582,33 @@ class ChiptunePlayer:
         self.volume = max(0.0, min(VOLUME_MAX, vol))
         self._persist()
 
+    def _halt_decoder(self):
+        """Stop the decode thread and drop the audio pipe, discarding whatever
+        was queued. Used by pause and seek so the change is heard at once."""
+        self._stop_event.set()
+        self._close_audio()
+        if self._decode_thread:
+            self._decode_thread.join(timeout=0.5)
+            self._decode_thread = None
+
+    def _start_decoder(self):
+        self._open_audio()
+        self._stop_event.clear()
+        self._pause_event.set()
+        self._decode_thread = threading.Thread(target=self._decode_loop, daemon=True)
+        self._decode_thread.start()
+
     def seek_to(self, seconds):
+        # Seeking only moved the module's read position; the audio already
+        # queued in the pipe still played out first. Flush it like pause does.
+        was_playing = self.status == "Playing"
+        if was_playing:
+            self._halt_decoder()
         with self._lock:
             if self.module:
-                self.module.seek(seconds)
+                self.module.seek(max(0.0, seconds))
+        if was_playing:
+            self._start_decoder()
 
     def get_metadata(self):
         with self._lock:

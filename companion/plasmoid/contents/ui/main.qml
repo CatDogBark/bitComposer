@@ -46,11 +46,13 @@ PlasmoidItem {
     readonly property string busPath: "/org/mpris/MediaPlayer2"
     readonly property string playerIface: "org.mpris.MediaPlayer2.Player"
 
-    // Cooldown: ignore polls briefly after a command so optimistic state isn't overwritten
+    // Cooldown: ignore polls briefly after a command so optimistic state isn't
+    // overwritten. A qdbus6 round trip is under 20 ms and polls run every
+    // 500 ms, so 400 ms is plenty; 800 made the progress bar lag after seeks.
     property bool cooldown: false
     Timer {
         id: cooldownTimer
-        interval: 800
+        interval: 400
         onTriggered: root.cooldown = false
     }
     function startCooldown() {
