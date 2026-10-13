@@ -96,10 +96,12 @@ re-running the installer on a machine where the daemon is already up would leave
 the old process holding the old `daemon.py` and the old `Environment=` — a green
 install that changed nothing. Finally it re-checks the import.
 
-`main.qml` hardcodes the music dir at line 116 — the only hardcoded `/home/troy`
-in the whole stack, since the daemon and both scripts use `$HOME`/`expanduser`.
-The installer rewrites that line to match `$MUSIC_DIR`, so a different username
-or a `$BITCOMPOSER_MUSIC_DIR` override works without hand-editing.
+`main.qml` carries a default music dir (the only `/home/troy` in the stack) that
+the installer rewrites to `$MUSIC_DIR`; at runtime the widget replaces it with
+whatever the daemon reports in `GetState` field 16, so the two cannot drift.
+
+Widget settings (preset and every chip) persist in the plasmoid's own
+configuration (`contents/config/main.xml`), so they survive a shell restart.
 
 Then add the widget: right-click panel → Add Widgets → "Cyberpunk Chiptune
 Player". After editing `main.qml` on an already-running shell:
@@ -132,14 +134,21 @@ is no longer a local-only modification that a reinstall would silently revert.
 Bus `org.mpris.MediaPlayer2.CyberpunkChiptune`, path `/org/mpris/MediaPlayer2`.
 Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
 
-- `GetState() -> s` — pipe-delimited, **14 fields**, 1-indexed for `cut -d'|'`:
+- `GetState() -> s` — pipe-delimited, **16 fields**, 1-indexed for `cut -d'|'`:
   1 status, 2 position, 3 duration, 4 channels, 5 title, 6 artist, 7 type,
   8 file, 9 patterns, 10 shuffle, 11 playlistCount, 12 currentIndex, 13 autoGen,
-  14 volume (linear gain, `1.00` = unity).
+  14 volume (linear gain, `1.00` = unity), 15 blurb (the module's song message
+  minus its title line, lines joined with `  /  `; generated tracks carry key,
+  BPM, style and form there), 16 music directory.
   Free-text fields have `|` replaced so a module title cannot shift the columns.
+- `GetPlaylistInfo() -> as` — one `filename|title|auto` line per track in
+  `GetPlaylist` order; `auto` is 1 for `bitcomposer_auto_*` files, which
+  `Rescan()` may prune. Titles are read through libopenmpt and cached by mtime.
+- `KeepTrack(i) -> s` — renames an auto-generated track to drop the prefix so
+  pruning leaves it alone; returns the new filename.
 - `Properties.Set Player Volume <0..3>` — linear gain; above 1.0 boosts with a
-  soft limiter on the output. Volume and Shuffle persist in
-  `~/.config/cyberpunk-chiptune/state.json`. Boolean and numeric variants may
+  soft limiter on the output. Volume, Shuffle and the auto-generate flag with
+  its CLI flags persist in `~/.config/cyberpunk-chiptune/state.json`. Boolean and numeric variants may
   arrive as strings (qdbus6 sends them that way) and are parsed.
 - `GetPlaylist() -> as`
 - `PlayIndex(i)` — `i` is a position in `GetPlaylist`, with or without shuffle.
@@ -168,10 +177,8 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
   `unlink()` and no trash. It is the single place pruning happens
   (`bitcomposer-generate.sh` used to prune independently). Rename a track you
   want to keep so it loses the `bitcomposer_auto_` prefix.
-- **Hardcoded music dir.** `plasmoid/contents/ui/main.qml:116` has
-  `/home/troy/Music/Chiptune/`. It is the only hardcoded `/home/troy` in the
-  stack — the daemon and both scripts use `$HOME` / `expanduser`. Patch it if the
-  user is not `troy`.
+- **Default music dir in the QML.** `main.qml` has `/home/troy/Music/Chiptune/`
+  as a fallback; the installer patches it and the daemon overrides it live.
 - **Mastering restarts the track.** `bitcomposer-master.sh` stops, rescans and
   replays the current track so the edit is audible immediately. That is by
   design, not a bug, but it is not a seamless in-place update.

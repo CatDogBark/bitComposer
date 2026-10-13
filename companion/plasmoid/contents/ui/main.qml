@@ -27,7 +27,8 @@ PlasmoidItem {
     property bool shuffleOn: false
     property int playlistCount: 0
     property int currentIndex: -1
-    property var playlistNames: []
+    property var playlistInfo: []      // [{file, title, auto}] from GetPlaylistInfo
+    property string trackMessage: ""   // key / BPM / palette / form, from the module's song message
     property real volumeGain: 1.0      // 1.0 = unity, up to maxGain (boost)
     readonly property real maxGain: 3.0
 
@@ -113,7 +114,8 @@ PlasmoidItem {
     property bool autoGenerate: false
     property bool showSettings: false
     property bool showMaster: false
-    property int settingsTab: 0  // 0=COMPOSE, 1=DRUMS, 2=MELODY, 3=HARMONY
+    property int settingsTab: Math.min(2, Plasmoid.configuration.settingsTab)  // 0=COMPOSE, 1=DRUMS, 2=PARTS
+    onSettingsTabChanged: Plasmoid.configuration.settingsTab = settingsTab
 
     // Channel volumes for mastering (0-64, matches IT header bytes 128-191).
     // Order mirrors bitcomposer.pattern; keep in step with CHANNEL_VOLUMES there.
@@ -127,7 +129,12 @@ PlasmoidItem {
         channelVolumesChanged()
     }
 
-    readonly property string musicDir: "/home/troy/Music/Chiptune/"
+    property string musicDir: "/home/troy/Music/Chiptune/"
+    function shortDir() {
+        var d = root.musicDir.replace(/\/$/, "")
+        var m = d.match(/^\/home\/[^\/]+\//)
+        return m ? "~/" + d.substring(m[0].length) : d
+    }
 
     function _trackPath() {
         if (!root.trackFile) return ""
@@ -174,19 +181,20 @@ PlasmoidItem {
             }
         }
     }
-    property string settTempo: "random"
-    property string settEnergy: "random"
-    property string settScale: "random"
-    property string settStyle: "random"
-    property string settDrumDensity: "random"
-    property bool settDrumFills: true
-    property string settDrumSwing: "random"
-    property string settMelody: "random"
-    property string settHarmonyVoicing: "random"
-    property string settHarmonyMode: "random"
-    property string settBassWeight: "random"
-    property string settForm: "random"
-    property string activePreset: ""
+    property string settTempo: Plasmoid.configuration.settTempo
+    property string settEnergy: Plasmoid.configuration.settEnergy
+    property string settScale: Plasmoid.configuration.settScale
+    property string settStyle: Plasmoid.configuration.settStyle
+    property string settDrumDensity: Plasmoid.configuration.settDrumDensity
+    property bool settDrumFills: Plasmoid.configuration.settDrumFills
+    property string settDrumSwing: Plasmoid.configuration.settDrumSwing
+    property string settMelody: Plasmoid.configuration.settMelody
+    property string settHarmonyVoicing: Plasmoid.configuration.settHarmonyVoicing
+    property string settHarmonyMode: Plasmoid.configuration.settHarmonyMode
+    property string settBassWeight: Plasmoid.configuration.settBassWeight
+    property string settForm: Plasmoid.configuration.settForm
+    property string activePreset: Plasmoid.configuration.activePreset
+    onActivePresetChanged: Plasmoid.configuration.activePreset = activePreset
     function _onSettingChanged() {
         if (!_applyingPreset) activePreset = ""
         if (autoGenerate) _pushAutoGenSettings()
@@ -198,18 +206,18 @@ PlasmoidItem {
     }
     onTrackFileChanged: if (showMaster) _loadMasterFromFile()
     onShowMasterChanged: if (showMaster) _loadMasterFromFile()
-    onSettTempoChanged: _onSettingChanged()
-    onSettEnergyChanged: _onSettingChanged()
-    onSettScaleChanged: _onSettingChanged()
-    onSettStyleChanged: _onSettingChanged()
-    onSettDrumDensityChanged: _onSettingChanged()
-    onSettDrumFillsChanged: _onSettingChanged()
-    onSettDrumSwingChanged: _onSettingChanged()
-    onSettMelodyChanged: _onSettingChanged()
-    onSettHarmonyVoicingChanged: _onSettingChanged()
-    onSettHarmonyModeChanged: _onSettingChanged()
-    onSettBassWeightChanged: _onSettingChanged()
-    onSettFormChanged: _onSettingChanged()
+    onSettTempoChanged: { Plasmoid.configuration.settTempo = settTempo; _onSettingChanged() }
+    onSettEnergyChanged: { Plasmoid.configuration.settEnergy = settEnergy; _onSettingChanged() }
+    onSettScaleChanged: { Plasmoid.configuration.settScale = settScale; _onSettingChanged() }
+    onSettStyleChanged: { Plasmoid.configuration.settStyle = settStyle; _onSettingChanged() }
+    onSettDrumDensityChanged: { Plasmoid.configuration.settDrumDensity = settDrumDensity; _onSettingChanged() }
+    onSettDrumFillsChanged: { Plasmoid.configuration.settDrumFills = settDrumFills; _onSettingChanged() }
+    onSettDrumSwingChanged: { Plasmoid.configuration.settDrumSwing = settDrumSwing; _onSettingChanged() }
+    onSettMelodyChanged: { Plasmoid.configuration.settMelody = settMelody; _onSettingChanged() }
+    onSettHarmonyVoicingChanged: { Plasmoid.configuration.settHarmonyVoicing = settHarmonyVoicing; _onSettingChanged() }
+    onSettHarmonyModeChanged: { Plasmoid.configuration.settHarmonyMode = settHarmonyMode; _onSettingChanged() }
+    onSettBassWeightChanged: { Plasmoid.configuration.settBassWeight = settBassWeight; _onSettingChanged() }
+    onSettFormChanged: { Plasmoid.configuration.settForm = settForm; _onSettingChanged() }
     property bool _applyingPreset: false
 
     function applyPreset(name) {
@@ -223,7 +231,7 @@ PlasmoidItem {
             "CREDITS":      { tempo: "slow",   energy: "chill",   scale: "major",      style: "snes",    drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
             "STREET FIGHT": { tempo: "fast",   energy: "intense", scale: "pentatonic", style: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "stabs",    bass: "heavy",  form: "short"    },
             "CYBER NOIR":   { tempo: "medium", energy: "normal",  scale: "minor",      style: "genesis", drumDensity: "normal", fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "linear"   },
-            "RANDOM":       { tempo: "random", energy: "random",  scale: "random",     style: "random",  drumDensity: "random", fills: true,  swing: "random", melody: "random",  voicing: "random", mode: "random", bass: "random", form: "random"   },
+            "ANY":          { tempo: "random", energy: "random",  scale: "random",     style: "random",  drumDensity: "random", fills: true,  swing: "random", melody: "random",  voicing: "random", mode: "random", bass: "random", form: "random"   },
         }
         var p = presets[name]
         if (!p) return
@@ -261,6 +269,43 @@ PlasmoidItem {
         return flags
     }
 
+    // One line describing what GENERATE will do, shown while the settings
+    // panel is closed. The preset name if one is active, otherwise every
+    // setting that is not left to chance.
+    function settingsSummary() {
+        if (activePreset && activePreset !== "ANY") return activePreset
+        var parts = []
+        if (settTempo !== "random") parts.push(settTempo)
+        if (settEnergy !== "random") parts.push(settEnergy)
+        if (settScale !== "random") parts.push(settScale)
+        if (settStyle !== "random") parts.push(settStyle)
+        if (settDrumDensity !== "random") parts.push(settDrumDensity + " drums")
+        if (!settDrumFills) parts.push("no fills")
+        if (settDrumSwing !== "random") parts.push(settDrumSwing + " swing")
+        if (settMelody !== "random") parts.push(settMelody + " melody")
+        if (settHarmonyVoicing !== "random") parts.push(settHarmonyVoicing + " harmony")
+        if (settHarmonyMode !== "random") parts.push(settHarmonyMode)
+        if (settBassWeight !== "random") parts.push(settBassWeight + " bass")
+        if (settForm !== "random") parts.push(settForm + " form")
+        return parts.length ? parts.join("  ·  ") : "any  ·  everything left to chance"
+    }
+
+    function refreshPlaylist() {
+        playlistSource.connectedSources = []
+        playlistSource.connectedSources = [
+            "qdbus6 " + root.busName + " " + root.busPath + " " + root.busName + ".GetPlaylistInfo"
+        ]
+    }
+    function keepTrack(idx) {
+        startCooldown()
+        dbusCustom("KeepTrack " + idx)
+        keepRefresh.restart()
+    }
+    Timer { id: keepRefresh; interval: 300; onTriggered: root.refreshPlaylist() }
+    function openMusicDir() {
+        cmdSource.connectSource("xdg-open '" + root.musicDir.replace(/'/g, "'\\''") + "'")
+    }
+
     function generateTrack() {
         if (root.generating) return
         root.generating = true
@@ -286,11 +331,7 @@ PlasmoidItem {
             disconnectSource(source)
             root.generating = false
             startCooldown()
-            // Refresh playlist display
-            playlistSource.connectedSources = []
-            playlistSource.connectedSources = [
-                "qdbus6 " + root.busName + " " + root.busPath + " " + root.busName + ".GetPlaylist"
-            ]
+            root.refreshPlaylist()
         }
     }
 
@@ -330,6 +371,11 @@ PlasmoidItem {
                 var g = parseFloat(parts[13])
                 if (!isNaN(g)) root.volumeGain = g
             }
+            if (parts.length > 14) root.trackMessage = parts[14]
+            if (parts.length > 15 && parts[15]) {
+                var d = parts[15]
+                root.musicDir = d.endsWith("/") ? d : d + "/"
+            }
         }
     }
 
@@ -338,13 +384,22 @@ PlasmoidItem {
         id: playlistSource
         engine: "executable"
         connectedSources: [
-            "qdbus6 " + root.busName + " " + root.busPath + " " + root.busName + ".GetPlaylist"
+            "qdbus6 " + root.busName + " " + root.busPath + " " + root.busName + ".GetPlaylistInfo"
         ]
         interval: 2000
 
         onNewData: function(source, data) {
             var stdout = (data["stdout"] || "").trim()
-            root.playlistNames = stdout ? stdout.split("\n") : []
+            var rows = []
+            if (stdout) {
+                var lines = stdout.split("\n")
+                for (var i = 0; i < lines.length; i++) {
+                    var f = lines[i].split("|")
+                    rows.push({ file: f[0], title: f.length > 1 && f[1] ? f[1] : f[0],
+                                auto: f.length > 2 && f[2] === "1" })
+                }
+            }
+            root.playlistInfo = rows
         }
     }
 
@@ -508,6 +563,16 @@ PlasmoidItem {
                             NumberAnimation { to: 1.0; duration: 800 }
                             onRunningChanged: if (!running) parent.opacity = 1
                         }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        visible: root.trackMessage !== ""
+                        text: root.trackMessage
+                        color: root.textColor
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: 9
+                        wrapMode: Text.WordWrap
                     }
 
                     Text {
@@ -782,34 +847,6 @@ PlasmoidItem {
                 }
             }
 
-            // ── Status Line ──
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-                Text {
-                    text: "SHUFFLE: " + (root.shuffleOn ? "ON" : "OFF")
-                    color: root.shuffleOn ? root.accentPink : root.dimText
-                    font.family: "JetBrains Mono"
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
-                }
-                Text {
-                    text: "AUTO: " + (root.autoGenerate ? "ON" : "OFF")
-                    color: root.autoGenerate ? root.accentPink : root.dimText
-                    font.family: "JetBrains Mono"
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
-                }
-                Item { Layout.fillWidth: true }
-                Text {
-                    text: "TRACKS: " + root.playlistCount
-                    color: root.dimText
-                    font.family: "JetBrains Mono"
-                    font.pixelSize: 9
-                    font.letterSpacing: 1
-                }
-            }
-
             // ── Generate + Settings ──
             RowLayout {
                 Layout.fillWidth: true
@@ -818,7 +855,7 @@ PlasmoidItem {
                 // Generate button
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 30
+                    height: 36
                     radius: 4
                     color: generateMouse.containsMouse ? "#142018" : root.tileBg
                     border.width: 1
@@ -859,8 +896,8 @@ PlasmoidItem {
 
                 // Auto-generate toggle button
                 Rectangle {
-                    width: 30
-                    height: 30
+                    width: 36
+                    height: 36
                     radius: 4
                     color: autoGenMouse.containsMouse ? "#142018" : root.tileBg
                     border.width: 1
@@ -871,11 +908,13 @@ PlasmoidItem {
                     Behavior on border.color { ColorAnimation { duration: 100 } }
 
                     Text {
-                        anchors.centerIn: parent
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: 1
                         text: "∞"
                         color: root.autoGenerate ? root.accentPink :
                             (autoGenMouse.containsMouse ? root.accentGreen : root.textColor)
-                        font.pixelSize: 16
+                        font.pixelSize: 15
                         font.bold: root.autoGenerate
 
                         Behavior on color { ColorAnimation { duration: 100 } }
@@ -889,6 +928,17 @@ PlasmoidItem {
                         }
                     }
 
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 2
+                        text: "AUTO"
+                        color: root.autoGenerate ? root.accentPink : root.dimText
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: 7
+                        font.letterSpacing: 1
+                    }
+
                     MouseArea {
                         id: autoGenMouse
                         anchors.fill: parent
@@ -900,8 +950,8 @@ PlasmoidItem {
 
                 // Settings gear button
                 Rectangle {
-                    width: 30
-                    height: 30
+                    width: 36
+                    height: 36
                     radius: 4
                     color: settingsMouse.containsMouse ? "#142018" : root.tileBg
                     border.width: 1
@@ -912,13 +962,26 @@ PlasmoidItem {
                     Behavior on border.color { ColorAnimation { duration: 100 } }
 
                     Text {
-                        anchors.centerIn: parent
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: 1
                         text: "⚙"
                         color: root.showSettings ? root.accentCyan :
                             (settingsMouse.containsMouse ? root.accentGreen : root.textColor)
                         font.pixelSize: 14
 
                         Behavior on color { ColorAnimation { duration: 100 } }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 2
+                        text: "SET"
+                        color: root.showSettings ? root.accentCyan : root.dimText
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: 7
+                        font.letterSpacing: 1
                     }
 
                     MouseArea {
@@ -932,8 +995,8 @@ PlasmoidItem {
 
                 // Master toggle button
                 Rectangle {
-                    width: 30
-                    height: 30
+                    width: 36
+                    height: 36
                     radius: 4
                     color: masterBtnMouse.containsMouse ? "#142018" : root.tileBg
                     border.width: 1
@@ -944,13 +1007,26 @@ PlasmoidItem {
                     Behavior on border.color { ColorAnimation { duration: 100 } }
 
                     Text {
-                        anchors.centerIn: parent
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: 1
                         text: "♬"
                         color: root.showMaster ? root.accentPink :
                             (masterBtnMouse.containsMouse ? root.accentGreen : root.textColor)
                         font.pixelSize: 14
 
                         Behavior on color { ColorAnimation { duration: 100 } }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 2
+                        text: "MIX"
+                        color: root.showMaster ? root.accentPink : root.dimText
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: 7
+                        font.letterSpacing: 1
                     }
 
                     MouseArea {
@@ -962,6 +1038,18 @@ PlasmoidItem {
                     }
                 }
 
+            }
+
+            // ── Settings summary (what GENERATE will do) ──
+            Text {
+                Layout.fillWidth: true
+                visible: !root.showSettings
+                text: root.settingsSummary()
+                color: root.dimText
+                font.family: "JetBrains Mono"
+                font.pixelSize: 8
+                font.letterSpacing: 1
+                elide: Text.ElideRight
             }
 
             // ── Settings Panel ──
@@ -993,7 +1081,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         spacing: 3
                         Repeater {
-                            model: ["MEGA DRIVE", "CASTLEVANIA", "BOSS FIGHT", "OVERWORLD", "CHILL WAVE", "DUNGEON", "CREDITS", "STREET FIGHT", "CYBER NOIR", "RANDOM"]
+                            model: ["MEGA DRIVE", "CASTLEVANIA", "BOSS FIGHT", "OVERWORLD", "CHILL WAVE", "DUNGEON", "CREDITS", "STREET FIGHT", "CYBER NOIR", "ANY"]
                             Rectangle {
                                 required property string modelData
                                 property bool active: root.activePreset === modelData
@@ -1013,7 +1101,7 @@ PlasmoidItem {
                     Row {
                         spacing: 2
                         Repeater {
-                            model: ["COMPOSE", "DRUMS", "MELODY", "HARMONY"]
+                            model: ["COMPOSE", "DRUMS", "PARTS"]
                             Rectangle {
                                 required property string modelData
                                 required property int index
@@ -1239,7 +1327,7 @@ PlasmoidItem {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 6
-                        visible: root.settingsTab === 3
+                        visible: root.settingsTab === 2
 
                         // VOICING
                         RowLayout { Layout.fillWidth: true; spacing: 8
@@ -1457,6 +1545,42 @@ PlasmoidItem {
                     font.letterSpacing: 3
                 }
                 Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0, 1, 0.53, 0.12) }
+                Text {
+                    text: root.playlistInfo.length + " TRACKS"
+                    color: root.dimText
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 8
+                    font.letterSpacing: 1
+                }
+            }
+            // Where the music lives. Click to open the folder. Auto-generated
+            // tracks are marked and the oldest beyond ten are pruned; KEEP
+            // renames one out of that set.
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                Text {
+                    text: root.shortDir() + "  ↗"
+                    color: dirMouse.containsMouse ? root.accentGreen : root.dimText
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 8
+                    elide: Text.ElideMiddle
+                    Layout.fillWidth: true
+                    MouseArea {
+                        id: dirMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.openMusicDir()
+                    }
+                }
+                Text {
+                    text: "AUTO = pruned after 10"
+                    color: Qt.rgba(1, 0, 0.33, 0.5)
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 7
+                    font.letterSpacing: 1
+                }
             }
 
             ListView {
@@ -1464,10 +1588,10 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(contentHeight, 200)
                 clip: true
-                model: root.playlistNames
+                model: root.playlistInfo
 
                 delegate: Rectangle {
-                    required property string modelData
+                    required property var modelData
                     required property int index
 
                     width: playlistView.width
@@ -1491,11 +1615,44 @@ PlasmoidItem {
 
                         Text {
                             Layout.fillWidth: true
-                            text: modelData
+                            text: modelData.title
                             color: index === root.currentIndex ? root.accentGreen : root.textColor
                             font.family: "JetBrains Mono"
                             font.pixelSize: 9
                             elide: Text.ElideRight
+                        }
+                        Text {
+                            visible: modelData.auto && !(plMouse.containsMouse)
+                            text: "AUTO"
+                            color: Qt.rgba(1, 0, 0.33, 0.6)
+                            font.family: "JetBrains Mono"
+                            font.pixelSize: 7
+                            font.letterSpacing: 1
+                        }
+                        Rectangle {
+                            visible: modelData.auto && plMouse.containsMouse
+                            width: keepLabel.implicitWidth + 10
+                            height: 16
+                            radius: 3
+                            color: keepMouse.containsMouse ? "#1a2e26" : "transparent"
+                            border.width: 1
+                            border.color: root.accentPink
+                            Text {
+                                id: keepLabel
+                                anchors.centerIn: parent
+                                text: "KEEP"
+                                color: root.accentPink
+                                font.family: "JetBrains Mono"
+                                font.pixelSize: 7
+                                font.letterSpacing: 1
+                            }
+                            MouseArea {
+                                id: keepMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.keepTrack(index)
+                            }
                         }
 
                         Text {

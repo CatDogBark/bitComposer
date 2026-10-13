@@ -163,7 +163,7 @@ do_install() {
     # main.qml hardcodes the music dir; patch it if this is not the same user.
     local qml="$PLASMOID_DIR/contents/ui/main.qml"
     if ! grep -q "\"$MUSIC_DIR/\"" "$qml" 2>/dev/null; then
-        sed -i "s|readonly property string musicDir: \".*\"|readonly property string musicDir: \"$MUSIC_DIR/\"|" "$qml"
+        sed -i "s|property string musicDir: \".*\"|property string musicDir: \"$MUSIC_DIR/\"|" "$qml"
         say "patched musicDir in main.qml -> $MUSIC_DIR/"
     fi
 

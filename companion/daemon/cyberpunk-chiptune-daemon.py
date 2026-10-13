@@ -145,6 +145,10 @@ class OpenMPTModule:
         return self.get_metadata("type")
 
     @property
+    def message(self):
+        return self.get_metadata("message")
+
+    @property
     def duration(self):
         return _lib.openmpt_module_get_duration_seconds(self._mod)
 
@@ -245,6 +249,7 @@ class ChiptunePlayer:
         except (TypeError, ValueError):
             pass
         self.shuffle = bool(saved.get("shuffle", False))
+        self._title_cache = {}   # path -> (mtime, title)
 
         self._lock = threading.Lock()
         self._pw_proc = None
@@ -257,9 +262,11 @@ class ChiptunePlayer:
         # Audio buffer
         self._buf = (ctypes.c_int16 * (FRAMES_PER_BUFFER * CHANNELS))()
 
-        # Auto-generate state
-        self.auto_generate = False
-        self.auto_generate_settings = ""  # CLI flags string
+        # Auto-generate state. The flag and its flags string are restored from
+        # the state file so "radio mode" survives a reboot; nothing starts
+        # playing until asked, generation only triggers when a track ends.
+        self.auto_generate = bool(saved.get("auto_generate", False))
+        self.auto_generate_settings = str(saved.get("auto_generate_settings", ""))
         self._generating = False
 
     def scan_music_dir(self):
@@ -570,7 +577,61 @@ class ChiptunePlayer:
             self.play()
 
     def _persist(self):
-        _save_state({"volume": round(self.volume, 3), "shuffle": self.shuffle})
+        _save_state({
+            "volume": round(self.volume, 3),
+            "shuffle": self.shuffle,
+            "auto_generate": self.auto_generate,
+            "auto_generate_settings": self.auto_generate_settings,
+        })
+
+    def track_title(self, path):
+        """Module title for a playlist entry, cached by mtime. Falls back to the
+        filename when the module has none or cannot be opened."""
+        try:
+            mtime = os.stat(path).st_mtime
+        except OSError:
+            return Path(path).stem
+        hit = self._title_cache.get(path)
+        if hit and hit[0] == mtime:
+            return hit[1]
+        try:
+            mod = OpenMPTModule(path)
+            title = mod.title
+            mod.destroy()
+        except RuntimeError:
+            title = Path(path).stem
+        self._title_cache[path] = (mtime, title)
+        return title
+
+    def is_autogen(self, path):
+        return os.path.basename(path).startswith(AUTOGEN_PREFIX)
+
+    def keep_track(self, index):
+        """Rename an auto-generated track so pruning leaves it alone.
+        Returns the new basename, or "" if nothing was done."""
+        if not (0 <= index < len(self.playlist)):
+            return ""
+        path = self.playlist[index]
+        if not self.is_autogen(path):
+            return os.path.basename(path)
+        base = os.path.basename(path)[len(AUTOGEN_PREFIX):]
+        new_path = os.path.join(os.path.dirname(path), "bitcomposer_" + base)
+        if os.path.exists(new_path):
+            stem, ext = os.path.splitext(new_path)
+            new_path = f"{stem}_kept{ext}"
+        try:
+            os.rename(path, new_path)
+        except OSError as e:
+            print(f"[KEEP] {e}")
+            return ""
+        self.playlist[index] = new_path
+        if path in self._title_cache:
+            self._title_cache[new_path] = self._title_cache.pop(path)
+        with self._lock:
+            if self.module and self.module.filepath == path:
+                self.module.filepath = new_path
+        print(f"[KEEP] {os.path.basename(path)} -> {os.path.basename(new_path)}")
+        return os.path.basename(new_path)
 
     def set_shuffle(self, enabled):
         self.shuffle = enabled
@@ -622,6 +683,7 @@ class ChiptunePlayer:
                     "channels": self.module.num_channels,
                     "patterns": self.module.num_patterns,
                     "file": os.path.basename(self.module.filepath),
+                    "message": self.module.message,
                 }
         return {}
 
@@ -751,16 +813,23 @@ class MPRISService(dbus.service.Object):
     def GetState(self):
         """Return compact state as a parseable string for the plasmoid.
 
-        14 pipe-delimited fields; see docs/INSTALL.md. Free-text fields have
+        16 pipe-delimited fields; see docs/INSTALL.md. Free-text fields have
         the delimiter stripped so a module titled "A|B" cannot shift them.
+        Field 15 is the module's song message minus its title line, joined
+        with " / "; field 16 is the music directory.
         """
         meta = self.player.get_metadata()
         ag = int(self.player.auto_generate)
         vol = f"{self.player.volume:.2f}"
+        clean = lambda v: str(v).replace("|", "/").replace("\n", " ")
         if not meta:
             return (f"Stopped|0|0|0||||||{int(self.player.shuffle)}"
-                    f"|{len(self.player.playlist)}|{self.player.current_index}|{ag}|{vol}")
-        clean = lambda v: str(v).replace("|", "/").replace("\n", " ")
+                    f"|{len(self.player.playlist)}|{self.player.current_index}|{ag}|{vol}"
+                    f"||{clean(MUSIC_DIR)}")
+        lines = [ln.strip() for ln in (meta.get("message") or "").splitlines() if ln.strip()]
+        if lines and lines[0] == meta["title"]:
+            lines = lines[1:]
+        blurb = "  /  ".join(clean(ln) for ln in lines[:3])
         return (
             f"{self.player.status}"
             f"|{meta['position']:.1f}"
@@ -776,11 +845,30 @@ class MPRISService(dbus.service.Object):
             f"|{self.player.current_index}"
             f"|{ag}"
             f"|{vol}"
+            f"|{blurb}"
+            f"|{clean(MUSIC_DIR)}"
         )
 
     @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
     def GetPlaylist(self):
         return dbus.Array(self.player.get_playlist_info(), signature="s")
+
+    @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
+    def GetPlaylistInfo(self):
+        """One "filename|title|auto" line per track, in GetPlaylist order.
+        auto is 1 for bitcomposer_auto_* files, which Rescan may prune."""
+        out = []
+        for path in self.player.playlist:
+            title = self.player.track_title(path).replace("|", "/")
+            out.append(f"{os.path.basename(path)}|{title}|{int(self.player.is_autogen(path))}")
+        return dbus.Array(out, signature="s")
+
+    @dbus.service.method(MPRIS_BUS_NAME, in_signature="i", out_signature="s")
+    def KeepTrack(self, index):
+        """Rename an auto-generated track out of the prune set. Returns the new filename."""
+        name = self.player.keep_track(int(index))
+        self._emit_props_changed()
+        return name
 
     @dbus.service.method(MPRIS_BUS_NAME, in_signature="i")
     def PlayIndex(self, index):
@@ -797,10 +885,11 @@ class MPRISService(dbus.service.Object):
     @dbus.service.method(MPRIS_BUS_NAME, in_signature="bs")
     def SetAutoGenerate(self, enabled, settings):
         """Toggle auto-generate mode. settings = CLI flags string."""
-        self.player.auto_generate = bool(enabled)
+        self.player.auto_generate = self._as_bool(enabled)
         self.player.auto_generate_settings = str(settings)
-        print(f"[AUTOGEN] {'ON' if enabled else 'OFF'} settings: {settings}")
-        if enabled and self.player.status != "Playing":
+        self.player._persist()
+        print(f"[AUTOGEN] {'ON' if self.player.auto_generate else 'OFF'} settings: {settings}")
+        if self.player.auto_generate and self.player.status != "Playing":
             # Kick off the first generation immediately
             self.player._auto_generate_next()
         self._emit_props_changed()
