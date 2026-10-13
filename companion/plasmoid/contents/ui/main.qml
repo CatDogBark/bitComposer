@@ -103,10 +103,12 @@ PlasmoidItem {
     property bool showMaster: false
     property int settingsTab: 0  // 0=COMPOSE, 1=DRUMS, 2=MELODY, 3=HARMONY
 
-    // Channel volumes for mastering (0-64, matches IT header bytes 128-191)
-    property var channelVolumes: [13, 25, 25, 25, 8, 33, 36, 36, 36, 36, 36, 36]
-    readonly property var channelNames: ["MELODY", "HARM 1", "HARM 2", "HARM 3", "BASS", "ARP", "KICK", "SNARE", "HIHAT", "TOM", "CRASH", "OP HAT"]
-    readonly property var channelColors: [0, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2] // 0=green, 1=cyan, 2=pink
+    // Channel volumes for mastering (0-64, matches IT header bytes 128-191).
+    // Order mirrors bitcomposer.pattern; keep in step with CHANNEL_VOLUMES there.
+    property var channelVolumes: [13, 25, 25, 25, 8, 33, 36, 36, 36, 36, 36, 36, 13, 13]
+    readonly property var channelNames: ["MELODY", "HARM 1", "HARM 2", "HARM 3", "BASS", "ARP", "KICK", "SNARE", "HIHAT", "TOM", "CRASH", "OP HAT", "ECHO 1", "ECHO 2"]
+    readonly property var channelColors: [0, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2, 1, 1] // 0=green, 1=cyan, 2=pink
+    readonly property int channelCount: channelNames.length
 
     function applyChannelVolume(channel, value) {
         channelVolumes[channel] = value
@@ -125,15 +127,16 @@ PlasmoidItem {
     function _applyMasterToFile() {
         var path = _trackPath()
         if (!path) return
-        var cmd = "bitcomposer-master.sh '" + path + "'"
-        for (var i = 0; i < 12; i++) cmd += " " + channelVolumes[i]
+        var cmd = "bitcomposer-master.sh '" + path.replace(/'/g, "'\\''") + "'"
+        for (var i = 0; i < channelCount; i++) cmd += " " + channelVolumes[i]
         masterSource.connectSource(cmd)
     }
 
     function _loadMasterFromFile() {
         var path = _trackPath()
         if (!path) return
-        var cmd = "python3 -c \"f=open('" + path + "','rb');f.seek(128);d=f.read(12);f.close();print(' '.join(str(b) for b in d))\""
+        // Read the per-channel volume block straight from the file header.
+        var cmd = "od -An -tu1 -j128 -N" + channelCount + " '" + path.replace(/'/g, "'\\''") + "'"
         masterLoadSource.connectSource(cmd)
     }
 
@@ -150,10 +153,10 @@ PlasmoidItem {
             disconnectSource(source)
             var stdout = (data["stdout"] || "").trim()
             if (!stdout) return
-            var parts = stdout.split(" ")
-            if (parts.length >= 12) {
+            var parts = stdout.split(/\s+/)
+            if (parts.length >= channelCount) {
                 var vols = []
-                for (var i = 0; i < 12; i++)
+                for (var i = 0; i < channelCount; i++)
                     vols.push(parseInt(parts[i]) || 0)
                 root.channelVolumes = vols
             }
@@ -993,7 +996,7 @@ PlasmoidItem {
                         RowLayout { Layout.fillWidth: true; spacing: 8
                             Text { Layout.preferredWidth: 52; text: "STYLE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
                             Row { spacing: 3
-                                Repeater { model: ["random", "snes", "genesis"]
+                                Repeater { model: ["random", "chip", "snes", "genesis"]
                                     Rectangle {
                                         required property string modelData
                                         property bool active: root.settStyle === modelData
@@ -1234,7 +1237,7 @@ PlasmoidItem {
 
                     // Channel sliders — horizontal rows
                     Repeater {
-                        model: 12
+                        model: root.channelCount
                         delegate: RowLayout {
                             required property int index
                             Layout.fillWidth: true

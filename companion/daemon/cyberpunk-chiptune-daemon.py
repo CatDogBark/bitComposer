@@ -5,14 +5,12 @@ Plays .mod/.xm/.it/.s3m tracker files via libopenmpt, exposes MPRIS2 over D-Bus.
 """
 
 import ctypes
-import ctypes.util
 import os
 import random
+import shlex
 import signal
 import struct
-import sys
 import threading
-import time
 from pathlib import Path
 
 import dbus
@@ -209,16 +207,43 @@ class ChiptunePlayer:
         ])
         self.playlist = files
         self._rebuild_shuffle()
+        # Keep pointing at the track that is loaded. Files appearing or
+        # disappearing before it in sort order used to shift current_index
+        # onto a different file, so the widget highlighted the wrong row and
+        # Next skipped or repeated a track.
+        if self.module is not None and self.module.filepath in files:
+            self.current_index = files.index(self.module.filepath)
+        elif self.current_index >= len(files):
+            self.current_index = -1
+        self._prune_autogen()
         print(f"[SCAN] Found {len(files)} tracks in {MUSIC_DIR}")
 
     def _rebuild_shuffle(self):
         self.shuffle_order = list(range(len(self.playlist)))
         random.shuffle(self.shuffle_order)
 
-    def _effective_index(self, idx):
-        if self.shuffle and 0 <= idx < len(self.shuffle_order):
-            return self.shuffle_order[idx]
-        return idx
+    def _step_index(self, direction):
+        """Playlist index of the next (+1) or previous (-1) track.
+
+        current_index is always a real playlist position — the same numbering
+        GetPlaylist, PlayIndex and the widget use. Shuffle only changes how
+        we step from one to the next: along a shuffled ring of positions
+        rather than in list order. Previously the index was a position in the
+        shuffled ring, so with shuffle on PlayIndex(n) from the widget played
+        a different track from the one clicked and the highlight was wrong.
+        """
+        n = len(self.playlist)
+        if n == 0:
+            return -1
+        if not self.shuffle:
+            return (self.current_index + direction) % n
+        if len(self.shuffle_order) != n:
+            self._rebuild_shuffle()
+        try:
+            pos = self.shuffle_order.index(self.current_index)
+        except ValueError:
+            pos = -1 if direction > 0 else 0
+        return self.shuffle_order[(pos + direction) % n]
 
     def _open_audio(self):
         if self._pw_proc is None or self._pw_proc.poll() is not None:
@@ -311,10 +336,17 @@ class ChiptunePlayer:
         filename = f"{AUTOGEN_PREFIX}{ts}.it"
         outpath = os.path.join(MUSIC_DIR, filename)
 
-        cmd = f"python3 -m bitcomposer.cli {settings} -o {outpath}"
+        # argv, not a shell string: settings arrive over D-Bus from any client,
+        # and the music dir can contain spaces.
+        try:
+            flags = shlex.split(settings)
+        except ValueError as e:
+            print(f"[AUTOGEN] Bad settings {settings!r}: {e}")
+            flags = []
+        cmd = ["python3", "-m", "bitcomposer.cli", *flags, "-o", outpath]
         print(f"[AUTOGEN] Generating: {filename}")
         try:
-            result = _subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            result = _subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
                 print(f"[AUTOGEN] Error: {result.stderr}")
                 self._generating = False
@@ -328,27 +360,38 @@ class ChiptunePlayer:
             return
 
         print(f"[AUTOGEN] Generated: {filename}")
-        # Prune old autogen files
-        self._prune_autogen(outpath)
-        # Schedule playlist rescan and play on main thread
+        # Schedule playlist rescan (which prunes) and play on main thread
         GLib.idle_add(self._autogen_play, outpath)
 
-    def _prune_autogen(self, keep_path):
-        """Delete oldest auto-generated files if over the limit."""
+    def _prune_autogen(self):
+        """Delete the oldest auto-generated files beyond AUTOGEN_MAX.
+
+        Runs on every rescan, so this is the single place autogen output is
+        pruned; bitcomposer-generate.sh used to prune independently with the
+        same cap. The track currently loaded is never removed.
+        """
         music = Path(MUSIC_DIR)
         autogen_files = sorted(
             [f for f in music.glob(f"{AUTOGEN_PREFIX}*.it") if f.is_file()],
             key=lambda f: f.stat().st_mtime
         )
-        # Keep the newest AUTOGEN_MAX (including the one we just made)
+        playing = self.module.filepath if self.module else None
+        removed = False
         while len(autogen_files) > AUTOGEN_MAX:
             oldest = autogen_files.pop(0)
-            if str(oldest) != keep_path:
-                print(f"[AUTOGEN] Pruning: {oldest.name}")
-                try:
-                    oldest.unlink()
-                except OSError as e:
-                    print(f"[AUTOGEN] Prune error: {e}")
+            if str(oldest) == playing:
+                continue
+            print(f"[AUTOGEN] Pruning: {oldest.name}")
+            try:
+                oldest.unlink()
+                removed = True
+            except OSError as e:
+                print(f"[AUTOGEN] Prune error: {e}")
+        if removed:
+            self.playlist = [f for f in self.playlist if Path(f).exists()]
+            self._rebuild_shuffle()
+            if self.module is not None and self.module.filepath in self.playlist:
+                self.current_index = self.playlist.index(self.module.filepath)
 
     def _autogen_play(self, filepath):
         """Main thread callback: rescan, find the new file, play it."""
@@ -368,11 +411,10 @@ class ChiptunePlayer:
         if not self.playlist:
             return False
 
-        real_idx = self._effective_index(index)
-        if real_idx < 0 or real_idx >= len(self.playlist):
+        if index < 0 or index >= len(self.playlist):
             return False
 
-        filepath = self.playlist[real_idx]
+        filepath = self.playlist[index]
         try:
             new_module = OpenMPTModule(filepath)
         except RuntimeError as e:
@@ -444,7 +486,7 @@ class ChiptunePlayer:
     def next(self):
         if not self.playlist:
             return
-        new_index = (self.current_index + 1) % len(self.playlist)
+        new_index = self._step_index(+1)
         was_playing = self.status == "Playing"
         self.stop_playback()
         if self._load_track(new_index) and was_playing:
@@ -455,9 +497,9 @@ class ChiptunePlayer:
             return
         # If more than 3 seconds in, restart current track
         if self.module and self.module.position > 3.0:
-            self.module.seek(0)
+            self.seek_to(0)
             return
-        new_index = (self.current_index - 1) % len(self.playlist)
+        new_index = self._step_index(-1)
         was_playing = self.status == "Playing"
         self.stop_playback()
         if self._load_track(new_index) and was_playing:
@@ -615,20 +657,25 @@ class MPRISService(dbus.service.Object):
 
     @dbus.service.method(MPRIS_BUS_NAME, out_signature="s")
     def GetState(self):
-        """Return compact state as a parseable string for the plasmoid."""
+        """Return compact state as a parseable string for the plasmoid.
+
+        13 pipe-delimited fields; see docs/INSTALL.md. Free-text fields have
+        the delimiter stripped so a module titled "A|B" cannot shift them.
+        """
         meta = self.player.get_metadata()
         ag = int(self.player.auto_generate)
         if not meta:
             return f"Stopped|0|0|0||||||{int(self.player.shuffle)}|{len(self.player.playlist)}|{self.player.current_index}|{ag}"
+        clean = lambda v: str(v).replace("|", "/").replace("\n", " ")
         return (
             f"{self.player.status}"
             f"|{meta['position']:.1f}"
             f"|{meta['duration']:.1f}"
             f"|{meta['channels']}"
-            f"|{meta['title']}"
-            f"|{meta['artist']}"
-            f"|{meta['type']}"
-            f"|{meta['file']}"
+            f"|{clean(meta['title'])}"
+            f"|{clean(meta['artist'])}"
+            f"|{clean(meta['type'])}"
+            f"|{clean(meta['file'])}"
             f"|{meta['patterns']}"
             f"|{int(self.player.shuffle)}"
             f"|{len(self.player.playlist)}"
@@ -741,7 +788,7 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    print(f"[READY] Cyberpunk Chiptune Player daemon running")
+    print("[READY] Cyberpunk Chiptune Player daemon running")
     print(f"[READY] {len(player.playlist)} tracks loaded from {MUSIC_DIR}")
     print(f"[READY] D-Bus: {MPRIS_BUS_NAME}")
 
