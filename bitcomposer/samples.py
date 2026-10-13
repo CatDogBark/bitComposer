@@ -554,6 +554,408 @@ def fm_lead(cycles: int = 6) -> tuple[bytes, int]:
     return data, length
 
 
+
+# ── SNES-style sampled instruments ──
+#
+# The SPC700 did not synthesize anything. Every SNES voice was a short sample,
+# usually stored at 8-16 kHz as 4-bit BRR ADPCM, with a loop point so a
+# sustained note could ring for as long as the tracker held it, and the whole
+# mix fed into a hardware echo. The palette below imitates that: instruments
+# are rendered at SNES_RATE with an attack region followed by a looped sustain
+# (or a decaying tail that loops quietly at the end), then run through a
+# BRR-style encode/decode so they carry the codec's grain. The old waveform
+# palette above stays as the "chip" style.
+
+SNES_RATE = 16000
+
+# Period of C-5 in samples at SNES_RATE. Rounding it to an integer is what lets
+# single-cycle regions loop seamlessly; the tiny pitch error that rounding
+# causes is undone by reporting the exact rate that period implies as the
+# sample's C-5 speed, so every instrument plays in tune.
+SNES_PERIOD = round(SNES_RATE / BASE_NOTE_HZ)          # 61
+SNES_TUNED_RATE = round(SNES_PERIOD * BASE_NOTE_HZ)    # 15959
+
+
+# The SPC700's four BRR prediction filters, as (coefficient of the previous
+# sample, coefficient of the one before). Filters 2 and 3 are second order and
+# predict smooth tonal content almost perfectly, which is why sustained SNES
+# samples sound clean while noisy transients pick up the codec's grain.
+_BRR_FILTERS = ((0.0, 0.0), (15 / 16, 0.0), (61 / 32, -15 / 16), (115 / 64, -13 / 16))
+
+
+def brr_roundtrip(samples: list[float]) -> list[float]:
+    """Run float samples (-1..1) through a BRR-style codec.
+
+    BRR stores 16-sample blocks of 4-bit residuals with a per-block shift and
+    one of four linear prediction filters. Each block tries all four filters
+    with the shift the largest open-loop residual demands and keeps whichever
+    decodes with the least error. The result is the characteristic SNES grain:
+    quiet detail and noisy transients get quantised, while loud sustained
+    tones pass almost untouched.
+    """
+    scale = 32767.0
+    ints = [x * scale for x in samples]
+    out: list[float] = []
+    p1 = p2 = 0.0
+    for b in range(0, len(ints), 16):
+        block = ints[b:b + 16]
+        best = None
+        for c1, c2 in _BRR_FILTERS:
+            # Open-loop residual estimate to pick the shift.
+            a, bb = p1, p2
+            max_res = 0.0
+            for x in block:
+                pred = c1 * a + c2 * bb
+                max_res = max(max_res, abs(x - pred))
+                a, bb = x, a
+            shift = 0
+            while shift < 12 and max_res / (1 << shift) > 7.5:
+                shift += 1
+            step = float(1 << shift)
+            # Closed-loop quantisation.
+            dec = []
+            a, bb = p1, p2
+            err = 0.0
+            for x in block:
+                pred = c1 * a + c2 * bb
+                nib = max(-8, min(7, int(round((x - pred) / step))))
+                y = max(-32768.0, min(32767.0, pred + nib * step))
+                err += (x - y) * (x - y)
+                dec.append(y)
+                a, bb = y, a
+            if best is None or err < best[0]:
+                best = (err, dec)
+        out.extend(best[1])
+        p1, p2 = best[1][-1], (best[1][-2] if len(best[1]) > 1 else p1)
+    return [y / scale for y in out]
+
+
+def _peak_normalize(samples: list[float], amplitude: float = 0.9) -> list[float]:
+    peak = max((abs(x) for x in samples), default=1.0) or 1.0
+    k = amplitude / peak
+    return [x * k for x in samples]
+
+
+def _finish_snes(samples: list[float], amplitude: float = 0.9,
+                 loop_start: int | None = None, loop_end: int | None = None,
+                 rate: int = SNES_TUNED_RATE) -> tuple[bytes, int, dict]:
+    """Normalise, BRR-grain, pack, and describe loop points for an SNES voice."""
+    samples = brr_roundtrip(_peak_normalize(samples, amplitude))
+    ints = [max(-32768, min(32767, int(round(x * 32767)))) for x in samples]
+    meta = {"rate": rate, "loop": loop_start is not None}
+    if loop_start is not None:
+        meta["loop_start"] = loop_start
+        meta["loop_end"] = loop_end if loop_end is not None else len(ints)
+    return _pack_samples(ints), len(ints), meta
+
+
+def _additive_cycle(harmonics: dict[int, float], period: int = SNES_PERIOD) -> list[float]:
+    """One period of a tone built from weighted harmonics."""
+    cycle = []
+    for i in range(period):
+        ph = 2.0 * math.pi * i / period
+        cycle.append(sum(a * math.sin(k * ph) for k, a in harmonics.items()))
+    return cycle
+
+
+def _sustained_voice(steady: dict[int, float], bright: dict[int, float] | None = None,
+                     attack_cycles: int = 10, loop_cycles: int = 2,
+                     lowpass: float | None = None, breath: float = 0.0,
+                     amplitude: float = 0.9) -> tuple[bytes, int, dict]:
+    """An attack region that ramps up (optionally crossfading from a brighter
+    spectrum) followed by a seamless looped sustain of `loop_cycles` periods."""
+    steady_cycle = _additive_cycle(steady)
+    bright_cycle = _additive_cycle(bright) if bright else steady_cycle
+    period = SNES_PERIOD
+    samples: list[float] = []
+    for c in range(attack_cycles):
+        t = (c + 1) / attack_cycles          # 0..1 across the attack
+        env = math.sin(0.5 * math.pi * t)    # smooth ramp
+        for i in range(period):
+            v = bright_cycle[i] * (1.0 - t) + steady_cycle[i] * t
+            if breath:
+                v += _rng.uniform(-1.0, 1.0) * breath * (1.0 - t)
+            samples.append(v * env)
+    loop_start = len(samples)
+    for _ in range(loop_cycles):
+        samples.extend(steady_cycle)
+    if lowpass is not None:
+        samples = _lowpass(samples, lowpass)
+        # The filter has memory, so re-derive the loop region from the final
+        # filtered cycle to keep the seam clean.
+        last = samples[-period:]
+        samples = samples[:loop_start] + last * loop_cycles
+    return _finish_snes(samples, amplitude, loop_start, len(samples))
+
+
+def _decaying_voice(seconds: float, tone, amp_tau: float,
+                    tail_loop: bool = False, amplitude: float = 0.9,
+                    extra=None) -> tuple[bytes, int, dict]:
+    """A struck/plucked voice: tone(t_frozen, i) gives the raw waveform, an
+    exponential envelope shapes it, and with tail_loop the last two periods
+    are frozen in level so the note can sustain quietly if held."""
+    n = int(SNES_RATE * seconds)
+    period = SNES_PERIOD
+    loop_start = n - 2 * period if tail_loop else None
+    samples = []
+    for i in range(n):
+        j = min(i, loop_start) if loop_start is not None else i
+        t = j / SNES_RATE
+        env = math.exp(-t / amp_tau)
+        # Phase must keep advancing through the frozen tail or the loop clicks.
+        v = tone(t, i) * env
+        if extra:
+            v += extra(t, i)
+        samples.append(v)
+    if loop_start is not None:
+        # Make the two tail cycles identical so the loop is seamless.
+        tail = samples[loop_start:loop_start + period]
+        samples = samples[:loop_start] + tail * 2
+    return _finish_snes(samples, amplitude, loop_start,
+                        len(samples) if loop_start is not None else None)
+
+
+def _karplus_strong(seconds: float, decay: float = 0.996,
+                    brightness: float = 1.0, period: int = SNES_PERIOD) -> list[float]:
+    """Plucked string by the Karplus-Strong algorithm: a noise burst recirculating
+    through a short averaging delay line. brightness < 1 pre-filters the burst."""
+    burst = [_rng.uniform(-1.0, 1.0) for _ in range(period)]
+    if brightness < 1.0:
+        burst = _lowpass(burst, max(0.05, brightness))
+    n = int(SNES_RATE * seconds)
+    buf = list(burst)
+    out = []
+    for i in range(n):
+        y = buf[i % period]
+        nxt = decay * 0.5 * (y + buf[(i + 1) % period])
+        out.append(y)
+        buf[i % period] = nxt
+    return out
+
+
+# Karplus-Strong's averaging adds half a sample to the loop, so its pitch is
+# SNES_RATE / (period + 0.5); report that rate so plucks are in tune too.
+KS_TUNED_RATE = round((SNES_PERIOD + 0.5) * BASE_NOTE_HZ)
+
+
+def snes_strings() -> tuple[bytes, int, dict]:
+    """Slow-bowed string section — softened saw spectrum, long attack."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.55, 3: 0.4, 4: 0.3, 5: 0.22, 6: 0.16, 7: 0.1, 8: 0.07},
+        attack_cycles=36, loop_cycles=2, lowpass=0.55, amplitude=0.85)
+
+
+def snes_brass() -> tuple[bytes, int, dict]:
+    """Brass section — bright overblown onset settling into a rounder tone."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.8, 3: 0.6, 4: 0.45, 5: 0.3, 6: 0.2, 7: 0.12},
+        bright={1: 0.7, 2: 0.9, 3: 0.9, 4: 0.8, 5: 0.7, 6: 0.6, 7: 0.5, 8: 0.4, 9: 0.3},
+        attack_cycles=8, loop_cycles=2, amplitude=0.9)
+
+
+def snes_choir() -> tuple[bytes, int, dict]:
+    """Choir 'ah' — harmonics weighted by vowel formants, slow attack.
+
+    The formants are baked into the sample, so they shift with pitch exactly
+    the way they did on the real hardware."""
+    formants = [(700.0, 130.0), (1200.0, 160.0), (2600.0, 220.0)]
+    harm = {}
+    for k in range(1, 14):
+        f = BASE_NOTE_HZ * k
+        w = sum(math.exp(-((f - fc) / bw) ** 2) for fc, bw in formants)
+        harm[k] = (0.15 + w) / k ** 0.5
+    return _sustained_voice(harm, attack_cycles=28, loop_cycles=2,
+                            lowpass=0.7, breath=0.04, amplitude=0.85)
+
+
+def snes_flute() -> tuple[bytes, int, dict]:
+    """Flute — near-sine with a breath-noise chiff on the attack."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.22, 3: 0.08, 4: 0.03},
+        attack_cycles=6, loop_cycles=1, breath=0.25, amplitude=0.9)
+
+
+def snes_organ() -> tuple[bytes, int, dict]:
+    """Drawbar organ — instant attack, pure harmonic stack."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.7, 3: 0.45, 4: 0.5, 6: 0.3, 8: 0.25},
+        attack_cycles=1, loop_cycles=1, amplitude=0.85)
+
+
+def snes_synth_lead() -> tuple[bytes, int, dict]:
+    """Sampled analog-style lead — saw and narrow pulse, lightly filtered."""
+    period = SNES_PERIOD
+    cycle = []
+    for i in range(period):
+        ph = i / period
+        saw = 2.0 * ph - 1.0
+        pulse = 1.0 if ph < 0.3 else -1.0
+        cycle.append(0.6 * saw + 0.4 * pulse)
+    samples = _lowpass(cycle * 4, 0.5)
+    last = samples[-period:]
+    return _finish_snes(last * 2, 0.9, 0, 2 * period)
+
+
+def snes_epiano() -> tuple[bytes, int, dict]:
+    """Electric piano — two-operator FM with a decaying index and a tine partial."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        idx = 2.2 * math.exp(-t / 0.18) + 0.15
+        body = math.sin(ph + idx * math.sin(ph))
+        tine = 0.18 * math.sin(4.0 * ph) * math.exp(-t / 0.08)
+        return body + tine
+    return _decaying_voice(1.1, tone, amp_tau=0.55, tail_loop=True)
+
+
+def snes_bell() -> tuple[bytes, int, dict]:
+    """Glockenspiel / music-box bell — FM with a 3:1 ratio, long clean decay."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        idx = 1.6 * math.exp(-t / 0.3) + 0.1
+        return math.sin(ph + idx * math.sin(3.0 * ph))
+    return _decaying_voice(1.0, tone, amp_tau=0.45, tail_loop=True, amplitude=0.8)
+
+
+def snes_marimba() -> tuple[bytes, int, dict]:
+    """Marimba — fundamental with a quickly-dying fourth harmonic."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return math.sin(ph) + 0.35 * math.sin(4.0 * ph) * math.exp(-t / 0.05)
+    return _decaying_voice(0.4, tone, amp_tau=0.11, tail_loop=False)
+
+
+def snes_pizz() -> tuple[bytes, int, dict]:
+    """Pizzicato strings — short Karplus-Strong pluck."""
+    return _finish_snes(_karplus_strong(0.35, decay=0.992, brightness=0.6),
+                        0.9, rate=KS_TUNED_RATE)
+
+
+def snes_harp() -> tuple[bytes, int, dict]:
+    """Harp — longer, brighter pluck."""
+    return _finish_snes(_karplus_strong(0.9, decay=0.9975, brightness=0.9),
+                        0.85, rate=KS_TUNED_RATE)
+
+
+def snes_pluck_bass() -> tuple[bytes, int, dict]:
+    """Fingered bass — dark pluck."""
+    return _finish_snes(_karplus_strong(0.6, decay=0.997, brightness=0.25),
+                        0.95, rate=KS_TUNED_RATE)
+
+
+def snes_slap_bass() -> tuple[bytes, int, dict]:
+    """Slap bass — bright pluck with a hard transient."""
+    ks = _karplus_strong(0.5, decay=0.995, brightness=1.0)
+    for i in range(min(120, len(ks))):
+        ks[i] += 0.6 * (1.0 - i / 120.0) * (1.0 if (i // 3) % 2 else -1.0)
+    return _finish_snes(ks, 0.95, rate=KS_TUNED_RATE)
+
+
+def snes_synth_bass() -> tuple[bytes, int, dict]:
+    """Filtered saw bass with a decaying envelope, quiet sustain loop."""
+    period = SNES_PERIOD
+
+    def tone(t, i):
+        ph = (i % period) / period
+        return 2.0 * ph - 1.0
+    data, length, meta = _decaying_voice(0.8, tone, amp_tau=0.4, tail_loop=True)
+    # Darken after the fact: unpack, filter, repack keeping the loop points.
+    ints = struct.unpack(f"<{length}h", data)
+    filt = _lowpass([x / 32767.0 for x in ints], 0.35)
+    ls = meta["loop_start"]
+    tail = filt[ls:ls + period]
+    filt = filt[:ls] + tail * 2
+    return _finish_snes(filt, 0.95, ls, len(filt))
+
+
+def snes_orch_hit() -> tuple[bytes, int, dict]:
+    """Orchestra hit — stacked saws on root, fifth and octave plus a noise burst."""
+    n = int(SNES_RATE * 0.5)
+    freqs = [BASE_NOTE_HZ, BASE_NOTE_HZ * 1.5, BASE_NOTE_HZ * 2.0, BASE_NOTE_HZ * 0.5]
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        v = sum((2.0 * ((t * f) % 1.0) - 1.0) / len(freqs) for f in freqs)
+        v += _rng.uniform(-0.5, 0.5) * math.exp(-t / 0.03)
+        out.append(v * math.exp(-t / 0.22))
+    return _finish_snes(_lowpass(out, 0.6), 0.95)
+
+
+def snes_kick() -> tuple[bytes, int, dict]:
+    """Tight sampled kick — fast pitch drop, short body."""
+    n = int(SNES_RATE * 0.25)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 45.0 + 110.0 * math.exp(-t / 0.035)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.11)
+        if i < 60:
+            v += _rng.uniform(-0.5, 0.5) * (1.0 - i / 60.0)
+        out.append(v)
+    return _finish_snes(out, 0.95)
+
+
+def snes_snare() -> tuple[bytes, int, dict]:
+    """Gated snare — the big early-90s room sound, chopped off hard."""
+    n = int(SNES_RATE * 0.22)
+    gate = int(SNES_RATE * 0.16)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        tone = math.sin(2.0 * math.pi * 190.0 * t) * math.exp(-t / 0.04)
+        noise = _rng.uniform(-1.0, 1.0)
+        room = noise * (0.55 if i < gate else 0.0) * (1.0 - 0.4 * i / gate)
+        hit = noise * math.exp(-t / 0.025)
+        v = 0.5 * tone + 0.6 * hit + room
+        if i >= gate:
+            v *= math.exp(-(i - gate) / (SNES_RATE * 0.004))
+        out.append(v)
+    return _finish_snes(_lowpass(out, 0.75), 0.9)
+
+
+def snes_hat() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.08)
+    out = [_rng.uniform(-1.0, 1.0) * math.exp(-(i / SNES_RATE) / 0.02) for i in range(n)]
+    return _finish_snes(_highpass(out, 0.5), 0.7)
+
+
+def snes_open_hat() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.35)
+    out = [_rng.uniform(-1.0, 1.0) * math.exp(-(i / SNES_RATE) / 0.1) for i in range(n)]
+    return _finish_snes(_highpass(out, 0.45), 0.6)
+
+
+def snes_tom() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.4)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 85.0 + 90.0 * math.exp(-t / 0.06)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.16)
+        v += _rng.uniform(-0.3, 0.3) * math.exp(-t / 0.01)
+        out.append(v)
+    return _finish_snes(out, 0.9)
+
+
+def snes_crash() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 1.0)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        v = _rng.uniform(-1.0, 1.0) * 0.7 + 0.3 * math.sin(2.0 * math.pi * 2900.0 * t)
+        out.append(v * math.exp(-t / 0.35))
+    return _finish_snes(_highpass(out, 0.3), 0.7)
+
+
 # Instrument presets: (name, generator_func, kwargs, default_volume)
 INSTRUMENT_PRESETS = {
     # Melodic — classic
@@ -597,13 +999,66 @@ INSTRUMENT_PRESETS = {
     "kick_layered":   (kick_layered,   {},             64),
     "snare_layered":  (snare_layered,  {},             56),
     "hihat_metallic": (hihat_metallic, {},             40),
+    # SNES — sampled palette (see the section above)
+    "snes_strings":   (snes_strings,   {},             60),
+    "snes_brass":     (snes_brass,     {},             64),
+    "snes_choir":     (snes_choir,     {},             57),
+    "snes_flute":     (snes_flute,     {},             64),
+    "snes_organ":     (snes_organ,     {},             57),
+    "snes_synth_lead": (snes_synth_lead, {},           64),
+    "snes_epiano":    (snes_epiano,    {},             64),
+    "snes_bell":      (snes_bell,      {},             62),
+    "snes_marimba":   (snes_marimba,   {},             64),
+    "snes_pizz":      (snes_pizz,      {},             64),
+    "snes_harp":      (snes_harp,      {},             62),
+    "snes_pluck_bass": (snes_pluck_bass, {},           64),
+    "snes_slap_bass": (snes_slap_bass, {},             64),
+    "snes_synth_bass": (snes_synth_bass, {},           64),
+    "snes_orch_hit":  (snes_orch_hit,  {},             64),
+    "snes_kick":      (snes_kick,      {},             64),
+    "snes_snare":     (snes_snare,     {},             64),
+    "snes_hat":       (snes_hat,       {},             46),
+    "snes_open_hat":  (snes_open_hat,  {},             44),
+    "snes_tom":       (snes_tom,       {},             64),
+    "snes_crash":     (snes_crash,     {},             53),
+}
+
+# Single-cycle waveforms are built on an integer period, so their true pitch is
+# SAMPLE_RATE / period rather than BASE_NOTE_HZ. Reporting the rate that the
+# period implies makes them play exactly in tune; at 44.1 kHz the old value was
+# about six cents sharp.
+WAVEFORM_TUNED_RATE = round(int(SAMPLE_RATE / BASE_NOTE_HZ) * BASE_NOTE_HZ)
+
+_ONE_SHOT_WAVEFORMS = {
+    "kick", "snare", "hihat", "tom", "crash", "open_hihat", "noise",
+    "kick_layered", "snare_layered", "hihat_metallic",
 }
 
 
-def generate_instrument(name: str) -> tuple[bytes, int, int]:
-    """Generate a named instrument. Returns (pcm_data, length, default_volume)."""
+def generate_instrument(name: str) -> dict:
+    """Generate a named instrument.
+
+    Returns {"data", "length", "volume", "rate", "loop", "loop_start",
+    "loop_end"} — everything an ITSample needs. Waveform presets loop over
+    their whole length; one-shots do not loop; SNES voices carry their own
+    loop points.
+    """
     if name not in INSTRUMENT_PRESETS:
         raise ValueError(f"Unknown instrument: {name}")
     func, kwargs, vol = INSTRUMENT_PRESETS[name]
-    data, length = func(**kwargs)
-    return data, length, vol
+    result = func(**kwargs)
+    if len(result) == 3:
+        data, length, meta = result
+        return {
+            "data": data, "length": length, "volume": vol,
+            "rate": meta["rate"], "loop": meta["loop"],
+            "loop_start": meta.get("loop_start", 0),
+            "loop_end": meta.get("loop_end", length),
+        }
+    data, length = result
+    one_shot = name in _ONE_SHOT_WAVEFORMS
+    return {
+        "data": data, "length": length, "volume": vol,
+        "rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
+        "loop": not one_shot, "loop_start": 0, "loop_end": length,
+    }

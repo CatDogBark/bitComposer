@@ -2,11 +2,8 @@
 Pattern-level utilities: note application, effects, drums, and sustain management.
 """
 
-import copy
 import random
 
-from . import theory
-from . import structure as struct
 from .it_format import (
     ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
     FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE,
@@ -28,8 +25,13 @@ CH_HIHAT = 8
 CH_TOM = 9
 CH_CRASH = 10
 CH_OPEN_HAT = 11
+# Echo returns of the lead. The SNES fed its mix through a hardware delay; a
+# tracker fakes that with a delayed, quieter copy of the part on its own
+# channel. Two taps give the feedback repeat.
+CH_ECHO1 = 12
+CH_ECHO2 = 13
 
-NUM_CHANNELS = 12
+NUM_CHANNELS = 14
 ROWS_PER_PATTERN = 64
 
 # Timing grid. IT plays 4 rows per quarter note at the speed/tempo pairing we
@@ -41,7 +43,8 @@ ROWS_PER_STEP = 1
 BARS_PER_PATTERN = ROWS_PER_PATTERN // ROWS_PER_BAR
 
 # Tonal channels that can ring (drums naturally stop)
-TONAL_CHANNELS = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP]
+TONAL_CHANNELS = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
+                  CH_ECHO1, CH_ECHO2]
 
 
 # ── Note application ──
@@ -138,6 +141,32 @@ def apply_retrigger(pattern: ITPattern, channel: int, rows: list[int],
                 cell.effect_val = ticks & 0x0F
 
 
+def apply_echo(pattern: ITPattern, src: int, dst: int,
+               delay_rows: int, level: float):
+    """Copy src's notes onto dst, delay_rows later and scaled to `level`.
+
+    Cuts are copied too, so the echo stops when the original does. Notes whose
+    echo would fall past the end of the pattern are dropped: patterns are
+    shared between order positions, so the tail cannot spill into whichever
+    one happens to come next.
+    """
+    for row in range(pattern.rows):
+        cell = pattern.data[row][src]
+        if cell.note == 0:
+            continue
+        target = row + delay_rows
+        if target >= pattern.rows:
+            continue
+        if cell.note in (NOTE_CUT, NOTE_OFF):
+            pattern.data[target][dst] = ITNote(note=cell.note)
+            continue
+        vol = cell.volume if cell.volume != 255 else 64
+        pattern.data[target][dst] = ITNote(
+            note=cell.note, instrument=cell.instrument,
+            volume=max(1, int(vol * level)),
+        )
+
+
 def apply_portamento(pattern: ITPattern, channel: int,
                      note_list: list[tuple[int, int]],
                      instrument: int, volume: int = 255,
@@ -181,24 +210,38 @@ def apply_harmony_fade(pattern: ITPattern, channel: int,
 
 def apply_fade(pattern: ITPattern, channel: int, fade_in: bool = False,
                fade_out: bool = False, rows_count: int = 8):
-    """Add volume fade in/out at pattern start/end."""
+    """Fade a channel in over the first rows_count rows or out over the last.
+
+    The volume column of each note-on inside the window is scaled, so new
+    notes come in at the faded level, and empty rows get a volume slide so
+    held notes move too. The previous version only wrote slides: a slide-up
+    on notes that already carried their full volume made the intro *louder*
+    than the song, and a slide-down was undone by the next note's volume
+    column, so fade-outs stepped back up every beat.
+    """
+    def scale_note(cell: ITNote, factor: float):
+        if cell.note == 0 or cell.note in (NOTE_CUT, NOTE_OFF):
+            return
+        base = cell.volume if cell.volume != 255 else 64
+        cell.volume = max(1, min(64, int(round(base * factor))))
+
     if fade_in:
-        # Volume slide up over first N rows
-        slide_val = 0x30  # Slide up by 3 per tick
-        for r in range(min(rows_count, pattern.rows)):
-            existing = pattern.data[r][channel]
-            if existing.effect == 0:
-                existing.effect = FX_VOLUME_SLIDE
-                existing.effect_val = slide_val
+        n = min(rows_count, pattern.rows)
+        for r in range(n):
+            cell = pattern.data[r][channel]
+            scale_note(cell, (r + 1) / n)
+            if cell.note == 0 and cell.effect == 0:
+                cell.effect = FX_VOLUME_SLIDE
+                cell.effect_val = 0x10  # slide up 1 per tick
     if fade_out:
-        # Volume slide down over last N rows
-        slide_val = 0x03  # Slide down by 3 per tick
-        start = max(0, pattern.rows - rows_count)
+        n = min(rows_count, pattern.rows)
+        start = pattern.rows - n
         for r in range(start, pattern.rows):
-            existing = pattern.data[r][channel]
-            if existing.effect == 0:
-                existing.effect = FX_VOLUME_SLIDE
-                existing.effect_val = slide_val
+            cell = pattern.data[r][channel]
+            scale_note(cell, 1.0 - (r - start) / n)
+            if cell.note == 0 and cell.effect == 0:
+                cell.effect = FX_VOLUME_SLIDE
+                cell.effect_val = 0xF1  # fine slide down 1 per row
 
 
 # ── Drums ──
@@ -278,7 +321,8 @@ def apply_sustain_safety_net(pat: ITPattern, channels: list[int] | None = None,
     Catches any generator that forgets to add note-cuts.
     """
     if channels is None:
-        channels = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_ARP]
+        channels = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_ARP,
+                    CH_ECHO1, CH_ECHO2]
     for ch in channels:
         last_note_row = None
         for row in range(pat.rows):
@@ -310,28 +354,28 @@ def silence_inactive_channels(orders: list[int], patterns: list[ITPattern]):
 
     If a channel had a ringing note in the previous pattern and the current
     pattern has no early event on that channel, insert a cut at row 0.
+
+    The cut is written into the pattern itself. A pattern can sit at several
+    order positions, but a cut on a channel that is silent for its first
+    max_ring rows is harmless wherever it plays — it either stops something
+    that was ringing in or stops nothing. The old deep-copy-per-order approach
+    left every song carrying orphaned, unplayed patterns and defeated the
+    order-list reuse the composer works to produce.
     """
     max_ring = 12  # match the in-pattern safety net
 
     for ord_idx in range(1, len(orders)):
         prev_pat = patterns[orders[ord_idx - 1]]
-        cur_pat_idx = orders[ord_idx]
-        cur_pat = patterns[cur_pat_idx]
+        cur_pat = patterns[orders[ord_idx]]
 
-        needs_cut = []
         for ch in TONAL_CHANNELS:
-            if _pattern_last_note_rings(prev_pat, ch):
-                has_early_event = False
-                for row in range(min(max_ring, cur_pat.rows)):
-                    if cur_pat.data[row][ch].note != 0:
-                        has_early_event = True
-                        break
-                if not has_early_event:
-                    needs_cut.append(ch)
-
-        if needs_cut:
-            new_pat = copy.deepcopy(cur_pat)
-            for ch in needs_cut:
-                new_pat.data[0][ch] = ITNote(note=NOTE_CUT)
-            patterns.append(new_pat)
-            orders[ord_idx] = len(patterns) - 1
+            if not _pattern_last_note_rings(prev_pat, ch):
+                continue
+            has_early_event = any(
+                cur_pat.data[row][ch].note != 0
+                for row in range(min(max_ring, cur_pat.rows)))
+            if not has_early_event:
+                # Keep whatever effect the cell carried (a fade slide, say).
+                cur_pat.data[0][ch].note = NOTE_CUT
+                cur_pat.data[0][ch].instrument = 0
+                cur_pat.data[0][ch].volume = 255

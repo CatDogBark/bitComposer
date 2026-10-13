@@ -12,16 +12,15 @@ from . import theory
 from . import samples as smp
 from . import structure as struct
 from .it_format import (
-    ITSample, ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
+    ITSample, ITPattern, ITNote, midi_to_it_note, NOTE_CUT,
     write_it_file, bpm_to_it_tempo, it_tempo_to_bpm,
-    FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE, FX_TREMOLO, FX_SET_TEMPO,
 )
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-    CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT,
+    CH_SNARE, CH_HIHAT, CH_CRASH, CH_ECHO1, CH_ECHO2,
     NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
-    apply_portamento, apply_harmony_fade, apply_fade,
+    apply_portamento, apply_harmony_fade, apply_fade, apply_echo,
     apply_drums_to_pattern, generate_drums,
     apply_sustain_safety_net, silence_inactive_channels,
     apply_chord_arpeggio, apply_retrigger,
@@ -30,8 +29,26 @@ from .melody import (
     generate_motif, vary_motif, generate_melody,
     generate_counter_melody, add_melody_cuts,
 )
-from .harmony import generate_harmony
-from .bass import generate_bass, generate_arpeggio, pick_section_bass
+from .harmony import generate_harmony_timeline
+from .bass import generate_bass_timeline, generate_arpeggio_timeline, pick_section_bass
+
+
+STYLES = ["chip", "snes", "genesis"]
+
+# Echo taps, in rows and as a fraction of the lead's volume. Three rows is a
+# dotted eighth at four rows to the beat — the classic tracker echo spacing —
+# and the second tap at twice that is the feedback repeat.
+ECHO_TAPS = [(CH_ECHO1, 3, 0.5), (CH_ECHO2, 6, 0.25)]
+
+# How fast harmony notes decay after their note-on, per voicing. stabs and
+# rhythmic are short hits, so a per-tick slide is right; sustain is a pad and
+# the per-tick slide killed it in six rows, so it gets a fine (per-row) slide.
+HARMONY_FADE = {"stabs": 0x02, "rhythmic": 0x03, "sustain": 0xF1}
+
+# Chance that a pattern changes chord at its halfway point, by section type.
+HALF_PATTERN_CHANGE = {
+    "intro": 0.2, "verse": 0.5, "chorus": 0.55, "bridge": 0.6, "outro": 0.3,
+}
 
 
 def _content_seed(song_salt: int, group: str, chord_idx: int) -> int:
@@ -53,96 +70,102 @@ def _energy_tier(energy: float) -> int:
     return round(energy * 5)
 
 
-def _pick_instruments(prefer_fm: bool | None = None,
-                      bass_weight: str = "heavy") -> dict[str, str]:
-    """Pick a random instrument set for the song."""
-    # Harmony uses thin, focused waveforms that sit behind the melody
-    harmony_choices = ["triangle_lead", "pulse_lead", "sine_bass", "filtered_lead"]
-    if prefer_fm is True:
-        lead_choices = ["fm_lead", "fm_lead", "fm_bell", "filtered_lead"]
-        harmony_choices = ["triangle_lead", "pulse_lead", "fm_bell", "filtered_lead"]
-        bass_heavy = ["fm_bass", "fm_bass", "distorted_bass", "filtered_bass"]
-        bass_medium = ["fm_bass", "filtered_bass", "saw_bass"]
-        bass_light = ["pluck_bass", "thin_bass", "bright_bass"]
-        arp_choices = ["fm_bell", "fm_lead", "fm_brass"]
-    elif prefer_fm is False:
-        lead_choices = ["square_lead", "pulse_lead", "triangle_lead",
-                        "pwm_lead", "filtered_lead"]
-        harmony_choices = ["triangle_lead", "pulse_lead", "filtered_lead"]
-        bass_heavy = ["triangle_bass", "sine_bass", "square_bass", "saw_bass",
-                      "filtered_bass"]
-        bass_medium = ["square_bass", "triangle_bass", "filtered_bass"]
-        bass_light = ["pluck_bass", "thin_bass", "bright_bass"]
-        arp_choices = ["square_lead", "pulse_lead", "triangle_lead", "pwm_lead"]
-    else:
-        lead_choices = ["square_lead", "pulse_lead", "fm_lead", "fm_bell",
-                        "pwm_lead", "filtered_lead"]
-        harmony_choices = ["triangle_lead", "pulse_lead", "fm_bell", "filtered_lead"]
-        bass_heavy = ["saw_bass", "triangle_bass", "fm_bass", "sine_bass",
-                      "square_bass", "distorted_bass", "filtered_bass", "supersaw_bass"]
-        bass_medium = ["saw_bass", "fm_bass", "square_bass", "filtered_bass"]
-        bass_light = ["pluck_bass", "thin_bass", "bright_bass"]
-        arp_choices = ["square_lead", "pulse_lead", "fm_bell", "triangle_lead",
-                       "pwm_lead", "fm_brass"]
+# Per-style instrument pools. "chip" is the original waveform palette — square
+# and triangle leads over synthesized drums, which is really a NES/Game Boy
+# sound. "snes" is the sampled palette: strings, brass, choir, plucks and a
+# gated drum kit, the way the SPC700 actually worked. "genesis" is FM.
+PALETTES = {
+    "chip": {
+        "lead": ["square_lead", "pulse_lead", "triangle_lead", "pwm_lead", "filtered_lead"],
+        "harmony": ["triangle_lead", "pulse_lead", "filtered_lead"],
+        "arp": ["square_lead", "pulse_lead", "triangle_lead", "pwm_lead"],
+        "bass_heavy": ["triangle_bass", "sine_bass", "square_bass", "saw_bass", "filtered_bass"],
+        "bass_medium": ["square_bass", "triangle_bass", "filtered_bass"],
+        "bass_light": ["pluck_bass", "thin_bass", "bright_bass"],
+        "alt_lead": ["square_lead", "pulse_lead", "triangle_lead", "pwm_lead", "filtered_lead"],
+        "drums": None,  # chosen below: classic or layered kit
+    },
+    "snes": {
+        "lead": ["snes_flute", "snes_brass", "snes_synth_lead", "snes_epiano",
+                 "snes_strings", "snes_bell", "snes_choir"],
+        "harmony": ["snes_strings", "snes_choir", "snes_organ", "snes_epiano", "snes_brass"],
+        "arp": ["snes_pizz", "snes_harp", "snes_marimba", "snes_bell", "snes_epiano"],
+        "bass_heavy": ["snes_pluck_bass", "snes_synth_bass", "snes_slap_bass"],
+        "bass_medium": ["snes_pluck_bass", "snes_slap_bass", "snes_synth_bass"],
+        "bass_light": ["snes_slap_bass", "snes_pizz", "snes_marimba"],
+        "alt_lead": ["snes_flute", "snes_brass", "snes_synth_lead", "snes_epiano",
+                     "snes_bell", "snes_strings"],
+        "drums": {"kick": "snes_kick", "snare": "snes_snare", "hihat": "snes_hat",
+                  "tom": "snes_tom", "crash": "snes_crash", "open_hihat": "snes_open_hat"},
+    },
+    "genesis": {
+        "lead": ["fm_lead", "fm_lead", "fm_bell", "filtered_lead"],
+        "harmony": ["triangle_lead", "pulse_lead", "fm_bell", "filtered_lead"],
+        "arp": ["fm_bell", "fm_lead", "fm_brass"],
+        "bass_heavy": ["fm_bass", "fm_bass", "distorted_bass", "filtered_bass"],
+        "bass_medium": ["fm_bass", "filtered_bass", "saw_bass"],
+        "bass_light": ["pluck_bass", "thin_bass", "bright_bass"],
+        "alt_lead": ["fm_lead", "fm_bell", "fm_brass", "fm_organ", "filtered_lead"],
+        "drums": None,
+    },
+}
 
-    # Pick bass timbre based on weight
-    if bass_weight == "light":
-        bass_choices = bass_light
-    elif bass_weight == "medium":
-        bass_choices = bass_medium
-    else:
-        bass_choices = bass_heavy
 
-    lead = random.choice(lead_choices)
-    harmony = random.choice([h for h in harmony_choices if h != lead] or harmony_choices)
+def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
+    """Pick a random instrument set for the song from the style's palette."""
+    pal = PALETTES[style]
+    bass_choices = pal.get(f"bass_{bass_weight}", pal["bass_heavy"])
+
+    lead = random.choice(pal["lead"])
+    harmony = random.choice([h for h in pal["harmony"] if h != lead] or pal["harmony"])
     bass = random.choice(bass_choices)
-    arp = random.choice([a for a in arp_choices if a != lead] or arp_choices)
+    arp = random.choice([a for a in pal["arp"] if a != lead] or pal["arp"])
 
-    # Enhanced drums: 40% chance of using layered drums
-    use_layered_drums = random.random() < 0.4
+    if pal["drums"]:
+        drums = dict(pal["drums"])
+    else:
+        # Enhanced drums: 40% chance of using layered drums
+        layered = random.random() < 0.4
+        drums = {
+            "kick": "kick_layered" if layered else "kick",
+            "snare": "snare_layered" if layered else "snare",
+            "hihat": "hihat_metallic" if layered else "hihat",
+            "tom": "tom", "crash": "crash", "open_hihat": "open_hihat",
+        }
 
-    return {
-        "melody": lead,
-        "harmony": harmony,
-        "bass": bass,
-        "arp": arp,
-        "kick": "kick_layered" if use_layered_drums else "kick",
-        "snare": "snare_layered" if use_layered_drums else "snare",
-        "hihat": "hihat_metallic" if use_layered_drums else "hihat",
-        "tom": "tom",
-        "crash": "crash",
-        "open_hihat": "open_hihat",
-    }
+    return {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
 
 
-def _build_samples(instruments: dict[str, str]) -> list[ITSample]:
-    """Generate ITSample objects for all instruments."""
-    samples = []
-    seen = {}
-    sample_map = {}  # instrument_key -> sample index (1-based)
+def _make_sample(name: str) -> ITSample:
+    inst = smp.generate_instrument(name)
+    return ITSample(
+        name=name.replace("_", " ").title(),
+        filename=name[:12],
+        data=inst["data"],
+        length=inst["length"],
+        loop=inst["loop"],
+        loop_start=inst["loop_start"],
+        loop_end=inst["loop_end"],
+        default_volume=inst["volume"],
+        c5_speed=inst["rate"],
+    )
+
+
+def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[str, int]]:
+    """Generate ITSample objects for all instruments.
+
+    Returns (samples, sample_map) where sample_map maps an instrument role
+    to a 1-based sample index; roles sharing a preset share a sample.
+    """
+    samples: list[ITSample] = []
+    seen: dict[str, int] = {}
+    sample_map: dict[str, int] = {}
 
     for key, name in instruments.items():
         if name in seen:
             sample_map[key] = seen[name]
             continue
-
-        data, length, vol = smp.generate_instrument(name)
-
-        # Drums don't loop
-        is_drum = key in ("kick", "snare", "hihat", "tom", "crash", "open_hihat")
-
-        it_sample = ITSample(
-            name=name.replace("_", " ").title(),
-            filename=name[:12],
-            data=data,
-            length=length,
-            loop=not is_drum,
-            loop_start=0,
-            loop_end=length,
-            default_volume=vol,
-            c5_speed=smp.SAMPLE_RATE,
-        )
-        samples.append(it_sample)
+        samples.append(_make_sample(name))
         idx = len(samples)  # 1-based
         seen[name] = idx
         sample_map[key] = idx
@@ -165,9 +188,28 @@ def _pick_section_motif(sec_type: str, use_phrased: bool,
         return generate_motif(length=random.choice([3, 4]))
 
 
-def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
-                     layers, sec_type, section, section_energy, section_density,
-                     section_bass, sample_map, samples,
+def _chord_segments(key: int, scale_name: str, scale_notes: list[int],
+                    entry, next_entry, sec_type: str) -> list[tuple]:
+    """Chord timeline for one pattern: [(start_row, end_row, root, type, notes)].
+
+    Usually one chord for the whole pattern; with HALF_PATTERN_CHANGE odds the
+    back two bars move to a related chord (see theory.secondary_chord), so the
+    harmony has a two-bar pulse instead of sitting on one chord for four.
+    """
+    def seg(start, end, e):
+        _, chord_type, _ = theory.unpack_chord(e)
+        root = theory.chord_root_for(key, scale_notes, e)
+        return (start, end, root, chord_type, theory.build_chord(root, chord_type))
+
+    if random.random() < HALF_PATTERN_CHANGE.get(sec_type, 0.4):
+        second = theory.secondary_chord(scale_name, entry, next_entry)
+        half = ROWS_PER_PATTERN // 2
+        return [seg(0, half, entry), seg(half, ROWS_PER_PATTERN, second)]
+    return [seg(0, ROWS_PER_PATTERN, entry)]
+
+
+def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
+                     section_density, section_bass, sample_map,
                      melody_sample, use_phrased, section_motif,
                      chord_idx, is_answer,
                      voicing_style, num_harmony_voices,
@@ -175,21 +217,29 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                      bass_weight, use_bass_porta, porta_speed,
                      arp_style, drum_pattern, drum_density,
                      fill_pattern, section_prog, is_ending, ending_style,
-                     swing_amount, speed, is_intro) -> ITPattern:
+                     swing_amount, speed, is_intro, use_echo) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
+
+    # The timeline in the shapes each generator wants.
+    chord_notes = segments[0][4]                       # the pattern's main chord
+    melody_timeline = [(s, notes) for s, _, _, _, notes in segments]
+    harmony_segments = [(s, e, notes) for s, e, _, _, notes in segments]
+    bass_segments = [(s, e, root, ctype) for s, e, root, ctype, _ in segments]
 
     # Scale volumes by section energy
     melody_vol = int(42 * section_energy)
     harmony_vol = int(22 * section_energy)
     arp_vol = int(36 * section_energy)
+    harmony_fade = HARMONY_FADE.get(voicing_style, 0x02)
 
     # ── Melody ──
     if layers["melody"]:
         melody = generate_melody(
             scale_notes, chord_notes, ROWS_PER_PATTERN, section_density,
             motif=section_motif, is_answer=is_answer, phrased=use_phrased,
+            chord_timeline=melody_timeline,
         )
         apply_notes_to_pattern(
             pat, CH_MELODY, melody, melody_sample,
@@ -197,6 +247,9 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
         )
         apply_vibrato(pat, CH_MELODY, melody,
                       speed=vibrato_speed, depth=vibrato_depth)
+        if use_echo:
+            for ch, delay, level in ECHO_TAPS:
+                apply_echo(pat, CH_MELODY, ch, delay, level)
 
     # ── Harmony ──
     if layers["harmony"]:
@@ -210,10 +263,9 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                 pat, CH_HARMONY, counter, sample_map["harmony"],
                 volume=int(20 * section_energy), humanize=True,
             )
-            apply_harmony_fade(pat, CH_HARMONY, counter)
-            voices = generate_harmony(
-                chord_notes, ROWS_PER_PATTERN,
-                voicing=voicing_style,
+            apply_harmony_fade(pat, CH_HARMONY, counter, fade_rate=harmony_fade)
+            voices = generate_harmony_timeline(
+                harmony_segments, voicing=voicing_style,
                 num_voices=min(2, num_harmony_voices),
             )
             for v_idx, voice_notes in enumerate(voices):
@@ -225,11 +277,10 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                         volume=humanize_volume(int(18 * section_energy), 4),
                         humanize=True,
                     )
-                    apply_harmony_fade(pat, ch, voice_notes)
+                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade)
         else:
-            voices = generate_harmony(
-                chord_notes, ROWS_PER_PATTERN,
-                voicing=voicing_style,
+            voices = generate_harmony_timeline(
+                harmony_segments, voicing=voicing_style,
                 num_voices=num_harmony_voices,
             )
             for v_idx, voice_notes in enumerate(voices):
@@ -246,16 +297,19 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
                     # arpeggiate it into one. With three voices the real
                     # stack already does the job.
                     if num_harmony_voices == 1:
-                        apply_chord_arpeggio(pat, ch, voice_notes, chord_notes)
-                    apply_harmony_fade(pat, ch, voice_notes)
+                        for s, e, notes in harmony_segments:
+                            apply_chord_arpeggio(
+                                pat, ch, [(r, n) for r, n in voice_notes if s <= r < e],
+                                notes)
+                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade)
 
     # ── Bass ──
     if layers["bass"]:
         # Keep the bass present but not relentless: even at full energy a few
         # off-beats drop out, and quiet sections thin further.
-        bass = generate_bass(chord_root, chord_type, ROWS_PER_PATTERN, section_bass,
-                             weight=bass_weight,
-                             density=0.6 + 0.35 * section_energy)
+        bass = generate_bass_timeline(bass_segments, section_bass,
+                                      weight=bass_weight,
+                                      density=0.6 + 0.35 * section_energy)
         bass_vol = {"heavy": 255, "medium": 150, "light": 100}.get(bass_weight, 255)
         if use_bass_porta and len(bass) > 1:
             apply_portamento(
@@ -280,8 +334,8 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
     if layers["arp"]:
         # Tie arp density to section energy so it thins out in verses and
         # intros instead of running at full tilt through the whole song.
-        arp = generate_arpeggio(chord_notes, ROWS_PER_PATTERN, arp_style,
-                                density=section_energy)
+        arp = generate_arpeggio_timeline(harmony_segments, arp_style,
+                                         density=section_energy)
         apply_notes_to_pattern(
             pat, CH_ARP, arp, sample_map["arp"],
             volume=arp_vol, humanize=True,
@@ -333,7 +387,8 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
 
     # ── Section transitions ──
     if is_intro and chord_idx == 0:
-        for ch in [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP]:
+        for ch in [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
+                   CH_ECHO1, CH_ECHO2]:
             apply_fade(pat, ch, fade_in=True, rows_count=16)
 
     if is_ending and chord_idx == len(section_prog) - 1:
@@ -345,14 +400,15 @@ def _compose_pattern(*, scale_notes, chord_root, chord_type, chord_notes,
 
 
 def compose_song(seed: int | None = None, tempo_pref: str = "random",
-                  energy_pref: str = "random", scale_pref: str = "random",
-                  style_pref: str = "random", drum_density: str = "random",
-                  drum_fills: bool = True, drum_swing: str = "random",
-                  melody_style: str = "random",
-                  harmony_voicing: str = "random",
-                  harmony_mode: str = "random",
-                  bass_weight: str = "random",
-                  song_form: str = "random") -> dict:
+                 energy_pref: str = "random", scale_pref: str = "random",
+                 style_pref: str = "random", drum_density: str = "random",
+                 drum_fills: bool = True, drum_swing: str = "random",
+                 melody_style: str = "random",
+                 harmony_voicing: str = "random",
+                 harmony_mode: str = "random",
+                 bass_weight: str = "random",
+                 song_form: str = "random",
+                 echo: str = "random") -> dict:
     """Compose a complete procedural song. Returns a dict for write_it_file."""
     if seed is not None:
         random.seed(seed)
@@ -374,6 +430,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         harmony_mode = random.choice(["stabs", "sustain", "rhythmic"])
     if bass_weight == "random":
         bass_weight = random.choice(["heavy", "medium", "light"])
+    if style_pref not in STYLES:
+        style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
+    if echo == "random":
+        # The SNES always had its echo on; the others borrow it sometimes.
+        echo_chance = {"snes": 1.0, "chip": 0.5, "genesis": 0.25}[style_pref]
+        use_echo = random.random() < echo_chance
+    else:
+        use_echo = echo == "on"
 
     # ── Musical choices ──
     key = theory.random_key()
@@ -411,12 +475,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     tempo = bpm_to_it_tempo(target_bpm, speed, ROWS_PER_BEAT)
 
     # ── Instruments ──
-    if style_pref == "genesis":
-        instruments = _pick_instruments(prefer_fm=True, bass_weight=bass_weight)
-    elif style_pref == "snes":
-        instruments = _pick_instruments(prefer_fm=False, bass_weight=bass_weight)
-    else:
-        instruments = _pick_instruments(bass_weight=bass_weight)
+    instruments = _pick_instruments(style_pref, bass_weight=bass_weight)
     samples, sample_map = _build_samples(instruments)
 
     # ── Energy / style ──
@@ -434,7 +493,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         melody_density = random.uniform(0.45, 0.65)
 
     # ── Song structure (from structure module) ──
-    song_structure, section_layers_map, energy_curve, ending_style, form_name = struct.generate_structure(form=song_form)
+    song_structure, section_layers_map, energy_curve, ending_style, form_name = \
+        struct.generate_structure(form=song_form)
 
     # ── Motifs ──
     use_phrased = melody_style == "phrased"
@@ -457,6 +517,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     use_alt_chorus = random.random() < 0.5
     modulate_chorus = random.random() < 0.25
     modulation_semitones = 1 if modulate_chorus else 0
+    # The chorus modulates as a whole: chords AND the scale the melody draws
+    # from. Shifting only the chord roots left the tune a semitone under its
+    # own harmony for every chorus.
+    chorus_scale = theory.build_scale(key + modulation_semitones, scale_name, octaves=4)
 
     # ── Effects ──
     vibrato_speed = random.choice([3, 4, 5])
@@ -467,9 +531,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     fill_pattern = theory.random_drum_fill() if drum_fills else None
 
     # ── Instrument swaps ──
-    alt_lead = random.choice([n for n in (
-        ["square_lead", "pulse_lead", "fm_lead", "fm_bell", "triangle_lead", "filtered_lead"]
-    ) if n != instruments["melody"]])
+    alt_lead = random.choice(
+        [n for n in PALETTES[style_pref]["alt_lead"] if n != instruments["melody"]]
+        or PALETTES[style_pref]["alt_lead"])
     alt_lead_sample_idx = None
 
     # ── Generate patterns ──
@@ -481,6 +545,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     pattern_cache = {}       # render identity -> pattern index
     pattern_index_for = {}   # (section, chord_idx) -> pattern index
     song_salt = random.randrange(2 ** 31)
+    half_changes = 0
 
     for section in song_structure:
         layers = section_layers_map.get(section, section_layers_map.get("verse1"))
@@ -495,7 +560,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             section, progression, alt_progression, use_alt_chorus)
         num_chords = len(section_prog)
 
-        for chord_idx, (degree, chord_type) in enumerate(section_prog):
+        modulated = modulate_chorus and sec_type == "chorus"
+        section_key = key + (modulation_semitones if modulated else 0)
+        section_scale = chorus_scale if modulated else scale_notes
+
+        for chord_idx, entry in enumerate(section_prog):
             # Graduated fadeout: ramp energy down across outro patterns
             if section == "outro" and ending_style == "fadeout" and num_chords > 1:
                 fade_progress = chord_idx / (num_chords - 1)  # 0.0 to 1.0
@@ -517,24 +586,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             if is_ending:
                 section_density = max(section_density, 0.45)
 
-            chord_root = key + (scale_notes[degree] - scale_notes[0]) if degree < len(scale_notes) else key
-            if modulate_chorus and sec_type == "chorus":
-                chord_root += modulation_semitones
-            chord_notes = theory.build_chord(chord_root, chord_type)
-
             # Instrument swap for verse2/chorus3
             melody_sample = sample_map["melody"]
             if section in ("verse2", "chorus3"):
                 if alt_lead_sample_idx is None:
-                    data, length, vol = smp.generate_instrument(alt_lead)
-                    it_sample = ITSample(
-                        name=alt_lead.replace("_", " ").title(),
-                        filename=alt_lead[:12],
-                        data=data, length=length,
-                        loop=True, loop_start=0, loop_end=length,
-                        default_volume=vol, c5_speed=smp.SAMPLE_RATE,
-                    )
-                    samples.append(it_sample)
+                    samples.append(_make_sample(alt_lead))
                     alt_lead_sample_idx = len(samples)
                 melody_sample = alt_lead_sample_idx
 
@@ -550,16 +606,20 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             # not a fresh roll of the dice.
             random.seed(_content_seed(song_salt, group, chord_idx))
 
+            next_entry = section_prog[(chord_idx + 1) % num_chords]
+            segments = _chord_segments(section_key, scale_name, section_scale,
+                                       entry, next_entry, sec_type)
+            half_changes += len(segments) - 1
+
             section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
             section_motif = _pick_section_motif(
                 sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif)
 
             pat = _compose_pattern(
-                scale_notes=scale_notes, chord_root=chord_root,
-                chord_type=chord_type, chord_notes=chord_notes,
-                layers=layers, sec_type=sec_type, section=section,
+                scale_notes=section_scale, segments=segments,
+                layers=layers, sec_type=sec_type,
                 section_energy=section_energy, section_density=section_density,
-                section_bass=section_bass, sample_map=sample_map, samples=samples,
+                section_bass=section_bass, sample_map=sample_map,
                 melody_sample=melody_sample, use_phrased=use_phrased,
                 section_motif=section_motif, chord_idx=chord_idx,
                 is_answer=(chord_idx % 2 == 1),
@@ -571,6 +631,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 fill_pattern=fill_pattern, section_prog=section_prog,
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, is_intro=is_intro,
+                use_echo=use_echo,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -598,6 +659,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "tempo": round(it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)),
         "it_tempo": tempo,
         "speed": speed,
+        "style": style_pref,
+        "echo": use_echo,
         "bass_style": bass_style,
         "bass_weight": bass_weight,
         "arp_style": arp_style,
@@ -612,7 +675,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "song_form": form_name,
         "alt_lead": alt_lead if alt_lead_sample_idx else None,
         "instruments": instruments,
-        "progression": [(d, t) for d, t in progression],
+        "progression": [tuple(e) for e in progression],
+        "half_pattern_changes": half_changes,
         "structure": display_structure,
         "num_patterns": len(patterns),
         "num_orders": len(orders),
@@ -631,6 +695,20 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     }
 
 
+# Channel mix — tuned by ear via the widget's master panel. Order matches
+# bitcomposer.pattern: melody, harmony x3, bass, arp, six drums, two echo taps.
+# The echo channels sit at the melody's level; the taps are already quieter
+# through their volume columns.
+CHANNEL_VOLUMES = [
+    13,              # melody
+    25, 25, 25,      # harmony
+    8,               # bass
+    33,              # arp
+    36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
+    13, 13,          # echo taps
+]
+
+
 def compose_and_save(filepath: str, seed: int | None = None,
                      tempo: str = "random", energy: str = "random",
                      scale: str = "random", style: str = "random",
@@ -640,7 +718,8 @@ def compose_and_save(filepath: str, seed: int | None = None,
                      harmony_voicing: str = "random",
                      harmony_mode: str = "random",
                      bass_weight: str = "random",
-                     song_form: str = "random") -> dict:
+                     song_form: str = "random",
+                     echo: str = "random") -> dict:
     """Compose a song and save it as an IT file. Returns song info."""
     song = compose_song(seed=seed, tempo_pref=tempo, energy_pref=energy,
                         scale_pref=scale, style_pref=style,
@@ -649,23 +728,8 @@ def compose_and_save(filepath: str, seed: int | None = None,
                         harmony_voicing=harmony_voicing,
                         harmony_mode=harmony_mode,
                         bass_weight=bass_weight,
-                        song_form=song_form)
-    # Channel mix — tuned by ear via master panel
-    #   0=melody, 1-3=harmony, 4=bass, 5=arp, 6-11=drums
-    channel_volumes = [
-        13,  # CH_MELODY
-        25,  # CH_HARMONY
-        25,  # CH_HARMONY2
-        25,  # CH_HARMONY3
-         8,  # CH_BASS
-        33,  # CH_ARP
-        36,  # CH_KICK
-        36,  # CH_SNARE
-        36,  # CH_HIHAT
-        36,  # CH_TOM
-        36,  # CH_CRASH
-        36,  # CH_OPEN_HAT
-    ]
+                        song_form=song_form,
+                        echo=echo)
     write_it_file(
         filepath=filepath,
         song_name=song["name"],
@@ -675,6 +739,6 @@ def compose_and_save(filepath: str, seed: int | None = None,
         tempo=song["tempo"],
         speed=song["speed"],
         num_channels=NUM_CHANNELS,
-        channel_volumes=channel_volumes,
+        channel_volumes=list(CHANNEL_VOLUMES),
     )
     return song["info"]

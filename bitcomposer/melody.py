@@ -19,7 +19,16 @@ RHYTHM_TEMPLATES = [
     [0, 8, 12, 14],                    # Long-short-short
     [0, 4, 8, 10, 12],                 # Running then rest
     [0, 6, 8, 12, 14],                 # Off-beat accent
-    [0, 4, 12, 14, 16],               # Gap then flurry
+    [0, 4, 12, 14, 16],                # Gap then flurry
+    # Sixteenth-note figures. Every template above sits on even rows, so no
+    # note could ever land a sixteenth ahead of or behind the beat — the
+    # single most common device in game melodies, and 0.3% of onsets had it.
+    [0, 3, 6, 8, 12],                  # Dotted-eighth push
+    [0, 4, 7, 8, 12],                  # Anticipated third beat
+    [0, 4, 8, 11, 12],                 # Pickup into beat four
+    [0, 2, 3, 8, 11],                  # Skip and anticipation
+    [0, 6, 7, 8, 14],                  # Flam into the beat
+    [0, 3, 4, 8, 12, 15],              # Pushed, then pickup to the next bar
 ]
 
 # Contour shapes: relative direction for each note in a motif
@@ -80,8 +89,8 @@ def vary_motif(motif: dict, amount: float = 0.3) -> dict:
 
     for i in range(len(rhythm)):
         if random.random() < amount:
-            # Slight rhythmic shift
-            rhythm[i] = max(0, rhythm[i] + random.choice([-2, 0, 2]))
+            # Slight rhythmic shift; a one-row nudge is a sixteenth push.
+            rhythm[i] = max(0, rhythm[i] + random.choice([-2, -1, 0, 1, 2]))
 
     for i in range(len(contour)):
         if random.random() < amount:
@@ -174,15 +183,31 @@ def _generate_melody_simple(scale_notes: list[int], chord_notes: list[int],
     return notes
 
 
+def chord_at(timeline, row: int, default: list[int]) -> list[int]:
+    """Chord notes sounding at `row` in a [(start_row, chord_notes), ...] list."""
+    if not timeline:
+        return default
+    current = default
+    for start, notes in timeline:
+        if start <= row:
+            current = notes
+        else:
+            break
+    return current
+
+
 def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
                               rows: int, density: float = 0.5,
                               motif: dict | None = None,
-                              is_answer: bool = False) -> list[tuple[int, int]]:
+                              is_answer: bool = False,
+                              chord_timeline=None) -> list[tuple[int, int]]:
     """
     Generate a melody using motif-based phrase structure.
 
     Uses question-answer phrasing: first half is the "question" (ends on tension),
-    second half is the "answer" (resolves to chord tone).
+    second half is the "answer" (resolves to chord tone). chord_timeline, when
+    given, is [(start_row, chord_notes), ...] so each bar resolves to the chord
+    actually sounding under it.
     """
     melody_notes = [n for n in scale_notes if 60 <= n <= 83]
     if not melody_notes:
@@ -243,10 +268,15 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
             # Odd bars answer the statement, so they vary more.
             bar_motif = vary_motif(motif, 0.35 if bar % 2 else 0.2)
 
+        bar_chord = chord_at(chord_timeline, bar * ROWS_PER_BAR, chord_notes)
+        # Resolve at the end of the phrase, and also onto a chord change so
+        # the tune acknowledges the new harmony instead of sailing over it.
+        chord_changes_next = (
+            chord_at(chord_timeline, (bar + 1) * ROWS_PER_BAR, chord_notes) != bar_chord)
         bar_notes, cur_idx = _realize_motif(
-            bar_motif, scale_notes, chord_notes,
+            bar_motif, scale_notes, bar_chord,
             start_row=bar * ROWS_PER_BAR, start_note_idx=cur_idx,
-            resolve_to_chord=is_last, rows=rows,
+            resolve_to_chord=is_last or chord_changes_next, rows=rows,
         )
         all_notes.extend(bar_notes)
 
@@ -308,11 +338,13 @@ def generate_melody(scale_notes: list[int], chord_notes: list[int],
                     rows: int, density: float = 0.5,
                     motif: dict | None = None,
                     is_answer: bool = False,
-                    phrased: bool = True) -> list[tuple[int, int]]:
+                    phrased: bool = True,
+                    chord_timeline=None) -> list[tuple[int, int]]:
     """Generate a melody line. Returns [(row, midi_note), ...]."""
     if phrased:
         notes = _generate_melody_phrased(
-            scale_notes, chord_notes, rows, density, motif, is_answer)
+            scale_notes, chord_notes, rows, density, motif, is_answer,
+            chord_timeline=chord_timeline)
     else:
         notes = _generate_melody_simple(scale_notes, chord_notes, rows, density)
     return add_melody_cuts(notes, rows, max_sustain=16)

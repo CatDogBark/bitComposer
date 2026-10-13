@@ -30,6 +30,7 @@ EFF = ".ABCDEFGHIJKLMNOPQRSTUVWXYZ"  # IT command letters, 1=A
 # Channel layout (mirrors bitcomposer.pattern)
 CH_MELODY, CH_BASS, CH_ARP = 0, 4, 5
 CH_HARMONY = (1, 2, 3)
+CH_ECHO = (12, 13)
 DRUM_NAMES = {6: "kick", 7: "snare", 8: "hat", 9: "tom", 10: "crash", 11: "ohat"}
 
 ROWS_PER_BEAT = 4  # rows to a quarter note
@@ -229,7 +230,7 @@ def grid(path, pat_idx=None, rows=64):
         "|" if r % ROWS_PER_BAR == 0 else ("+" if r % 4 == 0 else ".")
         for r in range(rows)))
     labels = {CH_MELODY: "mel ", 1: "hrm1", 2: "hrm2", 3: "hrm3",
-              CH_BASS: "bass", CH_ARP: "arp "}
+              CH_BASS: "bass", CH_ARP: "arp ", 12: "ech1", 13: "ech2"}
     labels.update({c: f"{n:<4}" for c, n in DRUM_NAMES.items()})
     for ch in sorted(labels):
         line = "".join(

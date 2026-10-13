@@ -142,7 +142,9 @@ DEFAULT_CHANNEL_PANS = [
     26,          # tom      — slightly left
     24,          # crash    — wide, it is an accent
     42,          # open hat — mirrors the closed hat
-] + [32] * 52
+    12,          # echo tap 1 — the SNES echo was wide; put the repeats out at the sides
+    52,          # echo tap 2 — opposite side, so the repeat bounces
+] + [32] * 50
 
 
 def bpm_to_it_tempo(bpm: float, speed: int, rows_per_beat: int = 4) -> int:

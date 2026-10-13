@@ -63,9 +63,10 @@ def main():
     )
     parser.add_argument(
         "--style",
-        choices=["snes", "genesis", "random"],
+        choices=["chip", "snes", "genesis", "random"],
         default="random",
-        help="Sound style (default: random)",
+        help="Sound palette: chip (square/triangle waves), snes (sampled strings, "
+             "brass, plucks, gated drums), genesis (FM) (default: random)",
     )
     parser.add_argument(
         "--drum-density",
@@ -115,6 +116,12 @@ def main():
         help="Song form (default: random)",
     )
     parser.add_argument(
+        "--echo",
+        choices=["on", "off", "random"],
+        default="random",
+        help="Delay echo on the lead, SNES style (default: random — always on for snes)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"bitcomposer {__version__}",
@@ -150,7 +157,8 @@ def main():
                                        harmony_voicing=args.harmony_voicing,
                                        harmony_mode=args.harmony_mode,
                                        bass_weight=args.bass_weight,
-                                       song_form=args.form)
+                                       song_form=args.form,
+                                       echo=args.echo)
         except Exception as e:
             print(f"Error generating song: {e}", file=sys.stderr)
             if args.verbose:
@@ -169,6 +177,9 @@ def main():
             print(f"  Density:     {info['melody_density']}")
             print(f"  Melody:      {info['melody_style']} ({info['melody_contour']})")
             print(f"  Harmony:     {info['harmony_voicing']} / {info['harmony_mode']}")
+            print(f"  Style:       {info['style']}"
+                  f"{' + echo' if info.get('echo') else ''}")
+            print(f"  Chord moves: {info['half_pattern_changes']} half-pattern changes")
             if info.get('chorus_modulated'):
                 print(f"  Modulation:  chorus +1 semitone")
             if info.get('chorus_alt_prog'):

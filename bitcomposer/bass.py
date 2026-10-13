@@ -152,3 +152,25 @@ def pick_section_bass(bass_weight: str, section_energy: float,
     elif section_energy > 0.85:
         return random.choice(["driving", "octave", bass_style])
     return bass_style
+
+
+def generate_bass_timeline(segments: list[tuple[int, int, int, str]],
+                           style: str = "steady", weight: str = "heavy",
+                           density: float = 1.0) -> list[tuple[int, int]]:
+    """generate_bass over [(start_row, end_row, root, chord_type), ...]."""
+    notes = []
+    for start, end, root, chord_type in segments:
+        part = generate_bass(root, chord_type, end - start, style, weight, density)
+        notes.extend((start + row, note) for row, note in part)
+    return notes
+
+
+def generate_arpeggio_timeline(segments: list[tuple[int, int, list[int]]],
+                               style: str = "up",
+                               density: float = 1.0) -> list[tuple[int, int]]:
+    """generate_arpeggio over [(start_row, end_row, chord_notes), ...]."""
+    notes = []
+    for start, end, chord_notes in segments:
+        part = generate_arpeggio(chord_notes, end - start, style, density)
+        notes.extend((start + row, note) for row, note in part)
+    return notes

@@ -2,8 +2,6 @@
 Harmony generation: chord voicings and multi-voice harmony parts.
 """
 
-import random
-
 
 HARMONY_VOICINGS = {
     "stabs": {
@@ -101,3 +99,23 @@ def generate_harmony(chord_notes: list[int], rows: int,
         result.append(notes)
 
     return result
+
+
+def generate_harmony_timeline(segments: list[tuple[int, int, list[int]]],
+                              voicing: str = "stabs",
+                              num_voices: int = 2) -> list[list[tuple[int, int]]]:
+    """generate_harmony over a chord timeline.
+
+    segments is [(start_row, end_row, chord_notes), ...]. Each segment is
+    voiced on its own, so a chord change mid-pattern restates the harmony on
+    the new chord, and the fixed anchors in voice_chord still give smooth
+    voice leading across the change.
+    """
+    voices: list[list[tuple[int, int]]] = []
+    for start, end, chord_notes in segments:
+        part = generate_harmony(chord_notes, end - start, voicing, num_voices)
+        for v_idx, notes in enumerate(part):
+            while len(voices) <= v_idx:
+                voices.append([])
+            voices[v_idx].extend((start + row, note) for row, note in notes)
+    return voices
