@@ -724,6 +724,35 @@ CHANNEL_VOLUMES = [
 ]
 
 
+def save_song(song: dict, filepath: str) -> None:
+    """Write a composed song (from compose_song) to an .it file."""
+    write_it_file(
+        filepath=filepath,
+        song_name=song["name"],
+        samples=song["samples"],
+        patterns=song["patterns"],
+        orders=song["orders"],
+        tempo=song["tempo"],
+        speed=song["speed"],
+        num_channels=NUM_CHANNELS,
+        channel_volumes=list(CHANNEL_VOLUMES),
+        message=song["message"],
+    )
+
+
+def unique_path(directory: str, stem: str, suffix: str = "", ext: str = ".it") -> str:
+    """`<directory>/<stem><suffix><ext>`, with " 2", " 3", ... inserted before
+    the suffix if that name is taken. Titles are drawn from a finite list, so
+    two songs can share one."""
+    import os
+    candidate = os.path.join(directory, f"{stem}{suffix}{ext}")
+    n = 2
+    while os.path.exists(candidate):
+        candidate = os.path.join(directory, f"{stem} {n}{suffix}{ext}")
+        n += 1
+    return candidate
+
+
 def compose_and_save(filepath: str, seed: int | None = None,
                      tempo: str = "random", energy: str = "random",
                      scale: str = "random", style: str = "random",
@@ -745,16 +774,5 @@ def compose_and_save(filepath: str, seed: int | None = None,
                         bass_weight=bass_weight,
                         song_form=song_form,
                         echo=echo)
-    write_it_file(
-        filepath=filepath,
-        song_name=song["name"],
-        samples=song["samples"],
-        patterns=song["patterns"],
-        orders=song["orders"],
-        tempo=song["tempo"],
-        speed=song["speed"],
-        num_channels=NUM_CHANNELS,
-        channel_volumes=list(CHANNEL_VOLUMES),
-        message=song["message"],
-    )
+    save_song(song, filepath)
     return song["info"]

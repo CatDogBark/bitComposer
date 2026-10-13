@@ -8,7 +8,7 @@ import sys
 import time
 
 from . import __version__
-from .composer import compose_and_save
+from .composer import compose_song, save_song, unique_path
 
 
 def main():
@@ -25,6 +25,18 @@ def main():
         "-d", "--output-dir",
         default=".",
         help="Output directory (used when -o is not specified)",
+    )
+    parser.add_argument(
+        "--name",
+        choices=["title", "timestamp"],
+        default="title",
+        help="How to name files when -o is not given: after the song's title "
+             "(\"Haunted Orchard.it\", default) or bitcomposer_<timestamp>.it",
+    )
+    parser.add_argument(
+        "--suffix",
+        default="",
+        help="Text appended to a title-named file before .it, e.g. \" (auto)\"",
     )
     parser.add_argument(
         "-s", "--seed",
@@ -136,29 +148,35 @@ def main():
         if seed is not None and args.count > 1:
             seed = seed + i
 
-        if args.output and args.count == 1:
-            filepath = args.output
-        else:
-            timestamp = int(time.time())
-            seed_str = f"_s{seed}" if seed is not None else ""
-            filepath = os.path.join(
-                args.output_dir,
-                f"bitcomposer_{timestamp}_{i}{seed_str}.it"
-            )
-
         try:
-            info = compose_and_save(filepath, seed=seed,
-                                       tempo=args.tempo, energy=args.energy,
-                                       scale=args.scale, style=args.style,
-                                       drum_density=args.drum_density,
-                                       drum_fills=not args.no_fills,
-                                       drum_swing=args.swing,
-                                       melody_style=args.melody,
-                                       harmony_voicing=args.harmony_voicing,
-                                       harmony_mode=args.harmony_mode,
-                                       bass_weight=args.bass_weight,
-                                       song_form=args.form,
-                                       echo=args.echo)
+            song = compose_song(seed=seed,
+                                tempo_pref=args.tempo, energy_pref=args.energy,
+                                scale_pref=args.scale, style_pref=args.style,
+                                drum_density=args.drum_density,
+                                drum_fills=not args.no_fills,
+                                drum_swing=args.swing,
+                                melody_style=args.melody,
+                                harmony_voicing=args.harmony_voicing,
+                                harmony_mode=args.harmony_mode,
+                                bass_weight=args.bass_weight,
+                                song_form=args.form,
+                                echo=args.echo)
+            info = song["info"]
+
+            if args.output and args.count == 1:
+                filepath = args.output
+            elif args.name == "title":
+                # The file is the song: what the player shows is what the
+                # folder shows.
+                filepath = unique_path(args.output_dir, song["name"], args.suffix)
+            else:
+                timestamp = int(time.time())
+                seed_str = f"_s{seed}" if seed is not None else ""
+                filepath = os.path.join(
+                    args.output_dir,
+                    f"bitcomposer_{timestamp}_{i}{seed_str}{args.suffix}.it"
+                )
+            save_song(song, filepath)
         except Exception as e:
             print(f"Error generating song: {e}", file=sys.stderr)
             if args.verbose:

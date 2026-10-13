@@ -54,7 +54,8 @@ bitcomposer -o mysong.it
 # Generate with verbose output
 bitcomposer -v -o mysong.it
 
-# Generate 5 songs into a directory
+# Generate 5 songs into a directory — files are named after their titles
+# ("Haunted Orchard.it"); use --name timestamp for bitcomposer_<ts>.it
 bitcomposer -n 5 -d ~/Music/Chiptune/
 
 # Reproducible with a seed

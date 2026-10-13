@@ -198,6 +198,24 @@ class OptionMatrix(unittest.TestCase):
                                              melody_style=("simple", "phrased")[i % 2])
 
 
+class CliNaming(unittest.TestCase):
+    def test_title_names_with_suffix_and_collisions(self):
+        from bitcomposer import cli
+        with tempfile.TemporaryDirectory() as tmp:
+            import contextlib, io
+            argv = sys.argv
+            try:
+                for extra in ([], ["--suffix", " (auto)"], []):
+                    sys.argv = ["bitcomposer", "-s", "3", "-d", tmp, *extra]
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        cli.main()
+            finally:
+                sys.argv = argv
+            title = compose_song(seed=3)["name"]
+            names = sorted(os.listdir(tmp))
+            self.assertEqual(names, sorted([f"{title}.it", f"{title} (auto).it", f"{title} 2.it"]))
+
+
 class Theory(unittest.TestCase):
     def test_progression_degrees_fit_their_scale(self):
         for scale, progs in theory.PROGRESSIONS.items():
