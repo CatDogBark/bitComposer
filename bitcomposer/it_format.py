@@ -200,8 +200,14 @@ def write_it_file(
     num_channels: int = 8,
     channel_volumes: list[int] | None = None,
     channel_pans: list[int] | None = None,
+    message: str = "",
 ) -> None:
-    """Write a complete .it module file."""
+    """Write a complete .it module file.
+
+    `message` goes into the module's song message (shown by trackers and
+    returned by libopenmpt as metadata "message"); lines are separated by
+    \r as the format requires. It is stored after the sample data.
+    """
 
     num_orders = len(orders)
     num_samples = len(samples)
@@ -249,6 +255,11 @@ def write_it_file(
         sample_data_positions.append(pos)
         pos += len(smp.data)
 
+    # Song message, if any, after the sample data. 8000 bytes is the format's cap.
+    msg_bytes = message.replace("\r\n", "\r").replace("\n", "\r").encode(
+        "ascii", errors="replace")[:7999] if message else b""
+    msg_offset = pos if msg_bytes else 0
+
     # Now build the file
     f = bytearray()
 
@@ -265,15 +276,15 @@ def write_it_file(
     # Flags: bit 0=stereo, bit 2=use instruments (0=samples), bit 3=linear slides
     flags = 0x0009  # Stereo + linear slides
     f.extend(struct.pack("<H", flags))
-    f.extend(struct.pack("<H", 0))                 # Special
+    f.extend(struct.pack("<H", 1 if msg_bytes else 0))  # Special: bit 0 = message attached
     f.extend(struct.pack("<B", global_volume))     # GV
     f.extend(struct.pack("<B", mix_volume))        # MV
     f.extend(struct.pack("<B", speed))             # IS (initial speed)
     f.extend(struct.pack("<B", tempo))             # IT (initial tempo)
     f.extend(struct.pack("<B", 128))               # Sep (stereo separation, 128=max)
     f.extend(struct.pack("<B", 0))                 # PWD (pitch wheel depth)
-    f.extend(struct.pack("<H", 0))                 # MsgLgth
-    f.extend(struct.pack("<I", 0))                 # MsgOff
+    f.extend(struct.pack("<H", len(msg_bytes)))    # MsgLgth
+    f.extend(struct.pack("<I", msg_offset))        # MsgOff
     f.extend(struct.pack("<I", 0))                 # Reserved
 
     # Channel pan (64 bytes). 0 = hard left, 32 = centre, 64 = hard right.
@@ -348,6 +359,11 @@ def write_it_file(
     # ── Sample data ──
     for smp in samples:
         f.extend(smp.data)
+
+    # ── Song message ──
+    if msg_bytes:
+        assert len(f) == msg_offset
+        f.extend(msg_bytes)
 
     with open(filepath, "wb") as fh:
         fh.write(bytes(f))

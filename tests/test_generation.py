@@ -21,7 +21,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from bitcomposer import composer, it_format, melody, pattern, samples, theory  # noqa: E402
+from bitcomposer import composer, it_format, melody, names, pattern, samples, theory  # noqa: E402
 from bitcomposer.composer import compose_and_save, compose_song  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(
@@ -57,11 +57,29 @@ class Determinism(unittest.TestCase):
 
 
 class FileFormat(unittest.TestCase):
+    def test_title_and_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, info = _gen(tmp, 3)
+            m = analyze.IT(path)
+            self.assertEqual(m.name, info["title"])
+            self.assertLessEqual(len(info["title"]), names.MAX_TITLE)
+            self.assertTrue(m.special & 1, "message flag not set")
+            msg_len, msg_off = struct.unpack("<HI", m.raw[0x36:0x3C])
+            msg = m.raw[msg_off:msg_off + msg_len].decode("ascii").split("\r")
+            self.assertEqual(msg[0], info["title"])
+            self.assertIn(f"{info['tempo']} BPM", msg[1])
+            self.assertIn(info["style"], msg[2])
+            self.assertIn("seed 3", msg[-1])
+            # titles differ between seeds and depend only on the seed
+            _, info_b = _gen(tmp, 4)
+            self.assertNotEqual(info["title"], info_b["title"])
+            self.assertEqual(compose_song(seed=3)["name"], info["title"])
+
     def test_header_and_channel_count(self):
         with tempfile.TemporaryDirectory() as tmp:
             path, info = _gen(tmp, 3)
             m = analyze.IT(path)
-            self.assertEqual(m.name[:11], "BitComposer")
+            self.assertEqual(m.name, info["title"])
             self.assertEqual(m.patnum, info["num_patterns"])
             self.assertEqual(len(m.played()), info["num_orders"])
             # 14 channels enabled, the rest flagged disabled (bit 7 of the pan byte).

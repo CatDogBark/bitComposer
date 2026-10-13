@@ -8,7 +8,9 @@ and pattern generation into playable Impulse Tracker modules.
 import random
 import zlib
 
+from . import __version__
 from . import theory
+from . import names
 from . import samples as smp
 from . import structure as struct
 from .it_format import (
@@ -648,15 +650,27 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
     # ── Song info ──
     key_name = theory.NOTE_NAMES[key % 12]
-    song_name = f"BitComposer - {key_name} {scale_name.replace('_', ' ').title()}"
+    scale_label = scale_name.replace("_", " ")
+    # Title from the song's own random state: as reproducible as the music,
+    # and finally something other than "BitComposer - C Dorian" twenty times.
+    song_name = names.song_title(scale_name)
     display_structure = [struct.section_type(s) for s in song_structure]
+    bpm = round(it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT))
+    message = "\n".join([
+        song_name,
+        f"{key_name} {scale_label} - {bpm} BPM",
+        f"{style_pref}{' + echo' if use_echo else ''} - {form_name} form",
+        f"{instruments['melody']} / {instruments['harmony']} / {instruments['bass']}",
+        f"seed {seed if seed is not None else 'none'} - bitcomposer {__version__}",
+    ])
 
     info = {
+        "title": song_name,
         "key": key_name,
         "scale": scale_name,
         # The audible tempo, not the raw IT field — reporting the field as BPM
         # is what hid the speed/tempo interaction for so long.
-        "tempo": round(it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)),
+        "tempo": bpm,
         "it_tempo": tempo,
         "speed": speed,
         "style": style_pref,
@@ -683,7 +697,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     }
 
     return {
-        "name": song_name[:25],
+        "name": song_name[:names.MAX_TITLE],
+        "message": message,
         "key": key,
         "scale": scale_name,
         "tempo": tempo,
@@ -740,5 +755,6 @@ def compose_and_save(filepath: str, seed: int | None = None,
         speed=song["speed"],
         num_channels=NUM_CHANNELS,
         channel_volumes=list(CHANNEL_VOLUMES),
+        message=song["message"],
     )
     return song["info"]

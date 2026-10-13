@@ -16,6 +16,7 @@ The generated music is inspired by the SNES and Sega Genesis era. Three sound pa
 - **Drum system** — 6 drum channels, per-section pattern selection, fill patterns at transitions, swing/shuffle, sparse/busy density variants
 - **Music theory** — 8 scales, 30 progressions including borrowed chords and secondary dominants, 7 chord types, two-bar harmonic rhythm within each pattern, progression variation between sections, key modulation (chorus up a semitone)
 - **14-channel output** — melody, 3 harmony, bass, arp, kick, snare, hihat, tom, crash, open hihat, 2 echo
+- **Named songs** — each module gets a seed-derived two-word title that leans with its scale ("Haunted Orchard", "Neon Causeway"), and a song message carrying key, BPM, palette, form, lead instruments and seed, which trackers and the companion player display
 - **Reproducible** — optional seed parameter for deterministic output
 - **Standard format** — outputs .it files playable by any tracker-compatible player (libopenmpt, VLC, Audacious, OpenMPT, etc.)
 - **Zero dependencies** — pure Python, no external libraries required

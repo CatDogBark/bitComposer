@@ -169,6 +169,7 @@ def main():
         print(f"Generated: {filepath}")
 
         if args.verbose:
+            print(f"  Title:       {info['title']}")
             print(f"  Key:         {info['key']} {info['scale']}")
             print(f"  Tempo:       {info['tempo']} BPM "
                   f"(speed {info['speed']}, IT tempo {info['it_tempo']})")
