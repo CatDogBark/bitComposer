@@ -750,11 +750,23 @@ class MPRISService(dbus.service.Object):
             }
         return {}
 
+    @staticmethod
+    def _as_bool(value):
+        """Coerce a D-Bus variant to bool.
+
+        qdbus6 (which the widget uses) sends "false" as a *string* variant,
+        and bool("false") is True — so Shuffle could be switched on but
+        never off from the widget.
+        """
+        if isinstance(value, str):
+            return value.strip().lower() in ("1", "true", "yes", "on")
+        return bool(value)
+
     @dbus.service.method(DBUS_PROPS_IFACE, in_signature="ssv")
     def Set(self, interface, prop, value):
         if interface == MPRIS_PLAYER_IFACE:
             if prop == "Shuffle":
-                self.player.set_shuffle(bool(value))
+                self.player.set_shuffle(self._as_bool(value))
                 self._emit_props_changed()
             elif prop == "Volume":
                 self.player.set_volume(float(value))
