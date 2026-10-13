@@ -156,35 +156,118 @@ harmony now steps rather than leaping between root positions.
 
 Seeded output remains byte-identical run to run.
 
-## 3. Tier 1 — design ceilings
+## 2c. Tier 1 results
 
-Not bugs, but hard limits on how good the output can get.
+**Date:** 2026-10-13. Branch `tier1-snes`, merged to main as v0.3.0. Twenty
+seeds, default settings, measured with `tools/analyze.py` and decoded through
+libopenmpt (the daemon's player) for levels.
 
-- **Rhythm is locked to an 8th-note grid.** All eight `RHYTHM_TEMPLATES` in
+| metric | Tier 0 (Sep 4) | before this pass | after | note |
+|---|---|---|---|---|
+| `odd_row_pct` | 0.6 | 3.2 | **8.1** | 16th-note figures in the melody templates |
+| `distinct_ioi` | 10.2 | 8.4 | **11.8** | more rhythmic variety |
+| `distinct_voicings` | 1.6 | 3.2 | **4.5** | two chords per pattern, borrowed chords |
+| `order_reuse_pct` | 3.3 | 5.4 | **7.5** | orphan copies gone |
+| `motif_reuse_pct` | 48.3 | 58.8 | 59.2 | held |
+| patterns / orders | 25.6 / 24.7 | 27.4 / 26.0 | 27.4 / 30.0 | every pattern in the file is now played |
+| kick / snare / hat per bar | 2.88 / 1.67 / 6.59 | 2.83 / 1.68 / 7.45 | 2.64 / 1.54 / 6.96 | unchanged within seed variance |
+| peak level | — | −6.0 to −7.5 dBFS | −6.0 to −8.7 dBFS | SNES palette ~2 dB quieter |
+
+Seeded output is byte-identical run to run; 25 unit tests in `tests/` cover
+determinism, format, tempo, the arrangement thresholds above, every option
+combination, loop seams and pattern operations.
+
+### What changed
+
+**Harmonic rhythm.** Each pattern carried one chord for four bars, so a
+four-chord progression took sixteen bars to come round. Patterns now hold a
+chord timeline; with per-section odds (verse 0.5, chorus 0.55, bridge 0.6)
+the back two bars move to a related chord — the next one in the progression
+anticipated, the plagal neighbour, or the dominant of the current chord.
+Melody, harmony, bass and arp all follow the timeline, and the melody
+resolves onto a chord tone at each change.
+
+**Harmonic vocabulary.** Progression entries can carry a chromatic shift, so
+major now has I–♭VII–IV, I–♭VI–♭VII, II (V/V) and III (V/vi); natural minor
+gained i–VI–III–VII, the Andalusian i–VII–VI–V and a borrowed major V.
+`major_pentatonic` had been falling back to the natural-minor table, which
+indexed degrees 5 and 6 past the five-note scale and put minor triads on a
+major scale; it has its own progressions now.
+
+**Melody rhythm.** Six 16th-note templates (dotted-eighth push, anticipated
+third beat, pickups, flams) join the eight even-grid ones, and motif
+variation can nudge a note by a single row.
+
+**Sound: SNES palette.** `--style snes` previously meant "square and triangle
+waves without FM" — a NES/Game Boy sound. The SPC700 was a sample player:
+short 8–16 kHz BRR samples with loop points, through a hardware echo. The new
+palette renders 21 voices that way — strings, brass, choir (formant-weighted,
+so they chipmunk with pitch like the real thing), flute, organ, e-piano,
+bell, marimba, pizzicato, harp, three basses, an orchestra hit and a gated
+drum kit — at 16 kHz with attack-then-loop sustain, run through a BRR codec
+model (all four SPC700 prediction filters, 4-bit residuals, per-block shift)
+for the grain. The old waveform set is now `--style chip`.
+
+**Echo.** Two echo channels carry delayed copies of the lead (3 rows at
+−6 dB, 6 rows at −12 dB), panned wide. Always on for snes, `--echo` controls
+it. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
+follow.
+
+**Bugs fixed on the way.**
+
+- Chorus modulation shifted chord roots a semitone but not the scale, so the
+  melody sat a semitone under its own harmony for every modulated chorus.
+- Intro "fade-in" wrote volume slide-ups onto notes already at full volume,
+  making the intro louder than the song; fade-outs were undone by each
+  note's volume column. Both now scale the volume columns and slide held notes.
+- Harmony `sustain` mode decayed at 2 per tick — a pad died in six rows and
+  the mode was indistinguishable from stabs. Decay is now per voicing, with a
+  fine per-row slide for sustain.
+- `silence_inactive_channels` deep-copied a pattern per order slot to add a
+  cut, leaving unplayed orphan patterns and defeating order-list reuse. Cuts
+  are written in place.
+- Single-cycle waveforms were six cents sharp (integer period at 44.1 kHz
+  reported as 44100 Hz); every sample now reports the exact rate its period
+  implies.
+
+**Still open.** The learned-model roadmap in §5 is untouched. Drums are still
+template-driven with no ghost notes or velocity shape beyond humanisation;
+the arp has one figure per song; there is no per-section instrumentation
+plan beyond the layer map. The analyzer does not yet score the SNES palette's
+timbral intent (loop seams and levels are covered by the tests instead).
+
+---
+
+## 3. Tier 1 — design ceilings (as found on 2026-09-04)
+
+Not bugs, but hard limits on how good the output can get. Items marked ✔ were
+lifted by the commits of 2026-09-04 and the Tier 1 pass in §2c.
+
+- ✔ **Rhythm is locked to an 8th-note grid.** All eight `RHYTHM_TEMPLATES` in
   `melody.py` use even offsets only; **0.3% of onsets land on an odd row**. No
   syncopation finer than an 8th, no triplets, no dotted rhythms, and no
   anticipations — pushing a note a 16th ahead of the beat is the single most
   effective "musical" device that is entirely absent.
-- **Arp and bass never rest.** `bass.py` → `generate_arpeggio()` writes a note
+- ✔ **Arp and bass never rest.** `bass.py` → `generate_arpeggio()` writes a note
   every 2 rows for all 64 rows regardless of style or section energy. 640 arp
   notes vs 167 melody notes: the arp is the densest thing in the mix and it never
   breathes. `generate_bass()` has the same unconditional-loop shape.
-- **Tiny harmonic vocabulary.** 2–4 progressions per scale, all four chords long,
+- ✔ **Tiny harmonic vocabulary.** 2–4 progressions per scale, all four chords long,
   all diatonic. `CHORD_INTERVALS` defines `7th`, `sus4`, `dim` and `aug` but
   `PROGRESSIONS` uses only `major`, `minor` and `power` — the others never reach
   output. No secondary dominants, borrowed chords, modal interchange, or pedal
   points. Game music leans heavily on ♭VI/♭VII and sus resolutions; none present.
-- **3 IT effects out of ~30.** Only D (volume slide), G (portamento) and H
+- ✔ **3 IT effects out of ~30.** Only D (volume slide), G (portamento) and H
   (vibrato) reach the file. Missing the ones that define the idiom: **Jxy
   arpeggio** (the classic single-channel chord), **Qxy retrigger**, **SDx note
   delay** (flams, humanisation), Oxx sample offset, and panning. `FX_TREMOLO` is
   imported into `composer.py` and never used.
-- **Dead code.** `theory.passing_chord()`, `theory.get_chord_for_degree()` and
+- ✔ **Dead code.** `theory.passing_chord()`, `theory.get_chord_for_degree()` and
   `theory.note_from_name()` have zero references.
-- **Orphaned patterns.** `silence_inactive_channels()` deep-copies patterns and
+- ✔ **Orphaned patterns.** `silence_inactive_channels()` deep-copies patterns and
   appends them, leaving the originals unreferenced in the order list — files
   carry more patterns than they play (26 patterns for 24 orders in seed 1).
-- **No tests and no regression harness** before this document; nothing indicated
+- ✔ **No tests and no regression harness** before this document; nothing indicated
   whether a change made the music better or worse.
 
 ---

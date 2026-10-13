@@ -134,11 +134,16 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
 
 - `GetState() -> s` — pipe-delimited, **13 fields**, 1-indexed for `cut -d'|'`:
   1 status, 2 position, 3 duration, 4 channels, 5 title, 6 artist, 7 type,
-  8 file, 9 patterns, 10 shuffle, 11 playlistCount, 12 currentIndex, 13 autoGen
+  8 file, 9 patterns, 10 shuffle, 11 playlistCount, 12 currentIndex, 13 autoGen.
+  Free-text fields have `|` replaced so a module title cannot shift the columns.
 - `GetPlaylist() -> as`
-- `PlayIndex(i)`
-- `Rescan()`
-- `SetAutoGenerate(b enabled, s cliFlags)`
+- `PlayIndex(i)` — `i` is a position in `GetPlaylist`, with or without shuffle.
+  `currentIndex` in `GetState` uses the same numbering; shuffle only changes
+  the order Next/Previous step through.
+- `Rescan()` — also prunes `bitcomposer_auto_*.it` down to `AUTOGEN_MAX`
+  (never the loaded track) and keeps `currentIndex` on the loaded file.
+- `SetAutoGenerate(b enabled, s cliFlags)` — flags are split with `shlex` and
+  passed to the CLI as arguments, not through a shell.
 
 Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 `EXTENSIONS={.mod,.xm,.it,.s3m,.mptm}`, `AUTOGEN_PREFIX="bitcomposer_auto_"`,
@@ -153,9 +158,11 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
   into `~/Music/Chiptune/` will not surface it until something calls that; both
   helper scripts do. Monitor code is on Ragnarok at
   `~/Projects/cyberpunk-hud/plasmoids/chiptune-player/daemon/...` lines ~754–767.
-- **Auto-file pruning happens twice.** `bitcomposer-generate.sh --auto` prunes to
-  10, and the daemon's `_prune_autogen` independently prunes to 10. Both hard
-  `rm`/`unlink()` with no trash, so a generation can silently destroy old output.
+- **Auto-file pruning is hard deletion.** The daemon prunes
+  `bitcomposer_auto_*.it` to `AUTOGEN_MAX` (10) on every `Rescan()`, with
+  `unlink()` and no trash. It is the single place pruning happens
+  (`bitcomposer-generate.sh` used to prune independently). Rename a track you
+  want to keep so it loses the `bitcomposer_auto_` prefix.
 - **Hardcoded music dir.** `plasmoid/contents/ui/main.qml:116` has
   `/home/troy/Music/Chiptune/`. It is the only hardcoded `/home/troy` in the
   stack — the daemon and both scripts use `$HOME` / `expanduser`. Patch it if the
@@ -178,9 +185,15 @@ cd / && env -u PYTHONPATH python3 -c \
 # generator end to end (widget-like environment)
 env -u PYTHONPATH bitcomposer-generate.sh --form standard --harmony-voicing full
 
-# mastering, on a copy — this patches in place
+# mastering, on a copy — this patches in place. One volume per channel, in
+# bitcomposer.pattern order (14 for current output: melody, harm x3, bass,
+# arp, kick, snare, hihat, tom, crash, open hat, echo x2). Only the channels
+# given are written.
 cp ~/Music/Chiptune/some.it /tmp/t.it
-bitcomposer-master.sh /tmp/t.it 64 20 20 20 12 30 40 40 40 40 40 40
+bitcomposer-master.sh /tmp/t.it 64 20 20 20 12 30 40 40 40 40 40 40 13 13
+
+# unit tests
+python3 -m unittest discover -s tests
 
 # generation quality did not regress
 python3 tools/analyze.py '~/Music/Chiptune/*.it'

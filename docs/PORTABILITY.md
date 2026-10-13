@@ -16,7 +16,7 @@
 
 
 **Status:** 2026-09-04. Originals received from Ragnarok at `~/bitcomposer-vendor`
-(not versioned here). Both helper scripts are installed and verified, and the
+(since deleted; `companion/` is the only copy). Both helper scripts are installed and verified, and the
 import gap is closed with a `.pth` file — see `INSTALL.md`, which is now the
 operational reference. **Still open: the A/B/C scope choice below.**
 
