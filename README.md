@@ -1,5 +1,9 @@
 # bitComposer
 
+[![CI](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml/badge.svg)](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/CatDogBark/bitComposer)](https://github.com/CatDogBark/bitComposer/releases/latest)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 Procedural 16-bit game music. Pure Python, no dependencies, writes Impulse
 Tracker `.it` modules you can play in any tracker player.
 

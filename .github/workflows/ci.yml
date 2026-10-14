@@ -27,4 +27,4 @@ jobs:
         run: |
           python -m pip install --quiet .
           cd / && bitcomposer --version
-          python -c "import bitcomposer, pkgutil; assert not pkgutil.find_loader('tests')"
+          python -c "import bitcomposer, importlib.util; assert importlib.util.find_spec('tests') is None"
