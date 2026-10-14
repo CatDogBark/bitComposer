@@ -413,7 +413,11 @@ class ChiptunePlayer:
             self._pw_proc = None
 
     def _decode_loop(self):
-        """Background thread: decode PCM from module and pipe to pw-cat."""
+        """Background thread: decode PCM from module and pipe to paplay."""
+        # Belt and braces for the live mixer: whatever path (re)started the
+        # decoder, the module carries the user's mix from the first buffer.
+        with self._lock:
+            self._reapply_mix()
         while not self._stop_event.is_set():
             self._pause_event.wait(timeout=0.1)
             if self._stop_event.is_set():
