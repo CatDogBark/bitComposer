@@ -129,8 +129,9 @@ PlasmoidItem {
         channelVolumesChanged()
     }
 
-    property string musicDir: "/home/troy/Music/Chiptune/"
+    property string musicDir: ""   // installer writes a fallback; the daemon reports the live one
     function shortDir() {
+        if (!root.musicDir) return "waiting for daemon…"
         var d = root.musicDir.replace(/\/$/, "")
         var m = d.match(/^\/home\/[^\/]+\//)
         return m ? "~/" + d.substring(m[0].length) : d
@@ -222,14 +223,14 @@ PlasmoidItem {
 
     function applyPreset(name) {
         var presets = {
-            "MEGA DRIVE":   { tempo: "fast",   energy: "intense", scale: "minor",      style: "genesis", drumDensity: "busy",   fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "standard" },
-            "CASTLEVANIA":  { tempo: "medium", energy: "normal",  scale: "minor",      style: "random",  drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "rondo"    },
+            "FM DRIVE":     { tempo: "fast",   energy: "intense", scale: "minor",      style: "genesis", drumDensity: "busy",   fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "standard" },
+            "GOTHIC":       { tempo: "medium", energy: "normal",  scale: "minor",      style: "random",  drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "rondo"    },
             "BOSS FIGHT":   { tempo: "fast",   energy: "intense", scale: "minor",      style: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "short"    },
             "OVERWORLD":    { tempo: "medium", energy: "normal",  scale: "major",      style: "snes",    drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "standard" },
             "CHILL WAVE":   { tempo: "slow",   energy: "chill",   scale: "pentatonic", style: "snes",    drumDensity: "sparse", fills: false, swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
             "DUNGEON":      { tempo: "slow",   energy: "chill",   scale: "minor",      style: "random",  drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "thin", mode: "stabs",    bass: "medium", form: "rondo"    },
             "CREDITS":      { tempo: "slow",   energy: "chill",   scale: "major",      style: "snes",    drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
-            "STREET FIGHT": { tempo: "fast",   energy: "intense", scale: "pentatonic", style: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "stabs",    bass: "heavy",  form: "short"    },
+            "FIGHT THEME":  { tempo: "fast",   energy: "intense", scale: "pentatonic", style: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "stabs",    bass: "heavy",  form: "short"    },
             "CYBER NOIR":   { tempo: "medium", energy: "normal",  scale: "minor",      style: "genesis", drumDensity: "normal", fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "linear"   },
             "ANY":          { tempo: "random", energy: "random",  scale: "random",     style: "random",  drumDensity: "random", fills: true,  swing: "random", melody: "random",  voicing: "random", mode: "random", bass: "random", form: "random"   },
         }
@@ -1089,7 +1090,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         spacing: 3
                         Repeater {
-                            model: ["MEGA DRIVE", "CASTLEVANIA", "BOSS FIGHT", "OVERWORLD", "CHILL WAVE", "DUNGEON", "CREDITS", "STREET FIGHT", "CYBER NOIR", "ANY"]
+                            model: ["FM DRIVE", "GOTHIC", "BOSS FIGHT", "OVERWORLD", "CHILL WAVE", "DUNGEON", "CREDITS", "FIGHT THEME", "CYBER NOIR", "ANY"]
                             Rectangle {
                                 required property string modelData
                                 property bool active: root.activePreset === modelData
@@ -1604,15 +1605,24 @@ PlasmoidItem {
 
                     width: playlistView.width
                     height: 26
-                    color: plMouse.containsMouse ? "#142018" :
+                    color: rowHover.hovered ? "#142018" :
                            (index === root.currentIndex ? "#0f1a16" : "transparent")
                     radius: 3
+
+                    // Hover state for the whole row. A HoverHandler never takes
+                    // input, so it cannot fight the KEEP button for the click.
+                    HoverHandler { id: rowHover }
 
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
                         spacing: 8
+                        // Above plMouse, which is declared later and would
+                        // otherwise sit on top and take the KEEP click. Text
+                        // items ignore mouse events, so row clicks still fall
+                        // through to plMouse.
+                        z: 1
 
                         Text {
                             text: String(index + 1).padStart(2, '0') + "."
@@ -1630,7 +1640,7 @@ PlasmoidItem {
                             elide: Text.ElideRight
                         }
                         Text {
-                            visible: modelData.auto && !(plMouse.containsMouse)
+                            visible: modelData.auto && !rowHover.hovered
                             text: "AUTO"
                             color: Qt.rgba(1, 0, 0.33, 0.6)
                             font.family: "JetBrains Mono"
@@ -1638,7 +1648,7 @@ PlasmoidItem {
                             font.letterSpacing: 1
                         }
                         Rectangle {
-                            visible: modelData.auto && plMouse.containsMouse
+                            visible: modelData.auto && rowHover.hovered
                             width: keepLabel.implicitWidth + 10
                             height: 16
                             radius: 3
