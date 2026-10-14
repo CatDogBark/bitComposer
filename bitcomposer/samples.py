@@ -481,19 +481,25 @@ def snare_layered(length: int = 5000) -> tuple[bytes, int]:
     return data, len(float_samples)
 
 
-def hihat_metallic(length: int = 2500) -> tuple[bytes, int]:
-    """Metallic hi-hat — layered square noise + ring mod for shimmer."""
+def hihat_metallic(length: int = 2200) -> tuple[bytes, int]:
+    """Metallic hi-hat — ring-modulated squares for the shimmer, under noise.
+
+    The first version was the three raw squares alone, full-band at 44.1 kHz:
+    a buzz with aliasing on top, and at the kit's level it was rough enough
+    that it got turned down by two thirds by ear. Now the metallic product is
+    one layer under filtered noise, low-passed, and the preset is quieter.
+    """
     samples = []
     for i in range(length):
         t = i / SAMPLE_RATE
-        # Multiple high-frequency square waves for metallic character
         s1 = 1.0 if math.sin(2.0 * math.pi * 4500.0 * t) > 0 else -1.0
         s2 = 1.0 if math.sin(2.0 * math.pi * 6000.0 * t) > 0 else -1.0
         s3 = 1.0 if math.sin(2.0 * math.pi * 7800.0 * t) > 0 else -1.0
-        # Ring modulate them together
         metallic = s1 * s2 * s3
+        noise = _rng.uniform(-1.0, 1.0)
         env = math.exp(-45.0 * t)
-        samples.append(metallic * env)
+        samples.append((0.35 * metallic + 0.65 * noise) * env)
+    samples = _highpass(_lowpass(samples, 0.6), 0.3)
     data = _pack_samples(_normalize(samples, amplitude=0.6))
     return data, length
 
@@ -1174,7 +1180,7 @@ INSTRUMENT_PRESETS = {
     # Drums — enhanced
     "kick_layered":   (kick_layered,   {},             64),
     "snare_layered":  (snare_layered,  {},             56),
-    "hihat_metallic": (hihat_metallic, {},             40),
+    "hihat_metallic": (hihat_metallic, {},             22),
     # SNES — sampled palette (see the section above)
     "snes_strings":   (snes_strings,   {},             60),
     "snes_brass":     (snes_brass,     {},             64),
