@@ -12,11 +12,13 @@ ending. Three sound palettes:
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 
-**Listen** (one minute each, rendered with libopenmpt):
-[snes](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-snes.ogg) ·
-[genesis](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-genesis.ogg) ·
-[chip](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-chip.ogg).
-The `.it` files for those demos are on the same
+**Listen** (one minute each, rendered with libopenmpt, picked by ear from the generator's output):
+
+- snes — [*Skyward Cloister*](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-snes.ogg)
+- genesis — [*Skyward Cistern*](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-genesis.ogg)
+- chip — [*Ember Dunes*](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-chip.ogg)
+
+The `.it` modules for those three are on the same
 [release](https://github.com/CatDogBark/bitComposer/releases/tag/v0.4.0).
 
 ## Quick start
