@@ -158,9 +158,8 @@ Seeded output remains byte-identical run to run.
 
 ## 2c. Tier 1 results
 
-**Date:** 2026-10-13. Branch `tier1-snes`, merged to main as v0.3.0. Twenty
-seeds, default settings, measured with `tools/analyze.py` and decoded through
-libopenmpt (the daemon's player) for levels.
+**Date:** 2026-10-13. Released as v0.3.0. Twenty seeds, default settings,
+measured with `tools/analyze.py` and decoded through libopenmpt for levels.
 
 | metric | Tier 0 (Sep 4) | before this pass | after | note |
 |---|---|---|---|---|
@@ -317,16 +316,3 @@ repeats, because those are arrangement-layer facts, not note-choice facts.
    where musical world-knowledge helps and validation is trivial. Orthogonal to
    3–4 and cheap. Would also produce real song titles instead of
    `BitComposer - C Dorian`.
-
-### Training hardware
-
-Model training is **not** intended for the dev laptop (Precision 5750, Quadro RTX
-3000 Max-Q, 6 GB VRAM — enough to *run* a small model, tight for anything else).
-Available instead:
-
-- **TESLA GPU box — 24 GB VRAM.** Existing AI training procedures already
-  developed on this machine; the intended target for steps 3–4.
-- **Ragnarok — GeForce 5080.**
-
-Both are far more than a symbolic music model needs (these are megabyte-scale, not
-gigabyte-scale). VRAM is not the constraint; corpus preparation is.

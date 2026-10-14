@@ -18,10 +18,9 @@ and daemon status without touching anything.
 creates that directory and otherwise never reads, writes or clears it —
 including on `--uninstall`.
 
-The vendored copies came from this laptop's **installed** files, which are
-authoritative. Ragnarok's dev copies under
-`~/Projects/cyberpunk-hud/plasmoids/chiptune-player/` are stale — behind by ~61
-lines of daemon and ~250 lines of QML. Do not sync from them.
+The companion is Linux-only and assumes KDE Plasma 6, PipeWire or
+PulseAudio, and Debian-style paths (`/usr/bin/python3`). It is optional:
+the generator itself runs anywhere Python does.
 
 ---
 
@@ -32,7 +31,7 @@ Both the daemon's autogen and `bitcomposer-generate.sh` shell out to
 python3 — not a venv. On Debian 13, PEP 668 (`/usr/lib/python3.13/
 EXTERNALLY-MANAGED`) blocks a plain `pip install`.
 
-This machine uses a `.pth` file:
+Use a `.pth` file:
 
 ```bash
 SITE=$(python3 -m site --user-site)     # ~/.local/lib/python3.13/site-packages
@@ -41,8 +40,7 @@ echo "/path/to/your/bitComposer" > "$SITE/bitcomposer.pth"
 ```
 
 `companion/install.sh` writes this for you, using the location of the checkout
-it is run from — the path is not fixed, and differs per machine (`~/bitComposer`
-on one, `~/Projects/bitComposer` on another).
+it is run from.
 
 One line, no pip, no PEP 668 override. Every `python3` this user runs picks it
 up — shell, daemon, and the widget via plasmashell alike. It points at the
@@ -96,9 +94,9 @@ re-running the installer on a machine where the daemon is already up would leave
 the old process holding the old `daemon.py` and the old `Environment=` — a green
 install that changed nothing. Finally it re-checks the import.
 
-`main.qml` carries a default music dir (the only `/home/troy` in the stack) that
-the installer rewrites to `$MUSIC_DIR`; at runtime the widget replaces it with
-whatever the daemon reports in `GetState` field 16, so the two cannot drift.
+`main.qml` has no music dir of its own: the installer writes `$MUSIC_DIR` into
+it as a fallback, and at runtime the widget uses whatever the daemon reports in
+`GetState` field 16, so the two cannot drift.
 
 Widget settings (preset and every chip) persist in the plasmoid's own
 configuration (`contents/config/main.xml`), so they survive a shell restart.
@@ -170,11 +168,9 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 
 ## Gotchas
 
-- **No file monitor.** The installed daemon dropped `Gio.File.monitor_directory`,
-  so the playlist refreshes *only* on an explicit `Rescan()`. Dropping a file
-  into `~/Music/Chiptune/` will not surface it until something calls that; both
-  helper scripts do. Monitor code is on Ragnarok at
-  `~/Projects/cyberpunk-hud/plasmoids/chiptune-player/daemon/...` lines ~754–767.
+- **No file monitor.** The playlist refreshes only on an explicit `Rescan()`.
+  Dropping a file into the music dir will not surface it until something calls
+  that; both helper scripts and the widget's generate path do.
 - **File names are song titles.** The CLI names output after the module
   title ("Haunted Orchard.it", with " 2", " 3" on a clash) unless `-o` or
   `--name timestamp` is given, so the player's playlist and the folder agree.
@@ -183,8 +179,9 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
   `AUTOGEN_MAX` (10) on every `Rescan()`, with `unlink()` and no trash. It is
   the single place pruning happens. Use KEEP in the widget (or `KeepTrack`)
   to rename one out of the set.
-- **Default music dir in the QML.** `main.qml` has `/home/troy/Music/Chiptune/`
-  as a fallback; the installer patches it and the daemon overrides it live.
+- **Default music dir in the QML.** `main.qml` carries a fallback path that
+  the installer patches to `$MUSIC_DIR`; at runtime the daemon's reported
+  directory overrides it.
 - **Mastering restarts the track.** `bitcomposer-master.sh` stops, rescans and
   replays the current track so the edit is audible immediately. That is by
   design, not a bug, but it is not a seamless in-place update.

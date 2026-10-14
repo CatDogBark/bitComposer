@@ -1,147 +1,129 @@
-# bitcomposer
+# bitComposer
 
-Procedural 16-bit chiptune music generator. Creates Impulse Tracker (.it) module files using algorithmically composed melodies, bass lines, arpeggios, harmony, and drum patterns.
+Procedural 16-bit game music. Pure Python, no dependencies, writes Impulse
+Tracker `.it` modules you can play in any tracker player.
 
-The generated music is inspired by the SNES and Sega Genesis era. Three sound palettes: **snes** — sampled strings, brass, choir, plucks and a gated drum kit rendered the way the SPC700 played them (16 kHz, looped, BRR-grained, with echo); **genesis** — FM bells, brass and bass; **chip** — square, pulse and triangle waves.
+Every run composes a new song: a motif-based melody with call-and-response
+phrasing, voice-led harmony, bass, arpeggio and drums, arranged into a form
+(verse–chorus, AABA, rondo, through-composed) with an energy curve and a real
+ending. Three sound palettes:
 
-## Features
+- **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead on a hardware-style echo.
+- **genesis** — FM bells, brass, organ and bass.
+- **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 
-- **Motif-based melody** — phrase structure with contour shaping (arch, climb, valley, etc.), question-answer phrasing, and chorus callbacks so the hook comes back
-- **Full harmony** — 2-3 note chord voicings across 3 channels, counter-melody generation, sustain/stabs/rhythmic modes, voiced in a lower octave to sit behind the melody
-- **Mix mastering** — per-channel global volumes baked into the IT header so melody leads and harmony/drums sit in the background naturally, with volume decay slides on sustained notes
-- **Dynamic arrangement** — energy curves across sections, gradual texture build, variable structure (tag/abrupt/fadeout endings, double bridges), instrument swaps between sections
-- **Three palettes, 55 instruments** — SNES-style sampled voices (strings, brass, formant choir, flute, organ, e-piano, bell, marimba, pizzicato, harp, three basses, orchestra hit, gated drum kit) built at 16 kHz with loop points and a BRR codec model; FM (organ, brass, bell, pad, bass); and classic waveforms (square, pulse, triangle, saw, PWM, supersaw) with layered drums
-- **Echo** — two delayed, panned copies of the lead, the SNES hardware-echo sound, as tracker channels
-- **IT effects** — vibrato, portamento, J arpeggio on thin harmony, Q retrigger on fills, SDx note-delay swing, volume slides, velocity humanization, note-cut control
-- **Drum system** — 6 drum channels, per-section pattern selection, fill patterns at transitions, swing/shuffle, sparse/busy density variants
-- **Music theory** — 8 scales, 30 progressions including borrowed chords and secondary dominants, 7 chord types, two-bar harmonic rhythm within each pattern, progression variation between sections, key modulation (chorus up a semitone)
-- **14-channel output** — melody, 3 harmony, bass, arp, kick, snare, hihat, tom, crash, open hihat, 2 echo
-- **Named songs** — each module gets a seed-derived two-word title that leans with its scale ("Haunted Orchard", "Neon Causeway"), and a song message carrying key, BPM, palette, form, lead instruments and seed, which trackers and the companion player display
-- **Reproducible** — optional seed parameter for deterministic output
-- **Standard format** — outputs .it files playable by any tracker-compatible player (libopenmpt, VLC, Audacious, OpenMPT, etc.)
-- **Zero dependencies** — pure Python, no external libraries required
+**Listen** (one minute each, rendered with libopenmpt):
+[snes](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-snes.ogg) ·
+[genesis](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-genesis.ogg) ·
+[chip](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-chip.ogg).
+The `.it` files for those demos are on the same
+[release](https://github.com/CatDogBark/bitComposer/releases/tag/v0.4.0).
 
-## Install
+## Quick start
+
+```bash
+git clone https://github.com/CatDogBark/bitComposer.git
+cd bitComposer
+python3 -m bitcomposer -d out            # writes out/<Title>.it
+python3 -m bitcomposer -d out -s 42 -v   # reproducible, with details
+```
+
+Play the result with [OpenMPT](https://openmpt.org/) (Windows),
+[Schism Tracker](https://schismtracker.org/), VLC, Audacious, `xmp`, or
+anything built on libopenmpt. To install the `bitcomposer` command:
 
 ```bash
 pip install .
 ```
 
-Or run directly:
+Python 3.10 or newer. Nothing else.
 
-```bash
-python3 -m bitcomposer.cli
+## What you can steer
+
+Everything defaults to `random`.
+
+```
+--style   chip|snes|genesis          sound palette
+--echo    on|off|random              lead echo (always on for snes when random)
+--tempo   slow|medium|fast           80–110 / 110–140 / 140–180 BPM
+--energy  chill|normal|intense       density and arrangement weight
+--scale   minor|major|pentatonic
+--form    standard|aaba|rondo|short|linear
+--drum-density sparse|normal|busy    --no-fills    --swing off|light|heavy
+--melody  simple|phrased             phrased = motif-based, has a hook
+--harmony-voicing thin|full          --harmony-mode stabs|sustain|rhythmic
+--bass-weight heavy|medium|light
+--name    title|timestamp            file naming; --suffix adds a marker
+-s SEED   -n COUNT   -o FILE   -d DIR   -v
 ```
 
-Tests (stdlib `unittest`, about 20 seconds):
+Some starting points:
+
+```bash
+# Overworld — bright, sampled palette with echo
+bitcomposer -d out --style snes --scale major --tempo medium --form standard
+
+# FM boss fight
+bitcomposer -d out --style genesis --tempo fast --energy intense --scale minor --drum-density busy --form short
+
+# Game Boy flavour — square waves, thin harmony, no echo
+bitcomposer -d out --style chip --echo off --harmony-voicing thin --bass-weight light --form short
+
+# Credits roll
+bitcomposer -d out --style snes --tempo slow --energy chill --scale major --drum-density sparse --no-fills --form linear
+```
+
+## How it works
+
+1. Pick a key and a scale weighted toward game music (minor pentatonic, dorian, harmonic minor, mixolydian…), then a progression for it. The tables include borrowed chords and secondary dominants — ♭VII, ♭VI, V/V — not just the diatonic set.
+2. Choose a form and its energy curve; decide which sections repeat. Repeated sections draw the same music from the same seed, so the hook comes back.
+3. Generate a motif (rhythm template plus contour) and vary it per bar in statement/answer pairs. Fourteen rhythm templates, six of them with 16th-note pushes and pickups.
+4. Each four-bar pattern holds a chord timeline; about half the time the back two bars move to a related chord. Melody resolves onto chord tones at each change; harmony is voiced from fixed register anchors so it steps rather than leaps; bass and arp follow and rest with the section's energy.
+5. Drums come from one-bar templates by section and density, with fills, retriggered snare rolls and tick-level swing.
+6. Instruments are synthesized per song from the chosen palette and written as samples. SNES voices get attack-then-loop sustain and the BRR treatment.
+7. The lead is copied to two echo channels, and everything is written as a 14-channel `.it` with the title and a song message (key, BPM, palette, form, seed) that trackers display.
+
+Each song gets a seed-derived two-word title that leans with its scale:
+*Haunted Orchard*, *Neon Causeway*, *Rusted Foundry*.
+
+## Measuring instead of guessing
+
+`tools/analyze.py` parses `.it` files back from disk (stdlib only, independent
+of the generator) and scores a batch on the things that correlate with
+"sounds like a song": section reuse, motif repetition, rhythmic grid, chord
+voicing variety, voice motion, effect vocabulary, drum density.
+
+```bash
+python3 tools/analyze.py 'out/*.it'          # metric table
+python3 tools/analyze.py --grid out/song.it  # tracker-style pattern dump
+```
+
+[docs/ANALYSIS.md](docs/ANALYSIS.md) is the story of this project: the
+output was once limited by three silent arrangement bugs that nine commits
+of ear-checking never caught, and every improvement since has been measured
+before and after. Read it before changing the generator.
+
+Tests:
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-Measure a batch of output rather than trusting your ears — see `docs/ANALYSIS.md`:
+## Companion player (optional, Linux + KDE Plasma 6)
+
+`companion/` holds a desktop player stack: a libopenmpt D-Bus daemon with
+MPRIS2, a Plasma 6 panel widget with transport, gain, generator settings,
+presets and a per-channel mixer, and an auto-generate "radio" mode that
+composes the next track as the current one ends.
 
 ```bash
-python3 tools/analyze.py 'out/*.it'
+./companion/install.sh --check   # see what it would do
+./companion/install.sh           # install, enable the daemon
 ```
 
-## Usage
-
-```bash
-# Generate a single song
-bitcomposer -o mysong.it
-
-# Generate with verbose output
-bitcomposer -v -o mysong.it
-
-# Generate 5 songs into a directory — files are named after their titles
-# ("Haunted Orchard.it"); use --name timestamp for bitcomposer_<ts>.it
-bitcomposer -n 5 -d ~/Music/Chiptune/
-
-# Reproducible with a seed
-bitcomposer -s 42 -o seed42.it
-```
-
-All style options default to `random`, so running `bitcomposer -o song.it` with no flags will randomize everything for maximum variety.
-
-### Style Options
-
-```bash
-# Composition
---tempo slow|medium|fast|random
---energy chill|normal|intense|random
---scale minor|major|pentatonic|random
---style chip|snes|genesis|random
---echo on|off|random          # lead echo; always on for snes when random
-
-# Drums
---drum-density sparse|normal|busy|random
---no-fills
---swing off|light|heavy|random
-
-# Melody
---melody simple|phrased|random
-
-# Harmony
---harmony-voicing thin|full|random
---harmony-mode stabs|sustain|rhythmic|random
-
-# Bass
---bass-weight heavy|medium|light|random
-
-# Song Form
---form standard|aaba|rondo|short|linear|random
-```
-
-### Example Presets
-
-```bash
-# Genesis boss fight — heavy, aggressive
-bitcomposer -v -o boss.it --tempo fast --energy intense --style genesis --drum-density busy --swing heavy --harmony-mode rhythmic --bass-weight heavy --form short
-
-# Chill exploration — light, airy, sampled SNES palette with echo
-bitcomposer -v -o chill.it --tempo slow --energy chill --scale pentatonic --style snes --drum-density sparse --no-fills --swing light --bass-weight light --form aaba
-
-# Game Boy flavour — square waves, no echo
-bitcomposer -v -o gb.it --style chip --echo off --harmony-voicing thin --bass-weight light --form short
-
-# Dark dungeon — medium, atmospheric
-bitcomposer -v -o dungeon.it --tempo slow --energy chill --scale minor --drum-density sparse --no-fills --harmony-voicing thin --harmony-mode stabs --bass-weight medium --form rondo
-
-# Credits roll — light, gentle
-bitcomposer -v -o credits.it --tempo slow --energy chill --scale major --style snes --drum-density sparse --no-fills --bass-weight light --form linear
-```
-
-## Song Forms
-
-Five song forms control the high-level architecture:
-
-- **standard** — intro → verse → chorus → verse → chorus → bridge → chorus → outro (classic pop/game structure, optional double bridge)
-- **aaba** — intro → verse → verse → bridge → verse → outro (no chorus, classic pop/jazz feel, sometimes doubles the form)
-- **rondo** — intro → theme → episode → theme → episode → theme → outro (main theme returns between contrasting sections)
-- **short** — 2-3 sections with no intro/outro (compact, great for game level music)
-- **linear** — intro → 4-6 unique sections → outro (through-composed, no repeats, RPG/adventure feel)
-
-Each form has its own energy curve. Endings are weighted toward fadeout (45%) and tag (40%), with abrupt endings rare (15%). Fadeout endings gradually ramp energy down across the outro patterns for a smooth wind-down. Short forms skip tag endings.
-
-## How It Works
-
-1. **Pick a key and scale** — randomly selects from game-music-friendly scales (minor pentatonic, dorian, harmonic minor, etc.)
-2. **Choose chord progressions** — selects progressions for verse and chorus (50% chance of different chorus chords), with optional key modulation
-3. **Generate motifs** — creates rhythmic+melodic templates with contour shapes that repeat and vary across sections, giving the melody recognizable phrases
-4. **Select instruments** — picks a palette (snes / genesis / chip) and draws lead, harmony, arp, bass and kit from it, with an alternate lead for later sections. SNES voices are rendered at 16 kHz with attack-then-loop sustain and passed through a BRR codec model so they carry the SPC700's grain
-5. **Compose layers**:
-   - **Melody** — motif-based phrases with question-answer structure, vibrato, register variation, note-cuts to prevent droning
-   - **Chords** — each four-bar pattern holds a chord timeline; about half the time the back two bars move to the next chord, the plagal neighbour or the dominant
-   - **Harmony** — 2-3 note voicings led smoothly from fixed register anchors, decay matched to the voicing mode, optional counter-melody in chorus/bridge
-   - **Bass** — root movement with weight control (heavy/medium/light affects register, volume, rhythm density, sustain, and sample selection)
-   - **Arpeggio** — chord tones in patterns (up, down, up-down, random)
-   - **Drums** — per-section patterns with fills at transitions, swing on hi-hats, crash on downbeats
-   - **Echo** — the lead copied to two echo channels, 3 and 6 rows late
-6. **Arrange** — energy curves scale volumes and density across sections (intro 50% → final chorus 100%), variable structure with multiple ending styles
-7. **Master** — per-channel volume mixing (melody leads, harmony pushed back, drums balanced), sustain safety nets prevent notes ringing across section boundaries
-8. **Write** — outputs a valid 14-channel Impulse Tracker module file
+See [docs/INSTALL.md](docs/INSTALL.md). The generator does not depend on
+any of this.
 
 ## License
 
-MIT
+MIT. Every instrument is synthesized; no samples were taken from any game.
