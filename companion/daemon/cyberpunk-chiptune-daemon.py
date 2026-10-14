@@ -18,7 +18,7 @@ from pathlib import Path
 import dbus
 import dbus.service
 import dbus.mainloop.glib
-from gi.repository import GLib
+from gi.repository import GLib, Gio
 
 import subprocess as _subprocess
 
@@ -1009,6 +1009,36 @@ def main():
     player.scan_music_dir()
 
     mpris = MPRISService(player, bus)
+
+    # Watch the music dir so files dropped in (or removed) show up without an
+    # explicit Rescan. Changes are debounced: a copy of several files, or a
+    # file still being written, triggers one rescan a second after it settles.
+    pending = {"id": 0}
+
+    def _rescan_later():
+        pending["id"] = 0
+        player.scan_music_dir()
+        mpris._emit_props_changed()
+        return False
+
+    def _on_dir_change(monitor, f, other, event):
+        if event in (Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+                     Gio.FileMonitorEvent.DELETED,
+                     Gio.FileMonitorEvent.MOVED_IN,
+                     Gio.FileMonitorEvent.MOVED_OUT,
+                     Gio.FileMonitorEvent.RENAMED):
+            if pending["id"]:
+                GLib.source_remove(pending["id"])
+            pending["id"] = GLib.timeout_add(1000, _rescan_later)
+
+    try:
+        gdir = Gio.File.new_for_path(MUSIC_DIR)
+        monitor = gdir.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
+        monitor.connect("changed", _on_dir_change)
+        print(f"[READY] Watching {MUSIC_DIR} for changes")
+    except GLib.Error as e:
+        monitor = None
+        print(f"[WARN] No file monitor ({e}); use Rescan")
 
     loop = GLib.MainLoop()
 

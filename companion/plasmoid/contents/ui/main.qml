@@ -306,6 +306,11 @@ PlasmoidItem {
         keepRefresh.restart()
     }
     Timer { id: keepRefresh; interval: 300; onTriggered: root.refreshPlaylist() }
+    function rescan() {
+        startCooldown()
+        dbusCustom("Rescan")
+        keepRefresh.restart()   // re-read the playlist once the daemon has rescanned
+    }
     function openMusicDir() {
         cmdSource.connectSource("xdg-open '" + root.musicDir.replace(/'/g, "'\\''") + "'")
     }
@@ -1560,6 +1565,32 @@ PlasmoidItem {
                     font.family: "JetBrains Mono"
                     font.pixelSize: 8
                     font.letterSpacing: 1
+                }
+                // Rescan the folder now. The daemon also watches the folder,
+                // but a button beats waiting when you have just dropped files in.
+                Rectangle {
+                    width: refreshLabel.implicitWidth + 12
+                    height: 18
+                    radius: 3
+                    color: refreshMouse.containsMouse ? "#142018" : "transparent"
+                    border.width: 1
+                    border.color: refreshMouse.containsMouse ? root.accentGreen : root.tileBorder
+                    Text {
+                        id: refreshLabel
+                        anchors.centerIn: parent
+                        text: "↻ REFRESH"
+                        color: refreshMouse.containsMouse ? root.accentGreen : root.dimText
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: 8
+                        font.letterSpacing: 1
+                    }
+                    MouseArea {
+                        id: refreshMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.rescan()
+                    }
                 }
             }
             // Where the music lives. Click to open the folder. Auto-generated

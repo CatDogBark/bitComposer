@@ -168,9 +168,9 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 
 ## Gotchas
 
-- **No file monitor.** The playlist refreshes only on an explicit `Rescan()`.
-  Dropping a file into the music dir will not surface it until something calls
-  that; both helper scripts and the widget's generate path do.
+- **File monitor.** The daemon watches the music dir (Gio) and rescans a
+  second after changes settle, so files dropped in or deleted show up on
+  their own. `Rescan()` and the widget's REFRESH button force it immediately.
 - **File names are song titles.** The CLI names output after the module
   title ("Haunted Orchard.it", with " 2", " 3" on a clash) unless `-o` or
   `--name timestamp` is given, so the player's playlist and the folder agree.
