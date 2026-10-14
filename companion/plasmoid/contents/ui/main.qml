@@ -32,6 +32,12 @@ PlasmoidItem {
     property real volumeGain: 1.0      // 1.0 = unity, up to maxGain (boost)
     readonly property real maxGain: 3.0
 
+    // ── Scale ──
+    // Every size here is a pixel count tuned at 1x. Kirigami's grid unit
+    // tracks the font DPI (about 18 px at 1x), so scaling by it keeps the
+    // widget the same physical size next to the rest of Plasma on HiDPI.
+    readonly property real ui: Math.max(1, Kirigami.Units.gridUnit / 18)
+
     // ── Colors ──
     readonly property color accentGreen: "#00ff88"
     readonly property color accentCyan: "#00ffcc"
@@ -483,7 +489,7 @@ PlasmoidItem {
                       root.playbackStatus === "Paused" ? "❚❚" : "■"
                 color: root.playbackStatus === "Playing" ? root.accentGreen :
                        root.playbackStatus === "Paused" ? root.accentCyan : root.dimText
-                font.pixelSize: 10
+                font.pixelSize: Math.round(10 * root.ui)
 
                 SequentialAnimation on opacity {
                     loops: root.playbackStatus === "Paused" ? Animation.Infinite : 0
@@ -500,7 +506,7 @@ PlasmoidItem {
                 text: root.trackTitle || "NO SIGNAL"
                 color: root.trackTitle ? root.textColor : root.dimText
                 font.family: "JetBrains Mono"
-                font.pixelSize: 11
+                font.pixelSize: Math.round(11 * root.ui)
                 elide: Text.ElideRight
             }
 
@@ -510,7 +516,7 @@ PlasmoidItem {
                 text: formatTime(root.trackPosition)
                 color: root.dimText
                 font.family: "JetBrains Mono"
-                font.pixelSize: 9
+                font.pixelSize: Math.round(9 * root.ui)
             }
         }
     }
@@ -518,8 +524,16 @@ PlasmoidItem {
     // ── Full Representation (popup) ──
     fullRepresentation: Rectangle {
         id: popup
-        implicitWidth: 340
+        // Plasma sizes the popup from these hints, not from implicitWidth;
+        // without them it fell back to its own default and the popup came
+        // up far wider than the content needs.
+        implicitWidth: 360 * root.ui
         implicitHeight: popupColumn.implicitHeight + 40
+        Layout.preferredWidth: 360 * root.ui
+        Layout.minimumWidth: 320 * root.ui
+        Layout.maximumWidth: 440 * root.ui
+        Layout.preferredHeight: implicitHeight
+        Layout.minimumHeight: Math.min(implicitHeight, 520 * root.ui)
         color: root.darkBg
         border.width: 1
         border.color: root.tileBorder
@@ -553,7 +567,7 @@ PlasmoidItem {
                     text: "CHIPTUNE PLAYER"
                     color: root.accentCyan
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 10
+                    font.pixelSize: Math.round(10 * root.ui)
                     font.letterSpacing: 4
                 }
                 Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0, 1, 0.53, 0.12) }
@@ -578,7 +592,7 @@ PlasmoidItem {
                         text: "[ NOW PLAYING ]"
                         color: root.accentCyan
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 9
+                        font.pixelSize: Math.round(9 * root.ui)
                         font.letterSpacing: 2
                         visible: root.trackTitle !== ""
                     }
@@ -588,7 +602,7 @@ PlasmoidItem {
                         text: root.trackTitle || "AWAITING SIGNAL..."
                         color: root.trackTitle ? root.accentGreen : root.dimText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 14
+                        font.pixelSize: Math.round(14 * root.ui)
                         font.bold: true
                         elide: Text.ElideRight
 
@@ -607,7 +621,7 @@ PlasmoidItem {
                         text: root.trackMessage
                         color: root.textColor
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 9
+                        font.pixelSize: Math.round(9 * root.ui)
                         wrapMode: Text.WordWrap
                     }
 
@@ -616,7 +630,7 @@ PlasmoidItem {
                         text: "by " + root.trackArtist
                         color: root.textColor
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 10
+                        font.pixelSize: Math.round(10 * root.ui)
                     }
 
                     RowLayout {
@@ -626,19 +640,19 @@ PlasmoidItem {
                             text: "FMT: " + root.trackFormat.toUpperCase()
                             color: root.dimText
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 9
+                            font.pixelSize: Math.round(9 * root.ui)
                         }
                         Text {
                             text: "CH: " + root.trackChannels
                             color: root.dimText
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 9
+                            font.pixelSize: Math.round(9 * root.ui)
                         }
                         Text {
                             text: "PAT: " + root.trackPatterns
                             color: root.dimText
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 9
+                            font.pixelSize: Math.round(9 * root.ui)
                         }
                     }
                 }
@@ -713,14 +727,14 @@ PlasmoidItem {
                         text: formatTime(root.trackPosition)
                         color: root.accentGreen
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 9
+                        font.pixelSize: Math.round(9 * root.ui)
                     }
                     Item { Layout.fillWidth: true }
                     Text {
                         text: formatTime(root.trackDuration)
                         color: root.dimText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 9
+                        font.pixelSize: Math.round(9 * root.ui)
                     }
                 }
             }
@@ -818,7 +832,7 @@ PlasmoidItem {
                     text: "GAIN"
                     color: root.dimText
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 9
+                    font.pixelSize: Math.round(9 * root.ui)
                     font.letterSpacing: 1
                 }
                 Item {
@@ -873,7 +887,7 @@ PlasmoidItem {
                     text: Math.round(root.volumeGain * 100) + "%"
                     color: root.volumeGain > 1.0 ? root.accentPink : root.textColor
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 9
+                    font.pixelSize: Math.round(9 * root.ui)
                     horizontalAlignment: Text.AlignRight
                     MouseArea {
                         anchors.fill: parent
@@ -907,7 +921,7 @@ PlasmoidItem {
                         color: root.generating ? root.accentCyan :
                             (generateMouse.containsMouse ? root.accentGreen : root.textColor)
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 10
+                        font.pixelSize: Math.round(10 * root.ui)
                         font.letterSpacing: 2
 
                         Behavior on color { ColorAnimation { duration: 100 } }
@@ -952,7 +966,7 @@ PlasmoidItem {
                         text: "∞"
                         color: root.autoGenerate ? root.accentPink :
                             (autoGenMouse.containsMouse ? root.accentGreen : root.textColor)
-                        font.pixelSize: 15
+                        font.pixelSize: Math.round(15 * root.ui)
                         font.bold: root.autoGenerate
 
                         Behavior on color { ColorAnimation { duration: 100 } }
@@ -965,7 +979,7 @@ PlasmoidItem {
                         text: root.autoGenerate ? "ON" : "AUTO"
                         color: root.autoGenerate ? root.accentPink : root.dimText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 7
+                        font.pixelSize: Math.round(7 * root.ui)
                         font.letterSpacing: 1
                     }
 
@@ -1000,7 +1014,7 @@ PlasmoidItem {
                         text: "⚙"
                         color: root.showSettings ? root.accentCyan :
                             (settingsMouse.containsMouse ? root.accentGreen : root.textColor)
-                        font.pixelSize: 14
+                        font.pixelSize: Math.round(14 * root.ui)
 
                         Behavior on color { ColorAnimation { duration: 100 } }
                     }
@@ -1012,7 +1026,7 @@ PlasmoidItem {
                         text: "SET"
                         color: root.showSettings ? root.accentCyan : root.dimText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 7
+                        font.pixelSize: Math.round(7 * root.ui)
                         font.letterSpacing: 1
                     }
 
@@ -1047,7 +1061,7 @@ PlasmoidItem {
                         text: "♬"
                         color: root.showMaster ? root.accentPink :
                             (masterBtnMouse.containsMouse ? root.accentGreen : root.textColor)
-                        font.pixelSize: 14
+                        font.pixelSize: Math.round(14 * root.ui)
 
                         Behavior on color { ColorAnimation { duration: 100 } }
                     }
@@ -1059,7 +1073,7 @@ PlasmoidItem {
                         text: "MIX"
                         color: root.showMaster ? root.accentPink : root.dimText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 7
+                        font.pixelSize: Math.round(7 * root.ui)
                         font.letterSpacing: 1
                     }
 
@@ -1081,7 +1095,7 @@ PlasmoidItem {
                 text: root.settingsSummary()
                 color: root.dimText
                 font.family: "JetBrains Mono"
-                font.pixelSize: 8
+                font.pixelSize: Math.round(8 * root.ui)
                 font.letterSpacing: 1
                 elide: Text.ElideRight
             }
@@ -1108,7 +1122,7 @@ PlasmoidItem {
                         text: "PRESETS"
                         color: root.accentCyan
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 9
+                        font.pixelSize: Math.round(9 * root.ui)
                         font.letterSpacing: 2
                     }
                     Flow {
@@ -1122,7 +1136,7 @@ PlasmoidItem {
                                 width: _tp.implicitWidth + 10; height: 20; radius: 3
                                 color: active ? "#1a2e26" : (_mp.containsMouse ? "#0f1a16" : "transparent")
                                 border.width: 1; border.color: active ? root.accentPink : (_mp.containsMouse ? root.tileBorder : "transparent")
-                                Text { id: _tp; anchors.centerIn: parent; text: modelData; color: active ? root.accentPink : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                Text { id: _tp; anchors.centerIn: parent; text: modelData; color: active ? root.accentPink : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                 MouseArea { id: _mp; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.applyPreset(modelData) }
                             }
                         }
@@ -1143,7 +1157,7 @@ PlasmoidItem {
                                 width: tabLabel.implicitWidth + 16; height: 22; radius: 3
                                 color: active ? "#1a2e26" : (tabMa.containsMouse ? "#0f1a16" : "transparent")
                                 border.width: 1; border.color: active ? root.accentCyan : (tabMa.containsMouse ? root.tileBorder : "transparent")
-                                Text { id: tabLabel; anchors.centerIn: parent; text: modelData; color: active ? root.accentCyan : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9; font.letterSpacing: 2 }
+                                Text { id: tabLabel; anchors.centerIn: parent; text: modelData; color: active ? root.accentCyan : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui); font.letterSpacing: 2 }
                                 MouseArea { id: tabMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settingsTab = index }
                             }
                         }
@@ -1157,7 +1171,7 @@ PlasmoidItem {
 
                         // TEMPO
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "TEMPO"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "TEMPO"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "slow", "medium", "fast"]
                                     Rectangle {
@@ -1166,7 +1180,7 @@ PlasmoidItem {
                                         width: _t.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_m.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_m.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _t; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _t; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settTempo = modelData }
                                     }
                                 }
@@ -1174,7 +1188,7 @@ PlasmoidItem {
                         }
                         // ENERGY
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "ENERGY"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "ENERGY"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "chill", "normal", "intense"]
                                     Rectangle {
@@ -1183,7 +1197,7 @@ PlasmoidItem {
                                         width: _t2.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_m2.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_m2.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _t2; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _t2; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _m2; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settEnergy = modelData }
                                     }
                                 }
@@ -1191,7 +1205,7 @@ PlasmoidItem {
                         }
                         // SCALE
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "SCALE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "SCALE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "minor", "major", "pentatonic"]
                                     Rectangle {
@@ -1200,7 +1214,7 @@ PlasmoidItem {
                                         width: _t3.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_m3.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_m3.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _t3; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _t3; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _m3; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settScale = modelData }
                                     }
                                 }
@@ -1208,7 +1222,7 @@ PlasmoidItem {
                         }
                         // STYLE
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "STYLE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "STYLE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "chip", "snes", "genesis"]
                                     Rectangle {
@@ -1217,7 +1231,7 @@ PlasmoidItem {
                                         width: _t4.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_m4.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_m4.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _t4; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _t4; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _m4; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settStyle = modelData }
                                     }
                                 }
@@ -1225,7 +1239,7 @@ PlasmoidItem {
                         }
                         // BASS
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "BASS"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "BASS"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "heavy", "medium", "light"]
                                     Rectangle {
@@ -1234,7 +1248,7 @@ PlasmoidItem {
                                         width: _tb.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_mb.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_mb.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _tb; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _tb; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _mb; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settBassWeight = modelData }
                                     }
                                 }
@@ -1242,7 +1256,7 @@ PlasmoidItem {
                         }
                         // FORM
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "FORM"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "FORM"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "standard", "aaba", "rondo", "short", "linear"]
                                     Rectangle {
@@ -1251,7 +1265,7 @@ PlasmoidItem {
                                         width: _tf5.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_mf5.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_mf5.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _tf5; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _tf5; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _mf5; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settForm = modelData }
                                     }
                                 }
@@ -1267,7 +1281,7 @@ PlasmoidItem {
 
                         // DENSITY
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "DENSITY"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "DENSITY"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "sparse", "normal", "busy"]
                                     Rectangle {
@@ -1276,7 +1290,7 @@ PlasmoidItem {
                                         width: _td.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_md.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_md.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _td; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _td; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _md; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settDrumDensity = modelData }
                                     }
                                 }
@@ -1284,7 +1298,7 @@ PlasmoidItem {
                         }
                         // FILLS
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "FILLS"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "FILLS"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["on", "off"]
                                     Rectangle {
@@ -1293,7 +1307,7 @@ PlasmoidItem {
                                         width: _tf.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_mf.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_mf.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _tf; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _tf; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _mf; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settDrumFills = (modelData === "on") }
                                     }
                                 }
@@ -1301,7 +1315,7 @@ PlasmoidItem {
                         }
                         // SWING
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "SWING"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "SWING"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "off", "light", "heavy"]
                                     Rectangle {
@@ -1310,7 +1324,7 @@ PlasmoidItem {
                                         width: _ts.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_ms.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_ms.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _ts; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _ts; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _ms; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settDrumSwing = modelData }
                                     }
                                 }
@@ -1326,7 +1340,7 @@ PlasmoidItem {
 
                         // STYLE
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "STYLE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "STYLE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "phrased", "simple"]
                                     Rectangle {
@@ -1335,7 +1349,7 @@ PlasmoidItem {
                                         width: _tm.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_mm.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_mm.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _tm; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _tm; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _mm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settMelody = modelData }
                                     }
                                 }
@@ -1352,7 +1366,7 @@ PlasmoidItem {
                                 : "Randomly picks phrased or simple per song"
                             color: root.dimText
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 8
+                            font.pixelSize: Math.round(8 * root.ui)
                             wrapMode: Text.WordWrap
                         }
                     }
@@ -1365,7 +1379,7 @@ PlasmoidItem {
 
                         // VOICING
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "VOICING"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "VOICING"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "full", "thin"]
                                     Rectangle {
@@ -1374,7 +1388,7 @@ PlasmoidItem {
                                         width: _thv.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_mhv.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_mhv.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _thv; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _thv; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _mhv; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settHarmonyVoicing = modelData }
                                     }
                                 }
@@ -1382,7 +1396,7 @@ PlasmoidItem {
                         }
                         // MODE
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "MODE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 9 }
+                            Text { Layout.preferredWidth: 52; text: "MODE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
                                 Repeater { model: ["random", "sustain", "stabs", "rhythmic"]
                                     Rectangle {
@@ -1391,7 +1405,7 @@ PlasmoidItem {
                                         width: _thm.implicitWidth + 10; height: 20; radius: 3
                                         color: active ? "#1a2e26" : (_mhm.containsMouse ? "#0f1a16" : "transparent")
                                         border.width: 1; border.color: active ? root.accentGreen : (_mhm.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _thm; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: 8 }
+                                        Text { id: _thm; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _mhm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settHarmonyMode = modelData }
                                     }
                                 }
@@ -1411,7 +1425,7 @@ PlasmoidItem {
                             }
                             color: root.dimText
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 8
+                            font.pixelSize: Math.round(8 * root.ui)
                             wrapMode: Text.WordWrap
                         }
                     }
@@ -1443,7 +1457,7 @@ PlasmoidItem {
                             text: "CHANNEL MIX"
                             color: root.accentPink
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 9
+                            font.pixelSize: Math.round(9 * root.ui)
                             font.letterSpacing: 2
                         }
                         Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 0, 0.33, 0.12) }
@@ -1466,7 +1480,7 @@ PlasmoidItem {
                                        root.channelColors[index] === 1 ? root.accentCyan :
                                        root.accentPink
                                 font.family: "JetBrains Mono"
-                                font.pixelSize: 8
+                                font.pixelSize: Math.round(8 * root.ui)
                                 horizontalAlignment: Text.AlignRight
                             }
 
@@ -1533,7 +1547,7 @@ PlasmoidItem {
                                 text: root.channelVolumes[index]
                                 color: root.dimText
                                 font.family: "JetBrains Mono"
-                                font.pixelSize: 8
+                                font.pixelSize: Math.round(8 * root.ui)
                                 horizontalAlignment: Text.AlignRight
                             }
                         }
@@ -1553,7 +1567,7 @@ PlasmoidItem {
                             anchors.centerIn: parent
                             text: "[ APPLY TO TRACK ]"
                             color: saveMasterMouse.containsMouse ? root.accentPink : root.dimText
-                            font.family: "JetBrains Mono"; font.pixelSize: 9; font.letterSpacing: 2
+                            font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui); font.letterSpacing: 2
                             Behavior on color { ColorAnimation { duration: 100 } }
                         }
                         MouseArea {
@@ -1575,7 +1589,7 @@ PlasmoidItem {
                     text: "PLAYLIST"
                     color: root.accentCyan
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 9
+                    font.pixelSize: Math.round(9 * root.ui)
                     font.letterSpacing: 3
                 }
                 Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(0, 1, 0.53, 0.12) }
@@ -1583,7 +1597,7 @@ PlasmoidItem {
                     text: root.playlistInfo.length + " TRACKS"
                     color: root.dimText
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 8
+                    font.pixelSize: Math.round(8 * root.ui)
                     font.letterSpacing: 1
                 }
                 // Rescan the folder now. The daemon also watches the folder,
@@ -1601,7 +1615,7 @@ PlasmoidItem {
                         text: "↻ REFRESH"
                         color: refreshMouse.containsMouse ? root.accentGreen : root.dimText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: 8
+                        font.pixelSize: Math.round(8 * root.ui)
                         font.letterSpacing: 1
                     }
                     MouseArea {
@@ -1623,7 +1637,7 @@ PlasmoidItem {
                     text: root.shortDir() + "  ↗"
                     color: dirMouse.containsMouse ? root.accentGreen : root.dimText
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 8
+                    font.pixelSize: Math.round(8 * root.ui)
                     elide: Text.ElideMiddle
                     Layout.fillWidth: true
                     MouseArea {
@@ -1638,7 +1652,7 @@ PlasmoidItem {
                     text: "AUTO = pruned after 10"
                     color: Qt.rgba(1, 0, 0.33, 0.5)
                     font.family: "JetBrains Mono"
-                    font.pixelSize: 7
+                    font.pixelSize: Math.round(7 * root.ui)
                     font.letterSpacing: 1
                 }
             }
@@ -1679,7 +1693,7 @@ PlasmoidItem {
                             text: String(index + 1).padStart(2, '0') + "."
                             color: index === root.currentIndex ? root.accentGreen : root.dimText
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 9
+                            font.pixelSize: Math.round(9 * root.ui)
                         }
 
                         Text {
@@ -1687,7 +1701,7 @@ PlasmoidItem {
                             text: modelData.title
                             color: index === root.currentIndex ? root.accentGreen : root.textColor
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 9
+                            font.pixelSize: Math.round(9 * root.ui)
                             elide: Text.ElideRight
                         }
                         Text {
@@ -1695,7 +1709,7 @@ PlasmoidItem {
                             text: "AUTO"
                             color: Qt.rgba(1, 0, 0.33, 0.6)
                             font.family: "JetBrains Mono"
-                            font.pixelSize: 7
+                            font.pixelSize: Math.round(7 * root.ui)
                             font.letterSpacing: 1
                         }
                         Rectangle {
@@ -1712,7 +1726,7 @@ PlasmoidItem {
                                 text: "KEEP"
                                 color: root.accentPink
                                 font.family: "JetBrains Mono"
-                                font.pixelSize: 7
+                                font.pixelSize: Math.round(7 * root.ui)
                                 font.letterSpacing: 1
                             }
                             MouseArea {
@@ -1728,7 +1742,7 @@ PlasmoidItem {
                             visible: index === root.currentIndex && root.playbackStatus === "Playing"
                             text: "▶"
                             color: root.accentGreen
-                            font.pixelSize: 8
+                            font.pixelSize: Math.round(8 * root.ui)
                         }
                     }
 
@@ -1753,7 +1767,7 @@ PlasmoidItem {
                 text: "[16-BIT AUDIO SUBSYSTEM]"
                 color: Qt.rgba(0.314, 0.51, 0.392, 0.25)
                 font.family: "JetBrains Mono"
-                font.pixelSize: 8
+                font.pixelSize: Math.round(8 * root.ui)
                 font.letterSpacing: 2
             }
         }
