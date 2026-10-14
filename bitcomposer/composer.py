@@ -733,6 +733,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 # bitcomposer.pattern: melody, harmony x3, bass, arp, six drums, two echo taps.
 # The echo channels sit at the melody's level; the taps are already quieter
 # through their volume columns.
+#
+# The arp level depends on the palette. SNES arps are plucks that die within
+# a beat, so 33 sits behind the lead; a chip arp is a pulse wave that holds
+# at full level until the next note, and at 33 it buried everything when the
+# chorus came in. 17 is where it balanced by ear (Lower Cistern, 2026-10-13).
 CHANNEL_VOLUMES = [
     13,              # melody
     25, 25, 25,      # harmony
@@ -741,6 +746,16 @@ CHANNEL_VOLUMES = [
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
     13, 13,          # echo taps
 ]
+PALETTE_MIX = {
+    "chip": {CH_ARP: 17},
+}
+
+
+def channel_volumes_for(style: str) -> list[int]:
+    vols = list(CHANNEL_VOLUMES)
+    for ch, v in PALETTE_MIX.get(style, {}).items():
+        vols[ch] = v
+    return vols
 
 
 def save_song(song: dict, filepath: str) -> None:
@@ -754,7 +769,7 @@ def save_song(song: dict, filepath: str) -> None:
         tempo=song["tempo"],
         speed=song["speed"],
         num_channels=NUM_CHANNELS,
-        channel_volumes=list(CHANNEL_VOLUMES),
+        channel_volumes=channel_volumes_for(song["info"]["style"]),
         message=song["message"],
     )
 
