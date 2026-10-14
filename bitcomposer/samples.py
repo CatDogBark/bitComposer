@@ -964,6 +964,103 @@ def snes_crash() -> tuple[bytes, int, dict]:
     return _finish_snes(_highpass(out, 0.3), 0.7)
 
 
+# ── Chip plucks and extra duty cycles ──
+#
+# Real 8-bit hardware forced variety on a composer: two pulse channels set to
+# different duty cycles (12.5% thin and nasal, 25% hollow, 50% full), the
+# triangle for bass, and arpeggios played as short decaying blips rather than
+# held tones. The palette had five shades of one sound; these give it the
+# missing characters. Plucks carry their own envelope and loop a quiet tail,
+# so they bypass polish_waveform's attack retiling.
+
+CHIP_PERIOD = int(SAMPLE_RATE / BASE_NOTE_HZ)   # 168
+
+
+def _chip_decay(cycle: list[float], seconds: float, tau: float,
+                lowpass: float, amplitude: float = 0.9) -> tuple[bytes, int, dict]:
+    """A single-cycle waveform under an exponential decay, low-passed, with
+    the last two cycles frozen in level so a held note sustains quietly."""
+    period = len(cycle)
+    n = int(SAMPLE_RATE * seconds) // period * period
+    loop_start = n - 2 * period
+    out = []
+    for i in range(n):
+        j = min(i, loop_start)
+        env = math.exp(-(j / SAMPLE_RATE) / tau)
+        out.append(cycle[i % period] * env)
+    out = _lowpass(out, lowpass)
+    tail = out[loop_start:loop_start + period]
+    out = out[:loop_start] + tail * 2
+    ints = _normalize(out, amplitude)
+    return _pack_samples(ints), len(ints), {
+        "rate": WAVEFORM_TUNED_RATE, "loop": True,
+        "loop_start": loop_start, "loop_end": len(ints)}
+
+
+def _pulse_cycle(duty: float) -> list[float]:
+    return [1.0 if i / CHIP_PERIOD < duty else -1.0 for i in range(CHIP_PERIOD)]
+
+
+def _triangle_cycle() -> list[float]:
+    return [4.0 * abs((i / CHIP_PERIOD + 0.75) % 1.0 - 0.5) - 1.0 for i in range(CHIP_PERIOD)]
+
+
+def pulse12_wave(cycles: int = 4) -> tuple[bytes, int]:
+    """12.5% pulse — the thin, nasal NES duty."""
+    return square_wave(duty=0.125, cycles=cycles)
+
+
+def square_pluck() -> tuple[bytes, int, dict]:
+    return _chip_decay(_pulse_cycle(0.5), 0.5, 0.14, 0.55)
+
+
+def pulse_pluck() -> tuple[bytes, int, dict]:
+    return _chip_decay(_pulse_cycle(0.25), 0.5, 0.14, 0.55)
+
+
+def pulse12_pluck() -> tuple[bytes, int, dict]:
+    return _chip_decay(_pulse_cycle(0.125), 0.5, 0.12, 0.6)
+
+
+def tri_pluck() -> tuple[bytes, int, dict]:
+    return _chip_decay(_triangle_cycle(), 0.6, 0.18, 0.8)
+
+
+# FM voices to separate the Genesis roles: a pad for harmony and a pluck for arps.
+def fm_strings(cycles: int = 40) -> tuple[bytes, int]:
+    """Low-index 1:1 FM with a slow swell — a YM2612 string pad."""
+    period = CHIP_PERIOD
+    length = period * cycles
+    samples = []
+    for i in range(length):
+        t = i / SAMPLE_RATE
+        phase = 2.0 * math.pi * BASE_NOTE_HZ * t
+        swell = min(1.0, t / 0.08)
+        idx = 0.6 + 0.6 * swell
+        samples.append(math.sin(phase + idx * math.sin(phase) + 0.3 * math.sin(2.0 * phase)) * (0.3 + 0.7 * swell))
+    return _pack_samples(_normalize(samples)), length
+
+
+def fm_pluck() -> tuple[bytes, int, dict]:
+    """2:1 FM with the index and level both falling fast — an FM arp blip."""
+    period = CHIP_PERIOD
+    cycle_fn = lambda t, ph: math.sin(ph + (2.8 * math.exp(-t / 0.06) + 0.2) * math.sin(2.0 * ph))
+    n = int(SAMPLE_RATE * 0.45) // period * period
+    loop_start = n - 2 * period
+    out = []
+    for i in range(n):
+        j = min(i, loop_start)
+        t = j / SAMPLE_RATE
+        ph = 2.0 * math.pi * BASE_NOTE_HZ * i / SAMPLE_RATE
+        out.append(cycle_fn(t, ph) * math.exp(-t / 0.16))
+    tail = out[loop_start:loop_start + period]
+    out = out[:loop_start] + tail * 2
+    ints = _normalize(out, 0.9)
+    return _pack_samples(ints), len(ints), {
+        "rate": WAVEFORM_TUNED_RATE, "loop": True,
+        "loop_start": loop_start, "loop_end": len(ints)}
+
+
 # ── Console output polish for the waveform and FM palettes ──
 #
 # These presets were raw, full-bandwidth single cycles at 44.1 kHz with no
@@ -976,10 +1073,10 @@ def snes_crash() -> tuple[bytes, int, dict]:
 # 0.6 is about 6 kHz and 0.4 about 3.5 kHz.
 WAVEFORM_POLISH = {
     "square_lead": (0.55, 8), "pulse_lead": (0.55, 8), "saw_lead": (0.5, 8),
-    "triangle_lead": (0.7, 6), "fm_bell": (0.65, 2), "fm_lead": (0.6, 4),
-    "pwm_lead": (0.5, 0), "supersaw_lead": (0.45, 0), "filtered_lead": (0.7, 8),
+    "triangle_lead": (0.5, 6), "fm_bell": (0.65, 2), "fm_lead": (0.6, 4),
+    "pwm_lead": (0.5, 0), "supersaw_lead": (0.45, 0), "filtered_lead": (0.5, 8),
     "sweep_lead": (0.6, 0), "fm_organ": (0.6, 3), "fm_brass": (0.6, 6),
-    "fm_pad": (0.5, 0),
+    "fm_pad": (0.5, 0), "fm_strings": (0.5, 4), "pulse12_lead": (0.45, 6),
     "saw_bass": (0.35, 2), "triangle_bass": (0.6, 2), "sine_bass": (0.8, 2),
     "fm_bass": (0.45, 2), "square_bass": (0.4, 2), "distorted_bass": (0.4, 2),
     "filtered_bass": (0.6, 2), "supersaw_bass": (0.35, 0),
@@ -1044,6 +1141,14 @@ INSTRUMENT_PRESETS = {
     "fm_organ":       (fm_organ,       {},             52),
     "fm_brass":       (fm_brass,       {},             58),
     "fm_pad":         (fm_pad,         {},             44),
+    "fm_strings":     (fm_strings,     {},             46),
+    "fm_pluck":       (fm_pluck,       {},             56),
+    # Chip — role voices
+    "pulse12_lead":   (pulse12_wave,   {},             58),
+    "square_pluck":   (square_pluck,   {},             60),
+    "pulse_pluck":    (pulse_pluck,    {},             60),
+    "pulse12_pluck":  (pulse12_pluck,  {},             58),
+    "tri_pluck":      (tri_pluck,      {},             64),
     # Bass — classic
     "saw_bass":       (sawtooth_wave,  {},             64),
     "triangle_bass":  (triangle_wave,  {},             64),

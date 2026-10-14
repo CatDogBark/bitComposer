@@ -78,10 +78,13 @@ def _energy_tier(energy: float) -> int:
 # sound. "snes" is the sampled palette: strings, brass, choir, plucks and a
 # gated drum kit, the way the SPC700 actually worked. "genesis" is FM.
 PALETTES = {
+    # Chip roles follow the hardware: pulse leads, triangle or thin pulse
+    # underneath, decaying pulse blips for the arp at a different duty from
+    # the lead (enforced in _pick_instruments), triangle or square bass.
     "chip": {
-        "lead": ["square_lead", "pulse_lead", "triangle_lead", "pwm_lead", "filtered_lead"],
-        "harmony": ["triangle_lead", "pulse_lead", "filtered_lead"],
-        "arp": ["square_lead", "pulse_lead", "triangle_lead", "pwm_lead"],
+        "lead": ["square_lead", "pulse_lead", "pwm_lead", "filtered_lead"],
+        "harmony": ["triangle_lead", "pulse12_lead", "filtered_lead"],
+        "arp": ["pulse_pluck", "square_pluck", "pulse12_pluck", "tri_pluck"],
         "bass_heavy": ["triangle_bass", "sine_bass", "square_bass", "saw_bass", "filtered_bass"],
         "bass_medium": ["square_bass", "triangle_bass", "filtered_bass"],
         "bass_light": ["pluck_bass", "thin_bass", "bright_bass"],
@@ -101,10 +104,11 @@ PALETTES = {
         "drums": {"kick": "snes_kick", "snare": "snes_snare", "hihat": "snes_hat",
                   "tom": "snes_tom", "crash": "snes_crash", "open_hihat": "snes_open_hat"},
     },
+    # Genesis roles: FM leads, FM pads underneath, decaying FM blips for arps.
     "genesis": {
-        "lead": ["fm_lead", "fm_lead", "fm_bell", "filtered_lead"],
-        "harmony": ["triangle_lead", "pulse_lead", "fm_bell", "filtered_lead"],
-        "arp": ["fm_bell", "fm_lead", "fm_brass"],
+        "lead": ["fm_lead", "fm_lead", "fm_brass", "fm_bell"],
+        "harmony": ["fm_strings", "fm_pad", "fm_organ"],
+        "arp": ["fm_bell", "fm_pluck", "fm_pluck"],
         "bass_heavy": ["fm_bass", "fm_bass", "distorted_bass", "filtered_bass"],
         "bass_medium": ["fm_bass", "filtered_bass", "saw_bass"],
         "bass_light": ["pluck_bass", "thin_bass", "bright_bass"],
@@ -114,15 +118,31 @@ PALETTES = {
 }
 
 
+# Pulse duty per preset, so a chip arp never shares the lead's duty — two
+# channels at the same duty were how the palette ended up sounding like one.
+PULSE_DUTY = {
+    "square_lead": 0.5, "square_pluck": 0.5, "square_bass": 0.5,
+    "pulse_lead": 0.25, "pulse_pluck": 0.25,
+    "pulse12_lead": 0.125, "pulse12_pluck": 0.125,
+}
+
+
 def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
     """Pick a random instrument set for the song from the style's palette."""
     pal = PALETTES[style]
     bass_choices = pal.get(f"bass_{bass_weight}", pal["bass_heavy"])
 
     lead = random.choice(pal["lead"])
-    harmony = random.choice([h for h in pal["harmony"] if h != lead] or pal["harmony"])
+    lead_duty = PULSE_DUTY.get(lead)
+
+    def distinct(pool):
+        out = [n for n in pool if n != lead
+               and not (lead_duty is not None and PULSE_DUTY.get(n) == lead_duty)]
+        return out or pool
+
+    harmony = random.choice(distinct(pal["harmony"]))
     bass = random.choice(bass_choices)
-    arp = random.choice([a for a in pal["arp"] if a != lead] or pal["arp"])
+    arp = random.choice(distinct(pal["arp"]))
 
     if pal["drums"]:
         drums = dict(pal["drums"])
@@ -734,10 +754,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 # The echo channels sit at the melody's level; the taps are already quieter
 # through their volume columns.
 #
-# The arp level depends on the palette. SNES arps are plucks that die within
-# a beat, so 33 sits behind the lead; a chip arp is a pulse wave that holds
-# at full level until the next note, and at 33 it buried everything when the
-# chorus came in. 17 is where it balanced by ear (Lower Cistern, 2026-10-13).
+# The arp level depends on the palette. A held chip pulse arp balanced by ear
+# at 17 (Lower Cistern, 2026-10-13) where 33 buried the chorus. Chip arps are
+# now decaying pulse blips, which average ~0.55x a held pulse over an 8th-note
+# step, so 28 puts them at the level that 17 gave the held tone. SNES and
+# Genesis arps are decaying plucks and bells and sit in that band at 33.
 CHANNEL_VOLUMES = [
     13,              # melody
     25, 25, 25,      # harmony
@@ -747,7 +768,7 @@ CHANNEL_VOLUMES = [
     13, 13,          # echo taps
 ]
 PALETTE_MIX = {
-    "chip": {CH_ARP: 17},
+    "chip": {CH_ARP: 28},
 }
 
 
