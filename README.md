@@ -113,6 +113,8 @@ python3 -m unittest discover -s tests -v
 
 ## Companion player (optional, Linux + KDE Plasma 6)
 
+<img src="docs/images/widget.png" alt="The Plasma widget: now playing, transport, gain, generate and settings, playlist" width="420">
+
 `companion/` holds a desktop player stack: a libopenmpt D-Bus daemon with
 MPRIS2, a Plasma 6 panel widget with transport, gain, generator settings,
 presets and a per-channel mixer, and an auto-generate "radio" mode that
