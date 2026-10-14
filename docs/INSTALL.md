@@ -144,6 +144,10 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
   `Rescan()` may prune. Titles are read through libopenmpt and cached by mtime.
 - `KeepTrack(i) -> s` — renames an auto-generated track to drop the prefix so
   pruning leaves it alone; returns the new filename.
+- `SetChannelVolume(i channel, i volume) -> b` — live mixer: sets a channel's
+  volume (0–64) on the playing module via libopenmpt's interactive interface.
+  Immediate, no restart. `GetChannelVolumes() -> ai` reads them back (with
+  `qdbus6 --literal`).
 - `Properties.Set Player Volume <0..3>` — linear gain; above 1.0 boosts with a
   soft limiter on the output. Volume, Shuffle and the auto-generate flag with
   its CLI flags persist in `~/.config/cyberpunk-chiptune/state.json`. Boolean and numeric variants may
@@ -183,9 +187,11 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 - **Default music dir in the QML.** `main.qml` carries a fallback path that
   the installer patches to `$MUSIC_DIR`; at runtime the daemon's reported
   directory overrides it.
-- **Mastering restarts the track.** `bitcomposer-master.sh` stops, rescans and
-  replays the current track so the edit is audible immediately. That is by
-  design, not a bug, but it is not a seamless in-place update.
+- **Mixer is live, APPLY persists.** Dragging a MIX slider calls
+  `SetChannelVolume`, which changes the playing module at once; APPLY TO
+  TRACK runs `bitcomposer-master.sh`, which only writes the values into the
+  file header so they survive a reload (the folder monitor rescans). Reopening
+  the panel reads the file's values back and re-applies them live.
 
 ---
 
@@ -201,7 +207,7 @@ cd / && env -u PYTHONPATH python3 -c \
 # generator end to end (widget-like environment)
 env -u PYTHONPATH bitcomposer-generate.sh --form standard --harmony-voicing full
 
-# mastering, on a copy — this patches in place. One volume per channel, in
+# persisting a mix, on a copy — this patches the header in place. One volume per channel, in
 # bitcomposer.pattern order (14 for current output: melody, harm x3, bass,
 # arp, kick, snare, hihat, tom, crash, open hat, echo x2). Only the channels
 # given are written.

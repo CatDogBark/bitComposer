@@ -124,9 +124,26 @@ PlasmoidItem {
     readonly property var channelColors: [0, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2, 1, 1] // 0=green, 1=cyan, 2=pink
     readonly property int channelCount: channelNames.length
 
+    // Sliders are live: each change goes to the daemon, which sets the
+    // channel's volume on the playing module at once. Sends are coalesced
+    // so a drag does not spawn a qdbus6 process per pixel. APPLY TO TRACK
+    // then writes the same numbers into the file so they persist.
+    property var _pendingMix: ({})
+    Timer {
+        id: mixFlush
+        interval: 60
+        onTriggered: {
+            for (var ch in root._pendingMix)
+                root.dbusCustom("SetChannelVolume " + ch + " " + root._pendingMix[ch])
+            root._pendingMix = ({})
+        }
+    }
     function applyChannelVolume(channel, value) {
+        if (channelVolumes[channel] === value) return
         channelVolumes[channel] = value
         channelVolumesChanged()
+        _pendingMix[channel] = value
+        mixFlush.restart()
     }
 
     property string musicDir: ""   // installer writes a fallback; the daemon reports the live one
@@ -179,6 +196,9 @@ PlasmoidItem {
                 for (var i = 0; i < channelCount; i++)
                     vols.push(parseInt(parts[i]) || 0)
                 root.channelVolumes = vols
+                // Reopening the panel shows the file's mix; make the live mix match it.
+                for (var c = 0; c < channelCount; c++) root._pendingMix[c] = vols[c]
+                mixFlush.restart()
             }
         }
     }

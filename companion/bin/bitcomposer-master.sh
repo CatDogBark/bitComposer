@@ -1,14 +1,13 @@
 #!/bin/bash
-# Write channel volumes into an IT file header and reload playback.
+# Write channel volumes into an IT file header.
 # Usage: bitcomposer-master.sh <filepath> <vol0> <vol1> ... <volN>
 #
 # Each volume is 0-64 and lands at header byte 128+i (the per-channel volume
 # block). Only the channels given are written; the rest of the block is left
-# as the generator wrote it. The old version zero-padded to 64 channels, which
-# muted any channel the caller did not know about.
-
-BUSNAME="org.mpris.MediaPlayer2.CyberpunkChiptune"
-BUSPATH="/org/mpris/MediaPlayer2"
+# as the generator wrote it. This persists a mix; the live mix is set over
+# D-Bus (SetChannelVolume) and does not need the track restarted, so this
+# script no longer stops and reloads playback. The daemon's folder monitor
+# notices the write and rescans on its own.
 
 FILE="$1"
 shift
@@ -28,12 +27,5 @@ with open(path, "r+b") as f:
     f.seek(128)
     f.write(vals)
 PY
-
-# Stop, rescan, replay the same track so the change is audible at once.
-IDX=$(qdbus6 "$BUSNAME" "$BUSPATH" "${BUSNAME}.GetState" 2>/dev/null | cut -d'|' -f12)
-qdbus6 "$BUSNAME" "$BUSPATH" org.mpris.MediaPlayer2.Player.Stop >/dev/null 2>&1
-qdbus6 "$BUSNAME" "$BUSPATH" "${BUSNAME}.Rescan" >/dev/null 2>&1
-sleep 0.2
-qdbus6 "$BUSNAME" "$BUSPATH" "${BUSNAME}.PlayIndex" "${IDX:-0}" >/dev/null 2>&1
 
 echo "OK"

@@ -56,15 +56,45 @@ def _log_silent(user, level, message):
 
 _silent_log = _openmpt_log_func(_log_silent)
 
-# Module creation
-_lib.openmpt_module_create_from_memory2.restype = ctypes.c_void_p
-_lib.openmpt_module_create_from_memory2.argtypes = [
-    ctypes.c_void_p, ctypes.c_size_t,  # data, size
-    _openmpt_log_func, ctypes.c_void_p,  # log callback
-    ctypes.c_void_p, ctypes.c_void_p,  # error callback (unused)
-    ctypes.c_void_p, ctypes.c_void_p,  # initial ctl
-    ctypes.c_void_p,  # error info
+# Module creation — through the extended API, which also hands us the
+# "interactive" interface (live per-channel volume, used by the mixer).
+_VP = ctypes.c_void_p
+_lib.openmpt_module_ext_create_from_memory.restype = _VP
+_lib.openmpt_module_ext_create_from_memory.argtypes = [
+    _VP, ctypes.c_size_t,              # data, size
+    _openmpt_log_func, _VP,            # log callback
+    _VP, _VP,                          # error callback (unused)
+    _VP, _VP,                          # error, error_message
+    _VP,                               # initial ctls
 ]
+_lib.openmpt_module_ext_get_module.restype = _VP
+_lib.openmpt_module_ext_get_module.argtypes = [_VP]
+_lib.openmpt_module_ext_get_interface.restype = ctypes.c_int
+_lib.openmpt_module_ext_get_interface.argtypes = [_VP, ctypes.c_char_p, _VP, ctypes.c_size_t]
+_lib.openmpt_module_ext_destroy.restype = None
+_lib.openmpt_module_ext_destroy.argtypes = [_VP]
+
+
+class _Interactive(ctypes.Structure):
+    """openmpt_module_ext_interface_interactive, field order as in libopenmpt_ext.h."""
+    _fields_ = [
+        ("set_current_speed", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32)),
+        ("set_current_tempo", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32)),
+        ("set_tempo_factor", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_double)),
+        ("get_tempo_factor", ctypes.CFUNCTYPE(ctypes.c_double, _VP)),
+        ("set_pitch_factor", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_double)),
+        ("get_pitch_factor", ctypes.CFUNCTYPE(ctypes.c_double, _VP)),
+        ("set_global_volume", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_double)),
+        ("get_global_volume", ctypes.CFUNCTYPE(ctypes.c_double, _VP)),
+        ("set_channel_volume", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32, ctypes.c_double)),
+        ("get_channel_volume", ctypes.CFUNCTYPE(ctypes.c_double, _VP, ctypes.c_int32)),
+        ("set_channel_mute_status", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32, ctypes.c_int)),
+        ("get_channel_mute_status", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32)),
+        ("set_instrument_mute_status", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32, ctypes.c_int)),
+        ("get_instrument_mute_status", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32)),
+        ("play_note", ctypes.CFUNCTYPE(ctypes.c_int32, _VP, ctypes.c_int32, ctypes.c_int32, ctypes.c_double, ctypes.c_double)),
+        ("stop_note", ctypes.CFUNCTYPE(ctypes.c_int, _VP, ctypes.c_int32)),
+    ]
 
 # Metadata
 _lib.openmpt_module_get_metadata.restype = ctypes.c_void_p
@@ -97,10 +127,6 @@ _lib.openmpt_module_read_interleaved_stereo.argtypes = [
     ctypes.c_void_p, ctypes.c_int32, ctypes.c_size_t, ctypes.c_void_p
 ]
 
-# Cleanup
-_lib.openmpt_module_destroy.restype = None
-_lib.openmpt_module_destroy.argtypes = [ctypes.c_void_p]
-
 _lib.openmpt_free_string.restype = None
 _lib.openmpt_free_string.argtypes = [ctypes.c_void_p]
 
@@ -111,11 +137,17 @@ class OpenMPTModule:
     def __init__(self, filepath):
         data = Path(filepath).read_bytes()
         buf = ctypes.create_string_buffer(data)
-        self._mod = _lib.openmpt_module_create_from_memory2(
+        self._ext = _lib.openmpt_module_ext_create_from_memory(
             buf, len(data), _silent_log, None, None, None, None, None, None
         )
-        if not self._mod:
+        if not self._ext:
+            self._mod = None
             raise RuntimeError(f"Failed to load: {filepath}")
+        self._mod = _lib.openmpt_module_ext_get_module(self._ext)
+        self._iface = _Interactive()
+        if not _lib.openmpt_module_ext_get_interface(
+                self._ext, b"interactive", ctypes.byref(self._iface), ctypes.sizeof(self._iface)):
+            self._iface = None
         # Don't loop — we'll handle next-track in the player
         _lib.openmpt_module_set_repeat_count(self._mod, 0)
         self.filepath = filepath
@@ -180,9 +212,22 @@ class OpenMPTModule:
             self._mod, SAMPLE_RATE, frames, buf
         )
 
+    def channel_volume(self, ch):
+        """Channel volume as the file's 0-64 value (libopenmpt reports it as a fraction)."""
+        if not self._iface:
+            return 64
+        return int(round(self._iface.get_channel_volume(self._ext, ch) * 64))
+
+    def set_channel_volume(self, ch, vol):
+        """Set a channel's volume (0-64) on the playing module, immediately."""
+        if not self._iface or not (0 <= ch < self.num_channels):
+            return False
+        return self._iface.set_channel_volume(self._ext, ch, max(0, min(64, vol)) / 64.0) == 1
+
     def destroy(self):
-        if self._mod:
-            _lib.openmpt_module_destroy(self._mod)
+        if getattr(self, "_ext", None):
+            _lib.openmpt_module_ext_destroy(self._ext)
+            self._ext = None
             self._mod = None
 
     def __del__(self):
@@ -901,6 +946,25 @@ class MPRISService(dbus.service.Object):
         name = self.player.keep_track(int(index))
         self._emit_props_changed()
         return name
+
+    @dbus.service.method(MPRIS_BUS_NAME, in_signature="ii", out_signature="b")
+    def SetChannelVolume(self, channel, volume):
+        """Live mixer: set one channel's volume (0-64) on the playing module.
+        Takes effect on the next buffer; nothing is restarted. Persist it
+        with bitcomposer-master.sh, which writes the file header."""
+        with self.player._lock:
+            if not self.player.module:
+                return False
+            return bool(self.player.module.set_channel_volume(int(channel), int(volume)))
+
+    @dbus.service.method(MPRIS_BUS_NAME, out_signature="ai")
+    def GetChannelVolumes(self):
+        """Current channel volumes (0-64) of the loaded module."""
+        with self.player._lock:
+            if not self.player.module:
+                return dbus.Array([], signature="i")
+            n = self.player.module.num_channels
+            return dbus.Array([self.player.module.channel_volume(c) for c in range(n)], signature="i")
 
     @dbus.service.method(MPRIS_BUS_NAME, in_signature="i")
     def PlayIndex(self, index):
