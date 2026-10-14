@@ -104,16 +104,19 @@ PALETTES = {
         "drums": {"kick": "snes_kick", "snare": "snes_snare", "hihat": "snes_hat",
                   "tom": "snes_tom", "crash": "snes_crash", "open_hihat": "snes_open_hat"},
     },
-    # Genesis roles: FM leads, FM pads underneath, decaying FM blips for arps.
+    # Genesis roles: feedback-FM leads and brass, FM pad or organ underneath
+    # with the PSG square as an occasional thin voice, FM blips for arps,
+    # slap/sub FM basses, and 8-bit DAC drums. See samples.py.
     "genesis": {
-        "lead": ["fm_lead", "fm_lead", "fm_brass", "fm_bell"],
-        "harmony": ["fm_strings", "fm_pad", "fm_organ"],
-        "arp": ["fm_bell", "fm_pluck", "fm_pluck"],
-        "bass_heavy": ["fm_bass", "fm_bass", "distorted_bass", "filtered_bass"],
-        "bass_medium": ["fm_bass", "filtered_bass", "saw_bass"],
-        "bass_light": ["pluck_bass", "thin_bass", "bright_bass"],
-        "alt_lead": ["fm_lead", "fm_bell", "fm_brass", "fm_organ", "filtered_lead"],
-        "drums": None,
+        "lead": ["gen_lead", "gen_saw_lead", "gen_brass", "gen_bell"],
+        "harmony": ["gen_pad", "gen_pad", "gen_pad", "fm_organ", "psg_square"],
+        "arp": ["gen_pluck", "gen_pluck", "gen_pluck", "gen_bell", "gen_bell", "psg_square"],
+        "bass_heavy": ["gen_slap_bass", "gen_slap_bass", "gen_sub_bass", "fm_bass"],
+        "bass_medium": ["gen_slap_bass", "gen_sub_bass", "fm_bass"],
+        "bass_light": ["gen_pluck_bass", "gen_pluck_bass", "gen_sub_bass"],
+        "alt_lead": ["gen_lead", "gen_saw_lead", "gen_brass", "gen_bell"],
+        "drums": {"kick": "gen_kick", "snare": "gen_snare", "hihat": "gen_hat",
+                  "tom": "gen_tom", "crash": "gen_crash", "open_hihat": "gen_open_hat"},
     },
 }
 
@@ -142,7 +145,10 @@ def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
 
     harmony = random.choice(distinct(pal["harmony"]))
     bass = random.choice(bass_choices)
-    arp = random.choice(distinct(pal["arp"]))
+    # The arp must also differ from the harmony, or two of the three upper
+    # parts share one timbre — the thin PSG square on both was the usual case.
+    arp = random.choice([a for a in distinct(pal["arp"]) if a != harmony]
+                        or distinct(pal["arp"]))
 
     if pal["drums"]:
         drums = dict(pal["drums"])

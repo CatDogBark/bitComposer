@@ -283,6 +283,22 @@ class Samples(unittest.TestCase):
             seam = abs(wrap - internal) / peak
             self.assertLess(seam, 0.06, f"{name} seam {seam:.3f}")
 
+    def test_looped_genesis_and_chip_voices_have_clean_seams(self):
+        """The wrap from loop end to loop start must be no bigger a jump than
+        the waveform takes anywhere inside the loop region."""
+        random.seed(1)
+        for name in samples.INSTRUMENT_PRESETS:
+            if not (name.startswith("gen_") or name.endswith("_pluck") or name == "psg_square"):
+                continue
+            d = samples.generate_instrument(name)
+            if not d["loop"]:
+                continue
+            x = struct.unpack(f"<{d['length']}h", d["data"])
+            region = x[d["loop_start"]:d["loop_end"]]
+            max_step = max(abs(region[i] - region[i - 1]) for i in range(1, len(region))) or 1
+            seam = abs(x[d["loop_start"]] - x[d["loop_end"] - 1]) / max_step
+            self.assertLessEqual(seam, 1.05, f"{name} seam {seam:.2f}")
+
     def test_waveforms_are_tuned(self):
         d = samples.generate_instrument("square_lead")
         period = int(samples.SAMPLE_RATE / samples.BASE_NOTE_HZ)
