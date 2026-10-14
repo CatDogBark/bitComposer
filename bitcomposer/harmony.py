@@ -12,7 +12,9 @@ HARMONY_VOICINGS = {
     "sustain": {
         "description": "Sustained pad chords, held across the pattern",
         "interval": 32,
-        "cut_after": 24,
+        # Hold almost to the next hit; the fade in the composer takes the
+        # last rows down so the re-attack is a swell, not a gap.
+        "cut_after": 30,
     },
     "rhythmic": {
         "description": "Rhythmic chord hits synced to groove",

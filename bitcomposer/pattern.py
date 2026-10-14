@@ -192,13 +192,20 @@ def apply_portamento(pattern: ITPattern, channel: int,
 
 
 def apply_harmony_fade(pattern: ITPattern, channel: int,
-                       note_list: list[tuple[int, int]], fade_rate: int = 2):
-    """Add volume slide down after each harmony note-on so notes decay naturally."""
+                       note_list: list[tuple[int, int]], fade_rate: int = 2,
+                       hold_rows: int = 0):
+    """Add volume slide down after each harmony note-on so notes decay naturally.
+
+    hold_rows delays the slide: a pad should sit at level and only come down
+    just before the next hit. With a per-row slide from the first row, a
+    sustain chord written at volume 20 was silent after 20 rows of a 32-row
+    hold and then re-attacked out of nothing — heard as the pad cutting out.
+    """
     for row, midi_note in note_list:
         if midi_note == -1 or row < 0 or row >= pattern.rows:
             continue
         # Apply volume slide down on rows after the note-on until next event
-        for r in range(row + 1, pattern.rows):
+        for r in range(row + 1 + hold_rows, pattern.rows):
             cell = pattern.data[r][channel]
             # Stop if we hit another note or note-cut on this channel
             if cell.note != 0:
@@ -288,6 +295,15 @@ def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
     }
     drum_note = midi_to_it_note(60)
 
+    # Which subdivision to swing depends on what the hat line is playing. An
+    # eighth-note line swings its off-beat eighths (row 2 of each beat). A
+    # sixteenth-note line must swing the sixteenths (odd rows) instead:
+    # delaying only the off-beat eighths of a straight-16th line pushes every
+    # fourth hat late while its neighbours stay put, which lurches, and the
+    # kick on those rows no longer lands with the hat.
+    hat_rows = drum_hits.get("hat", []) + drum_hits.get("hihat", [])
+    sixteenth_hats = any(r % 2 for r in hat_rows)
+
     for drum, hits in drum_hits.items():
         ch = drum_channels.get(drum)
         inst_key = drum if drum != "hat" else "hihat"
@@ -298,9 +314,8 @@ def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
             if not (0 <= row < pattern.rows):
                 continue
             effect = effect_val = 0
-            # Shuffle the off-beat eighth, which sits on row 2 of each beat.
-            if (swing > 0 and drum in ("hihat", "hat")
-                    and row % ROWS_PER_BEAT == 2 * ROWS_PER_STEP):
+            swung = (row % 2 == 1) if sixteenth_hats else (row % ROWS_PER_BEAT == 2 * ROWS_PER_STEP)
+            if swing > 0 and drum in ("hihat", "hat") and swung:
                 # light ~1/3 of a row late, heavy ~2/3.
                 delay = max(1, min(speed - 1, round(speed * swing / 3)))
                 effect, effect_val = FX_SPECIAL, S_NOTE_DELAY | delay
@@ -313,6 +328,32 @@ def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
 
 
 # ── Sustain management ──
+
+def apply_echo_spill(prev: ITPattern, cur: ITPattern, src: int, dst: int,
+                     delay_rows: int, level: float):
+    """Write the echo taps of prev's last notes into the start of cur.
+
+    apply_echo drops taps that fall past the pattern end, so the echo went
+    silent for the last beats of every pattern. The composer calls this for
+    consecutive patterns whose second member has a single predecessor, where
+    writing into it cannot be wrong for any other order position.
+    """
+    for row in range(prev.rows - delay_rows, prev.rows):
+        cell = prev.data[row][src]
+        if cell.note == 0:
+            continue
+        target = row + delay_rows - prev.rows
+        if cur.data[target][dst].note != 0:
+            continue
+        if cell.note in (NOTE_CUT, NOTE_OFF):
+            cur.data[target][dst] = ITNote(note=cell.note)
+            continue
+        vol = cell.volume if cell.volume != 255 else 64
+        cur.data[target][dst] = ITNote(
+            note=cell.note, instrument=cell.instrument,
+            volume=max(1, int(vol * level)),
+        )
+
 
 def apply_sustain_safety_net(pat: ITPattern, channels: list[int] | None = None,
                              max_ring: int = 12):

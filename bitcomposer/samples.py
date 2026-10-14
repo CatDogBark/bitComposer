@@ -399,7 +399,7 @@ def fm_organ(cycles: int = 6) -> tuple[bytes, int]:
     return data, length
 
 
-def fm_brass(cycles: int = 6) -> tuple[bytes, int]:
+def fm_brass(cycles: int = 30) -> tuple[bytes, int]:
     """3-operator FM brass — punchy attack, mellows out."""
     period = int(SAMPLE_RATE / BASE_NOTE_HZ)
     length = period * cycles
@@ -537,19 +537,22 @@ def fm_bass(cycles: int = 4) -> tuple[bytes, int]:
     return data, length
 
 
-def fm_lead(cycles: int = 6) -> tuple[bytes, int]:
-    """FM synthesis lead — bright, cutting Genesis lead."""
+def fm_lead(cycles: int = 40) -> tuple[bytes, int]:
+    """FM synthesis lead — bright attack settling into a rounder sustain.
+
+    The YM2612 gave every operator its own envelope, so a lead's modulator
+    (its brightness) decayed after the attack. A constant index of 3 for the
+    whole note was the buzz that made the palette abrasive."""
     period = int(SAMPLE_RATE / BASE_NOTE_HZ)
     length = period * cycles
     samples = []
     mod_ratio = 2.0
-    mod_index = 3.0
     for i in range(length):
         t = i / SAMPLE_RATE
         phase = 2.0 * math.pi * BASE_NOTE_HZ * t
+        mod_index = 1.3 + 1.7 * math.exp(-t / 0.05)
         modulator = mod_index * math.sin(mod_ratio * phase)
-        carrier = math.sin(phase + modulator)
-        samples.append(carrier)
+        samples.append(math.sin(phase + modulator))
     data = _pack_samples(_normalize(samples))
     return data, length
 
@@ -903,19 +906,24 @@ def snes_kick() -> tuple[bytes, int, dict]:
 
 
 def snes_snare() -> tuple[bytes, int, dict]:
-    """Gated snare — the big early-90s room sound, chopped off hard."""
+    """Gated snare — the big early-90s room sound, closed off by a gate.
+
+    The room is a decaying reverb-like noise tail, not a flat block: a
+    constant-level burst that stopped dead read as a glitch, not a gate.
+    """
     n = int(SNES_RATE * 0.22)
-    gate = int(SNES_RATE * 0.16)
+    gate = int(SNES_RATE * 0.15)
     out = []
     for i in range(n):
         t = i / SNES_RATE
         tone = math.sin(2.0 * math.pi * 190.0 * t) * math.exp(-t / 0.04)
         noise = _rng.uniform(-1.0, 1.0)
-        room = noise * (0.55 if i < gate else 0.0) * (1.0 - 0.4 * i / gate)
+        room = noise * 0.45 * math.exp(-t / 0.09) if i < gate else 0.0
         hit = noise * math.exp(-t / 0.025)
         v = 0.5 * tone + 0.6 * hit + room
         if i >= gate:
-            v *= math.exp(-(i - gate) / (SNES_RATE * 0.004))
+            # 12 ms gate close, so the tail ends with a quick fall, not a click.
+            v = noise * 0.45 * math.exp(-gate / SNES_RATE / 0.09) * math.exp(-(i - gate) / (SNES_RATE * 0.012))
         out.append(v)
     return _finish_snes(_lowpass(out, 0.75), 0.9)
 
@@ -954,6 +962,69 @@ def snes_crash() -> tuple[bytes, int, dict]:
         v = _rng.uniform(-1.0, 1.0) * 0.7 + 0.3 * math.sin(2.0 * math.pi * 2900.0 * t)
         out.append(v * math.exp(-t / 0.35))
     return _finish_snes(_highpass(out, 0.3), 0.7)
+
+
+# ── Console output polish for the waveform and FM palettes ──
+#
+# These presets were raw, full-bandwidth single cycles at 44.1 kHz with no
+# envelope: a square lead slammed on at full level with every harmonic the
+# sample rate allowed, and stayed flat until cut. No console sounded like
+# that — the DAC and the television rolled the top off, and the chips had
+# envelopes. polish_waveform() applies a one-pole low-pass (a console output
+# stage), ramps a short attack region, and loops the filter's steady state.
+# (cutoff, attack_cycles); cutoff is the one-pole alpha at 44.1 kHz, where
+# 0.6 is about 6 kHz and 0.4 about 3.5 kHz.
+WAVEFORM_POLISH = {
+    "square_lead": (0.55, 8), "pulse_lead": (0.55, 8), "saw_lead": (0.5, 8),
+    "triangle_lead": (0.7, 6), "fm_bell": (0.65, 2), "fm_lead": (0.6, 4),
+    "pwm_lead": (0.5, 0), "supersaw_lead": (0.45, 0), "filtered_lead": (0.7, 8),
+    "sweep_lead": (0.6, 0), "fm_organ": (0.6, 3), "fm_brass": (0.6, 6),
+    "fm_pad": (0.5, 0),
+    "saw_bass": (0.35, 2), "triangle_bass": (0.6, 2), "sine_bass": (0.8, 2),
+    "fm_bass": (0.45, 2), "square_bass": (0.4, 2), "distorted_bass": (0.4, 2),
+    "filtered_bass": (0.6, 2), "supersaw_bass": (0.35, 0),
+    "pluck_bass": (0.6, 0), "thin_bass": (0.5, 0), "bright_bass": (0.6, 0),
+}
+
+
+def polish_waveform(data: bytes, length: int, cutoff: float,
+                    attack_cycles: int) -> tuple[bytes, int, int, int]:
+    """Filter, add an attack, and set loop points on a packed waveform.
+
+    Returns (data, length, loop_start, loop_end). With attack_cycles > 0 the
+    waveform must be periodic at the C-5 period: the result is the ramped
+    attack followed by two cycles of the filter's steady state, which loop
+    seamlessly. With attack_cycles == 0 (sweeps, detuned stacks) the whole
+    filtered buffer loops as before.
+    """
+    period = int(SAMPLE_RATE / BASE_NOTE_HZ)
+    raw = [v / 32767.0 for v in struct.unpack(f"<{length}h", data)]
+    if attack_cycles and length % period == 0:
+        # Enough cycles for the filter to settle before the loop region. A
+        # preset that already evolves over its length (an FM lead whose
+        # brightness decays) is used as is, so its last cycle — the settled
+        # timbre — becomes the loop; a plain single cycle is tiled.
+        total = max(length, (attack_cycles + 6) * period)
+        buf = list(raw) if length >= (attack_cycles + 6) * period \
+            else (raw[:period] * (total // period))[:total]
+        attack_len = attack_cycles * period
+        for i in range(attack_len):
+            buf[i] *= math.sin(0.5 * math.pi * (i + 1) / attack_len)
+        filt = _lowpass(buf, cutoff)
+        steady = filt[-period:]
+        out = filt[:total - 2 * period] + steady * 2
+        loop_start = total - 2 * period
+    else:
+        out = _lowpass(raw * 2, cutoff)[length:]   # second pass = settled filter
+        # Detuned stacks and sweeps are not periodic, so crossfade the loop
+        # seam: blend the tail into the head over 64 samples.
+        k = min(64, len(out) // 4)
+        for i in range(k):
+            w = (i + 1) / (k + 1)
+            out[len(out) - k + i] = out[len(out) - k + i] * (1 - w) + out[i] * w
+        loop_start = 0
+    ints = _normalize(out)
+    return _pack_samples(ints), len(ints), loop_start, len(ints)
 
 
 # Instrument presets: (name, generator_func, kwargs, default_volume)
@@ -1057,8 +1128,12 @@ def generate_instrument(name: str) -> dict:
         }
     data, length = result
     one_shot = name in _ONE_SHOT_WAVEFORMS
+    loop_start, loop_end = 0, length
+    if not one_shot and name in WAVEFORM_POLISH:
+        cutoff, attack = WAVEFORM_POLISH[name]
+        data, length, loop_start, loop_end = polish_waveform(data, length, cutoff, attack)
     return {
         "data": data, "length": length, "volume": vol,
         "rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
-        "loop": not one_shot, "loop_start": 0, "loop_end": length,
+        "loop": not one_shot, "loop_start": loop_start, "loop_end": loop_end,
     }

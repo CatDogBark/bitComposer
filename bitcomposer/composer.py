@@ -22,7 +22,7 @@ from .pattern import (
     CH_SNARE, CH_HIHAT, CH_CRASH, CH_ECHO1, CH_ECHO2,
     NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
-    apply_portamento, apply_harmony_fade, apply_fade, apply_echo,
+    apply_portamento, apply_harmony_fade, apply_fade, apply_echo, apply_echo_spill,
     apply_drums_to_pattern, generate_drums,
     apply_sustain_safety_net, silence_inactive_channels,
     apply_chord_arpeggio, apply_retrigger,
@@ -42,10 +42,11 @@ STYLES = ["chip", "snes", "genesis"]
 # and the second tap at twice that is the feedback repeat.
 ECHO_TAPS = [(CH_ECHO1, 3, 0.5), (CH_ECHO2, 6, 0.25)]
 
-# How fast harmony notes decay after their note-on, per voicing. stabs and
-# rhythmic are short hits, so a per-tick slide is right; sustain is a pad and
-# the per-tick slide killed it in six rows, so it gets a fine (per-row) slide.
-HARMONY_FADE = {"stabs": 0x02, "rhythmic": 0x03, "sustain": 0xF1}
+# How harmony notes decay after their note-on, per voicing: (slide, rows to
+# hold first). stabs and rhythmic are short hits, so a per-tick slide from
+# the start is right. sustain is a pad: it holds for most of its 32-row
+# interval and then takes a fine (per-row) slide down into the next hit.
+HARMONY_FADE = {"stabs": (0x02, 0), "rhythmic": (0x03, 0), "sustain": (0xF2, 18)}
 
 # Chance that a pattern changes chord at its halfway point, by section type.
 HALF_PATTERN_CHANGE = {
@@ -234,7 +235,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     melody_vol = int(42 * section_energy)
     harmony_vol = int(22 * section_energy)
     arp_vol = int(36 * section_energy)
-    harmony_fade = HARMONY_FADE.get(voicing_style, 0x02)
+    harmony_fade, harmony_hold = HARMONY_FADE.get(voicing_style, (0x02, 0))
 
     # ── Melody ──
     if layers["melody"]:
@@ -265,7 +266,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 pat, CH_HARMONY, counter, sample_map["harmony"],
                 volume=int(20 * section_energy), humanize=True,
             )
-            apply_harmony_fade(pat, CH_HARMONY, counter, fade_rate=harmony_fade)
+            apply_harmony_fade(pat, CH_HARMONY, counter, fade_rate=harmony_fade,
+                               hold_rows=harmony_hold)
             voices = generate_harmony_timeline(
                 harmony_segments, voicing=voicing_style,
                 num_voices=min(2, num_harmony_voices),
@@ -279,7 +281,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                         volume=humanize_volume(int(18 * section_energy), 4),
                         humanize=True,
                     )
-                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade)
+                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade,
+                                       hold_rows=harmony_hold)
         else:
             voices = generate_harmony_timeline(
                 harmony_segments, voicing=voicing_style,
@@ -303,7 +306,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                             apply_chord_arpeggio(
                                 pat, ch, [(r, n) for r, n in voice_notes if s <= r < e],
                                 notes)
-                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade)
+                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade,
+                                       hold_rows=harmony_hold)
 
     # ── Bass ──
     if layers["bass"]:
@@ -644,6 +648,21 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     orders = struct.build_orders(
         song_structure, pattern_index_for, progression, alt_progression,
         use_alt_chorus)
+
+    # ── Echo tails across pattern boundaries ──
+    # Where a pattern is only ever preceded by one other, its first rows can
+    # carry the echo of that pattern's last notes.
+    if use_echo:
+        preds: dict[int, set[int]] = {}
+        for a, b in zip(orders, orders[1:]):
+            preds.setdefault(b, set()).add(a)
+        done = set()
+        for a, b in zip(orders, orders[1:]):
+            if (a, b) in done or len(preds[b]) != 1 or a == b:
+                continue
+            done.add((a, b))
+            for ch, delay, level in ECHO_TAPS:
+                apply_echo_spill(patterns[a], patterns[b], CH_MELODY, ch, delay, level)
 
     # ── Silence channels at section boundaries ──
     silence_inactive_channels(orders, patterns)
