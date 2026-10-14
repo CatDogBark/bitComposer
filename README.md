@@ -16,7 +16,9 @@ ending. Three sound palettes:
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 
-**Listen** (one minute each, rendered with libopenmpt, picked by ear from the generator's output):
+**[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: the three picks below plus two seeds rendered in all three palettes.
+
+**Download clips** (one minute each, rendered with libopenmpt, picked by ear from the generator's output):
 
 - snes — [*Skyward Cloister*](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-snes.ogg)
 - genesis — [*Skyward Cistern*](https://github.com/CatDogBark/bitComposer/releases/download/v0.4.0/demo-genesis.ogg)

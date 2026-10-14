@@ -9,3 +9,6 @@ build/
 output/
 *.it
 *.wav
+
+# The listening page ships real modules; everything else stays ignored.
+!docs/tracks/*.it
