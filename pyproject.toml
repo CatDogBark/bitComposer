@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bitcomposer"
-version = "0.3.0"
+version = "0.4.0"
 description = "Procedural 16-bit chiptune music generator — creates Impulse Tracker (.it) files"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "CatDogBark" },
+    { name = "CatDogBark", email = "CatDogBark@pm.me" },
 ]
 keywords = ["chiptune", "tracker", "music", "procedural", "16-bit", "snes", "genesis", "impulse-tracker"]
 classifiers = [
@@ -24,6 +24,12 @@ classifiers = [
 bitcomposer = "bitcomposer.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/CatDogBark/bitcomposer"
-Repository = "https://github.com/CatDogBark/bitcomposer"
-Issues = "https://github.com/CatDogBark/bitcomposer/issues"
+Homepage = "https://github.com/CatDogBark/bitComposer"
+Repository = "https://github.com/CatDogBark/bitComposer"
+Issues = "https://github.com/CatDogBark/bitComposer/issues"
+Changelog = "https://github.com/CatDogBark/bitComposer/blob/main/CHANGELOG.md"
+
+# Only the library ships. Without this, setuptools' flat-layout discovery would
+# also install tests/ as a top-level package.
+[tool.setuptools]
+packages = ["bitcomposer"]

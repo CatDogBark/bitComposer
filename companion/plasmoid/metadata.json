@@ -6,12 +6,13 @@
         "Icon": "audio-headphones",
         "Authors": [
             {
-                "Name": "Troy",
-                "Email": ""
+                "Name": "CatDogBark",
+                "Email": "CatDogBark@pm.me"
             }
         ],
         "Category": "Multimedia",
-        "License": "GPL-3.0"
+        "License": "MIT",
+        "Website": "https://github.com/CatDogBark/bitComposer"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "KPackageStructure": "Plasma/Applet"
