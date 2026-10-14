@@ -3,8 +3,11 @@
 # Usage: bitcomposer-generate.sh [--auto] [--tempo T] [--energy E] ...
 #
 # Files are named after the song's title ("Haunted Orchard.it"), so what the
-# player shows is what the folder shows. --auto appends " (auto)", which marks
-# the file for the daemon's pruning (AUTOGEN_MAX, on every Rescan).
+# player shows is what the folder shows. Every track made through the player
+# gets the " (auto)" suffix, which marks it for the daemon's pruning
+# (AUTOGEN_MAX, on every Rescan) until KEEP renames it. A generated track is
+# provisional until you decide it is worth keeping; --auto is accepted for
+# compatibility but no longer changes anything.
 
 BUSNAME="org.mpris.MediaPlayer2.CyberpunkChiptune"
 BUSPATH="/org/mpris/MediaPlayer2"
@@ -21,8 +24,7 @@ for arg in "$@"; do
 done
 
 mkdir -p "$MUSIC_DIR"
-SUFFIX=""
-[ "$AUTO" = true ] && SUFFIX=" (auto)"
+SUFFIX=" (auto)"
 
 OUT=$(python3 -m bitcomposer.cli "${ARGS[@]}" -d "$MUSIC_DIR" --suffix "$SUFFIX") || exit 1
 OUTPATH=$(printf '%s\n' "$OUT" | sed -n 's/^Generated: //p' | tail -1)

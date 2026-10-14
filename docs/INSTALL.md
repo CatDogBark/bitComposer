@@ -174,11 +174,12 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 - **File names are song titles.** The CLI names output after the module
   title ("Haunted Orchard.it", with " 2", " 3" on a clash) unless `-o` or
   `--name timestamp` is given, so the player's playlist and the folder agree.
-- **Auto-file pruning is hard deletion.** The daemon prunes auto-generated
-  tracks — `<Title> (auto).it`, and the older `bitcomposer_auto_*.it` — to
-  `AUTOGEN_MAX` (10) on every `Rescan()`, with `unlink()` and no trash. It is
-  the single place pruning happens. Use KEEP in the widget (or `KeepTrack`)
-  to rename one out of the set.
+- **Every track made through the player is provisional.** Both the GENERATE
+  button and auto-generate write `<Title> (auto).it`. The daemon prunes those
+  (and the older `bitcomposer_auto_*.it`) to `AUTOGEN_MAX` (10) on every
+  `Rescan()`, with `unlink()` and no trash; it is the single place pruning
+  happens. KEEP in the widget (or `KeepTrack`) renames one out of the set.
+  The CLI itself writes plain `<Title>.it`.
 - **Default music dir in the QML.** `main.qml` carries a fallback path that
   the installer patches to `$MUSIC_DIR`; at runtime the daemon's reported
   directory overrides it.
