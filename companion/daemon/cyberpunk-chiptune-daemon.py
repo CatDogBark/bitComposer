@@ -307,6 +307,10 @@ class ChiptunePlayer:
             pass
         self.shuffle = bool(saved.get("shuffle", False))
         self._title_cache = {}   # path -> (mtime, title)
+        # Live mixer values for the loaded track, channel -> 0-64. libopenmpt
+        # resets channel state on every seek (and resume is a seek), so these
+        # are re-applied after each one instead of silently reverting.
+        self._live_mix = {}
 
         self._lock = threading.Lock()
         self._pw_proc = None
@@ -568,6 +572,7 @@ class ChiptunePlayer:
                 self.module.destroy()
             self.module = new_module
             self.current_index = index
+            self._live_mix = {}   # a new track starts from its own header mix
 
         print(f"[LOAD] {new_module.title} ({Path(filepath).suffix})")
         return True
@@ -608,6 +613,7 @@ class ChiptunePlayer:
             if self.module:
                 with self._lock:
                     self.module.seek(self._pause_position)
+                    self._reapply_mix()
                 self._open_audio()
                 self._stop_event.clear()
                 self._pause_event.set()
@@ -736,6 +742,21 @@ class ChiptunePlayer:
         self._decode_thread = threading.Thread(target=self._decode_loop, daemon=True)
         self._decode_thread.start()
 
+    def _reapply_mix(self):
+        """Restore the live mixer after a seek (call with the lock held)."""
+        if self.module:
+            for ch, vol in self._live_mix.items():
+                self.module.set_channel_volume(ch, vol)
+
+    def set_channel_volume(self, ch, vol):
+        with self._lock:
+            if not self.module:
+                return False
+            ok = self.module.set_channel_volume(ch, vol)
+            if ok:
+                self._live_mix[ch] = vol
+            return ok
+
     def seek_to(self, seconds):
         # Seeking only moved the module's read position; the audio already
         # queued in the pipe still played out first. Flush it like pause does.
@@ -745,6 +766,7 @@ class ChiptunePlayer:
         with self._lock:
             if self.module:
                 self.module.seek(max(0.0, seconds))
+                self._reapply_mix()
         if was_playing:
             self._start_decoder()
 
@@ -952,10 +974,7 @@ class MPRISService(dbus.service.Object):
         """Live mixer: set one channel's volume (0-64) on the playing module.
         Takes effect on the next buffer; nothing is restarted. Persist it
         with bitcomposer-master.sh, which writes the file header."""
-        with self.player._lock:
-            if not self.player.module:
-                return False
-            return bool(self.player.module.set_channel_volume(int(channel), int(volume)))
+        return bool(self.player.set_channel_volume(int(channel), int(volume)))
 
     @dbus.service.method(MPRIS_BUS_NAME, out_signature="ai")
     def GetChannelVolumes(self):
