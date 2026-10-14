@@ -1742,6 +1742,11 @@ PlasmoidItem {
                 }
             }
 
+            // Any height the popup has beyond what the content needs goes
+            // here, so the sections stay packed at the top instead of the
+            // layout spreading the surplus into gaps between them.
+            Item { Layout.fillHeight: true }
+
             // ── Footer ──
             Text {
                 Layout.alignment: Qt.AlignHCenter
