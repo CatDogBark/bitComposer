@@ -414,10 +414,11 @@ class ChiptunePlayer:
 
     def _decode_loop(self):
         """Background thread: decode PCM from module and pipe to paplay."""
-        # Belt and braces for the live mixer: whatever path (re)started the
-        # decoder, the module carries the user's mix from the first buffer.
-        with self._lock:
-            self._reapply_mix()
+        # libopenmpt applies a position change lazily, on the read that
+        # follows it, and that resets channel state — so a mix re-applied
+        # right after seek() is undone by the first buffer. Re-apply after
+        # each of the first few reads instead; it costs microseconds.
+        reapply_left = 3
         while not self._stop_event.is_set():
             self._pause_event.wait(timeout=0.1)
             if self._stop_event.is_set():
@@ -429,6 +430,9 @@ class ChiptunePlayer:
                 if self.module is None:
                     break
                 frames_read = self.module.read_stereo(FRAMES_PER_BUFFER, self._buf)
+                if reapply_left:
+                    self._reapply_mix()
+                    reapply_left -= 1
 
             if frames_read == 0:
                 # Track ended — advance to next
