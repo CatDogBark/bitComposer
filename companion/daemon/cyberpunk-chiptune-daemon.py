@@ -138,7 +138,15 @@ class OpenMPTModule:
 
     @property
     def artist(self):
-        return self.get_metadata("artist") or self.get_metadata("tracker")
+        """IT has no artist field. Our own files carry a "bitcomposer <version>"
+        line in the song message, so credit them; otherwise fall back to the
+        tracker name libopenmpt reports."""
+        artist = self.get_metadata("artist")
+        if artist:
+            return artist
+        if "bitcomposer" in self.get_metadata("message").lower():
+            return "bitComposer"
+        return self.get_metadata("tracker")
 
     @property
     def type_name(self):
