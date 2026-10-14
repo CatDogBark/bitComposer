@@ -775,6 +775,7 @@ CHANNEL_VOLUMES = [
 ]
 PALETTE_MIX = {
     "chip": {CH_ARP: 28},
+    "genesis": {CH_ARP: 17},   # gen_pluck arp balanced by ear (Skyward Cistern, 2026-10-13)
 }
 
 
