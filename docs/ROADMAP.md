@@ -61,6 +61,30 @@ From `ANALYSIS.md` §5, unchanged:
 - **A local LLM as arranger**, producing a typed style brief (key, scale,
   progression set, form, palette, energy curve) that drives the engine.
 
+## Game integration
+
+bitComposer is intended, eventually, as the music engine of a game the
+author is building. Nothing here is near-term; it is recorded so the
+composer's design keeps the door open.
+
+- **The shape of it.** The game would not run Python. It needs a composer
+  that produces module bytes and libopenmpt to play them; libopenmpt has
+  C, C++, Rust and C# bindings and runs inside Unity and Godot today. The
+  port of the composer is the only real work, and seeded determinism makes
+  it verifiable byte for byte against this Python reference, which stays
+  the design workbench.
+- **Loop form.** Level music loops without an ending: a form whose last
+  pattern leads back into its first.
+- **Intensity layers.** The same seed rendered at two or three energy
+  tiers with identical form, so a game can crossfade between them on the
+  beat as the state changes. Seeded section reuse makes this natural.
+- **Transitions and stingers.** Short fills or hits in the piece's key and
+  palette to bridge one state to another.
+- **Palette as a game parameter**, per area or faction.
+- **In-browser generation** for the listening page is the same problem in
+  miniature; Pyodide (CPython in WebAssembly, ~7 MB) would run the
+  dependency-free generator unchanged and is the first thing to try.
+
 ## Player
 
 - HiDPI control sizes (fonts and popup already scale; buttons and sliders
