@@ -429,6 +429,12 @@ class Packs(unittest.TestCase):
             self.assertIn(info["instruments"]["arp"], pack["voices"]["arp"], name)
             self.assertEqual(info["instruments"]["tom"], pack["voices"]["drums"]["tom"], name)
 
+    def test_drone_bass_holds_one_note_per_chord(self):
+        from bitcomposer import bass
+        notes = bass.generate_bass(48, "minor", 32, style="drone", weight="heavy")
+        self.assertEqual(notes, [(0, 36)])      # heavy register: octave 2
+        self.assertEqual(bass.pick_section_bass("light", 0.95, "drone"), "drone")
+
     def test_pack_none_is_plain_snes(self):
         from bitcomposer.packs import PACKS
         info = compose_song(seed=5, style_pref="snes", pack="none")["info"]

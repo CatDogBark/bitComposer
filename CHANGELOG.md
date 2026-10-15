@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Style pack `evermore` (Secret of Evermore): warm and dark ensemble pads, a drone, a breathy flute, an "oo" choir, tubular bells, frame drum, brushed snare and a soft click; habits: slow tempos, chill energy, minor keys, linear forms, sustained harmony, a new `drone` bass style (one held note per chord, sliding between roots), sparse drums with a 40% chance of no kit at all (new pack habit `drumless`), wet centred echo on a quarter or dotted-eighth delay (packs can now weight `echo_delay` and the song form).
 - Style pack `mana` (Secret of Mana): celesta, kalimba, steel drum, wind chimes, whistle, pan flute, a glassy chorused pad, and a hand-percussion kit (conga on the tom slot, shaker as the hat, tambourine as the open hat, woodblock as the rim); habits: major and pentatonic keys, pulse / rhythmic / stab harmony, octave and walking bass, light swing, bouncy arp figures (packs can now weight `arp.FIGURES`), kick and snare trimmed back.
 - Arp echo: only the arp's accented steps are sent, and the arp send tapers with tempo (full to 130 BPM, gone by 170), so a fast pizzicato arp no longer turns into a stream of ticks between the plucks.
 - Echo stereo: the "spread" mode (every repeat hard on the far side of its part) is replaced by "centre" (repeats under their source). A copy arriving a quarter second late from another direction was heard as a second player coming in late rather than as a room.

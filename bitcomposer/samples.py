@@ -1196,6 +1196,100 @@ def mana_woodblock() -> tuple[bytes, int, dict]:
     return _finish_snes(out, 0.8)
 
 
+# ── Secret of Evermore set ──
+# Soule's palette: warm, slow and wide. Pads that swell, a breathy flute,
+# tubular bells, a drone under everything, an "oo" choir, soft percussion.
+
+def evm_pad() -> tuple[bytes, int, dict]:
+    """Warm pad — rounded spectrum, slow swell, three detuned layers."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.5, 3: 0.3, 4: 0.2, 5: 0.12, 6: 0.07},
+        periods=160, attack_cycles=60, detune_layers=2, lowpass=0.4, amplitude=0.85)
+
+
+def evm_dark_pad() -> tuple[bytes, int, dict]:
+    """Dark pad — hollow odd partials, slower still, darker."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.15, 3: 0.4, 5: 0.2, 7: 0.08},
+        periods=180, attack_cycles=70, detune_layers=2, lowpass=0.32, amplitude=0.85)
+
+
+def evm_drone() -> tuple[bytes, int, dict]:
+    """Drone — a low, slow-beating fundamental for the bass role to hold."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.3, 3: 0.15, 4: 0.05},
+        periods=200, attack_cycles=40, detune_layers=1, lowpass=0.25, amplitude=0.9)
+
+
+def evm_breath_flute() -> tuple[bytes, int, dict]:
+    """Breathy flute — more air than tone, soft onset."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.3, 3: 0.1, 4: 0.04},
+        attack_cycles=14, loop_cycles=2, breath=0.45, lowpass=0.6, amplitude=0.85)
+
+
+def evm_choir_oo() -> tuple[bytes, int, dict]:
+    """Choir 'oo' — darker vowel than the 'ah' choir, slower attack."""
+    formants = [(350.0, 100.0), (800.0, 120.0), (2400.0, 200.0)]
+    harm = {}
+    for k in range(1, 12):
+        f = BASE_NOTE_HZ * k
+        w = sum(math.exp(-((f - fc) / bw) ** 2) for fc, bw in formants)
+        harm[k] = (0.12 + w) / k ** 0.7
+    return _sustained_voice(harm, attack_cycles=40, loop_cycles=2,
+                            lowpass=0.5, breath=0.03, amplitude=0.85)
+
+
+def evm_tubular_bell() -> tuple[bytes, int, dict]:
+    """Tubular bell — inharmonic partials, a hum that outlasts the strike."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return (math.sin(ph) + 0.6 * math.sin(2.0 * ph) * math.exp(-t / 0.9)
+                + 0.5 * math.sin(2.76 * ph) * math.exp(-t / 0.5)
+                + 0.3 * math.sin(5.4 * ph) * math.exp(-t / 0.2)
+                + 0.5 * math.sin(0.5 * ph))
+    return _decaying_voice(1.8, tone, amp_tau=1.1, tail_loop=True, amplitude=0.8)
+
+
+def evm_frame_drum() -> tuple[bytes, int, dict]:
+    """Frame drum — a deep, soft hand drum with a long body."""
+    n = int(SNES_RATE * 0.6)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 60.0 + 50.0 * math.exp(-t / 0.04)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.28)
+        v += _rng.uniform(-0.2, 0.2) * math.exp(-t / 0.01)
+        out.append(v)
+    return _finish_snes(_lowpass(out, 0.35), 0.9)
+
+
+def evm_brush_snare() -> tuple[bytes, int, dict]:
+    """Brushed snare — a soft swish, no crack."""
+    n = int(SNES_RATE * 0.22)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        env = min(1.0, t / 0.02) * math.exp(-max(0.0, t - 0.02) / 0.07)
+        out.append(_rng.uniform(-1.0, 1.0) * env)
+    return _finish_snes(_lowpass(_highpass(out, 0.3), 0.5), 0.5)
+
+
+def evm_click() -> tuple[bytes, int, dict]:
+    """A soft wooden click for the rim slot."""
+    n = int(SNES_RATE * 0.05)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        out.append(math.sin(2.0 * math.pi * 1400.0 * t) * math.exp(-t / 0.006)
+                   + _rng.uniform(-0.3, 0.3) * math.exp(-t / 0.002))
+    return _finish_snes(out, 0.6)
+
+
 def snes_orch_hit() -> tuple[bytes, int, dict]:
     """Orchestra hit — stacked saws on root, fifth and octave plus a noise burst."""
     n = int(SNES_RATE * 0.5)
@@ -1646,6 +1740,8 @@ PRESET_RELEASE = {
     "mana_celesta": "keys", "mana_kalimba": "keys", "mana_steel_drum": "keys",
     "mana_chimes": "keys", "mana_whistle": "flute", "mana_panflute": "flute",
     "mana_glass_pad": "pad",
+    "evm_pad": "pad", "evm_dark_pad": "pad", "evm_drone": "bass",
+    "evm_breath_flute": "flute", "evm_choir_oo": "choir", "evm_tubular_bell": "keys",
     # Genesis
     "gen_lead": "lead", "gen_saw_lead": "lead", "gen_brass": "brass",
     "gen_pad": "pad", "gen_sub_bass": "bass", "gen_bell": "keys",
@@ -1874,6 +1970,16 @@ INSTRUMENT_PRESETS = {
     "mana_shaker":    (mana_shaker,    {},             54),
     "mana_tambourine": (mana_tambourine, {},           50),
     "mana_woodblock": (mana_woodblock, {},             56),
+    # Secret of Evermore set
+    "evm_pad":        (evm_pad,        {},             54),
+    "evm_dark_pad":   (evm_dark_pad,   {},             54),
+    "evm_drone":      (evm_drone,      {},             60),
+    "evm_breath_flute": (evm_breath_flute, {},         60),
+    "evm_choir_oo":   (evm_choir_oo,   {},             56),
+    "evm_tubular_bell": (evm_tubular_bell, {},         52),
+    "evm_frame_drum": (evm_frame_drum, {},             62),
+    "evm_brush_snare": (evm_brush_snare, {},           56),
+    "evm_click":      (evm_click,      {},             50),
     "snes_kick":      (snes_kick,      {},             64),
     "snes_snare":     (snes_snare,     {},             64),
     "snes_hat":       (snes_hat,       {},             46),
@@ -1918,7 +2024,7 @@ STRUCK_RATIO = 0.8
 
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
                      "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal",
-                     "conga", "tambourine", "woodblock"}
+                     "conga", "tambourine", "woodblock", "drum", "click", "brush"}
 
 
 def is_percussion(name: str) -> bool:

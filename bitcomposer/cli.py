@@ -153,7 +153,7 @@ def main():
     )
     parser.add_argument(
         "--pack",
-        choices=["ffvi", "mana", "none", "random"],
+        choices=["ffvi", "mana", "evermore", "none", "random"],
         default="random",
         help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
     )
