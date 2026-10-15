@@ -7,7 +7,15 @@ The tracker engine handles pitch-shifting to play different notes.
 """
 
 import math
-import random as _rng
+import random
+import zlib
+
+# Noise for the samples comes from this stream, never from the global one:
+# generate_instrument reseeds it per preset, so a sample is the same bytes
+# whatever was generated before it, and changing a sample's recipe cannot
+# move the song's arrangement (it used to: a longer shaker shifted every
+# draw after it, titles included).
+_rng = random.Random(0)
 import struct
 
 # Base sample rate for all generated waveforms
@@ -1150,16 +1158,18 @@ def mana_conga() -> tuple[bytes, int, dict]:
 
 
 def mana_shaker() -> tuple[bytes, int, dict]:
-    """Shaker — a short grain of filtered noise with a soft swell."""
-    n = int(SNES_RATE * 0.09)
+    """Shaker — one stroke: band-limited noise (a "shh" between about 2 and
+    6 kHz, not a full-band burst), a 12 ms swell of grains and a tail that
+    fades over the rest. The first version was white noise with a symmetric
+    envelope and read as a kit piece; a shaker is a texture under the kit."""
+    n = int(SNES_RATE * 0.11)
     out = []
     for i in range(n):
         t = i / SNES_RATE
-        env = math.sin(math.pi * min(1.0, t / 0.09)) ** 0.5
+        env = min(1.0, t / 0.012) * math.exp(-max(0.0, t - 0.012) / 0.035)
         out.append(_rng.uniform(-1.0, 1.0) * env)
-    # A sustained grain carries far more energy than a hat's tick at the same
-    # peak, and a shaker lives at the back of the mix: well under the hat.
-    return _finish_snes(_highpass(out, 0.6), 0.3)
+    out = _lowpass(_highpass(out, 0.35), 0.45)
+    return _finish_snes(out, 0.3)
 
 
 def mana_tambourine() -> tuple[bytes, int, dict]:
@@ -1981,6 +1991,7 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
     if name not in INSTRUMENT_PRESETS:
         raise ValueError(f"Unknown instrument: {name}")
     func, kwargs, vol = INSTRUMENT_PRESETS[name]
+    _rng.seed(zlib.crc32(name.encode()))
     result = func(**kwargs)
     if len(result) == 3:
         data, length, meta = result

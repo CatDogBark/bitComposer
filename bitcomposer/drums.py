@@ -181,6 +181,7 @@ def _thin_hats(hat: str) -> str:
 
 def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm: float,
                  swing: int, speed: int, fill: dict | None, breakdown: bool,
+                 hat_stroke: float = 1.0,
                  crash_on_one: bool, bars: int = 4) -> dict:
     """Write a four-bar drum phrase into `pat`. Returns counts per piece."""
     groove = GROOVES[groove_name]
@@ -202,7 +203,13 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
                                    volume=max(1, min(64, vel)), effect=fx, effect_val=fxv)
         counts[piece] = counts.get(piece, 0) + 1
 
+    # hat_stroke < 1 gives the hat slot a player's forward-and-back stroke:
+    # every second hat hit in a bar at that fraction. For a shaker in the
+    # hat slot (the Mana kit), the back stroke is what keeps it a texture.
+    hat_count = 0
+
     for bar in range(bars):
+        hat_count = 0
         maps = _bar_maps(groove, bar % 4)
         base = bar * rows_per_bar
         hat = maps.get("hat", "." * 16)
@@ -223,6 +230,9 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
                 row = base + i
                 if piece == "hat":
                     vel = 60 if c == "X" else HAT_VEL[i % 4]
+                    if hat_stroke < 1.0 and hat_count % 2:
+                        vel = int(round(vel * hat_stroke))
+                    hat_count += 1
                     put(piece, row, vel + random.randint(-3, 3))
                 elif piece == "snare" and c == "g" and sample_map.get("rim"):
                     put("snare", row, VEL["snare"]["g"] + 8, instrument_key="rim")

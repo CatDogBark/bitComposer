@@ -462,7 +462,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
                      n_patterns, is_ending, ending_style,
                      swing_amount, speed, bpm, is_intro, echo_sends,
-                     pickup_root=None, counter_chance=0.3) -> ITPattern:
+                     pickup_root=None, counter_chance=0.3, hat_stroke=1.0) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -623,6 +623,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         # and on section starts; see drums.py.
         render_drums(pat, groove, sample_map=sample_map, energy=section_energy,
                      bpm=bpm, swing=swing_amount, speed=speed, fill=drum_fill,
+                     hat_stroke=hat_stroke,
                      breakdown=breakdown,
                      crash_on_one=(chord_idx == 0 and sec_type in ("chorus", "bridge"))
                                   or (chord_idx % 2 == 0 and section_energy >= 0.8))
@@ -990,6 +991,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
                 is_intro=is_intro, echo_sends=echo_bus.sends(sec_type) if use_echo else None,
                 counter_chance=pack_value(pack, "counter_line", 0.3),
+                hat_stroke=pack_value(pack, "hat_stroke", 1.0),
             )
 
             pattern_cache[cache_key] = len(patterns)

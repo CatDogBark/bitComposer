@@ -85,6 +85,7 @@ PACKS = {
             "echo_stereo": {"bounce": 2, "centre": 1},
             "counter_line": 0.35,
             "section_rolls": False,
+            "hat_stroke": 0.6,        # shaker: every second hit is the back stroke
         },
         # A lighter kit: the hand percussion carries the time, the kick and
         # snare sit back.
