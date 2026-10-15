@@ -293,25 +293,29 @@ def _register_releases(samples: list[ITSample]) -> None:
 STRIKE_RULE_ROLES = {"arp"}
 
 
-def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[str, int]]:
+def _build_samples(instruments: dict[str, str]
+                   ) -> tuple[list[ITSample], dict[str, int], dict[str, bool]]:
     """Generate ITSample objects for all instruments.
 
-    Returns (samples, sample_map) where sample_map maps an instrument role
-    to a 1-based sample index; roles sharing a preset (and the same loudness
-    rule) share a sample.
+    Returns (samples, sample_map, struck): sample_map maps an instrument role
+    to a 1-based sample index, roles sharing a preset (and the same loudness
+    rule) share a sample; struck says per role whether the voice is a struck
+    one (the mix needs it for the arp).
     """
     samples: list[ITSample] = []
-    seen: dict[tuple[str, bool], int] = {}
+    seen: dict[tuple[str, bool], tuple[int, bool]] = {}
     sample_map: dict[str, int] = {}
+    struck: dict[str, bool] = {}
 
     for key, name in instruments.items():
         rule = key in STRIKE_RULE_ROLES
         if (name, rule) not in seen:
-            samples.append(_make_sample(name, strike_rule=rule))
-            seen[(name, rule)] = len(samples)  # 1-based
-        sample_map[key] = seen[(name, rule)]
+            inst = smp.generate_instrument(name, strike_rule=rule)
+            samples.append(_sample_from_inst(name, inst))
+            seen[(name, rule)] = (len(samples), bool(inst.get("struck")))  # 1-based
+        sample_map[key], struck[key] = seen[(name, rule)]
 
-    return samples, sample_map
+    return samples, sample_map, struck
 
 
 class _EchoBus:
@@ -777,7 +781,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
     # ── Instruments ──
     instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack)
-    samples, sample_map = _build_samples(instruments)
+    samples, sample_map, struck_roles = _build_samples(instruments)
     _register_releases(samples)
     echo_bus = None                      # built once song_salt exists
 
@@ -1116,6 +1120,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "song_form": form_name,
         "alt_lead": alt_lead if alt_lead_sample_idx else None,
         "instruments": instruments,
+        "struck": struck_roles,
         "progression": [tuple(e) for e in progression],
         "half_pattern_changes": half_changes,
         "structure": display_structure,
@@ -1157,11 +1162,12 @@ CHANNEL_VOLUMES = [
 # Levels no longer differ by palette: samples.generate_instrument normalises
 # sustaining voices to one loop loudness and, on the arp, struck voices to
 # one strike loudness, so a pluck, bell or pizz hits the arp at the same
-# level whatever the song drew. The one thing the samples cannot know: a
-# sustaining voice used as the arp (the genesis PSG square) is a held tone
-# where the others are strikes, and sits at the level the plucks had before
-# normalisation (set by ear, Lower Cistern, 2026-10-13).
-ARP_PRESET_TRIM = {"psg_square": 17}
+# level whatever the song drew. The arp channel's 33 was set for struck
+# voices, which peak and die within the step; a sustaining voice on the arp
+# (the genesis PSG square, the Mega Man X pulse synth) holds full level for
+# the whole step and came out 3-6 dB over the melody, so it takes this
+# level instead (set by ear for the PSG square, Lower Cistern, 2026-10-13).
+SUSTAINING_ARP_LEVEL = 17
 
 
 def channel_volumes_for(info: dict) -> list[int]:
@@ -1170,10 +1176,9 @@ def channel_volumes_for(info: dict) -> list[int]:
         for ch, r in enumerate(CHANNEL_ROLES):
             if r == role:
                 vols[ch] = vol
-    arp = info.get("instruments", {}).get("arp")
-    if arp in ARP_PRESET_TRIM:
+    if not info.get("struck", {}).get("arp", True):
         for ch in (CH_ARP, *CH_ECHO_ARP):
-            vols[ch] = ARP_PRESET_TRIM[arp]
+            vols[ch] = SUSTAINING_ARP_LEVEL
     return vols
 
 
