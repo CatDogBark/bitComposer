@@ -23,7 +23,7 @@ from .pattern import (
     CH_ECHO1, CH_ECHO2,
     NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
-    apply_portamento, apply_harmony_fade, apply_fade, apply_echo, apply_echo_spill,
+    apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_echo_spill_taps,
     apply_sustain_safety_net, silence_inactive_channels,
     apply_chord_arpeggio, end_note,
 )
@@ -39,10 +39,21 @@ from .arp import pick_figures, generate_arp
 
 STYLES = ["chip", "snes", "genesis"]
 
-# Echo taps, in rows and as a fraction of the lead's volume. Three rows is a
-# dotted eighth at four rows to the beat — the classic tracker echo spacing —
-# and the second tap at twice that is the feedback repeat.
-ECHO_TAPS = [(CH_ECHO1, 3, 0.5), (CH_ECHO2, 6, 0.25)]
+# Lead echo, modelled on the SNES echo unit's result rather than its wiring:
+# repeats on a beat fraction (three rows is a dotted eighth at four rows to
+# the beat), each one quieter by the feedback and darker through a lowpass,
+# drums dry. Three taps on the two echo channels: the first and third share
+# a channel, and pattern.plan_echo lets the louder win where they collide.
+ECHO_DELAY = 3                      # rows between repeats
+ECHO_LEVEL = 0.5                    # first repeat, as a fraction of the lead
+ECHO_FEEDBACK = 0.5                 # each further repeat relative to the last
+ECHO_TAP_CHANNELS = (CH_ECHO1, CH_ECHO2, CH_ECHO1)
+ECHO_TAP_CUTOFF_HZ = (4000, 2000, 1000)   # two-pole lowpass on the sample each tap plays
+# Per-note send: the hardware echoed everything a voice played; we send held
+# notes (>= 4 rows, a quarter note) and phrase endings (a rest of >= 2 rows
+# follows) and leave fast runs dry, so the tail reads as a tail.
+ECHO_SEND_HOLD = 4
+ECHO_SEND_REST = 2
 
 # How harmony notes decay after their note-on, per voicing: (slide, rows to
 # hold first). stabs and rhythmic are short hits, so a per-tick slide from
@@ -223,6 +234,37 @@ def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[st
     return samples, sample_map
 
 
+class _EchoBus:
+    """The song's echo: its taps and the darker samples they play.
+
+    Each tap has its own lowpass cutoff, so each lead preset that passes
+    through the echo gets one variant sample per distinct cutoff, made on
+    first use (the alternate lead arrives mid-song). taps() is what
+    pattern.apply_echo_taps wants: (channel, delay, level, {source: variant}).
+    """
+
+    def __init__(self, samples: list[ITSample]):
+        self.samples = samples
+        self._variants: dict[tuple[str, float], int] = {}
+        self._maps: list[dict[int, int]] = [dict() for _ in ECHO_TAP_CHANNELS]
+
+    def add_source(self, src_idx: int, preset: str) -> None:
+        if src_idx in self._maps[0]:
+            return
+        for k, cutoff in enumerate(ECHO_TAP_CUTOFF_HZ):
+            key = (preset, cutoff)
+            if key not in self._variants:
+                inst = smp.echo_variant(preset, cutoff)
+                self.samples.append(_sample_from_inst(f"{preset}_echo{int(cutoff) // 1000}k", inst))
+                self._variants[key] = len(self.samples)
+            self._maps[k][src_idx] = self._variants[key]
+        _register_releases(self.samples)
+
+    def taps(self) -> list[tuple[int, int, float, dict[int, int]]]:
+        return [(ch, ECHO_DELAY * (k + 1), ECHO_LEVEL * ECHO_FEEDBACK ** k, self._maps[k])
+                for k, ch in enumerate(ECHO_TAP_CHANNELS)]
+
+
 def _pick_section_motif(sec_type: str, use_phrased: bool,
                         chorus_motif, verse_motif, bridge_motif,
                         rng: random.Random | None = None, scale_size: int = 7) -> dict | None:
@@ -321,7 +363,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      bass_weight, use_bass_porta, porta_speed,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
                      n_patterns, is_ending, ending_style,
-                     swing_amount, speed, bpm, is_intro, use_echo,
+                     swing_amount, speed, bpm, is_intro, echo_taps,
                      pickup_root=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
@@ -357,9 +399,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         )
         apply_vibrato(pat, CH_MELODY, melody,
                       speed=vibrato_speed, depth=vibrato_depth)
-        if use_echo:
-            for ch, delay, level in ECHO_TAPS:
-                apply_echo(pat, CH_MELODY, ch, delay, level)
+        if echo_taps:
+            apply_echo_taps(pat, CH_MELODY, echo_taps, ECHO_SEND_HOLD, ECHO_SEND_REST)
 
     # ── Harmony ──
     if layers["harmony"]:
@@ -588,6 +629,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     instruments = _pick_instruments(style_pref, bass_weight=bass_weight)
     samples, sample_map = _build_samples(instruments)
     _register_releases(samples)
+    echo_bus = _EchoBus(samples)
 
     # ── Energy / style ──
     if energy_pref == "chill":
@@ -734,6 +776,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                     alt_lead_sample_idx = len(samples)
                     _register_releases(samples)
                 melody_sample = alt_lead_sample_idx
+            if use_echo:
+                echo_bus.add_source(melody_sample,
+                                    alt_lead if melody_sample == alt_lead_sample_idx
+                                    else instruments["melody"])
 
             # Two sections render to the same bytes only if the group, the
             # chord, the dynamics tier, the active layers and the lead all
@@ -795,7 +841,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 breakdown=breakdown, n_patterns=num_patterns, pickup_root=pickup_root,
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
-                is_intro=is_intro, use_echo=use_echo,
+                is_intro=is_intro, echo_taps=echo_bus.taps() if use_echo else None,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -817,8 +863,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             if (a, b) in done or len(preds[b]) != 1 or a == b:
                 continue
             done.add((a, b))
-            for ch, delay, level in ECHO_TAPS:
-                apply_echo_spill(patterns[a], patterns[b], CH_MELODY, ch, delay, level)
+            apply_echo_spill_taps(patterns[a], patterns[b], CH_MELODY, echo_bus.taps(),
+                                  ECHO_SEND_HOLD, ECHO_SEND_REST)
 
     # ── Silence channels at section boundaries ──
     silence_inactive_channels(orders, patterns)

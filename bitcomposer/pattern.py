@@ -148,30 +148,127 @@ def apply_chord_arpeggio(pattern: ITPattern, channel: int,
         cell.effect_val = arpeggio_param(midi_note, chord_notes)
 
 
-def apply_echo(pattern: ITPattern, src: int, dst: int,
-               delay_rows: int, level: float):
-    """Copy src's notes onto dst, delay_rows later and scaled to `level`.
+def echo_send_rows(pattern: ITPattern, src: int, hold: int = 0, rest: int = 0) -> set[int]:
+    """Rows of src's note-ons that the echo should carry.
 
-    Cuts are copied too, so the echo stops when the original does. Notes whose
-    echo would fall past the end of the pattern are dropped: patterns are
-    shared between order positions, so the tail cannot spill into whichever
-    one happens to come next (apply_echo_spill handles the safe cases).
+    The SNES echoed every note a voice played; we can choose. With hold and
+    rest both 0 every note is sent. Otherwise a note is sent when it is held
+    for at least `hold` rows or is followed by a rest of at least `rest`
+    rows, so held notes and phrase endings get a tail and fast runs stay dry.
     """
-    for row in range(pattern.rows):
-        cell = pattern.data[row][src]
-        if cell.note == 0:
+    events = [r for r in range(pattern.rows) if pattern.data[r][src].note != 0]
+    sent = set()
+    for i, r in enumerate(events):
+        if pattern.data[r][src].note in (NOTE_CUT, NOTE_OFF):
             continue
-        target = row + delay_rows
-        if target >= pattern.rows:
+        end = events[i + 1] if i + 1 < len(events) else pattern.rows
+        if hold == 0 and rest == 0:
+            sent.add(r)
             continue
-        if cell.note in (NOTE_CUT, NOTE_OFF):
-            pattern.data[target][dst] = ITNote(note=cell.note)
+        if end - r >= hold:
+            sent.add(r)
             continue
+        if rest and end < pattern.rows and pattern.data[end][src].note in (NOTE_CUT, NOTE_OFF):
+            after = events[i + 2] if i + 2 < len(events) else pattern.rows
+            if after - end >= rest:
+                sent.add(r)
+    return sent
+
+
+def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
+              ) -> dict[int, list[tuple[int, ITNote]]]:
+    """Echo events for src, on a timeline that runs past the pattern's end.
+
+    `taps` is a list of (dst_channel, delay_rows, level, inst_map); inst_map
+    maps a source instrument to the (darker) one the tap plays, or is None.
+    Several taps may share a channel: where two land on one row the louder
+    wins, and a copy's end (the source note's cut, note-off or next note-on,
+    shifted by the delay) is written only while that copy still owns the
+    channel, so a later tap never cuts an earlier one short.
+
+    Returns {dst_channel: [(row, ITNote)]} with rows that may be >= rows;
+    apply_echo keeps the in-pattern part and apply_echo_spill the rest.
+    """
+    events = [r for r in range(pattern.rows) if pattern.data[r][src].note != 0]
+    sent = echo_send_rows(pattern, src, hold, rest)
+    by_channel: dict[int, list] = {}
+    for i, r in enumerate(events):
+        if r not in sent:
+            continue
+        cell = pattern.data[r][src]
+        end = events[i + 1] if i + 1 < len(events) else pattern.rows
+        end_cell = pattern.data[end][src] if end < pattern.rows else None
         vol = cell.volume if cell.volume != 255 else 64
-        pattern.data[target][dst] = ITNote(
-            note=cell.note, instrument=cell.instrument,
-            volume=max(1, int(vol * level)),
-        )
+        for dst, delay, level, inst_map in taps:
+            inst = (inst_map or {}).get(cell.instrument, cell.instrument)
+            if end_cell is not None and end_cell.note in (NOTE_CUT, NOTE_OFF):
+                end_note_value = end_cell.note
+            else:
+                end_note_value = end_note(inst)
+            by_channel.setdefault(dst, []).append(
+                (r + delay, level, ITNote(note=cell.note, instrument=inst,
+                                           volume=max(1, int(vol * level))),
+                 end + delay, end_note_value))
+    out: dict[int, list[tuple[int, ITNote]]] = {}
+    for dst, items in by_channel.items():
+        items.sort(key=lambda t: (t[0], -t[1]))
+        chosen = []
+        for item in items:
+            if chosen and chosen[-1][0] == item[0]:
+                continue                      # same row: the louder tap was first
+            chosen.append(item)
+        evs = []
+        for k, (row, _, note, end_row, end_value) in enumerate(chosen):
+            evs.append((row, note))
+            next_row = chosen[k + 1][0] if k + 1 < len(chosen) else None
+            if next_row is None or end_row < next_row:
+                evs.append((end_row, ITNote(note=end_value)))
+        out[dst] = evs
+    return out
+
+
+def apply_echo_taps(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0):
+    """Write the echo of src into the pattern for every tap (see plan_echo).
+
+    Events past the pattern end are dropped: patterns are shared between
+    order positions, so a tail cannot spill into whichever one happens to
+    come next (apply_echo_spill_taps handles the safe cases).
+    """
+    for dst, evs in plan_echo(pattern, src, taps, hold, rest).items():
+        for row, note in evs:
+            if row < pattern.rows:
+                pattern.data[row][dst] = note
+
+
+def apply_echo_spill_taps(prev: ITPattern, cur: ITPattern, src: int, taps,
+                          hold: int = 0, rest: int = 0):
+    """Write the echo of prev's last notes into the start of cur.
+
+    apply_echo_taps drops events that fall past the pattern end, so the echo
+    went silent for the last beats of every pattern. The composer calls this
+    for consecutive patterns whose second member has a single predecessor,
+    where writing into it cannot be wrong for any other order position.
+    cur's own events win: nothing here overwrites a cell already in use.
+    """
+    for dst, evs in plan_echo(prev, src, taps, hold, rest).items():
+        for row, note in evs:
+            target = row - prev.rows
+            if 0 <= target < cur.rows and cur.data[target][dst].note == 0:
+                cur.data[target][dst] = note
+
+
+def apply_echo(pattern: ITPattern, src: int, dst: int,
+               delay_rows: int, level: float, inst_map=None,
+               hold: int = 0, rest: int = 0):
+    """One tap: copy src's notes onto dst, delay_rows later, scaled to level."""
+    apply_echo_taps(pattern, src, [(dst, delay_rows, level, inst_map)], hold, rest)
+
+
+def apply_echo_spill(prev: ITPattern, cur: ITPattern, src: int, dst: int,
+                     delay_rows: int, level: float, inst_map=None,
+                     hold: int = 0, rest: int = 0):
+    """One tap's spill into the next pattern (see apply_echo_spill_taps)."""
+    apply_echo_spill_taps(prev, cur, src, [(dst, delay_rows, level, inst_map)], hold, rest)
 
 
 def apply_portamento(pattern: ITPattern, channel: int,
@@ -259,32 +356,6 @@ def apply_fade(pattern: ITPattern, channel: int, fade_in: bool = False,
 
 
 # ── Sustain management ──
-
-def apply_echo_spill(prev: ITPattern, cur: ITPattern, src: int, dst: int,
-                     delay_rows: int, level: float):
-    """Write the echo taps of prev's last notes into the start of cur.
-
-    apply_echo drops taps that fall past the pattern end, so the echo went
-    silent for the last beats of every pattern. The composer calls this for
-    consecutive patterns whose second member has a single predecessor, where
-    writing into it cannot be wrong for any other order position.
-    """
-    for row in range(prev.rows - delay_rows, prev.rows):
-        cell = prev.data[row][src]
-        if cell.note == 0:
-            continue
-        target = row + delay_rows - prev.rows
-        if cur.data[target][dst].note != 0:
-            continue
-        if cell.note in (NOTE_CUT, NOTE_OFF):
-            cur.data[target][dst] = ITNote(note=cell.note)
-            continue
-        vol = cell.volume if cell.volume != 255 else 64
-        cur.data[target][dst] = ITNote(
-            note=cell.note, instrument=cell.instrument,
-            volume=max(1, int(vol * level)),
-        )
-
 
 def apply_sustain_safety_net(pat: ITPattern, channels: list[int] | None = None,
                              max_ring: int = 12):

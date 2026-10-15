@@ -223,10 +223,21 @@ natural level: a struck lead lives on its decay, and its attack is already at
 full scale, so nothing could give back what the strike rule took. The one
 trim left is the genesis PSG square as an arp, a held tone among strikes.
 
-**Echo.** Two echo channels carry delayed copies of the lead (3 rows at
-−6 dB, 6 rows at −12 dB), panned wide. Left to chance, 70% of snes songs
-get it and chip and genesis never do (neither chip had an echo unit);
-`--echo` overrides. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
+**Echo.** Modelled on what the SNES echo unit produced rather than how it
+was wired: three repeats on a dotted eighth (3, 6 and 9 rows), each half
+the level of the last (−6, −12, −18 dB), each playing a lowpassed copy of
+the lead sample (two-pole at 4, 2 and 1 kHz) so the repeats darken as they fade,
+the way the hardware's filter did on every feedback pass. The copies are
+separate samples (`samples.echo_variant`), since a tracker has no send
+effects; `pattern.plan_echo` places the taps on the two echo channels,
+lets the louder win where two land together, and ends each copy where
+its source note ended. Unlike the hardware, which echoed everything a
+voice played, only held notes (≥ 4 rows) and phrase endings (a rest of
+≥ 2 rows follows) are sent, about 70% of lead notes, so fast runs stay
+dry. Left to chance, 70% of snes songs get it and chip and genesis never
+do (neither chip had an echo unit); `--echo` overrides. Stages still to
+come: sends from harmony and arp with their own levels and a mixer bus,
+then per-song delay, feedback and wetness tied to the song's form. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
 follow.
 
 **Bugs fixed on the way.**

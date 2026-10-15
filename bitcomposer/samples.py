@@ -1584,6 +1584,51 @@ def _rms(values) -> float:
     return math.sqrt(sum(v * v for v in values) / len(values)) / 32767.0 if values else 0.0
 
 
+def echo_variant(name: str, cutoff_hz: float, poles: int = 2) -> dict:
+    """A darker copy of a preset for an echo tap.
+
+    The SNES ran its echo repeats through a filter on every pass, so each one
+    came back duller than the last. A tracker has no send effects, so a tap
+    is a note copy on another channel, and the darkening lives in the sample
+    it plays: a lowpass at cutoff_hz over the whole instrument, `poles`
+    one-pole stages in cascade (two by default: 12 dB per octave, since one
+    stage barely shades a bright brass sample).
+
+    The loop region is filtered as a cycle (a warm-up pass, then the pass
+    that is kept) so the seam stays seamless; the attack before it and the
+    release tail after it are filtered in sequence from the matching state.
+    Level is not restored: the filter's loss is part of the repeat's decay.
+    """
+    inst = generate_instrument(name)
+    ints = list(struct.unpack(f"<{inst['length']}h", inst["data"]))
+    alpha = 1.0 - math.exp(-2.0 * math.pi * cutoff_hz / inst["rate"])
+    alpha = max(0.001, min(1.0, alpha))
+
+    def run(seg, state):
+        state = list(state) if state else [0.0] * poles
+        out = []
+        for v in seg:
+            for i in range(poles):
+                state[i] += alpha * (v - state[i])
+                v = state[i]
+            out.append(v)
+        return out, state
+
+    looped = inst["loop"] or inst.get("sus_loop")
+    ls, le = inst["loop_start"], inst["loop_end"]
+    if looped and 0 <= ls < le <= len(ints):
+        head, state = run(ints[:ls], None)
+        _, state = run(ints[ls:le], state)          # warm up to the cycle's steady state
+        loop, state = run(ints[ls:le], state)
+        tail, _ = run(ints[le:], state)
+        out = head + loop + tail
+    else:
+        out, _ = run(ints, None)
+    variant = dict(inst)
+    variant["data"] = _pack_samples([max(-32768, min(32767, int(round(v)))) for v in out])
+    return variant
+
+
 def generate_instrument(name: str, strike_rule: bool = False) -> dict:
     """Generate a named instrument.
 
