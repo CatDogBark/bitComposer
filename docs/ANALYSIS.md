@@ -271,7 +271,11 @@ in late, so it went). Pans are written per tap as an Xxx effect on the
 copy's note row, so taps sharing a channel can still bounce. Every send
 is scaled by section (`ECHO_SECTION_GAIN`): opened in intros, bridges and
 outros, pulled back to 0.7 in the chorus where the arp and harmony fill
-the space. The drawn settings are written into the song message
+the space. The arp sends only its accented steps (strong and normal) and
+its send tapers with tempo, full to 130 BPM and gone by 170: at 180 BPM a
+dotted-eighth repeat of an eighth-note pizzicato landed one row after
+every pluck and the arp became a stream of ticks (Veiled Meridian).
+The drawn settings are written into the song message
 ("echo: dotted delay, feedback 0.45, bounce, wet"). Left to chance, 70%
 of snes songs get the echo and chip and genesis never do (neither chip
 had an echo unit); `--echo` overrides. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`

@@ -94,6 +94,14 @@ ECHO_WETNESS = {"light": 0.6, "normal": 1.0, "wet": 1.5, "random": 1.0}
 # follows) and leave fast runs dry, so the tail reads as a tail.
 ECHO_SEND_HOLD = 4
 ECHO_SEND_REST = 2
+# The arp sends only its accented steps (strong and normal, not weak: arp.py
+# writes them at 1.0 / 0.8 / 0.62 of the arp level), and the whole arp send
+# tapers with tempo: full to ECHO_ARP_FULL_BPM, gone by ECHO_ARP_OFF_BPM. At
+# 180 BPM a dotted-eighth repeat of an eighth-note pizzicato landed one row
+# after every pluck and the arp turned into a stream of ticks.
+ECHO_ARP_ACCENT = 0.7
+ECHO_ARP_FULL_BPM = 130
+ECHO_ARP_OFF_BPM = 170
 
 # How harmony notes decay after their note-on, per voicing: (slide, rows to
 # hold first). stabs and rhythmic are short hits, so a per-tick slide from
@@ -308,9 +316,10 @@ class _EchoBus:
     """
 
     def __init__(self, samples: list[ITSample], wet: float = 1.0, delay: int = 3,
-                 feedback: float = 0.5, stereo: str = "bounce"):
+                 feedback: float = 0.5, stereo: str = "bounce", arp_scale: float = 1.0):
         self.samples = samples
         self.wet, self.delay, self.feedback, self.stereo = wet, delay, feedback, stereo
+        self.arp_scale = arp_scale
         self._variants: dict[tuple[str, float, bool], int] = {}
         self._maps: list[dict[int, int]] = [dict() for _ in ECHO_TAP_CUTOFF_HZ]
 
@@ -335,16 +344,18 @@ class _EchoBus:
             taps.append((ch, self.delay * (k + 1), lvl, self._maps[k], pans[k]))
         return taps
 
-    def sends(self, sec_type: str = "verse") -> list[tuple[int, list, int, int]]:
-        """(source channel, taps, hold, rest) for every sent part in a section."""
+    def sends(self, sec_type: str = "verse") -> list[tuple[int, list, int, int, float]]:
+        """(source channel, taps, hold, rest, accent) for every sent part in a section."""
         gain = ECHO_SECTION_GAIN.get(sec_type, 1.0)
         pans = ECHO_PANS[self.stereo]
         out = [(CH_MELODY, self._taps(*ECHO_SENDS["melody"], pans["melody"], gain),
-                ECHO_SEND_HOLD, ECHO_SEND_REST)]
+                ECHO_SEND_HOLD, ECHO_SEND_REST, 0.0)]
         level, _ = ECHO_SENDS["harmony"]
         for v, (src, ret) in enumerate(zip((CH_HARMONY, CH_HARMONY2, CH_HARMONY3), CH_ECHO_HARMONY)):
-            out.append((src, self._taps(level, (ret, ret), pans["harmony"][v], gain), 0, 0))
-        out.append((CH_ARP, self._taps(*ECHO_SENDS["arp"], pans["arp"], gain), 0, 0))
+            out.append((src, self._taps(level, (ret, ret), pans["harmony"][v], gain), 0, 0, 0.0))
+        arp_level, arp_channels = ECHO_SENDS["arp"]
+        out.append((CH_ARP, self._taps(arp_level * self.arp_scale, arp_channels, pans["arp"], gain),
+                    0, 0, ECHO_ARP_ACCENT))
         return out
 
     def describe(self) -> str:
@@ -620,9 +631,9 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     # After every sent part is written: the lead per note, harmony and arp
     # whole. The safety net below bounds the returns like any tonal channel.
     if echo_sends:
-        for src, taps, hold, rest in echo_sends:
+        for src, taps, hold, rest, accent in echo_sends:
             if taps:
-                apply_echo_taps(pat, src, taps, hold, rest)
+                apply_echo_taps(pat, src, taps, hold, rest, accent)
 
     # ── Sustain safety net ──
     apply_sustain_safety_net(pat)
@@ -837,8 +848,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     if echo_stereo == "random":
         w = pack_weights(pack, "echo_stereo") or ECHO_STEREO_WEIGHTS
         echo_stereo = echo_rng.choices(list(w), list(w.values()))[0]
+    arp_scale = max(0.0, min(1.0, (ECHO_ARP_OFF_BPM - bpm_for_echo)
+                                  / (ECHO_ARP_OFF_BPM - ECHO_ARP_FULL_BPM)))
     echo_bus = _EchoBus(samples, ECHO_WETNESS[echo_wet], ECHO_DELAYS[echo_delay],
-                        echo_feedback, echo_stereo)
+                        echo_feedback, echo_stereo, arp_scale)
     pattern_sec: dict[int, str] = {}     # pattern index -> section type, for the spill
     half_changes = 0
 
@@ -999,9 +1012,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             if (a, b) in done or len(preds[b]) != 1 or a == b:
                 continue
             done.add((a, b))
-            for src, taps, hold, rest in echo_bus.sends(pattern_sec.get(a, "verse")):
+            for src, taps, hold, rest, accent in echo_bus.sends(pattern_sec.get(a, "verse")):
                 if taps:
-                    apply_echo_spill_taps(patterns[a], patterns[b], src, taps, hold, rest)
+                    apply_echo_spill_taps(patterns[a], patterns[b], src, taps, hold, rest, accent)
 
     # ── Silence channels at section boundaries ──
     silence_inactive_channels(orders, patterns)

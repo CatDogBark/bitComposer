@@ -164,18 +164,31 @@ def apply_chord_arpeggio(pattern: ITPattern, channel: int,
         cell.effect_val = arpeggio_param(midi_note, chord_notes)
 
 
-def echo_send_rows(pattern: ITPattern, src: int, hold: int = 0, rest: int = 0) -> set[int]:
+def echo_send_rows(pattern: ITPattern, src: int, hold: int = 0, rest: int = 0,
+                   accent: float = 0.0) -> set[int]:
     """Rows of src's note-ons that the echo should carry.
 
-    The SNES echoed every note a voice played; we can choose. With hold and
-    rest both 0 every note is sent. Otherwise a note is sent when it is held
+    The SNES echoed every note a voice played; we can choose. With hold,
+    rest and accent all 0 every note is sent. A note is sent when it is held
     for at least `hold` rows or is followed by a rest of at least `rest`
-    rows, so held notes and phrase endings get a tail and fast runs stay dry.
+    rows, so held notes and phrase endings get a tail and fast runs stay
+    dry. With accent > 0 only notes at or above that fraction of the
+    channel's loudest note-on are sent: an arp's strong and normal steps,
+    not its weak ones, so the repeats sit on the figure's shape instead of
+    filling every gap between plucks.
     """
     events = [r for r in range(pattern.rows) if pattern.data[r][src].note != 0]
+    floor = 0
+    if accent > 0:
+        vols = [pattern.data[r][src].volume if pattern.data[r][src].volume != 255 else 64
+                for r in events if pattern.data[r][src].note not in (NOTE_CUT, NOTE_OFF)]
+        floor = accent * max(vols) if vols else 0
     sent = set()
     for i, r in enumerate(events):
         if pattern.data[r][src].note in (NOTE_CUT, NOTE_OFF):
+            continue
+        vol = pattern.data[r][src].volume if pattern.data[r][src].volume != 255 else 64
+        if floor and vol < floor:
             continue
         end = events[i + 1] if i + 1 < len(events) else pattern.rows
         if hold == 0 and rest == 0:
@@ -191,8 +204,8 @@ def echo_send_rows(pattern: ITPattern, src: int, hold: int = 0, rest: int = 0) -
     return sent
 
 
-def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
-              ) -> dict[int, list[tuple[int, ITNote]]]:
+def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0,
+              accent: float = 0.0) -> dict[int, list[tuple[int, ITNote]]]:
     """Echo events for src, on a timeline that runs past the pattern's end.
 
     `taps` is a list of (dst_channel, delay_rows, level, inst_map[, pan]);
@@ -212,7 +225,7 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
     apply_echo keeps the in-pattern part and apply_echo_spill the rest.
     """
     events = [r for r in range(pattern.rows) if pattern.data[r][src].note != 0]
-    sent = echo_send_rows(pattern, src, hold, rest)
+    sent = echo_send_rows(pattern, src, hold, rest, accent)
     by_channel: dict[int, list] = {}
     for i, r in enumerate(events):
         if r not in sent:
@@ -267,14 +280,15 @@ def _scaled_effect(cell: ITNote, level: float) -> int:
     return cell.effect_val
 
 
-def apply_echo_taps(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0):
+def apply_echo_taps(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0,
+                    accent: float = 0.0):
     """Write the echo of src into the pattern for every tap (see plan_echo).
 
     Events past the pattern end are dropped: patterns are shared between
     order positions, so a tail cannot spill into whichever one happens to
     come next (apply_echo_spill_taps handles the safe cases).
     """
-    for dst, evs in plan_echo(pattern, src, taps, hold, rest).items():
+    for dst, evs in plan_echo(pattern, src, taps, hold, rest, accent).items():
         for row, note in evs:
             if row >= pattern.rows:
                 continue
@@ -284,7 +298,7 @@ def apply_echo_taps(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int
 
 
 def apply_echo_spill_taps(prev: ITPattern, cur: ITPattern, src: int, taps,
-                          hold: int = 0, rest: int = 0):
+                          hold: int = 0, rest: int = 0, accent: float = 0.0):
     """Write the echo of prev's last notes into the start of cur.
 
     apply_echo_taps drops events that fall past the pattern end, so the echo
@@ -293,7 +307,7 @@ def apply_echo_spill_taps(prev: ITPattern, cur: ITPattern, src: int, taps,
     where writing into it cannot be wrong for any other order position.
     cur's own events win: nothing here overwrites a cell already in use.
     """
-    for dst, evs in plan_echo(prev, src, taps, hold, rest).items():
+    for dst, evs in plan_echo(prev, src, taps, hold, rest, accent).items():
         for row, note in evs:
             target = row - prev.rows
             if 0 <= target < cur.rows and cur.data[target][dst].note == 0:
