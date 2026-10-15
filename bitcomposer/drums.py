@@ -121,6 +121,11 @@ FILLS = [
     {"name": "tom cascade", "beats": 4, "weight": "big", "tom": "x.x.x.x.x.x.....", "snare": "............xxxX", "kick": "X..............."},
     {"name": "build to crash", "beats": 4, "weight": "big", "kick": "X...X...X.X.X.X.", "snare": "..x...x...x.xxXX", "crash": "...............X"},
     {"name": "flam march", "beats": 4, "weight": "big", "snare": "x.xxx.xxx.xxxxxX", "kick": "X.......X......."},
+    # Orchestral: a timpani roll swelling into the next section, cymbal on the
+    # downbeat after. Packs that ask for it (packs.py "section_rolls") get it
+    # for most big fills; the tom slot is the timpani in those kits.
+    {"name": "timpani roll", "beats": 2, "weight": "big", "tom": "........xxxxxxxX", "roll": True, "orchestral": True},
+    {"name": "timpani cascade", "beats": 4, "weight": "big", "tom": "x...x...x.x.xxxX", "snare": "............xxxX", "roll": True, "orchestral": True},
 ]
 
 
@@ -233,7 +238,7 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
                     if c == "." or i < fill_from:
                         continue
                     row = base + i
-                    fx = (FX_RETRIGGER, 3) if (fill_here.get("roll") and piece == "snare" and c == "x") else (0, 0)
+                    fx = (FX_RETRIGGER, 3) if (fill_here.get("roll") and piece in ("snare", "tom") and c == "x") else (0, 0)
                     if piece == "hat":
                         put(piece, row, HAT_VEL[i % 4])
                     else:
@@ -244,7 +249,8 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
     return counts
 
 
-def pick_fill(next_section: str | None, position: str, enabled: bool) -> dict | None:
+def pick_fill(next_section: str | None, position: str, enabled: bool,
+              orchestral: bool = False) -> dict | None:
     """Fill for the end of a pattern.
 
     position: "section_end" (into next_section), "mid" (halfway through a
@@ -256,5 +262,10 @@ def pick_fill(next_section: str | None, position: str, enabled: bool) -> dict | 
     if position == "mid":
         return random.choice([f for f in FILLS if f["beats"] == 1]) if random.random() < 0.5 else None
     if next_section in ("chorus",):
-        return random.choice([f for f in FILLS if f["weight"] == "big"])
+        big = [f for f in FILLS if f["weight"] == "big"]
+        if orchestral and random.random() < 0.7:
+            big = [f for f in big if f.get("orchestral")] or big
+        else:
+            big = [f for f in big if not f.get("orchestral")] or big
+        return random.choice(big)
     return random.choice([f for f in FILLS if f["weight"] == "light"])

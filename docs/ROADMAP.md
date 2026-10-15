@@ -26,6 +26,15 @@ These change how every note sounds, not what notes are played.
   sections and pulled back in the chorus, and bounce / spread stereo with
   a pan per tap. Left for later: echo on the drums as a rare choice
   (gated snare), and a widget readout of the drawn settings.
+- **Style packs.** An instrument set paired with arrangement habits
+  (`bitcomposer/packs.py`): voices per role, weighted draws for tempo,
+  energy, scale, harmony mode, bass, drums and echo, a counter-line voice,
+  orchestral fills, channel trims. `ffvi` is done (orchestral). Next:
+  `mana` (Secret of Mana: bells, celesta, marimba, whistle, bouncier
+  habits), `evermore` (FFVI voices through the atmospheric set: pads, breathy
+  flute, dark basses, sparse drums), `megamanx` (overdriven guitar sample,
+  slap bass, synth brass stabs, riff bass, rock grooves). A pack is data;
+  the engine gaps that stay: riff-based bass, a detuned two-channel pad.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 

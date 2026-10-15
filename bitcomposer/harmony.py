@@ -21,6 +21,18 @@ HARMONY_VOICINGS = {
         "interval": 8,
         "cut_after": 4,
     },
+    # Ostinatos: the chord tones restruck in a repeating rhythmic cell, the
+    # way an orchestral string section carries a theme. "steps" are the rows
+    # hit inside each cell of "cell" rows.
+    "ostinato": {
+        "description": "3+3+2 ostinato (dotted eighths), every voice together",
+        "cell": 8, "steps": [0, 3, 6], "interval": 8, "cut_after": 2,
+    },
+    "pulse": {
+        "description": "Straight eighths, lower voice on the beat, upper voices between",
+        "cell": 8, "steps": [0, 2, 4, 6], "interval": 8, "cut_after": 1,
+        "offset_upper": 2,
+    },
 }
 
 
@@ -83,6 +95,23 @@ def generate_harmony(chord_notes: list[int], rows: int,
 
     # Generate note events for each voice
     result = []
+    if "steps" in config:
+        # Ostinato: every cell restates the chord tone on the cell's steps.
+        cell, steps = config["cell"], config["steps"]
+        offset_upper = config.get("offset_upper", 0)
+        for voice_idx, base_note in enumerate(voice_notes):
+            notes = []
+            shift = offset_upper if voice_idx > 0 else 0
+            hits = [r + st + shift for r in range(0, rows, cell) for st in steps
+                    if r + st + shift < rows]
+            for n, row in enumerate(hits):
+                notes.append((row, base_note))
+                nxt = hits[n + 1] if n + 1 < len(hits) else rows
+                cut_row = row + cut_after
+                if cut_row < nxt and cut_row < rows:
+                    notes.append((cut_row, -1))
+            result.append(notes)
+        return result
     for voice_idx, base_note in enumerate(voice_notes):
         notes = []
         for row in range(0, rows, interval):

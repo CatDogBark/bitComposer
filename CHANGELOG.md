@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Style packs (`--pack`, `bitcomposer/packs.py`): an instrument set paired with the arrangement habits of the scores it imitates. First pack `ffvi`: string section with ensemble beating (a long loop carrying sharp and flat copies that beat at 1.6 Hz), horn, trumpet, oboe, clarinet, piano, music box, pipe organ, bowed basses, and an orchestral kit (timpani on the tom slot, bass drum, orchestral snare, suspended cymbal); habits: ostinato (3+3+2) and pulse harmony modes, a horn counter-line in 60% of chorus and bridge patterns, timpani rolls into choruses, slower tempos, no swing, hats trimmed, a wetter and wider echo. Half of snes songs draw a pack when `--pack random`; the song message names it. Widget: PACK picker in the COMPOSE tab.
+
 ## 0.7.0 — 2026-10-15
 
 Echo release: the SNES echo rebuilt in three stages, each reviewed by ear on a comparison page, plus the arp loudness fix and the motif grammar. Modules are now 19 channels; the companion player's mixer follows the file's layout.

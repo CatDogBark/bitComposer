@@ -276,6 +276,7 @@ PlasmoidItem {
     property string settBassWeight: Plasmoid.configuration.settBassWeight
     property string settForm: Plasmoid.configuration.settForm
     property string settEcho: Plasmoid.configuration.settEcho
+    property string settPack: Plasmoid.configuration.settPack
     property string settEchoWet: Plasmoid.configuration.settEchoWet
     property string activePreset: Plasmoid.configuration.activePreset
     onActivePresetChanged: Plasmoid.configuration.activePreset = activePreset
@@ -303,6 +304,7 @@ PlasmoidItem {
     onSettBassWeightChanged: { Plasmoid.configuration.settBassWeight = settBassWeight; _onSettingChanged() }
     onSettFormChanged: { Plasmoid.configuration.settForm = settForm; _onSettingChanged() }
     onSettEchoChanged: { Plasmoid.configuration.settEcho = settEcho; _onSettingChanged() }
+    onSettPackChanged: { Plasmoid.configuration.settPack = settPack; _onSettingChanged() }
     onSettEchoWetChanged: { Plasmoid.configuration.settEchoWet = settEchoWet; _onSettingChanged() }
     property bool _applyingPreset: false
 
@@ -353,6 +355,7 @@ PlasmoidItem {
         if (settBassWeight !== "random") flags += " --bass-weight " + settBassWeight
         if (settForm !== "random") flags += " --form " + settForm
         if (settEcho !== "random") flags += " --echo " + settEcho
+        if (settPack !== "random") flags += " --pack " + settPack
         if (settEchoWet !== "random") flags += " --echo-wet " + settEchoWet
         return flags
     }
@@ -379,6 +382,7 @@ PlasmoidItem {
         if (settBassWeight !== "random") parts.push(settBassWeight + " bass")
         if (settForm !== "random") parts.push(settForm + " form")
         if (settEcho !== "random") parts.push("echo " + settEcho)
+        if (settPack !== "random") parts.push(settPack === "none" ? "no pack" : settPack + " pack")
         if (settEchoWet !== "random") parts.push(settEchoWet + " echo")
         return prefix + (parts.length ? parts.join("  ·  ") : "any  ·  everything left to chance")
     }
@@ -1296,6 +1300,23 @@ PlasmoidItem {
                                         border.width: 1; border.color: active ? root.accentGreen : (_m4.containsMouse ? root.tileBorder : "transparent")
                                         Text { id: _t4; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
                                         MouseArea { id: _m4; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settStyle = modelData }
+                                    }
+                                }
+                            }
+                        }
+                        // PACK (an instrument set with the habits of the scores it imitates)
+                        RowLayout { Layout.fillWidth: true; spacing: 8
+                            Text { Layout.preferredWidth: 52; text: "PACK"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
+                            Row { spacing: 3
+                                Repeater { model: ["random", "none", "ffvi"]
+                                    Rectangle {
+                                        required property string modelData
+                                        property bool active: root.settPack === modelData
+                                        width: _tp.implicitWidth + 10; height: 20; radius: 3
+                                        color: active ? "#1a2e26" : (_mp.containsMouse ? "#0f1a16" : "transparent")
+                                        border.width: 1; border.color: active ? root.accentGreen : (_mp.containsMouse ? root.tileBorder : "transparent")
+                                        Text { id: _tp; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
+                                        MouseArea { id: _mp; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settPack = modelData }
                                     }
                                 }
                             }

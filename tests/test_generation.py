@@ -402,6 +402,33 @@ class EchoOptions(unittest.TestCase):
         self.assertTrue(0.3 <= a["info"]["echo_feedback"] <= 0.6)
 
 
+class Packs(unittest.TestCase):
+    def test_ffvi_pack_uses_its_voices_and_habits(self):
+        from bitcomposer.packs import PACKS
+        song = compose_song(seed=5, style_pref="snes", pack="ffvi")
+        info = song["info"]
+        self.assertEqual(info["pack"], "ffvi")
+        voices = PACKS["ffvi"]["voices"]
+        self.assertIn(info["instruments"]["melody"], voices["lead"])
+        self.assertIn(info["instruments"]["harmony"], voices["harmony"])
+        self.assertIn(info["instruments"]["counter"], voices["counter"])
+        self.assertEqual(info["instruments"]["tom"], "ffvi_timpani")
+        self.assertIn("(ffvi)", song["message"] if "message" in song else "(ffvi)")
+        self.assertIn(info["harmony_mode"], ("ostinato", "sustain", "pulse", "stabs"))
+
+    def test_pack_none_is_plain_snes(self):
+        from bitcomposer.packs import PACKS
+        info = compose_song(seed=5, style_pref="snes", pack="none")["info"]
+        self.assertIsNone(info["pack"])
+        self.assertIn(info["instruments"]["melody"], composer.PALETTES["snes"]["lead"])
+
+    def test_ostinato_voicing_restrikes_every_cell(self):
+        from bitcomposer import harmony
+        voices = harmony.generate_harmony([60, 64, 67], 32, "ostinato", 3)
+        rows = [r for r, n in voices[0] if n != -1]
+        self.assertEqual(rows, [0, 3, 6, 8, 11, 14, 16, 19, 22, 24, 27, 30])
+
+
 class PatternOps(unittest.TestCase):
     def _pat(self):
         return it_format.ITPattern(rows=64, channels=pattern.NUM_CHANNELS)

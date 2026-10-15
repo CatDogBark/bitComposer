@@ -882,6 +882,187 @@ def snes_synth_bass() -> tuple[bytes, int, dict]:
     return _finish_snes(filt, 0.95, ls, len(filt))
 
 
+# ── FFVI orchestral set ──
+# The voices Uematsu's SNES scores lean on: a string section with ensemble
+# beating, horn and trumpet, oboe and clarinet, piano, music box, a pipe
+# organ and a bowed bass. All built the same way as the base SNES set
+# (additive or FM, 16 kHz, BRR model in _finish_snes).
+
+def _ensemble_voice(steady: dict[int, float], periods: int = 160,
+                    attack_cycles: int = 36, detune_layers: int = 2,
+                    lowpass: float | None = None, amplitude: float = 0.85
+                    ) -> tuple[bytes, int, dict]:
+    """A sustained voice with section chorusing baked in.
+
+    A single-cycle loop cannot beat, so the loop is `periods` cycles long and
+    carries the base tone plus copies one cycle sharper and flatter over that
+    loop (f * (periods +- 1) / periods), which are periodic over it and beat
+    at f / periods, about 1.6 Hz at 160 periods. The attack ramps over the
+    first attack_cycles periods on the same phases, so the loop seam is
+    continuous for every layer."""
+    rate, period = SNES_RATE, SNES_PERIOD
+    base = rate / period
+    ratios = [1.0]
+    if detune_layers >= 1:
+        ratios.append((periods + 1) / periods)
+    if detune_layers >= 2:
+        ratios.append((periods - 1) / periods)
+    total = (attack_cycles + periods) * period
+    out = []
+    for i in range(total):
+        t = i / rate
+        v = 0.0
+        for r in ratios:
+            for k, a in steady.items():
+                v += a * math.sin(2.0 * math.pi * base * r * k * t)
+        env = math.sin(0.5 * math.pi * min(1.0, (i + 1) / (attack_cycles * period)))
+        out.append(v * env / len(ratios))
+    loop_start = attack_cycles * period
+    if lowpass is not None:
+        alpha = max(0.001, min(1.0, lowpass))
+        head, st = [], 0.0
+        for v in out[:loop_start]:
+            st += alpha * (v - st); head.append(st)
+        for v in out[loop_start:]:                 # warm-up pass over the loop
+            st += alpha * (v - st)
+        loop = []
+        for v in out[loop_start:]:
+            st += alpha * (v - st); loop.append(st)
+        out = head + loop
+    return _finish_snes(out, amplitude, loop_start, len(out))
+
+
+def ffvi_strings() -> tuple[bytes, int, dict]:
+    """String section — softened saw spectrum with ensemble beating."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.55, 3: 0.4, 4: 0.3, 5: 0.22, 6: 0.16, 7: 0.1, 8: 0.07},
+        periods=160, attack_cycles=36, lowpass=0.55, amplitude=0.85)
+
+
+def ffvi_contrabass() -> tuple[bytes, int, dict]:
+    """Bowed double basses — dark, slow, a little ensemble spread."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.6, 3: 0.35, 4: 0.2, 5: 0.1},
+        periods=120, attack_cycles=14, detune_layers=1, lowpass=0.3, amplitude=0.9)
+
+
+def ffvi_horn() -> tuple[bytes, int, dict]:
+    """French horn — round, dark brass with a soft onset."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.5, 3: 0.3, 4: 0.16, 5: 0.08, 6: 0.04},
+        bright={1: 0.9, 2: 0.7, 3: 0.5, 4: 0.35, 5: 0.2, 6: 0.1},
+        attack_cycles=12, loop_cycles=2, lowpass=0.5, amplitude=0.9)
+
+
+def ffvi_trumpet() -> tuple[bytes, int, dict]:
+    """Trumpet — bright, strong upper partials, fast overblown onset."""
+    return _sustained_voice(
+        steady={1: 0.8, 2: 1.0, 3: 0.9, 4: 0.7, 5: 0.55, 6: 0.4, 7: 0.3, 8: 0.2, 9: 0.12},
+        bright={1: 0.5, 2: 0.8, 3: 1.0, 4: 1.0, 5: 0.9, 6: 0.8, 7: 0.7, 8: 0.6, 9: 0.5, 10: 0.4},
+        attack_cycles=5, loop_cycles=2, amplitude=0.9)
+
+
+def ffvi_oboe() -> tuple[bytes, int, dict]:
+    """Oboe — reedy, the second and fourth partials over the fundamental."""
+    return _sustained_voice(
+        steady={1: 0.6, 2: 1.0, 3: 0.8, 4: 0.9, 5: 0.5, 6: 0.35, 7: 0.25, 8: 0.15},
+        attack_cycles=8, loop_cycles=2, breath=0.08, amplitude=0.85)
+
+
+def ffvi_clarinet() -> tuple[bytes, int, dict]:
+    """Clarinet — odd partials only, hollow and smooth."""
+    return _sustained_voice(
+        steady={1: 1.0, 3: 0.6, 5: 0.35, 7: 0.2, 9: 0.1, 11: 0.05},
+        attack_cycles=10, loop_cycles=2, amplitude=0.85)
+
+
+def ffvi_organ() -> tuple[bytes, int, dict]:
+    """Pipe organ — principal with octaves and a fifth, a little wind."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.8, 3: 0.4, 4: 0.6, 6: 0.3, 8: 0.35, 12: 0.15},
+        attack_cycles=3, loop_cycles=1, breath=0.03, amplitude=0.85)
+
+
+def ffvi_piano() -> tuple[bytes, int, dict]:
+    """Piano — a stretched partial stack, bright strike dying into the body."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+    partials = [(1, 1.0), (2, 0.6), (3, 0.35), (4, 0.25), (5, 0.15), (6, 0.1), (7, 0.06)]
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        body = sum(a * math.sin(k * ph * (1.0 + 0.0004 * k * k)) * math.exp(-t * k / 1.6)
+                   for k, a in partials)
+        strike = 0.4 * math.sin(9.0 * ph) * math.exp(-t / 0.04)
+        return body + strike
+    return _decaying_voice(1.4, tone, amp_tau=0.7, tail_loop=True, amplitude=0.9)
+
+
+def ffvi_music_box() -> tuple[bytes, int, dict]:
+    """Music box — a tine: fundamental with inharmonic high partials, short."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return (math.sin(ph) + 0.5 * math.sin(4.2 * ph) * math.exp(-t / 0.12)
+                + 0.25 * math.sin(7.6 * ph) * math.exp(-t / 0.06))
+    return _decaying_voice(0.8, tone, amp_tau=0.3, tail_loop=True, amplitude=0.8)
+
+
+def ffvi_timpani() -> tuple[bytes, int, dict]:
+    """Timpani — a low drum with a pitch that settles, long ring, felt attack."""
+    n = int(SNES_RATE * 0.9)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 70.0 + 40.0 * math.exp(-t / 0.05)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.35) + 0.3 * math.sin(2.4 * ph) * math.exp(-t / 0.12)
+        v += _rng.uniform(-0.25, 0.25) * math.exp(-t / 0.015)
+        out.append(v)
+    return _finish_snes(_lowpass(out, 0.5), 0.95)
+
+
+def ffvi_bassdrum() -> tuple[bytes, int, dict]:
+    """Orchestral bass drum — deeper and longer than the kit kick, soft beater."""
+    n = int(SNES_RATE * 0.5)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 40.0 + 60.0 * math.exp(-t / 0.05)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.22)
+        v += _rng.uniform(-0.3, 0.3) * math.exp(-t / 0.012)
+        out.append(v)
+    return _finish_snes(_lowpass(out, 0.4), 0.95)
+
+
+def ffvi_snare() -> tuple[bytes, int, dict]:
+    """Orchestral snare — crisp, bright rattle, no gate, a touch of hall."""
+    n = int(SNES_RATE * 0.3)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        tone = math.sin(2.0 * math.pi * 220.0 * t) * math.exp(-t / 0.03)
+        noise = _rng.uniform(-1.0, 1.0)
+        rattle = noise * math.exp(-t / 0.06)
+        hall = noise * 0.25 * math.exp(-t / 0.14)
+        out.append(0.4 * tone + 0.7 * rattle + hall)
+    return _finish_snes(_highpass(out, 0.15), 0.9)
+
+
+def ffvi_cymbal() -> tuple[bytes, int, dict]:
+    """Suspended cymbal — long, washy, darker than the kit crash."""
+    n = int(SNES_RATE * 1.4)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        v = _rng.uniform(-1.0, 1.0) * 0.75 + 0.25 * math.sin(2.0 * math.pi * 2300.0 * t)
+        out.append(v * math.exp(-t / 0.55))
+    return _finish_snes(_lowpass(_highpass(out, 0.25), 0.8), 0.65)
+
+
 def snes_orch_hit() -> tuple[bytes, int, dict]:
     """Orchestra hit — stacked saws on root, fifth and octave plus a noise burst."""
     n = int(SNES_RATE * 0.5)
@@ -1326,6 +1507,9 @@ PRESET_RELEASE = {
     "snes_strings": "strings", "snes_choir": "choir", "snes_brass": "brass",
     "snes_flute": "flute", "snes_organ": "organ", "snes_synth_lead": "lead",
     "snes_epiano": "keys", "snes_bell": "keys", "snes_synth_bass": "bass",
+    "ffvi_strings": "strings", "ffvi_contrabass": "strings", "ffvi_horn": "brass",
+    "ffvi_trumpet": "brass", "ffvi_oboe": "flute", "ffvi_clarinet": "flute",
+    "ffvi_organ": "organ", "ffvi_piano": "keys", "ffvi_music_box": "keys",
     # Genesis
     "gen_lead": "lead", "gen_saw_lead": "lead", "gen_brass": "brass",
     "gen_pad": "pad", "gen_sub_bass": "bass", "gen_bell": "keys",
@@ -1528,6 +1712,20 @@ INSTRUMENT_PRESETS = {
     "snes_slap_bass": (snes_slap_bass, {},             64),
     "snes_synth_bass": (snes_synth_bass, {},           64),
     "snes_orch_hit":  (snes_orch_hit,  {},             64),
+    # FFVI orchestral set
+    "ffvi_strings":   (ffvi_strings,   {},             60),
+    "ffvi_contrabass": (ffvi_contrabass, {},           64),
+    "ffvi_horn":      (ffvi_horn,      {},             60),
+    "ffvi_trumpet":   (ffvi_trumpet,   {},             58),
+    "ffvi_oboe":      (ffvi_oboe,      {},             58),
+    "ffvi_clarinet":  (ffvi_clarinet,  {},             58),
+    "ffvi_organ":     (ffvi_organ,     {},             56),
+    "ffvi_piano":     (ffvi_piano,     {},             60),
+    "ffvi_music_box": (ffvi_music_box, {},             52),
+    "ffvi_timpani":   (ffvi_timpani,   {},             64),
+    "ffvi_bassdrum":  (ffvi_bassdrum,  {},             64),
+    "ffvi_snare":     (ffvi_snare,     {},             62),
+    "ffvi_cymbal":    (ffvi_cymbal,    {},             52),
     "snes_kick":      (snes_kick,      {},             64),
     "snes_snare":     (snes_snare,     {},             64),
     "snes_hat":       (snes_hat,       {},             46),
@@ -1571,7 +1769,7 @@ STRIKE_WINDOW = 0.15
 STRUCK_RATIO = 0.8
 
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
-                     "clap", "perc", "shaker", "cowbell", "hit"}
+                     "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal"}
 
 
 def is_percussion(name: str) -> bool:

@@ -28,6 +28,7 @@ from .pattern import (
     apply_chord_arpeggio, end_note,
 )
 from .drums import pick_grooves, pick_fill, render_drums
+from .packs import PACKS, PACK_NAMES, pack_weights, pack_value
 from .melody import (
     generate_motif, vary_motif, generate_melody,
     generate_counter_melody, add_melody_cuts,
@@ -38,6 +39,8 @@ from .arp import pick_figures, generate_arp
 
 
 STYLES = ["chip", "snes", "genesis"]
+# Chance that a snes song draws a style pack (packs.PACKS) when --pack random.
+PACK_CHANCE = 0.5
 
 # Echo, modelled on the SNES echo unit's result rather than its wiring:
 # repeats on a beat fraction (three rows is a dotted eighth at four rows to
@@ -90,7 +93,8 @@ ECHO_SEND_REST = 2
 # hold first). stabs and rhythmic are short hits, so a per-tick slide from
 # the start is right. sustain is a pad: it holds for most of its 32-row
 # interval and then takes a fine (per-row) slide down into the next hit.
-HARMONY_FADE = {"stabs": (0x02, 0), "rhythmic": (0x03, 0), "sustain": (0xF2, 18)}
+HARMONY_FADE = {"stabs": (0x02, 0), "rhythmic": (0x03, 0), "sustain": (0xF2, 18),
+                "ostinato": (0x03, 0), "pulse": (0x04, 0)}
 
 # Chance that a pattern changes chord at its halfway point, by section type.
 HALF_PATTERN_CHANGE = {
@@ -182,9 +186,21 @@ def _echo_label(use_echo: bool, echo_wet: str) -> str:
     return " + echo" if echo_wet == "normal" else f" + echo ({echo_wet})"
 
 
-def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
-    """Pick a random instrument set for the song from the style's palette."""
-    pal = PALETTES[style]
+def _weighted(choices: list[str], weights: dict | None) -> str:
+    """random.choice, or a pack-weighted choice when the pack has an opinion."""
+    if not weights:
+        return random.choice(choices)
+    pool = [c for c in choices if weights.get(c, 0) > 0] or choices
+    return random.choices(pool, [weights.get(c, 1) for c in pool], k=1)[0]
+
+
+def _pick_instruments(style: str, bass_weight: str = "heavy",
+                      pack: str | None = None) -> dict[str, str]:
+    """Pick a random instrument set for the song from the style's palette,
+    or from the pack's voices when the song has a pack."""
+    pal = dict(PALETTES[style])
+    if pack:
+        pal.update(PACKS[pack]["voices"])
     bass_choices = pal.get(f"bass_{bass_weight}", pal["bass_heavy"])
 
     lead = random.choice(pal["lead"])
@@ -214,7 +230,11 @@ def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
             "tom": "tom", "crash": "crash", "open_hihat": "open_hihat", "rim": "rim",
         }
 
-    return {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
+    out = {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
+    if pal.get("counter"):
+        out["counter"] = random.choice([c for c in pal["counter"] if c != harmony]
+                                       or pal["counter"])
+    return out
 
 
 def _make_sample(name: str, strike_rule: bool = False) -> ITSample:
@@ -425,7 +445,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
                      n_patterns, is_ending, ending_style,
                      swing_amount, speed, bpm, is_intro, echo_sends,
-                     pickup_root=None) -> ITPattern:
+                     pickup_root=None, counter_chance=0.3) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -465,12 +485,12 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     if layers["harmony"]:
         harmony_channels = [CH_HARMONY, CH_HARMONY2, CH_HARMONY3]
 
-        if melody and sec_type in ("chorus", "bridge") and random.random() < 0.3:
+        if melody and sec_type in ("chorus", "bridge") and random.random() < counter_chance:
             counter = generate_counter_melody(
                 scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng)
             counter = add_melody_cuts(counter, ROWS_PER_PATTERN, max_sustain=8)
             apply_notes_to_pattern(
-                pat, CH_HARMONY, counter, sample_map["harmony"],
+                pat, CH_HARMONY, counter, sample_map.get("counter", sample_map["harmony"]),
                 volume=int(20 * section_energy), humanize=True, rng=melody_rng,
             )
             apply_harmony_fade(pat, CH_HARMONY, counter, fade_rate=harmony_fade,
@@ -626,16 +646,34 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                  song_form: str = "random",
                  echo: str = "random", echo_wet: str = "random",
                  echo_delay: str = "random", echo_stereo: str = "random",
-                 keys: str = "moving") -> dict:
+                 keys: str = "moving", pack: str = "random") -> dict:
     """Compose a complete procedural song. Returns a dict for write_it_file."""
     if seed is not None:
         random.seed(seed)
 
     # Resolve "random" for all settings
+    if style_pref not in STYLES:
+        style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
+    # A pack narrows every draw below to the habits of the scores it imitates.
+    if pack == "random":
+        candidates = [p for p in PACK_NAMES if PACKS[p]["palette"] == style_pref]
+        pack = random.choice(candidates) if candidates and random.random() < PACK_CHANCE else None
+    elif pack in ("none", "", None):
+        pack = None
+    elif pack not in PACKS:
+        raise ValueError(f"Unknown pack: {pack}")
+    elif PACKS[pack]["palette"] != style_pref:
+        style_pref = PACKS[pack]["palette"]
+    if tempo_pref == "random" and pack_weights(pack, "tempo"):
+        tempo_pref = _weighted(["slow", "medium", "fast"], pack_weights(pack, "tempo"))
+    if energy_pref == "random" and pack_weights(pack, "energy"):
+        energy_pref = _weighted(["chill", "normal", "intense"], pack_weights(pack, "energy"))
+    if scale_pref == "random" and pack_weights(pack, "scale_family"):
+        scale_pref = _weighted(["minor", "major", "pentatonic"], pack_weights(pack, "scale_family"))
     if drum_density == "random":
-        drum_density = random.choice(["sparse", "normal", "busy"])
+        drum_density = _weighted(["sparse", "normal", "busy"], pack_weights(pack, "drum_density"))
     if drum_swing == "random":
-        drum_swing = random.choice(["off", "light", "heavy"])
+        drum_swing = _weighted(["off", "light", "heavy"], pack_weights(pack, "drum_swing"))
     if melody_style == "random":
         # Weighted toward phrased: it is the path with motifs, so it is the one
         # that produces a recognisable hook. simple is an unstructured random
@@ -643,19 +681,19 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         # explicitly via --melody.
         melody_style = random.choices(["phrased", "simple"], weights=[3, 1], k=1)[0]
     if harmony_voicing == "random":
-        harmony_voicing = random.choice(["full", "thin"])
+        harmony_voicing = _weighted(["full", "thin"], pack_weights(pack, "harmony_voicing"))
     if harmony_mode == "random":
-        harmony_mode = random.choice(["stabs", "sustain", "rhythmic"])
+        harmony_mode = _weighted(["stabs", "sustain", "rhythmic", "ostinato", "pulse"],
+                                 pack_weights(pack, "harmony_mode") or
+                                 {"stabs": 1, "sustain": 1, "rhythmic": 1})
     if bass_weight == "random":
-        bass_weight = random.choice(["heavy", "medium", "light"])
-    if style_pref not in STYLES:
-        style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
+        bass_weight = _weighted(["heavy", "medium", "light"], pack_weights(pack, "bass_weight"))
     if echo == "random":
         # The SNES S-DSP had a hardware echo send that most, not all, tracks
         # used, so snes draws it most of the time. The NES and the YM2612
         # had no echo unit, so chip and genesis stay dry unless asked.
         echo_chance = {"snes": 0.7, "chip": 0.0, "genesis": 0.0}[style_pref]
-        use_echo = random.random() < echo_chance
+        use_echo = random.random() < pack_value(pack, "echo", echo_chance)
     else:
         use_echo = echo == "on"
 
@@ -694,20 +732,20 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     tempo = bpm_to_it_tempo(target_bpm, speed, ROWS_PER_BEAT)
 
     # ── Instruments ──
-    instruments = _pick_instruments(style_pref, bass_weight=bass_weight)
+    instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack)
     samples, sample_map = _build_samples(instruments)
     _register_releases(samples)
     echo_bus = None                      # built once song_salt exists
 
     # ── Energy / style ──
     if energy_pref == "chill":
-        bass_style = random.choice(["steady", "steady", "walking"])
+        bass_style = _weighted(["steady", "steady", "walking"], pack_weights(pack, "bass_style"))
         melody_density = random.uniform(0.40, 0.50)
     elif energy_pref == "intense":
-        bass_style = random.choice(["driving", "driving", "octave"])
+        bass_style = _weighted(["driving", "driving", "octave"], pack_weights(pack, "bass_style"))
         melody_density = random.uniform(0.55, 0.75)
     else:
-        bass_style = random.choice(["steady", "octave", "walking", "driving"])
+        bass_style = _weighted(["steady", "octave", "walking", "driving"], pack_weights(pack, "bass_style"))
         melody_density = random.uniform(0.45, 0.65)
     arp_figures = pick_figures(energy_pref)
 
@@ -763,9 +801,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     bpm_value = it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)
 
     # ── Instrument swaps ──
-    alt_lead = random.choice(
-        [n for n in PALETTES[style_pref]["alt_lead"] if n != instruments["melody"]]
-        or PALETTES[style_pref]["alt_lead"])
+    alt_pool = PACKS[pack]["voices"]["alt_lead"] if pack else PALETTES[style_pref]["alt_lead"]
+    alt_lead = random.choice([n for n in alt_pool if n != instruments["melody"]] or alt_pool)
     alt_lead_sample_idx = None
 
     # ── Generate patterns ──
@@ -785,13 +822,15 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     echo_rng = random.Random(song_salt ^ 0xEC40)
     bpm_for_echo = it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)
     if echo_wet == "random":
-        echo_wet = echo_rng.choices(list(ECHO_WET_WEIGHTS), list(ECHO_WET_WEIGHTS.values()))[0]
+        w = pack_weights(pack, "echo_wet") or ECHO_WET_WEIGHTS
+        echo_wet = echo_rng.choices(list(w), list(w.values()))[0]
     if echo_delay == "random":
         weights = next(w for floor, w in ECHO_DELAY_WEIGHTS if bpm_for_echo >= floor)
         echo_delay = echo_rng.choices(list(weights), list(weights.values()))[0]
     echo_feedback = round(echo_rng.uniform(*ECHO_FEEDBACK_RANGE), 2)
     if echo_stereo == "random":
-        echo_stereo = echo_rng.choices(list(ECHO_STEREO_WEIGHTS), list(ECHO_STEREO_WEIGHTS.values()))[0]
+        w = pack_weights(pack, "echo_stereo") or ECHO_STEREO_WEIGHTS
+        echo_stereo = echo_rng.choices(list(w), list(w.values()))[0]
     echo_bus = _EchoBus(samples, ECHO_WETNESS[echo_wet], ECHO_DELAYS[echo_delay],
                         echo_feedback, echo_stereo)
     pattern_sec: dict[int, str] = {}     # pattern index -> section type, for the spill
@@ -902,7 +941,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 fill_pos = "mid"
             else:
                 fill_pos = "none"
-            drum_fill = pick_fill(next_sec, fill_pos, drum_fills)
+            drum_fill = pick_fill(next_sec, fill_pos, drum_fills,
+                                  orchestral=bool(pack_value(pack, "section_rolls", False)))
             breakdown = sec_type == "bridge" and chord_idx == 0 and random.random() < 0.4
             half_changes += len(segments) - 1
 
@@ -930,6 +970,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
                 is_intro=is_intro, echo_sends=echo_bus.sends(sec_type) if use_echo else None,
+                counter_chance=pack_value(pack, "counter_line", 0.3),
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -973,7 +1014,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     message = "\n".join([
         song_name,
         f"{key_name} {scale_label} - {bpm} BPM",
-        f"{style_pref}{_echo_label(use_echo, echo_wet)} - {form_name} form",
+        f"{style_pref}{f' ({pack})' if pack else ''}{_echo_label(use_echo, echo_wet)} - {form_name} form",
         f"{instruments['melody']} / {instruments['harmony']} / {instruments['bass']}",
         f"seed {seed if seed is not None else 'none'} - bitcomposer {__version__}",
         *([f"echo: {echo_bus.describe()}, {echo_wet}"] if use_echo else []),
@@ -990,6 +1031,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "it_tempo": tempo,
         "speed": speed,
         "style": style_pref,
+        "pack": pack,
         "echo": use_echo,
         "echo_wet": echo_wet if use_echo else None,
         "echo_delay": echo_delay if use_echo else None,
@@ -1062,6 +1104,10 @@ ARP_PRESET_TRIM = {"psg_square": 17}
 
 def channel_volumes_for(info: dict) -> list[int]:
     vols = list(CHANNEL_VOLUMES)
+    for role, vol in (PACKS[info["pack"]].get("trims", {}) if info.get("pack") else {}).items():
+        for ch, r in enumerate(CHANNEL_ROLES):
+            if r == role:
+                vols[ch] = vol
     arp = info.get("instruments", {}).get("arp")
     if arp in ARP_PRESET_TRIM:
         for ch in (CH_ARP, *CH_ECHO_ARP):
@@ -1110,7 +1156,7 @@ def compose_and_save(filepath: str, seed: int | None = None,
                      song_form: str = "random",
                      echo: str = "random", echo_wet: str = "random",
                      echo_delay: str = "random", echo_stereo: str = "random",
-                     keys: str = "moving") -> dict:
+                     keys: str = "moving", pack: str = "random") -> dict:
     """Compose a song and save it as an IT file. Returns song info."""
     song = compose_song(seed=seed, tempo_pref=tempo, energy_pref=energy,
                         scale_pref=scale, style_pref=style,
@@ -1121,6 +1167,6 @@ def compose_and_save(filepath: str, seed: int | None = None,
                         bass_weight=bass_weight,
                         song_form=song_form,
                         echo=echo, echo_wet=echo_wet, echo_delay=echo_delay,
-                        echo_stereo=echo_stereo, keys=keys)
+                        echo_stereo=echo_stereo, keys=keys, pack=pack)
     save_song(song, filepath)
     return song["info"]

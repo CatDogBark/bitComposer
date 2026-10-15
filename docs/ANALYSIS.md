@@ -223,6 +223,20 @@ natural level: a struck lead lives on its decay, and its attack is already at
 full scale, so nothing could give back what the strike rule took. The one
 trim left is the genesis PSG square as an arp, a held tone among strikes.
 
+**Style packs.** The FFVI sound is as much habit as timbre: ostinato
+strings under a brass melody, a horn answering the lead, timpani into
+the chorus. So a pack (`packs.py`) pairs voices per role with weighted
+draws for the composer's habits (tempo, energy, scale family, harmony
+voicing and mode, bass weight and style, drum density and swing, echo
+chance, wetness and stereo), a counter-line voice and chance, orchestral
+fills and channel trims. Anything a pack does not weight is drawn the
+plain way, so a pack is a narrowing, never a new engine. Two harmony
+modes arrived with it: `ostinato` restrikes the chord tones on a 3+3+2
+cell, `pulse` on straight eighths with the upper voices between the
+beats. The string section is a long loop (160 periods plus the attack)
+carrying the tone and copies one cycle sharp and flat over the loop, so
+it beats at about 1.6 Hz and stays seamless.
+
 **Echo.** Modelled on what the SNES echo unit produced rather than how it
 was wired: three repeats on a dotted eighth (3, 6 and 9 rows), each half
 the level of the last (−6, −12, −18 dB), each playing a lowpassed copy of
