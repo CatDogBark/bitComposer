@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Arpeggios are figures: eleven one-bar shapes with accents and rests, a verse, chorus and bridge figure per song, climbing on alternate bars, thinning under a busy lead. SNES arps carry the chord's 7th or 9th from the scale.
+- `docs/ROADMAP.md`.
+
 ## 0.4.0 — 2026-10-13
 
 First public release.
