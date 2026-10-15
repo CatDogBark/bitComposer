@@ -23,7 +23,7 @@ These change how every note sounds, not what notes are played.
   with an expand to LEAD / HARM / ARP, and `--echo-wet`. Stage three
   (done): per-song delay (eighth, dotted eighth or quarter, weighted by
   tempo), feedback and wetness drawn per song, sends opened in thin
-  sections and pulled back in the chorus, and bounce / spread stereo with
+  sections and pulled back in the chorus, and bounce / centre stereo with
   a pan per tap. Left for later: echo on the drums as a rare choice
   (gated snare), and a widget readout of the drawn settings.
 - **Style packs.** An instrument set paired with arrangement habits

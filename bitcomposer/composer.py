@@ -62,13 +62,19 @@ ECHO_DELAY_WEIGHTS = [        # (min bpm, {name: weight})
 ]
 ECHO_FEEDBACK_RANGE = (0.3, 0.6)    # each further repeat relative to the last
 ECHO_WET_WEIGHTS = {"light": 1, "normal": 2, "wet": 1}
-# How the repeats sit in the stereo field. "bounce" alternates sides per tap;
-# "spread" puts every repeat of a part wide on the far side of the part, the
-# way the hardware's two-sided echo read. Pans are IT Xxx values (0-255).
-ECHO_STEREO_WEIGHTS = {"bounce": 3, "spread": 2}
+# How the repeats sit in the stereo field. "bounce" alternates sides per tap,
+# an effect the ear files as an effect. "centre" puts every repeat under its
+# source, on the source's own side: the hardware's echo came back on both
+# sides at once, behind the voice, and reads as a room. An earlier "spread"
+# mode put every repeat hard on the far side of the part, and a copy arriving
+# a quarter second late from another direction is heard as a second player
+# coming in late (Sunlit Expanse, Veiled Meridian), so it is gone. Pans are
+# IT Xxx values (0-255); the sources sit at melody 128, harmony 80/128/176,
+# arp 160 (DEFAULT_CHANNEL_PANS, 0-64, times 4).
+ECHO_STEREO_WEIGHTS = {"bounce": 3, "centre": 2}
 ECHO_PANS = {
     "bounce": {"melody": (40, 215, 40), "harmony": ((200, 56), (56, 200), (56, 200)), "arp": (60, 200)},
-    "spread": {"melody": (190, 190, 190), "harmony": ((200, 200), (128, 128), (56, 56)), "arp": (64, 64)},
+    "centre": {"melody": (128, 128, 128), "harmony": ((80, 80), (128, 128), (176, 176)), "arp": (160, 160)},
 }
 # The hardware echoed at one level all song; we open it where the texture is
 # thin and pull it back where the arp and harmony fill the space.

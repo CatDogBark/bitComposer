@@ -40,7 +40,7 @@ PACKS = {
             "drum_swing": {"off": 5, "light": 1, "heavy": 0},
             "echo": 0.85,
             "echo_wet": {"light": 1, "normal": 3, "wet": 2},
-            "echo_stereo": {"bounce": 1, "spread": 2},
+            "echo_stereo": {"bounce": 1, "centre": 2},
             "counter_line": 0.6,      # chance per chorus/bridge pattern (plain: 0.3)
             "section_rolls": True,    # timpani roll into the next section
         },

@@ -391,13 +391,13 @@ class EchoOptions(unittest.TestCase):
         with different echo options writes identical dry channels."""
         a = compose_song(seed=11, style_pref="snes", echo="on")
         b = compose_song(seed=11, style_pref="snes", echo="on", echo_wet="wet",
-                         echo_delay="quarter", echo_stereo="spread")
+                         echo_delay="quarter", echo_stereo="centre")
         self.assertEqual(a["orders"], b["orders"])
         for pa, pb in zip(a["patterns"], b["patterns"]):
             for ra, rb in zip(pa.data, pb.data):
                 self.assertEqual(ra[:12], rb[:12])
         self.assertEqual(b["info"]["echo_delay"], "quarter")
-        self.assertEqual(b["info"]["echo_stereo"], "spread")
+        self.assertEqual(b["info"]["echo_stereo"], "centre")
         self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter"))
         self.assertTrue(0.3 <= a["info"]["echo_feedback"] <= 0.6)
 

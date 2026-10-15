@@ -48,7 +48,7 @@ Everything defaults to `random`.
 --echo    on|off|random              echo (random: 70% of snes songs, never chip or genesis)
 --echo-wet    light|normal|wet|random  how much of the lead, harmony and arp the echo carries
 --echo-delay  eighth|dotted|quarter|random  beat fraction between repeats (random: weighted by tempo)
---echo-stereo bounce|spread|random     repeats alternate sides, or sit wide on the far side
+--echo-stereo bounce|centre|random     repeats alternate sides, or sit under their source
 --keys    moving|home                moving: choruses/bridges may change key; home: stay put
 --tempo   slow|medium|fast           80–110 / 110–140 / 140–180 BPM
 --energy  chill|normal|intense       density and arrangement weight

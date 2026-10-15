@@ -147,9 +147,9 @@ def main():
     )
     parser.add_argument(
         "--echo-stereo",
-        choices=["bounce", "spread", "random"],
+        choices=["bounce", "centre", "random"],
         default="random",
-        help="bounce: repeats alternate sides; spread: wide on the far side of the part",
+        help="bounce: repeats alternate sides; centre: repeats under their source, like the hardware",
     )
     parser.add_argument(
         "--pack",

@@ -264,9 +264,10 @@ Each song draws its own echo from a stream of its own (`song_salt ^
 the delay as a beat fraction weighted by tempo (eighth, dotted eighth or
 quarter; fast songs favour the longer ones), feedback 0.3–0.6, a wetness
 (light 25% / normal 50% / wet 25%, `--echo-wet` overrides), and a stereo
-mode (`--echo-stereo`): "bounce" alternates sides per tap, "spread" puts
-every repeat of a part wide on the far side of it, the way the hardware's
-two-sided echo read. Pans are written per tap as an Xxx effect on the
+mode (`--echo-stereo`): "bounce" alternates sides per tap, "centre" puts
+every repeat under its source, the way the hardware's two-sided echo read
+(a one-sided "spread" mode was tried and heard as a second player coming
+in late, so it went). Pans are written per tap as an Xxx effect on the
 copy's note row, so taps sharing a channel can still bounce. Every send
 is scaled by section (`ECHO_SECTION_GAIN`): opened in intros, bridges and
 outros, pulled back to 0.7 in the chorus where the arp and harmony fill
