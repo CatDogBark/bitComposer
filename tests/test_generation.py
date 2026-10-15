@@ -174,6 +174,11 @@ class Arrangement(unittest.TestCase):
         self.assertGreater(self._mean("mel_end_hold"), 6.0)
         self.assertGreater(self._mean("mel_climax_pos"), 0.4)
 
+    def test_sections_cadence(self):
+        """Section ends resolve V to I into the next section; measured over
+        all pattern joins the old generator sat at ~18% (chance)."""
+        self.assertGreater(self._mean("v_to_i_pct"), 25.0)
+
     def test_harmony_has_voicings(self):
         self.assertGreater(self._mean("distinct_voicings"), 2.0)
 

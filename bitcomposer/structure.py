@@ -236,21 +236,34 @@ def get_section_progression(section: str, progression: list, alt_progression: li
     return progression
 
 
+def pattern_plan(section_prog: list, compact: bool) -> list[list]:
+    """Group a section's progression entries into patterns.
+
+    Normal harmonic rhythm is one chord per four-bar pattern; compact is two
+    chords per pattern (two bars each), so a four-chord progression is an
+    eight-bar section instead of sixteen — the length a verse or chorus
+    usually has, and at a fast tempo the difference between a loop and a
+    slog. A lone trailing entry keeps a pattern of its own.
+    """
+    if not compact:
+        return [[e] for e in section_prog]
+    plan = [section_prog[i:i + 2] for i in range(0, len(section_prog), 2)]
+    return plan or [[]]
+
+
 def build_orders(structure: list[str], pattern_index_for: dict,
-                 progression: list, alt_progression: list,
-                 use_alt_chorus: bool) -> list[int]:
+                 pattern_counts: dict[str, int]) -> list[int]:
     """Build the order list from the song structure.
 
-    pattern_index_for maps (section, chord_idx) to a pattern index. Sections
-    that share content and rendering map to the same index, so the order list
+    pattern_index_for maps (section, pattern_idx) to a pattern index and
+    pattern_counts says how many patterns each section has. Sections that
+    share content and rendering map to the same index, so the order list
     replays one pattern instead of carrying a near-duplicate.
     """
     orders = []
     for section in structure:
-        section_prog = get_section_progression(
-            section, progression, alt_progression, use_alt_chorus)
-        for chord_idx in range(len(section_prog)):
-            orders.append(pattern_index_for[(section, chord_idx)])
+        for idx in range(pattern_counts[section]):
+            orders.append(pattern_index_for[(section, idx)])
     return orders
 
 

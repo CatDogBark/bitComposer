@@ -209,6 +209,29 @@ def analyze(path):
     out["mel_climax_pos"] = float(statistics.mean(climaxes)) if climaxes else 0.0
     out["mel_register_spread"] = float(statistics.pstdev(means)) if len(means) > 1 else 0.0
 
+    # Cadences: at each pattern boundary, does the bass root in the last bar
+    # of the pattern sit a fifth above (or a fourth below) the root the next
+    # pattern opens on? That is V to I — a section ending that resolves.
+    # Also the audible length of the song.
+    def bar_root(pi, bar):
+        pat = m.patterns[pi]
+        for r in range(bar, min(bar + ROWS_PER_BAR, len(pat))):
+            e = pat[r].get(CH_BASS)
+            if e and e[0] is not None and e[0] < 120:
+                return e[0] % 12
+        return None
+    v_i = boundaries = 0
+    for a, b in zip(real, real[1:]):
+        # The back half of a pattern starts at row 32; a walking bass puts a
+        # chord tone, not the root, on later beats, so read the root there.
+        ra, rb = bar_root(a, 32), bar_root(b, 0)
+        if ra is None or rb is None:
+            continue
+        boundaries += 1
+        v_i += (rb - ra) % 12 == 5
+    out["v_to_i_pct"] = 100.0 * v_i / max(boundaries, 1)
+    out["seconds"] = len(real) * 64 * 2.5 * m.speed / m.tempo
+
     # Distinct chord shapes actually sounding on the harmony channels.
     voicings = set()
     for oi in real:
@@ -333,7 +356,8 @@ KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
         "odd_row_pct", "offgrid_pct", "motif_reuse_pct", "distinct_voicings",
         "voice_motion", "distinct_ioi", "n_fx", "arp_figures", "arp_mel_ratio",
         "arp_vol_levels", "drum_shapes", "drum_repeat_pct", "kick_levels", "snare_levels",
-        "mel_strong_fit_pct", "mel_end_hold", "mel_climax_pos", "mel_register_spread"]
+        "mel_strong_fit_pct", "mel_end_hold", "mel_climax_pos", "mel_register_spread",
+        "v_to_i_pct", "seconds"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar", "ohat_per_bar", "tom_per_bar", "crash_per_bar"]
 
 

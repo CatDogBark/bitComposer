@@ -231,22 +231,62 @@ def _pick_section_motif(sec_type: str, use_phrased: bool,
         return generate_motif(length=random.choice([3, 4]))
 
 
+# Related keys a section can move to, as (semitone shift, scale family).
+# "relative" is the relative major of a minor key or the relative minor of a
+# major one — the move game composers reach for at a chorus or a bridge; the
+# old +1 semitone chorus was the truck-driver key change and is gone.
+RELATIVE = {
+    "natural_minor": (3, "major"), "harmonic_minor": (3, "major"), "dorian": (3, "major"),
+    "phrygian": (3, "major"), "minor_pentatonic": (3, "major_pentatonic"),
+    "major": (-3, "natural_minor"), "mixolydian": (-3, "natural_minor"),
+    "major_pentatonic": (-3, "minor_pentatonic"),
+}
+
+
+def plan_keys(scale_name: str) -> dict[str, tuple[int, str]]:
+    """Per section type: (semitone shift from the home key, scale name).
+
+    Verses and themes stay home. A chorus stays home half the time, goes to
+    the relative key a third of the time, or lifts to the subdominant. A
+    bridge most often moves — that is what a bridge is for — to the relative
+    key or the subdominant.
+    """
+    rel_shift, rel_scale = RELATIVE.get(scale_name, (0, scale_name))
+    home = (0, scale_name)
+    chorus = random.choices([home, (rel_shift, rel_scale), (5, scale_name)], weights=[50, 32, 18], k=1)[0]
+    bridge = random.choices([home, (rel_shift, rel_scale), (5, scale_name)], weights=[40, 35, 25], k=1)[0]
+    return {"verse": home, "chorus": chorus, "bridge": bridge, "intro": home, "outro": home}
+
+
 def _chord_segments(key: int, scale_name: str, scale_notes: list[int],
-                    entry, next_entry, sec_type: str) -> list[tuple]:
+                    entries: list, next_entry, sec_type: str,
+                    cadence_root: int | None = None) -> list[tuple]:
     """Chord timeline for one pattern: [(start_row, end_row, root, type, notes)].
 
-    Usually one chord for the whole pattern; with HALF_PATTERN_CHANGE odds the
-    back two bars move to a related chord (see theory.secondary_chord), so the
-    harmony has a two-bar pulse instead of sitting on one chord for four.
+    `entries` holds one chord (normal harmonic rhythm) or two (compact, two
+    bars each). With one chord, HALF_PATTERN_CHANGE odds move the back two
+    bars to a related chord (theory.secondary_chord). With cadence_root set
+    — the root the next section opens on — the back half becomes that
+    root's dominant instead, so the section ends with a V that resolves into
+    the next one.
     """
     def seg(start, end, e):
         _, chord_type, _ = theory.unpack_chord(e)
         root = theory.chord_root_for(key, scale_notes, e)
         return (start, end, root, chord_type, theory.build_chord(root, chord_type))
 
+    half = ROWS_PER_PATTERN // 2
+    if cadence_root is not None:
+        dom = cadence_root + 7
+        while dom > key + 12:
+            dom -= 12
+        ctype = "power" if "pentatonic" in scale_name else "major"
+        return [seg(0, half, entries[0]), (half, ROWS_PER_PATTERN, dom, ctype, theory.build_chord(dom, ctype))]
+    if len(entries) >= 2:
+        return [seg(0, half, entries[0]), seg(half, ROWS_PER_PATTERN, entries[1])]
+    entry = entries[0]
     if random.random() < HALF_PATTERN_CHANGE.get(sec_type, 0.4):
         second = theory.secondary_chord(scale_name, entry, next_entry)
-        half = ROWS_PER_PATTERN // 2
         return [seg(0, half, entry), seg(half, ROWS_PER_PATTERN, second)]
     return [seg(0, ROWS_PER_PATTERN, entry)]
 
@@ -259,8 +299,9 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      vibrato_speed, vibrato_depth,
                      bass_weight, use_bass_porta, porta_speed,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
-                     section_prog, is_ending, ending_style,
-                     swing_amount, speed, bpm, is_intro, use_echo) -> ITPattern:
+                     n_patterns, is_ending, ending_style,
+                     swing_amount, speed, bpm, is_intro, use_echo,
+                     pickup_root=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -373,6 +414,23 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 volume=bass_vol if bass_vol < 255 else 255,
                 humanize=True,
             )
+        if pickup_root is not None and bass:
+            # Walk up into the next section's root over the last two beats:
+            # the fifth below, a step, then the leading tone — the pickup a
+            # bass player plays into a chorus.
+            target = pickup_root
+            lo = min(n for _, n in bass)
+            while target - 12 >= lo:
+                target -= 12
+            while target < 36:
+                target += 12
+            walk = [(ROWS_PER_PATTERN - 8, target - 5), (ROWS_PER_PATTERN - 4, target - 2),
+                    (ROWS_PER_PATTERN - 2, target - 1)]
+            for row in range(ROWS_PER_PATTERN - 8, ROWS_PER_PATTERN):
+                pat.data[row][CH_BASS] = ITNote()
+            apply_notes_to_pattern(pat, CH_BASS, walk, sample_map["bass"],
+                                   volume=bass_vol if bass_vol < 255 else 255)
+            bass = [b for b in bass if b[0] < ROWS_PER_PATTERN - 8] + walk
         if bass_weight in ("light", "medium"):
             cut_after = 2 if bass_weight == "light" else 4
             for row, _ in bass:
@@ -417,7 +475,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                    CH_ECHO1, CH_ECHO2]:
             apply_fade(pat, ch, fade_in=True, rows_count=16)
 
-    if is_ending and chord_idx == len(section_prog) - 1:
+    if is_ending and chord_idx == n_patterns - 1:
         if ending_style in ("fadeout", "tag"):
             for ch in range(NUM_CHANNELS):
                 apply_fade(pat, ch, fade_out=True, rows_count=24)
@@ -539,12 +597,15 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     progression = theory.add_chord_color(progression)
     alt_progression = theory.add_chord_color(alt_progression)
     use_alt_chorus = random.random() < 0.5
-    modulate_chorus = random.random() < 0.25
-    modulation_semitones = 1 if modulate_chorus else 0
-    # The chorus modulates as a whole: chords AND the scale the melody draws
-    # from. Shifting only the chord roots left the tune a semitone under its
-    # own harmony for every chorus.
-    chorus_scale = theory.build_scale(key + modulation_semitones, scale_name, octaves=4)
+    # Key relations and harmonic rhythm. A section that moves key takes a
+    # progression from its own scale's table, coloured like the home one.
+    key_plan = plan_keys(scale_name)
+    section_progs = {}
+    for sec, (shift, sname) in key_plan.items():
+        if sname != scale_name:
+            section_progs[sec] = theory.add_chord_color(theory.random_progression(sname))
+    compact = random.random() < (0.6 if target_bpm >= 130 else 0.35)
+    modulate_chorus = key_plan["chorus"][0] != 0
 
     # ── Effects ──
     vibrato_speed = random.choice([3, 4, 5])
@@ -568,7 +629,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # match as well the order list points at a single shared pattern.
     patterns = []
     pattern_cache = {}       # render identity -> pattern index
-    pattern_index_for = {}   # (section, chord_idx) -> pattern index
+    pattern_index_for = {}   # (section, pattern_idx) -> pattern index
+    pattern_counts = {}      # section -> patterns in it
     song_salt = random.randrange(2 ** 31)
     half_changes = 0
 
@@ -581,18 +643,35 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         is_ending = section in ("outro", "tag")
         base_energy = energy_curve.get(section, 0.7)
 
-        section_prog = struct.get_section_progression(
-            section, progression, alt_progression, use_alt_chorus)
-        num_chords = len(section_prog)
+        shift, sec_scale_name = key_plan.get(sec_type, (0, scale_name))
+        section_key = key + shift
+        section_scale = theory.build_scale(section_key, sec_scale_name, octaves=4)
+        if sec_type in section_progs:
+            section_prog = section_progs[sec_type]
+        else:
+            section_prog = struct.get_section_progression(
+                section, progression, alt_progression, use_alt_chorus)
+        plan = struct.pattern_plan(section_prog, compact)
+        num_patterns = len(plan)
+        pattern_counts[section] = num_patterns
 
-        modulated = modulate_chorus and sec_type == "chorus"
-        section_key = key + (modulation_semitones if modulated else 0)
-        section_scale = chorus_scale if modulated else scale_notes
+        # What the next section opens on, in its own key, for the cadence
+        # and the bass pickup into it.
+        sec_pos = song_structure.index(section)
+        next_section = song_structure[sec_pos + 1] if sec_pos + 1 < len(song_structure) else None
+        next_sec = struct.section_type(next_section) if next_section else None
+        next_root = None
+        if next_sec and next_sec != "outro":
+            n_shift, n_scale_name = key_plan.get(next_sec, (0, scale_name))
+            n_prog = section_progs.get(next_sec) or struct.get_section_progression(
+                next_section, progression, alt_progression, use_alt_chorus)
+            next_root = theory.chord_root_for(
+                key + n_shift, theory.build_scale(key + n_shift, n_scale_name, octaves=4), n_prog[0])
 
-        for chord_idx, entry in enumerate(section_prog):
+        for chord_idx, entries in enumerate(plan):
             # Graduated fadeout: ramp energy down across outro patterns
-            if section == "outro" and ending_style == "fadeout" and num_chords > 1:
-                fade_progress = chord_idx / (num_chords - 1)  # 0.0 to 1.0
+            if section == "outro" and ending_style == "fadeout" and num_patterns > 1:
+                fade_progress = chord_idx / (num_patterns - 1)  # 0.0 to 1.0
                 section_energy = base_energy * (1.0 - fade_progress * 0.7)
             else:
                 section_energy = base_energy
@@ -634,18 +713,22 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             random.seed(content_seed)
             melody_rng = random.Random(content_seed ^ 0x5EED)
 
-            next_entry = section_prog[(chord_idx + 1) % num_chords]
-            segments = _chord_segments(section_key, scale_name, section_scale,
-                                       entry, next_entry, sec_type)
+            next_entries = plan[(chord_idx + 1) % num_patterns]
+            is_section_end = chord_idx == num_patterns - 1 and not is_ending and next_root is not None
+            # Cadence: the last pattern of a section ends on the dominant of
+            # what comes next, most of the time; the bass walks up into it.
+            cadence = is_section_end and random.random() < 0.85
+            segments = _chord_segments(section_key, sec_scale_name, section_scale,
+                                       entries, next_entries[0], sec_type,
+                                       cadence_root=next_root if cadence else None)
+            pickup_root = next_root if cadence else None
 
             # Drums for this pattern: the section's groove; a fill at the end
             # of the section sized for what follows, a light one halfway; a
             # two-bar drop at the top of a bridge sometimes.
-            sec_pos = song_structure.index(section)
-            next_sec = struct.section_type(song_structure[sec_pos + 1]) if sec_pos + 1 < len(song_structure) else None
-            if chord_idx == num_chords - 1 and not is_ending and next_sec not in (None, "outro"):
+            if is_section_end:
                 fill_pos = "section_end"
-            elif num_chords >= 4 and chord_idx == num_chords // 2 - 1:
+            elif num_patterns >= 4 and chord_idx == num_patterns // 2 - 1:
                 fill_pos = "mid"
             else:
                 fill_pos = "none"
@@ -672,7 +755,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 arp_figure=arp_figures.get(sec_type, arp_figures["verse"]),
                 arp_colour=(style_pref == "snes"),
                 groove=grooves.get(sec_type, grooves["verse"]), drum_fill=drum_fill,
-                breakdown=breakdown, section_prog=section_prog,
+                breakdown=breakdown, n_patterns=num_patterns, pickup_root=pickup_root,
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
                 is_intro=is_intro, use_echo=use_echo,
@@ -683,9 +766,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             patterns.append(pat)
 
     # ── Build orders ──
-    orders = struct.build_orders(
-        song_structure, pattern_index_for, progression, alt_progression,
-        use_alt_chorus)
+    orders = struct.build_orders(song_structure, pattern_index_for, pattern_counts)
 
     # ── Echo tails across pattern boundaries ──
     # Where a pattern is only ever preceded by one other, its first rows can
@@ -742,6 +823,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "harmony_voicing": harmony_voicing,
         "harmony_mode": harmony_mode,
         "chorus_modulated": modulate_chorus,
+        "key_plan": {k: (v[0], v[1]) for k, v in key_plan.items() if k in ("chorus", "bridge")},
+        "harmonic_rhythm": "2 bars" if compact else "4 bars",
         "chorus_alt_prog": use_alt_chorus,
         "ending_style": ending_style,
         "song_form": form_name,

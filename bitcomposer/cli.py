@@ -202,8 +202,10 @@ def main():
             print(f"  Style:       {info['style']}"
                   f"{' + echo' if info.get('echo') else ''}")
             print(f"  Chord moves: {info['half_pattern_changes']} half-pattern changes")
-            if info.get('chorus_modulated'):
-                print(f"  Modulation:  chorus +1 semitone")
+            kp = info['key_plan']
+            if any(v[0] for v in kp.values()):
+                print("  Keys:        " + ", ".join(f"{k} {'+' if v[0] > 0 else ''}{v[0]} ({v[1].replace('_', ' ')})" for k, v in kp.items() if v[0]))
+            print(f"  Harm rhythm: {info['harmonic_rhythm']}")
             if info.get('chorus_alt_prog'):
                 print(f"  Chorus prog: alternate")
             print(f"  Form:        {info['song_form']}")
