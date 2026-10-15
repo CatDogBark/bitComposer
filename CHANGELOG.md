@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Arp loudness: a struck voice on the arp (bell, e-piano, marimba, pizz, harp, chip and genesis plucks) is normalised on its first 150 ms, so every arp voice hits at the same level; the SNES bell arp comes down 7 dB and the spread across SNES arp voices goes from 8.6 dB to 4.2 dB. Lead, harmony and bass samples are unchanged. The per-palette arp trims are gone; only the genesis PSG square keeps one.
 - Echo by palette: left to chance, 70% of snes songs get the lead echo and chip and genesis never do (neither the NES nor the YM2612 had an echo unit); `--echo on` still forces it anywhere.
 - Motif grammar: motifs are built from cells (steps, neighbours, repeats, thirds, short runs) with a leap allowed only to launch a phrase and always answered by a step; tension tones resolve; the rhythm is held as the phrase's identity; half of phrases take the period form (cell, answer, cell again, closed answer). Motifs draw from their own random stream. Over 20 seeds: stepwise intervals 57% to 69%, leaps 16% to 13%, bars keeping the previous bar's rhythm 27% to 35%.
 

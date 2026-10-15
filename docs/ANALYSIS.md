@@ -207,6 +207,22 @@ drum kit — at 16 kHz with attack-then-loop sustain, run through a BRR codec
 model (all four SPC700 prediction filters, 4-bit residuals, per-block shift)
 for the grain. The old waveform set is now `--style chip`.
 
+**Levels.** Every tonal preset is normalised in `samples.generate_instrument`
+so the channel mix means the same thing whichever voice a song drew.
+Sustaining voices (loop as loud as the attack) are scaled so their loop sits
+at `LOUDNESS_TARGET` RMS, which is where the SNES strings, organ and brass
+already were, so a chip square comes down ~6 dB and the FM lead ~5 dB.
+Struck voices (plucks, bells, e-piano, pizz, harp, marimba: loop region
+under 0.8× the strike, or no loop at all) carry their energy in the attack,
+and the loop rule leaves them at their natural peak-capped level. On the arp,
+where every note is a strike, that left the SNES bell 7 dB over the pizz, so
+the arp's sample is scaled on the RMS of its first 150 ms to `STRIKE_TARGET`
+instead; the spread across the five SNES arp voices went from 8.6 dB to
+4.2 dB and the per-palette arp trims went away. Leads and harmony keep the
+natural level: a struck lead lives on its decay, and its attack is already at
+full scale, so nothing could give back what the strike rule took. The one
+trim left is the genesis PSG square as an arp, a held tone among strikes.
+
 **Echo.** Two echo channels carry delayed copies of the lead (3 rows at
 −6 dB, 6 rows at −12 dB), panned wide. Left to chance, 70% of snes songs
 get it and chip and genesis never do (neither chip had an echo unit);

@@ -169,8 +169,11 @@ def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
     return {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
 
 
-def _make_sample(name: str) -> ITSample:
-    inst = smp.generate_instrument(name)
+def _make_sample(name: str, strike_rule: bool = False) -> ITSample:
+    return _sample_from_inst(name, smp.generate_instrument(name, strike_rule=strike_rule))
+
+
+def _sample_from_inst(name: str, inst: dict) -> ITSample:
     return ITSample(
         name=name.replace("_", " ").title(),
         filename=name[:12],
@@ -194,24 +197,28 @@ def _register_releases(samples: list[ITSample]) -> None:
         i + 1 for i, smp in enumerate(samples) if smp.sus_loop)
 
 
+# Roles whose struck voices are normalised on their attack rather than left
+# at their natural level: the arp, where every note is a strike.
+STRIKE_RULE_ROLES = {"arp"}
+
+
 def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[str, int]]:
     """Generate ITSample objects for all instruments.
 
     Returns (samples, sample_map) where sample_map maps an instrument role
-    to a 1-based sample index; roles sharing a preset share a sample.
+    to a 1-based sample index; roles sharing a preset (and the same loudness
+    rule) share a sample.
     """
     samples: list[ITSample] = []
-    seen: dict[str, int] = {}
+    seen: dict[tuple[str, bool], int] = {}
     sample_map: dict[str, int] = {}
 
     for key, name in instruments.items():
-        if name in seen:
-            sample_map[key] = seen[name]
-            continue
-        samples.append(_make_sample(name))
-        idx = len(samples)  # 1-based
-        seen[name] = idx
-        sample_map[key] = idx
+        rule = key in STRIKE_RULE_ROLES
+        if (name, rule) not in seen:
+            samples.append(_make_sample(name, strike_rule=rule))
+            seen[(name, rule)] = len(samples)  # 1-based
+        sample_map[key] = seen[(name, rule)]
 
     return samples, sample_map
 
@@ -891,9 +898,6 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 #
 # Measured by rendering each part alone (2026-10-14, 60 s, dBFS): melody sits
 # 6-14 dB under the drums and the arp 1-4 dB under the melody on every palette.
-# The arp level depends on the palette (PALETTE_MIX below): SNES arps are
-# decaying plucks and bells and sit at 33; chip pulse blips and the genesis
-# PSG square are trimmed.
 CHANNEL_VOLUMES = [
     13,              # melody
     25, 25, 25,      # harmony
@@ -902,22 +906,21 @@ CHANNEL_VOLUMES = [
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
     13, 13,          # echo taps
 ]
-# Lead levels no longer differ by palette: looped voices are normalised to
-# equal sustain loudness in samples.generate_instrument (LOUDNESS_TARGET).
-# Chip arp was set by ear (28) against a lead that was 6.6 dB too hot before
-# equal-loudness normalisation; the plucks themselves are peak-capped and did
-# not move, so the arp comes down by the same amount.  The genesis PSG arp is
-# a looped square and was normalised along with its lead, so 17 still holds.
-PALETTE_MIX = {
-    "chip": {CH_ARP: 15},
-    "genesis": {CH_ARP: 17},
-}
+# Levels no longer differ by palette: samples.generate_instrument normalises
+# sustaining voices to one loop loudness and, on the arp, struck voices to
+# one strike loudness, so a pluck, bell or pizz hits the arp at the same
+# level whatever the song drew. The one thing the samples cannot know: a
+# sustaining voice used as the arp (the genesis PSG square) is a held tone
+# where the others are strikes, and sits at the level the plucks had before
+# normalisation (set by ear, Lower Cistern, 2026-10-13).
+ARP_PRESET_TRIM = {"psg_square": 17}
 
 
-def channel_volumes_for(style: str) -> list[int]:
+def channel_volumes_for(info: dict) -> list[int]:
     vols = list(CHANNEL_VOLUMES)
-    for ch, v in PALETTE_MIX.get(style, {}).items():
-        vols[ch] = v
+    arp = info.get("instruments", {}).get("arp")
+    if arp in ARP_PRESET_TRIM:
+        vols[CH_ARP] = ARP_PRESET_TRIM[arp]
     return vols
 
 
@@ -932,7 +935,7 @@ def save_song(song: dict, filepath: str) -> None:
         tempo=song["tempo"],
         speed=song["speed"],
         num_channels=NUM_CHANNELS,
-        channel_volumes=channel_volumes_for(song["info"]["style"]),
+        channel_volumes=channel_volumes_for(song["info"]),
         message=song["message"],
     )
 

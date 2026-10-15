@@ -1548,17 +1548,47 @@ _ONE_SHOT_WAVEFORMS = {
 }
 
 
-# Sustain-region RMS (of full scale) every looped tonal preset is scaled to.
-# 0.45 is where the sustaining SNES voices sit (strings, organ, synth lead
-# 0.44; flute 0.63; brass 0.38), so that palette keeps its level; a square
-# wave (0.89) comes down ~6 dB and the FM lead (0.80) ~5 dB. Decaying
-# voices (plucks, bells, e-piano) have a quiet loop region and would only
-# scale up, which the peak cap prevents, so they keep their shape.
+# Sustain-region RMS (of full scale) every looped sustaining preset is scaled
+# to. 0.45 is where the sustaining SNES voices sit (strings, organ, synth
+# lead 0.44; flute 0.63; brass 0.38), so that palette keeps its level; a
+# square wave (0.89) comes down ~6 dB and the FM lead (0.80) ~5 dB.
 LOUDNESS_TARGET = 0.45
 
+# Struck voices (plucks, bells, e-piano, pizz, harp, marimba) carry their
+# energy in the attack and loop a quiet tail, so the sustain rule sees them
+# as quiet and leaves them alone (the peak cap stops the scale-up). On an
+# arp, where every note is a strike, that left the SNES bell 7 dB over the
+# pizz. With strike_rule=True a struck voice is scaled on the RMS of its
+# first STRIKE_WINDOW seconds instead, to STRIKE_TARGET. The composer asks
+# for it on the arp only: a struck lead or harmony holds notes and lives on
+# its decay, and taking 4-7 dB off a bell lead would bury it, while its
+# attack is already at full scale so nothing could give that back in-sample.
+STRIKE_TARGET = 0.25
+STRIKE_WINDOW = 0.15
+# A preset is struck when its loop region is this much quieter than its
+# strike, or when it does not loop at all (the SNES pizz, harp, marimba and
+# plucked basses are one-shots).
+STRUCK_RATIO = 0.8
 
-def generate_instrument(name: str) -> dict:
+_PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
+                     "clap", "perc", "shaker", "cowbell", "hit"}
+
+
+def is_percussion(name: str) -> bool:
+    """Whole name parts only: "rim" must not catch the marimba."""
+    return any(part in _PERCUSSION_WORDS for part in name.split("_"))
+
+
+def _rms(values) -> float:
+    values = list(values)
+    return math.sqrt(sum(v * v for v in values) / len(values)) / 32767.0 if values else 0.0
+
+
+def generate_instrument(name: str, strike_rule: bool = False) -> dict:
     """Generate a named instrument.
+
+    strike_rule: normalise a struck voice on its attack (see STRIKE_TARGET);
+    off, struck voices keep their natural peak-capped level.
 
     Returns {"data", "length", "volume", "rate", "loop", "loop_start",
     "loop_end"} — everything an ITSample needs. Waveform presets loop over
@@ -1583,22 +1613,31 @@ def generate_instrument(name: str) -> dict:
         meta = {"rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
                 "loop": not one_shot, "loop_start": loop_start, "loop_end": loop_end}
     family = PRESET_RELEASE.get(name)
-    if meta.get("loop"):
-        # Equal loudness: scale the sample data so its sustain region sits at
-        # LOUDNESS_TARGET RMS. A square wave sustains at full level and a
-        # bell at a fraction, so at the same written volume one was 6-8 dB
-        # louder than the other and the mix table chased samples. The data
-        # is scaled (not the default volume) because a volume column on a
-        # note overrides the default. Scaling up stops where the peak would
-        # clip, so percussive voices with a quiet tail keep their shape.
+    gain, struck = 1.0, False
+    if not is_percussion(name):
+        # Equal loudness: scale the sample data so like voices sit at like
+        # levels. Sustaining voices (loop as loud as the attack) go by their
+        # loop RMS to LOUDNESS_TARGET; struck voices, when asked, by the RMS
+        # of their first STRIKE_WINDOW to STRIKE_TARGET. The data is scaled
+        # (not the default volume) because a volume column on a note
+        # overrides the default. Scaling up stops where the peak would clip,
+        # which is what leaves a struck voice alone under the sustain rule.
         ints = list(struct.unpack(f"<{length}h", data))
-        region = ints[meta["loop_start"]:meta["loop_end"]] or ints
-        rms = math.sqrt(sum(v * v for v in region) / len(region)) / 32767.0
         peak = max(abs(v) for v in ints) / 32767.0
+        strike = _rms(ints[:max(1, int(meta["rate"] * STRIKE_WINDOW))])
+        loop_rms = _rms(ints[meta["loop_start"]:meta["loop_end"]] or ints)
+        struck = (not meta.get("loop")) or loop_rms < STRUCK_RATIO * strike
+        if struck and strike_rule:
+            target, rms = STRIKE_TARGET, strike
+        elif meta.get("loop"):
+            target, rms = LOUDNESS_TARGET, loop_rms
+        else:
+            target, rms = 1.0, 0.0            # one-shot, left as drawn
         if rms > 1e-4 and peak > 0:
-            k = min(LOUDNESS_TARGET / rms, 0.98 / peak)
+            k = min(target / rms, 0.98 / peak)
             if abs(k - 1.0) > 0.02:
                 data = _pack_samples([max(-32768, min(32767, int(v * k))) for v in ints])
+                gain = k
     if family and meta.get("loop"):
         data, length, meta = add_release(data, length, meta, RELEASE[family])
     return {
@@ -1606,4 +1645,5 @@ def generate_instrument(name: str) -> dict:
         "rate": meta["rate"], "loop": meta.get("loop", False),
         "loop_start": meta.get("loop_start", 0), "loop_end": meta.get("loop_end", length),
         "sus_loop": meta.get("sus_loop", False), "release": meta.get("release", 0.0),
+        "gain": gain, "struck": struck,
     }
