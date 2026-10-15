@@ -151,7 +151,7 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
   `ch1`, `ch2`, … The widget builds its mixer from this: one fader per dry
   channel and one ECHO bus for all the returns (expand for LEAD / HARM /
   ARP), the bus being a ratio against the mix the file was written with.
-  The COMPOSE tab's PACK picker passes `--pack` (random / none / ffvi / mana / evermore).
+  The COMPOSE tab's PACK picker passes `--pack` (random / none / ffvi / mana / evermore / megamanx).
 - `SetChannelVolume(i channel, i volume) -> b` — live mixer: sets a channel's
   volume (0–64) on the playing module via libopenmpt's interactive interface.
   Immediate, no restart. `GetChannelVolumes() -> ai` reads them back (with

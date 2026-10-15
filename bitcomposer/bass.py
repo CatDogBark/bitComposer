@@ -8,6 +8,11 @@ from . import theory
 from .pattern import ROWS_PER_BAR, ROWS_PER_BEAT
 
 
+# (row in bar, interval) of the riff bass; eighths with the octave on the
+# "and" of two and the fifth leading back to the root.
+RIFF = [(0, 0), (2, 0), (4, 12), (6, 0), (8, 0), (10, 7), (12, 12), (14, 7)]
+
+
 def generate_bass(root: int, chord_type: str,
                   rows: int, style: str = "steady",
                   weight: str = "heavy",
@@ -77,6 +82,13 @@ def generate_bass(root: int, chord_type: str,
         # One note per chord, held for the whole segment; the composer slides
         # between roots (porta) so the drone moves without restriking.
         notes.append((0, bass_root))
+    elif style == "riff":
+        # A one-bar riff that repeats: root on the beat, the octave and the
+        # fifth pushing between, the way a rock bass carries a stage theme.
+        for bar in range(0, rows, ROWS_PER_BAR):
+            for off, iv in RIFF:
+                if bar + off < rows:
+                    notes.append((bar + off, bass_root + iv))
 
     if density < 1.0:
         notes = [
@@ -90,8 +102,8 @@ def generate_bass(root: int, chord_type: str,
 def pick_section_bass(bass_weight: str, section_energy: float,
                       bass_style: str) -> str:
     """Choose bass style for a section based on weight and energy."""
-    if bass_style == "drone":
-        return "drone"                 # a drone does not lift with the section
+    if bass_style in ("drone", "riff"):
+        return bass_style              # a drone or a riff does not lift with the section
     if bass_weight == "light":
         if section_energy > 0.85:
             return random.choice(["steady", "walking"])

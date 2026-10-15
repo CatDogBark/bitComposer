@@ -32,11 +32,12 @@ These change how every note sounds, not what notes are played.
   orchestral fills, channel trims, arp figure weights. `ffvi` (orchestral)
   `mana` (Secret of Mana: mallets and air, hand percussion, bouncy habits)
   and `evermore` (Secret of Evermore: pads, drone bass, breathy flute,
-  sparse or no drums; the atmospheric set) are done. Next: `megamanx`
-  (overdriven guitar sample, slap bass, synth brass stabs, riff bass, rock
-  grooves). `metroid` would be evermore with a cold voice set (metallic
-  pads, detuned low brass, clangs, sub drone) and a dissonance weight in
-  the harmony. A pack is data;
+  sparse or no drums; the atmospheric set) and `megamanx` (Mega Man X: driven
+  guitars, pulse synth, synth brass, riff bass, slap echo; read off the
+  game's own sample bank) are done. `metroid` would be evermore with a cold
+  voice set (metallic pads, detuned low brass, clangs, sub drone) and a
+  dissonance weight in the harmony. Rock grooves of their own (double-time
+  hats, kick patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.

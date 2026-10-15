@@ -1304,6 +1304,163 @@ def evm_click() -> tuple[bytes, int, dict]:
     return _finish_snes(out, 0.6)
 
 
+# ── Mega Man X set ──
+# Read off the game's own sample bank (SPC snapshots): a chorused distorted
+# lead that goes through the echo everywhere, a clean bright pulse synth
+# that does not, a slow string pad, a punchy synth bass, a synth brass with
+# an overblown attack, a noise-like distorted rhythm guitar played low, and
+# a tight kit. Everything here is synthesised from scratch to those shapes.
+
+def _drive(samples: list[float], amount: float) -> list[float]:
+    """Soft clipping; the distortion in the guitars."""
+    return [math.tanh(v * amount) / math.tanh(amount) for v in samples]
+
+
+def mmx_lead_guitar() -> tuple[bytes, int, dict]:
+    """Distorted lead guitar — a saw-ish tone driven hard, two detuned layers
+    over a long loop so it shimmers, darkened a little after the clip."""
+    rate, period = SNES_RATE, SNES_PERIOD
+    base = rate / period; periods, attack = 120, 6
+    ratios = [1.0, (periods + 1) / periods]
+    total = (attack + periods) * period
+    out = []
+    for i in range(total):
+        t = i / rate
+        v = sum(sum(math.sin(2.0 * math.pi * base * r * k * t) / k for k in range(1, 21))
+                for r in ratios) / len(ratios)
+        out.append(v * min(1.0, (i + 1) / (attack * period)))
+    # Driven hard and left unfiltered: at 16 kHz through the BRR model this
+    # tops out around 2.1 kHz centroid, as bright as the palette gets.
+    out = _drive(out, 6.0)
+    loop_start = attack * period
+    return _finish_snes(out, 0.9, loop_start, len(out))
+
+
+def mmx_rhythm_guitar() -> tuple[bytes, int, dict]:
+    """Distorted rhythm guitar chug — a driven low tone with a scrape of noise
+    on the pick, decaying fast; meant for stabs an octave or two down."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+    n = int(SNES_RATE * 0.35)
+    raw = []
+    for i in range(n):
+        t = i / SNES_RATE
+        ph = w * i / SNES_RATE
+        v = sum(math.sin(k * ph) / k for k in range(1, 9)) + 0.35 * math.sin(1.5 * ph)
+        v += _rng.uniform(-0.6, 0.6) * math.exp(-t / 0.012)
+        raw.append(v)
+    raw = _drive(raw, 5.0)
+    out = [v * math.exp(-t / 0.16) for v, t in zip(raw, (i / SNES_RATE for i in range(n)))]
+    out = _lowpass(out, 0.35)
+    period = SNES_PERIOD
+    ls = n - 2 * period
+    tail = out[ls:ls + period]
+    out = out[:ls] + tail * 2
+    return _finish_snes(out, 0.95, ls, len(out))
+
+
+def mmx_pulse_lead() -> tuple[bytes, int, dict]:
+    """Clean bright pulse synth — the arp and counter-line voice, dry."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 1.0, 3: 0.74, 4: 0.23, 5: 0.19, 6: 0.27, 7: 0.17, 9: 0.1},
+        attack_cycles=3, loop_cycles=1, amplitude=0.9)
+
+
+def mmx_synth_brass() -> tuple[bytes, int, dict]:
+    """Synth brass — a bright overblown attack settling into a strong third
+    and fourth partial."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.46, 3: 0.79, 4: 0.58, 5: 0.37, 6: 0.13, 7: 0.22, 8: 0.2},
+        bright={1: 0.8, 2: 0.9, 3: 1.0, 4: 1.0, 5: 0.9, 6: 0.7, 7: 0.6, 8: 0.5, 9: 0.4},
+        attack_cycles=7, loop_cycles=2, amplitude=0.9)
+
+
+def mmx_string_pad() -> tuple[bytes, int, dict]:
+    """String pad — slow swell, the fourth partial on top, chorused."""
+    return _ensemble_voice(
+        steady={1: 0.3, 2: 0.4, 3: 0.5, 4: 1.0, 5: 0.2, 6: 0.5, 7: 0.3, 8: 0.2},
+        periods=150, attack_cycles=55, detune_layers=2, lowpass=0.5, amplitude=0.85)
+
+
+def mmx_soft_lead() -> tuple[bytes, int, dict]:
+    """Soft lead — the octave partial on top of a quiet fundamental, slow."""
+    return _sustained_voice(
+        steady={1: 0.15, 2: 1.0, 3: 0.5, 4: 0.33, 6: 0.08},
+        attack_cycles=14, loop_cycles=2, lowpass=0.6, amplitude=0.85)
+
+
+def mmx_bass() -> tuple[bytes, int, dict]:
+    """Synth bass — a snap of brightness into a round octave-heavy sustain."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        body = 0.34 * math.sin(ph) + 1.0 * math.sin(2.0 * ph) + 0.41 * math.sin(3.0 * ph) + 0.24 * math.sin(4.0 * ph)
+        snap = (0.8 * math.sin(6.0 * ph) + 0.5 * math.sin(9.0 * ph)) * math.exp(-t / 0.03)
+        return body + snap
+    return _decaying_voice(0.7, tone, amp_tau=0.5, tail_loop=True, amplitude=0.95)
+
+
+def mmx_kick() -> tuple[bytes, int, dict]:
+    """Tight kick — fast pitch drop, a click on top, 80 ms body."""
+    n = int(SNES_RATE * 0.2)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 50.0 + 130.0 * math.exp(-t / 0.025)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.08)
+        v += 0.5 * math.sin(2.0 * math.pi * 2200.0 * t) * math.exp(-t / 0.004)
+        out.append(v)
+    return _finish_snes(out, 0.95)
+
+
+def mmx_snare() -> tuple[bytes, int, dict]:
+    """Bright snare — a hard crack, a short bright rattle, built to take the echo."""
+    n = int(SNES_RATE * 0.2)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        tone = math.sin(2.0 * math.pi * 210.0 * t) * math.exp(-t / 0.03)
+        noise = _rng.uniform(-1.0, 1.0)
+        out.append(0.45 * tone + 0.8 * noise * math.exp(-t / 0.06))
+    return _finish_snes(_highpass(out, 0.2), 0.9)
+
+
+def mmx_tom() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.3)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 110.0 + 100.0 * math.exp(-t / 0.05)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        out.append(math.sin(ph) * math.exp(-t / 0.12) + _rng.uniform(-0.3, 0.3) * math.exp(-t / 0.008))
+    return _finish_snes(out, 0.9)
+
+
+def mmx_hat() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.06)
+    out = [_rng.uniform(-1.0, 1.0) * math.exp(-(i / SNES_RATE) / 0.015) for i in range(n)]
+    return _finish_snes(_highpass(out, 0.55), 0.7)
+
+
+def mmx_open_hat() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.25)
+    out = [_rng.uniform(-1.0, 1.0) * math.exp(-(i / SNES_RATE) / 0.08) for i in range(n)]
+    return _finish_snes(_highpass(out, 0.5), 0.6)
+
+
+def mmx_crash() -> tuple[bytes, int, dict]:
+    """Short bright crash — the game's cymbals are loops cut short, not washes."""
+    n = int(SNES_RATE * 0.45)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        out.append((_rng.uniform(-1.0, 1.0) * 0.8 + 0.2 * math.sin(2.0 * math.pi * 3100.0 * t)) * math.exp(-t / 0.15))
+    return _finish_snes(_highpass(out, 0.35), 0.7)
+
+
 def snes_orch_hit() -> tuple[bytes, int, dict]:
     """Orchestra hit — stacked saws on root, fifth and octave plus a noise burst."""
     n = int(SNES_RATE * 0.5)
@@ -1756,6 +1913,9 @@ PRESET_RELEASE = {
     "mana_glass_pad": "pad",
     "evm_pad": "pad", "evm_dark_pad": "pad", "evm_drone": "bass",
     "evm_breath_flute": "flute", "evm_choir_oo": "choir", "evm_tubular_bell": "keys",
+    "mmx_lead_guitar": "lead", "mmx_rhythm_guitar": "lead", "mmx_pulse_lead": "lead",
+    "mmx_synth_brass": "brass", "mmx_string_pad": "strings", "mmx_soft_lead": "lead",
+    "mmx_bass": "bass",
     # Genesis
     "gen_lead": "lead", "gen_saw_lead": "lead", "gen_brass": "brass",
     "gen_pad": "pad", "gen_sub_bass": "bass", "gen_bell": "keys",
@@ -1993,6 +2153,20 @@ INSTRUMENT_PRESETS = {
     "evm_tubular_bell": (evm_tubular_bell, {},         52),
     "evm_frame_drum": (evm_frame_drum, {},             62),
     "evm_soft_cymbal": (evm_soft_cymbal, {},           48),
+    # Mega Man X set
+    "mmx_lead_guitar": (mmx_lead_guitar, {},           58),
+    "mmx_rhythm_guitar": (mmx_rhythm_guitar, {},       60),
+    "mmx_pulse_lead": (mmx_pulse_lead, {},             58),
+    "mmx_synth_brass": (mmx_synth_brass, {},           58),
+    "mmx_string_pad": (mmx_string_pad, {},             54),
+    "mmx_soft_lead":  (mmx_soft_lead,  {},             58),
+    "mmx_bass":       (mmx_bass,       {},             64),
+    "mmx_kick":       (mmx_kick,       {},             64),
+    "mmx_snare":      (mmx_snare,      {},             62),
+    "mmx_tom":        (mmx_tom,        {},             62),
+    "mmx_hat":        (mmx_hat,        {},             50),
+    "mmx_open_hat":   (mmx_open_hat,   {},             48),
+    "mmx_crash":      (mmx_crash,      {},             52),
     "evm_brush_snare": (evm_brush_snare, {},           56),
     "evm_click":      (evm_click,      {},             50),
     "snes_kick":      (snes_kick,      {},             64),

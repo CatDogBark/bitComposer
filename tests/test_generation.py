@@ -435,6 +435,21 @@ class Packs(unittest.TestCase):
         self.assertEqual(notes, [(0, 36)])      # heavy register: octave 2
         self.assertEqual(bass.pick_section_bass("light", 0.95, "drone"), "drone")
 
+    def test_riff_bass_repeats_each_bar(self):
+        from bitcomposer import bass
+        notes = bass.generate_bass(48, "minor", 32, style="riff", weight="heavy")
+        rows = [r for r, _ in notes]
+        self.assertEqual(rows, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30])
+        self.assertEqual(notes[2][1] - notes[0][1], 12)
+        self.assertEqual(bass.pick_section_bass("heavy", 0.95, "riff"), "riff")
+
+    def test_slap_echo_writes_tick_delays(self):
+        song = compose_song(seed=9, style_pref="snes", echo="on", echo_delay="slap")
+        self.assertEqual(song["info"]["echo_delay"], "slap")
+        delayed = sum(1 for p in song["patterns"] for r in p.data
+                      if r[pattern.CH_ECHO1].note not in (0, 254, 255) and r[pattern.CH_ECHO1].effect == it_format.FX_SPECIAL)
+        self.assertGreater(delayed, 0)
+
     def test_pack_none_is_plain_snes(self):
         from bitcomposer.packs import PACKS
         info = compose_song(seed=5, style_pref="snes", pack="none")["info"]
