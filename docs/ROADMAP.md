@@ -32,7 +32,7 @@ These change how every note sounds, not what notes are played.
   today. Let a figure sit low in the verse and high in the chorus, or fall
   into a chord change, with the existing melody-collision check so the arp
   stays out of the lead's register.
-- **Drum ghost notes and velocity shape — done (branch `drums`, 2026-10-14)**,
+- **Drum ghost notes and velocity shape — done (merged 2026-10-14, approved by ear)**,
   along with phrase variation, the whole kit, fills by context and
   breakdowns; see `bitcomposer/drums.py`.
 - **Per-section instrumentation.** Beyond the layer map, a plan for which
