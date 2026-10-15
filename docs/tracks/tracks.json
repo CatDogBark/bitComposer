@@ -1,62 +1,62 @@
 [
  {
-  "file": "Fallen Gauntlet.it",
-  "title": "Fallen Gauntlet",
+  "file": "Outer Bastion.it",
+  "title": "Outer Bastion",
   "palette": "snes",
   "info": "D# minor pentatonic - 140 BPM",
   "arrangement": "snes + echo - standard form",
   "voices": "snes_choir / snes_organ / snes_slap_bass",
-  "seed": "seed 11 - bitcomposer 0.4.0",
+  "seed": "seed 11 - bitcomposer 0.6.0",
   "picked": false
  },
  {
-  "file": "Last Overpass.it",
-  "title": "Last Overpass",
+  "file": "Frozen Depot.it",
+  "title": "Frozen Depot",
   "palette": "genesis",
   "info": "D# minor pentatonic - 140 BPM",
   "arrangement": "genesis - linear form",
   "voices": "gen_saw_lead / gen_pad / gen_pluck_bass",
-  "seed": "seed 11 - bitcomposer 0.4.0",
+  "seed": "seed 11 - bitcomposer 0.6.0",
   "picked": false
  },
  {
-  "file": "Grim Caldera.it",
-  "title": "Grim Caldera",
+  "file": "Forsaken Foundry.it",
+  "title": "Forsaken Foundry",
   "palette": "chip",
   "info": "D# minor pentatonic - 140 BPM",
   "arrangement": "chip - standard form",
   "voices": "pulse_lead / triangle_lead / thin_bass",
-  "seed": "seed 11 - bitcomposer 0.4.0",
+  "seed": "seed 11 - bitcomposer 0.6.0",
   "picked": false
  },
  {
-  "file": "Quiet Outpost.it",
-  "title": "Quiet Outpost",
+  "file": "Lower Observatory.it",
+  "title": "Lower Observatory",
   "palette": "snes",
   "info": "F dorian - 151 BPM",
   "arrangement": "snes + echo - rondo form",
   "voices": "snes_bell / snes_brass / snes_pluck_bass",
-  "seed": "seed 12 - bitcomposer 0.4.0",
+  "seed": "seed 12 - bitcomposer 0.6.0",
   "picked": false
  },
  {
-  "file": "Starlit Caldera.it",
-  "title": "Starlit Caldera",
+  "file": "Quiet Reactor.it",
+  "title": "Quiet Reactor",
   "palette": "genesis",
   "info": "F dorian - 151 BPM",
   "arrangement": "genesis + echo - linear form",
   "voices": "gen_saw_lead / psg_square / gen_slap_bass",
-  "seed": "seed 12 - bitcomposer 0.4.0",
+  "seed": "seed 12 - bitcomposer 0.6.0",
   "picked": false
  },
  {
-  "file": "Quiet Expanse.it",
-  "title": "Quiet Expanse",
+  "file": "Last Sanctum.it",
+  "title": "Last Sanctum",
   "palette": "chip",
   "info": "F dorian - 151 BPM",
   "arrangement": "chip + echo - short form",
   "voices": "pulse_lead / filtered_lead / square_bass",
-  "seed": "seed 12 - bitcomposer 0.4.0",
+  "seed": "seed 12 - bitcomposer 0.6.0",
   "picked": false
  }
 ]

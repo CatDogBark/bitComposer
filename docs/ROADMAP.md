@@ -74,6 +74,10 @@ composer's design keeps the door open.
 - **Transitions and stingers.** Short fills or hits in the piece's key and
   palette to bridge one state to another.
 - **Palette as a game parameter**, per area or faction.
+- **Stable-key mode exists:** `--keys home` pins every section to the home
+  key. Game loops that sit under a scene, tracks that must match a stinger,
+  and A/B tests of other engine changes all want it; the default moving
+  plan is tuned for browsing a generator.
 - **In-browser generation** for the listening page is the same problem in
   miniature; Pyodide (CPython in WebAssembly, ~7 MB) would run the
   dependency-free generator unchanged and is the first thing to try.

@@ -229,11 +229,50 @@ follow.
   reported as 44100 Hz); every sample now reports the exact rate its period
   implies.
 
-**Still open.** The learned-model roadmap in §5 is untouched. Drums are still
-template-driven with no ghost notes or velocity shape beyond humanisation;
-the arp has one figure per song; there is no per-section instrumentation
-plan beyond the layer map. The analyzer does not yet score the SNES palette's
-timbral intent (loop seams and levels are covered by the tests instead).
+**Still open as of 0.3.0** (most of it since done — see §2d): the learned-model
+roadmap in §5; drums were template-driven with no ghost notes; the arp had one
+figure per song; no per-section instrumentation plan beyond the layer map.
+
+---
+
+## 2d. Composition passes — 0.5.0 and 0.6.0
+
+**Date:** 2026-10-14. Five passes, each developed on a branch, measured over
+twenty seeds with `tools/analyze.py`, and reviewed by ear on a comparison
+page (same seed, old against new, with the parts not under review held
+identical) before merging. Every one was approved; two were tuned by ear
+afterwards (arp levels, metallic hat).
+
+| pass | what changed | metric | before | after |
+|---|---|---|---|---|
+| Arp figures (0.5.0) | eleven one-bar figures with accents, verse/chorus/bridge figures per song, climb on alternate bars, weak steps dropped under a busy lead, SNES 7th/9th colour | distinct arp figures per song | 49.5 (velocity jitter) | 6.3 (real recurrence) |
+| | | arp velocity levels | 28.1 | 10.8 |
+| Release envelopes (0.5.0) | sustain loop + decaying tail per family, note-off endings | audible tail after a note is let go | 0–20 ms | strings 460, brass 220, flute 120, organ 60 ms |
+| Groove drums (0.5.0) | four-bar phrases (main, alt, lift), velocity tiers, ghosts on a rim, whole kit, fills by context, bridge drops | distinct bar patterns per song | 5.2 | 12.4 |
+| | | bars repeating the previous | 60% | 12% |
+| | | kick / snare velocity levels | 1 / 1 | 3 / 4 |
+| Melody phrases (0.6.0) | four-bar sentences (statement, sequence, climax, cadence), chord tones on strong beats, leaps answered, register from energy, own random stream | chord tone on beats 1 and 3 | 61% | 77% |
+| | | phrase-final note held (rows) | 5.0 | 7.4 |
+| | | position of the highest note | 0.35 | 0.49 |
+| Form (0.6.0) | section cadences with bass pickups, relative/subdominant key plan, two-bar harmonic rhythm | pattern joins resolving V→I | 18% | 33% |
+| | | mean song length | 224 s | 173 s |
+
+Two lessons from the reviews are worth more than any number:
+
+- **Hold everything else still.** The melody draws from its own random
+  stream, seeded from the pattern's content seed, so the parts after it do
+  not move when it changes; the drum pass rendered its "old" side by
+  degrading the new engine on the identical tune. Without that, an A/B
+  compares two songs, not one change.
+- **The comparison player must not lie.** Two `<audio>` elements kept in
+  step by seeking the muted one re-buffered every half second and made the
+  old side stutter through three reviews. Both clips now decode into
+  buffers on one audio clock and the switch is a gain change.
+
+**Still open** (see `ROADMAP.md`): arp register motion beyond the octave
+climb, chip chord stabs, per-section instrumentation, pad colour, the
+learned-model items, and the FFVI / Metroid instrument sets. `--keys home`
+pins every section to the home key for loops and A/B tests.
 
 ---
 

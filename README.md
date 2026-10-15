@@ -44,6 +44,7 @@ Everything defaults to `random`.
 ```
 --style   chip|snes|genesis          sound palette
 --echo    on|off|random              lead echo (always on for snes when random)
+--keys    moving|home                moving: choruses/bridges may change key; home: stay put
 --tempo   slow|medium|fast           80–110 / 110–140 / 140–180 BPM
 --energy  chill|normal|intense       density and arrangement weight
 --scale   minor|major|pentatonic

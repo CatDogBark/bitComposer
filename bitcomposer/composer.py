@@ -243,18 +243,28 @@ RELATIVE = {
 }
 
 
-def plan_keys(scale_name: str) -> dict[str, tuple[int, str]]:
+def plan_keys(scale_name: str, keys: str = "moving") -> dict[str, tuple[int, str]]:
     """Per section type: (semitone shift from the home key, scale name).
 
     Verses and themes stay home. A chorus stays home half the time, goes to
     the relative key a third of the time, or lifts to the subdominant. A
     bridge most often moves — that is what a bridge is for — to the relative
     key or the subdominant.
+
+    keys="home" pins every section to the home key. The moving plan trades
+    consistency for the chance of a striking song, which is right for a
+    generator you browse; a loop that has to sit under a game scene for ten
+    minutes, a track that must match a fixed-key stinger, or an A/B test of
+    anything else in the engine all want the stable version.
     """
     rel_shift, rel_scale = RELATIVE.get(scale_name, (0, scale_name))
     home = (0, scale_name)
+    # Draw either way, so a seed makes the same song with the keys pinned
+    # apart from the key moves themselves.
     chorus = random.choices([home, (rel_shift, rel_scale), (5, scale_name)], weights=[50, 32, 18], k=1)[0]
     bridge = random.choices([home, (rel_shift, rel_scale), (5, scale_name)], weights=[40, 35, 25], k=1)[0]
+    if keys == "home":
+        chorus = bridge = home
     return {"verse": home, "chorus": chorus, "bridge": bridge, "intro": home, "outro": home}
 
 
@@ -492,7 +502,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                  harmony_mode: str = "random",
                  bass_weight: str = "random",
                  song_form: str = "random",
-                 echo: str = "random") -> dict:
+                 echo: str = "random",
+                 keys: str = "moving") -> dict:
     """Compose a complete procedural song. Returns a dict for write_it_file."""
     if seed is not None:
         random.seed(seed)
@@ -599,11 +610,16 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     use_alt_chorus = random.random() < 0.5
     # Key relations and harmonic rhythm. A section that moves key takes a
     # progression from its own scale's table, coloured like the home one.
-    key_plan = plan_keys(scale_name)
+    # Draw the moving plan and its progressions regardless of `keys`, so a
+    # seed pinned to the home key is the same song minus the key moves.
+    drawn_plan = plan_keys(scale_name, "moving")
     section_progs = {}
-    for sec, (shift, sname) in key_plan.items():
+    for sec, (shift, sname) in drawn_plan.items():
         if sname != scale_name:
             section_progs[sec] = theory.add_chord_color(theory.random_progression(sname))
+    key_plan = drawn_plan if keys != "home" else {k: (0, scale_name) for k in drawn_plan}
+    if keys == "home":
+        section_progs = {}
     compact = random.random() < (0.6 if target_bpm >= 130 else 0.35)
     modulate_chorus = key_plan["chorus"][0] != 0
 
@@ -791,7 +807,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     scale_label = scale_name.replace("_", " ")
     # Title from the song's own random state: as reproducible as the music,
     # and finally something other than "BitComposer - C Dorian" twenty times.
-    song_name = names.song_title(scale_name)
+    # Its own stream: the title must not depend on how many random draws the
+    # arrangement happened to make, so a seed keeps its name across options
+    # like --keys home.
+    song_name = names.song_title(scale_name, rng=random.Random(song_salt ^ 0x7A1E))
     display_structure = [struct.section_type(s) for s in song_structure]
     bpm = round(it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT))
     message = "\n".join([
@@ -921,7 +940,8 @@ def compose_and_save(filepath: str, seed: int | None = None,
                      harmony_mode: str = "random",
                      bass_weight: str = "random",
                      song_form: str = "random",
-                     echo: str = "random") -> dict:
+                     echo: str = "random",
+                     keys: str = "moving") -> dict:
     """Compose a song and save it as an IT file. Returns song info."""
     song = compose_song(seed=seed, tempo_pref=tempo, energy_pref=energy,
                         scale_pref=scale, style_pref=style,
@@ -931,6 +951,6 @@ def compose_and_save(filepath: str, seed: int | None = None,
                         harmony_mode=harmony_mode,
                         bass_weight=bass_weight,
                         song_form=song_form,
-                        echo=echo)
+                        echo=echo, keys=keys)
     save_song(song, filepath)
     return song["info"]

@@ -134,6 +134,14 @@ def main():
         help="Delay echo on the lead, SNES style (default: random — always on for snes)",
     )
     parser.add_argument(
+        "--keys",
+        choices=["moving", "home"],
+        default="moving",
+        help="moving: choruses and bridges may change key (default); "
+             "home: every section stays in the home key, for loops that must "
+             "sit still or for A/B tests of other changes",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"bitcomposer {__version__}",
@@ -160,7 +168,7 @@ def main():
                                 harmony_mode=args.harmony_mode,
                                 bass_weight=args.bass_weight,
                                 song_form=args.form,
-                                echo=args.echo)
+                                echo=args.echo, keys=args.keys)
             info = song["info"]
 
             if args.output and args.count == 1:

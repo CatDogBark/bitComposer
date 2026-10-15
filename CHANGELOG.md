@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-10-14
+
+Composition release: the melody and form passes, each reviewed by ear on a comparison page before merging.
+
+- `--keys home` pins every section to the home key, for loops that must sit still or for A/B tests of other changes.
 
 - Form pass: every section ends on a cadence, the last two bars moving to the dominant of what follows with the bass walking up into it (pattern joins resolving V to I: 18% to 33% over 20 seeds); choruses and bridges move to the relative key or the subdominant instead of the old one-semitone lift; a two-bar harmonic rhythm (two chords per pattern, eight-bar sections) on some songs, more often at fast tempo.
 - Melody phrase engine: each pattern is a four-bar sentence (statement, sequence a step up, development carrying the climax, cadence on a held note), chord tones on strong beats, leaps answered by steps, question phrases ending off the root and answers on it, register driven by section energy so choruses lift. Over 20 seeds: chord tone on strong beats 61% to 77%, held phrase endings 5 to 7.4 rows, climax position 0.35 to 0.49.
