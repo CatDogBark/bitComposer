@@ -53,6 +53,14 @@ These change how every note sounds, not what notes are played.
   separate Metroid pack. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Windows player.** The Windows zip is the generator only: the window
+  makes songs, OpenMPT or XMPlay plays them. The Plasma widget's features
+  (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
+  shuffle, gain) live in the Linux daemon on libopenmpt and D-Bus. Two steps
+  up: a topped-up folder (the window keeps generating every few minutes with
+  a cap that prunes unkept songs), then a real player: bundle libopenmpt's
+  Windows DLL with the window and drive it the way the daemon does, since
+  the ctypes bindings already exist.
 - **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
   sample bank in BRR, every voice's envelope and pitch, the echo settings.
   A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot
