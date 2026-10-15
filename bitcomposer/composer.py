@@ -887,29 +887,28 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 # The echo channels sit at the melody's level; the taps are already quieter
 # through their volume columns.
 #
-# The arp level depends on the palette. A held chip pulse arp balanced by ear
-# at 17 (Lower Cistern, 2026-10-13) where 33 buried the chorus. Chip arps are
-# now decaying pulse blips, which average ~0.55x a held pulse over an 8th-note
-# step, so 28 puts them at the level that 17 gave the held tone. SNES and
-# Genesis arps are decaying plucks and bells and sit in that band at 33.
-# Melody and echo at 22: with looped voices normalised to equal sustain
-# loudness (samples.LOUDNESS_TARGET), 22 puts the SNES lead back where it
-# sat before normalisation (about 14 dB under the rest of the mix, measured
-# over 12 seeds); the per-palette overrides below land chip and genesis
-# within 2 dB of that.
+# Measured by rendering each part alone (2026-10-14, 60 s, dBFS): melody sits
+# 6-14 dB under the drums and the arp 1-4 dB under the melody on every palette.
+# The arp level depends on the palette (PALETTE_MIX below): SNES arps are
+# decaying plucks and bells and sit at 33; chip pulse blips and the genesis
+# PSG square are trimmed.
 CHANNEL_VOLUMES = [
-    22,              # melody
+    13,              # melody
     25, 25, 25,      # harmony
     8,               # bass
     33,              # arp
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
-    22, 22,          # echo taps
+    13, 13,          # echo taps
 ]
 # Lead levels no longer differ by palette: looped voices are normalised to
-# equal sustain loudness in samples.generate_instrument.
+# equal sustain loudness in samples.generate_instrument (LOUDNESS_TARGET).
+# Chip arp was set by ear (28) against a lead that was 6.6 dB too hot before
+# equal-loudness normalisation; the plucks themselves are peak-capped and did
+# not move, so the arp comes down by the same amount.  The genesis PSG arp is
+# a looped square and was normalised along with its lead, so 17 still holds.
 PALETTE_MIX = {
-    "chip": {CH_ARP: 28, CH_MELODY: 26, CH_ECHO1: 26, CH_ECHO2: 26},
-    "genesis": {CH_ARP: 17, CH_MELODY: 19, CH_ECHO1: 19, CH_ECHO2: 19},
+    "chip": {CH_ARP: 15},
+    "genesis": {CH_ARP: 17},
 }
 
 

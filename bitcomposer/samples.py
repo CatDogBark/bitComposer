@@ -1548,10 +1548,13 @@ _ONE_SHOT_WAVEFORMS = {
 }
 
 
-# Sustain-region RMS (of full scale, after the default volume) every looped
-# tonal preset is normalised to. 0.18 is where the SNES flute and brass
-# landed before normalisation, so the SNES palette keeps its level.
-LOUDNESS_TARGET = 0.18
+# Sustain-region RMS (of full scale) every looped tonal preset is scaled to.
+# 0.45 is where the sustaining SNES voices sit (strings, organ, synth lead
+# 0.44; flute 0.63; brass 0.38), so that palette keeps its level; a square
+# wave (0.89) comes down ~6 dB and the FM lead (0.80) ~5 dB. Decaying
+# voices (plucks, bells, e-piano) have a quiet loop region and would only
+# scale up, which the peak cap prevents, so they keep their shape.
+LOUDNESS_TARGET = 0.45
 
 
 def generate_instrument(name: str) -> dict:
