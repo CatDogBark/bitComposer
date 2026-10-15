@@ -20,10 +20,12 @@ These change how every note sounds, not what notes are played.
   Stage one (done): a decaying, darkening three-tap tail on the lead, sent
   per note. Stage two (done): harmony and arp sends with their own levels,
   a `layout:` line in the song message, one ECHO bus fader in the widget
-  with an expand to LEAD / HARM / ARP, and `--echo-wet`. Stage three:
-  per-song delay (eighth, dotted eighth or quarter), feedback and wetness
-  drawn per song, opened in thin sections and pulled back in the chorus,
-  and a ping-pong option.
+  with an expand to LEAD / HARM / ARP, and `--echo-wet`. Stage three
+  (done): per-song delay (eighth, dotted eighth or quarter, weighted by
+  tempo), feedback and wetness drawn per song, sends opened in thin
+  sections and pulled back in the chorus, and bounce / spread stereo with
+  a pan per tap. Left for later: echo on the drums as a rare choice
+  (gated snare), and a widget readout of the drawn settings.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 

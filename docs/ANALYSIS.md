@@ -241,13 +241,25 @@ at ½, harmony at 0.3 and arp at 0.35 of the part, repeats below 8%
 dropped, drums and bass dry. Returns live on seven channels (lead 2,
 harmony 3, arp 2; `pattern.CH_ECHO_ALL`, 19 channels in all) and the song
 message carries a `layout:` line naming every channel's role so the widget
-can fold them into one ECHO bus. `--echo-wet light|normal|wet` scales
-every send. Measured on four SNES songs: returns sit 6 dB under the lead,
-about 5 dB under the harmony and 9 dB under the arp; all returns together
-about 5 dB under the melody. Left to chance, 70% of snes songs get the
-echo and chip and genesis never do (neither chip had an echo unit);
-`--echo` overrides. Still to come: per-song delay, feedback and wetness
-tied to the song's form. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
+can fold them into one ECHO bus. Measured on four SNES songs: returns sit
+6 dB under the lead, 12–14 dB under the harmony and 9–11 dB under the
+arp; all returns together 2–6 dB under the melody.
+
+Each song draws its own echo from a stream of its own (`song_salt ^
+0xEC40`, so the arrangement never moves when the echo options change):
+the delay as a beat fraction weighted by tempo (eighth, dotted eighth or
+quarter; fast songs favour the longer ones), feedback 0.3–0.6, a wetness
+(light 25% / normal 50% / wet 25%, `--echo-wet` overrides), and a stereo
+mode (`--echo-stereo`): "bounce" alternates sides per tap, "spread" puts
+every repeat of a part wide on the far side of it, the way the hardware's
+two-sided echo read. Pans are written per tap as an Xxx effect on the
+copy's note row, so taps sharing a channel can still bounce. Every send
+is scaled by section (`ECHO_SECTION_GAIN`): opened in intros, bridges and
+outros, pulled back to 0.7 in the chorus where the arp and harmony fill
+the space. The drawn settings are written into the song message
+("echo: dotted delay, feedback 0.45, bounce, wet"). Left to chance, 70%
+of snes songs get the echo and chip and genesis never do (neither chip
+had an echo unit); `--echo` overrides. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
 follow.
 
 **Bugs fixed on the way.**
