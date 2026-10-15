@@ -9,11 +9,10 @@ second) and `CHANGELOG.md` for what has shipped.
 
 These change how every note sounds, not what notes are played.
 
-- **Release envelopes — done (branch `releases`, 2026-10-14).** Sustained
+- **Release envelopes — done (merged 2026-10-14, approved by ear).** Sustained
   voices now carry a sustain loop and a decaying tail; the generator writes
   note-off for them so each family releases at its own pace
-  (`samples.RELEASE`, `samples.PRESET_RELEASE`). Lengths are a first draft
-  set by principle and await tuning by ear. One-shot voices (plucks, drums)
+  (`samples.RELEASE`, `samples.PRESET_RELEASE`). Lengths were judged right as drafted. One-shot voices (plucks, drums)
   still end on their own.
 - **Reverb/echo on more than the lead.** The SNES echo ran on most voices.
   Harmony and arp echo returns at lower level, on the existing two echo
