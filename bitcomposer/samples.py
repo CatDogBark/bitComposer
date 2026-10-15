@@ -1253,6 +1253,20 @@ def evm_tubular_bell() -> tuple[bytes, int, dict]:
     return _decaying_voice(1.8, tone, amp_tau=1.1, tail_loop=True, amplitude=0.8)
 
 
+def evm_soft_cymbal() -> tuple[bytes, int, dict]:
+    """A cymbal touched with a mallet: blooms over 80 ms, dark, gone in well
+    under a second. For the crash slot of a quiet kit, where a hit-and-wash
+    crash takes the whole phrase."""
+    n = int(SNES_RATE * 0.7)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        env = min(1.0, t / 0.08) * math.exp(-max(0.0, t - 0.08) / 0.18)
+        v = _rng.uniform(-1.0, 1.0) * 0.8 + 0.2 * math.sin(2.0 * math.pi * 1900.0 * t)
+        out.append(v * env)
+    return _finish_snes(_lowpass(_highpass(out, 0.25), 0.5), 0.5)
+
+
 def evm_frame_drum() -> tuple[bytes, int, dict]:
     """Frame drum — a deep, soft hand drum with a long body."""
     n = int(SNES_RATE * 0.6)
@@ -1978,6 +1992,7 @@ INSTRUMENT_PRESETS = {
     "evm_choir_oo":   (evm_choir_oo,   {},             56),
     "evm_tubular_bell": (evm_tubular_bell, {},         52),
     "evm_frame_drum": (evm_frame_drum, {},             62),
+    "evm_soft_cymbal": (evm_soft_cymbal, {},           48),
     "evm_brush_snare": (evm_brush_snare, {},           56),
     "evm_click":      (evm_click,      {},             50),
     "snes_kick":      (snes_kick,      {},             64),

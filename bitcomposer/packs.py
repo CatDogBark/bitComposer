@@ -108,7 +108,7 @@ PACKS = {
             "bass_medium": ["evm_drone", "snes_pluck_bass", "ffvi_contrabass"],
             "bass_light": ["evm_drone", "snes_pluck_bass"],
             "drums": {"kick": "ffvi_bassdrum", "snare": "evm_brush_snare", "hihat": "mana_shaker",
-                      "tom": "evm_frame_drum", "crash": "ffvi_cymbal",
+                      "tom": "evm_frame_drum", "crash": "evm_soft_cymbal",
                       "open_hihat": "mana_tambourine", "rim": "evm_click"},
         },
         "habits": {
@@ -131,8 +131,10 @@ PACKS = {
             "counter_line": 0.2,
             "section_rolls": False,
             "hat_stroke": 0.6,
+            "crash_chance": 0.35,     # a third of the phrase starts, never on fills
+            "fill_crash": False,
         },
-        "trims": {"kick": 26, "snare": 24, "hihat": 18, "openhat": 18, "tom": 30},
+        "trims": {"kick": 26, "snare": 24, "hihat": 18, "openhat": 18, "tom": 30, "crash": 24},
     },
 }
 

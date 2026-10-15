@@ -181,7 +181,8 @@ def _thin_hats(hat: str) -> str:
 
 def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm: float,
                  swing: int, speed: int, fill: dict | None, breakdown: bool,
-                 hat_stroke: float = 1.0,
+                 hat_stroke: float = 1.0, crash_chance: float = 1.0,
+                 fill_crash: bool = True, kit_rng: random.Random | None = None,
                  crash_on_one: bool, bars: int = 4) -> dict:
     """Write a four-bar drum phrase into `pat`. Returns counts per piece."""
     groove = GROOVES[groove_name]
@@ -225,6 +226,8 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
             for i, c in enumerate(steps):
                 if c == "." or i >= fill_from:
                     continue
+                if piece == "crash" and crash_chance < 1.0 and (kit_rng or random).random() >= crash_chance:
+                    continue                  # a quiet kit marks fewer phrases
                 if drop and piece not in ("hat", "ohat"):
                     continue
                 row = base + i
@@ -241,6 +244,8 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
 
         if fill_here:
             for piece in ("kick", "snare", "tom", "crash", "hat"):
+                if piece == "crash" and not fill_crash:
+                    continue
                 steps = fill_here.get(piece)
                 if not steps:
                     continue
@@ -255,7 +260,8 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
                         put(piece, row, VEL[piece][c], extra_fx=fx)
 
     if crash_on_one and not breakdown:
-        put("crash", 0, int(VEL["crash"]["X"] * max(0.6, energy)))
+        if crash_chance >= 1.0 or (kit_rng or random).random() < crash_chance:
+            put("crash", 0, int(VEL["crash"]["X"] * max(0.6, energy)))
     return counts
 
 
