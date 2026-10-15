@@ -54,7 +54,9 @@ ECHO_TAP_CUTOFF_HZ = (4000, 2000, 1000)   # two-pole lowpass on the sample each 
 # a seed's arrangement does not move when they change. Delay in rows is picked
 # for the tempo so the repeat stays a musical fraction in a 180-450 ms band:
 # fast songs favour the dotted eighth and quarter, slow songs the eighth.
-ECHO_DELAYS = {"eighth": 2, "dotted": 3, "quarter": 4}
+# "slap" is the Mega Man X echo: 48 ms, under a row, written as a tick delay
+# (SDx) on the copy's note row instead of a pan, so it takes the channel's pan.
+ECHO_DELAYS = {"eighth": 2, "dotted": 3, "quarter": 4, "slap": 0.5}
 ECHO_DELAY_WEIGHTS = [        # (min bpm, {name: weight})
     (140, {"eighth": 1, "dotted": 5, "quarter": 4}),
     (100, {"eighth": 2, "dotted": 6, "quarter": 2}),
@@ -291,25 +293,29 @@ def _register_releases(samples: list[ITSample]) -> None:
 STRIKE_RULE_ROLES = {"arp"}
 
 
-def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[str, int]]:
+def _build_samples(instruments: dict[str, str]
+                   ) -> tuple[list[ITSample], dict[str, int], dict[str, bool]]:
     """Generate ITSample objects for all instruments.
 
-    Returns (samples, sample_map) where sample_map maps an instrument role
-    to a 1-based sample index; roles sharing a preset (and the same loudness
-    rule) share a sample.
+    Returns (samples, sample_map, struck): sample_map maps an instrument role
+    to a 1-based sample index, roles sharing a preset (and the same loudness
+    rule) share a sample; struck says per role whether the voice is a struck
+    one (the mix needs it for the arp).
     """
     samples: list[ITSample] = []
-    seen: dict[tuple[str, bool], int] = {}
+    seen: dict[tuple[str, bool], tuple[int, bool]] = {}
     sample_map: dict[str, int] = {}
+    struck: dict[str, bool] = {}
 
     for key, name in instruments.items():
         rule = key in STRIKE_RULE_ROLES
         if (name, rule) not in seen:
-            samples.append(_make_sample(name, strike_rule=rule))
-            seen[(name, rule)] = len(samples)  # 1-based
-        sample_map[key] = seen[(name, rule)]
+            inst = smp.generate_instrument(name, strike_rule=rule)
+            samples.append(_sample_from_inst(name, inst))
+            seen[(name, rule)] = (len(samples), bool(inst.get("struck")))  # 1-based
+        sample_map[key], struck[key] = seen[(name, rule)]
 
-    return samples, sample_map
+    return samples, sample_map, struck
 
 
 class _EchoBus:
@@ -322,11 +328,12 @@ class _EchoBus:
     with taps = [(channel, delay, level, {source instrument: variant})].
     """
 
-    def __init__(self, samples: list[ITSample], wet: float = 1.0, delay: int = 3,
-                 feedback: float = 0.5, stereo: str = "bounce", arp_scale: float = 1.0):
+    def __init__(self, samples: list[ITSample], wet: float = 1.0, delay: float = 3,
+                 feedback: float = 0.5, stereo: str = "bounce", arp_scale: float = 1.0,
+                 speed: int = 6):
         self.samples = samples
         self.wet, self.delay, self.feedback, self.stereo = wet, delay, feedback, stereo
-        self.arp_scale = arp_scale
+        self.arp_scale, self.speed = arp_scale, speed
         self._variants: dict[tuple[str, float, bool], int] = {}
         self._maps: list[dict[int, int]] = [dict() for _ in ECHO_TAP_CUTOFF_HZ]
 
@@ -348,7 +355,15 @@ class _EchoBus:
             lvl = min(1.0, level * self.wet * gain) * self.feedback ** k
             if lvl < 0.08:
                 break                         # below this a repeat is not heard
-            taps.append((ch, self.delay * (k + 1), lvl, self._maps[k], pans[k]))
+            total = self.delay * (k + 1)
+            rows = int(total)
+            ticks = int(round((total - rows) * self.speed))
+            if ticks >= self.speed:
+                rows, ticks = rows + 1, 0
+            if ticks:
+                taps.append((ch, rows, lvl, self._maps[k], None, ticks))
+            else:
+                taps.append((ch, rows, lvl, self._maps[k], pans[k]))
         return taps
 
     def sends(self, sec_type: str = "verse") -> list[tuple[int, list, int, int, float]]:
@@ -367,6 +382,8 @@ class _EchoBus:
 
     def describe(self) -> str:
         name = next(n for n, rows in ECHO_DELAYS.items() if rows == self.delay)
+        if name == "slap":
+            return f"slap delay, feedback {self.feedback:.2f}, {self.stereo}"
         return f"{name} delay, feedback {self.feedback:.2f}, {self.stereo}"
 
 
@@ -470,7 +487,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      n_patterns, is_ending, ending_style,
                      swing_amount, speed, bpm, is_intro, echo_sends,
                      pickup_root=None, counter_chance=0.3, hat_stroke=1.0,
-                     crash_chance=1.0, fill_crash=True, kit_rng=None) -> ITPattern:
+                     crash_chance=1.0, fill_crash=True, kit_rng=None,
+                     power_chords=False) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -479,6 +497,9 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     chord_notes = segments[0][4]                       # the pattern's main chord
     melody_timeline = [(s, notes) for s, _, _, _, notes in segments]
     harmony_segments = [(s, e, notes) for s, e, _, _, notes in segments]
+    if power_chords:
+        # Root, fifth, octave: the guitarist's chord, no third.
+        harmony_segments = [(s, e, [root, root + 7, root + 12]) for s, e, root, _, _ in segments]
     bass_segments = [(s, e, root, ctype) for s, e, root, ctype, _ in segments]
 
     # Scale volumes by section energy
@@ -760,7 +781,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
     # ── Instruments ──
     instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack)
-    samples, sample_map = _build_samples(instruments)
+    samples, sample_map, struck_roles = _build_samples(instruments)
     _register_releases(samples)
     echo_bus = None                      # built once song_salt exists
 
@@ -868,7 +889,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     arp_scale = max(0.0, min(1.0, (ECHO_ARP_OFF_BPM - bpm_for_echo)
                                   / (ECHO_ARP_OFF_BPM - ECHO_ARP_FULL_BPM)))
     echo_bus = _EchoBus(samples, ECHO_WETNESS[echo_wet], ECHO_DELAYS[echo_delay],
-                        echo_feedback, echo_stereo, arp_scale)
+                        echo_feedback, echo_stereo, arp_scale, speed)
     pattern_sec: dict[int, str] = {}     # pattern index -> section type, for the spill
     # Kit decisions a pack adds (which phrases get a crash) draw from their own
     # stream so they never move the parts composed after the drums.
@@ -1014,6 +1035,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 crash_chance=pack_value(pack, "crash_chance", 1.0),
                 fill_crash=pack_value(pack, "fill_crash", True),
                 kit_rng=kit_rng,
+                power_chords=bool(pack_value(pack, "power_chords", False)),
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -1098,6 +1120,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "song_form": form_name,
         "alt_lead": alt_lead if alt_lead_sample_idx else None,
         "instruments": instruments,
+        "struck": struck_roles,
         "progression": [tuple(e) for e in progression],
         "half_pattern_changes": half_changes,
         "structure": display_structure,
@@ -1139,11 +1162,12 @@ CHANNEL_VOLUMES = [
 # Levels no longer differ by palette: samples.generate_instrument normalises
 # sustaining voices to one loop loudness and, on the arp, struck voices to
 # one strike loudness, so a pluck, bell or pizz hits the arp at the same
-# level whatever the song drew. The one thing the samples cannot know: a
-# sustaining voice used as the arp (the genesis PSG square) is a held tone
-# where the others are strikes, and sits at the level the plucks had before
-# normalisation (set by ear, Lower Cistern, 2026-10-13).
-ARP_PRESET_TRIM = {"psg_square": 17}
+# level whatever the song drew. The arp channel's 33 was set for struck
+# voices, which peak and die within the step; a sustaining voice on the arp
+# (the genesis PSG square, the Mega Man X pulse synth) holds full level for
+# the whole step and came out 3-6 dB over the melody, so it takes this
+# level instead (set by ear for the PSG square, Lower Cistern, 2026-10-13).
+SUSTAINING_ARP_LEVEL = 17
 
 
 def channel_volumes_for(info: dict) -> list[int]:
@@ -1152,10 +1176,9 @@ def channel_volumes_for(info: dict) -> list[int]:
         for ch, r in enumerate(CHANNEL_ROLES):
             if r == role:
                 vols[ch] = vol
-    arp = info.get("instruments", {}).get("arp")
-    if arp in ARP_PRESET_TRIM:
+    if not info.get("struck", {}).get("arp", True):
         for ch in (CH_ARP, *CH_ECHO_ARP):
-            vols[ch] = ARP_PRESET_TRIM[arp]
+            vols[ch] = SUSTAINING_ARP_LEVEL
     return vols
 
 

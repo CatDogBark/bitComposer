@@ -393,16 +393,16 @@ class EchoOptions(unittest.TestCase):
     def test_echo_options_leave_the_arrangement_alone(self):
         """Delay, wetness and stereo draw from their own stream: the same seed
         with different echo options writes identical dry channels."""
-        a = compose_song(seed=11, style_pref="snes", echo="on")
+        a = compose_song(seed=11, style_pref="snes", echo="on", pack="none")
         b = compose_song(seed=11, style_pref="snes", echo="on", echo_wet="wet",
-                         echo_delay="quarter", echo_stereo="centre")
+                         echo_delay="quarter", echo_stereo="centre", pack="none")
         self.assertEqual(a["orders"], b["orders"])
         for pa, pb in zip(a["patterns"], b["patterns"]):
             for ra, rb in zip(pa.data, pb.data):
                 self.assertEqual(ra[:12], rb[:12])
         self.assertEqual(b["info"]["echo_delay"], "quarter")
         self.assertEqual(b["info"]["echo_stereo"], "centre")
-        self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter"))
+        self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter", "slap"))
         self.assertTrue(0.3 <= a["info"]["echo_feedback"] <= 0.6)
 
 
@@ -434,6 +434,30 @@ class Packs(unittest.TestCase):
         notes = bass.generate_bass(48, "minor", 32, style="drone", weight="heavy")
         self.assertEqual(notes, [(0, 36)])      # heavy register: octave 2
         self.assertEqual(bass.pick_section_bass("light", 0.95, "drone"), "drone")
+
+    def test_riff_bass_repeats_each_bar(self):
+        from bitcomposer import bass
+        notes = bass.generate_bass(48, "minor", 32, style="riff", weight="heavy")
+        rows = [r for r, _ in notes]
+        self.assertEqual(rows, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30])
+        self.assertEqual(notes[2][1] - notes[0][1], 12)
+        self.assertEqual(bass.pick_section_bass("heavy", 0.95, "riff"), "riff")
+
+    def test_slap_echo_writes_tick_delays(self):
+        song = compose_song(seed=9, style_pref="snes", echo="on", echo_delay="slap")
+        self.assertEqual(song["info"]["echo_delay"], "slap")
+        delayed = sum(1 for p in song["patterns"] for r in p.data
+                      if r[pattern.CH_ECHO1].note not in (0, 254, 255) and r[pattern.CH_ECHO1].effect == it_format.FX_SPECIAL)
+        self.assertGreater(delayed, 0)
+
+    def test_sustaining_arp_voice_is_trimmed(self):
+        song = compose_song(seed=4, style_pref="snes", pack="megamanx")
+        self.assertEqual(song["info"]["instruments"]["arp"], "mmx_pulse_lead")
+        self.assertFalse(song["info"]["struck"]["arp"])
+        self.assertEqual(composer.channel_volumes_for(song["info"])[pattern.CH_ARP], composer.SUSTAINING_ARP_LEVEL)
+        plain = compose_song(seed=21, style_pref="snes", pack="none")
+        self.assertTrue(plain["info"]["struck"]["arp"])
+        self.assertEqual(composer.channel_volumes_for(plain["info"])[pattern.CH_ARP], composer.CHANNEL_VOLUMES[pattern.CH_ARP])
 
     def test_pack_none_is_plain_snes(self):
         from bitcomposer.packs import PACKS

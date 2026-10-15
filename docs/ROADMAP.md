@@ -9,6 +9,21 @@ second) and `CHANGELOG.md` for what has shipped.
 
 These change how every note sounds, not what notes are played.
 
+- **Brightness and register across the SNES palette.** Measured against the
+  Mega Man X bank: the game's lead keeps its spectral centroid at 2 to 2.5
+  times the fundamental at every note; ours sat at 0.9 to 1.3 and fell as
+  the pitch rose, which is why it read as dull. Three things to carry
+  through every SNES voice, not just the Mega Man X set: (1) synthesise
+  content relative to the note, so leads keep a centroid near twice the
+  fundamental across the melody's two octaves; (2) distortion on one layer
+  and chorus after it, the way a pedal sits after an amp, so detuned layers
+  never intermodulate into growl; (3) cascaded filters for cabinet and
+  presence shapes. Two things measured and ruled out: aliasing above 8 kHz
+  is zero at every note, and the player's interpolation mode makes no
+  audible difference, so a 32 kHz sample rate buys nothing for single-cycle
+  voices (it only helps voices with non-periodic content: chorus smear,
+  noise, decays). Register splitting, one sample for the low octave and one
+  for the high, stays an option if one sample cannot hold the range.
 - **Release envelopes — done (merged 2026-10-14, approved by ear).** Sustained
   voices now carry a sustain loop and a decaying tail; the generator writes
   note-off for them so each family releases at its own pace
@@ -32,12 +47,21 @@ These change how every note sounds, not what notes are played.
   orchestral fills, channel trims, arp figure weights. `ffvi` (orchestral)
   `mana` (Secret of Mana: mallets and air, hand percussion, bouncy habits)
   and `evermore` (Secret of Evermore: pads, drone bass, breathy flute,
-  sparse or no drums; the atmospheric set) are done. Next: `megamanx`
-  (overdriven guitar sample, slap bass, synth brass stabs, riff bass, rock
-  grooves). `metroid` would be evermore with a cold voice set (metallic
-  pads, detuned low brass, clangs, sub drone) and a dissonance weight in
-  the harmony. A pack is data;
+  sparse or no drums; the atmospheric set) and `megamanx` (Mega Man X: driven
+  guitars, pulse synth, synth brass, riff bass, slap echo; read off the
+  game's own sample bank) are done. `metroid` would be evermore with a cold
+  voice set (metallic pads, detuned low brass, clangs, sub drone) and a
+  dissonance weight in the harmony. Rock grooves of their own (double-time
+  hats, kick patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
+  sample bank in BRR, every voice's envelope and pitch, the echo settings.
+  A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot
+  and map its samples onto a pack's roles through a small per-game role
+  map, falling back to the synthesised voices without one. The repo ships
+  the code, never the samples: the rips are the publishers' recordings and
+  do not belong in a public repository. The decoder and the bank profiler
+  already exist from the Mega Man X analysis (`~/diags/bitcomposer/mmx`).
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 

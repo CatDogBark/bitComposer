@@ -264,7 +264,10 @@ Each song draws its own echo from a stream of its own (`song_salt ^
 the delay as a beat fraction weighted by tempo (eighth, dotted eighth or
 quarter; fast songs favour the longer ones), feedback 0.3–0.6, a wetness
 (light 25% / normal 50% / wet 25%, `--echo-wet` overrides), and a stereo
-mode (`--echo-stereo`): "bounce" alternates sides per tap, "centre" puts
+mode (`--echo-stereo`); a fourth delay, "slap", is 48 ms under a row (the
+Mega Man X echo, read from the game's DSP registers: 48 ms, feedback 0.53,
+inverted sides) written as an SDx tick delay on the copy's note row.
+"bounce" alternates sides per tap, "centre" puts
 every repeat under its source, the way the hardware's two-sided echo read
 (a one-sided "spread" mode was tried and heard as a second player coming
 in late, so it went). Pans are written per tap as an Xxx effect on the

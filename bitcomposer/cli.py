@@ -141,9 +141,9 @@ def main():
     )
     parser.add_argument(
         "--echo-delay",
-        choices=["eighth", "dotted", "quarter", "random"],
+        choices=["eighth", "dotted", "quarter", "slap", "random"],
         default="random",
-        help="Beat fraction between echo repeats (default: random, weighted by tempo)",
+        help="Beat fraction between echo repeats, or slap (48 ms, under a row); default: random, weighted by tempo",
     )
     parser.add_argument(
         "--echo-stereo",
@@ -153,7 +153,7 @@ def main():
     )
     parser.add_argument(
         "--pack",
-        choices=["ffvi", "mana", "evermore", "none", "random"],
+        choices=["ffvi", "mana", "evermore", "megamanx", "none", "random"],
         default="random",
         help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
     )

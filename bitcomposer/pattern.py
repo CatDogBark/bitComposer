@@ -6,7 +6,7 @@ import random
 
 from .it_format import (
     ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
-    FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE, FX_SET_PAN,
+    FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE, FX_SET_PAN, FX_SPECIAL,
     FX_ARPEGGIO, arpeggio_param,
 )
 
@@ -236,13 +236,17 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0,
         vol = cell.volume if cell.volume != 255 else 64
         for dst, delay, level, inst_map, *more in taps:
             pan = more[0] if more else None
+            ticks = more[1] if len(more) > 1 else 0
             inst = (inst_map or {}).get(cell.instrument, cell.instrument)
             if end_cell is not None and end_cell.note in (NOTE_CUT, NOTE_OFF):
                 end_note_value = end_cell.note
             else:
                 end_note_value = end_note(inst)
             copy = ITNote(note=cell.note, instrument=inst, volume=max(1, int(vol * level)))
-            if pan is not None:
+            if ticks:
+                # A sub-row delay (the slap echo): SDx holds the note x ticks.
+                copy.effect, copy.effect_val = FX_SPECIAL, 0xD0 | max(1, min(15, int(ticks)))
+            elif pan is not None:
                 copy.effect, copy.effect_val = FX_SET_PAN, max(0, min(255, int(pan)))
             by_channel.setdefault(dst, []).append(
                 (r + delay, level, copy, end + delay, end_note_value, r, delay))
