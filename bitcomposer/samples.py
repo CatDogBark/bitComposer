@@ -1267,6 +1267,83 @@ def gen_crash() -> tuple[bytes, int, dict]:
     return _dac_finish(_highpass(out, 0.3), 0.65)
 
 
+# ── Release tails ──
+#
+# A note that is let go should die away, not stop between one frame and the
+# next. The tracker gives us the mechanism for free: a *sustain loop* is
+# looped while the note is held, and a note-off (===) exits it and plays
+# whatever follows. So every sustained voice gets its loop region marked as
+# the sustain loop and a tail appended after it: the same cycle, decaying
+# over the voice's release time. The generator then writes note-off instead
+# of note-cut for these voices (see pattern.end_note), and each family
+# releases at its own pace — strings long, flute short, organ almost none.
+#
+# Release lengths in seconds, by family. A new sustained voice picks one of
+# these (or overrides it); plucks and drums end on their own and get none.
+RELEASE = {
+    "strings": 0.30, "choir": 0.35, "pad": 0.40, "brass": 0.15, "flute": 0.08,
+    "organ": 0.03, "lead": 0.08, "keys": 0.15, "bass": 0.05, "psg": 0.03,
+}
+
+
+def add_release(data: bytes, length: int, meta: dict, seconds: float,
+                rate: int | None = None) -> tuple[bytes, int, dict]:
+    """Turn a looped sample into sustain-loop + decaying tail.
+
+    The loop region becomes the sustain loop; after it, the same region is
+    repeated and faded with an exponential whose time constant is a third
+    of `seconds`, so the tail is ~5% at its end. Continuity across the
+    seam is exact because the tail is the loop region itself.
+    """
+    if not meta.get("loop") or seconds <= 0:
+        return data, length, meta
+    rate = rate or meta.get("rate", SAMPLE_RATE)
+    ints = list(struct.unpack(f"<{length}h", data))
+    ls, le = meta["loop_start"], meta["loop_end"]
+    region = ints[ls:le]
+    if not region:
+        return data, length, meta
+    n_tail = int(rate * seconds)
+    tau = seconds / 4.0                       # ~1.8% at the end of the tail
+    fade = max(1, int(rate * 0.003))          # and a 3 ms linear fade to zero
+    tail = []
+    for i in range(n_tail):
+        env = math.exp(-(i / rate) / tau)
+        if i >= n_tail - fade:
+            env *= (n_tail - i) / fade
+        tail.append(int(region[i % len(region)] * env))
+    out = ints[:le] + tail
+    new_meta = dict(meta)
+    new_meta.update({"loop": False, "sus_loop": True,
+                     "loop_start": ls, "loop_end": le, "release": seconds})
+    return _pack_samples(out), len(out), new_meta
+
+
+# Which release each preset takes. Sustained voices only; a preset missing
+# here keeps hard cuts (plucks, drums, and anything that already decays).
+PRESET_RELEASE = {
+    # SNES
+    "snes_strings": "strings", "snes_choir": "choir", "snes_brass": "brass",
+    "snes_flute": "flute", "snes_organ": "organ", "snes_synth_lead": "lead",
+    "snes_epiano": "keys", "snes_bell": "keys", "snes_synth_bass": "bass",
+    # Genesis
+    "gen_lead": "lead", "gen_saw_lead": "lead", "gen_brass": "brass",
+    "gen_pad": "pad", "gen_sub_bass": "bass", "gen_bell": "keys",
+    "gen_slap_bass": "bass", "gen_pluck_bass": "bass", "gen_pluck": "lead",
+    "fm_organ": "organ", "fm_pad": "pad", "fm_strings": "strings", "fm_bass": "bass",
+    "fm_lead": "lead", "fm_brass": "brass", "fm_bell": "keys",
+    # Chip
+    "square_lead": "lead", "pulse_lead": "lead", "pulse12_lead": "lead",
+    "triangle_lead": "lead", "pwm_lead": "lead", "filtered_lead": "lead",
+    "saw_lead": "lead", "supersaw_lead": "pad", "sweep_lead": "pad",
+    "psg_square": "psg",
+    "saw_bass": "bass", "triangle_bass": "bass", "sine_bass": "bass",
+    "square_bass": "bass", "distorted_bass": "bass", "filtered_bass": "bass",
+    "supersaw_bass": "bass",
+    "square_pluck": "lead", "pulse_pluck": "lead", "pulse12_pluck": "lead", "tri_pluck": "lead",
+}
+
+
 # ── Console output polish for the waveform and FM palettes ──
 #
 # These presets were raw, full-bandwidth single cycles at 44.1 kHz with no
@@ -1449,20 +1526,23 @@ def generate_instrument(name: str) -> dict:
     result = func(**kwargs)
     if len(result) == 3:
         data, length, meta = result
-        return {
-            "data": data, "length": length, "volume": vol,
-            "rate": meta["rate"], "loop": meta["loop"],
-            "loop_start": meta.get("loop_start", 0),
-            "loop_end": meta.get("loop_end", length),
-        }
-    data, length = result
-    one_shot = name in _ONE_SHOT_WAVEFORMS
-    loop_start, loop_end = 0, length
-    if not one_shot and name in WAVEFORM_POLISH:
-        cutoff, attack = WAVEFORM_POLISH[name]
-        data, length, loop_start, loop_end = polish_waveform(data, length, cutoff, attack)
+        meta = dict(meta)
+        meta.setdefault("loop_start", 0); meta.setdefault("loop_end", length)
+    else:
+        data, length = result
+        one_shot = name in _ONE_SHOT_WAVEFORMS
+        loop_start, loop_end = 0, length
+        if not one_shot and name in WAVEFORM_POLISH:
+            cutoff, attack = WAVEFORM_POLISH[name]
+            data, length, loop_start, loop_end = polish_waveform(data, length, cutoff, attack)
+        meta = {"rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
+                "loop": not one_shot, "loop_start": loop_start, "loop_end": loop_end}
+    family = PRESET_RELEASE.get(name)
+    if family and meta.get("loop"):
+        data, length, meta = add_release(data, length, meta, RELEASE[family])
     return {
         "data": data, "length": length, "volume": vol,
-        "rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
-        "loop": not one_shot, "loop_start": loop_start, "loop_end": loop_end,
+        "rate": meta["rate"], "loop": meta.get("loop", False),
+        "loop_start": meta.get("loop_start", 0), "loop_end": meta.get("loop_end", length),
+        "sus_loop": meta.get("sus_loop", False), "release": meta.get("release", 0.0),
     }

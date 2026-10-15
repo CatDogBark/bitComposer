@@ -47,6 +47,20 @@ TONAL_CHANNELS = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_A
                   CH_ECHO1, CH_ECHO2]
 
 
+# ── Note endings ──
+
+# Sample indices (1-based) whose sample has a sustain loop and a release
+# tail. Set per song by the composer. A note on one of these ends with a
+# note-off, which lets the tail play; anything else still gets a hard cut.
+RELEASE_INSTRUMENTS: set[int] = set()
+
+
+def end_note(instrument: int) -> int:
+    """The note value that ends a note on this instrument: NOTE_OFF for a
+    voice with a release tail, NOTE_CUT otherwise."""
+    return NOTE_OFF if instrument in RELEASE_INSTRUMENTS else NOTE_CUT
+
+
 # ── Note application ──
 
 def humanize_volume(base_volume: int, amount: int = 6) -> int:
@@ -67,8 +81,8 @@ def apply_notes_to_pattern(pattern: ITPattern, channel: int,
     for row, midi_note in note_list:
         if 0 <= row < pattern.rows:
             if midi_note == -1:
-                # Note-cut event
-                pattern.data[row][channel] = ITNote(note=NOTE_CUT)
+                # End of the previous note: a release where the voice has one.
+                pattern.data[row][channel] = ITNote(note=end_note(instrument))
                 continue
             it_note = midi_to_it_note(midi_note)
             vol = volume
@@ -366,6 +380,7 @@ def apply_sustain_safety_net(pat: ITPattern, channels: list[int] | None = None,
                     CH_ECHO1, CH_ECHO2]
     for ch in channels:
         last_note_row = None
+        last_inst = 0
         for row in range(pat.rows):
             cell = pat.data[row][ch]
             if cell.note != 0:  # any note event (including cuts) resets
@@ -373,21 +388,23 @@ def apply_sustain_safety_net(pat: ITPattern, channels: list[int] | None = None,
                     last_note_row = None
                 else:
                     last_note_row = row
+                    last_inst = cell.instrument
             elif last_note_row is not None and (row - last_note_row) == max_ring:
-                pat.data[row][ch] = ITNote(note=NOTE_CUT)
+                pat.data[row][ch] = ITNote(note=end_note(last_inst))
                 last_note_row = None
 
 
-def _pattern_last_note_rings(pat: ITPattern, ch: int) -> bool:
-    """Check if a channel's last event is a note (not a cut), meaning it rings past the pattern end."""
-    last_is_note = False
+def _pattern_last_note_rings(pat: ITPattern, ch: int) -> int:
+    """If a channel's last event is a note (not a cut), return its instrument
+    (so it rings past the pattern end); 0 otherwise."""
+    last_inst = 0
     for row in range(pat.rows):
-        n = pat.data[row][ch].note
-        if n == NOTE_CUT or n == NOTE_OFF:
-            last_is_note = False
-        elif n != 0:
-            last_is_note = True
-    return last_is_note
+        cell = pat.data[row][ch]
+        if cell.note == NOTE_CUT or cell.note == NOTE_OFF:
+            last_inst = 0
+        elif cell.note != 0:
+            last_inst = cell.instrument or -1
+    return last_inst
 
 
 def silence_inactive_channels(orders: list[int], patterns: list[ITPattern]):
@@ -410,13 +427,14 @@ def silence_inactive_channels(orders: list[int], patterns: list[ITPattern]):
         cur_pat = patterns[orders[ord_idx]]
 
         for ch in TONAL_CHANNELS:
-            if not _pattern_last_note_rings(prev_pat, ch):
+            ringing = _pattern_last_note_rings(prev_pat, ch)
+            if not ringing:
                 continue
             has_early_event = any(
                 cur_pat.data[row][ch].note != 0
                 for row in range(min(max_ring, cur_pat.rows)))
             if not has_early_event:
                 # Keep whatever effect the cell carried (a fade slide, say).
-                cur_pat.data[0][ch].note = NOTE_CUT
+                cur_pat.data[0][ch].note = end_note(ringing)
                 cur_pat.data[0][ch].instrument = 0
                 cur_pat.data[0][ch].volume = 255

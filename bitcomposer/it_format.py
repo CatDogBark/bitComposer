@@ -21,6 +21,11 @@ class ITSample:
     loop_start: int = 0
     loop_end: int = 0
     loop: bool = True
+    # Sustain loop: looped while the note is held; a note-off (===) exits it
+    # and playback runs on through whatever follows — the release tail.
+    sus_loop: bool = False
+    sus_loop_start: int = 0
+    sus_loop_end: int = 0
     c5_speed: int = SAMPLE_RATE  # Playback rate for C-5
     default_volume: int = 64
     global_volume: int = 64
@@ -321,12 +326,14 @@ def write_it_file(
         sh.extend(b"IMPS")                         # Magic
         sh.extend(smp.filename[:12].ljust(13, '\0').encode('ascii', errors='replace'))
         sh.append(smp.global_volume)                # GvL
-        # Flags: bit 0=sample exists, bit 1=16-bit, bit 4=loop
+        # Flags: bit 0=sample exists, bit 1=16-bit, bit 4=loop, bit 5=sustain loop
         sflags = 0x01  # Sample present
         if smp.is_16bit:
             sflags |= 0x02
         if smp.loop:
             sflags |= 0x10
+        if smp.sus_loop:
+            sflags |= 0x20
         sh.append(sflags)
         sh.append(smp.default_volume)               # Vol
         sh.extend(smp.name[:25].ljust(26, '\0').encode('ascii', errors='replace'))
@@ -338,8 +345,8 @@ def write_it_file(
         sh.extend(struct.pack("<I", smp.loop_start))
         sh.extend(struct.pack("<I", loop_end))
         sh.extend(struct.pack("<I", smp.c5_speed))  # C5Speed
-        sh.extend(struct.pack("<I", 0))             # SusLoop begin
-        sh.extend(struct.pack("<I", 0))             # SusLoop end
+        sh.extend(struct.pack("<I", smp.sus_loop_start if smp.sus_loop else 0))  # SusLoop begin
+        sh.extend(struct.pack("<I", smp.sus_loop_end if smp.sus_loop else 0))    # SusLoop end
         sh.extend(struct.pack("<I", sample_data_positions[i]))  # SamplePointer
         sh.append(0)                                # ViS (vibrato speed)
         sh.append(0)                                # ViD (vibrato depth)

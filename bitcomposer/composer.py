@@ -17,6 +17,7 @@ from .it_format import (
     ITSample, ITPattern, ITNote, midi_to_it_note, NOTE_CUT,
     write_it_file, bpm_to_it_tempo, it_tempo_to_bpm,
 )
+from . import pattern as pattern_mod
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
     CH_SNARE, CH_HIHAT, CH_CRASH, CH_ECHO1, CH_ECHO2,
@@ -25,7 +26,7 @@ from .pattern import (
     apply_portamento, apply_harmony_fade, apply_fade, apply_echo, apply_echo_spill,
     apply_drums_to_pattern, generate_drums,
     apply_sustain_safety_net, silence_inactive_channels,
-    apply_chord_arpeggio, apply_retrigger,
+    apply_chord_arpeggio, apply_retrigger, end_note,
 )
 from .melody import (
     generate_motif, vary_motif, generate_melody,
@@ -176,9 +177,19 @@ def _make_sample(name: str) -> ITSample:
         loop=inst["loop"],
         loop_start=inst["loop_start"],
         loop_end=inst["loop_end"],
+        sus_loop=inst.get("sus_loop", False),
+        sus_loop_start=inst["loop_start"],
+        sus_loop_end=inst["loop_end"],
         default_volume=inst["volume"],
         c5_speed=inst["rate"],
     )
+
+
+def _register_releases(samples: list[ITSample]) -> None:
+    """Tell the pattern layer which samples end with a release (note-off)."""
+    pattern_mod.RELEASE_INSTRUMENTS.clear()
+    pattern_mod.RELEASE_INSTRUMENTS.update(
+        i + 1 for i, smp in enumerate(samples) if smp.sus_loop)
 
 
 def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[str, int]]:
@@ -361,7 +372,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 cut_row = row + cut_after
                 if cut_row < ROWS_PER_PATTERN:
                     if pat.data[cut_row][CH_BASS].note == 0:
-                        pat.data[cut_row][CH_BASS] = ITNote(note=NOTE_CUT)
+                        pat.data[cut_row][CH_BASS] = ITNote(note=end_note(sample_map["bass"]))
 
     # ── Arpeggio ──
     if layers["arp"]:
@@ -515,6 +526,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # ── Instruments ──
     instruments = _pick_instruments(style_pref, bass_weight=bass_weight)
     samples, sample_map = _build_samples(instruments)
+    _register_releases(samples)
 
     # ── Energy / style ──
     if energy_pref == "chill":
@@ -628,6 +640,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 if alt_lead_sample_idx is None:
                     samples.append(_make_sample(alt_lead))
                     alt_lead_sample_idx = len(samples)
+                    _register_releases(samples)
                 melody_sample = alt_lead_sample_idx
 
             # Two sections render to the same bytes only if the group, the

@@ -9,19 +9,12 @@ second) and `CHANGELOG.md` for what has shipped.
 
 These change how every note sounds, not what notes are played.
 
-- **Release envelopes.** Every note in every palette stops dead when it is
-  cut, because samples without instrument envelopes have no release. This
-  is the single biggest gap between "tracker demo" and "game soundtrack" at
-  the sample level. Two routes, which can be combined:
-  - *Fade before cut.* Where the generator writes a note-cut, write a short
-    volume slide (DFx or Dx0 over the last 1–2 rows) first, so the cut lands
-    on near-silence. Cheap, works in every palette, approximates a release.
-  - *Sustain loops with a release tail.* Build sustained SNES voices with a
-    sustain-loop region followed by a short decaying tail, and write
-    note-off (`===`) instead of note-cut. libopenmpt then exits the sustain
-    loop and plays the tail: a real release, per instrument. The IT writer
-    needs the sustain-loop fields (currently zero) and the SNES voices need
-    tails; chip and FM voices can get short synthetic ones.
+- **Release envelopes — done (branch `releases`, 2026-10-14).** Sustained
+  voices now carry a sustain loop and a decaying tail; the generator writes
+  note-off for them so each family releases at its own pace
+  (`samples.RELEASE`, `samples.PRESET_RELEASE`). Lengths are a first draft
+  set by principle and await tuning by ear. One-shot voices (plucks, drums)
+  still end on their own.
 - **Reverb/echo on more than the lead.** The SNES echo ran on most voices.
   Harmony and arp echo returns at lower level, on the existing two echo
   channels or two more.

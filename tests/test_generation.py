@@ -318,6 +318,33 @@ class Samples(unittest.TestCase):
             seam = abs(x[d["loop_start"]] - x[d["loop_end"] - 1]) / max_step
             self.assertLessEqual(seam, 1.05, f"{name} seam {seam:.2f}")
 
+    def test_release_tails_end_in_silence(self):
+        random.seed(1)
+        seen = 0
+        for name, family in samples.PRESET_RELEASE.items():
+            d = samples.generate_instrument(name)
+            if not d["sus_loop"]:
+                continue
+            seen += 1
+            x = struct.unpack(f"<{d['length']}h", d["data"])
+            peak = max(abs(v) for v in x) or 1
+            self.assertLess(max(abs(v) for v in x[-48:]) / peak, 0.03, name)
+            self.assertAlmostEqual(d["release"], samples.RELEASE[family])
+            self.assertLessEqual(d["loop_end"], d["length"] - int(d["rate"] * d["release"]) + 1)
+        self.assertGreater(seen, 20)
+
+    def test_released_voices_end_with_note_off(self):
+        song = compose_song(seed=4, style_pref="snes")
+        released = {i + 1 for i, s in enumerate(song["samples"]) if s.sus_loop}
+        self.assertTrue(released)
+        offs = cuts = 0
+        for pat in song["patterns"]:
+            for row in pat.data:
+                for cell in row:
+                    offs += cell.note == it_format.NOTE_OFF
+                    cuts += cell.note == it_format.NOTE_CUT
+        self.assertGreater(offs, 0)
+
     def test_waveforms_are_tuned(self):
         d = samples.generate_instrument("square_lead")
         period = int(samples.SAMPLE_RATE / samples.BASE_NOTE_HZ)
@@ -329,6 +356,7 @@ class PatternOps(unittest.TestCase):
         return it_format.ITPattern(rows=64, channels=pattern.NUM_CHANNELS)
 
     def test_echo_copies_and_scales(self):
+        pattern.RELEASE_INSTRUMENTS.clear()
         pat = self._pat()
         pat.data[0][0] = it_format.ITNote(note=60, instrument=1, volume=40)
         pat.data[8][0] = it_format.ITNote(note=it_format.NOTE_CUT)
@@ -348,6 +376,7 @@ class PatternOps(unittest.TestCase):
         self.assertLess(pat.data[12][0].volume, 40)
 
     def test_boundary_cut_is_in_place(self):
+        pattern.RELEASE_INSTRUMENTS.clear()   # composed songs register theirs; not this one
         ringing = self._pat()
         ringing.data[60][0] = it_format.ITNote(note=60, instrument=1, volume=40)
         quiet = self._pat()
