@@ -41,14 +41,33 @@ These change how every note sounds, not what notes are played.
 - **Harmony colour on pads.** The SNES arp now takes 7ths and 9ths; the
   pad voicings could carry an add9 or a 7th in the same palette.
 
+## Melody
+
+The engineering around the melody is now solid; the melody is the weak part
+and the hit-or-miss part. Two steps, in order.
+
+- **Motif grammar (next).** Motifs built from small cells with known shapes
+  (step-step-leap, neighbour-and-return, repeated note, leap-and-fall); the
+  rhythm fixed as the phrase's identity with pitches varying inside it;
+  two-bar cells repeated exactly before the tail changes; tendency tones
+  resolved (7→1, 4→3); leaps limited to a few sanctioned places (a fourth
+  or fifth to launch a phrase, an octave for drama, steps back down).
+  Measured by step-to-leap ratio, exact cell repetition rate and rhythmic
+  self-similarity across bars; reviewed on an identical arrangement.
+- **Corpus statistics, no neural net.** If the grammar is not enough: learn
+  interval and rhythm tables from real NES/SNES-era melodies offline —
+  intervals conditioned on scale degree, beat position and chord tone;
+  rhythm-cell frequencies; phrase-ending patterns — and ship them as JSON
+  the generator samples from under the same constraints. Corpus
+  preparation is the work (a symbolic dataset such as NESMDB, a stdlib MIDI
+  reader, melody-track selection); the tables are small and the
+  zero-dependency property holds. Statistics are derived data, not songs.
+
 ## Generation
 
-From `ANALYSIS.md` §5, unchanged:
+From `ANALYSIS.md` §5:
 
-- **Corpus statistics, no neural net.** n-gram tables for chord transitions,
-  melodic intervals conditioned on scale degree and chord tone, and real
-  rhythm-template frequencies, trained offline from symbolic chiptune and
-  shipped as JSON. Keeps the zero-dependency property.
+- **Corpus statistics** — see Melody above.
 - **A small conditioned model for the melody line only**, with structure
   and arrangement staying in deterministic code.
 - **A local LLM as arranger**, producing a typed style brief (key, scale,
