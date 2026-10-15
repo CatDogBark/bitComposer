@@ -57,12 +57,8 @@
     <a href="https://github.com/CatDogBark/bitComposer/blob/main/docs/ANALYSIS.md">how it got good (measurements)</a>
   </div>
 
-  <h2>Picked by ear</h2>
-  <div class="note">One per palette, chosen by the author from the generator's output.</div>
-  <div id="picked"></div>
-
   <h2>Straight from the generator</h2>
-  <div class="note">Two fixed seeds, each rendered in all three palettes. Same key, tempo, form and tune; only the sound changes. Nobody chose these.</div>
+  <div class="note">Two fixed seeds, each rendered in all three palettes. Same key, tempo, form and tune; only the sound changes. Nobody chose these, and they are regenerated with each release.</div>
   <div id="seeds"></div>
 
   <div class="bottom">
@@ -155,8 +151,8 @@ document.getElementById('vol').addEventListener('input', ev => { if (player) pla
 
 fetch('tracks/tracks.json').then(r => r.json()).then(list => {
   tracks = list;
-  const picked = document.getElementById('picked'), seeds = document.getElementById('seeds');
-  list.forEach((t, i) => { const el = row(t, i); rows.push(el); (t.picked ? picked : seeds).appendChild(el); });
+  const seeds = document.getElementById('seeds');
+  list.forEach((t, i) => { const el = row(t, i); rows.push(el); seeds.appendChild(el); });
 }).catch(() => { status.textContent = 'could not load the track list'; });
 </script>
 </body>
