@@ -897,9 +897,13 @@ CHANNEL_VOLUMES = [
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
     13, 13,          # echo taps
 ]
+# Melody and echo levels differ by palette for the same reason as the arp:
+# a chip pulse lead sustains at full level and an FM lead nearly so, where
+# the SNES voices decay. Measured melody-minus-backing: snes -14 dB, genesis
+# -9, chip -6. The settings below bring chip and genesis to about -11.
 PALETTE_MIX = {
-    "chip": {CH_ARP: 28},
-    "genesis": {CH_ARP: 17},   # gen_pluck arp balanced by ear (Skyward Cistern, 2026-10-13)
+    "chip": {CH_ARP: 28, CH_MELODY: 7, CH_ECHO1: 7, CH_ECHO2: 7},
+    "genesis": {CH_ARP: 17, CH_MELODY: 10, CH_ECHO1: 10, CH_ECHO2: 10},
 }
 
 
