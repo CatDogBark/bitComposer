@@ -535,8 +535,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     if style_pref not in STYLES:
         style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
     if echo == "random":
-        # The SNES always had its echo on; the others borrow it sometimes.
-        echo_chance = {"snes": 1.0, "chip": 0.5, "genesis": 0.25}[style_pref]
+        # The SNES S-DSP had a hardware echo send that most, not all, tracks
+        # used, so snes draws it most of the time. The NES and the YM2612
+        # had no echo unit, so chip and genesis stay dry unless asked.
+        echo_chance = {"snes": 0.7, "chip": 0.0, "genesis": 0.0}[style_pref]
         use_echo = random.random() < echo_chance
     else:
         use_echo = echo == "on"
