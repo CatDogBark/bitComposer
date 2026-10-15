@@ -12,6 +12,7 @@ phrasing, voice-led harmony, bass, arpeggio and drums, arranged into a form
 (verse–chorus, AABA, rondo, through-composed) with an energy curve and a real
 ending. Three sound palettes:
 
+- **snes + packs** — a style pack pairs an instrument set with the arrangement habits of the scores it imitates. `ffvi`: string section with ensemble beating, horn, trumpet, oboe, clarinet, piano, music box, pipe organ, bowed basses and an orchestral kit (timpani, bass drum, snare, cymbal), with ostinato strings, a horn counter-line in the chorus, timpani rolls into sections and a wet, wide echo. Half of snes songs draw a pack; `--pack` chooses.
 - **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead, harmony and arp through an echo modelled on the SNES unit's result: fading, darkening repeats on a beat fraction, drawn per song.
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
@@ -43,10 +44,11 @@ Everything defaults to `random`.
 
 ```
 --style   chip|snes|genesis          sound palette
+--pack    ffvi|none|random           style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)
 --echo    on|off|random              echo (random: 70% of snes songs, never chip or genesis)
 --echo-wet    light|normal|wet|random  how much of the lead, harmony and arp the echo carries
 --echo-delay  eighth|dotted|quarter|random  beat fraction between repeats (random: weighted by tempo)
---echo-stereo bounce|spread|random     repeats alternate sides, or sit wide on the far side
+--echo-stereo bounce|centre|random     repeats alternate sides, or sit under their source
 --keys    moving|home                moving: choruses/bridges may change key; home: stay put
 --tempo   slow|medium|fast           80–110 / 110–140 / 140–180 BPM
 --energy  chill|normal|intense       density and arrangement weight

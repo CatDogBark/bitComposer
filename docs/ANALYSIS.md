@@ -223,6 +223,20 @@ natural level: a struck lead lives on its decay, and its attack is already at
 full scale, so nothing could give back what the strike rule took. The one
 trim left is the genesis PSG square as an arp, a held tone among strikes.
 
+**Style packs.** The FFVI sound is as much habit as timbre: ostinato
+strings under a brass melody, a horn answering the lead, timpani into
+the chorus. So a pack (`packs.py`) pairs voices per role with weighted
+draws for the composer's habits (tempo, energy, scale family, harmony
+voicing and mode, bass weight and style, drum density and swing, echo
+chance, wetness and stereo), a counter-line voice and chance, orchestral
+fills and channel trims. Anything a pack does not weight is drawn the
+plain way, so a pack is a narrowing, never a new engine. Two harmony
+modes arrived with it: `ostinato` restrikes the chord tones on a 3+3+2
+cell, `pulse` on straight eighths with the upper voices between the
+beats. The string section is a long loop (160 periods plus the attack)
+carrying the tone and copies one cycle sharp and flat over the loop, so
+it beats at about 1.6 Hz and stays seamless.
+
 **Echo.** Modelled on what the SNES echo unit produced rather than how it
 was wired: three repeats on a dotted eighth (3, 6 and 9 rows), each half
 the level of the last (−6, −12, −18 dB), each playing a lowpassed copy of
@@ -250,13 +264,18 @@ Each song draws its own echo from a stream of its own (`song_salt ^
 the delay as a beat fraction weighted by tempo (eighth, dotted eighth or
 quarter; fast songs favour the longer ones), feedback 0.3–0.6, a wetness
 (light 25% / normal 50% / wet 25%, `--echo-wet` overrides), and a stereo
-mode (`--echo-stereo`): "bounce" alternates sides per tap, "spread" puts
-every repeat of a part wide on the far side of it, the way the hardware's
-two-sided echo read. Pans are written per tap as an Xxx effect on the
+mode (`--echo-stereo`): "bounce" alternates sides per tap, "centre" puts
+every repeat under its source, the way the hardware's two-sided echo read
+(a one-sided "spread" mode was tried and heard as a second player coming
+in late, so it went). Pans are written per tap as an Xxx effect on the
 copy's note row, so taps sharing a channel can still bounce. Every send
 is scaled by section (`ECHO_SECTION_GAIN`): opened in intros, bridges and
 outros, pulled back to 0.7 in the chorus where the arp and harmony fill
-the space. The drawn settings are written into the song message
+the space. The arp sends only its accented steps (strong and normal) and
+its send tapers with tempo, full to 130 BPM and gone by 170: at 180 BPM a
+dotted-eighth repeat of an eighth-note pizzicato landed one row after
+every pluck and the arp became a stream of ticks (Veiled Meridian).
+The drawn settings are written into the song message
 ("echo: dotted delay, feedback 0.45, bounce, wet"). Left to chance, 70%
 of snes songs get the echo and chip and genesis never do (neither chip
 had an echo unit); `--echo` overrides. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`

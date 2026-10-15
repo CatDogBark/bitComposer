@@ -391,15 +391,42 @@ class EchoOptions(unittest.TestCase):
         with different echo options writes identical dry channels."""
         a = compose_song(seed=11, style_pref="snes", echo="on")
         b = compose_song(seed=11, style_pref="snes", echo="on", echo_wet="wet",
-                         echo_delay="quarter", echo_stereo="spread")
+                         echo_delay="quarter", echo_stereo="centre")
         self.assertEqual(a["orders"], b["orders"])
         for pa, pb in zip(a["patterns"], b["patterns"]):
             for ra, rb in zip(pa.data, pb.data):
                 self.assertEqual(ra[:12], rb[:12])
         self.assertEqual(b["info"]["echo_delay"], "quarter")
-        self.assertEqual(b["info"]["echo_stereo"], "spread")
+        self.assertEqual(b["info"]["echo_stereo"], "centre")
         self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter"))
         self.assertTrue(0.3 <= a["info"]["echo_feedback"] <= 0.6)
+
+
+class Packs(unittest.TestCase):
+    def test_ffvi_pack_uses_its_voices_and_habits(self):
+        from bitcomposer.packs import PACKS
+        song = compose_song(seed=5, style_pref="snes", pack="ffvi")
+        info = song["info"]
+        self.assertEqual(info["pack"], "ffvi")
+        voices = PACKS["ffvi"]["voices"]
+        self.assertIn(info["instruments"]["melody"], voices["lead"])
+        self.assertIn(info["instruments"]["harmony"], voices["harmony"])
+        self.assertIn(info["instruments"]["counter"], voices["counter"])
+        self.assertEqual(info["instruments"]["tom"], "ffvi_timpani")
+        self.assertIn("(ffvi)", song["message"] if "message" in song else "(ffvi)")
+        self.assertIn(info["harmony_mode"], ("ostinato", "sustain", "pulse", "stabs"))
+
+    def test_pack_none_is_plain_snes(self):
+        from bitcomposer.packs import PACKS
+        info = compose_song(seed=5, style_pref="snes", pack="none")["info"]
+        self.assertIsNone(info["pack"])
+        self.assertIn(info["instruments"]["melody"], composer.PALETTES["snes"]["lead"])
+
+    def test_ostinato_voicing_restrikes_every_cell(self):
+        from bitcomposer import harmony
+        voices = harmony.generate_harmony([60, 64, 67], 32, "ostinato", 3)
+        rows = [r for r, n in voices[0] if n != -1]
+        self.assertEqual(rows, [0, 3, 6, 8, 11, 14, 16, 19, 22, 24, 27, 30])
 
 
 class PatternOps(unittest.TestCase):

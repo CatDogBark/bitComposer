@@ -147,9 +147,15 @@ def main():
     )
     parser.add_argument(
         "--echo-stereo",
-        choices=["bounce", "spread", "random"],
+        choices=["bounce", "centre", "random"],
         default="random",
-        help="bounce: repeats alternate sides; spread: wide on the far side of the part",
+        help="bounce: repeats alternate sides; centre: repeats under their source, like the hardware",
+    )
+    parser.add_argument(
+        "--pack",
+        choices=["ffvi", "none", "random"],
+        default="random",
+        help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
     )
     parser.add_argument(
         "--keys",
@@ -187,7 +193,8 @@ def main():
                                 bass_weight=args.bass_weight,
                                 song_form=args.form,
                                 echo=args.echo, echo_wet=args.echo_wet,
-                                echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys)
+                                echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys,
+                                pack=args.pack)
             info = song["info"]
 
             if args.output and args.count == 1:
