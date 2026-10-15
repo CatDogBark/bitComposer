@@ -230,7 +230,12 @@ draws for the composer's habits (tempo, energy, scale family, harmony
 voicing and mode, bass weight and style, drum density and swing, echo
 chance, wetness and stereo), a counter-line voice and chance, orchestral
 fills and channel trims. Anything a pack does not weight is drawn the
-plain way, so a pack is a narrowing, never a new engine. Two harmony
+plain way, so a pack is a narrowing, never a new engine. A pack's lead,
+harmony and bass pools hold only its own voices (a Mega Man X song that
+drew a plain synth lead, organ and slap bass sounded like neither), and the
+picker refuses three sustaining voices in overlapping registers: with no
+struck voice among lead, harmony and arp and no pad-like harmony, the
+harmony is redrawn from the pool's struck or pad voices. Two harmony
 modes arrived with it: `ostinato` restrikes the chord tones on a 3+3+2
 cell, `pulse` on straight eighths with the upper voices between the
 beats. The string section is a long loop (160 periods plus the attack)

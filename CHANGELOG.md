@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Pack voices: the packs' lead, harmony and bass pools hold only their own voices, with borrowing kept where it is the game's sound (FFVI flute and choir, Mana flute and mallets, Evermore flute and strings); Mega Man X borrows nothing. The instrument picker gains a contrast rule for every palette: when lead, harmony and arp all sustain and the harmony is not a pad, the harmony is redrawn as a struck or pad voice (over 200 draws, no all-sustaining trio remains). `samples.STRUCK_PRESETS` records the classifier's verdict per preset so the picker can ask without rendering.
+
 ## 0.8.0 — 2026-10-15
 
 Style packs: an instrument set paired with the arrangement habits of the scores it imitates. Four packs, each reviewed by ear against plain snes on comparison pages, plus the engine pieces they needed and the fixes the reviews turned up.

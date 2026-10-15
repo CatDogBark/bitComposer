@@ -459,6 +459,19 @@ class Packs(unittest.TestCase):
         self.assertTrue(plain["info"]["struck"]["arp"])
         self.assertEqual(composer.channel_volumes_for(plain["info"])[pattern.CH_ARP], composer.CHANNEL_VOLUMES[pattern.CH_ARP])
 
+    def test_struck_table_matches_the_classifier(self):
+        names = set()
+        for pal in composer.PALETTES.values():
+            for v in pal.values():
+                names.update(v if isinstance(v, list) else (v.values() if isinstance(v, dict) else []))
+        from bitcomposer.packs import PACKS
+        for p in PACKS.values():
+            for v in p["voices"].values():
+                names.update(v if isinstance(v, list) else v.values())
+        for name in sorted(names):
+            if name in samples.INSTRUMENT_PRESETS and not samples.is_percussion(name):
+                self.assertEqual(samples.is_struck(name), samples.generate_instrument(name)["struck"], name)
+
     def test_pack_none_is_plain_snes(self):
         from bitcomposer.packs import PACKS
         info = compose_song(seed=5, style_pref="snes", pack="none")["info"]

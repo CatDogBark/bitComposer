@@ -253,6 +253,18 @@ def _pick_instruments(style: str, bass_weight: str = "heavy",
             "tom": "tom", "crash": "crash", "open_hihat": "open_hihat", "rim": "rim",
         }
 
+    # Contrast: three sustaining voices in overlapping registers (lead, chord
+    # tones, arp) mask each other, and a pack's borrowed organ under a synth
+    # lead and a pulse arp was the clearest case. If none of the three is
+    # struck and the harmony is not a pad-like family, redraw the harmony
+    # from the pool's struck or pad-like voices when it has any.
+    soft = ("pad", "strings", "choir")
+    if not (smp.is_struck(lead) or smp.is_struck(arp) or smp.is_struck(harmony)) \
+            and smp.PRESET_RELEASE.get(harmony) not in soft:
+        contrast = [h for h in distinct(pal["harmony"])
+                    if smp.is_struck(h) or smp.PRESET_RELEASE.get(h) in soft]
+        if contrast:
+            harmony = random.choice(contrast)
     out = {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
     if pal.get("counter"):
         out["counter"] = random.choice([c for c in pal["counter"] if c != harmony]

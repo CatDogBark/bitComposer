@@ -2227,6 +2227,42 @@ STRIKE_WINDOW = 0.15
 # plucked basses are one-shots).
 STRUCK_RATIO = 0.8
 
+# Tonal presets whose energy is in the attack (loop quieter than the strike,
+# or no loop), as generate_instrument classifies them. Kept as a table so the
+# composer can ask without rendering a sample; a test checks it against the
+# classifier for every preset in the palettes and packs.
+STRUCK_PRESETS = {
+    "evm_tubular_bell",
+    "ffvi_music_box",
+    "ffvi_piano",
+    "gen_bell",
+    "gen_pluck",
+    "gen_pluck_bass",
+    "gen_slap_bass",
+    "mana_celesta",
+    "mana_chimes",
+    "mana_kalimba",
+    "mmx_bass",
+    "mmx_rhythm_guitar",
+    "pulse12_pluck",
+    "pulse_pluck",
+    "snes_bell",
+    "snes_epiano",
+    "snes_harp",
+    "snes_marimba",
+    "snes_pizz",
+    "snes_pluck_bass",
+    "snes_slap_bass",
+    "snes_synth_bass",
+    "square_pluck",
+    "tri_pluck",
+}
+
+
+def is_struck(name: str) -> bool:
+    return name in STRUCK_PRESETS
+
+
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
                      "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal",
                      "conga", "tambourine", "woodblock", "drum", "click", "brush"}
