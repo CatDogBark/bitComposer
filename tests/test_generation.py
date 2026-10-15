@@ -167,6 +167,13 @@ class Arrangement(unittest.TestCase):
         for piece in ("ohat_per_bar", "tom_per_bar", "crash_per_bar"):
             self.assertGreater(self._mean(piece), 0.0, piece)
 
+    def test_melody_phrases(self):
+        """The phrase engine: chord tones on strong beats, a held phrase-final
+        note, the peak late. The old generator measured 61%, 5 rows, 0.35."""
+        self.assertGreater(self._mean("mel_strong_fit_pct"), 65.0)
+        self.assertGreater(self._mean("mel_end_hold"), 6.0)
+        self.assertGreater(self._mean("mel_climax_pos"), 0.4)
+
     def test_harmony_has_voicings(self):
         self.assertGreater(self._mean("distinct_voicings"), 2.0)
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Melody phrase engine: each pattern is a four-bar sentence (statement, sequence a step up, development carrying the climax, cadence on a held note), chord tones on strong beats, leaps answered by steps, question phrases ending off the root and answers on it, register driven by section energy so choruses lift. Over 20 seeds: chord tone on strong beats 61% to 77%, held phrase endings 5 to 7.4 rows, climax position 0.35 to 0.49.
+- The melody and counter-melody draw from their own random stream, so melody changes no longer shift the rest of the arrangement.
+
 ## 0.5.0 — 2026-10-14
 
 Arrangement release: everything here was reviewed by ear on A/B comparison pages before merging.

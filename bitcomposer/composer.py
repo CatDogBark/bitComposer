@@ -253,7 +253,7 @@ def _chord_segments(key: int, scale_name: str, scale_notes: list[int],
 
 def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      section_density, section_bass, sample_map,
-                     melody_sample, use_phrased, section_motif,
+                     melody_sample, use_phrased, section_motif, melody_rng,
                      chord_idx, is_answer,
                      voicing_style, num_harmony_voices,
                      vibrato_speed, vibrato_depth,
@@ -279,14 +279,19 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
 
     # ── Melody ──
     if layers["melody"]:
+        # The melody has its own random stream, seeded from the pattern's
+        # content seed, so the arrangement around it does not move when the
+        # melody code changes. Register follows section energy: verses low,
+        # choruses high.
         melody = generate_melody(
             scale_notes, chord_notes, ROWS_PER_PATTERN, section_density,
             motif=section_motif, is_answer=is_answer, phrased=use_phrased,
-            chord_timeline=melody_timeline,
+            chord_timeline=melody_timeline, rng=melody_rng,
+            register=0.2 + 0.7 * max(0.0, min(1.0, (section_energy - 0.5) / 0.5)),
         )
         apply_notes_to_pattern(
             pat, CH_MELODY, melody, melody_sample,
-            volume=melody_vol, humanize=True,
+            volume=melody_vol, humanize=True, rng=melody_rng,
         )
         apply_vibrato(pat, CH_MELODY, melody,
                       speed=vibrato_speed, depth=vibrato_depth)
@@ -300,11 +305,11 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
 
         if melody and sec_type in ("chorus", "bridge") and random.random() < 0.3:
             counter = generate_counter_melody(
-                scale_notes, chord_notes, melody, ROWS_PER_PATTERN)
+                scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng)
             counter = add_melody_cuts(counter, ROWS_PER_PATTERN, max_sustain=8)
             apply_notes_to_pattern(
                 pat, CH_HARMONY, counter, sample_map["harmony"],
-                volume=int(20 * section_energy), humanize=True,
+                volume=int(20 * section_energy), humanize=True, rng=melody_rng,
             )
             apply_harmony_fade(pat, CH_HARMONY, counter, fade_rate=harmony_fade,
                                hold_rows=harmony_hold)
@@ -625,7 +630,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
             # Reseed per content group so a returning chorus is the same music,
             # not a fresh roll of the dice.
-            random.seed(_content_seed(song_salt, group, chord_idx))
+            content_seed = _content_seed(song_salt, group, chord_idx)
+            random.seed(content_seed)
+            melody_rng = random.Random(content_seed ^ 0x5EED)
 
             next_entry = section_prog[(chord_idx + 1) % num_chords]
             segments = _chord_segments(section_key, scale_name, section_scale,
@@ -656,7 +663,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 section_energy=section_energy, section_density=section_density,
                 section_bass=section_bass, sample_map=sample_map,
                 melody_sample=melody_sample, use_phrased=use_phrased,
-                section_motif=section_motif, chord_idx=chord_idx,
+                section_motif=section_motif, melody_rng=melody_rng, chord_idx=chord_idx,
                 is_answer=(chord_idx % 2 == 1),
                 voicing_style=voicing_style, num_harmony_voices=num_harmony_voices,
                 vibrato_speed=vibrato_speed, vibrato_depth=vibrato_depth,

@@ -169,6 +169,46 @@ def analyze(path):
         n for n in grams.values() if n > 1) / max(total_grams, 1)
     out["mel_notes"] = len(seq)
 
+    # Melody craft. Strong-beat chord fit: on beats 1 and 3, is the melody
+    # note a chord tone of the chord the bass states at the bar's downbeat
+    # (root, third of either kind, fifth, seventh)? End hold: how long the
+    # last melody note of a pattern rings before it is cut. Climax position:
+    # where in the pattern the highest note falls (0 = start, 1 = end); a
+    # phrase that peaks late reads ~0.5-0.75. Register spread: how much the
+    # per-pattern mean pitch moves across the song (verse low, chorus high).
+    CHORD_INTERVALS = {0, 3, 4, 7, 10, 11}
+    strong = fit = 0
+    holds, climaxes, means = [], [], []
+    for oi in real:
+        pat = m.patterns[oi]
+        mel = m.notes_on(oi, CH_MELODY)
+        if not mel:
+            continue
+        for bar in range(0, len(pat), ROWS_PER_BAR):
+            bass = pat[bar].get(CH_BASS)
+            root = bass[0] % 12 if bass and bass[0] is not None and bass[0] < 120 else None
+            if root is None:
+                continue
+            for r, n in mel:
+                if bar <= r < bar + ROWS_PER_BAR and (r - bar) in (0, 8):
+                    strong += 1
+                    fit += (n - root) % 12 in CHORD_INTERVALS
+        last_row = mel[-1][0]
+        end = len(pat)
+        for r in range(last_row + 1, len(pat)):
+            e = pat[r].get(CH_MELODY)
+            if e and e[0] is not None:
+                end = r
+                break
+        holds.append(end - last_row)
+        peak = max(mel, key=lambda x: (x[1], -x[0]))
+        climaxes.append(peak[0] / max(len(pat) - 1, 1))
+        means.append(statistics.mean(n for _, n in mel))
+    out["mel_strong_fit_pct"] = 100.0 * fit / max(strong, 1)
+    out["mel_end_hold"] = float(statistics.mean(holds)) if holds else 0.0
+    out["mel_climax_pos"] = float(statistics.mean(climaxes)) if climaxes else 0.0
+    out["mel_register_spread"] = float(statistics.pstdev(means)) if len(means) > 1 else 0.0
+
     # Distinct chord shapes actually sounding on the harmony channels.
     voicings = set()
     for oi in real:
@@ -292,7 +332,8 @@ def grid(path, pat_idx=None, rows=64):
 KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
         "odd_row_pct", "offgrid_pct", "motif_reuse_pct", "distinct_voicings",
         "voice_motion", "distinct_ioi", "n_fx", "arp_figures", "arp_mel_ratio",
-        "arp_vol_levels", "drum_shapes", "drum_repeat_pct", "kick_levels", "snare_levels"]
+        "arp_vol_levels", "drum_shapes", "drum_repeat_pct", "kick_levels", "snare_levels",
+        "mel_strong_fit_pct", "mel_end_hold", "mel_climax_pos", "mel_register_spread"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar", "ohat_per_bar", "tom_per_bar", "crash_per_bar"]
 
 

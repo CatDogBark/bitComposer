@@ -63,9 +63,10 @@ def end_note(instrument: int) -> int:
 
 # ── Note application ──
 
-def humanize_volume(base_volume: int, amount: int = 6) -> int:
+def humanize_volume(base_volume: int, amount: int = 6,
+                    rng: random.Random | None = None) -> int:
     """Add subtle random velocity variation to a note."""
-    variation = random.randint(-amount, amount)
+    variation = (rng or random).randint(-amount, amount)
     return max(1, min(64, base_volume + variation))
 
 
@@ -73,10 +74,13 @@ def apply_notes_to_pattern(pattern: ITPattern, channel: int,
                            note_list: list[tuple[int, int]],
                            instrument: int, volume: int = 255,
                            effect: int = 0, effect_val: int = 0,
-                           humanize: bool = False):
+                           humanize: bool = False,
+                           rng: random.Random | None = None):
     """Write note events into a pattern channel.
 
-    Note-cut events are signaled by midi_note == -1.
+    Note-cut events are signaled by midi_note == -1. `rng` is the stream
+    humanisation draws from; the melody passes its own so that the number of
+    melody notes does not shift the global stream for every later part.
     """
     for row, midi_note in note_list:
         if 0 <= row < pattern.rows:
@@ -87,7 +91,7 @@ def apply_notes_to_pattern(pattern: ITPattern, channel: int,
             it_note = midi_to_it_note(midi_note)
             vol = volume
             if humanize and vol != 255:
-                vol = humanize_volume(vol)
+                vol = humanize_volume(vol, rng=rng)
             pattern.data[row][channel] = ITNote(
                 note=it_note,
                 instrument=instrument,
