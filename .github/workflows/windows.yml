@@ -36,19 +36,21 @@ jobs:
           dir out
       - name: Build executables
         run: |
-          pyinstaller --onefile --name bitcomposer --console bitcomposer/cli.py
+          # Windows paths are case-insensitive: "bitcomposer" and "bitComposer"
+          # would be one file, so the command line gets a -cli suffix.
+          pyinstaller --onefile --name bitcomposer-cli --console bitcomposer/cli.py
           pyinstaller --onefile --name bitComposer --windowed bitcomposer/gui.py
       - name: Package
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path pkg | Out-Null
-          Copy-Item dist/bitcomposer.exe, dist/bitComposer.exe pkg/
+          Copy-Item dist/bitcomposer-cli.exe, dist/bitComposer.exe pkg/
           @"
           bitComposer for Windows
           =======================
 
           bitComposer.exe   a window: pick a palette, a style pack and how many songs, press Generate.
-          bitcomposer.exe   the command line, e.g.  bitcomposer -n 10 --style snes --pack megamanx -d "%USERPROFILE%\Music\bitComposer"
+          bitcomposer-cli.exe   the command line, e.g.  bitcomposer-cli -n 10 --style snes --pack megamanx -d "%USERPROFILE%\Music\bitComposer"
 
           Songs are Impulse Tracker (.it) files. Play them with XMPlay (free, one small exe, drag a folder onto it),
           foobar2000 with the OpenMPT component, or OpenMPT itself. Winamp opens them but its old module engine

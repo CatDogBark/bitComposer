@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Windows: `bitComposer.exe` (a tkinter window: palette, pack, echo, energy, tempo, count, folder, Generate) and `bitcomposer.exe` (the CLI), built single-file by a GitHub Actions Windows job and attached to each release as `bitComposer-windows.zip`; `bitcomposer-gui` console script; pyproject version synced to 0.8.0.
+- Windows: `bitComposer.exe` (a tkinter window: palette, pack, echo, energy, tempo, count, folder, Generate) and `bitcomposer-cli.exe` (the CLI), built single-file by a GitHub Actions Windows job and attached to each release as `bitComposer-windows.zip`; `bitcomposer-gui` console script; pyproject version synced to 0.8.0.
 - Pack voices: the packs' lead, harmony and bass pools hold only their own voices, with borrowing kept where it is the game's sound (FFVI flute and choir, Mana flute and mallets, Evermore flute and strings); Mega Man X borrows nothing. The instrument picker gains a contrast rule for every palette: when lead, harmony and arp all sustain and the harmony is not a pad, the harmony is redrawn as a struck or pad voice (over 200 draws, no all-sustaining trio remains). `samples.STRUCK_PRESETS` records the classifier's verdict per preset so the picker can ask without rendering.
 
 ## 0.8.0 — 2026-10-15
