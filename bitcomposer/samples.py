@@ -1548,6 +1548,12 @@ _ONE_SHOT_WAVEFORMS = {
 }
 
 
+# Sustain-region RMS (of full scale, after the default volume) every looped
+# tonal preset is normalised to. 0.18 is where the SNES flute and brass
+# landed before normalisation, so the SNES palette keeps its level.
+LOUDNESS_TARGET = 0.18
+
+
 def generate_instrument(name: str) -> dict:
     """Generate a named instrument.
 
@@ -1574,6 +1580,22 @@ def generate_instrument(name: str) -> dict:
         meta = {"rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
                 "loop": not one_shot, "loop_start": loop_start, "loop_end": loop_end}
     family = PRESET_RELEASE.get(name)
+    if meta.get("loop"):
+        # Equal loudness: scale the sample data so its sustain region sits at
+        # LOUDNESS_TARGET RMS. A square wave sustains at full level and a
+        # bell at a fraction, so at the same written volume one was 6-8 dB
+        # louder than the other and the mix table chased samples. The data
+        # is scaled (not the default volume) because a volume column on a
+        # note overrides the default. Scaling up stops where the peak would
+        # clip, so percussive voices with a quiet tail keep their shape.
+        ints = list(struct.unpack(f"<{length}h", data))
+        region = ints[meta["loop_start"]:meta["loop_end"]] or ints
+        rms = math.sqrt(sum(v * v for v in region) / len(region)) / 32767.0
+        peak = max(abs(v) for v in ints) / 32767.0
+        if rms > 1e-4 and peak > 0:
+            k = min(LOUDNESS_TARGET / rms, 0.98 / peak)
+            if abs(k - 1.0) > 0.02:
+                data = _pack_samples([max(-32768, min(32767, int(v * k))) for v in ints])
     if family and meta.get("loop"):
         data, length, meta = add_release(data, length, meta, RELEASE[family])
     return {

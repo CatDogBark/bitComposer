@@ -416,7 +416,10 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         bass = generate_bass_timeline(bass_segments, section_bass,
                                       weight=bass_weight,
                                       density=0.6 + 0.35 * section_energy)
-        bass_vol = {"heavy": 255, "medium": 150, "light": 100}.get(bass_weight, 255)
+        # Volume-column values are 0-64. The old 150/100 for medium/light were
+        # not volumes at all: in the IT volume column 150 is a pan command and
+        # 100 a volume slide down, which left light basses nearly silent.
+        bass_vol = {"heavy": 255, "medium": 52, "light": 44}.get(bass_weight, 255)
         if use_bass_porta and len(bass) > 1:
             apply_portamento(
                 pat, CH_BASS, bass, sample_map["bass"],
@@ -889,21 +892,24 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 # now decaying pulse blips, which average ~0.55x a held pulse over an 8th-note
 # step, so 28 puts them at the level that 17 gave the held tone. SNES and
 # Genesis arps are decaying plucks and bells and sit in that band at 33.
+# Melody and echo at 22: with looped voices normalised to equal sustain
+# loudness (samples.LOUDNESS_TARGET), 22 puts the SNES lead back where it
+# sat before normalisation (about 14 dB under the rest of the mix, measured
+# over 12 seeds); the per-palette overrides below land chip and genesis
+# within 2 dB of that.
 CHANNEL_VOLUMES = [
-    13,              # melody
+    22,              # melody
     25, 25, 25,      # harmony
     8,               # bass
     33,              # arp
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
-    13, 13,          # echo taps
+    22, 22,          # echo taps
 ]
-# Melody and echo levels differ by palette for the same reason as the arp:
-# a chip pulse lead sustains at full level and an FM lead nearly so, where
-# the SNES voices decay. Measured melody-minus-backing: snes -14 dB, genesis
-# -9, chip -6. The settings below bring chip and genesis to about -11.
+# Lead levels no longer differ by palette: looped voices are normalised to
+# equal sustain loudness in samples.generate_instrument.
 PALETTE_MIX = {
-    "chip": {CH_ARP: 28, CH_MELODY: 9, CH_ECHO1: 9, CH_ECHO2: 9},
-    "genesis": {CH_ARP: 17, CH_MELODY: 10, CH_ECHO1: 10, CH_ECHO2: 10},
+    "chip": {CH_ARP: 28, CH_MELODY: 26, CH_ECHO1: 26, CH_ECHO2: 26},
+    "genesis": {CH_ARP: 17, CH_MELODY: 19, CH_ECHO1: 19, CH_ECHO2: 19},
 }
 
 
