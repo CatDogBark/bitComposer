@@ -333,6 +333,7 @@ tuned by ear afterwards (arp levels, metallic hat).
 | | | leaps (5+ semitones) | 16% | 13% |
 | Equal loudness (0.7.0) | sustaining voices normalised by loop RMS, struck voices on the arp by their first 150 ms; bass volume-column bug fixed | spread across the five SNES arp voices | 8.6 dB | 4.2 dB |
 | | | SNES bell arp vs drums | −6.2 dB | −13.6 dB |
+| Style packs (0.8.0) | ffvi, mana, evermore, megamanx: voices per role plus weighted habits; drone and riff bass, power chords, ostinato / pulse harmony, slap echo, sustaining-arp rule, struck-voice strike normalisation; Mega Man X designed from the game's SPC bank | arp vs melody, Mega Man X pulse arp | +4 to +6 dB | −1.6 to +0.3 dB |
 | SNES echo (0.7.0) | three fading, darkening taps sent per note from the lead, lighter sends from harmony and arp on returns of their own, per-song delay / feedback / wetness / stereo drawn from an own stream, section gain, 19 channels | lead notes sent | 100% | 70% |
 | | | returns vs source (lead / harmony / arp) | −5 dB / none / none | −6 / −13 / −10 dB |
 | | | all returns vs melody (six songs) | about −5 dB | −0.3 to −5.2 dB |

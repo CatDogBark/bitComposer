@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.8.0 — 2026-10-15
+
+Style packs: an instrument set paired with the arrangement habits of the scores it imitates. Four packs, each reviewed by ear against plain snes on comparison pages, plus the engine pieces they needed and the fixes the reviews turned up.
 
 - Style pack `megamanx` (Mega Man X), designed from the game's own SPC sample bank: a driven, chorused lead guitar, a chugging rhythm guitar, a dry pulse synth, synth brass, a string pad, a soft lead, a snapping synth bass and a tight kit, all synthesised to the measured shapes; habits: fast tempos, intense energy, minor keys, stab and rhythmic harmony on power chords (new habit `power_chords`: root, fifth, octave), a new `riff` bass style (a one-bar root / octave / fifth riff), busy drums, no swing, broken-octave and gallop arps, a pulse-synth counter-line half the time, and the game's echo: a new `slap` delay (48 ms, written as a tick delay under a row) with bounce stereo.
 - Style pack `evermore` (Secret of Evermore): warm and dark ensemble pads, a drone, a breathy flute, an "oo" choir, tubular bells, frame drum, brushed snare and a soft click; habits: slow tempos, chill energy, minor keys, linear forms, sustained harmony, a new `drone` bass style (one held note per chord, sliding between roots), sparse drums with a 40% chance of no kit at all (new pack habit `drumless`), wet centred echo on a quarter or dotted-eighth delay (packs can now weight `echo_delay` and the song form).

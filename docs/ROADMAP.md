@@ -49,10 +49,9 @@ These change how every note sounds, not what notes are played.
   and `evermore` (Secret of Evermore: pads, drone bass, breathy flute,
   sparse or no drums; the atmospheric set) and `megamanx` (Mega Man X: driven
   guitars, pulse synth, synth brass, riff bass, slap echo; read off the
-  game's own sample bank) are done. `metroid` would be evermore with a cold
-  voice set (metallic pads, detuned low brass, clangs, sub drone) and a
-  dissonance weight in the harmony. Rock grooves of their own (double-time
-  hats, kick patterns under riffs) are the kit revision's job. A pack is data;
+  game's own sample bank) are done; Evermore covers the ambient ground, so no
+  separate Metroid pack. Rock grooves of their own (double-time hats, kick
+  patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
 - **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
   sample bank in BRR, every voice's envelope and pitch, the echo settings.
