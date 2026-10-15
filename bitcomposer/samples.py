@@ -1157,7 +1157,9 @@ def mana_shaker() -> tuple[bytes, int, dict]:
         t = i / SNES_RATE
         env = math.sin(math.pi * min(1.0, t / 0.09)) ** 0.5
         out.append(_rng.uniform(-1.0, 1.0) * env)
-    return _finish_snes(_highpass(out, 0.6), 0.6)
+    # A sustained grain carries far more energy than a hat's tick at the same
+    # peak, and a shaker lives at the back of the mix: well under the hat.
+    return _finish_snes(_highpass(out, 0.6), 0.3)
 
 
 def mana_tambourine() -> tuple[bytes, int, dict]:

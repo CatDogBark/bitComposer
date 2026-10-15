@@ -88,7 +88,7 @@ PACKS = {
         },
         # A lighter kit: the hand percussion carries the time, the kick and
         # snare sit back.
-        "trims": {"kick": 28, "snare": 30, "hihat": 32, "openhat": 30},
+        "trims": {"kick": 28, "snare": 30, "hihat": 20, "openhat": 22},
     },
 }
 
