@@ -764,7 +764,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     else:
         bass_style = _weighted(["steady", "octave", "walking", "driving"], pack_weights(pack, "bass_style"))
         melody_density = random.uniform(0.45, 0.65)
-    arp_figures = pick_figures(energy_pref)
+    arp_figures = pick_figures(energy_pref, pack_weights(pack, "arp_figures"))
 
     # ── Song structure (from structure module) ──
     song_structure, section_layers_map, energy_curve, ending_style, form_name = \

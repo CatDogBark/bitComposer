@@ -48,6 +48,48 @@ PACKS = {
         # kit's hats well back.
         "trims": {"hihat": 18, "openhat": 18},
     },
+    "mana": {
+        "palette": "snes",
+        "label": "Secret of Mana",
+        "voices": {
+            "lead": ["mana_whistle", "mana_panflute", "mana_celesta", "mana_steel_drum",
+                     "snes_flute", "mana_kalimba", "snes_bell"],
+            "alt_lead": ["mana_panflute", "mana_whistle", "mana_celesta", "snes_flute",
+                         "mana_steel_drum", "snes_epiano"],
+            "harmony": ["mana_glass_pad", "mana_glass_pad", "snes_strings", "snes_choir",
+                        "snes_epiano", "snes_organ"],
+            "counter": ["mana_celesta", "mana_kalimba", "snes_flute", "mana_steel_drum"],
+            "arp": ["mana_kalimba", "mana_celesta", "mana_chimes", "snes_marimba",
+                    "mana_steel_drum", "snes_bell"],
+            "bass_heavy": ["snes_slap_bass", "snes_pluck_bass", "snes_synth_bass"],
+            "bass_medium": ["snes_slap_bass", "snes_slap_bass", "snes_pluck_bass"],
+            "bass_light": ["snes_slap_bass", "snes_pizz", "snes_marimba"],
+            "drums": {"kick": "snes_kick", "snare": "snes_snare", "hihat": "mana_shaker",
+                      "tom": "mana_conga", "crash": "snes_crash",
+                      "open_hihat": "mana_tambourine", "rim": "mana_woodblock"},
+        },
+        "habits": {
+            "tempo": {"slow": 1, "medium": 3, "fast": 2},
+            "energy": {"chill": 1, "normal": 3, "intense": 1},
+            "scale_family": {"minor": 1, "major": 3, "pentatonic": 2},
+            "harmony_voicing": {"full": 1, "thin": 2},
+            "harmony_mode": {"pulse": 2, "rhythmic": 2, "stabs": 2, "sustain": 1, "ostinato": 0},
+            "bass_weight": {"heavy": 1, "medium": 2, "light": 2},
+            "bass_style": {"steady": 1, "walking": 2, "octave": 3, "driving": 1},
+            "drum_density": {"sparse": 1, "normal": 3, "busy": 2},
+            "drum_swing": {"off": 1, "light": 3, "heavy": 1},
+            "arp_figures": {"classic_up": 3, "up_down": 3, "cascade": 2, "sync_push": 2,
+                            "run16": 1, "quarter_up": 1, "broken_octave": 1},
+            "echo": 0.8,
+            "echo_wet": {"light": 1, "normal": 3, "wet": 1},
+            "echo_stereo": {"bounce": 2, "centre": 1},
+            "counter_line": 0.35,
+            "section_rolls": False,
+        },
+        # A lighter kit: the hand percussion carries the time, the kick and
+        # snare sit back.
+        "trims": {"kick": 28, "snare": 30, "hihat": 32, "openhat": 30},
+    },
 }
 
 PACK_NAMES = list(PACKS)

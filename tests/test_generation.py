@@ -416,6 +416,15 @@ class Packs(unittest.TestCase):
         self.assertIn("(ffvi)", song["message"] if "message" in song else "(ffvi)")
         self.assertIn(info["harmony_mode"], ("ostinato", "sustain", "pulse", "stabs"))
 
+    def test_every_pack_generates_with_its_own_voices(self):
+        from bitcomposer.packs import PACKS
+        for name, pack in PACKS.items():
+            info = compose_song(seed=6, style_pref="snes", pack=name)["info"]
+            self.assertEqual(info["pack"], name, name)
+            self.assertIn(info["instruments"]["melody"], pack["voices"]["lead"], name)
+            self.assertIn(info["instruments"]["arp"], pack["voices"]["arp"], name)
+            self.assertEqual(info["instruments"]["tom"], pack["voices"]["drums"]["tom"], name)
+
     def test_pack_none_is_plain_snes(self):
         from bitcomposer.packs import PACKS
         info = compose_song(seed=5, style_pref="snes", pack="none")["info"]
