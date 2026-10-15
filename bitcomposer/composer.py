@@ -218,7 +218,7 @@ def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[st
 
 def _pick_section_motif(sec_type: str, use_phrased: bool,
                         chorus_motif, verse_motif, bridge_motif,
-                        rng: random.Random | None = None) -> dict | None:
+                        rng: random.Random | None = None, scale_size: int = 7) -> dict | None:
     """Pick the appropriate motif for a section type."""
     if not use_phrased:
         return None
@@ -232,7 +232,7 @@ def _pick_section_motif(sec_type: str, use_phrased: bool,
         # Outro/tag: a fresh motif on the melody's own stream, so its draws
         # never touch the arrangement.
         r = rng or random
-        return generate_motif(length=r.choice([3, 4]), rng=rng)
+        return generate_motif(length=r.choice([3, 4]), rng=rng, scale_size=scale_size)
 
 
 # Related keys a section can move to, as (semitone shift, scale family).
@@ -599,9 +599,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # the motif grammar can change without moving the rest of the song.
     motif_rng = random.Random(random.randrange(2 ** 31))
     if use_phrased:
-        chorus_motif = generate_motif(length=motif_rng.choice([4, 5]), rng=motif_rng)
+        scale_size = len(theory.SCALES[scale_name])
+        chorus_motif = generate_motif(length=motif_rng.choice([4, 5]), rng=motif_rng, scale_size=scale_size)
         verse_motif = vary_motif(chorus_motif, 0.4, rng=motif_rng)
-        bridge_motif = generate_motif(length=motif_rng.choice([3, 4]), rng=motif_rng)
+        bridge_motif = generate_motif(length=motif_rng.choice([3, 4]), rng=motif_rng, scale_size=scale_size)
     else:
         chorus_motif = verse_motif = bridge_motif = None
 
@@ -761,7 +762,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
             section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
             section_motif = _pick_section_motif(
-                sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif, rng=melody_rng)
+                sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif, rng=melody_rng,
+                scale_size=len(theory.SCALES[sec_scale_name]))
 
             pat = _compose_pattern(
                 scale_notes=section_scale, segments=segments,

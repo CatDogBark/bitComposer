@@ -58,7 +58,8 @@ CELLS = [
 LAUNCHES = [("fourth", 3, 50), ("fifth", 4, 35), ("octave", 7, 15)]
 
 
-def generate_motif(length: int = 4, rng: random.Random | None = None) -> dict:
+def generate_motif(length: int = 4, rng: random.Random | None = None,
+                   scale_size: int = 7) -> dict:
     """A one-bar motif: a rhythm and a list of moves (scale steps) per note.
 
     The first move is 0. A launch leap is allowed on the first move only,
@@ -66,8 +67,13 @@ def generate_motif(length: int = 4, rng: random.Random | None = None) -> dict:
     Form says how the phrase treats it: a *sentence* (statement, sequence,
     development, cadence) or a *period* (a cell, its answer, the cell again,
     the answer closed) — the two shapes most hooks take.
+
+    Moves are scale steps, so they are sized by scale_size: in a five-note
+    scale a step is already two or three semitones, and a "fifth" is three
+    steps, not four — a four-step launch there was a sixth or more.
     """
     r = rng or random
+    pent = scale_size <= 5
     rhythm = list(r.choice(RHYTHM_TEMPLATES))
     if len(rhythm) > length:
         rhythm = rhythm[:length]
@@ -78,9 +84,13 @@ def generate_motif(length: int = 4, rng: random.Random | None = None) -> dict:
     moves = [0]
     if r.random() < 0.35:                               # a launch leap
         _, leap, _ = r.choices(LAUNCHES, weights=[w for _, _, w in LAUNCHES], k=1)[0]
+        if pent:
+            leap = {3: 2, 4: 3, 7: 5}.get(leap, leap)
         moves += [leap, -1]
     while len(moves) < len(rhythm):
         _, cell, _ = r.choices(CELLS, weights=[w for _, _, w in CELLS], k=1)[0]
+        if pent:
+            cell = [max(-1, min(1, c)) if abs(c) == 2 else c for c in cell]   # a "third" is one step here
         moves += cell
     moves = moves[:len(rhythm)]
     return {"rhythm": rhythm, "contour": moves,
