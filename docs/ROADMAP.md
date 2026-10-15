@@ -39,6 +39,14 @@ These change how every note sounds, not what notes are played.
   dissonance weight in the harmony. Rock grooves of their own (double-time
   hats, kick patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
+  sample bank in BRR, every voice's envelope and pitch, the echo settings.
+  A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot
+  and map its samples onto a pack's roles through a small per-game role
+  map, falling back to the synthesised voices without one. The repo ships
+  the code, never the samples: the rips are the publishers' recordings and
+  do not belong in a public repository. The decoder and the bank profiler
+  already exist from the Mega Man X analysis (`~/diags/bitcomposer/mmx`).
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 
