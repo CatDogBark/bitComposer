@@ -65,13 +65,23 @@ FIGURES = {
 }
 
 
-def pick_figures(energy_pref: str) -> dict[str, str]:
+def pick_figures(energy_pref: str, weights: dict[str, float] | None = None) -> dict[str, str]:
     """Choose a figure per section role for the song.
 
     Verse and chorus always differ, so the chorus arp is part of the hook
     rather than the same loop as everything else. The bridge gets a third
-    figure; intros and outros use the sparse pulse.
+    figure; intros and outros use the sparse pulse. A style pack may pass
+    weights over figure names; figures it weights at zero are out and the
+    chorus draw is weighted.
     """
+    if weights:
+        pool = [f for f in FIGURES if weights.get(f, 0) > 0]
+        chorus_pool = [f for f in pool if FIGURES[f]["energy"][0] >= 0.4] or pool
+        chorus = random.choices(chorus_pool, [weights[f] for f in chorus_pool], k=1)[0]
+        rest = [f for f in pool if f != chorus]
+        random.shuffle(rest)
+        return {"verse": rest[0], "chorus": chorus, "bridge": rest[1] if len(rest) > 1 else rest[0],
+                "intro": "sparse_pulse", "outro": "quarter_up"}
     if energy_pref == "chill":
         pool = ["quarter_up", "classic_up", "up_down", "pedal_bounce", "sparse_pulse"]
     elif energy_pref == "intense":

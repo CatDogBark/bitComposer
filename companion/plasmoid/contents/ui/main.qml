@@ -1308,7 +1308,7 @@ PlasmoidItem {
                         RowLayout { Layout.fillWidth: true; spacing: 8
                             Text { Layout.preferredWidth: 52; text: "PACK"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
                             Row { spacing: 3
-                                Repeater { model: ["random", "none", "ffvi"]
+                                Repeater { model: ["random", "none", "ffvi", "mana"]
                                     Rectangle {
                                         required property string modelData
                                         property bool active: root.settPack === modelData

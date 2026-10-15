@@ -7,7 +7,15 @@ The tracker engine handles pitch-shifting to play different notes.
 """
 
 import math
-import random as _rng
+import random
+import zlib
+
+# Noise for the samples comes from this stream, never from the global one:
+# generate_instrument reseeds it per preset, so a sample is the same bytes
+# whatever was generated before it, and changing a sample's recipe cannot
+# move the song's arrangement (it used to: a longer shaker shifted every
+# draw after it, titles included).
+_rng = random.Random(0)
 import struct
 
 # Base sample rate for all generated waveforms
@@ -1063,6 +1071,131 @@ def ffvi_cymbal() -> tuple[bytes, int, dict]:
     return _finish_snes(_lowpass(_highpass(out, 0.25), 0.8), 0.65)
 
 
+# ── Secret of Mana set ──
+# Kikuta's palette: bright mallets and air. Celesta, kalimba, steel drum,
+# wind chimes, a whistle and a pan flute, a glassy pad, and hand percussion.
+
+def mana_celesta() -> tuple[bytes, int, dict]:
+    """Celesta — a bright bell-bar: fundamental, a strong fourth-ish partial, quick."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return (math.sin(ph) + 0.45 * math.sin(4.0 * ph) * math.exp(-t / 0.18)
+                + 0.2 * math.sin(6.8 * ph) * math.exp(-t / 0.07))
+    return _decaying_voice(0.9, tone, amp_tau=0.4, tail_loop=True, amplitude=0.85)
+
+
+def mana_kalimba() -> tuple[bytes, int, dict]:
+    """Kalimba — a plucked tine: near-sine with a fast metallic click on top."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return math.sin(ph) + 0.35 * math.sin(6.2 * ph) * math.exp(-t / 0.03) + 0.15 * math.sin(2.0 * ph) * math.exp(-t / 0.15)
+    return _decaying_voice(0.6, tone, amp_tau=0.22, tail_loop=True, amplitude=0.85)
+
+
+def mana_steel_drum() -> tuple[bytes, int, dict]:
+    """Steel pan — fundamental with a strong octave and a slightly detuned twelfth
+    that wobbles as it rings."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return (math.sin(ph) + 0.7 * math.sin(2.0 * ph) * math.exp(-t / 0.35)
+                + 0.3 * math.sin(3.02 * ph) * math.exp(-t / 0.2)
+                + 0.15 * math.sin(4.0 * ph) * math.exp(-t / 0.1))
+    return _decaying_voice(1.0, tone, amp_tau=0.45, tail_loop=True, amplitude=0.85)
+
+
+def mana_chimes() -> tuple[bytes, int, dict]:
+    """Wind chimes — a high inharmonic cluster with a long clean ring; an arp
+    voice, not a lead."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return (math.sin(2.0 * ph) + 0.6 * math.sin(4.8 * ph) * math.exp(-t / 0.5)
+                + 0.4 * math.sin(7.8 * ph) * math.exp(-t / 0.3))
+    return _decaying_voice(1.2, tone, amp_tau=0.6, tail_loop=True, amplitude=0.7)
+
+
+def mana_whistle() -> tuple[bytes, int, dict]:
+    """Whistle — purer than the flute, a little breath, quick to speak."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.12, 3: 0.04},
+        attack_cycles=4, loop_cycles=1, breath=0.15, amplitude=0.9)
+
+
+def mana_panflute() -> tuple[bytes, int, dict]:
+    """Pan flute — breathy, hollow, a slower chiff than the flute."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.35, 3: 0.2, 4: 0.1, 5: 0.05},
+        attack_cycles=10, loop_cycles=2, breath=0.35, lowpass=0.7, amplitude=0.85)
+
+
+def mana_glass_pad() -> tuple[bytes, int, dict]:
+    """Glass pad — hollow, octaves and a twelfth, slow swell, lightly chorused."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.4, 3: 0.15, 4: 0.3, 6: 0.1, 8: 0.15},
+        periods=140, attack_cycles=30, detune_layers=1, lowpass=0.6, amplitude=0.8)
+
+
+def mana_conga() -> tuple[bytes, int, dict]:
+    """Conga — a hand drum: a settling pitch, short, a slap of noise."""
+    n = int(SNES_RATE * 0.3)
+    out = []
+    ph = 0.0
+    for i in range(n):
+        t = i / SNES_RATE
+        f = 190.0 + 120.0 * math.exp(-t / 0.02)
+        ph += 2.0 * math.pi * f / SNES_RATE
+        v = math.sin(ph) * math.exp(-t / 0.09)
+        v += _rng.uniform(-0.4, 0.4) * math.exp(-t / 0.006)
+        out.append(v)
+    return _finish_snes(out, 0.9)
+
+
+def mana_shaker() -> tuple[bytes, int, dict]:
+    """Shaker — one stroke: band-limited noise (a "shh" between about 2 and
+    6 kHz, not a full-band burst), a 12 ms swell of grains and a tail that
+    fades over the rest. The first version was white noise with a symmetric
+    envelope and read as a kit piece; a shaker is a texture under the kit."""
+    n = int(SNES_RATE * 0.11)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        env = min(1.0, t / 0.012) * math.exp(-max(0.0, t - 0.012) / 0.035)
+        out.append(_rng.uniform(-1.0, 1.0) * env)
+    out = _lowpass(_highpass(out, 0.35), 0.45)
+    return _finish_snes(out, 0.3)
+
+
+def mana_tambourine() -> tuple[bytes, int, dict]:
+    """Tambourine — jingles: bright noise with a ringing metallic partial."""
+    n = int(SNES_RATE * 0.25)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        v = _rng.uniform(-1.0, 1.0) * 0.7 * math.exp(-t / 0.08)
+        v += 0.3 * math.sin(2.0 * math.pi * 3400.0 * t) * math.exp(-t / 0.12)
+        out.append(v)
+    return _finish_snes(_highpass(out, 0.4), 0.6)
+
+
+def mana_woodblock() -> tuple[bytes, int, dict]:
+    """Woodblock — a dry tick with one short pitched resonance."""
+    n = int(SNES_RATE * 0.08)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        v = math.sin(2.0 * math.pi * 900.0 * t) * math.exp(-t / 0.012)
+        v += _rng.uniform(-0.5, 0.5) * math.exp(-t / 0.003)
+        out.append(v)
+    return _finish_snes(out, 0.8)
+
+
 def snes_orch_hit() -> tuple[bytes, int, dict]:
     """Orchestra hit — stacked saws on root, fifth and octave plus a noise burst."""
     n = int(SNES_RATE * 0.5)
@@ -1510,6 +1643,9 @@ PRESET_RELEASE = {
     "ffvi_strings": "strings", "ffvi_contrabass": "strings", "ffvi_horn": "brass",
     "ffvi_trumpet": "brass", "ffvi_oboe": "flute", "ffvi_clarinet": "flute",
     "ffvi_organ": "organ", "ffvi_piano": "keys", "ffvi_music_box": "keys",
+    "mana_celesta": "keys", "mana_kalimba": "keys", "mana_steel_drum": "keys",
+    "mana_chimes": "keys", "mana_whistle": "flute", "mana_panflute": "flute",
+    "mana_glass_pad": "pad",
     # Genesis
     "gen_lead": "lead", "gen_saw_lead": "lead", "gen_brass": "brass",
     "gen_pad": "pad", "gen_sub_bass": "bass", "gen_bell": "keys",
@@ -1726,6 +1862,18 @@ INSTRUMENT_PRESETS = {
     "ffvi_bassdrum":  (ffvi_bassdrum,  {},             64),
     "ffvi_snare":     (ffvi_snare,     {},             62),
     "ffvi_cymbal":    (ffvi_cymbal,    {},             52),
+    # Secret of Mana set
+    "mana_celesta":   (mana_celesta,   {},             56),
+    "mana_kalimba":   (mana_kalimba,   {},             56),
+    "mana_steel_drum": (mana_steel_drum, {},           56),
+    "mana_chimes":    (mana_chimes,    {},             48),
+    "mana_whistle":   (mana_whistle,   {},             60),
+    "mana_panflute":  (mana_panflute,  {},             60),
+    "mana_glass_pad": (mana_glass_pad, {},             52),
+    "mana_conga":     (mana_conga,     {},             60),
+    "mana_shaker":    (mana_shaker,    {},             54),
+    "mana_tambourine": (mana_tambourine, {},           50),
+    "mana_woodblock": (mana_woodblock, {},             56),
     "snes_kick":      (snes_kick,      {},             64),
     "snes_snare":     (snes_snare,     {},             64),
     "snes_hat":       (snes_hat,       {},             46),
@@ -1769,7 +1917,8 @@ STRIKE_WINDOW = 0.15
 STRUCK_RATIO = 0.8
 
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
-                     "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal"}
+                     "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal",
+                     "conga", "tambourine", "woodblock"}
 
 
 def is_percussion(name: str) -> bool:
@@ -1842,6 +1991,7 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
     if name not in INSTRUMENT_PRESETS:
         raise ValueError(f"Unknown instrument: {name}")
     func, kwargs, vol = INSTRUMENT_PRESETS[name]
+    _rng.seed(zlib.crc32(name.encode()))
     result = func(**kwargs)
     if len(result) == 3:
         data, length, meta = result
