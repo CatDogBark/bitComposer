@@ -360,7 +360,25 @@ def generate_melody(scale_notes: list[int], chord_notes: list[int],
             chord_timeline=chord_timeline, rng=rng, register=register)
     else:
         notes = _generate_melody_simple(scale_notes, chord_notes, rows, density)
-    return add_melody_cuts(notes, rows, max_sustain=16)
+    return add_melody_cuts(min_note_length(notes), rows, max_sustain=16)
+
+
+def min_note_length(notes: list[tuple[int, int]], rows: int = 2) -> list[tuple[int, int]]:
+    """Drop any note that would be cut off within `rows` by the next one.
+
+    A rhythm template's push a sixteenth before the beat was followed by
+    the beat note itself, so the lead played a one-row blip into the
+    downbeat: on a sustained voice that is an attack, a release and another
+    attack inside 100 ms, heard as a stutter. A push replaces the downbeat
+    in real playing, so the later note goes and the push holds.
+    """
+    notes = sorted(notes)
+    out = []
+    for i, (row, note) in enumerate(notes):
+        if out and row - out[-1][0] < rows:
+            continue
+        out.append((row, note))
+    return out
 
 
 def generate_counter_melody(scale_notes: list[int], chord_notes: list[int],
