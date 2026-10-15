@@ -161,105 +161,6 @@ CHORD_INTERVALS = {
     "7th":   [0, 4, 7, 10],
 }
 
-# Drum pattern templates (16 steps, 1 = hit, 0 = rest)
-# Each is a dict of {drum_name: pattern}
-DRUM_PATTERNS = [
-    {  # Standard rock
-        "kick":  [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        "hat":   [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    },
-    {  # Driving
-        "kick":  [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        "hat":   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    },
-    {  # Syncopated
-        "kick":  [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
-        "hat":   [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    },
-    {  # Double-time
-        "kick":  [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        "hat":   [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1],
-    },
-    {  # Half-time heavy
-        "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        "hat":   [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    },
-    {  # Funky
-        "kick":  [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1],
-        "hat":   [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0],
-    },
-]
-
-# Sparse variants for breakdowns and low-density sections (less busy).
-# These keep a half-time backbeat on beat 3: intro and outro sections disable
-# drums entirely via LAYERS, so anything reaching here is a main section that
-# still needs a pulse. Leaving the snare row empty gave whole songs no snare.
-DRUM_PATTERNS_SPARSE = [
-    {
-        "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        "hat":   [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    },
-    {
-        "kick":  [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-        "hat":   [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0],
-    },
-]
-
-# Busy variants for choruses/intense sections
-DRUM_PATTERNS_BUSY = [
-    {
-        "kick":  [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
-        "hat":   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    },
-    {
-        "kick":  [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0],
-        "snare": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-        "hat":   [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
-    },
-]
-
-# Fill patterns (16 steps) — played at section transitions
-DRUM_FILLS = [
-    {  # Snare roll
-        "kick":  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1],
-        "hat":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "tom":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "crash": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    },
-    {  # Tom cascade
-        "kick":  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-        "hat":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "tom":   [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1],
-        "crash": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    },
-    {  # Build to crash
-        "kick":  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1],
-        "hat":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "tom":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "crash": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    },
-    {  # Kick snare flurry
-        "kick":  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
-        "snare": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1],
-        "hat":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "tom":   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        "crash": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    },
-]
-
-
 def add_chord_color(progression: list[tuple[int, str]],
                     chance: float = 0.4) -> list[tuple[int, str]]:
     """Enrich some triads into 7ths and sus4s.
@@ -284,24 +185,6 @@ def add_chord_color(progression: list[tuple[int, str]],
                 chord_type = "sus4"
         out.append((degree, chord_type, shift) if shift else (degree, chord_type))
     return out
-
-
-def random_drum_fill() -> dict[str, list[int]]:
-    """Pick a random drum fill pattern."""
-    return random.choice(DRUM_FILLS)
-
-
-def random_drum_pattern_for_section(section: str, base_pattern: dict,
-                                     density: str = "normal") -> dict:
-    """Pick a drum pattern appropriate for the section and density."""
-    if density == "sparse" or section in ("intro", "outro"):
-        return random.choice(DRUM_PATTERNS_SPARSE)
-    elif density == "busy" or section == "chorus":
-        return random.choice(DRUM_PATTERNS_BUSY)
-    elif section == "bridge":
-        # Bridge can go either way
-        return random.choice([base_pattern] + DRUM_PATTERNS_SPARSE)
-    return base_pattern
 
 
 def note_name(midi_note: int) -> str:
@@ -368,11 +251,6 @@ def random_alternate_progression(scale_name: str,
     # If no alternate, rotate the main progression
     return main_prog[1:] + main_prog[:1]
 
-
-
-def random_drum_pattern() -> dict[str, list[int]]:
-    """Pick a random drum pattern."""
-    return random.choice(DRUM_PATTERNS)
 
 
 def random_tempo() -> int:

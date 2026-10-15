@@ -32,8 +32,9 @@ These change how every note sounds, not what notes are played.
   today. Let a figure sit low in the verse and high in the chorus, or fall
   into a chord change, with the existing melody-collision check so the arp
   stays out of the lead's register.
-- **Drum ghost notes and velocity shape.** Drums have humanised hats and
-  nothing else: no ghost snares, no accent pattern across the bar.
+- **Drum ghost notes and velocity shape — done (branch `drums`, 2026-10-14)**,
+  along with phrase variation, the whole kit, fills by context and
+  breakdowns; see `bitcomposer/drums.py`.
 - **Per-section instrumentation.** Beyond the layer map, a plan for which
   voice carries which role per section (e.g. the pad drops out of the verse,
   the lead swaps for the bridge — the alt-lead swap is the only case today).

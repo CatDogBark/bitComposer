@@ -194,6 +194,8 @@ def main():
             print(f"  Bass:        {info['bass_style']} ({info['bass_weight']})")
             f = info['arp_figures']
             print(f"  Arp figures: verse {f['verse']}, chorus {f['chorus']}, bridge {f['bridge']}")
+            g = info['grooves']
+            print(f"  Grooves:     verse {g['verse']}, chorus {g['chorus']}, bridge {g['bridge']}")
             print(f"  Density:     {info['melody_density']}")
             print(f"  Melody:      {info['melody_style']} ({info['melody_contour']})")
             print(f"  Harmony:     {info['harmony_voicing']} / {info['harmony_mode']}")

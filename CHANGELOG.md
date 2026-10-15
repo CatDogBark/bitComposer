@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Drums rebuilt as grooves: four-bar phrases with an alternate bar and a lift, velocity tiers, ghost notes on a rim sample, open hat, toms and crashes in the grooves, a fill library sized by what comes next, bridge drop-outs, hats thinned above 140 BPM. Over 20 seeds: distinct bar patterns 5 to 12, repeated bars 60% to 12%, kick and snare velocity levels 1 to 3 and 4, open hat and toms from nothing to regular.
 - Release envelopes: every sustained voice gets a sustain loop and a decaying tail, and notes end with note-off instead of a hard cut, so strings, pads, brass, leads and basses each die away at their family's pace.
 - Arpeggios are figures: eleven one-bar shapes with accents and rests, a verse, chorus and bridge figure per song, climbing on alternate bars, thinning under a busy lead. SNES arps carry the chord's 7th or 9th from the scale.
 - `docs/ROADMAP.md`.

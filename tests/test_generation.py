@@ -157,6 +157,16 @@ class Arrangement(unittest.TestCase):
         for letter in "DGHJQS":
             self.assertIn(letter, fx)
 
+    def test_drums_vary(self):
+        """The groove engine: phrases, dynamics and the whole kit. The old
+        drums measured 5 shapes, 60% repeated bars, one velocity level."""
+        self.assertGreater(self._mean("drum_shapes"), 8.0)
+        self.assertLess(self._mean("drum_repeat_pct"), 30.0)
+        self.assertGreaterEqual(self._mean("kick_levels"), 2.0)
+        self.assertGreaterEqual(self._mean("snare_levels"), 2.0)
+        for piece in ("ohat_per_bar", "tom_per_bar", "crash_per_bar"):
+            self.assertGreater(self._mean(piece), 0.0, piece)
+
     def test_harmony_has_voicings(self):
         self.assertGreater(self._mean("distinct_voicings"), 2.0)
 

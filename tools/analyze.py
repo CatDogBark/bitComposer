@@ -236,6 +236,31 @@ def analyze(path):
         hits = sum(len(m.notes_on(oi, ch)) for oi in real)
         out[f"{nm}_per_bar"] = hits / max(bars, 1)
     out["bars"] = bars
+
+    # Drum variety: distinct one-bar shapes (which piece on which step, with
+    # velocity), how often a bar repeats the one before, and how many
+    # velocity levels the kick and snare use (1 = a machine).
+    shapes = []
+    kick_v, snare_v = set(), set()
+    for oi in real:
+        pat = m.patterns[oi]
+        for bar in range(0, len(pat), ROWS_PER_BAR):
+            shape = []
+            for r in range(bar, min(bar + ROWS_PER_BAR, len(pat))):
+                for ch, nm in DRUM_NAMES.items():
+                    e = pat[r].get(ch)
+                    if e and e[0] is not None and e[0] < 120:
+                        v = e[2] if e[2] is not None else 64
+                        shape.append((r - bar, nm))
+                        if nm == "kick":
+                            kick_v.add(v // 4)
+                        elif nm == "snare":
+                            snare_v.add(v // 4)
+            shapes.append(tuple(shape))
+    out["drum_shapes"] = len(set(shapes))
+    out["drum_repeat_pct"] = 100.0 * sum(1 for a, b in zip(shapes, shapes[1:]) if a == b and a) / max(len(shapes) - 1, 1)
+    out["kick_levels"] = len(kick_v)
+    out["snare_levels"] = len(snare_v)
     return out
 
 
@@ -267,8 +292,8 @@ def grid(path, pat_idx=None, rows=64):
 KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
         "odd_row_pct", "offgrid_pct", "motif_reuse_pct", "distinct_voicings",
         "voice_motion", "distinct_ioi", "n_fx", "arp_figures", "arp_mel_ratio",
-        "arp_vol_levels"]
-DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar"]
+        "arp_vol_levels", "drum_shapes", "drum_repeat_pct", "kick_levels", "snare_levels"]
+DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar", "ohat_per_bar", "tom_per_bar", "crash_per_bar"]
 
 
 def main():

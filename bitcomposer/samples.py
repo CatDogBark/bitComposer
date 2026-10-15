@@ -1344,6 +1344,39 @@ PRESET_RELEASE = {
 }
 
 
+# ── Rim / ghost-note samples ──
+# Ghost snares (the quiet hits between backbeats) play on these when the
+# palette has one: a short tick with a little tone, so a ghost reads as a
+# touch on the drum rather than a quiet copy of the main hit.
+
+def rim_tick(length: int = 1400) -> tuple[bytes, int]:
+    out = []
+    for i in range(length):
+        t = i / SAMPLE_RATE
+        tone = math.sin(2.0 * math.pi * 820.0 * t) * math.exp(-t / 0.012)
+        noise = _rng.uniform(-1.0, 1.0) * math.exp(-t / 0.006)
+        out.append(0.6 * tone + 0.7 * noise)
+    return _pack_samples(_normalize(_highpass(out, 0.3), 0.8)), length
+
+
+def snes_rim() -> tuple[bytes, int, dict]:
+    n = int(SNES_RATE * 0.05); out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        out.append(math.sin(2.0 * math.pi * 760.0 * t) * math.exp(-t / 0.012) * 0.6
+                   + _rng.uniform(-1.0, 1.0) * math.exp(-t / 0.005) * 0.7)
+    return _finish_snes(_highpass(out, 0.3), 0.8)
+
+
+def gen_rim() -> tuple[bytes, int, dict]:
+    n = int(DAC_RATE * 0.05); out = []
+    for i in range(n):
+        t = i / DAC_RATE
+        out.append(math.sin(2.0 * math.pi * 900.0 * t) * math.exp(-t / 0.01) * 0.6
+                   + _rng.uniform(-1.0, 1.0) * math.exp(-t / 0.005) * 0.7)
+    return _dac_finish(_highpass(out, 0.3), 0.8)
+
+
 # ── Console output polish for the waveform and FM palettes ──
 #
 # These presets were raw, full-bandwidth single cycles at 44.1 kHz with no
@@ -1443,6 +1476,9 @@ INSTRUMENT_PRESETS = {
     "gen_tom":        (gen_tom,        {},             56),
     "gen_crash":      (gen_crash,      {},             46),
     "psg_square":     (square_wave,    {"duty": 0.5},  40),
+    "rim":            (rim_tick,       {},             44),
+    "snes_rim":       (snes_rim,       {},             44),
+    "gen_rim":        (gen_rim,        {},             44),
     "fm_pluck":       (fm_pluck,       {},             56),
     # Chip — role voices
     "pulse12_lead":   (pulse12_wave,   {},             58),
@@ -1507,7 +1543,7 @@ INSTRUMENT_PRESETS = {
 WAVEFORM_TUNED_RATE = round(int(SAMPLE_RATE / BASE_NOTE_HZ) * BASE_NOTE_HZ)
 
 _ONE_SHOT_WAVEFORMS = {
-    "kick", "snare", "hihat", "tom", "crash", "open_hihat", "noise",
+    "kick", "snare", "hihat", "tom", "crash", "open_hihat", "noise", "rim",
     "kick_layered", "snare_layered", "hihat_metallic",
 }
 

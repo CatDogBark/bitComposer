@@ -7,7 +7,7 @@ import random
 from .it_format import (
     ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
     FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE,
-    FX_ARPEGGIO, FX_RETRIGGER, FX_SPECIAL, S_NOTE_DELAY, arpeggio_param,
+    FX_ARPEGGIO, arpeggio_param,
 )
 
 
@@ -144,17 +144,6 @@ def apply_chord_arpeggio(pattern: ITPattern, channel: int,
         cell.effect_val = arpeggio_param(midi_note, chord_notes)
 
 
-def apply_retrigger(pattern: ITPattern, channel: int, rows: list[int],
-                    ticks: int = 3):
-    """Retrigger drum hits (Qxy) to turn single notes into a roll."""
-    for row in rows:
-        if 0 <= row < pattern.rows:
-            cell = pattern.data[row][channel]
-            if cell.note != 0 and cell.effect == 0:
-                cell.effect = FX_RETRIGGER
-                cell.effect_val = ticks & 0x0F
-
-
 def apply_echo(pattern: ITPattern, src: int, dst: int,
                delay_rows: int, level: float):
     """Copy src's notes onto dst, delay_rows later and scaled to `level`.
@@ -162,7 +151,7 @@ def apply_echo(pattern: ITPattern, src: int, dst: int,
     Cuts are copied too, so the echo stops when the original does. Notes whose
     echo would fall past the end of the pattern are dropped: patterns are
     shared between order positions, so the tail cannot spill into whichever
-    one happens to come next.
+    one happens to come next (apply_echo_spill handles the safe cases).
     """
     for row in range(pattern.rows):
         cell = pattern.data[row][src]
@@ -263,82 +252,6 @@ def apply_fade(pattern: ITPattern, channel: int, fade_in: bool = False,
             if cell.note == 0 and cell.effect == 0:
                 cell.effect = FX_VOLUME_SLIDE
                 cell.effect_val = 0xF1  # fine slide down 1 per row
-
-
-# ── Drums ──
-
-def generate_drums(drum_pattern: dict[str, list[int]],
-                   rows: int) -> dict[str, list[int]]:
-    """Tile a one-bar, 16-step drum pattern across the given number of rows.
-
-    The templates in theory.py are written as a single bar of 16th notes
-    (kick on 1/2/3/4, snare on 2 and 4, hats on 8ths), so one step is one
-    row and the bar repeats every ROWS_PER_BAR rows. Spreading the 16 steps
-    over the whole 64-row pattern instead would play everything at quarter
-    speed — one kick per bar and a snare every other bar.
-    """
-    expanded = {}
-    for drum, pattern in drum_pattern.items():
-        hits = []
-        for bar_start in range(0, rows, ROWS_PER_BAR):
-            for step, hit in enumerate(pattern):
-                row = bar_start + step * ROWS_PER_STEP
-                if hit and row < rows:
-                    hits.append(row)
-        expanded[drum] = hits
-    return expanded
-
-
-def apply_drums_to_pattern(pattern: ITPattern, drum_hits: dict[str, list[int]],
-                           sample_map: dict[str, int],
-                           swing: int = 0, speed: int = 6):
-    """Write drum hits into pattern. swing>0 shuffles the off-beat hats.
-
-    Swing is applied with the SDx note-delay effect rather than by moving the
-    hit to a later row. A row is the smallest unit the pattern grid can
-    express, and delaying the off-beat eighth by a whole row overshoots badly
-    — real shuffle sits about a third of a beat late. SDx delays the note by
-    ticks instead, and there are `speed` ticks to a row, so a two-thirds-of-a-
-    row delay is expressible and light and heavy swing become genuinely
-    different rather than both clamping to the same one-row shift.
-    """
-    drum_channels = {
-        "kick": CH_KICK, "snare": CH_SNARE, "hihat": CH_HIHAT,
-        "hat": CH_HIHAT, "tom": CH_TOM, "crash": CH_CRASH,
-        "open_hihat": CH_OPEN_HAT,
-    }
-    drum_note = midi_to_it_note(60)
-
-    # Which subdivision to swing depends on what the hat line is playing. An
-    # eighth-note line swings its off-beat eighths (row 2 of each beat). A
-    # sixteenth-note line must swing the sixteenths (odd rows) instead:
-    # delaying only the off-beat eighths of a straight-16th line pushes every
-    # fourth hat late while its neighbours stay put, which lurches, and the
-    # kick on those rows no longer lands with the hat.
-    hat_rows = drum_hits.get("hat", []) + drum_hits.get("hihat", [])
-    sixteenth_hats = any(r % 2 for r in hat_rows)
-
-    for drum, hits in drum_hits.items():
-        ch = drum_channels.get(drum)
-        inst_key = drum if drum != "hat" else "hihat"
-        inst = sample_map.get(inst_key)
-        if ch is None or inst is None:
-            continue
-        for row in hits:
-            if not (0 <= row < pattern.rows):
-                continue
-            effect = effect_val = 0
-            swung = (row % 2 == 1) if sixteenth_hats else (row % ROWS_PER_BEAT == 2 * ROWS_PER_STEP)
-            if swing > 0 and drum in ("hihat", "hat") and swung:
-                # light ~1/3 of a row late, heavy ~2/3.
-                delay = max(1, min(speed - 1, round(speed * swing / 3)))
-                effect, effect_val = FX_SPECIAL, S_NOTE_DELAY | delay
-            pattern.data[row][ch] = ITNote(
-                note=drum_note,
-                instrument=inst,
-                effect=effect,
-                effect_val=effect_val,
-            )
 
 
 # ── Sustain management ──

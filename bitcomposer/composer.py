@@ -20,14 +20,14 @@ from .it_format import (
 from . import pattern as pattern_mod
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-    CH_SNARE, CH_HIHAT, CH_CRASH, CH_ECHO1, CH_ECHO2,
+    CH_ECHO1, CH_ECHO2,
     NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
     apply_portamento, apply_harmony_fade, apply_fade, apply_echo, apply_echo_spill,
-    apply_drums_to_pattern, generate_drums,
     apply_sustain_safety_net, silence_inactive_channels,
-    apply_chord_arpeggio, apply_retrigger, end_note,
+    apply_chord_arpeggio, end_note,
 )
+from .drums import pick_grooves, pick_fill, render_drums
 from .melody import (
     generate_motif, vary_motif, generate_melody,
     generate_counter_melody, add_melody_cuts,
@@ -104,7 +104,8 @@ PALETTES = {
         "alt_lead": ["snes_flute", "snes_brass", "snes_synth_lead", "snes_epiano",
                      "snes_bell", "snes_strings"],
         "drums": {"kick": "snes_kick", "snare": "snes_snare", "hihat": "snes_hat",
-                  "tom": "snes_tom", "crash": "snes_crash", "open_hihat": "snes_open_hat"},
+                  "tom": "snes_tom", "crash": "snes_crash", "open_hihat": "snes_open_hat",
+                  "rim": "snes_rim"},
     },
     # Genesis roles: feedback-FM leads and brass, FM pad or organ underneath
     # with the PSG square as an occasional thin voice, FM blips for arps,
@@ -118,7 +119,8 @@ PALETTES = {
         "bass_light": ["gen_pluck_bass", "gen_pluck_bass", "gen_sub_bass"],
         "alt_lead": ["gen_lead", "gen_saw_lead", "gen_brass", "gen_bell"],
         "drums": {"kick": "gen_kick", "snare": "gen_snare", "hihat": "gen_hat",
-                  "tom": "gen_tom", "crash": "gen_crash", "open_hihat": "gen_open_hat"},
+                  "tom": "gen_tom", "crash": "gen_crash", "open_hihat": "gen_open_hat",
+                  "rim": "gen_rim"},
     },
 }
 
@@ -161,7 +163,7 @@ def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
             "kick": "kick_layered" if layered else "kick",
             "snare": "snare_layered" if layered else "snare",
             "hihat": "hihat_metallic" if layered else "hihat",
-            "tom": "tom", "crash": "crash", "open_hihat": "open_hihat",
+            "tom": "tom", "crash": "crash", "open_hihat": "open_hihat", "rim": "rim",
         }
 
     return {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
@@ -256,9 +258,9 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      voicing_style, num_harmony_voices,
                      vibrato_speed, vibrato_depth,
                      bass_weight, use_bass_porta, porta_speed,
-                     arp_figure, arp_colour, drum_pattern, drum_density,
-                     fill_pattern, section_prog, is_ending, ending_style,
-                     swing_amount, speed, is_intro, use_echo) -> ITPattern:
+                     arp_figure, arp_colour, groove, drum_fill, breakdown,
+                     section_prog, is_ending, ending_style,
+                     swing_amount, speed, bpm, is_intro, use_echo) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -392,44 +394,14 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
 
     # ── Drums ──
     if layers["drums"]:
-        section_drum = theory.random_drum_pattern_for_section(
-            sec_type, drum_pattern, drum_density)
-        drum_hits = generate_drums(section_drum, ROWS_PER_PATTERN)
-
-        is_last_chord = chord_idx == len(section_prog) - 1
-        if fill_pattern and is_last_chord and not is_ending:
-            # A fill replaces the groove for the final bar only, so the
-            # preceding bars keep their pattern and the fill reads as a
-            # one-bar lead-in to the next section.
-            fill_start = ROWS_PER_PATTERN - ROWS_PER_BAR
-            fill_hits = generate_drums(fill_pattern, ROWS_PER_BAR)
-            for drum_name in set(drum_hits) | set(fill_hits):
-                kept = [h for h in drum_hits.get(drum_name, []) if h < fill_start]
-                added = [fill_start + h for h in fill_hits.get(drum_name, [])]
-                drum_hits[drum_name] = kept + added
-
-        apply_drums_to_pattern(pat, drum_hits, sample_map, swing=swing_amount,
-                               speed=speed)
-
-        # Retrigger the fill's snares into a roll — what Q is for.
-        if fill_pattern and is_last_chord and not is_ending:
-            apply_retrigger(pat, CH_SNARE,
-                            [r for r in drum_hits.get("snare", [])
-                             if r >= ROWS_PER_PATTERN - ROWS_PER_BAR])
-
-        for r in range(pat.rows):
-            note = pat.data[r][CH_HIHAT]
-            if note.note != 0:
-                note.volume = humanize_volume(38, 8)
-
-        if chord_idx == 0 and sec_type in ("chorus", "bridge"):
-            crash_inst = sample_map.get("crash")
-            if crash_inst:
-                pat.data[0][CH_CRASH] = ITNote(
-                    note=midi_to_it_note(60),
-                    instrument=crash_inst,
-                    volume=int(52 * section_energy),
-                )
+        # A four-bar phrase from the section's groove, with its fill (if any)
+        # in the last bar, a crash on the first beat of every other pattern
+        # and on section starts; see drums.py.
+        render_drums(pat, groove, sample_map=sample_map, energy=section_energy,
+                     bpm=bpm, swing=swing_amount, speed=speed, fill=drum_fill,
+                     breakdown=breakdown,
+                     crash_on_one=(chord_idx == 0 and sec_type in ("chorus", "bridge"))
+                                  or (chord_idx % 2 == 0 and section_energy >= 0.8))
 
     # ── Sustain safety net ──
     apply_sustain_safety_net(pat)
@@ -501,7 +473,6 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         scale_name = theory.random_scale()
 
     progression = theory.random_progression(scale_name)
-    drum_pattern = theory.random_drum_pattern()
 
     if tempo_pref == "slow":
         target_bpm = random.randint(80, 110)
@@ -576,7 +547,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     porta_speed = random.choice([16, 24, 32, 48])
     use_bass_porta = bass_style in ("walking", "steady")
     swing_amount = {"off": 0, "light": 1, "heavy": 2}.get(drum_swing, 0)
-    fill_pattern = theory.random_drum_fill() if drum_fills else None
+    grooves = pick_grooves(energy_pref, drum_density)
+    bpm_value = it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)
 
     # ── Instrument swaps ──
     alt_lead = random.choice(
@@ -658,6 +630,20 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             next_entry = section_prog[(chord_idx + 1) % num_chords]
             segments = _chord_segments(section_key, scale_name, section_scale,
                                        entry, next_entry, sec_type)
+
+            # Drums for this pattern: the section's groove; a fill at the end
+            # of the section sized for what follows, a light one halfway; a
+            # two-bar drop at the top of a bridge sometimes.
+            sec_pos = song_structure.index(section)
+            next_sec = struct.section_type(song_structure[sec_pos + 1]) if sec_pos + 1 < len(song_structure) else None
+            if chord_idx == num_chords - 1 and not is_ending and next_sec not in (None, "outro"):
+                fill_pos = "section_end"
+            elif num_chords >= 4 and chord_idx == num_chords // 2 - 1:
+                fill_pos = "mid"
+            else:
+                fill_pos = "none"
+            drum_fill = pick_fill(next_sec, fill_pos, drum_fills)
+            breakdown = sec_type == "bridge" and chord_idx == 0 and random.random() < 0.4
             half_changes += len(segments) - 1
 
             section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
@@ -678,11 +664,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 porta_speed=porta_speed,
                 arp_figure=arp_figures.get(sec_type, arp_figures["verse"]),
                 arp_colour=(style_pref == "snes"),
-                drum_pattern=drum_pattern, drum_density=drum_density,
-                fill_pattern=fill_pattern, section_prog=section_prog,
+                groove=grooves.get(sec_type, grooves["verse"]), drum_fill=drum_fill,
+                breakdown=breakdown, section_prog=section_prog,
                 is_ending=is_ending, ending_style=ending_style,
-                swing_amount=swing_amount, speed=speed, is_intro=is_intro,
-                use_echo=use_echo,
+                swing_amount=swing_amount, speed=speed, bpm=bpm_value,
+                is_intro=is_intro, use_echo=use_echo,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -742,6 +728,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "bass_style": bass_style,
         "bass_weight": bass_weight,
         "arp_figures": {k: arp_figures[k] for k in ("verse", "chorus", "bridge")},
+        "grooves": {k: grooves[k] for k in ("verse", "chorus", "bridge")},
         "melody_density": round(melody_density, 2),
         "melody_style": melody_style,
         "melody_contour": chorus_motif["contour_name"] if use_phrased and chorus_motif else "n/a",
