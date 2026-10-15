@@ -1,11 +1,11 @@
 [
  {
-  "file": "Ember Foundry.it",
-  "title": "Ember Foundry",
+  "file": "Thorned Bastion.it",
+  "title": "Thorned Bastion",
   "palette": "snes",
   "info": "B natural minor - 166 BPM",
   "arrangement": "snes (megamanx) + echo (light) - aaba form",
-  "voices": "snes_synth_lead / snes_organ / snes_slap_bass",
+  "voices": "mmx_soft_lead / mmx_rhythm_guitar / mmx_bass",
   "seed": "seed 11 - bitcomposer 0.8.0",
   "picked": false
  },
