@@ -1,0 +1,71 @@
+name: Windows build
+
+# Builds two single-file executables on a Windows runner: bitcomposer.exe (the
+# command line) and bitComposer.exe (the window), zips them with a short
+# readme, keeps the zip as a workflow artifact, and on a tag (or a manual run
+# naming one) attaches it to that GitHub release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the zip to (leave empty to only build)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --quiet --upgrade pip pyinstaller
+          python -m pip install --quiet .
+      - name: Smoke test
+        run: |
+          python -m bitcomposer.cli --version
+          python -m bitcomposer.cli -s 11 --style snes --pack megamanx -d out
+          dir out
+      - name: Build executables
+        run: |
+          pyinstaller --onefile --name bitcomposer --console bitcomposer/cli.py
+          pyinstaller --onefile --name bitComposer --windowed bitcomposer/gui.py
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path pkg | Out-Null
+          Copy-Item dist/bitcomposer.exe, dist/bitComposer.exe pkg/
+          @"
+bitComposer for Windows
+=======================
+
+bitComposer.exe   a window: pick a palette, a style pack and how many songs, press Generate.
+bitcomposer.exe   the command line, e.g.  bitcomposer -n 10 --style snes --pack megamanx -d "%USERPROFILE%\Music\bitComposer"
+
+Songs are Impulse Tracker (.it) files. Play them with OpenMPT (https://openmpt.org, free),
+XMPlay, or foobar2000 with the OpenMPT component. OpenMPT plays a whole folder as a playlist.
+
+Style packs: ffvi, mana, evermore, megamanx. Leave the pack on "random" and half the SNES songs draw one.
+Windows SmartScreen may warn because the executables are not code-signed; "More info" then "Run anyway".
+"@ | Set-Content -Path pkg/README-WINDOWS.txt
+          Compress-Archive -Path pkg/* -DestinationPath bitComposer-windows.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bitComposer-windows
+          path: bitComposer-windows.zip
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = if ("${{ inputs.tag }}" -ne "") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          gh release upload $tag bitComposer-windows.zip --clobber

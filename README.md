@@ -114,6 +114,10 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
+## Windows
+
+Every release carries `bitComposer-windows.zip` with two executables built by GitHub Actions: `bitComposer.exe`, a small window (palette, style pack, echo, energy, tempo, how many, save folder, Generate), and `bitcomposer.exe`, the command line. Songs are `.it` files; [OpenMPT](https://openmpt.org) plays them and will play a whole folder as a playlist. The executables are not code-signed, so SmartScreen asks once. With Python installed instead, `pip install git+https://github.com/CatDogBark/bitComposer` gives the same two commands as `bitcomposer` and `bitcomposer-gui`.
+
 ## Companion player (optional, Linux + KDE Plasma 6)
 
 <img src="docs/images/widget.png" alt="The Plasma widget: now playing, transport, gain, generate and settings, playlist" width="420">
