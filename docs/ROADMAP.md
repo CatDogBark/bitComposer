@@ -30,10 +30,13 @@ These change how every note sounds, not what notes are played.
   (`bitcomposer/packs.py`): voices per role, weighted draws for tempo,
   energy, scale, harmony mode, bass, drums and echo, a counter-line voice,
   orchestral fills, channel trims, arp figure weights. `ffvi` (orchestral)
-  and `mana` (Secret of Mana: mallets and air, hand percussion, bouncy
-  habits) are done. Next: `megamanx` (overdriven guitar sample, slap bass,
-  synth brass stabs, riff bass, rock grooves), then `evermore` (pads, breathy
-  flute, dark basses, sparse drums; shares the atmospheric set). A pack is data;
+  `mana` (Secret of Mana: mallets and air, hand percussion, bouncy habits)
+  and `evermore` (Secret of Evermore: pads, drone bass, breathy flute,
+  sparse or no drums; the atmospheric set) are done. Next: `megamanx`
+  (overdriven guitar sample, slap bass, synth brass stabs, riff bass, rock
+  grooves). `metroid` would be evermore with a cold voice set (metallic
+  pads, detuned low brass, clangs, sub drone) and a dissonance weight in
+  the harmony. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.

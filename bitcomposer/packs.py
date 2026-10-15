@@ -91,6 +91,51 @@ PACKS = {
         # snare sit back.
         "trims": {"kick": 28, "snare": 30, "hihat": 20, "openhat": 22},
     },
+    "evermore": {
+        "palette": "snes",
+        "label": "Secret of Evermore",
+        "voices": {
+            "lead": ["evm_breath_flute", "evm_breath_flute", "snes_flute", "evm_choir_oo",
+                     "evm_tubular_bell", "ffvi_oboe", "snes_epiano"],
+            "alt_lead": ["evm_choir_oo", "snes_flute", "evm_breath_flute", "ffvi_clarinet",
+                         "snes_epiano"],
+            "harmony": ["evm_pad", "evm_pad", "evm_dark_pad", "evm_dark_pad", "evm_choir_oo",
+                        "snes_strings"],
+            "counter": ["evm_choir_oo", "snes_flute", "evm_breath_flute"],
+            "arp": ["snes_harp", "mana_kalimba", "evm_tubular_bell", "ffvi_music_box",
+                    "snes_epiano", "mana_glass_pad"],
+            "bass_heavy": ["evm_drone", "evm_drone", "snes_pluck_bass"],
+            "bass_medium": ["evm_drone", "snes_pluck_bass", "ffvi_contrabass"],
+            "bass_light": ["evm_drone", "snes_pluck_bass"],
+            "drums": {"kick": "ffvi_bassdrum", "snare": "evm_brush_snare", "hihat": "mana_shaker",
+                      "tom": "evm_frame_drum", "crash": "evm_soft_cymbal",
+                      "open_hihat": "mana_tambourine", "rim": "evm_click"},
+        },
+        "habits": {
+            "tempo": {"slow": 4, "medium": 1, "fast": 0},
+            "energy": {"chill": 3, "normal": 1, "intense": 0},
+            "scale_family": {"minor": 4, "major": 1, "pentatonic": 1},
+            "form": {"linear": 3, "standard": 1, "aaba": 1, "short": 1, "rondo": 0},
+            "harmony_voicing": {"full": 2, "thin": 1},
+            "harmony_mode": {"sustain": 5, "rhythmic": 1, "stabs": 0, "ostinato": 0, "pulse": 0},
+            "bass_weight": {"heavy": 1, "medium": 2, "light": 2},
+            "bass_style": {"drone": 3, "steady": 2, "walking": 1, "octave": 0, "driving": 0},
+            "drum_density": {"sparse": 4, "normal": 1, "busy": 0},
+            "drum_swing": {"off": 4, "light": 1, "heavy": 0},
+            "drumless": 0.4,          # chance the whole song has no kit at all
+            "arp_figures": {"sparse_pulse": 3, "quarter_up": 3, "pedal_bounce": 1, "classic_up": 1},
+            "echo": 1.0,
+            "echo_wet": {"light": 0, "normal": 1, "wet": 3},
+            "echo_delay": {"eighth": 0, "dotted": 2, "quarter": 3},
+            "echo_stereo": {"bounce": 1, "centre": 2},
+            "counter_line": 0.2,
+            "section_rolls": False,
+            "hat_stroke": 0.6,
+            "crash_chance": 0.35,     # a third of the phrase starts, never on fills
+            "fill_crash": False,
+        },
+        "trims": {"kick": 26, "snare": 24, "hihat": 18, "openhat": 18, "tom": 30, "crash": 24},
+    },
 }
 
 PACK_NAMES = list(PACKS)

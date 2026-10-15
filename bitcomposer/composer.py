@@ -201,11 +201,18 @@ def _echo_label(use_echo: bool, echo_wet: str) -> str:
 
 
 def _weighted(choices: list[str], weights: dict | None) -> str:
-    """random.choice, or a pack-weighted choice when the pack has an opinion."""
+    """random.choice, or a pack-weighted choice when the pack has an opinion.
+
+    A pack's weights replace the plain pool outright (a drone bass is not in
+    any plain pool), so the draw is over the names the pack weights above
+    zero; a pack that weights everything at zero falls back to the plain pool.
+    """
     if not weights:
         return random.choice(choices)
-    pool = [c for c in choices if weights.get(c, 0) > 0] or choices
-    return random.choices(pool, [weights.get(c, 1) for c in pool], k=1)[0]
+    pool = [c for c, w in weights.items() if w > 0]
+    if not pool:
+        return random.choice(choices)
+    return random.choices(pool, [weights[c] for c in pool], k=1)[0]
 
 
 def _pick_instruments(style: str, bass_weight: str = "heavy",
@@ -462,7 +469,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
                      n_patterns, is_ending, ending_style,
                      swing_amount, speed, bpm, is_intro, echo_sends,
-                     pickup_root=None, counter_chance=0.3, hat_stroke=1.0) -> ITPattern:
+                     pickup_root=None, counter_chance=0.3, hat_stroke=1.0,
+                     crash_chance=1.0, fill_crash=True, kit_rng=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -623,7 +631,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         # and on section starts; see drums.py.
         render_drums(pat, groove, sample_map=sample_map, energy=section_energy,
                      bpm=bpm, swing=swing_amount, speed=speed, fill=drum_fill,
-                     hat_stroke=hat_stroke,
+                     hat_stroke=hat_stroke, crash_chance=crash_chance,
+                     fill_crash=fill_crash, kit_rng=kit_rng,
                      breakdown=breakdown,
                      crash_on_one=(chord_idx == 0 and sec_type in ("chorus", "bridge"))
                                   or (chord_idx % 2 == 0 and section_energy >= 0.8))
@@ -768,8 +777,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     arp_figures = pick_figures(energy_pref, pack_weights(pack, "arp_figures"))
 
     # ── Song structure (from structure module) ──
+    if song_form == "random" and pack_weights(pack, "form"):
+        song_form = _weighted(struct.FORMS, pack_weights(pack, "form"))
     song_structure, section_layers_map, energy_curve, ending_style, form_name = \
         struct.generate_structure(form=song_form)
+    # Some packs play without a kit at all: pads, drone and lead carry it.
+    drumless = random.random() < pack_value(pack, "drumless", 0.0)
+    if drumless:
+        section_layers_map = {k: {**v, "drums": False} for k, v in section_layers_map.items()}
 
     # ── Motifs ──
     use_phrased = melody_style == "phrased"
@@ -813,7 +828,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     vibrato_speed = random.choice([3, 4, 5])
     vibrato_depth = random.choice([2, 3, 4])
     porta_speed = random.choice([16, 24, 32, 48])
-    use_bass_porta = bass_style in ("walking", "steady")
+    use_bass_porta = bass_style in ("walking", "steady", "drone")
     swing_amount = {"off": 0, "light": 1, "heavy": 2}.get(drum_swing, 0)
     grooves = pick_grooves(energy_pref, drum_density)
     bpm_value = it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT)
@@ -843,7 +858,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         w = pack_weights(pack, "echo_wet") or ECHO_WET_WEIGHTS
         echo_wet = echo_rng.choices(list(w), list(w.values()))[0]
     if echo_delay == "random":
-        weights = next(w for floor, w in ECHO_DELAY_WEIGHTS if bpm_for_echo >= floor)
+        weights = pack_weights(pack, "echo_delay") or \
+            next(w for floor, w in ECHO_DELAY_WEIGHTS if bpm_for_echo >= floor)
         echo_delay = echo_rng.choices(list(weights), list(weights.values()))[0]
     echo_feedback = round(echo_rng.uniform(*ECHO_FEEDBACK_RANGE), 2)
     if echo_stereo == "random":
@@ -854,6 +870,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     echo_bus = _EchoBus(samples, ECHO_WETNESS[echo_wet], ECHO_DELAYS[echo_delay],
                         echo_feedback, echo_stereo, arp_scale)
     pattern_sec: dict[int, str] = {}     # pattern index -> section type, for the spill
+    # Kit decisions a pack adds (which phrases get a crash) draw from their own
+    # stream so they never move the parts composed after the drums.
+    kit_rng = random.Random(song_salt ^ 0x0D12)
     half_changes = 0
 
     for section in song_structure:
@@ -992,6 +1011,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 is_intro=is_intro, echo_sends=echo_bus.sends(sec_type) if use_echo else None,
                 counter_chance=pack_value(pack, "counter_line", 0.3),
                 hat_stroke=pack_value(pack, "hat_stroke", 1.0),
+                crash_chance=pack_value(pack, "crash_chance", 1.0),
+                fill_crash=pack_value(pack, "fill_crash", True),
+                kit_rng=kit_rng,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -1059,6 +1081,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "echo_feedback": echo_feedback if use_echo else None,
         "echo_stereo": echo_stereo if use_echo else None,
         "bass_style": bass_style,
+        "drumless": drumless,
         "bass_weight": bass_weight,
         "arp_figures": {k: arp_figures[k] for k in ("verse", "chorus", "bridge")},
         "grooves": {k: grooves[k] for k in ("verse", "chorus", "bridge")},
