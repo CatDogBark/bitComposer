@@ -1317,35 +1317,37 @@ def _drive(samples: list[float], amount: float) -> list[float]:
 
 
 def mmx_lead_guitar() -> tuple[bytes, int, dict]:
-    """Distorted lead guitar, built the way an amp makes one rather than the
-    way a synth does. A band-limited core (six harmonics, a little square for
-    body) is driven moderately, so the clipper makes no aliasing fizz at
-    16 kHz; a cabinet lowpass takes the top off and a mid bump around 1-2 kHz
-    puts the bite where a guitar has it; a pick transient opens each note;
-    three detuned layers over a long loop smear the harmonics the way the
-    game's own lead (85% of its energy off the exact harmonics) is smeared.
-    The first version was a full saw through a hard clip: a buzzer."""
+    """Distorted lead guitar, tuned by measurement against the game's own lead
+    (power by harmonic band at the three sounding pitches of the melody
+    range). A core with strong second and third partials is driven gently
+    (tanh 2), then shaped like a cabinet: a cascaded lowpass for the body and
+    a presence band from the highpassed drive. The chorus comes after the
+    amp and keeps the dry signal in front (55%) of two detuned copies: equal
+    detuned layers summed together form a comb that nulls the upper partials
+    once per beat cycle, which is what made the earlier versions collapse to
+    a bare fundamental at the base pitch. A pick scrape opens each note.
+    The first version was a full saw through a hard clip, a buzzer."""
     rate, period = SNES_RATE, SNES_PERIOD
     base = rate / period; periods, attack = 100, 5
-    ratios = [1.0, (periods + 1) / periods, (periods - 1) / periods]
     total = (attack + periods) * period
-    core = []
+    weights = [1.0, 0.9, 0.7, 0.4, 0.3, 0.2, 0.12, 0.08]
+    mono = [sum(w * math.sin(2.0 * math.pi * base * (k + 1) * i / rate) for k, w in enumerate(weights))
+            for i in range(total)]
+    driven = _drive(mono, 2.0)
+    body = _lowpass(_lowpass(driven, 0.7), 0.7)
+    presence = _lowpass(_highpass(driven, 0.4), 0.8)
+    amp = [b + 1.2 * q for b, q in zip(body, presence)]
+    dry, wet = 0.55, 0.225
+    out = []
     for i in range(total):
-        t = i / rate
-        v = 0.0
-        for r in ratios:
-            ph = 2.0 * math.pi * base * r * t
-            v += sum(math.sin(k * ph) / k for k in range(1, 7)) + 0.3 * (math.sin(ph) + math.sin(3 * ph) / 3)
-        core.append(v / len(ratios) * min(1.0, (i + 1) / (attack * period)))
-    driven = _drive(core, 2.5)
-    # Cabinet: a lowpass for the top, plus a band around 1-2 kHz for presence.
-    body = _lowpass(driven, 0.6)
-    presence = _lowpass(_highpass(driven, 0.3), 0.65)
-    out = [0.7 * b + 0.8 * p for b, p in zip(body, presence)]
-    # Pick: a bright scrape over the first 12 ms.
+        v = dry * amp[i % total]
+        for r in ((periods + 1) / periods, (periods - 1) / periods):
+            j = i * r; j0 = int(j) % total; j1 = (j0 + 1) % total; fr = j - int(j)
+            v += wet * (amp[j0] * (1.0 - fr) + amp[j1] * fr)
+        out.append(v * min(1.0, (i + 1) / (attack * period)))
     pick = int(rate * 0.012)
     for i in range(pick):
-        out[i] += 0.35 * _rng.uniform(-1.0, 1.0) * (1.0 - i / pick)
+        out[i] += 0.3 * _rng.uniform(-1.0, 1.0) * (1.0 - i / pick)
     loop_start = attack * period
     return _finish_snes(out, 0.9, loop_start, len(out))
 
