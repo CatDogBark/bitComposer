@@ -902,7 +902,7 @@ CHANNEL_VOLUMES = [
 # the SNES voices decay. Measured melody-minus-backing: snes -14 dB, genesis
 # -9, chip -6. The settings below bring chip and genesis to about -11.
 PALETTE_MIX = {
-    "chip": {CH_ARP: 28, CH_MELODY: 7, CH_ECHO1: 7, CH_ECHO2: 7},
+    "chip": {CH_ARP: 28, CH_MELODY: 9, CH_ECHO1: 9, CH_ECHO2: 9},
     "genesis": {CH_ARP: 17, CH_MELODY: 10, CH_ECHO1: 10, CH_ECHO2: 10},
 }
 
