@@ -147,9 +147,11 @@ DEFAULT_CHANNEL_PANS = [
     26,          # tom      — slightly left
     24,          # crash    — wide, it is an accent
     42,          # open hat — mirrors the closed hat
-    12,          # echo tap 1 — the SNES echo was wide; put the repeats out at the sides
-    52,          # echo tap 2 — opposite side, so the repeat bounces
-] + [32] * 50
+    12,          # lead echo, taps 1+3 — the SNES echo was wide; put the repeats out at the sides
+    52,          # lead echo, tap 2 — opposite side, so the repeat bounces
+    44, 32, 20,  # harmony echo — each voice's return on the far side of the voice
+    16, 48,      # arp echo — the arp sits at 40; its repeats bounce around it
+] + [32] * 45
 
 
 def bpm_to_it_tempo(bpm: float, speed: int, rows_per_beat: int = 4) -> int:
@@ -171,6 +173,7 @@ FX_RETRIGGER = 17      # Qxy - retrigger note every y ticks (x = volume change)
 FX_TREMOLO = 18        # Rxy - tremolo (x=speed, y=depth)
 FX_SPECIAL = 19        # Sxy - command group; SDx delays the note by x ticks
 FX_SET_TEMPO = 20      # Txx - set tempo
+FX_SET_PAN = 24        # Xxx - set panning, 0 = left, 128 = centre, 255 = right
 
 # Sub-command of Sxy: note delay. Parameter is 0xD0 | ticks.
 S_NOTE_DELAY = 0xD0

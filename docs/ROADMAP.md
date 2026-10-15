@@ -15,10 +15,17 @@ These change how every note sounds, not what notes are played.
   (`samples.RELEASE`, `samples.PRESET_RELEASE`). Lengths were judged right as drafted. One-shot voices (plucks, drums)
   still end on their own.
 - **SNES echo as a real send.** The S-DSP echo was a per-voice send into one
-  delay line with feedback and an 8-tap filter, usually on lead, harmony and
-  arp with the drums dry. Today it is two fixed taps copied from the lead.
-  The proper job: harmony and arp returns at lower level, a decaying tail
-  over several taps at a tempo-related delay, and a lowpass on the repeats.
+  delay line with feedback and a filter, usually on lead, harmony and arp
+  with the drums dry. We keep the result and drop the hardware's limits.
+  Stage one (done): a decaying, darkening three-tap tail on the lead, sent
+  per note. Stage two (done): harmony and arp sends with their own levels,
+  a `layout:` line in the song message, one ECHO bus fader in the widget
+  with an expand to LEAD / HARM / ARP, and `--echo-wet`. Stage three
+  (done): per-song delay (eighth, dotted eighth or quarter, weighted by
+  tempo), feedback and wetness drawn per song, sends opened in thin
+  sections and pulled back in the chorus, and bounce / spread stereo with
+  a pan per tap. Left for later: echo on the drums as a rare choice
+  (gated snare), and a widget readout of the drawn settings.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 

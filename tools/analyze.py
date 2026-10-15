@@ -149,6 +149,12 @@ def analyze(path):
     sigs = [s for s in (tuple(m.notes_on(oi, CH_MELODY)) for oi in real) if s]
     out["mel_uniq_pct"] = 100.0 * len(set(sigs)) / max(len(sigs), 1)
 
+    # Share of melody notes the echo carries. The second echo channel holds
+    # only the second tap, so its note-ons count sent notes once; 0 = no echo.
+    mel_n = sum(len(m.notes_on(oi, CH_MELODY)) for oi in real)
+    echo_n = sum(len(m.notes_on(oi, CH_ECHO[1])) for oi in real)
+    out["echo_send_pct"] = 100.0 * echo_n / max(mel_n, 1)
+
     # Rhythmic grid: onsets on odd rows = 16th-note syncopation exists at all.
     odd = tot = offgrid = 0
     for oi in real:
@@ -399,7 +405,7 @@ KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
         "arp_vol_levels", "drum_shapes", "drum_repeat_pct", "kick_levels", "snare_levels",
         "mel_strong_fit_pct", "mel_end_hold", "mel_climax_pos", "mel_register_spread",
         "v_to_i_pct", "seconds", "mel_step_pct", "mel_leap_pct", "mel_cell_repeat_pct",
-        "mel_rhythm_same_pct"]
+        "mel_rhythm_same_pct", "echo_send_pct"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar", "ohat_per_bar", "tom_per_bar", "crash_per_bar"]
 
 

@@ -43,7 +43,10 @@ Everything defaults to `random`.
 
 ```
 --style   chip|snes|genesis          sound palette
---echo    on|off|random              lead echo (random: 70% of snes songs, never chip or genesis)
+--echo    on|off|random              echo (random: 70% of snes songs, never chip or genesis)
+--echo-wet    light|normal|wet|random  how much of the lead, harmony and arp the echo carries
+--echo-delay  eighth|dotted|quarter|random  beat fraction between repeats (random: weighted by tempo)
+--echo-stereo bounce|spread|random     repeats alternate sides, or sit wide on the far side
 --keys    moving|home                moving: choruses/bridges may change key; home: stay put
 --tempo   slow|medium|fast           80–110 / 110–140 / 140–180 BPM
 --energy  chill|normal|intense       density and arrangement weight
@@ -81,7 +84,7 @@ bitcomposer -d out --style snes --tempo slow --energy chill --scale major --drum
 4. Each four-bar pattern holds a chord timeline; about half the time the back two bars move to a related chord. Melody resolves onto chord tones at each change; harmony is voiced from fixed register anchors so it steps rather than leaps; bass and arp follow and rest with the section's energy.
 5. Drums come from one-bar templates by section and density, with fills, retriggered snare rolls and tick-level swing.
 6. Instruments are synthesized per song from the chosen palette and written as samples. SNES voices get attack-then-loop sustain and the BRR treatment.
-7. The lead is copied to two echo channels, and everything is written as a 14-channel `.it` with the title and a song message (key, BPM, palette, form, seed) that trackers display.
+7. The echo: held lead notes and phrase endings come back as three fading, darkening repeats, the harmony and arp as lighter ones, each on return channels of their own, drums and bass dry. Everything is written as a 19-channel `.it` with the title and a song message (key, BPM, palette, form, seed, and a `layout:` line naming every channel's role) that trackers display.
 
 Each song gets a seed-derived two-word title that leans with its scale:
 *Haunted Orchard*, *Neon Causeway*, *Rusted Foundry*.
