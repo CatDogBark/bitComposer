@@ -1,5 +1,5 @@
 """
-Bass and arpeggio generation.
+Bass generation. (Arpeggios live in arp.py.)
 """
 
 import random
@@ -83,63 +83,6 @@ def generate_bass(root: int, chord_type: str,
     return notes
 
 
-def generate_arpeggio(chord_notes: list[int], rows: int,
-                      style: str = "up",
-                      density: float = 1.0) -> list[tuple[int, int]]:
-    """Generate an arpeggio pattern. Returns [(row, midi_note), ...].
-
-    density (0..1) controls how much of the pattern the arp actually plays.
-    It previously ran flat out on every row of every pattern regardless of
-    section, which made it roughly four times denser than the melody it is
-    meant to sit behind — the arp became the track and the melody decoration.
-    Gating whole bars keeps the figure recognisable while letting it breathe.
-    """
-    # Arp in octave 4-5
-    arp_notes = []
-    for n in chord_notes:
-        for octave_shift in [0, 12]:
-            note = n + octave_shift
-            if 48 <= note <= 84:
-                arp_notes.append(note)
-    arp_notes.sort()
-
-    if not arp_notes:
-        return []
-
-    if style == "down":
-        seq = list(reversed(arp_notes))
-    elif style == "updown" and len(arp_notes) > 2:
-        seq = arp_notes + list(reversed(arp_notes[1:-1]))
-    else:
-        seq = arp_notes
-
-    density = max(0.0, min(1.0, density))
-    # Eighths only when there is energy for them; quarters when there is not.
-    step = 2 if density > 0.6 else 4
-
-    notes = []
-    idx = 0
-    for bar_start in range(0, rows, ROWS_PER_BAR):
-        if random.random() > density:
-            continue  # this bar rests
-        # Even in a busy bar, drop the last beat often enough that the figure
-        # has somewhere to land instead of running continuously into the next.
-        bar_len = ROWS_PER_BAR
-        if random.random() < 0.35:
-            bar_len -= ROWS_PER_BEAT
-        for offset in range(0, bar_len, step):
-            row = bar_start + offset
-            if row >= rows:
-                break
-            if style == "random":
-                notes.append((row, random.choice(arp_notes)))
-            else:
-                notes.append((row, seq[idx % len(seq)]))
-                idx += 1
-
-    return notes
-
-
 def pick_section_bass(bass_weight: str, section_energy: float,
                       bass_style: str) -> str:
     """Choose bass style for a section based on weight and energy."""
@@ -161,16 +104,5 @@ def generate_bass_timeline(segments: list[tuple[int, int, int, str]],
     notes = []
     for start, end, root, chord_type in segments:
         part = generate_bass(root, chord_type, end - start, style, weight, density)
-        notes.extend((start + row, note) for row, note in part)
-    return notes
-
-
-def generate_arpeggio_timeline(segments: list[tuple[int, int, list[int]]],
-                               style: str = "up",
-                               density: float = 1.0) -> list[tuple[int, int]]:
-    """generate_arpeggio over [(start_row, end_row, chord_notes), ...]."""
-    notes = []
-    for start, end, chord_notes in segments:
-        part = generate_arpeggio(chord_notes, end - start, style, density)
         notes.extend((start + row, note) for row, note in part)
     return notes

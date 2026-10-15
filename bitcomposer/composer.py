@@ -32,7 +32,8 @@ from .melody import (
     generate_counter_melody, add_melody_cuts,
 )
 from .harmony import generate_harmony_timeline
-from .bass import generate_bass_timeline, generate_arpeggio_timeline, pick_section_bass
+from .bass import generate_bass_timeline, pick_section_bass
+from .arp import pick_figures, generate_arp
 
 
 STYLES = ["chip", "snes", "genesis"]
@@ -244,7 +245,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      voicing_style, num_harmony_voices,
                      vibrato_speed, vibrato_depth,
                      bass_weight, use_bass_porta, porta_speed,
-                     arp_style, drum_pattern, drum_density,
+                     arp_figure, drum_pattern, drum_density,
                      fill_pattern, section_prog, is_ending, ending_style,
                      swing_amount, speed, is_intro, use_echo) -> ITPattern:
     """Compose a single pattern with all layers."""
@@ -364,14 +365,18 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
 
     # ── Arpeggio ──
     if layers["arp"]:
-        # Tie arp density to section energy so it thins out in verses and
-        # intros instead of running at full tilt through the whole song.
-        arp = generate_arpeggio_timeline(harmony_segments, arp_style,
-                                         density=section_energy)
+        # A figure with accents and rests, chosen per section role, that
+        # thins where the lead is busy; see arp.py.
+        arp = generate_arp(harmony_segments, arp_figure, section_energy,
+                           melody_rows={r for r, n in melody if n != -1})
         apply_notes_to_pattern(
-            pat, CH_ARP, arp, sample_map["arp"],
-            volume=arp_vol, humanize=True,
+            pat, CH_ARP, [(r, n) for r, n, _ in arp], sample_map["arp"],
+            volume=arp_vol, humanize=False,
         )
+        # Accents are the figure's own shape; no jitter on top, or every bar
+        # is unique again and the ear reads it as a sequencer.
+        for r, _, accent in arp:
+            pat.data[r][CH_ARP].volume = max(1, min(64, int(round(arp_vol * accent))))
 
     # ── Drums ──
     if layers["drums"]:
@@ -513,16 +518,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # ── Energy / style ──
     if energy_pref == "chill":
         bass_style = random.choice(["steady", "steady", "walking"])
-        arp_style = random.choice(["up", "down", "updown"])
         melody_density = random.uniform(0.40, 0.50)
     elif energy_pref == "intense":
         bass_style = random.choice(["driving", "driving", "octave"])
-        arp_style = random.choice(["updown", "random", "up"])
         melody_density = random.uniform(0.55, 0.75)
     else:
         bass_style = random.choice(["steady", "octave", "walking", "driving"])
-        arp_style = random.choice(["up", "down", "updown", "random"])
         melody_density = random.uniform(0.45, 0.65)
+    arp_figures = pick_figures(energy_pref)
 
     # ── Song structure (from structure module) ──
     song_structure, section_layers_map, energy_curve, ending_style, form_name = \
@@ -658,7 +661,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 voicing_style=voicing_style, num_harmony_voices=num_harmony_voices,
                 vibrato_speed=vibrato_speed, vibrato_depth=vibrato_depth,
                 bass_weight=bass_weight, use_bass_porta=use_bass_porta,
-                porta_speed=porta_speed, arp_style=arp_style,
+                porta_speed=porta_speed,
+                arp_figure=arp_figures.get(sec_type, arp_figures["verse"]),
                 drum_pattern=drum_pattern, drum_density=drum_density,
                 fill_pattern=fill_pattern, section_prog=section_prog,
                 is_ending=is_ending, ending_style=ending_style,
@@ -722,7 +726,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "echo": use_echo,
         "bass_style": bass_style,
         "bass_weight": bass_weight,
-        "arp_style": arp_style,
+        "arp_figures": {k: arp_figures[k] for k in ("verse", "chorus", "bridge")},
         "melody_density": round(melody_density, 2),
         "melody_style": melody_style,
         "melody_contour": chorus_motif["contour_name"] if use_phrased and chorus_motif else "n/a",

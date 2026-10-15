@@ -192,7 +192,8 @@ def main():
             print(f"  Tempo:       {info['tempo']} BPM "
                   f"(speed {info['speed']}, IT tempo {info['it_tempo']})")
             print(f"  Bass:        {info['bass_style']} ({info['bass_weight']})")
-            print(f"  Arpeggio:    {info['arp_style']}")
+            f = info['arp_figures']
+            print(f"  Arp figures: verse {f['verse']}, chorus {f['chorus']}, bridge {f['bridge']}")
             print(f"  Density:     {info['melody_density']}")
             print(f"  Melody:      {info['melody_style']} ({info['melody_contour']})")
             print(f"  Harmony:     {info['harmony_voicing']} / {info['harmony_mode']}")

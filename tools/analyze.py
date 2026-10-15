@@ -208,6 +208,28 @@ def analyze(path):
     out["fx"] = "".join(sorted(fx))
     out["n_fx"] = len(fx)
 
+    # Arpeggio: how many distinct one-bar figures (row pattern + accent
+    # pattern) the song uses, how dense it is next to the lead, and how many
+    # distinct velocity levels it has (1 = flat, 2-3 = accented, many = jitter).
+    figs = set()
+    arp_notes = 0
+    vols = set()
+    for oi in real:
+        pat = m.patterns[oi]
+        for bar in range(0, len(pat), ROWS_PER_BAR):
+            shape = []
+            for r in range(bar, min(bar + ROWS_PER_BAR, len(pat))):
+                e = pat[r].get(CH_ARP)
+                if e and e[0] is not None and e[0] < 120:
+                    shape.append((r - bar, e[2] if e[2] is not None else 64))
+                    arp_notes += 1
+                    vols.add(e[2] if e[2] is not None else 64)
+            if shape:
+                figs.add(tuple(shape))
+    out["arp_figures"] = len(figs)
+    out["arp_mel_ratio"] = arp_notes / max(len(seq), 1)
+    out["arp_vol_levels"] = len(vols)
+
     # Drum density, in hits per bar — the metric that exposed the 4x grid stretch.
     bars = len(real) * 64 / ROWS_PER_BAR
     for ch, nm in DRUM_NAMES.items():
@@ -244,7 +266,8 @@ def grid(path, pat_idx=None, rows=64):
 
 KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
         "odd_row_pct", "offgrid_pct", "motif_reuse_pct", "distinct_voicings",
-        "voice_motion", "distinct_ioi", "n_fx"]
+        "voice_motion", "distinct_ioi", "n_fx", "arp_figures", "arp_mel_ratio",
+        "arp_vol_levels"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar"]
 
 
