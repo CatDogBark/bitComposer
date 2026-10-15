@@ -69,7 +69,9 @@ class FileFormat(unittest.TestCase):
             self.assertEqual(msg[0], info["title"])
             self.assertIn(f"{info['tempo']} BPM", msg[1])
             self.assertIn(info["style"], msg[2])
-            self.assertIn("seed 3", msg[-2])
+            self.assertTrue(any(ln.startswith("seed 3") for ln in msg), msg)
+            if info["echo"]:
+                self.assertTrue(any(ln.startswith("echo: ") for ln in msg), msg)
             self.assertEqual(msg[-1], "layout: " + ",".join(pattern.CHANNEL_ROLES))
             # titles differ between seeds and depend only on the seed
             _, info_b = _gen(tmp, 4)
@@ -381,6 +383,23 @@ class Samples(unittest.TestCase):
         d = samples.generate_instrument("square_lead")
         period = int(samples.SAMPLE_RATE / samples.BASE_NOTE_HZ)
         self.assertAlmostEqual(d["rate"] / period, samples.BASE_NOTE_HZ, delta=1.0)
+
+
+class EchoOptions(unittest.TestCase):
+    def test_echo_options_leave_the_arrangement_alone(self):
+        """Delay, wetness and stereo draw from their own stream: the same seed
+        with different echo options writes identical dry channels."""
+        a = compose_song(seed=11, style_pref="snes", echo="on")
+        b = compose_song(seed=11, style_pref="snes", echo="on", echo_wet="wet",
+                         echo_delay="quarter", echo_stereo="spread")
+        self.assertEqual(a["orders"], b["orders"])
+        for pa, pb in zip(a["patterns"], b["patterns"]):
+            for ra, rb in zip(pa.data, pb.data):
+                self.assertEqual(ra[:12], rb[:12])
+        self.assertEqual(b["info"]["echo_delay"], "quarter")
+        self.assertEqual(b["info"]["echo_stereo"], "spread")
+        self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter"))
+        self.assertTrue(0.3 <= a["info"]["echo_feedback"] <= 0.6)
 
 
 class PatternOps(unittest.TestCase):

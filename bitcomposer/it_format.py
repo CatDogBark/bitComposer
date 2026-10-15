@@ -173,6 +173,7 @@ FX_RETRIGGER = 17      # Qxy - retrigger note every y ticks (x = volume change)
 FX_TREMOLO = 18        # Rxy - tremolo (x=speed, y=depth)
 FX_SPECIAL = 19        # Sxy - command group; SDx delays the note by x ticks
 FX_SET_TEMPO = 20      # Txx - set tempo
+FX_SET_PAN = 24        # Xxx - set panning, 0 = left, 128 = centre, 255 = right
 
 # Sub-command of Sxy: note delay. Parameter is 0xD0 | ticks.
 S_NOTE_DELAY = 0xD0

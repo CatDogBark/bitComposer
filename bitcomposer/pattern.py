@@ -6,7 +6,7 @@ import random
 
 from .it_format import (
     ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
-    FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE,
+    FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE, FX_SET_PAN,
     FX_ARPEGGIO, arpeggio_param,
 )
 
@@ -195,8 +195,10 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
               ) -> dict[int, list[tuple[int, ITNote]]]:
     """Echo events for src, on a timeline that runs past the pattern's end.
 
-    `taps` is a list of (dst_channel, delay_rows, level, inst_map); inst_map
-    maps a source instrument to the (darker) one the tap plays, or is None.
+    `taps` is a list of (dst_channel, delay_rows, level, inst_map[, pan]);
+    inst_map maps a source instrument to the (darker) one the tap plays, or
+    is None; pan (0-255), if given, is written as an Xxx effect on the copy's
+    note row, so taps on one channel can still bounce between sides.
     Several taps may share a channel: where two land on one row the louder
     wins, and a copy's end (the source note's cut, note-off or next note-on,
     shifted by the delay) is written only while that copy still owns the
@@ -219,16 +221,18 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
         end = events[i + 1] if i + 1 < len(events) else pattern.rows
         end_cell = pattern.data[end][src] if end < pattern.rows else None
         vol = cell.volume if cell.volume != 255 else 64
-        for dst, delay, level, inst_map in taps:
+        for dst, delay, level, inst_map, *more in taps:
+            pan = more[0] if more else None
             inst = (inst_map or {}).get(cell.instrument, cell.instrument)
             if end_cell is not None and end_cell.note in (NOTE_CUT, NOTE_OFF):
                 end_note_value = end_cell.note
             else:
                 end_note_value = end_note(inst)
+            copy = ITNote(note=cell.note, instrument=inst, volume=max(1, int(vol * level)))
+            if pan is not None:
+                copy.effect, copy.effect_val = FX_SET_PAN, max(0, min(255, int(pan)))
             by_channel.setdefault(dst, []).append(
-                (r + delay, level, ITNote(note=cell.note, instrument=inst,
-                                           volume=max(1, int(vol * level))),
-                 end + delay, end_note_value, r, delay))
+                (r + delay, level, copy, end + delay, end_note_value, r, delay))
     out: dict[int, list[tuple[int, ITNote]]] = {}
     for dst, items in by_channel.items():
         items.sort(key=lambda t: (t[0], -t[1]))
