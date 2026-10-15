@@ -961,6 +961,31 @@ class MPRISService(dbus.service.Object):
         return dbus.Array(self.player.get_playlist_info(), signature="s")
 
     @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
+    def GetLayout(self):
+        """Role of each channel of the loaded module, in channel order.
+
+        Read from the "layout:" line bitcomposer writes into the song message
+        ("echo.<role>" marks an echo return of that role), so the widget can
+        group faders without hard-coding the composer's channel table. Older
+        bitcomposer files (14 channels, no line) get the layout they were
+        written with; anything else is "ch1", "ch2", ... per channel."""
+        meta = self.player.get_metadata()
+        if not meta:
+            return dbus.Array([], signature="s")
+        n = int(meta.get("channels") or 0)
+        for line in (meta.get("message") or "").splitlines():
+            if line.strip().lower().startswith("layout:"):
+                roles = [r.strip() for r in line.split(":", 1)[1].split(",") if r.strip()]
+                if len(roles) == n:
+                    return dbus.Array(roles, signature="s")
+        if n == 14 and "bitcomposer" in (meta.get("message") or "").lower():
+            roles = ["melody", "harmony", "harmony", "harmony", "bass", "arp",
+                     "kick", "snare", "hihat", "tom", "crash", "openhat",
+                     "echo.melody", "echo.melody"]
+            return dbus.Array(roles, signature="s")
+        return dbus.Array([f"ch{i + 1}" for i in range(n)], signature="s")
+
+    @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
     def GetPlaylistInfo(self):
         """One "filename|title|auto" line per track, in GetPlaylist order.
         auto is 1 for bitcomposer_auto_* files, which Rescan may prune."""

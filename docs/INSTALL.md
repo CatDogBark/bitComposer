@@ -144,6 +144,13 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
   `Rescan()` may prune. Titles are read through libopenmpt and cached by mtime.
 - `KeepTrack(i) -> s` — renames an auto-generated track to drop the prefix so
   pruning leaves it alone; returns the new filename.
+- `GetLayout() -> as` — the role of every channel of the loaded module, in
+  order, from the `layout:` line bitcomposer writes into the song message
+  (`echo.<role>` marks an echo return of that role). Older 14-channel
+  bitcomposer files get the layout they were written with; other modules get
+  `ch1`, `ch2`, … The widget builds its mixer from this: one fader per dry
+  channel and one ECHO bus for all the returns (expand for LEAD / HARM /
+  ARP), the bus being a ratio against the mix the file was written with.
 - `SetChannelVolume(i channel, i volume) -> b` — live mixer: sets a channel's
   volume (0–64) on the playing module via libopenmpt's interactive interface.
   Immediate, no restart. `GetChannelVolumes() -> ai` reads them back (with

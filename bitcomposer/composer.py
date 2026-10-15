@@ -20,7 +20,7 @@ from .it_format import (
 from . import pattern as pattern_mod
 from .pattern import (
     CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-    CH_ECHO1, CH_ECHO2,
+    CH_ECHO1, CH_ECHO2, CH_ECHO_HARMONY, CH_ECHO_ARP, CH_ECHO_ALL, CHANNEL_ROLES,
     NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
     humanize_volume, apply_notes_to_pattern, apply_vibrato,
     apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_echo_spill_taps,
@@ -39,16 +39,26 @@ from .arp import pick_figures, generate_arp
 
 STYLES = ["chip", "snes", "genesis"]
 
-# Lead echo, modelled on the SNES echo unit's result rather than its wiring:
+# Echo, modelled on the SNES echo unit's result rather than its wiring:
 # repeats on a beat fraction (three rows is a dotted eighth at four rows to
 # the beat), each one quieter by the feedback and darker through a lowpass,
-# drums dry. Three taps on the two echo channels: the first and third share
-# a channel, and pattern.plan_echo lets the louder win where they collide.
+# one delay for the whole song, drums and bass dry. The hardware had one
+# on/off bit per voice; we send each part at its own level: the lead wet,
+# the harmony and arp lighter. A tap's channel may be shared (lead taps 1
+# and 3; both harmony taps) and pattern.plan_echo lets the louder win.
 ECHO_DELAY = 3                      # rows between repeats
-ECHO_LEVEL = 0.5                    # first repeat, as a fraction of the lead
 ECHO_FEEDBACK = 0.5                 # each further repeat relative to the last
-ECHO_TAP_CHANNELS = (CH_ECHO1, CH_ECHO2, CH_ECHO1)
 ECHO_TAP_CUTOFF_HZ = (4000, 2000, 1000)   # two-pole lowpass on the sample each tap plays
+# Per sent role: first-repeat level (fraction of the part) and tap channels.
+# Harmony has three source channels, one return channel each.
+ECHO_SENDS = {
+    "melody": (0.5, (CH_ECHO1, CH_ECHO2, CH_ECHO1)),
+    "harmony": (0.3, None),                       # per voice: (ch, ch)
+    "arp": (0.35, CH_ECHO_ARP),
+}
+# --echo-wet scales every send; "random" is "normal" until the per-song
+# wetness pass (stage three) draws it.
+ECHO_WETNESS = {"light": 0.6, "normal": 1.0, "wet": 1.5, "random": 1.0}
 # Per-note send: the hardware echoed everything a voice played; we send held
 # notes (>= 4 rows, a quarter note) and phrase endings (a rest of >= 2 rows
 # follows) and leave fast runs dry, so the tail reads as a tail.
@@ -145,6 +155,12 @@ PULSE_DUTY = {
 }
 
 
+def _echo_label(use_echo: bool, echo_wet: str) -> str:
+    if not use_echo:
+        return ""
+    return " + echo" if echo_wet in ("normal", "random") else f" + echo ({echo_wet})"
+
+
 def _pick_instruments(style: str, bass_weight: str = "heavy") -> dict[str, str]:
     """Pick a random instrument set for the song from the style's palette."""
     pal = PALETTES[style]
@@ -235,34 +251,50 @@ def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[st
 
 
 class _EchoBus:
-    """The song's echo: its taps and the darker samples they play.
+    """The song's echo: the sends, their taps and the darker samples they play.
 
-    Each tap has its own lowpass cutoff, so each lead preset that passes
-    through the echo gets one variant sample per distinct cutoff, made on
-    first use (the alternate lead arrives mid-song). taps() is what
-    pattern.apply_echo_taps wants: (channel, delay, level, {source: variant}).
+    Each tap has its own lowpass cutoff, so each preset that passes through
+    the echo gets one variant sample per distinct cutoff, made on first use
+    (the alternate lead arrives mid-song). sends() yields what
+    pattern.apply_echo_taps wants per source channel: (src, taps, hold, rest)
+    with taps = [(channel, delay, level, {source instrument: variant})].
     """
 
-    def __init__(self, samples: list[ITSample]):
+    def __init__(self, samples: list[ITSample], wet: float = 1.0):
         self.samples = samples
-        self._variants: dict[tuple[str, float], int] = {}
-        self._maps: list[dict[int, int]] = [dict() for _ in ECHO_TAP_CHANNELS]
+        self.wet = wet
+        self._variants: dict[tuple[str, float, bool], int] = {}
+        self._maps: list[dict[int, int]] = [dict() for _ in ECHO_TAP_CUTOFF_HZ]
 
-    def add_source(self, src_idx: int, preset: str) -> None:
+    def add_source(self, src_idx: int, preset: str, strike_rule: bool = False) -> None:
         if src_idx in self._maps[0]:
             return
         for k, cutoff in enumerate(ECHO_TAP_CUTOFF_HZ):
-            key = (preset, cutoff)
+            key = (preset, cutoff, strike_rule)
             if key not in self._variants:
-                inst = smp.echo_variant(preset, cutoff)
+                inst = smp.echo_variant(preset, cutoff, strike_rule=strike_rule)
                 self.samples.append(_sample_from_inst(f"{preset}_echo{int(cutoff) // 1000}k", inst))
                 self._variants[key] = len(self.samples)
             self._maps[k][src_idx] = self._variants[key]
         _register_releases(self.samples)
 
-    def taps(self) -> list[tuple[int, int, float, dict[int, int]]]:
-        return [(ch, ECHO_DELAY * (k + 1), ECHO_LEVEL * ECHO_FEEDBACK ** k, self._maps[k])
-                for k, ch in enumerate(ECHO_TAP_CHANNELS)]
+    def _taps(self, level: float, channels) -> list[tuple[int, int, float, dict[int, int]]]:
+        taps = []
+        for k, ch in enumerate(channels):
+            lvl = min(1.0, level * self.wet) * ECHO_FEEDBACK ** k
+            if lvl < 0.08:
+                break                         # below this a repeat is not heard
+            taps.append((ch, ECHO_DELAY * (k + 1), lvl, self._maps[k]))
+        return taps
+
+    def sends(self) -> list[tuple[int, list, int, int]]:
+        """(source channel, taps, hold, rest) for every sent part."""
+        out = [(CH_MELODY, self._taps(*ECHO_SENDS["melody"]), ECHO_SEND_HOLD, ECHO_SEND_REST)]
+        level, _ = ECHO_SENDS["harmony"]
+        for src, ret in zip((CH_HARMONY, CH_HARMONY2, CH_HARMONY3), CH_ECHO_HARMONY):
+            out.append((src, self._taps(level, (ret, ret)), 0, 0))
+        out.append((CH_ARP, self._taps(*ECHO_SENDS["arp"]), 0, 0))
+        return out
 
 
 def _pick_section_motif(sec_type: str, use_phrased: bool,
@@ -363,7 +395,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      bass_weight, use_bass_porta, porta_speed,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
                      n_patterns, is_ending, ending_style,
-                     swing_amount, speed, bpm, is_intro, echo_taps,
+                     swing_amount, speed, bpm, is_intro, echo_sends,
                      pickup_root=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
@@ -399,8 +431,6 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         )
         apply_vibrato(pat, CH_MELODY, melody,
                       speed=vibrato_speed, depth=vibrato_depth)
-        if echo_taps:
-            apply_echo_taps(pat, CH_MELODY, echo_taps, ECHO_SEND_HOLD, ECHO_SEND_REST)
 
     # ── Harmony ──
     if layers["harmony"]:
@@ -531,13 +561,21 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      crash_on_one=(chord_idx == 0 and sec_type in ("chorus", "bridge"))
                                   or (chord_idx % 2 == 0 and section_energy >= 0.8))
 
+    # ── Echo returns ──
+    # After every sent part is written: the lead per note, harmony and arp
+    # whole. The safety net below bounds the returns like any tonal channel.
+    if echo_sends:
+        for src, taps, hold, rest in echo_sends:
+            if taps:
+                apply_echo_taps(pat, src, taps, hold, rest)
+
     # ── Sustain safety net ──
     apply_sustain_safety_net(pat)
 
     # ── Section transitions ──
     if is_intro and chord_idx == 0:
         for ch in [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-                   CH_ECHO1, CH_ECHO2]:
+                   *CH_ECHO_ALL]:
             apply_fade(pat, ch, fade_in=True, rows_count=16)
 
     if is_ending and chord_idx == n_patterns - 1:
@@ -557,7 +595,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                  harmony_mode: str = "random",
                  bass_weight: str = "random",
                  song_form: str = "random",
-                 echo: str = "random",
+                 echo: str = "random", echo_wet: str = "random",
                  keys: str = "moving") -> dict:
     """Compose a complete procedural song. Returns a dict for write_it_file."""
     if seed is not None:
@@ -629,7 +667,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     instruments = _pick_instruments(style_pref, bass_weight=bass_weight)
     samples, sample_map = _build_samples(instruments)
     _register_releases(samples)
-    echo_bus = _EchoBus(samples)
+    echo_bus = _EchoBus(samples, ECHO_WETNESS.get(echo_wet, 1.0))
 
     # ── Energy / style ──
     if energy_pref == "chill":
@@ -780,6 +818,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 echo_bus.add_source(melody_sample,
                                     alt_lead if melody_sample == alt_lead_sample_idx
                                     else instruments["melody"])
+                echo_bus.add_source(sample_map["harmony"], instruments["harmony"])
+                echo_bus.add_source(sample_map["arp"], instruments["arp"],
+                                    strike_rule="arp" in STRIKE_RULE_ROLES)
 
             # Two sections render to the same bytes only if the group, the
             # chord, the dynamics tier, the active layers and the lead all
@@ -841,7 +882,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 breakdown=breakdown, n_patterns=num_patterns, pickup_root=pickup_root,
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
-                is_intro=is_intro, echo_taps=echo_bus.taps() if use_echo else None,
+                is_intro=is_intro, echo_sends=echo_bus.sends() if use_echo else None,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -863,8 +904,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             if (a, b) in done or len(preds[b]) != 1 or a == b:
                 continue
             done.add((a, b))
-            apply_echo_spill_taps(patterns[a], patterns[b], CH_MELODY, echo_bus.taps(),
-                                  ECHO_SEND_HOLD, ECHO_SEND_REST)
+            for src, taps, hold, rest in echo_bus.sends():
+                if taps:
+                    apply_echo_spill_taps(patterns[a], patterns[b], src, taps, hold, rest)
 
     # ── Silence channels at section boundaries ──
     silence_inactive_channels(orders, patterns)
@@ -883,9 +925,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     message = "\n".join([
         song_name,
         f"{key_name} {scale_label} - {bpm} BPM",
-        f"{style_pref}{' + echo' if use_echo else ''} - {form_name} form",
+        f"{style_pref}{_echo_label(use_echo, echo_wet)} - {form_name} form",
         f"{instruments['melody']} / {instruments['harmony']} / {instruments['bass']}",
         f"seed {seed if seed is not None else 'none'} - bitcomposer {__version__}",
+        "layout: " + ",".join(CHANNEL_ROLES),
     ])
 
     info = {
@@ -899,6 +942,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "speed": speed,
         "style": style_pref,
         "echo": use_echo,
+        "echo_wet": echo_wet if use_echo else None,
         "bass_style": bass_style,
         "bass_weight": bass_weight,
         "arp_figures": {k: arp_figures[k] for k in ("verse", "chorus", "bridge")},
@@ -950,7 +994,9 @@ CHANNEL_VOLUMES = [
     8,               # bass
     33,              # arp
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
-    13, 13,          # echo taps
+    13, 13,          # lead echo — at the melody's level; the sends set the wetness
+    25, 25, 25,      # harmony echo — at the harmony's level
+    33, 33,          # arp echo — at the arp's level
 ]
 # Levels no longer differ by palette: samples.generate_instrument normalises
 # sustaining voices to one loop loudness and, on the arp, struck voices to
@@ -966,7 +1012,8 @@ def channel_volumes_for(info: dict) -> list[int]:
     vols = list(CHANNEL_VOLUMES)
     arp = info.get("instruments", {}).get("arp")
     if arp in ARP_PRESET_TRIM:
-        vols[CH_ARP] = ARP_PRESET_TRIM[arp]
+        for ch in (CH_ARP, *CH_ECHO_ARP):
+            vols[ch] = ARP_PRESET_TRIM[arp]
     return vols
 
 
@@ -1009,7 +1056,7 @@ def compose_and_save(filepath: str, seed: int | None = None,
                      harmony_mode: str = "random",
                      bass_weight: str = "random",
                      song_form: str = "random",
-                     echo: str = "random",
+                     echo: str = "random", echo_wet: str = "random",
                      keys: str = "moving") -> dict:
     """Compose a song and save it as an IT file. Returns song info."""
     song = compose_song(seed=seed, tempo_pref=tempo, energy_pref=energy,
@@ -1020,6 +1067,6 @@ def compose_and_save(filepath: str, seed: int | None = None,
                         harmony_mode=harmony_mode,
                         bass_weight=bass_weight,
                         song_form=song_form,
-                        echo=echo, keys=keys)
+                        echo=echo, echo_wet=echo_wet, keys=keys)
     save_song(song, filepath)
     return song["info"]

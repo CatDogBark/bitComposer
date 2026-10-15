@@ -229,15 +229,25 @@ the level of the last (−6, −12, −18 dB), each playing a lowpassed copy of
 the lead sample (two-pole at 4, 2 and 1 kHz) so the repeats darken as they fade,
 the way the hardware's filter did on every feedback pass. The copies are
 separate samples (`samples.echo_variant`), since a tracker has no send
-effects; `pattern.plan_echo` places the taps on the two echo channels,
-lets the louder win where two land together, and ends each copy where
-its source note ended. Unlike the hardware, which echoed everything a
-voice played, only held notes (≥ 4 rows) and phrase endings (a rest of
-≥ 2 rows follows) are sent, about 70% of lead notes, so fast runs stay
-dry. Left to chance, 70% of snes songs get it and chip and genesis never
-do (neither chip had an echo unit); `--echo` overrides. Stages still to
-come: sends from harmony and arp with their own levels and a mixer bus,
-then per-song delay, feedback and wetness tied to the song's form. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
+effects; `pattern.plan_echo` places the taps on the return channels,
+lets the louder win where two land together, ends each copy where its
+source note ended, and carries the source's effect column (fades,
+vibrato) under the copy so a stab's echo decays like the stab. Unlike the
+hardware, which echoed everything a voice played, the lead sends only held
+notes (≥ 4 rows) and phrase endings (a rest of ≥ 2 rows follows), about
+70% of lead notes, so fast runs stay dry. The hardware had one on/off bit
+per voice; here each part has its own send (`composer.ECHO_SENDS`): lead
+at ½, harmony at 0.3 and arp at 0.35 of the part, repeats below 8%
+dropped, drums and bass dry. Returns live on seven channels (lead 2,
+harmony 3, arp 2; `pattern.CH_ECHO_ALL`, 19 channels in all) and the song
+message carries a `layout:` line naming every channel's role so the widget
+can fold them into one ECHO bus. `--echo-wet light|normal|wet` scales
+every send. Measured on four SNES songs: returns sit 6 dB under the lead,
+about 5 dB under the harmony and 9 dB under the arp; all returns together
+about 5 dB under the melody. Left to chance, 70% of snes songs get the
+echo and chip and genesis never do (neither chip had an echo unit);
+`--echo` overrides. Still to come: per-song delay, feedback and wetness
+tied to the song's form. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
 follow.
 
 **Bugs fixed on the way.**

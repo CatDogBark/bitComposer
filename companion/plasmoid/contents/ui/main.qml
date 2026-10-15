@@ -124,11 +124,48 @@ PlasmoidItem {
     onSettingsTabChanged: Plasmoid.configuration.settingsTab = settingsTab
 
     // Channel volumes for mastering (0-64, matches IT header bytes 128-191).
-    // Order mirrors bitcomposer.pattern; keep in step with CHANNEL_VOLUMES there.
+    // The channel layout comes from the daemon's GetLayout (the "layout:" line
+    // bitcomposer writes into the song message), so the mixer follows whatever
+    // the composer wrote: 14 channels for older files, 19 with the echo sends.
+    // Roles starting with "echo." are returns; they do not get faders of their
+    // own but fold into one ECHO bus (with an expand to LEAD / HARM / ARP).
+    property var layout: ["melody", "harmony", "harmony", "harmony", "bass", "arp", "kick", "snare", "hihat", "tom", "crash", "openhat", "echo.melody", "echo.melody"]
     property var channelVolumes: [13, 25, 25, 25, 8, 33, 36, 36, 36, 36, 36, 36, 13, 13]
-    readonly property var channelNames: ["MELODY", "HARM 1", "HARM 2", "HARM 3", "BASS", "ARP", "KICK", "SNARE", "HIHAT", "TOM", "CRASH", "OP HAT", "ECHO 1", "ECHO 2"]
-    readonly property var channelColors: [0, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2, 1, 1] // 0=green, 1=cyan, 2=pink
-    readonly property int channelCount: channelNames.length
+    readonly property int channelCount: layout.length
+    readonly property var dryChannels: { var a = []; for (var i = 0; i < layout.length; i++) if (String(layout[i]).indexOf("echo.") !== 0) a.push(i); return a }
+    readonly property var echoChannels: { var a = []; for (var i = 0; i < layout.length; i++) if (String(layout[i]).indexOf("echo.") === 0) a.push(i); return a }
+    readonly property var echoGroups: { var g = []; for (var i = 0; i < echoChannels.length; i++) { var r = String(layout[echoChannels[i]]).substring(5); if (g.indexOf(r) < 0) g.push(r) } return g }
+    // The bus and group faders are ratios against the mix the file was
+    // written with (echoBase), 0 = off, 1 = as written, 2 = double.
+    property var echoBase: []
+    property real echoBus: 1.0
+    property var echoGroupRatio: ({})
+    property bool echoExpanded: false
+    readonly property var echoRows: echoChannels.length ? ["bus"].concat(echoExpanded ? echoGroups : []) : []
+    function channelLabel(i) {
+        var r = String(layout[i] || ""), n = 0
+        if (r === "harmony") { for (var k = 0; k <= i; k++) if (layout[k] === "harmony") n++; return "HARM " + n }
+        if (r === "openhat") return "OP HAT"
+        if (r.indexOf("echo.") === 0) { for (var k2 = 0; k2 <= i; k2++) if (String(layout[k2]).indexOf("echo.") === 0) n++; return "ECHO " + n }
+        return r.toUpperCase()
+    }
+    function channelColor(i) {   // 0=green, 1=cyan, 2=pink
+        var r = String(layout[i] || "")
+        if (r === "melody" || r === "bass" || r === "arp") return 0
+        if (r === "harmony" || r.indexOf("echo.") === 0) return 1
+        return 2
+    }
+    function echoRatioOf(role) { return role === "bus" ? echoBus : (echoGroupRatio[role] !== undefined ? echoGroupRatio[role] : 1.0) }
+    function setEchoRatio(role, r) {
+        r = Math.max(0, Math.min(2, r))
+        if (role === "bus") echoBus = r
+        else { var m = echoGroupRatio; m[role] = r; echoGroupRatio = m; echoGroupRatioChanged() }
+        for (var k = 0; k < echoChannels.length; k++) {
+            var ch = echoChannels[k], g = echoRatioOf(String(layout[ch]).substring(5))
+            applyChannelVolume(ch, Math.max(0, Math.min(64, Math.round((echoBase[ch] || 0) * echoBus * g))))
+        }
+    }
+    function _resetEchoRatios() { echoBase = channelVolumes.slice(); echoBus = 1.0; echoGroupRatio = ({}); echoGroupRatioChanged() }
 
     // Sliders are live: each change goes to the daemon, which sets the
     // channel's volume on the playing module at once. Sends are coalesced
@@ -173,14 +210,31 @@ PlasmoidItem {
         var cmd = "bitcomposer-master.sh '" + path.replace(/'/g, "'\\''") + "'"
         for (var i = 0; i < channelCount; i++) cmd += " " + channelVolumes[i]
         masterSource.connectSource(cmd)
+        _resetEchoRatios()   // the written mix is now the base the bus scales
     }
 
     function _loadMasterFromFile() {
+        if (!_trackPath()) return
+        // The layout first (it sets channelCount), then the header block.
+        layoutSource.connectSource("qdbus6 " + busName + " " + busPath + " " + busName + ".GetLayout")
+    }
+    function _readMixFromFile() {
         var path = _trackPath()
         if (!path) return
         // Read the per-channel volume block straight from the file header.
         var cmd = "od -An -tu1 -j128 -N" + channelCount + " '" + path.replace(/'/g, "'\\''") + "'"
         masterLoadSource.connectSource(cmd)
+    }
+
+    P5Support.DataSource {
+        id: layoutSource
+        engine: "executable"
+        onNewData: function(source, data) {
+            disconnectSource(source)
+            var lines = (data["stdout"] || "").split("\n").map(function(l) { return l.trim() }).filter(function(l) { return l.length })
+            if (lines.length) root.layout = lines
+            root._readMixFromFile()
+        }
     }
 
     P5Support.DataSource {
@@ -202,6 +256,7 @@ PlasmoidItem {
                 for (var i = 0; i < channelCount; i++)
                     vols.push(parseInt(parts[i]) || 0)
                 root.channelVolumes = vols
+                root._resetEchoRatios()
                 // Reopening the panel shows the file's mix; make the live mix match it.
                 for (var c = 0; c < channelCount; c++) root._pendingMix[c] = vols[c]
                 mixFlush.restart()
@@ -220,6 +275,8 @@ PlasmoidItem {
     property string settHarmonyMode: Plasmoid.configuration.settHarmonyMode
     property string settBassWeight: Plasmoid.configuration.settBassWeight
     property string settForm: Plasmoid.configuration.settForm
+    property string settEcho: Plasmoid.configuration.settEcho
+    property string settEchoWet: Plasmoid.configuration.settEchoWet
     property string activePreset: Plasmoid.configuration.activePreset
     onActivePresetChanged: Plasmoid.configuration.activePreset = activePreset
     function _onSettingChanged() {
@@ -245,6 +302,8 @@ PlasmoidItem {
     onSettHarmonyModeChanged: { Plasmoid.configuration.settHarmonyMode = settHarmonyMode; _onSettingChanged() }
     onSettBassWeightChanged: { Plasmoid.configuration.settBassWeight = settBassWeight; _onSettingChanged() }
     onSettFormChanged: { Plasmoid.configuration.settForm = settForm; _onSettingChanged() }
+    onSettEchoChanged: { Plasmoid.configuration.settEcho = settEcho; _onSettingChanged() }
+    onSettEchoWetChanged: { Plasmoid.configuration.settEchoWet = settEchoWet; _onSettingChanged() }
     property bool _applyingPreset: false
 
     function applyPreset(name) {
@@ -293,6 +352,8 @@ PlasmoidItem {
         if (settHarmonyMode !== "random") flags += " --harmony-mode " + settHarmonyMode
         if (settBassWeight !== "random") flags += " --bass-weight " + settBassWeight
         if (settForm !== "random") flags += " --form " + settForm
+        if (settEcho !== "random") flags += " --echo " + settEcho
+        if (settEchoWet !== "random") flags += " --echo-wet " + settEchoWet
         return flags
     }
 
@@ -317,6 +378,8 @@ PlasmoidItem {
         if (settHarmonyMode !== "random") parts.push(settHarmonyMode)
         if (settBassWeight !== "random") parts.push(settBassWeight + " bass")
         if (settForm !== "random") parts.push(settForm + " form")
+        if (settEcho !== "random") parts.push("echo " + settEcho)
+        if (settEchoWet !== "random") parts.push(settEchoWet + " echo")
         return prefix + (parts.length ? parts.join("  ·  ") : "any  ·  everything left to chance")
     }
 
@@ -1237,6 +1300,40 @@ PlasmoidItem {
                                 }
                             }
                         }
+                        // ECHO
+                        RowLayout { Layout.fillWidth: true; spacing: 8
+                            Text { Layout.preferredWidth: 52; text: "ECHO"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
+                            Row { spacing: 3
+                                Repeater { model: ["random", "on", "off"]
+                                    Rectangle {
+                                        required property string modelData
+                                        property bool active: root.settEcho === modelData
+                                        width: _te.implicitWidth + 10; height: 20; radius: 3
+                                        color: active ? "#1a2e26" : (_me.containsMouse ? "#0f1a16" : "transparent")
+                                        border.width: 1; border.color: active ? root.accentGreen : (_me.containsMouse ? root.tileBorder : "transparent")
+                                        Text { id: _te; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
+                                        MouseArea { id: _me; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settEcho = modelData }
+                                    }
+                                }
+                            }
+                        }
+                        // WET (how much of the lead, harmony and arp the echo carries)
+                        RowLayout { Layout.fillWidth: true; spacing: 8
+                            Text { Layout.preferredWidth: 52; text: "WET"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
+                            Row { spacing: 3
+                                Repeater { model: ["random", "light", "normal", "wet"]
+                                    Rectangle {
+                                        required property string modelData
+                                        property bool active: root.settEchoWet === modelData
+                                        width: _tw.implicitWidth + 10; height: 20; radius: 3
+                                        color: active ? "#1a2e26" : (_mw.containsMouse ? "#0f1a16" : "transparent")
+                                        border.width: 1; border.color: active ? root.accentGreen : (_mw.containsMouse ? root.tileBorder : "transparent")
+                                        Text { id: _tw; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
+                                        MouseArea { id: _mw; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settEchoWet = modelData }
+                                    }
+                                }
+                            }
+                        }
                         // BASS
                         RowLayout { Layout.fillWidth: true; spacing: 8
                             Text { Layout.preferredWidth: 52; text: "BASS"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
@@ -1465,9 +1562,10 @@ PlasmoidItem {
 
                     // Channel sliders — horizontal rows
                     Repeater {
-                        model: root.channelCount
+                        model: root.dryChannels.length
                         delegate: RowLayout {
                             required property int index
+                            readonly property int ch: root.dryChannels[index]
                             Layout.fillWidth: true
                             spacing: 6
                             height: 18
@@ -1475,9 +1573,9 @@ PlasmoidItem {
                             // Channel name
                             Text {
                                 Layout.preferredWidth: 48
-                                text: root.channelNames[index]
-                                color: root.channelColors[index] === 0 ? root.accentGreen :
-                                       root.channelColors[index] === 1 ? root.accentCyan :
+                                text: root.channelLabel(ch)
+                                color: root.channelColor(ch) === 0 ? root.accentGreen :
+                                       root.channelColor(ch) === 1 ? root.accentCyan :
                                        root.accentPink
                                 font.family: "JetBrains Mono"
                                 font.pixelSize: Math.round(8 * root.ui)
@@ -1503,11 +1601,11 @@ PlasmoidItem {
                                 // Fill bar
                                 Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.width * (root.channelVolumes[index] / 64)
+                                    width: parent.width * (root.channelVolumes[ch] / 64)
                                     height: 4
                                     radius: 2
-                                    color: root.channelColors[index] === 0 ? root.accentGreen :
-                                           root.channelColors[index] === 1 ? root.accentCyan :
+                                    color: root.channelColor(ch) === 0 ? root.accentGreen :
+                                           root.channelColor(ch) === 1 ? root.accentCyan :
                                            root.accentPink
                                     opacity: 0.6
                                 }
@@ -1515,14 +1613,14 @@ PlasmoidItem {
                                 // Handle
                                 Rectangle {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    x: parent.width * (root.channelVolumes[index] / 64) - width / 2
+                                    x: parent.width * (root.channelVolumes[ch] / 64) - width / 2
                                     width: 8
                                     height: 12
                                     radius: 2
                                     color: hSliderMa.pressed ? "#2a4e36" : (hSliderMa.containsMouse ? "#1a3e26" : "#142018")
                                     border.width: 1
-                                    border.color: root.channelColors[index] === 0 ? root.accentGreen :
-                                                  root.channelColors[index] === 1 ? root.accentCyan :
+                                    border.color: root.channelColor(ch) === 0 ? root.accentGreen :
+                                                  root.channelColor(ch) === 1 ? root.accentCyan :
                                                   root.accentPink
                                 }
 
@@ -1536,7 +1634,7 @@ PlasmoidItem {
                                     onPositionChanged: function(mouse) { if (pressed) _setH(mouse.x) }
                                     function _setH(mouseX) {
                                         var ratio = Math.max(0, Math.min(1, mouseX / width))
-                                        root.applyChannelVolume(index, Math.round(ratio * 64))
+                                        root.applyChannelVolume(ch, Math.round(ratio * 64))
                                     }
                                 }
                             }
@@ -1544,7 +1642,90 @@ PlasmoidItem {
                             // Value
                             Text {
                                 Layout.preferredWidth: 20
-                                text: root.channelVolumes[index]
+                                text: root.channelVolumes[ch]
+                                color: root.dimText
+                                font.family: "JetBrains Mono"
+                                font.pixelSize: Math.round(8 * root.ui)
+                                horizontalAlignment: Text.AlignRight
+                            }
+                        }
+                    }
+
+                    // Echo bus: every return channel at once, as a ratio of the
+                    // written mix; expand for LEAD / HARM / ARP.
+                    Repeater {
+                        model: root.echoRows
+                        delegate: RowLayout {
+                            required property string modelData
+                            readonly property bool isBus: modelData === "bus"
+                            readonly property real ratio: root.echoRatioOf(modelData)
+                            Layout.fillWidth: true
+                            spacing: 6
+                            height: 18
+
+                            Item {
+                                Layout.preferredWidth: 48
+                                height: 14
+                                Text {
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: isBus ? ((root.echoExpanded ? "\u25BE " : "\u25B8 ") + "ECHO")
+                                                : (modelData === "melody" ? "LEAD" : modelData === "harmony" ? "HARM" : modelData.toUpperCase())
+                                    color: isBus ? root.accentCyan : root.dimText
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: Math.round(8 * root.ui)
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    enabled: isBus
+                                    cursorShape: isBus ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                    onClicked: root.echoExpanded = !root.echoExpanded
+                                }
+                            }
+
+                            Item {
+                                Layout.fillWidth: true
+                                height: 14
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width; height: 4; radius: 2
+                                    color: root.darkBg; border.width: 1; border.color: root.tileBorder
+                                }
+                                Rectangle {   // the written level is the middle of the track
+                                    x: parent.width / 2; width: 1; height: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: root.tileBorder
+                                }
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width * (ratio / 2); height: 4; radius: 2
+                                    color: root.accentCyan; opacity: 0.6
+                                }
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: parent.width * (ratio / 2) - width / 2
+                                    width: 8; height: 12; radius: 2
+                                    color: eSliderMa.pressed ? "#2a4e36" : (eSliderMa.containsMouse ? "#1a3e26" : "#142018")
+                                    border.width: 1; border.color: root.accentCyan
+                                }
+                                MouseArea {
+                                    id: eSliderMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    preventStealing: true
+                                    onPressed: function(mouse) { _setE(mouse.x) }
+                                    onPositionChanged: function(mouse) { if (pressed) _setE(mouse.x) }
+                                    function _setE(mouseX) {
+                                        var r = Math.max(0, Math.min(1, mouseX / width)) * 2
+                                        root.setEchoRatio(modelData, Math.round(r * 20) / 20)
+                                    }
+                                }
+                            }
+
+                            Text {
+                                Layout.preferredWidth: 28
+                                text: Math.round(ratio * 100) + "%"
                                 color: root.dimText
                                 font.family: "JetBrains Mono"
                                 font.pixelSize: Math.round(8 * root.ui)

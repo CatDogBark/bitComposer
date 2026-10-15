@@ -134,6 +134,12 @@ def main():
         help="Delay echo on the lead, SNES style (default: random — 70%% of snes songs, never chip or genesis)",
     )
     parser.add_argument(
+        "--echo-wet",
+        choices=["light", "normal", "wet", "random"],
+        default="random",
+        help="How much of the lead, harmony and arp the echo carries (default: random — normal for now)",
+    )
+    parser.add_argument(
         "--keys",
         choices=["moving", "home"],
         default="moving",
@@ -168,7 +174,7 @@ def main():
                                 harmony_mode=args.harmony_mode,
                                 bass_weight=args.bass_weight,
                                 song_form=args.form,
-                                echo=args.echo, keys=args.keys)
+                                echo=args.echo, echo_wet=args.echo_wet, keys=args.keys)
             info = song["info"]
 
             if args.output and args.count == 1:

@@ -18,11 +18,12 @@ These change how every note sounds, not what notes are played.
   delay line with feedback and a filter, usually on lead, harmony and arp
   with the drums dry. We keep the result and drop the hardware's limits.
   Stage one (done): a decaying, darkening three-tap tail on the lead, sent
-  per note. Stage two: harmony and arp sends with their own levels, a
-  channel layout line in the song message, and one ECHO bus fader in the
-  widget with an expand to LEAD / HARM / ARP. Stage three: per-song delay
-  (eighth, dotted eighth or quarter), feedback and wetness, opened in thin
-  sections and pulled back in the chorus, and a ping-pong option.
+  per note. Stage two (done): harmony and arp sends with their own levels,
+  a `layout:` line in the song message, one ECHO bus fader in the widget
+  with an expand to LEAD / HARM / ARP, and `--echo-wet`. Stage three:
+  per-song delay (eighth, dotted eighth or quarter), feedback and wetness
+  drawn per song, opened in thin sections and pulled back in the chorus,
+  and a ping-pong option.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 

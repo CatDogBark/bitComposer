@@ -25,13 +25,29 @@ CH_HIHAT = 8
 CH_TOM = 9
 CH_CRASH = 10
 CH_OPEN_HAT = 11
-# Echo returns of the lead. The SNES fed its mix through a hardware delay; a
-# tracker fakes that with a delayed, quieter copy of the part on its own
-# channel. Two taps give the feedback repeat.
-CH_ECHO1 = 12
-CH_ECHO2 = 13
+# Echo returns. The SNES fed its voices through one hardware delay with a
+# per-voice send; a tracker fakes that with delayed, quieter copies of each
+# sent part on channels of their own. The lead's three taps share two
+# channels (first and third on one), each harmony voice has one channel for
+# both of its taps (held chords rarely collide), and the arp's two taps get
+# a channel each (fast notes would).
+CH_ECHO1 = 12                 # lead, taps 1 and 3
+CH_ECHO2 = 13                 # lead, tap 2
+CH_ECHO_HARMONY = (14, 15, 16)
+CH_ECHO_ARP = (17, 18)
+CH_ECHO_ALL = (CH_ECHO1, CH_ECHO2) + CH_ECHO_HARMONY + CH_ECHO_ARP
 
-NUM_CHANNELS = 14
+NUM_CHANNELS = 19
+
+# Role of every channel, in order, written into the song message as a
+# "layout:" line so a player can group faders (the widget's ECHO bus) without
+# hard-coding this table. "echo.<role>" marks a return of that role.
+CHANNEL_ROLES = ["melody", "harmony", "harmony", "harmony", "bass", "arp",
+                 "kick", "snare", "hihat", "tom", "crash", "openhat",
+                 "echo.melody", "echo.melody",
+                 "echo.harmony", "echo.harmony", "echo.harmony",
+                 "echo.arp", "echo.arp"]
+assert len(CHANNEL_ROLES) == NUM_CHANNELS
 ROWS_PER_PATTERN = 64
 
 # Timing grid. IT plays 4 rows per quarter note at the speed/tempo pairing we
@@ -44,7 +60,7 @@ BARS_PER_PATTERN = ROWS_PER_PATTERN // ROWS_PER_BAR
 
 # Tonal channels that can ring (drums naturally stop)
 TONAL_CHANNELS = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-                  CH_ECHO1, CH_ECHO2]
+                  *CH_ECHO_ALL]
 
 
 # ── Note endings ──
@@ -186,6 +202,10 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
     shifted by the delay) is written only while that copy still owns the
     channel, so a later tap never cuts an earlier one short.
 
+    Each copy also carries the effect column the source has under its note
+    (harmony fades, vibrato), so a stab's echo decays like the stab. Those
+    cells are written only where the return channel has nothing.
+
     Returns {dst_channel: [(row, ITNote)]} with rows that may be >= rows;
     apply_echo keeps the in-pattern part and apply_echo_spill the rest.
     """
@@ -208,7 +228,7 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
             by_channel.setdefault(dst, []).append(
                 (r + delay, level, ITNote(note=cell.note, instrument=inst,
                                            volume=max(1, int(vol * level))),
-                 end + delay, end_note_value))
+                 end + delay, end_note_value, r, delay))
     out: dict[int, list[tuple[int, ITNote]]] = {}
     for dst, items in by_channel.items():
         items.sort(key=lambda t: (t[0], -t[1]))
@@ -218,13 +238,29 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0
                 continue                      # same row: the louder tap was first
             chosen.append(item)
         evs = []
-        for k, (row, _, note, end_row, end_value) in enumerate(chosen):
+        for k, (row, _, note, end_row, end_value, src_row, delay) in enumerate(chosen):
             evs.append((row, note))
             next_row = chosen[k + 1][0] if k + 1 < len(chosen) else None
+            stop = end_row if next_row is None else min(end_row, next_row)
+            for r in range(src_row + 1, min(stop - delay, pattern.rows)):
+                c = pattern.data[r][src]
+                if c.note == 0 and c.effect:
+                    evs.append((r + delay, ITNote(effect=c.effect,
+                                                  effect_val=_scaled_effect(c, note.volume / 64.0))))
             if next_row is None or end_row < next_row:
                 evs.append((end_row, ITNote(note=end_value)))
         out[dst] = evs
     return out
+
+
+def _scaled_effect(cell: ITNote, level: float) -> int:
+    """A copy's effect parameter. A plain volume slide down (D0y) is in
+    absolute units per tick, so at a third of the level it would die three
+    times as fast; scale it with the level (floor 1) so the copy fades in
+    proportion. Fine slides and every other effect are copied as they are."""
+    if cell.effect == FX_VOLUME_SLIDE and cell.effect_val & 0xF0 == 0:
+        return max(1, round((cell.effect_val & 0x0F) * level))
+    return cell.effect_val
 
 
 def apply_echo_taps(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0):
@@ -236,8 +272,11 @@ def apply_echo_taps(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int
     """
     for dst, evs in plan_echo(pattern, src, taps, hold, rest).items():
         for row, note in evs:
-            if row < pattern.rows:
-                pattern.data[row][dst] = note
+            if row >= pattern.rows:
+                continue
+            if note.note == 0 and pattern.data[row][dst].note != 0:
+                continue                      # an effect never displaces a note event
+            pattern.data[row][dst] = note
 
 
 def apply_echo_spill_taps(prev: ITPattern, cur: ITPattern, src: int, taps,
@@ -365,7 +404,7 @@ def apply_sustain_safety_net(pat: ITPattern, channels: list[int] | None = None,
     """
     if channels is None:
         channels = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_ARP,
-                    CH_ECHO1, CH_ECHO2]
+                    *CH_ECHO_ALL]
     for ch in channels:
         last_note_row = None
         last_inst = 0

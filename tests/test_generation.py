@@ -69,7 +69,8 @@ class FileFormat(unittest.TestCase):
             self.assertEqual(msg[0], info["title"])
             self.assertIn(f"{info['tempo']} BPM", msg[1])
             self.assertIn(info["style"], msg[2])
-            self.assertIn("seed 3", msg[-1])
+            self.assertIn("seed 3", msg[-2])
+            self.assertEqual(msg[-1], "layout: " + ",".join(pattern.CHANNEL_ROLES))
             # titles differ between seeds and depend only on the seed
             _, info_b = _gen(tmp, 4)
             self.assertNotEqual(info["title"], info_b["title"])

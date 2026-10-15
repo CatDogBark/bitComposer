@@ -22,6 +22,8 @@
     <entry name="settHarmonyMode" type="String"><default>random</default></entry>
     <entry name="settBassWeight" type="String"><default>random</default></entry>
     <entry name="settForm" type="String"><default>random</default></entry>
+    <entry name="settEcho" type="String"><default>random</default></entry>
+    <entry name="settEchoWet" type="String"><default>random</default></entry>
     <entry name="activePreset" type="String"><default></default></entry>
     <entry name="settingsTab" type="Int"><default>0</default></entry>
   </group>

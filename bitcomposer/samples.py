@@ -1584,7 +1584,8 @@ def _rms(values) -> float:
     return math.sqrt(sum(v * v for v in values) / len(values)) / 32767.0 if values else 0.0
 
 
-def echo_variant(name: str, cutoff_hz: float, poles: int = 2) -> dict:
+def echo_variant(name: str, cutoff_hz: float, poles: int = 2,
+                 strike_rule: bool = False) -> dict:
     """A darker copy of a preset for an echo tap.
 
     The SNES ran its echo repeats through a filter on every pass, so each one
@@ -1599,7 +1600,7 @@ def echo_variant(name: str, cutoff_hz: float, poles: int = 2) -> dict:
     release tail after it are filtered in sequence from the matching state.
     Level is not restored: the filter's loss is part of the repeat's decay.
     """
-    inst = generate_instrument(name)
+    inst = generate_instrument(name, strike_rule=strike_rule)
     ints = list(struct.unpack(f"<{inst['length']}h", inst["data"]))
     alpha = 1.0 - math.exp(-2.0 * math.pi * cutoff_hz / inst["rate"])
     alpha = max(0.001, min(1.0, alpha))
