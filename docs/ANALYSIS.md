@@ -208,8 +208,9 @@ model (all four SPC700 prediction filters, 4-bit residuals, per-block shift)
 for the grain. The old waveform set is now `--style chip`.
 
 **Echo.** Two echo channels carry delayed copies of the lead (3 rows at
-−6 dB, 6 rows at −12 dB), panned wide. Always on for snes, `--echo` controls
-it. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
+−6 dB, 6 rows at −12 dB), panned wide. Left to chance, 70% of snes songs
+get it and chip and genesis never do (neither chip had an echo unit);
+`--echo` overrides. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
 follow.
 
 **Bugs fixed on the way.**

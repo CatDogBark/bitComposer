@@ -204,6 +204,47 @@ def analyze(path):
         peak = max(mel, key=lambda x: (x[1], -x[0]))
         climaxes.append(peak[0] / max(len(pat) - 1, 1))
         means.append(statistics.mean(n for _, n in mel))
+    # Melody vocabulary: how stepwise the line is (intervals of 1-2 semitones
+    # vs leaps of 5+), how often a bar repeats an earlier bar of the same
+    # pattern exactly (rhythm and pitches), and how often a bar keeps the
+    # previous bar's rhythm — the three things a hook is made of.
+    steps = leaps = ivals = 0
+    cell_repeat = cells = rhythm_same = rhythm_pairs = 0
+    for oi in real:
+        pat = m.patterns[oi]
+        mel = m.notes_on(oi, CH_MELODY)
+        for (r1, n1), (r2, n2) in zip(mel, mel[1:]):
+            d = abs(n2 - n1)
+            ivals += 1
+            steps += d <= 2
+            leaps += d >= 5
+        bars_seen = []
+        prev_rhythm = None
+        for bar in range(0, len(pat), ROWS_PER_BAR):
+            notes = [(r - bar, n) for r, n in mel if bar <= r < bar + ROWS_PER_BAR]
+            if not notes:
+                prev_rhythm = None
+                continue
+            rhythm = tuple(r for r, _ in notes)
+            cell = tuple(notes)
+            cells += 1
+            # Near-exact: same rhythm and at least three quarters of the
+            # pitches the same. A repeat with one note bent by a chord change
+            # is still heard as a repeat.
+            def near(a, b):
+                return len(a) == len(b) and all(x[0] == y[0] for x, y in zip(a, b)) \
+                    and sum(x[1] == y[1] for x, y in zip(a, b)) >= 0.75 * len(a)
+            cell_repeat += any(near(cell, seen) for seen in bars_seen)
+            bars_seen.append(cell)
+            if prev_rhythm is not None:
+                rhythm_pairs += 1
+                rhythm_same += rhythm == prev_rhythm
+            prev_rhythm = rhythm
+    out["mel_step_pct"] = 100.0 * steps / max(ivals, 1)
+    out["mel_leap_pct"] = 100.0 * leaps / max(ivals, 1)
+    out["mel_cell_repeat_pct"] = 100.0 * cell_repeat / max(cells, 1)
+    out["mel_rhythm_same_pct"] = 100.0 * rhythm_same / max(rhythm_pairs, 1)
+
     out["mel_strong_fit_pct"] = 100.0 * fit / max(strong, 1)
     out["mel_end_hold"] = float(statistics.mean(holds)) if holds else 0.0
     out["mel_climax_pos"] = float(statistics.mean(climaxes)) if climaxes else 0.0
@@ -357,7 +398,8 @@ KEYS = ["bpm", "orders", "patterns", "order_reuse_pct", "mel_uniq_pct",
         "voice_motion", "distinct_ioi", "n_fx", "arp_figures", "arp_mel_ratio",
         "arp_vol_levels", "drum_shapes", "drum_repeat_pct", "kick_levels", "snare_levels",
         "mel_strong_fit_pct", "mel_end_hold", "mel_climax_pos", "mel_register_spread",
-        "v_to_i_pct", "seconds"]
+        "v_to_i_pct", "seconds", "mel_step_pct", "mel_leap_pct", "mel_cell_repeat_pct",
+        "mel_rhythm_same_pct"]
 DRUM_KEYS = ["kick_per_bar", "snare_per_bar", "hat_per_bar", "ohat_per_bar", "tom_per_bar", "crash_per_bar"]
 
 

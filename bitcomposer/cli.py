@@ -131,7 +131,7 @@ def main():
         "--echo",
         choices=["on", "off", "random"],
         default="random",
-        help="Delay echo on the lead, SNES style (default: random — always on for snes)",
+        help="Delay echo on the lead, SNES style (default: random — 70%% of snes songs, never chip or genesis)",
     )
     parser.add_argument(
         "--keys",

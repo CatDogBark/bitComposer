@@ -217,7 +217,8 @@ def _build_samples(instruments: dict[str, str]) -> tuple[list[ITSample], dict[st
 
 
 def _pick_section_motif(sec_type: str, use_phrased: bool,
-                        chorus_motif, verse_motif, bridge_motif) -> dict | None:
+                        chorus_motif, verse_motif, bridge_motif,
+                        rng: random.Random | None = None, scale_size: int = 7) -> dict | None:
     """Pick the appropriate motif for a section type."""
     if not use_phrased:
         return None
@@ -228,7 +229,10 @@ def _pick_section_motif(sec_type: str, use_phrased: bool,
     elif sec_type == "bridge":
         return bridge_motif
     else:
-        return generate_motif(length=random.choice([3, 4]))
+        # Outro/tag: a fresh motif on the melody's own stream, so its draws
+        # never touch the arrangement.
+        r = rng or random
+        return generate_motif(length=r.choice([3, 4]), rng=rng, scale_size=scale_size)
 
 
 # Related keys a section can move to, as (semitone shift, scale family).
@@ -412,7 +416,10 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         bass = generate_bass_timeline(bass_segments, section_bass,
                                       weight=bass_weight,
                                       density=0.6 + 0.35 * section_energy)
-        bass_vol = {"heavy": 255, "medium": 150, "light": 100}.get(bass_weight, 255)
+        # Volume-column values are 0-64. The old 150/100 for medium/light were
+        # not volumes at all: in the IT volume column 150 is a pan command and
+        # 100 a volume slide down, which left light basses nearly silent.
+        bass_vol = {"heavy": 255, "medium": 52, "light": 44}.get(bass_weight, 255)
         if use_bass_porta and len(bass) > 1:
             apply_portamento(
                 pat, CH_BASS, bass, sample_map["bass"],
@@ -528,8 +535,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     if style_pref not in STYLES:
         style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
     if echo == "random":
-        # The SNES always had its echo on; the others borrow it sometimes.
-        echo_chance = {"snes": 1.0, "chip": 0.5, "genesis": 0.25}[style_pref]
+        # The SNES S-DSP had a hardware echo send that most, not all, tracks
+        # used, so snes draws it most of the time. The NES and the YM2612
+        # had no echo unit, so chip and genesis stay dry unless asked.
+        echo_chance = {"snes": 0.7, "chip": 0.0, "genesis": 0.0}[style_pref]
         use_echo = random.random() < echo_chance
     else:
         use_echo = echo == "on"
@@ -591,10 +600,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
     # ── Motifs ──
     use_phrased = melody_style == "phrased"
+    # Motifs draw from their own stream (seeded from the global one), so
+    # the motif grammar can change without moving the rest of the song.
+    motif_rng = random.Random(random.randrange(2 ** 31))
     if use_phrased:
-        chorus_motif = generate_motif(length=random.choice([4, 5]))
-        verse_motif = vary_motif(chorus_motif, 0.4)
-        bridge_motif = generate_motif(length=random.choice([3, 4]))
+        scale_size = len(theory.SCALES[scale_name])
+        chorus_motif = generate_motif(length=motif_rng.choice([4, 5]), rng=motif_rng, scale_size=scale_size)
+        verse_motif = vary_motif(chorus_motif, 0.4, rng=motif_rng)
+        bridge_motif = generate_motif(length=motif_rng.choice([3, 4]), rng=motif_rng, scale_size=scale_size)
     else:
         chorus_motif = verse_motif = bridge_motif = None
 
@@ -754,7 +767,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 
             section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
             section_motif = _pick_section_motif(
-                sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif)
+                sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif, rng=melody_rng,
+                scale_size=len(theory.SCALES[sec_scale_name]))
 
             pat = _compose_pattern(
                 scale_notes=section_scale, segments=segments,
@@ -875,11 +889,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
 # The echo channels sit at the melody's level; the taps are already quieter
 # through their volume columns.
 #
-# The arp level depends on the palette. A held chip pulse arp balanced by ear
-# at 17 (Lower Cistern, 2026-10-13) where 33 buried the chorus. Chip arps are
-# now decaying pulse blips, which average ~0.55x a held pulse over an 8th-note
-# step, so 28 puts them at the level that 17 gave the held tone. SNES and
-# Genesis arps are decaying plucks and bells and sit in that band at 33.
+# Measured by rendering each part alone (2026-10-14, 60 s, dBFS): melody sits
+# 6-14 dB under the drums and the arp 1-4 dB under the melody on every palette.
+# The arp level depends on the palette (PALETTE_MIX below): SNES arps are
+# decaying plucks and bells and sit at 33; chip pulse blips and the genesis
+# PSG square are trimmed.
 CHANNEL_VOLUMES = [
     13,              # melody
     25, 25, 25,      # harmony
@@ -888,9 +902,15 @@ CHANNEL_VOLUMES = [
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
     13, 13,          # echo taps
 ]
+# Lead levels no longer differ by palette: looped voices are normalised to
+# equal sustain loudness in samples.generate_instrument (LOUDNESS_TARGET).
+# Chip arp was set by ear (28) against a lead that was 6.6 dB too hot before
+# equal-loudness normalisation; the plucks themselves are peak-capped and did
+# not move, so the arp comes down by the same amount.  The genesis PSG arp is
+# a looped square and was normalised along with its lead, so 17 still holds.
 PALETTE_MIX = {
-    "chip": {CH_ARP: 28},
-    "genesis": {CH_ARP: 17},   # gen_pluck arp balanced by ear (Skyward Cistern, 2026-10-13)
+    "chip": {CH_ARP: 15},
+    "genesis": {CH_ARP: 17},
 }
 
 

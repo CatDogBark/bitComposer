@@ -14,9 +14,11 @@ These change how every note sounds, not what notes are played.
   note-off for them so each family releases at its own pace
   (`samples.RELEASE`, `samples.PRESET_RELEASE`). Lengths were judged right as drafted. One-shot voices (plucks, drums)
   still end on their own.
-- **Reverb/echo on more than the lead.** The SNES echo ran on most voices.
-  Harmony and arp echo returns at lower level, on the existing two echo
-  channels or two more.
+- **SNES echo as a real send.** The S-DSP echo was a per-voice send into one
+  delay line with feedback and an 8-tap filter, usually on lead, harmony and
+  arp with the drums dry. Today it is two fixed taps copied from the lead.
+  The proper job: harmony and arp returns at lower level, a decaying tail
+  over several taps at a tempo-related delay, and a lowpass on the repeats.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 
