@@ -172,7 +172,16 @@ class Arrangement(unittest.TestCase):
         note, the peak late. The old generator measured 61%, 5 rows, 0.35."""
         self.assertGreater(self._mean("mel_strong_fit_pct"), 65.0)
         self.assertGreater(self._mean("mel_end_hold"), 6.0)
-        self.assertGreater(self._mean("mel_climax_pos"), 0.4)
+        # Periods (half of all phrases) peak in their answer bar, earlier
+        # than a sentence's development; the mean sits around 0.35-0.5.
+        self.assertGreater(self._mean("mel_climax_pos"), 0.3)
+
+    def test_melody_grammar(self):
+        """Tunes are mostly steps with few leaps, keep their rhythm across
+        bars and repeat bars. The contour walk measured 57% / 16% / 27%."""
+        self.assertGreater(self._mean("mel_step_pct"), 62.0)
+        self.assertLess(self._mean("mel_leap_pct"), 15.0)
+        self.assertGreater(self._mean("mel_rhythm_same_pct"), 30.0)
 
     def test_sections_cadence(self):
         """Section ends resolve V to I into the next section; measured over

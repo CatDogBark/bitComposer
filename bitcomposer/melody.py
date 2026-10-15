@@ -31,81 +31,91 @@ RHYTHM_TEMPLATES = [
     [0, 3, 4, 8, 12, 15],              # Pushed, then pickup to the next bar
 ]
 
-# Contour shapes: relative direction for each note in a motif
-# Values are scale steps from starting note — wider intervals = more melodic movement
-CONTOURS = {
-    # Cumulative: each value is a step from current position
-    "arch":        [0, 2, 2, -2, -2],       # Rise then fall
-    "descent":     [0, -1, -2, -2, 1],      # Stepwise fall, partial recover
-    "climb":       [0, 1, 2, 2, -1],        # Gradual rise, step back
-    "valley":      [0, -2, -2, 2, 2],       # Dip then return
-    "leap_return": [0, 4, -1, -1, -2],      # Big jump, walk back down
-    "zigzag":      [0, 3, -4, 3, -2],       # Alternating leaps
-    "cascade":     [0, -3, 2, -3, 1],       # Falling with rebounds
-    "soar":        [0, 2, 3, 1, -2],        # Big climb then relax
-}
+# ── Motif grammar ──
+#
+# A motif used to be a rhythm template plus a "contour", a list of scale
+# steps drawn from a shape (arch, zigzag) with no idea which intervals sound
+# like a tune. Tunes are mostly steps, with leaps in a few sanctioned places
+# — a fourth or fifth to launch a phrase, an octave for drama — answered by
+# steps back; tension tones resolve (the seventh up to the root, the fourth
+# down to the third); and the rhythm is the phrase's identity, repeated bar
+# to bar while pitches move inside it. The grammar below builds motifs from
+# cells with those properties. Moves are in scale steps between successive
+# notes.
+
+CELLS = [
+    # (name, moves, weight)
+    ("step up",        [1],        22),
+    ("step down",      [-1],       22),
+    ("repeat",         [0],        10),
+    ("neighbour up",   [1, -1],    10),
+    ("neighbour down", [-1, 1],    10),
+    ("third up",       [2],         8),
+    ("third down",     [-2],        8),
+    ("run up",         [1, 1],      5),
+    ("run down",       [-1, -1],    5),
+]
+LAUNCHES = [("fourth", 3, 50), ("fifth", 4, 35), ("octave", 7, 15)]
 
 
-def generate_motif(length: int = 4) -> dict:
-    """Generate a rhythmic+melodic motif template."""
-    rhythm = random.choice(RHYTHM_TEMPLATES)
-    # Trim or extend to match length
+def generate_motif(length: int = 4, rng: random.Random | None = None) -> dict:
+    """A one-bar motif: a rhythm and a list of moves (scale steps) per note.
+
+    The first move is 0. A launch leap is allowed on the first move only,
+    and is always answered by a step down. Everything else comes from CELLS.
+    Form says how the phrase treats it: a *sentence* (statement, sequence,
+    development, cadence) or a *period* (a cell, its answer, the cell again,
+    the answer closed) — the two shapes most hooks take.
+    """
+    r = rng or random
+    rhythm = list(r.choice(RHYTHM_TEMPLATES))
     if len(rhythm) > length:
         rhythm = rhythm[:length]
-    elif len(rhythm) < length:
-        # Add notes at end
-        last = rhythm[-1]
-        while len(rhythm) < length:
-            last += random.choice([2, 4])
-            rhythm.append(last)
+    while len(rhythm) < length:
+        rhythm.append(min(15, rhythm[-1] + r.choice([2, 4])))
+    rhythm = sorted(set(rhythm))
 
-    contour_name = random.choice(list(CONTOURS.keys()))
-    contour = CONTOURS[contour_name]
-
-    # Scale contour to motif length
-    if len(contour) != len(rhythm):
-        # Interpolate contour to match rhythm length
-        scaled = []
-        for i in range(len(rhythm)):
-            src = i * (len(contour) - 1) / max(1, len(rhythm) - 1)
-            lo = int(src)
-            hi = min(lo + 1, len(contour) - 1)
-            frac = src - lo
-            val = contour[lo] * (1 - frac) + contour[hi] * frac
-            scaled.append(round(val))
-        contour = scaled
-
-    return {
-        "rhythm": rhythm,
-        "contour": contour,
-        "contour_name": contour_name,
-    }
+    moves = [0]
+    if r.random() < 0.35:                               # a launch leap
+        _, leap, _ = r.choices(LAUNCHES, weights=[w for _, _, w in LAUNCHES], k=1)[0]
+        moves += [leap, -1]
+    while len(moves) < len(rhythm):
+        _, cell, _ = r.choices(CELLS, weights=[w for _, _, w in CELLS], k=1)[0]
+        moves += cell
+    moves = moves[:len(rhythm)]
+    return {"rhythm": rhythm, "contour": moves,
+            "form": "period" if r.random() < 0.5 else "sentence",
+            "contour_name": "period" if False else ("launch" if len(moves) > 1 and moves[1] >= 3 else "stepwise")}
 
 
-def vary_motif(motif: dict, amount: float = 0.3) -> dict:
+def vary_motif(motif: dict, amount: float = 0.3, rng: random.Random | None = None) -> dict:
     """Create a variation of a motif — small rhythmic/melodic changes."""
+    random_ = rng or random
     rhythm = list(motif["rhythm"])
     contour = list(motif["contour"])
 
-    for i in range(len(rhythm)):
-        if random.random() < amount:
-            # Slight rhythmic shift; a one-row nudge is a sixteenth push.
-            rhythm[i] = max(0, rhythm[i] + random.choice([-2, -1, 0, 1, 2]))
+    # The rhythm is the motif's identity: vary it rarely and by a single
+    # nudge, so a verse and chorus built on one motif still share a pulse.
+    if random_.random() < amount * 0.4:
+        i = random_.randrange(len(rhythm))
+        rhythm[i] = max(0, rhythm[i] + random_.choice([-1, 1]))
 
-    for i in range(len(contour)):
-        if random.random() < amount:
-            contour[i] += random.choice([-1, 0, 1])
+    for i in range(1, len(contour)):
+        if random_.random() < amount:
+            contour[i] = max(-2, min(2, contour[i] + random_.choice([-1, 1])))
 
     # Keep rhythm sorted and non-negative
     rhythm.sort()
     rhythm[0] = 0
 
-    return {"rhythm": rhythm, "contour": contour, "contour_name": motif["contour_name"]}
+    return {"rhythm": rhythm, "contour": contour, "contour_name": motif["contour_name"],
+            "form": motif.get("form", "sentence")}
 
 
 def _generate_melody_simple(scale_notes: list[int], chord_notes: list[int],
                             rows: int, density: float = 0.5) -> list[tuple[int, int]]:
     """Generate a simple random-walk melody. Returns [(row, midi_note), ...]."""
+    random_ = random
     notes = []
     melody_notes = [n for n in scale_notes if 60 <= n <= 83]
     if not melody_notes:
@@ -114,22 +124,22 @@ def _generate_melody_simple(scale_notes: list[int], chord_notes: list[int],
         return notes
 
     chord_in_range = [n for n in chord_notes if n in melody_notes]
-    current = random.choice(chord_in_range) if chord_in_range else random.choice(melody_notes)
+    current = random_.choice(chord_in_range) if chord_in_range else random_.choice(melody_notes)
 
     row = 0
     while row < rows:
-        if random.random() < density:
+        if random_.random() < density:
             idx = melody_notes.index(current) if current in melody_notes else 0
-            step = random.choices([-2, -1, 0, 1, 2], weights=[10, 25, 15, 25, 10], k=1)[0]
+            step = random_.choices([-2, -1, 0, 1, 2], weights=[10, 25, 15, 25, 10], k=1)[0]
             new_idx = max(0, min(len(melody_notes) - 1, idx + step))
             current = melody_notes[new_idx]
-            if random.random() < 0.2 and chord_in_range:
-                current = random.choice(chord_in_range)
-            duration = random.choice([2, 4, 4, 4, 8])
+            if random_.random() < 0.2 and chord_in_range:
+                current = random_.choice(chord_in_range)
+            duration = random_.choice([2, 4, 4, 4, 8])
             notes.append((row, current))
             row += duration
         else:
-            row += random.choice([2, 4])
+            row += random_.choice([2, 4])
 
     return notes
 
@@ -177,18 +187,39 @@ def _transform(motif: dict, kind: str, shift: int = 0) -> dict:
             "contour_name": motif.get("contour_name", "")}
 
 
+def _cadence_from(motif: dict) -> dict:
+    """A cadence bar in the motif's own rhythm: its first onsets, then a held
+    note on the next strong beat. Keeps the phrase's rhythmic identity to
+    the end instead of switching to a stock figure."""
+    head = [r for r in motif["rhythm"] if r < 8][:3] or [0]
+    land = 8 if head[-1] < 8 else 12
+    rhythm = head + [land]
+    return {"rhythm": rhythm, "contour": [0] + [-1] * (len(rhythm) - 1), "shift": 0, "cadence": True}
+
+
 def _plan_sentence(motif: dict, rng: random.Random, density: float) -> list[dict | None]:
-    """Four bars of transformations. The climax is built in: bar 2 sequences
-    upward more often than not and bar 3 develops from there, so the highest
-    note falls late in the phrase and the cadence descends into it."""
-    # The sentence rises: bar two a step up, bar three two steps up, so the
-    # peak comes late. Descending sequences exist in music, but a phrase
-    # that peaks in its first bar has nowhere to go for three more.
-    second = _transform(motif, "repeat", shift=1 if rng.random() < 0.8 else 0)
-    third_kind = rng.choice(["fragment", "fragment", "invert", "repeat"])
+    """Four bars of transformations.
+
+    A *period*: the cell, its answer (same rhythm, new pitches), the cell
+    again exactly, the answer closed on a cadence — the most repetitive
+    shape and the most hummable. A *sentence*: statement, the same shape a
+    step up (or repeated exactly), a development carrying the climax, a
+    cadence. Either way the rhythm holds across the bars.
+    """
+    if motif.get("form") == "period":
+        # The answer rises, so the period peaks in its second bar on purpose.
+        answer = _transform(motif, "repeat", shift=rng.choice([1, 2]))
+        answer["contour"] = [0] + [max(-2, min(2, c + rng.choice([-1, 0, 0, 1]))) for c in motif["contour"][1:]]
+        plan = [motif, answer, _transform(motif, "repeat", shift=0), _cadence_from(motif)]
+        if density < 0.45:
+            plan[1] = None
+        return plan
+    # The sentence rises: bar two a step up or an exact repeat, bar three two
+    # steps up, so the peak comes late.
+    second = _transform(motif, "repeat", shift=1 if rng.random() < 0.6 else 0)
+    third_kind = rng.choice(["fragment", "fragment", "repeat", "repeat", "invert"])
     third = _transform(motif, third_kind, shift=2 if third_kind != "invert" else 1)
-    cadence = {"rhythm": rng.choice([[0, 4, 8], [0, 2, 4, 8], [0, 3, 6, 8], [0, 4, 6, 8]]),
-               "contour": [0, -1, -1, 0], "shift": 0, "cadence": True}
+    cadence = _cadence_from(motif)
     plan = [motif, second, third, cadence]
     # Sparse phrases drop the sequence bar first and keep the development,
     # which carries the climax; only the sparsest drop both.
@@ -199,27 +230,37 @@ def _plan_sentence(motif: dict, rng: random.Random, density: float) -> list[dict
     return plan
 
 
-def _snap_to_chord(idx: int, melody_notes: list[int], chord: list[int], reach: int = 2) -> int:
-    """Nearest chord-tone index within `reach` scale steps of idx, else idx."""
+def _snap_to_chord(idx: int, melody_notes: list[int], chord: list[int], reach: int = 2,
+                   avoid: int | None = None, direction: int = 0) -> int:
+    """Nearest chord-tone index within `reach` scale steps of idx, else idx.
+
+    `avoid` is the index the line just left: when it was moving, snapping
+    straight back onto that note froze the melody on one pitch (63 63 63),
+    so a different chord tone is preferred, searched first in the line's
+    direction of travel.
+    """
     pcs = {n % 12 for n in chord}
-    best = None
+    order = (1, -1) if direction >= 0 else (-1, 1)
+    fallback = None
     for d in range(0, reach + 1):
-        for cand in (idx - d, idx + d):
+        for sign in order:
+            cand = idx + sign * d
             if 0 <= cand < len(melody_notes) and melody_notes[cand] % 12 in pcs:
-                best = cand
-                break
-        if best is not None:
-            break
-    return idx if best is None else best
+                if cand != avoid:
+                    return cand
+                fallback = fallback if fallback is not None else cand
+    return idx if fallback is None else fallback
 
 
 def _realize_bar(bar_motif: dict, melody_notes: list[int], chord: list[int],
                  start_row: int, cur_idx: int, rows: int,
-                 target_pc: int | None = None) -> tuple[list[tuple[int, int]], int]:
+                 target_pc: int | None = None, key_root: int | None = None) -> tuple[list[tuple[int, int]], int]:
     """Realise one bar of a sentence from the current scale index.
 
     Strong beats take chord tones; a leap is followed by a step back the
-    other way; a cadence bar walks to target_pc and holds it.
+    other way; tension tones resolve (the seventh rises to the root, the
+    fourth falls to the third) when the next move is a step; a cadence bar
+    walks to target_pc and holds it.
     """
     notes = []
     idx = max(0, min(len(melody_notes) - 1, cur_idx + bar_motif.get("shift", 0)))
@@ -229,18 +270,28 @@ def _realize_bar(bar_motif: dict, melody_notes: list[int], chord: list[int],
         row = start_row + off
         if row >= rows or off >= 16:
             break
+        prev_idx = idx
         if i > 0:
             if last_leap and (step == 0 or (step > 0) == (last_leap > 0)):
                 step = -1 if last_leap > 0 else 1          # answer the leap with a step back
+            elif key_root is not None and abs(step) == 1:
+                degree = (melody_notes[idx] - key_root) % 12
+                if degree == 11:
+                    step = 1                                # leading tone rises
+                elif degree == 5:
+                    step = -1                               # the fourth falls
             idx = max(0, min(len(melody_notes) - 1, idx + step))
-            last_leap = step if abs(step) >= LEAP else 0
+            last_leap = step if abs(step) >= 3 else 0
         if bar_motif.get("cadence") and i == len(steps) - 1 and target_pc is not None:
             # Land on the target pitch class nearest to where we are.
             cands = [k for k, n in enumerate(melody_notes) if n % 12 == target_pc]
             if cands:
                 idx = min(cands, key=lambda k: abs(k - idx))
         elif off % 16 in STRONG_ROWS:
-            idx = _snap_to_chord(idx, melody_notes, chord)
+            moved = idx - prev_idx
+            idx = _snap_to_chord(idx, melody_notes, chord, reach=3,
+                                 avoid=prev_idx if (i > 0 and moved) else None,
+                                 direction=moved)
         notes.append((row, melody_notes[idx]))
     return notes, idx
 
@@ -266,7 +317,7 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
     if not melody_notes:
         return []
     if motif is None:
-        motif = generate_motif(length=r.choice([4, 5]))
+        motif = generate_motif(length=r.choice([4, 5]), rng=r)
 
     bars = max(1, rows // ROWS_PER_BAR)
     first_chord = chord_at(chord_timeline, 0, chord_notes)
@@ -296,12 +347,14 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
             # wherever the previous bar happened to end — a falling motif
             # would otherwise drift down a bar at a time and peak in bar one.
             entry = phrase_start
-        bar_notes, cur_idx = _realize_bar(bar_plan, melody_notes, chord, start_row, entry, rows, target_pc)
+        bar_notes, cur_idx = _realize_bar(bar_plan, melody_notes, chord, start_row, entry, rows, target_pc,
+                                          key_root=scale_notes[0] % 12)
         all_notes.extend(bar_notes)
 
     # Keep the climax late: if the highest note still sits in bar 1 (chord
-    # snapping can undo a step), lift bars 2-3 until they clear it.
-    if all_notes and len(all_notes) > 4:
+    # snapping can undo a step), lift bars 2-3 until they clear it. Not for
+    # a period, whose third bar is the first bar again on purpose.
+    if all_notes and len(all_notes) > 4 and motif.get("form") != "period":
         bar1 = [n for r, n in all_notes if r < ROWS_PER_BAR]
         mid = [n for r, n in all_notes if ROWS_PER_BAR <= r < 3 * ROWS_PER_BAR]
         if bar1 and mid and max(bar1) >= max(mid):
