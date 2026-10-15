@@ -245,7 +245,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      voicing_style, num_harmony_voices,
                      vibrato_speed, vibrato_depth,
                      bass_weight, use_bass_porta, porta_speed,
-                     arp_figure, drum_pattern, drum_density,
+                     arp_figure, arp_colour, drum_pattern, drum_density,
                      fill_pattern, section_prog, is_ending, ending_style,
                      swing_amount, speed, is_intro, use_echo) -> ITPattern:
     """Compose a single pattern with all layers."""
@@ -368,7 +368,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         # A figure with accents and rests, chosen per section role, that
         # thins where the lead is busy; see arp.py.
         arp = generate_arp(harmony_segments, arp_figure, section_energy,
-                           melody_rows={r for r, n in melody if n != -1})
+                           melody_rows={r for r, n in melody if n != -1},
+                           scale_notes=scale_notes, colour=arp_colour)
         apply_notes_to_pattern(
             pat, CH_ARP, [(r, n) for r, n, _ in arp], sample_map["arp"],
             volume=arp_vol, humanize=False,
@@ -663,6 +664,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 bass_weight=bass_weight, use_bass_porta=use_bass_porta,
                 porta_speed=porta_speed,
                 arp_figure=arp_figures.get(sec_type, arp_figures["verse"]),
+                arp_colour=(style_pref == "snes"),
                 drum_pattern=drum_pattern, drum_density=drum_density,
                 fill_pattern=fill_pattern, section_prog=section_prog,
                 is_ending=is_ending, ending_style=ending_style,

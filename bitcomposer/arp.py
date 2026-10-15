@@ -106,8 +106,30 @@ def _ladder(chord_notes: list[int], base_octave_root: int = 48) -> list[int]:
     return ladder
 
 
+def colour_tones(chord_notes: list[int], scale_notes: list[int]) -> list[int]:
+    """The 7th and the 9th above the chord's root, as the scale spells them.
+
+    Returned as pitch offsets from the root (10 or 11 for the 7th, 13 or 14
+    for the 9th, 15 means "none"), so they work in any octave. Game-music
+    arps on strings and harps nearly always carry one of these — it is what
+    makes a harp run sound like a score rather than a music box — but they
+    must come from the scale: a major 7th over a mixolydian chord, or a
+    natural 9th in phrygian, is a wrong note.
+    """
+    pcs = {n % 12 for n in scale_notes}
+    root = chord_notes[0] % 12
+    out = []
+    for cands in ((10, 11), (14, 13)):            # 7th, then 9th
+        for off in cands:
+            if (root + off) % 12 in pcs:
+                out.append(off)
+                break
+    return out
+
+
 def generate_arp(segments: list[tuple[int, int, list[int]]], figure_name: str,
                  energy: float, melody_rows: set[int] | None = None,
+                 scale_notes: list[int] | None = None, colour: bool = False,
                  rows_per_bar: int = ROWS_PER_BAR) -> list[tuple[int, int, float]]:
     """Realise a figure over a chord timeline.
 
@@ -116,6 +138,10 @@ def generate_arp(segments: list[tuple[int, int, list[int]]], figure_name: str,
     high); a climbing figure plays its even bars an octave up; and where the
     melody is busy in a bar (melody_rows carries its onsets) the figure's
     weak steps are dropped so the arp fills gaps rather than fighting the lead.
+
+    With colour (the SNES palette), the figure's octave-root step becomes
+    the chord's 7th or 9th, alternating by bar, drawn from the scale via
+    colour_tones. Lower steps keep the triad, so the shimmer sits on top.
     """
     fig = FIGURES[figure_name]
     out = []
@@ -135,14 +161,22 @@ def generate_arp(segments: list[tuple[int, int, list[int]]], figure_name: str,
         if melody_rows:
             onsets = sum(1 for r in melody_rows if bar_start <= r < bar_start + rows_per_bar)
             busy = onsets >= 5
+        tints = colour_tones(chord, scale_notes) if (colour and scale_notes) else []
+        tint = tints[bar_index % len(tints)] if tints else None
         for row_off, degree, accent in fig["steps"]:
             if busy and accent == W:
                 continue
             idx = base + degree + shift
             if not (0 <= idx < len(ladder)):
                 continue
+            note = ladder[idx]
+            # The octave-root step (and any further octave of it) carries
+            # the colour tone, an octave below the root it replaces so the
+            # 7th/9th sits just above the triad rather than far on top.
+            if tint is not None and degree > 0 and degree % per_octave == 0:
+                note = ladder[idx - per_octave] + tint
             row = bar_start + row_off
             if row < total:
-                out.append((row, ladder[idx], accent))
+                out.append((row, note, accent))
         bar_index += 1
     return out
