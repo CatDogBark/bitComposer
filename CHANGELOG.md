@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 — 2026-10-15
+
+Echo release: the SNES echo rebuilt in three stages, each reviewed by ear on a comparison page, plus the arp loudness fix and the motif grammar. Modules are now 19 channels; the companion player's mixer follows the file's layout.
 
 - SNES echo, stage three: each song draws its own echo from a dedicated stream, so the arrangement never moves when the options change: delay as a beat fraction weighted by tempo (eighth, dotted eighth, quarter), feedback 0.3–0.6, wetness (light / normal / wet), and a stereo mode where repeats bounce between sides or spread wide on the far side of the part (pan per tap via an Xxx effect). Sends open in intros, bridges and outros and pull back in the chorus. `--echo-delay`, `--echo-stereo`; the settings are written into the song message.
 - SNES echo, stage two: the harmony and arp are sent too, at their own levels (0.3 and 0.35 of the part against the lead's ½), on return channels of their own; the module is 19 channels and its song message carries a `layout:` line naming every channel's role. Returns carry the source's fades so a stab's echo decays like the stab. `--echo-wet light|normal|wet` scales every send. Companion: the daemon answers `GetLayout`, the widget's mixer builds its faders from it, folds every return into one ECHO bus fader (expand for LEAD / HARM / ARP) scaled against the written mix, and the COMPOSE tab gains ECHO and WET pickers.

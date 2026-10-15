@@ -285,13 +285,14 @@ figure per song; no per-section instrumentation plan beyond the layer map.
 
 ---
 
-## 2d. Composition passes — 0.5.0 and 0.6.0
+## 2d. Composition passes — 0.5.0 to 0.7.0
 
-**Date:** 2026-10-14. Five passes, each developed on a branch, measured over
-twenty seeds with `tools/analyze.py`, and reviewed by ear on a comparison
-page (same seed, old against new, with the parts not under review held
-identical) before merging. Every one was approved; two were tuned by ear
-afterwards (arp levels, metallic hat).
+**Dates:** 2026-10-14 and 2026-10-15. Eight passes, each developed on a
+branch, measured over twenty seeds with `tools/analyze.py` (levels by
+rendering one part alone through libopenmpt), and reviewed by ear on a
+comparison page (same seed, old against new, with the parts not under
+review held identical) before merging. Every one was approved; two were
+tuned by ear afterwards (arp levels, metallic hat).
 
 | pass | what changed | metric | before | after |
 |---|---|---|---|---|
@@ -306,6 +307,13 @@ afterwards (arp levels, metallic hat).
 | | | position of the highest note | 0.35 | 0.49 |
 | Form (0.6.0) | section cadences with bass pickups, relative/subdominant key plan, two-bar harmonic rhythm | pattern joins resolving V→I | 18% | 33% |
 | | | mean song length | 224 s | 173 s |
+| Motif grammar (0.7.0) | motifs from cells (steps, neighbours, repeats, thirds, runs), leaps only to launch a phrase and answered by a step, tendency tones resolve, period and sentence forms, own random stream | stepwise intervals | 57% | 69% |
+| | | leaps (5+ semitones) | 16% | 13% |
+| Equal loudness (0.7.0) | sustaining voices normalised by loop RMS, struck voices on the arp by their first 150 ms; bass volume-column bug fixed | spread across the five SNES arp voices | 8.6 dB | 4.2 dB |
+| | | SNES bell arp vs drums | −6.2 dB | −13.6 dB |
+| SNES echo (0.7.0) | three fading, darkening taps sent per note from the lead, lighter sends from harmony and arp on returns of their own, per-song delay / feedback / wetness / stereo drawn from an own stream, section gain, 19 channels | lead notes sent | 100% | 70% |
+| | | returns vs source (lead / harmony / arp) | −5 dB / none / none | −6 / −13 / −10 dB |
+| | | all returns vs melody (six songs) | about −5 dB | −0.3 to −5.2 dB |
 
 Two lessons from the reviews are worth more than any number:
 

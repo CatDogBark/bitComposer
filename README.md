@@ -12,7 +12,7 @@ phrasing, voice-led harmony, bass, arpeggio and drums, arranged into a form
 (verse–chorus, AABA, rondo, through-composed) with an energy curve and a real
 ending. Three sound palettes:
 
-- **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead on a hardware-style echo.
+- **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead, harmony and arp through an echo modelled on the SNES unit's result: fading, darkening repeats on a beat fraction, drawn per song.
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 

@@ -1,62 +1,62 @@
 [
  {
-  "file": "Outer Bastion.it",
-  "title": "Outer Bastion",
+  "file": "Ashen Dunes.it",
+  "title": "Ashen Dunes",
   "palette": "snes",
   "info": "D# minor pentatonic - 140 BPM",
-  "arrangement": "snes + echo - standard form",
+  "arrangement": "snes - standard form",
   "voices": "snes_choir / snes_organ / snes_slap_bass",
-  "seed": "seed 11 - bitcomposer 0.6.0",
+  "seed": "seed 11 - bitcomposer 0.7.0",
   "picked": false
  },
  {
-  "file": "Frozen Depot.it",
-  "title": "Frozen Depot",
+  "file": "Silent Ramparts.it",
+  "title": "Silent Ramparts",
   "palette": "genesis",
   "info": "D# minor pentatonic - 140 BPM",
   "arrangement": "genesis - linear form",
   "voices": "gen_saw_lead / gen_pad / gen_pluck_bass",
-  "seed": "seed 11 - bitcomposer 0.6.0",
+  "seed": "seed 11 - bitcomposer 0.7.0",
   "picked": false
  },
  {
-  "file": "Forsaken Foundry.it",
-  "title": "Forsaken Foundry",
+  "file": "Ashen Observatory.it",
+  "title": "Ashen Observatory",
   "palette": "chip",
   "info": "D# minor pentatonic - 140 BPM",
   "arrangement": "chip - standard form",
   "voices": "pulse_lead / triangle_lead / thin_bass",
-  "seed": "seed 11 - bitcomposer 0.6.0",
+  "seed": "seed 11 - bitcomposer 0.7.0",
   "picked": false
  },
  {
-  "file": "Lower Observatory.it",
-  "title": "Lower Observatory",
+  "file": "Quiet Skyway.it",
+  "title": "Quiet Skyway",
   "palette": "snes",
   "info": "F dorian - 151 BPM",
   "arrangement": "snes + echo - rondo form",
   "voices": "snes_bell / snes_brass / snes_pluck_bass",
-  "seed": "seed 12 - bitcomposer 0.6.0",
+  "seed": "seed 12 - bitcomposer 0.7.0",
   "picked": false
  },
  {
-  "file": "Quiet Reactor.it",
-  "title": "Quiet Reactor",
+  "file": "Second Causeway.it",
+  "title": "Second Causeway",
   "palette": "genesis",
   "info": "F dorian - 151 BPM",
-  "arrangement": "genesis + echo - linear form",
+  "arrangement": "genesis - linear form",
   "voices": "gen_saw_lead / psg_square / gen_slap_bass",
-  "seed": "seed 12 - bitcomposer 0.6.0",
+  "seed": "seed 12 - bitcomposer 0.7.0",
   "picked": false
  },
  {
-  "file": "Last Sanctum.it",
-  "title": "Last Sanctum",
+  "file": "Far Monorail.it",
+  "title": "Far Monorail",
   "palette": "chip",
   "info": "F dorian - 151 BPM",
-  "arrangement": "chip + echo - short form",
+  "arrangement": "chip - short form",
   "voices": "pulse_lead / filtered_lead / square_bass",
-  "seed": "seed 12 - bitcomposer 0.6.0",
+  "seed": "seed 12 - bitcomposer 0.7.0",
   "picked": false
  }
 ]
