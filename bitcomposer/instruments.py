@@ -1,38 +1,11 @@
 """Palettes, the per-song instrument draw (with the contrast rule) and the
 sample set a song carries."""
 import random
-import zlib
 
-from . import __version__
-from . import theory
-from . import names
 from . import samples as smp
-from . import structure as struct
-from .it_format import (
-    ITSample, ITPattern, ITNote, midi_to_it_note, NOTE_CUT,
-    write_it_file, bpm_to_it_tempo, it_tempo_to_bpm,
-)
+from .it_format import ITSample
 from . import pattern as pattern_mod
-from .pattern import (
-    CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-    CH_ECHO1, CH_ECHO2, CH_ECHO_HARMONY, CH_ECHO_ARP, CH_ECHO_ALL, CHANNEL_ROLES,
-    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
-    humanize_volume, apply_notes_to_pattern, apply_vibrato,
-    apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_echo_spill_taps,
-    apply_sustain_safety_net, silence_inactive_channels,
-    apply_chord_arpeggio, end_note,
-)
-from .drums import pick_grooves, pick_fill, render_drums
-from .packs import PACKS, PACK_NAMES, pack_weights, pack_value
-from .melody import (
-    generate_motif, vary_motif, generate_melody,
-    generate_counter_melody, add_melody_cuts,
-)
-from .harmony import generate_harmony_timeline
-from .bass import generate_bass_timeline, pick_section_bass
-from .arp import pick_figures, generate_arp
-
-
+from .packs import PACKS
 
 
 # Per-style instrument pools. "chip" is the original waveform palette — square

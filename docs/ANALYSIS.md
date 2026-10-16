@@ -225,7 +225,7 @@ trim left is the genesis PSG square as an arp, a held tone among strikes.
 
 **Style packs.** The FFVI sound is as much habit as timbre: ostinato
 strings under a brass melody, a horn answering the lead, timpani into
-the chorus. So a pack (`packs.py`) pairs voices per role with weighted
+the chorus. So a pack (one module in `bitcomposer/packs/`) pairs voices per role with weighted
 draws for the composer's habits (tempo, energy, scale family, harmony
 voicing and mode, bass weight and style, drum density and swing, echo
 chance, wetness and stereo), a counter-line voice and chance, orchestral
