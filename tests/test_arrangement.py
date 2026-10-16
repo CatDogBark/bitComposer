@@ -133,7 +133,7 @@ class EchoOptions(unittest.TestCase):
                 self.assertEqual(ra[:12], rb[:12])
         self.assertEqual(b["info"]["echo_delay"], "quarter")
         self.assertEqual(b["info"]["echo_stereo"], "centre")
-        self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter", "slap"))
+        self.assertIn(a["info"]["echo_delay"], ("eighth", "dotted", "quarter", "slap", "row"))
         self.assertTrue(0.3 <= a["info"]["echo_feedback"] <= 0.6)
 
 

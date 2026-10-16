@@ -149,9 +149,9 @@ def main():
     )
     parser.add_argument(
         "--echo-delay",
-        choices=["eighth", "dotted", "quarter", "slap", "random"],
+        choices=["eighth", "dotted", "quarter", "slap", "row", "random"],
         default="random",
-        help="Beat fraction between echo repeats, or slap (48 ms, under a row); default: random, weighted by tempo",
+        help="Beat fraction between echo repeats, slap (48 ms, under a row) or row (one row); default: random, weighted by tempo",
     )
     parser.add_argument(
         "--echo-stereo",
