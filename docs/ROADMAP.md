@@ -49,7 +49,10 @@ These change how every note sounds, not what notes are played.
   sparse or no drums; the atmospheric set) and `megamanx` (Mega Man X: driven
   guitars, pulse synth, synth brass, riff bass, slap echo; read off the
   game's own sample bank) are done; Evermore covers the ambient ground, so no
-  separate Metroid pack. Rock grooves of their own (double-time hats, kick
+  separate Metroid pack. Packs from the banks: `megamanx` and `ffvi` are
+  built from their games' SPC snapshots (every voice profiled and
+  re-synthesised, echo from the DSP registers) and borrow nothing; `mana`
+  and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
 - **Windows player.** The Windows zip is the generator only: the window

@@ -179,8 +179,11 @@ STRUCK_RATIO = 0.8
 # classifier for every preset in the palettes and packs.
 STRUCK_PRESETS = {
     "evm_tubular_bell",
+    "ffvi_bass",
+    "ffvi_harp",
     "ffvi_music_box",
     "ffvi_piano",
+    "ffvi_pizz",
     "gen_bell",
     "gen_pluck",
     "gen_pluck_bass",

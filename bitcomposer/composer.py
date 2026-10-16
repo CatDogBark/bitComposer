@@ -284,7 +284,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         weights = pack_weights(pack, "echo_delay") or \
             next(w for floor, w in ECHO_DELAY_WEIGHTS if bpm_for_echo >= floor)
         echo_delay = echo_rng.choices(list(weights), list(weights.values()))[0]
-    echo_feedback = round(echo_rng.uniform(*ECHO_FEEDBACK_RANGE), 2)
+    echo_feedback = round(echo_rng.uniform(*pack_value(pack, "echo_feedback", ECHO_FEEDBACK_RANGE)), 2)
     if echo_stereo == "random":
         w = pack_weights(pack, "echo_stereo") or ECHO_STEREO_WEIGHTS
         echo_stereo = echo_rng.choices(list(w), list(w.values()))[0]

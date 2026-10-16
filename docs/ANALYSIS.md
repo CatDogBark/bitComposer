@@ -242,6 +242,21 @@ beats. The string section is a long loop (160 periods plus the attack)
 carrying the tone and copies one cycle sharp and flat over the loop, so
 it beats at about 1.6 Hz and stays seamless.
 
+**Packs from the banks.** An SPC snapshot carries the whole sound chip, so a
+pack can be built from measurement rather than memory. The method, first
+used for Mega Man X and then FFVI: decode every snapshot's BRR directory,
+deduplicate samples across the set by their PCM, profile each (steady-state
+harmonics on a loop-aligned window, centroid, attack and decay, loop length),
+then trace it through the voice registers of every snapshot it sounds in
+(sounding pitch from the pitch register, ADSR, echo bit, volume) to learn
+its role. The DSP registers give the echo outright. FFVI: 82 snapshots, 71
+unique samples, of which eight tiny loops are the driver's fixed set; the
+rest resolve to about thirty instruments. Every snapshot runs 80 ms of echo
+with feedback 0.64 and a flat filter, both sides the same sign, strings and
+leads sent, bass and kit dry. Each recipe in the pack states the profile it
+targets and a matcher (`tools/match.py` in the diag dir) prints ours beside
+it; the sustaining voices land within a few points on every partial.
+
 **Level.** The mix was tuned for balance with the overall level never
 revisited: files averaged −27 LUFS, ten dB under anything streamed and
 four under broadcast. The module's mix volume is now written at 128 (it
