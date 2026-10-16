@@ -13,6 +13,8 @@
     <entry name="settTempo" type="String"><default>random</default></entry>
     <entry name="settEnergy" type="String"><default>random</default></entry>
     <entry name="settScale" type="String"><default>random</default></entry>
+    <entry name="settSound" type="String"><default></default></entry>
+    <!-- Old two-axis pickers, kept so a saved choice folds into settSound once. -->
     <entry name="settStyle" type="String"><default>random</default></entry>
     <entry name="settDrumDensity" type="String"><default>random</default></entry>
     <entry name="settDrumFills" type="Bool"><default>true</default></entry>

@@ -1,6 +1,6 @@
 """
-A small window for people who are not at a terminal: pick a palette, a style
-pack and how many songs, press Generate, and the .it files land in a folder.
+A small window for people who are not at a terminal: pick a sound (a palette
+or a style pack) and how many songs, press Generate, and the .it files land in a folder.
 Play them with OpenMPT (Windows), or any tracker player that reads Impulse
 Tracker modules. Standard-library only (tkinter), like the rest of the
 generator, so the Windows build is one executable.
@@ -13,10 +13,9 @@ from pathlib import Path
 
 from . import __version__
 from .composer import compose_and_save
-from .packs import PACK_NAMES
+from .composer import SOUNDS
 
-STYLES = ["random", "snes", "chip", "genesis"]
-PACKS = ["random", "none", *PACK_NAMES]
+SOUND = ["random", *SOUNDS]
 ECHO = ["random", "on", "off"]
 ENERGY = ["random", "chill", "normal", "intense"]
 TEMPO = ["random", "slow", "medium", "fast"]
@@ -50,7 +49,7 @@ def main() -> None:
 
     choices = {}
     for row, (label, name, options) in enumerate([
-        ("Palette", "style", STYLES), ("Style pack", "pack", PACKS), ("Echo", "echo", ECHO),
+        ("Sound", "sound", SOUND), ("Echo", "echo", ECHO),
         ("Energy", "energy", ENERGY), ("Tempo", "tempo", TEMPO),
     ]):
         ttk.Label(frame, text=label).grid(row=row, column=0, sticky="w", **pad)
@@ -88,7 +87,7 @@ def main() -> None:
         for i in range(n):
             try:
                 path = out_dir / f"song-{i}.it"
-                info = compose_and_save(str(path), style=opts["style"], pack=opts["pack"], echo=opts["echo"],
+                info = compose_and_save(str(path), sound=opts["sound"], echo=opts["echo"],
                                         energy=opts["energy"], tempo=opts["tempo"])
                 final = out_dir / f"{info['title']}.it"
                 if final != path:

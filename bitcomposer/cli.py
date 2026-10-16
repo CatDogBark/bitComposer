@@ -74,6 +74,14 @@ def main():
         help="Scale preference (default: random)",
     )
     parser.add_argument(
+        "--sound",
+        choices=["chip", "snes", "genesis", "ffvi", "mana", "evermore", "megamanx", "random"],
+        default="random",
+        help="The sound in one word: a palette (chip, snes, genesis) or a style pack "
+             "(ffvi, mana, evermore, megamanx). Overrides --style and --pack. "
+             "random: drawn with the packs together weighing as much as plain snes (default)",
+    )
+    parser.add_argument(
         "--style",
         choices=["chip", "snes", "genesis", "random"],
         default="random",
@@ -194,7 +202,7 @@ def main():
                                 song_form=args.form,
                                 echo=args.echo, echo_wet=args.echo_wet,
                                 echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys,
-                                pack=args.pack)
+                                pack=args.pack, sound=args.sound)
             info = song["info"]
 
             if args.output and args.count == 1:
