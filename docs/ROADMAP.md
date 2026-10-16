@@ -58,8 +58,9 @@ These change how every note sounds, not what notes are played.
 - **Pack revisions (in progress, 2026-10-16).** The plan Troy approved: one
   SOUND picker (done), then each pack rebuilt from its game's SPC snapshots
   so it borrows nothing and carries its own kit: `ffvi` (done, branch
-  `ffvi-spc`: 35 own voices, echo from the DSP registers), `mana` (next),
-  `evermore`, then a widget readout of the drawn song and a mixer regrouped
+  `ffvi-spc`: 35 own voices, echo from the DSP registers), `mana` (done,
+  branch `mana-spc`: 25 own voices, no table exists so voices are named by
+  measured character), `evermore` (next), then a widget readout of the drawn song and a mixer regrouped
   by part with a KIT fold. Method and tools: `~/diags/bitcomposer/ffvi-spc/
   tools` (`survey.py` decodes and profiles every unique sample across a set
   of snapshots, `voices.py` traces each through the voice registers,

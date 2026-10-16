@@ -21,7 +21,9 @@ ECHO_TAP_CUTOFF_HZ = (4000, 2000, 1000)   # two-pole lowpass on the sample each 
 # fast songs favour the dotted eighth and quarter, slow songs the eighth.
 # "slap" is the Mega Man X echo: 48 ms, under a row, written as a tick delay
 # (SDx) on the copy's note row instead of a pan, so it takes the channel's pan.
-ECHO_DELAYS = {"eighth": 2, "dotted": 3, "quarter": 4, "slap": 0.5}
+# "row" is one row (100-150 ms at 100-150 BPM): the Secret of Mana echo sits
+# at 96 and 176 ms, between the slap and the eighth; only packs draw it.
+ECHO_DELAYS = {"eighth": 2, "dotted": 3, "quarter": 4, "slap": 0.5, "row": 1}
 ECHO_DELAY_WEIGHTS = [        # (min bpm, {name: weight})
     (140, {"eighth": 1, "dotted": 5, "quarter": 4}),
     (100, {"eighth": 2, "dotted": 6, "quarter": 2}),

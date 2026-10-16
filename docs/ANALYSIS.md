@@ -256,7 +256,13 @@ table by BRR size to within two bytes, which settled every identity (the
 song-based guesses had the choir and pipe organ swapped, and the game's
 most-used lead is a synth, not a horn). The table is the FF6 hacking
 community's BRR sample list (ff6hacking.com wiki, `ff3:ff3us:music:
-brrsamples:ff6`; see ROADMAP "Pack revisions" for the links). Every snapshot runs 80 ms of echo
+brrsamples:ff6`; see ROADMAP "Pack revisions" for the links). Secret of
+Mana has no such table: its 69 snapshots gave 166 directory entries, of which
+the ones that sound reduce to about thirty instruments, named by measured
+character and the role the voice registers show (a soft flute in 44 banks,
+strings in 43, choir in 28), with the fan soundfont's vocabulary as the
+guide; the echo there is a one-row delay (96 and 176 ms), feedback 0.31,
+wet. Every snapshot runs 80 ms of echo
 with feedback 0.64 and a flat filter, both sides the same sign, strings and
 leads sent, bass and kit dry. Each recipe in the pack states the profile it
 targets and a matcher (`tools/match.py` in the diag dir) prints ours beside

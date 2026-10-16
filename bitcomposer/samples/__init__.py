@@ -192,9 +192,13 @@ STRUCK_PRESETS = {
     "gen_pluck",
     "gen_pluck_bass",
     "gen_slap_bass",
-    "mana_celesta",
-    "mana_chimes",
-    "mana_kalimba",
+    "mana_bass",
+    "mana_bass_elec",
+    "mana_epiano",
+    "mana_marimba",
+    "mana_slap_bass",
+    "mana_tubular_bell",
+    "mana_vibraphone",
     "mmx_bass",
     "mmx_bass_hi",
     "mmx_rhythm_guitar",
@@ -219,7 +223,7 @@ def is_struck(name: str) -> bool:
 
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
                      "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal",
-                     "conga", "tambourine", "woodblock", "drum", "click", "brush"}
+                     "conga", "tambourine", "woodblock", "drum", "click", "brush", "castanet"}
 
 
 def is_percussion(name: str) -> bool:
