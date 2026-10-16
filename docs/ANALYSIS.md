@@ -252,6 +252,20 @@ scale. No limiter or compression: the dynamics (an 11 LU range on some
 songs) are left alone, and the players' gain (the widget's soft limiter,
 XMPlay's amplification) covers the rest.
 
+**Chorus.** Every ensemble voice (`_ensemble_voice`: the FFVI strings and
+contrabass, the Mana glass pad, the Evermore pads and drone) and the Mega
+Man X lead guitar carried their chorus as equal detuned copies summed
+with the tone. Measured by rendering each voice at the three pitches the
+melody sounds at (midi 60, 72, 83 sound an octave below their labels:
+131, 262, 495 Hz) and watching the fundamental's share of power across
+four windows, that construction is a comb: once per beat cycle the copies
+sit in antiphase to the tone and the odd partials cancel, so the share
+swung by 60-90 points. The dry tone now leads at 80% (`ENSEMBLE_DRY`)
+with the two copies a cycle sharp and two cycles flat, never in antiphase
+together; the swing is under 15 on every voice. The flute, whistle, pan
+flute and horn, the only leads under 1.4 times the fundamental, gained a
+little second and third partial.
+
 **Echo.** Modelled on what the SNES echo unit produced rather than how it
 was wired: three repeats on a dotted eighth (3, 6 and 9 rows), each half
 the level of the last (−6, −12, −18 dB), each playing a lowpassed copy of

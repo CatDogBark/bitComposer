@@ -786,9 +786,10 @@ def snes_choir() -> tuple[bytes, int, dict]:
 
 
 def snes_flute() -> tuple[bytes, int, dict]:
-    """Flute — near-sine with a breath-noise chiff on the attack."""
+    """Flute — near-sine with a breath-noise chiff on the attack; a little
+    second and third partial so it carries as a lead (centroid ~1.4x f0)."""
     return _sustained_voice(
-        steady={1: 1.0, 2: 0.22, 3: 0.08, 4: 0.03},
+        steady={1: 1.0, 2: 0.38, 3: 0.16, 4: 0.06, 5: 0.03},
         attack_cycles=6, loop_cycles=1, breath=0.25, amplitude=0.9)
 
 
@@ -896,6 +897,13 @@ def snes_synth_bass() -> tuple[bytes, int, dict]:
 # organ and a bowed bass. All built the same way as the base SNES set
 # (additive or FM, 16 kHz, BRR model in _finish_snes).
 
+# Share of an ensemble voice that is the dry tone; the two detuned copies
+# share the rest. At 0.8 the deepest dip of any partial is about -3 dB and
+# the fundamental's share of power moves by under 20 points across the loop
+# (it moved 60-90 with equal layers); the beating is a shimmer, not a sweep.
+ENSEMBLE_DRY = 0.8
+
+
 def _ensemble_voice(steady: dict[int, float], periods: int = 160,
                     attack_cycles: int = 36, detune_layers: int = 2,
                     lowpass: float | None = None, amplitude: float = 0.85
@@ -903,28 +911,34 @@ def _ensemble_voice(steady: dict[int, float], periods: int = 160,
     """A sustained voice with section chorusing baked in.
 
     A single-cycle loop cannot beat, so the loop is `periods` cycles long and
-    carries the base tone plus copies one cycle sharper and flatter over that
-    loop (f * (periods +- 1) / periods), which are periodic over it and beat
-    at f / periods, about 1.6 Hz at 160 periods. The attack ramps over the
-    first attack_cycles periods on the same phases, so the loop seam is
+    carries the base tone plus detuned copies that are periodic over it: one
+    a cycle sharp (f * (periods + 1) / periods) and one two cycles flat, so
+    they beat at about f / periods and 2 f / periods and are never in
+    antiphase to the dry tone at the same moment. The dry tone leads the mix
+    (ENSEMBLE_DRY): equal layers summed together form a comb that cancels
+    the odd partials outright once per beat cycle, which measured as the
+    fundamental's share of power swinging by 60-90 points across the loop
+    on every pad and string voice. The attack ramps over the first
+    attack_cycles periods on the same phases, so the loop seam is
     continuous for every layer."""
     rate, period = SNES_RATE, SNES_PERIOD
     base = rate / period
-    ratios = [1.0]
-    if detune_layers >= 1:
-        ratios.append((periods + 1) / periods)
-    if detune_layers >= 2:
-        ratios.append((periods - 1) / periods)
+    # Any chorus at all means both copies: a single copy against the dry
+    # tone still swings the odd partials by 40 points over the loop.
+    layers = [(1.0, ENSEMBLE_DRY if detune_layers else 1.0)]
+    if detune_layers:
+        layers.append(((periods + 1) / periods, (1.0 - ENSEMBLE_DRY) / 2))
+        layers.append(((periods - 2) / periods, (1.0 - ENSEMBLE_DRY) / 2))
     total = (attack_cycles + periods) * period
     out = []
     for i in range(total):
         t = i / rate
         v = 0.0
-        for r in ratios:
+        for r, w in layers:
             for k, a in steady.items():
-                v += a * math.sin(2.0 * math.pi * base * r * k * t)
+                v += w * a * math.sin(2.0 * math.pi * base * r * k * t)
         env = math.sin(0.5 * math.pi * min(1.0, (i + 1) / (attack_cycles * period)))
-        out.append(v * env / len(ratios))
+        out.append(v * env)
     loop_start = attack_cycles * period
     if lowpass is not None:
         alpha = max(0.001, min(1.0, lowpass))
@@ -955,9 +969,10 @@ def ffvi_contrabass() -> tuple[bytes, int, dict]:
 
 
 def ffvi_horn() -> tuple[bytes, int, dict]:
-    """French horn — round, dark brass with a soft onset."""
+    """French horn — round, dark brass with a soft onset; enough second and
+    third partial to carry a counter-line."""
     return _sustained_voice(
-        steady={1: 1.0, 2: 0.5, 3: 0.3, 4: 0.16, 5: 0.08, 6: 0.04},
+        steady={1: 1.0, 2: 0.65, 3: 0.42, 4: 0.22, 5: 0.1, 6: 0.05},
         bright={1: 0.9, 2: 0.7, 3: 0.5, 4: 0.35, 5: 0.2, 6: 0.1},
         attack_cycles=12, loop_cycles=2, lowpass=0.5, amplitude=0.9)
 
@@ -1124,14 +1139,14 @@ def mana_chimes() -> tuple[bytes, int, dict]:
 def mana_whistle() -> tuple[bytes, int, dict]:
     """Whistle — purer than the flute, a little breath, quick to speak."""
     return _sustained_voice(
-        steady={1: 1.0, 2: 0.12, 3: 0.04},
+        steady={1: 1.0, 2: 0.25, 3: 0.08, 4: 0.03},
         attack_cycles=4, loop_cycles=1, breath=0.15, amplitude=0.9)
 
 
 def mana_panflute() -> tuple[bytes, int, dict]:
     """Pan flute — breathy, hollow, a slower chiff than the flute."""
     return _sustained_voice(
-        steady={1: 1.0, 2: 0.35, 3: 0.2, 4: 0.1, 5: 0.05},
+        steady={1: 1.0, 2: 0.5, 3: 0.3, 4: 0.14, 5: 0.07},
         attack_cycles=10, loop_cycles=2, breath=0.35, lowpass=0.7, amplitude=0.85)
 
 
@@ -1322,10 +1337,11 @@ def mmx_lead_guitar() -> tuple[bytes, int, dict]:
     range). A core with strong second and third partials is driven gently
     (tanh 2), then shaped like a cabinet: a cascaded lowpass for the body and
     a presence band from the highpassed drive. The chorus comes after the
-    amp and keeps the dry signal in front (55%) of two detuned copies: equal
-    detuned layers summed together form a comb that nulls the upper partials
-    once per beat cycle, which is what made the earlier versions collapse to
-    a bare fundamental at the base pitch. A pick scrape opens each note.
+    amp and keeps the dry signal in front (ENSEMBLE_DRY) of two detuned
+    copies at different offsets: equal, symmetric layers summed together form
+    a comb that nulls the odd partials once per beat cycle, which is what
+    made the earlier versions collapse to a bare fundamental at the base
+    pitch. A pick scrape opens each note.
     The first version was a full saw through a hard clip, a buzzer."""
     rate, period = SNES_RATE, SNES_PERIOD
     base = rate / period; periods, attack = 100, 5
@@ -1337,11 +1353,11 @@ def mmx_lead_guitar() -> tuple[bytes, int, dict]:
     body = _lowpass(_lowpass(driven, 0.7), 0.7)
     presence = _lowpass(_highpass(driven, 0.4), 0.8)
     amp = [b + 1.2 * q for b, q in zip(body, presence)]
-    dry, wet = 0.55, 0.225
+    dry, wet = ENSEMBLE_DRY, (1.0 - ENSEMBLE_DRY) / 2
     out = []
     for i in range(total):
         v = dry * amp[i % total]
-        for r in ((periods + 1) / periods, (periods - 1) / periods):
+        for r in ((periods + 1) / periods, (periods - 2) / periods):
             j = i * r; j0 = int(j) % total; j1 = (j0 + 1) % total; fr = j - int(j)
             v += wet * (amp[j0] * (1.0 - fr) + amp[j1] * fr)
         out.append(v * min(1.0, (i + 1) / (attack * period)))
