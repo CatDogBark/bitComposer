@@ -62,6 +62,17 @@ class Packs(unittest.TestCase):
         insts = {c.instrument for p in song["patterns"] for r in p.data for c in [r[pattern.CH_BASS]] if c.note not in (0, 254, 255)}
         self.assertEqual(len(insts), 2, insts)      # the low sample and the high one
 
+    def test_arp_never_pushes_where_the_riff_pushes(self):
+        from bitcomposer import bass, arp, pattern
+        for seed in range(100, 130):
+            info = compose_song(seed=seed, style_pref="snes", pack="megamanx")["info"]
+            if not info["bass_riff"]:
+                continue
+            pushes = {r % 16 for r, _ in bass.RIFFS[info["bass_riff"]] if r % pattern.ROWS_PER_BEAT}
+            for sec in ("verse", "chorus", "bridge"):
+                steps = {r % 16 for r, _, _ in arp.FIGURES[info["arp_figures"][sec]]["steps"] if r % pattern.ROWS_PER_BEAT}
+                self.assertFalse(steps & pushes, (seed, sec, info["bass_riff"], info["arp_figures"][sec]))
+
     def test_chug_voicings_restrike_on_their_steps(self):
         from bitcomposer import harmony
         rows = [r for r, n in harmony.generate_harmony([60, 64, 67], 32, "chug_sync", 3)[0] if n != -1]

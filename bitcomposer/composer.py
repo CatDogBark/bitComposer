@@ -35,7 +35,8 @@ from .melody import (
 )
 from .harmony import generate_harmony_timeline
 from .bass import generate_bass_timeline, pick_section_bass
-from .arp import pick_figures, generate_arp
+from .arp import pick_figures, generate_arp, FIGURES
+from .bass import RIFFS
 from .echo import (ECHO_ARP_FULL_BPM, ECHO_ARP_OFF_BPM, ECHO_DELAYS, ECHO_DELAY_WEIGHTS, ECHO_FEEDBACK_RANGE, ECHO_STEREO_WEIGHTS, ECHO_WETNESS, ECHO_WET_WEIGHTS, _EchoBus, _echo_label)
 from .instruments import (PALETTES, PULSE_DUTY, STRIKE_RULE_ROLES, _build_samples, _make_sample, _pick_instruments, _register_releases, _sample_from_inst, _weighted)
 from .mix import (CHANNEL_VOLUMES, MASTER_GAIN, SUSTAINING_ARP_LEVEL, channel_volumes_for)
@@ -268,6 +269,22 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # harmony voices (a list): the chug plays fifths, the pad plays the chord.
     pc = pack_value(pack, "power_chords", False)
     power_chords = pc is True or (isinstance(pc, (list, tuple, set)) and instruments["harmony"] in pc)
+    if bass_riff:
+        # Rhythm collision: a riff and an arp figure that push on the same
+        # off-beat rows jab them in unison (the funk riff and the sync-push
+        # arp share 0, 3, 6). Any section whose arp pushes where the riff
+        # pushes redraws from figures that do not, on the riff's own stream.
+        riff_rng = random.Random(song_salt ^ 0xB055 ^ 0xA2)
+        pushes = {row % 16 for row, _ in RIFFS[bass_riff] if row % ROWS_PER_BEAT}
+        weights = pack_weights(pack, "arp_figures") or {f: 1 for f in FIGURES}
+        for sec, fig in list(arp_figures.items()):
+            steps = {row % 16 for row, _, _ in FIGURES[fig]["steps"] if row % ROWS_PER_BEAT}
+            if steps & pushes:
+                clear = [f for f, w in weights.items() if w > 0 and f != fig
+                         and not ({r % 16 for r, _, _ in FIGURES[f]["steps"] if r % ROWS_PER_BEAT} & pushes)
+                         and (sec != "chorus" or FIGURES[f]["energy"][0] >= 0.4)]
+                if clear:
+                    arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]
     half_changes = 0
 
     for section in song_structure:
