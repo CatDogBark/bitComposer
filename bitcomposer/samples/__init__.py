@@ -178,7 +178,12 @@ STRUCK_RATIO = 0.8
 # composer can ask without rendering a sample; a test checks it against the
 # classifier for every preset in the palettes and packs.
 STRUCK_PRESETS = {
-    "evm_tubular_bell",
+    "evm_bass",
+    "evm_harp",
+    "evm_kalimba",
+    "evm_piano",
+    "evm_pluck",
+    "evm_tinker",
     "ffvi_bass",
     "ffvi_dark_bass",
     "ffvi_guitar",
@@ -223,7 +228,7 @@ def is_struck(name: str) -> bool:
 
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
                      "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal",
-                     "conga", "tambourine", "woodblock", "drum", "click", "brush", "castanet"}
+                     "conga", "tambourine", "woodblock", "drum", "click", "brush", "castanet", "ping", "wash"}
 
 
 def is_percussion(name: str) -> bool:

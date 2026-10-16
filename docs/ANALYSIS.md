@@ -262,7 +262,11 @@ the ones that sound reduce to about thirty instruments, named by measured
 character and the role the voice registers show (a soft flute in 44 banks,
 strings in 43, choir in 28), with the fan soundfont's vocabulary as the
 guide; the echo there is a one-row delay (96 and 176 ms), feedback 0.31,
-wet. Every snapshot runs 80 ms of echo
+wet. Secret of Evermore streams a small set per song (131 samples over 72
+snapshots, about thirty recurring); William Kage's named rips settled seven
+by exact length, the rest are by character, and the DSP registers showed the
+echo off in two thirds of the snapshots and light where on, so the pack's
+"wet" habit was wrong: Evermore's space is in its long swells and textures. Every snapshot runs 80 ms of echo
 with feedback 0.64 and a flat filter, both sides the same sign, strings and
 leads sent, bass and kit dry. Each recipe in the pack states the profile it
 targets and a matcher (`tools/match.py` in the diag dir) prints ours beside

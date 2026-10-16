@@ -60,7 +60,9 @@ These change how every note sounds, not what notes are played.
   so it borrows nothing and carries its own kit: `ffvi` (done, branch
   `ffvi-spc`: 35 own voices, echo from the DSP registers), `mana` (done,
   branch `mana-spc`: 25 own voices, no table exists so voices are named by
-  measured character), `evermore` (next), then a widget readout of the drawn song and a mixer regrouped
+  measured character), `evermore` (done, branch `evermore-spc`: 22 own
+  voices, seven matched William Kage's named rips by length at
+  https://www.williamkage.com/snes_soundfonts/ , the rest by character), then a widget readout of the drawn song and a mixer regrouped
   by part with a KIT fold. Method and tools: `~/diags/bitcomposer/ffvi-spc/
   tools` (`survey.py` decodes and profiles every unique sample across a set
   of snapshots, `voices.py` traces each through the voice registers,
