@@ -142,7 +142,8 @@ def pick_section_bass(bass_weight: str, section_energy: float,
 def generate_bass_timeline(segments: list[tuple[int, int, int, str]],
                            style: str = "steady", weight: str = "heavy",
                            density: float = 1.0,
-                           riff: str | None = None) -> list[tuple[int, int]]:
+                           riff: str | None = None,
+                           scale_notes: list[int] | None = None) -> list[tuple[int, int]]:
     """generate_bass over [(start_row, end_row, root, chord_type), ...]."""
     notes = []
     for start, end, root, chord_type in segments:
