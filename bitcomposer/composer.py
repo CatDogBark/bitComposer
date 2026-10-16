@@ -288,6 +288,19 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                     arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]
     half_changes = 0
 
+    # ── Intro ──
+    # Its own stream, so the opening can change without moving the song.
+    intro_name = intro_length = None
+    if "intro" in song_structure:
+        intro_rng = random.Random(song_salt ^ 0x1A70)
+        intro_name, intro_length = struct.pick_intro(
+            pack_weights(pack, "intro"), drumless, intro_rng)
+        intro = struct.INTROS[intro_name]
+        section_layers_map["intro"] = struct.intro_layers(intro_name)
+        if intro["arp"] == "draw":
+            pool = ["sparse_pulse", "sparse_pulse", "quarter_up", arp_figures["verse"]]
+            arp_figures["intro"] = intro_rng.choice(pool)
+
     for section in song_structure:
         layers = section_layers_map.get(section, section_layers_map.get("verse1"))
         sec_type = struct.section_type(section)
@@ -306,6 +319,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             section_prog = struct.get_section_progression(
                 section, progression, alt_progression, use_alt_chorus)
         plan = struct.pattern_plan(section_prog, compact)
+        if is_intro:
+            plan = plan[:intro_length]
         num_patterns = len(plan)
         pattern_counts[section] = num_patterns
 
@@ -399,6 +414,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             half_changes += len(segments) - 1
 
             section_bass = pick_section_bass(bass_weight, section_energy, bass_style)
+            sec_voicing = voicing_style
+            if is_intro:
+                if intro["bass"] == "song":
+                    section_bass = bass_style
+                sec_voicing = intro.get("voicing", voicing_style)
             section_motif = _pick_section_motif(
                 sec_type, use_phrased, chorus_motif, verse_motif, bridge_motif, rng=melody_rng,
                 scale_size=len(theory.SCALES[sec_scale_name]))
@@ -411,17 +431,20 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 melody_sample=melody_sample, use_phrased=use_phrased,
                 section_motif=section_motif, melody_rng=melody_rng, chord_idx=chord_idx,
                 is_answer=(chord_idx % 2 == 1),
-                voicing_style=voicing_style, num_harmony_voices=num_harmony_voices,
+                voicing_style=sec_voicing, num_harmony_voices=num_harmony_voices,
                 vibrato_speed=vibrato_speed, vibrato_depth=vibrato_depth,
                 bass_weight=bass_weight, use_bass_porta=use_bass_porta,
                 porta_speed=porta_speed,
                 arp_figure=arp_figures.get(sec_type, arp_figures["verse"]),
                 arp_colour=(style_pref == "snes"),
-                groove=grooves.get(sec_type, grooves["verse"]), drum_fill=drum_fill,
+                groove=grooves["verse"] if is_intro and intro["groove"] == "song"
+                       else grooves.get(sec_type, grooves["verse"]),
+                drum_fill=drum_fill,
                 breakdown=breakdown, n_patterns=num_patterns, pickup_root=pickup_root,
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
-                is_intro=is_intro, echo_sends=echo_bus.sends(sec_type) if use_echo else None,
+                is_intro=is_intro, intro=intro if is_intro else None,
+                echo_sends=echo_bus.sends(sec_type) if use_echo else None,
                 counter_chance=pack_value(pack, "counter_line", 0.3),
                 hat_stroke=pack_value(pack, "hat_stroke", 1.0),
                 crash_chance=pack_value(pack, "crash_chance", 1.0),
@@ -517,6 +540,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "progression": [tuple(e) for e in progression],
         "half_pattern_changes": half_changes,
         "structure": display_structure,
+        "intro": intro_name,
+        "intro_patterns": intro_length,
         "num_patterns": len(patterns),
         "num_orders": len(orders),
     }

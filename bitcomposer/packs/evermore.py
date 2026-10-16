@@ -162,6 +162,7 @@ PACK = {
         },
         "habits": {
             "tempo": {"slow": 4, "medium": 1, "fast": 0},
+            "intro": {"pad_hook": 3, "arp_bed": 2, "drum_pickup": 2, "riff_vamp": 1},
             "energy": {"chill": 3, "normal": 1, "intense": 0},
             "scale_family": {"minor": 4, "major": 1, "pentatonic": 1},
             "form": {"linear": 3, "standard": 1, "aaba": 1, "short": 1, "rondo": 0},
