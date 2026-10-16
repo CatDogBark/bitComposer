@@ -51,6 +51,17 @@ class Packs(unittest.TestCase):
         notes = bass.generate_bass(48, "minor", 16, style="riff", weight="heavy", riff="funk", scale_notes=minor)
         self.assertEqual(notes[-1][1] - notes[0][1], 10)
 
+    def test_riff_keeps_every_note_and_pops_use_the_high_sample(self):
+        from bitcomposer import bass, pattern
+        import random
+        random.seed(1)
+        full = bass.generate_bass(48, "major", 32, style="riff", weight="heavy", density=0.3, riff="funk")
+        self.assertEqual(len(full), 2 * len(bass.RIFFS["funk"]))
+        song = compose_song(seed=101, style_pref="snes", pack="megamanx")
+        self.assertEqual(song["info"]["bass_style"], "riff")
+        insts = {c.instrument for p in song["patterns"] for r in p.data for c in [r[pattern.CH_BASS]] if c.note not in (0, 254, 255)}
+        self.assertEqual(len(insts), 2, insts)      # the low sample and the high one
+
     def test_chug_voicings_restrike_on_their_steps(self):
         from bitcomposer import harmony
         rows = [r for r, n in harmony.generate_harmony([60, 64, 67], 32, "chug_sync", 3)[0] if n != -1]
@@ -94,7 +105,7 @@ class Packs(unittest.TestCase):
         from bitcomposer.packs import PACKS
         for p in PACKS.values():
             for v in p["voices"].values():
-                names.update(v if isinstance(v, list) else v.values())
+                names.update(v if isinstance(v, list) else ([v] if isinstance(v, str) else v.values()))
         for name in sorted(names):
             if name in samples.INSTRUMENT_PRESETS and not samples.is_percussion(name):
                 self.assertEqual(samples.is_struck(name), samples.generate_instrument(name)["struck"], name)

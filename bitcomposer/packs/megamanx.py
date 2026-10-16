@@ -113,6 +113,20 @@ def mmx_bass() -> tuple[bytes, int, dict]:
     return _decaying_voice(0.7, tone, amp_tau=0.5, tail_loop=True, amplitude=0.95)
 
 
+def mmx_bass_hi() -> tuple[bytes, int, dict]:
+    """The synth bass for the top of the line: the octave pops. Built with the
+    fundamental and the second partial carrying the body, so that played an
+    octave above the low sample it stays as full as the root under it."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        body = 1.0 * math.sin(ph) + 0.55 * math.sin(2.0 * ph) + 0.22 * math.sin(3.0 * ph)
+        snap = (0.5 * math.sin(5.0 * ph) + 0.3 * math.sin(8.0 * ph)) * math.exp(-t / 0.03)
+        return body + snap
+    return _decaying_voice(0.6, tone, amp_tau=0.4, tail_loop=True, amplitude=0.95)
+
+
 def mmx_kick() -> tuple[bytes, int, dict]:
     """Tight kick — fast pitch drop, a click on top, 80 ms body."""
     n = int(SNES_RATE * 0.2)
@@ -183,6 +197,7 @@ PRESETS = {
     "mmx_string_pad": (mmx_string_pad, {},             54),
     "mmx_soft_lead":  (mmx_soft_lead,  {},             58),
     "mmx_bass":       (mmx_bass,       {},             64),
+    "mmx_bass_hi":    (mmx_bass_hi,    {},             64),
     "mmx_kick":       (mmx_kick,       {},             64),
     "mmx_snare":      (mmx_snare,      {},             62),
     "mmx_tom":        (mmx_tom,        {},             62),
@@ -195,7 +210,7 @@ PRESETS = {
 RELEASE = {
     "mmx_lead_guitar": "lead", "mmx_rhythm_guitar": "lead", "mmx_pulse_lead": "lead",
     "mmx_synth_brass": "brass", "mmx_string_pad": "strings", "mmx_soft_lead": "lead",
-    "mmx_bass": "bass",
+    "mmx_bass": "bass", "mmx_bass_hi": "bass",
 }
 
 
@@ -213,6 +228,7 @@ PACK = {
             "bass_heavy": ["mmx_bass"],
             "bass_medium": ["mmx_bass"],
             "bass_light": ["mmx_bass"],
+            "bass_hi": "mmx_bass_hi",
             "drums": {"kick": "mmx_kick", "snare": "mmx_snare", "hihat": "mmx_hat",
                       "tom": "mmx_tom", "crash": "mmx_crash", "open_hihat": "mmx_open_hat",
                       "rim": "snes_rim"},

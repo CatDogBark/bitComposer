@@ -259,11 +259,20 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 volume=bass_vol, porta_speed=porta_speed, humanize=False,
             )
         else:
-            apply_notes_to_pattern(
-                pat, CH_BASS, bass, sample_map["bass"],
-                volume=bass_vol if bass_vol < 255 else 255,
-                humanize=True,
-            )
+            # A pack may carry a second bass sample for the top of the line
+            # (an octave pop on a heavy bass thins out on the low sample).
+            # Every note picks its sample by pitch; the channel is the same.
+            ceiling = {"heavy": 48, "medium": 54, "light": 60}.get(bass_weight, 48)
+            hi = sample_map.get("bass_hi")
+            groups = [(sample_map["bass"], [n for n in bass if hi is None or n[1] < ceiling])]
+            if hi is not None:
+                groups.append((hi, [n for n in bass if n[1] >= ceiling]))
+            for inst, notes_ in groups:
+                apply_notes_to_pattern(
+                    pat, CH_BASS, notes_, inst,
+                    volume=bass_vol if bass_vol < 255 else 255,
+                    humanize=True,
+                )
         if pickup_root is not None and bass:
             # Walk up into the next section's root over the last two beats:
             # the fifth below, a step, then the leading tone — the pickup a

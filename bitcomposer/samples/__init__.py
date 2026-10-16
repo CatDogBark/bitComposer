@@ -189,6 +189,7 @@ STRUCK_PRESETS = {
     "mana_chimes",
     "mana_kalimba",
     "mmx_bass",
+    "mmx_bass_hi",
     "mmx_rhythm_guitar",
     "pulse12_pluck",
     "pulse_pluck",

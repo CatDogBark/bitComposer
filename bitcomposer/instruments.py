@@ -131,6 +131,8 @@ def _pick_instruments(style: str, bass_weight: str = "heavy",
         if contrast:
             harmony = random.choice(contrast)
     out = {"melody": lead, "harmony": harmony, "bass": bass, "arp": arp, **drums}
+    if isinstance(pal.get("bass_hi"), str):
+        out["bass_hi"] = pal["bass_hi"]          # the bass line's upper-register sample
     if pal.get("counter"):
         out["counter"] = random.choice([c for c in pal["counter"] if c != harmony]
                                        or pal["counter"])

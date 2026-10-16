@@ -114,7 +114,9 @@ def generate_bass(root: int, chord_type: str,
                         note -= 1
                 notes.append((bar + off, note))
 
-    if density < 1.0:
+    # A riff is a figure and repeats exactly; the thinning that lets the
+    # other styles rest would make it stumble from bar to bar.
+    if density < 1.0 and style != "riff":
         notes = [
             (row, note) for row, note in notes
             if row % ROWS_PER_BAR == 0 or random.random() < density
