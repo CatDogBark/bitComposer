@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Palette pass: the ensemble chorus (FFVI strings and contrabass, Mana glass pad, Evermore pads and drone, Mega Man X lead guitar) no longer combs; the dry tone leads at 80% with the two detuned copies at different offsets, so the fundamental's share of power swings by under 15 points across the loop instead of 60-90. The flute, whistle, pan flute and horn gain a little second and third partial.
 - Level: the module's mix volume is written at 128 (was 80) and every channel volume carries a master gain of 1.25, taking files from about −27 LUFS to about −20 with true peaks a decibel clear of full scale; balance and dynamics unchanged.
 - Windows: `bitComposer.exe` (a tkinter window: palette, pack, echo, energy, tempo, count, folder, Generate) and `bitcomposer-cli.exe` (the CLI), built single-file by a GitHub Actions Windows job and attached to each release as `bitComposer-windows.zip`; `bitcomposer-gui` console script; pyproject version synced to 0.8.0.
 - Pack voices: the packs' lead, harmony and bass pools hold only their own voices, with borrowing kept where it is the game's sound (FFVI flute and choir, Mana flute and mallets, Evermore flute and strings); Mega Man X borrows nothing. The instrument picker gains a contrast rule for every palette: when lead, harmony and arp all sustain and the harmony is not a pad, the harmony is redrawn as a struck or pad voice (over 200 draws, no all-sustaining trio remains). `samples.STRUCK_PRESETS` records the classifier's verdict per preset so the picker can ask without rendering.
