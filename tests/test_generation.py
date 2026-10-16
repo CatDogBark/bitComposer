@@ -450,14 +450,20 @@ class Packs(unittest.TestCase):
                       if r[pattern.CH_ECHO1].note not in (0, 254, 255) and r[pattern.CH_ECHO1].effect == it_format.FX_SPECIAL)
         self.assertGreater(delayed, 0)
 
+    def test_written_levels_stay_in_range(self):
+        for seed, pack in ((4, "megamanx"), (21, "none"), (7, "evermore")):
+            vols = composer.channel_volumes_for(compose_song(seed=seed, style_pref="snes", pack=pack)["info"])
+            self.assertTrue(all(0 <= v <= 64 for v in vols), vols)
+            self.assertEqual(len(vols), pattern.NUM_CHANNELS)
+
     def test_sustaining_arp_voice_is_trimmed(self):
         song = compose_song(seed=4, style_pref="snes", pack="megamanx")
         self.assertEqual(song["info"]["instruments"]["arp"], "mmx_pulse_lead")
         self.assertFalse(song["info"]["struck"]["arp"])
-        self.assertEqual(composer.channel_volumes_for(song["info"])[pattern.CH_ARP], composer.SUSTAINING_ARP_LEVEL)
+        self.assertEqual(composer.channel_volumes_for(song["info"])[pattern.CH_ARP], round(composer.SUSTAINING_ARP_LEVEL * composer.MASTER_GAIN))
         plain = compose_song(seed=21, style_pref="snes", pack="none")
         self.assertTrue(plain["info"]["struck"]["arp"])
-        self.assertEqual(composer.channel_volumes_for(plain["info"])[pattern.CH_ARP], composer.CHANNEL_VOLUMES[pattern.CH_ARP])
+        self.assertEqual(composer.channel_volumes_for(plain["info"])[pattern.CH_ARP], round(composer.CHANNEL_VOLUMES[pattern.CH_ARP] * composer.MASTER_GAIN))
 
     def test_struck_table_matches_the_classifier(self):
         names = set()

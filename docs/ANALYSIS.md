@@ -242,6 +242,16 @@ beats. The string section is a long loop (160 periods plus the attack)
 carrying the tone and copies one cycle sharp and flat over the loop, so
 it beats at about 1.6 Hz and stays seamless.
 
+**Level.** The mix was tuned for balance with the overall level never
+revisited: files averaged −27 LUFS, ten dB under anything streamed and
+four under broadcast. The module's mix volume is now written at 128 (it
+was 80) and every channel volume carries a master gain of 1.25
+(`composer.MASTER_GAIN`); over eighteen seeds across the palettes that is
+about −20 LUFS with the loudest song's true peak a decibel under full
+scale. No limiter or compression: the dynamics (an 11 LU range on some
+songs) are left alone, and the players' gain (the widget's soft limiter,
+XMPlay's amplification) covers the rest.
+
 **Echo.** Modelled on what the SNES echo unit produced rather than how it
 was wired: three repeats on a dotted eighth (3, 6 and 9 rows), each half
 the level of the last (−6, −12, −18 dB), each playing a lowpassed copy of

@@ -204,7 +204,7 @@ def write_it_file(
     tempo: int = 125,
     speed: int = 6,
     global_volume: int = 128,
-    mix_volume: int = 80,
+    mix_volume: int = 128,
     num_channels: int = 8,
     channel_volumes: list[int] | None = None,
     channel_pans: list[int] | None = None,

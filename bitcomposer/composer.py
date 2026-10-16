@@ -1181,8 +1181,21 @@ CHANNEL_VOLUMES = [
 # level instead (set by ear for the PSG square, Lower Cistern, 2026-10-13).
 SUSTAINING_ARP_LEVEL = 17
 
+# Master gain on every written channel volume. The table above and every
+# trim were tuned against each other for balance with the level never
+# revisited: songs came out at -27 LUFS on average, ten dB under anything
+# streamed. With the module's mix volume at 128 (it was 80) and this gain,
+# eighteen seeds across the palettes average about -20 LUFS with the loudest
+# song's true peak a decibel clear of full scale; the dynamics are untouched.
+MASTER_GAIN = 1.25
+
 
 def channel_volumes_for(info: dict) -> list[int]:
+    vols = [min(64, round(v * MASTER_GAIN)) for v in _channel_volumes_base(info)]
+    return vols
+
+
+def _channel_volumes_base(info: dict) -> list[int]:
     vols = list(CHANNEL_VOLUMES)
     for role, vol in (PACKS[info["pack"]].get("trims", {}) if info.get("pack") else {}).items():
         for ch, r in enumerate(CHANNEL_ROLES):
