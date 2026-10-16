@@ -55,6 +55,31 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Pack revisions (in progress, 2026-10-16).** The plan Troy approved: one
+  SOUND picker (done), then each pack rebuilt from its game's SPC snapshots
+  so it borrows nothing and carries its own kit: `ffvi` (done, branch
+  `ffvi-spc`: 35 own voices, echo from the DSP registers), `mana` (next),
+  `evermore`, then a widget readout of the drawn song and a mixer regrouped
+  by part with a KIT fold. Method and tools: `~/diags/bitcomposer/ffvi-spc/
+  tools` (`survey.py` decodes and profiles every unique sample across a set
+  of snapshots, `voices.py` traces each through the voice registers,
+  `fine.py` and `match.py` compare a sample's steady profile with ours,
+  `table.py` matches samples to a documented instrument table by exact BRR
+  size). Identify by size against a table, never by which songs carry a
+  sample: for FFVI the song-based guesses were wrong for eight voices.
+  Community references used: the FF6 BRR sample table (names, sizes, ADSR,
+  loop points) at
+  https://www.ff6hacking.com/wiki/doku.php?id=ff3:ff3us:music:brrsamples:ff6
+  and the per-song instrument-set format (16 slots per track at
+  $C53F95) at
+  https://www.ff6hacking.com/wiki/doku.php?id=ff3:ff3us:doc:asm:fmt:instrument_sets
+  with the song-data tutorial at
+  https://ff6hacking.com/wiki/doku.php?id=ff3:ff3us:tutorial:music:songdata.
+  Mana and Evermore have no table as complete; identify there by the
+  voice-register trace and by ear, and look for a community sample list
+  first. Left out of `ffvi` for the kit revision: congas, shaker,
+  tambourine, maracas (the kit has seven fixed slots); one-song colours
+  (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
 - **Windows player.** The Windows zip is the generator only: the window
   makes songs, OpenMPT or XMPlay plays them. The Plasma widget's features
   (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
