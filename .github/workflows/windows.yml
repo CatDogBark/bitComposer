@@ -38,8 +38,8 @@ jobs:
         run: |
           # Windows paths are case-insensitive: "bitcomposer" and "bitComposer"
           # would be one file, so the command line gets a -cli suffix.
-          pyinstaller --onefile --name bitcomposer-cli --console bitcomposer/cli.py
-          pyinstaller --onefile --name bitComposer --windowed bitcomposer/gui.py
+          pyinstaller --onefile --name bitcomposer-cli --console --collect-submodules bitcomposer tools/windows/launch_cli.py
+          pyinstaller --onefile --name bitComposer --windowed --collect-submodules bitcomposer tools/windows/launch_gui.py
       - name: Package
         shell: pwsh
         run: |
