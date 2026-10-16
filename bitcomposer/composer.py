@@ -271,17 +271,18 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     power_chords = pc is True or (isinstance(pc, (list, tuple, set)) and instruments["harmony"] in pc)
     if bass_riff:
         # Rhythm collision: a riff and an arp figure that push on the same
-        # off-beat rows jab them in unison (the funk riff and the sync-push
-        # arp share 0, 3, 6). Any section whose arp pushes where the riff
-        # pushes redraws from figures that do not, on the riff's own stream.
+        # sixteenth (the odd rows: the funk riff and the sync-push arp both
+        # hit row 3) jab it in unison. Any section whose arp pushes on a
+        # sixteenth the riff pushes on redraws from figures that do not, on
+        # the riff's own stream. Plain eighth-note off-beats are not pushes.
         riff_rng = random.Random(song_salt ^ 0xB055 ^ 0xA2)
-        pushes = {row % 16 for row, _ in RIFFS[bass_riff] if row % ROWS_PER_BEAT}
+        pushes = {row % 16 for row, _ in RIFFS[bass_riff] if row % 2}
         weights = pack_weights(pack, "arp_figures") or {f: 1 for f in FIGURES}
         for sec, fig in list(arp_figures.items()):
-            steps = {row % 16 for row, _, _ in FIGURES[fig]["steps"] if row % ROWS_PER_BEAT}
+            steps = {row % 16 for row, _, _ in FIGURES[fig]["steps"] if row % 2}
             if steps & pushes:
                 clear = [f for f, w in weights.items() if w > 0 and f != fig
-                         and not ({r % 16 for r, _, _ in FIGURES[f]["steps"] if r % ROWS_PER_BEAT} & pushes)
+                         and not ({r % 16 for r, _, _ in FIGURES[f]["steps"] if r % 2} & pushes)
                          and (sec != "chorus" or FIGURES[f]["energy"][0] >= 0.4)]
                 if clear:
                     arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]

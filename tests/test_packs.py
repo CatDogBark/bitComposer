@@ -68,9 +68,9 @@ class Packs(unittest.TestCase):
             info = compose_song(seed=seed, style_pref="snes", pack="megamanx")["info"]
             if not info["bass_riff"]:
                 continue
-            pushes = {r % 16 for r, _ in bass.RIFFS[info["bass_riff"]] if r % pattern.ROWS_PER_BEAT}
+            pushes = {r % 16 for r, _ in bass.RIFFS[info["bass_riff"]] if r % 2}
             for sec in ("verse", "chorus", "bridge"):
-                steps = {r % 16 for r, _, _ in arp.FIGURES[info["arp_figures"][sec]]["steps"] if r % pattern.ROWS_PER_BEAT}
+                steps = {r % 16 for r, _, _ in arp.FIGURES[info["arp_figures"][sec]]["steps"] if r % 2}
                 self.assertFalse(steps & pushes, (seed, sec, info["bass_riff"], info["arp_figures"][sec]))
 
     def test_chug_voicings_restrike_on_their_steps(self):
