@@ -266,7 +266,12 @@ wet. Secret of Evermore streams a small set per song (131 samples over 72
 snapshots, about thirty recurring); William Kage's named rips settled seven
 by exact length, the rest are by character, and the DSP registers showed the
 echo off in two thirds of the snapshots and light where on, so the pack's
-"wet" habit was wrong: Evermore's space is in its long swells and textures. Every snapshot runs 80 ms of echo
+"wet" habit was wrong: Evermore's space is in its long swells and textures.
+Mega Man X, re-checked the same way: 20 of its samples matched Kage's rips,
+and the by-ear pass had the arp voice (the overdrive guitar), the soft lead
+(the organ), the bass (slap bass) and the "string pad" (a distortion guitar
+with a 155 ms swell) under the wrong names, while the real strings, in every
+bank, were missing. The shapes were right; the names and the gaps were not. Every snapshot runs 80 ms of echo
 with feedback 0.64 and a flat filter, both sides the same sign, strings and
 leads sent, bass and kit dry. Each recipe in the pack states the profile it
 targets and a matcher (`tools/match.py` in the diag dir) prints ours beside

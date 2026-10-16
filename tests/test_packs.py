@@ -100,8 +100,9 @@ class Packs(unittest.TestCase):
             self.assertEqual(len(vols), pattern.NUM_CHANNELS)
 
     def test_sustaining_arp_voice_is_trimmed(self):
+        from bitcomposer.packs import PACKS
         song = compose_song(seed=4, style_pref="snes", pack="megamanx")
-        self.assertEqual(song["info"]["instruments"]["arp"], "mmx_pulse_lead")
+        self.assertIn(song["info"]["instruments"]["arp"], PACKS["megamanx"]["voices"]["arp"])
         self.assertFalse(song["info"]["struck"]["arp"])
         self.assertEqual(composer.channel_volumes_for(song["info"])[pattern.CH_ARP], round(composer.SUSTAINING_ARP_LEVEL * composer.MASTER_GAIN))
         plain = compose_song(seed=21, style_pref="snes", pack="none")

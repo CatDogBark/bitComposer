@@ -58,7 +58,9 @@ These change how every note sounds, not what notes are played.
 - **Pack revisions (in progress, 2026-10-16).** The plan Troy approved: one
   SOUND picker (done), then each pack rebuilt from its game's SPC snapshots
   so it borrows nothing and carries its own kit: `ffvi` (done, branch
-  `ffvi-spc`: 35 own voices, echo from the DSP registers), `mana` (done,
+  `ffvi-spc`: 35 own voices, echo from the DSP registers), `megamanx`
+  (re-checked against Kage's named rips: 20 matched, five voices renamed,
+  nine added; 23 own voices), `mana` (done,
   branch `mana-spc`: 25 own voices, no table exists so voices are named by
   measured character), `evermore` (done, branch `evermore-spc`: 22 own
   voices, seven matched William Kage's named rips by length at

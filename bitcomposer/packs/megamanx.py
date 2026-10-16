@@ -1,5 +1,17 @@
 """Mega Man X style pack: its voices (synthesised here) and the arrangement
-habits that go with them. Registered on import by bitcomposer.packs."""
+habits that go with them. Registered on import by bitcomposer.packs.
+
+Every voice is modelled on the game's own sample bank: 35 SPC snapshots, one
+shared bank of about thirty samples, each profiled (steady-state harmonics,
+centroid, attack, decay, loop) and traced to the voices that play it. Twenty
+of the samples matched William Kage's named rips by exact length, which fixed
+the names: the arp voice is the overdrive guitar, the soft lead the organ, the
+bass the slap bass, the "string pad" a distortion guitar with a 155 ms swell.
+The lead guitar is band-matched to the one bright instant-attack guitar in
+every bank, which Kage leaves unnamed. Nothing from the game is copied; the
+shapes are re-synthesised. The echo, from the DSP registers: 48 ms, feedback
+0.53, the two sides inverted.
+"""
 import math
 import random
 import struct
@@ -10,7 +22,7 @@ from ..samples.dsp import (
 )
 
 
-
+# ── Guitars ──
 
 def mmx_lead_guitar() -> tuple[bytes, int, dict]:
     """Distorted lead guitar, tuned by measurement against the game's own lead
@@ -71,38 +83,135 @@ def mmx_rhythm_guitar() -> tuple[bytes, int, dict]:
     return _finish_snes(out, 0.95, ls, len(out))
 
 
-def mmx_pulse_lead() -> tuple[bytes, int, dict]:
-    """Clean bright pulse synth — the arp and counter-line voice, dry."""
+def mmx_overdrive_guitar() -> tuple[bytes, int, dict]:
+    """Overdrive guitar (Kage's name), in every bank: a bright one-cycle
+    wave, fundamental and octave equal, the twelfth strong; the game's arp
+    and riff voice, dry."""
     return _sustained_voice(
         steady={1: 1.0, 2: 1.0, 3: 0.74, 4: 0.23, 5: 0.19, 6: 0.27, 7: 0.17, 9: 0.1},
         attack_cycles=3, loop_cycles=1, amplitude=0.9)
 
 
+def mmx_guitar_pad() -> tuple[bytes, int, dict]:
+    """Distortion guitar (Kage's name), in 26 banks: a 155 ms swell into a
+    tone carried by its fourth partial, the game's guitar pad, chorused."""
+    return _ensemble_voice(
+        steady={1: 0.2, 2: 0.38, 3: 0.43, 4: 1.0, 5: 0.13, 6: 0.48, 7: 0.24, 8: 0.18, 9: 0.2, 10: 0.1},
+        periods=150, attack_cycles=41, detune_layers=2, lowpass=0.5, amplitude=0.85)
+
+
+def mmx_clean_guitar() -> tuple[bytes, int, dict]:
+    """Acoustic guitar (Kage's name), in 7 banks: a clean pluck, nearly a
+    sine with a little octave and double octave."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+    partials = [(1, 1.0), (2, 0.14), (3, 0.08), (4, 0.08), (5, 0.04)]
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        body = sum(a * math.sin(k * ph) * math.exp(-t * k / 4.0) for k, a in partials)
+        return body + 0.4 * _rng.uniform(-1.0, 1.0) * math.exp(-t / 0.003)
+    return _decaying_voice(0.8, tone, amp_tau=0.35, tail_loop=True, amplitude=0.9)
+
+
+# ── Synths ──
+
 def mmx_synth_brass() -> tuple[bytes, int, dict]:
-    """Synth brass — a bright overblown attack settling into a strong third
-    and fourth partial."""
+    """Synth brass (Kage's name), in every bank: a bright overblown attack
+    settling into a strong third and fourth partial."""
     return _sustained_voice(
         steady={1: 1.0, 2: 0.46, 3: 0.79, 4: 0.58, 5: 0.37, 6: 0.13, 7: 0.22, 8: 0.2},
         bright={1: 0.8, 2: 0.9, 3: 1.0, 4: 1.0, 5: 0.9, 6: 0.7, 7: 0.6, 8: 0.5, 9: 0.4},
         attack_cycles=7, loop_cycles=2, amplitude=0.9)
 
 
-def mmx_string_pad() -> tuple[bytes, int, dict]:
-    """String pad — slow swell, the fourth partial on top, chorused."""
+def mmx_strings() -> tuple[bytes, int, dict]:
+    """Strings (Kage's name), in every bank: a 95 ms swell, fundamental over
+    a third of octave and a fourth partial, chorused."""
     return _ensemble_voice(
-        steady={1: 0.3, 2: 0.4, 3: 0.5, 4: 1.0, 5: 0.2, 6: 0.5, 7: 0.3, 8: 0.2},
-        periods=150, attack_cycles=55, detune_layers=2, lowpass=0.5, amplitude=0.85)
+        steady={1: 1.0, 2: 0.37, 3: 0.16, 4: 0.31, 5: 0.11, 6: 0.1, 7: 0.09, 8: 0.03},
+        periods=150, attack_cycles=25, detune_layers=2, lowpass=0.7, amplitude=0.85)
 
 
-def mmx_soft_lead() -> tuple[bytes, int, dict]:
-    """Soft lead — the octave partial on top of a quiet fundamental, slow."""
+def mmx_saw_pad() -> tuple[bytes, int, dict]:
+    """Saw wave (Kage's name), in 7 banks: a 160 ms swell into a soft saw,
+    the partials falling evenly."""
+    return _ensemble_voice(
+        steady={1: 1.0, 2: 0.83, 3: 0.53, 4: 0.29, 5: 0.19, 6: 0.14, 7: 0.1, 8: 0.07, 9: 0.05},
+        periods=150, attack_cycles=42, detune_layers=2, lowpass=0.6, amplitude=0.85)
+
+
+def mmx_organ() -> tuple[bytes, int, dict]:
+    """Organ (Kage's bell organ), in 25 banks: the octave carries it over a
+    quiet fundamental, with the twelfth and double octave, a 50 ms onset."""
     return _sustained_voice(
         steady={1: 0.15, 2: 1.0, 3: 0.5, 4: 0.33, 6: 0.08},
         attack_cycles=14, loop_cycles=2, lowpass=0.6, amplitude=0.85)
 
 
-def mmx_bass() -> tuple[bytes, int, dict]:
-    """Synth bass — a snap of brightness into a round octave-heavy sustain."""
+def mmx_synth_lead() -> tuple[bytes, int, dict]:
+    """Synth lead (Kage's boomer lead), in every bank: a one-cycle wave with
+    the partials falling smoothly, instant, bright."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.49, 3: 0.37, 4: 0.29, 5: 0.21, 6: 0.15, 7: 0.13, 8: 0.12, 9: 0.09, 10: 0.08},
+        attack_cycles=2, loop_cycles=1, amplitude=0.9)
+
+
+def mmx_square() -> tuple[bytes, int, dict]:
+    """Square wave (Kage's name), in every bank: odd partials, the
+    twelfth strong, instant."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.06, 3: 0.31, 4: 0.12, 5: 0.2, 7: 0.22, 9: 0.22},
+        attack_cycles=2, loop_cycles=1, amplitude=0.9)
+
+
+def mmx_bright_lead() -> tuple[bytes, int, dict]:
+    """Synth lead 2 (Kage's harmonica), in every bank: a buzzing one-cycle
+    wave with every partial up to the fifth near full, instant."""
+    return _sustained_voice(
+        steady={1: 0.94, 2: 1.0, 3: 0.89, 4: 0.77, 5: 0.58, 6: 0.39, 7: 0.15, 8: 0.07, 9: 0.23, 10: 0.33},
+        attack_cycles=2, loop_cycles=1, amplitude=0.9)
+
+
+def mmx_hollow() -> tuple[bytes, int, dict]:
+    """Hollow wave, in every bank: fundamental and twelfth, almost nothing
+    else; a clarinet-like synth."""
+    return _sustained_voice(
+        steady={1: 1.0, 2: 0.12, 3: 0.95, 5: 0.1},
+        attack_cycles=3, loop_cycles=1, amplitude=0.9)
+
+
+def mmx_bell() -> tuple[bytes, int, dict]:
+    """Bell synth (Kage's vibraphone), in 9 banks: a pure tone with a
+    double-octave partial, played with the driver's decay."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        return math.sin(ph) + 0.39 * math.sin(4.0 * ph) * math.exp(-t / 0.25) + 0.06 * math.sin(2.0 * ph)
+    return _decaying_voice(0.9, tone, amp_tau=0.4, tail_loop=True, amplitude=0.85)
+
+
+def mmx_orch_hit() -> tuple[bytes, int, dict]:
+    """Orchestra hit (Kage's name), in every bank: a 140 ms chord stab, every
+    partial strong, bright. The game's stab voice."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+    n = int(SNES_RATE * 0.18)
+    out = []
+    for i in range(n):
+        t = i / SNES_RATE
+        ph = w * i / SNES_RATE
+        v = (math.sin(ph) + 0.85 * math.sin(2.0 * ph) + 0.55 * math.sin(3.0 * ph) + 0.5 * math.sin(4.0 * ph)
+             + 0.67 * math.sin(5.0 * ph) + 0.7 * math.sin(1.5 * ph) + 0.5 * math.sin(2.5 * ph))
+        v += 0.5 * _rng.uniform(-1.0, 1.0) * math.exp(-t / 0.01)
+        out.append(v * min(1.0, t / 0.004) * math.exp(-t / 0.05))
+    return _finish_snes(_highpass(out, 0.1), 0.95)
+
+
+# ── Basses ──
+
+def mmx_slap_bass() -> tuple[bytes, int, dict]:
+    """Slap bass (Kage's name), in 21 banks: a snap of brightness into a
+    round octave-heavy sustain."""
     w = 2.0 * math.pi * BASE_NOTE_HZ
 
     def tone(t, i):
@@ -113,19 +222,25 @@ def mmx_bass() -> tuple[bytes, int, dict]:
     return _decaying_voice(0.7, tone, amp_tau=0.5, tail_loop=True, amplitude=0.95)
 
 
-def mmx_bass_hi() -> tuple[bytes, int, dict]:
-    """The synth bass for the top of the line: the octave pops. Built with the
-    fundamental and the second partial carrying the body, so that played an
+def mmx_synth_bass() -> tuple[bytes, int, dict]:
+    """Synth bass (Kage's name), in 13 banks, and the top of the slap line:
+    the fundamental and the second partial carry the body, so that played an
     octave above the low sample it stays as full as the root under it."""
     w = 2.0 * math.pi * BASE_NOTE_HZ
 
     def tone(t, i):
         ph = w * i / SNES_RATE
-        body = 1.0 * math.sin(ph) + 0.55 * math.sin(2.0 * ph) + 0.22 * math.sin(3.0 * ph)
+        body = 1.0 * math.sin(ph) + 0.74 * math.sin(2.0 * ph) + 0.14 * math.sin(3.0 * ph) + 0.18 * math.sin(5.0 * ph)
         snap = (0.5 * math.sin(5.0 * ph) + 0.3 * math.sin(8.0 * ph)) * math.exp(-t / 0.03)
         return body + snap
     return _decaying_voice(0.6, tone, amp_tau=0.4, tail_loop=True, amplitude=0.95)
 
+
+# ── Kit ──
+# Kage's kick is a 125 ms hit with its energy on the third partial; the snare
+# 188 ms, bright; the tom 94 ms with a 45 ms bloom; the open hat an 80 ms
+# loop; the crash a loop with an 80 ms swell (he calls it reverse cymbal);
+# the closed hat an 18 ms bright noise loop.
 
 def mmx_kick() -> tuple[bytes, int, dict]:
     """Tight kick — fast pitch drop, a click on top, 80 ms body."""
@@ -167,9 +282,10 @@ def mmx_tom() -> tuple[bytes, int, dict]:
 
 
 def mmx_hat() -> tuple[bytes, int, dict]:
-    n = int(SNES_RATE * 0.06)
-    out = [_rng.uniform(-1.0, 1.0) * math.exp(-(i / SNES_RATE) / 0.015) for i in range(n)]
-    return _finish_snes(_highpass(out, 0.55), 0.7)
+    """Closed hat: the bank's 18 ms bright noise loop, cut as a tick."""
+    n = int(SNES_RATE * 0.03)
+    out = [_rng.uniform(-1.0, 1.0) * math.exp(-(i / SNES_RATE) / 0.007) for i in range(n)]
+    return _finish_snes(_highpass(out, 0.6), 0.7)
 
 
 def mmx_open_hat() -> tuple[bytes, int, dict]:
@@ -190,45 +306,64 @@ def mmx_crash() -> tuple[bytes, int, dict]:
 
 # Presets this pack adds to the registry: name -> (builder, kwargs, default volume)
 PRESETS = {
-    "mmx_lead_guitar": (mmx_lead_guitar, {},           58),
-    "mmx_rhythm_guitar": (mmx_rhythm_guitar, {},       60),
-    "mmx_pulse_lead": (mmx_pulse_lead, {},             58),
-    "mmx_synth_brass": (mmx_synth_brass, {},           58),
-    "mmx_string_pad": (mmx_string_pad, {},             54),
-    "mmx_soft_lead":  (mmx_soft_lead,  {},             58),
-    "mmx_bass":       (mmx_bass,       {},             64),
-    "mmx_bass_hi":    (mmx_bass_hi,    {},             64),
-    "mmx_kick":       (mmx_kick,       {},             64),
-    "mmx_snare":      (mmx_snare,      {},             62),
-    "mmx_tom":        (mmx_tom,        {},             62),
-    "mmx_hat":        (mmx_hat,        {},             50),
-    "mmx_open_hat":   (mmx_open_hat,   {},             48),
-    "mmx_crash":      (mmx_crash,      {},             52),
+    "mmx_lead_guitar":      (mmx_lead_guitar,      {}, 58),
+    "mmx_rhythm_guitar":    (mmx_rhythm_guitar,    {}, 60),
+    "mmx_overdrive_guitar": (mmx_overdrive_guitar, {}, 58),
+    "mmx_guitar_pad":       (mmx_guitar_pad,       {}, 54),
+    "mmx_clean_guitar":     (mmx_clean_guitar,     {}, 56),
+    "mmx_synth_brass":      (mmx_synth_brass,      {}, 58),
+    "mmx_strings":          (mmx_strings,          {}, 56),
+    "mmx_saw_pad":          (mmx_saw_pad,          {}, 54),
+    "mmx_organ":            (mmx_organ,            {}, 58),
+    "mmx_synth_lead":       (mmx_synth_lead,       {}, 58),
+    "mmx_square":           (mmx_square,           {}, 56),
+    "mmx_bright_lead":      (mmx_bright_lead,      {}, 56),
+    "mmx_hollow":           (mmx_hollow,           {}, 56),
+    "mmx_bell":             (mmx_bell,             {}, 52),
+    "mmx_orch_hit":         (mmx_orch_hit,         {}, 60),
+    "mmx_slap_bass":        (mmx_slap_bass,        {}, 64),
+    "mmx_synth_bass":       (mmx_synth_bass,       {}, 64),
+    "mmx_kick":             (mmx_kick,             {}, 64),
+    "mmx_snare":            (mmx_snare,            {}, 62),
+    "mmx_tom":              (mmx_tom,              {}, 62),
+    "mmx_hat":              (mmx_hat,              {}, 50),
+    "mmx_open_hat":         (mmx_open_hat,         {}, 48),
+    "mmx_crash":            (mmx_crash,            {}, 52),
 }
 
 # Release family per sustaining voice (see samples.dsp.RELEASE)
 RELEASE = {
-    "mmx_lead_guitar": "lead", "mmx_rhythm_guitar": "lead", "mmx_pulse_lead": "lead",
-    "mmx_synth_brass": "brass", "mmx_string_pad": "strings", "mmx_soft_lead": "lead",
-    "mmx_bass": "bass", "mmx_bass_hi": "bass",
+    "mmx_lead_guitar": "lead", "mmx_rhythm_guitar": "lead", "mmx_overdrive_guitar": "lead",
+    "mmx_guitar_pad": "strings", "mmx_clean_guitar": "keys", "mmx_synth_brass": "brass",
+    "mmx_strings": "strings", "mmx_saw_pad": "pad", "mmx_organ": "organ",
+    "mmx_synth_lead": "lead", "mmx_square": "lead", "mmx_bright_lead": "lead",
+    "mmx_hollow": "lead", "mmx_bell": "keys", "mmx_slap_bass": "bass", "mmx_synth_bass": "bass",
 }
 
 
 PACK = {
         "palette": "snes",
         "label": "Mega Man X",
+        # Every voice is the pack's own, built from the game's bank. Pool
+        # weights follow the bank: the lead guitar, overdrive guitar, synth
+        # brass, strings and organ are in nearly every song.
         "voices": {
-            "lead": ["mmx_lead_guitar", "mmx_lead_guitar", "mmx_synth_brass", "mmx_synth_brass",
-                     "mmx_pulse_lead", "mmx_soft_lead"],
-            "alt_lead": ["mmx_synth_brass", "mmx_lead_guitar", "mmx_pulse_lead", "mmx_soft_lead"],
-            "harmony": ["mmx_rhythm_guitar", "mmx_rhythm_guitar", "mmx_string_pad", "mmx_synth_brass",
-                        "mmx_synth_brass"],
-            "counter": ["mmx_pulse_lead", "mmx_pulse_lead", "mmx_synth_brass", "mmx_soft_lead"],
-            "arp": ["mmx_pulse_lead", "mmx_pulse_lead", "mmx_soft_lead"],
-            "bass_heavy": ["mmx_bass"],
-            "bass_medium": ["mmx_bass"],
-            "bass_light": ["mmx_bass"],
-            "bass_hi": "mmx_bass_hi",
+            "lead": ["mmx_lead_guitar", "mmx_lead_guitar", "mmx_lead_guitar", "mmx_synth_brass",
+                     "mmx_synth_brass", "mmx_synth_lead", "mmx_bright_lead", "mmx_square",
+                     "mmx_organ", "mmx_overdrive_guitar"],
+            "alt_lead": ["mmx_synth_brass", "mmx_lead_guitar", "mmx_synth_lead", "mmx_organ",
+                         "mmx_bright_lead"],
+            "harmony": ["mmx_rhythm_guitar", "mmx_rhythm_guitar", "mmx_guitar_pad", "mmx_strings",
+                        "mmx_strings", "mmx_synth_brass", "mmx_synth_brass", "mmx_saw_pad",
+                        "mmx_orch_hit", "mmx_organ", "mmx_hollow"],
+            "counter": ["mmx_overdrive_guitar", "mmx_overdrive_guitar", "mmx_synth_brass",
+                        "mmx_square", "mmx_synth_lead", "mmx_organ"],
+            "arp": ["mmx_overdrive_guitar", "mmx_overdrive_guitar", "mmx_square", "mmx_bell",
+                    "mmx_clean_guitar", "mmx_hollow"],
+            "bass_heavy": ["mmx_slap_bass"],
+            "bass_medium": ["mmx_slap_bass"],
+            "bass_light": ["mmx_slap_bass"],
+            "bass_hi": "mmx_synth_bass",
             "drums": {"kick": "mmx_kick", "snare": "mmx_snare", "hihat": "mmx_hat",
                       "tom": "mmx_tom", "crash": "mmx_crash", "open_hihat": "mmx_open_hat",
                       "rim": "snes_rim"},
