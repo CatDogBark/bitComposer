@@ -5,7 +5,7 @@
   "palette": "snes",
   "info": "B natural minor - 166 BPM",
   "arrangement": "snes (megamanx) + echo (light) - aaba form",
-  "voices": "mmx_soft_lead / mmx_rhythm_guitar / mmx_bass",
+  "voices": "mmx_organ / mmx_rhythm_guitar / mmx_slap_bass",
   "seed": "seed 11 - bitcomposer 0.8.0",
   "picked": false
  },
