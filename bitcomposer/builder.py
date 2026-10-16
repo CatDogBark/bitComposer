@@ -5,7 +5,7 @@ import zlib
 
 from . import theory
 from .it_format import ITPattern, ITNote
-from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note
+from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
 from .drums import render_drums
 from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
 from .harmony import generate_harmony_timeline
@@ -230,6 +230,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                         volume=humanize_volume(vol, 4),
                         humanize=True,
                     )
+                    if voicing_style == "rhythmic" and v_idx > 0:
+                        apply_strum(pat, ch, voice_notes, STRUM_ROW, STRUM_TICKS)
                     # A lone voice cannot state a chord on its own, so let J
                     # arpeggiate it into one. With three voices the real
                     # stack already does the job.

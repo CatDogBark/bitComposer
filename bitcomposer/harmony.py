@@ -128,11 +128,11 @@ def generate_harmony(chord_notes: list[int], rows: int,
     for voice_idx, base_note in enumerate(voice_notes):
         notes = []
         for row in range(0, rows, interval):
-            # Add slight variation in timing for rhythmic feel
+            # The strum of the rhythmic voicing used to be a one-row offset
+            # on the upper voices (a tenth of a second at 144 BPM: a flam,
+            # not a strum). The voices now share the row and the builder
+            # delays the upper ones by a tick with the note-delay effect.
             actual_row = row
-            if voicing == "rhythmic" and voice_idx > 0 and row % 16 == 8:
-                # Offset higher voices slightly for strum effect
-                actual_row = min(row + 1, rows - 1)
 
             notes.append((actual_row, base_note))
 
