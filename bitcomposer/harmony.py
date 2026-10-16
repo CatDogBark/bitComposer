@@ -33,6 +33,19 @@ HARMONY_VOICINGS = {
         "cell": 8, "steps": [0, 2, 4, 6], "interval": 8, "cut_after": 1,
         "offset_upper": 2,
     },
+    # Chug rhythms: a rhythm guitar's one-bar patterns, every voice together.
+    "chug_sync": {
+        "description": "Syncopated chug: 1, the and of 1, the and of 2, 3, the and of 4",
+        "cell": 16, "steps": [0, 3, 6, 8, 14], "interval": 16, "cut_after": 2,
+    },
+    "chug_offbeat": {
+        "description": "Chug on the off-beats only",
+        "cell": 16, "steps": [2, 6, 10, 14], "interval": 16, "cut_after": 2,
+    },
+    "chug_gallop": {
+        "description": "Gallop: a dotted push into every beat",
+        "cell": 8, "steps": [0, 3, 4], "interval": 8, "cut_after": 1,
+    },
 }
 
 

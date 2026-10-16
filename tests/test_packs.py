@@ -34,6 +34,21 @@ class Packs(unittest.TestCase):
         self.assertEqual(notes, [(0, 36)])      # heavy register: octave 2
         self.assertEqual(bass.pick_section_bass("light", 0.95, "drone"), "drone")
 
+    def test_riff_library_is_chord_safe_and_one_bar(self):
+        from bitcomposer import bass
+        for name, figure in bass.RIFFS.items():
+            self.assertTrue(all(0 <= row < 16 for row, _ in figure), name)
+            self.assertTrue(all(iv % 12 in (0, 7, 10) for _, iv in figure), name)
+            notes = bass.generate_bass(48, "minor", 32, style="riff", weight="heavy", riff=name)
+            self.assertEqual([r for r, _ in notes][:len(figure)], [r for r, _ in figure], name)
+        song = compose_song(seed=101, style_pref="snes", pack="megamanx")
+        self.assertIn(song["info"]["bass_riff"], list(bass.RIFFS) + [None])
+
+    def test_chug_voicings_restrike_on_their_steps(self):
+        from bitcomposer import harmony
+        rows = [r for r, n in harmony.generate_harmony([60, 64, 67], 32, "chug_sync", 3)[0] if n != -1]
+        self.assertEqual(rows, [0, 3, 6, 8, 14, 16, 19, 22, 24, 30])
+
     def test_riff_bass_repeats_each_bar(self):
         from bitcomposer import bass
         notes = bass.generate_bass(48, "minor", 32, style="riff", weight="heavy")

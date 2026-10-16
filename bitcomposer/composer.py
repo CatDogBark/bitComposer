@@ -260,6 +260,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # Kit decisions a pack adds (which phrases get a crash) draw from their own
     # stream so they never move the parts composed after the drums.
     kit_rng = random.Random(song_salt ^ 0x0D12)
+    # The bass riff, when the song has one, from its own stream as well.
+    riff_weights = pack_weights(pack, "riffs") or {"rock": 1}
+    bass_riff = random.Random(song_salt ^ 0xB055).choices(list(riff_weights), list(riff_weights.values()))[0] \
+        if bass_style == "riff" else None
+    # A pack may ask for power chords everywhere (True) or only under some
+    # harmony voices (a list): the chug plays fifths, the pad plays the chord.
+    pc = pack_value(pack, "power_chords", False)
+    power_chords = pc is True or (isinstance(pc, (list, tuple, set)) and instruments["harmony"] in pc)
     half_changes = 0
 
     for section in song_structure:
@@ -401,7 +409,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 crash_chance=pack_value(pack, "crash_chance", 1.0),
                 fill_crash=pack_value(pack, "fill_crash", True),
                 kit_rng=kit_rng,
-                power_chords=bool(pack_value(pack, "power_chords", False)),
+                power_chords=power_chords, bass_riff=bass_riff,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -469,6 +477,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "echo_feedback": echo_feedback if use_echo else None,
         "echo_stereo": echo_stereo if use_echo else None,
         "bass_style": bass_style,
+        "bass_riff": bass_riff,
         "drumless": drumless,
         "bass_weight": bass_weight,
         "arp_figures": {k: arp_figures[k] for k in ("verse", "chorus", "bridge")},

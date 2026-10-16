@@ -123,7 +123,7 @@ def _pick_instruments(style: str, bass_weight: str = "heavy",
     # lead and a pulse arp was the clearest case. If none of the three is
     # struck and the harmony is not a pad-like family, redraw the harmony
     # from the pool's struck or pad-like voices when it has any.
-    soft = ("pad", "strings", "choir")
+    soft = ("pad", "strings", "choir", "brass")     # brass stabs cut through on their own
     if not (smp.is_struck(lead) or smp.is_struck(arp) or smp.is_struck(harmony)) \
             and smp.PRESET_RELEASE.get(harmony) not in soft:
         contrast = [h for h in distinct(pal["harmony"])
