@@ -33,6 +33,19 @@ HARMONY_VOICINGS = {
         "cell": 8, "steps": [0, 2, 4, 6], "interval": 8, "cut_after": 1,
         "offset_upper": 2,
     },
+    # Chug rhythms: a rhythm guitar's one-bar patterns, every voice together.
+    "chug_sync": {
+        "description": "Syncopated chug: 1, the and of 1, the and of 2, 3, the and of 4",
+        "cell": 16, "steps": [0, 3, 6, 8, 14], "interval": 16, "cut_after": 2,
+    },
+    "chug_offbeat": {
+        "description": "Chug on the off-beats only",
+        "cell": 16, "steps": [2, 6, 10, 14], "interval": 16, "cut_after": 2,
+    },
+    "chug_gallop": {
+        "description": "Gallop: a dotted push into every beat",
+        "cell": 8, "steps": [0, 3, 4], "interval": 8, "cut_after": 1,
+    },
 }
 
 
@@ -115,11 +128,11 @@ def generate_harmony(chord_notes: list[int], rows: int,
     for voice_idx, base_note in enumerate(voice_notes):
         notes = []
         for row in range(0, rows, interval):
-            # Add slight variation in timing for rhythmic feel
+            # The strum of the rhythmic voicing used to be a one-row offset
+            # on the upper voices (a tenth of a second at 144 BPM: a flam,
+            # not a strum). The voices now share the row and the builder
+            # delays the upper ones by a tick with the note-delay effect.
             actual_row = row
-            if voicing == "rhythmic" and voice_idx > 0 and row % 16 == 8:
-                # Offset higher voices slightly for strum effect
-                actual_row = min(row + 1, rows - 1)
 
             notes.append((actual_row, base_note))
 

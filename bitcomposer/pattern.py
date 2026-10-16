@@ -380,6 +380,28 @@ def apply_harmony_fade(pattern: ITPattern, channel: int,
                 cell.effect_val = fade_rate  # 0x0y = slide down by y per tick
 
 
+# The rhythmic harmony's strum: on this row of every bar the upper voices
+# speak a little after the lowest one. STRUM_TICKS is the gap in ticks (one
+# tick is 21 ms at speed 5), carried by the note-delay effect on the note
+# itself. Before, the gap was a whole row: 104 ms at 144 BPM, a flam that
+# read as a quieter second hit off the beat rather than a strum.
+STRUM_ROW = 8
+STRUM_TICKS = 1
+
+
+def apply_strum(pattern: ITPattern, channel: int,
+                note_list: list[tuple[int, int]], strum_row: int = STRUM_ROW,
+                ticks: int = STRUM_TICKS):
+    """Delay the note-ons that fall on strum_row of each bar by ticks ticks."""
+    for row, midi_note in note_list:
+        if midi_note == -1 or row < 0 or row >= pattern.rows or row % 16 != strum_row:
+            continue
+        cell = pattern.data[row][channel]
+        if cell.note != 0 and cell.effect == 0:
+            cell.effect = FX_SPECIAL
+            cell.effect_val = 0xD0 | max(1, min(15, ticks))
+
+
 def apply_fade(pattern: ITPattern, channel: int, fade_in: bool = False,
                fade_out: bool = False, rows_count: int = 8):
     """Fade a channel in over the first rows_count rows or out over the last.

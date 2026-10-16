@@ -5,7 +5,7 @@ import zlib
 
 from . import theory
 from .it_format import ITPattern, ITNote
-from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note
+from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
 from .drums import render_drums
 from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
 from .harmony import generate_harmony_timeline
@@ -18,7 +18,8 @@ from .arp import generate_arp
 # the start is right. sustain is a pad: it holds for most of its 32-row
 # interval and then takes a fine (per-row) slide down into the next hit.
 HARMONY_FADE = {"stabs": (0x02, 0), "rhythmic": (0x03, 0), "sustain": (0xF2, 18),
-                "ostinato": (0x03, 0), "pulse": (0x04, 0)}
+                "ostinato": (0x03, 0), "pulse": (0x04, 0),
+                "chug_sync": (0x03, 0), "chug_offbeat": (0x03, 0), "chug_gallop": (0x04, 0)}
 
 # Chance that a pattern changes chord at its halfway point, by section type.
 HALF_PATTERN_CHANGE = {
@@ -146,7 +147,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      swing_amount, speed, bpm, is_intro, echo_sends,
                      pickup_root=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
-                     power_chords=False) -> ITPattern:
+                     power_chords=False, bass_riff=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -229,6 +230,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                         volume=humanize_volume(vol, 4),
                         humanize=True,
                     )
+                    if voicing_style == "rhythmic" and v_idx > 0:
+                        apply_strum(pat, ch, voice_notes, STRUM_ROW, STRUM_TICKS)
                     # A lone voice cannot state a chord on its own, so let J
                     # arpeggiate it into one. With three voices the real
                     # stack already does the job.
@@ -246,7 +249,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         # off-beats drop out, and quiet sections thin further.
         bass = generate_bass_timeline(bass_segments, section_bass,
                                       weight=bass_weight,
-                                      density=0.6 + 0.35 * section_energy)
+                                      density=0.6 + 0.35 * section_energy, riff=bass_riff,
+                                      scale_notes=scale_notes)
         # Volume-column values are 0-64. The old 150/100 for medium/light were
         # not volumes at all: in the IT volume column 150 is a pan command and
         # 100 a volume slide down, which left light basses nearly silent.
@@ -257,11 +261,20 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 volume=bass_vol, porta_speed=porta_speed, humanize=False,
             )
         else:
-            apply_notes_to_pattern(
-                pat, CH_BASS, bass, sample_map["bass"],
-                volume=bass_vol if bass_vol < 255 else 255,
-                humanize=True,
-            )
+            # A pack may carry a second bass sample for the top of the line
+            # (an octave pop on a heavy bass thins out on the low sample).
+            # Every note picks its sample by pitch; the channel is the same.
+            ceiling = {"heavy": 48, "medium": 54, "light": 60}.get(bass_weight, 48)
+            hi = sample_map.get("bass_hi")
+            groups = [(sample_map["bass"], [n for n in bass if hi is None or n[1] < ceiling])]
+            if hi is not None:
+                groups.append((hi, [n for n in bass if n[1] >= ceiling]))
+            for inst, notes_ in groups:
+                apply_notes_to_pattern(
+                    pat, CH_BASS, notes_, inst,
+                    volume=bass_vol if bass_vol < 255 else 255,
+                    humanize=True,
+                )
         if pickup_root is not None and bass:
             # Walk up into the next section's root over the last two beats:
             # the fifth below, a step, then the leading tone — the pickup a

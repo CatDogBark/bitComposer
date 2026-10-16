@@ -113,6 +113,20 @@ def mmx_bass() -> tuple[bytes, int, dict]:
     return _decaying_voice(0.7, tone, amp_tau=0.5, tail_loop=True, amplitude=0.95)
 
 
+def mmx_bass_hi() -> tuple[bytes, int, dict]:
+    """The synth bass for the top of the line: the octave pops. Built with the
+    fundamental and the second partial carrying the body, so that played an
+    octave above the low sample it stays as full as the root under it."""
+    w = 2.0 * math.pi * BASE_NOTE_HZ
+
+    def tone(t, i):
+        ph = w * i / SNES_RATE
+        body = 1.0 * math.sin(ph) + 0.55 * math.sin(2.0 * ph) + 0.22 * math.sin(3.0 * ph)
+        snap = (0.5 * math.sin(5.0 * ph) + 0.3 * math.sin(8.0 * ph)) * math.exp(-t / 0.03)
+        return body + snap
+    return _decaying_voice(0.6, tone, amp_tau=0.4, tail_loop=True, amplitude=0.95)
+
+
 def mmx_kick() -> tuple[bytes, int, dict]:
     """Tight kick — fast pitch drop, a click on top, 80 ms body."""
     n = int(SNES_RATE * 0.2)
@@ -183,6 +197,7 @@ PRESETS = {
     "mmx_string_pad": (mmx_string_pad, {},             54),
     "mmx_soft_lead":  (mmx_soft_lead,  {},             58),
     "mmx_bass":       (mmx_bass,       {},             64),
+    "mmx_bass_hi":    (mmx_bass_hi,    {},             64),
     "mmx_kick":       (mmx_kick,       {},             64),
     "mmx_snare":      (mmx_snare,      {},             62),
     "mmx_tom":        (mmx_tom,        {},             62),
@@ -195,7 +210,7 @@ PRESETS = {
 RELEASE = {
     "mmx_lead_guitar": "lead", "mmx_rhythm_guitar": "lead", "mmx_pulse_lead": "lead",
     "mmx_synth_brass": "brass", "mmx_string_pad": "strings", "mmx_soft_lead": "lead",
-    "mmx_bass": "bass",
+    "mmx_bass": "bass", "mmx_bass_hi": "bass",
 }
 
 
@@ -203,36 +218,41 @@ PACK = {
         "palette": "snes",
         "label": "Mega Man X",
         "voices": {
-            "lead": ["mmx_lead_guitar", "mmx_lead_guitar", "mmx_synth_brass", "mmx_pulse_lead",
-                     "mmx_soft_lead"],
+            "lead": ["mmx_lead_guitar", "mmx_lead_guitar", "mmx_synth_brass", "mmx_synth_brass",
+                     "mmx_pulse_lead", "mmx_soft_lead"],
             "alt_lead": ["mmx_synth_brass", "mmx_lead_guitar", "mmx_pulse_lead", "mmx_soft_lead"],
-            "harmony": ["mmx_rhythm_guitar", "mmx_rhythm_guitar", "mmx_string_pad", "mmx_synth_brass"],
+            "harmony": ["mmx_rhythm_guitar", "mmx_rhythm_guitar", "mmx_string_pad", "mmx_synth_brass",
+                        "mmx_synth_brass"],
             "counter": ["mmx_pulse_lead", "mmx_pulse_lead", "mmx_synth_brass", "mmx_soft_lead"],
             "arp": ["mmx_pulse_lead", "mmx_pulse_lead", "mmx_soft_lead"],
             "bass_heavy": ["mmx_bass"],
             "bass_medium": ["mmx_bass"],
             "bass_light": ["mmx_bass"],
+            "bass_hi": "mmx_bass_hi",
             "drums": {"kick": "mmx_kick", "snare": "mmx_snare", "hihat": "mmx_hat",
                       "tom": "mmx_tom", "crash": "mmx_crash", "open_hihat": "mmx_open_hat",
                       "rim": "snes_rim"},
         },
         "habits": {
-            "tempo": {"slow": 0, "medium": 2, "fast": 4},
+            "tempo": {"slow": 0, "medium": 3, "fast": 3},
             "energy": {"chill": 0, "normal": 2, "intense": 3},
-            "scale_family": {"minor": 4, "major": 1, "pentatonic": 1},
+            "scale_family": {"minor": 3, "major": 2, "pentatonic": 1},
             "form": {"standard": 2, "aaba": 2, "short": 1, "linear": 1, "rondo": 1},
             "harmony_voicing": {"full": 1, "thin": 3},
-            "harmony_mode": {"stabs": 3, "rhythmic": 3, "pulse": 2, "sustain": 1, "ostinato": 1},
-            "power_chords": True,
+            "harmony_mode": {"stabs": 2, "rhythmic": 2, "pulse": 2, "sustain": 1, "ostinato": 1,
+                             "chug_sync": 2, "chug_offbeat": 1, "chug_gallop": 2},
+            "power_chords": ["mmx_rhythm_guitar"],       # fifths under the chug, real chords elsewhere
             "bass_weight": {"heavy": 3, "medium": 2, "light": 0},
-            "bass_style": {"riff": 4, "driving": 3, "octave": 2, "steady": 0, "walking": 0},
+            "bass_style": {"riff": 4, "driving": 2, "octave": 2, "walking": 1, "steady": 0},
+            "riffs": {"rock": 2, "gallop": 2, "funk": 2, "pedal_push": 1, "octaves": 1,
+                      "fifth_bounce": 1, "drop": 1},
             "drum_density": {"sparse": 0, "normal": 2, "busy": 3},
             "drum_swing": {"off": 5, "light": 0, "heavy": 0},
-            "arp_figures": {"broken_octave": 3, "sync_push": 2, "gallop": 2, "classic_up": 1,
-                            "run16": 1, "offbeat_stabs": 1},
+            "arp_figures": {"broken_octave": 2, "sync_push": 2, "gallop": 2, "classic_up": 1,
+                            "run16": 1, "offbeat_stabs": 1, "cascade": 1, "up_down": 1},
             "echo": 1.0,
             "echo_wet": {"light": 1, "normal": 3, "wet": 1},
-            "echo_delay": {"slap": 5, "eighth": 1, "dotted": 0, "quarter": 0},
+            "echo_delay": {"slap": 4, "eighth": 2, "dotted": 1, "quarter": 0},
             "echo_stereo": {"bounce": 3, "centre": 1},
             "counter_line": 0.5,
             "section_rolls": False,

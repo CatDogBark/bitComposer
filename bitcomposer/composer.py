@@ -35,7 +35,8 @@ from .melody import (
 )
 from .harmony import generate_harmony_timeline
 from .bass import generate_bass_timeline, pick_section_bass
-from .arp import pick_figures, generate_arp
+from .arp import pick_figures, generate_arp, FIGURES
+from .bass import RIFFS
 from .echo import (ECHO_ARP_FULL_BPM, ECHO_ARP_OFF_BPM, ECHO_DELAYS, ECHO_DELAY_WEIGHTS, ECHO_FEEDBACK_RANGE, ECHO_STEREO_WEIGHTS, ECHO_WETNESS, ECHO_WET_WEIGHTS, _EchoBus, _echo_label)
 from .instruments import (PALETTES, PULSE_DUTY, STRIKE_RULE_ROLES, _build_samples, _make_sample, _pick_instruments, _register_releases, _sample_from_inst, _weighted)
 from .mix import (CHANNEL_VOLUMES, MASTER_GAIN, SUSTAINING_ARP_LEVEL, channel_volumes_for)
@@ -260,6 +261,31 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # Kit decisions a pack adds (which phrases get a crash) draw from their own
     # stream so they never move the parts composed after the drums.
     kit_rng = random.Random(song_salt ^ 0x0D12)
+    # The bass riff, when the song has one, from its own stream as well.
+    riff_weights = pack_weights(pack, "riffs") or {"rock": 1}
+    bass_riff = random.Random(song_salt ^ 0xB055).choices(list(riff_weights), list(riff_weights.values()))[0] \
+        if bass_style == "riff" else None
+    # A pack may ask for power chords everywhere (True) or only under some
+    # harmony voices (a list): the chug plays fifths, the pad plays the chord.
+    pc = pack_value(pack, "power_chords", False)
+    power_chords = pc is True or (isinstance(pc, (list, tuple, set)) and instruments["harmony"] in pc)
+    if bass_riff:
+        # Rhythm collision: a riff and an arp figure that push on the same
+        # sixteenth (the odd rows: the funk riff and the sync-push arp both
+        # hit row 3) jab it in unison. Any section whose arp pushes on a
+        # sixteenth the riff pushes on redraws from figures that do not, on
+        # the riff's own stream. Plain eighth-note off-beats are not pushes.
+        riff_rng = random.Random(song_salt ^ 0xB055 ^ 0xA2)
+        pushes = {row % 16 for row, _ in RIFFS[bass_riff] if row % 2}
+        weights = pack_weights(pack, "arp_figures") or {f: 1 for f in FIGURES}
+        for sec, fig in list(arp_figures.items()):
+            steps = {row % 16 for row, _, _ in FIGURES[fig]["steps"] if row % 2}
+            if steps & pushes:
+                clear = [f for f, w in weights.items() if w > 0 and f != fig
+                         and not ({r % 16 for r, _, _ in FIGURES[f]["steps"] if r % 2} & pushes)
+                         and (sec != "chorus" or FIGURES[f]["energy"][0] >= 0.4)]
+                if clear:
+                    arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]
     half_changes = 0
 
     for section in song_structure:
@@ -401,7 +427,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 crash_chance=pack_value(pack, "crash_chance", 1.0),
                 fill_crash=pack_value(pack, "fill_crash", True),
                 kit_rng=kit_rng,
-                power_chords=bool(pack_value(pack, "power_chords", False)),
+                power_chords=power_chords, bass_riff=bass_riff,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -469,6 +495,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "echo_feedback": echo_feedback if use_echo else None,
         "echo_stereo": echo_stereo if use_echo else None,
         "bass_style": bass_style,
+        "bass_riff": bass_riff,
         "drumless": drumless,
         "bass_weight": bass_weight,
         "arp_figures": {k: arp_figures[k] for k in ("verse", "chorus", "bridge")},
