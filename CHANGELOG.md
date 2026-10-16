@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Widget readout and mixer regrouping. The song message gains two machine-readable lines, `voices:` (every drawn voice by role, kit included, plus the alternate lead) and `drew:` (sound, form, intro template, harmony mode, bass style and riff, echo delay, feedback, stereo and wetness, tempo, key); the daemon serves them as `GetSongInfo`. The widget shows what the song drew in one line under the title, labels each mixer fader with its drawn voice ("LEAD" over "lead guitar"), and folds the six kit faders into one KIT bus at 0-200% of the written mix with an expand, the same pattern as the ECHO bus. The Windows window logs the voices and the draws under each title. Files written before this show the old labels.
+
 ## 0.9.0 — 2026-10-16
 
 Packs from the banks. Every style pack is now built from its game's SPC snapshots and carries only its own voices, named by the community's documented tables and rips where they exist (FFVI's ff6hacking sample table; William Kage's raw sets for Mega Man X and Evermore) and by measured character where they do not (Mana). Echo per pack follows the DSP registers. Also: one SOUND picker, drawn intro templates, the Mega Man X variety pass and the rhythmic-strum fix.

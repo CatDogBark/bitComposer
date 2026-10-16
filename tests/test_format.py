@@ -107,3 +107,21 @@ class CliNaming(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SongMessage(unittest.TestCase):
+    """The machine-readable lines players read: voices by role, what the song drew."""
+
+    def test_message_names_every_voice_and_the_draws(self):
+        song = compose_song(seed=5, style_pref="snes", pack="megamanx")
+        lines = {ln.split(":", 1)[0]: ln.split(":", 1)[1].strip() for ln in song["message"].splitlines() if ":" in ln}
+        voices = dict(item.split("=", 1) for item in lines["voices"].split(","))
+        for role in ("melody", "harmony", "bass", "arp", "kick", "snare", "hihat", "tom", "crash", "open_hihat"):
+            self.assertEqual(voices[role], song["info"]["instruments"][role], role)
+        drew = dict(item.split("=", 1) for item in lines["drew"].split(","))
+        self.assertEqual(drew["sound"], "megamanx")
+        self.assertEqual(drew["form"], song["info"]["song_form"])
+        self.assertEqual(drew["harmony"], song["info"]["harmony_mode"])
+        self.assertIn("tempo", drew)
+        self.assertEqual(lines["layout"].split(","), list(pattern.CHANNEL_ROLES))
+

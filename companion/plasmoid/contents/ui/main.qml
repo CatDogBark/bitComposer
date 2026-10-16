@@ -29,6 +29,30 @@ PlasmoidItem {
     property int currentIndex: -1
     property var playlistInfo: []      // [{file, title, auto}] from GetPlaylistInfo
     property string trackMessage: ""   // key / BPM / palette / form, from the module's song message
+    // From the daemon's GetSongInfo (the "voices:" and "drew:" lines bitcomposer
+    // writes into the song message): every drawn voice by role, and what the
+    // song drew. Empty for files without the lines.
+    property var songVoices: ({})
+    property var songDrew: ({})
+    readonly property string songReadout: {
+        var d = songDrew; if (!d || !d.form) return ""
+        var parts = []
+        if (d.intro && d.intro !== "none") parts.push(d.intro.replace(/_/g, " ") + " intro")
+        parts.push(d.form + " form")
+        if (d.harmony) parts.push(d.harmony.replace(/_/g, " ") + " harmony")
+        if (d.bass) { var b = d.bass.split("/"); parts.push(b[0] + " bass" + (b[1] ? " (" + b[1].replace(/_/g, " ") + ")" : "")) }
+        if (d.echo) { if (d.echo === "off") parts.push("no echo"); else { var e = d.echo.split("/"); parts.push(e[0] + " echo" + (e[1] ? " fb " + e[1] : "") + (e[2] ? " " + e[2] : "")) } }
+        return parts.join("  ·  ")
+    }
+    // The drawn voice behind a channel, short: the pack prefix dropped,
+    // underscores to spaces ("mmx_lead_guitar" -> "lead guitar").
+    function voiceLabel(i) {
+        var r = String(layout[i] || ""), v = songVoices || {}
+        var key = r === "melody" ? "melody" : r === "openhat" ? "open_hihat" : r
+        var name = v[key]
+        if (!name) return ""
+        return String(name).replace(/^(ffvi|mana|evm|mmx|snes|gen|chip)_/, "").replace(/_/g, " ")
+    }
     property real volumeGain: 1.0      // 1.0 = unity, up to maxGain (boost)
     readonly property real maxGain: 3.0
 
@@ -139,6 +163,22 @@ PlasmoidItem {
     // written with (echoBase), 0 = off, 1 = as written, 2 = double.
     property var echoBase: []
     property real echoBus: 1.0
+    // The kit folds into one KIT fader (a ratio of the written mix, like the
+    // ECHO bus) with an expand to the six pieces.
+    readonly property var kitRoles: ["kick", "snare", "hihat", "tom", "crash", "openhat"]
+    readonly property var kitChannels: { var a = []; for (var i = 0; i < dryChannels.length; i++) if (kitRoles.indexOf(String(layout[dryChannels[i]])) >= 0) a.push(dryChannels[i]); return a }
+    readonly property var partChannels: { var a = []; for (var i = 0; i < dryChannels.length; i++) if (kitRoles.indexOf(String(layout[dryChannels[i]])) < 0) a.push(dryChannels[i]); return a }
+    property var kitBase: []
+    property real kitBus: 1.0
+    property bool kitExpanded: false
+    function setKitRatio(r) {
+        kitBus = Math.max(0, Math.min(2, r))
+        for (var k = 0; k < kitChannels.length; k++) {
+            var ch = kitChannels[k]
+            applyChannelVolume(ch, Math.max(0, Math.min(64, Math.round((kitBase[ch] || 0) * kitBus))))
+        }
+    }
+    function _resetKitRatios() { kitBase = channelVolumes.slice(); kitBus = 1.0 }
     property var echoGroupRatio: ({})
     property bool echoExpanded: false
     readonly property var echoRows: echoChannels.length ? ["bus"].concat(echoExpanded ? echoGroups : []) : []
@@ -165,7 +205,7 @@ PlasmoidItem {
             applyChannelVolume(ch, Math.max(0, Math.min(64, Math.round((echoBase[ch] || 0) * echoBus * g))))
         }
     }
-    function _resetEchoRatios() { echoBase = channelVolumes.slice(); echoBus = 1.0; echoGroupRatio = ({}); echoGroupRatioChanged() }
+    function _resetEchoRatios() { echoBase = channelVolumes.slice(); echoBus = 1.0; echoGroupRatio = ({}); echoGroupRatioChanged(); _resetKitRatios() }
 
     // Sliders are live: each change goes to the daemon, which sets the
     // channel's volume on the playing module at once. Sends are coalesced
@@ -233,6 +273,7 @@ PlasmoidItem {
             disconnectSource(source)
             var lines = (data["stdout"] || "").split("\n").map(function(l) { return l.trim() }).filter(function(l) { return l.length })
             if (lines.length) root.layout = lines
+            root._loadSongInfo()
             root._readMixFromFile()
         }
     }
@@ -297,7 +338,30 @@ PlasmoidItem {
         cmdSource.connectSource("qdbus6 " + busName + " " + busPath + " "
             + busName + ".SetAutoGenerate true '" + flags.trim() + "'")
     }
-    onTrackFileChanged: if (showMaster) _loadMasterFromFile()
+    onTrackFileChanged: { _loadSongInfo(); if (showMaster) _loadMasterFromFile() }
+    function _loadSongInfo() {
+        songInfoSource.connectSource("qdbus6 " + busName + " " + busPath + " " + busName + ".GetSongInfo")
+    }
+    P5Support.DataSource {
+        id: songInfoSource
+        engine: "executable"
+        onNewData: function(source, data) {
+            disconnectSource(source)
+            var voices = {}, drew = {}
+            var lines = (data["stdout"] || "").split("\n")
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim(); var c = line.indexOf(":"); if (c < 0) continue
+                var key = line.substring(0, c).trim().toLowerCase(), body = line.substring(c + 1).trim()
+                if (key !== "voices" && key !== "drew") continue
+                var items = body.split(","), target = key === "voices" ? voices : drew
+                for (var j = 0; j < items.length; j++) {
+                    var eq = items[j].indexOf("="); if (eq < 0) continue
+                    target[items[j].substring(0, eq).trim()] = items[j].substring(eq + 1).trim()
+                }
+            }
+            root.songVoices = voices; root.songDrew = drew
+        }
+    }
     onShowMasterChanged: if (showMaster) _loadMasterFromFile()
     onSettTempoChanged: { Plasmoid.configuration.settTempo = settTempo; _onSettingChanged() }
     onSettEnergyChanged: { Plasmoid.configuration.settEnergy = settEnergy; _onSettingChanged() }
@@ -694,6 +758,17 @@ PlasmoidItem {
                         color: root.textColor
                         font.family: "JetBrains Mono"
                         font.pixelSize: Math.round(9 * root.ui)
+                        wrapMode: Text.WordWrap
+                    }
+                    // What the song drew (intro, form, harmony, bass, echo), from
+                    // the "drew:" line; files without it show nothing here.
+                    Text {
+                        Layout.fillWidth: true
+                        visible: root.songReadout !== ""
+                        text: root.songReadout
+                        color: root.dimText
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: Math.round(8 * root.ui)
                         wrapMode: Text.WordWrap
                     }
 
@@ -1569,26 +1644,40 @@ PlasmoidItem {
                         Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 0, 0.33, 0.12) }
                     }
 
-                    // Channel sliders — horizontal rows
-                    Repeater {
-                        model: root.dryChannels.length
-                        delegate: RowLayout {
-                            required property int index
-                            readonly property int ch: root.dryChannels[index]
+                    Component {
+                        id: channelRow
+                        RowLayout {
+                            required property int modelData
+                            readonly property int ch: modelData
+                            readonly property string voice: root.voiceLabel(ch)
                             Layout.fillWidth: true
                             spacing: 6
-                            height: 18
+                            height: voice ? 24 : 18
 
-                            // Channel name
-                            Text {
-                                Layout.preferredWidth: 48
-                                text: root.channelLabel(ch)
-                                color: root.channelColor(ch) === 0 ? root.accentGreen :
-                                       root.channelColor(ch) === 1 ? root.accentCyan :
-                                       root.accentPink
-                                font.family: "JetBrains Mono"
-                                font.pixelSize: Math.round(8 * root.ui)
-                                horizontalAlignment: Text.AlignRight
+                            // Channel name, with the drawn voice beneath when the file names it
+                            Column {
+                                Layout.preferredWidth: voice ? 76 : 48
+                                spacing: 0
+                                Text {
+                                    width: parent.width
+                                    text: root.channelLabel(ch)
+                                    color: root.channelColor(ch) === 0 ? root.accentGreen :
+                                           root.channelColor(ch) === 1 ? root.accentCyan :
+                                           root.accentPink
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: Math.round(8 * root.ui)
+                                    horizontalAlignment: Text.AlignRight
+                                }
+                                Text {
+                                    width: parent.width
+                                    visible: voice !== ""
+                                    text: voice
+                                    color: root.dimText
+                                    font.family: "JetBrains Mono"
+                                    font.pixelSize: Math.round(7 * root.ui)
+                                    horizontalAlignment: Text.AlignRight
+                                    elide: Text.ElideLeft
+                                }
                             }
 
                             // Slider
@@ -1659,6 +1748,64 @@ PlasmoidItem {
                             }
                         }
                     }
+
+                    // The parts: lead, harmony, bass, arp.
+                    Repeater { model: root.partChannels; delegate: channelRow }
+
+                    // KIT bus: the six pieces at once, as a ratio of the written
+                    // mix; expand for the pieces.
+                    RowLayout {
+                        visible: root.kitChannels.length > 0
+                        Layout.fillWidth: true
+                        spacing: 6
+                        height: 18
+                        Item {
+                            Layout.preferredWidth: 48
+                            height: 14
+                            Text {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: (root.kitExpanded ? "\u25BE " : "\u25B8 ") + "KIT"
+                                color: root.accentPink
+                                font.family: "JetBrains Mono"
+                                font.pixelSize: Math.round(8 * root.ui)
+                            }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.kitExpanded = !root.kitExpanded }
+                        }
+                        Item {
+                            Layout.fillWidth: true
+                            height: 14
+                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: parent.width; height: 4; radius: 2; color: root.darkBg; border.width: 1; border.color: root.tileBorder }
+                            Rectangle { x: parent.width / 2; width: 1; height: 8; anchors.verticalCenter: parent.verticalCenter; color: root.tileBorder }
+                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: parent.width * (root.kitBus / 2); height: 4; radius: 2; color: root.accentPink; opacity: 0.6 }
+                            Rectangle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: parent.width * (root.kitBus / 2) - width / 2
+                                width: 8; height: 12; radius: 2
+                                color: kSliderMa.pressed ? "#2a4e36" : (kSliderMa.containsMouse ? "#1a3e26" : "#142018")
+                                border.width: 1; border.color: root.accentPink
+                            }
+                            MouseArea {
+                                id: kSliderMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                preventStealing: true
+                                onPressed: function(mouse) { _setK(mouse.x) }
+                                onPositionChanged: function(mouse) { if (pressed) _setK(mouse.x) }
+                                function _setK(mouseX) { root.setKitRatio(Math.round(Math.max(0, Math.min(1, mouseX / width)) * 2 * 20) / 20) }
+                            }
+                        }
+                        Text {
+                            Layout.preferredWidth: 28
+                            text: Math.round(root.kitBus * 100) + "%"
+                            color: root.dimText
+                            font.family: "JetBrains Mono"
+                            font.pixelSize: Math.round(8 * root.ui)
+                            horizontalAlignment: Text.AlignRight
+                        }
+                    }
+                    Repeater { model: root.kitExpanded ? root.kitChannels : []; delegate: channelRow }
 
                     // Echo bus: every return channel at once, as a ratio of the
                     // written mix; expand for LEAD / HARM / ARP.

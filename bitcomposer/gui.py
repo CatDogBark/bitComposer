@@ -95,7 +95,12 @@ def main() -> None:
                         final.unlink()
                     path.rename(final)
                 pack = f" ({info['pack']})" if info.get("pack") else ""
+                ins = info["instruments"]
+                drew = (f"{info['song_form']} form, {info.get('intro') or 'no'} intro, {info['harmony_mode']} harmony, "
+                        f"{info['bass_style']} bass" + (f" ({info['bass_riff']})" if info.get('bass_riff') else "")
+                        + (f", {info['echo_delay']} echo" if info.get("echo") else ", no echo"))
                 root.after(0, log.insert, "end", f"{info['title']}  —  {info['style']}{pack}, {info['tempo']} BPM")
+                root.after(0, log.insert, "end", f"    {ins['melody']} / {ins['harmony']} / {ins['bass']} / {ins['arp']}  ·  {drew}")
             except Exception as e:                    # keep the window alive on any failure
                 root.after(0, log.insert, "end", f"failed: {e}")
             root.after(0, log.see, "end")

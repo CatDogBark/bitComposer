@@ -986,6 +986,21 @@ class MPRISService(dbus.service.Object):
         return dbus.Array([f"ch{i + 1}" for i in range(n)], signature="s")
 
     @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
+    def GetSongInfo(self):
+        """The machine-readable lines of the loaded module's song message:
+        "voices: role=name,...", "drew: sound=...,form=...", "echo: ...",
+        "layout: ...". Empty for files without them."""
+        meta = self.player.get_metadata()
+        if not meta:
+            return dbus.Array([], signature="s")
+        out = []
+        for line in (meta.get("message") or "").splitlines():
+            key = line.split(":", 1)[0].strip().lower()
+            if ":" in line and key in ("voices", "drew", "echo", "layout"):
+                out.append(line.strip())
+        return dbus.Array(out, signature="s")
+
+    @dbus.service.method(MPRIS_BUS_NAME, out_signature="as")
     def GetPlaylistInfo(self):
         """One "filename|title|auto" line per track, in GetPlaylist order.
         auto is 1 for bitcomposer_auto_* files, which Rescan may prune."""

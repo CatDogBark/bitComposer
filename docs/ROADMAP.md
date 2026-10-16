@@ -39,7 +39,7 @@ These change how every note sounds, not what notes are played.
   tempo), feedback and wetness drawn per song, sends opened in thin
   sections and pulled back in the chorus, and bounce / centre stereo with
   a pan per tap. Left for later: echo on the drums as a rare choice
-  (gated snare), and a widget readout of the drawn settings.
+  (gated snare). The widget readout of the drawn settings is done.
 - **Style packs.** An instrument set paired with arrangement habits
   (`bitcomposer/packs.py`): voices per role, weighted draws for tempo,
   energy, scale, harmony mode, bass, drums and echo, a counter-line voice,
@@ -65,7 +65,9 @@ These change how every note sounds, not what notes are played.
   measured character), `evermore` (done, branch `evermore-spc`: 22 own
   voices, seven matched William Kage's named rips by length at
   https://www.williamkage.com/snes_soundfonts/ , the rest by character), then a widget readout of the drawn song and a mixer regrouped
-  by part with a KIT fold. Method and tools: `~/diags/bitcomposer/ffvi-spc/
+  by part with a KIT fold (done 2026-10-16: `voices:` and `drew:` lines in
+  the song message, `GetSongInfo` on the daemon, voice labels on the
+  faders, the KIT bus). Method and tools: `~/diags/bitcomposer/ffvi-spc/
   tools` (`survey.py` decodes and profiles every unique sample across a set
   of snapshots, `voices.py` traces each through the voice registers,
   `fine.py` and `match.py` compare a sample's steady profile with ours,
