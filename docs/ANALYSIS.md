@@ -251,7 +251,10 @@ then trace it through the voice registers of every snapshot it sounds in
 (sounding pitch from the pitch register, ADSR, echo bit, volume) to learn
 its role. The DSP registers give the echo outright. FFVI: 82 snapshots, 71
 unique samples, of which eight tiny loops are the driver's fixed set; the
-rest resolve to about thirty instruments. Every snapshot runs 80 ms of echo
+other 63 each matched one row of the community's documented instrument
+table by BRR size to within two bytes, which settled every identity (the
+song-based guesses had the choir and pipe organ swapped, and the game's
+most-used lead is a synth, not a horn). Every snapshot runs 80 ms of echo
 with feedback 0.64 and a flat filter, both sides the same sign, strings and
 leads sent, bass and kit dry. Each recipe in the pack states the profile it
 targets and a matcher (`tools/match.py` in the diag dir) prints ours beside
