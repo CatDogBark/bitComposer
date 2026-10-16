@@ -247,7 +247,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         # off-beats drop out, and quiet sections thin further.
         bass = generate_bass_timeline(bass_segments, section_bass,
                                       weight=bass_weight,
-                                      density=0.6 + 0.35 * section_energy, riff=bass_riff)
+                                      density=0.6 + 0.35 * section_energy, riff=bass_riff,
+                                      scale_notes=scale_notes)
         # Volume-column values are 0-64. The old 150/100 for medium/light were
         # not volumes at all: in the IT volume column 150 is a pan command and
         # 100 a volume slide down, which left light basses nearly silent.

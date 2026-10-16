@@ -43,6 +43,13 @@ class Packs(unittest.TestCase):
             self.assertEqual([r for r, _ in notes][:len(figure)], [r for r, _ in figure], name)
         song = compose_song(seed=101, style_pref="snes", pack="megamanx")
         self.assertIn(song["info"]["bass_riff"], list(bass.RIFFS) + [None])
+        # the seventh snaps to the key: in a major scale it becomes the sixth
+        major = [60, 62, 64, 65, 67, 69, 71]
+        notes = bass.generate_bass(48, "major", 16, style="riff", weight="heavy", riff="funk", scale_notes=major)
+        self.assertEqual(notes[-1][1] - notes[0][1], 9)
+        minor = [60, 62, 63, 65, 67, 68, 70]
+        notes = bass.generate_bass(48, "minor", 16, style="riff", weight="heavy", riff="funk", scale_notes=minor)
+        self.assertEqual(notes[-1][1] - notes[0][1], 10)
 
     def test_chug_voicings_restrike_on_their_steps(self):
         from bitcomposer import harmony

@@ -27,7 +27,8 @@ RIFF = RIFFS["rock"]
 def generate_bass(root: int, chord_type: str,
                   rows: int, style: str = "steady",
                   weight: str = "heavy",
-                  density: float = 1.0, riff: str | None = None) -> list[tuple[int, int]]:
+                  density: float = 1.0, riff: str | None = None,
+                  scale_notes: list[int] | None = None) -> list[tuple[int, int]]:
     """Generate a bass line. Returns [(row, midi_note), ...].
 
     density (0..1) thins the off-beat notes. The line previously played every
@@ -97,10 +98,21 @@ def generate_bass(root: int, chord_type: str,
         # A one-bar riff that repeats: root on the beat, the octave and the
         # fifth pushing between, the way a rock bass carries a stage theme.
         figure = RIFFS.get(riff or "rock", RIFF)
+        # A riff's seventh is only in key for minor, dorian, mixolydian and
+        # minor pentatonic; in a major key it sat a semitone under the
+        # melody's note. Snap every interval to the nearest scale tone at or
+        # below it, so the seventh becomes the sixth where that is the key's
+        # note and stays a seventh where it is.
+        classes = {n % 12 for n in scale_notes} if scale_notes else None
         for bar in range(0, rows, ROWS_PER_BAR):
             for off, iv in figure:
-                if bar + off < rows:
-                    notes.append((bar + off, bass_root + iv))
+                if bar + off >= rows:
+                    continue
+                note = bass_root + iv
+                if classes and note % 12 not in classes:
+                    while note % 12 not in classes and note > bass_root - 12:
+                        note -= 1
+                notes.append((bar + off, note))
 
     if density < 1.0:
         notes = [
@@ -134,6 +146,7 @@ def generate_bass_timeline(segments: list[tuple[int, int, int, str]],
     """generate_bass over [(start_row, end_row, root, chord_type), ...]."""
     notes = []
     for start, end, root, chord_type in segments:
-        part = generate_bass(root, chord_type, end - start, style, weight, density, riff=riff)
+        part = generate_bass(root, chord_type, end - start, style, weight, density, riff=riff,
+                             scale_notes=scale_notes)
         notes.extend((start + row, note) for row, note in part)
     return notes
