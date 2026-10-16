@@ -31,13 +31,24 @@ every generator change is judged by measurement rather than by ear alone.
 
 | path | what |
 |---|---|
-| `bitcomposer/theory.py` | scales, chord tables, progressions, drum templates |
-| `bitcomposer/melody.py`, `harmony.py`, `bass.py` | the parts |
-| `bitcomposer/samples.py` | every instrument, including the SNES palette and BRR model |
-| `bitcomposer/composer.py` | arrangement: structure, chord timeline, palettes, echo |
-| `bitcomposer/it_format.py` | the Impulse Tracker writer |
-| `tools/analyze.py` | standalone .it parser and metric harness |
-| `companion/` | optional Linux/KDE Plasma 6 player (daemon, widget, scripts) |
+| `bitcomposer/composer.py` | `compose_song`: the draws, the section loop, the song message; `compose_and_save` |
+| `bitcomposer/builder.py` | one pattern at a time: chord timeline, key plan, every layer written into it |
+| `bitcomposer/instruments.py` | palettes, the per-song instrument draw (contrast rule), the sample set |
+| `bitcomposer/echo.py` | echo settings tables and the bus that makes taps and darker variants |
+| `bitcomposer/mix.py` | written channel volumes, sustaining-arp level, pack trims, master gain |
+| `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
+| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits |
+| `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
+| `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
+| `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
+| `bitcomposer/cli.py`, `gui.py` | the command line and the Windows window |
+| `tools/analyze.py` | measures written files (the regression harness behind the tests) |
+| `tests/` | one module per area, sharing `support.py` |
+| `companion/` | the Plasma widget, the daemon and the scripts |
+
+Adding a pack is one file in `bitcomposer/packs/` plus its name in the CLI
+and widget choices. Moving code between modules must keep generation
+byte-identical: write twenty seeds before, twenty after, compare the files.
 
 ## Style
 
