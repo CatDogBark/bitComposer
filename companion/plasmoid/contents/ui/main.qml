@@ -266,7 +266,16 @@ PlasmoidItem {
     property string settTempo: Plasmoid.configuration.settTempo
     property string settEnergy: Plasmoid.configuration.settEnergy
     property string settScale: Plasmoid.configuration.settScale
-    property string settStyle: Plasmoid.configuration.settStyle
+    // One axis for the sound: a palette (chip, snes, genesis) or a style
+    // pack (ffvi, mana, evermore, megamanx), which is snes narrowed to one
+    // score. The old STYLE + PACK pair let a stale pack override a preset's
+    // palette; a saved pair is folded into settSound once.
+    property string settSound: Plasmoid.configuration.settSound !== "" ? Plasmoid.configuration.settSound : _legacySound()
+    function _legacySound() {
+        var p = Plasmoid.configuration.settPack, st = Plasmoid.configuration.settStyle
+        if (p && p !== "random" && p !== "none") return p
+        return st || "random"
+    }
     property string settDrumDensity: Plasmoid.configuration.settDrumDensity
     property bool settDrumFills: Plasmoid.configuration.settDrumFills
     property string settDrumSwing: Plasmoid.configuration.settDrumSwing
@@ -276,7 +285,6 @@ PlasmoidItem {
     property string settBassWeight: Plasmoid.configuration.settBassWeight
     property string settForm: Plasmoid.configuration.settForm
     property string settEcho: Plasmoid.configuration.settEcho
-    property string settPack: Plasmoid.configuration.settPack
     property string settEchoWet: Plasmoid.configuration.settEchoWet
     property string activePreset: Plasmoid.configuration.activePreset
     onActivePresetChanged: Plasmoid.configuration.activePreset = activePreset
@@ -294,7 +302,7 @@ PlasmoidItem {
     onSettTempoChanged: { Plasmoid.configuration.settTempo = settTempo; _onSettingChanged() }
     onSettEnergyChanged: { Plasmoid.configuration.settEnergy = settEnergy; _onSettingChanged() }
     onSettScaleChanged: { Plasmoid.configuration.settScale = settScale; _onSettingChanged() }
-    onSettStyleChanged: { Plasmoid.configuration.settStyle = settStyle; _onSettingChanged() }
+    onSettSoundChanged: { Plasmoid.configuration.settSound = settSound; _onSettingChanged() }
     onSettDrumDensityChanged: { Plasmoid.configuration.settDrumDensity = settDrumDensity; _onSettingChanged() }
     onSettDrumFillsChanged: { Plasmoid.configuration.settDrumFills = settDrumFills; _onSettingChanged() }
     onSettDrumSwingChanged: { Plasmoid.configuration.settDrumSwing = settDrumSwing; _onSettingChanged() }
@@ -304,22 +312,21 @@ PlasmoidItem {
     onSettBassWeightChanged: { Plasmoid.configuration.settBassWeight = settBassWeight; _onSettingChanged() }
     onSettFormChanged: { Plasmoid.configuration.settForm = settForm; _onSettingChanged() }
     onSettEchoChanged: { Plasmoid.configuration.settEcho = settEcho; _onSettingChanged() }
-    onSettPackChanged: { Plasmoid.configuration.settPack = settPack; _onSettingChanged() }
     onSettEchoWetChanged: { Plasmoid.configuration.settEchoWet = settEchoWet; _onSettingChanged() }
     property bool _applyingPreset: false
 
     function applyPreset(name) {
         var presets = {
-            "FM DRIVE":     { tempo: "fast",   energy: "intense", scale: "minor",      style: "genesis", drumDensity: "busy",   fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "standard" },
-            "GOTHIC":       { tempo: "medium", energy: "normal",  scale: "minor",      style: "random",  drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "rondo"    },
-            "BOSS FIGHT":   { tempo: "fast",   energy: "intense", scale: "minor",      style: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "short"    },
-            "OVERWORLD":    { tempo: "medium", energy: "normal",  scale: "major",      style: "snes",    drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "standard" },
-            "CHILL WAVE":   { tempo: "slow",   energy: "chill",   scale: "pentatonic", style: "snes",    drumDensity: "sparse", fills: false, swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
-            "DUNGEON":      { tempo: "slow",   energy: "chill",   scale: "minor",      style: "random",  drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "thin", mode: "stabs",    bass: "medium", form: "rondo"    },
-            "CREDITS":      { tempo: "slow",   energy: "chill",   scale: "major",      style: "snes",    drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
-            "FIGHT THEME":  { tempo: "fast",   energy: "intense", scale: "pentatonic", style: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "stabs",    bass: "heavy",  form: "short"    },
-            "CYBER NOIR":   { tempo: "medium", energy: "normal",  scale: "minor",      style: "genesis", drumDensity: "normal", fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "linear"   },
-            "ANY":          { tempo: "random", energy: "random",  scale: "random",     style: "random",  drumDensity: "random", fills: true,  swing: "random", melody: "random",  voicing: "random", mode: "random", bass: "random", form: "random"   },
+            "FM DRIVE":     { tempo: "fast",   energy: "intense", scale: "minor",      sound: "genesis", drumDensity: "busy",   fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "standard" },
+            "GOTHIC":       { tempo: "medium", energy: "normal",  scale: "minor",      sound: "random",  drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "rondo"    },
+            "BOSS FIGHT":   { tempo: "fast",   energy: "intense", scale: "minor",      sound: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "rhythmic", bass: "heavy",  form: "short"    },
+            "OVERWORLD":    { tempo: "medium", energy: "normal",  scale: "major",      sound: "snes",    drumDensity: "normal", fills: true,  swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "standard" },
+            "CHILL WAVE":   { tempo: "slow",   energy: "chill",   scale: "pentatonic", sound: "snes",    drumDensity: "sparse", fills: false, swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
+            "DUNGEON":      { tempo: "slow",   energy: "chill",   scale: "minor",      sound: "random",  drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "thin", mode: "stabs",    bass: "medium", form: "rondo"    },
+            "CREDITS":      { tempo: "slow",   energy: "chill",   scale: "major",      sound: "snes",    drumDensity: "sparse", fills: false, swing: "off",    melody: "phrased", voicing: "full", mode: "sustain",  bass: "light",  form: "aaba"     },
+            "FIGHT THEME":  { tempo: "fast",   energy: "intense", scale: "pentatonic", sound: "genesis", drumDensity: "busy",   fills: true,  swing: "heavy",  melody: "phrased", voicing: "full", mode: "stabs",    bass: "heavy",  form: "short"    },
+            "CYBER NOIR":   { tempo: "medium", energy: "normal",  scale: "minor",      sound: "genesis", drumDensity: "normal", fills: true,  swing: "light",  melody: "phrased", voicing: "full", mode: "sustain",  bass: "medium", form: "linear"   },
+            "ANY":          { tempo: "random", energy: "random",  scale: "random",     sound: "random",  drumDensity: "random", fills: true,  swing: "random", melody: "random",  voicing: "random", mode: "random", bass: "random", form: "random"   },
         }
         var p = presets[name]
         if (!p) return
@@ -327,7 +334,7 @@ PlasmoidItem {
         root.settTempo = p.tempo
         root.settEnergy = p.energy
         root.settScale = p.scale
-        root.settStyle = p.style
+        root.settSound = p.sound
         root.settDrumDensity = p.drumDensity
         root.settDrumFills = p.fills
         root.settDrumSwing = p.swing
@@ -345,7 +352,7 @@ PlasmoidItem {
         if (settTempo !== "random") flags += " --tempo " + settTempo
         if (settEnergy !== "random") flags += " --energy " + settEnergy
         if (settScale !== "random") flags += " --scale " + settScale
-        if (settStyle !== "random") flags += " --style " + settStyle
+        if (settSound !== "random") flags += " --sound " + settSound
         if (settDrumDensity !== "random") flags += " --drum-density " + settDrumDensity
         if (!settDrumFills) flags += " --no-fills"
         if (settDrumSwing !== "random") flags += " --swing " + settDrumSwing
@@ -355,7 +362,6 @@ PlasmoidItem {
         if (settBassWeight !== "random") flags += " --bass-weight " + settBassWeight
         if (settForm !== "random") flags += " --form " + settForm
         if (settEcho !== "random") flags += " --echo " + settEcho
-        if (settPack !== "random") flags += " --pack " + settPack
         if (settEchoWet !== "random") flags += " --echo-wet " + settEchoWet
         return flags
     }
@@ -372,7 +378,7 @@ PlasmoidItem {
         if (settTempo !== "random") parts.push(settTempo)
         if (settEnergy !== "random") parts.push(settEnergy)
         if (settScale !== "random") parts.push(settScale)
-        if (settStyle !== "random") parts.push(settStyle)
+        if (settSound !== "random") parts.push(settSound)
         if (settDrumDensity !== "random") parts.push(settDrumDensity + " drums")
         if (!settDrumFills) parts.push("no fills")
         if (settDrumSwing !== "random") parts.push(settDrumSwing + " swing")
@@ -382,7 +388,6 @@ PlasmoidItem {
         if (settBassWeight !== "random") parts.push(settBassWeight + " bass")
         if (settForm !== "random") parts.push(settForm + " form")
         if (settEcho !== "random") parts.push("echo " + settEcho)
-        if (settPack !== "random") parts.push(settPack === "none" ? "no pack" : settPack + " pack")
         if (settEchoWet !== "random") parts.push(settEchoWet + " echo")
         return prefix + (parts.length ? parts.join("  ·  ") : "any  ·  everything left to chance")
     }
@@ -1287,36 +1292,19 @@ PlasmoidItem {
                                 }
                             }
                         }
-                        // STYLE
+                        // SOUND: a palette or a style pack (snes narrowed to one score)
                         RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "STYLE"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
-                            Row { spacing: 3
-                                Repeater { model: ["random", "chip", "snes", "genesis"]
+                            Text { Layout.preferredWidth: 52; text: "SOUND"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
+                            Flow { Layout.fillWidth: true; spacing: 3
+                                Repeater { model: ["random", "chip", "genesis", "snes", "ffvi", "mana", "evermore", "megamanx"]
                                     Rectangle {
                                         required property string modelData
-                                        property bool active: root.settStyle === modelData
-                                        width: _t4.implicitWidth + 10; height: 20; radius: 3
-                                        color: active ? "#1a2e26" : (_m4.containsMouse ? "#0f1a16" : "transparent")
-                                        border.width: 1; border.color: active ? root.accentGreen : (_m4.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _t4; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
-                                        MouseArea { id: _m4; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settStyle = modelData }
-                                    }
-                                }
-                            }
-                        }
-                        // PACK (an instrument set with the habits of the scores it imitates)
-                        RowLayout { Layout.fillWidth: true; spacing: 8
-                            Text { Layout.preferredWidth: 52; text: "PACK"; color: root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(9 * root.ui) }
-                            Row { spacing: 3
-                                Repeater { model: ["random", "none", "ffvi", "mana", "evermore", "megamanx"]
-                                    Rectangle {
-                                        required property string modelData
-                                        property bool active: root.settPack === modelData
-                                        width: _tp.implicitWidth + 10; height: 20; radius: 3
-                                        color: active ? "#1a2e26" : (_mp.containsMouse ? "#0f1a16" : "transparent")
-                                        border.width: 1; border.color: active ? root.accentGreen : (_mp.containsMouse ? root.tileBorder : "transparent")
-                                        Text { id: _tp; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
-                                        MouseArea { id: _mp; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settPack = modelData }
+                                        property bool active: root.settSound === modelData
+                                        width: _ts.implicitWidth + 10; height: 20; radius: 3
+                                        color: active ? "#1a2e26" : (_ms.containsMouse ? "#0f1a16" : "transparent")
+                                        border.width: 1; border.color: active ? root.accentGreen : (_ms.containsMouse ? root.tileBorder : "transparent")
+                                        Text { id: _ts; anchors.centerIn: parent; text: modelData.toUpperCase(); color: active ? root.accentGreen : root.dimText; font.family: "JetBrains Mono"; font.pixelSize: Math.round(8 * root.ui) }
+                                        MouseArea { id: _ms; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.settSound = modelData }
                                     }
                                 }
                             }

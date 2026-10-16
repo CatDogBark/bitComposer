@@ -49,6 +49,35 @@ STYLES = ["chip", "snes", "genesis"]
 # Chance that a snes song draws a style pack (packs.PACKS) when --pack random.
 PACK_CHANCE = 0.5
 
+# One axis for the listener: a sound is a palette or a pack (a pack is a snes
+# palette narrowed to one score). The widget, the window and --sound pick
+# from this list; --style and --pack remain as the two halves of it. When
+# everything is left to chance the song draws a sound by these weights: the
+# four packs together carry as much as plain snes.
+SOUNDS = [*STYLES, *PACK_NAMES]
+SOUND_WEIGHTS = {"chip": 2, "genesis": 4, "snes": 4, **{p: 1 for p in PACK_NAMES}}
+
+
+def resolve_sound(style: str = "random", pack: str = "random",
+                  sound: str = "random") -> tuple[str, str]:
+    """Reduce (style, pack, sound) to a (style, pack) pair with no conflict.
+
+    A sound names both; otherwise a pack implies its palette, and a palette
+    that is not snes carries no pack. "random" values stay random for
+    compose_song to draw.
+    """
+    if sound and sound != "random":
+        if sound in STYLES:
+            return sound, "none"
+        if sound in PACKS:
+            return PACKS[sound]["palette"], sound
+        raise ValueError(f"Unknown sound: {sound}")
+    if pack in PACKS:
+        return PACKS[pack]["palette"], pack
+    if style in STYLES and style != "snes":
+        return style, "none"
+    return style, pack
+
 
 def compose_song(seed: int | None = None, tempo_pref: str = "random",
                  energy_pref: str = "random", scale_pref: str = "random",
@@ -61,15 +90,21 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                  song_form: str = "random",
                  echo: str = "random", echo_wet: str = "random",
                  echo_delay: str = "random", echo_stereo: str = "random",
-                 keys: str = "moving", pack: str = "random") -> dict:
+                 keys: str = "moving", pack: str = "random",
+                 sound: str = "random") -> dict:
     """Compose a complete procedural song. Returns a dict for write_it_file."""
     if seed is not None:
         random.seed(seed)
 
-    # Resolve "random" for all settings
+    # Resolve "random" for all settings. A pack narrows every draw below to
+    # the habits of the scores it imitates.
+    style_pref, pack = resolve_sound(style_pref, pack, sound)
     if style_pref not in STYLES:
-        style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
-    # A pack narrows every draw below to the habits of the scores it imitates.
+        if pack == "random":
+            drawn = random.choices(SOUNDS, weights=[SOUND_WEIGHTS[s] for s in SOUNDS], k=1)[0]
+            style_pref, pack = resolve_sound(sound=drawn)
+        else:
+            style_pref = random.choices(STYLES, weights=[1, 2, 1], k=1)[0]
     if pack == "random":
         candidates = [p for p in PACK_NAMES if PACKS[p]["palette"] == style_pref]
         pack = random.choice(candidates) if candidates and random.random() < PACK_CHANCE else None
@@ -601,8 +636,10 @@ def compose_and_save(filepath: str, seed: int | None = None,
                      song_form: str = "random",
                      echo: str = "random", echo_wet: str = "random",
                      echo_delay: str = "random", echo_stereo: str = "random",
-                     keys: str = "moving", pack: str = "random") -> dict:
+                     keys: str = "moving", pack: str = "random",
+                     sound: str = "random") -> dict:
     """Compose a song and save it as an IT file. Returns song info."""
+    style, pack = resolve_sound(style, pack, sound)
     song = compose_song(seed=seed, tempo_pref=tempo, energy_pref=energy,
                         scale_pref=scale, style_pref=style,
                         drum_density=drum_density, drum_fills=drum_fills,
