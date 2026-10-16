@@ -238,6 +238,7 @@ PACK = {
             "energy": {"chill": 0, "normal": 2, "intense": 3},
             "scale_family": {"minor": 3, "major": 2, "pentatonic": 1},
             "form": {"standard": 2, "aaba": 2, "short": 1, "linear": 1, "rondo": 1},
+            "intro": {"riff_vamp": 4, "drum_pickup": 3, "arp_bed": 1, "pad_hook": 1},
             "harmony_voicing": {"full": 1, "thin": 3},
             "harmony_mode": {"stabs": 2, "rhythmic": 2, "pulse": 2, "sustain": 1, "ostinato": 1,
                              "chug_sync": 2, "chug_offbeat": 1, "chug_gallop": 2},

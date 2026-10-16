@@ -192,6 +192,7 @@ PACK = {
         # drawn the way plain snes draws it.
         "habits": {
             "tempo": {"slow": 2, "medium": 3, "fast": 1},
+            "intro": {"pad_hook": 4, "arp_bed": 3, "riff_vamp": 1, "drum_pickup": 1},
             "energy": {"chill": 1, "normal": 2, "intense": 1},
             "scale_family": {"minor": 3, "major": 2, "pentatonic": 0},
             "harmony_voicing": {"full": 3, "thin": 1},

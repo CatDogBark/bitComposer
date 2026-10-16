@@ -5,7 +5,7 @@ import zlib
 
 from . import theory
 from .it_format import ITPattern, ITNote
-from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
+from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
 from .drums import render_drums
 from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
 from .harmony import generate_harmony_timeline
@@ -17,6 +17,13 @@ from .arp import generate_arp
 # hold first). stabs and rhythmic are short hits, so a per-tick slide from
 # the start is right. sustain is a pad: it holds for most of its 32-row
 # interval and then takes a fine (per-row) slide down into the next hit.
+# The channels each part writes, for the intro entries.
+PART_CHANNELS = {
+    "melody": (CH_MELODY,), "harmony": (CH_HARMONY, CH_HARMONY2, CH_HARMONY3),
+    "bass": (CH_BASS,), "arp": (CH_ARP,),
+    "drums": (CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT),
+}
+
 HARMONY_FADE = {"stabs": (0x02, 0), "rhythmic": (0x03, 0), "sustain": (0xF2, 18),
                 "ostinato": (0x03, 0), "pulse": (0x04, 0),
                 "chug_sync": (0x03, 0), "chug_offbeat": (0x03, 0), "chug_gallop": (0x04, 0)}
@@ -58,6 +65,8 @@ def _pick_section_motif(sec_type: str, use_phrased: bool,
         return verse_motif
     elif sec_type == "bridge":
         return bridge_motif
+    elif sec_type == "intro":
+        return chorus_motif or verse_motif
     else:
         # Outro/tag: a fresh motif on the melody's own stream, so its draws
         # never touch the arrangement.
@@ -145,7 +154,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      arp_figure, arp_colour, groove, drum_fill, breakdown,
                      n_patterns, is_ending, ending_style,
                      swing_amount, speed, bpm, is_intro, echo_sends,
-                     pickup_root=None, counter_chance=0.3, hat_stroke=1.0,
+                     pickup_root=None, intro=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
                      power_chords=False, bass_riff=None) -> ITPattern:
     """Compose a single pattern with all layers."""
@@ -329,6 +338,15 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      crash_on_one=(chord_idx == 0 and sec_type in ("chorus", "bridge"))
                                   or (chord_idx % 2 == 0 and section_energy >= 0.8))
 
+    # ── Intro entries ──
+    # In the first intro pattern each part waits for its bar (structure.INTROS);
+    # before the echo returns, so nothing is sent from a bar a part is not in.
+    if intro and chord_idx == 0:
+        for part, bar in intro["enter"].items():
+            for ch in PART_CHANNELS[part]:
+                for row in range(min(bar * ROWS_PER_BAR, ROWS_PER_PATTERN)):
+                    pat.data[row][ch] = ITNote()
+
     # ── Echo returns ──
     # After every sent part is written: the lead per note, harmony and arp
     # whole. The safety net below bounds the returns like any tonal channel.
@@ -341,7 +359,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     apply_sustain_safety_net(pat)
 
     # ── Section transitions ──
-    if is_intro and chord_idx == 0:
+    if is_intro and chord_idx == 0 and (intro is None or intro["fade_in"]):
         for ch in [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
                    *CH_ECHO_ALL]:
             apply_fade(pat, ch, fade_in=True, rows_count=16)

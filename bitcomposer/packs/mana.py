@@ -181,6 +181,7 @@ PACK = {
         },
         "habits": {
             "tempo": {"slow": 1, "medium": 3, "fast": 2},
+            "intro": {"arp_bed": 3, "pad_hook": 3, "drum_pickup": 1, "riff_vamp": 1},
             "energy": {"chill": 1, "normal": 3, "intense": 1},
             "scale_family": {"minor": 1, "major": 3, "pentatonic": 2},
             "harmony_voicing": {"full": 1, "thin": 2},

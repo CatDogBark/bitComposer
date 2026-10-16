@@ -137,3 +137,79 @@ class EchoOptions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Intros(unittest.TestCase):
+    """The intro is drawn per song from structure.INTROS, on its own stream."""
+
+    def _intro_pattern(self, seed, pack="none"):
+        song = compose_song(seed=seed, style_pref="snes", pack=pack)
+        pat = song["patterns"][song["orders"][0]]
+        return song["info"], pat
+
+    def _bars_with_notes(self, pat, channels):
+        return {r // 16 for r in range(pat.rows) for ch in channels
+                if pat.data[r][ch].note not in (0, 253, 254, 255)}
+
+    def test_intros_vary_and_are_short(self):
+        from bitcomposer import structure as struct
+        seen = set()
+        for seed in range(1, 21):
+            info = compose_song(seed=seed, style_pref="snes")["info"]
+            if info["intro"]:
+                self.assertIn(info["intro"], struct.INTROS)
+                self.assertLessEqual(info["intro_patterns"], 2)
+                seen.add(info["intro"])
+        self.assertGreaterEqual(len(seen), 3, seen)
+
+    def test_parts_enter_on_their_bars(self):
+        from bitcomposer import structure as struct
+        from bitcomposer.builder import PART_CHANNELS
+        checked = set()
+        for pack, seeds in (("none", range(1, 13)), ("megamanx", range(101, 111))):
+            for seed in seeds:
+                info, pat = self._intro_pattern(seed, pack)
+                name = info["intro"]
+                if not name or name in checked:
+                    continue
+                checked.add(name)
+                enter = struct.INTROS[name]["enter"]
+                for part, chans in PART_CHANNELS.items():
+                    bars = self._bars_with_notes(pat, chans)
+                    if part not in enter:
+                        self.assertFalse(bars, (name, part, bars))
+                    else:
+                        self.assertFalse({b for b in bars if b < enter[part]}, (name, part, bars))
+                        if enter[part] < 3:
+                            self.assertTrue(bars, (name, part))
+        self.assertGreaterEqual(len(checked), 3, checked)
+
+    def test_intro_draw_leaves_the_song_alone(self):
+        """Two songs that differ only in the intro draw agree after it."""
+        from bitcomposer import structure as struct
+        song = compose_song(seed=1, style_pref="snes", pack="none")
+        n = song["info"]["intro_patterns"]
+        self.assertTrue(song["info"]["intro"])
+        saved = dict(struct.INTRO_WEIGHTS)
+        try:
+            other = next(k for k in struct.INTROS if k != song["info"]["intro"])
+            struct.INTRO_WEIGHTS.clear(); struct.INTRO_WEIGHTS[other] = 1
+            song2 = compose_song(seed=1, style_pref="snes", pack="none")
+        finally:
+            struct.INTRO_WEIGHTS.clear(); struct.INTRO_WEIGHTS.update(saved)
+        self.assertNotEqual(song["info"]["intro"], song2["info"]["intro"])
+        self.assertEqual(song["info"]["title"], song2["info"]["title"])
+        n2 = song2["info"]["intro_patterns"]
+        a = [song["patterns"][i] for i in song["orders"][n:]]
+        b = [song2["patterns"][i] for i in song2["orders"][n2:]]
+        self.assertEqual(len(a), len(b))
+        # The first bar after the intro carries the handoff (echo spill, note
+        # offs of what the intro held) and may differ; nothing else does.
+        for pi, (pa, pb) in enumerate(zip(a, b)):
+            for r in range(16 if pi == 0 else 0, pa.rows):
+                for c in range(pa.channels):
+                    x, y = pa.data[r][c], pb.data[r][c]
+                    self.assertEqual((x.note, x.instrument, x.volume, x.effect, x.effect_val),
+                                     (y.note, y.instrument, y.volume, y.effect, y.effect_val),
+                                     (pi, r, c))
+

@@ -62,6 +62,57 @@ LAYERS = {
 }
 
 
+# ── Intro templates ──
+# The intro used to be the one section with nothing drawn in it: bass and a
+# two-note pulse arp, fading up from silence, over the whole home progression,
+# in every song of every pack. Now a song draws one of these. `enter` says the
+# bar (0-3) each part comes in on in the first intro pattern; parts not listed
+# stay out. A later intro pattern plays every listed part from its first bar.
+# `fade_in` is the old swell from silence; a song that starts on a hit has none.
+# `arp` is how the arp figure is chosen ("sparse" = the old pulse, "draw" = a
+# light figure drawn per song); `bass` "song" keeps the song's bass style
+# (a riff vamps alone), "calm" lets it drop to steady at intro energy;
+# `groove` "song" plays the verse groove, "sparse" the intro one; `voicing`
+# overrides the harmony voicing for the intro.
+INTROS = {
+    # The arp bed over the bass, swelling in. The old intro.
+    "arp_bed":     {"enter": {"bass": 0, "arp": 0}, "fade_in": True,
+                    "arp": "draw", "bass": "calm", "groove": "sparse"},
+    # The bass riff vamps alone, the harmony lands on bar three, drums only
+    # for the fill out. The Mega Man X opening.
+    "riff_vamp":   {"enter": {"bass": 0, "harmony": 2, "drums": 3}, "fade_in": False,
+                    "arp": "draw", "bass": "song", "groove": "song"},
+    # The kit leads, the bass joins halfway, the band lands on the verse.
+    "drum_pickup": {"enter": {"drums": 0, "bass": 2, "arp": 3}, "fade_in": False,
+                    "arp": "draw", "bass": "song", "groove": "song"},
+    # A sustained pad with the hook stated once over it, swelling in.
+    "pad_hook":    {"enter": {"harmony": 0, "melody": 1, "bass": 3}, "fade_in": True,
+                    "arp": "sparse", "bass": "calm", "groove": "sparse",
+                    "voicing": "sustain"},
+}
+INTRO_WEIGHTS = {"arp_bed": 2, "riff_vamp": 2, "drum_pickup": 2, "pad_hook": 2}
+# Intro length in patterns (four bars each) and its weights. The old intro ran
+# the whole home progression: eight or sixteen bars before the song started.
+INTRO_LENGTHS = {1: 2, 2: 3}
+
+
+def pick_intro(weights: dict | None, drumless: bool, rng: random.Random) -> tuple[str, int]:
+    """Draw the intro template and length. Drumless songs never lead with the kit."""
+    w = dict(weights or INTRO_WEIGHTS)
+    if drumless:
+        w["drum_pickup"] = 0
+    names = [n for n in INTROS if w.get(n, 0) > 0] or ["arp_bed"]
+    name = rng.choices(names, [w.get(n, 1) for n in names])[0]
+    length = rng.choices(list(INTRO_LENGTHS), list(INTRO_LENGTHS.values()))[0]
+    return name, length
+
+
+def intro_layers(name: str) -> dict:
+    """The layer map an intro template needs on."""
+    enter = INTROS[name]["enter"]
+    return {part: part in enter for part in ("drums", "bass", "melody", "arp", "harmony")}
+
+
 def _build_layers(structure: list[str]) -> dict[str, dict]:
     """Build per-section layer map from a structure list.
 
