@@ -156,7 +156,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      swing_amount, speed, bpm, is_intro, echo_sends,
                      pickup_root=None, intro=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
-                     power_chords=False, bass_riff=None) -> ITPattern:
+                     power_chords=False, bass_riff=None, harmony_family=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -175,6 +175,14 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     harmony_vol = int(22 * section_energy)
     arp_vol = int(36 * section_energy)
     harmony_fade, harmony_hold = HARMONY_FADE.get(voicing_style, (0x02, 0))
+    # Brass sits a fifth higher than a pad: the games stab their brass at
+    # 250-580 Hz, and a lone brass note on the lowest anchor was a honk.
+    harmony_shift = 7 if harmony_family == "brass" else 0
+    # A lone voice is arpeggiated into a chord with the J effect, which reads
+    # as shimmer on a pad, strings, choir or organ, and as a rasp on anything
+    # with a hard spectrum: on brass the pitch flipping every tick was the
+    # abrasive thing in Northern Dawn. Only the soft families take it.
+    arpeggiate_lone = harmony_family in ("pad", "strings", "choir", "organ")
 
     # ── Melody ──
     if layers["melody"]:
@@ -211,7 +219,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                                hold_rows=harmony_hold)
             voices = generate_harmony_timeline(
                 harmony_segments, voicing=voicing_style,
-                num_voices=min(2, num_harmony_voices),
+                num_voices=min(2, num_harmony_voices), anchor_shift=harmony_shift,
             )
             for v_idx, voice_notes in enumerate(voices):
                 if v_idx + 1 < len(harmony_channels):
@@ -227,7 +235,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         else:
             voices = generate_harmony_timeline(
                 harmony_segments, voicing=voicing_style,
-                num_voices=num_harmony_voices,
+                num_voices=num_harmony_voices, anchor_shift=harmony_shift,
             )
             for v_idx, voice_notes in enumerate(voices):
                 if v_idx < len(harmony_channels):
@@ -244,7 +252,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                     # A lone voice cannot state a chord on its own, so let J
                     # arpeggiate it into one. With three voices the real
                     # stack already does the job.
-                    if num_harmony_voices == 1:
+                    if num_harmony_voices == 1 and arpeggiate_lone:
                         for s, e, notes in harmony_segments:
                             apply_chord_arpeggio(
                                 pat, ch, [(r, n) for r, n in voice_notes if s <= r < e],

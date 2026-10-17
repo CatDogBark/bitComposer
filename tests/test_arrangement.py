@@ -40,7 +40,12 @@ class Arrangement(unittest.TestCase):
     def test_effects_reach_file(self):
         fx = set("".join(r["fx"] for r in self.rows))
         for letter in "DGHJQS":
-            self.assertIn(letter, fx)
+            self.assertIn(letter, fx) if letter != 'J' else None
+        # The J arpeggio only fakes a chord for a lone pad-like harmony voice
+        # now; a thin Evermore song (pads) must still carry it.
+        with tempfile.TemporaryDirectory() as tmp:
+            path, _ = _gen(tmp, 3, harmony_voicing="thin", pack="evermore")
+            self.assertIn("J", analyze.analyze(path)["fx"])
 
     def test_drums_vary(self):
         """The groove engine: phrases, dynamics and the whole kit. The old

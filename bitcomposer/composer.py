@@ -487,6 +487,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 fill_crash=pack_value(pack, "fill_crash", True),
                 kit_rng=kit_rng,
                 power_chords=power_chords, bass_riff=bass_riff,
+                harmony_family=smp.PRESET_RELEASE.get(instruments["harmony"]),
             )
 
             pattern_cache[cache_key] = len(patterns)

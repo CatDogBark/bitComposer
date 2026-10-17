@@ -59,7 +59,7 @@ VOICE_ANCHOR_SPREAD = 7
 HARMONY_LOW, HARMONY_HIGH = 45, 72
 
 
-def voice_chord(chord_notes: list[int], num_voices: int) -> list[int]:
+def voice_chord(chord_notes: list[int], num_voices: int, anchor_shift: int = 0) -> list[int]:
     """Place num_voices chord tones near fixed register anchors.
 
     Picking the chord tone nearest a constant anchor, rather than always
@@ -79,7 +79,7 @@ def voice_chord(chord_notes: list[int], num_voices: int) -> list[int]:
 
     chosen: list[int] = []
     for i in range(num_voices):
-        target = VOICE_ANCHORS_BASE + VOICE_ANCHOR_SPREAD * i
+        target = VOICE_ANCHORS_BASE + anchor_shift + VOICE_ANCHOR_SPREAD * i
         remaining = [p for p in pitches if p not in chosen]
         if not remaining:
             break
@@ -89,7 +89,7 @@ def voice_chord(chord_notes: list[int], num_voices: int) -> list[int]:
 
 def generate_harmony(chord_notes: list[int], rows: int,
                      voicing: str = "stabs",
-                     num_voices: int = 2) -> list[list[tuple[int, int]]]:
+                     num_voices: int = 2, anchor_shift: int = 0) -> list[list[tuple[int, int]]]:
     """
     Generate harmony parts for multiple channels.
 
@@ -102,7 +102,7 @@ def generate_harmony(chord_notes: list[int], rows: int,
     interval = config["interval"]
     cut_after = config["cut_after"]
 
-    voice_notes = voice_chord(chord_notes, num_voices)
+    voice_notes = voice_chord(chord_notes, num_voices, anchor_shift)
     if not voice_notes:
         return []
 
@@ -147,7 +147,7 @@ def generate_harmony(chord_notes: list[int], rows: int,
 
 def generate_harmony_timeline(segments: list[tuple[int, int, list[int]]],
                               voicing: str = "stabs",
-                              num_voices: int = 2) -> list[list[tuple[int, int]]]:
+                              num_voices: int = 2, anchor_shift: int = 0) -> list[list[tuple[int, int]]]:
     """generate_harmony over a chord timeline.
 
     segments is [(start_row, end_row, chord_notes), ...]. Each segment is
@@ -157,7 +157,7 @@ def generate_harmony_timeline(segments: list[tuple[int, int, list[int]]],
     """
     voices: list[list[tuple[int, int]]] = []
     for start, end, chord_notes in segments:
-        part = generate_harmony(chord_notes, end - start, voicing, num_voices)
+        part = generate_harmony(chord_notes, end - start, voicing, num_voices, anchor_shift)
         for v_idx, notes in enumerate(part):
             while len(voices) <= v_idx:
                 voices.append([])
