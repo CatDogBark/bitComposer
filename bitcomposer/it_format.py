@@ -114,11 +114,15 @@ def midi_to_it_note(midi_note: int) -> int:
     """Convert MIDI note number to IT note value.
     IT notes: 0=C-0, 1=C#0, ... 12=C-1, etc.
     MIDI: 0=C-(-1), 12=C-0, 24=C-1, 60=C-4
-    IT format stores notes as (octave * 12 + semitone) but starting from C-0."""
-    # MIDI 0 = C-(-1), IT 0 = C-0
-    # So IT note = MIDI note - 12 (but clamped)
-    it_note = midi_note - 12
-    return max(0, min(119, it_note))
+    IT format stores notes as (octave * 12 + semitone) but starting from C-0.
+
+    IT note 60 is C-5, and C-5 is the note that plays a sample at its C5Speed;
+    our samples carry one period of 261.6 Hz at that rate, so IT 60 sounds
+    at middle C, which is MIDI 60. The numbers agree; there is no offset.
+    Until 2026-10-17 this subtracted 12, so every tonal part sounded an
+    octave below its label (label 60 rendered at 130.8 Hz, measured), and
+    the registers were then tuned by ear around the error."""
+    return max(0, min(119, midi_note))
 
 
 NOTE_CUT = 254

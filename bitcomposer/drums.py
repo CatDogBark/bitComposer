@@ -19,6 +19,10 @@ Hats thin to eighths above FAST_BPM.
 import random
 
 from .it_format import ITNote, midi_to_it_note, FX_RETRIGGER, FX_SPECIAL, S_NOTE_DELAY
+
+# The IT note every kit piece is played at. It was midi_to_it_note(60) while
+# that conversion subtracted an octave; the pieces are tuned to this value.
+KIT_NOTE = 48
 from .pattern import (CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT,
                       ROWS_PER_BAR, ROWS_PER_BEAT)
 
@@ -200,7 +204,7 @@ def render_drums(pat, groove_name: str, *, sample_map: dict, energy: float, bpm:
         fx, fxv = extra_fx
         if piece == "hat" and swing and swung_rows(row % rows_per_bar):
             fx, fxv = FX_SPECIAL, S_NOTE_DELAY | delay
-        pat.data[row][ch] = ITNote(note=midi_to_it_note(60), instrument=inst,
+        pat.data[row][ch] = ITNote(note=KIT_NOTE, instrument=inst,
                                    volume=max(1, min(64, vel)), effect=fx, effect_val=fxv)
         counts[piece] = counts.get(piece, 0) + 1
 

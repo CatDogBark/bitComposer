@@ -31,7 +31,7 @@ class Packs(unittest.TestCase):
     def test_drone_bass_holds_one_note_per_chord(self):
         from bitcomposer import bass
         notes = bass.generate_bass(48, "minor", 32, style="drone", weight="heavy")
-        self.assertEqual(notes, [(0, 48)])      # heavy register: label 48, 32.7 Hz sounding
+        self.assertEqual(notes, [(0, 36)])      # heavy register, MIDI 28-39: C2, 65 Hz
         self.assertEqual(bass.pick_section_bass("light", 0.95, "drone"), "drone")
 
     def test_riff_library_is_chord_safe_and_one_bar(self):

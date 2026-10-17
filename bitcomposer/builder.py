@@ -274,10 +274,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             # A pack may carry a second bass sample for the top of the line
             # (an octave pop on a heavy bass thins out on the low sample).
             # Every note picks its sample by pitch; the channel is the same.
-            # Label space, an octave above the old values: with the bass floor
-            # at label 48 the whole line sat above the old heavy ceiling and
-            # the low sample never played.
-            ceiling = {"heavy": 60, "medium": 66, "light": 72}.get(bass_weight, 60)
+            ceiling = {"heavy": 40, "medium": 46, "light": 52}.get(bass_weight, 40)
             hi = sample_map.get("bass_hi")
             groups = [(sample_map["bass"], [n for n in bass if hi is None or n[1] < ceiling])]
             if hi is not None:
