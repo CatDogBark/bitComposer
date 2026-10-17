@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Widget playlist: the list grows with the folder up to twenty-four rows and scrolls past that, and it keeps the playing track in view. It used to stop at 200 px with no scrollbar, so from the ninth track on a song was in the folder and in the daemon's playlist but not on screen, the playing one included. The same seed under two sounds no longer shares a title (the sound salts the title's seed).
 - Titles read the song. The scale still sets the mood of the adjectives, and now the energy and tempo add their words (a chill song can be a Lullaby or a Vigil, an intense one a Siege or a Pursuit, a fast one a Flight), and the sound sets the places: a Mega Man X song is set in a Fortress, a Hangar or a Reactor Core, an FFVI song in an Opera House, a Cathedral or on the Veldt, a Mana song in a Grove, a Spring or the Pure Land, an Evermore song in a Pyramid, a Jungle or the Tar Pits. Eight patterns over lists of thirty to sixty words. The old single pattern gave 720 titles per mood and repeated a name every thirty-odd songs; the new ones give about thirteen thousand distinct titles per sound and mood and a first repeat around two hundred songs. Titles of existing seeds change.
 
 ## 0.9.1 — 2026-10-16

@@ -1997,9 +1997,22 @@ PlasmoidItem {
             ListView {
                 id: playlistView
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(contentHeight, 200)
+                // The list grows with the folder up to twenty-four rows, then
+                // scrolls. It used to stop at 200 px (under eight rows) with
+                // no scrollbar, so the ninth track on was there but unseen,
+                // the playing one included.
+                Layout.preferredHeight: Math.min(contentHeight, 26 * 24)
                 clip: true
+                interactive: contentHeight > height
                 model: root.playlistInfo
+                // Keep the playing track in view when it changes.
+                Connections {
+                    target: root
+                    function onCurrentIndexChanged() {
+                        if (root.currentIndex >= 0 && root.currentIndex < playlistView.count)
+                            playlistView.positionViewAtIndex(root.currentIndex, ListView.Contain)
+                    }
+                }
 
                 delegate: Rectangle {
                     required property var modelData
