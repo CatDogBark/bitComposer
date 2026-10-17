@@ -24,6 +24,26 @@ RIFFS = {
 RIFF = RIFFS["rock"]
 
 
+# The lowest bass note written, as a MIDI label before the pattern's octave
+# shift (the composer sounds an octave below its labels: label 48 is pattern
+# note 36, 32.7 Hz, a semitone under a bass guitar's low E). The register
+# floors above were set in label space, so "deep and heavy" at label 36 was
+# 16 Hz, and the octave-bounce and driving styles dropped a twelfth under
+# that: across the sounds a sixth to a half of bass notes sat below 33 Hz,
+# down to 13 Hz, a flutter under the snap of a slap bass rather than a note.
+BASS_FLOOR = 48
+
+
+def floor_bass(notes: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Every note below BASS_FLOOR raised by octaves until it is not."""
+    out = []
+    for row, note in notes:
+        while 0 < note < BASS_FLOOR:
+            note += 12
+        out.append((row, note))
+    return out
+
+
 def generate_bass(root: int, chord_type: str,
                   rows: int, style: str = "steady",
                   weight: str = "heavy",
@@ -36,27 +56,30 @@ def generate_bass(root: int, chord_type: str,
     the same "never rests" problem the arp had. Bar downbeats are always kept,
     since the bass has to state the chord.
     """
-    # Register depends on weight
+    # Register depends on weight. These are labels; the pattern sounds an
+    # octave lower, so the heavy window's label 48 is 32.7 Hz, a bass
+    # guitar's low E. The windows sat an octave under this until 2026-10-17
+    # (heavy at label 36 was 16 Hz; see BASS_FLOOR).
     if weight == "light":
-        # Octave 3-4 (MIDI 48-71) — punchier, more melodic
+        # Labels 60-71 (65-123 Hz sounding) — punchier, more melodic
+        bass_root = root
+        while bass_root >= 72:
+            bass_root -= 12
+        while bass_root < 60:
+            bass_root += 12
+    elif weight == "medium":
+        # Labels 54-65 (46-87 Hz) — middle ground
+        bass_root = root
+        while bass_root >= 66:
+            bass_root -= 12
+        while bass_root < 54:
+            bass_root += 12
+    else:
+        # Labels 48-59 (33-62 Hz) — deep and heavy
         bass_root = root
         while bass_root >= 60:
             bass_root -= 12
         while bass_root < 48:
-            bass_root += 12
-    elif weight == "medium":
-        # Octave 3 (MIDI 42-59) — middle ground
-        bass_root = root
-        while bass_root >= 54:
-            bass_root -= 12
-        while bass_root < 42:
-            bass_root += 12
-    else:
-        # Octave 2-3 (MIDI 36-59) — deep and heavy
-        bass_root = root
-        while bass_root >= 48:
-            bass_root -= 12
-        while bass_root < 36:
             bass_root += 12
 
     chord = theory.build_chord(bass_root, chord_type)

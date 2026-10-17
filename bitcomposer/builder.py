@@ -9,7 +9,7 @@ from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, C
 from .drums import render_drums
 from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
 from .harmony import generate_harmony_timeline
-from .bass import generate_bass_timeline
+from .bass import generate_bass_timeline, floor_bass
 from .arp import generate_arp
 
 
@@ -260,6 +260,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                                       weight=bass_weight,
                                       density=0.6 + 0.35 * section_energy, riff=bass_riff,
                                       scale_notes=scale_notes)
+        bass = floor_bass(bass)
         # Volume-column values are 0-64. The old 150/100 for medium/light were
         # not volumes at all: in the IT volume column 150 is a pan command and
         # 100 a volume slide down, which left light basses nearly silent.
@@ -273,7 +274,10 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             # A pack may carry a second bass sample for the top of the line
             # (an octave pop on a heavy bass thins out on the low sample).
             # Every note picks its sample by pitch; the channel is the same.
-            ceiling = {"heavy": 48, "medium": 54, "light": 60}.get(bass_weight, 48)
+            # Label space, an octave above the old values: with the bass floor
+            # at label 48 the whole line sat above the old heavy ceiling and
+            # the low sample never played.
+            ceiling = {"heavy": 60, "medium": 66, "light": 72}.get(bass_weight, 60)
             hi = sample_map.get("bass_hi")
             groups = [(sample_map["bass"], [n for n in bass if hi is None or n[1] < ceiling])]
             if hi is not None:
@@ -294,8 +298,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 target -= 12
             while target < 36:
                 target += 12
-            walk = [(ROWS_PER_PATTERN - 8, target - 5), (ROWS_PER_PATTERN - 4, target - 2),
-                    (ROWS_PER_PATTERN - 2, target - 1)]
+            walk = floor_bass([(ROWS_PER_PATTERN - 8, target - 5), (ROWS_PER_PATTERN - 4, target - 2),
+                               (ROWS_PER_PATTERN - 2, target - 1)])
             for row in range(ROWS_PER_PATTERN - 8, ROWS_PER_PATTERN):
                 pat.data[row][CH_BASS] = ITNote()
             apply_notes_to_pattern(pat, CH_BASS, walk, sample_map["bass"],
