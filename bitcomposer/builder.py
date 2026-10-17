@@ -170,9 +170,12 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         harmony_segments = [(s, e, [root, root + 7, root + 12]) for s, e, root, _, _ in segments]
     bass_segments = [(s, e, root, ctype) for s, e, root, ctype, _ in segments]
 
-    # Scale volumes by section energy
+    # Scale volumes by section energy. A brass harmony is written 3 dB under
+    # a pad's: bright, in the band the ear weights most, it sat forward even
+    # at 14 dB under the kit.
+    harmony_level = 0.7 if harmony_family == "brass" else 1.0
     melody_vol = int(42 * section_energy)
-    harmony_vol = int(22 * section_energy)
+    harmony_vol = int(22 * section_energy * harmony_level)
     arp_vol = int(36 * section_energy)
     harmony_fade, harmony_hold = HARMONY_FADE.get(voicing_style, (0x02, 0))
     # Brass sits a fifth higher than a pad: the games stab their brass at
@@ -227,7 +230,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                     apply_notes_to_pattern(
                         pat, ch, voice_notes,
                         sample_map["harmony"],
-                        volume=humanize_volume(int(18 * section_energy), 4),
+                        volume=humanize_volume(int(18 * section_energy * harmony_level), 4),
                         humanize=True,
                     )
                     apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade,
@@ -240,7 +243,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             for v_idx, voice_notes in enumerate(voices):
                 if v_idx < len(harmony_channels):
                     ch = harmony_channels[v_idx]
-                    vol = harmony_vol if v_idx == 0 else int(18 * section_energy)
+                    vol = harmony_vol if v_idx == 0 else int(18 * section_energy * harmony_level)
                     apply_notes_to_pattern(
                         pat, ch, voice_notes,
                         sample_map["harmony"],

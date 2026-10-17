@@ -323,6 +323,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 if clear:
                     arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]
     half_changes = 0
+    # A brass harmony sits forward at its register: its notes are written
+    # 3 dB under a pad's and its echo stays under the source (see builder).
+    harmony_brass = smp.PRESET_RELEASE.get(instruments["harmony"]) == "brass"
 
     # ── Intro ──
     # Its own stream, so the opening can change without moving the song.
@@ -480,7 +483,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
                 is_intro=is_intro, intro=intro if is_intro else None,
-                echo_sends=echo_bus.sends(sec_type) if use_echo else None,
+                echo_sends=echo_bus.sends(sec_type, harmony_centre=harmony_brass) if use_echo else None,
                 counter_chance=pack_value(pack, "counter_line", 0.3),
                 hat_stroke=pack_value(pack, "hat_stroke", 1.0),
                 crash_chance=pack_value(pack, "crash_chance", 1.0),
