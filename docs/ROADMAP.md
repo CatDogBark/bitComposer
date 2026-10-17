@@ -55,6 +55,40 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Harmony rework (1.0.0 blocker, 2026-10-17).** Troy: the harmonies are
+  the weakest part and fixing them lifts everything. What the week's
+  measurements say the harmony does wrong, in order of damage:
+  1. **One voice is not a chord.** The thin voicing is a single channel, and
+     the engine fakes the chord with the J arpeggio (pitch cycling root,
+     fourth, fifth every tick). On a held pad it is a shimmer; on a stab or
+     a chug it is a warble (Strike of the Factory: one strings note a bar,
+     552 ms, cut, quacking) and on a hard voice a rasp (Northern Dawn's
+     brass before the fix). Replace it: a thin harmony should be two real
+     voices, or one voice that plays the chord as a short strummed
+     arpeggio in rows rather than ticks, or the mode should pick the voice
+     count (stabs and chugs want three voices, a pad can hold two).
+  2. **Voice and mode do not fit.** The mode-fit rule (no rhythmic mode on
+     strings, pad or choir) is a patch; the draw should choose the harmony
+     voice knowing the mode and the tempo, and choose the mode knowing the
+     voice. A pad is held; a brass or guitar is stabbed or chugged; a stab's
+     note length should be set from the voice's attack and the row length,
+     not a fixed six rows.
+  3. **Register and spacing.** Anchors were tuned around the octave error;
+     now that the conversion is exact the lowest voice sits at 160 Hz and
+     brass a fifth above. Re-derive the anchors per family (pads lower and
+     wider, brass and guitars mid and close) and keep the top voice under
+     the lead's line, not just under a fixed ceiling.
+  4. **Level per family.** Brass is written at 0.7 of a pad's volume by
+     hand; make the harmony level a property of the voice family and the
+     mode, measured with the per-part ebur128 method, so a bright stab and
+     a soft pad land at the same perceived distance under the lead.
+  5. **The counter-line shares the harmony channel** and takes its level;
+     give it its own level rule, and never put it on the harmony channel in
+     the bar a stab lands.
+  Method: a page of eight songs across the sounds, harmony alone and in the
+  mix, before and after, with the per-part loudness and the interval and
+  register measurements printed per song. Every change measured on rendered
+  audio first.
 - **Melody register (1.x, fine tuning).** With the note conversion exact
   the lead sits at a median of 570 to 620 Hz across the sounds (the old
   by-ear tuning had it an octave under that). Troy: the songs are right,
