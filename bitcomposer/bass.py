@@ -24,6 +24,23 @@ RIFFS = {
 RIFF = RIFFS["rock"]
 
 
+# The lowest bass note written, as MIDI (28 is E1, 41.2 Hz, a bass guitar's
+# low string). The windows below sit on it. Before the note conversion was
+# corrected the whole engine sounded an octave low and the bass reached
+# 13 Hz; the floor keeps any style's octave drop or cadence walk honest.
+BASS_FLOOR = 28
+
+
+def floor_bass(notes: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Every note below BASS_FLOOR raised by octaves until it is not."""
+    out = []
+    for row, note in notes:
+        while 0 < note < BASS_FLOOR:
+            note += 12
+        out.append((row, note))
+    return out
+
+
 def generate_bass(root: int, chord_type: str,
                   rows: int, style: str = "steady",
                   weight: str = "heavy",
@@ -36,27 +53,28 @@ def generate_bass(root: int, chord_type: str,
     the same "never rests" problem the arp had. Bar downbeats are always kept,
     since the bass has to state the chord.
     """
-    # Register depends on weight
+    # Register depends on weight, in MIDI (the conversion to the pattern is
+    # exact since 2026-10-17; before that everything sounded an octave low).
     if weight == "light":
-        # Octave 3-4 (MIDI 48-71) — punchier, more melodic
+        # MIDI 40-51 (82-165 Hz) — punchier, more melodic
         bass_root = root
-        while bass_root >= 60:
+        while bass_root >= 52:
             bass_root -= 12
-        while bass_root < 48:
+        while bass_root < 40:
             bass_root += 12
     elif weight == "medium":
-        # Octave 3 (MIDI 42-59) — middle ground
+        # MIDI 34-45 (58-110 Hz) — middle ground
         bass_root = root
-        while bass_root >= 54:
+        while bass_root >= 46:
             bass_root -= 12
-        while bass_root < 42:
+        while bass_root < 34:
             bass_root += 12
     else:
-        # Octave 2-3 (MIDI 36-59) — deep and heavy
+        # MIDI 28-39 (41-78 Hz) — deep and heavy
         bass_root = root
-        while bass_root >= 48:
+        while bass_root >= 40:
             bass_root -= 12
-        while bass_root < 36:
+        while bass_root < 28:
             bass_root += 12
 
     chord = theory.build_chord(bass_root, chord_type)

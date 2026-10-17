@@ -127,10 +127,16 @@ class _EchoBus:
                 taps.append((ch, rows, lvl, self._maps[k], pans[k]))
         return taps
 
-    def sends(self, sec_type: str = "verse") -> list[tuple[int, list, int, int, float]]:
-        """(source channel, taps, hold, rest, accent) for every sent part in a section."""
+    def sends(self, sec_type: str = "verse", harmony_centre: bool = False) -> list[tuple[int, list, int, int, float]]:
+        """(source channel, taps, hold, rest, accent) for every sent part in a section.
+
+        harmony_centre: the harmony's returns stay under their source whatever
+        the song's stereo mode; a brass harmony bouncing hard left and right
+        read as wide and close."""
         gain = ECHO_SECTION_GAIN.get(sec_type, 1.0)
-        pans = ECHO_PANS[self.stereo]
+        pans = dict(ECHO_PANS[self.stereo])
+        if harmony_centre:
+            pans["harmony"] = ECHO_PANS["centre"]["harmony"]
         out = [(CH_MELODY, self._taps(*ECHO_SENDS["melody"], pans["melody"], gain),
                 ECHO_SEND_HOLD, ECHO_SEND_REST, 0.0)]
         level, _ = ECHO_SENDS["harmony"]

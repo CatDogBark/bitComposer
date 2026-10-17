@@ -182,7 +182,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     tempo = bpm_to_it_tempo(target_bpm, speed, ROWS_PER_BEAT)
 
     # ── Instruments ──
-    instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack)
+    instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack,
+                                    rhythmic=harmony_mode not in ("sustain", "stabs"))
     samples, sample_map, struck_roles = _build_samples(instruments)
     _register_releases(samples)
     echo_bus = None                      # built once song_salt exists
@@ -322,6 +323,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 if clear:
                     arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]
     half_changes = 0
+    # A brass harmony sits forward at its register: its notes are written
+    # 3 dB under a pad's and its echo stays under the source (see builder).
+    harmony_brass = smp.PRESET_RELEASE.get(instruments["harmony"]) == "brass"
 
     # ── Intro ──
     # Its own stream, so the opening can change without moving the song.
@@ -479,13 +483,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 is_ending=is_ending, ending_style=ending_style,
                 swing_amount=swing_amount, speed=speed, bpm=bpm_value,
                 is_intro=is_intro, intro=intro if is_intro else None,
-                echo_sends=echo_bus.sends(sec_type) if use_echo else None,
+                echo_sends=echo_bus.sends(sec_type, harmony_centre=harmony_brass) if use_echo else None,
                 counter_chance=pack_value(pack, "counter_line", 0.3),
                 hat_stroke=pack_value(pack, "hat_stroke", 1.0),
                 crash_chance=pack_value(pack, "crash_chance", 1.0),
                 fill_crash=pack_value(pack, "fill_crash", True),
                 kit_rng=kit_rng,
                 power_chords=power_chords, bass_riff=bass_riff,
+                harmony_family=smp.PRESET_RELEASE.get(instruments["harmony"]),
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -494,7 +499,17 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             patterns.append(pat)
 
     # ── Build orders ──
-    orders = struct.build_orders(song_structure, pattern_index_for, pattern_counts)
+    pattern_seconds = ROWS_PER_PATTERN * 60.0 / (bpm_value * ROWS_PER_BEAT)
+    orders, played_sections, length_note = struct.clamp_length(
+        song_structure, pattern_index_for, pattern_counts, pattern_seconds)
+    if length_note:
+        # A dropped section leaves its patterns unreferenced: keep only the
+        # patterns the order list reaches, renumbered in first-use order.
+        used = sorted(set(orders), key=orders.index)
+        remap = {old: new for new, old in enumerate(used)}
+        patterns = [patterns[i] for i in used]
+        pattern_sec = {remap[i]: sec for i, sec in pattern_sec.items() if i in remap}
+        orders = [remap[i] for i in orders]
 
     # ── Echo tails across pattern boundaries ──
     # Where a pattern is only ever preceded by one other, its first rows can
@@ -529,9 +544,13 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     title_tempo = tempo_pref if tempo_pref in ("slow", "medium", "fast") else \
         ("slow" if bpm < 110 else "fast" if bpm >= 140 else "medium")
     title_energy = energy_pref if energy_pref in ("chill", "normal", "intense") else "normal"
-    song_name = names.song_title(scale_name, rng=random.Random(song_salt ^ 0x7A1E),
+    # The sound is folded into the title's seed: the same seed under two
+    # sounds is two songs and should not share a name (the plain palettes
+    # make the same number of draws, so their salts coincide).
+    title_rng = random.Random(song_salt ^ 0x7A1E ^ zlib.crc32((pack or style_pref).encode()))
+    song_name = names.song_title(scale_name, rng=title_rng,
                                  sound=pack or style_pref, energy=title_energy, tempo=title_tempo)
-    display_structure = [struct.section_type(s) for s in song_structure]
+    display_structure = [struct.section_type(s) for s in played_sections]
     message = "\n".join([
         song_name,
         f"{key_name} {scale_label} - {bpm} BPM",
@@ -592,6 +611,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "progression": [tuple(e) for e in progression],
         "half_pattern_changes": half_changes,
         "structure": display_structure,
+        "length_sec": round(len(orders) * pattern_seconds),
+        "length_adjust": length_note,
         "intro": intro_name,
         "intro_patterns": intro_length,
         "num_patterns": len(patterns),

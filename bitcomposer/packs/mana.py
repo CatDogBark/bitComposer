@@ -64,7 +64,6 @@ def mana_brass() -> tuple[bytes, int, dict]:
     boss and travel themes."""
     return _sustained_voice(
         steady={1: 1.0, 2: 0.37, 3: 0.3, 4: 0.21, 5: 0.12, 6: 0.06, 7: 0.03},
-        bright={1: 0.8, 2: 0.6, 3: 0.6, 4: 0.5, 5: 0.4, 6: 0.3, 7: 0.2},
         attack_cycles=29, loop_cycles=2, amplitude=0.9)
 
 

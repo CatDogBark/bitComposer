@@ -118,9 +118,11 @@ def mmx_clean_guitar() -> tuple[bytes, int, dict]:
 def mmx_synth_brass() -> tuple[bytes, int, dict]:
     """Synth brass (Kage's name), in every bank: a bright overblown attack
     settling into a strong third and fourth partial."""
+    # The game's sample has no brighter onset (its centroid is flat from the
+    # first block to the loop); the overblown attack here was invented and,
+    # retriggered on every stab, was a burst. Gone.
     return _sustained_voice(
         steady={1: 1.0, 2: 0.46, 3: 0.79, 4: 0.58, 5: 0.37, 6: 0.13, 7: 0.22, 8: 0.2},
-        bright={1: 0.8, 2: 0.9, 3: 1.0, 4: 1.0, 5: 0.9, 6: 0.7, 7: 0.6, 8: 0.5, 9: 0.4},
         attack_cycles=7, loop_cycles=2, amplitude=0.9)
 
 

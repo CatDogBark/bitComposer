@@ -9,7 +9,7 @@ from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, C
 from .drums import render_drums
 from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
 from .harmony import generate_harmony_timeline
-from .bass import generate_bass_timeline
+from .bass import generate_bass_timeline, floor_bass
 from .arp import generate_arp
 
 
@@ -156,7 +156,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      swing_amount, speed, bpm, is_intro, echo_sends,
                      pickup_root=None, intro=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
-                     power_chords=False, bass_riff=None) -> ITPattern:
+                     power_chords=False, bass_riff=None, harmony_family=None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -170,11 +170,22 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         harmony_segments = [(s, e, [root, root + 7, root + 12]) for s, e, root, _, _ in segments]
     bass_segments = [(s, e, root, ctype) for s, e, root, ctype, _ in segments]
 
-    # Scale volumes by section energy
+    # Scale volumes by section energy. A brass harmony is written 3 dB under
+    # a pad's: bright, in the band the ear weights most, it sat forward even
+    # at 14 dB under the kit.
+    harmony_level = 0.7 if harmony_family == "brass" else 1.0
     melody_vol = int(42 * section_energy)
-    harmony_vol = int(22 * section_energy)
+    harmony_vol = int(22 * section_energy * harmony_level)
     arp_vol = int(36 * section_energy)
     harmony_fade, harmony_hold = HARMONY_FADE.get(voicing_style, (0x02, 0))
+    # Brass sits a fifth higher than a pad: the games stab their brass at
+    # 250-580 Hz, and a lone brass note on the lowest anchor was a honk.
+    harmony_shift = 7 if harmony_family == "brass" else 0
+    # A lone voice is arpeggiated into a chord with the J effect, which reads
+    # as shimmer on a pad, strings, choir or organ, and as a rasp on anything
+    # with a hard spectrum: on brass the pitch flipping every tick was the
+    # abrasive thing in Northern Dawn. Only the soft families take it.
+    arpeggiate_lone = harmony_family in ("pad", "strings", "choir", "organ")
 
     # ── Melody ──
     if layers["melody"]:
@@ -211,7 +222,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                                hold_rows=harmony_hold)
             voices = generate_harmony_timeline(
                 harmony_segments, voicing=voicing_style,
-                num_voices=min(2, num_harmony_voices),
+                num_voices=min(2, num_harmony_voices), anchor_shift=harmony_shift,
             )
             for v_idx, voice_notes in enumerate(voices):
                 if v_idx + 1 < len(harmony_channels):
@@ -219,7 +230,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                     apply_notes_to_pattern(
                         pat, ch, voice_notes,
                         sample_map["harmony"],
-                        volume=humanize_volume(int(18 * section_energy), 4),
+                        volume=humanize_volume(int(18 * section_energy * harmony_level), 4),
                         humanize=True,
                     )
                     apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade,
@@ -227,12 +238,12 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         else:
             voices = generate_harmony_timeline(
                 harmony_segments, voicing=voicing_style,
-                num_voices=num_harmony_voices,
+                num_voices=num_harmony_voices, anchor_shift=harmony_shift,
             )
             for v_idx, voice_notes in enumerate(voices):
                 if v_idx < len(harmony_channels):
                     ch = harmony_channels[v_idx]
-                    vol = harmony_vol if v_idx == 0 else int(18 * section_energy)
+                    vol = harmony_vol if v_idx == 0 else int(18 * section_energy * harmony_level)
                     apply_notes_to_pattern(
                         pat, ch, voice_notes,
                         sample_map["harmony"],
@@ -244,7 +255,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                     # A lone voice cannot state a chord on its own, so let J
                     # arpeggiate it into one. With three voices the real
                     # stack already does the job.
-                    if num_harmony_voices == 1:
+                    if num_harmony_voices == 1 and arpeggiate_lone:
                         for s, e, notes in harmony_segments:
                             apply_chord_arpeggio(
                                 pat, ch, [(r, n) for r, n in voice_notes if s <= r < e],
@@ -260,6 +271,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                                       weight=bass_weight,
                                       density=0.6 + 0.35 * section_energy, riff=bass_riff,
                                       scale_notes=scale_notes)
+        bass = floor_bass(bass)
         # Volume-column values are 0-64. The old 150/100 for medium/light were
         # not volumes at all: in the IT volume column 150 is a pan command and
         # 100 a volume slide down, which left light basses nearly silent.
@@ -273,7 +285,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             # A pack may carry a second bass sample for the top of the line
             # (an octave pop on a heavy bass thins out on the low sample).
             # Every note picks its sample by pitch; the channel is the same.
-            ceiling = {"heavy": 48, "medium": 54, "light": 60}.get(bass_weight, 48)
+            ceiling = {"heavy": 40, "medium": 46, "light": 52}.get(bass_weight, 40)
             hi = sample_map.get("bass_hi")
             groups = [(sample_map["bass"], [n for n in bass if hi is None or n[1] < ceiling])]
             if hi is not None:
@@ -294,8 +306,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                 target -= 12
             while target < 36:
                 target += 12
-            walk = [(ROWS_PER_PATTERN - 8, target - 5), (ROWS_PER_PATTERN - 4, target - 2),
-                    (ROWS_PER_PATTERN - 2, target - 1)]
+            walk = floor_bass([(ROWS_PER_PATTERN - 8, target - 5), (ROWS_PER_PATTERN - 4, target - 2),
+                               (ROWS_PER_PATTERN - 2, target - 1)])
             for row in range(ROWS_PER_PATTERN - 8, ROWS_PER_PATTERN):
                 pat.data[row][CH_BASS] = ITNote()
             apply_notes_to_pattern(pat, CH_BASS, walk, sample_map["bass"],

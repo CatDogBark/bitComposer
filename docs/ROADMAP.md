@@ -55,6 +55,25 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Loudness and the brass (1.x, measured 2026-10-17).** Songs are written
+  at one level whatever they contain, and over sixteen random seeds the
+  result runs from −25.4 to −17.8 LUFS, a 7.6 dB spread that tracks kit hits
+  per second: sparse slow songs quiet, busy fast ones hot. Northern Dawn
+  (Mega Man X, seed 202; toms groove, 180 BPM, the pack's kit boost of
+  40/40/30 over the base 36) is the extreme at −15.7. Fix: a density-aware
+  kit level (scale the kit channels by hits per second against a reference)
+  and the Mega Man X kit trims back to the base; verify with ebur128 over a
+  seed set. Separately, Northern Dawn's brass harmony is still forward after
+  the 2026-10-17 pass (no J arpeggio on hard voices, brass a fifth up and
+  3 dB down, echo centred, invented attack removed; harmony with echo now
+  −32.0 LUFS against the lead at −27.8). Troy: manageable, still off.
+  Next things to measure before changing anything: the synth brass's
+  spectrum against the game's sample at the register it is now played in
+  (the 3rd and 4th partials land at 700 Hz to 3 kHz), the chug gallop's
+  note length against the voice (83 ms notes at 180 BPM), and whether the
+  rhythm guitar should take the chug modes instead of the brass in this
+  pack. Measure parts alone: zero the other channels' header volumes in a
+  copy of the file, render, ebur128.
 - **Pack revisions (in progress, 2026-10-16).** The plan Troy approved: one
   SOUND picker (done), then each pack rebuilt from its game's SPC snapshots
   so it borrows nothing and carries its own kit: `ffvi` (done, branch

@@ -125,3 +125,25 @@ class SongMessage(unittest.TestCase):
         self.assertIn("tempo", drew)
         self.assertEqual(lines["layout"].split(","), list(pattern.CHANNEL_ROLES))
 
+
+class Pitch(unittest.TestCase):
+    """MIDI and IT note numbers agree: IT 60 is C-5, the note that plays a
+    sample at its C5Speed, and our samples carry middle C at that rate. The
+    conversion subtracted an octave until 2026-10-17 and every tonal part
+    sounded an octave below its label (label 60 rendered at 130.8 Hz)."""
+
+    def test_note_numbers_agree_and_registers_land(self):
+        from bitcomposer.it_format import midi_to_it_note
+        from bitcomposer.bass import BASS_FLOOR
+        from bitcomposer.drums import KIT_NOTE
+        self.assertEqual(midi_to_it_note(60), 60)
+        self.assertEqual(KIT_NOTE, 48)
+        song = compose_song(seed=11, style_pref="snes")
+        bass = [p.data[r][pattern.CH_BASS].note for p in song["patterns"] for r in range(p.rows)
+                if 0 < p.data[r][pattern.CH_BASS].note < 120]
+        self.assertGreaterEqual(min(bass), BASS_FLOOR)
+        self.assertLessEqual(max(bass), 64)
+        mel = [p.data[r][pattern.CH_MELODY].note for p in song["patterns"] for r in range(p.rows)
+               if 0 < p.data[r][pattern.CH_MELODY].note < 120]
+        self.assertGreaterEqual(min(mel), 55)          # the lead sits above the chords
+
