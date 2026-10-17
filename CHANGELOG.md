@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Titles read the song. The scale still sets the mood of the adjectives, and now the energy and tempo add their words (a chill song can be a Lullaby or a Vigil, an intense one a Siege or a Pursuit, a fast one a Flight), and the sound sets the places: a Mega Man X song is set in a Fortress, a Hangar or a Reactor Core, an FFVI song in an Opera House, a Cathedral or on the Veldt, a Mana song in a Grove, a Spring or the Pure Land, an Evermore song in a Pyramid, a Jungle or the Tar Pits. Eight patterns over lists of thirty to sixty words. The old single pattern gave 720 titles per mood and repeated a name every thirty-odd songs; the new ones give about thirteen thousand distinct titles per sound and mood and a first repeat around two hundred songs. Titles of existing seeds change.
+
 ## 0.9.1 — 2026-10-16
 
 - Widget readout and mixer regrouping. The song message gains two machine-readable lines, `voices:` (every drawn voice by role, kit included, plus the alternate lead) and `drew:` (sound, form, intro template, harmony mode, bass style and riff, echo delay, feedback, stereo and wetness, tempo, key); the daemon serves them as `GetSongInfo`. The widget shows what the song drew in one line under the title, labels each mixer fader with its drawn voice ("LEAD" over "lead guitar"), and folds the six kit faders into one KIT bus at 0-200% of the written mix with an expand, the same pattern as the ECHO bus. The Windows window logs the voices and the draws under each title. Files written before this show the old labels.

@@ -523,9 +523,15 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # Its own stream: the title must not depend on how many random draws the
     # arrangement happened to make, so a seed keeps its name across options
     # like --keys home.
-    song_name = names.song_title(scale_name, rng=random.Random(song_salt ^ 0x7A1E))
-    display_structure = [struct.section_type(s) for s in song_structure]
     bpm = round(it_tempo_to_bpm(tempo, speed, ROWS_PER_BEAT))
+    # The plain palette leaves tempo and energy "random"; the title reads the
+    # tempo off the drawn BPM and treats unknown energy as normal.
+    title_tempo = tempo_pref if tempo_pref in ("slow", "medium", "fast") else \
+        ("slow" if bpm < 110 else "fast" if bpm >= 140 else "medium")
+    title_energy = energy_pref if energy_pref in ("chill", "normal", "intense") else "normal"
+    song_name = names.song_title(scale_name, rng=random.Random(song_salt ^ 0x7A1E),
+                                 sound=pack or style_pref, energy=title_energy, tempo=title_tempo)
+    display_structure = [struct.section_type(s) for s in song_structure]
     message = "\n".join([
         song_name,
         f"{key_name} {scale_label} - {bpm} BPM",
