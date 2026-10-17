@@ -182,7 +182,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     tempo = bpm_to_it_tempo(target_bpm, speed, ROWS_PER_BEAT)
 
     # ── Instruments ──
-    instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack)
+    instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack,
+                                    rhythmic=harmony_mode not in ("sustain", "stabs"))
     samples, sample_map, struck_roles = _build_samples(instruments)
     _register_releases(samples)
     echo_bus = None                      # built once song_salt exists

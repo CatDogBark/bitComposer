@@ -137,3 +137,16 @@ class Packs(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_rhythmic_harmony_never_lands_on_a_slow_voice(self):
+        from bitcomposer.instruments import SLOW_FAMILIES
+        from bitcomposer.packs import PACKS
+        for pack in ("megamanx", "ffvi", "mana"):
+            pool = PACKS[pack]["voices"]["harmony"]
+            has_fast = any(samples.PRESET_RELEASE.get(h) not in SLOW_FAMILIES for h in pool)
+            for seed in range(1, 25):
+                info = compose_song(seed=seed, style_pref="snes", pack=pack)["info"]
+                if info["harmony_mode"] not in ("sustain", "stabs") and has_fast:
+                    self.assertNotIn(samples.PRESET_RELEASE.get(info["instruments"]["harmony"]), SLOW_FAMILIES,
+                                     (pack, seed, info["harmony_mode"], info["instruments"]["harmony"]))
+

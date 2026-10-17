@@ -82,10 +82,22 @@ def _weighted(choices: list[str], weights: dict | None) -> str:
     return random.choices(pool, [weights[c] for c in pool], k=1)[0]
 
 
+# Voice families whose onset is a swell: a chord restruck every row or two
+# never finishes speaking on them. Rhythmic harmony modes redraw these.
+SLOW_FAMILIES = ("strings", "pad", "choir")
+
+
 def _pick_instruments(style: str, bass_weight: str = "heavy",
-                      pack: str | None = None) -> dict[str, str]:
+                      pack: str | None = None, rhythmic: bool = False) -> dict[str, str]:
     """Pick a random instrument set for the song from the style's palette,
-    or from the pack's voices when the song has a pack."""
+    or from the pack's voices when the song has a pack.
+
+    rhythmic: the harmony mode restrikes chords (chug, pulse, rhythmic,
+    ostinato). A slow-attack harmony voice is then redrawn from the pool's
+    fast ones, and the contrast rule's pad exemption is off: Northern Dawn
+    put a chug gallop at 180 BPM on the Mega Man X strings, 264 of 266 chord
+    notes shorter than the voice's 96 ms swell, under a sustaining organ
+    lead and a sustaining square arp in the same octave."""
     pal = dict(PALETTES[style])
     if pack:
         pal.update(PACKS[pack]["voices"])
@@ -100,6 +112,10 @@ def _pick_instruments(style: str, bass_weight: str = "heavy",
         return out or pool
 
     harmony = random.choice(distinct(pal["harmony"]))
+    if rhythmic and smp.PRESET_RELEASE.get(harmony) in SLOW_FAMILIES:
+        fast = [h for h in distinct(pal["harmony"]) if smp.PRESET_RELEASE.get(h) not in SLOW_FAMILIES]
+        if fast:
+            harmony = random.choice(fast)
     bass = random.choice(bass_choices)
     # The arp must also differ from the harmony, or two of the three upper
     # parts share one timbre — the thin PSG square on both was the usual case.
@@ -123,7 +139,8 @@ def _pick_instruments(style: str, bass_weight: str = "heavy",
     # lead and a pulse arp was the clearest case. If none of the three is
     # struck and the harmony is not a pad-like family, redraw the harmony
     # from the pool's struck or pad-like voices when it has any.
-    soft = ("pad", "strings", "choir", "brass")     # brass stabs cut through on their own
+    # Under a rhythmic mode a pad is not a pad, so only brass keeps the pass.
+    soft = ("brass",) if rhythmic else ("pad", "strings", "choir", "brass")
     if not (smp.is_struck(lead) or smp.is_struck(arp) or smp.is_struck(harmony)) \
             and smp.PRESET_RELEASE.get(harmony) not in soft:
         contrast = [h for h in distinct(pal["harmony"])
