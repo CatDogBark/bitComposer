@@ -152,6 +152,13 @@ Standard MPRIS2 (Play/Pause/PlayPause/Stop/Next/Previous/Seek/SetPosition) plus:
   channel and one ECHO bus for all the returns (expand for LEAD / HARM /
   ARP), the bus being a ratio against the mix the file was written with.
   The COMPOSE tab's SOUND picker passes `--sound` (random / chip / genesis / snes / ffvi / mana / evermore / megamanx); a pack is snes narrowed to one score, so there is no separate palette picker.
+- `GetSongInfo() -> as` — the machine-readable lines of the loaded module's
+  song message: `voices: role=name,...` (every drawn voice, kit included,
+  `alt=` the alternate lead), `drew: sound=,form=,intro=,harmony=,bass=,echo=,
+  tempo=,key=` and the `echo:` and `layout:` lines. Empty for files without
+  them. The widget's readout line and the voice labels on its faders read
+  these; the KIT bus folds the six kit faders the way the ECHO bus folds the
+  returns.
 - `SetChannelVolume(i channel, i volume) -> b` — live mixer: sets a channel's
   volume (0–64) on the playing module via libopenmpt's interactive interface.
   Immediate, no restart. `GetChannelVolumes() -> ai` reads them back (with
