@@ -1,12 +1,42 @@
 [
  {
-  "file": "Thorned Bastion.it",
-  "title": "Thorned Bastion",
+  "file": "Jade Harbor.it",
+  "title": "Jade Harbor",
   "palette": "snes",
-  "info": "B natural minor - 166 BPM",
-  "arrangement": "snes (megamanx) + echo (light) - aaba form",
-  "voices": "mmx_organ / mmx_rhythm_guitar / mmx_slap_bass",
-  "seed": "seed 11 - bitcomposer 0.8.0",
+  "info": "C# major - 163 BPM",
+  "arrangement": "snes (megamanx) + echo (normal) - rondo form",
+  "voices": "mmx_lead_guitar / mmx_strings / mmx_slap_bass",
+  "seed": "seed 104 - bitcomposer 0.9.1",
+  "picked": false
+ },
+ {
+  "file": "Hidden Caldera.it",
+  "title": "Hidden Caldera",
+  "palette": "snes",
+  "info": "G# dorian - 104 BPM",
+  "arrangement": "snes (ffvi) + echo (wet) - rondo form",
+  "voices": "ffvi_synth_lead / ffvi_flutes / ffvi_dark_bass",
+  "seed": "seed 4 - bitcomposer 0.9.1",
+  "picked": false
+ },
+ {
+  "file": "Lucent Harbor.it",
+  "title": "Lucent Harbor",
+  "palette": "snes",
+  "info": "C# major - 127 BPM",
+  "arrangement": "snes (mana) + echo (normal) - aaba form",
+  "voices": "mana_flute / mana_vibraphone / mana_bass",
+  "seed": "seed 7 - bitcomposer 0.9.1",
+  "picked": false
+ },
+ {
+  "file": "Fallen Harbor.it",
+  "title": "Fallen Harbor",
+  "palette": "snes",
+  "info": "C# harmonic minor - 97 BPM",
+  "arrangement": "snes (evermore) - linear form",
+  "voices": "evm_breath_flute / evm_pad / evm_drone",
+  "seed": "seed 7 - bitcomposer 0.9.1",
   "picked": false
  },
  {
@@ -16,7 +46,7 @@
   "info": "G# dorian - 150 BPM",
   "arrangement": "genesis - linear form",
   "voices": "gen_lead / fm_organ / gen_pluck_bass",
-  "seed": "seed 11 - bitcomposer 0.8.0",
+  "seed": "seed 11 - bitcomposer 0.9.1",
   "picked": false
  },
  {
@@ -26,37 +56,7 @@
   "info": "G# dorian - 150 BPM",
   "arrangement": "chip - linear form",
   "voices": "square_lead / pulse12_lead / thin_bass",
-  "seed": "seed 11 - bitcomposer 0.8.0",
-  "picked": false
- },
- {
-  "file": "Northern Canopy.it",
-  "title": "Northern Canopy",
-  "palette": "snes",
-  "info": "G dorian - 90 BPM",
-  "arrangement": "snes (evermore) + echo (wet) - linear form",
-  "voices": "evm_breath_flute / evm_choir_oo / evm_drone",
-  "seed": "seed 12 - bitcomposer 0.8.0",
-  "picked": false
- },
- {
-  "file": "Bleak Caldera.it",
-  "title": "Bleak Caldera",
-  "palette": "genesis",
-  "info": "G natural minor - 129 BPM",
-  "arrangement": "genesis - standard form",
-  "voices": "gen_saw_lead / psg_square / gen_slap_bass",
-  "seed": "seed 12 - bitcomposer 0.8.0",
-  "picked": false
- },
- {
-  "file": "Molten Expanse.it",
-  "title": "Molten Expanse",
-  "palette": "chip",
-  "info": "G natural minor - 129 BPM",
-  "arrangement": "chip - short form",
-  "voices": "pulse_lead / filtered_lead / triangle_bass",
-  "seed": "seed 12 - bitcomposer 0.8.0",
+  "seed": "seed 11 - bitcomposer 0.9.1",
   "picked": false
  }
 ]

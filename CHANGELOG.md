@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.1 — 2026-10-16
 
 - Widget readout and mixer regrouping. The song message gains two machine-readable lines, `voices:` (every drawn voice by role, kit included, plus the alternate lead) and `drew:` (sound, form, intro template, harmony mode, bass style and riff, echo delay, feedback, stereo and wetness, tempo, key); the daemon serves them as `GetSongInfo`. The widget shows what the song drew in one line under the title, labels each mixer fader with its drawn voice ("LEAD" over "lead guitar"), and folds the six kit faders into one KIT bus at 0-200% of the written mix with an expand, the same pattern as the ECHO bus. The Windows window logs the voices and the draws under each title. Files written before this show the old labels.
 
