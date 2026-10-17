@@ -55,6 +55,23 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Melody register (1.x, fine tuning).** With the note conversion exact
+  the lead sits at a median of 570 to 620 Hz across the sounds (the old
+  by-ear tuning had it an octave under that). Troy: the songs are right,
+  and bringing the melody in a little lower may suit some sounds; try it per
+  pack by ear against a page, not as a global change. The melody's window is
+  labels 60-83 and its `register` argument follows section energy
+  (`builder._compose_pattern`); a pack habit for a lower lead window is the
+  cheap lever.
+- **Orchestra hit under sustain harmony (small, before or after 1.0).** The
+  Mega Man X orchestra hit is a one-shot in the harmony pool; drawn with the
+  sustain mode it leaves gaps between hits. Restrict it to the stab and chug
+  modes, the way the mode-fit rule already steers slow voices away from the
+  rhythmic modes.
+- **The Evermore 'oo' choir is the one voice built without a measurement**:
+  William Kage's set shows a long vocal sample none of the 72 snapshots holds
+  whole. The recipe stays as designed by ear; if the sample turns up in
+  another set, profile it the usual way.
 - **Loudness and the brass (1.x, measured 2026-10-17).** Songs are written
   at one level whatever they contain, and over sixteen random seeds the
   result runs from −25.4 to −17.8 LUFS, a 7.6 dB spread that tracks kit hits

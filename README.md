@@ -5,19 +5,23 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 Procedural 16-bit game music. Pure Python, no dependencies, writes Impulse
-Tracker `.it` modules you can play in any tracker player.
+Tracker `.it` modules you can play in any tracker player, and a KDE Plasma
+player that generates while you listen.
 
 Every run composes a new song: a motif-based melody with call-and-response
 phrasing, voice-led harmony, bass, arpeggio and drums, arranged into a form
-(verse–chorus, AABA, rondo, through-composed) with an energy curve and a real
-ending. Three sound palettes:
+(verse–chorus, AABA, rondo, through-composed) with a drawn intro, an energy
+curve and a real ending, titled after what it drew, between 1:15 and 3:30
+long. Seven sounds, picked with `--sound`:
 
-- **snes + packs** — a style pack pairs an instrument set with the arrangement habits of the scores it imitates. `ffvi`: every voice modelled on the game's own sample bank and named by its instrument table: the chorused string section, flutes in chords, the dark synth lead of Locke and the Returners, trumpet, trombone, oboe, Terra's and Cyan's pan flutes, cello, choir, pipe organ and rock organ, the Aria's soprano, the Battle theme's distortion guitar, piano, harp, picked string, acoustic guitar, tubular bell, xylophone, a bass guitar and a kit of its own (kick, snare, hats, cymbal, timpani, wood block), with ostinato strings, a brass counter-line in the chorus, timpani rolls into sections and the game's short, wet echo. `mana`: every voice modelled on the game's own sample bank: a soft slow-breathed flute, bright chorused strings, an 'ah' choir, a high whistle, soft and synth brass, marimba, vibraphone, electric piano, tubular bell, reed, accordion, glass and sine pads, fingered, electric and slap basses and a kit of its own (kick, snare, hats, crash, tom, castanet), with major and pentatonic keys, syncopated harmony, bouncy arps, light swing, the kick and snare set back and the game's one-row echo. `evermore`: every voice modelled on the game's own sample bank: a slow bright string swell, a warm pad, a dark pad, a glass bell, a breathy flute, a reed, an "oo" choir, harp, tinker music box, piano, pluck and kalimba, a textured drone and a wind loop, a bass, and a quiet kit (soft kick, frame drum, brushes, hat, cymbal, wood ping), with slow tempos, sustained harmony, a drone bass, sparse or no drums, long linear forms and the game's sparing 80 ms echo. `megamanx`: every voice modelled on the game's own sample bank and named by it: a driven, chorused lead guitar, a chugging rhythm guitar on power chords, the overdrive guitar for arps and counter-lines, synth brass, strings, a guitar swell pad, a saw pad, organ, the boomer synth lead, square and bright leads, a hollow wave, a bell synth, an acoustic pluck, the orchestra hit for stabs, slap and synth basses on a riff, and a tight kit, at fast tempos in minor keys with the game's 48 ms slapback echo. `--sound` picks a palette or a pack in one word; left to chance, the four packs together weigh as much as plain snes.
-- **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead, harmony and arp through an echo modelled on the SNES unit's result: fading, darkening repeats on a beat fraction, drawn per song.
+- **snes** — sampled-style voices built the way the SNES made sound, through a BRR codec model and the SNES echo.
+- **ffvi**, **mana**, **evermore**, **megamanx** — style packs: an instrument set rebuilt from each game's own sound chip (every sample profiled, nothing copied) plus the arrangement habits of its score. Details under [Sounds](#sounds).
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 
-**[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: two seeds rendered in all three palettes, straight from the generator, regenerated with each release.
+**[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: one song per sound, straight from the generator, regenerated with each release.
+
+**Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws, and the song message records the version that wrote the file.
 
 ## Quick start
 
@@ -37,6 +41,21 @@ pip install .
 ```
 
 Python 3.10 or newer. Nothing else.
+
+## Sounds
+
+A style pack pairs an instrument set with the arrangement habits of the score it imitates. Each is built from the game's SPC snapshots: every sample decoded and profiled, matched to the community's instrument tables where they exist, and re-synthesised; nothing from the games is in the repository.
+
+- `ffvi`: every voice modelled on the game's own sample bank and named by its instrument table: the chorused string section, flutes in chords, the dark synth lead of Locke and the Returners, trumpet, trombone, oboe, Terra's and Cyan's pan flutes, cello, choir, pipe organ and rock organ, the Aria's soprano, the Battle theme's distortion guitar, piano, harp, picked string, acoustic guitar, tubular bell, xylophone, a bass guitar and a kit of its own (kick, snare, hats, cymbal, timpani, wood block), with ostinato strings, a brass counter-line in the chorus, timpani rolls into sections and the game's short, wet echo. 
+- `mana`: every voice modelled on the game's own sample bank: a soft slow-breathed flute, bright chorused strings, an 'ah' choir, a high whistle, soft and synth brass, marimba, vibraphone, electric piano, tubular bell, reed, accordion, glass and sine pads, fingered, electric and slap basses and a kit of its own (kick, snare, hats, crash, tom, castanet), with major and pentatonic keys, syncopated harmony, bouncy arps, light swing, the kick and snare set back and the game's one-row echo. 
+- `evermore`: every voice modelled on the game's own sample bank: a slow bright string swell, a warm pad, a dark pad, a glass bell, a breathy flute, a reed, an "oo" choir, harp, tinker music box, piano, pluck and kalimba, a textured drone and a wind loop, a bass, and a quiet kit (soft kick, frame drum, brushes, hat, cymbal, wood ping), with slow tempos, sustained harmony, a drone bass, sparse or no drums, long linear forms and the game's sparing 80 ms echo. 
+- `megamanx`: every voice modelled on the game's own sample bank and named by it: a driven, chorused lead guitar, a chugging rhythm guitar on power chords, the overdrive guitar for arps and counter-lines, synth brass, strings, a guitar swell pad, a saw pad, organ, the boomer synth lead, square and bright leads, a hollow wave, a bell synth, an acoustic pluck, the orchestra hit for stabs, slap and synth basses on a riff, and a tight kit, at fast tempos in minor keys with the game's 48 ms slapback echo.
+
+`--sound` picks a palette or a pack in one word; left to chance, the four packs together weigh as much as plain snes.
+
+- **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead, harmony and arp through an echo modelled on the SNES unit's result: fading, darkening repeats on a beat fraction, drawn per song.
+- **genesis** — FM bells, brass, organ and bass.
+- **chip** — square, pulse and triangle waves.
 
 ## What you can steer
 

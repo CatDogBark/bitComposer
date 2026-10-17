@@ -1,7 +1,7 @@
 [
  {
-  "file": "Jade Harbor.it",
-  "title": "Jade Harbor",
+  "file": "Strike of the Factory.it",
+  "title": "Strike of the Factory",
   "palette": "snes",
   "info": "C# major - 163 BPM",
   "arrangement": "snes (megamanx) + echo (normal) - rondo form",
@@ -10,8 +10,8 @@
   "picked": false
  },
  {
-  "file": "Hidden Caldera.it",
-  "title": "Hidden Caldera",
+  "file": "Distant Veldt.it",
+  "title": "Distant Veldt",
   "palette": "snes",
   "info": "G# dorian - 104 BPM",
   "arrangement": "snes (ffvi) + echo (wet) - rondo form",
@@ -20,8 +20,8 @@
   "picked": false
  },
  {
-  "file": "Lucent Harbor.it",
-  "title": "Lucent Harbor",
+  "file": "Sanctum of Light.it",
+  "title": "Sanctum of Light",
   "palette": "snes",
   "info": "C# major - 127 BPM",
   "arrangement": "snes (mana) + echo (normal) - aaba form",
@@ -30,8 +30,8 @@
   "picked": false
  },
  {
-  "file": "Fallen Harbor.it",
-  "title": "Fallen Harbor",
+  "file": "Dream of the Tar Pits.it",
+  "title": "Dream of the Tar Pits",
   "palette": "snes",
   "info": "C# harmonic minor - 97 BPM",
   "arrangement": "snes (evermore) - linear form",
@@ -40,8 +40,8 @@
   "picked": false
  },
  {
-  "file": "Endless Causeway.it",
-  "title": "Endless Causeway",
+  "file": "The Sleeping Chrome City.it",
+  "title": "The Sleeping Chrome City",
   "palette": "genesis",
   "info": "G# dorian - 150 BPM",
   "arrangement": "genesis - linear form",
@@ -50,8 +50,8 @@
   "picked": false
  },
  {
-  "file": "Second Orchard.it",
-  "title": "Second Orchard",
+  "file": "Twin Sparks.it",
+  "title": "Twin Sparks",
   "palette": "chip",
   "info": "G# dorian - 150 BPM",
   "arrangement": "chip - linear form",
