@@ -55,40 +55,40 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
-- **Harmony rework (1.0.0 blocker, 2026-10-17).** Troy: the harmonies are
-  the weakest part and fixing them lifts everything. What the week's
-  measurements say the harmony does wrong, in order of damage:
-  1. **One voice is not a chord.** The thin voicing is a single channel, and
-     the engine fakes the chord with the J arpeggio (pitch cycling root,
-     fourth, fifth every tick). On a held pad it is a shimmer; on a stab or
-     a chug it is a warble (Strike of the Factory: one strings note a bar,
-     552 ms, cut, quacking) and on a hard voice a rasp (Northern Dawn's
-     brass before the fix). Replace it: a thin harmony should be two real
-     voices, or one voice that plays the chord as a short strummed
-     arpeggio in rows rather than ticks, or the mode should pick the voice
-     count (stabs and chugs want three voices, a pad can hold two).
-  2. **Voice and mode do not fit.** The mode-fit rule (no rhythmic mode on
-     strings, pad or choir) is a patch; the draw should choose the harmony
-     voice knowing the mode and the tempo, and choose the mode knowing the
-     voice. A pad is held; a brass or guitar is stabbed or chugged; a stab's
-     note length should be set from the voice's attack and the row length,
-     not a fixed six rows.
-  3. **Register and spacing.** Anchors were tuned around the octave error;
-     now that the conversion is exact the lowest voice sits at 160 Hz and
-     brass a fifth above. Re-derive the anchors per family (pads lower and
-     wider, brass and guitars mid and close) and keep the top voice under
-     the lead's line, not just under a fixed ceiling.
-  4. **Level per family.** Brass is written at 0.7 of a pad's volume by
-     hand; make the harmony level a property of the voice family and the
-     mode, measured with the per-part ebur128 method, so a bright stab and
-     a soft pad land at the same perceived distance under the lead.
-  5. **The counter-line shares the harmony channel** and takes its level;
-     give it its own level rule, and never put it on the harmony channel in
-     the bar a stab lands.
-  Method: a page of eight songs across the sounds, harmony alone and in the
-  mix, before and after, with the per-part loudness and the interval and
-  register measurements printed per song. Every change measured on rendered
-  audio first.
+- **Harmony rework (1.0.0 blocker, 2026-10-17; done on branch
+  `harmony-rework`, under review by ear).** Troy: the harmonies are the
+  weakest part and fixing them lifts everything. The week's measurements
+  listed five failings in order of damage; what was found and done:
+  1. **One voice is not a chord.** The thin voicing was one channel and the J
+     arpeggio; and under every stab a per-tick volume slide (D02) had the
+     note silent 250 ms after its attack, so Strike of the Factory's strings
+     swelled for 100 ms and were gone by 260 ms (measured on the part alone),
+     warbling. Thin is now two real voices, full three, no J; the voicing
+     rule keeps a chord's colour tone in (a two-voice pad is a tenth, a
+     two-voice brass a sixth or a third).
+  2. **Voice and mode.** A stab's hold comes from the voice: its family's
+     length or three times its measured attack, in rows at the tempo, no
+     slide, a note-off into the release. A struck voice never draws the
+     sustain mode (this also closes the orchestra-hit item below).
+  3. **Register and spacing.** Per family: pads, strings, choir low and wide
+     (lowest voice C3-D3, the top a tenth up), brass and guitars a close
+     triad at 196-330 Hz, the top voice under the lead's lower quartile per
+     pattern.
+  4. **Level per family.** Measured: every harmony-pool preset on one chord
+     figure through ebur128 lands within 1.5 dB across the sustaining
+     families, so the family table is flat except brass (2 dB by ear) and
+     struck voices (+1 dB). What was wrong was the whole part: with real
+     voices holding, the harmony channels at 25 put a strings chord's hits
+     at the lead's level; at 9 the review set sits 6 to 10 dB under the lead
+     (momentary loudness, 95th percentile); a hit shorter than the ear's
+     200 ms integration is written up by the square root of the ratio, so
+     the one-row chug lands with the held chords.
+  5. **The counter-line** has the third harmony channel and its own level
+     (32 against the lead's 42), no chord fade.
+  Open after the listen: the brass trim is still a by-ear number (K-weighted
+  loudness says brass is not louder; if it still reads forward the next
+  measurement is its spectrum at the new register); the 200 ms hit rule;
+  whether thin stabs want three voices on some packs.
 - **Melody register (1.x, fine tuning).** With the note conversion exact
   the lead sits at a median of 570 to 620 Hz across the sounds (the old
   by-ear tuning had it an octave under that). Troy: the songs are right,

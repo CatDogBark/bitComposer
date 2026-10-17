@@ -229,6 +229,18 @@ def is_struck(name: str) -> bool:
     return name in STRUCK_PRESETS
 
 
+def harmony_family(name: str) -> str | None:
+    """The family the harmony voices and levels a preset by: its release
+    family, or "struck" for a struck voice that has none (the orchestra
+    hit, the rhythm guitar), None for anything else."""
+    fam = PRESET_RELEASE.get(name)
+    if fam is None and is_struck(name):
+        return "struck"
+    if fam == "lead" and is_struck(name):
+        return "struck"
+    return fam
+
+
 _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "noise",
                      "clap", "perc", "shaker", "cowbell", "hit", "timpani", "bassdrum", "cymbal",
                      "conga", "tambourine", "woodblock", "drum", "click", "brush", "castanet", "ping", "wash"}
@@ -315,7 +327,7 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
         meta = {"rate": SAMPLE_RATE if one_shot else WAVEFORM_TUNED_RATE,
                 "loop": not one_shot, "loop_start": loop_start, "loop_end": loop_end}
     family = PRESET_RELEASE.get(name)
-    gain, struck = 1.0, False
+    gain, struck, onset_ms = 1.0, False, 0.0
     if not is_percussion(name):
         # Equal loudness: scale the sample data so like voices sit at like
         # levels. Sustaining voices (loop as loud as the attack) go by their
@@ -329,6 +341,7 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
         strike = _rms(ints[:max(1, int(meta["rate"] * STRIKE_WINDOW))])
         loop_rms = _rms(ints[meta["loop_start"]:meta["loop_end"]] or ints)
         struck = (not meta.get("loop")) or loop_rms < STRUCK_RATIO * strike
+        onset_ms = _onset_ms(ints, meta["rate"])
         if struck and strike_rule:
             target, rms = STRIKE_TARGET, strike
         elif meta.get("loop"):
@@ -347,8 +360,24 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
         "rate": meta["rate"], "loop": meta.get("loop", False),
         "loop_start": meta.get("loop_start", 0), "loop_end": meta.get("loop_end", length),
         "sus_loop": meta.get("sus_loop", False), "release": meta.get("release", 0.0),
-        "gain": gain, "struck": struck,
+        "gain": gain, "struck": struck, "onset_ms": onset_ms,
     }
+
+
+def _onset_ms(ints, rate: int, window_s: float = 0.004, span_s: float = 0.5) -> float:
+    """The voice's attack: time to reach 80% of its loudest 4 ms window in
+    the first half second. A struck voice reads 0; a string swell its swell.
+    The harmony sets a stab's length from it (harmony.stab_rows)."""
+    win = max(1, int(rate * window_s))
+    span = min(len(ints), int(rate * span_s))
+    levels = [_rms(ints[i:i + win]) for i in range(0, max(win, span - win + 1), win)]
+    if not levels:
+        return 0.0
+    top = max(levels)
+    for k, lvl in enumerate(levels):
+        if lvl >= 0.8 * top:
+            return 1000.0 * k * win / rate
+    return 0.0
 
 
 def register_presets(presets: dict, releases: dict) -> None:

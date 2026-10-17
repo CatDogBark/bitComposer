@@ -184,7 +184,14 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # ── Instruments ──
     instruments = _pick_instruments(style_pref, bass_weight=bass_weight, pack=pack,
                                     rhythmic=harmony_mode not in ("sustain", "stabs"))
-    samples, sample_map, struck_roles = _build_samples(instruments)
+    if smp.is_struck(instruments["harmony"]) and harmony_mode == "sustain":
+        # A struck voice (the orchestra hit, a piano, a vibraphone) decays
+        # within the second: a 32-row hold on it is one hit and then
+        # silence. The mode is redrawn from the pack's restruck modes.
+        w = {m: v for m, v in (pack_weights(pack, "harmony_mode") or {"stabs": 1, "rhythmic": 1}).items()
+             if m != "sustain" and v > 0} or {"stabs": 1}
+        harmony_mode = _weighted(list(w), w)
+    samples, sample_map, struck_roles, onset_roles = _build_samples(instruments)
     _register_releases(samples)
     echo_bus = None                      # built once song_salt exists
 
@@ -224,7 +231,10 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         chorus_motif = verse_motif = bridge_motif = None
 
     # ── Harmony config ──
-    num_harmony_voices = 3 if harmony_voicing == "full" else 1
+    # Thin is two real voices (a third or a sixth, a tenth on a pad); it
+    # was one voice arpeggiated into a chord with the J effect, which on
+    # anything but a held pad was a warble (see harmony.py).
+    num_harmony_voices = 3 if harmony_voicing == "full" else 2
     voicing_style = harmony_mode
 
     # ── Progression variation ──
@@ -324,8 +334,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                     arp_figures[sec] = riff_rng.choices(clear, [weights[f] for f in clear])[0]
     half_changes = 0
     # A brass harmony sits forward at its register: its notes are written
-    # 3 dB under a pad's and its echo stays under the source (see builder).
-    harmony_brass = smp.PRESET_RELEASE.get(instruments["harmony"]) == "brass"
+    # 2 dB under a pad's (harmony.FAMILY_LEVEL) and its echo stays under
+    # the source whatever the song's stereo mode.
+    harmony_brass = smp.harmony_family(instruments["harmony"]) == "brass"
 
     # ── Intro ──
     # Its own stream, so the opening can change without moving the song.
@@ -490,7 +501,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 fill_crash=pack_value(pack, "fill_crash", True),
                 kit_rng=kit_rng,
                 power_chords=power_chords, bass_riff=bass_riff,
-                harmony_family=smp.PRESET_RELEASE.get(instruments["harmony"]),
+                harmony_family=smp.harmony_family(instruments["harmony"]),
+                harmony_preset=instruments["harmony"],
+                harmony_onset_ms=onset_roles["harmony"],
             )
 
             pattern_cache[cache_key] = len(patterns)

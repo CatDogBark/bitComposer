@@ -115,7 +115,7 @@ def main():
         "--harmony-voicing",
         choices=["thin", "full", "random"],
         default="random",
-        help="Harmony voicing: thin (1 note) or full (2-3 note chords) (default: random)",
+        help="Harmony voicing: thin (two voices) or full (three) (default: random)",
     )
     parser.add_argument(
         "--harmony-mode",
