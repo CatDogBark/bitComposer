@@ -63,7 +63,7 @@ These change how every note sounds, not what notes are played.
   labels 60-83 and its `register` argument follows section energy
   (`builder._compose_pattern`); a pack habit for a lower lead window is the
   cheap lever.
-- **Orchestra hit under sustain harmony (small, before or after 1.0).** The
+- **Orchestra hit under sustain harmony (1.x).** The
   Mega Man X orchestra hit is a one-shot in the harmony pool; drawn with the
   sustain mode it leaves gaps between hits. Restrict it to the stab and chug
   modes, the way the mode-fit rule already steers slow voices away from the
