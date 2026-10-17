@@ -30,7 +30,9 @@ Repository = "https://github.com/CatDogBark/bitComposer"
 Issues = "https://github.com/CatDogBark/bitComposer/issues"
 Changelog = "https://github.com/CatDogBark/bitComposer/blob/main/CHANGELOG.md"
 
-# Only the library ships. Without this, setuptools' flat-layout discovery would
-# also install tests/ as a top-level package.
-[tool.setuptools]
-packages = ["bitcomposer"]
+# Only the library ships, with its subpackages (samples/, packs/). A fixed
+# list of just "bitcomposer" left them out once they existed, so an installed
+# copy could not import; and without a filter, setuptools' flat-layout
+# discovery would also install tests/ as a top-level package.
+[tool.setuptools.packages.find]
+include = ["bitcomposer*"]
