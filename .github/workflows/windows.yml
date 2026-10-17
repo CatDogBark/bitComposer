@@ -71,4 +71,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = if ("${{ inputs.tag }}" -ne "") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          # A tag pushed without a release yet: make the release from the tag
+          # message, then attach. (0.9.0 and 0.9.1 failed here for want of it.)
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title $tag --notes-from-tag }
           gh release upload $tag bitComposer-windows.zip --clobber
