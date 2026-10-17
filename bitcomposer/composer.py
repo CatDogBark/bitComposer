@@ -529,7 +529,11 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     title_tempo = tempo_pref if tempo_pref in ("slow", "medium", "fast") else \
         ("slow" if bpm < 110 else "fast" if bpm >= 140 else "medium")
     title_energy = energy_pref if energy_pref in ("chill", "normal", "intense") else "normal"
-    song_name = names.song_title(scale_name, rng=random.Random(song_salt ^ 0x7A1E),
+    # The sound is folded into the title's seed: the same seed under two
+    # sounds is two songs and should not share a name (the plain palettes
+    # make the same number of draws, so their salts coincide).
+    title_rng = random.Random(song_salt ^ 0x7A1E ^ zlib.crc32((pack or style_pref).encode()))
+    song_name = names.song_title(scale_name, rng=title_rng,
                                  sound=pack or style_pref, energy=title_energy, tempo=title_tempo)
     display_structure = [struct.section_type(s) for s in song_structure]
     message = "\n".join([
