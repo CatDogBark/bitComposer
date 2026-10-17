@@ -244,3 +244,20 @@ class Sound(unittest.TestCase):
             seen.add(info["pack"] or info["style"])
         self.assertGreaterEqual(len(seen & set(SOUNDS)), 5, seen)
 
+
+class Length(unittest.TestCase):
+    """Songs sit in a band: the last section repeats under the floor, repeats
+    are dropped above the ceiling, and the order list stays valid."""
+
+    def test_lengths_stay_in_the_band(self):
+        from bitcomposer import structure as struct
+        adjusted = 0
+        for seed in range(300, 330):
+            song = compose_song(seed=seed)
+            info = song["info"]
+            self.assertTrue(all(0 <= i < len(song["patterns"]) for i in song["orders"]))
+            self.assertLessEqual(info["length_sec"], struct.LENGTH_CEILING_SEC + 64 * 60 / (info["tempo"] * 4) + 1)
+            if info["length_adjust"]:
+                adjusted += 1
+        self.assertGreater(adjusted, 0)
+

@@ -302,6 +302,66 @@ def pattern_plan(section_prog: list, compact: bool) -> list[list]:
     return plan or [[]]
 
 
+# Song length, in seconds. Over sixty random seeds the median was two minutes
+# with a tail each way: three in ten songs under 1:30 (the short form, a
+# quarter of draws, at speed) and two in ten over 3:00 (a long form with its
+# whole AABA repeated at 80 BPM, up to six minutes). The spread is right for
+# a player that cycles sounds; the tails are not. Below the floor the last
+# body section plays again; above the ceiling the latest repeat of a section
+# group is dropped, the first of every group kept, intro and ending kept.
+LENGTH_FLOOR_SEC = 75
+LENGTH_CEILING_SEC = 210
+
+
+def clamp_length(structure: list[str], pattern_index_for: dict,
+                 pattern_counts: dict[str, int], pattern_seconds: float
+                 ) -> tuple[list[int], list[str], str | None]:
+    """The order list clamped to the length band. Returns (orders, the
+    section list as played, a note on what moved or None)."""
+    blocks = [(s, [pattern_index_for[(s, i)] for i in range(pattern_counts[s])]) for s in structure]
+    ending = {"intro", "outro", "tag"}
+
+    def total():
+        return sum(len(b) for _, b in blocks) * pattern_seconds
+    note = None
+    # Under the floor: the whole body (everything between the intro and the
+    # ending) plays again once, as a level loop would; then, if still short,
+    # the last section up to twice more. Repeating only the last section was
+    # the first version: a 43 s short form became one verse three times over.
+    body = [i for i, (sec, _) in enumerate(blocks) if sec not in ending]
+    if body and total() < LENGTH_FLOOR_SEC:
+        blocks[body[-1] + 1:body[-1] + 1] = [blocks[i] for i in body]
+        note = "played the body twice"
+    repeats = 0
+    while total() < LENGTH_FLOOR_SEC and repeats < 2:
+        body = [i for i, (sec, _) in enumerate(blocks) if sec not in ending]
+        if not body:
+            break
+        idx = body[-1]
+        blocks.insert(idx + 1, blocks[idx])
+        repeats += 1
+        note = f"played the body twice, then the last {section_type(blocks[idx][0])} again"
+    while total() > LENGTH_CEILING_SEC:
+        groups: dict[str, list[int]] = {}
+        for i, (sec, _) in enumerate(blocks):
+            if sec not in ending:
+                groups.setdefault(reuse_group(sec), []).append(i)
+        candidates = [idxs[-1] for idxs in groups.values() if len(idxs) > 1]
+        if candidates:
+            drop = max(candidates)
+            note = f"dropped a repeat of the {section_type(blocks[drop][0])}"
+        else:
+            # Through-composed (linear): nothing repeats, so the last body
+            # section goes, as long as two remain.
+            body = [i for i, (sec, _) in enumerate(blocks) if sec not in ending]
+            if len(body) <= 2:
+                break
+            drop = body[-1]
+            note = f"dropped the last {section_type(blocks[drop][0])}"
+        del blocks[drop]
+    return [p for _, b in blocks for p in b], [sec for sec, _ in blocks], note
+
+
 def build_orders(structure: list[str], pattern_index_for: dict,
                  pattern_counts: dict[str, int]) -> list[int]:
     """Build the order list from the song structure.

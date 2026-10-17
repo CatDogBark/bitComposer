@@ -494,7 +494,17 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             patterns.append(pat)
 
     # ── Build orders ──
-    orders = struct.build_orders(song_structure, pattern_index_for, pattern_counts)
+    pattern_seconds = ROWS_PER_PATTERN * 60.0 / (bpm_value * ROWS_PER_BEAT)
+    orders, played_sections, length_note = struct.clamp_length(
+        song_structure, pattern_index_for, pattern_counts, pattern_seconds)
+    if length_note:
+        # A dropped section leaves its patterns unreferenced: keep only the
+        # patterns the order list reaches, renumbered in first-use order.
+        used = sorted(set(orders), key=orders.index)
+        remap = {old: new for new, old in enumerate(used)}
+        patterns = [patterns[i] for i in used]
+        pattern_sec = {remap[i]: sec for i, sec in pattern_sec.items() if i in remap}
+        orders = [remap[i] for i in orders]
 
     # ── Echo tails across pattern boundaries ──
     # Where a pattern is only ever preceded by one other, its first rows can
@@ -535,7 +545,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     title_rng = random.Random(song_salt ^ 0x7A1E ^ zlib.crc32((pack or style_pref).encode()))
     song_name = names.song_title(scale_name, rng=title_rng,
                                  sound=pack or style_pref, energy=title_energy, tempo=title_tempo)
-    display_structure = [struct.section_type(s) for s in song_structure]
+    display_structure = [struct.section_type(s) for s in played_sections]
     message = "\n".join([
         song_name,
         f"{key_name} {scale_label} - {bpm} BPM",
@@ -596,6 +606,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "progression": [tuple(e) for e in progression],
         "half_pattern_changes": half_changes,
         "structure": display_structure,
+        "length_sec": round(len(orders) * pattern_seconds),
+        "length_adjust": length_note,
         "intro": intro_name,
         "intro_patterns": intro_length,
         "num_patterns": len(patterns),
