@@ -46,7 +46,7 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     from PySide6.QtNetwork import QLocalServer, QLocalSocket
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuick import QQuickWindow  # noqa: F401  (so the root object comes back as one, with grabWindow)
-    from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSystemTrayIcon
+    from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QSystemTrayIcon
 
     from .backend import Backend
 
@@ -244,19 +244,14 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     backend.folderRequested.connect(choose_folder)
     backend.openFolderRequested.connect(lambda p: QDesktopServices.openUrl(QUrl.fromLocalFile(p)))
 
-    def confirm_update(version):
-        ans = QMessageBox.question(None, "bitComposer",
-                                   f"Update to {version}?\n\nThe player restarts (or the installer runs) when it is done.")
-        if ans == QMessageBox.StandardButton.Yes:
-            backend.start_update()
-    backend.updateConfirm.connect(confirm_update)
+    backend.openUrlRequested.connect(lambda u: QDesktopServices.openUrl(QUrl(u)))
     backend.quitRequested.connect(app.quit)
 
     if try_update:
-        if upd.install_kind() == "frozen":
+        if upd.install_kind() in ("frozen", "pipx"):
             backend.offer(upd.local_release(try_update, __version__))
         else:
-            backend.notify("--try-update is for the installed Windows build")
+            backend.notify("--try-update is for an installed copy (the Windows build, or pipx)")
     app.aboutToQuit.connect(backend.shutdown)
     # Ctrl+C in a terminal and a SIGTERM quit cleanly (state saved, audio
     # closed). Python only sees a signal when it runs, so a slow timer
