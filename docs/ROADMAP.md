@@ -10,7 +10,7 @@ second) and `CHANGELOG.md` for what has shipped.
 Decided 2026-10-18. The product is the generator and, on top of it, a player
 that generates while you listen, the way the Plasma widget does, on Linux
 and Windows as far as each allows. The 1.0.0 gate holds both the generator
-and the Linux companion; the Windows player is 1.x.
+and the Linux companion; the cross-platform player is 1.x.
 
 - **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
   sdist and wheel, checks the tag against `bitcomposer.__version__`, and
@@ -28,11 +28,20 @@ and the Linux companion; the Windows player is 1.x.
   `docs/INSTALL.md` is rewritten around that.
 - **Docs.** README install section (pipx, Windows zip, developer clone, the
   tkinter line) done; the listening page is regenerated at the tag.
-- **Windows player (1.x).** The window grows the widget's features
+- **The player (1.x), one program on both platforms.** Decided
+  2026-10-18: rather than a KDE widget on Linux and a separate window on
+  Windows, one player program with the widget's features and layout
   (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
-  shuffle, gain) with the same layout: bundle libopenmpt's Windows DLL and
-  drive it through the ctypes bindings the daemon already uses, with an
-  audio output path. Two parts: the DLL and the audio path.
+  shuffle, gain, the readout of what the song drew) runs on both. It
+  plays through libopenmpt by the ctypes bindings the daemon already uses
+  (the shared library on Linux, the DLL bundled on Windows) with an audio
+  output path per platform, and generates through the `bitcomposer`
+  command the way the companion does. The Plasma widget stays as a thin
+  KDE-native face over the same daemon until the program is at least as
+  good on Linux, then is retired or kept as a panel front end; that call is
+  made when the program is ready, not now. Order of work: the audio path
+  and the DLL on Windows first (the window exists, the player part does
+  not), then the Linux build of the same program.
 
 ## Sound quality
 
@@ -186,8 +195,8 @@ These change how every note sounds, not what notes are played.
   first. Left out of `ffvi` for the kit revision: congas, shaker,
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
-- **Windows player.** See Release above: a 1.x item, the window with the
-  widget's features and layout over libopenmpt's Windows DLL.
+- **Windows player.** See "The player" under Release above: one program
+  on both platforms, Windows first.
 - **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
   sample bank in BRR, every voice's envelope and pitch, the echo settings.
   A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot
