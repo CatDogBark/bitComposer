@@ -16,6 +16,8 @@ AppSupportURL=https://github.com/CatDogBark/bitComposer/issues
 DefaultDirName={autopf}\bitComposer
 DefaultGroupName=bitComposer
 UninstallDisplayIcon={app}\bitComposer.exe
+; Paths below are relative to the repository root, not to this script.
+SourceDir=..\..
 OutputDir=.
 OutputBaseFilename=bitComposer-setup
 Compression=lzma2
