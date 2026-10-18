@@ -1,11 +1,13 @@
-# BitComposer — Generation Quality Analysis
+# bitComposer — Generation Quality Analysis
 
-**Date:** 2026-09-04
-**Analyzed commit:** `548eef1` (last code change 2026-03-11)
-**Method:** 8 seeded songs (`-s 1..8`), parsed back from `.it` and measured with
-`tools/analyze.py`.
+**Started:** 2026-09-04, on commit `548eef1` (last code change 2026-03-11).
+Kept since as the record of every measured pass, through 1.0.0 (§2e,
+2026-10-18).
+**Method:** seeded songs parsed back from `.it` and measured with
+`tools/analyze.py`; levels and pitches by rendering one part alone through
+libopenmpt (§4). The first analysis used 8 songs (`-s 1..8`).
 
-The headline finding: **the output is not limited by algorithmic sophistication.
+The first analysis's headline: **the output is not limited by algorithmic sophistication.
 It is limited by three defects that silently gut the arrangement.** Any work on
 smarter generation — statistical or neural — should come *after* these are fixed,
 because none of them are things a model can compensate for.
@@ -284,15 +286,16 @@ was 80) and every channel volume carries a master gain of 1.25
 (`composer.MASTER_GAIN`); over eighteen seeds across the palettes that is
 about −20 LUFS with the loudest song's true peak a decibel under full
 scale. No limiter or compression: the dynamics (an 11 LU range on some
-songs) are left alone, and the players' gain (the widget's soft limiter,
-XMPlay's amplification) covers the rest.
+songs) are left alone, and the players' gain (bitComposer's player has one
+with a soft limiter; XMPlay amplifies) covers the rest.
 
 **Chorus.** Every ensemble voice (`_ensemble_voice`: the FFVI strings and
 contrabass, the Mana glass pad, the Evermore pads and drone) and the Mega
 Man X lead guitar carried their chorus as equal detuned copies summed
 with the tone. Measured by rendering each voice at the three pitches the
-melody sounds at (midi 60, 72, 83 sound an octave below their labels:
-131, 262, 495 Hz) and watching the fundamental's share of power across
+melody sounds at (midi 60, 72, 83, which at the time sounded an octave
+below their labels, 131, 262, 495 Hz: the note-conversion error fixed in
+§2e) and watching the fundamental's share of power across
 four windows, that construction is a comb: once per beat cycle the copies
 sit in antiphase to the tone and the odd partials cancel, so the share
 swung by 60-90 points. The dry tone now leads at 80% (`ENSEMBLE_DRY`)
@@ -318,8 +321,8 @@ per voice; here each part has its own send (`composer.ECHO_SENDS`): lead
 at ½, harmony at 0.3 and arp at 0.35 of the part, repeats below 8%
 dropped, drums and bass dry. Returns live on seven channels (lead 2,
 harmony 3, arp 2; `pattern.CH_ECHO_ALL`, 19 channels in all) and the song
-message carries a `layout:` line naming every channel's role so the widget
-can fold them into one ECHO bus. Measured on four SNES songs: returns sit
+message carries a `layout:` line naming every channel's role so a player's
+mixer (bitComposer's own does) can fold them into one ECHO bus. Measured on four SNES songs: returns sit
 6 dB under the lead, 12–14 dB under the harmony and 9–11 dB under the
 arp; all returns together 2–6 dB under the melody.
 
@@ -345,8 +348,9 @@ every pluck and the arp became a stream of ticks (Veiled Meridian).
 The drawn settings are written into the song message
 ("echo: dotted delay, feedback 0.45, bounce, wet"). Left to chance, 70%
 of snes songs get the echo and chip and genesis never do (neither chip
-had an echo unit); `--echo` overrides. Channel count is 14; the widget's mixer and `bitcomposer-master.sh`
-follow.
+had an echo unit); `--echo` overrides. The player's mixer reads the
+channel roles from the `layout:` line, so it follows whatever the composer
+writes.
 
 **Bugs fixed on the way.**
 
@@ -371,7 +375,7 @@ figure per song; no per-section instrumentation plan beyond the layer map.
 
 ---
 
-## 2d. Composition passes — 0.5.0 to 0.7.0
+## 2d. Composition passes — 0.5.0 to 0.9.0
 
 **Dates:** 2026-10-14 and 2026-10-15. Eight passes, each developed on a
 branch, measured over twenty seeds with `tools/analyze.py` (levels by
@@ -402,7 +406,7 @@ tuned by ear afterwards (arp levels, metallic hat).
 | SNES echo (0.7.0) | three fading, darkening taps sent per note from the lead, lighter sends from harmony and arp on returns of their own, per-song delay / feedback / wetness / stereo drawn from an own stream, section gain, 19 channels | lead notes sent | 100% | 70% |
 | | | returns vs source (lead / harmony / arp) | −5 dB / none / none | −6 / −13 / −10 dB |
 | | | all returns vs melody (six songs) | about −5 dB | −0.3 to −5.2 dB |
-| Harmony rework (unreleased, 2026-10-17) | two or three real voices (the J arpeggio retired), a voicing rule that keeps the chord's colour tone, stab length from the voice's measured attack with no volume slide, registers per family with the top voice under the lead's lower quartile, level per family measured through ebur128 and the harmony channels 25 → 9, hits under 200 ms written up, the counter-line on its own channel and level | harmony hits vs lead, momentary loudness 95th pct, eight songs | −5.5 to +5.5 dB | −4.4 to −12.2 dB |
+| Harmony rework (1.0.0, 2026-10-17) | two or three real voices (the J arpeggio retired), a voicing rule that keeps the chord's colour tone, stab length from the voice's measured attack with no volume slide, registers per family with the top voice under the lead's lower quartile, level per family measured through ebur128 and the harmony channels 25 → 9, hits under 200 ms written up, the counter-line on its own channel and level | harmony hits vs lead, momentary loudness 95th pct, eight songs | −5.5 to +5.5 dB | −4.4 to −12.2 dB |
 | | | strings stab audible length (Strike of the Factory) | 260 ms (slide) | 736 ms (hold) |
 | | | J-arpeggio notes across the set | 71 | 0 |
 
@@ -418,10 +422,40 @@ Two lessons from the reviews are worth more than any number:
   old side stutter through three reviews. Both clips now decode into
   buffers on one audio clock and the switch is a gain change.
 
-**Still open** (see `ROADMAP.md`): arp register motion beyond the octave
-climb, chip chord stabs, per-section instrumentation, pad colour, the
-learned-model items, and the FFVI / Metroid instrument sets. `--keys home`
-pins every section to the home key for loops and A/B tests.
+**Still open after 0.9** (see `ROADMAP.md`): arp register motion beyond the
+octave climb, chip chord stabs, per-section instrumentation, pad colour and
+the learned-model items. The FFVI set became a pack (0.8.0, rebuilt from the
+game's bank in 0.9.0); Metroid was dropped, Evermore covering its ground.
+`--keys home` pins every section to the home key for loops and A/B tests.
+
+---
+
+## 2e. Toward 1.0.0 — the release listen
+
+**Dates:** 2026-10-17 and 2026-10-18. After 0.9.1, every sound was heard
+end to end on a release page, and what the listen turned up was mostly
+engine-wide rather than per pack. Each finding was measured on the part
+rendered alone before anything changed, the same way as §2d.
+
+| fix | what was wrong | measured before | after |
+|---|---|---|---|
+| Note conversion | `midi_to_it_note` subtracted 12, believing IT's C-5 was MIDI 72; IT note 60 plays a sample at its C5Speed, where our samples carry middle C. Every tonal part sounded an octave below its label, and the registers had been tuned by ear around the error | label 60 played at 130.8 Hz; the harmony's lowest voice at 39-41 Hz in every sound, under the bass | label 60 at 261.6 Hz; bass medians 78-107 Hz, harmony 160-370 Hz, arp 270-340 Hz |
+| Bass floor | bass windows set in label space without the pattern's octave shift; "deep and heavy" at 16 Hz, octave-bounce and driving styles a twelfth under that | a sixth to a half of bass notes under 33 Hz, down to 13 Hz (Northern Dawn's slap bass at 29 Hz, a blown speaker by ear) | windows in MIDI (heavy E1-D#2), a floor at E1 on every written bass note |
+| Harmony mode and voice | a rhythmic harmony mode (chug, pulse, ostinato) could land on a slow-attack voice (strings, pad, choir) | 18 of 60 Mega Man X seeds; Northern Dawn: 264 of 266 chord notes shorter than the strings' 96 ms swell | none where the pool has a fast voice |
+| Song length | a short form at speed, or a long form repeated at a slow tempo | 3 in 10 songs under 1:30 (43 s at worst), 2 in 10 over 3:00 (up to 6 min) | every song 75-210 s, the median unchanged at 2.1 min |
+| Brass harmony | a lone harmony voice was always arpeggiated with the J effect; on bright brass that is a rasp, twelve times a second on Northern Dawn | brass harmony at 160 Hz alone (the games stab theirs at 250-580 Hz) | the J arpeggio only on pad, strings, choir and organ; brass a fifth higher and 3 dB under a pad |
+| Lead register | the conversion fix raised the lead an octave while bass and harmony were re-derived downward; by ear, piercing | lead medians 523-640 Hz | placed once per song by `registers.py`: medians 415-480 Hz, the lead under the chord's top voice in 0-18% of rows |
+| Harmony rework | see the §2d table | | |
+
+The lesson of the week: **a constant error tuned around by ear hides
+itself.** The octave offset had been there since the first version; every
+register had been set to sound right on top of it, so nothing sounded
+wrong until a part was measured in hertz against what the games play.
+
+**Still open at 1.0.0** (`ROADMAP.md`): the loudness spread across songs
+(7.6 dB, following the kit's hits per second times tempo), the melody's
+register per pack by ear, the orchestra hit's use, the brass on Northern
+Dawn ("manageable, still off"), and the next packs.
 
 ---
 
@@ -472,7 +506,15 @@ python3 tools/analyze.py --grid /tmp/out/s1.it    # tracker-style pattern dump
 
 Grade generator changes against these numbers on **fixed seeds**, before and
 after. Ear-checking alone has repeatedly missed the defects above — the drum
-stretch survived nine commits and a full README write-up.
+stretch survived nine commits and a full README write-up, and the octave
+error of §2e every version until 1.0.
+
+**One part alone.** Levels and pitches in §2c-2e come from rendering a single
+part: in a copy of the file, set every other channel's volume in the header
+to zero (byte `0x80` + channel), render through libopenmpt (the player's
+`bitcomposer.player.openmpt` binding does it), and measure the result:
+ffmpeg's `ebur128` for loudness, a pitch track for register. The
+comparison pages used for the by-ear reviews live outside the repository.
 
 ---
 
@@ -482,16 +524,17 @@ Ordered by return on effort. The important claim is that **steps 1–2 must prec
 step 3**: a learned model cannot fix a stretched drum grid or a chorus that never
 repeats, because those are arrangement-layer facts, not note-choice facts.
 
-1. **Fix Tier 0.** Cheap, deterministic, individually audible.
-2. **Lift the Tier 1 ceilings** that are pure code: 16th-note rhythm templates and
+1. ✔ **Fix Tier 0.** Cheap, deterministic, individually audible (§2b).
+2. ✔ **Lift the Tier 1 ceilings** that are pure code: 16th-note rhythm templates and
    anticipations, arp/bass rests tied to section energy, extended chord types and
-   secondary dominants, and the J/Q/SDx effect vocabulary.
+   secondary dominants, and the J/Q/SDx effect vocabulary (§2c, §2d).
 3. **Corpus statistics — no neural net.** Train n-gram / Markov tables on real
    chiptune (NESMDB, ~5k NES songs already symbolic; or the Modland module
    archive). Learn chord-transition probabilities, melodic interval distributions
    conditioned on scale degree and chord tone, and real rhythm-template
    frequencies. A few hundred lines, trained offline, shipped as a JSON table —
-   **this preserves the project's zero-runtime-dependency property.** Best
+   **this preserves the generator's zero-dependency property** (the player
+   has Qt; the generator still needs nothing). Best
    quality-per-effort on the list.
 4. **A small conditioned transformer.** ~5–20M parameters over a note-event
    vocabulary, trained on the same corpus. Condition it on chord, section type and
@@ -502,5 +545,5 @@ repeats, because those are arrangement-layer facts, not note-choice facts.
    (key, scale, progression set, form, instrument palette, energy curve,
    per-section texture plan) that drives the existing engine. Small typed output
    where musical world-knowledge helps and validation is trivial. Orthogonal to
-   3–4 and cheap. Would also produce real song titles instead of
-   `BitComposer - C Dorian`.
+   3–4 and cheap. (Song titles no longer need it: `names.py` builds them
+   from the song's scale, sound, energy and tempo.)

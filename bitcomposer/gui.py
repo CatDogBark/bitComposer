@@ -2,8 +2,8 @@
 A small window for people who are not at a terminal: pick a sound (a palette
 or a style pack) and how many songs, press Generate, and the .it files land in a folder.
 Play them with OpenMPT (Windows), or any tracker player that reads Impulse
-Tracker modules. Standard-library only (tkinter), like the rest of the
-generator, so the Windows build is one executable.
+Tracker modules. Standard-library only (tkinter), like the generator; the
+player (bitcomposer-player) is the full program.
 """
 import os
 import sys

@@ -5,6 +5,8 @@
   </picture>
 </h1>
 
+*Endless music. Keep what moves you.*
+
 [![CI](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml/badge.svg)](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/CatDogBark/bitComposer)](https://github.com/CatDogBark/bitComposer/releases/latest)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -123,7 +125,8 @@ Everything defaults to `random`.
 --harmony-voicing thin|full          two real voices, or three
 --harmony-mode stabs|sustain|rhythmic
 --bass-weight heavy|medium|light
---name    title|timestamp            file naming; --suffix adds a marker
+--lead-shift SEMITONES               move the lead's window (negative lowers it); default: the sound's own
+--name    title|timestamp            file naming; --prefix / --suffix add a marker ("(auto) " is the player's)
 -s SEED   -n COUNT   -o FILE   -d DIR   -v
 ```
 
@@ -153,8 +156,10 @@ bitcomposer -d out --style snes --tempo slow --energy chill --scale major --drum
 6. Instruments are synthesized per song from the chosen palette and written as samples. SNES voices get attack-then-loop sustain and the BRR treatment.
 7. The echo: held lead notes and phrase endings come back as three fading, darkening repeats, the harmony and arp as lighter ones, each on return channels of their own, drums and bass dry. Everything is written as a 19-channel `.it` with the title and a song message (key, BPM, palette, form, seed, and a `layout:` line naming every channel's role) that trackers display.
 
-Each song gets a seed-derived two-word title that leans with its scale:
-*Haunted Orchard*, *Neon Causeway*, *Rusted Foundry*.
+Each song gets a title that reads the song: its scale, sound, energy and
+tempo lean the words, so a slow minor Evermore piece and a fast Mega Man X
+track are named differently (*Lunar Snow*, *Lighthouse of Steel*, *The
+Power Plant of Sparks*).
 
 ## Measuring instead of guessing
 
@@ -202,9 +207,10 @@ Linux through the desktop's media controls (MPRIS, so the Plasma media
 applet and lock screen, GNOME and `playerctl` see it too), on Windows as
 global keys. SET → PLAYER → LOGIN, or the tray menu, starts it when you
 log in: in the tray, not playing. When a newer
-release exists an UPDATE button appears: on Linux it reinstalls through
-pipx and restarts the player, on Windows it downloads the release's
-installer and runs it. A player installed from a release candidate is
+release exists an UPDATE button appears. It says what the update will do,
+then shows it happening: on Linux it reinstalls through pipx, pipx's
+output scrolling past, and restarts the player; on Windows it downloads
+the release's installer and runs it. A player installed from a release candidate is
 offered the next candidate; a release player only releases.
 
 ## Windows

@@ -1,7 +1,8 @@
 # Contributing
 
-bitComposer is small on purpose: pure Python, no runtime dependencies, and
-every generator change is judged by measurement rather than by ear alone.
+bitComposer is small on purpose: the generator is pure Python with no runtime
+dependencies (the player adds Qt), and every generator change is judged by
+measurement rather than by ear alone.
 
 ## Before you open a pull request
 
@@ -41,7 +42,7 @@ every generator change is judged by measurement rather than by ear alone.
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
 | `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
 | `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
-| `bitcomposer/cli.py`, `gui.py` | the command line and the Windows window |
+| `bitcomposer/cli.py`, `gui.py` | the command line and the small tkinter generate window |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
 | `tests/` | one module per area, sharing `support.py` |
 | `bitcomposer/player/` | the player: the engine, the Qt window (`qml/Main.qml`, `backend.py`, `app.py`), MPRIS, start at login, the menu entry, updates |
@@ -78,10 +79,16 @@ it from there and the publish workflow refuses a tag that does not match it.
 
    The tag starts two workflows: `publish.yml` builds the sdist and wheel,
    checks the tag against the version and uploads to PyPI through trusted
-   publishing; `windows.yml` builds the executables, creates the GitHub
-   release from the tag message if none exists and attaches the zip.
+   publishing; `windows.yml` builds the executables and the installer,
+   installs and uninstalls it on the runner, creates the GitHub release
+   from the tag message if none exists, attaches the zip and
+   `bitComposer-setup.exe`, and adds the code signing policy link to the
+   notes.
 7. Check both: `pip install bitcomposer==X.Y.Z` in a fresh venv, and the
-   release page carries `bitComposer-windows.zip`.
+   release page carries `bitComposer-windows.zip` and `bitComposer-setup.exe`.
+8. Start a player on the previous release (pipx on Linux, the installed
+   one on Windows): it should offer UPDATE to the new version and come
+   back on it.
 
 A pre-release tag (`v1.0.0rc1`) goes through the same path. PyPI lists it
 as a pre-release that `pip` and `pipx` only install by exact version, so it

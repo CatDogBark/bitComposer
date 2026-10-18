@@ -8,7 +8,7 @@ second) and `CHANGELOG.md` for what has shipped.
 ## Release (1.0.0)
 
 Decided 2026-10-18. The product is the player: a program that generates
-while you listen, the way the Plasma widget does, on Linux and Windows.
+while you listen, the way the Plasma widget did, on Linux and Windows.
 Only developers want the generator alone, so 1.0.0 ships with the player
 (branch `player`), not after it. The window was tkinter at first, to keep
 the package dependency-free; it is Qt since 2026-10-18 (see The player,
@@ -17,15 +17,32 @@ below).
 - **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
   sdist and wheel, checks the tag against `bitcomposer.__version__`, and
   publishes to PyPI through trusted publishing (`publish.yml`, environment
-  `pypi`); the Windows build runs on every push to main and attaches its
-  zip on the tag. The version lives in `bitcomposer/__init__.py` alone.
+  `pypi`); the Windows build runs on every push to main and, on the
+  tag, makes the GitHub release with the installer and the zip. The version lives in `bitcomposer/__init__.py` alone.
   First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
   exact version. The checklist is in `CONTRIBUTING.md`.
 - **Linux install (done).** `pipx install bitcomposer` is the user's path;
   the player's first launch adds its menu entry. (The widget's installer
   and its `docs/INSTALL.md` went with the widget in 1.0.0rc3.)
-- **Docs.** README install section (pipx, Windows zip, developer clone)
-  done; the listening page is regenerated at the tag.
+- **Docs (done 2026-10-18).** README (install, the player, Windows, the
+  code signing policy, privacy, contact), CONTRIBUTING, PORTABILITY and
+  ANALYSIS (the release listen as §2e) brought up to 1.0.
+- **Release candidates.** rc3 (the Qt player, media keys, start at login,
+  the widget retired) and rc4 (the fixes from testing rc3 on Plasma and
+  Windows, and GNOME, tested on GNOME Shell 50). Trying rc4's UPDATE
+  button on Linux found it doing nothing: the check for a pipx install
+  followed the venv's python link to the system python and decided the
+  player was not pipx's. rc5 fixes it and puts an update screen over the
+  window showing what the update is doing (pipx's own output on Linux; on
+  Windows the download, then the installer's own progress window; rc3 to
+  rc4 on Windows worked). An rc3 or rc4 install on Linux takes rc5 by
+  hand once (`pipx install --force`); rc5 to 1.0.0 through the button is
+  the update screen's first real run, on both platforms.
+- **Code signing.** Applied to the SignPath Foundation's open-source
+  programme (2026-10-18); 1.0.0 ships unsigned, and signing joins the
+  Windows build in a 1.0.x once it is approved (the workflow's Azure
+  wiring stays dormant). The UPDATE button then checks a downloaded
+  installer's signature before running it.
 - **The player (1.0.0, branch `player`), one program on both platforms.**
   Decided 2026-10-18: rather than a KDE widget on Linux and a separate
   window on Windows, one player program with the widget's features and
@@ -33,10 +50,11 @@ below).
   prune, shuffle, gain, the readout of what the song drew) runs on both.
   Built: `bitcomposer/player/` (engine, window, libopenmpt and audio
   bindings), the Windows installer, the desktop entry. Verified headless
-  here; the window on Plasma and the installer on Windows are checked by hand.
+  in the tests; the window on Plasma and GNOME and the installer on
+  Windows are checked by hand.
   - **One package.** The player lives in the `bitcomposer` package next to
-    the generator: Qt for the window (below), libopenmpt through the ctypes
-    code the daemon already has, audio out through the standard library
+    the generator: Qt for the window (below), libopenmpt through ctypes, audio
+    out through the standard library
     (waveOut on Windows, paplay or ALSA on Linux). Generator
     and player are one version released by one tag, so there is nothing
     for an install to pull separately: a generator change reaches users
@@ -44,24 +62,15 @@ below).
     version wrote each file.
   - **Install and upgrade.** Linux: `pipx install bitcomposer`, then
     one `bitcomposer-player` from a terminal, which adds the app-menu
-    entry itself (pip and pipx run nothing at install time; desktop.py);
-    upgrade with `pipx upgrade bitcomposer`. Windows: the release zip,
-    later an installer; the player checks GitHub releases and says when a
-    newer one exists. PyPI stays the one source every install is made
-    from. Later, only if wanted: a winget manifest (Windows gets
-    `winget upgrade`) and a Flatpak (the software centre's update button),
-    both packaging over the same package.
-  - **Order.** 1.1: the engine lifted out of the daemon into
-    `bitcomposer/player/` (module loading, mixing, channel volumes, the
-    prune and KEEP rules, auto-generate; no D-Bus in it), the window on
-    top of it with the widget's layout, the `bitcomposer-player` entry
-    point, the Windows build bundling libopenmpt's DLL, the update check.
-    Windows first: the window exists there and the player part does not.
-    1.2: the daemon re-based on the same engine so the widget and the
-    player share one implementation; the Plasma widget becomes an optional
-    front end; then the keep-or-retire call. (Superseded: the Qt player
-    took the widget's place, and the widget, its daemon and `companion/`
-    were removed in 1.0.0rc3.)
+    entry itself (pip and pipx run nothing at install time; desktop.py).
+    Windows: the installer from the release page (per-user, listed in
+    Installed apps with its uninstaller), or the zip. On both the player
+    checks GitHub releases, and its UPDATE button installs a newer one:
+    `pipx install --force` of the new version on Linux, the new installer
+    run silently on Windows, which reopens the player. PyPI stays the one
+    source every Linux install is made from. Later, only if wanted: a
+    winget manifest (Windows gets `winget upgrade`) and a Flatpak (see
+    Player, below), both packaging over the same package.
   - **Developing it.** Run the player from the checkout
     (`python3 -m bitcomposer.player`), the way the generator is developed;
     no `.pth` and no `--dev`, since the player is not a system service.
@@ -94,20 +103,6 @@ below).
     did for the widget, so `companion/` (the Plasma widget, the D-Bus
     daemon, the helper scripts and their installer) and `docs/INSTALL.md`
     are gone.
-  - **Flatpak on Flathub: the Linux install for everyone (after 1.0).**
-    pipx is a developer's path: a terminal, then one launch for the menu
-    entry. On Flathub the player is an Install button in KDE Discover and
-    GNOME Software, with its menu entry, icon and updates handled by the
-    store. The work: a manifest on the Qt for Python base app
-    (`io.qt.PySide.BaseApp`) over the KDE runtime, libopenmpt built as a
-    module, an audio output that works in the sandbox (check what the
-    runtime has: paplay and pw-cat may need bundling, or an output on the
-    PulseAudio/PipeWire library through ctypes), AppStream metainfo with
-    screenshots (the `--screenshot` mode makes them), the UPDATE button
-    hidden under `FLATPAK_ID` (desktop.py already skips its menu entry
-    there), then Flathub's review, which takes days to weeks and is not
-    ours to hurry. An AppImage is the lighter fallback (one download, no
-    store, no review) if Flathub stalls.
 
 ## Sound quality
 
@@ -137,13 +132,13 @@ These change how every note sounds, not what notes are played.
   with the drums dry. We keep the result and drop the hardware's limits.
   Stage one (done): a decaying, darkening three-tap tail on the lead, sent
   per note. Stage two (done): harmony and arp sends with their own levels,
-  a `layout:` line in the song message, one ECHO bus fader in the widget
+  a `layout:` line in the song message, one ECHO bus fader in the mixer
   with an expand to LEAD / HARM / ARP, and `--echo-wet`. Stage three
   (done): per-song delay (eighth, dotted eighth or quarter, weighted by
   tempo), feedback and wetness drawn per song, sends opened in thin
   sections and pulled back in the chorus, and bounce / centre stereo with
   a pan per tap. Left for later: echo on the drums as a rare choice
-  (gated snare). The widget readout of the drawn settings is done.
+  (gated snare). The player's readout of the drawn settings is done.
 - **Style packs.** An instrument set paired with arrangement habits
   (`bitcomposer/packs.py`): voices per role, weighted draws for tempo,
   energy, scale, harmony mode, bass, drums and echo, a counter-line voice,
@@ -153,10 +148,9 @@ These change how every note sounds, not what notes are played.
   sparse or no drums; the atmospheric set) and `megamanx` (Mega Man X: driven
   guitars, pulse synth, synth brass, riff bass, slap echo; read off the
   game's own sample bank) are done; Evermore covers the ambient ground, so no
-  separate Metroid pack. Packs from the banks: `megamanx` and `ffvi` are
-  built from their games' SPC snapshots (every voice profiled and
-  re-synthesised, echo from the DSP registers) and borrow nothing; `mana`
-  and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
+  separate Metroid pack. All four are built from their games' SPC
+  snapshots (every voice profiled and re-synthesised, echo from the DSP
+  registers) and borrow nothing; see Pack revisions. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
 - **Road Rash pack (Genesis; next new pack, asked for 2026-10-18).** The
@@ -177,6 +171,21 @@ These change how every note sounds, not what notes are played.
   register, drum density. The rock machinery exists from `megamanx`
   (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
   mostly data plus the VGM reader and the patch renderer.
+- **Your own packs (after 1.0, asked for 2026-10-18).** A pack added
+  without touching the code: a pack file in a packs folder that the SOUND
+  picker lists beside the built-in ones. A pack is mostly data already
+  (voices per role, weighted habits, channel trims), so the work is a
+  file format for the PACK table (JSON or TOML, read by the standard
+  library) checked on load with messages that say what is wrong and
+  where; voices named from the built-in set (any registered voice of the
+  pack's palette) or the user's own samples (WAV through the standard
+  `wave` module, with a base note and loop points, written into the
+  module the way the synthesised voices are); and a pack folder that can
+  be shared as one zip. Data only, never code: a pack someone sends
+  cannot run anything. The built-in packs stay Python (their voices are
+  recipes), and a user pack points at their voices by name. The SPC
+  sample banks item below is the same loader with a game's snapshot as
+  the sample source.
 - **Harmony rework (1.0.0 blocker, 2026-10-17; merged 2026-10-18 after the
   listen).** From the listen: the harmonies are the
   weakest part and fixing them lifts everything. The week's measurements
@@ -211,8 +220,7 @@ These change how every note sounds, not what notes are played.
   loudness says brass is not louder; if it still reads forward the next
   measurement is its spectrum at the new register); the 200 ms hit rule;
   whether thin stabs want three voices on some packs.
-- **Register plan (branch `register-plan`, 2026-10-18, under review by
-  ear).** The lead was heard as piercing after the octave fix of the
+- **Register plan (merged 2026-10-18).** The lead was heard as piercing after the octave fix of the
   17th: measured, the lead had gone up an octave with the fix (medians
   269-320 Hz before, 523-640 after) while the bass and the harmony were
   re-derived downward and the lead was not. On a page with the lead a
@@ -279,7 +287,7 @@ These change how every note sounds, not what notes are played.
   rhythm guitar should take the chug modes instead of the brass in this
   pack. Measure parts alone: zero the other channels' header volumes in a
   copy of the file, render, ebur128.
-- **Pack revisions (in progress, 2026-10-16).** The approved plan: one
+- **Pack revisions (done 2026-10-16).** The approved plan: one
   SOUND picker (done), then each pack rebuilt from its game's SPC snapshots
   so it borrows nothing and carries its own kit: `ffvi` (done, branch
   `ffvi-spc`: 35 own voices, echo from the DSP registers), `megamanx`
@@ -288,10 +296,10 @@ These change how every note sounds, not what notes are played.
   branch `mana-spc`: 25 own voices, no table exists so voices are named by
   measured character), `evermore` (done, branch `evermore-spc`: 22 own
   voices, seven matched William Kage's named rips by length at
-  https://www.williamkage.com/snes_soundfonts/ , the rest by character), then a widget readout of the drawn song and a mixer regrouped
-  by part with a KIT fold (done 2026-10-16: `voices:` and `drew:` lines in
-  the song message, `GetSongInfo` on the daemon, voice labels on the
-  faders, the KIT bus). Method and tools: `~/diags/bitcomposer/ffvi-spc/
+  https://www.williamkage.com/snes_soundfonts/ , the rest by character), then a readout of the drawn song and a mixer
+  regrouped by part with a KIT fold (done 2026-10-16: `voices:` and
+  `drew:` lines in the song message, voice labels on the faders, the KIT
+  bus; the player reads them since the widget retired). Method and tools: `~/diags/bitcomposer/ffvi-spc/
   tools` (`survey.py` decodes and profiles every unique sample across a set
   of snapshots, `voices.py` traces each through the voice registers,
   `fine.py` and `match.py` compare a sample's steady profile with ours,
@@ -311,8 +319,6 @@ These change how every note sounds, not what notes are played.
   first. Left out of `ffvi` for the kit revision: congas, shaker,
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
-- **Windows player.** See "The player" under Release above: one program
-  on both platforms, Windows first.
 - **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
   sample bank in BRR, every voice's envelope and pitch, the echo settings.
   A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot
@@ -407,6 +413,42 @@ composer's design keeps the door open.
 
 ## Player
 
-- HiDPI control sizes (fonts and popup already scale; buttons and sliders
-  are still fixed pixels).
-- Social preview image for the repository.
+After 1.0.0: how the player reaches people and fits their desktop.
+
+- **Flatpak on Flathub: the Linux install for everyone.**
+  pipx is a developer's path: a terminal, then one launch for the menu
+  entry. On Flathub the player is an Install button in KDE Discover and
+  GNOME Software, with its menu entry, icon and updates handled by the
+  store. The work: a manifest on the Qt for Python base app
+  (`io.qt.PySide.BaseApp`) over the KDE runtime, libopenmpt built as a
+  module, an audio output that works in the sandbox (check what the
+  runtime has: paplay and pw-cat may need bundling, or an output on the
+  PulseAudio/PipeWire library through ctypes), AppStream metainfo with
+  screenshots (the `--screenshot` mode makes them), the UPDATE button
+  hidden under `FLATPAK_ID` (desktop.py already skips its menu entry
+  there), then Flathub's review, which takes days to weeks and is not
+  ours to hurry. An AppImage is the lighter fallback (one download, no
+  store, no review) if Flathub stalls.
+- **Desktop integration, GNOME and KDE (asked for 2026-10-18).** The
+  player runs on both (checked on Plasma 6 and GNOME Shell 50: menu
+  entry, media controls through MPRIS, start at login, a tray where there
+  is one) but looks and behaves the same everywhere. Each desktop offers
+  more to an app that asks. The player stays one program, so each piece
+  is skipped where its desktop is not there, Windows included; the
+  candidates, each tried on its desktop before it is kept:
+  - Both: the system's light or dark scheme and accent colour where the
+    bit look allows (the settings portal's `org.freedesktop.appearance`);
+    notifications through the notification portal (the new song's title,
+    a skip action); start at login through the Background portal, which
+    GNOME lists under Background Apps for the user to stop. Portals are
+    also what a Flatpak needs, so this and the Flatpak go together.
+  - GNOME: no tray by default, so a background player's only handle is
+    its media card: the card's controls should reach everything the tray
+    menu does. A search provider: type a song's title in the overview and
+    play it.
+  - KDE: global shortcuts through KGlobalAccel, so they show and rebind
+    in System Settings; a KRunner plugin over D-Bus (search and play a
+    song); a generation's progress in the notification area; the Breeze
+    colours from kdeglobals where the look allows.
+- Social preview image for the repository (set in the repository's
+  settings; the logo SVGs make one).
