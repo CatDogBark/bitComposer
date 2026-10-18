@@ -367,20 +367,6 @@ PACK = {
             "echo_feedback": (0.2, 0.45),
             "echo_stereo": {"bounce": 1, "centre": 3},
             "counter_line": 0.35,
-            # Where each lead voice plays in the game (see ffvi.py): eight
-            # semitones either side of the median sounding pitch across the
-            # 69 snapshots. Samples identified by bank count and character.
-            "lead_ranges": {
-                "mana_flute": (73, 89),        # median 881 Hz, 9 uses
-                "mana_whistle": (79, 95),      # 1233 Hz, 2
-                "mana_brass": (53, 69),        # 272 Hz, 5
-                "mana_strings": (56, 72),      # 328 Hz, 25
-                "mana_choir": (60, 76),        # 417 Hz, 7
-                "mana_synth_brass": (64, 80),  # 526 Hz, 3
-                "mana_hollow_wave": (52, 68),  # 260 Hz, 9
-                "mana_vibraphone": (47, 63),   # 195 Hz, 3
-                "mana_epiano": (42, 58),       # 149 Hz, 4
-            },
             "section_rolls": False,
             "hat_stroke": 0.6,        # every second hat hit is the back stroke
         },

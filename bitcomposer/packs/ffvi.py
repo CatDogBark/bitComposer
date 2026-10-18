@@ -470,30 +470,6 @@ PACK = {
             "echo_feedback": (0.55, 0.7),
             "echo_stereo": {"bounce": 0, "centre": 1},
             "counter_line": 0.6,      # chance per chorus/bridge pattern (plain: 0.3)
-            # Where each lead voice plays in the game: a window of eight
-            # semitones either side of the voice's median sounding pitch
-            # across the SPC snapshots it plays in (tools: voices.py over
-            # the 82 snapshots; sounding pitch = the sample's fundamental
-            # times the DSP pitch register). Snapshots are instants, not
-            # whole songs, so "uses" is how many voice slots held the
-            # sample across them. The register plan places the lead here.
-            "lead_ranges": {
-                "ffvi_flute": (85, 101),       # median 1763 Hz, 28 uses
-                "ffvi_flutes": (68, 84),       # 678 Hz, 20
-                "ffvi_oboe": (77, 93),         # 1111 Hz, 14
-                "ffvi_trumpet": (66, 82),      # 588 Hz, 14
-                "ffvi_synth_lead": (86, 102),  # 1828 Hz, 5
-                "ffvi_piano": (77, 93),        # 1128 Hz, 17
-                "ffvi_voice": (70, 86),        # 736 Hz, 5
-                "ffvi_organ": (66, 82),        # 594 Hz, 13
-                "ffvi_harp": (66, 82),         # 588 Hz, 19
-                "ffvi_strings": (67, 83),      # 633 Hz, 102
-                "ffvi_pan_flute": (89, 105),   # 2256 Hz, 3
-                "ffvi_cello": (57, 73),        # 358 Hz, 2
-                "ffvi_rock_organ": (66, 82),   # 586 Hz, 3
-                "ffvi_strings2": (81, 97),     # 1396 Hz, 5
-                "ffvi_dist_guitar": (42, 58),  # 149 Hz, 5
-            },
             "section_rolls": True,    # timpani roll into the next section
         },
         # Channel trims by role, on top of the mix: the orchestra keeps the
