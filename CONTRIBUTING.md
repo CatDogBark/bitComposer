@@ -44,10 +44,10 @@ every generator change is judged by measurement rather than by ear alone.
 | `bitcomposer/cli.py`, `gui.py` | the command line and the Windows window |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
 | `tests/` | one module per area, sharing `support.py` |
-| `companion/` | the Plasma widget, the daemon and the scripts |
+| `bitcomposer/player/` | the player: the engine, the Qt window (`qml/Main.qml`, `backend.py`, `app.py`), MPRIS, start at login, the menu entry, updates |
 
 Adding a pack is one file in `bitcomposer/packs/` plus its name in the CLI
-and widget choices. Moving code between modules must keep generation
+and in the player's SOUND row (`bitcomposer/player/qml/Main.qml`). Moving code between modules must keep generation
 byte-identical: write twenty seeds before, twenty after, compare the files.
 
 ## Style

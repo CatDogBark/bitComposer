@@ -1,6 +1,6 @@
 """Start at login, minimised to the tray and not playing: the media keys
-and the tray work from there, the way the companion daemon was always
-there for the widget.
+and the tray work from there, the way the old Plasma widget's daemon was
+always running.
 
 Linux: an XDG autostart entry (~/.config/autostart/bitcomposer-player.
 desktop), which Plasma, GNOME and the other desktops read. Windows: the

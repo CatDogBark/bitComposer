@@ -1,7 +1,7 @@
 """MPRIS on Linux: the player on the session bus as
 org.mpris.MediaPlayer2.bitcomposer, so the media keys, the Plasma media
 applet and lock screen, GNOME's media controls and playerctl drive it, and
-show what is playing. This is what the companion daemon did for the widget.
+show what is playing (what the old Plasma widget's daemon did for it).
 
 jeepney (pure Python) speaks D-Bus here rather than QtDBus: MPRIS clients
 check types (PropertiesChanged must be sa{sv}as, lengths int64, track ids

@@ -1,8 +1,8 @@
 /*
     bitComposer player window: the Plasma widget's popup as a desktop window.
 
-    The layout, colours and wording are the widget's (companion/plasmoid/
-    contents/ui/main.qml); what changed is the plumbing. The widget polled a
+    The layout, colours and wording are the old Plasma widget's (removed in
+    1.0.0rc3); what changed is the plumbing. The widget polled a
     D-Bus daemon through qdbus6 processes; here `backend` (bitcomposer/
     player/app.py) wraps the engine in-process, so state is pushed rather
     than polled and there is no cooldown dance.

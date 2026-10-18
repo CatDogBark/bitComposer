@@ -1,15 +1,14 @@
 """The player engine: a folder of modules, playback through libopenmpt, the
 live mixer, auto-generate with prune and KEEP, and the state that survives
 a restart. No toolkit and no D-Bus in here: the window (window.py) and the
-companion daemon are faces over it.
+tray are faces over it.
 
-Lifted from companion/daemon/cyberpunk-chiptune-daemon.py (2026-10-18) so
-the Plasma widget and the cross-platform player share one implementation.
-Differences from the daemon: generation runs in-process (compose_and_save
+Lifted from the Plasma widget's D-Bus daemon (2026-10-18; the widget and
+the daemon were removed in 1.0.0rc3, the player doing what they did).
+Differences from that daemon: generation runs in-process (compose_and_save
 in a thread) rather than through the bitcomposer command, since the player
 ships with the generator; events reach the face through a scheduler it
-provides (a queued Qt signal in the window, GLib's idle_add in the daemon)
-instead of GLib directly.
+provides (a queued Qt signal in the window) instead of GLib directly.
 """
 import ctypes
 import json
@@ -47,7 +46,7 @@ def default_music_dir() -> Path:
     if env:
         return Path(env).expanduser()
     music = Path.home() / "Music"
-    legacy = music / "Chiptune"          # the companion's folder
+    legacy = music / "Chiptune"          # where the old Plasma widget kept its songs
     if legacy.is_dir():
         return legacy
     return (music if music.is_dir() else Path.home()) / "bitComposer"
