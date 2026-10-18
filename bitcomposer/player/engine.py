@@ -101,13 +101,17 @@ def parse_message(message: str) -> dict:
 
 
 def write_channel_volumes(path: str, volumes: list[int]) -> None:
-    """Patch an .it file's channel volumes (header bytes 0x80+ch) in place."""
+    """Patch an .it file's channel volumes (header bytes 0x80+ch) in place.
+    The file keeps its modification time: the playlist is newest first by
+    it, and a remix is not a new song."""
     vals = bytes(max(0, min(64, int(v))) for v in volumes[:64])
+    st = os.stat(path)
     with open(path, "r+b") as f:
         if f.read(4) != b"IMPM":
             raise ValueError("not an IT module")
         f.seek(0x80)
         f.write(vals)
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))
 
 
 class Player:
@@ -184,7 +188,11 @@ class Player:
     # ── playlist ──
     def scan(self) -> None:
         self.music_dir.mkdir(parents=True, exist_ok=True)
-        files = sorted(str(f) for f in self.music_dir.rglob("*") if f.suffix.lower() in EXTENSIONS and f.is_file())
+        # Newest first, so a song just composed is at the top (by name, a new
+        # song landed wherever its title fell, mid-list once the prune ran).
+        found = [f for f in self.music_dir.rglob("*") if f.suffix.lower() in EXTENSIONS and f.is_file()]
+        found.sort(key=lambda f: (-f.stat().st_mtime, str(f)))
+        files = [str(f) for f in found]
         self.playlist = files
         self._rebuild_shuffle()
         if self.module is not None and self.module.filepath in files:

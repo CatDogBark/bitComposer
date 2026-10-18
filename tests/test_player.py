@@ -87,6 +87,19 @@ class EngineHeadless(unittest.TestCase):
         self.assertEqual(p.status, "Playing")
         self.assertEqual(os.path.basename(p.module.filepath), os.path.basename(done[0]))
 
+    def test_newest_first_and_a_remix_stays_put(self):
+        p = self.p
+        p.scan()
+        names = [os.path.basename(f) for f in p.playlist]
+        self.assertEqual(names, ["Fresh (auto).it", "Kept.it"])     # composed second, listed first
+        older = os.path.join(self.music, "Kept.it")
+        os.utime(older, (time.time() + 60, time.time() + 60))        # touched later: now the newest
+        p.scan()
+        self.assertEqual(os.path.basename(p.playlist[0]), "Kept.it")
+        before = os.stat(older).st_mtime_ns
+        engine.write_channel_volumes(older, [5] * 19)                # APPLY TO TRACK
+        self.assertEqual(os.stat(older).st_mtime_ns, before)
+
     def test_message_parsing_and_header_write(self):
         info = engine.parse_message("Title\r\nC major - 120 BPM\r\nvoices: melody=a,harmony=b\r\ndrew: sound=chip,form=aaba\r\nlayout: melody,harmony,echo.melody\r\n")
         self.assertEqual(info["layout"], ["melody", "harmony", "echo.melody"])
