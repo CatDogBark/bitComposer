@@ -26,7 +26,14 @@ done
 mkdir -p "$MUSIC_DIR"
 SUFFIX=" (auto)"
 
-OUT=$(python3 -m bitcomposer.cli "${ARGS[@]}" -d "$MUSIC_DIR" --suffix "$SUFFIX") || exit 1
+# The bitcomposer command (pipx) wins; a developer's checkout on the import
+# path (install.sh --dev) is the fallback. Same rule as the daemon.
+if GEN=$(command -v bitcomposer); then
+    GENCMD=("$GEN")
+else
+    GENCMD=(python3 -m bitcomposer.cli)
+fi
+OUT=$("${GENCMD[@]}" "${ARGS[@]}" -d "$MUSIC_DIR" --suffix "$SUFFIX") || exit 1
 OUTPATH=$(printf '%s\n' "$OUT" | sed -n 's/^Generated: //p' | tail -1)
 FILENAME=$(basename "$OUTPATH")
 

@@ -158,6 +158,7 @@ presets and a per-channel mixer, and an auto-generate "radio" mode that
 composes the next track as the current one ends.
 
 ```bash
+pipx install bitcomposer         # the generator the player runs
 ./companion/install.sh --check   # see what it would do
 ./companion/install.sh           # install, enable the daemon
 ```

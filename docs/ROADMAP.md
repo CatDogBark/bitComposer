@@ -19,12 +19,13 @@ and the Linux companion; the Windows player is 1.x.
   zip on the tag. The version lives in `bitcomposer/__init__.py` alone.
   First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
   exact version. The checklist is in `CONTRIBUTING.md`.
-- **Linux install.** `pipx install bitcomposer` is the user's path. The
-  companion (KDE Plasma 6, Debian-style paths, the scope for 1.0) must call
-  `bitcomposer` on PATH instead of `python3 -m bitcomposer.cli` from a
-  checkout, with the `.pth` kept as a documented developer override; the
-  installer checks for pipx and the command. `docs/INSTALL.md` is rewritten
-  around that. To do.
+- **Linux install (done, branch `companion-path`, to verify on Troy's
+  machine).** `pipx install bitcomposer` is the user's path. The companion
+  (KDE Plasma 6, Debian-style paths, the scope for 1.0) runs `bitcomposer`
+  on PATH and falls back to `python3 -m bitcomposer.cli`; the installer's
+  `--dev` keeps the checkout on the import path (a `.pth` and a daemon
+  drop-in) for development, and `--check` reports which generator plays.
+  `docs/INSTALL.md` is rewritten around that.
 - **Docs.** README install section (pipx, Windows zip, developer clone, the
   tkinter line) done; the listening page is regenerated at the tag.
 - **Windows player (1.x).** The window grows the widget's features

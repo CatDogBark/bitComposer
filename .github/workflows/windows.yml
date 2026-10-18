@@ -78,6 +78,9 @@ jobs:
           $tag = if ("${{ inputs.tag }}" -ne "") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
           # A tag pushed without a release yet: make the release from the tag
           # message, then attach. (0.9.0 and 0.9.1 failed here for want of it.)
+          # An rc, alpha or beta tag is a pre-release, so the "Latest" badge
+          # and the README's release badge keep pointing at the last real one.
+          $pre = if ($tag -match '(a|b|rc)\d+$') { @("--prerelease") } else { @() }
           gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) { gh release create $tag --title $tag --notes-from-tag }
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --title $tag --notes-from-tag @pre }
           gh release upload $tag bitComposer-windows.zip --clobber

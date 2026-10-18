@@ -21,61 +21,64 @@ including on `--uninstall`.
 The companion is Linux-only and assumes KDE Plasma 6, PipeWire or
 PulseAudio, and Debian-style paths (`/usr/bin/python3`). It is optional:
 the generator itself runs anywhere Python does, and installs on its own
-with `pipx install bitcomposer` (README). The companion still reaches the
-generator through the checkout, as described below; making it use the
-installed `bitcomposer` command is on the roadmap for 1.0.0.
+with `pipx install bitcomposer` (README); the companion runs that command.
 
 ---
 
-## Making bitComposer importable
+## Where the companion finds the generator
 
-Both the daemon's autogen and `bitcomposer-generate.sh` shell out to
-`python3 -m bitcomposer.cli`, so the package must be importable by the **system**
-python3 — not a venv. On Debian 13, PEP 668 (`/usr/lib/python3.13/
-EXTERNALLY-MANAGED`) blocks a plain `pip install`.
-
-Use a `.pth` file:
+The daemon's autogen and `bitcomposer-generate.sh` run the `bitcomposer`
+command. Install it with pipx, which puts it in `~/.local/bin` without
+touching the system Python (Debian 13's PEP 668 guard blocks a plain
+`pip install` there):
 
 ```bash
-SITE=$(python3 -m site --user-site)     # ~/.local/lib/python3.13/site-packages
-mkdir -p "$SITE"
-echo "/path/to/your/bitComposer" > "$SITE/bitcomposer.pth"
+sudo apt install pipx
+pipx install bitcomposer
 ```
 
-`companion/install.sh` writes this for you, using the location of the checkout
-it is run from.
+`~/.local/bin` has to be on PATH anyway: the widget shells out to the helper
+scripts by bare name. The daemon's unit adds it for the service, since a
+user service does not get it from a login shell.
 
-One line, no pip, no PEP 668 override. Every `python3` this user runs picks it
-up — shell, daemon, and the widget via plasmashell alike. It points at the
-working tree, so **autogen follows whichever git branch is checked out**, which
-makes A/B testing generator changes a `git checkout` away. Undo by deleting the
-file.
+### Developer mode: generation follows the checkout
 
-> ### ⚠️ This breaks silently on a Python version bump
+To hear the branch you have checked out instead of the released package,
+install with `--dev`:
+
+```bash
+./companion/install.sh --dev
+```
+
+That writes two things and the companion falls back to
+`python3 -m bitcomposer.cli` whenever no `bitcomposer` command is on PATH:
+
+- a `.pth` file in the system python3's user site
+  (`~/.local/lib/python3.13/site-packages/bitcomposer.pth`) holding the
+  checkout path, so every `python3` this user runs imports from it;
+- a systemd drop-in (`~/.config/systemd/user/cyberpunk-chiptune-daemon.service.d/dev.conf`)
+  giving the daemon the same path as `PYTHONPATH`.
+
+A plain `./companion/install.sh` removes both again. If a pipx `bitcomposer`
+is also installed, it wins over the checkout; `--check` says so, and
+`pipx uninstall bitcomposer` restores the checkout.
+
+> ### ⚠️ Developer mode breaks silently on a Python version bump
 >
-> The path contains the Python minor version. When Debian moves to 3.14, the
-> user-site directory becomes `~/.local/lib/python3.14/site-packages`, the old
-> `.pth` is no longer read, and **the widget's GENERATE button and the daemon's
-> autogen both start failing with `ModuleNotFoundError`** — with no other
-> symptom, since playback keeps working fine.
->
-> Recreate it after any Python upgrade by re-running the snippet above.
-> Check with:
+> The `.pth` path contains the Python minor version. When Debian moves to
+> 3.14, the user-site directory becomes `~/.local/lib/python3.14/site-packages`,
+> the old `.pth` is no longer read, and **the widget's GENERATE button and
+> the daemon's autogen both start failing with `ModuleNotFoundError`** with
+> no other symptom, since playback keeps working fine. The daemon's drop-in
+> keeps autogen alive; the widget's button does not have it. Re-run
+> `./companion/install.sh --dev` after a Python upgrade. Check with:
 >
 > ```bash
-> python3 -c "import bitcomposer, os; print(os.path.dirname(bitcomposer.__file__))"
+> ./companion/install.sh --check
 > ```
 >
-> An editable `pip install` has exactly the same failure mode. Only a plain
-> (non-editable) install is immune — but that is a static copy, so it gives up
-> the branch-tracking property above.
-
-The systemd unit also carries `Environment=PYTHONPATH`, written as the
-placeholder `@REPO@` in the repo and substituted by `install.sh` with the real
-checkout path. That is redundant with the `.pth` but harmless, and is left in
-place as a fallback for the daemon specifically. Do not `cp` the unit into
-place by hand — an unsubstituted `@REPO@` gives the daemon a PYTHONPATH that
-does not exist.
+> A pipx install has no such failure mode (pipx keeps its own venv), which
+> is why it is the user's path.
 
 ---
 
@@ -88,14 +91,15 @@ does not exist.
 | `daemon/cyberpunk-chiptune-daemon.py` | `~/.local/bin/` (0755) |
 | `daemon/cyberpunk-chiptune-daemon.service` | `~/.config/systemd/user/` (0644) |
 | `plasmoid/` | `~/.local/share/plasma/plasmoids/org.kde.plasma.cyberpunkchiptune/` |
-| — | writes the `.pth` described above |
+| — (`--dev` only) | the `.pth` and the daemon drop-in described above |
 | — | `mkdir -p` the music dir, then leaves it alone |
 
 It then reloads systemd, enables the daemon, and `try-restart`s it before
 starting it. `enable --now` alone would only *start* a stopped unit, so
 re-running the installer on a machine where the daemon is already up would leave
 the old process holding the old `daemon.py` and the old `Environment=` — a green
-install that changed nothing. Finally it re-checks the import.
+install that changed nothing. Finally it reports which generator the daemon
+will run.
 
 `main.qml` has no music dir of its own: the installer writes `$MUSIC_DIR` into
 it as a fallback, and at runtime the widget uses whatever the daemon reports in
@@ -112,9 +116,6 @@ Player". After editing `main.qml` on an already-running shell:
 bare name, and it inherits plasmashell's PATH, not a login shell's. `--check`
 verifies this.
 
-The vendored service unit includes the `Environment=PYTHONPATH` fallback, so it
-is no longer a local-only modification that a reinstall would silently revert.
-
 ---
 
 ## Runtime dependencies
@@ -123,6 +124,7 @@ is no longer a local-only modification that a reinstall would silently revert.
 
 | Dependency | Notes |
 |---|---|
+| `bitcomposer` command | `pipx install bitcomposer` (`apt install pipx` first); or a checkout through `--dev` |
 | `libopenmpt.so.0` | loaded via raw `ctypes.CDLL`, so the SONAME must match exactly. Stock on Debian trixie. Test with `python3 -c "import ctypes; ctypes.CDLL('libopenmpt.so.0')"` — **not** `ldconfig -p`, which lives in `/sbin` and is absent from a normal user PATH, so it fails silently and reports a false negative |
 | `python3-dbus`, `python3-gi` | apt |
 | `paplay` (pulseaudio-utils) | audio path is raw PCM 48k/16-bit stereo piped to `paplay --raw` |
@@ -216,11 +218,8 @@ Daemon config constants: `MUSIC_DIR=~/Music/Chiptune`, `SAMPLE_RATE=48000`,
 ## Verifying an install
 
 ```bash
-# import resolves to the CHECKOUT, with no PYTHONPATH, from any directory.
-# Print the path — a bare `import` succeeding proves nothing, because a
-# pip-installed copy in site-packages shadows the .pth and imports fine.
-cd / && env -u PYTHONPATH python3 -c \
-  "import bitcomposer, os; print(os.path.dirname(os.path.dirname(bitcomposer.__file__)))"
+# which generator the daemon and the widget will run, and from where
+./companion/install.sh --check
 
 # generator end to end (widget-like environment)
 env -u PYTHONPATH bitcomposer-generate.sh --form standard --harmony-voicing full
