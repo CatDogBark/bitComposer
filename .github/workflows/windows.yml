@@ -146,6 +146,34 @@ jobs:
           $version = python -c "import bitcomposer; print(bitcomposer.__version__)"
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" tools\windows\installer.iss
           Get-ChildItem bitComposer-setup.exe
+      - name: Install, check Installed apps, uninstall
+        shell: pwsh
+        run: |
+          # What a user does: run the installer (quietly here), find the app
+          # in Settings > Apps > Installed apps (the Uninstall registry key),
+          # start it, then uninstall from there and check nothing is left.
+          $p = Start-Process -FilePath .\bitComposer-setup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=install.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 40; throw "setup exited $($p.ExitCode)" }
+          $roots = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall", "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+          $key = Get-ChildItem $roots -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "bitComposer*" } | Select-Object -First 1
+          if (-not $key) { throw "no Installed apps entry" }
+          $e = Get-ItemProperty $key.PSPath
+          Write-Host "Installed apps: $($e.DisplayName) | $($e.Publisher) | $($e.DisplayVersion) | $($e.InstallLocation) | $($e.UninstallString)"
+          if ($e.Publisher -ne "Enlightened Solutions LLC") { throw "publisher is '$($e.Publisher)'" }
+          $exe = Join-Path $e.InstallLocation "bitComposer.exe"
+          if (-not (Test-Path $exe)) { throw "bitComposer.exe was not installed" }
+          $menu = Join-Path ([Environment]::GetFolderPath("Programs")) "bitComposer\bitComposer.lnk"
+          if (-not (Test-Path $menu)) { throw "no Start menu entry at $menu" }
+          $p = Start-Process -FilePath $exe -ArgumentList "--check" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "the installed bitComposer.exe --check exited $($p.ExitCode)" }
+          $un = $e.UninstallString.Trim('"')
+          Start-Process -FilePath $un -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          # The uninstaller hands itself off to a copy in TEMP and returns early.
+          for ($i = 0; $i -lt 90 -and ((Test-Path $exe) -or (Test-Path $key.PSPath)); $i++) { Start-Sleep 1 }
+          if (Test-Path $exe) { throw "uninstall left $exe" }
+          if (Test-Path $key.PSPath) { throw "uninstall left the Installed apps entry" }
+          if (Test-Path $menu) { throw "uninstall left the Start menu entry" }
+          Write-Host "installed, listed, started, uninstalled: clean"
       - uses: actions/upload-artifact@v4
         with:
           name: bitComposer-windows
