@@ -32,11 +32,12 @@ below).
   Windows, and GNOME, tested on GNOME Shell 50). Trying rc4's UPDATE
   button on Linux found it doing nothing: the check for a pipx install
   followed the venv's python link to the system python and decided the
-  player was not pipx's. Fixed on branch `update-ui`, which also puts an
-  update screen over the window showing what the update is doing (pipx's
-  own output on Linux; on Windows the download, then the installer's own
-  progress window). An rc3 or rc4 install takes the fixed version by hand
-  once (`pipx install --force`); from then on the button is the path.
+  player was not pipx's. rc5 fixes it and puts an update screen over the
+  window showing what the update is doing (pipx's own output on Linux; on
+  Windows the download, then the installer's own progress window; rc3 to
+  rc4 on Windows worked). An rc3 or rc4 install on Linux takes rc5 by
+  hand once (`pipx install --force`); rc5 to 1.0.0 through the button is
+  the update screen's first real run, on both platforms.
 - **Code signing.** Applied to the SignPath Foundation's open-source
   programme (2026-10-18); 1.0.0 ships unsigned, and signing joins the
   Windows build in a 1.0.x once it is approved (the workflow's Azure

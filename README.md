@@ -5,6 +5,8 @@
   </picture>
 </h1>
 
+*Endless music. Keep what moves you.*
+
 [![CI](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml/badge.svg)](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/CatDogBark/bitComposer)](https://github.com/CatDogBark/bitComposer/releases/latest)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -205,9 +207,10 @@ Linux through the desktop's media controls (MPRIS, so the Plasma media
 applet and lock screen, GNOME and `playerctl` see it too), on Windows as
 global keys. SET → PLAYER → LOGIN, or the tray menu, starts it when you
 log in: in the tray, not playing. When a newer
-release exists an UPDATE button appears: on Linux it reinstalls through
-pipx and restarts the player, on Windows it downloads the release's
-installer and runs it. A player installed from a release candidate is
+release exists an UPDATE button appears. It says what the update will do,
+then shows it happening: on Linux it reinstalls through pipx, pipx's
+output scrolling past, and restarts the player; on Windows it downloads
+the release's installer and runs it. A player installed from a release candidate is
 offered the next candidate; a release player only releases.
 
 ## Windows
