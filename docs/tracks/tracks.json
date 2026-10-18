@@ -6,7 +6,7 @@
   "info": "B natural minor - 169 BPM",
   "arrangement": "snes (megamanx) + echo (wet) - rondo form",
   "voices": "mmx_lead_guitar / mmx_rhythm_guitar / mmx_slap_bass",
-  "seed": "seed 24 - bitcomposer 1.0.0rc1",
+  "seed": "seed 24 - bitcomposer 1.0.0",
   "picked": false
  },
  {
@@ -16,7 +16,7 @@
   "info": "C major - 109 BPM",
   "arrangement": "snes (ffvi) + echo (wet) - linear form",
   "voices": "ffvi_flute / ffvi_strings / ffvi_dark_bass",
-  "seed": "seed 21 - bitcomposer 1.0.0rc1",
+  "seed": "seed 21 - bitcomposer 1.0.0",
   "picked": false
  },
  {
@@ -26,7 +26,7 @@
   "info": "D minor pentatonic - 124 BPM",
   "arrangement": "snes (mana) + echo (wet) - aaba form",
   "voices": "mana_vibraphone / mana_brass / mana_bass_elec",
-  "seed": "seed 5 - bitcomposer 1.0.0rc1",
+  "seed": "seed 5 - bitcomposer 1.0.0",
   "picked": false
  },
  {
@@ -36,7 +36,7 @@
   "info": "F dorian - 104 BPM",
   "arrangement": "snes (evermore) + echo - short form",
   "voices": "evm_harp / evm_pad / evm_pluck",
-  "seed": "seed 19 - bitcomposer 1.0.0rc1",
+  "seed": "seed 19 - bitcomposer 1.0.0",
   "picked": false
  },
  {
@@ -46,7 +46,7 @@
   "info": "A# major - 133 BPM",
   "arrangement": "genesis - rondo form",
   "voices": "gen_brass / gen_pad / gen_slap_bass",
-  "seed": "seed 10 - bitcomposer 1.0.0rc1",
+  "seed": "seed 10 - bitcomposer 1.0.0",
   "picked": false
  },
  {
@@ -56,7 +56,7 @@
   "info": "E harmonic minor - 102 BPM",
   "arrangement": "chip - rondo form",
   "voices": "pulse_lead / pulse12_lead / bright_bass",
-  "seed": "seed 2 - bitcomposer 1.0.0rc1",
+  "seed": "seed 2 - bitcomposer 1.0.0",
   "picked": false
  }
 ]

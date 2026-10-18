@@ -5,7 +5,7 @@ recorded here when they come up so they are not lost; nothing here is
 promised. See `ANALYSIS.md` for how changes are judged (measure first, ear
 second) and `CHANGELOG.md` for what has shipped.
 
-## Release (1.0.0)
+## Release (1.0.0, shipped 2026-10-18)
 
 Decided 2026-10-18. The product is the player: a program that generates
 while you listen, the way the Plasma widget did, on Linux and Windows.
@@ -36,8 +36,10 @@ below).
   window showing what the update is doing (pipx's own output on Linux; on
   Windows the download, then the installer's own progress window; rc3 to
   rc4 on Windows worked). An rc3 or rc4 install on Linux takes rc5 by
-  hand once (`pipx install --force`); rc5 to 1.0.0 through the button is
-  the update screen's first real run, on both platforms.
+  hand once (`pipx install --force`). rc6 (the dead-code pass, no song
+  changed; the tkinter window retired) was the update screen's first real
+  run, rc5 to rc6 through the button on both platforms; 1.0.0 followed the
+  same day.
 - **Code signing.** Applied to the SignPath Foundation's open-source
   programme (2026-10-18); 1.0.0 ships unsigned, and signing joins the
   Windows build in a 1.0.x once it is approved (the workflow's Azure
