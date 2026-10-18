@@ -352,6 +352,16 @@ PACK = {
             "echo_feedback": (0.05, 0.2),
             "echo_stereo": {"bounce": 0, "centre": 1},
             "counter_line": 0.2,
+            # Where each lead voice plays in the game (see ffvi.py): eight
+            # semitones either side of the median sounding pitch across the
+            # 72 snapshots, for the voices Kage's names identify.
+            "lead_ranges": {
+                "evm_strings": (77, 93),       # median 1104 Hz, 7 uses
+                "evm_bell": (59, 75),          # 391 Hz, 2
+                "evm_harp": (59, 75),          # 389 Hz, 5
+                "evm_tinker": (59, 75),        # 396 Hz, 1
+                "evm_piano": (49, 65),         # 226 Hz, 4
+            },
             "section_rolls": False,
             "hat_stroke": 0.6,
             "crash_chance": 0.35,     # a third of the phrase starts, never on fills
