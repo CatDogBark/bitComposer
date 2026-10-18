@@ -85,10 +85,17 @@ below).
     every push. Windows build is a PyInstaller folder (onedir) so Qt
     starts at once; the installer is per-user by default and UPDATE runs
     it silently and relaunches.
-  - **Next for the player.** MPRIS through QtDBus (media keys, the Plasma
-    media applet) and start-at-login minimised to the tray, which together
-    replace the daemon; then the daemon and widget retire
-    (`companion/install.sh --uninstall` for existing installs).
+  - **Media keys and start at login (done 2026-10-18).** MPRIS on Linux
+    (`player/mpris.py`, jeepney rather than QtDBus: clients check the
+    types, which PySide's variant conversion does not write exactly),
+    RegisterHotKey on Windows (`player/mediakeys_win.py`, not yet tried on
+    a real Windows desktop), start at login in the tray
+    (`player/autostart.py`: XDG autostart, the per-user Run key) from
+    SET → PLAYER or the tray menu. Windows has no SMTC entry yet (the
+    volume flyout's media card); that is a WinRT job for later.
+  - **Next for the player.** The daemon and widget retire
+    (`companion/install.sh --uninstall` for existing installs): the
+    player now does what the daemon did for them.
   - **Flatpak on Flathub: the Linux install for everyone (after 1.0).**
     pipx is a developer's path: a terminal, then one launch for the menu
     entry. On Flathub the player is an Install button in KDE Discover and

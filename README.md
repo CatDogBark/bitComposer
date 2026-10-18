@@ -193,7 +193,11 @@ SET and MIX panels open inside it (scrolling on a small or scaled
 screen), and it keeps the size you give it; Ctrl + and
 Ctrl − zoom it, Ctrl 0 resets. Closing the window leaves the music playing
 in the tray (quit from the tray menu), and starting it again brings that
-window back rather than a second player. When a newer
+window back rather than a second player. The media keys drive it: on
+Linux through the desktop's media controls (MPRIS, so the Plasma media
+applet and lock screen, GNOME and `playerctl` see it too), on Windows as
+global keys. SET → PLAYER → LOGIN, or the tray menu, starts it when you
+log in: in the tray, not playing. When a newer
 release exists an UPDATE button appears: on Linux it reinstalls through
 pipx and restarts the player, on Windows it downloads the release's
 installer and runs it. A player installed from a release candidate is

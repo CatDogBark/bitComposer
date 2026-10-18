@@ -32,9 +32,16 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 CloseApplications=yes
+; The Run value above is per user by design, in either install mode.
+UsedUserAreasWarning=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+
+[Registry]
+; Start at login is the player's own setting (its per-user Run value); the
+; installer never writes it, the uninstaller takes it out.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "bitComposer"; ValueType: none; Flags: uninsdeletevalue dontcreatekey
 
 [InstallDelete]
 ; The bundle's file set changes between versions (Qt's in particular): clear

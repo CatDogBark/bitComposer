@@ -31,6 +31,8 @@ ApplicationWindow {
     property bool startMaster: false
     // The screenshot mode: no scanline sweep caught mid-frame.
     property bool still: false
+    // Started at login (--minimized): stay in the tray until asked for.
+    property bool startHidden: false
 
     // ── Zoom ──
     property real ui: 1.0
@@ -76,10 +78,11 @@ ApplicationWindow {
         root.width = Math.min(root.savedW > 0 ? root.savedW : Math.round(400 * root.ui), root.availW)
         root.height = root.savedH > 0 ? Math.max(root.minimumHeight, Math.min(root.savedH, root.maxH)) : root.maxH
         root._sizedAt = Date.now()
-        root.visible = true
+        if (!root.startHidden) root.visible = true
     }
     function _fitOnce() {
-        if (root._sized || popupColumn.implicitHeight < 50) return
+        // not while hidden: the column is only laid out for a shown window
+        if (root._sized || !root.visible || popupColumn.implicitHeight < 50) return
         root._sized = true
         if (root.savedH <= 0)
             root.height = Math.max(root.minimumHeight, Math.min(root.contentH, root.maxH))
@@ -87,7 +90,7 @@ ApplicationWindow {
         Qt.callLater(function() { root._shown = true })
     }
     onFrameSwapped: if (!root._sized) root._fitOnce()
-    Timer { interval: 400; running: true; onTriggered: { root._fitOnce(); root._shown = true } }   // in case no frame comes
+    Timer { interval: 400; running: true; onTriggered: if (root.visible) { root._fitOnce(); root._shown = true } }   // in case no frame comes
     onMaxHChanged: if (root._sized && root.height > root.maxH) root.height = root.maxH
     // A size change well after the window sized itself is the user's.
     onWidthChanged: root._noteSize()
@@ -1097,7 +1100,7 @@ ApplicationWindow {
                         Row {
                             spacing: 2
                             Repeater {
-                                model: ["COMPOSE", "DRUMS", "PARTS"]
+                                model: ["COMPOSE", "DRUMS", "PARTS", "PLAYER"]
                                 Rectangle {
                                     required property string modelData
                                     required property int index
@@ -1164,6 +1167,46 @@ ApplicationWindow {
                                     if (root.settHarmonyVoicing === "thin") return "Two-voice harmony. " + modeDesc
                                     return "Random voicing per song. " + modeDesc
                                 }
+                                color: root.dimText
+                                font.family: root.mono
+                                font.pixelSize: Math.round(8 * root.ui)
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+
+                        // ── PLAYER: the program, not the songs ──
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            visible: root.settingsTab === 3
+                            OptionRow {
+                                visible: backend.autostartSupported
+                                label: "LOGIN"; options: ["on", "off"]; value: backend.autostart ? "on" : "off"
+                                onPicked: function(c) { if ((c === "on") !== backend.autostart) backend.setAutostart(c === "on") }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: backend.autostartSupported
+                                    ? "Start bitComposer when you log in: in the tray, not playing, so the media keys and the tray menu work from the start."
+                                    : "Start at login works from an installed copy (pipx or the installer), not from a checkout."
+                                color: root.dimText
+                                font.family: root.mono
+                                font.pixelSize: Math.round(8 * root.ui)
+                                wrapMode: Text.WordWrap
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "MEDIA KEYS  " + (backend.mediaKeys ? backend.mediaKeys.toUpperCase() : "NOT AVAILABLE HERE")
+                                color: backend.mediaKeys ? root.textColor : root.dimText
+                                font.family: root.mono
+                                font.pixelSize: Math.round(8 * root.ui)
+                                font.letterSpacing: 1
+                                wrapMode: Text.WordWrap
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "Closing the window keeps the music going in the tray; quit from the tray menu."
+                                visible: backend.trayAvailable
                                 color: root.dimText
                                 font.family: root.mono
                                 font.pixelSize: Math.round(8 * root.ui)

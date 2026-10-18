@@ -13,7 +13,8 @@ license = "MIT"
 requires-python = ">=3.10"
 # The player's window is Qt (QtQuick). Essentials is the part of PySide6 it
 # uses, a third of the full download.
-dependencies = ["PySide6-Essentials>=6.5"]
+# jeepney speaks D-Bus for MPRIS (the media keys) on Linux; pure Python.
+dependencies = ["PySide6-Essentials>=6.5", "jeepney>=0.8; sys_platform == 'linux'"]
 authors = [
     { name = "CatDogBark", email = "186357707+CatDogBark@users.noreply.github.com" },
 ]
