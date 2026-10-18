@@ -47,8 +47,8 @@ bitcomposer -d out -s 42 -v            # the command line, reproducible, with de
 
 The player needs libopenmpt (above) and an audio output: `paplay`
 (pulseaudio-utils), `pw-cat` (pipewire-bin) or `aplay` (alsa-utils).
-`bitcomposer-player --check` says what it found. Upgrades are
-`pipx upgrade bitcomposer`.
+`bitcomposer-player --check` says what it found. Upgrades: the UPDATE
+button in the player, or `pipx upgrade bitcomposer`.
 
 From a clone, for development:
 
@@ -171,8 +171,11 @@ with presets, a live mixer per channel with the KIT and ECHO buses and
 APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
 shuffle, and the playlist with KEEP: every track the player makes is
 provisional (`<Title> (auto).it`) and pruned after ten unless kept. The
-picture is the Plasma widget, which has the same layout. The player tells
-you when a newer release exists.
+picture is the Plasma widget, which has the same layout. When a newer
+release exists an UPDATE button appears: on Linux it reinstalls through
+pipx and restarts the player, on Windows it downloads the release's
+installer and runs it. A player installed from a release candidate is
+offered the next candidate; a release player only releases.
 
 ## Windows
 

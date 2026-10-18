@@ -93,3 +93,28 @@ class EngineHeadless(unittest.TestCase):
         with open(path, "rb") as fh:
             fh.seek(0x80)
             self.assertEqual(fh.read(3), bytes([1, 2, 3]))
+
+
+class UpdateCheck(unittest.TestCase):
+    def test_versions_and_release_choice(self):
+        import json
+        from bitcomposer.player import update as u
+        self.assertLess(u.parse_version("1.0.0rc2"), u.parse_version("1.0.0"))
+        self.assertLess(u.parse_version("1.0.0rc1"), u.parse_version("1.0.0rc2"))
+        self.assertLess(u.parse_version("1.0.0"), u.parse_version("1.0.1"))
+        self.assertEqual(u.parse_version("garbage"), ())
+        rels = [{"tag_name": "v1.0.0rc3", "prerelease": True, "html_url": "p",
+                 "assets": [{"name": "bitComposer-setup.exe", "browser_download_url": "u"}]},
+                {"tag_name": "v0.9.1", "prerelease": False, "html_url": "q", "assets": []}]
+        fetch = lambda url: json.dumps(rels).encode()
+        # a candidate player sees the next candidate; a release player does not
+        self.assertEqual(u.newer_release("1.0.0rc2", fetch)["version"], "1.0.0rc3")
+        self.assertEqual(u.newer_release("1.0.0rc2", fetch)["installer"], "u")
+        self.assertIsNone(u.newer_release("0.9.1", fetch))
+        rels.append({"tag_name": "v1.0.0", "prerelease": False, "html_url": "r", "assets": []})
+        self.assertEqual(u.newer_release("0.9.1", fetch)["version"], "1.0.0")
+        self.assertEqual(u.newer_release("1.0.0rc2", fetch)["version"], "1.0.0")
+        self.assertIsNone(u.newer_release("1.0.0", fetch))
+        # a dead network is no update, not an error
+        self.assertIsNone(u.newer_release("1.0.0", lambda url: (_ for _ in ()).throw(OSError("offline"))))
+        self.assertIn(u.install_kind(), ("frozen", "pipx", "other"))
