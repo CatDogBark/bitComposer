@@ -92,7 +92,11 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
         probe = QLocalSocket()
         probe.connectToServer(name)
         if probe.waitForConnected(300):
-            probe.write(b"show\n")
+            # The desktop's activation token, when it launched us (Wayland:
+            # XDG_ACTIVATION_TOKEN), goes along: GNOME brings a window forward
+            # only with one, and says "is ready" in a notification otherwise.
+            token = os.environ.get("XDG_ACTIVATION_TOKEN", "")
+            probe.write(f"show {token}\n".encode())
             probe.flush()
             probe.waitForBytesWritten(300)
             probe.disconnectFromServer()
@@ -140,11 +144,18 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("backend", backend)
     open_panels = {p.strip() for p in (panels or "").split(",") if p.strip()}
-    # Started at login (--minimized): only the tray, if there is one by now.
-    hidden = bool(minimized and not screenshot and _wait_for_tray(app))
+    # Started at login (--minimized): no window. With a tray (if one comes up
+    # in time) it sits there; with none (GNOME without the AppIndicator
+    # extension) it runs in the background, the media keys and the desktop's
+    # media controls reaching it, and opening it from the app menu shows the
+    # window (a second launch hands off). A minimized window was tried for
+    # the no-tray case: GNOME answers a window that maps minimized with an
+    # "is ready" notification, at every login.
+    if minimized and not screenshot:
+        _wait_for_tray(app)
     engine.setInitialProperties({"startSettings": "settings" in open_panels or "set" in open_panels,
                                  "startMaster": "mix" in open_panels, "still": bool(screenshot),
-                                 "startHidden": hidden})
+                                 "startHidden": bool(minimized and not screenshot)})
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
         print("bitcomposer-player: the window failed to load (see the QML errors above)", file=sys.stderr)
@@ -171,7 +182,9 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     window.screenChanged.connect(follow_screen)
     follow_screen()
 
-    def show_window():
+    def show_window(token: str = ""):
+        if token:
+            os.environ["XDG_ACTIVATION_TOKEN"] = token     # Qt's Wayland activation uses it once
         window.show()
         window.raise_()
         window.requestActivate()
@@ -181,7 +194,10 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
         def on_connection():
             sock = server.nextPendingConnection()
             if sock is not None:
-                sock.readyRead.connect(lambda: (sock.readAll(), show_window()))
+                def got():
+                    words = bytes(sock.readAll()).decode(errors="replace").split()
+                    show_window(words[1] if len(words) > 1 and words[0] == "show" else "")
+                sock.readyRead.connect(got)
                 sock.disconnected.connect(sock.deleteLater)
         server.newConnection.connect(on_connection)
 
@@ -263,9 +279,14 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
 def _wait_for_tray(app, seconds: float = 20.0) -> bool:
     """At login the panel holding the tray may come up after us: wait for
     it a little, so a --minimized start does not open the window just
-    because it was early. False if no tray turned up (the window opens)."""
+    because it was early. False if no tray turned up (the window opens
+    minimized). GNOME's tray, where there is one, is an extension loaded
+    with the shell, which is up before login programs start, so it is
+    asked for only briefly there."""
     import time
     from PySide6.QtWidgets import QSystemTrayIcon
+    if "GNOME" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper():
+        seconds = min(seconds, 3.0)
     end = time.monotonic() + seconds
     while not QSystemTrayIcon.isSystemTrayAvailable():
         if time.monotonic() > end:

@@ -48,11 +48,28 @@ def default_music_dir() -> Path:
     env = os.environ.get("BITCOMPOSER_MUSIC_DIR")
     if env:
         return Path(env).expanduser()
-    music = Path.home() / "Music"
+    music = _xdg_music_dir() or Path.home() / "Music"
     legacy = music / "Chiptune"          # where the old Plasma widget kept its songs
     if legacy.is_dir():
         return legacy
     return (music if music.is_dir() else Path.home()) / "bitComposer"
+
+
+def _xdg_music_dir() -> Path | None:
+    """The desktop's own Music folder (XDG user dirs: GNOME, Plasma and the
+    rest keep it in user-dirs.dirs, translated or moved as the user set it)."""
+    if not sys.platform.startswith("linux"):
+        return None
+    conf = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "user-dirs.dirs"
+    try:
+        for line in conf.read_text().splitlines():
+            if line.startswith("XDG_MUSIC_DIR="):
+                value = line.split("=", 1)[1].strip().strip('"').replace("$HOME", str(Path.home()))
+                path = Path(value)
+                return path if path != Path.home() else None      # unset means $HOME: no Music folder
+    except OSError:
+        pass
+    return None
 
 
 def state_file() -> Path:
