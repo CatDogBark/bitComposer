@@ -81,7 +81,8 @@ def _exec_target(text: str) -> str:
 
 def ensure_entry() -> str:
     """Called on every launch: "added" the first time, "repaired" when the
-    entry named a program that is gone, "" otherwise."""
+    entry named a program that is gone, "icon" when the installed icon is
+    an older one, "" otherwise."""
     if not sys.platform.startswith("linux") or getattr(sys, "frozen", False) or os.environ.get("FLATPAK_ID"):
         return ""
     cmd = launch_command()
@@ -100,9 +101,11 @@ def ensure_entry() -> str:
     if not target or not (Path(target).exists() or shutil.which(target)):
         write_entry(_quote(cmd))
         return "repaired"
-    if not icon.exists():
+    src = HERE / "icons" / "bitcomposer.svg"
+    if not icon.exists() or icon.read_bytes() != src.read_bytes():
         icon.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(HERE / "icons" / "bitcomposer.svg", icon)
+        shutil.copyfile(src, icon)          # a new icon in a new version reaches the menu too
+        return "icon"
     return ""
 
 

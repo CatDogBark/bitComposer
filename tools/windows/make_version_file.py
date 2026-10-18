@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from bitcomposer import __version__  # noqa: E402
 
-PUBLISHER = "CatDogBark"
+PUBLISHER = "Enlightened Solutions LLC"
 COPYRIGHT = "Copyright (c) 2026 Enlightened Solutions LLC"
 
 

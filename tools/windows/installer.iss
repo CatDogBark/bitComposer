@@ -16,7 +16,7 @@
 AppId={{9D1D5E6A-2B4C-4A8E-9F3B-bitComposer01}
 AppName=bitComposer
 AppVersion={#AppVersion}
-AppPublisher=CatDogBark
+AppPublisher=Enlightened Solutions LLC
 AppCopyright=Copyright (c) 2026 Enlightened Solutions LLC
 AppContact=catdogbark@pm.me
 AppPublisherURL=https://github.com/CatDogBark/bitComposer

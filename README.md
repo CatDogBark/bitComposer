@@ -1,3 +1,5 @@
+<img src="bitcomposer/player/icons/bitcomposer.svg" width="88" alt="The bitComposer tile: level bars on a 5x5 pixel grid, the pink bit top right">
+
 # bitComposer
 
 [![CI](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml/badge.svg)](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml)

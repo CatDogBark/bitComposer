@@ -84,7 +84,7 @@ jobs:
           foreach ($exe in "dist\bitComposer\bitComposer.exe", "dist\bitComposer\bitcomposer-cli.exe") {
             $v = (Get-Item $exe).VersionInfo
             Write-Host "$exe : $($v.ProductName) $($v.ProductVersion) / $($v.CompanyName) / $($v.LegalCopyright)"
-            if ($v.LegalCopyright -notmatch "Enlightened Solutions LLC" -or $v.CompanyName -ne "CatDogBark") { throw "version details missing on $exe" }
+            if ($v.LegalCopyright -notmatch "Enlightened Solutions LLC" -or $v.CompanyName -ne "Enlightened Solutions LLC") { throw "version details missing on $exe" }
           }
       - name: Smoke test the player build
         shell: pwsh

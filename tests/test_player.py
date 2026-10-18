@@ -355,6 +355,10 @@ class DesktopEntry(unittest.TestCase):
         self.assertIn("StartupWMClass=bitcomposer-player\n", text)
         self.assertTrue(os.path.exists(self.icon))
         self.assertEqual(d.ensure_entry(), "")              # nothing to do the second time
+        with open(self.icon, "w") as fh:                     # an older version's icon
+            fh.write("<svg/>")
+        self.assertEqual(d.ensure_entry(), "icon")
+        self.assertEqual(d.ensure_entry(), "")
         # the program moved (a reinstall elsewhere): the entry follows it
         moved = os.path.join(self.tmp.name, "other bin", "bitcomposer-player")
         os.makedirs(os.path.dirname(moved))
@@ -383,6 +387,13 @@ class DesktopEntry(unittest.TestCase):
         with unittest.mock.patch.object(sys, "argv", ["-m"]):    # a checkout run cannot be started at login
             self.assertFalse(autostart.supported())
             self.assertNotEqual(autostart.set_enabled(True), "")
+
+    def test_site_icon_is_the_app_icon(self):
+        """docs/ is all GitHub Pages serves, so the site keeps a copy of the tile."""
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual((root / "docs/images/bitcomposer.svg").read_bytes(),
+                         (root / "bitcomposer/player/icons/bitcomposer.svg").read_bytes())
 
     def test_leaves_alone(self):
         d = self.d

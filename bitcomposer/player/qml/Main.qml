@@ -691,12 +691,13 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
+                    // The bit family's wordmark: [bit]Name, brackets dim, bit bold.
                     Text {
-                        text: "BITCOMPOSER"
-                        color: root.accentCyan
+                        textFormat: Text.StyledText
+                        text: "<font color='#2f8f5f'>[</font><b><font color='#00ff88'>bit</font></b><font color='#2f8f5f'>]</font>Composer"
+                        color: root.textColor
                         font.family: root.mono
-                        font.pixelSize: Math.round(10 * root.ui)
-                        font.letterSpacing: 4
+                        font.pixelSize: Math.round(13 * root.ui)
                     }
                     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(0, 1, 0.53, 0.12) }
                     Rectangle {
