@@ -6,7 +6,7 @@ Before this (2026-10-18) each part placed itself from its own fixed numbers
 and pairwise rules kept them apart: the lead from a window and section
 energy, the chord from anchors per family with its top voice capped under
 the lead's lower quartile, floored at label 60. Every register change then
-moved the next part: lowering the lead a fifth (the page Troy chose it on)
+moved the next part: lowering the lead a fifth (chosen by ear on a listening page)
 dragged the brass chord under it back toward the 147-262 Hz band it had
 been moved out of the day before. The plan states the order instead: the
 chord sits in its family's register (harmony.REGISTERS, measured on the
@@ -20,7 +20,7 @@ Lead ranges per voice come from the games: each pack's SPC traces record
 the sounding pitch of every voice in every snapshot. Until a voice has its
 range in LEAD_RANGES it takes LEAD_RANGE_DEFAULT, labels 53-76 (G3 to E5),
 a fifth under the old 60-83 window, which is where the octave fix of the
-17th had left every lead and where Troy heard it as piercing.
+17th had left every lead and where it was heard as piercing.
 """
 from .harmony import anchors_for, family_register
 

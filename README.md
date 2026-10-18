@@ -224,6 +224,10 @@ pipx install bitcomposer         # the generator the player runs
 See [docs/INSTALL.md](docs/INSTALL.md). The generator does not depend on
 any of this.
 
-## License
+## License and contact
 
-MIT. Every instrument is synthesized; no samples were taken from any game.
+MIT, copyright 2026 Enlightened Solutions LLC (see [LICENSE](LICENSE)).
+Every instrument is synthesized; no samples were taken from any game.
+
+Bugs and ideas: [GitHub issues](https://github.com/CatDogBark/bitComposer/issues).
+Anything else: CatDogBark, catdogbark@pm.me.

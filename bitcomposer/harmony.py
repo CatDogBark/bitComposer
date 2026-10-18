@@ -187,7 +187,7 @@ def voice_chord(chord_notes: list[int], num_voices: int, anchor_shift: int = 0,
 # speak. Before, every stab was cut after six rows whatever the voice, and
 # the per-tick volume slide under it had the note gone in 250 ms anyway:
 # Strike of the Factory's strings swelled for 100 ms and were silent by
-# 260 (measured on the rendered part), which is the quack Troy heard.
+# 260 (measured on the rendered part): the quack heard on the release listen.
 STAB_MS = {
     "brass": 180, "lead": 150, "psg": 150, "keys": 170, "organ": 170, "struck": 150,
     "flute": 350, "strings": 700, "choir": 700, "pad": 900,

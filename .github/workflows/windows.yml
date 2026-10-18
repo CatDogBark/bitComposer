@@ -69,11 +69,23 @@ jobs:
           # generates as well); the libopenmpt DLLs sit in its bundle, where
           # player/openmpt.py looks, and --collect-data brings the window's
           # QML, font and icon. The command line leaves Qt out.
+          # The version resources name the product, publisher and copyright
+          # holder in Explorer's Properties > Details.
           python tools/windows/make_icon.py build/bitcomposer.ico
-          pyinstaller --noconfirm --onefile --name bitcomposer-cli --console --icon build/bitcomposer.ico --collect-submodules bitcomposer --exclude-module PySide6 --exclude-module shiboken6 tools/windows/launch_cli.py
-          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --collect-submodules bitcomposer --collect-data bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
+          python tools/windows/make_version_file.py build/version-cli.txt bitcomposer-cli.exe "bitComposer command line"
+          python tools/windows/make_version_file.py build/version-player.txt bitComposer.exe "bitComposer"
+          pyinstaller --noconfirm --onefile --name bitcomposer-cli --console --icon build/bitcomposer.ico --version-file build/version-cli.txt --collect-submodules bitcomposer --exclude-module PySide6 --exclude-module shiboken6 tools/windows/launch_cli.py
+          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --version-file build/version-player.txt --collect-submodules bitcomposer --collect-data bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
           Copy-Item dist/bitcomposer-cli.exe dist/bitComposer/
           dist\bitComposer\bitcomposer-cli.exe --version
+      - name: Check the executables' details
+        shell: pwsh
+        run: |
+          foreach ($exe in "dist\bitComposer\bitComposer.exe", "dist\bitComposer\bitcomposer-cli.exe") {
+            $v = (Get-Item $exe).VersionInfo
+            Write-Host "$exe : $($v.ProductName) $($v.ProductVersion) / $($v.CompanyName) / $($v.LegalCopyright)"
+            if ($v.LegalCopyright -notmatch "Enlightened Solutions LLC" -or $v.CompanyName -ne "CatDogBark") { throw "version details missing on $exe" }
+          }
       - name: Smoke test the player build
         shell: pwsh
         run: |
