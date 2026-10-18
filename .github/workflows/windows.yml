@@ -3,10 +3,15 @@ name: Windows build
 # Builds two single-file executables on a Windows runner: bitcomposer.exe (the
 # command line) and bitComposer.exe (the window), zips them with a short
 # readme, keeps the zip as a workflow artifact, and on a tag (or a manual run
-# naming one) attaches it to that GitHub release.
+# naming one) attaches it to that GitHub release. The build runs on every
+# push to main and on pull requests as well, so a broken Windows build shows
+# up when it breaks and not on release day (0.9.0 and 0.9.1 both found out
+# at the tag).
 on:
   push:
+    branches: [main]
     tags: ["v*"]
+  pull_request:
   workflow_dispatch:
     inputs:
       tag:

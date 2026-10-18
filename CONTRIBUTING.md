@@ -55,3 +55,34 @@ byte-identical: write twenty seeds before, twenty after, compare the files.
 Match the surrounding code. Comments explain *why* — most of them record a
 defect that was measured and what the fix changed, so the next reader does
 not re-break it.
+
+## Cutting a release
+
+The version lives in one place, `bitcomposer/__init__.py`; pyproject reads
+it from there and the publish workflow refuses a tag that does not match it.
+
+1. `CHANGELOG.md`: the Unreleased section becomes `## X.Y.Z — date`, with a
+   one-paragraph summary at its top the way the earlier releases have.
+2. `bitcomposer/__init__.py`: `__version__ = "X.Y.Z"`.
+3. `docs/ROADMAP.md`: move what shipped out of the open items.
+4. Regenerate the listening page (`docs/index.html`, `docs/tracks/`) if the
+   sound changed, so the page people hear is the release.
+5. Commit, push to main, wait for CI (tests on every Python) and the Windows
+   build to go green on that commit.
+6. Tag and push the tag:
+
+   ```bash
+   git tag -a vX.Y.Z -m "X.Y.Z: one line on what it is"
+   git push origin vX.Y.Z
+   ```
+
+   The tag starts two workflows: `publish.yml` builds the sdist and wheel,
+   checks the tag against the version and uploads to PyPI through trusted
+   publishing; `windows.yml` builds the executables, creates the GitHub
+   release from the tag message if none exists and attaches the zip.
+7. Check both: `pip install bitcomposer==X.Y.Z` in a fresh venv, and the
+   release page carries `bitComposer-windows.zip`.
+
+A pre-release tag (`v1.0.0rc1`) goes through the same path. PyPI lists it
+as a pre-release that `pip` and `pipx` only install by exact version, so it
+proves the pipeline without becoming anyone's default.
