@@ -35,6 +35,14 @@ def check() -> int:
         print(f"audio output: ok ({type(out).__name__}{' via ' + out.command if hasattr(out, 'command') else ''})")
     except OutputUnavailable as e:
         print(f"audio output: MISSING ({e})"); ok = False
+    if sys.platform.startswith("linux"):
+        try:
+            import jeepney  # noqa: F401
+            import os
+            bus = "ok" if os.environ.get("DBUS_SESSION_BUS_ADDRESS") else "no session bus in this shell"
+            print(f"media keys (MPRIS through jeepney): {bus}")
+        except ImportError:
+            print("media keys: MISSING jeepney (pipx install --force bitcomposer puts it back)")
     print(f"music folder: {default_music_dir()}")
     print(f"bitcomposer {__version__}")
     return 0 if ok else 1
@@ -73,6 +81,8 @@ def main(argv=None) -> int:
     ap.add_argument("--install-desktop", action="store_true", help="write the app-menu entry (Linux; the first launch does it by itself) and exit")
     ap.add_argument("--remove-desktop", action="store_true", help="remove the app-menu entry (Linux), e.g. before pipx uninstall, and exit")
     ap.add_argument("--music-dir", help="folder of songs (default: $BITCOMPOSER_MUSIC_DIR, ~/Music/Chiptune if it exists, else ~/Music/bitComposer)")
+    ap.add_argument("--minimized", action="store_true", help="start in the tray, window closed (what start at login runs)")
+    ap.add_argument("--try-update", metavar="SETUP_EXE", help="Windows build: offer UPDATE for this local installer, to try the update path without a release")
     ap.add_argument("--screenshot", metavar="PNG", help="render the window offscreen to PNG and exit (with a few fresh songs, nothing played)")
     ap.add_argument("--screen", type=_size, default=(1920, 1080), metavar="WxH", help="with --screenshot: the screen in physical pixels (default 1920x1080)")
     ap.add_argument("--scale", type=float, default=1.0, help="with --screenshot: the display scaling, 1.5 for 150%% (default 1)")
@@ -95,7 +105,8 @@ def main(argv=None) -> int:
     except ImportError as e:
         print(f"{QT_HINT} ({e})", file=sys.stderr)
         return 1
-    return run(args.music_dir, screenshot=args.screenshot, screen=args.screen, scale=args.scale, panels=args.panels)
+    return run(args.music_dir, screenshot=args.screenshot, screen=args.screen, scale=args.scale, panels=args.panels,
+               minimized=args.minimized, try_update=args.try_update)
 
 
 if __name__ == "__main__":

@@ -24,10 +24,15 @@ on:
 
 permissions:
   contents: write
+  id-token: write        # signing: the job signs in to Azure with GitHub's OIDC token, no stored password
 
 jobs:
   build:
     runs-on: windows-latest
+    # The "signing" environment holds the Azure IDs and the signing account's
+    # names; Azure trusts this repository's runs in that environment (a
+    # federated credential), and nothing else.
+    environment: signing
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -69,11 +74,66 @@ jobs:
           # generates as well); the libopenmpt DLLs sit in its bundle, where
           # player/openmpt.py looks, and --collect-data brings the window's
           # QML, font and icon. The command line leaves Qt out.
+          # The version resources name the product, publisher and copyright
+          # holder in Explorer's Properties > Details.
           python tools/windows/make_icon.py build/bitcomposer.ico
-          pyinstaller --noconfirm --onefile --name bitcomposer-cli --console --icon build/bitcomposer.ico --collect-submodules bitcomposer --exclude-module PySide6 --exclude-module shiboken6 tools/windows/launch_cli.py
-          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --collect-submodules bitcomposer --collect-data bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
+          python tools/windows/make_version_file.py build/version-cli.txt bitcomposer-cli.exe "bitComposer command line"
+          python tools/windows/make_version_file.py build/version-player.txt bitComposer.exe "bitComposer"
+          pyinstaller --noconfirm --onefile --name bitcomposer-cli --console --icon build/bitcomposer.ico --version-file build/version-cli.txt --collect-submodules bitcomposer --exclude-module PySide6 --exclude-module shiboken6 tools/windows/launch_cli.py
+          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --version-file build/version-player.txt --collect-submodules bitcomposer --collect-data bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
           Copy-Item dist/bitcomposer-cli.exe dist/bitComposer/
           dist\bitComposer\bitcomposer-cli.exe --version
+      # Code signing (Azure Artifact Signing, the certificate in the name of
+      # Enlightened Solutions LLC): release builds only, that is tags and
+      # runs started by hand; pushes and pull requests build unsigned. With
+      # the environment not set up yet, every build is unsigned and says so.
+      - name: Signing for this build?
+        id: sign
+        shell: pwsh
+        env:
+          CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          RELEASE: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          if (-not $env:CLIENT_ID) { Write-Host "::notice::Code signing is not set up (the signing environment has no AZURE_CLIENT_ID): this build is unsigned"; "on=false" >> $env:GITHUB_OUTPUT }
+          elseif ($env:RELEASE -ne "true") { Write-Host "Not a release build: unsigned"; "on=false" >> $env:GITHUB_OUTPUT }
+          else { "on=true" >> $env:GITHUB_OUTPUT }
+      - uses: azure/login@v2
+        if: steps.sign.outputs.on == 'true'
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign the executables
+        if: steps.sign.outputs.on == 'true'
+        shell: pwsh
+        env:
+          SIGNING_ENDPOINT: ${{ vars.SIGNING_ENDPOINT }}
+          SIGNING_ACCOUNT: ${{ vars.SIGNING_ACCOUNT }}
+          SIGNING_PROFILE: ${{ vars.SIGNING_PROFILE }}
+        run: |
+          # signtool with Artifact Signing's dlib, which signs in through the
+          # Azure login above. The same command signs the installer and its
+          # uninstaller in the Installer step.
+          nuget install Microsoft.ArtifactSigning.Client -x -OutputDirectory signing | Out-Null
+          $dlib = Get-ChildItem -Recurse signing -Filter "*Dlib.dll" | Where-Object { $_.FullName -match '\\x64\\' } | Select-Object -First 1
+          if (-not $dlib) { throw "Artifact Signing dlib not found in the NuGet package" }
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe not found" }
+          @{ Endpoint = $env:SIGNING_ENDPOINT; CodeSigningAccountName = $env:SIGNING_ACCOUNT; CertificateProfileName = $env:SIGNING_PROFILE } | ConvertTo-Json | Set-Content signing\metadata.json
+          $meta = (Resolve-Path signing\metadata.json).Path
+          "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+          "SIGN_DLIB=$($dlib.FullName)" >> $env:GITHUB_ENV
+          "SIGN_META=$meta" >> $env:GITHUB_ENV
+          & $signtool.FullName sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib $dlib.FullName /dmdf $meta dist\bitComposer\bitComposer.exe dist\bitComposer\bitcomposer-cli.exe
+          if ($LASTEXITCODE -ne 0) { throw "signtool exited $LASTEXITCODE" }
+      - name: Check the executables' details
+        shell: pwsh
+        run: |
+          foreach ($exe in "dist\bitComposer\bitComposer.exe", "dist\bitComposer\bitcomposer-cli.exe") {
+            $v = (Get-Item $exe).VersionInfo
+            Write-Host "$exe : $($v.ProductName) $($v.ProductVersion) / $($v.CompanyName) / $($v.LegalCopyright)"
+            if ($v.LegalCopyright -notmatch "Enlightened Solutions LLC" -or $v.CompanyName -ne "Enlightened Solutions LLC") { throw "version details missing on $exe" }
+          }
       - name: Smoke test the player build
         shell: pwsh
         run: |
@@ -132,8 +192,54 @@ jobs:
           # shortcut (optional), uninstaller. Unsigned, like the executables.
           choco install innosetup --no-progress -y | Out-Null
           $version = python -c "import bitcomposer; print(bitcomposer.__version__)"
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" tools\windows\installer.iss
+          $numver = python -c "import re, bitcomposer; print('.'.join(re.match(r'(\d+)\.(\d+)\.(\d+)', bitcomposer.__version__).groups()) + '.0')"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if ("${{ steps.sign.outputs.on }}" -eq "true") {
+            # Inno calls this for the setup and for the uninstaller it embeds ($q a quote, $f the file).
+            $cmd = "`$q$env:SIGNTOOL`$q sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib `$q$env:SIGN_DLIB`$q /dmdf `$q$env:SIGN_META`$q `$f"
+            & $iscc "/DAppVersion=$version" "/DAppNumVersion=$numver" "/DSigned=1" "/Ssign=$cmd" tools\windows\installer.iss
+          } else {
+            & $iscc "/DAppVersion=$version" "/DAppNumVersion=$numver" tools\windows\installer.iss
+          }
+          if ($LASTEXITCODE -ne 0) { throw "ISCC exited $LASTEXITCODE" }
           Get-ChildItem bitComposer-setup.exe
+      - name: Install, check Installed apps, uninstall
+        shell: pwsh
+        run: |
+          # What a user does: run the installer (quietly here), find the app
+          # in Settings > Apps > Installed apps (the Uninstall registry key),
+          # start it, then uninstall from there and check nothing is left.
+          $p = Start-Process -FilePath .\bitComposer-setup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=install.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 40; throw "setup exited $($p.ExitCode)" }
+          $roots = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall", "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+          $key = Get-ChildItem $roots -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "bitComposer*" } | Select-Object -First 1
+          if (-not $key) { throw "no Installed apps entry" }
+          $e = Get-ItemProperty $key.PSPath
+          Write-Host "Installed apps: $($e.DisplayName) | $($e.Publisher) | $($e.DisplayVersion) | $($e.InstallLocation) | $($e.UninstallString)"
+          if ($e.Publisher -ne "Enlightened Solutions LLC") { throw "publisher is '$($e.Publisher)'" }
+          $exe = Join-Path $e.InstallLocation "bitComposer.exe"
+          if (-not (Test-Path $exe)) { throw "bitComposer.exe was not installed" }
+          $menu = Join-Path ([Environment]::GetFolderPath("Programs")) "bitComposer\bitComposer.lnk"
+          if (-not (Test-Path $menu)) { throw "no Start menu entry at $menu" }
+          $p = Start-Process -FilePath $exe -ArgumentList "--check" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "the installed bitComposer.exe --check exited $($p.ExitCode)" }
+          $un = $e.UninstallString.Trim('"')
+          Start-Process -FilePath $un -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          # The uninstaller hands itself off to a copy in TEMP and returns early.
+          for ($i = 0; $i -lt 90 -and ((Test-Path $exe) -or (Test-Path $key.PSPath)); $i++) { Start-Sleep 1 }
+          if (Test-Path $exe) { throw "uninstall left $exe" }
+          if (Test-Path $key.PSPath) { throw "uninstall left the Installed apps entry" }
+          if (Test-Path $menu) { throw "uninstall left the Start menu entry" }
+          Write-Host "installed, listed, started, uninstalled: clean"
+      - name: Check the signatures
+        if: steps.sign.outputs.on == 'true'
+        shell: pwsh
+        run: |
+          foreach ($f in "dist\bitComposer\bitComposer.exe", "dist\bitComposer\bitcomposer-cli.exe", "bitComposer-setup.exe") {
+            $s = Get-AuthenticodeSignature $f
+            Write-Host "$f : $($s.Status) / $($s.SignerCertificate.Subject)"
+            if ($s.Status -ne "Valid" -or $s.SignerCertificate.Subject -notmatch "Enlightened Solutions LLC") { throw "$f is not signed by Enlightened Solutions LLC" }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: bitComposer-windows
@@ -166,3 +272,11 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit 1 }
           }
           gh release upload $tag bitComposer-windows.zip bitComposer-setup.exe --clobber
+          # The release page names the code signing policy, as the signing
+          # programme asks of every download page.
+          $body = gh release view $tag --json body --jq .body
+          if ($body -notmatch "Code signing policy") {
+            Set-Content notes.md $body
+            Add-Content notes.md "`n`n[Code signing policy](https://github.com/CatDogBark/bitComposer#code-signing-policy) · [Privacy](https://github.com/CatDogBark/bitComposer#privacy)"
+            gh release edit $tag --notes-file notes.md
+          }

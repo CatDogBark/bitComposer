@@ -21,7 +21,7 @@ below).
   zip on the tag. The version lives in `bitcomposer/__init__.py` alone.
   First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
   exact version. The checklist is in `CONTRIBUTING.md`.
-- **Linux install (done, branch `companion-path`, to verify on Troy's
+- **Linux install (done, branch `companion-path`, to verify on the maintainer's
   machine).** `pipx install bitcomposer` is the user's path. The companion
   (KDE Plasma 6, Debian-style paths, the scope for 1.0) runs `bitcomposer`
   on PATH and falls back to `python3 -m bitcomposer.cli`; the installer's
@@ -37,7 +37,7 @@ below).
   prune, shuffle, gain, the readout of what the song drew) runs on both.
   Built: `bitcomposer/player/` (engine, window, libopenmpt and audio
   bindings), the Windows installer, the desktop entry. Verified headless
-  here; Troy verifies the window on Plasma and the installer on Windows.
+  here; the window on Plasma and the installer on Windows are checked by hand.
   - **One package.** The player lives in the `bitcomposer` package next to
     the generator: Qt for the window (below), libopenmpt through the ctypes
     code the daemon already has, audio out through the standard library
@@ -71,24 +71,31 @@ below).
   - **The window is Qt (decided 2026-10-18).** The first window was
     tkinter: plain, with a fixed 520x640 minimum and pixel-sized sliders,
     so at 1920x1080 and 150% (1280x720 logical) it ran off the screen.
-    Troy chose PySide6, as a required dependency (PySide6-Essentials,
+    PySide6 was chosen, as a required dependency (PySide6-Essentials,
     ~80 MB download, 250 MB installed): a clone still runs the generator
     with nothing installed. The window (`player/qml/Main.qml`) is the
     widget's QML ported to plain QtQuick, its D-Bus polling replaced by a
     QObject over the engine (`player/backend.py`); sizes are logical
     pixels, the window opens no taller than its screen and scrolls, option
-    rows wrap, Ctrl +/- zooms. JetBrains Mono ships in the package (Apache
-    2.0). Tray icon (close keeps playing), one instance (a second launch
+    rows wrap, Ctrl +/- zooms. JetBrains Mono ships in the package (SIL
+    Open Font License 1.1). Tray icon (close keeps playing), one instance (a second launch
     shows the first). `bitcomposer-player --screenshot out.png --screen
     1920x1080 --scale 1.5 [--panels settings,mix]` renders it offscreen;
     the Windows build renders six setups from the frozen executable on
     every push. Windows build is a PyInstaller folder (onedir) so Qt
     starts at once; the installer is per-user by default and UPDATE runs
     it silently and relaunches.
-  - **Next for the player.** MPRIS through QtDBus (media keys, the Plasma
-    media applet) and start-at-login minimised to the tray, which together
-    replace the daemon; then the daemon and widget retire
-    (`companion/install.sh --uninstall` for existing installs).
+  - **Media keys and start at login (done 2026-10-18).** MPRIS on Linux
+    (`player/mpris.py`, jeepney rather than QtDBus: clients check the
+    types, which PySide's variant conversion does not write exactly),
+    RegisterHotKey on Windows (`player/mediakeys_win.py`, not yet tried on
+    a real Windows desktop), start at login in the tray
+    (`player/autostart.py`: XDG autostart, the per-user Run key) from
+    SET → PLAYER or the tray menu. Windows has no SMTC entry yet (the
+    volume flyout's media card); that is a WinRT job for later.
+  - **Next for the player.** The daemon and widget retire
+    (`companion/install.sh --uninstall` for existing installs): the
+    player now does what the daemon did for them.
   - **Flatpak on Flathub: the Linux install for everyone (after 1.0).**
     pipx is a developer's path: a terminal, then one launch for the menu
     entry. On Flathub the player is an Install button in KDE Discover and
@@ -154,8 +161,26 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Road Rash pack (Genesis; next new pack, asked for 2026-10-18).** The
+  first pack on the genesis style, after four SNES ones: Road Rash's
+  YM2612 rock (overdriven FM lead and rhythm guitars, a hard picked FM
+  bass, fast tempos, DAC drums) is the Genesis sound at its loudest. The
+  source works differently from the SPC packs: a Genesis score has no
+  sample bank to decode, its instruments are FM patches, so the source is
+  a VGM log of the chip's register writes (the community's VGM packs, e.g.
+  vgmrips.net). Each instrument's patch (algorithm, feedback, and per
+  operator TL, AR/DR/SR/RR, MUL, DT) is read off the writes and re-rendered
+  through the genesis palette's feedback-FM renderer
+  (`samples/genesis.py`, `_fm_render`, extended to four operators where a
+  patch needs them) into samples of our own at C-5, the DAC drums profiled
+  and re-synthesised; the repository ships parameters and our renders,
+  never the rip. Habits to measure from the logs: tempo, the riff bass,
+  power-chord rhythm guitar (two FM channels a fifth apart), the lead's
+  register, drum density. The rock machinery exists from `megamanx`
+  (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
+  mostly data plus the VGM reader and the patch renderer.
 - **Harmony rework (1.0.0 blocker, 2026-10-17; merged 2026-10-18 after the
-  listen).** Troy: the harmonies are the
+  listen).** From the listen: the harmonies are the
   weakest part and fixing them lifts everything. The week's measurements
   listed five failings in order of damage; what was found and done:
   1. **One voice is not a chord.** The thin voicing was one channel and the J
@@ -189,11 +214,11 @@ These change how every note sounds, not what notes are played.
   measurement is its spectrum at the new register); the 200 ms hit rule;
   whether thin stabs want three voices on some packs.
 - **Register plan (branch `register-plan`, 2026-10-18, under review by
-  ear).** Troy heard the lead as piercing after the octave fix of the
+  ear).** The lead was heard as piercing after the octave fix of the
   17th: measured, the lead had gone up an octave with the fix (medians
   269-320 Hz before, 523-640 after) while the bass and the harmony were
   re-derived downward and the lead was not. On a page with the lead a
-  fifth down and an octave down, Troy chose the fifth (medians 349-453
+  fifth down and an octave down, the fifth was chosen (medians 349-453
   Hz) on every song. Doing that alone would have been a patch on a
   bigger problem: each part placed itself from its own numbers and
   pairwise rules kept them apart, so lowering the lead let the
@@ -216,7 +241,7 @@ These change how every note sounds, not what notes are played.
   whistles and synth leads an octave or more above the plan's window
   (FFVI flute 1 median 1763 Hz over 28 uses, Mana flute 881, Evermore
   strings 1104) and leave harp, bell and marimba where the plan has
-  them; on a page with the leads placed there, Troy: way too high. Two
+  them; on a page with the leads placed there, by ear: way too high. Two
   reasons it does not transfer: a snapshot's voice slots do not say
   which one is the melody, so doublings, trills and chord tops pull the
   medians up; and our leads are fuller stacks than the games' thin
@@ -248,7 +273,7 @@ These change how every note sounds, not what notes are played.
   seed set. Separately, Northern Dawn's brass harmony is still forward after
   the 2026-10-17 pass (no J arpeggio on hard voices, brass a fifth up and
   3 dB down, echo centred, invented attack removed; harmony with echo now
-  −32.0 LUFS against the lead at −27.8). Troy: manageable, still off.
+  −32.0 LUFS against the lead at −27.8). By ear: manageable, still off.
   Next things to measure before changing anything: the synth brass's
   spectrum against the game's sample at the register it is now played in
   (the 3rd and 4th partials land at 700 Hz to 3 kHz), the chug gallop's
@@ -256,7 +281,7 @@ These change how every note sounds, not what notes are played.
   rhythm guitar should take the chug modes instead of the brass in this
   pack. Measure parts alone: zero the other channels' header volumes in a
   copy of the file, render, ebur128.
-- **Pack revisions (in progress, 2026-10-16).** The plan Troy approved: one
+- **Pack revisions (in progress, 2026-10-16).** The approved plan: one
   SOUND picker (done), then each pack rebuilt from its game's SPC snapshots
   so it borrows nothing and carries its own kit: `ffvi` (done, branch
   `ffvi-spc`: 35 own voices, echo from the DSP registers), `megamanx`

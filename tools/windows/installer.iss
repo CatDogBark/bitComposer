@@ -11,12 +11,26 @@
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
+#ifndef AppNumVersion
+  #define AppNumVersion "0.0.0.0"
+#endif
 
 [Setup]
 AppId={{9D1D5E6A-2B4C-4A8E-9F3B-bitComposer01}
 AppName=bitComposer
 AppVersion={#AppVersion}
-AppPublisher=CatDogBark
+; The setup's own version details match the executables' (product name,
+; version), which code signing checks on every signed file.
+VersionInfoVersion={#AppNumVersion}
+VersionInfoProductName=bitComposer
+VersionInfoProductVersion={#AppNumVersion}
+VersionInfoProductTextVersion={#AppVersion}
+; What the player sends over the network (the update check, which can be
+; turned off), shown before installing.
+InfoBeforeFile=tools\windows\privacy.txt
+AppPublisher=Enlightened Solutions LLC
+AppCopyright=Copyright (c) 2026 Enlightened Solutions LLC
+AppContact=catdogbark@pm.me
 AppPublisherURL=https://github.com/CatDogBark/bitComposer
 AppSupportURL=https://github.com/CatDogBark/bitComposer/issues
 DefaultDirName={autopf}\bitComposer
@@ -32,9 +46,22 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 CloseApplications=yes
+; The Run value above is per user by design, in either install mode.
+UsedUserAreasWarning=no
+#ifdef Signed
+; Release builds: the setup and its uninstaller signed by the "sign" tool
+; the workflow passes to ISCC (/Ssign=..., Azure Artifact Signing).
+SignTool=sign
+SignedUninstaller=yes
+#endif
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+
+[Registry]
+; Start at login is the player's own setting (its per-user Run value); the
+; installer never writes it, the uninstaller takes it out.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "bitComposer"; ValueType: none; Flags: uninsdeletevalue dontcreatekey
 
 [InstallDelete]
 ; The bundle's file set changes between versions (Qt's in particular): clear

@@ -1,0 +1,18 @@
+bitComposer: privacy
+
+bitComposer composes and plays music on your computer. It collects nothing
+about you, your music or how you use it, and sends none of it anywhere.
+
+One thing goes over the network on its own: when the player starts, it asks
+GitHub's public releases list (api.github.com) whether a newer version exists,
+so it can offer the UPDATE button. That request carries only what any web
+request does (your IP address and the program's name). Turn it off in the
+player under SET > PLAYER > UPDATES.
+
+Updating downloads only when you press UPDATE (the installer, from GitHub).
+
+Uninstall from Settings > Apps > Installed apps, or the Start menu's
+"Uninstall bitComposer". Your music and settings stay where they are.
+
+Full privacy and code signing policy:
+https://github.com/CatDogBark/bitComposer#privacy

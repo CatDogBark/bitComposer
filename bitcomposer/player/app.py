@@ -26,7 +26,7 @@ APP_ID = "CatDogBark.bitComposer"
 TASKBAR = 48
 
 
-def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> int:
+def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", minimized=False, try_update=None) -> int:
     if screenshot:
         # Before Qt loads: no real display, a fixed scale, the software
         # renderer (no GPU in CI), and a config dir of its own so nothing
@@ -90,21 +90,41 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
 
     if screenshot:
         _compose_demo(Path(music_dir))
-        menu = ""
+        entry_state = ""
     else:
         from .desktop import ensure_entry
         try:
-            menu = ensure_entry()       # first launch of an installed copy: into the app menu
+            entry_state = ensure_entry()    # first launch of an installed copy: into the app menu
         except OSError as e:
             print(f"bitcomposer-player: could not write the app-menu entry: {e}", file=sys.stderr)
-            menu = ""
+            entry_state = ""
 
     backend = Backend(music_dir=music_dir, quiet=bool(screenshot))
-    if menu:
+    if entry_state:
         from .desktop import announce_icons
         announce_icons()
-    if menu == "added":
+    if entry_state == "added":
         backend.notify("bitComposer is in your app menu now")
+
+    # The media keys: MPRIS on Linux (the desktop routes the keys, the media
+    # applet and the lock screen to it), global hot keys on Windows.
+    media_keys = None
+    if not screenshot:
+        if sys.platform.startswith("linux"):
+            from .mpris import Mpris
+            m = Mpris(backend)
+            if m.start():
+                backend.mpris = m
+                backend.set_media_keys("through the desktop's media controls (MPRIS)")
+        elif sys.platform.startswith("win"):
+            try:
+                from .mediakeys_win import MediaKeys
+                media_keys = MediaKeys(backend, log=backend.notify)
+                app.installNativeEventFilter(media_keys)
+                app.aboutToQuit.connect(media_keys.release)
+                backend.set_media_keys(f"{len(media_keys.ids)} of 4 keys" if media_keys.ids else "taken by another program")
+            except Exception as e:
+                print(f"bitcomposer-player: media keys unavailable: {e}", file=sys.stderr)
     if screenshot:
         sw, sh = screen
         s = float(scale or 1)
@@ -118,8 +138,11 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("backend", backend)
     open_panels = {p.strip() for p in (panels or "").split(",") if p.strip()}
+    # Started at login (--minimized): only the tray, if there is one by now.
+    hidden = bool(minimized and not screenshot and _wait_for_tray(app))
     engine.setInitialProperties({"startSettings": "settings" in open_panels or "set" in open_panels,
-                                 "startMaster": "mix" in open_panels, "still": bool(screenshot)})
+                                 "startMaster": "mix" in open_panels, "still": bool(screenshot),
+                                 "startHidden": hidden})
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
         print("bitcomposer-player: the window failed to load (see the QML errors above)", file=sys.stderr)
@@ -150,6 +173,7 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
         window.show()
         window.raise_()
         window.requestActivate()
+    backend.raiseRequested.connect(show_window)
 
     if server is not None:
         def on_connection():
@@ -169,8 +193,14 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
         act_next = QAction("Next", menu); act_next.triggered.connect(backend.next)
         act_gen = QAction("Generate new track", menu); act_gen.triggered.connect(lambda: backend.generate(backend.autoFlags()))
         act_show = QAction("Show window", menu); act_show.triggered.connect(show_window)
+        act_login = QAction("Start at login", menu)
+        act_login.setCheckable(True)
+        act_login.setChecked(backend.autostart)
+        act_login.setEnabled(backend.autostartSupported)
+        act_login.toggled.connect(lambda on: on != backend.autostart and backend.setAutostart(on))
+        backend.autostartChanged.connect(lambda: act_login.setChecked(backend.autostart))
         act_quit = QAction("Quit", menu); act_quit.triggered.connect(app.quit)
-        for a in (act_show, None, act_play, act_next, act_gen, None, act_quit):
+        for a in (act_show, None, act_play, act_next, act_gen, None, act_login, None, act_quit):
             menu.addSeparator() if a is None else menu.addAction(a)
         tray.setContextMenu(menu)
 
@@ -204,6 +234,11 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
     backend.updateConfirm.connect(confirm_update)
     backend.quitRequested.connect(app.quit)
 
+    if try_update:
+        if upd.install_kind() == "frozen":
+            backend.offer(upd.local_release(try_update, __version__))
+        else:
+            backend.notify("--try-update is for the installed Windows build")
     app.aboutToQuit.connect(backend.shutdown)
     # Ctrl+C in a terminal and a SIGTERM quit cleanly (state saved, audio
     # closed). Python only sees a signal when it runs, so a slow timer
@@ -221,6 +256,21 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
     if backend.restart_after_quit:
         upd.restart_self()
     return code
+
+
+def _wait_for_tray(app, seconds: float = 20.0) -> bool:
+    """At login the panel holding the tray may come up after us: wait for
+    it a little, so a --minimized start does not open the window just
+    because it was early. False if no tray turned up (the window opens)."""
+    import time
+    from PySide6.QtWidgets import QSystemTrayIcon
+    end = time.monotonic() + seconds
+    while not QSystemTrayIcon.isSystemTrayAvailable():
+        if time.monotonic() > end:
+            return False
+        app.processEvents()
+        time.sleep(0.25)
+    return True
 
 
 def _compose_demo(music: Path) -> None:

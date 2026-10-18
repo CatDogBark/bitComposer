@@ -12,6 +12,7 @@ from PySide6.QtCore import Property, QObject, QTimer, Qt, Signal, Slot
 
 from .. import __version__
 from .engine import Player, VOLUME_MAX, AUTOGEN_MAX, state_file
+from . import autostart as startup   # the module; `autostart` below is the Qt property
 from . import update as upd
 
 
@@ -50,6 +51,9 @@ class Backend(QObject):
     openFolderRequested = Signal(str)
     updateConfirm = Signal(str)
     quitRequested = Signal()
+    raiseRequested = Signal()
+    autostartChanged = Signal()
+    mediaKeysChanged = Signal()
 
     def __init__(self, music_dir=None, quiet=False, output_kind=None):
         super().__init__()
@@ -71,6 +75,8 @@ class Backend(QObject):
         self._tray = False
         self._dirty = False
         self.restart_after_quit = False
+        self.mpris = None                 # app.py starts one on Linux
+        self._media_keys = ""
         self._tick = QTimer(self)
         self._tick.setInterval(250)
         self._tick.timeout.connect(self._update_position)
@@ -137,6 +143,8 @@ class Backend(QObject):
             self._tick.start()
         else:
             self._tick.stop()
+        if self.mpris:
+            self.mpris.update()
 
     def _update_position(self):
         pos = self.player.position()
@@ -172,6 +180,22 @@ class Backend(QObject):
     def _get_tray(self): return self._tray
     trayAvailable = Property(bool, _get_tray, notify=trayChanged)
 
+    def _get_autostart(self): return startup.is_enabled()
+    autostart = Property(bool, _get_autostart, notify=autostartChanged)
+
+    def _get_autostart_supported(self): return startup.supported()
+    autostartSupported = Property(bool, _get_autostart_supported, constant=True)
+
+    def _get_check_updates(self): return self.player.check_updates
+    checkUpdates = Property(bool, _get_check_updates, notify=updateChanged)
+
+    def _get_media_keys(self): return self._media_keys
+    mediaKeys = Property(str, _get_media_keys, notify=mediaKeysChanged)
+
+    def set_media_keys(self, text: str):
+        self._media_keys = text
+        self.mediaKeysChanged.emit()
+
     def _get_version(self): return __version__
     version = Property(str, _get_version, constant=True)
 
@@ -194,6 +218,14 @@ class Backend(QObject):
         """A line for the window's footer."""
         self._set_notice(text)
 
+    def on_main(self, fn):
+        """Run fn on the main thread (from the MPRIS thread, say)."""
+        self._dispatch.call.emit(fn)
+
+    def current_path(self) -> str:
+        m = self.player.module
+        return m.filepath if m is not None else ""
+
     def set_tray(self, on: bool):
         self._tray = on
         self.trayChanged.emit()
@@ -205,12 +237,20 @@ class Backend(QObject):
         self._refresh()
 
     def start(self):
-        """After the window is up: the update check, off the main thread."""
+        """After the window is up: the update check, off the main thread,
+        unless it is turned off (SET > PLAYER > UPDATES)."""
+        if not self.player.check_updates:
+            return
+
         def check():
             rel = upd.newer_release(__version__)
             if rel:
                 self._dispatch.call.emit(lambda: self._offer(rel))
         threading.Thread(target=check, daemon=True).start()
+
+    def offer(self, rel):
+        """Show UPDATE for this release (the check's, or --try-update's)."""
+        self._offer(rel)
 
     def _offer(self, rel):
         self._release = rel
@@ -238,6 +278,8 @@ class Backend(QObject):
 
     def shutdown(self):
         self._tick.stop()
+        if self.mpris:
+            self.mpris.stop()
         self.player.shutdown()
         self.player.persist()
 
@@ -274,6 +316,8 @@ class Backend(QObject):
     def seek(self, seconds):
         self.player.seek(seconds)
         self._update_position()
+        if self.mpris:
+            self.mpris.seeked(self.player.position())
 
     @Slot(str)
     def generate(self, flags):
@@ -338,6 +382,21 @@ class Backend(QObject):
     def applyUpdate(self):
         if self._release and not self._updating:
             self.updateConfirm.emit(self._release["version"])
+
+    @Slot(bool)
+    def setCheckUpdates(self, on):
+        self.player.check_updates = bool(on)
+        self.player.persist()
+        if not on and self._release and not self._updating:
+            self._release = None              # no UPDATE offer from a check the user turned off
+        self._set_notice("checks GitHub for a newer version at start" if on else "never checks for updates")
+        self.updateChanged.emit()
+
+    @Slot(bool)
+    def setAutostart(self, on):
+        err = startup.set_enabled(on)
+        self._set_notice(err or ("starts at login, in the tray" if on else "no longer starts at login"))
+        self.autostartChanged.emit()
 
     @Slot()
     def hiddenToTray(self):

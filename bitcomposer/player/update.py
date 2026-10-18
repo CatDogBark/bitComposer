@@ -40,6 +40,15 @@ def is_prerelease(text: str) -> bool:
     return bool(v) and v[3] != float("inf")
 
 
+def local_release(installer: str, current: str) -> dict:
+    """A stand-in newer release whose installer is a file on this machine,
+    for trying the UPDATE button on the installed Windows build without
+    publishing a release (`bitComposer.exe --try-update setup.exe`). The
+    download is a file:// URL, which urlretrieve fetches like any other."""
+    p = Path(installer).expanduser().resolve()
+    return {"version": f"{current} (test)", "tag": "local", "page": p.parent.as_uri(), "installer": p.as_uri()}
+
+
 def newer_release(current: str, fetch=None) -> dict | None:
     """The newest release above `current`, as {"version", "tag", "page",
     "installer"} or None. fetch(url) -> bytes is replaceable for tests."""

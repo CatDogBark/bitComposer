@@ -1,11 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <rect x="8" y="8" width="240" height="240" rx="36" fill="#0a100e" stroke="#1a2e26" stroke-width="8"/>
-  <g fill="#00ff88">
-    <rect x="44" y="132" width="24" height="76"/>
-    <rect x="80" y="92" width="24" height="116"/>
-    <rect x="116" y="60" width="24" height="148"/>
-    <rect x="152" y="108" width="24" height="100"/>
+  <!-- The bit tile: a 5x5 pixel grid, each bit app lighting its own glyph,
+       the pink bit always the top-right cell. bitComposer: level bars. -->
+  <rect x="4" y="4" width="248" height="248" rx="56" fill="#0e1612" stroke="#1a2e26" stroke-width="6"/>
+  <g fill="#13221b">
+    <rect x="42" y="42" width="30" height="30" rx="3"/>
+    <rect x="78" y="42" width="30" height="30" rx="3"/>
+    <rect x="114" y="42" width="30" height="30" rx="3"/>
+    <rect x="150" y="42" width="30" height="30" rx="3"/>
+    <rect x="42" y="78" width="30" height="30" rx="3"/>
+    <rect x="78" y="78" width="30" height="30" rx="3"/>
+    <rect x="150" y="78" width="30" height="30" rx="3"/>
+    <rect x="42" y="114" width="30" height="30" rx="3"/>
+    <rect x="150" y="114" width="30" height="30" rx="3"/>
   </g>
-  <rect x="188" y="76" width="24" height="132" fill="#00ffcc"/>
-  <rect x="116" y="36" width="24" height="16" fill="#ff0055"/>
+  <g fill="#00ff88">
+    <rect x="114" y="78" width="30" height="30" rx="3"/>
+    <rect x="186" y="78" width="30" height="30" rx="3"/>
+    <rect x="78" y="114" width="30" height="30" rx="3"/>
+    <rect x="114" y="114" width="30" height="30" rx="3"/>
+    <rect x="186" y="114" width="30" height="30" rx="3"/>
+    <rect x="42" y="150" width="30" height="30" rx="3"/>
+    <rect x="78" y="150" width="30" height="30" rx="3"/>
+    <rect x="114" y="150" width="30" height="30" rx="3"/>
+    <rect x="150" y="150" width="30" height="30" rx="3"/>
+    <rect x="186" y="150" width="30" height="30" rx="3"/>
+    <rect x="42" y="186" width="30" height="30" rx="3"/>
+    <rect x="78" y="186" width="30" height="30" rx="3"/>
+    <rect x="114" y="186" width="30" height="30" rx="3"/>
+    <rect x="150" y="186" width="30" height="30" rx="3"/>
+    <rect x="186" y="186" width="30" height="30" rx="3"/>
+  </g>
+  <rect x="186" y="42" width="30" height="30" rx="3" fill="#ff0055"/>
 </svg>
