@@ -1,9 +1,12 @@
 name: Windows build
 
-# Builds two single-file executables on a Windows runner: bitcomposer.exe (the
-# command line) and bitComposer.exe (the window), zips them with a short
-# readme, keeps the zip as a workflow artifact, and on a tag (or a manual run
-# naming one) attaches it to that GitHub release. The build runs on every
+# Builds the player (bitComposer.exe, a folder build: Qt starts in a moment
+# from a folder, where a single file would unpack ~100 MB on every launch)
+# and the command line (bitcomposer-cli.exe, one file, no Qt) on a Windows
+# runner, renders the player offscreen at common screen sizes and scalings,
+# zips the folder with a short readme, builds the installer, keeps all of it
+# as workflow artifacts, and on a tag (or a manual run naming one) attaches
+# the zip and the installer to that GitHub release. The build runs on every
 # push to main and on pull requests as well, so a broken Windows build shows
 # up when it breaks and not on release day (0.9.0 and 0.9.1 both found out
 # at the tag).
@@ -61,25 +64,58 @@ jobs:
       - name: Build executables
         run: |
           # Windows paths are case-insensitive: "bitcomposer" and "bitComposer"
-          # would be one file, so the command line gets a -cli suffix.
-          # bitComposer.exe is the player (it generates as well); the DLLs
-          # sit next to it in the bundle, where player/openmpt.py looks.
-          pyinstaller --onefile --name bitcomposer-cli --console --collect-submodules bitcomposer tools/windows/launch_cli.py
-          pyinstaller --onefile --name bitComposer --windowed --collect-submodules bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
+          # would be one file, so the command line gets a -cli suffix and
+          # goes into the player's folder. bitComposer.exe is the player (it
+          # generates as well); the libopenmpt DLLs sit in its bundle, where
+          # player/openmpt.py looks, and --collect-data brings the window's
+          # QML, font and icon. The command line leaves Qt out.
+          python tools/windows/make_icon.py build/bitcomposer.ico
+          pyinstaller --noconfirm --onefile --name bitcomposer-cli --console --icon build/bitcomposer.ico --collect-submodules bitcomposer --exclude-module PySide6 --exclude-module shiboken6 tools/windows/launch_cli.py
+          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --collect-submodules bitcomposer --collect-data bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
+          Copy-Item dist/bitcomposer-cli.exe dist/bitComposer/
+          dist\bitComposer\bitcomposer-cli.exe --version
       - name: Smoke test the player build
+        shell: pwsh
         run: |
-          dist\bitComposer.exe --check
+          # The player is a windowed program: Start-Process -Wait for its exit
+          # code. The screenshots are the frozen build drawing its window on
+          # Windows, offscreen, as it opens on each screen (WxH physical, then
+          # the scaling), with both panels open where the name says "all".
+          $exe = "dist\bitComposer\bitComposer.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--check" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "bitComposer.exe --check exited $($p.ExitCode)" }
+          New-Item -ItemType Directory -Force -Path shots | Out-Null
+          $shots = @(
+            @("1920x1080-150", "1920x1080", "1.5", ""),
+            @("1920x1080-150-all", "1920x1080", "1.5", "settings,mix"),
+            @("1920x1080-100-all", "1920x1080", "1", "settings,mix"),
+            @("1366x768-100-all", "1366x768", "1", "settings,mix"),
+            @("2560x1440-125-all", "2560x1440", "1.25", "settings,mix"),
+            @("3840x2160-200-all", "3840x2160", "2", "settings,mix")
+          )
+          foreach ($s in $shots) {
+            $a = @("--screenshot", "shots\$($s[0]).png", "--screen", $s[1], "--scale", $s[2])
+            if ($s[3]) { $a += @("--panels", $s[3]) }
+            $p = Start-Process -FilePath $exe -ArgumentList $a -Wait -PassThru
+            if ($p.ExitCode -ne 0 -or -not (Test-Path "shots\$($s[0]).png")) { throw "screenshot $($s[0]) failed ($($p.ExitCode))" }
+          }
+          Get-ChildItem shots
       - name: Package
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path pkg | Out-Null
-          Copy-Item dist/bitcomposer-cli.exe, dist/bitComposer.exe pkg/
           @"
           bitComposer for Windows
           =======================
 
+          bitComposer-setup.exe installs this for you (Start menu, updates from the player's UPDATE button).
+          This zip is the same program without installing: keep the bitComposer folder together and run
+          bitComposer.exe from it.
+
           bitComposer.exe       the player: plays your folder, generates the next song as the current one ends,
                                 live mixer, keep or prune, settings for what it composes. Needs nothing else.
+                                Closing the window leaves it playing in the tray; quit from the tray menu.
+                                Ctrl + and Ctrl - zoom the window, Ctrl 0 resets.
           bitcomposer-cli.exe   the command line, e.g.  bitcomposer-cli -n 10 --sound megamanx -d "%USERPROFILE%\Music\bitComposer"
 
           Songs are Impulse Tracker (.it) files and play in any tracker player as well (XMPlay, OpenMPT).
@@ -87,7 +123,8 @@ jobs:
           Style packs: ffvi, mana, evermore, megamanx. Leave the pack on "random" and half the SNES songs draw one.
           Windows SmartScreen may warn because the executables are not code-signed; "More info" then "Run anyway".
           "@ | Set-Content -Path pkg/README-WINDOWS.txt
-          Compress-Archive -Path pkg/* -DestinationPath bitComposer-windows.zip -Force
+          Copy-Item pkg/README-WINDOWS.txt dist/bitComposer/
+          Compress-Archive -Path dist/bitComposer -DestinationPath bitComposer-windows.zip -Force
       - name: Installer
         shell: pwsh
         run: |
@@ -103,6 +140,10 @@ jobs:
           path: |
             bitComposer-windows.zip
             bitComposer-setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: player-screenshots-windows
+          path: shots/
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
         shell: pwsh

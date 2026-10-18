@@ -11,6 +11,9 @@ description = "Procedural 16-bit chiptune music generator — creates Impulse Tr
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
+# The player's window is Qt (QtQuick). Essentials is the part of PySide6 it
+# uses, a third of the full download.
+dependencies = ["PySide6-Essentials>=6.5"]
 authors = [
     { name = "CatDogBark", email = "186357707+CatDogBark@users.noreply.github.com" },
 ]
@@ -39,6 +42,10 @@ Changelog = "https://github.com/CatDogBark/bitComposer/blob/main/CHANGELOG.md"
 # discovery would also install tests/ as a top-level package.
 [tool.setuptools.packages.find]
 include = ["bitcomposer*"]
+
+# The player's window, font and icon are files beside its code.
+[tool.setuptools.package-data]
+"bitcomposer.player" = ["qml/*.qml", "fonts/*.ttf", "fonts/LICENSE.txt", "icons/*.svg"]
 
 [tool.setuptools.dynamic]
 version = { attr = "bitcomposer.__version__" }

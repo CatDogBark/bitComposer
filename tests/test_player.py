@@ -3,9 +3,11 @@ so transport, the live mixer, KEEP and in-process generation run as they do
 in the window, without a device."""
 import os
 import queue
+import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 
 try:
     from .support import compose_and_save
@@ -121,3 +123,218 @@ class UpdateCheck(unittest.TestCase):
         # a dead network is no update, not an error
         self.assertIsNone(u.newer_release("1.0.0", lambda url: (_ for _ in ()).throw(OSError("offline"))))
         self.assertIn(u.install_kind(), ("frozen", "pipx", "other"))
+
+
+def _have_qt():
+    try:
+        import PySide6.QtQuick  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+@unittest.skipUnless(_have_openmpt() and _have_qt(), "needs libopenmpt and PySide6")
+class WindowHeadless(unittest.TestCase):
+    """The Qt face offscreen: the bridge the QML binds to, driven the way
+    the window drives it, and the window itself loading without a QML
+    error and fitting the screen it is told about."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        os.environ["QT_QUICK_BACKEND"] = "software"
+        from PySide6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.music = os.path.join(self.tmp.name, "music")
+        os.makedirs(self.music)
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.tmp.name, "cfg")
+        compose_and_save(os.path.join(self.music, "Kept.it"), seed=3, sound="chip")
+        compose_and_save(os.path.join(self.music, "Fresh (auto).it"), seed=4, sound="chip")
+        from bitcomposer.player.backend import Backend
+        self.b = Backend(music_dir=self.music, quiet=True, output_kind="null")
+
+    def tearDown(self):
+        self.b.shutdown()
+        self.tmp.cleanup()
+
+    def pump(self, seconds, until=None):
+        end = time.time() + seconds
+        while time.time() < end:
+            self.app.processEvents()
+            if until and until():
+                return True
+            time.sleep(0.02)
+        return bool(until and until())
+
+    def test_bridge(self):
+        b = self.b
+        self.assertEqual([t["auto"] for t in b.playlist], [True, False])
+        self.assertEqual(b.state["currentIndex"], -1)
+        b.playIndex(1)
+        self.assertTrue(self.pump(2, lambda: b.position > 0.3))
+        st = b.state
+        self.assertEqual(st["status"], "Playing")
+        self.assertEqual(st["currentIndex"], 1)
+        self.assertEqual(st["layout"][0], "melody")
+        self.assertIn("BPM", st["message"])
+        self.assertEqual(len(b.channelVolumes), 19)
+        b.setChannelVolume(1, 7)
+        self.assertTrue(b.applyMix())
+        self.assertEqual(b.channelVolumes[1], 7)
+        b.keep(0)
+        self.pump(0.2)
+        self.assertEqual([t["auto"] for t in b.playlist], [False, False])
+        # turning AUTO on while playing composes nothing yet
+        b.setAutoGenerate(True, "--sound chip")
+        self.pump(0.2)
+        self.assertFalse(b.state["generating"])
+        self.assertTrue(b.state["autoGenerate"])
+        # GENERATE composes in the background and plays the new track
+        b.generate("--sound chip -s 9")
+        self.pump(0.1)
+        self.assertTrue(b.state["generating"])
+        self.assertTrue(self.pump(60, lambda: not b.state["generating"]))
+        self.assertEqual(len(b.playlist), 3)
+        self.assertEqual(b.state["status"], "Playing")
+        self.assertTrue(b.state["file"].endswith(" (auto).it"))
+        self.assertIn("composed", b.notice)
+        # the window's own settings round-trip
+        b.saveUi('{"settTempo": "fast"}')
+        self.assertEqual(b.loadUi(), '{"settTempo": "fast"}')
+
+    def test_window_loads_and_fits(self):
+        from pathlib import Path
+        from PySide6.QtCore import QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1280, 672)       # 1920x1080 at 150%, less a taskbar
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"startSettings": True, "startMaster": True, "still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        self.assertTrue(eng.rootObjects(), warnings)
+        win = eng.rootObjects()[0]
+        self.b.playIndex(0)
+        win.show()
+        self.pump(1.0)
+        self.assertEqual(warnings, [])
+        # both panels open: taller than the screen, so the window stops at
+        # the screen and the column scrolls inside it
+        self.assertGreater(win.property("contentH"), 672)
+        self.assertLessEqual(win.height(), 672)
+        self.assertLessEqual(win.width(), 1280)
+        win.close()
+        del eng
+
+    def test_panels_open_inside_the_window(self):
+        """SET and MIX opened after start leave the window's size alone (it
+        grew before, off the bottom of a Wayland screen, and flashed) and
+        scroll the opened panel into view."""
+        from pathlib import Path
+        from PySide6.QtCore import QObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1920, 1152)
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        self.b.playIndex(0)
+        win.show()
+        self.assertTrue(self.pump(3, lambda: win.property("_sized")))
+        self.pump(0.5)
+        size = (win.width(), win.height())
+        self.assertLess(win.height(), 1152 - 64)          # panels closed: the content, not the screen
+        scroll = win.findChild(QObject, "scroll")
+        win.setProperty("showSettings", True)
+        self.pump(0.5)
+        win.setProperty("showMaster", True)
+        self.pump(0.6)
+        self.assertEqual((win.width(), win.height()), size)
+        self.assertGreater(win.property("contentH"), win.height())
+        self.assertGreater(scroll.property("contentY"), 0)  # MIX scrolled into view
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
+
+class DesktopEntry(unittest.TestCase):
+    """The Linux app-menu entry: the first launch of an installed player
+    adds it, a moved program is repaired, a removed entry stays removed."""
+
+    def setUp(self):
+        from unittest import mock
+        self.tmp = tempfile.TemporaryDirectory()
+        t = self.tmp.name
+        self.bin = os.path.join(t, "bin")
+        os.makedirs(self.bin)
+        self.exe = os.path.join(self.bin, "bitcomposer-player")
+        open(self.exe, "w").close()
+        os.chmod(self.exe, 0o755)
+        self.patches = [
+            mock.patch.dict(os.environ, {"XDG_DATA_HOME": os.path.join(t, "data"), "XDG_CONFIG_HOME": os.path.join(t, "cfg"),
+                                         "PATH": self.bin}),
+            mock.patch.object(sys, "argv", [self.exe]),
+            mock.patch.object(sys, "platform", "linux"),
+        ]
+        for p in self.patches:
+            p.start()
+        os.environ.pop("FLATPAK_ID", None)
+        from bitcomposer.player import desktop
+        self.d = desktop
+        self.entry, self.icon = desktop._paths()
+
+    def tearDown(self):
+        for p in reversed(self.patches):
+            p.stop()
+        self.tmp.cleanup()
+
+    def read(self):
+        with open(self.entry) as fh:
+            return fh.read()
+
+    def test_first_launch_repair_and_removal(self):
+        d = self.d
+        self.assertEqual(d.ensure_entry(), "added")
+        text = self.read()
+        self.assertIn(f"Exec={self.exe}\n", text)
+        self.assertIn("Icon=bitcomposer\n", text)
+        self.assertIn("StartupWMClass=bitcomposer-player\n", text)
+        self.assertTrue(os.path.exists(self.icon))
+        self.assertEqual(d.ensure_entry(), "")              # nothing to do the second time
+        # the program moved (a reinstall elsewhere): the entry follows it
+        moved = os.path.join(self.tmp.name, "other bin", "bitcomposer-player")
+        os.makedirs(os.path.dirname(moved))
+        os.rename(self.exe, moved)
+        with unittest.mock.patch.object(sys, "argv", [moved]), unittest.mock.patch.dict(os.environ, {"PATH": os.path.dirname(moved)}):
+            self.assertEqual(d.ensure_entry(), "repaired")
+            self.assertIn(f'Exec="{moved}"\n', self.read())
+            self.assertEqual(d.ensure_entry(), "")          # quoted path with a space reads back
+        # removed by the user: stays removed until asked for
+        self.assertEqual(len(d.remove_entry()), 2)
+        self.assertEqual(d.ensure_entry(), "")
+        self.assertFalse(os.path.exists(self.entry))
+
+    def test_leaves_alone(self):
+        d = self.d
+        os.makedirs(os.path.dirname(self.entry))
+        with open(self.entry, "w") as fh:                    # someone's own entry, no mark
+            fh.write("[Desktop Entry]\nExec=/gone/bitcomposer-player\n")
+        self.assertEqual(d.ensure_entry(), "")
+        self.assertEqual(self.read(), "[Desktop Entry]\nExec=/gone/bitcomposer-player\n")
+        os.remove(self.entry)
+        with unittest.mock.patch.dict(os.environ, {"FLATPAK_ID": "io.github.CatDogBark.bitComposer"}):
+            self.assertEqual(d.ensure_entry(), "")           # a Flatpak ships its own
+        with unittest.mock.patch.object(sys, "argv", ["-m"]):
+            self.assertEqual(d.ensure_entry(), "")           # python -m from a checkout: a menu cannot start that
+        self.assertFalse(os.path.exists(self.entry))
