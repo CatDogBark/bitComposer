@@ -34,6 +34,7 @@ from .melody import (
     generate_counter_melody, add_melody_cuts,
 )
 from .harmony import generate_harmony_timeline
+from .registers import plan_registers
 from .bass import generate_bass_timeline, pick_section_bass
 from .arp import pick_figures, generate_arp, FIGURES
 from .bass import RIFFS
@@ -234,16 +235,21 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     else:
         chorus_motif = verse_motif = bridge_motif = None
 
-    # ── Lead register ──
-    if lead_shift is None:
-        lead_shift = int(pack_value(pack, "lead_shift", 0))
-
     # ── Harmony config ──
     # Thin is two real voices (a third or a sixth, a tenth on a pad); it
     # was one voice arpeggiated into a chord with the J effect, which on
     # anything but a held pad was a warble (see harmony.py).
     num_harmony_voices = 3 if harmony_voicing == "full" else 2
     voicing_style = harmony_mode
+
+    # ── Registers ──
+    # One plan per song: the chord in its family's register, the lead above
+    # it in its voice's range (registers.py).
+    if lead_shift is None:
+        lead_shift = int(pack_value(pack, "lead_shift", 0))
+    registers = plan_registers(instruments["melody"], smp.harmony_family(instruments["harmony"]),
+                               num_harmony_voices, lead_shift,
+                               pack_value(pack, "lead_ranges", None))
 
     # ── Progression variation ──
     alt_progression = theory.random_alternate_progression(scale_name, progression)
@@ -512,7 +518,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
                 harmony_family=smp.harmony_family(instruments["harmony"]),
                 harmony_preset=instruments["harmony"],
                 harmony_onset_ms=onset_roles["harmony"],
-                lead_shift=lead_shift,
+                registers=registers,
             )
 
             pattern_cache[cache_key] = len(patterns)
@@ -620,6 +626,8 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "melody_style": melody_style,
         "melody_contour": chorus_motif["contour_name"] if use_phrased and chorus_motif else "n/a",
         "lead_shift": lead_shift,
+        "registers": {"lead": registers["lead_window"], "lead_floor": registers["lead_floor"],
+                      "harmony": registers["harmony_anchors"]},
         "harmony_voicing": harmony_voicing,
         "harmony_mode": harmony_mode,
         "chorus_modulated": modulate_chorus,

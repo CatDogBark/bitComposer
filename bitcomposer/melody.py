@@ -328,14 +328,16 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
                               chord_timeline=None,
                               rng: random.Random | None = None,
                               register: float = 0.5,
-                              window: tuple[int, int] | None = None) -> list[tuple[int, int]]:
+                              window: tuple[int, int] | None = None,
+                              floor: int | None = None) -> list[tuple[int, int]]:
     """A four-bar sentence over the pattern. See the phrase-engine note above.
 
     register (0..1) places the phrase low or high in the melody range — the
     composer drives it from section energy, so verses sit low and choruses
     lift. rng is the melody's own stream, so the rest of the arrangement does
     not shift when the melody code changes. window is the lead's MIDI
-    window (melody_window).
+    window (melody_window); floor, when given, is the lowest label a phrase
+    may start on (the register plan puts it above the chord's top voice).
     """
     r = rng or random
     melody_notes = melody_window(scale_notes, window)
@@ -348,6 +350,9 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
     first_chord = chord_at(chord_timeline, 0, chord_notes)
     # Start near the register centre, on a chord tone, with room to climb.
     centre = int(round(register * (len(melody_notes) - 1)))
+    if floor is not None:
+        centre = max(centre, next((i for i, n in enumerate(melody_notes) if n >= floor),
+                                  len(melody_notes) - 1))
     centre = max(1, min(len(melody_notes) - 4, centre + r.randint(-1, 1)))
     cur_idx = _snap_to_chord(centre, melody_notes, first_chord, reach=3)
 
@@ -431,12 +436,14 @@ def generate_melody(scale_notes: list[int], chord_notes: list[int],
                     chord_timeline=None,
                     rng: random.Random | None = None,
                     register: float = 0.5,
-                    window: tuple[int, int] | None = None) -> list[tuple[int, int]]:
+                    window: tuple[int, int] | None = None,
+                    floor: int | None = None) -> list[tuple[int, int]]:
     """Generate a melody line. Returns [(row, midi_note), ...]."""
     if phrased:
         notes = _generate_melody_phrased(
             scale_notes, chord_notes, rows, density, motif, is_answer,
-            chord_timeline=chord_timeline, rng=rng, register=register, window=window)
+            chord_timeline=chord_timeline, rng=rng, register=register, window=window,
+            floor=floor)
     else:
         notes = _generate_melody_simple(scale_notes, chord_notes, rows, density, window=window)
     return add_melody_cuts(min_note_length(notes), rows, max_sustain=16)

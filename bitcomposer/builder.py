@@ -174,13 +174,16 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
                      power_chords=False, bass_riff=None, harmony_family=None,
                      harmony_preset=None, harmony_onset_ms=0.0,
-                     lead_shift: int = 0) -> ITPattern:
+                     registers: dict | None = None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
-    # The lead's window, lowered by the pack's lead_shift (semitones); the
-    # counter-line shares it and the harmony's ceiling follows the notes.
-    lead_window = (MELODY_LOW + lead_shift, MELODY_HIGH + lead_shift)
+    # Where the parts sit: the song's register plan (registers.py). Without
+    # one (a direct caller), the old window and the family's own register.
+    registers = registers or {}
+    lead_window = registers.get("lead_window", (MELODY_LOW, MELODY_HIGH))
+    lead_floor = registers.get("lead_floor")
+    harmony_window = registers.get("harmony_window", window_for(harmony_family))
 
     # The timeline in the shapes each generator wants.
     chord_notes = segments[0][4]                       # the pattern's main chord
@@ -217,7 +220,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             motif=section_motif, is_answer=is_answer, phrased=use_phrased,
             chord_timeline=melody_timeline, rng=melody_rng,
             register=0.2 + 0.7 * max(0.0, min(1.0, (section_energy - 0.5) / 0.5)),
-            window=lead_window,
+            window=lead_window, floor=lead_floor,
         )
         apply_notes_to_pattern(
             pat, CH_MELODY, melody, melody_sample,
@@ -240,13 +243,13 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             and random.random() < counter_chance
         n_voices = min(2, num_harmony_voices) if has_counter else num_harmony_voices
 
-        # Register per family, the top voice under the lead's line in this
-        # pattern; the level per family and voice count.
-        lead_notes = [n for _, n in melody if n != -1]
+        # Register per family from the plan (the lead is placed above the
+        # chord, so the chord is not capped under the lead any more); the
+        # level per family and voice count.
         voices = generate_harmony_timeline(
             harmony_segments, voicing=voicing_style, num_voices=n_voices,
             anchors=anchors_for(harmony_family, n_voices),
-            window=window_for(harmony_family, lead_notes), cut_after=harmony_cut,
+            window=harmony_window, cut_after=harmony_cut,
         )
         harmony_vol = int(HARMONY_VOL * section_energy
                           * harmony_level(harmony_family, harmony_preset, n_voices, harmony_hold_ms))

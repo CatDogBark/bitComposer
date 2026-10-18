@@ -151,19 +151,32 @@ These change how every note sounds, not what notes are played.
   loudness says brass is not louder; if it still reads forward the next
   measurement is its spectrum at the new register); the 200 ms hit rule;
   whether thin stabs want three voices on some packs.
-- **Melody register (next, 2026-10-18).** With the note conversion exact
-  the lead sits at a median of 570 to 620 Hz across the sounds (the old
-  by-ear tuning had it an octave under that), and after the harmony rework
-  put the chords in their own registers Troy hears the lead as too high.
-  Method as always: measure first. Per sound, the lead's median and range
-  against the game's own leads (the packs' SPC profiles already record the
-  sounding pitches of the melody range for the lead voices, the Mega Man
-  X lead guitar's three pitches among them), then a page with the lead
-  window lowered per pack, same seeds, old against new, with the harmony
-  held still. The melody's window is labels 60-83 and its `register`
-  argument follows section energy (`builder._compose_pattern`); a pack
-  habit for a lower lead window is the cheap lever, a global shift the
-  wrong one.
+- **Register plan (branch `register-plan`, 2026-10-18, under review by
+  ear).** Troy heard the lead as piercing after the octave fix of the
+  17th: measured, the lead had gone up an octave with the fix (medians
+  269-320 Hz before, 523-640 after) while the bass and the harmony were
+  re-derived downward and the lead was not. On a page with the lead a
+  fifth down and an octave down, Troy chose the fifth (medians 349-453
+  Hz) on every song. Doing that alone would have been a patch on a
+  bigger problem: each part placed itself from its own numbers and
+  pairwise rules kept them apart, so lowering the lead let the
+  chord-under-the-lead cap drag Northern Dawn's brass back into the
+  147-262 Hz band it had been moved out of (half its chords re-voiced,
+  top 370 → 262 Hz). The plan (`registers.py`) places the parts once per
+  song, in order: the chord in its family's register, never pushed; the
+  lead in its voice's range (53-76 until a voice has a measured one), its
+  window's floor at most four semitones under the chord's top anchor,
+  its phrases starting above it; the counter-line in the lead's window.
+  The cap is gone. Measured over the review set: chord registers
+  unchanged from the harmony page; lead medians 415-480 Hz by sound;
+  rows with the lead under the chord's top voice 0-18% (the fifth-down
+  page had up to 34%). The phrase floor turned out a weak lever (it
+  binds only in the lowest-energy sections; the window's floor does the
+  work); kept, and said so. Next, in the same item: per-voice lead ranges
+  from the packs' SPC traces (`voices.py` in each `*-spc/tools` records
+  the sounding pitch of every voice per snapshot), a table per pack, so
+  the lead sits where that voice plays in the game rather than at one
+  default; then the bass and the arp join the plan.
 - **Orchestra hit under sustain harmony (1.x).** The
   Mega Man X orchestra hit is a one-shot in the harmony pool; drawn with the
   sustain mode it leaves gaps between hits. Restrict it to the stab and chug
