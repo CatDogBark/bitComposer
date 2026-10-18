@@ -172,11 +172,25 @@ These change how every note sounds, not what notes are played.
   rows with the lead under the chord's top voice 0-18% (the fifth-down
   page had up to 34%). The phrase floor turned out a weak lever (it
   binds only in the lowest-energy sections; the window's floor does the
-  work); kept, and said so. Next, in the same item: per-voice lead ranges
-  from the packs' SPC traces (`voices.py` in each `*-spc/tools` records
-  the sounding pitch of every voice per snapshot), a table per pack, so
-  the lead sits where that voice plays in the game rather than at one
-  default; then the bass and the arp join the plan.
+  work); kept, and said so. Tried and reverted the same day: per-voice
+  lead windows from the packs' SPC traces (`voices.py` in each
+  `*-spc/tools`: the sample's fundamental times the DSP pitch register,
+  per voice slot, per snapshot). The traces put the games' flutes,
+  whistles and synth leads an octave or more above the plan's window
+  (FFVI flute 1 median 1763 Hz over 28 uses, Mana flute 881, Evermore
+  strings 1104) and leave harp, bell and marimba where the plan has
+  them; on a page with the leads placed there, Troy: way too high. Two
+  reasons it does not transfer: a snapshot's voice slots do not say
+  which one is the melody, so doublings, trills and chord tops pull the
+  medians up; and our leads are fuller stacks than the games' thin
+  samples, played denser, so the same register pierces where theirs did
+  not. The SNES Gaussian filter is not the difference: it softens a
+  sample relative to its own rate and that shape moves up with the
+  pitch. The traces stay in the diags as the target for the
+  voice-fidelity work (the "spectrum at the register" item): when a
+  lead's spectrum matches the game's at the game's register, its traced
+  window becomes usable, one voice at a time. Still ahead in this item:
+  the bass and the arp join the plan.
 - **Orchestra hit under sustain harmony (1.x).** The
   Mega Man X orchestra hit is a one-shot in the harmony pool; drawn with the
   sustain mode it leaves gaps between hits. Restrict it to the stab and chug
