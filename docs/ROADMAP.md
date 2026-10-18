@@ -161,6 +161,24 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
+- **Road Rash pack (Genesis; next new pack, asked for 2026-10-18).** The
+  first pack on the genesis style, after four SNES ones: Road Rash's
+  YM2612 rock (overdriven FM lead and rhythm guitars, a hard picked FM
+  bass, fast tempos, DAC drums) is the Genesis sound at its loudest. The
+  source works differently from the SPC packs: a Genesis score has no
+  sample bank to decode, its instruments are FM patches, so the source is
+  a VGM log of the chip's register writes (the community's VGM packs, e.g.
+  vgmrips.net). Each instrument's patch (algorithm, feedback, and per
+  operator TL, AR/DR/SR/RR, MUL, DT) is read off the writes and re-rendered
+  through the genesis palette's feedback-FM renderer
+  (`samples/genesis.py`, `_fm_render`, extended to four operators where a
+  patch needs them) into samples of our own at C-5, the DAC drums profiled
+  and re-synthesised; the repository ships parameters and our renders,
+  never the rip. Habits to measure from the logs: tempo, the riff bass,
+  power-chord rhythm guitar (two FM channels a fifth apart), the lead's
+  register, drum density. The rock machinery exists from `megamanx`
+  (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
+  mostly data plus the VGM reader and the patch renderer.
 - **Harmony rework (1.0.0 blocker, 2026-10-17; merged 2026-10-18 after the
   listen).** From the listen: the harmonies are the
   weakest part and fixing them lifts everything. The week's measurements
