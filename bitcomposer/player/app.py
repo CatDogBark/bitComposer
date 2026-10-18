@@ -67,6 +67,19 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     for f in sorted((HERE / "fonts").glob("*.ttf")):
         QFontDatabase.addApplicationFont(str(f))
 
+    # The app-menu entry first, before a second launch hands off to the
+    # running player and quits: a launch from a terminal while an older
+    # player runs must still put the entry (back) in the menu.
+    entry_state = ""
+    if not screenshot:
+        from .desktop import announce_icons, ensure_entry
+        try:
+            entry_state = ensure_entry()    # first launch of an installed copy: into the app menu
+        except OSError as e:
+            print(f"bitcomposer-player: could not write the app-menu entry: {e}", file=sys.stderr)
+        if entry_state:
+            announce_icons()
+
     # One player at a time: a second launch shows the first one's window.
     # "One" per settings folder, so a run with its own XDG_CONFIG_HOME (a
     # test, a second profile) never hands off to the everyday player.
@@ -90,19 +103,8 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
 
     if screenshot:
         _compose_demo(Path(music_dir))
-        entry_state = ""
-    else:
-        from .desktop import ensure_entry
-        try:
-            entry_state = ensure_entry()    # first launch of an installed copy: into the app menu
-        except OSError as e:
-            print(f"bitcomposer-player: could not write the app-menu entry: {e}", file=sys.stderr)
-            entry_state = ""
 
     backend = Backend(music_dir=music_dir, quiet=bool(screenshot))
-    if entry_state:
-        from .desktop import announce_icons
-        announce_icons()
     if entry_state == "added":
         backend.notify("bitComposer is in your app menu now")
 

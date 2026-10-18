@@ -537,3 +537,41 @@ class MprisOnAPrivateBus(unittest.TestCase):
         self.b.raiseRequested.connect(lambda: raised.append(1))
         self.call(mpris.ROOT, "Raise")
         self.assertTrue(self.pump(2, lambda: raised))
+
+
+def _player_script():
+    import shutil
+    here = os.path.join(os.path.dirname(sys.executable), "bitcomposer-player")
+    return here if os.path.exists(here) else shutil.which("bitcomposer-player")
+
+
+@unittest.skipUnless(_have_openmpt() and _have_qt() and sys.platform.startswith("linux") and _player_script(),
+                     "needs libopenmpt, PySide6 and an installed bitcomposer-player")
+class SecondLaunch(unittest.TestCase):
+    """A launch while a player already runs hands off to it and quits, but
+    puts the app-menu entry back first (a terminal launch beside an older
+    player left the menu empty)."""
+
+    def test_entry_written_before_the_hand_off(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as t:
+            env = dict(os.environ, QT_QPA_PLATFORM="offscreen", XDG_CONFIG_HOME=os.path.join(t, "cfg"),
+                       XDG_DATA_HOME=os.path.join(t, "data"), BITCOMPOSER_MUSIC_DIR=os.path.join(t, "music"))
+            entry = os.path.join(t, "data", "applications", "bitcomposer-player.desktop")
+            flag = os.path.join(t, "cfg", "bitcomposer", "desktop-entry")
+            first = subprocess.Popen([_player_script()], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                end = time.time() + 20
+                while time.time() < end and not os.path.exists(entry):
+                    time.sleep(0.2)
+                self.assertTrue(os.path.exists(entry))
+                time.sleep(1.0)                                  # the first player is listening by now
+                os.remove(entry)
+                os.remove(flag)
+                second = subprocess.run([_player_script()], env=env, timeout=20, capture_output=True)
+                self.assertEqual(second.returncode, 0)
+                self.assertTrue(os.path.exists(entry))
+                self.assertIsNone(first.poll())                  # handed off, the first one still runs
+            finally:
+                first.terminate()
+                first.wait(10)
