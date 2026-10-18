@@ -36,6 +36,12 @@ PrivilegesRequiredOverridesAllowed=dialog
 CloseApplications=yes
 ; The Run value above is per user by design, in either install mode.
 UsedUserAreasWarning=no
+#ifdef Signed
+; Release builds: the setup and its uninstaller signed by the "sign" tool
+; the workflow passes to ISCC (/Ssign=..., Azure Artifact Signing).
+SignTool=sign
+SignedUninstaller=yes
+#endif
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
