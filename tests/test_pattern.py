@@ -15,7 +15,7 @@ class PatternOps(unittest.TestCase):
         pat.data[0][0] = it_format.ITNote(note=60, instrument=1, volume=40)
         pat.data[8][0] = it_format.ITNote(note=it_format.NOTE_CUT)
         pat.data[62][0] = it_format.ITNote(note=62, instrument=1, volume=40)
-        pattern.apply_echo(pat, 0, pattern.CH_ECHO1, 3, 0.5)
+        pattern.apply_echo_taps(pat, 0, [(pattern.CH_ECHO1, 3, 0.5, None)])
         self.assertEqual(pat.data[3][pattern.CH_ECHO1].volume, 20)
         self.assertEqual(pat.data[11][pattern.CH_ECHO1].note, it_format.NOTE_CUT)
         # a tap that would land past the pattern end is dropped, not wrapped

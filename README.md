@@ -84,9 +84,7 @@ Play the result with [OpenMPT](https://openmpt.org/) (Windows),
 anything built on libopenmpt.
 
 Python 3.10 or newer. The generator has no dependencies; the player's
-window is Qt (PySide6, installed with the package). The small generate
-window (`bitcomposer-gui`) uses tkinter, which Debian and Ubuntu ship
-separately as `python3-tk`.
+window is Qt (PySide6, installed with the package).
 
 ## Sounds
 

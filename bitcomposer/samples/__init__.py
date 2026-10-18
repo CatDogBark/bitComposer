@@ -6,21 +6,20 @@ table and generate_instrument itself. Names are re-exported here so callers
 keep writing samples.<name>.
 """
 import math
-import random
 import struct
 import zlib
 
 from .dsp import (
-    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, _normalize, _lowpass, _highpass, _lowpass_sweep, _distort, _reverb_tail, SNES_RATE, SNES_PERIOD, SNES_TUNED_RATE, _BRR_FILTERS, brr_roundtrip, _peak_normalize, _finish_snes, _additive_cycle, _sustained_voice, _decaying_voice, _karplus_strong, KS_TUNED_RATE, ENSEMBLE_DRY, _ensemble_voice, _drive, RELEASE, add_release, polish_waveform, WAVEFORM_TUNED_RATE, _rms,
+    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, SNES_PERIOD, RELEASE, add_release, polish_waveform, WAVEFORM_TUNED_RATE, _rms,
 )
 from .chip import (
-    square_wave, sawtooth_wave, triangle_wave, sine_wave, noise_white, noise_periodic, kick_drum, snare_drum, hihat, tom_drum, crash_cymbal, open_hihat, pwm_sweep, supersaw, filtered_saw, sweep_pad, distorted_bass, pluck_bass_gen, thin_bass_gen, bright_bass_gen, kick_layered, snare_layered, hihat_metallic, CHIP_PERIOD, _chip_decay, _pulse_cycle, _triangle_cycle, pulse12_wave, square_pluck, pulse_pluck, pulse12_pluck, tri_pluck, rim_tick, WAVEFORM_POLISH, _ONE_SHOT_WAVEFORMS,
+    square_wave, sawtooth_wave, triangle_wave, sine_wave, noise_white, kick_drum, snare_drum, hihat, tom_drum, crash_cymbal, open_hihat, pwm_sweep, supersaw, filtered_saw, sweep_pad, distorted_bass, pluck_bass_gen, thin_bass_gen, bright_bass_gen, kick_layered, snare_layered, hihat_metallic, pulse12_wave, square_pluck, pulse_pluck, pulse12_pluck, tri_pluck, rim_tick, WAVEFORM_POLISH, _ONE_SHOT_WAVEFORMS,
 )
 from .snes import (
     snes_strings, snes_brass, snes_choir, snes_flute, snes_organ, snes_synth_lead, snes_epiano, snes_bell, snes_marimba, snes_pizz, snes_harp, snes_pluck_bass, snes_slap_bass, snes_synth_bass, snes_orch_hit, snes_kick, snes_snare, snes_hat, snes_open_hat, snes_tom, snes_crash, snes_rim,
 )
 from .genesis import (
-    fm_organ, fm_brass, fm_pad, fm_bell, fm_bass, fm_lead, fm_strings, fm_pluck, GEN_PERIOD, _fm_render, _fm_sustained, _fm_decaying, gen_lead, gen_saw_lead, gen_brass, gen_pad, gen_bell, gen_pluck, gen_slap_bass, gen_sub_bass, gen_pluck_bass, DAC_RATE, _dac_finish, gen_kick, gen_snare, gen_hat, gen_open_hat, gen_tom, gen_crash, gen_rim,
+    fm_organ, fm_brass, fm_pad, fm_bell, fm_bass, fm_lead, fm_strings, fm_pluck, gen_lead, gen_saw_lead, gen_brass, gen_pad, gen_bell, gen_pluck, gen_slap_bass, gen_sub_bass, gen_pluck_bass, gen_kick, gen_snare, gen_hat, gen_open_hat, gen_tom, gen_crash, gen_rim,
 )
 
 

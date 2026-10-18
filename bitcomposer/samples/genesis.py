@@ -1,12 +1,9 @@
 """The Genesis palette: feedback-FM voices and 8-bit DAC drums, plus the FM
 waveforms the chip palette borrows."""
 import math
-import random
-import struct
-import zlib
 
 from .dsp import (
-    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, _normalize, _lowpass, _highpass, _lowpass_sweep, _distort, _reverb_tail, SNES_RATE, SNES_PERIOD, SNES_TUNED_RATE, _BRR_FILTERS, brr_roundtrip, _peak_normalize, _finish_snes, _additive_cycle, _sustained_voice, _decaying_voice, _karplus_strong, KS_TUNED_RATE, ENSEMBLE_DRY, _ensemble_voice, _drive, RELEASE, add_release, polish_waveform, WAVEFORM_TUNED_RATE, _rms,
+    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, _normalize, _lowpass, _highpass, WAVEFORM_TUNED_RATE,
 )
 from .chip import (CHIP_PERIOD)
 
@@ -231,7 +228,7 @@ def _fm_sustained(mod_ratio, feedback, idx_attack, idx_sustain, idx_tau,
 
 
 def _fm_decaying(mod_ratio, feedback, idx0, idx_tau, amp_tau, seconds,
-                 lowpass=0.65, amplitude=0.9, sustain_level=None) -> tuple[bytes, int, dict]:
+                 lowpass=0.65, amplitude=0.9) -> tuple[bytes, int, dict]:
     """A struck feedback-FM voice with a quiet looped tail."""
     period = GEN_PERIOD
     cycles = 2 if abs(mod_ratio - round(mod_ratio)) > 1e-9 else 1

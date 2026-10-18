@@ -9,7 +9,6 @@ import ctypes
 import shutil
 import subprocess
 import sys
-import threading
 import time
 
 CHANNELS = 2

@@ -12,6 +12,13 @@ measurement rather than by ear alone.
    python3 -m unittest discover -s tests -v
    ```
 
+   The generator's tests need nothing. The player's (`tests/test_player.py`)
+   skip without what CI installs: PySide6-Essentials and jeepney
+   (`pip install PySide6-Essentials jeepney`), libopenmpt (`libopenmpt0` on
+   Debian and Ubuntu) and `dbus-daemon`. A skip is not a pass: have them
+   before touching `bitcomposer/player/`. The window's tests run Qt
+   offscreen, so no display is needed.
+
 2. If you touched anything in `bitcomposer/`, generate a fixed batch before
    and after your change and paste both analyzer tables in the PR:
 
@@ -24,7 +31,10 @@ measurement rather than by ear alone.
    alone has repeatedly missed real defects here.
 
 3. Keep seeded output deterministic. If your change alters what a seed
-   produces, say so; that is fine, silently breaking it is not.
+   produces, say so; that is fine, silently breaking it is not. A change
+   meant to leave the music alone (a refactor, a cleanup, moving code
+   between modules) must leave every file byte-identical: see the check
+   below.
 
 4. Keep it dependency-free. The generator must run with a bare `python3`.
 
@@ -40,16 +50,41 @@ measurement rather than by ear alone.
 | `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
 | `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
+| `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
 | `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
 | `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
-| `bitcomposer/cli.py`, `gui.py` | the command line and the small tkinter generate window |
+| `bitcomposer/cli.py` | the command line; its parser is also the player's list of compose settings |
+| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check and UPDATE) |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
+| `tools/make_logo.py` | writes the README logo from the icon and the bundled font |
+| `tools/windows/` | the Windows build: PyInstaller launchers, the icon and version-details makers, the Inno Setup installer and its privacy page |
+| `docs/` | ANALYSIS, ROADMAP, PORTABILITY; the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
 | `tests/` | one module per area, sharing `support.py` |
-| `bitcomposer/player/` | the player: the engine, the Qt window (`qml/Main.qml`, `backend.py`, `app.py`), MPRIS, start at login, the menu entry, updates |
 
-Adding a pack is one file in `bitcomposer/packs/` plus its name in the CLI
-and in the player's SOUND row (`bitcomposer/player/qml/Main.qml`). Moving code between modules must keep generation
-byte-identical: write twenty seeds before, twenty after, compare the files.
+Adding a pack: its module in `bitcomposer/packs/`, registered in
+`packs/__init__.py` (the import, `_MODULES` and `PACKS`); its name in the
+CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's SOUND
+row in `bitcomposer/player/qml/Main.qml`, where the mixer's voice labels
+also drop each pack's voice-name prefix (`ffvi_`, `mmx_`, ...) by one
+pattern near the top of the file. The random sound draw picks a new pack
+up by itself.
+
+The byte-identical check, on one version (the song message records it),
+before and after the change:
+
+```bash
+mkdir -p /tmp/before
+for sound in chip snes genesis ffvi mana evermore megamanx; do for s in $(seq 1 10); do python3 -m bitcomposer.cli --sound $sound -s $s -o /tmp/before/$sound-$s.it; done; done
+```
+
+then the same into `/tmp/after`, and compare:
+
+```bash
+diff <(cd /tmp/before && sha256sum *.it) <(cd /tmp/after && sha256sum *.it)
+```
+
+No output means no song changed. Add the options your change touches
+(`--keys home`, `--form aaba`, `--lead-shift -3`, ...) to the loop.
 
 ## Style
 
@@ -66,8 +101,13 @@ it from there and the publish workflow refuses a tag that does not match it.
    one-paragraph summary at its top the way the earlier releases have.
 2. `bitcomposer/__init__.py`: `__version__ = "X.Y.Z"`.
 3. `docs/ROADMAP.md`: move what shipped out of the open items.
-4. Regenerate the listening page (`docs/index.html`, `docs/tracks/`) if the
-   sound changed, so the page people hear is the release.
+4. If the sound changed, regenerate the listening page's tracks so the
+   page people hear is the release. Each entry in `docs/tracks/tracks.json`
+   names its seed and its sound (the pack in brackets in `arrangement`, or
+   else `palette`); write it again with the CLI, e.g.
+   `python3 -m bitcomposer.cli --sound megamanx -s 24 -o "docs/tracks/Grotto Charge.it" -v`,
+   and bring the entry up to date from the `-v` output (key and tempo,
+   voices) and its version. A changed title renames the file.
 5. Commit, push to main, wait for CI (tests on every Python) and the Windows
    build to go green on that commit.
 6. Tag and push the tag:
@@ -89,6 +129,13 @@ it from there and the publish workflow refuses a tag that does not match it.
 8. Start a player on the previous release (pipx on Linux, the installed
    one on Windows): it should offer UPDATE to the new version and come
    back on it.
+
+The update path can be tried before any tag: `--try-update` makes the
+player offer a local file as the update. On a pipx install, build a wheel
+(`python3 -m pip wheel --no-deps -w dist .`) and run
+`bitcomposer-player --try-update dist/bitcomposer-X.Y.Z-py3-none-any.whl`;
+on Windows, `bitComposer.exe --try-update bitComposer-setup.exe` with an
+installer from a Windows build.
 
 A pre-release tag (`v1.0.0rc1`) goes through the same path. PyPI lists it
 as a pre-release that `pip` and `pipx` only install by exact version, so it

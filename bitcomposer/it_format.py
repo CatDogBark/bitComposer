@@ -61,12 +61,6 @@ def _pack_pattern(pattern: ITPattern) -> bytes:
     """Pack a pattern into IT compressed format."""
     # IT uses a "packed" pattern format with channel masking.
     out = bytearray()
-    last_mask = [0] * 64
-    last_note = [0] * 64
-    last_inst = [0] * 64
-    last_vol = [255] * 64
-    last_cmd = [0] * 64
-    last_cmdval = [0] * 64
 
     for row in range(pattern.rows):
         for ch in range(pattern.channels):
@@ -221,7 +215,6 @@ def write_it_file(
     \r as the format requires. It is stored after the sample data.
     """
 
-    num_orders = len(orders)
     num_samples = len(samples)
     num_patterns = len(patterns)
 

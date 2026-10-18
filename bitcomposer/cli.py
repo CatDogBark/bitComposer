@@ -267,7 +267,7 @@ def main():
                 print("  Keys:        " + ", ".join(f"{k} {'+' if v[0] > 0 else ''}{v[0]} ({v[1].replace('_', ' ')})" for k, v in kp.items() if v[0]))
             print(f"  Harm rhythm: {info['harmonic_rhythm']}")
             if info.get('chorus_alt_prog'):
-                print(f"  Chorus prog: alternate")
+                print("  Chorus prog: alternate")
             print(f"  Form:        {info['song_form']}")
             print(f"  Ending:      {info['ending_style']}")
             if info.get('alt_lead'):

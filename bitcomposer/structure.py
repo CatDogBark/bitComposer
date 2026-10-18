@@ -276,7 +276,6 @@ def apply_ending(structure: list[str], layers: dict, energy: dict) -> str:
 def get_section_progression(section: str, progression: list, alt_progression: list,
                             use_alt_chorus: bool) -> list:
     """Get the chord progression for a given section."""
-    is_ending = section in ("outro", "tag")
     st = section_type(section)
     if section == "tag":
         return progression[:max(1, len(progression) // 2)]
@@ -360,22 +359,6 @@ def clamp_length(structure: list[str], pattern_index_for: dict,
             note = f"dropped the last {section_type(blocks[drop][0])}"
         del blocks[drop]
     return [p for _, b in blocks for p in b], [sec for sec, _ in blocks], note
-
-
-def build_orders(structure: list[str], pattern_index_for: dict,
-                 pattern_counts: dict[str, int]) -> list[int]:
-    """Build the order list from the song structure.
-
-    pattern_index_for maps (section, pattern_idx) to a pattern index and
-    pattern_counts says how many patterns each section has. Sections that
-    share content and rendering map to the same index, so the order list
-    replays one pattern instead of carrying a near-duplicate.
-    """
-    orders = []
-    for section in structure:
-        for idx in range(pattern_counts[section]):
-            orders.append(pattern_index_for[(section, idx)])
-    return orders
 
 
 def generate_structure(form: str = "random") -> tuple[list[str], dict[str, dict], dict[str, float], str, str]:

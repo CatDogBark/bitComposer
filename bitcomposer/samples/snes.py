@@ -1,11 +1,9 @@
 """The base SNES palette: sampled-style voices and the gated kit."""
 import math
-import random
 import struct
-import zlib
 
 from .dsp import (
-    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, _normalize, _lowpass, _highpass, _lowpass_sweep, _distort, _reverb_tail, SNES_RATE, SNES_PERIOD, SNES_TUNED_RATE, _BRR_FILTERS, brr_roundtrip, _peak_normalize, _finish_snes, _additive_cycle, _sustained_voice, _decaying_voice, _karplus_strong, KS_TUNED_RATE, ENSEMBLE_DRY, _ensemble_voice, _drive, RELEASE, add_release, polish_waveform, WAVEFORM_TUNED_RATE, _rms,
+    _rng, BASE_NOTE_HZ, _lowpass, _highpass, SNES_RATE, SNES_PERIOD, _finish_snes, _sustained_voice, _decaying_voice, _karplus_strong, KS_TUNED_RATE,
 )
 
 

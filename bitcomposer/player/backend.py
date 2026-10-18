@@ -2,7 +2,6 @@
 properties, its actions as slots. app.py owns the window, tray and dialogs;
 this owns nothing visual.
 """
-import json
 import os
 import sys
 import threading

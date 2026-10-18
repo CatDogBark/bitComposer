@@ -6,7 +6,6 @@ libopenmpt0), libopenmpt.dll next to this file or next to the executable on
 Windows (the release build bundles it), libopenmpt.dylib on macOS.
 """
 import ctypes
-import os
 import sys
 from pathlib import Path
 

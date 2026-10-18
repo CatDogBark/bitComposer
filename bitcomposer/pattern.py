@@ -7,7 +7,6 @@ import random
 from .it_format import (
     ITPattern, ITNote, midi_to_it_note, NOTE_CUT, NOTE_OFF,
     FX_VIBRATO, FX_PORTAMENTO, FX_VOLUME_SLIDE, FX_SET_PAN, FX_SPECIAL,
-    FX_ARPEGGIO, arpeggio_param,
 )
 
 
@@ -55,8 +54,6 @@ ROWS_PER_PATTERN = 64
 # Drum templates are 16 steps of one 16th note each — one step per row.
 ROWS_PER_BEAT = 4
 ROWS_PER_BAR = 16
-ROWS_PER_STEP = 1
-BARS_PER_PATTERN = ROWS_PER_PATTERN // ROWS_PER_BAR
 
 # Tonal channels that can ring (drums naturally stop)
 TONAL_CHANNELS = [CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
@@ -144,26 +141,6 @@ def apply_vibrato(pattern: ITPattern, channel: int,
                 )
 
 
-def apply_chord_arpeggio(pattern: ITPattern, channel: int,
-                         note_list: list[tuple[int, int]],
-                         chord_notes: list[int]):
-    """Give single-voice harmony the Jxy arpeggio so it sounds like a chord.
-
-    J is the defining tracker/chiptune effect — one channel cycling through
-    chord tones fast enough to read as a chord — and the generator emitted
-    none at all. Applied where the harmony is thin, so a lone voice still
-    states the full harmony.
-    """
-    for row, midi_note in note_list:
-        if midi_note == -1 or not (0 <= row < pattern.rows):
-            continue
-        cell = pattern.data[row][channel]
-        if cell.note == 0 or cell.effect != 0:
-            continue
-        cell.effect = FX_ARPEGGIO
-        cell.effect_val = arpeggio_param(midi_note, chord_notes)
-
-
 def echo_send_rows(pattern: ITPattern, src: int, hold: int = 0, rest: int = 0,
                    accent: float = 0.0) -> set[int]:
     """Rows of src's note-ons that the echo should carry.
@@ -222,7 +199,7 @@ def plan_echo(pattern: ITPattern, src: int, taps, hold: int = 0, rest: int = 0,
     cells are written only where the return channel has nothing.
 
     Returns {dst_channel: [(row, ITNote)]} with rows that may be >= rows;
-    apply_echo keeps the in-pattern part and apply_echo_spill the rest.
+    apply_echo_taps keeps the in-pattern part and apply_echo_spill_taps the rest.
     """
     events = [r for r in range(pattern.rows) if pattern.data[r][src].note != 0]
     sent = echo_send_rows(pattern, src, hold, rest, accent)
@@ -316,20 +293,6 @@ def apply_echo_spill_taps(prev: ITPattern, cur: ITPattern, src: int, taps,
             target = row - prev.rows
             if 0 <= target < cur.rows and cur.data[target][dst].note == 0:
                 cur.data[target][dst] = note
-
-
-def apply_echo(pattern: ITPattern, src: int, dst: int,
-               delay_rows: int, level: float, inst_map=None,
-               hold: int = 0, rest: int = 0):
-    """One tap: copy src's notes onto dst, delay_rows later, scaled to level."""
-    apply_echo_taps(pattern, src, [(dst, delay_rows, level, inst_map)], hold, rest)
-
-
-def apply_echo_spill(prev: ITPattern, cur: ITPattern, src: int, dst: int,
-                     delay_rows: int, level: float, inst_map=None,
-                     hold: int = 0, rest: int = 0):
-    """One tap's spill into the next pattern (see apply_echo_spill_taps)."""
-    apply_echo_spill_taps(prev, cur, src, [(dst, delay_rows, level, inst_map)], hold, rest)
 
 
 def apply_portamento(pattern: ITPattern, channel: int,

@@ -2,6 +2,7 @@
 import unittest
 
 from support import (compose_song, composer, it_format, names, pattern, samples, unittest)  # noqa: F401
+from bitcomposer import mix  # noqa: E402
 
 
 
@@ -104,10 +105,10 @@ class Packs(unittest.TestCase):
         song = compose_song(seed=4, style_pref="snes", pack="megamanx")
         self.assertIn(song["info"]["instruments"]["arp"], PACKS["megamanx"]["voices"]["arp"])
         self.assertFalse(song["info"]["struck"]["arp"])
-        self.assertEqual(composer.channel_volumes_for(song["info"])[pattern.CH_ARP], round(composer.SUSTAINING_ARP_LEVEL * composer.MASTER_GAIN))
+        self.assertEqual(composer.channel_volumes_for(song["info"])[pattern.CH_ARP], round(mix.SUSTAINING_ARP_LEVEL * mix.MASTER_GAIN))
         plain = compose_song(seed=21, style_pref="snes", pack="none")
         self.assertTrue(plain["info"]["struck"]["arp"])
-        self.assertEqual(composer.channel_volumes_for(plain["info"])[pattern.CH_ARP], round(composer.CHANNEL_VOLUMES[pattern.CH_ARP] * composer.MASTER_GAIN))
+        self.assertEqual(composer.channel_volumes_for(plain["info"])[pattern.CH_ARP], round(mix.CHANNEL_VOLUMES[pattern.CH_ARP] * mix.MASTER_GAIN))
 
     def test_struck_table_matches_the_classifier(self):
         names = set()

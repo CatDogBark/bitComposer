@@ -2,6 +2,7 @@
 import unittest
 
 from support import (_gen, _read, analyze, compose_song, composer, it_format, names, os, pattern, struct, sys, tempfile, unittest)  # noqa: F401
+from bitcomposer import mix  # noqa: E402
 
 
 
@@ -53,7 +54,7 @@ class FileFormat(unittest.TestCase):
             pans = m.raw[0x40:0x80]
             self.assertTrue(all(p < 128 for p in pans[:pattern.NUM_CHANNELS]))
             self.assertTrue(all(p & 128 for p in pans[pattern.NUM_CHANNELS:]))
-            self.assertEqual(len(composer.CHANNEL_VOLUMES), pattern.NUM_CHANNELS)
+            self.assertEqual(len(mix.CHANNEL_VOLUMES), pattern.NUM_CHANNELS)
 
     def test_sample_headers_consistent(self):
         song = compose_song(seed=4, style_pref="snes")

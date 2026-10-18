@@ -187,14 +187,6 @@ def add_chord_color(progression: list[tuple[int, str]],
     return out
 
 
-def note_name(midi_note: int) -> str:
-    """Convert MIDI note number to name like C-5, D#3."""
-    octave = (midi_note // 12) - 1
-    name = NOTE_NAMES[midi_note % 12]
-    return f"{name}{octave}"
-
-
-
 def build_scale(root: int, scale_name: str, octaves: int = 2) -> list[int]:
     """Build a scale across multiple octaves from a root MIDI note."""
     intervals = SCALES[scale_name]
@@ -210,7 +202,6 @@ def build_scale(root: int, scale_name: str, octaves: int = 2) -> list[int]:
 def build_chord(root: int, chord_type: str) -> list[int]:
     """Build a chord from a root note."""
     return [root + i for i in CHORD_INTERVALS[chord_type] if root + i <= 127]
-
 
 
 def random_key() -> int:
@@ -250,7 +241,6 @@ def random_alternate_progression(scale_name: str,
         return random.choice(alternates)
     # If no alternate, rotate the main progression
     return main_prog[1:] + main_prog[:1]
-
 
 
 def random_tempo() -> int:
