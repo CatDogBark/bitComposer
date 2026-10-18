@@ -123,7 +123,8 @@ Everything defaults to `random`.
 --harmony-voicing thin|full          two real voices, or three
 --harmony-mode stabs|sustain|rhythmic
 --bass-weight heavy|medium|light
---name    title|timestamp            file naming; --suffix adds a marker
+--lead-shift SEMITONES               move the lead's window (negative lowers it); default: the sound's own
+--name    title|timestamp            file naming; --prefix / --suffix add a marker ("(auto) " is the player's)
 -s SEED   -n COUNT   -o FILE   -d DIR   -v
 ```
 
@@ -153,8 +154,10 @@ bitcomposer -d out --style snes --tempo slow --energy chill --scale major --drum
 6. Instruments are synthesized per song from the chosen palette and written as samples. SNES voices get attack-then-loop sustain and the BRR treatment.
 7. The echo: held lead notes and phrase endings come back as three fading, darkening repeats, the harmony and arp as lighter ones, each on return channels of their own, drums and bass dry. Everything is written as a 19-channel `.it` with the title and a song message (key, BPM, palette, form, seed, and a `layout:` line naming every channel's role) that trackers display.
 
-Each song gets a seed-derived two-word title that leans with its scale:
-*Haunted Orchard*, *Neon Causeway*, *Rusted Foundry*.
+Each song gets a title that reads the song: its scale, sound, energy and
+tempo lean the words, so a slow minor Evermore piece and a fast Mega Man X
+track are named differently (*Lunar Snow*, *Lighthouse of Steel*, *The
+Power Plant of Sparks*).
 
 ## Measuring instead of guessing
 

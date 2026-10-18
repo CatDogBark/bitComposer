@@ -586,7 +586,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         f"{instruments['melody']} / {instruments['harmony']} / {instruments['bass']}",
         f"seed {seed if seed is not None else 'none'} - bitcomposer {__version__}",
         *([f"echo: {echo_bus.describe()}, {echo_wet}"] if use_echo else []),
-        # Machine-readable lines for players (the widget's readout and mixer
+        # Machine-readable lines for players (the player's readout and mixer
         # labels): every drawn voice by role, and what the song drew.
         "voices: " + ",".join(f"{role}={name}" for role, name in sorted(instruments.items()))
         + (f",alt={alt_lead}" if alt_lead_sample_idx else ""),

@@ -5,8 +5,9 @@ from .pattern import CH_ARP, CH_ECHO_ARP, CHANNEL_ROLES
 from .packs import PACKS
 
 
-# Channel mix — tuned by ear via the widget's master panel. Order matches
-# bitcomposer.pattern: melody, harmony x3, bass, arp, six drums, two echo taps.
+# Channel mix — tuned by ear through the mixer (the old Plasma widget's, now
+# the player's). Order matches bitcomposer.pattern.CHANNEL_ROLES: melody,
+# harmony x3, bass, arp, six drums, then the seven echo returns.
 # The echo channels sit at the melody's level; the taps are already quieter
 # through their volume columns.
 #

@@ -40,7 +40,7 @@ CH_ECHO_ALL = (CH_ECHO1, CH_ECHO2) + CH_ECHO_HARMONY + CH_ECHO_ARP
 NUM_CHANNELS = 19
 
 # Role of every channel, in order, written into the song message as a
-# "layout:" line so a player can group faders (the widget's ECHO bus) without
+# "layout:" line so a player can group faders (the player's ECHO bus) without
 # hard-coding this table. "echo.<role>" marks a return of that role.
 CHANNEL_ROLES = ["melody", "harmony", "harmony", "harmony", "bass", "arp",
                  "kick", "snare", "hihat", "tom", "crash", "openhat",

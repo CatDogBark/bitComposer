@@ -8,7 +8,7 @@ second) and `CHANGELOG.md` for what has shipped.
 ## Release (1.0.0)
 
 Decided 2026-10-18. The product is the player: a program that generates
-while you listen, the way the Plasma widget does, on Linux and Windows.
+while you listen, the way the Plasma widget did, on Linux and Windows.
 Only developers want the generator alone, so 1.0.0 ships with the player
 (branch `player`), not after it. The window was tkinter at first, to keep
 the package dependency-free; it is Qt since 2026-10-18 (see The player,
@@ -24,8 +24,18 @@ below).
 - **Linux install (done).** `pipx install bitcomposer` is the user's path;
   the player's first launch adds its menu entry. (The widget's installer
   and its `docs/INSTALL.md` went with the widget in 1.0.0rc3.)
-- **Docs.** README install section (pipx, Windows zip, developer clone)
-  done; the listening page is regenerated at the tag.
+- **Docs (done 2026-10-18).** README (install, the player, Windows, the
+  code signing policy, privacy, contact), CONTRIBUTING, PORTABILITY and
+  ANALYSIS (the release listen as §2e) brought up to 1.0.
+- **Release candidates.** rc3 (the Qt player, media keys, start at login,
+  the widget retired) and rc4 (the fixes from testing rc3 on Plasma and
+  Windows, and GNOME, tested on GNOME Shell 50). rc4 to 1.0.0 through the
+  UPDATE button is the update path's first real run, on both platforms.
+- **Code signing.** Applied to the SignPath Foundation's open-source
+  programme (2026-10-18); 1.0.0 ships unsigned, and signing joins the
+  Windows build in a 1.0.x once it is approved (the workflow's Azure
+  wiring stays dormant). The UPDATE button then checks a downloaded
+  installer's signature before running it.
 - **The player (1.0.0, branch `player`), one program on both platforms.**
   Decided 2026-10-18: rather than a KDE widget on Linux and a separate
   window on Windows, one player program with the widget's features and
