@@ -4,6 +4,22 @@ Melody generation: motifs, contours, counter-melody, and note-cuts.
 
 import random
 
+# The lead's window in MIDI: two octaves from middle C. A pack lowers it with
+# its lead_shift habit (semitones, negative), the builder passes the shifted
+# window in; the counter-line shares it.
+MELODY_LOW, MELODY_HIGH = 60, 83
+
+
+def melody_window(scale_notes: list[int], window: tuple[int, int] | None = None) -> list[int]:
+    """The scale tones inside the lead's window, or an octave under it
+    raised by one when the window holds none."""
+    lo, hi = window or (MELODY_LOW, MELODY_HIGH)
+    notes = [n for n in scale_notes if lo <= n <= hi]
+    if not notes:
+        notes = [n + 12 for n in scale_notes if lo - 12 <= n <= hi - 12]
+    return notes
+
+
 from .pattern import ROWS_PER_BAR
 
 
@@ -123,13 +139,12 @@ def vary_motif(motif: dict, amount: float = 0.3, rng: random.Random | None = Non
 
 
 def _generate_melody_simple(scale_notes: list[int], chord_notes: list[int],
-                            rows: int, density: float = 0.5) -> list[tuple[int, int]]:
+                            rows: int, density: float = 0.5,
+                            window: tuple[int, int] | None = None) -> list[tuple[int, int]]:
     """Generate a simple random-walk melody. Returns [(row, midi_note), ...]."""
     random_ = random
     notes = []
-    melody_notes = [n for n in scale_notes if 60 <= n <= 83]
-    if not melody_notes:
-        melody_notes = [n + 12 for n in scale_notes if 48 <= n <= 71]
+    melody_notes = melody_window(scale_notes, window)
     if not melody_notes:
         return notes
 
@@ -312,18 +327,18 @@ def _generate_melody_phrased(scale_notes: list[int], chord_notes: list[int],
                               is_answer: bool = False,
                               chord_timeline=None,
                               rng: random.Random | None = None,
-                              register: float = 0.5) -> list[tuple[int, int]]:
+                              register: float = 0.5,
+                              window: tuple[int, int] | None = None) -> list[tuple[int, int]]:
     """A four-bar sentence over the pattern. See the phrase-engine note above.
 
     register (0..1) places the phrase low or high in the melody range — the
     composer drives it from section energy, so verses sit low and choruses
     lift. rng is the melody's own stream, so the rest of the arrangement does
-    not shift when the melody code changes.
+    not shift when the melody code changes. window is the lead's MIDI
+    window (melody_window).
     """
     r = rng or random
-    melody_notes = [n for n in scale_notes if 60 <= n <= 83]
-    if not melody_notes:
-        melody_notes = [n + 12 for n in scale_notes if 48 <= n <= 71]
+    melody_notes = melody_window(scale_notes, window)
     if not melody_notes:
         return []
     if motif is None:
@@ -415,14 +430,15 @@ def generate_melody(scale_notes: list[int], chord_notes: list[int],
                     phrased: bool = True,
                     chord_timeline=None,
                     rng: random.Random | None = None,
-                    register: float = 0.5) -> list[tuple[int, int]]:
+                    register: float = 0.5,
+                    window: tuple[int, int] | None = None) -> list[tuple[int, int]]:
     """Generate a melody line. Returns [(row, midi_note), ...]."""
     if phrased:
         notes = _generate_melody_phrased(
             scale_notes, chord_notes, rows, density, motif, is_answer,
-            chord_timeline=chord_timeline, rng=rng, register=register)
+            chord_timeline=chord_timeline, rng=rng, register=register, window=window)
     else:
-        notes = _generate_melody_simple(scale_notes, chord_notes, rows, density)
+        notes = _generate_melody_simple(scale_notes, chord_notes, rows, density, window=window)
     return add_melody_cuts(min_note_length(notes), rows, max_sustain=16)
 
 
@@ -446,7 +462,8 @@ def min_note_length(notes: list[tuple[int, int]], rows: int = 2) -> list[tuple[i
 
 def generate_counter_melody(scale_notes: list[int], chord_notes: list[int],
                              melody_notes_list: list[tuple[int, int]],
-                             rows: int, rng: random.Random | None = None) -> list[tuple[int, int]]:
+                             rows: int, rng: random.Random | None = None,
+                             window: tuple[int, int] | None = None) -> list[tuple[int, int]]:
     """
     Generate a counter-melody that fills gaps in the main melody.
 
@@ -455,9 +472,7 @@ def generate_counter_melody(scale_notes: list[int], chord_notes: list[int],
     on the melody, so on the global stream it shifted every part after it.
     """
     random_ = rng or random
-    melody_range = [n for n in scale_notes if 60 <= n <= 83]
-    if not melody_range:
-        melody_range = [n + 12 for n in scale_notes if 48 <= n <= 71]
+    melody_range = melody_window(scale_notes, window)
     if not melody_range:
         return []
 

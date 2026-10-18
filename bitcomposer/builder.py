@@ -7,7 +7,7 @@ from . import theory
 from .it_format import ITPattern, ITNote
 from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
 from .drums import render_drums
-from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
+from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts, MELODY_LOW, MELODY_HIGH
 from .harmony import generate_harmony_timeline, anchors_for, window_for, stab_rows, harmony_level, HARMONY_VOICINGS
 from .bass import generate_bass_timeline, floor_bass
 from .arp import generate_arp
@@ -173,10 +173,14 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      pickup_root=None, intro=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
                      power_chords=False, bass_riff=None, harmony_family=None,
-                     harmony_preset=None, harmony_onset_ms=0.0) -> ITPattern:
+                     harmony_preset=None, harmony_onset_ms=0.0,
+                     lead_shift: int = 0) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
+    # The lead's window, lowered by the pack's lead_shift (semitones); the
+    # counter-line shares it and the harmony's ceiling follows the notes.
+    lead_window = (MELODY_LOW + lead_shift, MELODY_HIGH + lead_shift)
 
     # The timeline in the shapes each generator wants.
     chord_notes = segments[0][4]                       # the pattern's main chord
@@ -213,6 +217,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             motif=section_motif, is_answer=is_answer, phrased=use_phrased,
             chord_timeline=melody_timeline, rng=melody_rng,
             register=0.2 + 0.7 * max(0.0, min(1.0, (section_energy - 0.5) / 0.5)),
+            window=lead_window,
         )
         apply_notes_to_pattern(
             pat, CH_MELODY, melody, melody_sample,
@@ -266,7 +271,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
 
         if has_counter:
             counter = generate_counter_melody(
-                scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng)
+                scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng,
+                window=lead_window)
             counter = add_melody_cuts(counter, ROWS_PER_PATTERN, max_sustain=8)
             apply_notes_to_pattern(
                 pat, CH_HARMONY3, counter, sample_map.get("counter", sample_map["harmony"]),
