@@ -17,6 +17,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 import QtQuick.Window
 
 ApplicationWindow {
@@ -457,9 +458,49 @@ ApplicationWindow {
     }
 
     // A square tool button with a glyph over a caption (AUTO, SET, MIX).
+    // Line icons for the symbols JetBrains Mono does not have (shuffle,
+    // settings, mixer, pause). As text they came from whatever fallback
+    // font the system had, and on Windows from none: empty boxes. Drawn on
+    // a 24-unit grid in the colour the text would have had.
+    component Icon: Shape {
+        id: icon
+        property string name: ""
+        property color color: root.textColor
+        property real size: Math.round(14 * root.ui)
+        readonly property var strokes: ({
+            "shuffle": "M3 7 H7 C11 7 13 17 17 17 H21 M3 17 H7 C11 17 13 7 17 7 H21 M18 4 L21 7 L18 10 M18 14 L21 17 L18 20",
+            "gear": "M18.5 12 A6.5 6.5 0 1 1 5.5 12 A6.5 6.5 0 1 1 18.5 12 M14.5 12 A2.5 2.5 0 1 1 9.5 12 A2.5 2.5 0 1 1 14.5 12"
+                  + " M18.5 12 H22 M16.6 7.4 L19.1 4.9 M12 5.5 V2 M7.4 7.4 L4.9 4.9 M5.5 12 H2 M7.4 16.6 L4.9 19.1 M12 18.5 V22 M16.6 16.6 L19.1 19.1",
+            "faders": "M6 3 V21 M12 3 V21 M18 3 V21",
+        })
+        readonly property var fills: ({
+            "faders": "M3.5 13 H8.5 V17 H3.5 Z M9.5 6 H14.5 V10 H9.5 Z M15.5 10.5 H20.5 V14.5 H15.5 Z",
+            "pause": "M6.5 4.5 H10 V19.5 H6.5 Z M14 4.5 H17.5 V19.5 H14 Z",
+        })
+        implicitWidth: size
+        implicitHeight: size
+        antialiasing: true
+        ShapePath {
+            strokeColor: icon.strokes[icon.name] ? icon.color : "transparent"
+            strokeWidth: 2.2 * icon.size / 24
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            joinStyle: ShapePath.RoundJoin
+            scale: Qt.size(icon.size / 24, icon.size / 24)
+            PathSvg { path: icon.strokes[icon.name] || "M0 0" }
+        }
+        ShapePath {
+            strokeColor: "transparent"
+            fillColor: icon.fills[icon.name] ? icon.color : "transparent"
+            scale: Qt.size(icon.size / 24, icon.size / 24)
+            PathSvg { path: icon.fills[icon.name] || "M0 0" }
+        }
+    }
+
     component ToolTile: Rectangle {
         id: tile
         property string glyph: ""
+        property string icon: ""
         property string caption: ""
         property bool on: false
         property color onColor: root.accentCyan
@@ -474,12 +515,23 @@ ApplicationWindow {
         Behavior on color { ColorAnimation { duration: 100 } }
         Behavior on border.color { ColorAnimation { duration: 100 } }
         Text {
+            visible: tile.icon === ""
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
             anchors.topMargin: 1
             text: tile.glyph
             color: tile.on ? tile.onColor : (tileMouse.containsMouse ? root.accentGreen : root.textColor)
+            font.family: root.mono
             font.pixelSize: Math.round(14 * root.ui)
+        }
+        Icon {
+            visible: tile.icon !== ""
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: Math.round(5 * root.ui)
+            name: tile.icon
+            size: Math.round(14 * root.ui)
+            color: tile.on ? tile.onColor : (tileMouse.containsMouse ? root.accentGreen : root.textColor)
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -765,12 +817,20 @@ ApplicationWindow {
                             property string label: {
                                 switch (modelData) {
                                     case "prev": return "|◀"
-                                    case "playpause": return root.playbackStatus === "Playing" ? "❚❚" : "▶"
+                                    case "playpause": return "▶"
                                     case "stop": return "■"
                                     case "next": return "▶|"
-                                    case "shuffle": return "⟳"
+                                    case "shuffle": return ""
                                 }
                                 return ""
+                            }
+                            // Drawn instead of a glyph the font lacks.
+                            property string iconName: isShuffle ? "shuffle" : (isPlayPause && root.playbackStatus === "Playing") ? "pause" : ""
+                            property color tint: {
+                                if (isShuffle && root.shuffleOn) return root.accentPink
+                                if (isPlayPause && root.playbackStatus === "Playing") return root.accentGreen
+                                if (transportMouse.containsMouse) return root.accentGreen
+                                return root.textColor
                             }
                             Layout.preferredWidth: Math.round((isPlayPause ? 56 : 42) * root.ui)
                             Layout.preferredHeight: Math.round(32 * root.ui)
@@ -785,16 +845,19 @@ ApplicationWindow {
                             Behavior on color { ColorAnimation { duration: 100 } }
                             Behavior on border.color { ColorAnimation { duration: 100 } }
                             Text {
+                                visible: parent.iconName === ""
                                 anchors.centerIn: parent
                                 text: parent.label
-                                color: {
-                                    if (parent.isShuffle && root.shuffleOn) return root.accentPink
-                                    if (parent.isPlayPause && root.playbackStatus === "Playing") return root.accentGreen
-                                    if (transportMouse.containsMouse) return root.accentGreen
-                                    return root.textColor
-                                }
+                                color: parent.tint
                                 font.family: root.mono
                                 font.pixelSize: Math.round((parent.isPlayPause ? 14 : 12) * root.ui)
+                            }
+                            Icon {
+                                visible: parent.iconName !== ""
+                                anchors.centerIn: parent
+                                name: parent.iconName
+                                size: Math.round((parent.isPlayPause ? 14 : 15) * root.ui)
+                                color: parent.tint
                             }
                             MouseArea {
                                 id: transportMouse
@@ -920,12 +983,12 @@ ApplicationWindow {
                         onClicked: root.toggleAutoGenerate()
                     }
                     ToolTile {
-                        glyph: "⚙"; caption: "SET"
+                        icon: "gear"; caption: "SET"
                         on: root.showSettings; onColor: root.accentCyan
                         onClicked: root.showSettings = !root.showSettings
                     }
                     ToolTile {
-                        glyph: "♬"; caption: "MIX"
+                        icon: "faders"; caption: "MIX"
                         on: root.showMaster; onColor: root.accentPink
                         onClicked: root.showMaster = !root.showMaster
                     }
@@ -1235,7 +1298,7 @@ ApplicationWindow {
                     Text { text: "PLAYLIST"; color: root.accentCyan; font.family: root.mono; font.pixelSize: Math.round(9 * root.ui); font.letterSpacing: 3 }
                     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(0, 1, 0.53, 0.12) }
                     Text { text: root.playlistInfo.length + " TRACKS"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui); font.letterSpacing: 1 }
-                    Chip { text: "↻ REFRESH"; onClicked: root.rescan() }
+                    Chip { text: "REFRESH"; onClicked: root.rescan() }
                 }
                 // Where the music lives: click to open it, FOLDER to choose
                 // another. Auto-generated tracks are marked and the oldest
