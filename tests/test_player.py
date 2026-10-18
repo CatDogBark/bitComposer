@@ -7,7 +7,10 @@ import tempfile
 import time
 import unittest
 
-from .support import compose_and_save
+try:
+    from .support import compose_and_save
+except ImportError:          # discover -s tests imports the modules top-level
+    from support import compose_and_save
 from bitcomposer.player import engine
 from bitcomposer.player.openmpt import LibraryMissing, lib
 
