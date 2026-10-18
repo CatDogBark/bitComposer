@@ -420,40 +420,40 @@ composer's design keeps the door open.
 
 After 1.0.0: how the player reaches people and fits their desktop.
 
-- **Flatpak on Flathub: the Linux install for everyone.**
-  pipx is a developer's path: a terminal, then one launch for the menu
-  entry. On Flathub the player is an Install button in KDE Discover and
-  GNOME Software, with its menu entry, icon and updates handled by the
-  store. The work: a manifest on the Qt for Python base app
+- **In KDE Discover and GNOME Software, through Flathub (later: when there
+  is an audience; decided 2026-10-18).** The ask: GUI users find the
+  player in their software centre and press Install, instead of a
+  terminal and GitHub. Flathub is the one listing both centres show (on
+  by default on Fedora, Mint, Pop!_OS, KDE neon, the Steam Deck; Ubuntu's
+  App Center shows Snaps, a second listing if ever wanted). Not now: a
+  listing pays off when people go looking, and nothing has been announced
+  yet; and every release would ship through a second channel (Flathub's
+  bot opens the manifest bump, still ours to review, and a sandbox break
+  is ours to fix) while releases are this frequent. Do it when releases
+  slow down, and before any announcement. Waiting costs nothing: the app
+  ID `io.github.CatDogBark.bitComposer` belongs to the GitHub account
+  (which also earns Flathub's verified mark).
+  The work, when it comes: a manifest on the Qt for Python base app
   (`io.qt.PySide.BaseApp`) over the KDE runtime, libopenmpt built as a
-  module, an audio output that works in the sandbox (check what the
-  runtime has: paplay and pw-cat may need bundling, or an output on the
-  PulseAudio/PipeWire library through ctypes), AppStream metainfo with
-  screenshots (the `--screenshot` mode makes them), the UPDATE button
-  hidden under `FLATPAK_ID` (desktop.py already skips its menu entry
-  there), then Flathub's review, which takes days to weeks and is not
-  ours to hurry. An AppImage is the lighter fallback (one download, no
-  store, no review) if Flathub stalls.
-- **Desktop integration, GNOME and KDE (asked for 2026-10-18).** The
-  player runs on both (checked on Plasma 6 and GNOME Shell 50: menu
-  entry, media controls through MPRIS, start at login, a tray where there
-  is one) but looks and behaves the same everywhere. Each desktop offers
-  more to an app that asks. The player stays one program, so each piece
-  is skipped where its desktop is not there, Windows included; the
-  candidates, each tried on its desktop before it is kept:
-  - Both: the system's light or dark scheme and accent colour where the
-    bit look allows (the settings portal's `org.freedesktop.appearance`);
-    notifications through the notification portal (the new song's title,
-    a skip action); start at login through the Background portal, which
-    GNOME lists under Background Apps for the user to stop. Portals are
-    also what a Flatpak needs, so this and the Flatpak go together.
-  - GNOME: no tray by default, so a background player's only handle is
-    its media card: the card's controls should reach everything the tray
-    menu does. A search provider: type a song's title in the overview and
-    play it.
-  - KDE: global shortcuts through KGlobalAccel, so they show and rebind
-    in System Settings; a KRunner plugin over D-Bus (search and play a
-    song); a generation's progress in the notification area; the Breeze
-    colours from kdeglobals where the look allows.
+  module, an audio output that works in the sandbox (the unknown: paplay
+  and pw-cat may be missing, so possibly an output on the PulseAudio
+  library through ctypes), AppStream metainfo with screenshots (the
+  `--screenshot` mode makes them) and a content rating, the UPDATE button
+  hidden under `FLATPAK_ID` (Flathub apps do not update themselves;
+  desktop.py already skips its menu entry there), start at login through
+  the Background portal (the sandbox cannot write an autostart file; GNOME
+  then lists the player under Background Apps), the tray's and MPRIS's
+  D-Bus names allowed, then Flathub's review, days to weeks and not ours
+  to hurry. A Flatpak can also give GNOME's overview a search provider
+  (type a song's title, play it), which a pipx install cannot (GNOME reads
+  them from system folders). An AppImage is the lighter fallback (one
+  download, no store, no review) if Flathub stalls.
+- **Desktop extras (ideas, nobody asked).** Notifications for a new song
+  with a skip action; KDE global shortcuts (GENERATE, KEEP) that rebind in
+  System Settings, a KRunner search, a generation's progress in the
+  notification area; the system's light or dark scheme and accent colour,
+  after `Main.qml`'s colours are tokens (22 are written inline) and a
+  light palette is designed. GNOME's media card shows only the standard
+  transport buttons, so KEEP and GENERATE cannot go there.
 - Social preview image for the repository (set in the repository's
   settings; the logo SVGs make one).
