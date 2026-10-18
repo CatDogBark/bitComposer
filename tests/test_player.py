@@ -220,6 +220,14 @@ class WindowHeadless(unittest.TestCase):
         # the window's own settings round-trip
         b.saveUi('{"settTempo": "fast"}')
         self.assertEqual(b.loadUi(), '{"settTempo": "fast"}')
+        # the update check can be turned off, and stays off
+        import json
+        from bitcomposer.player.engine import state_file
+        self.assertTrue(b.checkUpdates)
+        b.setCheckUpdates(False)
+        self.assertFalse(b.checkUpdates)
+        with open(state_file()) as fh:
+            self.assertFalse(json.load(fh)["check_updates"])
 
     def test_window_loads_and_fits(self):
         from pathlib import Path

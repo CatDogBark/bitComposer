@@ -192,13 +192,14 @@ jobs:
           # shortcut (optional), uninstaller. Unsigned, like the executables.
           choco install innosetup --no-progress -y | Out-Null
           $version = python -c "import bitcomposer; print(bitcomposer.__version__)"
+          $numver = python -c "import re, bitcomposer; print('.'.join(re.match(r'(\d+)\.(\d+)\.(\d+)', bitcomposer.__version__).groups()) + '.0')"
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if ("${{ steps.sign.outputs.on }}" -eq "true") {
             # Inno calls this for the setup and for the uninstaller it embeds ($q a quote, $f the file).
             $cmd = "`$q$env:SIGNTOOL`$q sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib `$q$env:SIGN_DLIB`$q /dmdf `$q$env:SIGN_META`$q `$f"
-            & $iscc "/DAppVersion=$version" "/DSigned=1" "/Ssign=$cmd" tools\windows\installer.iss
+            & $iscc "/DAppVersion=$version" "/DAppNumVersion=$numver" "/DSigned=1" "/Ssign=$cmd" tools\windows\installer.iss
           } else {
-            & $iscc "/DAppVersion=$version" tools\windows\installer.iss
+            & $iscc "/DAppVersion=$version" "/DAppNumVersion=$numver" tools\windows\installer.iss
           }
           if ($LASTEXITCODE -ne 0) { throw "ISCC exited $LASTEXITCODE" }
           Get-ChildItem bitComposer-setup.exe
@@ -271,3 +272,11 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit 1 }
           }
           gh release upload $tag bitComposer-windows.zip bitComposer-setup.exe --clobber
+          # The release page names the code signing policy, as the signing
+          # programme asks of every download page.
+          $body = gh release view $tag --json body --jq .body
+          if ($body -notmatch "Code signing policy") {
+            Set-Content notes.md $body
+            Add-Content notes.md "`n`n[Code signing policy](https://github.com/CatDogBark/bitComposer#code-signing-policy) · [Privacy](https://github.com/CatDogBark/bitComposer#privacy)"
+            gh release edit $tag --notes-file notes.md
+          }

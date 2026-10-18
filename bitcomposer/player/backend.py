@@ -186,6 +186,9 @@ class Backend(QObject):
     def _get_autostart_supported(self): return startup.supported()
     autostartSupported = Property(bool, _get_autostart_supported, constant=True)
 
+    def _get_check_updates(self): return self.player.check_updates
+    checkUpdates = Property(bool, _get_check_updates, notify=updateChanged)
+
     def _get_media_keys(self): return self._media_keys
     mediaKeys = Property(str, _get_media_keys, notify=mediaKeysChanged)
 
@@ -234,7 +237,11 @@ class Backend(QObject):
         self._refresh()
 
     def start(self):
-        """After the window is up: the update check, off the main thread."""
+        """After the window is up: the update check, off the main thread,
+        unless it is turned off (SET > PLAYER > UPDATES)."""
+        if not self.player.check_updates:
+            return
+
         def check():
             rel = upd.newer_release(__version__)
             if rel:
@@ -375,6 +382,15 @@ class Backend(QObject):
     def applyUpdate(self):
         if self._release and not self._updating:
             self.updateConfirm.emit(self._release["version"])
+
+    @Slot(bool)
+    def setCheckUpdates(self, on):
+        self.player.check_updates = bool(on)
+        self.player.persist()
+        if not on and self._release and not self._updating:
+            self._release = None              # no UPDATE offer from a check the user turned off
+        self._set_notice("checks GitHub for a newer version at start" if on else "never checks for updates")
+        self.updateChanged.emit()
 
     @Slot(bool)
     def setAutostart(self, on):

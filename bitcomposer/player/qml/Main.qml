@@ -1195,6 +1195,18 @@ ApplicationWindow {
                                 font.pixelSize: Math.round(8 * root.ui)
                                 wrapMode: Text.WordWrap
                             }
+                            OptionRow {
+                                label: "UPDATES"; options: ["on", "off"]; value: backend.checkUpdates ? "on" : "off"
+                                onPicked: function(c) { if ((c === "on") !== backend.checkUpdates) backend.setCheckUpdates(c === "on") }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "At start the player asks GitHub's releases list whether a newer version exists, for the UPDATE button. It sends nothing about you or your music. Off: it never asks."
+                                color: root.dimText
+                                font.family: root.mono
+                                font.pixelSize: Math.round(8 * root.ui)
+                                wrapMode: Text.WordWrap
+                            }
                             Text {
                                 Layout.fillWidth: true
                                 text: "MEDIA KEYS  " + (backend.mediaKeys ? backend.mediaKeys.toUpperCase() : "NOT AVAILABLE HERE")

@@ -11,11 +11,23 @@
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
+#ifndef AppNumVersion
+  #define AppNumVersion "0.0.0.0"
+#endif
 
 [Setup]
 AppId={{9D1D5E6A-2B4C-4A8E-9F3B-bitComposer01}
 AppName=bitComposer
 AppVersion={#AppVersion}
+; The setup's own version details match the executables' (product name,
+; version), which code signing checks on every signed file.
+VersionInfoVersion={#AppNumVersion}
+VersionInfoProductName=bitComposer
+VersionInfoProductVersion={#AppNumVersion}
+VersionInfoProductTextVersion={#AppVersion}
+; What the player sends over the network (the update check, which can be
+; turned off), shown before installing.
+InfoBeforeFile=tools\windows\privacy.txt
 AppPublisher=Enlightened Solutions LLC
 AppCopyright=Copyright (c) 2026 Enlightened Solutions LLC
 AppContact=catdogbark@pm.me

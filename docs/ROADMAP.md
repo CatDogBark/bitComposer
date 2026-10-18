@@ -77,8 +77,8 @@ below).
     widget's QML ported to plain QtQuick, its D-Bus polling replaced by a
     QObject over the engine (`player/backend.py`); sizes are logical
     pixels, the window opens no taller than its screen and scrolls, option
-    rows wrap, Ctrl +/- zooms. JetBrains Mono ships in the package (Apache
-    2.0). Tray icon (close keeps playing), one instance (a second launch
+    rows wrap, Ctrl +/- zooms. JetBrains Mono ships in the package (SIL
+    Open Font License 1.1). Tray icon (close keeps playing), one instance (a second launch
     shows the first). `bitcomposer-player --screenshot out.png --screen
     1920x1080 --scale 1.5 [--panels settings,mix]` renders it offscreen;
     the Windows build renders six setups from the frozen executable on

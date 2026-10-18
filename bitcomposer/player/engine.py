@@ -149,6 +149,9 @@ class Player:
         self.shuffle = bool(saved.get("shuffle", False))
         self.auto_generate = bool(saved.get("auto_generate", False))
         self.auto_generate_settings = str(saved.get("auto_generate_settings", ""))
+        # The one thing the player sends over the network on its own: asking
+        # GitHub's releases list for a newer version at start. Off = never.
+        self.check_updates = bool(saved.get("check_updates", True))
         if saved.get("music_dir") and music_dir is None and not os.environ.get("BITCOMPOSER_MUSIC_DIR"):
             self.music_dir = Path(saved["music_dir"])
 
@@ -169,6 +172,7 @@ class Player:
                 json.dump({"volume": round(self.volume, 3), "shuffle": self.shuffle,
                            "auto_generate": self.auto_generate,
                            "auto_generate_settings": self.auto_generate_settings,
+                           "check_updates": self.check_updates,
                            "music_dir": str(self.music_dir)}, fh)
             os.replace(tmp, p)
         except OSError as e:

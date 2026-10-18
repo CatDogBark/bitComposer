@@ -207,7 +207,7 @@ offered the next candidate; a release player only releases.
 
 ## Windows
 
-Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same `bitComposer` folder, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with Qt and libopenmpt beside it; and `bitcomposer-cli.exe`, the command line. The installer installs for your user by default (no administrator prompt; all users is an option on its first page), and the player's UPDATE button runs the next one quietly and reopens the player. Each build also renders the player offscreen at common screen sizes and scalings (1366×768, 1920×1080 at 100% and 150%, 2560×1440 at 125%, 4K at 200%), kept as the workflow's `player-screenshots-windows` artifact. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Nothing is code-signed, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
+Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same `bitComposer` folder, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with Qt and libopenmpt beside it; and `bitcomposer-cli.exe`, the command line. The installer installs for your user by default (no administrator prompt; all users is an option on its first page), and the player's UPDATE button runs the next one quietly and reopens the player. Each build also renders the player offscreen at common screen sizes and scalings (1366×768, 1920×1080 at 100% and 150%, 2560×1440 at 125%, 4K at 200%), kept as the workflow's `player-screenshots-windows` artifact. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Windows releases are to be code-signed through the SignPath Foundation's programme for open-source projects (see [Code signing policy](#code-signing-policy)); until that is in place they are unsigned, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
 
 ## Plasma widget (optional, Linux + KDE Plasma 6)
 
@@ -225,6 +225,27 @@ pipx install bitcomposer         # the generator the player runs
 
 See [docs/INSTALL.md](docs/INSTALL.md). The generator does not depend on
 any of this.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Status: applied for in October 2026. Until it is approved, the Windows builds are unsigned.
+
+What is signed: the Windows release files built by this repository's GitHub Actions workflow from the source in this repository: `bitComposer.exe`, `bitcomposer-cli.exe` and `bitComposer-setup.exe`. Libraries included from upstream projects (Python, Qt, libopenmpt) are their own projects' builds.
+
+- Committers and reviewers: [CatDogBark](https://github.com/CatDogBark)
+- Approvers: [CatDogBark](https://github.com/CatDogBark)
+
+Every release is approved by hand before it is signed. Everyone with these roles uses multi-factor authentication on GitHub and SignPath.
+
+## Privacy
+
+bitComposer composes and plays music on your computer. It collects nothing about you, your music or how you use it, and sends none of it anywhere.
+
+One thing goes over the network on its own: when the player starts, it asks GitHub's public releases list (`api.github.com`) whether a newer version exists, so it can offer the UPDATE button. That request carries only what any web request does (your IP address and the program's name), and [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) covers it. Turn it off in the player under SET → PLAYER → UPDATES. Updating itself downloads only when you press UPDATE: the installer from GitHub on Windows, the package from PyPI with pipx.
+
+The [listening page](https://catdogbark.github.io/bitComposer/) is a website: GitHub Pages serves it and Google Fonts serves its font, each under its own privacy policy. It plays the songs in your browser and keeps nothing.
 
 ## License and contact
 
