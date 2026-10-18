@@ -10,8 +10,9 @@ second) and `CHANGELOG.md` for what has shipped.
 Decided 2026-10-18. The product is the player: a program that generates
 while you listen, the way the Plasma widget does, on Linux and Windows.
 Only developers want the generator alone, so 1.0.0 ships with the player
-(branch `player`), not after it; tkinter, so the package stays
-dependency-free and one executable on Windows.
+(branch `player`), not after it. The window was tkinter at first, to keep
+the package dependency-free; it is Qt since 2026-10-18 (see The player,
+below).
 
 - **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
   sdist and wheel, checks the tag against `bitcomposer.__version__`, and
@@ -27,8 +28,8 @@ dependency-free and one executable on Windows.
   `--dev` keeps the checkout on the import path (a `.pth` and a daemon
   drop-in) for development, and `--check` reports which generator plays.
   `docs/INSTALL.md` is rewritten around that.
-- **Docs.** README install section (pipx, Windows zip, developer clone, the
-  tkinter line) done; the listening page is regenerated at the tag.
+- **Docs.** README install section (pipx, Windows zip, developer clone)
+  done; the listening page is regenerated at the tag.
 - **The player (1.0.0, branch `player`), one program on both platforms.**
   Decided 2026-10-18: rather than a KDE widget on Linux and a separate
   window on Windows, one player program with the widget's features and
@@ -38,9 +39,9 @@ dependency-free and one executable on Windows.
   bindings), the Windows installer, the desktop entry. Verified headless
   here; Troy verifies the window on Plasma and the installer on Windows.
   - **One package.** The player lives in the `bitcomposer` package next to
-    the generator, stdlib-only like it: tkinter for the window, libopenmpt
-    through the ctypes code the daemon already has, audio out through
-    ctypes as well (waveOut on Windows, paplay or ALSA on Linux). Generator
+    the generator: Qt for the window (below), libopenmpt through the ctypes
+    code the daemon already has, audio out through the standard library
+    (waveOut on Windows, paplay or ALSA on Linux). Generator
     and player are one version released by one tag, so there is nothing
     for an install to pull separately: a generator change reaches users
     when they upgrade the player, and the song message records which
@@ -66,10 +67,28 @@ dependency-free and one executable on Windows.
   - **Developing it.** Run the player from the checkout
     (`python3 -m bitcomposer.player`), the way the generator is developed;
     no `.pth` and no `--dev`, since the player is not a system service.
-  - **Open choice, made when 1.1 starts.** tkinter keeps the
-    zero-dependency promise and ships sooner but looks plainer than the
-    widget; Qt through PySide6 looks like a desktop app and costs a
-    150 MB dependency on every install. The engine is the same either way.
+  - **The window is Qt (decided 2026-10-18).** The first window was
+    tkinter: plain, with a fixed 520x640 minimum and pixel-sized sliders,
+    so at 1920x1080 and 150% (1280x720 logical) it ran off the screen.
+    Troy chose PySide6, as a required dependency (PySide6-Essentials,
+    ~80 MB download, 250 MB installed): a clone still runs the generator
+    with nothing installed. The window (`player/qml/Main.qml`) is the
+    widget's QML ported to plain QtQuick, its D-Bus polling replaced by a
+    QObject over the engine (`player/backend.py`); sizes are logical
+    pixels, the window opens no taller than its screen and scrolls, option
+    rows wrap, Ctrl +/- zooms. JetBrains Mono ships in the package (Apache
+    2.0). Tray icon (close keeps playing), one instance (a second launch
+    shows the first). `bitcomposer-player --screenshot out.png --screen
+    1920x1080 --scale 1.5 [--panels settings,mix]` renders it offscreen;
+    the Windows build renders six setups from the frozen executable on
+    every push. Windows build is a PyInstaller folder (onedir) so Qt
+    starts at once; the installer is per-user by default and UPDATE runs
+    it silently and relaunches.
+  - **Next for the player.** MPRIS through QtDBus (media keys, the Plasma
+    media applet) and start-at-login minimised to the tray, which together
+    replace the daemon; then the daemon and widget retire
+    (`companion/install.sh --uninstall` for existing installs). Linux
+    packaging beyond pipx (AppImage or Flatpak) after that.
 
 ## Sound quality
 

@@ -28,15 +28,15 @@ long. Seven sounds, picked with `--sound`:
 ## Install
 
 **Windows.** Every release carries `bitComposer-setup.exe`: the player, the
-command line, a Start menu entry and an uninstaller; or `bitComposer-windows.zip`
-with the two executables and nothing to install. No Python needed. See
+command line, a Start menu entry and an uninstaller; or `bitComposer-windows.zip`,
+the same program as a folder with nothing to install. No Python needed. See
 [Windows](#windows).
 
 **Linux.** From PyPI with [pipx](https://pipx.pypa.io/), so it lands on your
 PATH without touching the system Python (Debian and Fedora refuse a plain
-`pip install` there; `sudo apt install pipx libopenmpt0 python3-tk` or
-`sudo dnf install pipx libopenmpt python3-tkinter` gets pipx, the module
-library and the window toolkit):
+`pip install` there; `sudo apt install pipx libopenmpt0` or
+`sudo dnf install pipx libopenmpt` gets pipx and the module library). The
+player's window is Qt, which pipx brings along (PySide6, about 80 MB):
 
 ```bash
 pipx install bitcomposer
@@ -50,7 +50,8 @@ The player needs libopenmpt (above) and an audio output: `paplay`
 `bitcomposer-player --check` says what it found. Upgrades: the UPDATE
 button in the player, or `pipx upgrade bitcomposer`.
 
-From a clone, for development:
+From a clone, for development, or for the generator alone: the command
+line needs nothing but Python, and only the player needs Qt.
 
 ```bash
 git clone https://github.com/CatDogBark/bitComposer.git
@@ -62,8 +63,9 @@ Play the result with [OpenMPT](https://openmpt.org/) (Windows),
 [Schism Tracker](https://schismtracker.org/), VLC, Audacious, `xmp`, or
 anything built on libopenmpt.
 
-Python 3.10 or newer, no dependencies. The player and the small generate
-window (`bitcomposer-gui`) use tkinter, which Debian and Ubuntu ship
+Python 3.10 or newer. The generator has no dependencies; the player's
+window is Qt (PySide6, installed with the package). The small generate
+window (`bitcomposer-gui`) uses tkinter, which Debian and Ubuntu ship
 separately as `python3-tk`.
 
 ## Sounds
@@ -171,7 +173,12 @@ with presets, a live mixer per channel with the KIT and ECHO buses and
 APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
 shuffle, and the playlist with KEEP: every track the player makes is
 provisional (`<Title> (auto).it`) and pruned after ten unless kept. The
-picture is the Plasma widget, which has the same layout. When a newer
+picture is the Plasma widget; the player's window is the same layout,
+colours and type. It opens no taller than the screen it lands on and
+scrolls when the panels are open on a small or scaled screen; Ctrl + and
+Ctrl − zoom it, Ctrl 0 resets. Closing the window leaves the music playing
+in the tray (quit from the tray menu), and starting it again brings that
+window back rather than a second player. When a newer
 release exists an UPDATE button appears: on Linux it reinstalls through
 pipx and restarts the player, on Windows it downloads the release's
 installer and runs it. A player installed from a release candidate is
@@ -179,7 +186,7 @@ offered the next candidate; a release player only releases.
 
 ## Windows
 
-Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same two executables, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with libopenmpt inside; and `bitcomposer-cli.exe`, the command line. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Nothing is code-signed, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
+Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same `bitComposer` folder, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with Qt and libopenmpt beside it; and `bitcomposer-cli.exe`, the command line. The installer installs for your user by default (no administrator prompt; all users is an option on its first page), and the player's UPDATE button runs the next one quietly and reopens the player. Each build also renders the player offscreen at common screen sizes and scalings (1366×768, 1920×1080 at 100% and 150%, 2560×1440 at 125%, 4K at 200%), kept as the workflow's `player-screenshots-windows` artifact. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Nothing is code-signed, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
 
 ## Plasma widget (optional, Linux + KDE Plasma 6)
 

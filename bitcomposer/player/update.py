@@ -4,7 +4,8 @@ Releases are read from GitHub; a newer one is offered. The update itself
 goes through whatever installed the player: pipx (the Linux path, and
 Windows with Python) reinstalls the exact version and the player restarts;
 the Windows executable downloads bitComposer-setup.exe from the release and
-launches it, then quits so the installer can replace the files. A checkout
+runs it quietly, then quits so the installer can replace the files and
+start the new player. A checkout
 or a plain pip install is told what to run instead. A pre-release player
 sees pre-releases; a release player sees releases only.
 """
@@ -102,7 +103,10 @@ def apply_update(release: dict, log, restart=None) -> bool:
             log(f"downloading {INSTALLER_NAME}…")
             urllib.request.urlretrieve(release["installer"], target)
             log("starting the installer")
-            os.startfile(str(target))                 # noqa: S606 - the release's own installer
+            # Quietly, closing this player, then starting the new one
+            # (installer.iss). startfile, not Popen: an all-users install
+            # needs the elevation prompt, which only the shell raises.
+            os.startfile(str(target), "open", "/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELAUNCH=1")  # noqa: S606
             return True
         except Exception as e:
             log(f"update failed: {e}; get it at {release['page']}")

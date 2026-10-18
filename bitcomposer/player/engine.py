@@ -8,7 +8,8 @@ the Plasma widget and the cross-platform player share one implementation.
 Differences from the daemon: generation runs in-process (compose_and_save
 in a thread) rather than through the bitcomposer command, since the player
 ships with the generator; events reach the face through a scheduler it
-provides (tkinter's after, GLib's idle_add) instead of GLib directly.
+provides (a queued Qt signal in the window, GLib's idle_add in the daemon)
+instead of GLib directly.
 """
 import ctypes
 import json

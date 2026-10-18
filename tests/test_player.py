@@ -121,3 +121,111 @@ class UpdateCheck(unittest.TestCase):
         # a dead network is no update, not an error
         self.assertIsNone(u.newer_release("1.0.0", lambda url: (_ for _ in ()).throw(OSError("offline"))))
         self.assertIn(u.install_kind(), ("frozen", "pipx", "other"))
+
+
+def _have_qt():
+    try:
+        import PySide6.QtQuick  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+@unittest.skipUnless(_have_openmpt() and _have_qt(), "needs libopenmpt and PySide6")
+class WindowHeadless(unittest.TestCase):
+    """The Qt face offscreen: the bridge the QML binds to, driven the way
+    the window drives it, and the window itself loading without a QML
+    error and fitting the screen it is told about."""
+
+    @classmethod
+    def setUpClass(cls):
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        os.environ["QT_QUICK_BACKEND"] = "software"
+        from PySide6.QtWidgets import QApplication
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.music = os.path.join(self.tmp.name, "music")
+        os.makedirs(self.music)
+        os.environ["XDG_CONFIG_HOME"] = os.path.join(self.tmp.name, "cfg")
+        compose_and_save(os.path.join(self.music, "Kept.it"), seed=3, sound="chip")
+        compose_and_save(os.path.join(self.music, "Fresh (auto).it"), seed=4, sound="chip")
+        from bitcomposer.player.backend import Backend
+        self.b = Backend(music_dir=self.music, quiet=True, output_kind="null")
+
+    def tearDown(self):
+        self.b.shutdown()
+        self.tmp.cleanup()
+
+    def pump(self, seconds, until=None):
+        end = time.time() + seconds
+        while time.time() < end:
+            self.app.processEvents()
+            if until and until():
+                return True
+            time.sleep(0.02)
+        return bool(until and until())
+
+    def test_bridge(self):
+        b = self.b
+        self.assertEqual([t["auto"] for t in b.playlist], [True, False])
+        self.assertEqual(b.state["currentIndex"], -1)
+        b.playIndex(1)
+        self.assertTrue(self.pump(2, lambda: b.position > 0.3))
+        st = b.state
+        self.assertEqual(st["status"], "Playing")
+        self.assertEqual(st["currentIndex"], 1)
+        self.assertEqual(st["layout"][0], "melody")
+        self.assertIn("BPM", st["message"])
+        self.assertEqual(len(b.channelVolumes), 19)
+        b.setChannelVolume(1, 7)
+        self.assertTrue(b.applyMix())
+        self.assertEqual(b.channelVolumes[1], 7)
+        b.keep(0)
+        self.pump(0.2)
+        self.assertEqual([t["auto"] for t in b.playlist], [False, False])
+        # turning AUTO on while playing composes nothing yet
+        b.setAutoGenerate(True, "--sound chip")
+        self.pump(0.2)
+        self.assertFalse(b.state["generating"])
+        self.assertTrue(b.state["autoGenerate"])
+        # GENERATE composes in the background and plays the new track
+        b.generate("--sound chip -s 9")
+        self.pump(0.1)
+        self.assertTrue(b.state["generating"])
+        self.assertTrue(self.pump(60, lambda: not b.state["generating"]))
+        self.assertEqual(len(b.playlist), 3)
+        self.assertEqual(b.state["status"], "Playing")
+        self.assertTrue(b.state["file"].endswith(" (auto).it"))
+        self.assertIn("composed", b.notice)
+        # the window's own settings round-trip
+        b.saveUi('{"settTempo": "fast"}')
+        self.assertEqual(b.loadUi(), '{"settTempo": "fast"}')
+
+    def test_window_loads_and_fits(self):
+        from pathlib import Path
+        from PySide6.QtCore import QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1280, 672)       # 1920x1080 at 150%, less a taskbar
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"startSettings": True, "startMaster": True, "still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        self.assertTrue(eng.rootObjects(), warnings)
+        win = eng.rootObjects()[0]
+        self.b.playIndex(0)
+        win.show()
+        self.pump(1.0)
+        self.assertEqual(warnings, [])
+        # both panels open: taller than the screen, so the window stops at
+        # the screen and the column scrolls inside it
+        self.assertGreater(win.property("contentH"), 672)
+        self.assertLessEqual(win.height(), 672)
+        self.assertLessEqual(win.width(), 1280)
+        win.close()
+        del eng
