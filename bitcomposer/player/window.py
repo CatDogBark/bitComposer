@@ -13,8 +13,6 @@ import os
 import shlex
 import sys
 import threading
-import urllib.request
-import json
 from pathlib import Path
 
 from .. import __version__
@@ -22,6 +20,7 @@ from ..composer import SOUNDS
 from .engine import Player, VOLUME_MAX, AUTOGEN_MAX, KIT_ROLES, default_music_dir
 from .openmpt import LibraryMissing, lib as openmpt_lib
 from .audio import make_output, OutputUnavailable
+from . import update as upd
 
 OPTIONS = [
     # (label, flag, choices); "random" first is the CLI default for each
@@ -47,7 +46,6 @@ PRESETS = {
     "credits": {"--sound": "snes", "--tempo": "slow", "--energy": "chill", "--scale": "major", "--drum-density": "sparse"},
     "mega man x": {"--sound": "megamanx"}, "ffvi": {"--sound": "ffvi"}, "mana": {"--sound": "mana"}, "evermore": {"--sound": "evermore"},
 }
-RELEASES_URL = "https://api.github.com/repos/CatDogBark/bitComposer/releases/latest"
 
 
 def flags_from(choices: dict) -> str:
@@ -205,6 +203,32 @@ def run_window(music_dir=None) -> int:
         gain_lbl.config(text=f"{int(player.volume * 100)}%")
     ttk.Scale(bar, from_=0.0, to=VOLUME_MAX, variable=gain_var, orient="horizontal", length=120, command=on_gain).pack(side="left")
     gain_lbl.pack(side="left")
+    update_btn = ttk.Button(bar, text="UPDATE")
+    pending = {"release": None}
+
+    def do_update():
+        rel = pending["release"]
+        if not rel:
+            return
+        if not messagebox.askyesno("bitComposer", f"Update to {rel['version']}?\n\nThe player restarts (or the installer runs) when it is done."):
+            return
+        update_btn.state(["disabled"])
+        log(f"updating to {rel['version']}…")
+
+        def work():
+            quit_now = upd.apply_update(rel, lambda m: root.after(0, log, m), restart=None)
+            if quit_now:
+                root.after(0, finish)
+            else:
+                root.after(0, lambda: update_btn.state(["!disabled"]))
+
+        def finish():
+            player.shutdown()
+            root.destroy()
+            if upd.install_kind() == "pipx":
+                upd.restart_self()
+        threading.Thread(target=work, daemon=True).start()
+    update_btn.config(command=do_update)
 
     # Generate + auto
     gen = ttk.LabelFrame(main, text="GENERATE", padding=6)
@@ -394,14 +418,14 @@ def run_window(music_dir=None) -> int:
         root.after(250, tick)
 
     def update_check():
-        try:
-            with urllib.request.urlopen(RELEASES_URL, timeout=5) as r:
-                tag = json.load(r).get("tag_name", "")
-            latest = tag.lstrip("v")
-            if latest and latest != __version__ and not latest.endswith(("rc1", "rc2", "rc3")):
-                root.after(0, lambda: log(f"version {latest} is out: github.com/CatDogBark/bitComposer/releases"))
-        except Exception:
-            pass
+        rel = upd.newer_release(__version__)
+        if rel:
+            def show():
+                pending["release"] = rel
+                update_btn.config(text=f"UPDATE to {rel['version']}")
+                update_btn.pack(side="right", padx=4)
+                log(f"version {rel['version']} is out")
+            root.after(0, show)
     threading.Thread(target=update_check, daemon=True).start()
 
     player.scan()
