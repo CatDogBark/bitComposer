@@ -1,4 +1,4 @@
-"""PyInstaller entry for the command line (see launch_gui.py)."""
+"""PyInstaller entry for the command line (see launch_player.py for why a launcher)."""
 import sys
 from bitcomposer.cli import main
 

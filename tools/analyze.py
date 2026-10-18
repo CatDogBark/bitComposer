@@ -37,16 +37,6 @@ ROWS_PER_BEAT = 4  # rows to a quarter note
 ROWS_PER_BAR = 16  # 4 beats of 4 rows
 
 
-def note_str(n):
-    if n == 255:
-        return "=="
-    if n == 254:
-        return "^^"
-    if n >= 120:
-        return "~~"
-    return f"{NOTE_NAMES[n % 12]}{n // 12}"
-
-
 class IT:
     """Minimal Impulse Tracker module reader — enough to inspect note data."""
 

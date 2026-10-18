@@ -23,7 +23,6 @@ PLAYER = "org.mpris.MediaPlayer2.Player"
 PROPS = "org.freedesktop.DBus.Properties"
 INTROSPECTABLE = "org.freedesktop.DBus.Introspectable"
 PEER = "org.freedesktop.DBus.Peer"
-NO_TRACK = "/org/mpris/MediaPlayer2/TrackList/NoTrack"
 ICON = Path(__file__).resolve().parent / "icons" / "bitcomposer.svg"
 
 INTROSPECTION = """<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"

@@ -18,7 +18,7 @@ Hats thin to eighths above FAST_BPM.
 
 import random
 
-from .it_format import ITNote, midi_to_it_note, FX_RETRIGGER, FX_SPECIAL, S_NOTE_DELAY
+from .it_format import ITNote, FX_RETRIGGER, FX_SPECIAL, S_NOTE_DELAY
 
 # The IT note every kit piece is played at. It was midi_to_it_note(60) while
 # that conversion subtracted an octave; the pieces are tuned to this value.

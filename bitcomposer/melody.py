@@ -111,7 +111,7 @@ def generate_motif(length: int = 4, rng: random.Random | None = None,
     moves = moves[:len(rhythm)]
     return {"rhythm": rhythm, "contour": moves,
             "form": "period" if r.random() < 0.5 else "sentence",
-            "contour_name": "period" if False else ("launch" if len(moves) > 1 and moves[1] >= 3 else "stepwise")}
+            "contour_name": "launch" if len(moves) > 1 and moves[1] >= 3 else "stepwise"}
 
 
 def vary_motif(motif: dict, amount: float = 0.3, rng: random.Random | None = None) -> dict:
@@ -193,7 +193,6 @@ def chord_at(timeline, row: int, default: list[int]) -> list[int]:
 # is what "noodling in motif clothes" sounds like.
 
 STRONG_ROWS = (0, 8)          # beats 1 and 3 of a 16-row bar
-LEAP = 4                      # scale steps that count as a leap
 
 
 def _transform(motif: dict, kind: str, shift: int = 0) -> dict:
@@ -460,7 +459,7 @@ def min_note_length(notes: list[tuple[int, int]], rows: int = 2) -> list[tuple[i
     """
     notes = sorted(notes)
     out = []
-    for i, (row, note) in enumerate(notes):
+    for row, note in notes:
         if out and row - out[-1][0] < rows:
             continue
         out.append((row, note))
@@ -486,7 +485,6 @@ def generate_counter_melody(scale_notes: list[int], chord_notes: list[int],
     chord_in_range = [n for n in chord_notes if n in melody_range]
 
     # Find gaps in the melody (rows where melody is silent)
-    melody_rows = {row for row, _ in melody_notes_list}
     # Extend occupied rows to include duration estimates
     occupied = set()
     sorted_melody = sorted(melody_notes_list, key=lambda x: x[0])

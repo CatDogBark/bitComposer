@@ -7,7 +7,6 @@ modules do that.
 import math
 import random
 import struct
-import zlib
 
 # Noise for the samples comes from this stream, never from the global one:
 # generate_instrument reseeds it per preset, so a sample is the same bytes
@@ -16,7 +15,6 @@ import zlib
 # draw after it, titles included).
 _rng = random.Random(0)
 
-import struct
 
 # Base sample rate for all generated waveforms
 SAMPLE_RATE = 44100

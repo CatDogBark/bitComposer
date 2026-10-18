@@ -14,33 +14,26 @@ from . import names
 from . import samples as smp
 from . import structure as struct
 from .it_format import (
-    ITSample, ITPattern, ITNote, midi_to_it_note, NOTE_CUT,
     write_it_file, bpm_to_it_tempo, it_tempo_to_bpm,
 )
-from . import pattern as pattern_mod
 from .pattern import (
-    CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP,
-    CH_ECHO1, CH_ECHO2, CH_ECHO_HARMONY, CH_ECHO_ARP, CH_ECHO_ALL, CHANNEL_ROLES,
-    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, ROWS_PER_BEAT,
-    humanize_volume, apply_notes_to_pattern, apply_vibrato,
-    apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_echo_spill_taps,
-    apply_sustain_safety_net, silence_inactive_channels,
-    apply_chord_arpeggio, end_note,
+    CHANNEL_ROLES,
+    NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BEAT,
+    apply_echo_spill_taps,
+    silence_inactive_channels,
 )
-from .drums import pick_grooves, pick_fill, render_drums
+from .drums import pick_grooves, pick_fill
 from .packs import PACKS, PACK_NAMES, pack_weights, pack_value
 from .melody import (
-    generate_motif, vary_motif, generate_melody,
-    generate_counter_melody, add_melody_cuts,
+    generate_motif, vary_motif,
 )
-from .harmony import generate_harmony_timeline
 from .registers import plan_registers
-from .bass import generate_bass_timeline, pick_section_bass
-from .arp import pick_figures, generate_arp, FIGURES
+from .bass import pick_section_bass
+from .arp import pick_figures, FIGURES
 from .bass import RIFFS
 from .echo import (ECHO_ARP_FULL_BPM, ECHO_ARP_OFF_BPM, ECHO_DELAYS, ECHO_DELAY_WEIGHTS, ECHO_FEEDBACK_RANGE, ECHO_STEREO_WEIGHTS, ECHO_WETNESS, ECHO_WET_WEIGHTS, _EchoBus, _echo_label)
-from .instruments import (PALETTES, PULSE_DUTY, STRIKE_RULE_ROLES, _build_samples, _make_sample, _pick_instruments, _register_releases, _sample_from_inst, _weighted)
-from .mix import (CHANNEL_VOLUMES, MASTER_GAIN, SUSTAINING_ARP_LEVEL, channel_volumes_for)
+from .instruments import (PALETTES, STRIKE_RULE_ROLES, _build_samples, _make_sample, _pick_instruments, _register_releases, _weighted)
+from .mix import (channel_volumes_for)
 from .builder import (_chord_segments, _compose_pattern, _content_seed, _energy_tier, _pick_section_motif, plan_keys)
 
 
@@ -175,8 +168,6 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     else:
         target_bpm = theory.random_tempo()
 
-    scale_notes = theory.build_scale(key, scale_name, octaves=4)
-
     # Ticks per row. Higher means more ticks for per-tick effects (vibrato,
     # volume slides) to run in, so they sound smoother.
     speed = random.choice([4, 5, 6])
@@ -263,7 +254,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
     # seed pinned to the home key is the same song minus the key moves.
     drawn_plan = plan_keys(scale_name, "moving")
     section_progs = {}
-    for sec, (shift, sname) in drawn_plan.items():
+    for sec, (_, sname) in drawn_plan.items():
         if sname != scale_name:
             section_progs[sec] = theory.add_chord_color(theory.random_progression(sname))
     key_plan = drawn_plan if keys != "home" else {k: (0, scale_name) for k in drawn_plan}

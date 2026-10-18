@@ -1,15 +1,10 @@
 """The chip palette: NES / Game Boy style waveforms, plucks, basses and the
 synthesised drum kits (classic and layered)."""
 import math
-import random
-import struct
-import zlib
 
 from .dsp import (
-    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, _normalize, _lowpass, _highpass, _lowpass_sweep, _distort, _reverb_tail, SNES_RATE, SNES_PERIOD, SNES_TUNED_RATE, _BRR_FILTERS, brr_roundtrip, _peak_normalize, _finish_snes, _additive_cycle, _sustained_voice, _decaying_voice, _karplus_strong, KS_TUNED_RATE, ENSEMBLE_DRY, _ensemble_voice, _drive, RELEASE, add_release, polish_waveform, WAVEFORM_TUNED_RATE, _rms,
+    _rng, SAMPLE_RATE, BASE_NOTE_HZ, _pack_samples, _normalize, _lowpass, _highpass, _lowpass_sweep, _distort, _reverb_tail, WAVEFORM_TUNED_RATE,
 )
-
-
 
 
 def square_wave(duty: float = 0.5, cycles: int = 4) -> tuple[bytes, int]:
@@ -71,17 +66,6 @@ def noise_white(length: int = 4000) -> tuple[bytes, int]:
 
     samples = [_rng.uniform(-1.0, 1.0) for _ in range(length)]
     data = _pack_samples(_normalize(samples, amplitude=0.8))
-    return data, length
-
-
-def noise_periodic(period: int = 32, length: int = 4000) -> tuple[bytes, int]:
-    """Generate periodic noise (looped short noise) — metallic, NES-like."""
-
-    one_period = [_rng.uniform(-1.0, 1.0) for _ in range(period)]
-    samples = []
-    for i in range(length):
-        samples.append(one_period[i % period])
-    data = _pack_samples(_normalize(samples, amplitude=0.7))
     return data, length
 
 

@@ -5,7 +5,7 @@ Bass generation. (Arpeggios live in arp.py.)
 import random
 
 from . import theory
-from .pattern import ROWS_PER_BAR, ROWS_PER_BEAT
+from .pattern import ROWS_PER_BAR
 
 
 # Riffs: (row in bar, interval from the root) of a one-bar figure that

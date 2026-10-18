@@ -56,9 +56,6 @@ HARMONY_VOICINGS = {
     },
 }
 
-# Modes that restrike the chord: a stab, a chug, a pulse. The others hold.
-STRUCK_MODES = ("stabs", "rhythmic", "ostinato", "pulse", "chug_sync", "chug_offbeat", "chug_gallop")
-
 
 # ── Register ──
 # Per voice family: (anchor of the lowest voice, anchor spread with three

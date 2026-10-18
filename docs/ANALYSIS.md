@@ -283,7 +283,7 @@ it; the sustaining voices land within a few points on every partial.
 revisited: files averaged −27 LUFS, ten dB under anything streamed and
 four under broadcast. The module's mix volume is now written at 128 (it
 was 80) and every channel volume carries a master gain of 1.25
-(`composer.MASTER_GAIN`); over eighteen seeds across the palettes that is
+(`mix.MASTER_GAIN`); over eighteen seeds across the palettes that is
 about −20 LUFS with the loudest song's true peak a decibel under full
 scale. No limiter or compression: the dynamics (an 11 LU range on some
 songs) are left alone, and the players' gain (bitComposer's player has one

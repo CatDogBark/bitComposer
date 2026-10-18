@@ -39,7 +39,6 @@ AUTOGEN_LEGACY_SUFFIX = " (auto)"
 AUTOGEN_LEGACY_PREFIX = "bitcomposer_auto_"
 AUTOGEN_MAX = 10
 
-KIT_ROLES = ("kick", "snare", "hihat", "tom", "crash", "openhat")
 LEGACY_LAYOUT = ["melody", "harmony", "harmony", "harmony", "bass", "arp",
                  "kick", "snare", "hihat", "tom", "crash", "openhat", "echo.melody", "echo.melody"]
 
@@ -49,9 +48,6 @@ def default_music_dir() -> Path:
     if env:
         return Path(env).expanduser()
     music = _xdg_music_dir() or Path.home() / "Music"
-    legacy = music / "Chiptune"          # where the old Plasma widget kept its songs
-    if legacy.is_dir():
-        return legacy
     return (music if music.is_dir() else Path.home()) / "bitComposer"
 
 
