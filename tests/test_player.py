@@ -141,6 +141,41 @@ class UpdateCheck(unittest.TestCase):
         self.assertIsNone(u.newer_release("1.0.0", lambda url: (_ for _ in ()).throw(OSError("offline"))))
         self.assertIn(u.install_kind(), ("frozen", "pipx", "other"))
 
+    def test_pipx_is_told_by_its_metadata_file(self):
+        """pipx's venv python links to the system one, so the interpreter's
+        path says nothing; the venv's pipx_metadata.json does."""
+        from unittest import mock
+        from bitcomposer.player import update as u
+        with tempfile.TemporaryDirectory() as venv:
+            with mock.patch.object(sys, "prefix", venv):
+                self.assertEqual(u.install_kind(), "other")
+                open(os.path.join(venv, "pipx_metadata.json"), "w").close()
+                self.assertEqual(u.install_kind(), "pipx")
+
+    def test_pipx_update_streams_its_output(self):
+        """The update screen gets pipx's lines as they come, cleaned of its
+        debug prefixes, and a failure says so instead of vanishing."""
+        from unittest import mock
+        from bitcomposer.player import update as u
+        with tempfile.TemporaryDirectory() as t:
+            def fake_pipx(code):
+                f = os.path.join(t, f"pipx{code}")
+                with open(f, "w") as fh:
+                    fh.write("#!/bin/sh\necho 'pipx >(install_package:247): Installing bitcomposer from spec x'\n"
+                             "echo 'installing bitcomposer...'\necho 'done! \u2728'\nexit %d\n" % code)
+                os.chmod(f, 0o755)
+                return [f]
+            rel = {"version": "9.9.9", "tag": "v9.9.9", "page": "p"}
+            for code, expect in ((0, True), (1, False)):
+                lines = []
+                with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                        mock.patch.object(u, "pipx_command", lambda c=code: fake_pipx(c)):
+                    self.assertEqual(u.apply_update(rel, lambda text, prog: lines.append(text)), expect)
+                self.assertEqual(lines[0], "$ pipx install --force bitcomposer==9.9.9")
+                self.assertIn("Installing bitcomposer from spec x", lines)          # the prefix gone
+                self.assertIn("done!", lines)                                       # the pictograph gone
+                self.assertTrue(lines[-1].startswith("updated to" if expect else "pipx exited with 1"))
+
     def test_try_update_offers_a_local_installer(self):
         """--try-update: the UPDATE button for a setup.exe on this machine,
         so the update path runs without a published release."""
@@ -156,6 +191,23 @@ class UpdateCheck(unittest.TestCase):
             urllib.request.urlretrieve(rel["installer"], got)          # what apply_update does with it
             with open(got, "rb") as fh:
                 self.assertEqual(fh.read(), b"MZ")
+            # a wheel says its own version, and pipx installs it by path
+            wheel = os.path.join(t, "bitcomposer-1.0.0rc5-py3-none-any.whl")
+            rel = u.local_release(wheel, "1.0.0rc4")
+            self.assertEqual(rel["version"], "1.0.0rc5 (test)")
+            self.assertEqual(rel["spec"], wheel)
+
+    def test_restart_leaves_the_one_time_options_behind(self):
+        """After an update the new player starts on the same command, less a
+        test release (offered again otherwise) and a hidden start."""
+        from unittest import mock
+        from bitcomposer.player import update as u
+        argv = ["/x/bitcomposer-player", "--minimized", "--try-update", "a.whl",
+                "--try-update=b.whl", "--music-dir", "/m"]
+        with mock.patch.object(sys, "argv", argv), mock.patch.object(os, "execv") as execv:
+            u.restart_self()
+        self.assertEqual(execv.call_args[0][1][-2:], ["--music-dir", "/m"])
+        self.assertFalse([a for a in execv.call_args[0][1] if "update" in a or a == "--minimized"])
 
 
 def _have_qt():
@@ -296,6 +348,53 @@ class WindowHeadless(unittest.TestCase):
         self.assertTrue(self.pump(3, lambda: win.property("_sized")))
         self.pump(0.3)
         self.assertLess(win.height(), 1152 - 64)          # shrunk to the content, as a normal start
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
+    def test_update_screen(self):
+        """UPDATE opens the update screen asking first; UPDATE NOW runs it and
+        its lines reach the screen's log; a failure ends on CLOSE, and the
+        player is unchanged."""
+        from pathlib import Path
+        from unittest import mock
+        from PySide6.QtCore import QObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        from bitcomposer.player import update as u
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1920, 1152)
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        win.show()
+        self.pump(0.5)
+        panel = win.findChild(QObject, "updatePanel")
+        self.assertFalse(panel.property("visible"))
+        self.b.offer({"version": "9.9.9", "tag": "v9.9.9", "page": "p", "installer": None})
+        self.b.applyUpdate()
+        self.pump(0.3)
+        self.assertEqual(self.b.updateState, "confirm")
+        self.assertTrue(panel.property("visible"))
+
+        def fake(rel, report, restart=None):
+            report("$ pipx install --force bitcomposer==9.9.9", None)
+            report("installing bitcomposer...", None)
+            report("pipx exited with 1; the player is unchanged", None)
+            return False
+        with mock.patch.object(u, "apply_update", fake):
+            self.b.confirmUpdate()
+            self.assertTrue(self.pump(3, lambda: self.b.updateState == "failed"))
+        self.pump(0.3)
+        self.assertEqual(len(self.b.updateLog), 3)
+        self.assertEqual(win.findChild(QObject, "updateLog").property("count"), 3)
+        self.b.closeUpdate()
+        self.pump(0.2)
+        self.assertFalse(panel.property("visible"))
         self.assertEqual(warnings, [])
         win.close()
         del eng

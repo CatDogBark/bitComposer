@@ -49,7 +49,7 @@ class Backend(QObject):
     # Asks for app.py: dialogs and quitting live there.
     folderRequested = Signal()
     openFolderRequested = Signal(str)
-    updateConfirm = Signal(str)
+    openUrlRequested = Signal(str)
     quitRequested = Signal()
     raiseRequested = Signal()
     autostartChanged = Signal()
@@ -72,6 +72,10 @@ class Backend(QObject):
         self._notice = ""
         self._release = None
         self._updating = False
+        # The update screen: "" (closed), "confirm", "running", "failed", "done".
+        self._upd_state = ""
+        self._upd_log = []
+        self._upd_progress = -1.0           # 0..1, or -1 while it cannot be known
         self._tray = False
         self._dirty = False
         self.restart_after_quit = False
@@ -177,6 +181,18 @@ class Backend(QObject):
     def _get_updating(self): return self._updating
     updating = Property(bool, _get_updating, notify=updateChanged)
 
+    def _get_upd_state(self): return self._upd_state
+    updateState = Property(str, _get_upd_state, notify=updateChanged)
+
+    def _get_upd_log(self): return self._upd_log
+    updateLog = Property("QVariantList", _get_upd_log, notify=updateChanged)
+
+    def _get_upd_progress(self): return self._upd_progress
+    updateProgress = Property(float, _get_upd_progress, notify=updateChanged)
+
+    def _get_upd_kind(self): return upd.install_kind()
+    updateKind = Property(str, _get_upd_kind, constant=True)
+
     def _get_tray(self): return self._tray
     trayAvailable = Property(bool, _get_tray, notify=trayChanged)
 
@@ -262,19 +278,38 @@ class Backend(QObject):
         if not rel or self._updating:
             return
         self._updating = True
+        self._upd_state = "running"
+        self._upd_log = []
+        self._upd_progress = -1.0
         self.updateChanged.emit()
 
+        def report(text, progress):            # from the update thread
+            self._dispatch.call.emit(lambda: self._update_line(text, progress))
+
         def work():
-            quit_now = upd.apply_update(rel, self._log, restart=None)
+            try:
+                quit_now = upd.apply_update(rel, report, restart=None)
+            except Exception as e:               # never leave the screen spinning
+                report(f"update failed: {e}", None)
+                quit_now = False
             self._dispatch.call.emit(lambda: self._update_done(quit_now))
         threading.Thread(target=work, daemon=True).start()
 
+    def _update_line(self, text: str, progress):
+        if not self.quiet:
+            print(f"[UPDATE] {text}", file=sys.stderr)
+        self._upd_log = (self._upd_log + [text])[-400:]
+        if progress is not None:
+            self._upd_progress = float(progress)
+        self.updateChanged.emit()
+
     def _update_done(self, quit_now: bool):
         self._updating = False
+        self._upd_state = "done" if quit_now else "failed"
         self.updateChanged.emit()
         if quit_now:
             self.restart_after_quit = upd.install_kind() == "pipx"
-            self.quitRequested.emit()
+            QTimer.singleShot(1500, self.quitRequested.emit)   # long enough to read "restarting"
 
     def shutdown(self):
         self._tick.stop()
@@ -380,8 +415,28 @@ class Backend(QObject):
 
     @Slot()
     def applyUpdate(self):
+        """UPDATE in the header: the update screen, asking first."""
         if self._release and not self._updating:
-            self.updateConfirm.emit(self._release["version"])
+            self._upd_state = "confirm"
+            self._upd_log = []
+            self._upd_progress = -1.0
+            self.updateChanged.emit()
+
+    @Slot()
+    def confirmUpdate(self):
+        if self._upd_state == "confirm":
+            self.start_update()
+
+    @Slot()
+    def closeUpdate(self):
+        if not self._updating:
+            self._upd_state = ""
+            self.updateChanged.emit()
+
+    @Slot()
+    def openReleasePage(self):
+        if self._release:
+            self.openUrlRequested.emit(self._release["page"])
 
     @Slot(bool)
     def setCheckUpdates(self, on):

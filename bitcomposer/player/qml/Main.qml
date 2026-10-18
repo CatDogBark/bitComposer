@@ -1562,6 +1562,192 @@ ApplicationWindow {
         }
     }
 
+    // ── The update screen ──
+    // Over the whole window while an update is asked for, running, or has
+    // ended: what will happen, then the work as it happens (the pipx output
+    // on Linux, the installer's download on Windows), then the result. The
+    // player underneath keeps playing until the update takes over.
+    component PanelButton: Rectangle {
+        id: pb
+        property string text: ""
+        property color accent: root.accentGreen
+        signal clicked()
+        implicitWidth: pbLabel.implicitWidth + Math.round(28 * root.ui)
+        implicitHeight: Math.round(32 * root.ui)
+        radius: 4
+        color: pbMouse.containsMouse ? "#142018" : root.tileBg
+        border.width: 1
+        border.color: pbMouse.containsMouse ? pb.accent : root.tileBorder
+        Text {
+            id: pbLabel
+            anchors.centerIn: parent
+            text: pb.text
+            color: pbMouse.containsMouse ? pb.accent : root.textColor
+            font.family: root.mono
+            font.pixelSize: Math.round(9 * root.ui)
+            font.letterSpacing: 2
+        }
+        MouseArea { id: pbMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pb.clicked() }
+    }
+
+    property double _updStarted: 0
+    property int _updElapsed: 0
+    Connections {
+        target: backend
+        function onUpdateChanged() {
+            if (backend.updateState === "running" && root._updStarted === 0) { root._updStarted = Date.now(); root._updElapsed = 0 }
+            if (backend.updateState !== "running") root._updStarted = 0
+        }
+    }
+    Timer {
+        interval: 1000; repeat: true; running: backend.updateState === "running"
+        onTriggered: root._updElapsed = Math.round((Date.now() - root._updStarted) / 1000)
+    }
+
+    Rectangle {
+        id: updatePanel
+        objectName: "updatePanel"
+        anchors.fill: parent
+        visible: backend.updateState !== ""
+        color: Qt.rgba(0.02, 0.05, 0.04, 1)
+        z: 30
+        MouseArea { anchors.fill: parent; hoverEnabled: true; preventStealing: true; onWheel: function(w) { w.accepted = true } }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: Math.round(10 * root.ui)
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Text { text: "[ UPDATE ]"; color: root.accentCyan; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); font.letterSpacing: 3 }
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(0, 1, 0.8, 0.15) }
+            }
+            Text {
+                text: "v" + backend.version + "  \u2192  v" + backend.updateVersion
+                color: root.accentGreen
+                font.family: root.mono
+                font.pixelSize: Math.round(14 * root.ui)
+                font.bold: true
+            }
+            Text {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                color: backend.updateState === "failed" ? root.accentPink : root.textColor
+                font.family: root.mono
+                font.pixelSize: Math.round(9 * root.ui)
+                text: {
+                    var st = backend.updateState, kind = backend.updateKind
+                    if (st === "confirm") {
+                        if (kind === "pipx") return "pipx reinstalls bitComposer at the new version (with Qt, about 80 MB the first time), then the player restarts on it. The music stops while it does."
+                        if (kind === "frozen") return "The new installer downloads here, then runs with its own progress window and opens bitComposer again when it is done."
+                        return "This copy was not installed by pipx or the installer (a checkout, or a plain pip), so it cannot update itself: update it the way it was installed."
+                    }
+                    if (st === "running") return (kind === "frozen" ? "Downloading the installer\u2026" : "Updating\u2026") + "  " + root._updElapsed + " s"
+                    if (st === "done") return kind === "pipx" ? "Updated. Restarting\u2026" : "The installer is taking over: it shows its progress, then opens bitComposer."
+                    if (st === "failed") return "The update did not finish; the player is unchanged. The log says why."
+                    return ""
+                }
+            }
+
+            // Progress: filling when the amount is known (a download), a
+            // sweep while it is not (pip says nothing until it is done).
+            Rectangle {
+                id: updBar
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.round(6 * root.ui)
+                visible: backend.updateState === "running" || backend.updateState === "done"
+                radius: 3
+                color: root.tileBg
+                border.width: 1
+                border.color: root.tileBorder
+                clip: true
+                Rectangle {
+                    visible: backend.updateProgress >= 0 || backend.updateState === "done"
+                    height: parent.height
+                    radius: 3
+                    width: parent.width * (backend.updateState === "done" ? 1 : Math.max(0, Math.min(1, backend.updateProgress)))
+                    color: root.accentGreen
+                    Behavior on width { NumberAnimation { duration: 200 } }
+                }
+                Rectangle {
+                    id: sweep
+                    visible: backend.updateProgress < 0 && backend.updateState === "running"
+                    height: parent.height
+                    width: parent.width * 0.28
+                    radius: 3
+                    color: root.accentGreen
+                    opacity: 0.85
+                    SequentialAnimation on x {
+                        running: sweep.visible
+                        loops: Animation.Infinite
+                        NumberAnimation { from: -sweep.width; to: updBar.width; duration: 1400; easing.type: Easing.InOutQuad }
+                    }
+                }
+            }
+
+            // The log, terminal style: the command, then everything it says.
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: backend.updateState !== "confirm"
+                color: "#050907"
+                radius: 4
+                border.width: 1
+                border.color: root.tileBorder
+                ListView {
+                    id: updLog
+                    objectName: "updateLog"
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    clip: true
+                    model: backend.updateLog
+                    boundsBehavior: Flickable.StopAtBounds
+                    onCountChanged: Qt.callLater(updLog.positionViewAtEnd)
+                    ScrollBar.vertical: ScrollBar { policy: updLog.contentHeight > updLog.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff; width: Math.round(6 * root.ui)
+                        contentItem: Rectangle { radius: 3; color: Qt.rgba(0, 1, 0.53, 0.35) } }
+                    delegate: Text {
+                        required property string modelData
+                        width: updLog.width - Math.round(8 * root.ui)
+                        text: modelData
+                        wrapMode: Text.WrapAnywhere
+                        color: modelData.indexOf("$ ") === 0 ? root.accentCyan
+                             : /failed|error|exited with|not found|could not/i.test(modelData) ? root.accentPink
+                             : "#86c7a4"
+                        font.family: root.mono
+                        font.pixelSize: Math.round(8 * root.ui)
+                        lineHeight: 1.15
+                    }
+                }
+            }
+            Item { Layout.fillHeight: true; visible: backend.updateState === "confirm" }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: 8
+                PanelButton {
+                    visible: backend.updateState === "confirm" || backend.updateState === "failed"
+                    text: backend.updateState === "failed" ? "CLOSE" : "LATER"
+                    onClicked: backend.closeUpdate()
+                }
+                PanelButton {
+                    visible: backend.updateState === "failed" || (backend.updateState === "confirm" && backend.updateKind === "other")
+                    text: "RELEASE PAGE"
+                    accent: root.accentCyan
+                    onClicked: backend.openReleasePage()
+                }
+                PanelButton {
+                    objectName: "updateNow"
+                    visible: backend.updateState === "confirm" && backend.updateKind !== "other"
+                    text: "UPDATE NOW"
+                    accent: root.accentPink
+                    onClicked: backend.confirmUpdate()
+                }
+            }
+        }
+    }
+
     // Scanline sweep, over everything and taking no input.
     Rectangle {
         visible: !root.still
