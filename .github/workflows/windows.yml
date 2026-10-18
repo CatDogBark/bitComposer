@@ -39,12 +39,36 @@ jobs:
           python -m bitcomposer.cli --version
           python -m bitcomposer.cli -s 11 --style snes --pack megamanx -d out
           dir out
+      - name: Fetch libopenmpt for Windows
+        shell: pwsh
+        run: |
+          # The player plays through libopenmpt. The official Windows dev
+          # build (lib.openmpt.org) carries libopenmpt.dll with its
+          # openmpt-*.dll companions for x64; the newest 0.x release zip is
+          # taken from the listing so the version is not pinned here.
+          $index = Invoke-WebRequest -UseBasicParsing https://lib.openmpt.org/files/libopenmpt/dev/
+          $names = [regex]::Matches($index.Content, 'libopenmpt-[0-9.]+\+release\.dev\.windows\.vs\d+\.zip') | ForEach-Object { $_.Value } | Sort-Object -Unique
+          if (-not $names) { throw "no libopenmpt Windows dev zip found in the listing" }
+          $zip = $names | Sort-Object { [version]([regex]::Match($_, '\d+\.\d+\.\d+').Value) } | Select-Object -Last 1
+          Write-Host "libopenmpt: $zip"
+          Invoke-WebRequest -UseBasicParsing "https://lib.openmpt.org/files/libopenmpt/dev/$zip" -OutFile libopenmpt.zip
+          Expand-Archive libopenmpt.zip -DestinationPath libopenmpt
+          $dir = Get-ChildItem -Recurse -Directory libopenmpt | Where-Object { Test-Path (Join-Path $_.FullName 'libopenmpt.dll') } | Where-Object { $_.FullName -match 'amd64|x64|x86_64' } | Select-Object -First 1
+          if (-not $dir) { throw "libopenmpt.dll for x64 not found in $zip" }
+          New-Item -ItemType Directory -Force -Path dll | Out-Null
+          Copy-Item (Join-Path $dir.FullName '*.dll') dll/
+          Get-ChildItem dll
       - name: Build executables
         run: |
           # Windows paths are case-insensitive: "bitcomposer" and "bitComposer"
           # would be one file, so the command line gets a -cli suffix.
+          # bitComposer.exe is the player (it generates as well); the DLLs
+          # sit next to it in the bundle, where player/openmpt.py looks.
           pyinstaller --onefile --name bitcomposer-cli --console --collect-submodules bitcomposer tools/windows/launch_cli.py
-          pyinstaller --onefile --name bitComposer --windowed --collect-submodules bitcomposer tools/windows/launch_gui.py
+          pyinstaller --onefile --name bitComposer --windowed --collect-submodules bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
+      - name: Smoke test the player build
+        run: |
+          dist\bitComposer.exe --check
       - name: Package
         shell: pwsh
         run: |
@@ -54,21 +78,31 @@ jobs:
           bitComposer for Windows
           =======================
 
-          bitComposer.exe   a window: pick a palette, a style pack and how many songs, press Generate.
-          bitcomposer-cli.exe   the command line, e.g.  bitcomposer-cli -n 10 --style snes --pack megamanx -d "%USERPROFILE%\Music\bitComposer"
+          bitComposer.exe       the player: plays your folder, generates the next song as the current one ends,
+                                live mixer, keep or prune, settings for what it composes. Needs nothing else.
+          bitcomposer-cli.exe   the command line, e.g.  bitcomposer-cli -n 10 --sound megamanx -d "%USERPROFILE%\Music\bitComposer"
 
-          Songs are Impulse Tracker (.it) files. Play them with XMPlay (free, one small exe, drag a folder onto it),
-          foobar2000 with the OpenMPT component, or OpenMPT itself. Winamp opens them but its old module engine
-          gets the release tails and the slap echo wrong.
+          Songs are Impulse Tracker (.it) files and play in any tracker player as well (XMPlay, OpenMPT).
 
           Style packs: ffvi, mana, evermore, megamanx. Leave the pack on "random" and half the SNES songs draw one.
           Windows SmartScreen may warn because the executables are not code-signed; "More info" then "Run anyway".
           "@ | Set-Content -Path pkg/README-WINDOWS.txt
           Compress-Archive -Path pkg/* -DestinationPath bitComposer-windows.zip -Force
+      - name: Installer
+        shell: pwsh
+        run: |
+          # Inno Setup makes bitComposer-setup.exe: Start menu entry, desktop
+          # shortcut (optional), uninstaller. Unsigned, like the executables.
+          choco install innosetup --no-progress -y | Out-Null
+          $version = python -c "import bitcomposer; print(bitcomposer.__version__)"
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" tools\windows\installer.iss
+          Get-ChildItem bitComposer-setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: bitComposer-windows
-          path: bitComposer-windows.zip
+          path: |
+            bitComposer-windows.zip
+            bitComposer-setup.exe
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
         shell: pwsh
@@ -83,4 +117,4 @@ jobs:
           $pre = if ($tag -match '(a|b|rc)\d+$') { @("--prerelease") } else { @() }
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) { gh release create $tag --title $tag --notes-from-tag @pre }
-          gh release upload $tag bitComposer-windows.zip --clobber
+          gh release upload $tag bitComposer-windows.zip bitComposer-setup.exe --clobber
