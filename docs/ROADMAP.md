@@ -321,14 +321,17 @@ These change how every note sounds, not what notes are played.
   first. Left out of `ffvi` for the kit revision: congas, shaker,
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
-- **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
-  sample bank in BRR, every voice's envelope and pitch, the echo settings.
-  A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot
-  and map its samples onto a pack's roles through a small per-game role
-  map, falling back to the synthesised voices without one. The repo ships
-  the code, never the samples: the rips are the publishers' recordings and
-  do not belong in a public repository. The decoder and the bank profiler
-  already exist from the Mega Man X analysis (`~/diags/bitcomposer/mmx`).
+- **SPC import: a pack from a game's own files (planned 2026-10-18; the
+  plan is `docs/SPC-IMPORT.md`).** The import reads a soundtrack's `.spc`
+  snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
+  own music driver and logs what it tells the DSP; a translator turns the
+  log into notes, roles and measured habits. Two outputs: an SPC-to-IT
+  conversion, one to one (the translator's proof), and a pack in the SOUND
+  picker. Getting and unpacking the files is the user's business; the repo
+  ships the code, never the samples, and imported packs stay on the
+  user's machine. Built on the pack file format (Your own packs, above).
+  Supersedes the per-game role map once planned here: the emulated notes
+  say which sample is the melody.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 
