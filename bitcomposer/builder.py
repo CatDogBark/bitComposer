@@ -7,7 +7,7 @@ from . import theory
 from .it_format import ITPattern, ITNote
 from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
 from .drums import render_drums
-from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
+from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts, MELODY_LOW, MELODY_HIGH
 from .harmony import generate_harmony_timeline, anchors_for, window_for, stab_rows, harmony_level, HARMONY_VOICINGS
 from .bass import generate_bass_timeline, floor_bass
 from .arp import generate_arp
@@ -173,10 +173,17 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      pickup_root=None, intro=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
                      power_chords=False, bass_riff=None, harmony_family=None,
-                     harmony_preset=None, harmony_onset_ms=0.0) -> ITPattern:
+                     harmony_preset=None, harmony_onset_ms=0.0,
+                     registers: dict | None = None) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
+    # Where the parts sit: the song's register plan (registers.py). Without
+    # one (a direct caller), the old window and the family's own register.
+    registers = registers or {}
+    lead_window = registers.get("lead_window", (MELODY_LOW, MELODY_HIGH))
+    lead_floor = registers.get("lead_floor")
+    harmony_window = registers.get("harmony_window", window_for(harmony_family))
 
     # The timeline in the shapes each generator wants.
     chord_notes = segments[0][4]                       # the pattern's main chord
@@ -213,6 +220,7 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             motif=section_motif, is_answer=is_answer, phrased=use_phrased,
             chord_timeline=melody_timeline, rng=melody_rng,
             register=0.2 + 0.7 * max(0.0, min(1.0, (section_energy - 0.5) / 0.5)),
+            window=lead_window, floor=lead_floor,
         )
         apply_notes_to_pattern(
             pat, CH_MELODY, melody, melody_sample,
@@ -235,13 +243,13 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
             and random.random() < counter_chance
         n_voices = min(2, num_harmony_voices) if has_counter else num_harmony_voices
 
-        # Register per family, the top voice under the lead's line in this
-        # pattern; the level per family and voice count.
-        lead_notes = [n for _, n in melody if n != -1]
+        # Register per family from the plan (the lead is placed above the
+        # chord, so the chord is not capped under the lead any more); the
+        # level per family and voice count.
         voices = generate_harmony_timeline(
             harmony_segments, voicing=voicing_style, num_voices=n_voices,
             anchors=anchors_for(harmony_family, n_voices),
-            window=window_for(harmony_family, lead_notes), cut_after=harmony_cut,
+            window=harmony_window, cut_after=harmony_cut,
         )
         harmony_vol = int(HARMONY_VOL * section_energy
                           * harmony_level(harmony_family, harmony_preset, n_voices, harmony_hold_ms))
@@ -266,7 +274,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
 
         if has_counter:
             counter = generate_counter_melody(
-                scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng)
+                scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng,
+                window=lead_window)
             counter = add_melody_cuts(counter, ROWS_PER_PATTERN, max_sustain=8)
             apply_notes_to_pattern(
                 pat, CH_HARMONY3, counter, sample_map.get("counter", sample_map["harmony"]),

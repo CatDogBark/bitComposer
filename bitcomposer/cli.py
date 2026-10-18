@@ -166,6 +166,12 @@ def main():
         help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
     )
     parser.add_argument(
+        "--lead-shift",
+        type=int, default=None, metavar="SEMITONES",
+        help="move the lead's window by this many semitones (negative lowers it); "
+             "default: the sound's own setting",
+    )
+    parser.add_argument(
         "--keys",
         choices=["moving", "home"],
         default="moving",
@@ -202,6 +208,7 @@ def main():
                                 song_form=args.form,
                                 echo=args.echo, echo_wet=args.echo_wet,
                                 echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys,
+                                lead_shift=args.lead_shift,
                                 pack=args.pack, sound=args.sound)
             info = song["info"]
 
