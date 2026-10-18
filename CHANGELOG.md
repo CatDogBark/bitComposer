@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 — 2026-10-18
+
+UPDATE on Linux gets past pip's saved copy of PyPI's version list.
+
+- Updating to 1.0.0 from a candidate failed on a laptop minutes after the release: the player saw 1.0.0 on GitHub, but pip read its saved copy of PyPI's version list, which ended at rc6, and said no such version exists (PyPI itself listed 1.0.0; the same install with pip's cache off found it). Now when pip says the version does not exist, the update asks once more with pip's cache off (`PIP_NO_CACHE_DIR=1`), and if PyPI still does not list it the screen says so and to try again in a few minutes. Updates otherwise keep the cache, so Qt is not downloaded again. Windows was not affected: its update downloads the installer from the GitHub release. The retry is in the updater of the version doing the updating, so it helps from 1.0.1 on; a 1.0.0 player that hits this updates on a later try.
+
 ## 1.0.0 — 2026-10-18
 
 The first official release, and bitComposer is now a player: one program on Linux and Windows that composes the next song as the current one ends, with a live mixer, KEEP and the ten-song prune, media keys, start at login and an UPDATE button that shows its work. Install it with `pipx install bitcomposer` or the Windows installer. Six release candidates took it from the first Qt window to an update path proven on both platforms, tested on Plasma, GNOME and Windows. Under the player, the week after 0.9.1 was a release listen across every sound, and what it turned up was mostly engine-wide: the note conversion had every tonal part an octave below its label since the first version, the harmony's lowest voice sat under the bass in every song, a rhythmic harmony mode could land on a pad that never finished its swell, a lone harmony voice was arpeggiated into a rasp on bright voices, songs ran from 42 seconds to six minutes, and the widget's playlist hid every track past the eighth. Each was measured on rendered audio before it was changed, and each change was heard on a page before it merged. Then the harmony itself was reworked: two or three real voices in a register per family, stabs held as long as the voice needs, the level measured. Titles now read the song. The compatibility promise is written down in the README: the same seed on the same version is the same song. Releases go to PyPI from a tag.
