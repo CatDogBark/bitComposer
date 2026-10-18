@@ -23,24 +23,33 @@ long. Seven sounds, picked with `--sound`:
 
 **Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws, and the song message records the version that wrote the file.
 
-## Quick start
+## Install
+
+From PyPI, with [pipx](https://pipx.pypa.io/) so it lands on your PATH
+without touching the system Python (Debian and Fedora refuse a plain
+`pip install` there):
+
+```bash
+pipx install bitcomposer
+bitcomposer -d out            # writes out/<Title>.it
+bitcomposer -d out -s 42 -v   # reproducible, with details
+```
+
+On Windows, the release zip needs no Python at all; see [Windows](#windows).
+From a clone, for development:
 
 ```bash
 git clone https://github.com/CatDogBark/bitComposer.git
 cd bitComposer
-python3 -m bitcomposer -d out            # writes out/<Title>.it
-python3 -m bitcomposer -d out -s 42 -v   # reproducible, with details
+python3 -m bitcomposer -d out
 ```
 
 Play the result with [OpenMPT](https://openmpt.org/) (Windows),
 [Schism Tracker](https://schismtracker.org/), VLC, Audacious, `xmp`, or
-anything built on libopenmpt. To install the `bitcomposer` command:
+anything built on libopenmpt.
 
-```bash
-pip install .
-```
-
-Python 3.10 or newer. Nothing else.
+Python 3.10 or newer, no dependencies. The window (`bitcomposer-gui`) uses
+tkinter, which Debian and Ubuntu ship separately as `python3-tk`.
 
 ## Sounds
 
@@ -76,7 +85,8 @@ Everything defaults to `random`.
 --form    standard|aaba|rondo|short|linear
 --drum-density sparse|normal|busy    --no-fills    --swing off|light|heavy
 --melody  simple|phrased             phrased = motif-based, has a hook
---harmony-voicing thin|full          --harmony-mode stabs|sustain|rhythmic
+--harmony-voicing thin|full          two real voices, or three
+--harmony-mode stabs|sustain|rhythmic
 --bass-weight heavy|medium|light
 --name    title|timestamp            file naming; --suffix adds a marker
 -s SEED   -n COUNT   -o FILE   -d DIR   -v
