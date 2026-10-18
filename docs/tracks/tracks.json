@@ -4,9 +4,9 @@
   "title": "Strike of the Factory",
   "palette": "snes",
   "info": "C# major - 163 BPM",
-  "arrangement": "snes (megamanx) + echo (normal) - rondo form",
+  "arrangement": "snes (megamanx) + echo - rondo form",
   "voices": "mmx_lead_guitar / mmx_strings / mmx_slap_bass",
-  "seed": "seed 104 - bitcomposer 0.9.1",
+  "seed": "seed 104 - bitcomposer 1.0.0rc1",
   "picked": false
  },
  {
@@ -16,7 +16,7 @@
   "info": "G# dorian - 104 BPM",
   "arrangement": "snes (ffvi) + echo (wet) - rondo form",
   "voices": "ffvi_synth_lead / ffvi_flutes / ffvi_dark_bass",
-  "seed": "seed 4 - bitcomposer 0.9.1",
+  "seed": "seed 4 - bitcomposer 1.0.0rc1",
   "picked": false
  },
  {
@@ -24,9 +24,9 @@
   "title": "Sanctum of Light",
   "palette": "snes",
   "info": "C# major - 127 BPM",
-  "arrangement": "snes (mana) + echo (normal) - aaba form",
+  "arrangement": "snes (mana) + echo - aaba form",
   "voices": "mana_flute / mana_vibraphone / mana_bass",
-  "seed": "seed 7 - bitcomposer 0.9.1",
+  "seed": "seed 7 - bitcomposer 1.0.0rc1",
   "picked": false
  },
  {
@@ -36,7 +36,7 @@
   "info": "C# harmonic minor - 97 BPM",
   "arrangement": "snes (evermore) - linear form",
   "voices": "evm_breath_flute / evm_pad / evm_drone",
-  "seed": "seed 7 - bitcomposer 0.9.1",
+  "seed": "seed 7 - bitcomposer 1.0.0rc1",
   "picked": false
  },
  {
@@ -46,7 +46,7 @@
   "info": "G# dorian - 150 BPM",
   "arrangement": "genesis - linear form",
   "voices": "gen_lead / fm_organ / gen_pluck_bass",
-  "seed": "seed 11 - bitcomposer 0.9.1",
+  "seed": "seed 11 - bitcomposer 1.0.0rc1",
   "picked": false
  },
  {
@@ -56,7 +56,7 @@
   "info": "G# dorian - 150 BPM",
   "arrangement": "chip - linear form",
   "voices": "square_lead / pulse12_lead / thin_bass",
-  "seed": "seed 11 - bitcomposer 0.9.1",
+  "seed": "seed 11 - bitcomposer 1.0.0rc1",
   "picked": false
  }
 ]
