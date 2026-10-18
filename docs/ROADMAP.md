@@ -21,13 +21,9 @@ below).
   zip on the tag. The version lives in `bitcomposer/__init__.py` alone.
   First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
   exact version. The checklist is in `CONTRIBUTING.md`.
-- **Linux install (done, branch `companion-path`, to verify on the maintainer's
-  machine).** `pipx install bitcomposer` is the user's path. The companion
-  (KDE Plasma 6, Debian-style paths, the scope for 1.0) runs `bitcomposer`
-  on PATH and falls back to `python3 -m bitcomposer.cli`; the installer's
-  `--dev` keeps the checkout on the import path (a `.pth` and a daemon
-  drop-in) for development, and `--check` reports which generator plays.
-  `docs/INSTALL.md` is rewritten around that.
+- **Linux install (done).** `pipx install bitcomposer` is the user's path;
+  the player's first launch adds its menu entry. (The widget's installer
+  and its `docs/INSTALL.md` went with the widget in 1.0.0rc3.)
 - **Docs.** README install section (pipx, Windows zip, developer clone)
   done; the listening page is regenerated at the tag.
 - **The player (1.0.0, branch `player`), one program on both platforms.**
@@ -63,8 +59,9 @@ below).
     Windows first: the window exists there and the player part does not.
     1.2: the daemon re-based on the same engine so the widget and the
     player share one implementation; the Plasma widget becomes an optional
-    front end; then the keep-or-retire call. `companion/install.sh` exists
-    as long as the widget does.
+    front end; then the keep-or-retire call. (Superseded: the Qt player
+    took the widget's place, and the widget, its daemon and `companion/`
+    were removed in 1.0.0rc3.)
   - **Developing it.** Run the player from the checkout
     (`python3 -m bitcomposer.player`), the way the generator is developed;
     no `.pth` and no `--dev`, since the player is not a system service.
@@ -93,9 +90,10 @@ below).
     (`player/autostart.py`: XDG autostart, the per-user Run key) from
     SET → PLAYER or the tray menu. Windows has no SMTC entry yet (the
     volume flyout's media card); that is a WinRT job for later.
-  - **Next for the player.** The daemon and widget retire
-    (`companion/install.sh --uninstall` for existing installs): the
-    player now does what the daemon did for them.
+  - **The widget retired (1.0.0rc3).** The player does what the daemon
+    did for the widget, so `companion/` (the Plasma widget, the D-Bus
+    daemon, the helper scripts and their installer) and `docs/INSTALL.md`
+    are gone.
   - **Flatpak on Flathub: the Linux install for everyone (after 1.0).**
     pipx is a developer's path: a terminal, then one launch for the menu
     entry. On Flathub the player is an Install button in KDE Discover and

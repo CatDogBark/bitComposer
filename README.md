@@ -1,6 +1,9 @@
-<img src="bitcomposer/player/icons/bitcomposer.svg" width="88" alt="The bitComposer tile: level bars on a 5x5 pixel grid, the pink bit top right">
-
-# bitComposer
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+    <img src="docs/images/logo-light.svg" alt="bitComposer" height="64">
+  </picture>
+</h1>
 
 [![CI](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml/badge.svg)](https://github.com/CatDogBark/bitComposer/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/CatDogBark/bitComposer)](https://github.com/CatDogBark/bitComposer/releases/latest)
@@ -9,8 +12,7 @@
 Procedural 16-bit game music. A player that composes the next song as the
 current one ends, with a live mixer, on Linux and Windows; a command line
 and a generator library underneath, pure Python with no dependencies,
-writing Impulse Tracker `.it` modules any tracker player reads; and a KDE
-Plasma widget for the panel.
+writing Impulse Tracker `.it` modules any tracker player reads.
 
 Every run composes a new song: a motif-based melody with call-and-response
 phrasing, voice-led harmony, bass, arpeggio and drums, arranged into a form
@@ -179,7 +181,7 @@ python3 -m unittest discover -s tests -v
 
 ## The player
 
-<img src="docs/images/widget.png" alt="The Plasma widget: now playing, transport, gain, generate and settings, playlist" width="420">
+<img src="docs/images/player.png" alt="The player: now playing, transport, gain, generate, settings and mix, the playlist" width="400">
 
 `bitcomposer-player` (Linux) and `bitComposer.exe` (Windows) are the same
 program: a folder of songs played through libopenmpt, GENERATE AND PLAY,
@@ -188,9 +190,8 @@ composes (sound, tempo, energy, scale, form, echo, bass, drums, harmony)
 with presets, a live mixer per channel with the KIT and ECHO buses and
 APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
 shuffle, and the playlist with KEEP: every track the player makes is
-provisional (`<Title> (auto).it`) and pruned after ten unless kept. The
-picture is the Plasma widget; the player's window is the same layout,
-colours and type. It opens no taller than the screen it lands on, the
+provisional (`<Title> (auto).it`) and pruned after ten unless kept. It
+opens no taller than the screen it lands on, the
 SET and MIX panels open inside it (scrolling on a small or scaled
 screen), and it keeps the size you give it; Ctrl + and
 Ctrl − zoom it, Ctrl 0 resets. Closing the window leaves the music playing
@@ -208,23 +209,6 @@ offered the next candidate; a release player only releases.
 ## Windows
 
 Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same `bitComposer` folder, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with Qt and libopenmpt beside it; and `bitcomposer-cli.exe`, the command line. The installer installs for your user by default (no administrator prompt; all users is an option on its first page), and the player's UPDATE button runs the next one quietly and reopens the player. Each build also renders the player offscreen at common screen sizes and scalings (1366×768, 1920×1080 at 100% and 150%, 2560×1440 at 125%, 4K at 200%), kept as the workflow's `player-screenshots-windows` artifact. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Windows releases are to be code-signed through the SignPath Foundation's programme for open-source projects (see [Code signing policy](#code-signing-policy)); until that is in place they are unsigned, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
-
-## Plasma widget (optional, Linux + KDE Plasma 6)
-
-`companion/` holds the panel version of the player: a libopenmpt D-Bus
-daemon with MPRIS2 and a Plasma 6 widget with the same transport, gain,
-settings, presets, mixer and radio mode, for people who want it in the
-panel rather than in a window.
-
-```bash
-sudo apt install pipx libopenmpt0 python3-tk python3-dbus python3-gi qt6-tools pulseaudio-utils
-pipx install bitcomposer         # the generator the player runs
-./companion/install.sh --check   # see what it would do
-./companion/install.sh           # install, enable the daemon
-```
-
-See [docs/INSTALL.md](docs/INSTALL.md). The generator does not depend on
-any of this.
 
 ## Code signing policy
 

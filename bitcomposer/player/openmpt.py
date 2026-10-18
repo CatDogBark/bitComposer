@@ -1,5 +1,5 @@
-"""libopenmpt through ctypes: the module loader the player and the companion
-daemon share, with the interactive interface for the live mixer.
+"""libopenmpt through ctypes: the player's module loader, with the
+interactive interface for the live mixer.
 
 The library is found per platform: libopenmpt.so.0 on Linux (apt
 libopenmpt0), libopenmpt.dll next to this file or next to the executable on
