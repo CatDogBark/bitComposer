@@ -402,6 +402,9 @@ tuned by ear afterwards (arp levels, metallic hat).
 | SNES echo (0.7.0) | three fading, darkening taps sent per note from the lead, lighter sends from harmony and arp on returns of their own, per-song delay / feedback / wetness / stereo drawn from an own stream, section gain, 19 channels | lead notes sent | 100% | 70% |
 | | | returns vs source (lead / harmony / arp) | −5 dB / none / none | −6 / −13 / −10 dB |
 | | | all returns vs melody (six songs) | about −5 dB | −0.3 to −5.2 dB |
+| Harmony rework (unreleased, 2026-10-17) | two or three real voices (the J arpeggio retired), a voicing rule that keeps the chord's colour tone, stab length from the voice's measured attack with no volume slide, registers per family with the top voice under the lead's lower quartile, level per family measured through ebur128 and the harmony channels 25 → 9, hits under 200 ms written up, the counter-line on its own channel and level | harmony hits vs lead, momentary loudness 95th pct, eight songs | −5.5 to +5.5 dB | −4.4 to −12.2 dB |
+| | | strings stab audible length (Strike of the Factory) | 260 ms (slide) | 736 ms (hold) |
+| | | J-arpeggio notes across the set | 71 | 0 |
 
 Two lessons from the reviews are worth more than any number:
 

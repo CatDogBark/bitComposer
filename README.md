@@ -23,24 +23,33 @@ long. Seven sounds, picked with `--sound`:
 
 **Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws, and the song message records the version that wrote the file.
 
-## Quick start
+## Install
+
+From PyPI, with [pipx](https://pipx.pypa.io/) so it lands on your PATH
+without touching the system Python (Debian and Fedora refuse a plain
+`pip install` there):
+
+```bash
+pipx install bitcomposer
+bitcomposer -d out            # writes out/<Title>.it
+bitcomposer -d out -s 42 -v   # reproducible, with details
+```
+
+On Windows, the release zip needs no Python at all; see [Windows](#windows).
+From a clone, for development:
 
 ```bash
 git clone https://github.com/CatDogBark/bitComposer.git
 cd bitComposer
-python3 -m bitcomposer -d out            # writes out/<Title>.it
-python3 -m bitcomposer -d out -s 42 -v   # reproducible, with details
+python3 -m bitcomposer -d out
 ```
 
 Play the result with [OpenMPT](https://openmpt.org/) (Windows),
 [Schism Tracker](https://schismtracker.org/), VLC, Audacious, `xmp`, or
-anything built on libopenmpt. To install the `bitcomposer` command:
+anything built on libopenmpt.
 
-```bash
-pip install .
-```
-
-Python 3.10 or newer. Nothing else.
+Python 3.10 or newer, no dependencies. The window (`bitcomposer-gui`) uses
+tkinter, which Debian and Ubuntu ship separately as `python3-tk`.
 
 ## Sounds
 
@@ -76,7 +85,8 @@ Everything defaults to `random`.
 --form    standard|aaba|rondo|short|linear
 --drum-density sparse|normal|busy    --no-fills    --swing off|light|heavy
 --melody  simple|phrased             phrased = motif-based, has a hook
---harmony-voicing thin|full          --harmony-mode stabs|sustain|rhythmic
+--harmony-voicing thin|full          two real voices, or three
+--harmony-mode stabs|sustain|rhythmic
 --bass-weight heavy|medium|light
 --name    title|timestamp            file naming; --suffix adds a marker
 -s SEED   -n COUNT   -o FILE   -d DIR   -v
@@ -103,7 +113,7 @@ bitcomposer -d out --style snes --tempo slow --energy chill --scale major --drum
 1. Pick a key and a scale weighted toward game music (minor pentatonic, dorian, harmonic minor, mixolydian…), then a progression for it. The tables include borrowed chords and secondary dominants — ♭VII, ♭VI, V/V — not just the diatonic set.
 2. Choose a form and its energy curve; decide which sections repeat. Repeated sections draw the same music from the same seed, so the hook comes back.
 3. Generate a motif (rhythm template plus contour) and vary it per bar in statement/answer pairs. Fourteen rhythm templates, six of them with 16th-note pushes and pickups.
-4. Each four-bar pattern holds a chord timeline; about half the time the back two bars move to a related chord. Melody resolves onto chord tones at each change; harmony is voiced from fixed register anchors so it steps rather than leaps; bass and arp follow and rest with the section's energy.
+4. Each four-bar pattern holds a chord timeline; about half the time the back two bars move to a related chord. Melody resolves onto chord tones at each change. Harmony is two or three real voices placed near fixed anchors, so it steps rather than leaps and keeps the chord's third; the anchors are set per voice family (pads low and wide, brass and guitars mid and close), the top voice stays under the lead's line, and a stab holds for as long as the voice needs to speak. Bass and arp follow and rest with the section's energy.
 5. Drums come from one-bar templates by section and density, with fills, retriggered snare rolls and tick-level swing.
 6. Instruments are synthesized per song from the chosen palette and written as samples. SNES voices get attack-then-loop sustain and the BRR treatment.
 7. The echo: held lead notes and phrase endings come back as three fading, darkening repeats, the harmony and arp as lighter ones, each on return channels of their own, drums and bass dry. Everything is written as a 19-channel `.it` with the title and a song message (key, BPM, palette, form, seed, and a `layout:` line naming every channel's role) that trackers display.
@@ -136,7 +146,7 @@ python3 -m unittest discover -s tests -v
 
 ## Windows
 
-Every release carries `bitComposer-windows.zip` with two executables built by GitHub Actions: `bitComposer.exe`, a small window (palette, style pack, echo, energy, tempo, how many, save folder, Generate), and `bitcomposer-cli.exe`, the command line. Songs are `.it` files; [OpenMPT](https://openmpt.org) plays them and will play a whole folder as a playlist. The executables are not code-signed, so SmartScreen asks once. With Python installed instead, `pip install git+https://github.com/CatDogBark/bitComposer` gives the same two commands as `bitcomposer` and `bitcomposer-gui`.
+Every release carries `bitComposer-windows.zip` with two executables built by GitHub Actions on every push and attached on the tag: `bitComposer.exe`, a small window (sound, echo, energy, tempo, how many, save folder, Generate), and `bitcomposer-cli.exe`, the command line. Songs are `.it` files; [OpenMPT](https://openmpt.org) plays them and will play a whole folder as a playlist. The executables are not code-signed, so SmartScreen asks once. With Python installed instead, `pipx install bitcomposer` gives the same two commands as `bitcomposer` and `bitcomposer-gui`. A Windows player with the Plasma widget's features is a 1.x item (see the roadmap).
 
 ## Companion player (optional, Linux + KDE Plasma 6)
 

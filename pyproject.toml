@@ -4,13 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bitcomposer"
-version = "0.9.1"
+# The version lives in bitcomposer/__init__.py alone; the tag workflow checks
+# that a vX.Y.Z tag names it.
+dynamic = ["version"]
 description = "Procedural 16-bit chiptune music generator — creates Impulse Tracker (.it) files"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "CatDogBark", email = "CatDogBark@pm.me" },
+    { name = "CatDogBark", email = "186357707+CatDogBark@users.noreply.github.com" },
 ]
 keywords = ["chiptune", "tracker", "music", "procedural", "16-bit", "snes", "genesis", "impulse-tracker"]
 classifiers = [
@@ -36,3 +38,6 @@ Changelog = "https://github.com/CatDogBark/bitComposer/blob/main/CHANGELOG.md"
 # discovery would also install tests/ as a top-level package.
 [tool.setuptools.packages.find]
 include = ["bitcomposer*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "bitcomposer.__version__" }
