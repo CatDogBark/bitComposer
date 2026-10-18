@@ -190,25 +190,27 @@ STRIKE_RULE_ROLES = {"arp"}
 
 
 def _build_samples(instruments: dict[str, str]
-                   ) -> tuple[list[ITSample], dict[str, int], dict[str, bool]]:
+                   ) -> tuple[list[ITSample], dict[str, int], dict[str, bool], dict[str, float]]:
     """Generate ITSample objects for all instruments.
 
-    Returns (samples, sample_map, struck): sample_map maps an instrument role
-    to a 1-based sample index, roles sharing a preset (and the same loudness
-    rule) share a sample; struck says per role whether the voice is a struck
-    one (the mix needs it for the arp).
+    Returns (samples, sample_map, struck, onset): sample_map maps an
+    instrument role to a 1-based sample index, roles sharing a preset (and
+    the same loudness rule) share a sample; struck says per role whether the
+    voice is a struck one (the mix needs it for the arp); onset is the
+    voice's attack in ms per role (the harmony sets a stab's length from it).
     """
     samples: list[ITSample] = []
-    seen: dict[tuple[str, bool], tuple[int, bool]] = {}
+    seen: dict[tuple[str, bool], tuple[int, bool, float]] = {}
     sample_map: dict[str, int] = {}
     struck: dict[str, bool] = {}
+    onset: dict[str, float] = {}
 
     for key, name in instruments.items():
         rule = key in STRIKE_RULE_ROLES
         if (name, rule) not in seen:
             inst = smp.generate_instrument(name, strike_rule=rule)
             samples.append(_sample_from_inst(name, inst))
-            seen[(name, rule)] = (len(samples), bool(inst.get("struck")))  # 1-based
-        sample_map[key], struck[key] = seen[(name, rule)]
+            seen[(name, rule)] = (len(samples), bool(inst.get("struck")), inst.get("onset_ms", 0.0))
+        sample_map[key], struck[key], onset[key] = seen[(name, rule)]
 
-    return samples, sample_map, struck
+    return samples, sample_map, struck, onset

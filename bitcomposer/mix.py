@@ -12,14 +12,21 @@ from .packs import PACKS
 #
 # Measured by rendering each part alone (2026-10-14, 60 s, dBFS): melody sits
 # 6-14 dB under the drums and the arp 1-4 dB under the melody on every palette.
+#
+# Harmony at 9 (was 25), 2026-10-17: the harmony rework writes two or three
+# real voices that hold for their whole stab instead of one voice a volume
+# slide killed in 250 ms, so at 25 a strings stab's hits landed at the
+# lead's own level (momentary loudness, 95th percentile, +1.0 dB on Strike
+# of the Factory). At 9 the chord's hits sit six to ten dB under the
+# lead's across the review set; the echo returns follow.
 CHANNEL_VOLUMES = [
     13,              # melody
-    25, 25, 25,      # harmony
+    9, 9, 9,         # harmony
     8,               # bass
     33,              # arp
     36, 36, 36, 36, 36, 36,  # kick, snare, hihat, tom, crash, open hat
     13, 13,          # lead echo — at the melody's level; the sends set the wetness
-    25, 25, 25,      # harmony echo — at the harmony's level
+    9, 9, 9,         # harmony echo — at the harmony's level
     33, 33,          # arp echo — at the arp's level
 ]
 # Levels no longer differ by palette: samples.generate_instrument normalises

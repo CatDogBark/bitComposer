@@ -5,18 +5,14 @@ import zlib
 
 from . import theory
 from .it_format import ITPattern, ITNote
-from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, apply_chord_arpeggio, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
+from .pattern import CH_MELODY, CH_HARMONY, CH_HARMONY2, CH_HARMONY3, CH_BASS, CH_ARP, CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT, CH_ECHO_ALL, NUM_CHANNELS, ROWS_PER_PATTERN, ROWS_PER_BAR, humanize_volume, apply_notes_to_pattern, apply_vibrato, apply_portamento, apply_harmony_fade, apply_fade, apply_echo_taps, apply_sustain_safety_net, end_note, apply_strum, STRUM_ROW, STRUM_TICKS
 from .drums import render_drums
 from .melody import generate_motif, generate_melody, generate_counter_melody, add_melody_cuts
-from .harmony import generate_harmony_timeline
+from .harmony import generate_harmony_timeline, anchors_for, window_for, stab_rows, harmony_level, HARMONY_VOICINGS
 from .bass import generate_bass_timeline, floor_bass
 from .arp import generate_arp
 
 
-# How harmony notes decay after their note-on, per voicing: (slide, rows to
-# hold first). stabs and rhythmic are short hits, so a per-tick slide from
-# the start is right. sustain is a pad: it holds for most of its 32-row
-# interval and then takes a fine (per-row) slide down into the next hit.
 # The channels each part writes, for the intro entries.
 PART_CHANNELS = {
     "melody": (CH_MELODY,), "harmony": (CH_HARMONY, CH_HARMONY2, CH_HARMONY3),
@@ -24,9 +20,29 @@ PART_CHANNELS = {
     "drums": (CH_KICK, CH_SNARE, CH_HIHAT, CH_TOM, CH_CRASH, CH_OPEN_HAT),
 }
 
-HARMONY_FADE = {"stabs": (0x02, 0), "rhythmic": (0x03, 0), "sustain": (0xF2, 18),
+# How harmony notes decay after their note-on, per voicing: (slide, rows to
+# hold first), or None for no slide. The chug, pulse and rhythmic hits are
+# short, so a per-tick slide from the start is right. sustain is a pad: it
+# holds for most of its 32-row interval and then takes a fine (per-row)
+# slide down into the next hit (its hold is set per pattern so the slide,
+# one per row, reaches zero at the cut whatever the written volume: at the
+# old fixed 18 rows a quieter chord went silent early and re-attacked out
+# of nothing). A stab takes no slide: it holds at level
+# for the rows harmony.stab_rows gives the voice and ends on a note-off
+# into the family's release. It used to take D02, which at volume 22 had
+# the note silent eleven ticks after its attack whatever the cut row said.
+HARMONY_FADE = {"stabs": None, "rhythmic": (0x03, 0), "sustain": (0xF1, None),
                 "ostinato": (0x03, 0), "pulse": (0x04, 0),
                 "chug_sync": (0x03, 0), "chug_offbeat": (0x03, 0), "chug_gallop": (0x04, 0)}
+
+# The harmony's written volume per voice at full energy, before the family
+# level and the voice-count scale (harmony.harmony_level). The distance
+# under the lead is set by the harmony channels' volume in mix.py, so the
+# note volumes keep their resolution and the humanisation stays small
+# against them. The counter-line has its own level: a second melodic line,
+# it sits a little under the lead, not at the chord's level.
+HARMONY_VOL = 22
+COUNTER_VOL = 32
 
 # Chance that a pattern changes chord at its halfway point, by section type.
 HALF_PATTERN_CHANGE = {
@@ -156,7 +172,8 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
                      swing_amount, speed, bpm, is_intro, echo_sends,
                      pickup_root=None, intro=None, counter_chance=0.3, hat_stroke=1.0,
                      crash_chance=1.0, fill_crash=True, kit_rng=None,
-                     power_chords=False, bass_riff=None, harmony_family=None) -> ITPattern:
+                     power_chords=False, bass_riff=None, harmony_family=None,
+                     harmony_preset=None, harmony_onset_ms=0.0) -> ITPattern:
     """Compose a single pattern with all layers."""
     pat = ITPattern(rows=ROWS_PER_PATTERN, channels=NUM_CHANNELS)
     melody = []
@@ -170,22 +187,20 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
         harmony_segments = [(s, e, [root, root + 7, root + 12]) for s, e, root, _, _ in segments]
     bass_segments = [(s, e, root, ctype) for s, e, root, ctype, _ in segments]
 
-    # Scale volumes by section energy. A brass harmony is written 3 dB under
-    # a pad's: bright, in the band the ear weights most, it sat forward even
-    # at 14 dB under the kit.
-    harmony_level = 0.7 if harmony_family == "brass" else 1.0
+    # Scale volumes by section energy. The harmony's level is a property of
+    # the voice family and the voice count (harmony.harmony_level).
     melody_vol = int(42 * section_energy)
-    harmony_vol = int(22 * section_energy * harmony_level)
     arp_vol = int(36 * section_energy)
-    harmony_fade, harmony_hold = HARMONY_FADE.get(voicing_style, (0x02, 0))
-    # Brass sits a fifth higher than a pad: the games stab their brass at
-    # 250-580 Hz, and a lone brass note on the lowest anchor was a honk.
-    harmony_shift = 7 if harmony_family == "brass" else 0
-    # A lone voice is arpeggiated into a chord with the J effect, which reads
-    # as shimmer on a pad, strings, choir or organ, and as a rasp on anything
-    # with a hard spectrum: on brass the pitch flipping every tick was the
-    # abrasive thing in Northern Dawn. Only the soft families take it.
-    arpeggiate_lone = harmony_family in ("pad", "strings", "choir", "organ")
+    harmony_fade = HARMONY_FADE.get(voicing_style, (0x02, 0))
+    row_ms = 60000.0 / (bpm * 4)                    # four rows to a beat
+    # A stab's hold comes from the voice: its family's length or three times
+    # its attack, in rows at this tempo; every other mode keeps its own.
+    harmony_cut = None
+    if voicing_style == "stabs":
+        harmony_cut = stab_rows(harmony_family, harmony_onset_ms, row_ms,
+                                HARMONY_VOICINGS["stabs"]["interval"])
+    harmony_hold_ms = (harmony_cut if harmony_cut is not None
+                       else HARMONY_VOICINGS.get(voicing_style, HARMONY_VOICINGS["stabs"])["cut_after"]) * row_ms
 
     # ── Melody ──
     if layers["melody"]:
@@ -210,58 +225,53 @@ def _compose_pattern(*, scale_notes, segments, layers, sec_type, section_energy,
     if layers["harmony"]:
         harmony_channels = [CH_HARMONY, CH_HARMONY2, CH_HARMONY3]
 
-        if melody and sec_type in ("chorus", "bridge") and random.random() < counter_chance:
+        # The counter-line, when a chorus or bridge pattern draws one, has
+        # the third channel to itself; the chord keeps the first two. It
+        # used to take the first channel at the chord's level and with the
+        # chord's fade, so under a stab mode every counter note died like a
+        # stab, and the chord voice moved channel (and echo pan) between
+        # the patterns that had a counter and the ones that did not.
+        has_counter = bool(melody) and sec_type in ("chorus", "bridge") \
+            and random.random() < counter_chance
+        n_voices = min(2, num_harmony_voices) if has_counter else num_harmony_voices
+
+        # Register per family, the top voice under the lead's line in this
+        # pattern; the level per family and voice count.
+        lead_notes = [n for _, n in melody if n != -1]
+        voices = generate_harmony_timeline(
+            harmony_segments, voicing=voicing_style, num_voices=n_voices,
+            anchors=anchors_for(harmony_family, n_voices),
+            window=window_for(harmony_family, lead_notes), cut_after=harmony_cut,
+        )
+        harmony_vol = int(HARMONY_VOL * section_energy
+                          * harmony_level(harmony_family, harmony_preset, n_voices, harmony_hold_ms))
+        for v_idx, voice_notes in enumerate(voices):
+            if v_idx >= len(harmony_channels):
+                break
+            ch = harmony_channels[v_idx]
+            apply_notes_to_pattern(
+                pat, ch, voice_notes,
+                sample_map["harmony"],
+                volume=humanize_volume(harmony_vol, 4),
+                humanize=True,
+            )
+            if voicing_style == "rhythmic" and v_idx > 0:
+                apply_strum(pat, ch, voice_notes, STRUM_ROW, STRUM_TICKS)
+            if harmony_fade is not None:
+                slide, hold = harmony_fade
+                if hold is None:
+                    # Hold, then a one-per-row slide that lands on zero at the cut.
+                    hold = max(0, HARMONY_VOICINGS[voicing_style]["cut_after"] - 1 - harmony_vol)
+                apply_harmony_fade(pat, ch, voice_notes, fade_rate=slide, hold_rows=hold)
+
+        if has_counter:
             counter = generate_counter_melody(
                 scale_notes, chord_notes, melody, ROWS_PER_PATTERN, rng=melody_rng)
             counter = add_melody_cuts(counter, ROWS_PER_PATTERN, max_sustain=8)
             apply_notes_to_pattern(
-                pat, CH_HARMONY, counter, sample_map.get("counter", sample_map["harmony"]),
-                volume=int(20 * section_energy), humanize=True, rng=melody_rng,
+                pat, CH_HARMONY3, counter, sample_map.get("counter", sample_map["harmony"]),
+                volume=int(COUNTER_VOL * section_energy), humanize=True, rng=melody_rng,
             )
-            apply_harmony_fade(pat, CH_HARMONY, counter, fade_rate=harmony_fade,
-                               hold_rows=harmony_hold)
-            voices = generate_harmony_timeline(
-                harmony_segments, voicing=voicing_style,
-                num_voices=min(2, num_harmony_voices), anchor_shift=harmony_shift,
-            )
-            for v_idx, voice_notes in enumerate(voices):
-                if v_idx + 1 < len(harmony_channels):
-                    ch = harmony_channels[v_idx + 1]
-                    apply_notes_to_pattern(
-                        pat, ch, voice_notes,
-                        sample_map["harmony"],
-                        volume=humanize_volume(int(18 * section_energy * harmony_level), 4),
-                        humanize=True,
-                    )
-                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade,
-                                       hold_rows=harmony_hold)
-        else:
-            voices = generate_harmony_timeline(
-                harmony_segments, voicing=voicing_style,
-                num_voices=num_harmony_voices, anchor_shift=harmony_shift,
-            )
-            for v_idx, voice_notes in enumerate(voices):
-                if v_idx < len(harmony_channels):
-                    ch = harmony_channels[v_idx]
-                    vol = harmony_vol if v_idx == 0 else int(18 * section_energy * harmony_level)
-                    apply_notes_to_pattern(
-                        pat, ch, voice_notes,
-                        sample_map["harmony"],
-                        volume=humanize_volume(vol, 4),
-                        humanize=True,
-                    )
-                    if voicing_style == "rhythmic" and v_idx > 0:
-                        apply_strum(pat, ch, voice_notes, STRUM_ROW, STRUM_TICKS)
-                    # A lone voice cannot state a chord on its own, so let J
-                    # arpeggiate it into one. With three voices the real
-                    # stack already does the job.
-                    if num_harmony_voices == 1 and arpeggiate_lone:
-                        for s, e, notes in harmony_segments:
-                            apply_chord_arpeggio(
-                                pat, ch, [(r, n) for r, n in voice_notes if s <= r < e],
-                                notes)
-                    apply_harmony_fade(pat, ch, voice_notes, fade_rate=harmony_fade,
-                                       hold_rows=harmony_hold)
 
     # ── Bass ──
     if layers["bass"]:
