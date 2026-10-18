@@ -5,6 +5,34 @@ recorded here when they come up so they are not lost; nothing here is
 promised. See `ANALYSIS.md` for how changes are judged (measure first, ear
 second) and `CHANGELOG.md` for what has shipped.
 
+## Release (1.0.0)
+
+Decided 2026-10-18. The product is the generator and, on top of it, a player
+that generates while you listen, the way the Plasma widget does, on Linux
+and Windows as far as each allows. The 1.0.0 gate holds both the generator
+and the Linux companion; the Windows player is 1.x.
+
+- **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
+  sdist and wheel, checks the tag against `bitcomposer.__version__`, and
+  publishes to PyPI through trusted publishing (`publish.yml`, environment
+  `pypi`); the Windows build runs on every push to main and attaches its
+  zip on the tag. The version lives in `bitcomposer/__init__.py` alone.
+  First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
+  exact version. The checklist is in `CONTRIBUTING.md`.
+- **Linux install.** `pipx install bitcomposer` is the user's path. The
+  companion (KDE Plasma 6, Debian-style paths, the scope for 1.0) must call
+  `bitcomposer` on PATH instead of `python3 -m bitcomposer.cli` from a
+  checkout, with the `.pth` kept as a documented developer override; the
+  installer checks for pipx and the command. `docs/INSTALL.md` is rewritten
+  around that. To do.
+- **Docs.** README install section (pipx, Windows zip, developer clone, the
+  tkinter line) done; the listening page is regenerated at the tag.
+- **Windows player (1.x).** The window grows the widget's features
+  (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
+  shuffle, gain) with the same layout: bundle libopenmpt's Windows DLL and
+  drive it through the ctypes bindings the daemon already uses, with an
+  audio output path. Two parts: the DLL and the audio path.
+
 ## Sound quality
 
 These change how every note sounds, not what notes are played.
@@ -55,8 +83,8 @@ These change how every note sounds, not what notes are played.
   and `evermore` are next, the same way, kits included. Rock grooves of their own (double-time hats, kick
   patterns under riffs) are the kit revision's job. A pack is data;
   the engine gaps that stay: riff-based bass, a detuned two-channel pad.
-- **Harmony rework (1.0.0 blocker, 2026-10-17; done on branch
-  `harmony-rework`, under review by ear).** Troy: the harmonies are the
+- **Harmony rework (1.0.0 blocker, 2026-10-17; merged 2026-10-18 after the
+  listen).** Troy: the harmonies are the
   weakest part and fixing them lifts everything. The week's measurements
   listed five failings in order of damage; what was found and done:
   1. **One voice is not a chord.** The thin voicing was one channel and the J
@@ -157,14 +185,8 @@ These change how every note sounds, not what notes are played.
   first. Left out of `ffvi` for the kit revision: congas, shaker,
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
-- **Windows player.** The Windows zip is the generator only: the window
-  makes songs, OpenMPT or XMPlay plays them. The Plasma widget's features
-  (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
-  shuffle, gain) live in the Linux daemon on libopenmpt and D-Bus. Two steps
-  up: a topped-up folder (the window keeps generating every few minutes with
-  a cap that prunes unkept songs), then a real player: bundle libopenmpt's
-  Windows DLL with the window and drive it the way the daemon does, since
-  the ctypes bindings already exist.
+- **Windows player.** See Release above: a 1.x item, the window with the
+  widget's features and layout over libopenmpt's Windows DLL.
 - **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
   sample bank in BRR, every voice's envelope and pitch, the echo settings.
   A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot

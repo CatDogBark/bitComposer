@@ -20,7 +20,10 @@ including on `--uninstall`.
 
 The companion is Linux-only and assumes KDE Plasma 6, PipeWire or
 PulseAudio, and Debian-style paths (`/usr/bin/python3`). It is optional:
-the generator itself runs anywhere Python does.
+the generator itself runs anywhere Python does, and installs on its own
+with `pipx install bitcomposer` (README). The companion still reaches the
+generator through the checkout, as described below; making it use the
+installed `bitcomposer` command is on the roadmap for 1.0.0.
 
 ---
 
