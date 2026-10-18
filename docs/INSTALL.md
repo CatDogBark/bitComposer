@@ -1,5 +1,12 @@
 # Companion install — daemon, widget, helper scripts
 
+The companion is the KDE Plasma panel version of the player. The player
+itself (`bitcomposer-player`, the same program as `bitComposer.exe` on
+Windows) needs none of this: `pipx install bitcomposer`, then
+`bitcomposer-player --install-desktop` once for the app-menu entry, and
+`bitcomposer-player --check` to see that libopenmpt and an audio output
+are found. This page is for the widget and its daemon.
+
 The player stack around the generator — a D-Bus daemon, a KDE Plasma widget, and
 two helper scripts — is vendored in `companion/` and installed with:
 

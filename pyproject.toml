@@ -25,6 +25,7 @@ classifiers = [
 [project.scripts]
 bitcomposer = "bitcomposer.cli:main"
 bitcomposer-gui = "bitcomposer.gui:main"
+bitcomposer-player = "bitcomposer.player.window:main"
 
 [project.urls]
 Homepage = "https://github.com/CatDogBark/bitComposer"

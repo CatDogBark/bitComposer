@@ -11,7 +11,7 @@ from . import __version__
 from .composer import compose_song, save_song, unique_path
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(
         prog="bitcomposer",
         description="Procedural 16-bit chiptune music generator",
@@ -185,47 +185,53 @@ def main():
         version=f"bitcomposer {__version__}",
     )
 
-    args = parser.parse_args()
+    return parser
 
+
+def compose_from_args(args, index: int = 0):
+    """Compose one song the way the command line does and save it; returns
+    the path written. The player calls this in-process with its own
+    settings string parsed by build_parser, so the window's options and the
+    command line's are one list."""
+    seed = args.seed
+    if seed is not None and args.count > 1:
+        seed = seed + index
+    song = compose_song(seed=seed,
+                        tempo_pref=args.tempo, energy_pref=args.energy,
+                        scale_pref=args.scale, style_pref=args.style,
+                        drum_density=args.drum_density,
+                        drum_fills=not args.no_fills,
+                        drum_swing=args.swing,
+                        melody_style=args.melody,
+                        harmony_voicing=args.harmony_voicing,
+                        harmony_mode=args.harmony_mode,
+                        bass_weight=args.bass_weight,
+                        song_form=args.form,
+                        echo=args.echo, echo_wet=args.echo_wet,
+                        echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys,
+                        lead_shift=args.lead_shift,
+                        pack=args.pack, sound=args.sound)
     os.makedirs(args.output_dir, exist_ok=True)
+    if args.output and args.count == 1:
+        filepath = args.output
+    elif args.name == "title":
+        # The file is the song: what the player shows is what the
+        # folder shows.
+        filepath = unique_path(args.output_dir, song["name"], args.suffix)
+    else:
+        timestamp = int(time.time())
+        seed_str = f"_s{seed}" if seed is not None else ""
+        filepath = os.path.join(args.output_dir, f"bitcomposer_{timestamp}_{index}{seed_str}{args.suffix}.it")
+    save_song(song, filepath)
+    return filepath, song["info"]
+
+
+def main():
+    args = build_parser().parse_args()
 
     for i in range(args.count):
-        seed = args.seed
-        if seed is not None and args.count > 1:
-            seed = seed + i
-
         try:
-            song = compose_song(seed=seed,
-                                tempo_pref=args.tempo, energy_pref=args.energy,
-                                scale_pref=args.scale, style_pref=args.style,
-                                drum_density=args.drum_density,
-                                drum_fills=not args.no_fills,
-                                drum_swing=args.swing,
-                                melody_style=args.melody,
-                                harmony_voicing=args.harmony_voicing,
-                                harmony_mode=args.harmony_mode,
-                                bass_weight=args.bass_weight,
-                                song_form=args.form,
-                                echo=args.echo, echo_wet=args.echo_wet,
-                                echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys,
-                                lead_shift=args.lead_shift,
-                                pack=args.pack, sound=args.sound)
-            info = song["info"]
-
-            if args.output and args.count == 1:
-                filepath = args.output
-            elif args.name == "title":
-                # The file is the song: what the player shows is what the
-                # folder shows.
-                filepath = unique_path(args.output_dir, song["name"], args.suffix)
-            else:
-                timestamp = int(time.time())
-                seed_str = f"_s{seed}" if seed is not None else ""
-                filepath = os.path.join(
-                    args.output_dir,
-                    f"bitcomposer_{timestamp}_{i}{seed_str}{args.suffix}.it"
-                )
-            save_song(song, filepath)
+            filepath, info = compose_from_args(args, i)
         except Exception as e:
             print(f"Error generating song: {e}", file=sys.stderr)
             if args.verbose:

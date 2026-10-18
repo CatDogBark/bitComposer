@@ -4,9 +4,11 @@
 [![Release](https://img.shields.io/github/v/release/CatDogBark/bitComposer)](https://github.com/CatDogBark/bitComposer/releases/latest)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Procedural 16-bit game music. Pure Python, no dependencies, writes Impulse
-Tracker `.it` modules you can play in any tracker player, and a KDE Plasma
-player that generates while you listen.
+Procedural 16-bit game music. A player that composes the next song as the
+current one ends, with a live mixer, on Linux and Windows; a command line
+and a generator library underneath, pure Python with no dependencies,
+writing Impulse Tracker `.it` modules any tracker player reads; and a KDE
+Plasma widget for the panel.
 
 Every run composes a new song: a motif-based melody with call-and-response
 phrasing, voice-led harmony, bass, arpeggio and drums, arranged into a form
@@ -25,18 +27,29 @@ long. Seven sounds, picked with `--sound`:
 
 ## Install
 
-From PyPI, with [pipx](https://pipx.pypa.io/) so it lands on your PATH
-without touching the system Python (Debian and Fedora refuse a plain
-`pip install` there; `sudo apt install pipx` or `sudo dnf install pipx`
-gets pipx itself):
+**Windows.** Every release carries `bitComposer-setup.exe`: the player, the
+command line, a Start menu entry and an uninstaller; or `bitComposer-windows.zip`
+with the two executables and nothing to install. No Python needed. See
+[Windows](#windows).
+
+**Linux.** From PyPI with [pipx](https://pipx.pypa.io/), so it lands on your
+PATH without touching the system Python (Debian and Fedora refuse a plain
+`pip install` there; `sudo apt install pipx libopenmpt0 python3-tk` or
+`sudo dnf install pipx libopenmpt python3-tkinter` gets pipx, the module
+library and the window toolkit):
 
 ```bash
 pipx install bitcomposer
-bitcomposer -d out            # writes out/<Title>.it
-bitcomposer -d out -s 42 -v   # reproducible, with details
+bitcomposer-player --install-desktop   # once: the app-menu entry
+bitcomposer-player                     # the player
+bitcomposer -d out -s 42 -v            # the command line, reproducible, with details
 ```
 
-On Windows, the release zip needs no Python at all; see [Windows](#windows).
+The player needs libopenmpt (above) and an audio output: `paplay`
+(pulseaudio-utils), `pw-cat` (pipewire-bin) or `aplay` (alsa-utils).
+`bitcomposer-player --check` says what it found. Upgrades are
+`pipx upgrade bitcomposer`.
+
 From a clone, for development:
 
 ```bash
@@ -49,8 +62,9 @@ Play the result with [OpenMPT](https://openmpt.org/) (Windows),
 [Schism Tracker](https://schismtracker.org/), VLC, Audacious, `xmp`, or
 anything built on libopenmpt.
 
-Python 3.10 or newer, no dependencies. The window (`bitcomposer-gui`) uses
-tkinter, which Debian and Ubuntu ship separately as `python3-tk`.
+Python 3.10 or newer, no dependencies. The player and the small generate
+window (`bitcomposer-gui`) use tkinter, which Debian and Ubuntu ship
+separately as `python3-tk`.
 
 ## Sounds
 
@@ -145,21 +159,34 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
-## Windows
-
-Every release carries `bitComposer-windows.zip` with two executables built by GitHub Actions on every push and attached on the tag: `bitComposer.exe`, a small window (sound, echo, energy, tempo, how many, save folder, Generate), and `bitcomposer-cli.exe`, the command line. Songs are `.it` files; [OpenMPT](https://openmpt.org) plays them and will play a whole folder as a playlist. The executables are not code-signed, so SmartScreen asks once. With Python installed instead, `pipx install bitcomposer` gives the same two commands as `bitcomposer` and `bitcomposer-gui`. A Windows player with the Plasma widget's features is a 1.x item (see the roadmap).
-
-## Companion player (optional, Linux + KDE Plasma 6)
+## The player
 
 <img src="docs/images/widget.png" alt="The Plasma widget: now playing, transport, gain, generate and settings, playlist" width="420">
 
-`companion/` holds a desktop player stack: a libopenmpt D-Bus daemon with
-MPRIS2, a Plasma 6 panel widget with transport, gain, generator settings,
-presets and a per-channel mixer, and an auto-generate "radio" mode that
-composes the next track as the current one ends.
+`bitcomposer-player` (Linux) and `bitComposer.exe` (Windows) are the same
+program: a folder of songs played through libopenmpt, GENERATE AND PLAY,
+auto-generate when a track ends (the "radio"), the settings of what it
+composes (sound, tempo, energy, scale, form, echo, bass, drums, harmony)
+with presets, a live mixer per channel with the KIT and ECHO buses and
+APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
+shuffle, and the playlist with KEEP: every track the player makes is
+provisional (`<Title> (auto).it`) and pruned after ten unless kept. The
+picture is the Plasma widget, which has the same layout. The player tells
+you when a newer release exists.
+
+## Windows
+
+Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same two executables, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with libopenmpt inside; and `bitcomposer-cli.exe`, the command line. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Nothing is code-signed, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
+
+## Plasma widget (optional, Linux + KDE Plasma 6)
+
+`companion/` holds the panel version of the player: a libopenmpt D-Bus
+daemon with MPRIS2 and a Plasma 6 widget with the same transport, gain,
+settings, presets, mixer and radio mode, for people who want it in the
+panel rather than in a window.
 
 ```bash
-sudo apt install pipx libopenmpt0 python3-dbus python3-gi qt6-tools pulseaudio-utils
+sudo apt install pipx libopenmpt0 python3-tk python3-dbus python3-gi qt6-tools pulseaudio-utils
 pipx install bitcomposer         # the generator the player runs
 ./companion/install.sh --check   # see what it would do
 ./companion/install.sh           # install, enable the daemon

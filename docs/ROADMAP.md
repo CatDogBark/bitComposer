@@ -7,10 +7,11 @@ second) and `CHANGELOG.md` for what has shipped.
 
 ## Release (1.0.0)
 
-Decided 2026-10-18. The product is the generator and, on top of it, a player
-that generates while you listen, the way the Plasma widget does, on Linux
-and Windows as far as each allows. The 1.0.0 gate holds both the generator
-and the Linux companion; the cross-platform player is 1.x.
+Decided 2026-10-18. The product is the player: a program that generates
+while you listen, the way the Plasma widget does, on Linux and Windows.
+Only developers want the generator alone, so 1.0.0 ships with the player
+(branch `player`), not after it; tkinter, so the package stays
+dependency-free and one executable on Windows.
 
 - **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
   sdist and wheel, checks the tag against `bitcomposer.__version__`, and
@@ -28,11 +29,14 @@ and the Linux companion; the cross-platform player is 1.x.
   `docs/INSTALL.md` is rewritten around that.
 - **Docs.** README install section (pipx, Windows zip, developer clone, the
   tkinter line) done; the listening page is regenerated at the tag.
-- **The player (1.x), one program on both platforms.** Decided
-  2026-10-18: rather than a KDE widget on Linux and a separate window on
-  Windows, one player program with the widget's features and layout
-  (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
-  shuffle, gain, the readout of what the song drew) runs on both.
+- **The player (1.0.0, branch `player`), one program on both platforms.**
+  Decided 2026-10-18: rather than a KDE widget on Linux and a separate
+  window on Windows, one player program with the widget's features and
+  layout (auto-generate on track end, live mixer and ECHO bus, KEEP and
+  prune, shuffle, gain, the readout of what the song drew) runs on both.
+  Built: `bitcomposer/player/` (engine, window, libopenmpt and audio
+  bindings), the Windows installer, the desktop entry. Verified headless
+  here; Troy verifies the window on Plasma and the installer on Windows.
   - **One package.** The player lives in the `bitcomposer` package next to
     the generator, stdlib-only like it: tkinter for the window, libopenmpt
     through the ctypes code the daemon already has, audio out through
