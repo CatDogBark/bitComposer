@@ -83,9 +83,26 @@ class EngineHeadless(unittest.TestCase):
         p.generate("--sound chip -s 9", play=True, on_done=done.append)
         self.pump(60)
         self.assertEqual(len(done), 1)
-        self.assertTrue(done[0].endswith(" (auto).it"))
+        self.assertTrue(os.path.basename(done[0]).startswith("(auto) "))   # the mark in front
         self.assertEqual(p.status, "Playing")
         self.assertEqual(os.path.basename(p.module.filepath), os.path.basename(done[0]))
+        # KEEP takes the mark off the front
+        new = p.playlist.index(done[0])
+        self.assertEqual(p.keep_track(new), os.path.basename(done[0])[len("(auto) "):])
+        self.assertFalse(p.is_autogen(p.playlist[new]))
+
+    def test_newest_first_and_a_remix_stays_put(self):
+        p = self.p
+        p.scan()
+        names = [os.path.basename(f) for f in p.playlist]
+        self.assertEqual(names, ["Fresh (auto).it", "Kept.it"])     # composed second, listed first
+        older = os.path.join(self.music, "Kept.it")
+        os.utime(older, (time.time() + 60, time.time() + 60))        # touched later: now the newest
+        p.scan()
+        self.assertEqual(os.path.basename(p.playlist[0]), "Kept.it")
+        before = os.stat(older).st_mtime_ns
+        engine.write_channel_volumes(older, [5] * 19)                # APPLY TO TRACK
+        self.assertEqual(os.stat(older).st_mtime_ns, before)
 
     def test_message_parsing_and_header_write(self):
         info = engine.parse_message("Title\r\nC major - 120 BPM\r\nvoices: melody=a,harmony=b\r\ndrew: sound=chip,form=aaba\r\nlayout: melody,harmony,echo.melody\r\n")
@@ -215,7 +232,7 @@ class WindowHeadless(unittest.TestCase):
         self.assertTrue(self.pump(60, lambda: not b.state["generating"]))
         self.assertEqual(len(b.playlist), 3)
         self.assertEqual(b.state["status"], "Playing")
-        self.assertTrue(b.state["file"].endswith(" (auto).it"))
+        self.assertTrue(b.state["file"].startswith("(auto) "))
         self.assertIn("composed", b.notice)
         # the window's own settings round-trip
         b.saveUi('{"settTempo": "fast"}')
@@ -537,3 +554,41 @@ class MprisOnAPrivateBus(unittest.TestCase):
         self.b.raiseRequested.connect(lambda: raised.append(1))
         self.call(mpris.ROOT, "Raise")
         self.assertTrue(self.pump(2, lambda: raised))
+
+
+def _player_script():
+    import shutil
+    here = os.path.join(os.path.dirname(sys.executable), "bitcomposer-player")
+    return here if os.path.exists(here) else shutil.which("bitcomposer-player")
+
+
+@unittest.skipUnless(_have_openmpt() and _have_qt() and sys.platform.startswith("linux") and _player_script(),
+                     "needs libopenmpt, PySide6 and an installed bitcomposer-player")
+class SecondLaunch(unittest.TestCase):
+    """A launch while a player already runs hands off to it and quits, but
+    puts the app-menu entry back first (a terminal launch beside an older
+    player left the menu empty)."""
+
+    def test_entry_written_before_the_hand_off(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as t:
+            env = dict(os.environ, QT_QPA_PLATFORM="offscreen", XDG_CONFIG_HOME=os.path.join(t, "cfg"),
+                       XDG_DATA_HOME=os.path.join(t, "data"), BITCOMPOSER_MUSIC_DIR=os.path.join(t, "music"))
+            entry = os.path.join(t, "data", "applications", "bitcomposer-player.desktop")
+            flag = os.path.join(t, "cfg", "bitcomposer", "desktop-entry")
+            first = subprocess.Popen([_player_script()], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                end = time.time() + 20
+                while time.time() < end and not os.path.exists(entry):
+                    time.sleep(0.2)
+                self.assertTrue(os.path.exists(entry))
+                time.sleep(1.0)                                  # the first player is listening by now
+                os.remove(entry)
+                os.remove(flag)
+                second = subprocess.run([_player_script()], env=env, timeout=20, capture_output=True)
+                self.assertEqual(second.returncode, 0)
+                self.assertTrue(os.path.exists(entry))
+                self.assertIsNone(first.poll())                  # handed off, the first one still runs
+            finally:
+                first.terminate()
+                first.wait(10)

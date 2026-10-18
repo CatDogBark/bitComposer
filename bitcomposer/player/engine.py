@@ -30,9 +30,12 @@ VOLUME_MAX = 3.0
 _LIMIT_KNEE = 20000.0
 _LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 
-# Auto-generated tracks are "<Title> (auto).it"; the suffix marks them for
-# pruning and KEEP strips it. Older files were "bitcomposer_auto_<time>.it".
-AUTOGEN_SUFFIX = " (auto)"
+# Auto-generated tracks are "(auto) <Title>.it": the mark in front, so a file
+# browser sorts them together. It marks them for pruning and KEEP strips it.
+# Earlier ones were "<Title> (auto).it" and, before that,
+# "bitcomposer_auto_<time>.it"; both still count, so they rotate out.
+AUTOGEN_PREFIX = "(auto) "
+AUTOGEN_LEGACY_SUFFIX = " (auto)"
 AUTOGEN_LEGACY_PREFIX = "bitcomposer_auto_"
 AUTOGEN_MAX = 10
 
@@ -45,11 +48,28 @@ def default_music_dir() -> Path:
     env = os.environ.get("BITCOMPOSER_MUSIC_DIR")
     if env:
         return Path(env).expanduser()
-    music = Path.home() / "Music"
+    music = _xdg_music_dir() or Path.home() / "Music"
     legacy = music / "Chiptune"          # where the old Plasma widget kept its songs
     if legacy.is_dir():
         return legacy
     return (music if music.is_dir() else Path.home()) / "bitComposer"
+
+
+def _xdg_music_dir() -> Path | None:
+    """The desktop's own Music folder (XDG user dirs: GNOME, Plasma and the
+    rest keep it in user-dirs.dirs, translated or moved as the user set it)."""
+    if not sys.platform.startswith("linux"):
+        return None
+    conf = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "user-dirs.dirs"
+    try:
+        for line in conf.read_text().splitlines():
+            if line.startswith("XDG_MUSIC_DIR="):
+                value = line.split("=", 1)[1].strip().strip('"').replace("$HOME", str(Path.home()))
+                path = Path(value)
+                return path if path != Path.home() else None      # unset means $HOME: no Music folder
+    except OSError:
+        pass
+    return None
 
 
 def state_file() -> Path:
@@ -101,13 +121,17 @@ def parse_message(message: str) -> dict:
 
 
 def write_channel_volumes(path: str, volumes: list[int]) -> None:
-    """Patch an .it file's channel volumes (header bytes 0x80+ch) in place."""
+    """Patch an .it file's channel volumes (header bytes 0x80+ch) in place.
+    The file keeps its modification time: the playlist is newest first by
+    it, and a remix is not a new song."""
     vals = bytes(max(0, min(64, int(v))) for v in volumes[:64])
+    st = os.stat(path)
     with open(path, "r+b") as f:
         if f.read(4) != b"IMPM":
             raise ValueError("not an IT module")
         f.seek(0x80)
         f.write(vals)
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))
 
 
 class Player:
@@ -184,7 +208,11 @@ class Player:
     # ── playlist ──
     def scan(self) -> None:
         self.music_dir.mkdir(parents=True, exist_ok=True)
-        files = sorted(str(f) for f in self.music_dir.rglob("*") if f.suffix.lower() in EXTENSIONS and f.is_file())
+        # Newest first, so a song just composed is at the top (by name, a new
+        # song landed wherever its title fell, mid-list once the prune ran).
+        found = [f for f in self.music_dir.rglob("*") if f.suffix.lower() in EXTENSIONS and f.is_file()]
+        found.sort(key=lambda f: (-f.stat().st_mtime, str(f)))
+        files = [str(f) for f in found]
         self.playlist = files
         self._rebuild_shuffle()
         if self.module is not None and self.module.filepath in files:
@@ -242,7 +270,8 @@ class Player:
 
     def is_autogen(self, path: str) -> bool:
         stem = Path(path).stem
-        return stem.endswith(AUTOGEN_SUFFIX) or stem.startswith(AUTOGEN_LEGACY_PREFIX)
+        return (stem.startswith(AUTOGEN_PREFIX) or stem.endswith(AUTOGEN_LEGACY_SUFFIX)
+                or stem.startswith(AUTOGEN_LEGACY_PREFIX))
 
     def keep_track(self, index: int) -> str:
         if not (0 <= index < len(self.playlist)):
@@ -251,8 +280,10 @@ class Player:
         if not self.is_autogen(path):
             return os.path.basename(path)
         stem, ext = os.path.splitext(os.path.basename(path))
-        if stem.endswith(AUTOGEN_SUFFIX):
-            stem = stem[:-len(AUTOGEN_SUFFIX)]
+        if stem.startswith(AUTOGEN_PREFIX):
+            stem = stem[len(AUTOGEN_PREFIX):]
+        elif stem.endswith(AUTOGEN_LEGACY_SUFFIX):
+            stem = stem[:-len(AUTOGEN_LEGACY_SUFFIX)]
         elif stem.startswith(AUTOGEN_LEGACY_PREFIX):
             stem = "bitcomposer_" + stem[len(AUTOGEN_LEGACY_PREFIX):]
         new_path = os.path.join(os.path.dirname(path), stem + ext)
@@ -532,7 +563,7 @@ class Player:
     def _do_generate(self, flags: str, play: bool, on_done) -> None:
         from ..cli import build_parser, compose_from_args   # the CLI's option parsing, in-process
         try:
-            args = build_parser().parse_args(shlex.split(flags) + ["-d", str(self.music_dir), "--suffix", AUTOGEN_SUFFIX])
+            args = build_parser().parse_args(shlex.split(flags) + ["-d", str(self.music_dir), "--prefix", AUTOGEN_PREFIX])
             path, _info = compose_from_args(args)
         except SystemExit:
             path = None

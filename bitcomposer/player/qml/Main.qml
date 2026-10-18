@@ -31,7 +31,8 @@ ApplicationWindow {
     property bool startMaster: false
     // The screenshot mode: no scanline sweep caught mid-frame.
     property bool still: false
-    // Started at login (--minimized): stay in the tray until asked for.
+    // Started at login (--minimized): no window until asked for (the tray,
+    // the app menu, the desktop's media controls).
     property bool startHidden: false
 
     // ── Zoom ──
@@ -82,15 +83,23 @@ ApplicationWindow {
     }
     function _fitOnce() {
         // not while hidden: the column is only laid out for a shown window
-        if (root._sized || !root.visible || popupColumn.implicitHeight < 50) return
+        if (root._sized || !root.visible || root.visibility === Window.Minimized || popupColumn.implicitHeight < 50) return
         root._sized = true
         if (root.savedH <= 0)
             root.height = Math.max(root.minimumHeight, Math.min(root.contentH, root.maxH))
         root._sizedAt = Date.now()
         Qt.callLater(function() { root._shown = true })
     }
-    onFrameSwapped: if (!root._sized) root._fitOnce()
-    Timer { interval: 400; running: true; onTriggered: if (root.visible) { root._fitOnce(); root._shown = true } }   // in case no frame comes
+    // Fit when the column has stopped changing for a moment after the window
+    // shows. A fixed delay was too short where the first frame is slow (GNOME
+    // drawing in software): the fit ran before the layout and never again.
+    // (A frame only starts the wait, it does not restart it: animations
+    // draw frames all the time, the layout changing is what restarts it.)
+    onFrameSwapped: if (!root._sized && !settle.running) settle.start()
+    onContentHChanged: if (!root._sized && root.visible) settle.restart()
+    onVisibilityChanged: if (!root._sized && root.visibility !== Window.Minimized && root.visibility !== Window.Hidden) settle.restart()
+    Timer { id: settle; interval: 150; onTriggered: { root._fitOnce(); if (root._sized) root._shown = true } }
+    Timer { interval: 3000; running: true; onTriggered: if (root.visible && root.visibility !== Window.Minimized) root._shown = true }   // never leave the column unseen
     onMaxHChanged: if (root._sized && root.height > root.maxH) root.height = root.maxH
     // A size change well after the window sized itself is the user's.
     onWidthChanged: root._noteSize()
@@ -1187,9 +1196,11 @@ ApplicationWindow {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: backend.autostartSupported
+                                text: !backend.autostartSupported
+                                    ? "Start at login works from an installed copy (pipx or the installer), not from a checkout."
+                                    : backend.trayAvailable
                                     ? "Start bitComposer when you log in: in the tray, not playing, so the media keys and the tray menu work from the start."
-                                    : "Start at login works from an installed copy (pipx or the installer), not from a checkout."
+                                    : "Start bitComposer when you log in, in the background and not playing: the media keys work from the start, and opening bitComposer from the app menu shows it. (This desktop has no system tray; on GNOME the AppIndicator extension adds one.)"
                                 color: root.dimText
                                 font.family: root.mono
                                 font.pixelSize: Math.round(8 * root.ui)
@@ -1218,8 +1229,9 @@ ApplicationWindow {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: "Closing the window keeps the music going in the tray; quit from the tray menu."
-                                visible: backend.trayAvailable
+                                text: backend.trayAvailable
+                                    ? "Closing the window keeps the music going in the tray; quit from the tray menu."
+                                    : "Closing the window quits: this desktop has no system tray to keep it in. Minimize it to keep the music going."
                                 color: root.dimText
                                 font.family: root.mono
                                 font.pixelSize: Math.round(8 * root.ui)

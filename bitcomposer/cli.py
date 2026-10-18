@@ -34,9 +34,14 @@ def build_parser():
              "(\"Haunted Orchard.it\", default) or bitcomposer_<timestamp>.it",
     )
     parser.add_argument(
+        "--prefix",
+        default="",
+        help="Text put before a title-named file's name, e.g. \"(auto) \" (the player's mark)",
+    )
+    parser.add_argument(
         "--suffix",
         default="",
-        help="Text appended to a title-named file before .it, e.g. \" (auto)\"",
+        help="Text appended to a title-named file before .it",
     )
     parser.add_argument(
         "-s", "--seed",
@@ -217,11 +222,11 @@ def compose_from_args(args, index: int = 0):
     elif args.name == "title":
         # The file is the song: what the player shows is what the
         # folder shows.
-        filepath = unique_path(args.output_dir, song["name"], args.suffix)
+        filepath = unique_path(args.output_dir, song["name"], args.suffix, prefix=args.prefix)
     else:
         timestamp = int(time.time())
         seed_str = f"_s{seed}" if seed is not None else ""
-        filepath = os.path.join(args.output_dir, f"bitcomposer_{timestamp}_{index}{seed_str}{args.suffix}.it")
+        filepath = os.path.join(args.output_dir, f"{args.prefix}bitcomposer_{timestamp}_{index}{seed_str}{args.suffix}.it")
     save_song(song, filepath)
     return filepath, song["info"]
 

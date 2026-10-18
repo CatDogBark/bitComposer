@@ -190,7 +190,8 @@ composes (sound, tempo, energy, scale, form, echo, bass, drums, harmony)
 with presets, a live mixer per channel with the KIT and ECHO buses and
 APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
 shuffle, and the playlist with KEEP: every track the player makes is
-provisional (`<Title> (auto).it`) and pruned after ten unless kept. It
+provisional (`(auto) <Title>.it`, so a file browser sorts them together)
+and pruned after ten unless kept. It
 opens no taller than the screen it lands on, the
 SET and MIX panels open inside it (scrolling on a small or scaled
 screen), and it keeps the size you give it; Ctrl + and

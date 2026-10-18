@@ -680,15 +680,15 @@ def save_song(song: dict, filepath: str) -> None:
     )
 
 
-def unique_path(directory: str, stem: str, suffix: str = "", ext: str = ".it") -> str:
-    """`<directory>/<stem><suffix><ext>`, with " 2", " 3", ... inserted before
-    the suffix if that name is taken. Titles are drawn from a finite list, so
-    two songs can share one."""
+def unique_path(directory: str, stem: str, suffix: str = "", ext: str = ".it", prefix: str = "") -> str:
+    """`<directory>/<prefix><stem><suffix><ext>`, with " 2", " 3", ...
+    after the stem if that name is taken. Titles are drawn from a finite
+    list, so two songs can share one."""
     import os
-    candidate = os.path.join(directory, f"{stem}{suffix}{ext}")
+    candidate = os.path.join(directory, f"{prefix}{stem}{suffix}{ext}")
     n = 2
     while os.path.exists(candidate):
-        candidate = os.path.join(directory, f"{stem} {n}{suffix}{ext}")
+        candidate = os.path.join(directory, f"{prefix}{stem} {n}{suffix}{ext}")
         n += 1
     return candidate
 
