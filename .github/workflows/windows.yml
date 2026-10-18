@@ -116,7 +116,12 @@ jobs:
           # and the README's release badge keep pointing at the last real one.
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) {
-            if ($tag -match '(a|b|rc)\d+$') { gh release create $tag --title $tag --notes-from-tag --prerelease }
-            else { gh release create $tag --title $tag --notes-from-tag }
+            # A dispatched build checks out main, not the tag, so fetch the
+            # tag first: --notes-from-tag reads the tag message locally.
+            git fetch --force origin "refs/tags/${tag}:refs/tags/${tag}"
+            $notes = if ($LASTEXITCODE -eq 0) { "--notes-from-tag" } else { "--generate-notes" }
+            if ($tag -match '(a|b|rc)\d+$') { gh release create $tag --title $tag $notes --prerelease }
+            else { gh release create $tag --title $tag $notes }
+            if ($LASTEXITCODE -ne 0) { exit 1 }
           }
           gh release upload $tag bitComposer-windows.zip bitComposer-setup.exe --clobber
