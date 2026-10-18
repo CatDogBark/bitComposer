@@ -34,8 +34,9 @@ with the two executables and nothing to install. No Python needed. See
 
 **Linux.** From PyPI with [pipx](https://pipx.pypa.io/), so it lands on your
 PATH without touching the system Python (Debian and Fedora refuse a plain
-`pip install` there; `sudo apt install pipx libopenmpt0` or
-`sudo dnf install pipx libopenmpt` gets pipx and the module library):
+`pip install` there; `sudo apt install pipx libopenmpt0 python3-tk` or
+`sudo dnf install pipx libopenmpt python3-tkinter` gets pipx, the module
+library and the window toolkit):
 
 ```bash
 pipx install bitcomposer
@@ -185,7 +186,7 @@ settings, presets, mixer and radio mode, for people who want it in the
 panel rather than in a window.
 
 ```bash
-sudo apt install pipx libopenmpt0 python3-dbus python3-gi qt6-tools pulseaudio-utils
+sudo apt install pipx libopenmpt0 python3-tk python3-dbus python3-gi qt6-tools pulseaudio-utils
 pipx install bitcomposer         # the generator the player runs
 ./companion/install.sh --check   # see what it would do
 ./companion/install.sh           # install, enable the daemon

@@ -68,9 +68,18 @@ def choices_from(flags: str) -> dict:
     return out
 
 
+TK_HINT = ("tkinter is missing: the player's window needs it. Debian/Ubuntu: sudo apt install python3-tk; "
+           "Fedora: sudo dnf install python3-tkinter; then run bitcomposer-player again")
+
+
 def check() -> int:
-    """Report what the player needs and exit: libopenmpt, an audio output, the music folder."""
+    """Report what the player needs and exit: tkinter, libopenmpt, an audio output, the music folder."""
     ok = True
+    try:
+        import tkinter  # noqa: F401
+        print("tkinter: ok")
+    except ImportError:
+        print(f"tkinter: MISSING ({TK_HINT})"); ok = False
     try:
         openmpt_lib()
         print("libopenmpt: ok")
@@ -117,8 +126,12 @@ def main(argv=None) -> int:
 
 
 def run_window(music_dir=None) -> int:
-    import tkinter as tk
-    from tkinter import ttk, filedialog, messagebox
+    try:
+        import tkinter as tk
+        from tkinter import ttk, filedialog, messagebox
+    except ImportError:
+        print(TK_HINT, file=sys.stderr)
+        return 1
 
     root = tk.Tk()
     root.title(f"bitComposer {__version__}")
