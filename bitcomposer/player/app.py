@@ -280,7 +280,7 @@ def _compose_demo(music: Path) -> None:
     from ..cli import build_parser, compose_from_args
     music.mkdir(parents=True, exist_ok=True)
     for i, extra in enumerate((["--sound", "ffvi"], ["--sound", "megamanx"], ["--sound", "mana"], ["--sound", "evermore"])):
-        suffix = [] if i % 2 else ["--suffix", " (auto)"]
+        suffix = [] if i % 2 else ["--prefix", "(auto) "]
         args = build_parser().parse_args(extra + ["--seed", str(4100 + i), "-d", str(music)] + suffix)
         compose_from_args(args)
 

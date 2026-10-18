@@ -94,7 +94,7 @@ class CliNaming(unittest.TestCase):
             import contextlib, io
             argv = sys.argv
             try:
-                for extra in ([], ["--suffix", " (auto)"], []):
+                for extra in ([], ["--suffix", " (auto)"], [], ["--prefix", "(auto) "]):
                     sys.argv = ["bitcomposer", "-s", "3", "-d", tmp, *extra]
                     with contextlib.redirect_stdout(io.StringIO()):
                         cli.main()
@@ -102,7 +102,7 @@ class CliNaming(unittest.TestCase):
                 sys.argv = argv
             title = compose_song(seed=3)["name"]
             names = sorted(os.listdir(tmp))
-            self.assertEqual(names, sorted([f"{title}.it", f"{title} (auto).it", f"{title} 2.it"]))
+            self.assertEqual(names, sorted([f"{title}.it", f"{title} (auto).it", f"{title} 2.it", f"(auto) {title}.it"]))
 
 
 if __name__ == "__main__":

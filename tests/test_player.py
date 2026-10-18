@@ -83,9 +83,13 @@ class EngineHeadless(unittest.TestCase):
         p.generate("--sound chip -s 9", play=True, on_done=done.append)
         self.pump(60)
         self.assertEqual(len(done), 1)
-        self.assertTrue(done[0].endswith(" (auto).it"))
+        self.assertTrue(os.path.basename(done[0]).startswith("(auto) "))   # the mark in front
         self.assertEqual(p.status, "Playing")
         self.assertEqual(os.path.basename(p.module.filepath), os.path.basename(done[0]))
+        # KEEP takes the mark off the front
+        new = p.playlist.index(done[0])
+        self.assertEqual(p.keep_track(new), os.path.basename(done[0])[len("(auto) "):])
+        self.assertFalse(p.is_autogen(p.playlist[new]))
 
     def test_newest_first_and_a_remix_stays_put(self):
         p = self.p
@@ -228,7 +232,7 @@ class WindowHeadless(unittest.TestCase):
         self.assertTrue(self.pump(60, lambda: not b.state["generating"]))
         self.assertEqual(len(b.playlist), 3)
         self.assertEqual(b.state["status"], "Playing")
-        self.assertTrue(b.state["file"].endswith(" (auto).it"))
+        self.assertTrue(b.state["file"].startswith("(auto) "))
         self.assertIn("composed", b.notice)
         # the window's own settings round-trip
         b.saveUi('{"settTempo": "fast"}')

@@ -30,9 +30,12 @@ VOLUME_MAX = 3.0
 _LIMIT_KNEE = 20000.0
 _LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 
-# Auto-generated tracks are "<Title> (auto).it"; the suffix marks them for
-# pruning and KEEP strips it. Older files were "bitcomposer_auto_<time>.it".
-AUTOGEN_SUFFIX = " (auto)"
+# Auto-generated tracks are "(auto) <Title>.it": the mark in front, so a file
+# browser sorts them together. It marks them for pruning and KEEP strips it.
+# Earlier ones were "<Title> (auto).it" and, before that,
+# "bitcomposer_auto_<time>.it"; both still count, so they rotate out.
+AUTOGEN_PREFIX = "(auto) "
+AUTOGEN_LEGACY_SUFFIX = " (auto)"
 AUTOGEN_LEGACY_PREFIX = "bitcomposer_auto_"
 AUTOGEN_MAX = 10
 
@@ -250,7 +253,8 @@ class Player:
 
     def is_autogen(self, path: str) -> bool:
         stem = Path(path).stem
-        return stem.endswith(AUTOGEN_SUFFIX) or stem.startswith(AUTOGEN_LEGACY_PREFIX)
+        return (stem.startswith(AUTOGEN_PREFIX) or stem.endswith(AUTOGEN_LEGACY_SUFFIX)
+                or stem.startswith(AUTOGEN_LEGACY_PREFIX))
 
     def keep_track(self, index: int) -> str:
         if not (0 <= index < len(self.playlist)):
@@ -259,8 +263,10 @@ class Player:
         if not self.is_autogen(path):
             return os.path.basename(path)
         stem, ext = os.path.splitext(os.path.basename(path))
-        if stem.endswith(AUTOGEN_SUFFIX):
-            stem = stem[:-len(AUTOGEN_SUFFIX)]
+        if stem.startswith(AUTOGEN_PREFIX):
+            stem = stem[len(AUTOGEN_PREFIX):]
+        elif stem.endswith(AUTOGEN_LEGACY_SUFFIX):
+            stem = stem[:-len(AUTOGEN_LEGACY_SUFFIX)]
         elif stem.startswith(AUTOGEN_LEGACY_PREFIX):
             stem = "bitcomposer_" + stem[len(AUTOGEN_LEGACY_PREFIX):]
         new_path = os.path.join(os.path.dirname(path), stem + ext)
@@ -540,7 +546,7 @@ class Player:
     def _do_generate(self, flags: str, play: bool, on_done) -> None:
         from ..cli import build_parser, compose_from_args   # the CLI's option parsing, in-process
         try:
-            args = build_parser().parse_args(shlex.split(flags) + ["-d", str(self.music_dir), "--suffix", AUTOGEN_SUFFIX])
+            args = build_parser().parse_args(shlex.split(flags) + ["-d", str(self.music_dir), "--prefix", AUTOGEN_PREFIX])
             path, _info = compose_from_args(args)
         except SystemExit:
             path = None
