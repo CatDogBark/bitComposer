@@ -2,8 +2,8 @@
 
 The companion is the KDE Plasma panel version of the player. The player
 itself (`bitcomposer-player`, the same program as `bitComposer.exe` on
-Windows) needs none of this: `pipx install bitcomposer`, then
-`bitcomposer-player --install-desktop` once for the app-menu entry, and
+Windows) needs none of this: `pipx install bitcomposer`, then launch
+`bitcomposer-player` once (that adds it to the app menu), and
 `bitcomposer-player --check` to see that libopenmpt and an audio output
 are found. This page is for the widget and its daemon.
 

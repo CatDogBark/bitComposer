@@ -190,6 +190,10 @@ class Backend(QObject):
     def screen_size(self):
         return self._screen
 
+    def notify(self, text: str):
+        """A line for the window's footer."""
+        self._set_notice(text)
+
     def set_tray(self, on: bool):
         self._tray = on
         self.trayChanged.emit()

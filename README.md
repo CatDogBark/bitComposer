@@ -40,15 +40,29 @@ player's window is Qt, which pipx brings along (PySide6, about 80 MB):
 
 ```bash
 pipx install bitcomposer
-bitcomposer-player --install-desktop   # once: the app-menu entry
-bitcomposer-player                     # the player
-bitcomposer -d out -s 42 -v            # the command line, reproducible, with details
+bitcomposer-player
 ```
+
+That first launch adds bitComposer to your app menu (under Multimedia,
+with its icon); from then on start it from there like any other program.
+The command line is `bitcomposer`, e.g. `bitcomposer -d out -s 42 -v` for
+a reproducible song with details.
 
 The player needs libopenmpt (above) and an audio output: `paplay`
 (pulseaudio-utils), `pw-cat` (pipewire-bin) or `aplay` (alsa-utils).
 `bitcomposer-player --check` says what it found. Upgrades: the UPDATE
 button in the player, or `pipx upgrade bitcomposer`.
+
+To uninstall, take the menu entry out first (pipx cannot), then the
+program:
+
+```bash
+bitcomposer-player --remove-desktop
+pipx uninstall bitcomposer
+```
+
+A menu entry you delete yourself stays deleted;
+`bitcomposer-player --install-desktop` puts it back.
 
 From a clone, for development, or for the generator alone: the command
 line needs nothing but Python, and only the player needs Qt.
@@ -174,8 +188,9 @@ APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
 shuffle, and the playlist with KEEP: every track the player makes is
 provisional (`<Title> (auto).it`) and pruned after ten unless kept. The
 picture is the Plasma widget; the player's window is the same layout,
-colours and type. It opens no taller than the screen it lands on and
-scrolls when the panels are open on a small or scaled screen; Ctrl + and
+colours and type. It opens no taller than the screen it lands on, the
+SET and MIX panels open inside it (scrolling on a small or scaled
+screen), and it keeps the size you give it; Ctrl + and
 Ctrl − zoom it, Ctrl 0 resets. Closing the window leaves the music playing
 in the tray (quit from the tray menu), and starting it again brings that
 window back rather than a second player. When a newer

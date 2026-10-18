@@ -68,9 +68,14 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
         QFontDatabase.addApplicationFont(str(f))
 
     # One player at a time: a second launch shows the first one's window.
+    # "One" per settings folder, so a run with its own XDG_CONFIG_HOME (a
+    # test, a second profile) never hands off to the everyday player.
     server = None
     if not screenshot:
-        name = f"bitcomposer-player-{os.environ.get('USER') or os.environ.get('USERNAME') or 'user'}"
+        import zlib
+        from .engine import state_file
+        user = os.environ.get("USER") or os.environ.get("USERNAME") or "user"
+        name = f"bitcomposer-player-{user}-{zlib.crc32(str(state_file().parent).encode()):08x}"
         probe = QLocalSocket()
         probe.connectToServer(name)
         if probe.waitForConnected(300):
@@ -85,13 +90,31 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="") -> 
 
     if screenshot:
         _compose_demo(Path(music_dir))
+        menu = ""
+    else:
+        from .desktop import ensure_entry
+        try:
+            menu = ensure_entry()       # first launch of an installed copy: into the app menu
+        except OSError as e:
+            print(f"bitcomposer-player: could not write the app-menu entry: {e}", file=sys.stderr)
+            menu = ""
 
     backend = Backend(music_dir=music_dir, quiet=bool(screenshot))
+    if menu:
+        from .desktop import announce_icons
+        announce_icons()
+    if menu == "added":
+        backend.notify("bitComposer is in your app menu now")
     if screenshot:
         sw, sh = screen
         s = float(scale or 1)
         backend.set_screen(round(sw / s), round(sh / s) - TASKBAR)
 
+    if not screenshot:
+        # The window's starting height is the screen's; the primary one
+        # until the window says where it is (follow_screen below).
+        g = app.primaryScreen().availableGeometry()
+        backend.set_screen(g.width(), g.height())
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("backend", backend)
     open_panels = {p.strip() for p in (panels or "").split(",") if p.strip()}

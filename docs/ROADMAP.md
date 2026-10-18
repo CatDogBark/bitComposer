@@ -47,7 +47,8 @@ below).
     when they upgrade the player, and the song message records which
     version wrote each file.
   - **Install and upgrade.** Linux: `pipx install bitcomposer`, then
-    `bitcomposer-player --install-desktop` once for the app-menu entry;
+    one `bitcomposer-player` from a terminal, which adds the app-menu
+    entry itself (pip and pipx run nothing at install time; desktop.py);
     upgrade with `pipx upgrade bitcomposer`. Windows: the release zip,
     later an installer; the player checks GitHub releases and says when a
     newer one exists. PyPI stays the one source every install is made
@@ -87,8 +88,21 @@ below).
   - **Next for the player.** MPRIS through QtDBus (media keys, the Plasma
     media applet) and start-at-login minimised to the tray, which together
     replace the daemon; then the daemon and widget retire
-    (`companion/install.sh --uninstall` for existing installs). Linux
-    packaging beyond pipx (AppImage or Flatpak) after that.
+    (`companion/install.sh --uninstall` for existing installs).
+  - **Flatpak on Flathub: the Linux install for everyone (after 1.0).**
+    pipx is a developer's path: a terminal, then one launch for the menu
+    entry. On Flathub the player is an Install button in KDE Discover and
+    GNOME Software, with its menu entry, icon and updates handled by the
+    store. The work: a manifest on the Qt for Python base app
+    (`io.qt.PySide.BaseApp`) over the KDE runtime, libopenmpt built as a
+    module, an audio output that works in the sandbox (check what the
+    runtime has: paplay and pw-cat may need bundling, or an output on the
+    PulseAudio/PipeWire library through ctypes), AppStream metainfo with
+    screenshots (the `--screenshot` mode makes them), the UPDATE button
+    hidden under `FLATPAK_ID` (desktop.py already skips its menu entry
+    there), then Flathub's review, which takes days to weeks and is not
+    ours to hurry. An AppImage is the lighter fallback (one download, no
+    store, no review) if Flathub stalls.
 
 ## Sound quality
 

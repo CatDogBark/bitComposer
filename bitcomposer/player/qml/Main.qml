@@ -22,7 +22,7 @@ import QtQuick.Window
 
 ApplicationWindow {
     id: root
-    visible: true
+    visible: false          // shown by Component.onCompleted, at its starting size
     title: root.trackTitle ? root.trackTitle + "  ·  bitComposer" : "bitComposer"
     color: root.darkBg
 
@@ -34,7 +34,13 @@ ApplicationWindow {
 
     // ── Zoom ──
     property real ui: 1.0
-    function setZoom(z) { root.ui = Math.max(0.75, Math.min(2.0, Math.round(z * 20) / 20)); root._save() }
+    function setZoom(z) {
+        var old = root.ui
+        root.ui = Math.max(0.75, Math.min(2.0, Math.round(z * 20) / 20))
+        // the window widens with the type; its height stays and the column scrolls
+        if (root._sized) root.width = Math.min(Math.round(root.width * root.ui / old), root.availW)
+        root._save()
+    }
     Shortcut { sequences: ["Ctrl+=", "Ctrl++"]; onActivated: root.setZoom(root.ui + 0.1) }
     Shortcut { sequence: "Ctrl+-"; onActivated: root.setZoom(root.ui - 0.1) }
     Shortcut { sequence: "Ctrl+0"; onActivated: root.setZoom(1.0) }
@@ -50,27 +56,66 @@ ApplicationWindow {
     readonly property real maxH: Math.max(240, root.availH - 64)
     minimumWidth: Math.min(320, root.availW)
     minimumHeight: Math.min(240, root.maxH)
-    width: Math.min(Math.round(400 * root.ui), root.availW)
-    // The window follows the content (opening SET or MIX grows it, as the
-    // widget's popup did) up to the screen, until the user resizes it. A
-    // height change well after our own request is the user's drag; the
-    // window manager's answer to a request comes within moments.
-    property bool userSized: false
-    property real _askedH: 0
-    property double _askedAt: 0
-    function _fit() {
-        if (root.userSized) return
-        root._askedH = Math.min(root.contentH, root.maxH)
-        root._askedAt = Date.now()
-        root.height = root._askedH
+    // The window sizes itself once. It opens as tall as the screen allows
+    // (or at the size the user last gave it), and after its first frame,
+    // when the text has wrapped, shrinks to the content; the column stays
+    // transparent until then. Only ever shrinking after the window manager
+    // has placed it keeps it on the screen: Wayland lets no program move
+    // its own window, so one that grows runs off the bottom. After that
+    // the size is the user's: SET and MIX open inside it and scroll into
+    // view (growing for them, as the widget's popup did, ran the window
+    // off the screen and flashed), and a size the user drags is kept.
+    width: Math.min(400, root.availW)
+    height: root.maxH
+    property real savedW: 0
+    property real savedH: 0
+    property bool _sized: false
+    property bool _shown: false
+    property double _sizedAt: 0
+    function _start() {
+        root.width = Math.min(root.savedW > 0 ? root.savedW : Math.round(400 * root.ui), root.availW)
+        root.height = root.savedH > 0 ? Math.max(root.minimumHeight, Math.min(root.savedH, root.maxH)) : root.maxH
+        root._sizedAt = Date.now()
+        root.visible = true
     }
-    onContentHChanged: Qt.callLater(root._fit)
-    onMaxHChanged: Qt.callLater(root._fit)
-    onHeightChanged: {
-        if (root._ready && root.visible && Math.abs(root.height - root._askedH) > 4 && Date.now() - root._askedAt > 800)
-            root.userSized = true
+    function _fitOnce() {
+        if (root._sized || popupColumn.implicitHeight < 50) return
+        root._sized = true
+        if (root.savedH <= 0)
+            root.height = Math.max(root.minimumHeight, Math.min(root.contentH, root.maxH))
+        root._sizedAt = Date.now()
+        Qt.callLater(function() { root._shown = true })
     }
-    property bool _ready: false
+    onFrameSwapped: if (!root._sized) root._fitOnce()
+    Timer { interval: 400; running: true; onTriggered: { root._fitOnce(); root._shown = true } }   // in case no frame comes
+    onMaxHChanged: if (root._sized && root.height > root.maxH) root.height = root.maxH
+    // A size change well after the window sized itself is the user's.
+    onWidthChanged: root._noteSize()
+    onHeightChanged: root._noteSize()
+    function _noteSize() { if (root._sized && Date.now() - root._sizedAt > 1000) sizeSave.restart() }
+    Timer { id: sizeSave; interval: 800; onTriggered: { root.savedW = root.width; root.savedH = root.height; root._save() } }
+
+    // Opening a panel scrolls it into view (top first when it is taller
+    // than the window).
+    onShowSettingsChanged: if (root.showSettings && root._sized) reveal.show(settingsPanel)
+    onShowMasterChanged: if (root.showMaster && root._sized) reveal.show(masterPanel)
+    Timer {
+        id: reveal
+        interval: 40            // after the column has laid the panel out
+        property Item target: null
+        function show(item) { target = item; restart() }
+        onTriggered: {
+            if (!target) return
+            var top = popupColumn.y + target.y - 8
+            var bottom = popupColumn.y + target.y + target.height + 8
+            var y = flick.contentY
+            if (bottom > y + flick.height) y = bottom - flick.height
+            if (top < y) y = top
+            y = Math.max(0, Math.min(y, flick.contentHeight - flick.height))
+            if (Math.abs(y - flick.contentY) > 1) { revealAnim.to = y; revealAnim.restart() }
+        }
+    }
+    NumberAnimation { id: revealAnim; target: flick; property: "contentY"; duration: 180; easing.type: Easing.OutCubic }
 
     // ── State, from the engine ──
     property string playbackStatus: backend.state.status || "Stopped"
@@ -262,7 +307,7 @@ ApplicationWindow {
 
     readonly property var _savedKeys: ["settTempo", "settEnergy", "settScale", "settSound", "settDrumDensity", "settDrumFills",
         "settDrumSwing", "settMelody", "settHarmonyVoicing", "settHarmonyMode", "settBassWeight", "settForm",
-        "settEcho", "settEchoWet", "activePreset", "settingsTab", "ui"]
+        "settEcho", "settEchoWet", "activePreset", "settingsTab", "ui", "savedW", "savedH"]
     function _save() {
         if (root._loading) return
         var o = {}
@@ -383,7 +428,7 @@ ApplicationWindow {
         root.showMaster = root.startMaster
         root.channelVolumes = backend.channelVolumes.slice()
         root._resetEchoRatios()
-        Qt.callLater(function() { root._fit(); root._ready = true })
+        root._start()
     }
 
     // Close to the tray when there is one: it keeps playing and generating,
@@ -608,6 +653,8 @@ ApplicationWindow {
     // ── The window ──
     Flickable {
         id: flick
+        objectName: "scroll"
+        opacity: root._shown ? 1 : 0       // laid out, not seen, until the window has its size
         readonly property bool needBar: contentHeight > height + 1
         anchors.fill: parent
         contentWidth: width
@@ -622,8 +669,10 @@ ApplicationWindow {
             background: Rectangle { color: root.tileBg }
         }
 
+        // The scroll bar has its own gutter, shown or not, so its coming and
+        // going never changes the column's width (and so its wrapping).
         Item {
-            width: flick.width - (flick.needBar ? vbar.width : 0)
+            width: flick.width - vbar.width
             height: root.contentH
 
             ColumnLayout {
@@ -632,6 +681,7 @@ ApplicationWindow {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 anchors.margins: 16
+                anchors.rightMargin: Math.max(4, 16 - vbar.width)   // the gutter makes up the rest
                 spacing: Math.round(12 * root.ui)
 
                 // ── Header ──
@@ -1010,6 +1060,7 @@ ApplicationWindow {
 
                 // ── Settings Panel ──
                 Rectangle {
+                    id: settingsPanel
                     Layout.fillWidth: true
                     visible: root.showSettings
                     implicitHeight: settingsCol.implicitHeight + 16
@@ -1124,6 +1175,7 @@ ApplicationWindow {
 
                 // ── Mix Panel ──
                 Rectangle {
+                    id: masterPanel
                     Layout.fillWidth: true
                     visible: root.showMaster
                     implicitHeight: masterCol.implicitHeight + 16

@@ -1,20 +1,18 @@
 """The player's command line: `bitcomposer-player` opens the window (Qt,
 in app.py and qml/Main.qml); `--check` reports what it needs and exits;
-`--install-desktop` writes the Linux app-menu entry; `--screenshot` renders
+`--install-desktop` and `--remove-desktop` write and remove the Linux
+app-menu entry (the first launch adds it by itself); `--screenshot` renders
 the window offscreen at a given screen size and scale and exits.
 """
 import argparse
-import os
-import shutil
 import sys
-from pathlib import Path
 
 from .. import __version__
 from .engine import default_music_dir
 from .openmpt import LibraryMissing, lib as openmpt_lib
 from .audio import make_output, OutputUnavailable
+from . import desktop
 
-HERE = Path(__file__).resolve().parent
 QT_HINT = "PySide6 is missing: the player's window needs it. pipx install --force bitcomposer puts it back"
 
 
@@ -43,25 +41,21 @@ def check() -> int:
 
 
 def install_desktop() -> int:
-    """Write the app-menu entry and its icon (Linux)."""
+    """Write the app-menu entry and its icon (Linux). The first launch does
+    this by itself (desktop.py); this is for putting a removed one back."""
     if not sys.platform.startswith("linux"):
         print("desktop entries are a Linux thing; on Windows the installer makes the Start menu entry")
         return 1
-    data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
-    apps = data / "applications"
-    icons = data / "icons" / "hicolor" / "scalable" / "apps"
-    apps.mkdir(parents=True, exist_ok=True)
-    icons.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(HERE / "icons" / "bitcomposer.svg", icons / "bitcomposer.svg")
-    exe = Path(sys.argv[0]).resolve()
-    cmd = str(exe) if exe.name == "bitcomposer-player" else f"{sys.executable} -m bitcomposer.player"
-    # The file name is the window's app id (app.py setDesktopFileName), so
-    # the taskbar matches the window to this entry and its icon.
-    (apps / "bitcomposer-player.desktop").write_text(
-        "[Desktop Entry]\nType=Application\nName=bitComposer\nComment=Procedural 16-bit game music: plays and generates\n"
-        f"Exec={cmd}\nIcon=bitcomposer\nTerminal=false\nCategories=AudioVideo;Audio;Music;\n"
-        "StartupWMClass=bitcomposer-player\n")
-    print(f"wrote {apps / 'bitcomposer-player.desktop'} and {icons / 'bitcomposer.svg'}")
+    cmd = desktop.launch_command() or f"{sys.executable} -m bitcomposer.player"
+    entry = desktop.write_entry(f'"{cmd}"' if " " in cmd else cmd)
+    desktop.announce_icons()
+    print(f"wrote {entry} (runs {cmd})")
+    return 0
+
+
+def remove_desktop() -> int:
+    gone = desktop.remove_entry()
+    print("removed " + ", ".join(map(str, gone)) if gone else "no app-menu entry to remove")
     return 0
 
 
@@ -76,7 +70,8 @@ def _size(text: str) -> tuple[int, int]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="bitcomposer-player", description="bitComposer: the player")
     ap.add_argument("--check", action="store_true", help="report Qt, libopenmpt, the audio output and the music folder, then exit")
-    ap.add_argument("--install-desktop", action="store_true", help="write the app-menu entry (Linux) and exit")
+    ap.add_argument("--install-desktop", action="store_true", help="write the app-menu entry (Linux; the first launch does it by itself) and exit")
+    ap.add_argument("--remove-desktop", action="store_true", help="remove the app-menu entry (Linux), e.g. before pipx uninstall, and exit")
     ap.add_argument("--music-dir", help="folder of songs (default: $BITCOMPOSER_MUSIC_DIR, ~/Music/Chiptune if it exists, else ~/Music/bitComposer)")
     ap.add_argument("--screenshot", metavar="PNG", help="render the window offscreen to PNG and exit (with a few fresh songs, nothing played)")
     ap.add_argument("--screen", type=_size, default=(1920, 1080), metavar="WxH", help="with --screenshot: the screen in physical pixels (default 1920x1080)")
@@ -88,6 +83,8 @@ def main(argv=None) -> int:
         return check()
     if args.install_desktop:
         return install_desktop()
+    if args.remove_desktop:
+        return remove_desktop()
     try:
         openmpt_lib()
     except LibraryMissing as e:
