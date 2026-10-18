@@ -162,20 +162,23 @@ def apply_update(release: dict, report, restart=None) -> bool:
         if not cmd:
             report(f"pipx not found; run:  pipx install --force {spec}", None)
             return False
-        args = cmd + ["install", "--force", "--verbose", spec]
         report("$ pipx install --force " + spec, None)
-        try:
-            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                                    bufsize=1, env=dict(os.environ, PYTHONUNBUFFERED="1"))
-            for raw in proc.stdout:
-                text = clean_line(raw)
-                if text:
-                    report(text, None)
-            code = proc.wait()
-        except OSError as e:
-            report(f"could not run pipx: {e}", None)
+        code, missing = _pipx_install(cmd, spec, report)
+        if code and missing:
+            # pip keeps PyPI's list of versions for a while, and a list saved
+            # before this release went up does not have it: on 1.0.0 the
+            # player saw the release on GitHub while pip's saved list ended
+            # at rc6. Once more without pip's saved copies. Not every time:
+            # they are also what spares an update downloading Qt again.
+            report("pip's saved list of PyPI's versions is older than this release; asking PyPI again", None)
+            report("$ PIP_NO_CACHE_DIR=1 pipx install --force " + spec, None)
+            code, missing = _pipx_install(cmd, spec, report, PIP_NO_CACHE_DIR="1")
+        if code is None:
             return False
         if code != 0:
+            if missing:
+                report(f"PyPI does not list {release['version']} yet; that can take a few minutes after a release, "
+                       "so try UPDATE again later", None)
             report(f"pipx exited with {code}; the player is unchanged", None)
             return False
         report(f"updated to {release['version']}; restarting", 1.0)
@@ -185,6 +188,30 @@ def apply_update(release: dict, report, restart=None) -> bool:
     report("this copy was not installed by pipx or the installer (a checkout, or a plain pip),", None)
     report(f"so update it the way it was installed. The release: {release['page']}", None)
     return False
+
+
+# What pip says when the index it read has no such version.
+_NO_SUCH_VERSION = re.compile(r"No matching distribution found for|Could not find a version that satisfies the requirement")
+
+
+def _pipx_install(cmd: list[str], spec: str, report, **env) -> tuple[int | None, bool]:
+    """pipx install --force spec, its output to report line by line. Returns
+    pipx's exit code (None: it would not start) and whether pip said the
+    index has no such version."""
+    missing = False
+    try:
+        proc = subprocess.Popen(cmd + ["install", "--force", "--verbose", spec], stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, bufsize=1,
+                                env=dict(os.environ, PYTHONUNBUFFERED="1", **env))
+        for raw in proc.stdout:
+            text = clean_line(raw)
+            if text:
+                missing = missing or bool(_NO_SUCH_VERSION.search(text))
+                report(text, None)
+        return proc.wait(), missing
+    except OSError as e:
+        report(f"could not run pipx: {e}", None)
+        return None, False
 
 
 def restart_self() -> None:

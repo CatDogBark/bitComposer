@@ -176,6 +176,41 @@ class UpdateCheck(unittest.TestCase):
                 self.assertIn("done!", lines)                                       # the pictograph gone
                 self.assertTrue(lines[-1].startswith("updated to" if expect else "pipx exited with 1"))
 
+    def test_pipx_update_asks_again_past_a_stale_index(self):
+        """pip's saved copy of PyPI's version list can predate the release
+        the player saw on GitHub: the update asks once more without pip's
+        cache, and says PyPI is behind when it still has no such version."""
+        from unittest import mock
+        from bitcomposer.player import update as u
+        with tempfile.TemporaryDirectory() as t:
+            def fake_pipx(listed_without_cache):
+                f = os.path.join(t, f"pipx-{listed_without_cache}")
+                with open(f, "w") as fh:
+                    fh.write("#!/bin/sh\n"
+                             f"if [ -n \"$PIP_NO_CACHE_DIR\" ] && [ {int(listed_without_cache)} = 1 ]; then echo 'done!'; exit 0; fi\n"
+                             "echo '    ERROR: Could not find a version that satisfies the requirement bitcomposer==9.9.9 (from versions: 9.9.8)'\n"
+                             "echo '    ERROR: No matching distribution found for bitcomposer==9.9.9'\nexit 1\n")
+                os.chmod(f, 0o755)
+                return [f]
+            rel = {"version": "9.9.9", "tag": "v9.9.9", "page": "p"}
+            for listed, expect in ((True, True), (False, False)):
+                lines = []
+                with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                        mock.patch.object(u, "pipx_command", lambda l=listed: fake_pipx(l)):
+                    self.assertEqual(u.apply_update(rel, lambda text, prog: lines.append(text)), expect)
+                self.assertIn("$ PIP_NO_CACHE_DIR=1 pipx install --force bitcomposer==9.9.9", lines)
+                if expect:
+                    self.assertTrue(lines[-1].startswith("updated to 9.9.9"))
+                else:
+                    self.assertTrue(any(l.startswith("PyPI does not list 9.9.9 yet") for l in lines))
+                    self.assertTrue(lines[-1].startswith("pipx exited with 1"))
+            # any other failure is not retried
+            lines = []
+            with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                    mock.patch.object(u, "pipx_command", lambda: ["false"]):
+                self.assertFalse(u.apply_update(rel, lambda text, prog: lines.append(text)))
+            self.assertFalse(any("PIP_NO_CACHE_DIR" in l for l in lines))
+
     def test_try_update_offers_a_local_installer(self):
         """--try-update: the UPDATE button for a setup.exe on this machine,
         so the update path runs without a published release."""
