@@ -10,7 +10,7 @@ second) and `CHANGELOG.md` for what has shipped.
 Decided 2026-10-18. The product is the generator and, on top of it, a player
 that generates while you listen, the way the Plasma widget does, on Linux
 and Windows as far as each allows. The 1.0.0 gate holds both the generator
-and the Linux companion; the Windows player is 1.x.
+and the Linux companion; the cross-platform player is 1.x.
 
 - **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
   sdist and wheel, checks the tag against `bitcomposer.__version__`, and
@@ -19,19 +19,53 @@ and the Linux companion; the Windows player is 1.x.
   zip on the tag. The version lives in `bitcomposer/__init__.py` alone.
   First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
   exact version. The checklist is in `CONTRIBUTING.md`.
-- **Linux install.** `pipx install bitcomposer` is the user's path. The
-  companion (KDE Plasma 6, Debian-style paths, the scope for 1.0) must call
-  `bitcomposer` on PATH instead of `python3 -m bitcomposer.cli` from a
-  checkout, with the `.pth` kept as a documented developer override; the
-  installer checks for pipx and the command. `docs/INSTALL.md` is rewritten
-  around that. To do.
+- **Linux install (done, branch `companion-path`, to verify on Troy's
+  machine).** `pipx install bitcomposer` is the user's path. The companion
+  (KDE Plasma 6, Debian-style paths, the scope for 1.0) runs `bitcomposer`
+  on PATH and falls back to `python3 -m bitcomposer.cli`; the installer's
+  `--dev` keeps the checkout on the import path (a `.pth` and a daemon
+  drop-in) for development, and `--check` reports which generator plays.
+  `docs/INSTALL.md` is rewritten around that.
 - **Docs.** README install section (pipx, Windows zip, developer clone, the
   tkinter line) done; the listening page is regenerated at the tag.
-- **Windows player (1.x).** The window grows the widget's features
+- **The player (1.x), one program on both platforms.** Decided
+  2026-10-18: rather than a KDE widget on Linux and a separate window on
+  Windows, one player program with the widget's features and layout
   (auto-generate on track end, live mixer and ECHO bus, KEEP and prune,
-  shuffle, gain) with the same layout: bundle libopenmpt's Windows DLL and
-  drive it through the ctypes bindings the daemon already uses, with an
-  audio output path. Two parts: the DLL and the audio path.
+  shuffle, gain, the readout of what the song drew) runs on both.
+  - **One package.** The player lives in the `bitcomposer` package next to
+    the generator, stdlib-only like it: tkinter for the window, libopenmpt
+    through the ctypes code the daemon already has, audio out through
+    ctypes as well (waveOut on Windows, paplay or ALSA on Linux). Generator
+    and player are one version released by one tag, so there is nothing
+    for an install to pull separately: a generator change reaches users
+    when they upgrade the player, and the song message records which
+    version wrote each file.
+  - **Install and upgrade.** Linux: `pipx install bitcomposer`, then
+    `bitcomposer-player --install-desktop` once for the app-menu entry;
+    upgrade with `pipx upgrade bitcomposer`. Windows: the release zip,
+    later an installer; the player checks GitHub releases and says when a
+    newer one exists. PyPI stays the one source every install is made
+    from. Later, only if wanted: a winget manifest (Windows gets
+    `winget upgrade`) and a Flatpak (the software centre's update button),
+    both packaging over the same package.
+  - **Order.** 1.1: the engine lifted out of the daemon into
+    `bitcomposer/player/` (module loading, mixing, channel volumes, the
+    prune and KEEP rules, auto-generate; no D-Bus in it), the window on
+    top of it with the widget's layout, the `bitcomposer-player` entry
+    point, the Windows build bundling libopenmpt's DLL, the update check.
+    Windows first: the window exists there and the player part does not.
+    1.2: the daemon re-based on the same engine so the widget and the
+    player share one implementation; the Plasma widget becomes an optional
+    front end; then the keep-or-retire call. `companion/install.sh` exists
+    as long as the widget does.
+  - **Developing it.** Run the player from the checkout
+    (`python3 -m bitcomposer.player`), the way the generator is developed;
+    no `.pth` and no `--dev`, since the player is not a system service.
+  - **Open choice, made when 1.1 starts.** tkinter keeps the
+    zero-dependency promise and ships sooner but looks plainer than the
+    widget; Qt through PySide6 looks like a desktop app and costs a
+    150 MB dependency on every install. The engine is the same either way.
 
 ## Sound quality
 
@@ -117,14 +151,19 @@ These change how every note sounds, not what notes are played.
   loudness says brass is not louder; if it still reads forward the next
   measurement is its spectrum at the new register); the 200 ms hit rule;
   whether thin stabs want three voices on some packs.
-- **Melody register (1.x, fine tuning).** With the note conversion exact
+- **Melody register (next, 2026-10-18).** With the note conversion exact
   the lead sits at a median of 570 to 620 Hz across the sounds (the old
-  by-ear tuning had it an octave under that). Troy: the songs are right,
-  and bringing the melody in a little lower may suit some sounds; try it per
-  pack by ear against a page, not as a global change. The melody's window is
-  labels 60-83 and its `register` argument follows section energy
-  (`builder._compose_pattern`); a pack habit for a lower lead window is the
-  cheap lever.
+  by-ear tuning had it an octave under that), and after the harmony rework
+  put the chords in their own registers Troy hears the lead as too high.
+  Method as always: measure first. Per sound, the lead's median and range
+  against the game's own leads (the packs' SPC profiles already record the
+  sounding pitches of the melody range for the lead voices, the Mega Man
+  X lead guitar's three pitches among them), then a page with the lead
+  window lowered per pack, same seeds, old against new, with the harmony
+  held still. The melody's window is labels 60-83 and its `register`
+  argument follows section energy (`builder._compose_pattern`); a pack
+  habit for a lower lead window is the cheap lever, a global shift the
+  wrong one.
 - **Orchestra hit under sustain harmony (1.x).** The
   Mega Man X orchestra hit is a one-shot in the harmony pool; drawn with the
   sustain mode it leaves gaps between hits. Restrict it to the stab and chug
@@ -185,8 +224,8 @@ These change how every note sounds, not what notes are played.
   first. Left out of `ffvi` for the kit revision: congas, shaker,
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
-- **Windows player.** See Release above: a 1.x item, the window with the
-  widget's features and layout over libopenmpt's Windows DLL.
+- **Windows player.** See "The player" under Release above: one program
+  on both platforms, Windows first.
 - **SPC sample banks.** An SPC snapshot holds the whole sound chip: the
   sample bank in BRR, every voice's envelope and pitch, the echo settings.
   A loader (`--spc-bank file.spc`) would decode a user-supplied snapshot

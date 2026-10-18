@@ -4,14 +4,13 @@ After=pipewire.service
 
 [Service]
 Type=simple
-# The daemon's autogen shells out to "python3 -m bitcomposer.cli". bitcomposer
-# is not installed (PEP 668 blocks a system pip install on Debian 13), so point
-# the import path at the working copy. Autogen then follows whichever git branch
-# is checked out, which makes A/B testing generator changes a checkout away.
-# @REPO@ is filled in by companion/install.sh with the real checkout path; do
-# not install this file directly or the daemon gets a PYTHONPATH that does not
-# exist. See docs/INSTALL.md.
-Environment=PYTHONPATH=@REPO@
+# The daemon's autogen runs the bitcomposer command, which pipx installs in
+# ~/.local/bin; a user service does not have that directory on PATH by
+# itself. A developer's checkout instead reaches the daemon through the
+# drop-in companion/install.sh --dev writes next to this unit
+# (PYTHONPATH to the checkout), and the daemon falls back to
+# "python3 -m bitcomposer.cli" when there is no command. See docs/INSTALL.md.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 # Unbuffered so the daemon's log lines reach journalctl as they happen rather
 # than in one burst when the process exits.
 Environment=PYTHONUNBUFFERED=1

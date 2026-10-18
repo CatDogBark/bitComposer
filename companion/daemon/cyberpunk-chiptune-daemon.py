@@ -10,6 +10,7 @@ import math
 import os
 import random
 import shlex
+import shutil
 import signal
 import struct
 import threading
@@ -25,6 +26,19 @@ import subprocess as _subprocess
 # ─── Configuration ────────────────────────────────────────────────────────────
 
 MUSIC_DIR = os.path.expanduser("~/Music/Chiptune")
+
+# Where the generator is. The bitcomposer command (pipx puts it in
+# ~/.local/bin, which a user service does not have on PATH by itself, so it
+# is added here as well as in the unit) wins; without one, the package on
+# the import path, which is how a developer's checkout plays through
+# companion/install.sh --dev.
+os.environ["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + os.environ.get("PATH", "")
+
+
+def generator_command() -> list:
+    exe = shutil.which("bitcomposer")
+    return [exe] if exe else ["python3", "-m", "bitcomposer.cli"]
+
 STATE_FILE = os.path.expanduser("~/.config/cyberpunk-chiptune/state.json")
 SAMPLE_RATE = 48000
 
@@ -480,9 +494,9 @@ class ChiptunePlayer:
             flags = []
         # The CLI names the file after the song's title; we only add the
         # (auto) suffix and read the chosen path back from its output.
-        cmd = ["python3", "-m", "bitcomposer.cli", *flags,
+        cmd = [*generator_command(), *flags,
                "-d", MUSIC_DIR, "--suffix", AUTOGEN_SUFFIX]
-        print("[AUTOGEN] Generating...")
+        print(f"[AUTOGEN] Generating with {cmd[0]}...")
         try:
             result = _subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:

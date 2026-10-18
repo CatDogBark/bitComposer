@@ -13,7 +13,8 @@ Generated music deliberately stays out of the repo, in `~/Music/Chiptune`
 directory unless told otherwise, and the helper scripts pass the music dir
 explicitly.
 
-The import path for the daemon and widget is a `.pth` file pointing at the
-checkout rather than a pip install, so generation follows whichever branch is
-checked out. The cost of that choice, and how to recover from a Python minor
-version bump, is in `INSTALL.md`.
+The daemon and widget run the `bitcomposer` command that pipx installs
+(decided 2026-10-18 for 1.0.0). A developer installs the companion with
+`--dev` instead, which points the system python3 at the checkout so
+generation follows whichever branch is checked out; the cost of that mode,
+and how to recover from a Python minor version bump, is in `INSTALL.md`.

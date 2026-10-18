@@ -27,7 +27,8 @@ long. Seven sounds, picked with `--sound`:
 
 From PyPI, with [pipx](https://pipx.pypa.io/) so it lands on your PATH
 without touching the system Python (Debian and Fedora refuse a plain
-`pip install` there):
+`pip install` there; `sudo apt install pipx` or `sudo dnf install pipx`
+gets pipx itself):
 
 ```bash
 pipx install bitcomposer
@@ -158,6 +159,8 @@ presets and a per-channel mixer, and an auto-generate "radio" mode that
 composes the next track as the current one ends.
 
 ```bash
+sudo apt install pipx libopenmpt0 python3-dbus python3-gi qt6-tools pulseaudio-utils
+pipx install bitcomposer         # the generator the player runs
 ./companion/install.sh --check   # see what it would do
 ./companion/install.sh           # install, enable the daemon
 ```
