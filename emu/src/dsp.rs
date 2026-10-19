@@ -6,8 +6,9 @@
 //! Drivers read its state back (Secret of Evermore's polls every voice's
 //! envelope level and the end flags), so it runs whether or not anyone
 //! listens; the mixed output exists to check it against a reference player
-//! (and a conversion, a voice at a time: `mute`), and a voice's own output
-//! can be recorded (`taps`) for what a converter cannot rebuild.
+//! (and a conversion, a voice at a time: `mute`, or all eight from one run:
+//! `solos`), and a voice's own output can be recorded (`taps`) for what a
+//! converter cannot rebuild.
 //!
 //! Written from Nocash's fullsnes ("SNES APU DSP" chapters): the Gaussian
 //! table and the interpolation's overflow behaviour, the envelope steps and
@@ -150,12 +151,31 @@ pub struct Dsp {
     /// pitch modulation made of a voice, for a converter to keep as it was.
     pub taps: u8,
     pub tapped: Vec<i16>,
+    /// Each voice alone, as a run with the other seven muted would play it.
+    pub solos: Option<Box<Solos>>,
     /// Samples run so far.
     pub samples: u64,
     /// Every key-on as the SNES chip acted on it, with the directory entry it
     /// read then: many drivers write a voice's entry just before keying it, so
     /// the snapshot's directory need not hold what a note plays.
     pub keyons: Vec<KeyOn>,
+}
+
+/// Each voice alone from one run: its own mix and its own echo, as a run with
+/// the other seven voices muted would play it. The echo buffer lives in RAM,
+/// so each voice has a copy of the RAM for its echo (the bus writes the CPU's
+/// writes into every copy), and its own echo filter history.
+pub struct Solos {
+    pub ram: Vec<Vec<u8>>,
+    fir: [[[i32; 2]; 8]; 8],
+    /// Per voice, its output: interleaved left, right.
+    pub out: Vec<Vec<i16>>,
+}
+
+impl Solos {
+    pub fn new(ram: &[u8]) -> Solos {
+        Solos { ram: vec![ram.to_vec(); 8], fir: [[[0; 2]; 8]; 8], out: vec![Vec::new(); 8] }
+    }
 }
 
 /// A key-on as it took effect.
@@ -197,6 +217,7 @@ impl Dsp {
             mute: 0,
             taps: 0,
             tapped: Vec::new(),
+            solos: None,
             samples: 0,
             keyons: Vec::new(),
         };
@@ -246,6 +267,8 @@ impl Dsp {
         let (mut main_l, mut main_r, mut echo_l, mut echo_r) = (0i32, 0i32, 0i32, 0i32);
         let mut prev_out = 0;
         let mut outs = [0i32; 8];
+        // per voice, what it alone sends to the main mix and the echo: left, right, echo left, echo right
+        let mut alone = [[0i32; 4]; 8];
         let mute = self.mute;
         for vi in 0..8 {
             let base = vi * 0x10;
@@ -337,6 +360,8 @@ impl Dsp {
             // Into the mix.
             let al = (out * voll) >> 7;
             let ar = (out * volr) >> 7;
+            let sends = eon & bit != 0;
+            alone[vi] = [clamp16(al), clamp16(ar), if sends { clamp16(al) } else { 0 }, if sends { clamp16(ar) } else { 0 }];
             if mute & bit == 0 {
                 main_l = clamp16(main_l + al);
                 main_r = clamp16(main_r + ar);
@@ -382,6 +407,41 @@ impl Dsp {
                 let a = addr + 2 * k;
                 ram[a & 0xFFFF] = *v as u8;
                 ram[(a + 1) & 0xFFFF] = (*v >> 8) as u8;
+            }
+        }
+        // Each voice alone: the same echo, at the same place, in its own RAM.
+        if let Some(solos) = self.solos.as_mut() {
+            let regs = &self.regs;
+            let mix = |m: i32, mv: usize, f: i32, ev: usize| {
+                let v = clamp16(((m * regs[mv] as i8 as i32) >> 7) + ((f * regs[ev] as i8 as i32) >> 7));
+                if regs[FLG] & 0x40 != 0 { 0 } else { v }
+            };
+            for (v, sent) in alone.iter().enumerate() {
+                let r = &mut solos.ram[v];
+                let rd = |r: &Vec<u8>, a: usize| (r[a & 0xFFFF] as u16 | (r[(a + 1) & 0xFFFF] as u16) << 8) as i16 as i32;
+                solos.fir[v][self.fir_pos] = [rd(r, addr) >> 1, rd(r, addr + 2) >> 1];
+                let hist = &solos.fir[v];
+                let mut f = [0i32; 2];
+                for (ch, o) in f.iter_mut().enumerate() {
+                    let mut s = 0i32;
+                    for k in 0..7 {
+                        s += (hist[(self.fir_pos + 1 + k) & 7][ch] * regs[0x0F + 0x10 * k] as i8 as i32) >> 6;
+                    }
+                    s = s as i16 as i32;
+                    s += (hist[self.fir_pos][ch] * regs[0x7F] as i8 as i32) >> 6;
+                    *o = clamp16(s) & !1;
+                }
+                if flg & 0x20 == 0 {
+                    let i_l = clamp16(sent[2] + ((f[0] * efb) >> 7)) & !1;
+                    let i_r = clamp16(sent[3] + ((f[1] * efb) >> 7)) & !1;
+                    for (k, x) in [i_l, i_r].iter().enumerate() {
+                        let a = addr + 2 * k;
+                        r[a & 0xFFFF] = *x as u8;
+                        r[(a + 1) & 0xFFFF] = (*x >> 8) as u8;
+                    }
+                }
+                solos.out[v].push(mix(sent[0], MVOLL, f[0], EVOLL) as i16);
+                solos.out[v].push(mix(sent[1], MVOLR, f[1], EVOLR) as i16);
             }
         }
         if self.echo_offset == 0 {
