@@ -54,6 +54,51 @@ class Conversion(unittest.TestCase):
         self.assertGreater(check.rms(wet[0::2]) / check.rms(dry[0::2]), 0.2)  # the echo, apart from the dry sound
 
 
+class DriverRecord(unittest.TestCase):
+    def test_a_block_between_its_markers_and_nothing_else(self):
+        text = "before\n<!-- generated: x -->\nold\n<!-- end generated -->\nafter\n"
+        self.assertEqual(check.fill(text, "x", "new\n"), "before\n<!-- generated: x -->\nnew\n<!-- end generated -->\nafter\n")
+        with self.assertRaises(ValueError):
+            check.fill(text, "y", "new")
+
+    def test_the_record_from_traits_and_a_sweep(self):
+        import json
+        import tempfile
+        trait = {"notes": 100, "tick_hz": 50.0, "on_ticks": True, "adsr_share": 1.0, "rewritten_share": 0.0,
+                 "envelope_writes_per_note": 0.0, "pitch_writes_per_note": 1.0, "noise_notes": 0, "pitch_modulated": False,
+                 "echo_delay_ms": 80, "echo_feedback": 0.5, "echo_volume": 0.25, "echo_inverted": False, "echo_filter_dc": 1.0,
+                 "master_volume": 127, "median_note_s": 0.2, "artist": "A Composer"}
+        traits = [dict(trait, game_folder=g, song=f"{g} {i}", game=f"Tagged {g}") for g in ("one", "two") for i in range(3)]
+        voices = {"0": {"rms": 900, "tone": 0.99, "contour": 0.98, "gap_db": 0.5, "level": 1.0}}
+        results = [{"game": g, "song": f"{g} {i}", "emu_rms": 900, "contour": 0.97, "gap_db": 0.4, "level": 1.0, "voices": voices}
+                   for g in ("one", "two") for i in range(3)]
+        with tempfile.TemporaryDirectory() as d:
+            docs, root = os.path.join(d, "drivers"), os.path.join(d, "spc")
+            os.makedirs(os.path.join(docs, "snes")); os.makedirs(root)
+            with open(os.path.join(docs, "README.md"), "w") as fh:
+                fh.write("<!-- generated: games snes -->\n<!-- end generated -->\n<!-- generated: composers snes -->\n<!-- end generated -->\n")
+            with open(os.path.join(docs, "snes", "README.md"), "w") as fh:
+                fh.write("<!-- generated: scores -->\n<!-- end generated -->\n")
+            with open(os.path.join(root, "drivers.json"), "w") as fh:
+                json.dump({"one": {"driver": "shared", "game": "Game One"}, "two": "shared"}, fh)
+            for name, data in (("traits.json", traits), ("results.jsonl", results)):
+                with open(os.path.join(d, name), "w") as fh:
+                    fh.write(json.dumps(data) if name.endswith(".json") else "\n".join(map(json.dumps, data)))
+            class Args:
+                spc_root, traits, results = root, os.path.join(d, "traits.json"), os.path.join(d, "results.jsonl")
+            Args.docs = docs
+            self.assertEqual(check.cmd_doc(Args), 0)
+            with open(os.path.join(docs, "snes", "shared.md")) as fh:
+                driver = fh.read()
+            with open(os.path.join(docs, "README.md")) as fh:
+                index = fh.read()
+        self.assertIn("| Game One | A Composer | 3 (3) |", driver)                 # the manifest's name
+        self.assertIn("| Tagged two | A Composer | 3 (3) |", driver)                # else the tags'
+        self.assertIn("| Clock | 50 Hz, on its ticks (6 songs) |", driver)         # both games, one driver
+        self.assertIn("to write", driver)                                         # a new driver's file, to fill in
+        self.assertIn("[shared](snes/shared.md)", index)
+
+
 @unittest.skipUnless(emulate.available(), "needs the compiled emulator")
 class Traits(unittest.TestCase):
     def test_what_the_tiny_driver_does(self):
