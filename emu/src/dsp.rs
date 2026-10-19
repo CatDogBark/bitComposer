@@ -207,7 +207,7 @@ impl Dsp {
             voices,
             counter: 0,
             every_other: false,
-            new_kon: 0,
+            new_kon: regs[KON],
             noise: 0x4000,
             echo_offset: 0,
             echo_length: 0,
@@ -221,8 +221,12 @@ impl Dsp {
             samples: 0,
             keyons: Vec::new(),
         };
-        // The snapshot's KON is what the driver last wrote, long since acted on:
-        // it reads back as written but keys nothing on.
+        // The snapshot's KON keys its voices on at the first poll, as SPC
+        // players load it (libgme does): most snapshots are taken as a song's
+        // first notes key on, before the SNES chip has started them (their
+        // envelopes still 0), and left unkeyed those voices stayed silent until
+        // the driver keyed them again: half a second at the median, never for
+        // a held note.
         d
     }
 

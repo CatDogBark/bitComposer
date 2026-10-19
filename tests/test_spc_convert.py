@@ -4,6 +4,7 @@ import ctypes
 import math
 import struct
 import unittest
+from array import array
 
 from support import os, tempfile, unittest  # noqa: F401,F811
 from bitcomposer import it_format as itf  # noqa: E402
@@ -189,6 +190,13 @@ class Interpolation(unittest.TestCase):
 
 
 class Envelopes(unittest.TestCase):
+    def test_writes_in_one_sample_keep_their_order(self):
+        # ADSR1 off with GAIN still 0x9F (the fastest fade), then GAIN 0x8B (a slow one) a moment
+        # later, in the same sample: the slow fade is what plays (sorted by value, 0x9F won and the
+        # note died in 2 ms: Rendering Ranger's notes were cut 0.5 s early)
+        track = snes_chip.envelope_track(0xFF, 0xE0, 0x9F, [(1000, 0x00, 0xE0, 0x9F), (1000, 0x00, 0xE0, 0x8B)], 4000)
+        self.assertGreater(dict(track).get(max(t for t, _ in track if t <= 1500), 0), 1500)
+
     def test_steps_fall_on_the_shared_counter(self):
         # GAIN 0xC6: a linear rise at rate 6, a step every 640 samples where the sample number is 536 mod 640
         on_note = snes_chip.envelope_track(0x00, 0x00, 0xC6, [], 3000)
@@ -384,6 +392,21 @@ class Convert(unittest.TestCase):
             self.assertLess(side(a, 0, 0.5, 0.9), 0.02 * side(a, 0, 0.1, 0.3))       # silent after it
             self.assertGreater(side(a, 1, 0.5, 0.9), 1000)                           # right
         self.assertAlmostEqual(side(pcm, 1, 0.5, 0.9) / side(emu, 1, 0.5, 0.9), 1.0, delta=0.15)
+
+    def test_echo_repeats_between_rows(self):
+        # a 48 ms echo on rows of 10 ms: the first repeat goes 4 rows after its note, its copy
+        # starting with the 8 ms left over as silence (256 frames at the sample's own rate), then
+        # the filter's own span (its one tap, FIR0, 7 samples back)
+        song = convert.convert(tiny(tuple((r, {0x7D: 3}.get(r, v)) for r, v in TINY) + KON0), 1.0)
+        info = song["info"]
+        rows = [row for pat in song["patterns"] for row in pat.data]
+        r0 = next(r for r, row in enumerate(rows) if 0 < row[0].note < 120)
+        r1 = next(r for r, row in enumerate(rows) if 0 < row[info["echo_channels"][0][0]].note < 120)
+        self.assertEqual((info["row_hz"], r1 - r0), (100.0, 4))
+        copy = next(smp for smp in song["samples"] if smp.name.startswith("echo 1 of"))
+        frames = array("h")
+        frames.frombytes(copy.data)
+        self.assertEqual(next(i for i, v in enumerate(frames) if v), 256 + 7)
 
     def test_an_echo_of_delay_0(self):
         # EDL 0: the echo's buffer holds one sample, so the echo is a loop of a sample's delay through

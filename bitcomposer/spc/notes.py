@@ -17,7 +17,7 @@ later, so a note sounds about 6 samples (0.19 ms) after its write.
 """
 from dataclasses import dataclass, field
 
-from .emulate import CLOCK, RATE
+from .emulate import CLOCK, RATE, Write
 
 KON, KOFF, FLG, EON, NON, PMON = 0x4C, 0x5C, 0x6C, 0x4D, 0x3D, 0x2D
 MVOLL, MVOLR, EVOLL, EVOLR, EFB, EDL = 0x0C, 0x1C, 0x2C, 0x3C, 0x0D, 0x7D
@@ -63,7 +63,10 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
     """The notes in a run's writes, in order of their start. `keyons` (from
     emulate.Run) gives each note the sample addresses the SNES chip read as
     it keyed the voice on; many drivers write a voice's directory entry just
-    before keying it, so the snapshot's entry may not be what plays."""
+    before keying it, so the snapshot's entry may not be what plays. The
+    snapshot's own KON keys its voices on at the start, as the emulator (and
+    SPC players) load it: most snapshots are taken as a song's first notes
+    key on."""
     regs = bytearray(snapshot.dsp)
     sounding: dict[int, Note] = {}
     notes: list[Note] = []
@@ -72,6 +75,12 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
     # Some drivers key off and on in one go and clear KOFF just after (Factor 5's).
     held: dict[int, list] = {}              # voice: [note, KON time, when KOFF cleared]
     releases: list[list] = []
+    writes = list(writes)
+    # ...unless the driver writes KON before the SNES chip's first poll (its first sample, 32
+    # cycles in): the write replaces it, as in the register (Super Metroid's Crateria Rainstorm
+    # was dumped just as its driver wrote KON, and its rain played twice, the second unsampled)
+    if snapshot.dsp[KON] and not any(w.reg == KON and w.cycle < 32 for w in writes):
+        writes = [Write(0, KON, snapshot.dsp[KON])] + writes
 
     def close(v: int, t: float):
         n = sounding.pop(v, None)
