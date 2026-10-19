@@ -1,0 +1,28 @@
+[package]
+name = "bitcomposer-emu"
+version = "0.3.0"
+edition = "2021"
+license = "MIT"
+description = "The SNES sound CPU (SPC700) and SNES chip (S-DSP) emulator behind bitComposer's SPC import"
+repository = "https://github.com/CatDogBark/bitComposer"
+publish = false
+
+[lib]
+name = "bitcomposer_emu"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# The Python module. Off for `cargo test`, which then needs no Python at all;
+# the wheel build (pyproject.toml) turns it on.
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["abi3-py310"], optional = true }
+
+[dev-dependencies]
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

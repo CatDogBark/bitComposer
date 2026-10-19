@@ -109,6 +109,7 @@ Everything defaults to `random`.
 --sound   chip|snes|genesis|ffvi|mana|evermore|megamanx  the sound in one word: a palette or a style pack (overrides the two below)
 --style   chip|snes|genesis          sound palette
 --pack    ffvi|mana|evermore|megamanx|none|random  style pack: an instrument set with the habits of the scores it imitates (a pack implies snes)
+--pack-file PACK.json               a pack as data, with its own voices as WAV files (docs/PACKS.md); overrides --pack and --sound
 --echo    on|off|random              echo (random: 70% of snes songs, never chip or genesis)
 --echo-wet    light|normal|wet|random  how much of the lead, harmony and arp the echo carries
 --echo-delay  eighth|dotted|quarter|slap|row|random  beat fraction between repeats, a 48 ms slap, or one row (random: weighted by tempo)
@@ -181,6 +182,19 @@ Tests:
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+## SPC import (developer preview)
+
+bitComposer is starting to learn from the games its packs imitate.
+`python -m bitcomposer.spc --to-it song.it game.spc` runs an SPC file's own
+music driver in an emulator of the SNES sound hardware and writes the song as
+an IT module (its samples, notes, envelopes and echo), and
+`tools/spc_check.py` measures the module against the original, voice by
+voice. It needs the emulator, `bitcomposer-emu`, built from source (Rust;
+CONTRIBUTING.md has how); it is not on PyPI yet. Making a pack from a
+soundtrack comes later (`docs/SPC-IMPORT.md`; what has been tested, and how
+well it converts, is in `docs/drivers/`). The SPC files are yours:
+bitComposer ships none.
 
 ## The player
 

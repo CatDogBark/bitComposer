@@ -245,9 +245,14 @@ _PERCUSSION_WORDS = {"kick", "snare", "hat", "hihat", "tom", "crash", "rim", "no
                      "conga", "tambourine", "woodblock", "drum", "click", "brush", "castanet", "ping", "wash"}
 
 
+# Kit voices from pack files (bitcomposer.packs.packfile), whose names are
+# the pack author's and need not carry a percussion word.
+PERCUSSION_PRESETS: set[str] = set()
+
+
 def is_percussion(name: str) -> bool:
     """Whole name parts only: "rim" must not catch the marimba."""
-    return any(part in _PERCUSSION_WORDS for part in name.split("_"))
+    return name in PERCUSSION_PRESETS or any(part in _PERCUSSION_WORDS for part in name.split("_"))
 
 
 def echo_variant(name: str, cutoff_hz: float, poles: int = 2,
@@ -383,3 +388,34 @@ def register_presets(presets: dict, releases: dict) -> None:
     """A style pack adds its voices on import (see bitcomposer.packs)."""
     INSTRUMENT_PRESETS.update(presets)
     PRESET_RELEASE.update(releases)
+
+
+def register_sample_voice(name: str, data: bytes, length: int, meta: dict, volume: int,
+                          release: str | None = None, percussion: bool = False) -> dict:
+    """A voice from a sample file (a pack file's own voice): 16-bit mono
+    data with its rate (C5Speed) and loop in meta. It joins the tables the
+    composer asks without rendering: the release family, the kit voices,
+    and STRUCK_PRESETS, from the same classifier generate_instrument uses.
+    Returns its generate_instrument result."""
+    meta = dict(meta)
+    INSTRUMENT_PRESETS[name] = (lambda: (data, length, dict(meta)), {}, volume)
+    if release:
+        PRESET_RELEASE[name] = release
+    else:
+        PRESET_RELEASE.pop(name, None)
+    if percussion:
+        PERCUSSION_PRESETS.add(name)
+    else:
+        PERCUSSION_PRESETS.discard(name)
+    STRUCK_PRESETS.discard(name)
+    inst = generate_instrument(name)
+    if inst["struck"]:
+        STRUCK_PRESETS.add(name)
+    return inst
+
+
+def unregister_voice(name: str) -> None:
+    for table in (INSTRUMENT_PRESETS, PRESET_RELEASE):
+        table.pop(name, None)
+    PERCUSSION_PRESETS.discard(name)
+    STRUCK_PRESETS.discard(name)

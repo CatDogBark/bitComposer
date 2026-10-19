@@ -33,6 +33,27 @@ class ITSample:
 
 
 @dataclass
+class ITInstrument:
+    """An IT instrument: a sample with a volume envelope, the way a tracker
+    shows an instrument (the generator writes samples alone; the SPC
+    converter writes instruments, so a converted song opens readable).
+
+    envelope: (tick, level 0-64) nodes, at most 25; empty for none. The
+    envelope runs in song ticks from the note's start and holds its last
+    level. sustain: a node index the envelope holds at until a note-off.
+    """
+    name: str = ""
+    sample: int = 1                  # 1-based: every note of the keyboard plays this sample
+    keyboard: list | None = None     # or per note 0-119, the (note, sample) it plays instead
+    envelope: list = field(default_factory=list)
+    sustain: int | None = None
+    nna: int = 0                     # new note action: 0 cut, 1 continue, 2 note off, 3 fade
+    fadeout: int = 0
+    global_volume: int = 128
+    pan: int | None = None           # default pan 0-64, or None to leave the channel's
+
+
+@dataclass
 class ITNote:
     """A single note event in a pattern."""
     note: int = 0       # 0=none, 1-120=C-0 to B-9, 254=notecut, 255=noteoff
@@ -164,6 +185,8 @@ def it_tempo_to_bpm(tempo: int, speed: int, rows_per_beat: int = 4) -> float:
 
 # IT effect commands (letter = number)
 FX_VOLUME_SLIDE = 4    # Dxy - volume slide (x=up, y=down)
+FX_PORTA_DOWN = 5      # Exx - pitch down; EFx fine (x/16 semitone), EEx extra fine (x/64), once a row
+FX_PORTA_UP = 6        # Fxx - pitch up, the same
 FX_PORTAMENTO = 7      # Gxx - tone portamento (slide to note)
 FX_VIBRATO = 8         # Hxy - vibrato (x=speed, y=depth)
 FX_ARPEGGIO = 10       # Jxy - cycle note / note+x / note+y semitones per tick
@@ -207,14 +230,21 @@ def write_it_file(
     channel_volumes: list[int] | None = None,
     channel_pans: list[int] | None = None,
     message: str = "",
+    instruments: list | None = None,
 ) -> None:
     """Write a complete .it module file.
 
     `message` goes into the module's song message (shown by trackers and
     returned by libopenmpt as metadata "message"); lines are separated by
     \r as the format requires. It is stored after the sample data.
+
+    `instruments` (ITInstrument) switches the file to instrument mode:
+    pattern notes then name instruments, not samples. Without them the
+    file is written exactly as it always was (sample mode).
     """
 
+    instruments = list(instruments or [])
+    num_instruments = len(instruments)
     num_samples = len(samples)
     num_patterns = len(patterns)
 
@@ -227,7 +257,8 @@ def write_it_file(
     header_size = 192
     # After header: orders, then sample offsets, then pattern offsets
     orders_offset = header_size
-    sample_offsets_start = orders_offset + len(order_list)
+    instrument_offsets_start = orders_offset + len(order_list)
+    sample_offsets_start = instrument_offsets_start + (num_instruments * 4)
     pattern_offsets_start = sample_offsets_start + (num_samples * 4)
     data_start = pattern_offsets_start + (num_patterns * 4)
 
@@ -241,7 +272,8 @@ def write_it_file(
     # Layout: header | orders | smp_offset_table | pat_offset_table |
     #         sample_headers | pattern_data | sample_data
 
-    sample_headers_start = data_start
+    instrument_headers_start = data_start
+    sample_headers_start = instrument_headers_start + (num_instruments * INSTRUMENT_SIZE)
     pattern_data_start = sample_headers_start + (num_samples * 80)
 
     # Calculate pattern data positions
@@ -273,13 +305,15 @@ def write_it_file(
     f.extend(song_name[:25].ljust(26, '\0').encode('ascii', errors='replace'))  # Song name
     f.extend(struct.pack("<H", 0))                 # PHilight
     f.extend(struct.pack("<H", len(order_list)))   # OrdNum
-    f.extend(struct.pack("<H", 0))                 # InsNum (we use samples directly)
+    f.extend(struct.pack("<H", num_instruments))   # InsNum (0: samples directly)
     f.extend(struct.pack("<H", num_samples))       # SmpNum
     f.extend(struct.pack("<H", num_patterns))      # PatNum
     f.extend(struct.pack("<H", 0x0214))            # Cwt/v (IT 2.14 compatible)
     f.extend(struct.pack("<H", 0x0214))            # Cmwt (compatible with IT 2.14)
     # Flags: bit 0=stereo, bit 2=use instruments (0=samples), bit 3=linear slides
     flags = 0x0009  # Stereo + linear slides
+    if num_instruments:
+        flags |= 0x0004  # instruments
     f.extend(struct.pack("<H", flags))
     f.extend(struct.pack("<H", 1 if msg_bytes else 0))  # Special: bit 0 = message attached
     f.extend(struct.pack("<B", global_volume))     # GV
@@ -312,6 +346,10 @@ def write_it_file(
     # ── Orders ──
     f.extend(bytes(order_list))
 
+    # ── Instrument offset table ──
+    for i in range(num_instruments):
+        f.extend(struct.pack("<I", instrument_headers_start + i * INSTRUMENT_SIZE))
+
     # ── Sample offset table ──
     for i in range(num_samples):
         f.extend(struct.pack("<I", sample_headers_start + i * 80))
@@ -319,6 +357,10 @@ def write_it_file(
     # ── Pattern offset table ──
     for i in range(num_patterns):
         f.extend(struct.pack("<I", pattern_positions[i]))
+
+    # ── Instrument headers ──
+    for ins in instruments:
+        f.extend(_instrument_header(ins))
 
     # ── Sample headers (80 bytes each) ──
     for i, smp in enumerate(samples):
@@ -374,3 +416,46 @@ def write_it_file(
 
     with open(filepath, "wb") as fh:
         fh.write(bytes(f))
+
+
+INSTRUMENT_SIZE = 554
+
+
+def _envelope(nodes, sustain: int | None = None) -> bytes:
+    """An IT envelope block (82 bytes): on when it has nodes."""
+    nodes = list(nodes)[:25]
+    flags = (1 if nodes else 0) | (4 if sustain is not None and nodes else 0)
+    sus = min(sustain or 0, max(len(nodes) - 1, 0))
+    b = bytearray([flags, len(nodes), 0, 0, sus, sus])
+    for tick, level in nodes:
+        b.append(max(0, min(64, level)))
+        b.extend(struct.pack("<H", max(0, min(9999, tick))))
+    b.extend(bytes(3 * (25 - len(nodes))))
+    b.append(0)
+    assert len(b) == 82
+    return bytes(b)
+
+
+def _instrument_header(ins: "ITInstrument") -> bytes:
+    """An IT 2.14 instrument (IMPI, 554 bytes)."""
+    h = bytearray(b"IMPI")
+    h.extend(ins.name[:12].ljust(13, "\0").encode("ascii", errors="replace")[:12])   # DOS filename
+    h.append(0)
+    h.extend(bytes([ins.nna & 3, 0, 0]))                    # NNA, duplicate check type and action
+    h.extend(struct.pack("<H", max(0, min(256, ins.fadeout))))
+    h.extend(bytes([0, 60]))                                # pitch-pan separation, centre
+    h.append(max(0, min(128, ins.global_volume)))
+    h.append(128 | 32 if ins.pan is None else max(0, min(64, ins.pan)))
+    h.extend(bytes([0, 0]))                                 # random volume, random pan
+    h.extend(bytes(4))                                      # tracker version, sample count, unused
+    h.extend(ins.name[:25].ljust(26, "\0").encode("ascii", errors="replace")[:26])
+    h.extend(bytes([0, 0, 0, 0]))                           # filter cutoff, resonance, MIDI channel, program
+    h.extend(struct.pack("<H", 0))                          # MIDI bank
+    for note in range(120):                                 # the keyboard: every note, this sample, unless mapped
+        h.extend(bytes(ins.keyboard[note] if ins.keyboard else (note, ins.sample)))
+    h.extend(_envelope(ins.envelope, ins.sustain))          # volume
+    h.extend(_envelope([]))                                 # panning
+    h.extend(_envelope([]))                                 # pitch
+    h.extend(bytes(4))
+    assert len(h) == INSTRUMENT_SIZE, len(h)
+    return bytes(h)

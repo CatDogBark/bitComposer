@@ -42,13 +42,16 @@ class EngineHeadless(unittest.TestCase):
         self.p.shutdown()
         self.tmp.cleanup()
 
-    def pump(self, seconds):
+    def pump(self, seconds, until=None):
         end = time.time() + seconds
         while time.time() < end:
             try:
                 self.q.get(timeout=0.05)()
             except queue.Empty:
                 pass
+            if until and until():
+                return True
+        return bool(until and until())
 
     def test_transport_mixer_keep_and_generate(self):
         p = self.p
@@ -81,7 +84,9 @@ class EngineHeadless(unittest.TestCase):
         # generation in-process lands in the folder as an (auto) track and plays
         done = []
         p.generate("--sound chip -s 9", play=True, on_done=done.append)
-        self.pump(60)
+        playing = lambda: (done and p.status == "Playing" and p.module is not None                    # noqa: E731
+                           and os.path.basename(p.module.filepath) == os.path.basename(done[0]))
+        self.pump(60, until=playing)                      # 60 s at most: a song takes a second or two
         self.assertEqual(len(done), 1)
         self.assertTrue(os.path.basename(done[0]).startswith("(auto) "))   # the mark in front
         self.assertEqual(p.status, "Playing")
@@ -312,9 +317,11 @@ class WindowHeadless(unittest.TestCase):
         self.pump(0.2)
         self.assertFalse(b.state["generating"])
         self.assertTrue(b.state["autoGenerate"])
-        # GENERATE composes in the background and plays the new track
+        # GENERATE composes in the background and plays the new track. The
+        # flag is up as soon as generate() returns; checked before pumping,
+        # since a fast machine can finish a chip song inside a short pump
+        # (CI did, on Python 3.12).
         b.generate("--sound chip -s 9")
-        self.pump(0.1)
         self.assertTrue(b.state["generating"])
         self.assertTrue(self.pump(60, lambda: not b.state["generating"]))
         self.assertEqual(len(b.playlist), 3)

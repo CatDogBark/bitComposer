@@ -1,0 +1,16 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "bitcomposer-emu"
+version = "0.3.0"
+description = "The SNES sound CPU and SNES chip emulator behind bitComposer's SPC import"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "CatDogBark", email = "catdogbark@pm.me" }]
+classifiers = ["Programming Language :: Rust", "Programming Language :: Python :: 3"]
+
+[tool.maturin]
+features = ["python", "pyo3/extension-module"]
+module-name = "bitcomposer_emu"

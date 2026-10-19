@@ -3,7 +3,8 @@
 What is worth doing next, in the order it would be heard. Items are
 recorded here when they come up so they are not lost; nothing here is
 promised. See `ANALYSIS.md` for how changes are judged (measure first, ear
-second) and `CHANGELOG.md` for what has shipped.
+second), `CHANGELOG.md` for what has shipped, and `VISION.md` (at the top
+of the repository) for where it is all heading.
 
 ## Release (1.0.0, shipped 2026-10-18)
 
@@ -173,9 +174,12 @@ These change how every note sounds, not what notes are played.
   register, drum density. The rock machinery exists from `megamanx`
   (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
   mostly data plus the VGM reader and the patch renderer.
-- **Your own packs (after 1.0, asked for 2026-10-18).** A pack added
-  without touching the code: a pack file in a packs folder that the SOUND
-  picker lists beside the built-in ones. A pack is mostly data already
+- **Your own packs (after 1.0, asked for 2026-10-18; the format and
+  loader shipped in 1.1.0, `docs/PACKS.md`, `--pack-file`; open: the
+  player's PACKS panel, step 6 of the SPC import plan, and a pack folder
+  shared as one zip).** A pack added
+  without touching the code: a pack file the player lists in its PACKS
+  panel, apart from the built-in sounds. A pack is mostly data already
   (voices per role, weighted habits, channel trims), so the work is a
   file format for the PACK table (JSON or TOML, read by the standard
   library) checked on load with messages that say what is wrong and
@@ -322,7 +326,11 @@ These change how every note sounds, not what notes are played.
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
 - **SPC import: a pack from a game's own files (planned 2026-10-18; the
-  plan is `docs/SPC-IMPORT.md`).** The import reads a soundtrack's `.spc`
+  plan is `docs/SPC-IMPORT.md`; shipped in 1.1.0 as a developer preview:
+  the reader, the emulator, built from source, SPC-to-IT and its measuring
+  tool, `docs/drivers/` the record of what it converts; open: the
+  translator and a pack from a soundtrack, step 5, the PACKS panel, step
+  6, and the emulator's wheels on PyPI).** The import reads a soundtrack's `.spc`
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
   own music driver and logs what it tells the DSP; a translator turns the
   log into notes, roles and measured habits. Two outputs: an SPC-to-IT
@@ -380,6 +388,20 @@ and the hit-or-miss part. Two steps, in order.
   zero-dependency property holds. Statistics are derived data, not songs.
 
 ## Generation
+
+- **The generator writes IT instruments (a later version, with a listening
+  review; decided 2026-10-18).** Today's songs are sample mode: release
+  tails baked into the sample data (a sustain loop and a decaying copy
+  after it), stab lengths as note cuts, swells as volume slides. It sounds
+  right, but a tracker shows nameless samples with their fades printed
+  into the waveform. IT instruments (the writer has them since the SPC
+  converter, `it_format.ITInstrument`) would give named instruments with
+  release envelopes in place of baked tails, the two-sample bass as one
+  instrument with a keyboard split, smaller files, cleaner patterns, and,
+  as an option, new-note actions so plucked harmony and arp notes ring
+  into each other. Every song's bytes change, so it is a version of its
+  own, judged by ear; the baked tails are reproduced by envelope where the
+  sound must not move.
 
 From `ANALYSIS.md` §5:
 
