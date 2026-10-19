@@ -118,10 +118,17 @@ repository (`~/diags/bitcomposer/research/`).
 
 ### Decided (2026-10-18)
 
-1. **Emulation, with VGMTrans as the checker.** Emulation is the one path
-   that works for every game. For the games VGMTrans reads, its MIDI of the
-   same snapshot is a note-for-note answer to compare the translator with;
-   for the rest (Evermore here), spc2it's recording and reference audio.
+1. **Emulation, for any SPC file, with VGMTrans as a checker.** The
+   importer runs whatever driver a snapshot holds, so it takes any SPC
+   file; there is no per-game or per-driver code in it. The games named in
+   this plan are the test set that checks it, not a limit on what it
+   imports. Its correctness rests on what is driver-independent: the SNES
+   sound CPU core passing every instruction test and hardware test. On top
+   of that, for test games VGMTrans reads, its MIDI of the same snapshot is
+   a note-for-note answer to compare the translator with; for the rest
+   (Evermore here), spc2it's recording and reference audio. VGMTrans's own
+   approach, a reader per driver, is not followed: it covers only the
+   drivers someone has written a reader for.
 2. **The emulator need not be Python.** The generator stays pure Python
    with nothing to install; the emulator may be written in a compiled
    language if Python is too slow for it. Step 3 opens with a prototype
