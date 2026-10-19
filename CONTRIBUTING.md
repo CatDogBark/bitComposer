@@ -61,6 +61,7 @@ Python.
 | `bitcomposer/echo.py` | echo settings tables and the bus that makes taps and darker variants |
 | `bitcomposer/mix.py` | written channel volumes, sustaining-arp level, pack trims, master gain |
 | `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
+| `emu/` | the SNES sound CPU and SNES chip emulator, in Rust (a second package, `bitcomposer-emu`); see Building the emulator |
 | `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); `python -m bitcomposer.spc` |
 | `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`) |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
@@ -103,6 +104,21 @@ diff <(cd /tmp/before && sha256sum *.it) <(cd /tmp/after && sha256sum *.it)
 
 No output means no song changed. Add the options your change touches
 (`--keys home`, `--form aaba`, `--lead-shift -3`, ...) to the loop.
+
+## Building the emulator
+
+The emulator in `emu/` is Rust (why: `docs/SPC-IMPORT.md`), and is the one
+part of the repository that needs a compiler: the Rust toolchain
+(rustup.rs) and, for the Python module, maturin (`pip install maturin`).
+Everything else stays pure Python.
+
+```bash
+cd emu
+cargo test                          # the emulator alone; no Python involved
+maturin build --release -o dist     # the Python module, as a wheel for this machine
+```
+
+The wheel is abi3: one file serves every Python from 3.10 on.
 
 ## Style
 
