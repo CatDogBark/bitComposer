@@ -89,6 +89,7 @@ ALIGNED = 0.6                         # how closely key-ons must line up with a 
 TAPS = 24                             # echo repeats a voice can have, at most
 QUIET = 1 / 32                        # an echo repeat quieter than this against its note (-30 dB) is left out
 CENTRED = 0.7                         # a voice this close to the middle (quieter side / louder) can play centred
+ROWS_PER_PATTERN = it_song.ROWS_PER_PATTERN   # tools/spc_check.py reads it here
 
 
 def tick_rate(snap, writes) -> tuple[float, float]:
