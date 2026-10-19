@@ -25,6 +25,11 @@ Python.
    python3 -m unittest discover -s tests -v
    ```
 
+   On a machine with many cores, `python3 tools/run_tests.py` runs the same
+   suite in parallel, each test in a process of its own (`--workers N` for
+   fewer; a module prefix such as `test_spc` for part of it): as long as its
+   longest test rather than all of them added up.
+
    The generator's tests need nothing. The player's (`tests/test_player.py`)
    skip without what CI installs: PySide6-Essentials and jeepney
    (`pip install PySide6-Essentials jeepney`), libopenmpt (`libopenmpt0` on
