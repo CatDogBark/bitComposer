@@ -8,7 +8,7 @@ States), named for its game here.
 <!-- generated: games -->
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
-| Secret of Evermore | Jeremy Soule | 72 (70) |
+| Secret of Evermore | Jeremy Soule | 72 (72) |
 <!-- end generated -->
 
 ## What the driver does
@@ -18,15 +18,15 @@ States), named for its game here.
 |---|---|
 | Clock | 50 Hz, on its ticks (52 songs); 50 Hz, key-ons anywhere in a tick (14); none found (6) |
 | Envelopes | ADSR at key-on: 0 % of notes; rewritten as they sound: 100 % (9.5 writes a note) |
-| Pitch writes | 1.3 a note (90 %: 32.5) |
+| Pitch writes | 1.2 a note (90 %: 32.5) |
 | Pitch modulation | in 0 of 72 songs |
-| Noise | in 41 of 72 songs |
+| Noise | in 44 of 72 songs |
 | Echo | 80 ms, feedback 0.16 (58 songs); 0 ms, feedback 0.0 (12); 48 ms, feedback 0.08 (2) |
 | Echo volume | 0.39 (58 songs); 0.0 (12) |
 | Echo sides inverted | in 0 of 72 songs |
 | Echo filter at DC | -1.25 (58 songs); 0.0 (12) |
 | Master volume | 127 (72 songs) |
-| Density | 297 notes in a song's first minute; a note 0.27 s |
+| Density | 300 notes in a song's first minute; a note 0.27 s |
 <!-- end generated -->
 
 - **Clock**: key-ons on its ticks: modules run on the driver's own clock, 50
@@ -47,7 +47,7 @@ States), named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 70 | 0.94 (0.74) | 0.60 (1.20) | 0.99 (0.95-1.02) | 0.99 (0.97) |
+| 72 | 0.95 (0.78) | 0.52 (1.01) | 1.00 (0.96-1.02) | 0.99 (0.98) |
 <!-- end generated -->
 
 ## The converter
@@ -59,7 +59,12 @@ their steps on the SNES chip's shared rate counter (counted from each note's
 start, it drifted a step on most switches); samples softened as the SNES
 chip's Gaussian interpolation softens them (the wind was three times too
 strong above its own top). The low tenth percentile of contour is the
-steady beds, whose gaps are small.
+steady beds, whose gaps are small. Single voices measured at 0.2 to 0.3 of
+their level were two things: held notes the driver pans as they sound,
+whose pan the module now follows (The Professor's Room, Pirates of
+Crustacia, The Seashore), and voices measured alone with the echo the
+snapshot held of what played before it (Bugmuck Tar Pits, Dark Forest,
+Underground Path), which the measuring now leaves out.
 
 ## For generation
 
@@ -70,9 +75,5 @@ registers) give the echo off in 47 of 72; in play it is on in 60
 
 ## Open
 
-- Single voices at 0.2 to 0.3 of their level, 20 to 58 dB off over time,
-  though their tone is right: Bugmuck Tar Pits (voice 3), The Professor's
-  Room (2), Pirates of Crustacia (5), The Seashore (1), Dark Forest (1, 7),
-  Underground Path (5).
 - A hi-hat played faster than the output rate (Regal Castle, voice 2) loses
   its aliasing ([known limits](README.md#known-limits)).

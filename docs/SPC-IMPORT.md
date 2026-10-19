@@ -303,7 +303,17 @@ verdict: it is another emulator): FFVI's battle theme correlates at 0.98
 plays the noise generator constantly, and the noise sequence's position is
 not in an SPC file either. Two causes on our side were tested and ruled
 out (when ENDX is set; whether the snapshot's KON keys voices on); the
-driver's key-ons came out identical in every run. Listened to side by
+driver's key-ons came out identical in every run. The snapshot's KON did
+matter elsewhere, though. Most snapshots are taken as a song's first notes
+key on, before the SNES chip has started them, and libgme keys those voices
+on as it loads the file; the emulator left them silent until the driver
+keyed them again (half a second at the median, never for a held note: 1343
+of 1836 songs were missing opening or held notes, in the emulator and so in
+their modules). Since 0.3.1 it keys them on too, and the decoder makes them
+notes from the start: against libgme over 156 songs' first 10 s, the
+loudness contours correlate at a median of 1.000, the level matches to
+within 1 % in 80 % of them (libgme plays 1.4 times louder, its own gain, and
+skips a track's opening silence). Listened to side by
 side on FFVI, Mana and two Evermore songs: identical and accurate, the
 only difference that libgme stops at the length in the file's tag.
 
@@ -318,7 +328,12 @@ measurements.
 hands back every SNES chip write. `bitcomposer/spc/notes.py`, the SNES
 chip decoder, replays them into notes: the voice, the sample, the pitch,
 the volume and envelope at key-on, the bends and swells while it sounds,
-and its end (key-off, the voice's next key-on, or the soft reset).
+and its end (key-off, the voice's next key-on, or the soft reset). A
+key-on while the voice's KOFF bit is still set counts if KOFF clears before
+the SNES chip's next poll, as the hardware has it: Factor 5's driver keys
+voices off and on in one go and clears KOFF just after, and every Super
+Turrican 2 song converted silent until then. A note keyed at pitch 0 takes
+the pitch written just after (EarthBound sweeps up from 0).
 `bitcomposer/spc/tuning.py` measures each sample's own pitch (a loop's
 whole cycles; otherwise autocorrelation past the lag where the wave has
 moved on from itself, the peak placed between whole lags), so a note has
@@ -335,7 +350,10 @@ song. One IT sample
 per sample played, found by the addresses the SNES chip read as it keyed
 each voice on (Secret of Evermore's driver writes a voice's directory
 entry just before keying it; its snapshot's directory is placeholders), its
-C5Speed set so the notes fall on whole semitones, and filtered as the
+C5Speed set so the notes fall on whole semitones (and whole octaves off
+where that brings more of them onto IT's keys, 1-119: a cell cannot write
+C-0, and DKC2's bass, five octaves under its sample's rate, fell silent in
+stretches), and filtered as the
 SNES chip's Gaussian interpolation colours it (a lowpass in the sample's
 own terms, -4 dB at a quarter of its rate and -15 dB at the top, where an
 IT player interpolates almost ideally); one instrument per sample and
@@ -355,22 +373,38 @@ the original's, 1.70 on the counter, 0.95 with the interpolation's
 softness in the samples too). Volumes side for
 side: the SNES chip sets each side's level on its own, an IT player pans
 linearly (a centred note at half its volume each side), so a note's IT
-volume is its two sides' sum and its pan the right side's share; the SNES
-chip's master volume is the IT global volume, its changes (a driver's
-fade-out) on a channel of their own; the song runs as an SPC player plays
+volume is its two sides' sum and its pan the right side's share (followed
+row by row where the driver moves it while the note sounds: EarthBound
+pans held notes slowly from side to side); the SNES chip's master volume is
+the IT global volume, its changes (a driver's fade-out) on a channel of
+their own, and the two traded where one has room, since a note's loudness
+is their product and both are whole numbers: the channels up and the global
+volume down as far as the loudest voice allows (IT's volumes are coarse at
+the bottom: EarthBound's quiet voices rounded to silence), or the other way
+where voices pass IT's 64 under a low master (DKC2's 123 under 60); the song runs as an SPC player plays
 it, the tag's length and then its fade, and the module ends on its last
 row (rounded up to a whole pattern, held notes rang on past the end with
 their echo stacked, Dark World twice as loud). Noise plays the SNES chip's own
 noise, its 15-bit shift register rendered at the output rate for each
 noise clock a song uses, each value held as the hardware holds it, each
 note starting somewhere else in it. The echo as repeats: each note
-sending to the echo again on a channel of its own, an echo delay late,
+sending to the echo again on a channel of its own, an echo delay late (its
+copy carrying what the delays leave over a whole row as silence, so the
+repeat lands between rows, and its sign against the note: the echo
+volume's times the master volume's on each side, and the feedback's to
+the k-1; rounded to rows and unsigned, repeats stacked by chance on held
+tones, and Seiken Densetsu 3's, against its notes on one side, added),
 until the repeats fall to -30 dB (as many as IT's 64 channels allow,
 shared among the voices that send; three stopped Dark World's 1.1 s tail
 at 0.24 s), raised past the master volume (the SNES chip leaves the echo
 out of it, an IT global volume reaches every channel), played from a copy of its sample as the echo hands it back after that many trips round its loop (the filter once a trip: its colour, and its span, which rows alone leave out: Dark World's repeats came 7 samples a trip early and stacked a third brighter), coloured by the echo
 filter (at the pitch its echoing notes mostly have) and scaled by the echo
-volume, the feedback and the filter's gain over the note itself; when the
+volume, the feedback and the filter's gain over the note itself (an echo
+of delay 0 is no echo: its buffer holds a sample, so it is a loop of a
+sample through the filter and the feedback, a tone control on every voice
+that sends, and plays as one copy of each note at its own row, coloured by
+every trip round the loop: Flammie Coming's lows were at half without it);
+when the
 two echo volumes have opposite signs (Mega Man X's widening trick), a
 voice near the middle has its repeats play in surround, one side inverted
 (surround plays centred: a panned voice's echo there landed on the wrong
@@ -385,9 +419,11 @@ recording, the longest, on the keyboard of an instrument of recordings.
 10 of FFVI's 82 songs and 8 of Mana's 69 use it, none of Evermore's or
 Mega Man X's; the most recordings any of them needs is 28 (FFVI's New
 Continent). Rows are the driver's tick when its key-ons land on a running
-timer IT can run (Evermore's 50 Hz), else IT's finest grid, 100 a second
-(FFVI's and Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz
-is past IT's 102).
+timer IT can run, and keep pace with through the song (Evermore's 50 Hz,
+DKC2's 80), else IT's finest grid, 100 a second (FFVI's and Mana's drivers
+key on anywhere in a tick; Mega Man X's 125 Hz is past IT's 102; IT's tempo
+comes in steps of 0.4 rows a second, and Factor 5's 62.5 Hz on 62.4 rows
+fell a tenth of a second behind over a song).
 
 `drivers/` records every game tested so far by music driver (a file per
 driver family), with the latest scores and what each driver does. Measured against the
@@ -409,7 +445,10 @@ the emulator's -0.01); recorded, it is the hiss it should be (0.88). An
 echo copied at full range is worse than none where the filter passes
 little bass (Spark Mandrill 0.86 against 0.93), which is why the repeats
 are coloured: they then match the original's band levels without adding
-bass.
+bass. Twenty more games (862 songs, twelve more drivers) found six more of the
+SNES chip's ways that the converter now carries, listed with the driver
+that showed each in `drivers/snes/README.md`; over all 1108 songs scored,
+the median gap is 0.46 dB, 1.00 at the 90th percentile.
 
 For the SNES chip:
 

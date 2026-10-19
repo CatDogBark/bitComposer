@@ -132,7 +132,7 @@ def envelope_track(adsr1: int, adsr2: int, gain: int, changes, length: int,
     note (Secret of Evermore's), drifts a step on most switches without it."""
     env, mode, hidden, n = 0, "attack", 0, 0
     track = [(0, 0)]
-    changes = sorted(changes)
+    changes = sorted(changes, key=lambda c: c[0])     # by sample only: writes in one sample keep their order
     regs, ci = (adsr1, adsr2, gain), 0
     while n < length:
         while ci < len(changes) and changes[ci][0] <= n:
@@ -221,6 +221,22 @@ def echo_filter_peak(taps) -> float:
     return max(abs(sum(c / 128 * cmath.exp(-2j * math.pi * f / 64 * k) for k, c in enumerate(taps))) for f in range(33))
 
 
+def _as_played(pcm, loop, pitch: int, n: int) -> list[float]:
+    """Up to n output samples of the sample played at `pitch` (linearly
+    interpolated), through its loop."""
+    step, pos, x = pitch / 0x1000, 0.0, []
+    end = (loop[1] if loop else len(pcm)) - 1
+    while len(x) < n:
+        if pos >= end:
+            if loop is None or end <= loop[0]:
+                break
+            pos = loop[0] + (pos - end) % (end - loop[0])
+        i = int(pos)
+        x.append(pcm[i] + (pcm[i + 1] - pcm[i]) * (pos - i))
+        pos += step
+    return x
+
+
 def echo_gains(pcm, loop, pitch: int, taps, repeats: int, n: int = 1024) -> list[float]:
     """How much of a note the echo hands back on each of its repeats: the
     filter's gain over the note's own spectrum, which is what a repeat
@@ -234,16 +250,7 @@ def echo_gains(pcm, loop, pitch: int, taps, repeats: int, n: int = 1024) -> list
     if pcm is None:
         flat = math.sqrt(sum(x * x for x in c))
         return [flat ** k for k in range(1, repeats + 1)]
-    step, pos, x = pitch / 0x1000, 0.0, []
-    end = (loop[1] if loop else len(pcm)) - 1
-    while len(x) < n:
-        if pos >= end:
-            if loop is None or end <= loop[0]:
-                break
-            pos = loop[0] + (pos - end) % (end - loop[0])
-        i = int(pos)
-        x.append(pcm[i] + (pcm[i + 1] - pcm[i]) * (pos - i))
-        pos += step
+    x = _as_played(pcm, loop, pitch, n)
     energy = lambda v: sum(s * s for s in v[8 * repeats:])        # noqa: E731
     base = energy(x)
     if len(x) <= 8 * repeats + 16 or not base:
@@ -255,12 +262,59 @@ def echo_gains(pcm, loop, pitch: int, taps, repeats: int, n: int = 1024) -> list
     return gains
 
 
-def echo_coloured(pcm, loop, ratio: float, taps, passes: int = 1) -> tuple[array, float]:
+def echo_response(taps, passes: int = 1, feedback: float | None = None) -> list[float]:
+    """What the echo hands a sound back as, by delay in output samples: the
+    filter `passes` times over (its taps convolved); or, with `feedback`,
+    every trip round an echo of delay 0 summed. Its buffer then holds one
+    sample, so each trip comes a sample later, through the filter again and
+    `feedback` times weaker: not an echo but a tone control on every voice
+    that sends (Secret of Mana's Flammie Coming, 14 of DKC2's songs)."""
+    one = [0.0] * 8                          # the filter by delay in output samples: FIR0 weighs the oldest of eight
+    for k, t in enumerate(taps):
+        one[7 - k] = t / 128
+
+    def through(h):
+        return [sum(h[i] * one[j - i] for i in range(max(0, j - 7), min(len(h), j + 1))) for j in range(len(h) + 7)]
+    if feedback is None:
+        h = [1.0]
+        for _ in range(passes):
+            h = through(h)
+        return h
+    total, trip, peak = [], [1.0], echo_filter_peak(taps)
+    for k in range(1, 129):                  # until a trip falls under 1/10000, or the hardware's clamp would hold it
+        trip = [0.0] + through(trip)
+        gain = feedback ** (k - 1)
+        total += [0.0] * (len(trip) - len(total))
+        for d, c in enumerate(trip):
+            total[d] += gain * c
+        if abs(gain) * peak ** k < 1e-4:
+            break
+    return total
+
+
+def response_peak(h) -> float:
+    """An echo response's strongest gain at any pitch."""
+    return max(abs(sum(c * cmath.exp(-2j * math.pi * f / 128 * d) for d, c in enumerate(h))) for f in range(65))
+
+
+def echo_response_gain(pcm, loop, pitch: int, h, n: int = 2048) -> float:
+    """How much of a note an echo response hands back: its gain over the
+    note's own spectrum, the sample played at its pitch (as echo_gains)."""
+    x = _as_played(pcm, loop, pitch, n)
+    base = sum(s * s for s in x[len(h):])
+    if len(x) <= len(h) + 16 or not base:
+        return abs(sum(h))
+    y = [sum(h[d] * x[i - d] for d in range(len(h)) if i - d >= 0) for i in range(len(h), len(x))]
+    return math.sqrt(sum(s * s for s in y) / base)
+
+
+def echo_coloured(pcm, loop, ratio: float, taps, passes: int = 1, feedback: float | None = None) -> tuple[array, float]:
     """The sample as the echo hands it back after `passes` trips round its
-    loop, when the voice plays it at `ratio` times its own rate. Each trip
-    goes through the echo filter, whose taps are 1/32000 s apart at the
-    output (so `ratio` samples apart in the sample), and so is coloured by
-    it and delayed by its span: a repeat comes passes x (echo delay + the
+    loop (or every trip of an echo of delay 0 summed, with `feedback`:
+    echo_response), when the voice plays it at `ratio` times its own rate.
+    Each trip goes through the echo filter, whose taps are 1/32000 s apart at
+    the output (so `ratio` samples apart in the sample), and so is coloured
+    by it and delayed by its span: a repeat comes passes x (echo delay + the
     filter's span) late, where rows alone give passes x the delay. FFVI's
     Dark World has one tap, 7 samples back; repeats 7 samples a trip early
     stacked differently on its held organ chords, a third brighter than the
@@ -268,12 +322,7 @@ def echo_coloured(pcm, loop, ratio: float, taps, passes: int = 1) -> tuple[array
     convolved), so the sample is interpolated once. A loop is filtered as it
     repeats. Returns the 16-bit data and the factor it was scaled down by to
     fit (1.0 when it did)."""
-    one = [0.0] * 8                          # the filter by delay in output samples: FIR0 weighs the oldest of eight
-    for k, t in enumerate(taps):
-        one[7 - k] = t / 128
-    h = [1.0]
-    for _ in range(passes):
-        h = [sum(h[i] * one[j - i] for i in range(max(0, j - 7), min(len(h), j + 1))) for j in range(len(h) + 7)]
+    h = echo_response(taps, passes, feedback)
     terms = [(d * ratio, c) for d, c in enumerate(h) if c]
     span = max((d for d, _ in terms), default=0.0)
     if loop:

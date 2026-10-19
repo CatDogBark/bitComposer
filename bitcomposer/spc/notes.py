@@ -17,7 +17,7 @@ later, so a note sounds about 6 samples (0.19 ms) after its write.
 """
 from dataclasses import dataclass, field
 
-from .emulate import CLOCK, RATE
+from .emulate import CLOCK, RATE, Write
 
 KON, KOFF, FLG, EON, NON, PMON = 0x4C, 0x5C, 0x6C, 0x4D, 0x3D, 0x2D
 MVOLL, MVOLR, EVOLL, EVOLR, EFB, EDL = 0x0C, 0x1C, 0x2C, 0x3C, 0x0D, 0x7D
@@ -63,10 +63,24 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
     """The notes in a run's writes, in order of their start. `keyons` (from
     emulate.Run) gives each note the sample addresses the SNES chip read as
     it keyed the voice on; many drivers write a voice's directory entry just
-    before keying it, so the snapshot's entry may not be what plays."""
+    before keying it, so the snapshot's entry may not be what plays. The
+    snapshot's own KON keys its voices on at the start, as the emulator (and
+    SPC players) load it: most snapshots are taken as a song's first notes
+    key on."""
     regs = bytearray(snapshot.dsp)
     sounding: dict[int, Note] = {}
     notes: list[Note] = []
+    # Keyed on while the voice's KOFF bit was set: the SNES chip starts the note at its next
+    # poll and releases it at the one after (from silence) unless KOFF has cleared by then.
+    # Some drivers key off and on in one go and clear KOFF just after (Factor 5's).
+    held: dict[int, list] = {}              # voice: [note, KON time, when KOFF cleared]
+    releases: list[list] = []
+    writes = list(writes)
+    # ...unless the driver writes KON before the SNES chip's first poll (its first sample, 32
+    # cycles in): the write replaces it, as in the register (Super Metroid's Crateria Rainstorm
+    # was dumped just as its driver wrote KON, and its rain played twice, the second unsampled)
+    if snapshot.dsp[KON] and not any(w.reg == KON and w.cycle < 32 for w in writes):
+        writes = [Write(0, KON, snapshot.dsp[KON])] + writes
 
     def close(v: int, t: float):
         n = sounding.pop(v, None)
@@ -80,8 +94,9 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
             for v in range(8):
                 if val >> v & 1:
                     close(v, t)
-                    if regs[KOFF] >> v & 1 or regs[FLG] & 0x80:
-                        continue                 # keyed on while held off: no sound
+                    held.pop(v, None)
+                    if regs[FLG] & 0x80:
+                        continue                 # keyed on in the soft reset: no sound
                     b = v * 0x10
                     n = Note(voice=v, start=t + KEY_ON_DELAY, sample=regs[b + 4],
                              pitch=(regs[b + 2] | regs[b + 3] << 8) & 0x3FFF,
@@ -93,6 +108,9 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
                              echo_writes=not regs[FLG] & 0x20, pmon=v > 0 and bool(regs[PMON] >> v & 1))
                     sounding[v] = n
                     notes.append(n)
+                    if regs[KOFF] >> v & 1:
+                        held[v] = [n, t, None]
+                        releases.append(held[v])
             continue
         if reg == 0x7C:                          # ENDX: a write acknowledges, nothing is kept
             continue
@@ -101,6 +119,8 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
             for v in range(8):
                 if val >> v & 1:
                     close(v, t)
+                elif v in held:
+                    held.pop(v)[2] = t
         elif reg == FLG and val & 0x80:
             for v in list(sounding):
                 close(v, t)
@@ -131,6 +151,7 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
     if until is not None:
         for n in sounding.values():
             n.end = None
+    polled = {}                              # id(note): the poll that keyed it on, as the SNES chip says
     if keyons:
         by_voice: dict[int, list] = {}
         for k in keyons:
@@ -142,7 +163,11 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
             if ks and ks[0].time <= n.start + 0.0005:
                 k = ks.pop(0)
                 n.brr = (k.start, k.loop)
-    return notes
+                polled[id(n)] = k.time
+    # without the SNES chip's word, the poll is a sample after the write on average
+    silent = {id(n) for n, t, cleared in releases
+              if cleared is None or cleared >= polled.get(id(n), t + 1 / RATE) + 2 / RATE}
+    return [n for n in notes if id(n) not in silent] if silent else notes
 
 
 def master_volume(snapshot, writes) -> list[tuple[float, int, int]]:
