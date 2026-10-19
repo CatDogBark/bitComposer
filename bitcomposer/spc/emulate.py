@@ -85,3 +85,15 @@ def run(snapshot, seconds: float, audio: bool = False, mute: int = 0, taps: int 
         for i, v in enumerate(voices):
             tapped[v] = both[i::len(voices)]
     return Run(writes=writes, keyons=keyons, seconds=cycles / CLOCK, instructions=n, audio=pcm, tapped=tapped)
+
+
+def solos(snapshot, seconds: float) -> dict[int, array]:
+    """Each voice alone for `seconds` of song, as run(audio=True, mute=...)
+    with the other seven muted gives it, but from one run (each voice's echo
+    kept apart): {voice: 32 kHz stereo 16-bit}. Needs emulator 0.3."""
+    emu = _module()
+    if emu is None or not hasattr(emu, "solos"):
+        raise EmulatorMissing("each voice alone from one run needs the emulator, bitcomposer-emu, version 0.3 or later")
+    raw, frames = emu.solos(snapshot.raw, float(seconds))
+    every = array("h", raw)
+    return {v: every[2 * frames * v:2 * frames * (v + 1)] for v in range(8)}

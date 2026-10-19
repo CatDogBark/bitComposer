@@ -96,6 +96,14 @@ impl Bus for SpcBus {
 
     #[inline(always)]
     fn write(&mut self, a: u16, v: u8, now: u64) {
+        if let Some(solos) = self.dsp.solos.as_mut() {
+            // each voice alone has its own copy of the RAM: the CPU writes it too
+            if !(0xF0..=0xFF).contains(&a) || matches!(a, 0xF8 | 0xF9) {
+                for r in solos.ram.iter_mut() {
+                    r[a as usize] = v;
+                }
+            }
+        }
         if !(0xF0..=0xFF).contains(&a) {
             self.ram[a as usize] = v;
             return;

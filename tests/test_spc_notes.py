@@ -102,6 +102,26 @@ class Emulator(unittest.TestCase):
         self.assertAlmostEqual(run.seconds, 0.01, delta=0.001)
         self.assertEqual(len(notes.decode(snap, run.writes)), 1)
 
+    @unittest.skipUnless(emulate.available() and hasattr(__import__("bitcomposer_emu"), "solos"), "needs emulator 0.3")
+    def test_each_voice_alone_from_one_run(self):
+        # two voices keyed, voice 0 sending to the echo (DIR 0x10, a looped sample at 0x0400): each voice alone
+        # from one run is what a run with the other muted gives, sample for sample, echo and all
+        regs = ((0x5D, 0x10), (0x04, 0), (0x03, 0x10), (0x00, 60), (0x01, 60), (0x07, 0x7F), (0x14, 0), (0x13, 0x08),
+                (0x10, 40), (0x11, 70), (0x17, 0x7F), (0x0C, 0x7F), (0x1C, 0x7F), (0x6D, 0x80), (0x7D, 0x02), (0x2C, 0x40),
+                (0x3C, 0x40), (0x0D, 0x50), (0x0F, 0x7F), (0x4D, 0x01), (0x6C, 0x00), (0x4C, 0x03))
+        code = b"".join(bytes([0x8F, r, 0xF2, 0x8F, v, 0xF3]) for r, v in regs) + bytes([0x2F, 0xFE])
+        data = bytearray(snapshot(code).raw)
+        blk = bytes([0xB0] + [0x77, 0x77, 0x99, 0x99] * 2) + bytes([0xB3] + [0x77, 0x77, 0x99, 0x99] * 2)
+        data[spc.RAM + 0x0400:spc.RAM + 0x0400 + len(blk)] = blk
+        data[spc.RAM + 0x1000:spc.RAM + 0x1004] = (0x0400).to_bytes(2, "little") + (0x0409).to_bytes(2, "little")
+        snap = spc.read(bytes(data))
+        alone = emulate.solos(snap, 0.3)
+        for v in (0, 1):
+            muted = array("h", emulate.run(snap, 0.3, audio=True, mute=0xFF ^ (1 << v)).audio)
+            self.assertGreater(max(map(abs, muted)), 100)
+            self.assertEqual(alone[v], muted)
+        self.assertFalse(any(alone[2]))
+
 
 if __name__ == "__main__":
     unittest.main()

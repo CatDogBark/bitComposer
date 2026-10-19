@@ -70,11 +70,34 @@ mod python {
         Ok((PyBytes::new(py, &out), PyBytes::new(py, &kons), pcm, tapped, cpu.cycles, n))
     }
 
+    /// solos(data, seconds) -> (voices, frames)
+    ///
+    /// Each voice alone, as `run` with the other seven muted gives it, from
+    /// one run: `voices` is eight streams one after another (voice 0 first),
+    /// each `frames` stereo frames of 16-bit little-endian, left then right.
+    #[pyfunction]
+    fn solos<'py>(py: Python<'py>, data: &[u8], seconds: f64) -> PyResult<(Bound<'py, PyBytes>, u64)> {
+        let (mut cpu, mut bus) = spc::load(data).map_err(PyValueError::new_err)?;
+        bus.dsp.solos = Some(Box::new(crate::dsp::Solos::new(&bus.ram)));
+        let budget = (spc::CLOCK as f64 * seconds.max(0.0)) as u64;
+        py.allow_threads(|| spc::run(&mut cpu, &mut bus, budget));
+        let solos = bus.dsp.solos.take().expect("solos kept");
+        let frames = solos.out[0].len() / 2;
+        let mut b = Vec::with_capacity(8 * frames * 4);
+        for out in &solos.out {
+            for s in out {
+                b.extend_from_slice(&s.to_le_bytes());
+            }
+        }
+        Ok((PyBytes::new(py, &b), frames as u64))
+    }
+
     #[pymodule]
     fn bitcomposer_emu(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add("__version__", super::VERSION)?;
         m.add("CLOCK", spc::CLOCK)?;
         m.add_function(wrap_pyfunction!(run, m)?)?;
+        m.add_function(wrap_pyfunction!(solos, m)?)?;
         Ok(())
     }
 }
