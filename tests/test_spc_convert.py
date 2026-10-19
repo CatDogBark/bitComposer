@@ -221,6 +221,14 @@ class Convert(unittest.TestCase):
             m, pcm = render(path, 0.5)
             self.assertGreater(max(abs(v) for v in pcm), 1000)
 
+    def test_a_note_shorter_than_a_row(self):
+        # keyed on, its GAIN rewritten and keyed off within a millisecond: it takes its row, the cut the next
+        snap = tiny(TINY + KON0 + ((0x07, 0x40), (0x5C, 0x01)))
+        song = convert.convert(snap, 0.5)
+        rows = [row[0] for pat in song["patterns"] for row in pat.data]
+        start = next(r for r, c in enumerate(rows) if 0 < c.note < 120)
+        self.assertEqual(rows[start + 1].note, itf.NOTE_CUT)
+
     def test_a_tiny_driver_becomes_a_playable_module(self):
         snap = tiny()
         with tempfile.TemporaryDirectory() as d:
