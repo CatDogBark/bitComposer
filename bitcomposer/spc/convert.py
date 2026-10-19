@@ -529,6 +529,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         if vol == 0 and not any(loudness(sl, sr, gl, gr)[0] for _, sl, sr in n.swells):
             return False                 # silent throughout (a driver may key a note silent, then swell it up)
         end_row = (round(n.end * row_hz) + shift) if n.end is not None else last_row + 1
+        end_row = max(end_row, row + 1)  # a note shorter than half a row still gets its row, and its cut after
         factors = None
         if n.envelopes and not baked:
             factors, silent = envelope_factors(n, row - shift, end_row - shift)
