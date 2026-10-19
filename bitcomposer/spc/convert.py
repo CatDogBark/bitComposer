@@ -20,9 +20,16 @@ original. The pieces:
   simulated from the ADSR or GAIN registers.
 - Note volume and pan from the voice's volumes; swells in the volume column;
   a key-off is a note cut (the SNES chip's release takes under 8 ms).
+- The echo as repeats: each echoing note again on a channel of its own, a
+  delay (EDL x 16 ms) late, up to three times, the k-th at the echo volume
+  times the filter's gain to the k and the feedback to the k-1, left and
+  right as the echo volumes have them.
+- The master volume (a driver's fade-out) as global volume, relative to
+  the song's start, on a channel of its own.
 - Noise voices play a white-noise sample at the noise clock's rate.
 
-Not yet carried over: the echo, pitch modulation, phase-inverted volumes.
+Not yet carried over: pitch modulation, the echo filter's colour (only its
+gain is), phase-inverted volumes.
 The files stay the user's: a converted song holds the game's samples.
 """
 import math
@@ -39,6 +46,8 @@ MAX_TICK_RATE = 102.0                 # IT tempo 255 is 102 ticks a second
 FINE_GRID = 100.0                     # rows a second when the driver's clock cannot be the grid
 ALIGNED = 0.6                         # how closely key-ons must line up with a timer to be its ticks
 MAX_INSTRUMENTS = 99
+TAPS = 3                              # echo repeats carried over, at most
+FX_SET_GLOBAL_VOLUME = 22             # Vxx
 ENV_NODES = 25
 
 # The SNES chip's envelope rates: samples between steps (rate 0 never steps).
@@ -227,9 +236,14 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         instruments.append(itf.ITInstrument(name=f"{label} env {len(instruments) + 1}", sample=sample, envelope=nodes))
         instrument_of[key] = len(instruments)
 
+    # Channels: the eight voices; for each voice up to TAPS echo repeats; the master volume last.
+    voices_echo = any(n.echo and n.echo_writes and n.echo_delay > 0 for n in found)
+    taps = TAPS if voices_echo else 0
+    channels = 8 + 8 * taps + 1
+    master_ch = channels - 1
     total_rows = int(run.seconds * row_hz) + 2
     n_patterns = min(200, math.ceil(total_rows / ROWS_PER_PATTERN))
-    patterns = [itf.ITPattern(rows=ROWS_PER_PATTERN, channels=8) for _ in range(n_patterns)]
+    patterns = [itf.ITPattern(rows=ROWS_PER_PATTERN, channels=channels) for _ in range(n_patterns)]
     last_row = n_patterns * ROWS_PER_PATTERN - 1
 
     def cell(row, ch):
@@ -241,43 +255,44 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
             return 60 + 12 * math.log2(1 / per)
         return 60 + 12 * math.log2(pitch / 0x1000) - offset[n.brr]
 
-    pans = [None] * 8
-    placed = 0
-    for n in sorted(found, key=lambda n: (n.start, n.voice)):
-        ins = instrument_of.get(key_of(n))
-        row = round(n.start * row_hz)
-        c = cell(row, n.voice)
-        if ins is None or c is None:
-            continue
-        if n.noise and not n.noise_rate:
-            continue
-        semis = it_semis(n, n.pitch)
-        note = round(semis)
-        if not 0 <= note <= 119:
-            continue
-        left, right = abs(n.volume[0]), abs(n.volume[1])
-        c.note, c.instrument = note, ins
-        c.volume = max(0, min(64, round(64 * max(left, right) / 127)))
-        if left + right:
-            pan = round(255 * (0.5 + 0.5 * (right - left) / (left + right)))
-            if pan != pans[n.voice]:
-                c.effect, c.effect_val = itf.FX_SET_PAN, pan
-                pans[n.voice] = pan
-        placed += 1
-        end_row = round(n.end * row_hz) if n.end is not None else last_row + 1
-        # bends and swells, row by row, until the note ends
+    def loudness(left, right, gl, gr):
+        """(IT volume, IT pan or None) for voice volumes scaled by gains."""
+        l, r = abs(left) * gl, abs(right) * gr
+        vol = max(0, min(64, round(64 * max(l, r) / 127)))
+        pan = round(255 * (0.5 + 0.5 * (r - l) / (l + r))) if l + r > 0 else None
+        return vol, pan
+
+    pans = {}
+
+    def place(n, ch, note, ins, shift, gl, gr) -> bool:
+        """Write note n into channel ch, `shift` rows late, its volumes scaled
+        by gl (left) and gr (right): the note, its pan, its bends and swells
+        row by row, its cut."""
+        row = round(n.start * row_hz) + shift
+        c = cell(row, ch)
+        if c is None:
+            return False
+        vol, pan = loudness(*n.volume, gl, gr)
+        if vol == 0 and not any(loudness(sl, sr, gl, gr)[0] for _, sl, sr in n.swells):
+            return False                 # silent throughout (a driver may key a note silent, then swell it up)
+        c.note, c.instrument, c.volume = note, ins, vol
+        if pan is not None and pan != pans.get(ch):
+            c.effect, c.effect_val = itf.FX_SET_PAN, pan
+            pans[ch] = pan
+        end_row = (round(n.end * row_hz) + shift) if n.end is not None else last_row + 1
         bends, swells = list(n.bends), list(n.swells)
-        cur, pitch, vol, last_vol = 0, n.pitch, c.volume, c.volume
+        cur, pitch, last_vol = 0, n.pitch, vol
         for r in range(row, min(end_row, last_row + 1)):
-            t = (r + 0.5) / row_hz
+            t = (r - shift + 0.5) / row_hz
             while bends and bends[0][0] <= t:
                 pitch = bends.pop(0)[1]
+            v = last_vol
             while swells and swells[0][0] <= t:
                 _, sl, sr = swells.pop(0)
-                vol = max(0, min(64, round(64 * max(abs(sl), abs(sr)) / 127)))
-            cc = cell(r, n.voice)
-            if r > row and vol != last_vol and cc.volume == 255 and cc.note == 0:
-                cc.volume, last_vol = vol, vol
+                v = loudness(sl, sr, gl, gr)[0]
+            cc = cell(r, ch)
+            if r > row and v != last_vol and cc.volume == 255 and cc.note == 0:
+                cc.volume, last_vol = v, v
             if not pitch:
                 continue
             target = round(64 * (it_semis(n, pitch) - note))
@@ -292,26 +307,63 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
                 cc.effect = itf.FX_PORTA_UP if delta > 0 else itf.FX_PORTA_DOWN
                 cc.effect_val = val
                 cur += moved if delta > 0 else -moved
-        if n.end is not None and end_row <= last_row:
-            cc = cell(end_row, n.voice)
+        if end_row <= last_row:
+            cc = cell(end_row, ch)
             if cc.note == 0:
                 cc.note = itf.NOTE_CUT
+        return True
+
+    placed = repeats = 0
+    for n in sorted(found, key=lambda n: (n.start, n.voice)):
+        ins = instrument_of.get(key_of(n))
+        if ins is None or (n.noise and not n.noise_rate):
+            continue
+        note = round(it_semis(n, n.pitch))
+        if not 0 <= note <= 119:
+            continue
+        if not place(n, n.voice, note, ins, 0, 1.0, 1.0):
+            continue
+        placed += 1
+        # The echo, as repeats: the k-th comes k delays late, at the echo
+        # volume times the filter's gain to the k and the feedback to the k-1.
+        if taps and n.echo and n.echo_writes and n.echo_delay > 0:
+            g, fb = abs(n.echo_fir), abs(n.echo_feedback)
+            for k in range(1, taps + 1):
+                scale = g ** k * fb ** (k - 1)
+                gl, gr = abs(n.echo_volume[0]) * scale, abs(n.echo_volume[1]) * scale
+                if max(gl, gr) < 1 / 32:
+                    break
+                shift = round(k * n.echo_delay * row_hz)
+                if place(n, 8 + n.voice * taps + k - 1, note, ins, shift, gl, gr):
+                    repeats += 1
+
+    # The master volume, relative to where the song starts (fades, mostly).
+    mv = notes_mod.master_volume(snap, run.writes)
+    base = max(abs(mv[0][1]), abs(mv[0][2])) or 127
+    level = 128
+    for t_mv, ml, mr in mv[1:]:
+        gv = max(0, min(128, round(128 * max(abs(ml), abs(mr)) / base)))
+        c = cell(round(t_mv * row_hz), master_ch)
+        if c is not None and gv != level:
+            c.effect, c.effect_val = FX_SET_GLOBAL_VOLUME, gv
+            level = gv
 
     t = snap.tags
     message = "\r".join([
         f"{t.title or 'SPC'}{' - ' + t.game if t.game else ''}{' - ' + t.artist if t.artist else ''}",
         "Converted from an SPC snapshot by bitComposer: the game's own samples and the notes its",
-        "driver played, one to one. Not carried over yet: echo, pitch modulation.",
+        "driver played, one to one, the echo as repeats on channels of their own.",
+        "Not carried over yet: pitch modulation, the echo filter's colour.",
         (f"rows on the driver's clock, {hz:.2f} Hz" if on_ticks else
-         f"rows at {row_hz:.0f} a second (the driver's key-ons do not sit on a tick IT can run)") + f"; {placed} notes",
+         f"rows at {row_hz:.0f} a second (the driver's key-ons do not sit on a tick IT can run)") + f"; {placed} notes, {repeats} echo repeats",
     ])
     song = {"name": (t.title or "SPC")[:25], "samples": samples, "patterns": patterns,
             "orders": list(range(n_patterns)), "tempo": tempo, "speed": 1, "instruments": instruments,
             "message": message,
-            "info": {"notes": placed, "tick_hz": hz, "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
+            "info": {"notes": placed, "repeats": repeats, "channels": channels, "tick_hz": hz, "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
                      "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
     if path:
         itf.write_it_file(path, song["name"], samples, patterns, song["orders"], tempo=tempo, speed=1,
-                          global_volume=128, mix_volume=128, num_channels=8, channel_pans=[32] * 8,
+                          global_volume=128, mix_volume=128, num_channels=channels, channel_pans=[32] * channels,
                           message=message, instruments=instruments)
     return song

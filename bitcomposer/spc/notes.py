@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from .emulate import CLOCK, RATE
 
 KON, KOFF, FLG, EON, NON = 0x4C, 0x5C, 0x6C, 0x4D, 0x3D
+MVOLL, MVOLR, EVOLL, EVOLR, EFB, EDL = 0x0C, 0x1C, 0x2C, 0x3C, 0x0D, 0x7D
+FIR = (0x0F, 0x1F, 0x2F, 0x3F, 0x4F, 0x5F, 0x6F, 0x7F)
 KEY_ON_DELAY = 6 / RATE
 
 
@@ -35,6 +37,12 @@ class Note:
     noise: bool
     noise_rate: int = 0              # FLG's noise clock (5-bit rate) at key-on, for noise notes
     brr: tuple[int, int] | None = None   # the (start, loop) addresses it played, as the SNES chip read them
+    # the echo as it stood at key-on (it sends when `echo` and echo writes are on)
+    echo_delay: float = 0.0          # seconds: EDL * 16 ms
+    echo_volume: tuple[float, float] = (0.0, 0.0)    # EVOL left, right, -1..1
+    echo_feedback: float = 0.0       # EFB, -1..1
+    echo_fir: float = 1.0            # the FIR filter's gain at DC: its taps' sum / 128
+    echo_writes: bool = True         # FLG bit 5 clear
     end: float | None = None         # None: still sounding when the run ended
     bends: list[tuple[float, int]] = field(default_factory=list)       # (time, pitch) while it sounds
     swells: list[tuple[float, int, int]] = field(default_factory=list)  # (time, left, right)
@@ -76,7 +84,10 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
                              pitch=(regs[b + 2] | regs[b + 3] << 8) & 0x3FFF,
                              volume=(_s8(regs[b]), _s8(regs[b + 1])), adsr=(regs[b + 5], regs[b + 6]),
                              gain=regs[b + 7], echo=bool(regs[EON] >> v & 1), noise=bool(regs[NON] >> v & 1),
-                             noise_rate=regs[FLG] & 0x1F)
+                             noise_rate=regs[FLG] & 0x1F, echo_delay=(regs[EDL] & 0x0F) * 0.016,
+                             echo_volume=(_s8(regs[EVOLL]) / 128, _s8(regs[EVOLR]) / 128),
+                             echo_feedback=_s8(regs[EFB]) / 128, echo_fir=sum(_s8(regs[a]) for a in FIR) / 128,
+                             echo_writes=not regs[FLG] & 0x20)
                     sounding[v] = n
                     notes.append(n)
             continue
@@ -119,3 +130,19 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
                 k = ks.pop(0)
                 n.brr = (k.start, k.loop)
     return notes
+
+
+def master_volume(snapshot, writes) -> list[tuple[float, int, int]]:
+    """The SNES chip's master volume over the run: (time, left, right), the
+    snapshot's first, then each change (a driver fades a song out here)."""
+    left, right = _s8(snapshot.dsp[MVOLL]), _s8(snapshot.dsp[MVOLR])
+    out = [(0.0, left, right)]
+    for w in writes:
+        if w.reg in (MVOLL, MVOLR):
+            if w.reg == MVOLL:
+                left = _s8(w.value)
+            else:
+                right = _s8(w.value)
+            if (left, right) != out[-1][1:]:
+                out.append((w.cycle / CLOCK, left, right))
+    return out
