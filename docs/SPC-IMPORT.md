@@ -83,11 +83,33 @@ counts, DSP readings), which JSON cannot hold. Instead a test writes each
 built-in pack in the format and reads it back unchanged, which proves
 the format can say everything they say and keeps it that way.
 
-### 2. The SPC reader (`bitcomposer/spc/`)
+### 2. The SPC reader (built: `bitcomposer/spc/`)
 
 The research tools' decoding, made a module with tests: the file layout,
-ID666, the BRR decoder, the sample directory, the DSP register map.
-Pure Python, standard library only, like the generator.
+ID666 (text and binary), the BRR decoder, the sample directory, the DSP
+register map (per voice the volume, pitch, sample and envelope; the echo,
+noise and pitch modulation). Pure Python, standard library only, like the
+generator. `python -m bitcomposer.spc` shows what a snapshot holds, and
+`--export DIR` writes every sample of a set of snapshots once, as WAV, with
+its loop in `samples.json`.
+
+Three things the research tools did not need and an import does:
+
+- **The chip's arithmetic exactly.** The research decoder ran the filters
+  at half scale and clipped where the chip wraps: a sum past 15 bits loses
+  its top bit on the SNES, which flips its sign. The reader wraps, as the
+  chip does; a random-block test checks it against a second decoder
+  written the way bsnes does it.
+- **Loops as they sound on the repeats.** A loop whose first block
+  predicts from the samples before it decodes differently on its first
+  pass and on the repeats, so a tracker looping the first pass clicks.
+  The reader appends repeat passes until one decodes as the last did
+  (within 64 of 65536, where the filters' rounding drifts for ever) and
+  loops that one.
+- **Telling samples from leftovers.** A snapshot's directory has 256
+  entries, most pointing at whatever the RAM holds now. An entry counts as
+  a sample when every block's shift is at most 12 and the first block is
+  unfiltered, as encoders write them, or when a voice is playing it.
 
 ### 3. The emulator
 
@@ -190,8 +212,14 @@ Imported packs live in the user's settings folder.
 
 Measured, as everything here is:
 
-- **Reader:** decoded samples match the research tools' WAVs exactly, over
-  the 258 snapshots the four packs were built from.
+- **Reader (done):** over the 258 snapshots the four packs were built
+  from, the 4,728 samples the research tools found decode to exactly twice
+  their values in 3,414; the other 1,313 differ only where the research
+  decoder let a sum run past 15 bits, which the chip wraps. Of the 262
+  samples the voices were playing, the plausibility test keeps 259 (all
+  262 are listed, being played) and drops 70% of the directory's other
+  entries. 56 of the 61 played loops that never repeat exactly settle
+  within the seam tolerance.
 - **Emulator:** the onsets in its key-on log line up with the onsets in
   the reference player's audio of the same snapshot, within a few ms, for
   every driver in the test set (the four built-in packs' games: three
@@ -214,7 +242,7 @@ Each step is its own branch and pull request, shippable on its own:
 
 1. The pack file format (built), proven on the built-in packs by a
    round-trip test.
-2. The SPC reader, tested against the research tools.
+2. The SPC reader (built), checked against the research tools.
 3. The emulator, tested against reference renders. The long one.
 4. The translator and SPC to IT, which proves 3.
 5. The pack from a soundtrack, checked against the built-in packs.
