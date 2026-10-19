@@ -328,7 +328,8 @@ These change how every note sounds, not what notes are played.
 - **SPC import: a pack from a game's own files (planned 2026-10-18; the
   plan is `docs/SPC-IMPORT.md`; shipped in 1.1.0 as a developer preview:
   the reader, the emulator, built from source, SPC-to-IT and its measuring
-  tool, `docs/drivers/` the record of what it converts; open: the
+  tool, `docs/drivers/` the record of what it converts; 1.1.1 converts 39
+  games of 20 music drivers, its songs as SPC players play them; open: the
   translator and a pack from a soundtrack, step 5, the PACKS panel, step
   6, and the emulator's wheels on PyPI).** The import reads a soundtrack's `.spc`
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
