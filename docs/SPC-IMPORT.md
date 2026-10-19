@@ -283,8 +283,29 @@ as a register file and every write logged. On real songs from the four
 test games it runs at about 1,000 to 1,180 times real time (285 million
 instructions a second on a Ryzen 7 9800X3D), and its log is identical to
 the Python prototype's: the same writes, the same key-ons at the same
-cycles. Next: the SNES chip's voices, envelopes and echo, which Evermore's
-driver reads back.
+cycles.
+
+Then the SNES chip (`emu/src/dsp.rs`), written from fullsnes: the eight
+voices walking their BRR samples with the hardware's Gaussian
+interpolation (its 512-entry table and overflow behaviour), pitch
+modulation and noise; the ADSR and GAIN envelopes; KON and KOFF polled
+every other sample with the 5-sample key-on delay; ENDX; the echo with
+its FIR filter and feedback, written into RAM; the mixer. It steps one
+sample every 32 CPU cycles, so the driver reads live state. Voices the
+driver has not keyed on since the snapshot wait silent, since an SPC file
+does not say where a voice was in its sample. With the SNES chip and its
+output on, songs run at about 200 to 230 times real time.
+
+Checked against libgme's rendering of the same snapshots (evidence, not a
+verdict: it is another emulator): FFVI's battle theme correlates at 0.98
+(stretches at 0.998 to 1.000, aligned to the sample), Secret of Mana's at
+0.93. Secret of Evermore's cannot line up sample for sample: its driver
+plays the noise generator constantly, and the noise sequence's position is
+not in an SPC file either. Two causes on our side were tested and ruled
+out (when ENDX is set; whether the snapshot's KON keys voices on); the
+driver's key-ons came out identical in every run. Listened to side by
+side on FFVI, Mana and two Evermore songs: identical and accurate, the
+only difference that libgme stops at the length in the file's tag.
 
 ### 4. The translator
 
@@ -369,8 +390,8 @@ Measured, as everything here is:
   262 are listed, being played) and drops 70% of the directory's other
   entries. 56 of the 61 played loops that never repeat exactly settle
   within the seam tolerance.
-- **Emulator:** every SingleStepTests case and every gilyon hardware test
-  passes; then the onsets in its key-on log line up with the onsets in
+- **Emulator:** every SingleStepTests case (done: all 254,000) and every
+  gilyon hardware test passes; then the onsets in its key-on log line up with the onsets in
   the reference player's audio of the same snapshot, within a few ms, for
   every driver in the test set (the four built-in packs' games: three
   Square titles, whose drivers differ by version, and Capcom's Mega Man X). A reference player is a development

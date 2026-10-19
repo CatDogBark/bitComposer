@@ -6,6 +6,7 @@
 //! is) it is also the Python module `bitcomposer_emu`.
 
 pub mod cpu;
+pub mod dsp;
 pub mod spc;
 
 /// The crate's version, also the Python module's `__version__`.
