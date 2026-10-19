@@ -175,8 +175,9 @@ These change how every note sounds, not what notes are played.
   (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
   mostly data plus the VGM reader and the patch renderer.
 - **Your own packs (after 1.0, asked for 2026-10-18; the format and
-  loader built 2026-10-18, `docs/PACKS.md`, `--pack-file`; the player's
-  PACKS panel is step 6 of the SPC import plan).** A pack added
+  loader shipped in 1.1.0, `docs/PACKS.md`, `--pack-file`; open: the
+  player's PACKS panel, step 6 of the SPC import plan, and a pack folder
+  shared as one zip).** A pack added
   without touching the code: a pack file the player lists in its PACKS
   panel, apart from the built-in sounds. A pack is mostly data already
   (voices per role, weighted habits, channel trims), so the work is a
@@ -325,7 +326,11 @@ These change how every note sounds, not what notes are played.
   tambourine, maracas (the kit has seven fixed slots); one-song colours
   (banjo, bagpipe, synth drums, metal hits, crowd) stay out.
 - **SPC import: a pack from a game's own files (planned 2026-10-18; the
-  plan is `docs/SPC-IMPORT.md`).** The import reads a soundtrack's `.spc`
+  plan is `docs/SPC-IMPORT.md`; shipped in 1.1.0 as a developer preview:
+  the reader, the emulator, built from source, SPC-to-IT and its measuring
+  tool, `docs/drivers/` the record of what it converts; open: the
+  translator and a pack from a soundtrack, step 5, the PACKS panel, step
+  6, and the emulator's wheels on PyPI).** The import reads a soundtrack's `.spc`
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
   own music driver and logs what it tells the DSP; a translator turns the
   log into notes, roles and measured habits. Two outputs: an SPC-to-IT

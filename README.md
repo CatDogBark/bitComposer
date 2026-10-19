@@ -183,6 +183,19 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
+## SPC import (developer preview)
+
+bitComposer is starting to learn from the games its packs imitate.
+`python -m bitcomposer.spc --to-it song.it game.spc` runs an SPC file's own
+music driver in an emulator of the SNES sound hardware and writes the song as
+an IT module (its samples, notes, envelopes and echo), and
+`tools/spc_check.py` measures the module against the original, voice by
+voice. It needs the emulator, `bitcomposer-emu`, built from source (Rust;
+CONTRIBUTING.md has how); it is not on PyPI yet. Making a pack from a
+soundtrack comes later (`docs/SPC-IMPORT.md`; what has been tested, and how
+well it converts, is in `docs/drivers/`). The SPC files are yours:
+bitComposer ships none.
+
 ## The player
 
 <img src="docs/images/player.png" alt="The player: now playing, transport, gain, generate, settings and mix, the playlist" width="400">
