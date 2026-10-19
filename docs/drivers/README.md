@@ -46,23 +46,28 @@ across a game's songs unless a number says otherwise. CONTRIBUTING.md
 
 ## Games
 
-<!-- generated: games -->
-| Console | Game | Composer (as the tags credit) | Music driver | Songs (scored) |
-|---|---|---|---|---|
-| SNES | Final Fantasy VI | Nobuo Uematsu | [Square: AKAO](snes/akao.md) | 82 (79) |
-| SNES | Secret of Mana | Hiroki Kikuta | [Square: Secret of Mana's](snes/secret-of-mana.md) | 69 (68) |
-| SNES | Secret of Evermore | Jeremy Soule | [Square Soft US: Secret of Evermore's](snes/secret-of-evermore.md) | 72 (70) |
-| SNES | Mega Man X | "Setsuo, Tomozou, Sato, Yuko, Kir" (cut off) | [Capcom](snes/capcom.md) | 35 (35) |
+### SNES
+
+<!-- generated: games snes -->
+| Game | Composer (as the tags credit) | Music driver | Songs (scored) |
+|---|---|---|---|
+| Final Fantasy VI | Nobuo Uematsu | [Square: AKAO](snes/akao.md) | 82 (79) |
+| Mega Man X | "Setsuo, Tomozou, Sato, Yuko, Kir" (cut off) | [Capcom](snes/capcom.md) | 35 (35) |
+| Secret of Evermore | Jeremy Soule | [Square Soft US: Secret of Evermore's](snes/secret-of-evermore.md) | 72 (70) |
+| Secret of Mana | Hiroki Kikuta | [Square: Secret of Mana's](snes/secret-of-mana.md) | 69 (68) |
 <!-- end generated -->
 
-Composers are as the tags give them: a cut-off or missing credit is left as
-it is rather than filled in from memory (an SPC tag's field holds 32
-characters). Driver names are given only where they are well established;
-otherwise a driver is named for its game.
+Composers are as the tags give them unless the SPC folder's `drivers.json`
+gives a fuller credit: a cut-off or missing credit is left as it is rather
+than filled in from memory (an SPC tag's field holds 32 characters). Driver
+names are given only where they are well established; otherwise a driver is
+named for its game.
 
 ## Composers
 
-<!-- generated: composers -->
+### SNES
+
+<!-- generated: composers snes -->
 | Composer (as the tags credit) | Games | Drivers |
 |---|---|---|
 | Hiroki Kikuta | Secret of Mana | [Square: Secret of Mana's](snes/secret-of-mana.md) |
@@ -70,6 +75,11 @@ otherwise a driver is named for its game.
 | Nobuo Uematsu | Final Fantasy VI | [Square: AKAO](snes/akao.md) |
 | "Setsuo, Tomozou, Sato, Yuko, Kir" (cut off) | Mega Man X | [Capcom](snes/capcom.md) |
 <!-- end generated -->
+
+The tables between "generated" markers here and in the console folders are
+written by `tools/spc_check.py doc` from `traits` and a sweep; everything else
+is written by hand. Each console's tables are its own, so one console's tool
+never rewrites another's.
 
 ## Adding a console
 

@@ -13,6 +13,7 @@ Usage:
     python3 tools/spc_check.py sweep SPC_ROOT OUT_DIR [--workers 8] [--seconds 30]
     python3 tools/spc_check.py report OUT_DIR/results.jsonl
     python3 tools/spc_check.py traits SPC_ROOT OUT.json [--workers 8]
+    python3 tools/spc_check.py doc SPC_ROOT TRAITS.json RESULTS.jsonl [--docs docs/drivers]
 
 The numbers:
 - contour: the correlation of the two loudness contours (RMS in 50 ms
@@ -34,12 +35,18 @@ The numbers:
 `traits` records what each song's driver does with the SNES chip, over its
 first minute: its clock, how it shapes envelopes, its pitch writes, pitch
 modulation and noise, its echo and master volume, its density; and prints
-them per game. docs/drivers/ is written from these and a sweep.
+them per game. `doc` writes the measured parts of docs/drivers/ from these
+and a sweep: each driver file's games, traits and scores, the SNES scores,
+and the index of games and composers, between "generated" markers; what is
+written by hand around them stays. A driver family with no file yet gets one
+to fill in.
 
 A sweep converts every SPC under SPC_ROOT/<game>/ at full length (to catch
 failures and IT's limits) and measures the first --seconds. A drivers.json in
-SPC_ROOT, {"<game folder>": "<music driver family>"}, groups the report by
-music driver, the unit a result says the most about. The converted modules
+SPC_ROOT names each game folder's music driver, the unit a result says the
+most about: {"<game folder>": {"driver": "<driver file, as akao>", "game":
+"<its name>", "composer": "<a fuller credit than the tags'>"}} (game and
+composer optional; a plain string is the driver alone). The converted modules
 go to OUT_DIR/it/: they hold the games' samples, and stay where they are.
 
 Needs the emulator (bitcomposer-emu, CONTRIBUTING.md) and libopenmpt.
@@ -414,8 +421,7 @@ def cmd_sweep(args) -> int:
     if not files:
         print(f"spc_check: no SPC files under {args.spc_root}/<game>/", file=sys.stderr)
         return 1
-    drivers_path = os.path.join(args.spc_root, "drivers.json")
-    drivers = json.load(open(drivers_path)) if os.path.exists(drivers_path) else {}
+    drivers = {k: v["driver"] for k, v in load_manifest(args.spc_root).items()}
     os.makedirs(os.path.join(args.out_dir, "it"), exist_ok=True)
     results = os.path.join(args.out_dir, "results.jsonl")
     t0 = time.time()
@@ -475,22 +481,184 @@ def cmd_traits(args) -> int:
         json.dump(recs, fh, indent=1)
     for game in sorted({r["game_folder"] for r in recs}):
         rs = [r for r in recs if r["game_folder"] == game]
-        busy = [r for r in rs if r["notes"] > 20]                # not a sound effect
-        common = lambda key, n=3: ", ".join(f"{k} ({c})" for k, c in sorted(               # noqa: E731
-            ((k, sum(1 for r in rs if key(r) == k)) for k in {key(r) for r in rs}), key=lambda kc: -kc[1])[:n])
-        print(f"{game}: {len(rs)} songs; game {common(lambda r: r['game'], 1)}; composer {common(lambda r: r['artist'], 2)}")
-        print(f"  clock: {common(lambda r: (round(r['tick_hz']), 'key-ons on it' if r['on_ticks'] else 'key-ons anywhere'))}")
-        print(f"  envelopes: ADSR at key-on {_pct([r['adsr_share'] for r in busy], .5):.2f} of notes; rewritten as they sound "
-              f"{_pct([r['rewritten_share'] for r in busy], .5):.2f}, {_pct([r['envelope_writes_per_note'] for r in busy], .5):.1f} writes a note")
-        print(f"  pitch writes a note: {_pct([r['pitch_writes_per_note'] for r in busy], .5):.1f} (90 %: "
-              f"{_pct([r['pitch_writes_per_note'] for r in busy], .9):.1f}); pitch modulation in {sum(r['pitch_modulated'] for r in rs)} songs, "
-              f"noise in {sum(1 for r in rs if r['noise_notes'])}")
-        print(f"  echo (ms, feedback): {common(lambda r: (r['echo_delay_ms'], round(r['echo_feedback'], 2)), 4)}; volume "
-              f"{common(lambda r: round(r['echo_volume'], 2), 2)}; sides inverted in {sum(r['echo_inverted'] for r in rs)}; "
-              f"filter at DC {common(lambda r: round(r['echo_filter_dc'], 2), 2)}")
-        print(f"  master volume {common(lambda r: r['master_volume'], 2)}; notes in the first minute "
-              f"{_pct([r['notes'] for r in rs], .5)}, a note {_pct([r['median_note_s'] for r in busy], .5):.2f} s (medians)")
+        print(f"{game}: {len(rs)} songs; game {_counted(rs, lambda r: r['game'], 1)}; composer {_counted(rs, lambda r: r['artist'], 2)}")
+        for name, text in trait_rows(rs):
+            print(f"  {name}: {text}")
     print(f"{args.out}: {len(recs)} songs")
+    return 0
+
+
+def _counted(recs, key, n: int = 3) -> str:
+    """The commonest values of key over recs, each with how many songs have it."""
+    counts = defaultdict(int)
+    for r in recs:
+        counts[key(r)] += 1
+    top = sorted(counts.items(), key=lambda kc: (-kc[1], str(kc[0])))[:n]
+    return "; ".join(f"{k} ({c}{' songs' if i == 0 else ''})" for i, (k, c) in enumerate(top))
+
+
+def trait_rows(recs) -> list[tuple[str, str]]:
+    """What a driver does, over songs' traits: (trait, measured), medians across the songs
+    (over those with more than 20 notes, where a sound effect would skew them)."""
+    busy = [r for r in recs if r["notes"] > 20] or recs
+    n = len(recs)
+    med = lambda key, p=.5: _pct([key(r) for r in busy], p)           # noqa: E731
+
+    def clock(r):
+        hz = round(r["tick_hz"])
+        return f"{hz} Hz, " + ("on its ticks" if r["on_ticks"] else "key-ons anywhere in a tick") if hz else "none found"
+    return [
+        ("Clock", _counted(recs, clock)),
+        ("Envelopes", f"ADSR at key-on: {100 * med(lambda r: r['adsr_share']):.0f} % of notes; rewritten as they sound: "
+                      f"{100 * med(lambda r: r['rewritten_share']):.0f} % ({med(lambda r: r['envelope_writes_per_note']):.1f} writes a note)"),
+        ("Pitch writes", f"{med(lambda r: r['pitch_writes_per_note']):.1f} a note (90 %: {med(lambda r: r['pitch_writes_per_note'], .9):.1f})"),
+        ("Pitch modulation", f"in {sum(r['pitch_modulated'] for r in recs)} of {n} songs"),
+        ("Noise", f"in {sum(1 for r in recs if r['noise_notes'])} of {n} songs"),
+        ("Echo", _counted(recs, lambda r: f"{r['echo_delay_ms']} ms, feedback {round(r['echo_feedback'], 2)}", 4)),
+        ("Echo volume", _counted(recs, lambda r: round(r["echo_volume"], 2), 2)),
+        ("Echo sides inverted", f"in {sum(r['echo_inverted'] for r in recs)} of {n} songs"),
+        ("Echo filter at DC", _counted(recs, lambda r: round(r["echo_filter_dc"], 2), 2)),
+        ("Master volume", _counted(recs, lambda r: r["master_volume"], 2)),
+        ("Density", f"{_pct([r['notes'] for r in recs], .5)} notes in a song's first minute; a note {med(lambda r: r['median_note_s']):.2f} s"),
+    ]
+
+
+# the driver record ---------------------------------------------------------
+
+def load_manifest(spc_root: str) -> dict:
+    """SPC_ROOT/drivers.json as {game folder: {"driver": ..., "game"?: ..., "composer"?: ...}}."""
+    path = os.path.join(spc_root, "drivers.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path) as fh:
+        raw = json.load(fh)
+    return {k: (dict(v) if isinstance(v, dict) else {"driver": v}) for k, v in raw.items()}
+
+
+def fill(text: str, name: str, content: str) -> str:
+    """text with what stands between its <!-- generated: name --> and <!-- end generated --> replaced."""
+    begin, end = f"<!-- generated: {name} -->\n", "<!-- end generated -->"
+    i = text.find(begin)
+    if i < 0:
+        raise ValueError(f"no '<!-- generated: {name} -->' block")
+    j = text.index(end, i)
+    return text[:i + len(begin)] + content.rstrip("\n") + "\n" + text[j:]
+
+
+def _commonest(values):
+    values = [v for v in values if v]
+    return max(set(values), key=values.count) if values else None
+
+
+def _credit(artist: str | None) -> str:
+    """A composer as the tags credit them: a full 32-character field was most likely cut off."""
+    if not artist:
+        return "(not in the tags)"
+    return f'"{artist}" (cut off)' if len(artist) >= 32 else artist
+
+
+def _scores(rs) -> str:
+    c, g, lv = [r["contour"] for r in rs], [r["gap_db"] for r in rs], [r["level"] for r in rs]
+    vt = [x["tone"] for r in rs for _, x in _voices_that_matter(r)]
+    return (f"{len(rs)} | {_pct(c, .5):.2f} ({_pct(c, .1):.2f}) | {_pct(g, .5):.2f} ({_pct(g, .9):.2f}) | "
+            f"{_pct(lv, .5):.2f} ({_pct(lv, .1):.2f}-{_pct(lv, .9):.2f}) | {_pct(vt, .5):.2f} ({_pct(vt, .1):.2f})")
+
+
+SCORES_HEAD = "Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %)"
+NEW_DRIVER = """# {slug}
+
+(What the driver is, and whose: to write.)
+
+## Games
+
+<!-- generated: games -->
+<!-- end generated -->
+
+## What the driver does
+
+<!-- generated: traits -->
+<!-- end generated -->
+
+(What these numbers mean for this driver: to write.)
+
+## Scores
+
+<!-- generated: scores -->
+<!-- end generated -->
+
+## The converter
+
+(What the converter does for this driver: to write.)
+
+## For generation
+
+(What defines its sound: to write.)
+
+## Open
+
+(Found by the sweep, not yet looked into: to write.)
+"""
+
+
+def cmd_doc(args) -> int:
+    manifest = load_manifest(args.spc_root)
+    with open(args.traits) as fh:
+        traits = json.load(fh)
+    with open(args.results) as fh:
+        results = [json.loads(line) for line in fh]
+    scored = [r for r in results if "error" not in r and r.get("contour") is not None and r["emu_rms"] >= 50]
+    console = os.path.join(args.docs, "snes")
+    by_driver = defaultdict(list)
+    for folder in sorted({t["game_folder"] for t in traits}):
+        by_driver[manifest.get(folder, {}).get("driver", folder)].append(folder)
+    games, composers, names = [], defaultdict(lambda: (set(), set())), {}
+    for slug, folders in sorted(by_driver.items()):
+        path = os.path.join(console, f"{slug}.md")
+        if not os.path.exists(path):
+            with open(path, "w") as fh:
+                fh.write(NEW_DRIVER.format(slug=slug))
+            print(f"{path}: new, to fill in")
+        with open(path) as fh:
+            text = fh.read()
+        names[slug] = text.splitlines()[0].lstrip("# ").strip()
+        rows = []
+        for folder in folders:
+            ts = [t for t in traits if t["game_folder"] == folder]
+            entry = manifest.get(folder, {})
+            game = entry.get("game") or _commonest(t["game"] for t in ts) or folder
+            credit = entry.get("composer") or _credit(_commonest(t["artist"] for t in ts))
+            songs = f"{len(ts)} ({sum(1 for r in scored if r['game'] == folder)})"
+            rows.append(f"| {game} | {credit} | {songs} |")
+            games.append((game, credit, slug, songs))
+            composers[credit][0].add(game)
+            composers[credit][1].add(slug)
+        ts = [t for t in traits if t["game_folder"] in folders]
+        rs = [r for r in scored if r["game"] in folders]
+        text = fill(text, "games", "| Game | Composer (as the tags credit) | Songs (scored) |\n|---|---|---|\n" + "\n".join(rows))
+        text = fill(text, "traits", "| Trait | Measured |\n|---|---|\n" + "\n".join(f"| {k} | {v} |" for k, v in trait_rows(ts)))
+        text = fill(text, "scores", f"| {SCORES_HEAD} |\n|---|---|---|---|---|\n| {_scores(rs)} |" if rs else "No song scored yet.")
+        with open(path, "w") as fh:
+            fh.write(text)
+    path = os.path.join(console, "README.md")
+    with open(path) as fh:
+        text = fh.read()
+    lines = [f"| [{names[slug]}]({slug}.md) | {_scores([r for r in scored if r['game'] in folders])} |"
+             for slug, folders in sorted(by_driver.items(), key=lambda kv: names[kv[0]]) if any(r["game"] in folders for r in scored)]
+    text = fill(text, "scores", f"| Driver | {SCORES_HEAD} |\n|---|---|---|---|---|---|\n" + "\n".join(lines)
+                + f"\n| **All** | {_scores(scored)} |")
+    with open(path, "w") as fh:
+        fh.write(text)
+    path = os.path.join(args.docs, "README.md")
+    with open(path) as fh:
+        text = fh.read()
+    text = fill(text, "games snes", "| Game | Composer (as the tags credit) | Music driver | Songs (scored) |\n|---|---|---|---|\n"
+                + "\n".join(f"| {g} | {c} | [{names[s]}](snes/{s}.md) | {n} |" for g, c, s, n in sorted(games)))
+    text = fill(text, "composers snes", "| Composer (as the tags credit) | Games | Drivers |\n|---|---|---|\n"
+                + "\n".join(f"| {c} | {', '.join(sorted(gs))} | {', '.join(f'[{names[s]}](snes/{s}.md)' for s in sorted(ss))} |"
+                             for c, (gs, ss) in sorted(composers.items(), key=lambda kv: kv[0].strip('"').lower())))
+    with open(path, "w") as fh:
+        fh.write(text)
+    print(f"{args.docs}: {len(by_driver)} drivers, {len(games)} games, {len(scored)} songs scored")
     return 0
 
 
@@ -566,6 +734,11 @@ def main(argv=None) -> int:
     s.add_argument("out_dir")
     s.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     s.add_argument("--seconds", type=float, default=30.0, help="seconds of each song measured")
+    d = sub.add_parser("doc", help="the measured parts of docs/drivers/, from traits and a sweep")
+    d.add_argument("spc_root")
+    d.add_argument("traits")
+    d.add_argument("results")
+    d.add_argument("--docs", default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "drivers"))
     t = sub.add_parser("traits", help="what each song's driver does with the SNES chip, per game")
     t.add_argument("spc_root")
     t.add_argument("out")
@@ -575,7 +748,8 @@ def main(argv=None) -> int:
     r.add_argument("--top", type=int, default=15, help="lines in each list")
     args = ap.parse_args(argv)
     try:
-        return {"voice": cmd_voice, "sweep": cmd_sweep, "report": cmd_report, "traits": cmd_traits}[args.cmd](args)
+        return {"voice": cmd_voice, "sweep": cmd_sweep, "report": cmd_report, "traits": cmd_traits,
+                "doc": cmd_doc}[args.cmd](args)
     except emulate.EmulatorMissing as e:
         print(f"spc_check: {e}", file=sys.stderr)
         return 1

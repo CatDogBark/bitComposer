@@ -15,10 +15,10 @@ work (interpolation, envelope clock, echo, endings).
 <!-- generated: scores -->
 | Driver | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|---|
+| [Capcom](capcom.md) | 35 | 0.94 (0.61) | 0.48 (0.95) | 0.99 (0.88-1.01) | 1.00 (0.99) |
+| [Square Soft US: Secret of Evermore's](secret-of-evermore.md) | 70 | 0.93 (0.52) | 0.63 (1.31) | 0.99 (0.92-1.02) | 0.99 (0.97) |
 | [Square: AKAO](akao.md) | 79 | 0.98 (0.93) | 0.40 (0.74) | 0.99 (0.95-1.02) | 1.00 (0.99) |
 | [Square: Secret of Mana's](secret-of-mana.md) | 68 | 0.93 (0.72) | 0.76 (1.43) | 0.97 (0.92-1.03) | 0.99 (0.97) |
-| [Square Soft US: Secret of Evermore's](secret-of-evermore.md) | 70 | 0.93 (0.52) | 0.63 (1.31) | 0.99 (0.92-1.02) | 0.99 (0.97) |
-| [Capcom](capcom.md) | 35 | 0.94 (0.61) | 0.48 (0.95) | 0.99 (0.88-1.01) | 1.00 (0.98) |
 | **All** | 252 | 0.95 (0.76) | 0.58 (1.22) | 0.99 (0.93-1.02) | 0.99 (0.98) |
 <!-- end generated -->
 
@@ -84,10 +84,16 @@ the generator plays, and a change to one is a change to the songs).
 
 1. Its `.spc` files in a folder of their own beside the others (the folder is
    the game's name in the results).
-2. Its music driver in `drivers.json` beside the folders (`{"<folder>":
-   "<driver family>"}`): a known family where it is one, so its results pool
-   with the others; else named for the game.
-3. `tools/spc_check.py traits`, `sweep` and `report` (CONTRIBUTING.md).
-4. Here: the game in [the index](../README.md#games), its driver's file (a
-   new one in the same parts, or the existing one's numbers updated), and
-   anything the sweep found to that file's Open.
+2. Its entry in `drivers.json` beside the folders: `{"<folder>": {"driver":
+   "<driver file>", "game": "<its name>"}}`, the driver file being one here
+   (`akao`, `capcom`, ...) where the game uses a known family, so its results
+   pool with the others, or a new name for a new one; `"composer"` when the
+   tags' credit is cut off or wrong and a fuller one is known for sure.
+3. `tools/spc_check.py traits`, `sweep`, then `doc` (CONTRIBUTING.md): the
+   measured tables here, in the driver files and in [the index](../README.md#games)
+   are rewritten; a new driver family gets a file whose hand-written parts are
+   marked to write.
+4. By hand: the driver file's notes on what the numbers mean, the converter,
+   generation and anything the sweep found to its Open; a new SNES chip
+   behaviour to the tables above; a pack's habit contradicted to the packs
+   table.

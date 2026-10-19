@@ -20,7 +20,7 @@ Square's sound driver, known as AKAO.
 | Pitch writes | 3.2 a note (90 %: 23.8) |
 | Pitch modulation | in 11 of 82 songs |
 | Noise | in 4 of 82 songs |
-| Echo | 80 ms, feedback 0.78 (42 songs); 80 ms, 0.55 (27); 80 ms, 0.62 (7); 80 ms, 0.77 (2) |
+| Echo | 80 ms, feedback 0.78 (42 songs); 80 ms, feedback 0.55 (27); 80 ms, feedback 0.62 (7); 80 ms, feedback 0.47 (2) |
 | Echo volume | 0.2 (68 songs); 0.27 (5) |
 | Echo sides inverted | in 0 of 82 songs |
 | Echo filter at DC | 0.99 (78 songs); 1.0 (2) |

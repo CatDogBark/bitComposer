@@ -20,7 +20,7 @@ The driver of Secret of Mana, named for its game here.
 | Pitch writes | 0.2 a note (90 %: 5.9) |
 | Pitch modulation | in 8 of 69 songs |
 | Noise | in 0 of 69 songs |
-| Echo | 48 ms, feedback 0.0 (15 songs); 96 ms, 0.0 (11); 176 ms, 0.79 (10); 176 ms, 0.72 (6) |
+| Echo | 48 ms, feedback 0.0 (15 songs); 96 ms, feedback 0.0 (11); 176 ms, feedback 0.79 (10); 176 ms, feedback 0.72 (6) |
 | Echo volume | 0.5 (43 songs); 0.25 (14) |
 | Echo sides inverted | in 0 of 69 songs |
 | Echo filter at DC | 0.99 (65 songs); 1.0 (4) |

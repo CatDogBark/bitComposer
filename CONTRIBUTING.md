@@ -147,6 +147,7 @@ python3 tools/spc_check.py voice song.spc --trace 3 --bands         # voice 3 ov
 python3 tools/spc_check.py sweep ~/spc /tmp/sweep --workers 12      # every <game>/*.spc under ~/spc
 python3 tools/spc_check.py report /tmp/sweep/results.jsonl          # the summary, by music driver
 python3 tools/spc_check.py traits ~/spc /tmp/traits.json             # what each song's driver does, per game
+python3 tools/spc_check.py doc ~/spc /tmp/traits.json /tmp/sweep/results.jsonl   # docs/drivers/'s measured tables
 ```
 
 `docs/drivers/` records every game tested, by console and music driver
@@ -154,8 +155,10 @@ python3 tools/spc_check.py traits ~/spc /tmp/traits.json             # what each
 sound chip, the scores and what is still off. A converter change or a new
 game updates it from a sweep.
 
-A `drivers.json` beside the game folders (`{"<game folder>": "<driver family>"}`)
-groups the report by music driver. The SPC files and the converted modules
+A `drivers.json` beside the game folders (`{"<game folder>": {"driver":
+"<driver file>", "game": "<its name>"}}`) names each game's music driver,
+which groups the report and decides which file in `docs/drivers/` a game
+belongs in. The SPC files and the converted modules
 are the user's and stay out of the repository.
 
 ## Style

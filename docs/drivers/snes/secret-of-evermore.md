@@ -21,7 +21,7 @@ States), named for its game here.
 | Pitch writes | 1.3 a note (90 %: 32.5) |
 | Pitch modulation | in 0 of 72 songs |
 | Noise | in 41 of 72 songs |
-| Echo | 80 ms, feedback 0.16 (58 songs); 0 ms, 0.0 (12); 48 ms, 0.08 (2) |
+| Echo | 80 ms, feedback 0.16 (58 songs); 0 ms, feedback 0.0 (12); 48 ms, feedback 0.08 (2) |
 | Echo volume | 0.39 (58 songs); 0.0 (12) |
 | Echo sides inverted | in 0 of 72 songs |
 | Echo filter at DC | -1.25 (58 songs); 0.0 (12) |

@@ -45,7 +45,7 @@ Capcom's SNES sound driver.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 35 | 0.94 (0.61) | 0.48 (0.95) | 0.99 (0.88-1.01) | 1.00 (0.98) |
+| 35 | 0.94 (0.61) | 0.48 (0.95) | 0.99 (0.88-1.01) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter
