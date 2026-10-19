@@ -6,14 +6,20 @@ key-ons (AKAO's wander by 5 ms). Then locked to the song: the unit and its
 phase fitted to the onsets' own times by least squares, over a window that
 grows to the whole song (a unit fitted from neighbouring gaps can be 0.2 ms
 off, which over a minute of FFVI's battle theme is a sixteenth). Then the
-beat: the pulse, the finest multiple of the unit that nearly every point
-of has an onset, grouped by twos or threes (whichever its accents say)
-while it is faster than 180 BPM: the beat a listener taps is the one
-always present.
-(Loudness alone keeps rising with every coarser level, and leaning toward a
-tempo chose FFVI's battle theme's dotted quarter, a three of a grid of twos.) The bar: the beat count whose accents repeat most
-strongly, its downbeat where they are loudest. Swing: where the off-beat
-falls.
+beat. The pulse first: the finest multiple of the unit that nearly every
+point of has an onset. Above it the levels it groups into, by twos, or
+with one three where the pulse repeats every three more than every two.
+The beat is the level of those a listener taps: the one holding about as
+many notes as a tapped beat does, at a tempo near the one listeners lean
+toward. Each choice was tuned by ear: eleven FFVI songs tapped (Kefka at
+80, not 160; Kids Run Through the City in threes at 110, not 73 in fours;
+The Phantom Train's 12/8 at 54). The bar: the beat count whose accents
+repeat most strongly, its downbeat where they are loudest. Swing: where
+the off-beat falls.
+
+Before any of it, each voice's lag behind the others is taken out (a
+driver keying a part a tick late, all song long), and a roll on no grid of
+the song's (notes five to the eighth) is left out.
 
 A song keeps its tempo but not always its phase: a held note of an odd
 length, a fermata, the loop's jump move the grid (FFVI's battle theme holds
@@ -21,14 +27,15 @@ its grid from 0 to 15 s and from 25 to 40, half a step off in between). So
 the grid is followed onset by onset and taken again where three onsets in a
 row miss it: a song is sections, each with its own grid, the beat counted
 on across them."""
+import bisect
 import math
-from dataclasses import dataclass
+import statistics
+from dataclasses import dataclass, field
 
 SLOW, FAST = 40.0, 240.0             # BPM a beat may have
 JITTER = 0.006                       # seconds an onset may sit off its grid point
 TATUM_FIT = 0.75                     # the share of onset gaps the grid's unit must divide
 FILLED = 0.85                        # the share of a pulse's points that have an onset
-FASTEST = 180.0                      # BPM a pulse is grouped above, by twos or threes
 FREE = 0.8                           # under this share of onsets on a grid, a song is in free time
 MULTIPLES = (1, 2, 3, 4, 6, 8, 12, 16, 24)   # units a beat may be
 
@@ -61,6 +68,8 @@ class Grid:
     bar_times: list                  # every bar's first beat
     on_grid: float                   # the share of onsets, by loudness, on their section's grid
     swing: float                     # where the off-beat falls in the beat (0.5: straight)
+    lags: dict = field(default_factory=dict)   # voice -> seconds it plays behind the others (a tick late)
+    ornaments: set = field(default_factory=set)  # voices left out of the grid (rolls)
 
     @property
     def bpm(self) -> float:
@@ -110,7 +119,10 @@ def tatum(onsets) -> float | None:
     """The grid's unit: the longest step (400 ms down to 20) that three onset
     gaps in four are whole multiples of, within jitter."""
     times = sorted({round(t, 3) for t, _ in onsets})
-    gaps = [b - a for a, b in zip(times, times[1:]) if 0.018 <= b - a <= 3.0]
+    return _unit([b - a for a, b in zip(times, times[1:]) if 0.018 <= b - a <= 3.0])
+
+
+def _unit(gaps: list) -> float | None:
     if len(gaps) < 6:
         return None
     for ms in range(400, 19, -1):
@@ -120,6 +132,84 @@ def tatum(onsets) -> float | None:
         if len(fits) >= TATUM_FIT * len(gaps):
             return sum(d * m for d, m in fits) / sum(m * m for _, m in fits)
     return None
+
+
+LATTICE = (2, 3, 4, 6, 8, 9, 12, 16, 18, 24, 32, 36, 48)   # a grid's steps in another's, by twos and threes
+
+
+def ornaments(onsets) -> set:
+    """Voices left out of the grid: a roll or tremolo, notes far faster than
+    the song's and on no grid of its twos and threes (The Phantom Train's
+    wheels, five to the eighth, put a 23 ms unit under the whole song). A
+    voice's own unit is the one its own gaps share; the song's, the voices'
+    median."""
+    by = {}
+    for t, w, v in onsets:
+        if w > 0:
+            by.setdefault(v, []).append(t)
+    own = {}
+    for v, ts in by.items():
+        ts.sort()
+        u = _unit([b - a for a, b in zip(ts, ts[1:]) if 0.018 <= b - a <= 3.0])
+        if u:
+            own[v] = u
+    if len(own) < 3:
+        return set()
+    main = statistics.median(own.values())
+    return {v for v, u in own.items()
+            if u < 0.5 * main and not any(abs(main / u / n - 1) < 0.03 for n in LATTICE)}
+
+
+LATE = 0.05                          # seconds a voice may play behind the others and be heard with them
+MATCHED = 12                         # notes a voice must share with the others for its lag to be measured
+HELD = 0.6                           # the share of those that must sit at its lag
+
+
+def align(onsets) -> tuple[list, dict]:
+    """Each voice's lag behind the others, and the onsets with it taken out.
+
+    A driver may key a voice a tick or two after the rest, all song long (Wild
+    West's two lowest voices, 18 and 20 ms: a band playing loose), which puts
+    an onset between every two of the grid's and leaves no unit. The lag is
+    measured against the voices already aligned (the busiest first): the
+    median of each note's nearest neighbour there, if most of them sit at it.
+    The window is under half the unit each voice's own gaps share, so a part
+    a grid step after another is its rhythm, not a lag."""
+    by = {}
+    for t, w, v in onsets:
+        if w > 0:
+            by.setdefault(v, []).append(t)
+    for ts in by.values():
+        ts.sort()
+    unit = _unit([b - a for ts in by.values() for a, b in zip(ts, ts[1:]) if 0.018 <= b - a <= 3.0])
+    lags = {v: 0.0 for v in by}
+    if unit is None or len(by) < 2:
+        return [(t, w) for t, w, _ in onsets], lags
+    window = min(LATE, 0.4 * unit)
+    first = max(by, key=lambda v: len(by[v]))
+    pool, todo = list(by[first]), [v for v in by if v != first]
+
+    def nearest(ts):
+        out = []
+        for t in ts:
+            i = bisect.bisect_left(pool, t - window)
+            near = [t - o for o in pool[i:i + 16] if abs(t - o) <= window]
+            if near:
+                out.append(min(near, key=abs))
+        return out
+
+    while todo:
+        found = {v: nearest(by[v]) for v in todo}
+        v = max(todo, key=lambda u: len(found[u]))
+        ds = found[v]
+        if len(ds) < MATCHED:
+            break                            # the rest share too little with the others: left as they are
+        lag = statistics.median(ds)
+        if abs(lag) >= 0.004 and sum(1 for d in ds if abs(d - lag) <= JITTER) >= HELD * len(ds):
+            lags[v] = lag
+        pool = sorted(pool + [t - lags[v] for t in by[v]])
+        todo.remove(v)
+    return [(t - lags.get(v, 0.0), w) for t, w, v in onsets], lags
 
 
 def lock(onsets, unit: float) -> tuple[float, float]:
@@ -258,9 +348,98 @@ def _fill(keep, k: int) -> float:
     return filled / total if total else 0.0
 
 
+def _repeats(keep, k: int, lag: int) -> float:
+    """How alike the loudness on a pulse of k steps is `lag` pulses apart
+    (its autocorrelation), over the sections."""
+    num = den = 0.0
+    for x, sl in keep:
+        first, _ = _best_phase(sl, k)
+        xs = [sl.get(i, 0.0) for i in range(first, max(sl) + 1, k)]
+        if len(xs) < 2 * lag + 2:
+            continue
+        m = sum(xs) / len(xs)
+        d = [v - m for v in xs]
+        num += sum(d[i] * d[i + lag] for i in range(len(d) - lag))
+        den += sum(v * v for v in d[:len(d) - lag])
+    return num / den if den else 0.0
+
+
+def _offbeats(keep, k: int, m: int) -> float:
+    """The loudness on a pulse of k steps' points between those of a level m
+    times coarser, over the loudness on them: low, the pulse groups by m."""
+    on = off = n_on = n_off = 0.0
+    for x, sl in keep:
+        first, _ = _best_phase(sl, m * k)
+        for i in range(first - ((first - min(sl)) // k) * k, max(sl) + 1, k):
+            w = sl.get(i, 0.0)
+            if (i - first) % (m * k) == 0:
+                on, n_on = on + w, n_on + 1
+            else:
+                off, n_off = off + w, n_off + 1
+    return (off / n_off) / (on / n_on) if n_on and n_off and on else 1.0
+
+
+REPEATS = (2, 3, 4, 6, 8, 12, 16, 24)   # pulses a bar's pattern may repeat after
+ALIKE = 0.9                          # a shorter repeat this nearly as strong as the strongest is the period
+SURE = 0.3                           # a repeat weaker than this is no period (by twos then)
+
+
+def _period(keep, pulse: int) -> int:
+    """The pulses the song's pattern repeats after: the shortest repeat nearly
+    as strong as any (every multiple of the period repeats too)."""
+    reps = {lag: _repeats(keep, pulse, lag) for lag in REPEATS}
+    best = max(reps.values())
+    return min(lag for lag, r in reps.items() if r >= ALIKE * best) if best >= SURE else 4
+
+
+def _levels(keep, pulse: int) -> list[tuple[int, int]]:
+    """The pulse and the levels it groups into, each with the grouping that
+    made it (steps, 1/2/3): by twos, unless the pulse's pattern repeats
+    after a three of them (Kids Run Through the City's, every twelve
+    eighths: 0.76, against 0.18 every eight); then one three, first if the
+    pulse's own off-beats group by threes (6/8, 12/8: The Phantom Train),
+    else second (3/4). The repeats over a bar, not the off-beats alone, tell
+    twos from threes: The Decisive Battle's bass, three sixteenths, three
+    and two, groups its eighths by threes up close."""
+    if _period(keep, pulse) % 3 == 0:
+        steps = (3, 2, 2, 2) if _offbeats(keep, pulse, 3) < _offbeats(keep, pulse, 2) else (2, 3, 2, 2)
+    else:
+        steps = (2, 2, 2, 2)
+    out = [(pulse, 1)]
+    for g in steps:
+        out.append((out[-1][0] * g, g))
+    return out
+
+
+DENSE, BUSY = 3.5, 2.0               # onsets, and the busiest voice's notes, a beat as a listener taps it
+PREFER, LEAN = 110.0, 1.0            # the tempo listeners lean toward, and how much (per octave away)
+
+
+def _crowding(rates: tuple, period: float, group: int) -> float:
+    """How far a beat of `period` seconds is from the beat a listener taps:
+    about three and a half onsets and two of the busiest voice's notes (half
+    as many again in a beat of three), at a tempo near PREFER. Kefka's
+    quarter at 160 holds 1.9 onsets, its half note 3.9: heard at 80.
+    Terra's, at 160, 3.9. The lean keeps a sparse song off a beat of 45
+    (Umaro, Gogo: an octave too slow without it)."""
+    dense, busy = (DENSE * 1.5, BUSY * 1.5) if group == 3 else (DENSE, BUSY)
+    return (abs(math.log2(rates[0] * period / dense)) + abs(math.log2(rates[1] * period / busy))
+            + LEAN * abs(math.log2(60 / period / PREFER)))
+
+
 def find(onsets) -> Grid | None:
-    """The beat of onsets [(time, weight)]; None when they keep to no grid, or
-    too few of them to one (free time)."""
+    """The beat of onsets [(time, weight)] or [(time, weight, voice)] (each
+    voice's lag then taken out first, its rolls left out); None when they keep
+    to no grid, or too few of them to one (free time)."""
+    lags, left, busiest = {}, set(), None
+    if onsets and len(onsets[0]) == 3:
+        left = ornaments(onsets)
+        counts = {}
+        for t, w, v in onsets:
+            if w > 0 and v not in left:
+                counts[v] = counts.get(v, 0) + 1
+        busiest = max(counts.values(), default=0)
+        onsets, lags = align([o for o in onsets if o[2] not in left])
     onsets = [(t, w) for t, w in onsets if w > 0]
     unit = tatum(onsets) if len(onsets) >= 8 else None
     if unit is None:
@@ -272,25 +451,23 @@ def find(onsets) -> Grid | None:
         return None
     total = sum(w for _, w in onsets)
     on_grid = sum(sum(sl.values()) for _, sl in keep) / total if total else 0.0
-    # one beat for the song: the pulse, the finest multiple of the grid's step that nearly every point
-    # of has an onset (FILLED), grouped by twos or threes while faster than FASTEST
     mean_unit = sum(x.unit * (x.end - x.start) for x, _ in keep) / (sum(x.end - x.start for x, _ in keep) or 1.0)
     if on_grid < FREE:
         return None                          # free time: FFVI's opening organ, held and released at will
     fills = {k: _fill(keep, k) for k in MULTIPLES if 60 / 400 <= k * mean_unit <= 60 / SLOW}
     if not fills:
         return None
-    # FILLED, or nearly the most any level has where rests fall on beats (Kefka's, 0.82)
+    # the pulse: the finest multiple of the grid's step that nearly every point of has an onset (FILLED,
+    # or nearly the most any level has where rests fall on beats: Kefka's, 0.82)
     enough = min(FILLED, max(fills.values()) - 0.05)
-    best = min(k for k, f in fills.items() if f >= enough)
-    while 60 / (best * mean_unit) > FASTEST:
-        ups = [best * m for m in (2, 3) if best * m * mean_unit <= 60 / SLOW]
-        if not ups:
-            break
-        # a pulse groups by twos or threes as its accents say (a quarter of eighths, a 6/8's dotted quarter)
-        best = max(ups, key=lambda k: sum(_best_phase(sl, k)[1] * (x.end - x.start) for x, sl in keep))
-    best = [None, best]
-    k = best[1]
+    pulse = min(k for k, f in fills.items() if f >= enough)
+    # the beat: of the pulse and the levels it groups into, the one with as many notes a beat as a listener's
+    times = sorted(t for t, _ in onsets)
+    span = (times[-1] - times[0]) or 1.0
+    distinct = sum(1 for a, b in zip(times, times[1:]) if b - a > 0.010) + 1
+    rates = (distinct / span, (busiest or distinct) / span)
+    levels = [(k, g) for k, g in _levels(keep, pulse) if SLOW <= 60 / (k * mean_unit) <= FAST] or [(pulse, 1)]
+    k = min(levels, key=lambda kg: _crowding(rates, kg[0] * mean_unit, kg[1]))[0]
     beat_times, bar_times = [], []
     for x, sl in keep:
         x.division = k
@@ -307,7 +484,7 @@ def find(onsets) -> Grid | None:
             if (m - x.downbeat) % x.meter == 0:
                 bar_times.append(t)
     return Grid(mean_unit, k, [x for x, _ in keep], beat_times, bar_times, on_grid,
-                _swing(onsets, keep[0][0].period, keep[0][0].first))
+                _swing(onsets, keep[0][0].period, keep[0][0].first), {v: x for v, x in lags.items() if x}, left)
 
 
 BASS_LIFT = 1.4                      # how much more than chance the bass must land on a bar's first beat

@@ -14,7 +14,7 @@ from array import array
 from pathlib import Path
 
 SCHEMA = 1
-VERSION = "1"                        # the translator's; a song read by another is read again
+VERSION = "2"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -97,8 +97,13 @@ def keep(db, reading) -> None:
     roles = {x.voice: x for x in r.roles}
     for v, notes in by_voice.items():
         x = roles.get(v)
+        evidence = dict(x.evidence) if x else {}
+        if g and v in g.lags:
+            evidence["lag_ms"] = round(g.lags[v] * 1000, 1)     # keyed this far behind the others
+        if g and v in g.ornaments:
+            evidence["roll"] = True                             # left out of the grid
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (
-            sid, v, x.role if x else None, x.of if x else None, json.dumps(x.evidence) if x else None,
+            sid, v, x.role if x else None, x.of if x else None, json.dumps(evidence) if evidence else None,
             pack(notes, g, index)))
     if g:
         db.execute("INSERT INTO beats VALUES (?,?,?)", (sid, array("d", g.beat_times).tobytes(),

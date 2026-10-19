@@ -48,6 +48,38 @@ class Beat(unittest.TestCase):
         self.assertAlmostEqual(g.unit, period / 12, delta=0.0005)
         self.assertAlmostEqual(g.bpm, 140, delta=0.5)
 
+    def test_a_voice_keyed_late_all_song_long_is_heard_with_the_others(self):
+        # Wild West's: two of four voices 18 ms behind, every note; their lag is taken out, not a grid of 18 ms
+        r = random.Random(5)
+        period, out = 60 / 92, []
+        for b in range(96):
+            for k in range(4):                                   # sixteenths, on time
+                out.append((b * period + k * period / 4 + r.uniform(-0.004, 0.004), 0.3, 0))
+            for k in range(2):                                   # eighths, on time
+                out.append((b * period + k * period / 2 + r.uniform(-0.004, 0.004), 0.6, 1))
+            out.append((b * period + 0.018 + r.uniform(-0.003, 0.003), 1.0 if b % 2 == 0 else 0.7, 2))
+            for k in range(2):                                   # late eighths, the bass
+                out.append((b * period + k * period / 2 + 0.018 + r.uniform(-0.003, 0.003), 0.8, 3))
+        g = beat.find(sorted(out))
+        self.assertAlmostEqual(g.bpm, 92, delta=0.5)
+        self.assertEqual(set(g.lags), {2, 3})
+        self.assertAlmostEqual(g.lags[2], 0.018, delta=0.003)
+
+    def test_a_roll_on_no_grid_of_the_song_s_is_left_out(self):
+        # The Phantom Train's wheels: five notes to an eighth, louder than its grid of sixteenths can take
+        r = random.Random(6)
+        eighth, out = 60 / 162, []
+        for i in range(192):
+            t = i * eighth
+            out.append((t + r.uniform(-0.003, 0.003), 1.0 if i % 3 == 0 else 0.5, 0))
+            if i % 2 == 0:
+                out.append((t + r.uniform(-0.003, 0.003), 0.7, 1))
+                out.append((t + eighth / 2 + r.uniform(-0.003, 0.003), 0.4, 2))
+            out += [(t + k * eighth / 5 + r.uniform(-0.004, 0.004), 0.3, 3) for k in range(5)]
+        g = beat.find(sorted(out))
+        self.assertEqual(g.ornaments, {3})
+        self.assertAlmostEqual(g.unit, eighth / 2, delta=0.002)
+
     def test_free_time_has_no_beat(self):
         r = random.Random(3)
         t, out = 0.0, []
@@ -68,6 +100,38 @@ class Bar(unittest.TestCase):
     def test_a_bass_on_every_beat_leaves_the_bar(self):
         g = beat.find(onsets(150, 48, 2, accent=(1.0, 0.7, 0.8, 0.7)))
         self.assertFalse(beat.rebar(g, [float(b) for b in range(48)]))
+
+    def test_eighths_in_threes_of_twos_or_twos_of_threes(self):
+        # one stream of eighths, its accents 3/4's (Kids Run Through the City) or 6/8's (dotted-quarter beats);
+        # a loud downbeat makes the 3/4 louder every three eighths than every two, but it repeats every six
+        def bars(accents, eighth, n=48):
+            return [(i * eighth, accents[i % 6]) for i in range(6 * n)]
+        g = beat.find(bars((1.6, 0.3, 0.5, 0.3, 0.5, 0.3), 60 / 220))
+        self.assertEqual((round(g.bpm), g.division, g.meter), (110, 2, 3))
+        g = beat.find(bars((1.0, 0.3, 0.3, 0.7, 0.3, 0.3), 60 / 330))
+        self.assertEqual((round(g.bpm), g.division), (110, 3))
+
+    def test_a_bass_of_three_three_and_two_still_beats_in_twos(self):
+        # The Decisive Battle's: sixteenths, the bass on 0, 3 and 6 of eight, louder every three eighths
+        # than every two; the pattern repeats every eight sixteenths (and so every twelve eighths too)
+        sixteenth, out = 60 / 104 / 4, []
+        for i in range(16 * 32):
+            out.append((i * sixteenth, 0.4, 0))
+            if i % 8 in (0, 3, 6):
+                out.append((i * sixteenth, 1.0, 1))
+        g = beat.find(sorted(out))
+        self.assertEqual((round(g.bpm), g.division, g.meter), (104, 4, 4))
+
+    def test_the_beat_holds_as_many_notes_as_a_tapped_one(self):
+        # quarter notes at 160 and a bass every other one: heard at 80 (Kefka); add sixteenths: at 160 (Terra)
+        q, tune = 60 / 160, []
+        for i in range(128):
+            tune.append((i * q, 1.0 if i % 2 == 0 else 0.7, 0))
+            if i % 2 == 0:
+                tune.append((i * q, 0.8, 1))
+        self.assertAlmostEqual(beat.find(sorted(tune)).bpm, 80, delta=0.5)
+        busy = tune + [(i * q / 4, 0.3, 2) for i in range(128 * 4)]
+        self.assertAlmostEqual(beat.find(sorted(busy)).bpm, 160, delta=0.5)
 
 
 def song_of(parts):

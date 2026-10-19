@@ -34,14 +34,20 @@ def manifest(folder: str) -> dict:
     return entry if isinstance(entry, dict) else {"driver": entry}
 
 
-def read(snap, seconds: float | None = None) -> Reading:
-    """Read a snapshot as music."""
-    song = events.play(snap, seconds)
-    grid = beat.find([(p.start, p.level) for p in song.notes])
+def beat_and_parts(song) -> tuple:
+    """The song's beat (None: free time) and each voice's part, the bar set again from the bass."""
+    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes])
     roles = roles_mod.assign(song, grid)
     if grid:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
+    return grid, roles
+
+
+def read(snap, seconds: float | None = None) -> Reading:
+    """Read a snapshot as music."""
+    song = events.play(snap, seconds)
+    grid, roles = beat_and_parts(song)
     folder = os.path.basename(os.path.dirname(os.path.abspath(snap.source))) if snap.source else ""
     m = manifest(os.path.dirname(os.path.abspath(snap.source))) if snap.source else {}
     t = snap.tags
