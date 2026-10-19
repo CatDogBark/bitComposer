@@ -171,6 +171,12 @@ def build_parser():
         help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
     )
     parser.add_argument(
+        "--pack-file",
+        default=None, metavar="PACK.json",
+        help="compose with a pack file: a pack as data, with its own voices as WAV files "
+             "(docs/PACKS.md); overrides --pack and --sound",
+    )
+    parser.add_argument(
         "--lead-shift",
         type=int, default=None, metavar="SEMITONES",
         help="move the lead's window by this many semitones (negative lowers it); "
@@ -201,6 +207,10 @@ def compose_from_args(args, index: int = 0):
     seed = args.seed
     if seed is not None and args.count > 1:
         seed = seed + index
+    pack, sound = args.pack, args.sound
+    if args.pack_file:
+        from .packs.packfile import load_pack_file
+        pack, sound = load_pack_file(args.pack_file), "random"
     song = compose_song(seed=seed,
                         tempo_pref=args.tempo, energy_pref=args.energy,
                         scale_pref=args.scale, style_pref=args.style,
@@ -215,7 +225,7 @@ def compose_from_args(args, index: int = 0):
                         echo=args.echo, echo_wet=args.echo_wet,
                         echo_delay=args.echo_delay, echo_stereo=args.echo_stereo, keys=args.keys,
                         lead_shift=args.lead_shift,
-                        pack=args.pack, sound=args.sound)
+                        pack=pack, sound=sound)
     os.makedirs(args.output_dir, exist_ok=True)
     if args.output and args.count == 1:
         filepath = args.output

@@ -66,20 +66,22 @@ driver is one job.
 
 ## The pieces
 
-### 1. The pack file format (prerequisite)
+### 1. The pack file format (built: `docs/PACKS.md`)
 
-The "your own packs" roadmap item: a pack as data, not Python. Today a
-pack is a module whose voices are synthesis functions and whose `PACK`
-table (`palette`, `label`, `voices` per role, `habits`, `trims`) is a dict
-in the code. An imported pack needs that table as a file, its voices as
-sample files with their tuning, loop and envelope, and a loader that
-registers both the way `bitcomposer/packs/__init__.py` registers the
-built-in ones. The habits it can carry are exactly the built-in packs'
-keys: `tempo`, `intro`, `energy`, `scale_family`, `harmony_voicing`,
-`harmony_mode`, `bass_weight`, `bass_style`, `drum_density`, `drum_swing`,
-`echo`, `echo_wet`, `echo_delay`, `echo_feedback`, `echo_stereo`,
-`counter_line`, `section_rolls`. Roles: `lead`, `alt_lead`, `harmony`,
-`counter`, `arp`, `bass_heavy`, `bass_medium`, `bass_light`, `drums`.
+The "your own packs" roadmap item: a pack as data, not Python. A pack
+file is JSON holding the table a built-in pack keeps as `PACK` (palette,
+label, voices per role, habits, trims), with the pack's own voices as WAV
+files (tuning, loop, release family, volume). `bitcomposer/packs/packfile.py`
+checks it, registers its voices with the sample registry and the pack in
+`PACKS` (not in the random draw), and `--pack-file` composes with it; the
+player's PACKS panel will pass that same option. It carries every habit
+the composer reads (27) and every role.
+
+Changed from the first plan: the built-in packs stay Python. Their
+tables carry comments recording where each number came from (bank
+counts, DSP readings), which JSON cannot hold. Instead a test writes each
+built-in pack in the format and reads it back unchanged, which proves
+the format can say everything they say and keeps it that way.
 
 ### 2. The SPC reader (`bitcomposer/spc/`)
 
@@ -210,8 +212,8 @@ Measured, as everything here is:
 
 Each step is its own branch and pull request, shippable on its own:
 
-1. The pack file format, and the built-in packs' data separated from
-   their voice code.
+1. The pack file format (built), proven on the built-in packs by a
+   round-trip test.
 2. The SPC reader, tested against the research tools.
 3. The emulator, tested against reference renders. The long one.
 4. The translator and SPC to IT, which proves 3.
