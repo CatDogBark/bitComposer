@@ -410,7 +410,8 @@ def window(song: dict, seconds: float) -> dict:
     for the voice checks: writing a long song's every pattern eight times over
     costs more than measuring it."""
     rows = math.ceil(seconds * song["info"]["row_hz"]) + 1
-    n = min(len(song["patterns"]), rows // convert.ROWS_PER_PATTERN + 2)
+    per = song["patterns"][0].rows if song["patterns"] else 1     # the song's own, whichever module lays it out
+    n = min(len(song["patterns"]), rows // per + 2)
     return dict(song, patterns=song["patterns"][:n], orders=list(range(n)))
 
 
