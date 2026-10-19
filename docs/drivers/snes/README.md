@@ -6,9 +6,9 @@ play, eight voices of BRR samples with an echo. An SPC file is a snapshot of
 that unit; the emulator runs the driver from it, and the converter turns
 what the driver writes to the SNES chip into an IT module (`../../SPC-IMPORT.md`).
 
-Numbers are from 2026-10-20: all 1120 songs of the 24 games in
+Numbers are from 2026-10-19: all 1120 songs of the 24 games in
 [the index](../README.md#games), 16 drivers, with the fixes that the twenty
-games added on 2026-10-19 led to (key-ons under KOFF, IT's keys and volumes,
+games added that day led to (key-ons under KOFF, IT's keys and volumes,
 pans while a note sounds, the clock's pace).
 
 ## Scores by driver
