@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 CLOCK = 1_024_000            # SNES sound CPU cycles per second
 RATE = 32000                 # the SNES chip's output rate
-NEEDS = (0, 2)               # the emulator version this module calls (voice taps and mute)
+NEEDS = (0, 3, 1)            # the emulator version this module calls (the snapshot's KON keyed on at load)
 
 
 class EmulatorMissing(RuntimeError):
@@ -58,7 +58,7 @@ def _module():
         import bitcomposer_emu as emu
     except ImportError:
         return None
-    version = tuple(int(p) for p in emu.__version__.split(".")[:2] if p.isdigit())
+    version = tuple(int(p) for p in emu.__version__.split(".")[:3] if p.isdigit())
     return emu if version >= NEEDS else None
 
 

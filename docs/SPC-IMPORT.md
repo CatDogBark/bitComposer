@@ -303,7 +303,17 @@ verdict: it is another emulator): FFVI's battle theme correlates at 0.98
 plays the noise generator constantly, and the noise sequence's position is
 not in an SPC file either. Two causes on our side were tested and ruled
 out (when ENDX is set; whether the snapshot's KON keys voices on); the
-driver's key-ons came out identical in every run. Listened to side by
+driver's key-ons came out identical in every run. The snapshot's KON did
+matter elsewhere, though. Most snapshots are taken as a song's first notes
+key on, before the SNES chip has started them, and libgme keys those voices
+on as it loads the file; the emulator left them silent until the driver
+keyed them again (half a second at the median, never for a held note: 1343
+of 1836 songs were missing opening or held notes, in the emulator and so in
+their modules). Since 0.3.1 it keys them on too, and the decoder makes them
+notes from the start: against libgme over 156 songs' first 10 s, the
+loudness contours correlate at a median of 1.000, the level matches to
+within 1 % in 80 % of them (libgme plays 1.4 times louder, its own gain, and
+skips a track's opening silence). Listened to side by
 side on FFVI, Mana and two Evermore songs: identical and accurate, the
 only difference that libgme stops at the length in the file's tag.
 
@@ -378,7 +388,12 @@ their echo stacked, Dark World twice as loud). Noise plays the SNES chip's own
 noise, its 15-bit shift register rendered at the output rate for each
 noise clock a song uses, each value held as the hardware holds it, each
 note starting somewhere else in it. The echo as repeats: each note
-sending to the echo again on a channel of its own, an echo delay late,
+sending to the echo again on a channel of its own, an echo delay late (its
+copy carrying what the delays leave over a whole row as silence, so the
+repeat lands between rows, and its sign against the note: the echo
+volume's times the master volume's on each side, and the feedback's to
+the k-1; rounded to rows and unsigned, repeats stacked by chance on held
+tones, and Seiken Densetsu 3's, against its notes on one side, added),
 until the repeats fall to -30 dB (as many as IT's 64 channels allow,
 shared among the voices that send; three stopped Dark World's 1.1 s tail
 at 0.24 s), raised past the master volume (the SNES chip leaves the echo

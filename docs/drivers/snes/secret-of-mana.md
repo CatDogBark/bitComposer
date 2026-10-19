@@ -7,7 +7,7 @@ The driver of Secret of Mana, named for its game here.
 <!-- generated: games -->
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
-| Secret of Mana | Hiroki Kikuta | 69 (68) |
+| Secret of Mana | Hiroki Kikuta | 69 (69) |
 <!-- end generated -->
 
 ## What the driver does
@@ -17,7 +17,7 @@ The driver of Secret of Mana, named for its game here.
 |---|---|
 | Clock | 222 Hz, on its ticks (35 songs); 222 Hz, key-ons anywhere in a tick (28); none found (5) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
-| Pitch writes | 0.2 a note (90 %: 5.9) |
+| Pitch writes | 0.2 a note (90 %: 6.1) |
 | Pitch modulation | in 8 of 69 songs |
 | Noise | in 0 of 69 songs |
 | Echo | 48 ms, feedback 0.0 (15 songs); 96 ms, feedback 0.0 (11); 176 ms, feedback 0.79 (10); 176 ms, feedback 0.72 (6) |
@@ -25,7 +25,7 @@ The driver of Secret of Mana, named for its game here.
 | Echo sides inverted | in 0 of 69 songs |
 | Echo filter at DC | 0.99 (65 songs); 1.0 (4) |
 | Master volume | 127 (69 songs) |
-| Density | 504 notes in a song's first minute; a note 0.16 s |
+| Density | 508 notes in a song's first minute; a note 0.16 s |
 <!-- end generated -->
 
 - **Clock**: key-ons on its ticks in about half the songs; modules use 100
@@ -43,7 +43,7 @@ The driver of Secret of Mana, named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 68 | 0.93 (0.76) | 0.75 (1.35) | 0.97 (0.94-1.04) | 0.99 (0.97) |
+| 69 | 0.94 (0.75) | 0.66 (1.24) | 0.98 (0.91-1.03) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter

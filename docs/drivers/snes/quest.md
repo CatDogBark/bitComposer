@@ -25,7 +25,7 @@ Quest's sound driver, in Ogre Battle.
 | Echo sides inverted | in 0 of 26 songs |
 | Echo filter at DC | 0.0 (26 songs) |
 | Master volume | 96 (26 songs) |
-| Density | 1505 notes in a song's first minute; a note 0.11 s |
+| Density | 1509 notes in a song's first minute; a note 0.11 s |
 <!-- end generated -->
 
 - **Clock**: a timer set per song (111 to 145 Hz): modules use 100 rows a
@@ -40,7 +40,7 @@ Quest's sound driver, in Ogre Battle.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 26 | 0.97 (0.93) | 0.37 (0.56) | 1.00 (0.99-1.02) | 1.00 (0.99) |
+| 26 | 0.97 (0.92) | 0.36 (0.54) | 1.00 (0.99-1.02) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter

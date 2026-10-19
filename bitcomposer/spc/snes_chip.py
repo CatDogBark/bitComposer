@@ -132,7 +132,7 @@ def envelope_track(adsr1: int, adsr2: int, gain: int, changes, length: int,
     note (Secret of Evermore's), drifts a step on most switches without it."""
     env, mode, hidden, n = 0, "attack", 0, 0
     track = [(0, 0)]
-    changes = sorted(changes)
+    changes = sorted(changes, key=lambda c: c[0])     # by sample only: writes in one sample keep their order
     regs, ci = (adsr1, adsr2, gain), 0
     while n < length:
         while ci < len(changes) and changes[ci][0] <= n:

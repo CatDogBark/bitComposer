@@ -27,7 +27,7 @@ shares almost none of its code with Mega Man X's ([capcom.md](capcom.md)):
 | Echo sides inverted | in 0 of 23 songs |
 | Echo filter at DC | 0.99 (23 songs) |
 | Master volume | 127 (23 songs) |
-| Density | 578 notes in a song's first minute; a note 0.24 s |
+| Density | 579 notes in a song's first minute; a note 0.24 s |
 <!-- end generated -->
 
 - **Clock**: 125 Hz, as Mega Man X's, faster than IT can run: modules use

@@ -173,10 +173,18 @@ def _sends_at_once(n) -> bool:
     return n.echo and n.echo_writes and n.echo_delay == 0 and any(n.echo_volume) and any(n.echo_filter) and not n.noise
 
 
-def _at_once_sign(n) -> int:
-    """-1 where both echo volumes are negative: an echo of delay 0 sounds with
-    the note, so its sign counts, and its copy is inverted."""
-    return -1 if max(n.echo_volume) < 0 else 1
+def _echo_signs(song, n) -> tuple[int, int, bool]:
+    """A note's echo against the note itself: the sign on the left (the
+    echo volume's times the master volume's, which the note passes through
+    and the echo does not), the feedback's (repeat k's sign is the first's
+    times it to the k-1), and whether the right's differs from the left's
+    (then surround, which inverts the right). Seiken Densetsu 3's master is
+    negative on the left and its echo volume on both: the echo is with the
+    note on the left and against it on the right."""
+    ml, mr = song.master.at(n.start)
+    left = -1 if (n.echo_volume[0] < 0) != (ml < 0) else 1
+    right = -1 if (n.echo_volume[1] < 0) != (mr < 0) else 1
+    return left, -1 if n.echo_feedback < 0 else 1, left != right
 
 
 def _instrument_key(n):
@@ -255,7 +263,7 @@ class _Song:
     taps: int = 0                                            # repeats each sending voice has
     copies: int = 0                                          # echo-coloured copies a sample has (later repeats play the last)
     echo_instrument_of: dict = field(default_factory=dict)   # (_instrument_key, k) -> IT instrument of copy k
-    coloured_at: dict = field(default_factory=dict)          # (BRR addresses, k) -> (semitone, filter, fit) of copy k
+    coloured_at: dict = field(default_factory=dict)          # (BRR addresses, k) -> (semitone, filter, fit, lead, signs) of copy k
     at_once_instrument_of: dict = field(default_factory=dict)   # (key, filter, feedback, sign) -> IT instrument of a delay-0 echo's copy
     at_once_colour: dict = field(default_factory=dict)       # (sample, filter, feedback, sign) -> (semitone, fit) of that copy
     responses: dict = field(default_factory=dict)            # (filter, feedback) -> a delay-0 echo's response
@@ -473,7 +481,15 @@ def _add_echo_copies(song: _Song) -> None:
     notes mostly have), and an instrument for each beside each of the
     sample's own: as many repeats as the samples and instruments IT has left
     allow (the pitch-modulation recordings came first); later repeats play
-    the last."""
+    the last. Copy k starts with what k echo delays leave over a whole row,
+    as silence, so its repeat goes on the row before and still comes k
+    delays after its note (for a note at the copy's pitch; nearer for the
+    rest): repeats rounded to rows stacked by chance on held tones (Mana's
+    176 ms, 17.6 rows). And with its sign: the echo volume's times the
+    feedback's to the k-1 (the filter's is in the copy already), since a
+    repeat now meets its held note as the hardware's does, and an inverted
+    one cancels where the other adds (Seiken Densetsu 3's echo volumes are
+    negative)."""
     sends = [n for n in song.notes if _sends(n) and not n.noise and n.pitch]
     addrs = sorted({n.brr for n in sends if n.brr in song.sample_of})
     keys_of = {a: [key for key in song.instrument_of if key[0] == a] for a in addrs}
@@ -484,14 +500,25 @@ def _add_echo_copies(song: _Song) -> None:
         echoing = [n for n in sends if n.brr == addr]
         semis = sorted(round(12 * math.log2(n.pitch / 0x1000)) for n in echoing)
         mid, filt = semis[len(semis) // 2], echoing[0].echo_filter
+        delays = [n.echo_delay for n in echoing]
+        delay = max(set(delays), key=delays.count)
+        signs = [_echo_signs(song, n)[:2] for n in echoing]
+        ev_sign, fb_sign = max(set(signs), key=signs.count)
         s = song.decoded[addr]
         dry = song.samples[song.sample_of[addr] - 1]
         for k in range(1, song.copies + 1):
             data, fit = snes_chip.echo_coloured(s.pcm, _loop(s), 2 ** (mid / 12), filt, k)
+            over = k * delay - math.floor(k * delay * song.row_hz + 1e-9) / song.row_hz
+            lead = round(over * RATE * 2 ** (mid / 12))          # in the sample's frames, at the copy's pitch
+            if ev_sign * fb_sign ** (k - 1) < 0:
+                data = array("h", (max(-32767, -v) for v in data))
+            data = array("h", bytes(2 * lead)) + data
             song.samples.append(itf.ITSample(name=f"echo {k} of {addr[0]:04X}", filename=f"e{k}{addr[0]:04x}",
                                              data=data.tobytes(), length=len(data), loop=dry.loop,
-                                             loop_start=dry.loop_start, loop_end=dry.loop_end, c5_speed=dry.c5_speed))
-            song.coloured_at[(addr, k)] = (mid, filt, fit)
+                                             loop_start=dry.loop_start + lead if dry.loop else dry.loop_start,
+                                             loop_end=dry.loop_end + lead if dry.loop else dry.loop_end,
+                                             c5_speed=dry.c5_speed))
+            song.coloured_at[(addr, k)] = (mid, filt, fit, lead, (ev_sign, fb_sign))
             for key in keys_of[addr]:
                 src = song.instruments[song.instrument_of[key] - 1]
                 song.instruments.append(itf.ITInstrument(name=f"echo {k} {src.name}"[:25], sample=len(song.samples),
@@ -517,7 +544,7 @@ def _add_at_once_copies(song: _Song) -> None:
     for n in song.notes:
         if _sends_at_once(n) and n.voice in song.echo_channels:
             what = ("baked",) + song.baked_of[id(n)] if id(n) in song.baked_of else n.brr
-            groups.setdefault((what, n.echo_filter, n.echo_feedback, _at_once_sign(n)), []).append(n)
+            groups.setdefault((what, n.echo_filter, n.echo_feedback, _echo_signs(song, n)[0]), []).append(n)
     for (what, filt, fb, sign), ns in sorted(groups.items(), key=lambda kv: -len(kv[1])):
         if song.samples_left <= 0 or song.instruments_left <= 0:
             break
@@ -566,7 +593,7 @@ def _at_once(song: _Song, n) -> tuple[int | None, float]:
     """(the instrument, the gain over the note's volumes) of a note's delay-0
     echo copy: its response's gain at the note's pitch over the copy's, and
     over the factor the copy was scaled down by to fit."""
-    sign = _at_once_sign(n)
+    sign = _echo_signs(song, n)[0]
     if id(n) in song.baked_of:
         baked_ins, key = song.baked_of[id(n)]
         ins = song.at_once_instrument_of.get((("baked", baked_ins), n.echo_filter, n.echo_feedback, sign))
@@ -614,17 +641,20 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
         if n.voice in song.echo_channels and _sends(n):
             gains, fb = _repeat_gains(song, n), abs(n.echo_feedback)
             ev = n.echo_volume
-            # Echo volumes of opposite signs: surround inverts one side, but
+            # An echo against the note on one side only: surround inverts the right, but
             # plays centred, so only a voice near the middle keeps its place.
             sides = sorted((abs(n.volume[0]), abs(n.volume[1])))
-            inverted = ev[0] * ev[1] < 0 and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
+            inverted = _echo_signs(song, n)[2] and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
             for k in range(1, song.taps + 1):
                 kk = min(k, song.copies)
                 echo_ins = song.echo_instrument_of.get((_instrument_key(n), kk))
                 colour = song.coloured_at.get((n.brr, kk))
-                if id(n) not in song.baked_of and echo_ins is not None and colour[1] == n.echo_filter:
+                lead = 0.0                           # seconds of silence the copy starts with, at the note's pitch
+                if (id(n) not in song.baked_of and echo_ins is not None and colour[1] == n.echo_filter
+                        and colour[4] == _echo_signs(song, n)[:2]):
                     mid_gain = _gains_at(song, n.brr, colour[0], n.echo_filter)[kk - 1]
                     passed = gains[k - 1] / mid_gain / colour[2] if mid_gain else 0.0
+                    lead = colour[3] / (RATE * n.pitch / 0x1000)
                 else:
                     echo_ins, passed = ins, gains[k - 1]
                 scale = passed * fb ** (k - 1) * song.master.past(n.start + k * n.echo_delay)
@@ -633,7 +663,7 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
                     gl = gr = max(gl, gr)
                 if max(gl, gr) < QUIET:
                     break
-                shift = round(k * n.echo_delay * song.row_hz)
+                shift = round((k * n.echo_delay - lead) * song.row_hz)
                 if _place(song, grid, n, song.echo_channels[n.voice][k - 1], note, echo_ins, shift, gl, gr, inverted,
                           id(n) in song.baked_of):
                     repeats += 1
@@ -643,7 +673,7 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
             echo_ins, passed = _at_once(song, n)
             ev = n.echo_volume
             sides = sorted((abs(n.volume[0]), abs(n.volume[1])))
-            inverted = ev[0] * ev[1] < 0 and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
+            inverted = _echo_signs(song, n)[2] and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
             gl, gr = (abs(e) * passed * song.master.past(n.start) for e in ev)
             if inverted:
                 gl = gr = max(gl, gr)

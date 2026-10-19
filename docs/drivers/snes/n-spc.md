@@ -1,11 +1,12 @@
 # Nintendo: N-SPC
 
 Nintendo's sound driver, known as N-SPC, in Nintendo's own games and in
-other publishers' (Enix's ActRaiser, Natsume's Pocky & Rocky, Konami's Super
-Castlevania IV, Kemco's Top Gear). Grouped by its code (`spc_check.py
-family`): the eight games share 0.26 to 0.5 of their driver code with one
-another and 0.05 or less with any other driver here, and six of them carry
-N-SPC's velocity table (19 32 4C 65 ...), EarthBound a variant of it.
+other publishers' (Enix's ActRaiser and Soul Blazer, Natsume's Pocky &
+Rocky, Konami's Super Castlevania IV, Kemco's Top Gear, Terranigma).
+Grouped by its code (`spc_check.py family`): its games share 0.24 to 0.99
+of their driver code with one another (Soul Blazer 0.99 of ActRaiser's) and
+0.05 or less with any other driver here, and most carry N-SPC's velocity
+table (19 32 4C 65 ...), EarthBound and Yoshi's Island a variant of it.
 Kirby Super Star shares the code without the table.
 
 ## Games
@@ -14,13 +15,17 @@ Kirby Super Star shares the code without the table.
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
 | ActRaiser | Yuzo Koshiro | 19 (19) |
-| EarthBound | "Akio Ohmori, Ritsuo Kamimura, Ke" (cut off) | 206 (203) |
-| Kirby Super Star | Jun Ishikawa, Dan Miyakawa | 70 (69) |
+| EarthBound | "Akio Ohmori, Ritsuo Kamimura, Ke" (cut off) | 206 (206) |
+| Kirby Super Star | Jun Ishikawa, Dan Miyakawa | 70 (70) |
 | Pocky & Rocky | Hiroyuki Iwatsuki | 24 (24) |
-| Star Fox | Hajime Hirasawa | 51 (50) |
+| Soul Blazer | Yukihide Takekawa, Kazz Tomaya | 20 (20) |
+| Star Fox | Hajime Hirasawa | 51 (51) |
 | Super Castlevania IV | Masanori Adachi, Taro Kudou | 36 (36) |
 | Super Metroid | Kenji Yamamoto, Minako Hamano | 36 (36) |
+| Terranigma | "Miyoko Kobayashi, Masanori Hikic" (cut off) | 57 (57) |
 | Top Gear | Kemco sound team | 7 (7) |
+| Yoshi's Island | Koji Kondo | 48 (48) |
+| The Legend of Zelda: A Link to the Past | Koji Kondo | 36 (36) |
 <!-- end generated -->
 
 ## What the driver does
@@ -28,17 +33,17 @@ Kirby Super Star shares the code without the table.
 <!-- generated: traits -->
 | Trait | Measured |
 |---|---|
-| Clock | 500 Hz, key-ons anywhere in a tick (372 songs); 250 Hz, key-ons anywhere in a tick (29); 500 Hz, on its ticks (29) |
+| Clock | 500 Hz, key-ons anywhere in a tick (501 songs); 500 Hz, on its ticks (41); 250 Hz, key-ons anywhere in a tick (29) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
-| Pitch writes | 6.9 a note (90 %: 61.3) |
-| Pitch modulation | in 0 of 449 songs |
-| Noise | in 0 of 449 songs |
-| Echo | 32 ms, feedback 0.39 (45 songs); 0 ms, feedback 0.0 (36); 48 ms, feedback 0.16 (27); 16 ms, feedback 0.01 (26) |
-| Echo volume | 0.39 (89 songs); 0.0 (61) |
-| Echo sides inverted | in 2 of 449 songs |
-| Echo filter at DC | 0.99 (158 songs); 0.1 (136) |
-| Master volume | 112 (206 songs); 96 (137) |
-| Density | 448 notes in a song's first minute; a note 0.15 s |
+| Pitch writes | 5.6 a note (90 %: 51.4) |
+| Pitch modulation | in 0 of 610 songs |
+| Noise | in 0 of 610 songs |
+| Echo | 32 ms, feedback 0.23 (58 songs); 32 ms, feedback 0.39 (45); 0 ms, feedback 0.0 (36); 16 ms, feedback 0.01 (27) |
+| Echo volume | 0.0 (102 songs); 0.39 (93) |
+| Echo sides inverted | in 2 of 610 songs |
+| Echo filter at DC | 0.99 (213 songs); 1.0 (174) |
+| Master volume | 96 (241 songs); 112 (206) |
+| Density | 493 notes in a song's first minute; a note 0.15 s |
 <!-- end generated -->
 
 - **Clock**: a 500 Hz timer in nearly every song (250 Hz in Super
@@ -56,6 +61,9 @@ Kirby Super Star shares the code without the table.
   Super Metroid's boost it (4.1 at DC).
 - **Master volume**: 96 in most games, 112 in EarthBound, full in Kirby
   Super Star and Super Castlevania IV.
+- **Later games**: A Link to the Past and Yoshi's Island a short echo
+  (32 ms at 0.16 to 0.23); Soul Blazer and Terranigma (Quintet's) negative
+  feedback (-0.62 to -0.77), Soul Blazer's echo at full volume.
 - No pitch modulation and no noise in any of the 449 songs.
 
 ## Scores
@@ -63,7 +71,7 @@ Kirby Super Star shares the code without the table.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 444 | 0.98 (0.89) | 0.49 (1.10) | 0.99 (0.94-1.03) | 0.99 (0.98) |
+| 610 | 0.97 (0.87) | 0.49 (1.00) | 0.99 (0.94-1.02) | 0.99 (0.98) |
 <!-- end generated -->
 
 ## The converter
@@ -87,8 +95,9 @@ Top Gear's long full-strength echo, Super Castlevania IV's dry sound.
 
 ## Open
 
-- Super Metroid's Wrecked Ship (3.5 dB off, at 0.81 of its level): its
-  trailing echoes are the composer's, written as notes (voice 4 replays
+- Super Metroid's Wrecked Ship (1.8 dB off, 3.5 before the echo repeats
+  between rows, at 0.82 of its level): its trailing echoes are the
+  composer's, written as notes (voice 4 replays
   voice 0 on the same sample and pitch 0.146 s later); on IT's 10 ms rows
   the copy comes 4 ms late, which turns the two held tones from adding to
   cancelling ([known limits](README.md#known-limits)).
