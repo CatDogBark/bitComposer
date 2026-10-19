@@ -33,6 +33,8 @@ class Note:
     gain: int
     echo: bool
     noise: bool
+    noise_rate: int = 0              # FLG's noise clock (5-bit rate) at key-on, for noise notes
+    brr: tuple[int, int] | None = None   # the (start, loop) addresses it played, as the SNES chip read them
     end: float | None = None         # None: still sounding when the run ended
     bends: list[tuple[float, int]] = field(default_factory=list)       # (time, pitch) while it sounds
     swells: list[tuple[float, int, int]] = field(default_factory=list)  # (time, left, right)
@@ -46,8 +48,11 @@ def _s8(b: int) -> int:
     return b - 256 if b & 0x80 else b
 
 
-def decode(snapshot, writes, until: float | None = None) -> list[Note]:
-    """The notes in a run's writes, in order of their start."""
+def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[Note]:
+    """The notes in a run's writes, in order of their start. `keyons` (from
+    emulate.Run) gives each note the sample addresses the SNES chip read as
+    it keyed the voice on; many drivers write a voice's directory entry just
+    before keying it, so the snapshot's entry may not be what plays."""
     regs = bytearray(snapshot.dsp)
     sounding: dict[int, Note] = {}
     notes: list[Note] = []
@@ -70,7 +75,8 @@ def decode(snapshot, writes, until: float | None = None) -> list[Note]:
                     n = Note(voice=v, start=t + KEY_ON_DELAY, sample=regs[b + 4],
                              pitch=(regs[b + 2] | regs[b + 3] << 8) & 0x3FFF,
                              volume=(_s8(regs[b]), _s8(regs[b + 1])), adsr=(regs[b + 5], regs[b + 6]),
-                             gain=regs[b + 7], echo=bool(regs[EON] >> v & 1), noise=bool(regs[NON] >> v & 1))
+                             gain=regs[b + 7], echo=bool(regs[EON] >> v & 1), noise=bool(regs[NON] >> v & 1),
+                             noise_rate=regs[FLG] & 0x1F)
                     sounding[v] = n
                     notes.append(n)
             continue
@@ -101,4 +107,15 @@ def decode(snapshot, writes, until: float | None = None) -> list[Note]:
     if until is not None:
         for n in sounding.values():
             n.end = None
+    if keyons:
+        by_voice: dict[int, list] = {}
+        for k in keyons:
+            by_voice.setdefault(k.voice, []).append(k)
+        for n in notes:
+            ks = by_voice.get(n.voice, [])
+            while ks and ks[0].time < n.start - 0.0005:
+                ks.pop(0)
+            if ks and ks[0].time <= n.start + 0.0005:
+                k = ks.pop(0)
+                n.brr = (k.start, k.loop)
     return notes

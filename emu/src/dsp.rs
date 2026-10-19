@@ -140,6 +140,22 @@ pub struct Dsp {
     fir_pos: usize,
     /// The mixed output, when kept: interleaved left, right.
     pub audio: Option<Vec<i16>>,
+    /// Samples run so far.
+    pub samples: u64,
+    /// Every key-on as the SNES chip acted on it, with the directory entry it
+    /// read then: many drivers write a voice's entry just before keying it, so
+    /// the snapshot's directory need not hold what a note plays.
+    pub keyons: Vec<KeyOn>,
+}
+
+/// A key-on as it took effect.
+#[derive(Clone, Copy, Debug)]
+pub struct KeyOn {
+    pub sample: u64,
+    pub voice: u8,
+    pub srcn: u8,
+    pub start: u16,
+    pub loop_addr: u16,
 }
 
 #[inline(always)]
@@ -168,6 +184,8 @@ impl Dsp {
             fir: [[0; 2]; 8],
             fir_pos: 0,
             audio: None,
+            samples: 0,
+            keyons: Vec::new(),
         };
         // The snapshot's KON is what the driver last wrote, long since acted on:
         // it reads back as written but keys nothing on.
@@ -193,6 +211,7 @@ impl Dsp {
 
     /// One 32 kHz sample.
     pub fn sample(&mut self, ram: &mut [u8]) {
+        self.samples += 1;
         self.counter = if self.counter == 0 { COUNTER_RANGE - 1 } else { self.counter - 1 };
         let flg = self.regs[FLG];
         if self.steps((flg & 0x1F) as usize) {
@@ -250,6 +269,8 @@ impl Dsp {
                 if v.kon_delay == 5 {
                     let e = (dir + 4 * srcn as u16) as usize;
                     v.brr_addr = ram[e & 0xFFFF] as u16 | (ram[(e + 1) & 0xFFFF] as u16) << 8;
+                    let loop_addr = ram[(e + 2) & 0xFFFF] as u16 | (ram[(e + 3) & 0xFFFF] as u16) << 8;
+                    self.keyons.push(KeyOn { sample: self.samples, voice: vi as u8, srcn, start: v.brr_addr, loop_addr });
                     v.brr_offset = 1;
                     v.pos = 0;
                     v.p1 = 0;

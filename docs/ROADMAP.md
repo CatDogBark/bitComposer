@@ -383,6 +383,20 @@ and the hit-or-miss part. Two steps, in order.
 
 ## Generation
 
+- **The generator writes IT instruments (a later version, with a listening
+  review; decided 2026-10-18).** Today's songs are sample mode: release
+  tails baked into the sample data (a sustain loop and a decaying copy
+  after it), stab lengths as note cuts, swells as volume slides. It sounds
+  right, but a tracker shows nameless samples with their fades printed
+  into the waveform. IT instruments (the writer has them since the SPC
+  converter, `it_format.ITInstrument`) would give named instruments with
+  release envelopes in place of baked tails, the two-sample bass as one
+  instrument with a keyboard split, smaller files, cleaner patterns, and,
+  as an option, new-note actions so plucked harmony and arp notes ring
+  into each other. Every song's bytes change, so it is a version of its
+  own, judged by ear; the baked tails are reproduced by envelope where the
+  sound must not move.
+
 From `ANALYSIS.md` §5:
 
 - **Corpus statistics** — see Melody above.
