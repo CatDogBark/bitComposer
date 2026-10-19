@@ -354,24 +354,43 @@ def snes_interpolated(pcm, loop) -> array:
     return out
 
 
-def echo_coloured(pcm, loop, ratio: float, taps) -> tuple[array, float]:
-    """The sample as the echo filter colours it when the voice plays it at
-    `ratio` times its own rate: the filter's taps are 1/32000 s apart at the
-    output, so `ratio` samples apart in the sample. A loop is filtered as it
-    repeats (its history the loop's own end). Returns the 16-bit data and
-    the factor it was scaled down by to fit (1.0 when it did)."""
-    c = [t / 128 for t in taps]
-    ext = list(pcm[:loop[1]]) + list(pcm[loop[0]:loop[1]]) if loop else list(pcm)
+def echo_coloured(pcm, loop, ratio: float, taps, passes: int = 1) -> tuple[array, float]:
+    """The sample as the echo hands it back after `passes` trips round its
+    loop, when the voice plays it at `ratio` times its own rate. Each trip
+    goes through the echo filter, whose taps are 1/32000 s apart at the
+    output (so `ratio` samples apart in the sample), and so is coloured by
+    it and delayed by its span: a repeat comes passes x (echo delay + the
+    filter's span) late, where rows alone give passes x the delay. FFVI's
+    Dark World has one tap, 7 samples back; repeats 7 samples a trip early
+    stacked differently on its held organ chords, a third brighter than the
+    original's. The filter is applied `passes` times as one (its taps
+    convolved), so the sample is interpolated once. A loop is filtered as it
+    repeats. Returns the 16-bit data and the factor it was scaled down by to
+    fit (1.0 when it did)."""
+    one = [0.0] * 8                          # the filter by delay in output samples: FIR0 weighs the oldest of eight
+    for k, t in enumerate(taps):
+        one[7 - k] = t / 128
+    h = [1.0]
+    for _ in range(passes):
+        h = [sum(h[i] * one[j - i] for i in range(max(0, j - 7), min(len(h), j + 1))) for j in range(len(h) + 7)]
+    terms = [(d * ratio, c) for d, c in enumerate(h) if c]
+    span = max((d for d, _ in terms), default=0.0)
+    if loop:
+        ls, le = loop
+        ext = list(pcm[:le]) + list(pcm[ls:le]) * (1 + math.ceil(span / max(1, le - ls)))
+    else:
+        ext = list(pcm)
+    n = len(ext)
 
     def at(x: float) -> float:
         if x < 0:
             return 0.0
         i = int(x)
-        return ext[i] + (ext[i + 1] - ext[i]) * (x - i) if i + 1 < len(ext) else (ext[i] if i < len(ext) else 0.0)
+        return ext[i] + (ext[i + 1] - ext[i]) * (x - i) if i + 1 < n else (ext[i] if i < n else 0.0)
 
-    y = [sum(c[k] * at(n - (7 - k) * ratio) for k in range(8)) for n in range(len(ext))]
-    if loop:                                 # the attack as it first plays, the loop as it repeats
-        y = y[:loop[0]] + y[loop[1]:loop[1] + loop[1] - loop[0]]
+    y = [sum(c * at(i - d) for d, c in terms) for i in range(n)]
+    if loop:                                 # the attack as it first plays, the loop as it repeats (its last pass)
+        y = y[:loop[0]] + y[n - (loop[1] - loop[0]):]
     peak = max((abs(v) for v in y), default=0.0)
     fit = min(1.0, 32767 / peak) if peak else 1.0
     return array("h", (round(v * fit) for v in y)), fit
@@ -461,32 +480,6 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
         instruments.append(itf.ITInstrument(name=f"{label} {kind}", sample=sample, envelope=nodes))
         instrument_of[key] = len(instruments)
 
-    # The echo's colour: for each sample an echoing note plays, a copy as the
-    # echo filter colours it at the pitch its echoing notes mostly have, and
-    # an instrument for it beside each of the sample's own.
-    echo_instrument_of, coloured_at = {}, {}
-    sends = [n for n in found if n.echo and n.echo_writes and n.echo_delay > 0 and not n.noise and n.pitch]
-    for addr in sorted({n.brr for n in sends if n.brr in sample_of}):
-        echoing = [n for n in sends if n.brr == addr]
-        semis = sorted(round(12 * math.log2(n.pitch / 0x1000)) for n in echoing)
-        mid = semis[len(semis) // 2] if semis else 0
-        filt = echoing[0].echo_filter if echoing else None
-        if filt is None or len(instruments) >= MAX_INSTRUMENTS:
-            continue
-        s = decoded[addr]
-        loop = (s.loop_start, s.loop_end or len(s)) if s.loops else None
-        data, fit = echo_coloured(s.pcm, loop, 2 ** (mid / 12), filt)
-        dry = samples[sample_of[addr] - 1]
-        samples.append(itf.ITSample(name=f"echo of {addr[0]:04X}", filename=f"echo{addr[0]:04x}", data=data.tobytes(),
-                                    length=len(data), loop=dry.loop, loop_start=dry.loop_start, loop_end=dry.loop_end,
-                                    c5_speed=dry.c5_speed))
-        coloured_at[addr] = (mid, filt, fit)
-        for key, ins in list(instrument_of.items()):
-            if key[0] == addr and len(instruments) < MAX_INSTRUMENTS:
-                src = instruments[ins - 1]
-                instruments.append(itf.ITInstrument(name=f"echo {src.name}"[:25], sample=len(samples), envelope=src.envelope))
-                echo_instrument_of[key] = len(instruments)
-
     # Pitch modulation: a note whose pitch the voice below it bent (PMON) is
     # kept as the emulator played it, the voice's own output through the
     # note (after its envelope, before its volumes), since IT cannot bend a
@@ -555,6 +548,38 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
     echo_channels = {v: [8 + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
     channels = 8 + len(sending) * taps + 1
     master_ch = channels - 1
+
+    # The echo's colour and timing: for each sample an echoing note plays, a
+    # copy per repeat as the echo hands it back after that many trips round
+    # its loop (echo_coloured, at the pitch the sample's echoing notes mostly
+    # have), and an instrument for each beside each of the sample's own: as
+    # many repeats as the samples and instruments IT has left allow (the
+    # pitch-modulation recordings came first); later repeats play the last.
+    echo_instrument_of, coloured_at = {}, {}
+    sends = [n for n in found if n.echo and n.echo_writes and n.echo_delay > 0 and not n.noise and n.pitch]
+    addrs = sorted({n.brr for n in sends if n.brr in sample_of})
+    keys_of = {a: [key for key in instrument_of if key[0] == a] for a in addrs}
+    copies = 0
+    if addrs and taps:
+        copies = max(0, min(taps, (MAX_SAMPLES - len(samples)) // len(addrs),
+                            (MAX_INSTRUMENTS - len(instruments)) // max(1, sum(map(len, keys_of.values())))))
+    for addr in addrs if copies else []:
+        echoing = [n for n in sends if n.brr == addr]
+        semis = sorted(round(12 * math.log2(n.pitch / 0x1000)) for n in echoing)
+        mid, filt = semis[len(semis) // 2], echoing[0].echo_filter
+        s = decoded[addr]
+        loop = (s.loop_start, s.loop_end or len(s)) if s.loops else None
+        dry = samples[sample_of[addr] - 1]
+        for k in range(1, copies + 1):
+            data, fit = echo_coloured(s.pcm, loop, 2 ** (mid / 12), filt, k)
+            samples.append(itf.ITSample(name=f"echo {k} of {addr[0]:04X}", filename=f"e{k}{addr[0]:04x}", data=data.tobytes(),
+                                        length=len(data), loop=dry.loop, loop_start=dry.loop_start, loop_end=dry.loop_end,
+                                        c5_speed=dry.c5_speed))
+            coloured_at[(addr, k)] = (mid, filt, fit)
+            for key in keys_of[addr]:
+                src = instruments[instrument_of[key] - 1]
+                instruments.append(itf.ITInstrument(name=f"echo {k} {src.name}"[:25], sample=len(samples), envelope=src.envelope))
+                echo_instrument_of[(key, k)] = len(instruments)
     # Patterns to the song's last row exactly (the last one short): rounded up
     # to a whole pattern, notes still held at the end rang on for up to two
     # seconds past it with their echo stacked on (FFVI's Dark World, twice as loud).
@@ -722,26 +747,26 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
         placed += 1
         baked += id(n) in baked_of
         # The echo, as repeats: the k-th comes k delays late, at the echo
-        # volume times the filter's gain through k passes and the feedback
-        # to the k-1, played from the coloured copy of the sample where
-        # there is one (which holds one pass of the filter at its pitch).
+        # volume times the feedback to the k-1 and the filter's gain through
+        # k passes, played from the copy that holds k passes of the filter
+        # (its colour and its span) where there is one.
         if n.voice in echo_channels and n.echo and n.echo_writes and n.echo_delay > 0:
             gains, fb = repeat_gains(n), abs(n.echo_feedback)
-            echo_ins, colour = echo_instrument_of.get(key_of(n)), coloured_at.get(n.brr)
-            if id(n) in baked_of:
-                echo_ins, passes = ins, gains
-            elif echo_ins is not None and colour[1] == n.echo_filter:
-                mid_gain = gains_at(n.brr, colour[0], n.echo_filter)[0]
-                passes = [g / mid_gain / colour[2] if mid_gain else 0.0 for g in gains]
-            else:
-                echo_ins, passes = ins, gains
             ev = n.echo_volume
             # Echo volumes of opposite signs: surround inverts one side, but
             # plays centred, so only a voice near the middle keeps its place.
             sides = sorted((abs(n.volume[0]), abs(n.volume[1])))
             inverted = ev[0] * ev[1] < 0 and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
             for k in range(1, taps + 1):
-                scale = passes[k - 1] * fb ** (k - 1) * past_master(n.start + k * n.echo_delay)
+                kk = min(k, copies)
+                echo_ins = echo_instrument_of.get((key_of(n), kk))
+                colour = coloured_at.get((n.brr, kk))
+                if id(n) not in baked_of and echo_ins is not None and colour[1] == n.echo_filter:
+                    mid_gain = gains_at(n.brr, colour[0], n.echo_filter)[kk - 1]
+                    passed = gains[k - 1] / mid_gain / colour[2] if mid_gain else 0.0
+                else:
+                    echo_ins, passed = ins, gains[k - 1]
+                scale = passed * fb ** (k - 1) * past_master(n.start + k * n.echo_delay)
                 gl, gr = abs(ev[0]) * scale, abs(ev[1]) * scale
                 if inverted:
                     gl = gr = max(gl, gr)

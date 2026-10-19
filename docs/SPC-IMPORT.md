@@ -366,7 +366,7 @@ sending to the echo again on a channel of its own, an echo delay late,
 until the repeats fall to -30 dB (as many as IT's 64 channels allow,
 shared among the voices that send; three stopped Dark World's 1.1 s tail
 at 0.24 s), raised past the master volume (the SNES chip leaves the echo
-out of it, an IT global volume reaches every channel), played from a copy of its sample coloured by the echo
+out of it, an IT global volume reaches every channel), played from a copy of its sample as the echo hands it back after that many trips round its loop (the filter once a trip: its colour, and its span, which rows alone leave out: Dark World's repeats came 7 samples a trip early and stacked a third brighter), coloured by the echo
 filter (at the pitch its echoing notes mostly have) and scaled by the echo
 volume, the feedback and the filter's gain over the note itself; when the
 two echo volumes have opposite signs (Mega Man X's widening trick), a

@@ -146,6 +146,12 @@ class Echo(unittest.TestCase):
         self.assertAlmostEqual(convert.echo_gains(self.sine(200), (0, 3200), 0x1000 * 15, self.BANDPASS, 1)[0],
                                hi[0], delta=0.1)                             # the same sample, played 15x up
 
+    def test_each_trip_round_the_echo_adds_the_filter_s_span(self):
+        click = [0] * 100 + [10000] + [0] * 99
+        for k in (1, 2, 3):                                                  # one tap 7 samples back: 7 later a trip
+            data, _ = convert.echo_coloured(click, None, 1.0, (127, 0, 0, 0, 0, 0, 0, 0), k)
+            self.assertEqual(max(range(len(data)), key=lambda i: abs(data[i])), 100 + 7 * k)
+
     def test_the_coloured_copy_keeps_its_length_and_loses_the_bass(self):
         rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
         for hz, keep in ((3000, 0.9), (200, 0.25)):
@@ -241,7 +247,8 @@ class Convert(unittest.TestCase):
             self.assertEqual((info["notes"], info["baked"], info["bakes"]), (2, 1, 1))
             keys = [ins.keyboard for ins in song["instruments"] if ins.keyboard]
             self.assertEqual(len(keys), 1)
-            self.assertEqual(keys[0][1], (60, info["samples"]))              # key 1: the recording, at its own rate
+            recording = next(i for i, smp in enumerate(song["samples"], 1) if smp.filename.startswith("pmon"))
+            self.assertEqual(keys[0][1], (60, recording))                    # key 1: the recording, at its own rate
             m, pcm = render(path, 0.5)
             self.assertGreater(max(abs(v) for v in pcm), 1000)
 
@@ -285,7 +292,8 @@ class Convert(unittest.TestCase):
             song = convert.convert(snap, 1.0, path)
             info = song["info"]
             self.assertEqual(info["notes"], 1)
-            self.assertEqual((info["samples"], info["instruments"]), (2, 2))    # the sample and its echo-coloured copy
+            copies = len(info["echo_channels"][0])                          # a copy per repeat: k passes of the echo
+            self.assertEqual((info["samples"], info["instruments"]), (1 + copies, 1 + copies))
             self.assertGreaterEqual(info["repeats"], 1)                          # the echo, as repeats
             # the first repeat: voice 0's first echo channel, 32 ms after the note
             hits = [(r, ch) for p, pat in enumerate(song["patterns"]) for r, row in enumerate(pat.data)
