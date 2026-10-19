@@ -166,7 +166,31 @@ class Noise(unittest.TestCase):
         self.assertGreater(rms, 15000)                                     # full scale, as the hardware's
 
 
+class Interpolation(unittest.TestCase):
+    def test_samples_soften_as_the_snes_chip_reads_them(self):
+        rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
+        for f, gain in ((0.02, 1.0), (0.25, 0.63), (0.4, 0.30)):          # the hardware's Gaussian, measured
+            pcm = [round(10000 * math.sin(2 * math.pi * f * i)) for i in range(4000)]
+            out = convert.snes_interpolated(pcm, None)
+            self.assertAlmostEqual(rms(out[100:-100]) / rms(pcm[100:-100]), gain, delta=0.02)
+
+    def test_a_loop_is_filtered_as_it_repeats(self):
+        pcm = [1000] * 50 + [5000, -5000] * 25 + [7, 7, 7]                 # a tail past the loop end is dropped
+        out = convert.snes_interpolated(pcm, (50, 100))
+        self.assertEqual(len(out), 100)
+        self.assertEqual(out[10], 1000)                                       # DC as it was
+        self.assertAlmostEqual(abs(out[99]), 0.18 * 5000, delta=50)           # the loop's end, its start after it
+
+
 class Envelopes(unittest.TestCase):
+    def test_steps_fall_on_the_shared_counter(self):
+        # GAIN 0xC6: a linear rise at rate 6, a step every 640 samples where the sample number is 536 mod 640
+        on_note = convert.envelope_track(0x00, 0x00, 0xC6, [], 3000)
+        on_counter = convert.envelope_track(0x00, 0x00, 0xC6, [], 3000, start=1000)
+        self.assertEqual(on_note[:2], [(0, 32), (640, 64)])                  # from the note's start (an IT envelope)
+        self.assertEqual(on_counter[:2], [(0, 0), (176, 32)])                # sample 1176 = 640 + 536
+        self.assertEqual([s - t for (s, _), (t, _) in zip(on_counter[2:], on_counter[1:])], [640] * (len(on_counter) - 2))
+
     def test_a_gain_fade_written_mid_note(self):
         # ADSR FF/E0 holds at once; at sample 3200 the driver switches to GAIN 0x9E, a fast linear fade
         track = convert.envelope_track(0xFF, 0xE0, 0xB8, [(3200, 0x00, 0xE0, 0x9E)], 6400)

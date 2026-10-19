@@ -15,7 +15,9 @@ original. The pieces:
   grid instead, 100 rows a second: every note within 5 ms of its time.
 - One IT sample per SNES sample, its C5Speed set so the song's notes fall on
   whole semitones; what is left (a few cents) and every pitch write while a
-  note sounds (vibrato, slides) become fine pitch slides, row by row.
+  note sounds (vibrato, slides) become fine pitch slides, row by row. Each is
+  filtered as the SNES chip's Gaussian interpolation colours it (an IT player
+  interpolates almost ideally): the SNES's softness is in the samples.
 - One IT instrument per sample and envelope setting, its volume envelope
   simulated from the ADSR or GAIN registers.
 - Note volume and pan from the voice's volumes, side for side: the SNES
@@ -68,6 +70,14 @@ MAX_INSTRUMENTS = 99
 MAX_SAMPLES = 255                     # what an instrument's keyboard can name
 KEYS = 119                            # bakes one instrument holds: notes 1-119 (0 reads as none)
 RELEASE = 256                         # samples a released SNES voice takes to fall silent
+# The SNES chip reads every sample through a 4-point Gaussian interpolation, a lowpass in
+# the sample's own terms: -0.6 dB at a tenth of its rate, -4 dB at a quarter, -10.5 dB at
+# 0.4, -15 dB at the top (computed from the hardware table in emu/src/dsp.rs, averaged over
+# the interpolation's 256 positions). An IT player interpolates almost ideally, so the
+# samples are filtered with this response first: the half of a symmetric 9-tap filter,
+# within 0.4 dB of it. Without it, bright samples played low came out up to 3 times too
+# strong above their own top (Secret of Evermore's wind), and every instrument too bright.
+GAUSS_RESPONSE = (0.615783, 0.199155, -0.010345, 0.004865, -0.002367)
 TAPS = 3                              # echo repeats carried over, at most
 FX_SET_GLOBAL_VOLUME = 22             # Vxx
 SURROUND_ON, SURROUND_OFF = 0x91, 0x90   # S91 / S90: one side phase-inverted, centred
@@ -78,6 +88,11 @@ ENV_NODES = 25
 # The SNES chip's envelope rates: samples between steps (rate 0 never steps).
 RATE_PERIOD = [0, 2048, 1536, 1280, 1024, 768, 640, 512, 384, 320, 256, 192, 160, 128, 96, 80,
                64, 48, 40, 32, 24, 20, 16, 12, 10, 8, 6, 5, 4, 3, 2, 1]
+# Where each rate's steps fall on the SNES chip's one counter, shared by all eight voices:
+# a rate steps in sample s (counting from the snapshot, the first being 1) when
+# s % period == phase % period (every period divides the counter's range, 30720).
+RATE_PHASE = [1, 0, 1040, 536, 0, 1040, 536, 0, 1040, 536, 0, 1040, 536, 0, 1040, 536,
+              0, 1040, 536, 0, 1040, 536, 0, 1040, 536, 0, 1040, 536, 0, 1040, 0, 0]
 
 
 def tick_rate(snap, writes) -> tuple[float, float]:
@@ -180,12 +195,20 @@ def envelope(adsr1: int, adsr2: int, gain: int, tick_hz: float, seconds: float =
     return _simplify(levels)
 
 
-def envelope_track(adsr1: int, adsr2: int, gain: int, changes, length: int) -> list[tuple[int, int]]:
+def envelope_track(adsr1: int, adsr2: int, gain: int, changes, length: int,
+                   start: int | None = None) -> list[tuple[int, int]]:
     """The SNES chip's envelope through a note of `length` samples, the
     registers replaced by `changes` [(sample, ADSR1, ADSR2, GAIN)] as they
     come: [(sample, level 0-0x7FF)], each level holding until the next
     listed. Only the envelope's steps are visited (a held level is jumped
-    over), so a long note costs its steps, not its samples."""
+    over), so a long note costs its steps, not its samples.
+
+    `start` is the sample (from the snapshot) of the envelope's first run:
+    with it, steps fall where the hardware's shared counter puts them;
+    without it, every `period` samples from the note's start (as an IT
+    instrument's envelope, which starts with its note, must). A driver that
+    shapes notes itself, switching GAIN ramps and holds hundreds of times a
+    note (Secret of Evermore's), drifts a step on most switches without it."""
     env, mode, hidden, n = 0, "attack", 0, 0
     track = [(0, 0)]
     changes = sorted(changes)
@@ -196,7 +219,12 @@ def envelope_track(adsr1: int, adsr2: int, gain: int, changes, length: int) -> l
         upto = changes[ci][0] if ci < len(changes) else length
         rate, step, boundary = _rule(*regs, mode)
         period = RATE_PERIOD[rate]
-        at = n if not period or n % period == 0 else (n // period + 1) * period
+        if not period:
+            at = n
+        elif start is None:
+            at = n if n % period == 0 else (n // period + 1) * period
+        else:
+            at = n + (RATE_PHASE[rate] - (start + n)) % period
         if not period or at >= upto:
             n = upto
             continue
@@ -290,6 +318,28 @@ def echo_gains(pcm, loop, pitch: int, taps, repeats: int, n: int = 1024) -> list
     return gains
 
 
+def snes_interpolated(pcm, loop) -> array:
+    """A sample as the SNES chip's interpolation colours it (GAUSS_RESPONSE),
+    for an IT player that interpolates cleanly. `loop` is (start, end) or
+    None; a loop is filtered as it repeats, its own end before its start."""
+    norm = GAUSS_RESPONSE[0] + 2 * sum(GAUSS_RESPONSE[1:])
+    taps = [h / norm for h in GAUSS_RESPONSE]
+    n, k_max = len(pcm), len(taps) - 1
+    ls, le = loop if loop else (None, n)
+
+    def at(i: int, looping: bool) -> int:
+        if loop and (i >= le or (looping and i < ls)):
+            i = ls + (i - ls) % (le - ls)
+        return pcm[i] if 0 <= i < n else 0
+
+    out = array("h")
+    for i in range(le if loop else n):
+        looping = bool(loop) and i >= ls
+        v = taps[0] * pcm[i] + sum(taps[k] * (at(i - k, looping) + at(i + k, looping)) for k in range(1, k_max + 1))
+        out.append(max(-32768, min(32767, round(v))))
+    return out
+
+
 def echo_coloured(pcm, loop, ratio: float, taps) -> tuple[array, float]:
     """The sample as the echo filter colours it when the voice plays it at
     `ratio` times its own rate: the filter's taps are 1/32000 s apart at the
@@ -351,6 +401,8 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         s = brr.decode(snap.ram, *addr) if 0 < addr[0] < 0xFFC0 else None
         if s is None or len(s) < 16:
             continue
+        loop = (s.loop_start, s.loop_end or len(s)) if s.loops else None
+        s.pcm = snes_interpolated(s.pcm, loop)      # from here on, the sample as the voice plays it
         decoded[addr] = s
         fracs = [12 * math.log2(n.pitch / 0x1000) for n in found if n.brr == addr and not n.noise and n.pitch]
         ang = [2 * math.pi * (f - math.floor(f)) for f in fracs]
@@ -501,10 +553,15 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         it is silent for good (or None)."""
         if id(n) in factors_of:
             return factors_of[id(n)]
-        start = round(n.start * RATE)
-        length = round(((n.end if n.end is not None else run.seconds) - n.start) * RATE)
-        changes = [(round(t * RATE) - start, a1, a2, g) for t, a1, a2, g in n.envelopes]
-        real = envelope_track(*n.adsr, n.gain, changes, length)
+        # The samples the SNES chip acts in: a write made in sample k's 32
+        # cycles is seen from sample k + 1; a key-on is taken on an odd
+        # sample, and the envelope first runs four samples later.
+        seen = lambda t: math.floor(t * RATE + 1e-6) + 1                    # noqa: E731
+        kon = seen(n.start - notes_mod.KEY_ON_DELAY)
+        start = (kon if kon % 2 else kon + 1) + 4
+        length = seen(n.end if n.end is not None else run.seconds) - start
+        changes = [(seen(t) - start, a1, a2, g) for t, a1, a2, g in n.envelopes]
+        real = envelope_track(*n.adsr, n.gain, changes, length, start)
         bounds = [max(0, round(r / row_hz * RATE) - start) for r in range(first, stop + 1)]
         f = [level / 0x7FF for level in _row_means(real, bounds)]
         silent = None

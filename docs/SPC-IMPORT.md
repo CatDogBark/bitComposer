@@ -333,16 +333,24 @@ so a converted song opens in a tracker as a tracker song. One IT sample
 per sample played, found by the addresses the SNES chip read as it keyed
 each voice on (Secret of Evermore's driver writes a voice's directory
 entry just before keying it; its snapshot's directory is placeholders), its
-C5Speed set so the notes fall on whole semitones; one instrument per
-sample and envelope setting, its volume envelope simulated from ADSR or
-GAIN (each tick holding its window's RMS, so a fast decay keeps the
-energy of its peak); bends as fine slides row by row; key-offs as cuts.
+C5Speed set so the notes fall on whole semitones, and filtered as the
+SNES chip's Gaussian interpolation colours it (a lowpass in the sample's
+own terms, -4 dB at a quarter of its rate and -15 dB at the top, where an
+IT player interpolates almost ideally); one instrument per sample and
+envelope setting, its volume envelope simulated from ADSR or GAIN (each
+tick holding its window's RMS, so a fast decay keeps the energy of its
+peak); bends as fine slides row by row; key-offs as cuts.
 A note whose envelope registers are written while it sounds plays an
 instrument without an envelope, its envelope simulated through the writes
 and carried whole in the volume column, and is cut where it falls silent:
 Mega Man X's driver keys every note on held and releases it with a GAIN
 fade a moment before the next, never with a key-off; Secret of Evermore's
-wind swells one held note for the length of a song. Volumes side for
+shapes every note itself with hundreds of GAIN ramps and holds, reading
+the envelope back to know when to switch, so the simulation steps where
+the SNES chip's shared rate counter does (counted from each note's start
+instead, it drifted a step on most switches: the wind's level 2.17 times
+the original's, 1.70 on the counter, 0.95 with the interpolation's
+softness in the samples too). Volumes side for
 side: the SNES chip sets each side's level on its own, an IT player pans
 linearly (a centred note at half its volume each side), so a note's IT
 volume is its two sides' sum and its pan the right side's share; the SNES
