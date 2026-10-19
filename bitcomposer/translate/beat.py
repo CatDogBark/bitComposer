@@ -76,6 +76,13 @@ class Grid:
             weights[x.meter] = weights.get(x.meter, 0.0) + x.end - x.start
         return max(weights, key=weights.get) if weights else 4
 
+    def period_at(self, t: float) -> float:
+        """The beat's length at time t: its section's."""
+        for x in self.sections:
+            if t <= x.end:
+                return x.period
+        return self.sections[-1].period if self.sections else 0.5
+
     def beats(self, t: float) -> float:
         """A time in beats from the first beat (between two beats, the fraction of the way)."""
         b = self.beat_times
@@ -301,6 +308,34 @@ def find(onsets) -> Grid | None:
                 bar_times.append(t)
     return Grid(mean_unit, k, [x for x, _ in keep], beat_times, bar_times, on_grid,
                 _swing(onsets, keep[0][0].period, keep[0][0].first))
+
+
+BASS_LIFT = 1.4                      # how much more than chance the bass must land on a bar's first beat
+
+
+def rebar(grid: Grid, bass_beats: list[float]) -> bool:
+    """The bar again from where the bass lands: on the first of three beats
+    in a waltz (oom-pah-pah), of two or four otherwise. Its notes falling on
+    one beat of m more often than chance (1/m) by BASS_LIFT or more set the
+    bar and its downbeat; else the accents' bar stays. The Wedding Waltz's
+    bass lands on the first of three 87 % of the time, its accents had read
+    four. Returns whether the bar changed."""
+    on = [round(b) for b in bass_beats if abs(b - round(b)) < 0.15 and b >= -0.15]
+    if len(on) < 8:
+        return False
+    best = None
+    for m in (4, 3, 2):
+        counts = [sum(1 for b in on if b % m == d) for d in range(m)]
+        lift = max(counts) / len(on) * m
+        if best is None or lift > best[0] * (1.0 if m != 2 else 1.1):
+            best = (lift, m, counts.index(max(counts)))
+    lift, m, d = best
+    if lift < BASS_LIFT:
+        return False
+    for x in grid.sections:
+        x.meter = m
+    grid.bar_times = grid.beat_times[d::m]
+    return True
 
 
 def _meter(slots: dict, k: int, first: float) -> tuple[int, int]:

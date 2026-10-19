@@ -57,6 +57,62 @@ class Beat(unittest.TestCase):
         self.assertIsNone(beat.find(out))
 
 
+class Bar(unittest.TestCase):
+    def test_a_waltz_bass_sets_a_bar_of_three(self):
+        # the accents gave four; the bass lands on every third beat (oom-pah-pah)
+        g = beat.find(onsets(150, 48, 2, accent=(1.0, 0.7, 0.8, 0.7)))
+        self.assertEqual(g.meter, 4)
+        self.assertTrue(beat.rebar(g, [float(b) for b in range(1, 48, 3)]))
+        self.assertEqual((g.meter, g.bar_times[0]), (3, g.beat_times[1]))
+
+    def test_a_bass_on_every_beat_leaves_the_bar(self):
+        g = beat.find(onsets(150, 48, 2, accent=(1.0, 0.7, 0.8, 0.7)))
+        self.assertFalse(beat.rebar(g, [float(b) for b in range(48)]))
+
+
+def song_of(parts):
+    """A Song from {voice: [(start, length, midi or None), ...]} at full level, centred."""
+    from bitcomposer.translate.events import Played, Sample, Song
+    samples = {}
+    notes = []
+    for v, ns in parts.items():
+        s = samples.setdefault(v, Sample((v * 0x100, v * 0x100), f"s{v}", 440.0 if ns[0][2] is not None else None, 100, True))
+        notes += [Played(v, t, t + n, s, m, 0.8, 0.5, None) for t, n, m in ns]
+    notes.sort(key=lambda p: (p.start, p.voice))
+    return Song("test", 30.0, notes, samples)
+
+
+class Parts(unittest.TestCase):
+    def test_drums_bass_melody_and_held_chords(self):
+        from bitcomposer.translate import harmony, roles
+        b = 0.5                                       # 120 BPM
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        song = song_of({
+            0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                    # the melody, stepwise, on top
+            1: [(i * 4 * b, 4 * b, m) for i, m in enumerate([60, 60, 57, 55] * 4)],  # held chords' root
+            2: [(i * 4 * b, 4 * b, m) for i, m in enumerate([64, 64, 60, 59] * 4)],
+            3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # bass
+            4: [(i * b / 2, 0.05, None) for i in range(128)],                      # drums: no pitch
+        })
+        g = beat.find([(p.start, p.level) for p in song.notes])
+        parts = {r.voice: r.role for r in roles.assign(song, g)}
+        self.assertEqual(parts, {0: roles.MELODY, 1: roles.HARMONY, 2: roles.HARMONY, 3: roles.BASS, 4: roles.DRUMS})
+        tonic, mode, _ = harmony.key(song, g, roles.assign(song, g))
+        self.assertEqual((harmony.NAMES[tonic], mode), ("C", "major"))
+        first = harmony.chords(song, g, roles.assign(song, g))[0]
+        self.assertEqual((first.name, first.end - first.start), ("C", 8))
+
+    def test_a_voice_playing_another_s_notes_is_its_double(self):
+        from bitcomposer.translate import roles
+        b = 0.5
+        line = [(i * b, 0.4, 60 + (i * 5) % 12) for i in range(48)]
+        song = song_of({0: line, 1: [(t + 0.12, n, m + 12) for t, n, m in line],    # 0.12 s late, an octave up
+                        2: [(i * 2 * b, 2 * b, 36 + (i % 3)) for i in range(24)]})
+        g = beat.find([(p.start, p.level) for p in song.notes if p.voice != 1])
+        double = [r for r in roles.assign(song, g) if r.voice == 1][0]
+        self.assertEqual((double.role, double.of), (roles.DOUBLE, 0))
+
+
 class Events(unittest.TestCase):
     def test_a_sample_s_notes_are_named_against_its_own_tuning(self):
         # notes 8 cents flat together are named on the semitone; the offset is the sample's
