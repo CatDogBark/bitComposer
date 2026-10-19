@@ -1,6 +1,6 @@
 # The translator: a plan in stages
 
-Proposed 2026-10-19, waiting on a go. Step 4 of `SPC-IMPORT.md`, in detail:
+Agreed 2026-10-19. Step 4 of `SPC-IMPORT.md`, in detail:
 from a game's SPC files to a pack the generator composes with.
 
 ## Where it starts
@@ -31,8 +31,16 @@ from a game's SPC files to a pack the generator composes with.
   notes are its music and its samples are its files. The repository holds
   the schema and the code; `drivers/` stays the record of aggregates.
 - The command line first; the player's PACKS panel after.
-- The first pack in today's vocabulary, so the whole chain runs; the
-  composer's own writing as soon after as it can be.
+- What the translator measures does not depend on the generator's
+  vocabulary: readings are the music as played (notes on beats, chords,
+  roles, form), so any vocabulary can be made from them.
+- The first pack is thin, in today's format, to run the whole chain; the
+  vocabulary is then made anew from what the readings show, and that is
+  the plan's main work (stage 4), not guessed before the readings exist.
+- The generator writes in voices (stage 3), as many as a setting says:
+  eight for the SNES palette, as the hardware had, more possible later.
+- A new vocabulary serves imported packs first; the built-in packs sound
+  as they do until moving them over is chosen.
 - Final Fantasy VI first, checked against the hand-made `ffvi` pack.
 
 ## Stage 1: readings
@@ -66,18 +74,19 @@ Check: a report per song from the command line (tempo, key, chords by
 section, roles, form) for a dozen FFVI songs, read against what is heard;
 songs whose conversion scores badly are marked and kept out of packs.
 
-## Stage 2: the first imported pack
+## Stage 2: a thin first pack
 
-The game's samples as voices, its readings as habits, in today's format.
+The whole chain, run once: the game's samples as voices, and only the
+habits the readings give directly, in today's format. No classifiers built
+for categories the plan is to outgrow.
 
 - **Voices.** For each role, the samples the game uses most for it, written
   as WAVs (the loop kept, the SNES chip's interpolation in them, the pitch
   from the sample's tuning), each with a release family from its envelope
-  and a volume.
-- **Habits.** The readings sorted into the pack's vocabulary and counted
-  over the game's songs: tempo, energy, scale family, harmony mode and
-  voicing, bass style and weight, drum density and swing, arp figures, echo
-  (delay, feedback, wetness, from what the driver sets), form, intro.
+  and a volume. Most of a game's sound is here.
+- **Habits.** The ones that map straight across, counted over the game's
+  songs: tempo, scale family, echo (delay, feedback, wetness, from what the
+  driver sets).
 - **Measures in common.** The yardsticks of `ANALYSIS.md` computed from
   notes rather than from the generator's channel layout, so one set of
   measures reads the soundtrack's readings and the generator's songs alike,
@@ -97,7 +106,11 @@ the generator writes them, and one back end makes the module.
 - **A score of voices.** The generator's parts (melody, harmony, bass, arp,
   counter-line, drums) given to voices, each note the decoder's kind: a
   sample, a pitch, volumes, an envelope (ADSR or GAIN), whether it sends to
-  the echo.
+  the echo. How many voices is a setting: eight for the SNES palette, as
+  the hardware had, so an arrangement fits it the way a game's had to.
+  More is possible later at a cost: every voice is a channel, and IT's 64
+  leave the echo's repeats fewer to share (six voices sending get about
+  nine repeats each; sixteen about three).
 - **One back end.** The converter's stages after decoding (samples,
   instruments, the echo plan and its copies, the notes' placement, the
   master volume) take a generated score the way they take a decoded one.
@@ -111,9 +124,11 @@ design, so the yardsticks before and after, the time a song takes, and a
 listen before it ships. It changes how the built-in packs sound: a release
 of its own.
 
-## Stage 4: the composer's writing
+## Stage 4: the vocabulary, made anew
 
-What the vocabulary cannot say, measured and carried in the pack.
+The plan's main work: what a pack can say, designed from what the readings
+show composers doing, and the generator taught to play it. Imported packs
+use it first; the built-in packs move over only when chosen.
 
 - **From the readings.** Chord voicings (which tones, how spread, which
   inversion, which voice takes which tone), how one chord moves to the
@@ -143,9 +158,6 @@ building it.
 
 ## To settle as we go
 
-- **Stage 3: eight voices or more.** The SNES had eight, its echo shared
-  among them; the generator uses more parts than that today. Fitting eight
-  is authentic and shapes the arrangement; more is easier.
 - **Where the database lives**: the settings folder (with the packs) or the
   user's data folder.
 - **Tuning to taste**: a user's corrections (roles, voices, habits) kept in
