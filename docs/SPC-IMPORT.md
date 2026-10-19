@@ -311,7 +311,23 @@ only difference that libgme stops at the length in the file's tag.
 
 The SNES chip decoder turns the register log into events (the design,
 above), and the shared translator turns events into musical facts, then
-measurements. For the SNES chip:
+measurements.
+
+**Built so far:** the emulator is called from Python
+(`bitcomposer_emu.run`, wrapped by `bitcomposer/spc/emulate.py`), which
+hands back every SNES chip write. `bitcomposer/spc/notes.py`, the SNES
+chip decoder, replays them into notes: the voice, the sample, the pitch,
+the volume and envelope at key-on, the bends and swells while it sounds,
+and its end (key-off, the voice's next key-on, or the soft reset).
+`bitcomposer/spc/tuning.py` measures each sample's own pitch (a loop's
+whole cycles; otherwise autocorrelation past the lag where the wave has
+moved on from itself, the peak placed between whole lags), so a note has
+a name: FFVI's battle bass is an A1 ostinato, Secret of Mana's opening an
+F major chord, every instrument of it within a cent of the same offset
+(-8 cents: the game's own tuning, which the translator will calibrate
+out). `python -m bitcomposer.spc --notes FILE.spc` lists them.
+
+For the SNES chip:
 
 - **Notes.** A `KON` on a voice is a note: its sample (`SRCN` at that
   moment), its pitch (the sample's fundamental, measured once by the

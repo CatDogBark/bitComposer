@@ -109,6 +109,7 @@ class Snapshot:
     sp: int
     tags: Tags
     source: str = ""
+    raw: bytes = field(default=b"", repr=False)    # the file as read, for the emulator
     _samples: dict = field(default_factory=dict, repr=False)
 
     @property
@@ -197,7 +198,7 @@ def read(path_or_data, source: str = "") -> Snapshot:
     pc = data[0x25] | data[0x26] << 8
     return Snapshot(ram=data[RAM:RAM + 0x10000], dsp=data[DSP:DSP + 0x80], extra_ram=data[EXTRA:EXTRA + 0x40],
                     pc=pc, a=data[0x27], x=data[0x28], y=data[0x29], psw=data[0x2A], sp=data[0x2B],
-                    tags=_tags(data) if data[0x23] == 26 else Tags(), source=source)
+                    tags=_tags(data) if data[0x23] == 26 else Tags(), source=source, raw=data)
 
 
 def _text(b: bytes) -> str:
