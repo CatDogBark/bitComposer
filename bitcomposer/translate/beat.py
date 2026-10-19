@@ -1,0 +1,341 @@
+"""The beat and bar a song's notes sit on, from their onsets.
+
+First the grid's unit (the tatum): the longest step that the gaps between
+onsets are whole multiples of, within the jitter a driver's timer gives its
+key-ons (AKAO's wander by 5 ms). Then locked to the song: the unit and its
+phase fitted to the onsets' own times by least squares, over a window that
+grows to the whole song (a unit fitted from neighbouring gaps can be 0.2 ms
+off, which over a minute of FFVI's battle theme is a sixteenth). Then the
+beat: the pulse, the finest multiple of the unit that nearly every point
+of has an onset, grouped by twos or threes (whichever its accents say)
+while it is faster than 180 BPM: the beat a listener taps is the one
+always present.
+(Loudness alone keeps rising with every coarser level, and leaning toward a
+tempo chose FFVI's battle theme's dotted quarter, a three of a grid of twos.) The bar: the beat count whose accents repeat most
+strongly, its downbeat where they are loudest. Swing: where the off-beat
+falls.
+
+A song keeps its tempo but not always its phase: a held note of an odd
+length, a fermata, the loop's jump move the grid (FFVI's battle theme holds
+its grid from 0 to 15 s and from 25 to 40, half a step off in between). So
+the grid is followed onset by onset and taken again where three onsets in a
+row miss it: a song is sections, each with its own grid, the beat counted
+on across them."""
+import math
+from dataclasses import dataclass
+
+SLOW, FAST = 40.0, 240.0             # BPM a beat may have
+JITTER = 0.006                       # seconds an onset may sit off its grid point
+TATUM_FIT = 0.75                     # the share of onset gaps the grid's unit must divide
+FILLED = 0.85                        # the share of a pulse's points that have an onset
+FASTEST = 180.0                      # BPM a pulse is grouped above, by twos or threes
+FREE = 0.8                           # under this share of onsets on a grid, a song is in free time
+MULTIPLES = (1, 2, 3, 4, 6, 8, 12, 16, 24)   # units a beat may be
+
+
+@dataclass
+class Section:
+    """A stretch of the song on one grid."""
+    start: float                     # its first onset
+    end: float                       # its last onset on its grid
+    unit: float                      # seconds a grid step
+    phase: float                     # a grid point's time
+    first: float = 0.0               # its first beat's time
+    meter: int = 4                   # beats a bar
+    downbeat: int = 0                # its first bar's first beat, counted from `first`
+
+    @property
+    def period(self) -> float:
+        return self.unit * self.division
+
+    division: int = 1                # grid steps a beat (set with the song's beat)
+
+
+@dataclass
+class Grid:
+    """A song's beat: its sections, and the beats and bars through them."""
+    unit: float                      # seconds a grid step, over the song
+    division: int                    # grid steps a beat (2: eighths, 3: triplets, 4: sixteenths, 12: both)
+    sections: list
+    beat_times: list                 # every beat, in order
+    bar_times: list                  # every bar's first beat
+    on_grid: float                   # the share of onsets, by loudness, on their section's grid
+    swing: float                     # where the off-beat falls in the beat (0.5: straight)
+
+    @property
+    def bpm(self) -> float:
+        """The tempo, the sections' weighted by their length."""
+        total = sum(x.end - x.start for x in self.sections) or 1.0
+        return sum(60 / x.period * (x.end - x.start) for x in self.sections) / total
+
+    @property
+    def meter(self) -> int:
+        """The bar most of the song is in."""
+        weights = {}
+        for x in self.sections:
+            weights[x.meter] = weights.get(x.meter, 0.0) + x.end - x.start
+        return max(weights, key=weights.get) if weights else 4
+
+    def beats(self, t: float) -> float:
+        """A time in beats from the first beat (between two beats, the fraction of the way)."""
+        b = self.beat_times
+        if not b:
+            return 0.0
+        lo, hi = 0, len(b) - 1
+        if t <= b[0]:
+            return (t - b[0]) / (b[1] - b[0]) if len(b) > 1 else 0.0
+        if t >= b[-1]:
+            return hi + ((t - b[-1]) / (b[-1] - b[-2]) if len(b) > 1 else 0.0)
+        while hi - lo > 1:
+            mid = (lo + hi) // 2
+            if b[mid] <= t:
+                lo = mid
+            else:
+                hi = mid
+        return lo + (t - b[lo]) / (b[hi] - b[lo])
+
+
+def _tolerance(unit: float) -> float:
+    return max(JITTER, min(0.3 * unit, 0.015))
+
+
+def tatum(onsets) -> float | None:
+    """The grid's unit: the longest step (400 ms down to 20) that three onset
+    gaps in four are whole multiples of, within jitter."""
+    times = sorted({round(t, 3) for t, _ in onsets})
+    gaps = [b - a for a, b in zip(times, times[1:]) if 0.018 <= b - a <= 3.0]
+    if len(gaps) < 6:
+        return None
+    for ms in range(400, 19, -1):
+        u = ms / 1000
+        tol = max(JITTER, 0.12 * u)
+        fits = [(d, m) for d in gaps if 1 <= (m := round(d / u)) <= 24 and abs(d - m * u) <= tol]
+        if len(fits) >= TATUM_FIT * len(gaps):
+            return sum(d * m for d, m in fits) / sum(m * m for _, m in fits)
+    return None
+
+
+def lock(onsets, unit: float) -> tuple[float, float]:
+    """The unit and its phase fitted to the onsets' times: least squares over
+    the onsets on the grid, in a window grown from the first eight seconds to
+    the whole song, each pass placing onsets on the grid the last one found."""
+    times = sorted(t for t, _ in onsets)
+    t0, u = times[0], unit
+    tol = _tolerance(unit)
+    end = t0 + 8.0
+    while True:
+        pts = []
+        for t in times:
+            if t > end:
+                break
+            i = round((t - t0) / u)
+            if abs(t - t0 - i * u) <= tol:
+                pts.append((i, t))
+        n = len(pts)
+        si = sum(i for i, _ in pts)
+        sii = sum(i * i for i, _ in pts)
+        st = sum(t for _, t in pts)
+        sit = sum(i * t for i, t in pts)
+        den = n * sii - si * si
+        if n >= 4 and den:
+            u = (n * sit - si * st) / den
+            t0 = (st - u * si) / n
+        if end >= times[-1]:
+            return u, t0
+        end = min(times[-1], t0 + (end - t0) * 1.6)
+
+
+MISSES = 3                           # onsets in a row off the grid that end a section
+LOCK_WINDOW = 6.0                    # seconds a section's phase is first taken from
+LONG = 6.0                           # seconds a section must last to have a unit of its own
+
+
+def _residual(t: float, unit: float, phase: float) -> float:
+    return (t - phase + unit / 2) % unit - unit / 2
+
+
+def _follow(times: list, onsets, unit: float) -> list[Section]:
+    """Sections on a grid of one unit: each one's phase taken from its first
+    onsets (the grid through whichever holds most of its first seconds),
+    followed until MISSES onsets in a row miss it."""
+    tol = _tolerance(unit)
+    out, i = [], 0
+    while i < len(times):
+        start = times[i]
+        first = [t for t in times[i:] if t < start + LOCK_WINDOW]
+        ph = max(first[:8], key=lambda p: sum(1 for t in first if abs(_residual(t, unit, p)) <= tol))
+        j, misses, last = i, 0, i
+        while j < len(times) and misses < MISSES:
+            if abs(_residual(times[j], unit, ph)) <= tol:
+                misses, last = 0, j
+            else:
+                misses += 1
+            j += 1
+        out.append(Section(start, times[last], unit, ph))
+        i = last + 1
+    return out
+
+
+def _common_unit(secs: list, times: list) -> float:
+    """One unit for every section, each keeping its own phase: least squares
+    with a shared slope."""
+    num = den = 0.0
+    for x in secs:
+        pts = [(round((t - x.phase) / x.unit), t) for t in times if x.start <= t <= x.end
+               and abs(_residual(t, x.unit, x.phase)) <= _tolerance(x.unit)]
+        if len(pts) < 2:
+            continue
+        mi = sum(i for i, _ in pts) / len(pts)
+        mt = sum(t for _, t in pts) / len(pts)
+        num += sum((i - mi) * (t - mt) for i, t in pts)
+        den += sum((i - mi) ** 2 for i, _ in pts)
+    return num / den if den else secs[0].unit
+
+
+def sections(onsets, unit: float) -> list[Section]:
+    """The song in sections, each on a grid of its own phase: found with one
+    unit for the song, the unit fitted again over all of them (a section
+    locked on its own first half-second came out 1 % off, and every section
+    after it drifted), twice; a section of LONG seconds or more then gets its
+    own unit, so a song may change tempo."""
+    times = []
+    for t in sorted(t for t, _ in onsets):
+        if not times or t - times[-1] > 0.003:      # a chord's notes are one onset
+            times.append(t)
+    secs = _follow(times, onsets, unit)
+    for _ in range(2):
+        unit = _common_unit(secs, times)
+        secs = _follow(times, onsets, unit)
+    for x in secs:
+        if x.end - x.start >= LONG:
+            held = [(t, w) for t, w in onsets if x.start <= t <= x.end
+                    and abs(_residual(t, x.unit, x.phase)) <= _tolerance(x.unit)]
+            if len(held) >= 8:
+                x.unit, x.phase = lock(held, x.unit)
+    return secs
+
+
+def _section_slots(onsets, x: Section) -> dict:
+    tol = _tolerance(x.unit)
+    out = {}
+    for t, w in onsets:
+        if x.start - tol <= t <= x.end + tol:
+            i = round((t - x.phase) / x.unit)
+            if abs(t - x.phase - i * x.unit) <= tol:
+                out[i] = out.get(i, 0.0) + w
+    return out
+
+
+def _best_phase(slots: dict, k: int) -> tuple[int, float]:
+    """The grid point a beat of k steps starts on, and how much more loudness
+    its points hold than the grid's points on average."""
+    lo, hi = min(slots), max(slots)
+    mean = sum(slots.values()) / (hi - lo + 1)
+    best = (lo, 0.0)
+    for ph in range(k):
+        on = [slots.get(i, 0.0) for i in range(lo + ph, hi + 1, k)]
+        c = (sum(on) / len(on)) / mean if on and mean else 0.0
+        if c > best[1]:
+            best = (lo + ph, c)
+    return best
+
+
+def _fill(keep, k: int) -> float:
+    """The share of a beat of k steps' points that have an onset, over the sections."""
+    filled = total = 0.0
+    for x, sl in keep:
+        first, _ = _best_phase(sl, k)
+        points = range(first, max(sl) + 1, k)
+        filled += sum(1 for i in points if sl.get(i)) * (x.end - x.start)
+        total += len(points) * (x.end - x.start)
+    return filled / total if total else 0.0
+
+
+def find(onsets) -> Grid | None:
+    """The beat of onsets [(time, weight)]; None when they keep to no grid, or
+    too few of them to one (free time)."""
+    onsets = [(t, w) for t, w in onsets if w > 0]
+    unit = tatum(onsets) if len(onsets) >= 8 else None
+    if unit is None:
+        return None
+    secs = [x for x in sections(onsets, unit) if x.end > x.start]
+    slots = [_section_slots(onsets, x) for x in secs]
+    keep = [(x, sl) for x, sl in zip(secs, slots) if sl]
+    if not keep:
+        return None
+    total = sum(w for _, w in onsets)
+    on_grid = sum(sum(sl.values()) for _, sl in keep) / total if total else 0.0
+    # one beat for the song: the pulse, the finest multiple of the grid's step that nearly every point
+    # of has an onset (FILLED), grouped by twos or threes while faster than FASTEST
+    mean_unit = sum(x.unit * (x.end - x.start) for x, _ in keep) / (sum(x.end - x.start for x, _ in keep) or 1.0)
+    if on_grid < FREE:
+        return None                          # free time: FFVI's opening organ, held and released at will
+    fills = {k: _fill(keep, k) for k in MULTIPLES if 60 / 400 <= k * mean_unit <= 60 / SLOW}
+    if not fills:
+        return None
+    # FILLED, or nearly the most any level has where rests fall on beats (Kefka's, 0.82)
+    enough = min(FILLED, max(fills.values()) - 0.05)
+    best = min(k for k, f in fills.items() if f >= enough)
+    while 60 / (best * mean_unit) > FASTEST:
+        ups = [best * m for m in (2, 3) if best * m * mean_unit <= 60 / SLOW]
+        if not ups:
+            break
+        # a pulse groups by twos or threes as its accents say (a quarter of eighths, a 6/8's dotted quarter)
+        best = max(ups, key=lambda k: sum(_best_phase(sl, k)[1] * (x.end - x.start) for x, sl in keep))
+    best = [None, best]
+    k = best[1]
+    beat_times, bar_times = [], []
+    for x, sl in keep:
+        x.division = k
+        first_slot, _ = _best_phase(sl, k)
+        x.first = x.phase + first_slot * x.unit
+        x.first -= math.floor((x.first - x.start + _tolerance(x.unit)) / x.period) * x.period
+        x.meter, x.downbeat = _meter(sl, k, (x.first - x.phase) / x.unit)
+        n = int((x.end - x.first) / x.period + 1e-9) + 1
+        for m in range(n):
+            t = x.first + m * x.period
+            if beat_times and t <= beat_times[-1] + 0.5 * x.period:
+                continue                     # the last section's last beat, or one too close to it
+            beat_times.append(t)
+            if (m - x.downbeat) % x.meter == 0:
+                bar_times.append(t)
+    return Grid(mean_unit, k, [x for x, _ in keep], beat_times, bar_times, on_grid,
+                _swing(onsets, keep[0][0].period, keep[0][0].first))
+
+
+def _meter(slots: dict, k: int, first: float) -> tuple[int, int]:
+    """Beats a bar, 2, 3 or 4, and the downbeat's place among them: the count
+    whose accents repeat most strongly, the place where they are loudest."""
+    start = round(first)
+    beats = {}
+    for i, w in slots.items():
+        if (i - start) % k == 0:
+            beats[(i - start) // k] = beats.get((i - start) // k, 0.0) + w
+    if not beats:
+        return 4, 0
+    n = max(beats) + 1
+    acc = [beats.get(b, 0.0) for b in range(n)]
+    best = (4, 0, -1.0)
+    for m in (4, 3, 2):
+        if n < 2 * m:
+            continue
+        sums = [sum(acc[j::m]) for j in range(m)]
+        mean = sum(sums) / m
+        contrast = max(sums) / mean if mean else 0.0
+        # a bar of 4 holds a bar of 2's pattern too: a shorter bar must beat it clearly
+        if contrast > best[2] * (1.0 if m == 4 else 1.08):
+            best = (m, sums.index(max(sums)), contrast)
+    return best[0], best[1]
+
+
+def _swing(onsets, period: float, first: float) -> float:
+    """Where the off-beat falls within the beat, by loudness (0.5: halfway,
+    straight; 0.67: a triplet's long-short)."""
+    offs = []
+    for t, w in onsets:
+        f = ((t - first) / period) % 1.0
+        if 0.3 < f < 0.8:
+            offs.append((f, w))
+    if not offs:
+        return 0.5
+    return sum(f * w for f, w in offs) / sum(w for _, w in offs)
