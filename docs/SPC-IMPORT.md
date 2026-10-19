@@ -388,7 +388,12 @@ their echo stacked, Dark World twice as loud). Noise plays the SNES chip's own
 noise, its 15-bit shift register rendered at the output rate for each
 noise clock a song uses, each value held as the hardware holds it, each
 note starting somewhere else in it. The echo as repeats: each note
-sending to the echo again on a channel of its own, an echo delay late,
+sending to the echo again on a channel of its own, an echo delay late (its
+copy carrying what the delays leave over a whole row as silence, so the
+repeat lands between rows, and its sign against the note: the echo
+volume's times the master volume's on each side, and the feedback's to
+the k-1; rounded to rows and unsigned, repeats stacked by chance on held
+tones, and Seiken Densetsu 3's, against its notes on one side, added),
 until the repeats fall to -30 dB (as many as IT's 64 channels allow,
 shared among the voices that send; three stopped Dark World's 1.1 s tail
 at 0.24 s), raised past the master volume (the SNES chip leaves the echo

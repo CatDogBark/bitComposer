@@ -1,6 +1,7 @@
-# rendering-ranger
+# Rendering Ranger R2's
 
-(What the driver is, and whose: to write.)
+The driver of Rendering Ranger R2, named for its game here. It shares
+nothing with Factor 5's in Super Turrican 2 ([factor-5.md](factor-5.md)).
 
 ## Games
 
@@ -28,7 +29,13 @@
 | Density | 1091 notes in a song's first minute; a note 0.21 s |
 <!-- end generated -->
 
-(What these numbers mean for this driver: to write.)
+- **Clock**: 62.5 Hz (a timer of 128), key-ons on its ticks in most songs:
+  IT cannot run it exactly, so modules use 100 rows a second.
+- **Envelopes**: ADSR at key-on, rewritten as notes sound (2.9 writes a
+  note), switching to GAIN fades.
+- **Samples**: single-cycle synth waveforms (32 frames, looped), swept in
+  pitch (4.3 pitch writes a note).
+- **Echo**: none, in any song; the master at full.
 
 ## Scores
 
@@ -40,12 +47,15 @@
 
 ## The converter
 
-(What the converter does for this driver: to write.)
+Its envelope writes showed a fault in the simulation: two writes in one
+sample, sorted by their values, let a stale fastest fade win, and the Virgin
+logo's notes were cut half a second early (one voice 52 dB off). They keep
+their order now.
 
 ## For generation
 
-(What defines its sound: to write.)
+Dry synth voices, the envelope and the pitch moving through each note.
 
 ## Open
 
-(Found by the sweep, not yet looked into: to write.)
+Nothing found yet.

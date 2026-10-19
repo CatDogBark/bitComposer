@@ -1,6 +1,9 @@
 # Rare
 
-Rare's sound driver, in Donkey Kong Country 2.
+Rare's sound driver, in the Donkey Kong Country games: DKC2 and DKC3 share
+0.38 of their driver code, and DKC's shares 0.15 with DKC2's (an earlier
+version) and behaves alike (the 80 Hz clock, the master at 60, the
+boosting echo filter).
 
 ## Games
 
@@ -34,10 +37,9 @@ Rare's sound driver, in Donkey Kong Country 2.
   the driver's own clock (IT runs 80 rows a second exactly).
 - **Envelopes**: the instrument's ADSR at key-on, left alone.
 - **Echo**: short (32 to 64 ms) with moderate feedback, set per song,
-  through a filter that boosts a little (1.05 to 1.12 at DC). In 14 songs
-  (Stickerbrush Symphony's, Crocodile Cacophony's, the Token Tango's) a
-  delay of 0: the echo then a tone control on every voice that sends, its
-  loop a sample long.
+  through a filter that boosts a little (1.05 to 1.12 at DC). A delay of 0
+  in 14 of DKC2's songs and 62 of DKC3's: the echo then a tone control on
+  every voice that sends, its loop a sample long.
 - **Volumes**: a master of 60 with voices up to 123: the loudness is in the
   voices, past IT's 64.
 - **Bass**: samples played five octaves under their own rate (pitch 0x0080).
@@ -68,7 +70,6 @@ far below their samples' rate.
 ## Open
 
 - Dixie Clear (Jib Jig): voice 4 33 dB off over time at its right level.
-- Player Down (In a Snow-Bound Land): voice 6 at twice its level.
 - The deep bass's tone (0.86 in Dixie Clear (Snakey Chantey), voice 1): at
   a 32nd of its rate the module is brighter from 0.7 to 5.6 kHz and darker
   above, the SNES chip's interpolation and libopenmpt's resampling parting.

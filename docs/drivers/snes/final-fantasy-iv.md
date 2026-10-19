@@ -1,6 +1,8 @@
-# final-fantasy-iv
+# Square: Final Fantasy IV's
 
-(What the driver is, and whose: to write.)
+Square's driver in Final Fantasy IV, named for its game here. It shares
+0.02 of its code at most with any other driver here, AKAO's
+([akao.md](akao.md)) included: not an earlier AKAO in its code.
 
 ## Games
 
@@ -28,7 +30,12 @@
 | Density | 521 notes in a song's first minute; a note 0.18 s |
 <!-- end generated -->
 
-(What these numbers mean for this driver: to write.)
+- **Clock**: 222 Hz (as Secret of Mana's), key-ons anywhere in its ticks
+  in most songs: modules use 100 rows a second.
+- **Envelopes**: ADSR at key-on, and two envelope writes as each note
+  sounds.
+- **Echo**: 80 ms at 0.55 in nearly every song, at 0.27 of the voices; the
+  master at 64; noise in 3 songs.
 
 ## Scores
 
@@ -40,12 +47,13 @@
 
 ## The converter
 
-(What the converter does for this driver: to write.)
+Nothing of its own.
 
 ## For generation
 
-(What defines its sound: to write.)
+One echo for the whole game, 80 ms at 0.55, as FFVI's chooses 80 ms in
+every song.
 
 ## Open
 
-(Found by the sweep, not yet looked into: to write.)
+Nothing found yet (the worst song, Gysahl's Whistle, 1.2 dB off).

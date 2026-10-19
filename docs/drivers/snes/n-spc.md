@@ -1,11 +1,12 @@
 # Nintendo: N-SPC
 
 Nintendo's sound driver, known as N-SPC, in Nintendo's own games and in
-other publishers' (Enix's ActRaiser, Natsume's Pocky & Rocky, Konami's Super
-Castlevania IV, Kemco's Top Gear). Grouped by its code (`spc_check.py
-family`): the eight games share 0.26 to 0.5 of their driver code with one
-another and 0.05 or less with any other driver here, and six of them carry
-N-SPC's velocity table (19 32 4C 65 ...), EarthBound a variant of it.
+other publishers' (Enix's ActRaiser and Soul Blazer, Natsume's Pocky &
+Rocky, Konami's Super Castlevania IV, Kemco's Top Gear, Terranigma).
+Grouped by its code (`spc_check.py family`): its games share 0.24 to 0.99
+of their driver code with one another (Soul Blazer 0.99 of ActRaiser's) and
+0.05 or less with any other driver here, and most carry N-SPC's velocity
+table (19 32 4C 65 ...), EarthBound and Yoshi's Island a variant of it.
 Kirby Super Star shares the code without the table.
 
 ## Games
@@ -60,6 +61,9 @@ Kirby Super Star shares the code without the table.
   Super Metroid's boost it (4.1 at DC).
 - **Master volume**: 96 in most games, 112 in EarthBound, full in Kirby
   Super Star and Super Castlevania IV.
+- **Later games**: A Link to the Past and Yoshi's Island a short echo
+  (32 ms at 0.16 to 0.23); Soul Blazer and Terranigma (Quintet's) negative
+  feedback (-0.62 to -0.77), Soul Blazer's echo at full volume.
 - No pitch modulation and no noise in any of the 449 songs.
 
 ## Scores
@@ -67,7 +71,7 @@ Kirby Super Star shares the code without the table.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 610 | 0.97 (0.86) | 0.51 (1.10) | 0.99 (0.94-1.02) | 0.99 (0.98) |
+| 610 | 0.97 (0.87) | 0.49 (1.00) | 0.99 (0.94-1.02) | 0.99 (0.98) |
 <!-- end generated -->
 
 ## The converter
@@ -91,8 +95,9 @@ Top Gear's long full-strength echo, Super Castlevania IV's dry sound.
 
 ## Open
 
-- Super Metroid's Wrecked Ship (3.5 dB off, at 0.81 of its level): its
-  trailing echoes are the composer's, written as notes (voice 4 replays
+- Super Metroid's Wrecked Ship (1.8 dB off, 3.5 before the echo repeats
+  between rows, at 0.82 of its level): its trailing echoes are the
+  composer's, written as notes (voice 4 replays
   voice 0 on the same sample and pitch 0.146 s later); on IT's 10 ms rows
   the copy comes 4 ms late, which turns the two held tones from adding to
   cancelling ([known limits](README.md#known-limits)).

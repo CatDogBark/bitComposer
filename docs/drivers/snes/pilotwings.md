@@ -1,9 +1,10 @@
 # Nintendo: Pilotwings'
 
-Nintendo's driver in Pilotwings, named for its game here. It shares only
-0.05 of its code with N-SPC's ([n-spc.md](n-spc.md)), but has a note-length
-table close to EarthBound's N-SPC one (33 66 80 99 against 33 66 7F 99): an
-earlier driver of Nintendo's, or an early N-SPC.
+Nintendo's driver in Pilotwings and Super Mario World (the two share 0.45
+of their driver code and a note-length table), named for its first game
+here. It shares only 0.05 to 0.10 of its code with N-SPC's
+([n-spc.md](n-spc.md)), whose note-length table is close to it (33 66 7F 99
+against 33 66 80 99): an earlier driver of Nintendo's, or an early N-SPC.
 
 ## Games
 
@@ -36,8 +37,10 @@ earlier driver of Nintendo's, or an early N-SPC.
   100 rows a second.
 - **Envelopes**: ADSR at key-on for most notes, GAIN for the rest, left
   alone while they sound.
-- **Echo**: 64 ms at 0.31 to 0.39 feedback in every song, through a filter
-  that boosts a little (1.03 at DC); the master full.
+- **Echo**: Pilotwings' 64 ms at 0.31 to 0.39 feedback in every song,
+  through a filter that boosts a little (1.03 at DC); Super Mario World's
+  64 or 32 ms with strong feedback (0.75 to 0.84), its echo volume off in
+  56 of 66 songs; the master full.
 
 ## Scores
 

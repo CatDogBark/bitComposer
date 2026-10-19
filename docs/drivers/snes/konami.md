@@ -1,6 +1,8 @@
-# konami
+# Konami
 
-(What the driver is, and whose: to write.)
+Konami's own sound driver, in Axelay and Contra III (the two share 0.71 of
+their driver code). Konami's Super Castlevania IV runs Nintendo's N-SPC
+instead ([n-spc.md](n-spc.md)).
 
 ## Games
 
@@ -29,7 +31,12 @@
 | Density | 1168 notes in a song's first minute; a note 0.11 s |
 <!-- end generated -->
 
-(What these numbers mean for this driver: to write.)
+- **Clock**: 250 Hz, key-ons anywhere in its ticks: modules use 100 rows a
+  second.
+- **Envelopes**: the instrument's ADSR at key-on, left alone.
+- **Echo**: 80 ms in every song, its feedback set per song (0.39 to 0.66),
+  and loud: 0.55 to 0.62 of the voices, under a master at full.
+- **Density**: 1168 notes in a song's first minute, a note 0.11 s.
 
 ## Scores
 
@@ -41,12 +48,13 @@
 
 ## The converter
 
-(What the converter does for this driver: to write.)
+Nothing of its own.
 
 ## For generation
 
-(What defines its sound: to write.)
+Fast, short notes in a strong 80 ms echo, its feedback chosen song by
+song.
 
 ## Open
 
-(Found by the sweep, not yet looked into: to write.)
+- Axelay's The Moment of Rest: 2.1 dB off, at 0.75 of its level.

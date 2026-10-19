@@ -1,6 +1,9 @@
-# seiken-densetsu-3
+# Square: Seiken Densetsu 3's
 
-(What the driver is, and whose: to write.)
+Square's driver in Seiken Densetsu 3 and Bahamut Lagoon (the two share
+0.45 of their driver code), named for its first game here. It shares none
+with Secret of Mana's ([secret-of-mana.md](secret-of-mana.md)), though
+Seiken Densetsu 3 is that game's sequel and has its composer.
 
 ## Games
 
@@ -29,24 +32,38 @@
 | Density | 761 notes in a song's first minute; a note 0.15 s |
 <!-- end generated -->
 
-(What these numbers mean for this driver: to write.)
+- **Clock**: a timer set per song (83 to 96 Hz), key-ons on its ticks;
+  modules run on it where IT can keep pace (96 Hz), else 100 rows a second.
+- **Envelopes**: the instrument's ADSR at key-on, left alone.
+- **Pitch**: hardly any pitch writes; pitch modulation in 8 songs, noise
+  in 2.
+- **Echo**: Seiken Densetsu 3's 80 ms at 0.44 through a filter that boosts
+  a little (1.09 at DC), Bahamut Lagoon's 96 to 128 ms at 0.62. The echo
+  volume is negative on both sides and the master negative on the left, so
+  the echo is with the notes on the left and against them on the right.
 
 ## Scores
 
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 115 | 0.87 (0.67) | 0.75 (1.47) | 0.99 (0.94-1.09) | 1.00 (0.99) |
+| 115 | 0.94 (0.74) | 0.52 (1.13) | 1.00 (0.96-1.05) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter
 
-(What the converter does for this driver: to write.)
+Echo repeats with their sign against the note, on each side (the
+driver's median contour from 0.87 to 0.94), and between rows (Bahamut
+Lagoon's 128 ms echo on held notes came out 1.4 times too strong).
 
 ## For generation
 
-(What defines its sound: to write.)
+A long echo with strong feedback (Bahamut Lagoon's), widened by its signs:
+with the notes on one side, against them on the other.
 
 ## Open
 
-(Found by the sweep, not yet looked into: to write.)
+- Jingles and sound effects: Gate (2.3 dB off), Bahamut Lagoon Arutairu
+  (2.2), Pihyara Flute (at 1.4 of its level); the treasure sparkles (Open
+  Chest, Treasure!) play their sample at three times its rate in notes
+  shorter than two rows ([known limits](README.md#known-limits)).

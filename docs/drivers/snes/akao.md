@@ -1,6 +1,9 @@
 # Square: AKAO
 
-Square's sound driver, known as AKAO.
+Square's sound driver, known as AKAO, in Final Fantasy VI, Chrono Trigger
+and Romancing SaGa 3: later versions, grouped by their code (Chrono Trigger
+shares 0.34 of FFVI's, Romancing SaGa 3 0.43 of Chrono Trigger's). Final
+Fantasy IV's driver is another ([final-fantasy-iv.md](final-fantasy-iv.md)).
 
 ## Games
 
@@ -37,7 +40,8 @@ Square's sound driver, known as AKAO.
 - **Pitch modulation**, for effects and timbres: The Phantom Train's steam is
   a 667 Hz tone whose pitch a noise voice shakes into a hiss; New
   Continent's are FM timbres (287 notes, 28 recordings).
-- **Echo**: 80 ms in every song, feedback set per song. The filter is a
+- **Echo**: 80 ms in every song of FFVI's and Romancing SaGa 3's (Chrono
+  Trigger's 80 or 96 ms), feedback set per song. The filter is a
   single tap seven samples back: it passes everything, but each trip round
   the echo is seven samples longer than the delay. Four to seven voices send.
 - **Master volume**: the voices play loud and the master halves them; the
@@ -70,3 +74,7 @@ registers, give 0.64 everywhere: [the packs table](README.md#the-style-packs-aga
 
 - Sound-effect tracks (999 Blazing Fire voice 2, 999 Train voice 5): the
   wrong tone.
+- Chrono Trigger's ambience (Rain and Flowing Water, Truce Canyon): a tiny
+  looped sample played at 3.8 times its rate, its aliasing the wind and
+  rain; libopenmpt filters it out ([known limits](README.md#known-limits)).
+- Chrono Trigger's Leene's Bell: 3.0 dB off, at 1.15 of its level.

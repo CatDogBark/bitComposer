@@ -52,17 +52,17 @@ across a game's songs unless a number says otherwise. CONTRIBUTING.md
 | Game | Composer (as the tags credit) | Music driver | Songs (scored) |
 |---|---|---|---|
 | ActRaiser | Yuzo Koshiro | [Nintendo: N-SPC](snes/n-spc.md) | 19 (19) |
-| Axelay | Taro Kudou, M. C. Ada | [konami](snes/konami.md) | 21 (21) |
-| Bahamut Lagoon | Noriko Matsueda | [seiken-densetsu-3](snes/seiken-densetsu-3.md) | 36 (36) |
+| Axelay | Taro Kudou, M. C. Ada | [Konami](snes/konami.md) | 21 (21) |
+| Bahamut Lagoon | Noriko Matsueda | [Square: Seiken Densetsu 3's](snes/seiken-densetsu-3.md) | 36 (36) |
 | Chrono Trigger | Yasunori Mitsuda, Nobuo Uematsu, Noriko Matsueda | [Square: AKAO](snes/akao.md) | 74 (74) |
-| Contra III: The Alien Wars | "Miki Yanagisawa, Masanori Adachi" (cut off) | [konami](snes/konami.md) | 15 (15) |
+| Contra III: The Alien Wars | "Miki Yanagisawa, Masanori Adachi" (cut off) | [Konami](snes/konami.md) | 15 (15) |
 | Cybernator | Masanao Akahori | [NCS](snes/ncs.md) | 15 (15) |
 | Donkey Kong Country | Dave Wise, Eveline Fischer, Robin Beanland | [Rare](snes/rare.md) | 29 (29) |
 | Donkey Kong Country 2 | Dave Wise | [Rare](snes/rare.md) | 109 (109) |
 | Donkey Kong Country 3 | Eveline Fischer, Dave Wise | [Rare](snes/rare.md) | 77 (77) |
 | Dragon Quest V | Koichi Sugiyama | [Chunsoft](snes/chunsoft.md) | 50 (50) |
 | EarthBound | "Akio Ohmori, Ritsuo Kamimura, Ke" (cut off) | [Nintendo: N-SPC](snes/n-spc.md) | 206 (206) |
-| Final Fantasy IV | Nobuo Uematsu | [final-fantasy-iv](snes/final-fantasy-iv.md) | 65 (65) |
+| Final Fantasy IV | Nobuo Uematsu | [Square: Final Fantasy IV's](snes/final-fantasy-iv.md) | 65 (65) |
 | Final Fantasy VI | Nobuo Uematsu | [Square: AKAO](snes/akao.md) | 82 (82) |
 | Jurassic Park Part 2 | Dean Evans, Jonathan Dunn | [Ocean](snes/ocean.md) | 16 (16) |
 | Kirby Super Star | Jun Ishikawa, Dan Miyakawa | [Nintendo: N-SPC](snes/n-spc.md) | 70 (70) |
@@ -72,11 +72,11 @@ across a game's songs unless a number says otherwise. CONTRIBUTING.md
 | Pilotwings | Soyo Oka | [Nintendo: Pilotwings'](snes/pilotwings.md) | 21 (21) |
 | Plok | Geoff & Tim Follin | [Plok's](snes/plok.md) | 20 (20) |
 | Pocky & Rocky | Hiroyuki Iwatsuki | [Nintendo: N-SPC](snes/n-spc.md) | 24 (24) |
-| Rendering Ranger R2 | "Stefan Kramer, Jesper "Jo" Olsen" (cut off) | [rendering-ranger](snes/rendering-ranger.md) | 19 (19) |
+| Rendering Ranger R2 | "Stefan Kramer, Jesper "Jo" Olsen" (cut off) | [Rendering Ranger R2's](snes/rendering-ranger.md) | 19 (19) |
 | Romancing SaGa 3 | Kenji Ito | [Square: AKAO](snes/akao.md) | 74 (74) |
 | Secret of Evermore | Jeremy Soule | [Square Soft US: Secret of Evermore's](snes/secret-of-evermore.md) | 72 (72) |
 | Secret of Mana | Hiroki Kikuta | [Square: Secret of Mana's](snes/secret-of-mana.md) | 69 (69) |
-| Seiken Densetsu 3 | Hiroki Kikuta | [seiken-densetsu-3](snes/seiken-densetsu-3.md) | 79 (79) |
+| Seiken Densetsu 3 | Hiroki Kikuta | [Square: Seiken Densetsu 3's](snes/seiken-densetsu-3.md) | 79 (79) |
 | Soul Blazer | Yukihide Takekawa, Kazz Tomaya | [Nintendo: N-SPC](snes/n-spc.md) | 20 (20) |
 | Star Fox | Hajime Hirasawa | [Nintendo: N-SPC](snes/n-spc.md) | 51 (51) |
 | Super Bomberman 4 | Jun Chiki Chikuma | [Hudson](snes/hudson.md) | 26 (26) |
@@ -116,7 +116,7 @@ share a driver is measured from their code (`tools/spc_check.py family`).
 | Eveline Fischer, Dave Wise | Donkey Kong Country 3 | [Rare](snes/rare.md) |
 | Geoff & Tim Follin | Plok | [Plok's](snes/plok.md) |
 | Hajime Hirasawa | Star Fox | [Nintendo: N-SPC](snes/n-spc.md) |
-| Hiroki Kikuta | Secret of Mana, Seiken Densetsu 3 | [Square: Secret of Mana's](snes/secret-of-mana.md), [seiken-densetsu-3](snes/seiken-densetsu-3.md) |
+| Hiroki Kikuta | Secret of Mana, Seiken Densetsu 3 | [Square: Secret of Mana's](snes/secret-of-mana.md), [Square: Seiken Densetsu 3's](snes/seiken-densetsu-3.md) |
 | Hiroyuki Iwatsuki | Pocky & Rocky | [Nintendo: N-SPC](snes/n-spc.md) |
 | Jeremy Soule | Secret of Evermore | [Square Soft US: Secret of Evermore's](snes/secret-of-evermore.md) |
 | Jun Chiki Chikuma | Super Bomberman 4 | [Hudson](snes/hudson.md) |
@@ -130,14 +130,14 @@ share a driver is measured from their code (`tools/spc_check.py family`).
 | Masaharu Iwata, Hitoshi Sakimoto, Hayato Matsuo | Ogre Battle | [Quest](snes/quest.md) |
 | Masanao Akahori | Cybernator | [NCS](snes/ncs.md) |
 | Masanori Adachi, Taro Kudou | Super Castlevania IV | [Nintendo: N-SPC](snes/n-spc.md) |
-| "Miki Yanagisawa, Masanori Adachi" (cut off) | Contra III: The Alien Wars | [konami](snes/konami.md) |
+| "Miki Yanagisawa, Masanori Adachi" (cut off) | Contra III: The Alien Wars | [Konami](snes/konami.md) |
 | "Miyoko Kobayashi, Masanori Hikic" (cut off) | Terranigma | [Nintendo: N-SPC](snes/n-spc.md) |
-| Nobuo Uematsu | Final Fantasy IV, Final Fantasy VI | [Square: AKAO](snes/akao.md), [final-fantasy-iv](snes/final-fantasy-iv.md) |
-| Noriko Matsueda | Bahamut Lagoon | [seiken-densetsu-3](snes/seiken-densetsu-3.md) |
+| Nobuo Uematsu | Final Fantasy IV, Final Fantasy VI | [Square: AKAO](snes/akao.md), [Square: Final Fantasy IV's](snes/final-fantasy-iv.md) |
+| Noriko Matsueda | Bahamut Lagoon | [Square: Seiken Densetsu 3's](snes/seiken-densetsu-3.md) |
 | "Setsuo, Tomozou, Sato, Yuko, Kir" (cut off) | Mega Man X | [Capcom: Mega Man X's](snes/capcom.md) |
 | Soyo Oka | Pilotwings | [Nintendo: Pilotwings'](snes/pilotwings.md) |
-| "Stefan Kramer, Jesper "Jo" Olsen" (cut off) | Rendering Ranger R2 | [rendering-ranger](snes/rendering-ranger.md) |
-| Taro Kudou, M. C. Ada | Axelay | [konami](snes/konami.md) |
+| "Stefan Kramer, Jesper "Jo" Olsen" (cut off) | Rendering Ranger R2 | [Rendering Ranger R2's](snes/rendering-ranger.md) |
+| Taro Kudou, M. C. Ada | Axelay | [Konami](snes/konami.md) |
 | Yasunori Mitsuda, Nobuo Uematsu, Noriko Matsueda | Chrono Trigger | [Square: AKAO](snes/akao.md) |
 | Yasunori Shiono | Lufia II | [Neverland](snes/neverland.md) |
 | Yukihide Takekawa, Kazz Tomaya | Soul Blazer | [Nintendo: N-SPC](snes/n-spc.md) |

@@ -46,7 +46,7 @@ almost none of its code ([super-ghouls-ghosts.md](super-ghouls-ghosts.md)).
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 35 | 0.93 (0.86) | 0.49 (0.81) | 0.98 (0.96-1.00) | 1.00 (0.98) |
+| 35 | 0.94 (0.86) | 0.46 (0.83) | 0.98 (0.96-1.01) | 1.00 (0.98) |
 <!-- end generated -->
 
 ## The converter

@@ -6,37 +6,38 @@ play, eight voices of BRR samples with an echo. An SPC file is a snapshot of
 that unit; the emulator runs the driver from it, and the converter turns
 what the driver writes to the SNES chip into an IT module (`../../SPC-IMPORT.md`).
 
-Numbers are from 2026-10-19: all 1120 songs of the 24 games in
-[the index](../README.md#games), 16 drivers, with the fixes that the twenty
-games added that day led to (key-ons under KOFF, IT's keys and volumes,
-pans while a note sounds, the clock's pace).
+Numbers are from 2026-10-19: all 1836 songs of the 39 games in
+[the index](../README.md#games), 20 drivers, the emulator 0.3.1, with the
+fixes the 35 games added that day led to (the snapshot's own key-on, key-ons
+under KOFF, IT's keys and volumes, pans while a note sounds, the clock's
+pace, echo repeats between rows and with their signs).
 
 ## Scores by driver
 
 <!-- generated: scores -->
 | Driver | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|---|
-| [Capcom: Mega Man X's](capcom.md) | 35 | 0.93 (0.86) | 0.49 (0.81) | 0.98 (0.96-1.00) | 1.00 (0.98) |
+| [Capcom: Mega Man X's](capcom.md) | 35 | 0.94 (0.86) | 0.46 (0.83) | 0.98 (0.96-1.01) | 1.00 (0.98) |
 | [Capcom: Super Ghouls'n Ghosts'](super-ghouls-ghosts.md) | 23 | 0.96 (0.89) | 0.39 (0.66) | 0.97 (0.94-1.00) | 0.99 (0.98) |
 | [Chunsoft](chunsoft.md) | 50 | 0.97 (0.90) | 0.45 (0.99) | 1.01 (0.98-1.05) | 1.00 (0.99) |
 | [Factor 5](factor-5.md) | 34 | 0.98 (0.94) | 0.31 (0.57) | 0.99 (0.98-1.01) | 1.00 (0.99) |
 | [Hudson](hudson.md) | 26 | 0.98 (0.89) | 0.36 (0.64) | 0.99 (0.97-1.01) | 0.99 (0.96) |
+| [Konami](konami.md) | 36 | 0.95 (0.87) | 0.55 (0.96) | 0.99 (0.94-1.03) | 0.99 (0.97) |
 | [NCS](ncs.md) | 15 | 0.95 (0.84) | 0.40 (0.58) | 0.99 (0.96-1.00) | 1.00 (0.99) |
 | [Neverland](neverland.md) | 63 | 0.96 (0.88) | 0.45 (0.72) | 1.00 (0.98-1.03) | 1.00 (0.99) |
-| [Nintendo: N-SPC](n-spc.md) | 610 | 0.97 (0.86) | 0.51 (1.10) | 0.99 (0.94-1.02) | 0.99 (0.98) |
+| [Nintendo: N-SPC](n-spc.md) | 610 | 0.97 (0.87) | 0.49 (1.00) | 0.99 (0.94-1.02) | 0.99 (0.98) |
 | [Nintendo: Pilotwings'](pilotwings.md) | 87 | 0.98 (0.94) | 0.42 (0.63) | 1.00 (0.99-1.02) | 0.99 (0.97) |
 | [Ocean](ocean.md) | 16 | 0.98 (0.93) | 0.38 (0.47) | 1.00 (0.99-1.02) | 1.00 (0.99) |
 | [Plok's](plok.md) | 30 | 0.98 (0.87) | 0.31 (0.48) | 1.00 (0.98-1.00) | 0.99 (0.97) |
 | [Quest](quest.md) | 26 | 0.97 (0.92) | 0.36 (0.54) | 1.00 (0.99-1.02) | 1.00 (0.99) |
 | [Rare](rare.md) | 215 | 0.99 (0.94) | 0.38 (0.76) | 1.01 (0.98-1.04) | 0.99 (0.96) |
+| [Rendering Ranger R2's](rendering-ranger.md) | 19 | 0.95 (0.81) | 0.43 (0.67) | 1.00 (0.97-1.03) | 1.00 (0.98) |
 | [Square Soft US: Secret of Evermore's](secret-of-evermore.md) | 72 | 0.95 (0.78) | 0.52 (1.01) | 1.00 (0.96-1.02) | 0.99 (0.98) |
 | [Square: AKAO](akao.md) | 230 | 0.97 (0.85) | 0.48 (0.95) | 0.99 (0.96-1.03) | 1.00 (0.98) |
-| [Square: Secret of Mana's](secret-of-mana.md) | 69 | 0.94 (0.75) | 0.67 (1.24) | 0.98 (0.91-1.04) | 0.99 (0.97) |
-| [final-fantasy-iv](final-fantasy-iv.md) | 65 | 0.96 (0.90) | 0.38 (0.55) | 1.00 (0.97-1.03) | 1.00 (0.99) |
-| [konami](konami.md) | 36 | 0.95 (0.87) | 0.55 (0.96) | 0.99 (0.94-1.03) | 0.99 (0.97) |
-| [rendering-ranger](rendering-ranger.md) | 19 | 0.95 (0.81) | 0.43 (0.67) | 1.00 (0.97-1.03) | 1.00 (0.98) |
-| [seiken-densetsu-3](seiken-densetsu-3.md) | 115 | 0.87 (0.67) | 0.75 (1.47) | 0.99 (0.94-1.09) | 1.00 (0.99) |
-| **All** | 1836 | 0.97 (0.85) | 0.47 (0.98) | 1.00 (0.96-1.03) | 0.99 (0.98) |
+| [Square: Final Fantasy IV's](final-fantasy-iv.md) | 65 | 0.96 (0.90) | 0.38 (0.55) | 1.00 (0.97-1.03) | 1.00 (0.99) |
+| [Square: Secret of Mana's](secret-of-mana.md) | 69 | 0.94 (0.75) | 0.66 (1.24) | 0.98 (0.91-1.03) | 0.99 (0.97) |
+| [Square: Seiken Densetsu 3's](seiken-densetsu-3.md) | 115 | 0.94 (0.74) | 0.52 (1.13) | 1.00 (0.96-1.05) | 1.00 (0.99) |
+| **All** | 1836 | 0.97 (0.86) | 0.45 (0.93) | 1.00 (0.96-1.03) | 0.99 (0.98) |
 <!-- end generated -->
 
 Voice tone is over the voices that carry at least 5 % of their song's
@@ -66,21 +67,31 @@ exposed each (`../../SPC-IMPORT.md` has the details):
 | A sample's C5Speed whole octaves off, so its notes land on IT's keys (a cell cannot write C-0) | [Rare](rare.md) (basses five octaves down) |
 | Channel volumes and the global volume traded: up where voices pass 64 under a low master, down where quiet notes sit on IT's coarse bottom steps | [Rare](rare.md), [N-SPC](n-spc.md) (EarthBound, Kirby Super Star) |
 | Rows on the driver's clock only where IT's tempo keeps pace with it through the song | [Factor 5](factor-5.md), [Ocean](ocean.md) |
-| An echo of delay 0, which is a tone control (its loop a sample long, through the filter): a coloured copy of each note at its own row | [Secret of Mana's](secret-of-mana.md) (Flammie Coming), [Rare](rare.md) (14 songs) |
+| An echo of delay 0, which is a tone control (its loop a sample long, through the filter): a coloured copy of each note at its own row | [Secret of Mana's](secret-of-mana.md) (Flammie Coming), [Rare](rare.md) (76 songs) |
+| The snapshot's own KON, keyed on as it loads (as libgme does): most snapshots are taken as a song's first notes key on (the emulator, 0.3.1) | every driver: 1343 of 1836 songs were missing opening or held notes ([AKAO](akao.md)'s Chrono Trigger Time Vortex silent) |
+| Echo repeats between rows: each copy starts with what its delays leave over a whole row, as silence | [Seiken Densetsu 3's](seiken-densetsu-3.md) (Bahamut Lagoon), [Secret of Mana's](secret-of-mana.md) |
+| Echo repeats with their sign against the note: the echo volume's times the master's on each side, the feedback's to the k-1 | [Seiken Densetsu 3's](seiken-densetsu-3.md) (a negative master on one side), [N-SPC](n-spc.md) (ActRaiser's negative feedback) |
+| Envelope writes in one sample, in the order written | [Rendering Ranger R2's](rendering-ranger.md) |
 
 ## Known limits
 
-- **Held tones on echo delays that miss whole rows** (Mana's 176 ms): the
-  repeats stack or cancel by chance. IT places notes no finer than a tick,
-  and players round their ticks differently. The same goes for an echo a
-  composer writes as notes: Super Metroid's Wrecked Ship replays a voice's
-  notes on another voice, the same sample and pitch, 0.146 s later, and on
-  IT's 10 ms rows that is 0.150 s, enough to turn the held tones from adding
-  to cancelling: its trailing echoes fade faster.
+- **Held tones, and timing finer than a row**: IT places notes no finer
+  than a tick (10 ms at its fastest). Echo repeats carry the remainder in
+  their copies, exact for a note at the copy's pitch and up to a row out at
+  others (a voice spanning 17 semitones on Seiken Densetsu 3's 80 ms echo
+  still beats against it unlike the hardware's). An echo a composer writes
+  as notes has no copy to carry it: Super Metroid's Wrecked Ship replays a
+  voice's notes on another voice, the same sample and pitch, 0.146 s later,
+  0.150 s on IT's rows, enough to turn the held tones from adding to
+  cancelling: its trailing echoes fade faster.
 - **Samples played faster than the output rate**: the SNES chip aliases
   them (nothing filters them), libopenmpt filters; such a voice loses that
   energy (a hi-hat in Evermore's Regal Castle; some FFVI voices' top octave).
-  At the other end, a sample played at a 32nd of its rate (DKC2's bass)
+  Some drivers play samples far over the output rate on purpose: Chrono
+  Trigger's wind and rain are a tiny loop at 3.8 times its rate, all
+  aliasing; Seiken Densetsu 3's treasure sparkles three times. In the median
+  song 11 % of the notes' loudness is over the output rate, most of it
+  barely. At the other end, a sample played at a 32nd of its rate (DKC2's bass)
   comes out brighter from 0.7 to 5.6 kHz and darker above: the SNES chip's
   interpolation and libopenmpt's resampling part.
 - **IT's volume ceiling**: a voice needing more than 64 under a master
