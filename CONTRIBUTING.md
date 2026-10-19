@@ -120,6 +120,18 @@ maturin build --release -o dist     # the Python module, as a wheel for this mac
 
 The wheel is abi3: one file serves every Python from 3.10 on.
 
+The SNES sound CPU is checked against the SingleStepTests suite, 1,000
+cases per instruction (81 MB, not in the repository): fetch
+[ProcessorTests](https://github.com/SingleStepTests/ProcessorTests)'
+`spc700/v1` folder and run
+
+```bash
+SPC700_TESTS=path/to/spc700/v1 cargo test --release -- --nocapture
+```
+
+Without `SPC700_TESTS` the suite says it was skipped and passes. To watch
+a driver run: `cargo run --release --example run_spc -- song.spc 10`.
+
 ## Style
 
 Match the surrounding code. Comments explain *why* — most of them record a

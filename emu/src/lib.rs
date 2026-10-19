@@ -5,6 +5,9 @@
 //! The emulator is plain Rust; built with the `python` feature (as the wheel
 //! is) it is also the Python module `bitcomposer_emu`.
 
+pub mod cpu;
+pub mod spc;
+
 /// The crate's version, also the Python module's `__version__`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
