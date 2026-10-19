@@ -260,6 +260,7 @@ class ITSong(unittest.TestCase):
         self.assertEqual((nodes[0], nodes[-1]), ((0, levels[0]), (299, levels[-1])))
 
 
+@unittest.skipUnless(emulate.available(), "needs the compiled emulator")
 class Voices(unittest.TestCase):
     def test_a_voice_muted_and_tapped(self):
         snap = tiny()
