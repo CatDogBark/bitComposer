@@ -27,6 +27,7 @@ ENV_NODES = 25                        # an IT envelope's nodes
 FX_SET_GLOBAL_VOLUME = 22             # Vxx
 FX_SAMPLE_OFFSET = 15                 # Oxx: start xx * 256 samples in
 SURROUND_ON, SURROUND_OFF = 0x91, 0x90   # S91 / S90: one side phase-inverted, centred
+VOLUME_PAN = 128                      # the volume column's pans: 128-192, pan 0-64
 
 
 def tempo_for(row_hz: float) -> tuple[int, float]:
@@ -72,13 +73,16 @@ class Line:
     the song goes): the first volume is the note's own, each later one goes
     in the volume column where it changes and the cell is free; a pitch is
     in 64ths of a semitone from `note` (None: none to reach), reached by fine
-    slides where the effect column is free."""
+    slides where the effect column is free; a later pan (a driver panning a
+    held note) goes in the effect column where it is free, else in the
+    volume column's."""
     row: int
     end: int
     note: int                         # IT note 1-119 (a cell's 0, C-0, reads as none)
     instrument: int
     volumes: list[int]                # 0-64
     pan: int | None = None            # 0-255 (Xxx), set where it changes; None leaves the channel's
+    pans: list[int | None] | None = None   # row by row from `row`, as `volumes`: the pan as it moves
     surround: bool = False            # S91: plays centred, one side inverted
     pitch: list[int | None] | None = None
     offset: int | None = None         # Oxx on the first row, where the effect column is free
@@ -118,16 +122,15 @@ class Grid:
             self._pans[ch] = line.pan
         if line.offset is not None and c.effect == 0:
             c.effect, c.effect_val = FX_SAMPLE_OFFSET, line.offset
-        cur, last_vol = 0, c.volume
+        cur, last_vol, last_pan = 0, c.volume, self._pans.get(ch)
+        pans = line.pans if line.pans and not line.surround else None
         for i, r in enumerate(range(line.row, min(line.end, self.last_row + 1))):
             cc = self.cell(r, ch)
             v = line.volumes[i]
             if i and v != last_vol and cc.volume == 255 and cc.note == 0:
                 cc.volume, last_vol = v, v
             target = line.pitch[i] if line.pitch else None
-            if target is None:
-                continue
-            delta = target - cur
+            delta = target - cur if target is not None else 0
             if delta and cc.effect == 0:
                 d = abs(delta)
                 if d <= 15:
@@ -138,6 +141,14 @@ class Grid:
                 cc.effect = itf.FX_PORTA_UP if delta > 0 else itf.FX_PORTA_DOWN
                 cc.effect_val = val
                 cur += moved if delta > 0 else -moved
+            p = pans[i] if pans and i < len(pans) else None
+            if i and p is not None and p != last_pan and cc.note == 0:
+                if cc.effect == 0:
+                    cc.effect, cc.effect_val, last_pan = itf.FX_SET_PAN, p, p
+                elif cc.volume == 255:
+                    cc.volume, last_pan = VOLUME_PAN + round(p * 64 / 255), p
+        if pans:
+            self._pans[ch] = last_pan
         if line.end <= self.last_row:
             cc = self.cell(line.end, ch)
             if cc.note == 0:

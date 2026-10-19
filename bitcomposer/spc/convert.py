@@ -116,6 +116,16 @@ def tick_rate(snap, writes) -> tuple[float, float]:
     return (CLOCK / best, best_r) if best else (0.0, 0.0)
 
 
+def _keeps_pace(hz: float, seconds: float) -> bool:
+    """Whether IT's rows can run on the driver's clock through the song: IT's
+    tempo comes in steps of 0.4 rows a second, and rows off the clock fall
+    behind it as the song goes (Factor 5's 62.5 Hz on 62.4 rows lost 0.1 s
+    in a song, Jurassic Park 2's 49.38 Hz on 49.2 up to 2 s). Within half a
+    row over the song, they do; else the fine grid, which runs exactly."""
+    _, row_hz = it_song.tempo_for(hz)
+    return abs(hz / row_hz - 1) * seconds < 0.5 / row_hz
+
+
 def envelope(adsr1: int, adsr2: int, gain: int, tick_hz: float, seconds: float = 20.0) -> list[tuple[int, int]]:
     """The SNES chip's envelope for these registers, in IT envelope nodes:
     (tick, level 0-64), at most 25, the level held after the last."""
@@ -268,12 +278,17 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
         seconds = float(snap.tags.length_s or 90) + fade
     fade = max(0.0, min(fade, seconds))
     run = emulate_run(snap, seconds)
-    found = [n for n in notes_mod.decode(snap, run.writes, keyons=run.keyons) if n.pitch or n.noise]
+    found = []
+    for n in notes_mod.decode(snap, run.writes, keyons=run.keyons):
+        if not n.pitch and not n.noise and n.bends:
+            n.pitch = n.bends.pop(0)[1]  # keyed at pitch 0, its pitch written just after (EarthBound's sweeps up)
+        if n.pitch or n.noise:
+            found.append(n)
     for n in found:                      # what each note played: the SNES chip's own reading, else the snapshot's
         if n.brr is None and not n.noise:
             n.brr = snap.entry(n.sample)
     hz, aligned = tick_rate(snap, run.writes)
-    on_ticks = aligned >= ALIGNED and 0 < hz <= MAX_TICK_RATE
+    on_ticks = aligned >= ALIGNED and 0 < hz <= MAX_TICK_RATE and _keeps_pace(hz, run.seconds)
     tempo, row_hz = it_song.tempo_for(hz if on_ticks else FINE_GRID)
 
     song = _Song(snap, run, found, row_hz, _Master(snap, run.writes))
@@ -301,7 +316,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
            "global_volume": song.master.start(), "orders": list(range(len(grid.patterns))), "tempo": tempo, "speed": 1,
            "instruments": instruments, "message": message,
            "info": {"notes": placed, "repeats": repeats, "channels": channels, "echo_channels": song.echo_channels,
-                    "fade": fade, "baked": baked, "unbaked": song.unbaked, "off_keys": song.off_keys,
+                    "fade": fade, "baked": baked, "unbaked": song.unbaked, "off_keys": song.off_keys, "lift": song.lift,
                     "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": hz,
                     "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
                     "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
@@ -326,13 +341,12 @@ def _add_samples(song: _Song) -> None:
         ang = [2 * math.pi * (f - math.floor(f)) for f in fracs]
         mean = math.atan2(sum(map(math.sin, ang)), sum(map(math.cos, ang))) / (2 * math.pi) if ang else 0.0
         # Whole octaves on top, so the sample's notes fall on IT's keys, 1-119 (a cell's note 0,
-        # C-0, reads as none): DKC2's bass plays five octaves under its sample's rate.
+        # C-0, reads as none): DKC2's bass plays five octaves under its sample's rate. The
+        # octaves that place the most of them (none where that is as many), so one note off
+        # the rest (a sweep up from near 0) does not push the others off the top.
         if fracs:
-            lo, hi = round(60 + min(fracs) - mean), round(60 + max(fracs) - mean)
-            if lo < 1:
-                mean -= 12 * math.ceil((1 - lo) / 12)
-            elif hi > 119:
-                mean += 12 * math.ceil((hi - 119) / 12)
+            on_keys = lambda k: sum(1 <= round(60 + f - mean + 12 * k) <= 119 for f in fracs)   # noqa: E731
+            mean -= 12 * max(range(-10, 11), key=lambda k: (on_keys(k), -abs(k)))
         song.offset[addr] = mean                            # semitones the C5Speed sits off 32 kHz
         data = s.pcm.tobytes() if s.pcm.itemsize == 2 else array("h", s.pcm).tobytes()
         song.samples.append(itf.ITSample(name=f"SNES sample at {addr[0]:04X}", filename=f"brr{addr[0]:04x}", data=data,
@@ -522,15 +536,21 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
 
 
 def _lift(song: _Song) -> None:
-    """IT's volumes stop at 64 and the SNES chip's go to 127, but a note's
-    loudness is its volume times the master volume, and the master volume is
-    the IT global volume (up to 128): where the master leaves room, the global
-    volume is raised and every channel's volume lowered as far as the loudest
-    voice needs (DKC2's voices reach 123 under a master of 60). Only songs
-    with a voice over 64 change."""
-    loudest = max(((abs(left) + abs(right)) / 2 for n in song.notes
-                   for left, right in (n.volume, *((sl, sr) for _, sl, sr in n.swells))), default=0)
-    song.lift = song.master.lift = max(1.0, min(loudest / 64, 128 / song.master.loudest()))
+    """A note's loudness is its channel's volume times the global volume (the
+    master volume's), and both are whole numbers: the channel's 0-64, the
+    global 0-128. Every channel's volume is raised, and the global volume
+    lowered by as much, as far as the loudest voice (or its echo's first
+    repeat) reaches 64, with the global volume kept at 32 or more: IT's
+    volumes are coarse at the bottom (Kirby swells a voice to 3 of 127, IT
+    volume 1.5, which rounds a third too loud). The other way where the
+    master leaves room: DKC2's voices reach 123 under a master of 60, and IT
+    stops at 64."""
+    def demand(n):
+        dry = max((abs(left) + abs(right)) / 2 for left, right in (n.volume, *((sl, sr) for _, sl, sr in n.swells)))
+        return max(dry, dry * max(map(abs, n.echo_volume)) * song.master.past(n.start)) if _sends(n) else dry
+    master = song.master.loudest()
+    lift = max(max(map(demand, song.notes), default=0) / 64, min(1.0, 32 / master))
+    song.lift = song.master.lift = min(lift, max(1.0, 128 / master))
 
 
 def _master_channel(song: _Song, grid: it_song.Grid, ch: int, fade: float) -> None:
@@ -576,21 +596,23 @@ def _place(song: _Song, grid: it_song.Grid, n, ch: int, note: int, ins: int, shi
     scaled = lambda v, r: v if factors is None else max(0, min(64, round(v * factors[r - row])))  # noqa: E731
     bends, swells = [] if baked else list(n.bends), list(n.swells)
     pitch, base = 0 if baked else n.pitch, vol
-    volumes, targets = [scaled(vol, row)], []
+    volumes, targets, pans, side = [scaled(vol, row)], [], [pan], pan
     for r in range(row, min(end_row, grid.last_row + 1)):
         t = (r - shift + 0.5) / row_hz
         while bends and bends[0][0] <= t:
             pitch = bends.pop(0)[1]
         while swells and swells[0][0] <= t:
             _, sl, sr = swells.pop(0)
-            base = _loudness(sl, sr, gl, gr)[0]
+            base, moved = _loudness(sl, sr, gl, gr)
+            side = moved if moved is not None else side
         if r > row:
             volumes.append(scaled(base, r))
+            pans.append(side)
         targets.append(round(64 * (song.it_semis(n, pitch) - note)) if pitch else None)
     # the hardware's noise runs on between notes: start each somewhere else
     offset = 1 + round(n.start * RATE) * 40503 % (RATE // 256 - 1) if n.noise else None
     grid.write(ch, Line(row=row, end=end_row, note=note, instrument=ins, volumes=volumes, pan=pan, surround=inverted,
-                        pitch=targets, offset=offset))
+                        pitch=targets, offset=offset, pans=pans))
     return True
 
 

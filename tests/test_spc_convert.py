@@ -219,6 +219,14 @@ class Envelopes(unittest.TestCase):
         self.assertTrue(all(level == 32 for _, level in nodes))
 
 
+class Clock(unittest.TestCase):
+    def test_rows_on_the_driver_s_clock_only_where_it_keeps_pace(self):
+        self.assertTrue(convert._keeps_pace(80.0, 300))               # 8000/100 Hz: IT tempo 200, exact
+        self.assertTrue(convert._keeps_pace(62.5, 2))                 # 62.4 rows: 3 ms behind after 2 s
+        self.assertFalse(convert._keeps_pace(62.5, 60))               # 0.1 s behind after a minute
+        self.assertFalse(convert._keeps_pace(8000 / 162, 30))         # 49.38 Hz on 49.2 rows
+
+
 @unittest.skipUnless(emulate.available(), "needs the compiled emulator")
 class ITSong(unittest.TestCase):
     """The IT half alone: lines written as cells, no emulator."""
@@ -243,6 +251,17 @@ class ITSong(unittest.TestCase):
         fx = [(grid.cell(r, 0).effect, grid.cell(r, 0).effect_val) for r in (0, 10, 20, 30, 40)]
         self.assertEqual(fx, [(itf.FX_SET_PAN, 64), (0, 0), (itf.FX_SPECIAL, it_song.SURROUND_ON),
                               (itf.FX_SPECIAL, it_song.SURROUND_OFF), (itf.FX_SET_PAN, 64)])   # the pan again after
+
+    def test_a_held_note_panned_as_it_sounds(self):
+        # the pan moves on rows 3 and 6; on row 6 a pitch slide holds the effect column
+        grid = it_song.Grid(1.0, 100.0, 1)
+        grid.write(0, it_song.Line(row=0, end=10, note=60, instrument=1, volumes=[40] * 10, pan=0,
+                                   pans=[0, 0, 0, 128, 128, 128, 255, 255, 255, 255], pitch=[None] * 6 + [8] * 4))
+        col = [grid.cell(r, 0) for r in range(10)]
+        self.assertEqual([(c.effect, c.effect_val) for c in col[:4]], [(itf.FX_SET_PAN, 0), (0, 0), (0, 0), (itf.FX_SET_PAN, 128)])
+        self.assertEqual((col[6].effect, col[6].volume), (itf.FX_PORTA_UP, it_song.VOLUME_PAN + 64))
+        grid.write(0, it_song.Line(row=20, end=25, note=60, instrument=1, volumes=[40] * 5, pan=255))
+        self.assertEqual(grid.cell(20, 0).effect, 0)                                  # the channel is there already
 
     def test_the_song_ends_on_its_last_row(self):
         grid = it_song.Grid(1.37, 100.0, 1)
@@ -302,7 +321,7 @@ class Convert(unittest.TestCase):
         info = song["info"]
         rows = [row for pat in song["patterns"] for row in pat.data]
         master = [row[info["channels"] - 1] for row in rows if row[info["channels"] - 1].effect == it_song.FX_SET_GLOBAL_VOLUME]
-        self.assertEqual(master[0].effect_val, 0x40)                      # the driver sets the master volume at the start
+        self.assertEqual(master[0].effect_val, round(0x40 * info["lift"]))   # the driver sets the master volume at the start
         self.assertIn(len(info["echo_channels"][0]), (10, 11))
         dry = next(row[0] for row in rows if 0 < row[0].note < 120)
         first = next(row[info["echo_channels"][0][0]] for row in rows if 0 < row[info["echo_channels"][0][0]].note < 120)
@@ -343,6 +362,44 @@ class Convert(unittest.TestCase):
             emu = struct.unpack(f"<{16000 * 2}h", emulate.run(snap, 0.5, audio=True).audio[:16000 * 4])
             level = lambda a: math.sqrt(sum(v * v for v in a[6400:]) / len(a[6400:]))   # noqa: E731
             self.assertAlmostEqual(level(pcm[:len(emu)]) / level(emu), 1.0, delta=0.1)
+
+    def test_a_held_note_panned_by_its_driver(self):
+        # keyed hard left, then after a wait (0.38 s: 256 x 256 loops) moved hard right, still held:
+        # the module follows, its left side silent after the move as the emulator's is
+        start = tuple((r, {0x4D: 0, 0x00: 60, 0x01: 0}.get(r, v)) for r, v in TINY) + KON0
+        writes = lambda regs: b"".join(bytes([0x8F, r, 0xF2, 0x8F, v, 0xF3]) for r, v in regs)  # noqa: E731
+        wait = bytes([0x8F, 0x00, 0x10, 0x8D, 0x00, 0xFE, 0xFE, 0x6E, 0x10, 0xF9])   # $10 x Y loops
+        code = writes(start) + wait + writes(((0x00, 0), (0x01, 60))) + bytes([0x2F, 0xFE])
+        data = bytearray(tiny(start).raw)
+        data[spc.RAM + 0x0200:spc.RAM + 0x0200 + len(code)] = code
+        snap = spc.read(bytes(data))
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "panned.it")
+            convert.convert(snap, 1.0, path)
+            m, pcm = render(path, 1.0)
+        emu = struct.unpack(f"<{32000 * 2}h", emulate.run(snap, 1.0, audio=True).audio[:32000 * 4])
+        side = lambda a, ch, t0, t1: math.sqrt(sum(v * v for v in a[2 * int(t0 * 32000) + ch:2 * int(t1 * 32000):2]) / (32000 * (t1 - t0)))  # noqa: E731
+        for a in (emu, pcm):
+            self.assertGreater(side(a, 0, 0.1, 0.3), 1000)                           # left, before the move
+            self.assertLess(side(a, 0, 0.5, 0.9), 0.02 * side(a, 0, 0.1, 0.3))       # silent after it
+            self.assertGreater(side(a, 1, 0.5, 0.9), 1000)                           # right
+        self.assertAlmostEqual(side(pcm, 1, 0.5, 0.9) / side(emu, 1, 0.5, 0.9), 1.0, delta=0.15)
+
+    def test_a_note_keyed_at_pitch_0_and_given_its_pitch_after(self):
+        # keyed with its pitch at 0, the pitch written a moment later (EarthBound sweeps up from 0)
+        start = tuple((r, {0x4D: 0, 0x00: 50, 0x01: 50, 0x02: 0, 0x03: 0}.get(r, v)) for r, v in TINY) + KON0
+        wait = bytes([0x8F, 0x08, 0x10, 0x8D, 0x00, 0xFE, 0xFE, 0x6E, 0x10, 0xF9])   # 8 x 256 loops: 12 ms
+        code = b"".join(bytes([0x8F, r, 0xF2, 0x8F, v, 0xF3]) for r, v in start) + wait + \
+            bytes([0x8F, 0x03, 0xF2, 0x8F, 0x10, 0xF3, 0x2F, 0xFE])
+        data = bytearray(tiny(start).raw)
+        data[spc.RAM + 0x0200:spc.RAM + 0x0200 + len(code)] = code
+        snap = spc.read(bytes(data))
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "sweep.it")
+            song = convert.convert(snap, 0.5, path)
+            m, pcm = render(path, 0.5)
+        self.assertEqual(song["info"]["notes"], 1)
+        self.assertGreater(max(abs(v) for v in pcm), 1000)
 
     def test_a_voice_over_it_s_volume_ceiling_under_a_low_master(self):
         # voice volume 100 (IT's stop at 64) under a master of 0x40: the global volume rises to 100
