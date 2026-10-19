@@ -142,6 +142,36 @@ repository (`~/diags/bitcomposer/research/`).
    emulator is written from the documentation and from understanding. What
    we learned from is credited here.
 
+## The design: sources, chip decoders, one translator (decided 2026-10-18)
+
+The import is three layers, so that every console after the SNES reuses
+the last one:
+
+1. **A source per file format** turns a file into a log of timed writes to
+   a sound chip's registers. The file says what it is in its first bytes,
+   and each format belongs to one console, so there is no guessing which
+   hardware a log came from. `.spc` (`SNES-SPC700 Sound File Data`) runs
+   the game's driver on the SNES sound CPU emulator and logs what it writes
+   to the SNES chip. `.vgm` (`Vgm `, whose header lists its chips and their
+   clocks) already is a register log, recorded from the console when the
+   file was made: no emulation. `.nsf` (`NESM`, the NES) would run a NES CPU
+   emulator, and so on.
+2. **A chip decoder per sound chip** knows what its registers mean (the
+   SNES chip's key-on, pitch and sample number; the Genesis YM2612's key-on,
+   frequency and patch) and turns its log into events common to every
+   chip: a note started on a voice, with an instrument, at a pitch and a
+   volume, at a time; a note released; an echo or a pan changed.
+3. **The translator**, shared, turns events into the beat grid, notes,
+   roles and habits, and the outputs (the one-to-one `.it`, the pack). It
+   never knows which console the music came from.
+
+A log is only as true as its source. For VGM it was recorded from the
+real sound chip. For SPC it is what the emulator's SNES sound CPU wrote,
+which equals what the real SNES chip received exactly when the emulator
+behaves as the real SNES sound CPU does: the instruction tests and the
+hardware test ROMs are what make that a checked claim. A new console is a
+new source and chip decoder; everything from the events on comes free.
+
 ## The pieces
 
 ### 1. The pack file format (built: `docs/PACKS.md`)
@@ -222,7 +252,9 @@ cases and the gilyon hardware tests before it runs a song.
 
 ### 4. The translator
 
-The register log becomes musical events, then measurements:
+The SNES chip decoder turns the register log into events (the design,
+above), and the shared translator turns events into musical facts, then
+measurements. For the SNES chip:
 
 - **Notes.** A `KON` on a voice is a note: its sample (`SRCN` at that
   moment), its pitch (the sample's fundamental, measured once by the
@@ -360,6 +392,6 @@ measurements, borrowing nothing.
 ## Related
 
 The Road Rash pack (ROADMAP.md) reads Genesis VGM files, which are
-already register logs: no emulation needed, and the translator (step 4)
-works on them unchanged once the YM2612's registers are mapped. The
-two plans share that step.
+already register logs: no emulation needed. It is the second source in
+the design above: a VGM source and a YM2612 chip decoder, and the
+translator unchanged. The two plans share everything from the events on.
