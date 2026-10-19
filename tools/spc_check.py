@@ -140,13 +140,14 @@ def corr(a, b) -> float:
 
 
 def rms(x) -> float:
-    s = x[::3]
-    return math.sqrt(sum(v * v for v in s) / len(s)) if len(s) else 0.0
+    return math.sqrt(sum(v * v for v in x) / len(x)) if len(x) else 0.0
 
 
 def contour(side, w: int = WINDOW) -> list[float]:
-    """RMS in w-sample windows (every fourth sample of each)."""
-    return [math.sqrt(sum(side[i] ** 2 for i in range(s, s + w, 4)) / (w / 4)) for s in range(0, len(side) - w, w)]
+    """RMS in w-sample windows, from every sample: a stride lands on the same
+    points of a loop whose period it divides (a BRR loop of 8 or 16 samples
+    read every fourth sample measured a softened square 4 dB low)."""
+    return [math.sqrt(sum(v * v for v in side[s:s + w]) / w) for s in range(0, len(side) - w, w)]
 
 
 def ac_rms(side, w: int = WINDOW) -> float:
