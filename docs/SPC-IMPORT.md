@@ -129,12 +129,12 @@ repository (`~/diags/bitcomposer/research/`).
    (Evermore here), spc2it's recording and reference audio. VGMTrans's own
    approach, a reader per driver, is not followed: it covers only the
    drivers someone has written a reader for.
-2. **The emulator need not be Python.** The generator stays pure Python
-   with nothing to install; the emulator may be written in a compiled
-   language if Python is too slow for it. Step 3 opens with a prototype
-   SNES sound CPU core timed on the SingleStepTests suite and on a real
-   song, and the language is chosen from those numbers, with how it ships
-   (built per platform in CI, inside the wheel and the Windows build).
+2. **The emulator is Rust** (decided 2026-10-18, from the prototype
+   below). The generator, the player, the reader and the translator stay
+   Python; only the emulator is compiled. Rust over C because SPC files
+   come from the internet: they are untrusted input, and Rust is memory
+   safe at C's speed. PyO3 and maturin build one wheel per platform that
+   serves every Python version.
 3. **Research material versus our code.** Anything can be read, run and
    learned from. Code that goes into bitComposer must be under a license
    that fits an MIT project (MIT, BSD, zlib), with credit; code under
@@ -219,19 +219,24 @@ Three things the research tools did not need and an import does:
   a sample when every block's shift is at most 12 and the first block is
   unfiltered, as encoders write them, or when a voice is playing it.
 
-### 3. The emulator
+### 3. The emulator (Rust)
 
-Enough of the machine to run the game's driver and record what it tells
-the DSP, not to make sound:
+The SNES sound CPU, the timers, and the SNES chip, running the game's
+driver and recording what it tells the SNES chip:
 
 - **The SPC700 CPU**: 256 opcodes over a small set of addressing modes, at
   1.024 MHz, cycle-counted so the timers run true.
 - **The three timers** (two at 8 kHz, one at 64 kHz). Drivers pace their
   tempo off them, so they are the clock everything is measured by.
-- **The DSP as a register file** that logs every write with its cycle
-  time: `KON`, `KOFF`, pitch, `SRCN`, volume, envelope, echo and noise
-  registers. Sound synthesis is not needed for the log, which keeps the
-  emulator small: the DSP's job here is to be written to.
+- **The SNES chip**, logging every write with its cycle time (`KON`,
+  `KOFF`, pitch, `SRCN`, volume, envelope, echo, noise), and emulated, not
+  only written to: drivers read its live state back. Secret of Evermore's
+  driver polls every voice's envelope level (`ENVX`) and the end flags
+  (`ENDX`) about 50 times a second, values that exist only if the voices
+  run, sample by sample: the pitch counter walking each BRR sample, the
+  ADSR and GAIN envelopes, the end flags, and the echo, which writes into
+  RAM a driver can read. So the SNES chip is emulated as accurately as the
+  SNES sound CPU, short of mixing an output nobody listens to.
 - **The I/O ports** the main CPU would talk through, left as the snapshot
   has them (a running song does not wait for the game).
 - **The IPL ROM** (64 bytes) for drivers that jump into it.
@@ -240,12 +245,33 @@ How long to run: the ID666 length when the tag has one, otherwise until
 the song's register writes repeat (the loop point), capped at a few
 minutes of song time.
 
-Speed decides the language (decision 2 above). A three-minute song is
-about 180 million CPU cycles, tens of millions of instructions; the
-target is a minute or two per song on a laptop, with a progress screen
-like UPDATE's. The prototype measures how far Python is from that; past a
-tighter dispatch loop and stopping at the detected loop point, the answer
-is a compiled core.
+**The prototype that chose the language** (2026-10-18; kept outside the
+repository). A complete SNES sound CPU core in plain Python, with the sound
+unit's memory map, timers, boot ROM and the SNES chip register log, passed
+all 254,000 SingleStepTests cases (the two halting instructions aside,
+which drivers do not use) and ran real songs from all four test games.
+Measured on a laptop (Core i9-10885H):
+
+- the SNES sound CPU alone: 1.1-1.2 million instructions a second, about
+  250,000 per second of song, so 4.3 to 5.0 times real time;
+- a bare SNES chip voice model alone (no interpolation, a simple
+  envelope): 5.3 times real time, 0.74 us per voice per sample;
+- both, with the SNES chip accurate: about 1.5 to 2.5 times real time;
+- blargg's compiled emulator (libgme, with full sound synthesis): about
+  170 times real time on FFVI's battle theme.
+
+Importing a soundtrack runs every song to its loop point: FFVI's 82
+songs would take tens of minutes to over an hour in Python and about a
+minute compiled. Tuning the Python buys perhaps twice; the gap is nearly
+a hundred. Hence Rust. The Python prototype stays useful as a second
+opinion: the same snapshot through both, logs compared, while the Rust
+emulator is written.
+
+**How it ships.** The emulator becomes a second, compiled package
+published from this repository, with wheels built per platform when a
+release is tagged (Linux, Windows, macOS) and bundled by the Windows
+build. It is optional where no wheel exists: the generator and the player
+install everywhere, and IMPORT says what is missing there.
 
 The core is checked instruction by instruction against the SingleStepTests
 cases and the gilyon hardware tests before it runs a song.
@@ -370,8 +396,9 @@ Each step is its own branch and pull request, shippable on its own:
 - **Emulator accuracy.** Drivers lean on timer behaviour and odd
   instructions; one wrong flag stalls a song. The test set has four
   drivers; others will find new faults.
-- **Speed**, which picks the emulator's language (above), and then how a
-  compiled core ships on every platform.
+- **Packaging a compiled core**: wheels on every platform from CI, the
+  Windows build bundling it, and a clear message where no wheel exists.
+  (Speed itself is settled: Rust.)
 - **Drivers that load samples during the song** (from the main CPU): a
   snapshot holds only what was loaded when it was taken; such songs
   import with what was there.
