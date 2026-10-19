@@ -95,10 +95,25 @@ def _s8(b: int) -> int:
 
 # Rendering -----------------------------------------------------------------
 
+def _undithered(m) -> None:
+    """libopenmpt dithers 16-bit output by default, random in the lowest bit,
+    so two renders of one module differed by a few parts in a million; the
+    measures should come out the same every time."""
+    from bitcomposer.player.openmpt import lib
+    L = lib()
+    try:
+        f = L.openmpt_module_ctl_set_integer
+    except AttributeError:                   # a libopenmpt older than 0.5: dithered, then
+        return
+    f.argtypes, f.restype = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int64], ctypes.c_int
+    f(m._mod, b"dither", 0)
+
+
 def render_it(path: str, seconds: float) -> array.array:
-    """A module's first `seconds` as libopenmpt plays it: 32 kHz stereo."""
+    """A module's first `seconds` as libopenmpt plays it: 32 kHz stereo, undithered."""
     from bitcomposer.player.openmpt import Module
     m = Module(path)
+    _undithered(m)
     buf = (ctypes.c_int16 * (2 * RATE))()
     pcm = array.array("h")
     while len(pcm) < 2 * RATE * seconds:
@@ -113,6 +128,19 @@ def emulated(snap, seconds: float, voice: int | None = None) -> array.array:
     """The emulator's output (32 kHz stereo), of one voice alone when given."""
     mute = 0 if voice is None else 0xFF ^ (1 << voice)
     return array.array("h", emulate.run(snap, seconds, audio=True, mute=mute).audio)
+
+
+def each_alone(snap, seconds: float) -> dict:
+    """Each voice's output alone (32 kHz stereo): from one run where the
+    emulator can (0.3: emulate.solos, a fifth of the time), else a muted run
+    for each voice; the same samples either way."""
+    solos = getattr(emulate, "solos", None)
+    if solos is not None:
+        try:
+            return solos(snap, seconds)
+        except emulate.EmulatorMissing:
+            pass
+    return {v: emulated(snap, seconds, v) for v in range(8)}
 
 
 def channels_of(song: dict, voice: int) -> tuple[int, list[int], int]:
@@ -397,7 +425,7 @@ def _trace(snap, song, v, secs, step, ref, it, side, dry, echo):
 # sweep ---------------------------------------------------------------------
 
 _OUT, _DRIVERS, _SECONDS, _SINCE = None, {}, 30.0, {}
-MEASURES = "2026-10-19"          # bump when the measures change, so a sweep --since does not reuse older numbers
+MEASURES = "2026-10-19b"         # bump when the measures change, so a sweep --since does not reuse older numbers
 
 
 def _init(out, drivers, seconds, since=None):
@@ -460,9 +488,10 @@ def measure(path: str) -> dict:
             rec["emu_rms"] = rms(ref)
             rec.update(compare(ref, render_it(it_path, secs), active_sides(ref)))
             part = window(song, secs)
+            alone = each_alone(snap, secs)
             rec["voices"] = {}
             for v in range(8):
-                vref = emulated(snap, secs, v)
+                vref = alone[v]
                 sides = active_sides(vref)
                 if not sides:
                     continue
