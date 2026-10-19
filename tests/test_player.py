@@ -312,9 +312,11 @@ class WindowHeadless(unittest.TestCase):
         self.pump(0.2)
         self.assertFalse(b.state["generating"])
         self.assertTrue(b.state["autoGenerate"])
-        # GENERATE composes in the background and plays the new track
+        # GENERATE composes in the background and plays the new track. The
+        # flag is up as soon as generate() returns; checked before pumping,
+        # since a fast machine can finish a chip song inside a short pump
+        # (CI did, on Python 3.12).
         b.generate("--sound chip -s 9")
-        self.pump(0.1)
         self.assertTrue(b.state["generating"])
         self.assertTrue(self.pump(60, lambda: not b.state["generating"]))
         self.assertEqual(len(b.playlist), 3)
