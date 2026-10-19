@@ -213,6 +213,29 @@ Known limits:
 - **The noise generator's position** is not in an SPC file: noise matches in
   level and colour, not sample for sample.
 
+## The style packs against the drivers in play
+
+The four built-in style packs (`bitcomposer/packs/`) were measured from these
+games' SPC files before the emulator existed: their habits come from the
+SNES chip's registers as each snapshot left them. Played, the drivers set
+the SNES chip as they go, and some habits are not what the snapshots
+showed. Each difference found is listed here, for when a pack is re-measured
+or made by the importer; the packs themselves are unchanged (they are what
+the generator plays, and a change to one is a change to the songs).
+
+| Pack | Habit | The pack's notes (snapshot registers) | Measured in play |
+|---|---|---|---|
+| `ffvi` | echo feedback | 0.64 in every snapshot | chosen per song: 0.78 in 42 songs, 0.55 in 27, 0.62 in 7, 0.47 to 0.77 in the rest |
+| `ffvi` | echo against the main | (not stated) | the master volume (63) halves the voices and not the echo, so the echo (0.20) is about 0.4 of the main |
+| `mana` | echo feedback and delay | 0.31 on average; delays 32 to 176 ms, 96 and 176 the most common | two kinds of echo, not one: short and dry (48 ms in 15 songs, 96 ms in 11, no feedback) or long and ringing (176 ms with 0.72 to 0.79 in 16, 96 ms with 0.81 in 4) |
+| `mana` | echo level | 0.34 of the main | 0.5 in 43 songs, 0.25 in 14, against a full master volume |
+| `mana` | echo sides | the same sign in 60 of 69 | the same sign in every song |
+| `evermore` | echo | off in 47 of 72; where on, an eighth of the main ("the space is in the samples, not in the echo") | on in 60 of 72 (80 ms, feedback 0.16 in 58), at 0.39 of the main |
+| `evermore` | envelopes | per voice: each recipe's swell and decay | per note: the driver writes every note's envelope as it sounds (9.5 writes a note, GAIN ramps and holds), so the swells are the composer's, not the samples' |
+| `megamanx` | echo | 48 ms, feedback 0.53, sides inverted | the same, in every song; the echo at 0.56 against a master of 92, about 0.8 of the main |
+| `megamanx` | articulation | (not stated) | every note released by a GAIN fade a moment before the next: staccato from the driver, not the samples |
+| `megamanx` | arrangement | (not stated) | the melody doubled by a delayed copy on another voice, panned the other way (Spark Mandrill: 0.12 s behind) |
+
 ## Open
 
 Found by the sweep, not yet looked into:
@@ -226,8 +249,8 @@ Found by the sweep, not yet looked into:
 - **FFVI's sound-effect tracks** (999 Blazing Fire voice 2, 999 Train voice
   5): the wrong tone.
 - **The style packs' habits** were read from snapshot registers before the
-  emulator ran the drivers; in play the drivers set them differently (the
-  echo above). Measure them again from played songs.
+  emulator ran the drivers; in play the drivers set some of them differently
+  (the table above). Measure them again from played songs.
 
 ## Adding a game
 
