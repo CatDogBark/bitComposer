@@ -17,7 +17,7 @@ Chunsoft's sound driver, in Dragon Quest V.
 |---|---|
 | Clock | 200 Hz, key-ons anywhere in a tick (42 songs); 200 Hz, on its ticks (6); none found (2) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 99 % (1.0 writes a note) |
-| Pitch writes | 0.0 a note (90 %: 8.1) |
+| Pitch writes | 0.0 a note (90 %: 8.2) |
 | Pitch modulation | in 0 of 50 songs |
 | Noise | in 0 of 50 songs |
 | Echo | 80 ms, feedback 0.09 (46 songs); 80 ms, feedback 0.0 (4) |
@@ -25,7 +25,7 @@ Chunsoft's sound driver, in Dragon Quest V.
 | Echo sides inverted | in 46 of 50 songs |
 | Echo filter at DC | 1.03 (50 songs) |
 | Master volume | 92 (46 songs); 77 (4) |
-| Density | 167 notes in a song's first minute; a note 0.28 s |
+| Density | 168 notes in a song's first minute; a note 0.28 s |
 <!-- end generated -->
 
 - **Clock**: 200 Hz, key-ons anywhere in its ticks: modules use 100 rows a
@@ -43,7 +43,7 @@ Chunsoft's sound driver, in Dragon Quest V.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 50 | 0.97 (0.93) | 0.45 (0.99) | 1.01 (0.98-1.06) | 1.00 (0.99) |
+| 50 | 0.97 (0.90) | 0.45 (0.99) | 1.01 (0.98-1.05) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter

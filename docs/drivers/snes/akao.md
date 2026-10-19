@@ -7,7 +7,9 @@ Square's sound driver, known as AKAO.
 <!-- generated: games -->
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
-| Final Fantasy VI | Nobuo Uematsu | 82 (79) |
+| Chrono Trigger | Yasunori Mitsuda, Nobuo Uematsu, Noriko Matsueda | 74 (74) |
+| Final Fantasy VI | Nobuo Uematsu | 82 (82) |
+| Romancing SaGa 3 | Kenji Ito | 74 (74) |
 <!-- end generated -->
 
 ## What the driver does
@@ -15,17 +17,17 @@ Square's sound driver, known as AKAO.
 <!-- generated: traits -->
 | Trait | Measured |
 |---|---|
-| Clock | 205 Hz, key-ons anywhere in a tick (49 songs); 205 Hz, on its ticks (28); none found (3) |
+| Clock | 205 Hz, key-ons anywhere in a tick (108 songs); 205 Hz, on its ticks (42); 190 Hz, key-ons anywhere in a tick (37) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
-| Pitch writes | 3.2 a note (90 %: 23.8) |
-| Pitch modulation | in 11 of 82 songs |
-| Noise | in 4 of 82 songs |
-| Echo | 80 ms, feedback 0.78 (42 songs); 80 ms, feedback 0.55 (27); 80 ms, feedback 0.62 (7); 80 ms, feedback 0.47 (2) |
-| Echo volume | 0.2 (68 songs); 0.27 (5) |
-| Echo sides inverted | in 0 of 82 songs |
-| Echo filter at DC | 0.99 (78 songs); 1.0 (2) |
-| Master volume | 63 (82 songs) |
-| Density | 655 notes in a song's first minute; a note 0.17 s |
+| Pitch writes | 0.9 a note (90 %: 17.7) |
+| Pitch modulation | in 29 of 230 songs |
+| Noise | in 10 of 230 songs |
+| Echo | 80 ms, feedback 0.78 (48 songs); 80 ms, feedback 0.55 (30); 80 ms, feedback 0.62 (29); 80 ms, feedback 0.47 (12) |
+| Echo volume | 0.2 (85 songs); 0.16 (48) |
+| Echo sides inverted | in 0 of 230 songs |
+| Echo filter at DC | 0.99 (221 songs); -0.01 (5) |
+| Master volume | 64 (147 songs); 63 (82) |
+| Density | 553 notes in a song's first minute; a note 0.19 s |
 <!-- end generated -->
 
 - **Clock**: key-ons land anywhere in a tick in most songs, so modules use
@@ -46,7 +48,7 @@ Square's sound driver, known as AKAO.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 79 | 0.98 (0.95) | 0.38 (0.66) | 0.99 (0.96-1.02) | 1.00 (0.99) |
+| 230 | 0.97 (0.85) | 0.48 (0.95) | 0.99 (0.96-1.03) | 1.00 (0.98) |
 <!-- end generated -->
 
 ## The converter

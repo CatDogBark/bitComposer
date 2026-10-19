@@ -7,7 +7,9 @@ Rare's sound driver, in Donkey Kong Country 2.
 <!-- generated: games -->
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
+| Donkey Kong Country | Dave Wise, Eveline Fischer, Robin Beanland | 29 (29) |
 | Donkey Kong Country 2 | Dave Wise | 109 (109) |
+| Donkey Kong Country 3 | Eveline Fischer, Dave Wise | 77 (77) |
 <!-- end generated -->
 
 ## What the driver does
@@ -15,17 +17,17 @@ Rare's sound driver, in Donkey Kong Country 2.
 <!-- generated: traits -->
 | Trait | Measured |
 |---|---|
-| Clock | 80 Hz, on its ticks (108 songs); none found (1) |
+| Clock | 80 Hz, on its ticks (208 songs); 80 Hz, key-ons anywhere in a tick (4); 133 Hz, key-ons anywhere in a tick (2) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
-| Pitch writes | 1.2 a note (90 %: 4.9) |
-| Pitch modulation | in 0 of 109 songs |
-| Noise | in 0 of 109 songs |
-| Echo | 32 ms, feedback 0.39 (16 songs); 64 ms, feedback 0.45 (9); 48 ms, feedback 0.34 (7); 32 ms, feedback 0.41 (5) |
-| Echo volume | 0.26 (25 songs); 0.18 (10) |
-| Echo sides inverted | in 0 of 109 songs |
-| Echo filter at DC | 1.05 (39 songs); 1.12 (20) |
-| Master volume | 60 (109 songs) |
-| Density | 329 notes in a song's first minute; a note 0.14 s |
+| Pitch writes | 0.9 a note (90 %: 3.9) |
+| Pitch modulation | in 0 of 215 songs |
+| Noise | in 0 of 215 songs |
+| Echo | 0 ms, feedback 0.43 (65 songs); 32 ms, feedback 0.39 (16); 64 ms, feedback 0.47 (14); 64 ms, feedback 0.45 (9) |
+| Echo volume | 0.25 (80 songs); 0.18 (38) |
+| Echo sides inverted | in 0 of 215 songs |
+| Echo filter at DC | 1.0 (92 songs); 1.12 (42) |
+| Master volume | 60 (201 songs); 51 (4) |
+| Density | 360 notes in a song's first minute; a note 0.14 s |
 <!-- end generated -->
 
 - **Clock**: 80 Hz, key-ons on its ticks in all but one song: modules run on
@@ -45,7 +47,7 @@ Rare's sound driver, in Donkey Kong Country 2.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 109 | 0.98 (0.91) | 0.38 (0.78) | 1.01 (0.98-1.04) | 0.99 (0.97) |
+| 215 | 0.99 (0.94) | 0.38 (0.76) | 1.01 (0.98-1.04) | 0.99 (0.96) |
 <!-- end generated -->
 
 ## The converter

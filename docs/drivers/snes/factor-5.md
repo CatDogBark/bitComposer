@@ -17,7 +17,7 @@ Factor 5's sound driver, in Super Turrican 2.
 |---|---|
 | Clock | 62 Hz, on its ticks (34 songs) |
 | Envelopes | ADSR at key-on: 0 % of notes; rewritten as they sound: 100 % (2.4 writes a note) |
-| Pitch writes | 4.1 a note (90 %: 15.4) |
+| Pitch writes | 4.4 a note (90 %: 15.5) |
 | Pitch modulation | in 0 of 34 songs |
 | Noise | in 0 of 34 songs |
 | Echo | 32 ms, feedback -1.0 (34 songs) |
@@ -25,7 +25,7 @@ Factor 5's sound driver, in Super Turrican 2.
 | Echo sides inverted | in 0 of 34 songs |
 | Echo filter at DC | 0.75 (34 songs) |
 | Master volume | 127 (34 songs) |
-| Density | 629 notes in a song's first minute; a note 0.21 s |
+| Density | 634 notes in a song's first minute; a note 0.21 s |
 <!-- end generated -->
 
 - **Clock**: 62.5 Hz (a timer of 128), key-ons on its ticks. IT cannot run
@@ -44,7 +44,7 @@ Factor 5's sound driver, in Super Turrican 2.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 34 | 0.97 (0.90) | 0.35 (0.65) | 1.00 (0.99-1.08) | 1.00 (0.99) |
+| 34 | 0.98 (0.94) | 0.31 (0.57) | 0.99 (0.98-1.01) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter

@@ -14,13 +14,17 @@ Kirby Super Star shares the code without the table.
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
 | ActRaiser | Yuzo Koshiro | 19 (19) |
-| EarthBound | "Akio Ohmori, Ritsuo Kamimura, Ke" (cut off) | 206 (203) |
-| Kirby Super Star | Jun Ishikawa, Dan Miyakawa | 70 (69) |
+| EarthBound | "Akio Ohmori, Ritsuo Kamimura, Ke" (cut off) | 206 (206) |
+| Kirby Super Star | Jun Ishikawa, Dan Miyakawa | 70 (70) |
 | Pocky & Rocky | Hiroyuki Iwatsuki | 24 (24) |
-| Star Fox | Hajime Hirasawa | 51 (50) |
+| Soul Blazer | Yukihide Takekawa, Kazz Tomaya | 20 (20) |
+| Star Fox | Hajime Hirasawa | 51 (51) |
 | Super Castlevania IV | Masanori Adachi, Taro Kudou | 36 (36) |
 | Super Metroid | Kenji Yamamoto, Minako Hamano | 36 (36) |
+| Terranigma | "Miyoko Kobayashi, Masanori Hikic" (cut off) | 57 (57) |
 | Top Gear | Kemco sound team | 7 (7) |
+| Yoshi's Island | Koji Kondo | 48 (48) |
+| The Legend of Zelda: A Link to the Past | Koji Kondo | 36 (36) |
 <!-- end generated -->
 
 ## What the driver does
@@ -28,17 +32,17 @@ Kirby Super Star shares the code without the table.
 <!-- generated: traits -->
 | Trait | Measured |
 |---|---|
-| Clock | 500 Hz, key-ons anywhere in a tick (372 songs); 250 Hz, key-ons anywhere in a tick (29); 500 Hz, on its ticks (29) |
+| Clock | 500 Hz, key-ons anywhere in a tick (501 songs); 500 Hz, on its ticks (41); 250 Hz, key-ons anywhere in a tick (29) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
-| Pitch writes | 6.9 a note (90 %: 61.3) |
-| Pitch modulation | in 0 of 449 songs |
-| Noise | in 0 of 449 songs |
-| Echo | 32 ms, feedback 0.39 (45 songs); 0 ms, feedback 0.0 (36); 48 ms, feedback 0.16 (27); 16 ms, feedback 0.01 (26) |
-| Echo volume | 0.39 (89 songs); 0.0 (61) |
-| Echo sides inverted | in 2 of 449 songs |
-| Echo filter at DC | 0.99 (158 songs); 0.1 (136) |
-| Master volume | 112 (206 songs); 96 (137) |
-| Density | 448 notes in a song's first minute; a note 0.15 s |
+| Pitch writes | 5.6 a note (90 %: 51.4) |
+| Pitch modulation | in 0 of 610 songs |
+| Noise | in 0 of 610 songs |
+| Echo | 32 ms, feedback 0.23 (58 songs); 32 ms, feedback 0.39 (45); 0 ms, feedback 0.0 (36); 16 ms, feedback 0.01 (27) |
+| Echo volume | 0.0 (102 songs); 0.39 (93) |
+| Echo sides inverted | in 2 of 610 songs |
+| Echo filter at DC | 0.99 (213 songs); 1.0 (174) |
+| Master volume | 96 (241 songs); 112 (206) |
+| Density | 493 notes in a song's first minute; a note 0.15 s |
 <!-- end generated -->
 
 - **Clock**: a 500 Hz timer in nearly every song (250 Hz in Super
@@ -63,7 +67,7 @@ Kirby Super Star shares the code without the table.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 444 | 0.98 (0.89) | 0.49 (1.10) | 0.99 (0.94-1.03) | 0.99 (0.98) |
+| 610 | 0.97 (0.86) | 0.51 (1.10) | 0.99 (0.94-1.02) | 0.99 (0.98) |
 <!-- end generated -->
 
 ## The converter

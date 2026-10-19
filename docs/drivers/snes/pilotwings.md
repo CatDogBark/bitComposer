@@ -11,6 +11,7 @@ earlier driver of Nintendo's, or an early N-SPC.
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
 | Pilotwings | Soyo Oka | 21 (21) |
+| Super Mario World | Koji Kondo | 66 (66) |
 <!-- end generated -->
 
 ## What the driver does
@@ -18,17 +19,17 @@ earlier driver of Nintendo's, or an early N-SPC.
 <!-- generated: traits -->
 | Trait | Measured |
 |---|---|
-| Clock | 500 Hz, key-ons anywhere in a tick (21 songs) |
-| Envelopes | ADSR at key-on: 78 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
-| Pitch writes | 6.9 a note (90 %: 23.4) |
-| Pitch modulation | in 0 of 21 songs |
-| Noise | in 0 of 21 songs |
-| Echo | 64 ms, feedback 0.31 (16 songs); 64 ms, feedback 0.39 (5) |
-| Echo volume | 0.25 (15 songs); 0.42 (5) |
-| Echo sides inverted | in 0 of 21 songs |
-| Echo filter at DC | 1.03 (21 songs) |
-| Master volume | 127 (21 songs) |
-| Density | 589 notes in a song's first minute; a note 0.20 s |
+| Clock | 500 Hz, key-ons anywhere in a tick (81 songs); none found (4); 500 Hz, on its ticks (2) |
+| Envelopes | ADSR at key-on: 80 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
+| Pitch writes | 3.7 a note (90 %: 23.3) |
+| Pitch modulation | in 0 of 87 songs |
+| Noise | in 0 of 87 songs |
+| Echo | 64 ms, feedback 0.84 (35 songs); 32 ms, feedback 0.75 (30); 64 ms, feedback 0.31 (16); 64 ms, feedback 0.39 (5) |
+| Echo volume | 0.0 (56 songs); 0.25 (15) |
+| Echo sides inverted | in 1 of 87 songs |
+| Echo filter at DC | 1.03 (56 songs); 0.0 (24) |
+| Master volume | 127 (86 songs); 96 (1) |
+| Density | 590 notes in a song's first minute; a note 0.12 s |
 <!-- end generated -->
 
 - **Clock**: 500 Hz, key-ons anywhere in its ticks, as N-SPC's: modules use
@@ -43,7 +44,7 @@ earlier driver of Nintendo's, or an early N-SPC.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 21 | 0.96 (0.92) | 0.61 (0.83) | 1.02 (1.00-1.05) | 0.99 (0.98) |
+| 87 | 0.98 (0.94) | 0.42 (0.63) | 1.00 (0.99-1.02) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter

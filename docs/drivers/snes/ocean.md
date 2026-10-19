@@ -16,8 +16,8 @@ Ocean's sound driver, in Jurassic Park Part 2.
 | Trait | Measured |
 |---|---|
 | Clock | 49 Hz, on its ticks (15 songs); none found (1) |
-| Envelopes | ADSR at key-on: 0 % of notes; rewritten as they sound: 38 % (0.4 writes a note) |
-| Pitch writes | 8.0 a note (90 %: 30.1) |
+| Envelopes | ADSR at key-on: 0 % of notes; rewritten as they sound: 36 % (0.4 writes a note) |
+| Pitch writes | 8.0 a note (90 %: 29.6) |
 | Pitch modulation | in 1 of 16 songs |
 | Noise | in 0 of 16 songs |
 | Echo | 0 ms, feedback 0.0 (14 songs); 0 ms, feedback -0.47 (1); 0 ms, feedback 0.47 (1) |
@@ -25,7 +25,7 @@ Ocean's sound driver, in Jurassic Park Part 2.
 | Echo sides inverted | in 0 of 16 songs |
 | Echo filter at DC | 0.99 (14 songs); 0.1 (1) |
 | Master volume | 104 (16 songs) |
-| Density | 439 notes in a song's first minute; a note 0.22 s |
+| Density | 441 notes in a song's first minute; a note 0.22 s |
 <!-- end generated -->
 
 - **Clock**: 49.38 Hz (a timer of 162), key-ons on its ticks. IT cannot run
@@ -41,7 +41,7 @@ Ocean's sound driver, in Jurassic Park Part 2.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 16 | 0.98 (0.94) | 0.39 (0.51) | 1.00 (0.98-1.02) | 1.00 (0.99) |
+| 16 | 0.98 (0.93) | 0.38 (0.47) | 1.00 (0.99-1.02) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter

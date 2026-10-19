@@ -17,7 +17,7 @@ Hudson's sound driver, in Super Bomberman 4.
 |---|---|
 | Clock | 250 Hz, key-ons anywhere in a tick (19 songs); 62 Hz, key-ons anywhere in a tick (3); 250 Hz, on its ticks (2) |
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 100 % (3.0 writes a note) |
-| Pitch writes | 2.3 a note (90 %: 14.4) |
+| Pitch writes | 2.2 a note (90 %: 14.9) |
 | Pitch modulation | in 0 of 26 songs |
 | Noise | in 0 of 26 songs |
 | Echo | 16 ms, feedback 0.0 (5 songs); 16 ms, feedback 0.31 (2); 112 ms, feedback 0.81 (1); 128 ms, feedback 0.31 (1) |
@@ -25,7 +25,7 @@ Hudson's sound driver, in Super Bomberman 4.
 | Echo sides inverted | in 0 of 26 songs |
 | Echo filter at DC | 0.99 (16 songs); 1.0 (10) |
 | Master volume | 96 (26 songs) |
-| Density | 1183 notes in a song's first minute; a note 0.11 s |
+| Density | 1186 notes in a song's first minute; a note 0.13 s |
 <!-- end generated -->
 
 - **Clock**: 250 Hz (62 in three songs), key-ons anywhere in its ticks:
@@ -39,7 +39,7 @@ Hudson's sound driver, in Super Bomberman 4.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 26 | 0.97 (0.88) | 0.38 (0.93) | 0.99 (0.96-1.01) | 0.99 (0.97) |
+| 26 | 0.98 (0.89) | 0.36 (0.64) | 0.99 (0.97-1.01) | 0.99 (0.96) |
 <!-- end generated -->
 
 ## The converter

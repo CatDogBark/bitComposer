@@ -20,7 +20,7 @@ studios made them (Software Creations, and DMA Design).
 |---|---|
 | Clock | 320 Hz, on its ticks (4 songs); 356 Hz, on its ticks (3); 251 Hz, on its ticks (2) |
 | Envelopes | ADSR at key-on: 0 % of notes; rewritten as they sound: 98 % (8.4 writes a note) |
-| Pitch writes | 1.7 a note (90 %: 11.1) |
+| Pitch writes | 1.7 a note (90 %: 11.0) |
 | Pitch modulation | in 0 of 30 songs |
 | Noise | in 0 of 30 songs |
 | Echo | 0 ms, feedback 0.0 (30 songs) |
@@ -28,7 +28,7 @@ studios made them (Software Creations, and DMA Design).
 | Echo sides inverted | in 0 of 30 songs |
 | Echo filter at DC | 0.99 (30 songs) |
 | Master volume | 127 (30 songs) |
-| Density | 1277 notes in a song's first minute; a note 0.14 s |
+| Density | 1281 notes in a song's first minute; a note 0.14 s |
 <!-- end generated -->
 
 - **Clock**: a timer set per song (251 to 356 Hz), key-ons on its ticks:
@@ -44,7 +44,7 @@ studios made them (Software Creations, and DMA Design).
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 30 | 0.98 (0.94) | 0.31 (0.57) | 0.99 (0.98-1.00) | 0.99 (0.97) |
+| 30 | 0.98 (0.87) | 0.31 (0.48) | 1.00 (0.98-1.00) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter

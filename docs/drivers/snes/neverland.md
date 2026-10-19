@@ -7,7 +7,7 @@ Neverland's sound driver, in Lufia II.
 <!-- generated: games -->
 | Game | Composer (as the tags credit) | Songs (scored) |
 |---|---|---|
-| Lufia II | Yasunori Shiono | 63 (62) |
+| Lufia II | Yasunori Shiono | 63 (63) |
 <!-- end generated -->
 
 ## What the driver does
@@ -19,13 +19,13 @@ Neverland's sound driver, in Lufia II.
 | Envelopes | ADSR at key-on: 100 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
 | Pitch writes | 0.0 a note (90 %: 3.5) |
 | Pitch modulation | in 0 of 63 songs |
-| Noise | in 0 of 63 songs |
+| Noise | in 1 of 63 songs |
 | Echo | 80 ms, feedback 0.81 (22 songs); 64 ms, feedback 0.81 (14); 80 ms, feedback 0.56 (6); 48 ms, feedback 0.56 (3) |
 | Echo volume | 0.18 (31 songs); 0.16 (12) |
 | Echo sides inverted | in 0 of 63 songs |
 | Echo filter at DC | 0.99 (63 songs) |
 | Master volume | 112 (63 songs) |
-| Density | 491 notes in a song's first minute; a note 0.21 s |
+| Density | 491 notes in a song's first minute; a note 0.19 s |
 <!-- end generated -->
 
 - **Clock**: 64 Hz, key-ons anywhere in its ticks in most songs: modules use
@@ -40,7 +40,7 @@ Neverland's sound driver, in Lufia II.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 62 | 0.95 (0.86) | 0.48 (0.93) | 1.01 (0.98-1.04) | 1.00 (0.99) |
+| 63 | 0.96 (0.88) | 0.45 (0.72) | 1.00 (0.98-1.03) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter

@@ -26,7 +26,7 @@ almost none of its code ([super-ghouls-ghosts.md](super-ghouls-ghosts.md)).
 | Echo sides inverted | in 35 of 35 songs |
 | Echo filter at DC | 0.1 (35 songs) |
 | Master volume | 92 (35 songs) |
-| Density | 1258 notes in a song's first minute; a note 0.19 s |
+| Density | 1261 notes in a song's first minute; a note 0.19 s |
 <!-- end generated -->
 
 - **Clock**: 125 Hz is faster than IT can run (102 ticks a second at most),
@@ -46,7 +46,7 @@ almost none of its code ([super-ghouls-ghosts.md](super-ghouls-ghosts.md)).
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 35 | 0.94 (0.86) | 0.49 (0.84) | 0.98 (0.96-1.00) | 1.00 (0.98) |
+| 35 | 0.93 (0.86) | 0.49 (0.81) | 0.98 (0.96-1.00) | 1.00 (0.98) |
 <!-- end generated -->
 
 ## The converter
