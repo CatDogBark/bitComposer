@@ -10,11 +10,15 @@ name: Windows build
 # push to main and on pull requests as well, so a broken Windows build shows
 # up when it breaks and not on release day (0.9.0 and 0.9.1 both found out
 # at the tag).
+# main, tags, and pull requests into main (a release); not pull requests
+# into dev (see ci.yml). Start it by hand on a branch whose change could
+# break the Windows build.
 on:
   push:
     branches: [main]
     tags: ["v*"]
   pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:

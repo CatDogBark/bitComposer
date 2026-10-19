@@ -1,9 +1,14 @@
 name: CI
 
+# main and pull requests into it (a release): every supported Python. Pull
+# requests into dev run nothing here; the tests are run locally before them
+# (CONTRIBUTING.md), and a run can be started by hand on any branch.
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
