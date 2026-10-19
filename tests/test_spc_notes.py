@@ -52,6 +52,16 @@ class Notes(unittest.TestCase):
         self.assertAlmostEqual(b.end, 0.30, places=6)    # ended by its voice's next key-on
         self.assertIsNone(c.end)                         # still sounding when the writes ran out
 
+    def test_envelope_writes_while_a_note_sounds(self):
+        # a driver releasing with a GAIN fade: ADSR1 off, then GAIN 0x9E, while the note sounds
+        snap = snapshot(dsp={0x05: 0xFF, 0x06: 0xE0, 0x07: 0xB8, 0x03: 0x10})
+        t = lambda s: int(s * CLOCK)                  # noqa: E731
+        writes = [Write(t(0.01), notes.KON, 0x01), Write(t(0.10), 0x05, 0x00), Write(t(0.10), 0x07, 0x9E),
+                  Write(t(0.10), 0x07, 0x9E), Write(t(0.30), notes.KOFF, 0x01), Write(t(0.40), 0x07, 0x00)]
+        n, = notes.decode(snap, writes)
+        self.assertEqual((n.adsr, n.gain), ((0xFF, 0xE0), 0xB8))
+        self.assertEqual([e[1:] for e in n.envelopes], [(0x00, 0xE0, 0xB8), (0x00, 0xE0, 0x9E)])  # repeats and after-end writes left out
+
 
 class Tuning(unittest.TestCase):
     def test_a_loop_of_whole_cycles(self):

@@ -6,8 +6,9 @@ per sound chip". It replays the writes against a copy of the SNES chip's
 registers (as the snapshot left them): a key-on (KON) on a voice starts a
 note with the voice's sample, pitch, volume and envelope at that moment;
 a key-off (KOFF), the voice's next key-on, or the soft reset (FLG bit 7)
-ends it; pitch and volume writes while it sounds are kept as bends and
-volume changes (vibrato, slides, swells). What the notes mean musically
+ends it; pitch, volume and envelope writes while it sounds are kept as
+bends, volume changes (vibrato, slides, swells) and envelope changes (many
+drivers release a note by switching its voice to a GAIN fade, not by KOFF). What the notes mean musically
 (tempo, roles, habits) is the translator's job, shared by every chip.
 
 Times are seconds from the snapshot, at the moment the SNES chip acts:
@@ -41,11 +42,12 @@ class Note:
     echo_delay: float = 0.0          # seconds: EDL * 16 ms
     echo_volume: tuple[float, float] = (0.0, 0.0)    # EVOL left, right, -1..1
     echo_feedback: float = 0.0       # EFB, -1..1
-    echo_fir: float = 1.0            # the FIR filter's gain at DC: its taps' sum / 128
+    echo_filter: tuple[int, ...] = (127, 0, 0, 0, 0, 0, 0, 0)    # the FIR taps FIR0..FIR7, -128..127
     echo_writes: bool = True         # FLG bit 5 clear
     end: float | None = None         # None: still sounding when the run ended
     bends: list[tuple[float, int]] = field(default_factory=list)       # (time, pitch) while it sounds
     swells: list[tuple[float, int, int]] = field(default_factory=list)  # (time, left, right)
+    envelopes: list[tuple[float, int, int, int]] = field(default_factory=list)   # (time, ADSR1, ADSR2, GAIN)
 
     @property
     def length(self) -> float | None:
@@ -86,7 +88,7 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
                              gain=regs[b + 7], echo=bool(regs[EON] >> v & 1), noise=bool(regs[NON] >> v & 1),
                              noise_rate=regs[FLG] & 0x1F, echo_delay=(regs[EDL] & 0x0F) * 0.016,
                              echo_volume=(_s8(regs[EVOLL]) / 128, _s8(regs[EVOLR]) / 128),
-                             echo_feedback=_s8(regs[EFB]) / 128, echo_fir=sum(_s8(regs[a]) for a in FIR) / 128,
+                             echo_feedback=_s8(regs[EFB]) / 128, echo_filter=tuple(_s8(regs[a]) for a in FIR),
                              echo_writes=not regs[FLG] & 0x20)
                     sounding[v] = n
                     notes.append(n)
@@ -108,6 +110,13 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
                 p = (regs[b + 2] | regs[b + 3] << 8) & 0x3FFF
                 if p != (n.bends[-1][1] if n.bends else n.pitch):
                     n.bends.append((t, p))
+        elif reg < 0x80 and reg & 0x0F in (5, 6, 7):
+            n = sounding.get(reg >> 4)
+            if n is not None:
+                b = n.voice * 0x10
+                env = (regs[b + 5], regs[b + 6], regs[b + 7])
+                if env != (n.envelopes[-1][1:] if n.envelopes else (*n.adsr, n.gain)):
+                    n.envelopes.append((t, *env))
         elif reg < 0x80 and reg & 0x0F in (0, 1):
             n = sounding.get(reg >> 4)
             if n is not None:

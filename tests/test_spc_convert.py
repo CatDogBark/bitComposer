@@ -95,7 +95,41 @@ class MasterVolume(unittest.TestCase):
         self.assertEqual([(round(t, 3), l, r) for t, l, r in mv], [(0.0, 96, 96), (1.0, 48, 96), (1.0, 48, 48)])
 
 
+class Echo(unittest.TestCase):
+    BANDPASS = (52, 51, 0, -39, -27, 1, -4, -21)                         # passes 2-8 kHz, little at DC
+
+    def sine(self, hz, n=3200):
+        return [int(10000 * math.sin(2 * math.pi * hz * i / 32000)) for i in range(n)]
+
+    def test_gains_follow_the_note_not_dc(self):
+        hi = convert.echo_gains(self.sine(3000), (0, 3200), 0x1000, self.BANDPASS, 2)
+        lo = convert.echo_gains(self.sine(200), (0, 3200), 0x1000, self.BANDPASS, 2)
+        self.assertAlmostEqual(hi[0], 1.06, delta=0.05)
+        self.assertAlmostEqual(lo[0], 0.16, delta=0.03)
+        self.assertAlmostEqual(hi[1], hi[0] ** 2, delta=0.05)                # two passes through the filter
+        self.assertAlmostEqual(convert.echo_gains(self.sine(200), (0, 3200), 0x1000 * 15, self.BANDPASS, 1)[0],
+                               hi[0], delta=0.1)                             # the same sample, played 15x up
+
+    def test_the_coloured_copy_keeps_its_length_and_loses_the_bass(self):
+        rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
+        for hz, keep in ((3000, 0.9), (200, 0.25)):
+            data, fit = convert.echo_coloured(self.sine(hz), (1600, 3200), 1.0, self.BANDPASS)
+            self.assertEqual(len(data), 3200)
+            ratio = rms(data[1600:]) / fit / rms(self.sine(hz)[1600:])
+            self.assertGreater(ratio, keep) if hz == 3000 else self.assertLess(ratio, keep)
+
+
 class Envelopes(unittest.TestCase):
+    def test_a_gain_fade_written_mid_note(self):
+        # ADSR FF/E0 holds at once; at sample 3200 the driver switches to GAIN 0x9E, a fast linear fade
+        track = convert.envelope_track(0xFF, 0xE0, 0xB8, [(3200, 0x00, 0xE0, 0x9E)], 6400)
+        level = dict(track)
+        self.assertEqual(track[-1][1], 0)
+        self.assertAlmostEqual(track[-1][0], 3200 + 128, delta=4)           # 2039 down by 32 every 2 samples
+        self.assertEqual(max(lv for s, lv in track if s < 3200), 2047)
+        self.assertEqual(len(convert.envelope_track(0xFF, 0xE0, 0xB8, [], 10 * 32000)), 3)   # attack, decay, held: no more
+        self.assertIn(3200, level)
+
     def test_adsr_rises_decays_and_holds(self):
         # attack 15 (at once), decay 7, sustain level 3 (boundary 0x400), sustain rate 0 (hold)
         nodes = convert.envelope(0x8F | 0x70, 3 << 5, 0, 100.0)
@@ -136,7 +170,7 @@ class Convert(unittest.TestCase):
             song = convert.convert(snap, 1.0, path)
             info = song["info"]
             self.assertEqual(info["notes"], 1)
-            self.assertEqual((info["samples"], info["instruments"]), (1, 1))
+            self.assertEqual((info["samples"], info["instruments"]), (2, 2))    # the sample and its echo-coloured copy
             self.assertGreaterEqual(info["repeats"], 1)                          # the echo, as repeats
             # the first repeat: voice 0's first echo channel, 32 ms after the note
             hits = [(r, ch) for p, pat in enumerate(song["patterns"]) for r, row in enumerate(pat.data)
