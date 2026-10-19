@@ -387,7 +387,9 @@ timer IT can run (Evermore's 50 Hz), else IT's finest grid, 100 a second
 (FFVI's and Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz
 is past IT's 102).
 
-Measured against the emulator's own output (`tools/spc_check.py`;
+`SPC-DRIVERS.md` records every game tested so far by music driver, with
+the latest scores and what each driver does. Measured against the
+emulator's own output (`tools/spc_check.py`;
 loudness contours, 50 ms windows over the first 14 s, each side,
 averaged; the level is the IT's RMS over the emulator's): FFVI's battle theme 0.98 (level 0.99) and The
 Phantom Train 0.97 (0.90), Mana's Together Always 0.96 (0.98) and The
