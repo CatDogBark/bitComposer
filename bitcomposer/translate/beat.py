@@ -115,17 +115,30 @@ def _tolerance(unit: float) -> float:
     return max(JITTER, min(0.3 * unit, 0.015))
 
 
+FLAM = 0.020                         # seconds within which onsets are one: a flam, a strum, a grace note
+
+
 def tatum(onsets) -> float | None:
-    """The grid's unit: the longest step (400 ms down to 20) that three onset
-    gaps in four are whole multiples of, within jitter."""
-    times = sorted({round(t, 3) for t, _ in onsets})
+    """The grid's unit: the longest step (400 ms down to 18: Hyrule Field's
+    32nds against its triplets share a 24th of a beat; finer, any onsets fit
+    by chance) that three onset gaps in four are whole multiples of, within
+    jitter. Onsets within FLAM of each other are one, at their middle:
+    Corneria's flams, a part 8 to 16 ms off the rest, left no unit at all."""
+    times, cluster = [], []
+    for t in sorted(t for t, _ in onsets):
+        if cluster and t - cluster[0] > FLAM:
+            times.append(statistics.median(cluster))
+            cluster = []
+        cluster.append(t)
+    if cluster:
+        times.append(statistics.median(cluster))
     return _unit([b - a for a, b in zip(times, times[1:]) if 0.018 <= b - a <= 3.0])
 
 
 def _unit(gaps: list) -> float | None:
     if len(gaps) < 6:
         return None
-    for ms in range(400, 19, -1):
+    for ms in range(400, 17, -1):
         u = ms / 1000
         tol = max(JITTER, 0.12 * u)
         fits = [(d, m) for d in gaps if 1 <= (m := round(d / u)) <= 24 and abs(d - m * u) <= tol]
