@@ -71,6 +71,7 @@ Python.
 | `bitcomposer/cli.py` | the command line; its parser is also the player's list of compose settings |
 | `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check and UPDATE) |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
+| `tools/spc_check.py` | measures SPC-to-IT conversions against the emulator, voice by voice; sweeps a folder of SPC files and reports by music driver |
 | `tools/make_logo.py` | writes the README logo from the icon and the bundled font |
 | `tools/windows/` | the Windows build: PyInstaller launchers, the icon and version-details makers, the Inno Setup installer and its privacy page |
 | `docs/` | ANALYSIS, ROADMAP, PORTABILITY, PACKS (the pack file format), SPC-IMPORT (the plan); the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
@@ -131,6 +132,25 @@ SPC700_TESTS=path/to/spc700/v1 cargo test --release -- --nocapture
 
 Without `SPC700_TESTS` the suite says it was skipped and passes. To watch
 a driver run: `cargo run --release --example run_spc -- song.spc 10`.
+
+### Checking the SPC converter
+
+`tools/spc_check.py` renders a conversion and the emulator's own output and
+compares them, the whole mix and then voice by voice (the emulator can play
+one voice alone): loudness over time, the gap in dB, the level, the tone,
+and each voice's echo against its dry sound. A converter change is judged
+this way first and by ear second.
+
+```bash
+python3 tools/spc_check.py voice song.spc --seconds 30              # one song, voice by voice
+python3 tools/spc_check.py voice song.spc --trace 3 --bands         # voice 3 over time; octave levels
+python3 tools/spc_check.py sweep ~/spc /tmp/sweep --workers 12      # every <game>/*.spc under ~/spc
+python3 tools/spc_check.py report /tmp/sweep/results.jsonl          # the summary, by music driver
+```
+
+A `drivers.json` beside the game folders (`{"<game folder>": "<driver family>"}`)
+groups the report by music driver. The SPC files and the converted modules
+are the user's and stay out of the repository.
 
 ## Style
 
