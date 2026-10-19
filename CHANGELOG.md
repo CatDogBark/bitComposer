@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Pack files: a style pack as data. A JSON file names the pack's palette, the voices each part draws from, its habits and its channel trims, and brings its own voices as WAV files (tuned from the recording's note or pitch in Hz, with a loop, a release family and a volume); `bitcomposer --pack-file pack.json` composes with it. Any role or habit left out keeps the palette's, so a pack can change as little as its lead, and a pack can borrow any built-in voice by name. Everything is checked on load, and a mistake is reported with where it is (`habits.tempo.medum: not one of slow, medium, fast`). Data only: a pack file cannot run anything. A pack file is never drawn by a random sound. The built-in packs stay code, since their tables carry comments recording where each number came from, but a test writes each one in the format and reads it back unchanged, so the format can say everything they say. The format is `docs/PACKS.md`; it is the first step of the SPC import plan (`docs/SPC-IMPORT.md`), whose importer will write these files. Built-in sounds are unchanged: 72 songs across every sound and the main options are byte-identical before and after.
+
 ## 1.0.1 — 2026-10-18
 
 UPDATE on Linux gets past pip's saved copy of PyPI's version list.

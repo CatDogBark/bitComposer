@@ -173,9 +173,11 @@ These change how every note sounds, not what notes are played.
   register, drum density. The rock machinery exists from `megamanx`
   (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
   mostly data plus the VGM reader and the patch renderer.
-- **Your own packs (after 1.0, asked for 2026-10-18).** A pack added
-  without touching the code: a pack file in a packs folder that the SOUND
-  picker lists beside the built-in ones. A pack is mostly data already
+- **Your own packs (after 1.0, asked for 2026-10-18; the format and
+  loader built 2026-10-18, `docs/PACKS.md`, `--pack-file`; the player's
+  PACKS panel is step 6 of the SPC import plan).** A pack added
+  without touching the code: a pack file the player lists in its PACKS
+  panel, apart from the built-in sounds. A pack is mostly data already
   (voices per role, weighted habits, channel trims), so the work is a
   file format for the PACK table (JSON or TOML, read by the standard
   library) checked on load with messages that say what is wrong and

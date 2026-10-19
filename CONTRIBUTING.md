@@ -48,7 +48,7 @@ measurement rather than by ear alone.
 | `bitcomposer/echo.py` | echo settings tables and the bus that makes taps and darker variants |
 | `bitcomposer/mix.py` | written channel volumes, sustaining-arp level, pack trims, master gain |
 | `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
-| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits |
+| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`) |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
 | `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
 | `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
@@ -58,10 +58,14 @@ measurement rather than by ear alone.
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
 | `tools/make_logo.py` | writes the README logo from the icon and the bundled font |
 | `tools/windows/` | the Windows build: PyInstaller launchers, the icon and version-details makers, the Inno Setup installer and its privacy page |
-| `docs/` | ANALYSIS, ROADMAP, PORTABILITY; the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
+| `docs/` | ANALYSIS, ROADMAP, PORTABILITY, PACKS (the pack file format), SPC-IMPORT (the plan); the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
 | `tests/` | one module per area, sharing `support.py` |
 
-Adding a pack: its module in `bitcomposer/packs/`, registered in
+A pack can also be a pack file, with no code at all (`docs/PACKS.md`). A habit or role the
+composer starts reading must be added to `packs/packfile.py` too, or pack files cannot carry it;
+the round-trip test in `tests/test_packfile.py` fails until it is.
+
+Adding a built-in pack: its module in `bitcomposer/packs/`, registered in
 `packs/__init__.py` (the import, `_MODULES` and `PACKS`); its name in the
 CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's SOUND
 row in `bitcomposer/player/qml/Main.qml`, where the mixer's voice labels
