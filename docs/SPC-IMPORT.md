@@ -327,9 +327,11 @@ F major chord, every instrument of it within a cent of the same offset
 (-8 cents: the game's own tuning, which the translator will calibrate
 out). `python -m bitcomposer.spc --notes FILE.spc` lists them.
 
-**SPC to IT** (`bitcomposer/spc/convert.py`, `python -m bitcomposer.spc
---to-it OUT.it FILE.spc`): the notes as an IT module in instrument mode,
-so a converted song opens in a tracker as a tracker song. One IT sample
+**SPC to IT** (`bitcomposer/spc/convert.py`, with `snes_chip.py` for the
+SNES chip's sound and `it_song.py` for the IT song; `python -m
+bitcomposer.spc --to-it OUT.it FILE.spc`): the notes as an IT module in
+instrument mode, so a converted song opens in a tracker as a tracker
+song. One IT sample
 per sample played, found by the addresses the SNES chip read as it keyed
 each voice on (Secret of Evermore's driver writes a voice's directory
 entry just before keying it; its snapshot's directory is placeholders), its

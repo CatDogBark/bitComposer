@@ -8,7 +8,7 @@ import unittest
 from support import os, tempfile, unittest  # noqa: F401,F811
 from bitcomposer import it_format as itf  # noqa: E402
 from bitcomposer import spc  # noqa: E402
-from bitcomposer.spc import convert, emulate, notes  # noqa: E402
+from bitcomposer.spc import convert, emulate, it_song, notes, snes_chip  # noqa: E402
 from bitcomposer.spc.emulate import CLOCK, Write  # noqa: E402
 
 
@@ -138,24 +138,24 @@ class Echo(unittest.TestCase):
         return [int(10000 * math.sin(2 * math.pi * hz * i / 32000)) for i in range(n)]
 
     def test_gains_follow_the_note_not_dc(self):
-        hi = convert.echo_gains(self.sine(3000), (0, 3200), 0x1000, self.BANDPASS, 2)
-        lo = convert.echo_gains(self.sine(200), (0, 3200), 0x1000, self.BANDPASS, 2)
+        hi = snes_chip.echo_gains(self.sine(3000), (0, 3200), 0x1000, self.BANDPASS, 2)
+        lo = snes_chip.echo_gains(self.sine(200), (0, 3200), 0x1000, self.BANDPASS, 2)
         self.assertAlmostEqual(hi[0], 1.06, delta=0.05)
         self.assertAlmostEqual(lo[0], 0.16, delta=0.03)
         self.assertAlmostEqual(hi[1], hi[0] ** 2, delta=0.05)                # two passes through the filter
-        self.assertAlmostEqual(convert.echo_gains(self.sine(200), (0, 3200), 0x1000 * 15, self.BANDPASS, 1)[0],
+        self.assertAlmostEqual(snes_chip.echo_gains(self.sine(200), (0, 3200), 0x1000 * 15, self.BANDPASS, 1)[0],
                                hi[0], delta=0.1)                             # the same sample, played 15x up
 
     def test_each_trip_round_the_echo_adds_the_filter_s_span(self):
         click = [0] * 100 + [10000] + [0] * 99
         for k in (1, 2, 3):                                                  # one tap 7 samples back: 7 later a trip
-            data, _ = convert.echo_coloured(click, None, 1.0, (127, 0, 0, 0, 0, 0, 0, 0), k)
+            data, _ = snes_chip.echo_coloured(click, None, 1.0, (127, 0, 0, 0, 0, 0, 0, 0), k)
             self.assertEqual(max(range(len(data)), key=lambda i: abs(data[i])), 100 + 7 * k)
 
     def test_the_coloured_copy_keeps_its_length_and_loses_the_bass(self):
         rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
         for hz, keep in ((3000, 0.9), (200, 0.25)):
-            data, fit = convert.echo_coloured(self.sine(hz), (1600, 3200), 1.0, self.BANDPASS)
+            data, fit = snes_chip.echo_coloured(self.sine(hz), (1600, 3200), 1.0, self.BANDPASS)
             self.assertEqual(len(data), 3200)
             ratio = rms(data[1600:]) / fit / rms(self.sine(hz)[1600:])
             self.assertGreater(ratio, keep) if hz == 3000 else self.assertLess(ratio, keep)
@@ -177,12 +177,12 @@ class Interpolation(unittest.TestCase):
         rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
         for f, gain in ((0.02, 1.0), (0.25, 0.63), (0.4, 0.30)):          # the hardware's Gaussian, measured
             pcm = [round(10000 * math.sin(2 * math.pi * f * i)) for i in range(4000)]
-            out = convert.snes_interpolated(pcm, None)
+            out = snes_chip.snes_interpolated(pcm, None)
             self.assertAlmostEqual(rms(out[100:-100]) / rms(pcm[100:-100]), gain, delta=0.02)
 
     def test_a_loop_is_filtered_as_it_repeats(self):
         pcm = [1000] * 50 + [5000, -5000] * 25 + [7, 7, 7]                 # a tail past the loop end is dropped
-        out = convert.snes_interpolated(pcm, (50, 100))
+        out = snes_chip.snes_interpolated(pcm, (50, 100))
         self.assertEqual(len(out), 100)
         self.assertEqual(out[10], 1000)                                       # DC as it was
         self.assertAlmostEqual(abs(out[99]), 0.18 * 5000, delta=50)           # the loop's end, its start after it
@@ -191,20 +191,20 @@ class Interpolation(unittest.TestCase):
 class Envelopes(unittest.TestCase):
     def test_steps_fall_on_the_shared_counter(self):
         # GAIN 0xC6: a linear rise at rate 6, a step every 640 samples where the sample number is 536 mod 640
-        on_note = convert.envelope_track(0x00, 0x00, 0xC6, [], 3000)
-        on_counter = convert.envelope_track(0x00, 0x00, 0xC6, [], 3000, start=1000)
+        on_note = snes_chip.envelope_track(0x00, 0x00, 0xC6, [], 3000)
+        on_counter = snes_chip.envelope_track(0x00, 0x00, 0xC6, [], 3000, start=1000)
         self.assertEqual(on_note[:2], [(0, 32), (640, 64)])                  # from the note's start (an IT envelope)
         self.assertEqual(on_counter[:2], [(0, 0), (176, 32)])                # sample 1176 = 640 + 536
         self.assertEqual([s - t for (s, _), (t, _) in zip(on_counter[2:], on_counter[1:])], [640] * (len(on_counter) - 2))
 
     def test_a_gain_fade_written_mid_note(self):
         # ADSR FF/E0 holds at once; at sample 3200 the driver switches to GAIN 0x9E, a fast linear fade
-        track = convert.envelope_track(0xFF, 0xE0, 0xB8, [(3200, 0x00, 0xE0, 0x9E)], 6400)
+        track = snes_chip.envelope_track(0xFF, 0xE0, 0xB8, [(3200, 0x00, 0xE0, 0x9E)], 6400)
         level = dict(track)
         self.assertEqual(track[-1][1], 0)
         self.assertAlmostEqual(track[-1][0], 3200 + 128, delta=4)           # 2039 down by 32 every 2 samples
         self.assertEqual(max(lv for s, lv in track if s < 3200), 2047)
-        self.assertEqual(len(convert.envelope_track(0xFF, 0xE0, 0xB8, [], 10 * 32000)), 3)   # attack, decay, held: no more
+        self.assertEqual(len(snes_chip.envelope_track(0xFF, 0xE0, 0xB8, [], 10 * 32000)), 3)   # attack, decay, held: no more
         self.assertIn(3200, level)
 
     def test_adsr_rises_decays_and_holds(self):
@@ -220,6 +220,46 @@ class Envelopes(unittest.TestCase):
 
 
 @unittest.skipUnless(emulate.available(), "needs the compiled emulator")
+class ITSong(unittest.TestCase):
+    """The IT half alone: lines written as cells, no emulator."""
+
+    def test_a_line_as_cells(self):
+        grid = it_song.Grid(1.0, 100.0, 2)
+        grid.write(0, it_song.Line(row=10, end=20, note=60, instrument=1, volumes=[40] * 5 + [20] * 5, pan=128,
+                                   pitch=[None, None] + [32] * 8))
+        col = [grid.cell(r, 0) for r in range(100)]
+        self.assertEqual((col[10].note, col[10].instrument, col[10].volume), (60, 1, 40))
+        self.assertEqual((col[10].effect, col[10].effect_val), (itf.FX_SET_PAN, 128))
+        self.assertEqual([c.volume for c in col[11:16]], [255, 255, 255, 255, 20])     # only where it changes
+        self.assertEqual((col[12].effect, col[12].effect_val), (itf.FX_PORTA_UP, 0xF8))  # half a semitone: 8 x 4/64
+        self.assertEqual(col[13].effect, 0)                                             # reached
+        self.assertEqual(col[20].note, itf.NOTE_CUT)
+
+    def test_pan_and_surround_only_where_the_channel_changes(self):
+        grid = it_song.Grid(1.0, 100.0, 1)
+        for row, pan, surround in ((0, 64, False), (10, 64, False), (20, 64, True), (30, 64, False), (40, 64, False)):
+            grid.write(0, it_song.Line(row=row, end=row + 5, note=60, instrument=1, volumes=[40] * 5, pan=pan,
+                                       surround=surround))
+        fx = [(grid.cell(r, 0).effect, grid.cell(r, 0).effect_val) for r in (0, 10, 20, 30, 40)]
+        self.assertEqual(fx, [(itf.FX_SET_PAN, 64), (0, 0), (itf.FX_SPECIAL, it_song.SURROUND_ON),
+                              (itf.FX_SPECIAL, it_song.SURROUND_OFF), (itf.FX_SET_PAN, 64)])   # the pan again after
+
+    def test_the_song_ends_on_its_last_row(self):
+        grid = it_song.Grid(1.37, 100.0, 1)
+        self.assertEqual((sum(p.rows for p in grid.patterns), grid.last_row), (137, 136))
+        self.assertFalse(grid.has(137))
+        grid.write(0, it_song.Line(row=130, end=200, note=60, instrument=1, volumes=[40] * 7))
+        self.assertTrue(all(grid.cell(r, 0).note != itf.NOTE_CUT for r in range(137)))   # its cut falls past the end
+        grid.global_volume(0, 64, [(0, 64), (5, 32), (6, 32), (500, 10)])
+        self.assertEqual([r for r in range(137) if grid.cell(r, 0).effect == it_song.FX_SET_GLOBAL_VOLUME], [5])
+
+    def test_an_envelope_in_at_most_25_nodes(self):
+        levels = [round(64 * abs(math.sin(i / 9))) for i in range(300)]
+        nodes = it_song.envelope_nodes(levels)
+        self.assertLessEqual(len(nodes), it_song.ENV_NODES)
+        self.assertEqual((nodes[0], nodes[-1]), ((0, levels[0]), (299, levels[-1])))
+
+
 class Voices(unittest.TestCase):
     def test_a_voice_muted_and_tapped(self):
         snap = tiny()
@@ -260,7 +300,7 @@ class Convert(unittest.TestCase):
         song = convert.convert(tiny(TINY + voice + KON0), 3.0)
         info = song["info"]
         rows = [row for pat in song["patterns"] for row in pat.data]
-        master = [row[info["channels"] - 1] for row in rows if row[info["channels"] - 1].effect == convert.FX_SET_GLOBAL_VOLUME]
+        master = [row[info["channels"] - 1] for row in rows if row[info["channels"] - 1].effect == it_song.FX_SET_GLOBAL_VOLUME]
         self.assertEqual(master[0].effect_val, 0x40)                      # the driver sets the master volume at the start
         self.assertIn(len(info["echo_channels"][0]), (10, 11))
         dry = next(row[0] for row in rows if 0 < row[0].note < 120)
@@ -272,7 +312,7 @@ class Convert(unittest.TestCase):
         self.assertEqual(sum(p.rows for p in song["patterns"]), 137)          # to the last row, the last pattern short
         master = song["info"]["channels"] - 1
         levels = [(r, row[master].effect_val) for r, row in enumerate(song["patterns"][0].data)
-                  if row[master].effect == convert.FX_SET_GLOBAL_VOLUME and r > 0]     # row 0: the driver's own
+                  if row[master].effect == it_song.FX_SET_GLOBAL_VOLUME and r > 0]     # row 0: the driver's own
         self.assertGreaterEqual(levels[0][0], 85)                            # the fade starts 0.5 s from the end
         self.assertEqual([v for _, v in levels], sorted((v for _, v in levels), reverse=True))
         self.assertLessEqual(levels[-1][1], 3)                               # and ends near silence
