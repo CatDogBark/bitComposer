@@ -43,7 +43,7 @@ The driver of Secret of Mana, named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 68 | 0.93 (0.76) | 0.76 (1.39) | 0.97 (0.94-1.04) | 0.99 (0.97) |
+| 68 | 0.93 (0.76) | 0.75 (1.35) | 0.97 (0.94-1.04) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter
@@ -53,7 +53,11 @@ pans linearly: these songs played at half their level before). The 176 ms
 echo is 17.6 rows at 100 a second, so on a held, looped tone the repeats
 stack as the hardware's only by chance: a held note's echo can come out
 stronger or weaker than the original's, right on average (Fond Memories'
-shimmer is this echo beating against the notes).
+shimmer is this echo beating against the notes). Flammie Coming, a
+pitch-modulated jingle, sends every voice to an echo of delay 0, which is a
+tone control rather than an echo; left out, the jingle sounded bright, its
+lows at half, 14.5 dB off before the twenty-game fixes and 2.0 after them.
+With a copy of each recording coloured by the echo's loop, 0.2 dB off.
 
 ## For generation
 
@@ -63,5 +67,4 @@ average the two kinds of echo into one ([the packs table](README.md#the-style-pa
 
 ## Open
 
-- 9a Flammie Coming (a pitch-modulated jingle): 2.0 dB off (14.5 before
-  the twenty-game fixes), voices 2 and 3 at 0.49 and 0.61 of their level.
+Nothing found yet.

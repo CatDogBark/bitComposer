@@ -87,7 +87,11 @@ Top Gear's long full-strength echo, Super Castlevania IV's dry sound.
 
 ## Open
 
-- Super Metroid's Wrecked Ship: 3.5 dB off, at 0.81 of its level.
+- Super Metroid's Wrecked Ship (3.5 dB off, at 0.81 of its level): its
+  trailing echoes are the composer's, written as notes (voice 4 replays
+  voice 0 on the same sample and pitch 0.146 s later); on IT's 10 ms rows
+  the copy comes 4 ms late, which turns the two held tones from adding to
+  cancelling ([known limits](README.md#known-limits)).
 - EarthBound's A Flash of Memory and The Heroes Return (part 1): voice 3 at
   three times its level (10 dB).
 - Single voices with the wrong tone: Kirby Super Star's Battle Windows

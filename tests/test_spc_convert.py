@@ -385,6 +385,21 @@ class Convert(unittest.TestCase):
             self.assertGreater(side(a, 1, 0.5, 0.9), 1000)                           # right
         self.assertAlmostEqual(side(pcm, 1, 0.5, 0.9) / side(emu, 1, 0.5, 0.9), 1.0, delta=0.15)
 
+    def test_an_echo_of_delay_0(self):
+        # EDL 0: the echo's buffer holds one sample, so the echo is a loop of a sample's delay through
+        # the filter (FIR7 alone, passing all) and the feedback (0.5): a gain of 2 at the bottom, at echo
+        # volume 0.5 as loud again as the note. As the emulator plays it, with one copy at the note's row.
+        regs = tuple((r, {0x7D: 0, 0x0F: 0, 0x00: 50, 0x01: 50}.get(r, v)) for r, v in TINY) + ((0x7F, 0x7F),) + KON0
+        snap = tiny(regs)
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "at-once.it")
+            song = convert.convert(snap, 1.0, path)
+            m, pcm = render(path, 0.5)
+        self.assertEqual(song["info"]["repeats"], 1)
+        emu = struct.unpack(f"<{16000 * 2}h", emulate.run(snap, 0.5, audio=True).audio[:16000 * 4])
+        level = lambda a: math.sqrt(sum(v * v for v in a[6400:]) / len(a[6400:]))   # noqa: E731
+        self.assertAlmostEqual(level(pcm[:len(emu)]) / level(emu), 1.0, delta=0.12)
+
     def test_a_note_keyed_at_pitch_0_and_given_its_pitch_after(self):
         # keyed with its pitch at 0, the pitch written a moment later (EarthBound sweeps up from 0)
         start = tuple((r, {0x4D: 0, 0x00: 50, 0x01: 50, 0x02: 0, 0x03: 0}.get(r, v)) for r, v in TINY) + KON0

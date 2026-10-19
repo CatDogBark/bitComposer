@@ -32,7 +32,10 @@ Rare's sound driver, in Donkey Kong Country 2.
   the driver's own clock (IT runs 80 rows a second exactly).
 - **Envelopes**: the instrument's ADSR at key-on, left alone.
 - **Echo**: short (32 to 64 ms) with moderate feedback, set per song,
-  through a filter that boosts a little (1.05 to 1.12 at DC).
+  through a filter that boosts a little (1.05 to 1.12 at DC). In 14 songs
+  (Stickerbrush Symphony's, Crocodile Cacophony's, the Token Tango's) a
+  delay of 0: the echo then a tone control on every voice that sends, its
+  loop a sample long.
 - **Volumes**: a master of 60 with voices up to 123: the loudness is in the
   voices, past IT's 64.
 - **Bass**: samples played five octaves under their own rate (pitch 0x0080).
@@ -42,7 +45,7 @@ Rare's sound driver, in Donkey Kong Country 2.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 109 | 0.98 (0.91) | 0.39 (0.85) | 1.01 (0.97-1.04) | 0.99 (0.97) |
+| 109 | 0.98 (0.91) | 0.38 (0.78) | 1.01 (0.98-1.04) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter
@@ -51,7 +54,9 @@ Voices over IT's 64 under a master that leaves room: the global volume
 raised and every channel's volume lowered as far (they played at half; one
 song from a 5.1 dB gap to 0.2). Samples played far under their rate get
 their C5Speed octaves down, so their notes land on IT's keys (a cell cannot
-write C-0, and the bass fell silent in stretches).
+write C-0, and the bass fell silent in stretches). An echo of delay 0 as one
+copy of each note at its own row, coloured by every trip round the loop
+(left out, Stickerbrush Symphony was 1.9 dB off; now 0.4).
 
 ## For generation
 

@@ -28,11 +28,11 @@ pans while a note sounds, the clock's pace).
 | [Ocean](ocean.md) | 16 | 0.98 (0.94) | 0.39 (0.51) | 1.00 (0.98-1.02) | 1.00 (0.99) |
 | [Plok's](plok.md) | 30 | 0.98 (0.94) | 0.31 (0.57) | 0.99 (0.98-1.00) | 0.99 (0.97) |
 | [Quest](quest.md) | 26 | 0.97 (0.93) | 0.37 (0.56) | 1.00 (0.99-1.02) | 1.00 (0.99) |
-| [Rare](rare.md) | 109 | 0.98 (0.91) | 0.39 (0.85) | 1.01 (0.97-1.04) | 0.99 (0.97) |
+| [Rare](rare.md) | 109 | 0.98 (0.91) | 0.38 (0.78) | 1.01 (0.98-1.04) | 0.99 (0.97) |
 | [Square Soft US: Secret of Evermore's](secret-of-evermore.md) | 70 | 0.96 (0.82) | 0.54 (1.12) | 1.00 (0.96-1.03) | 0.99 (0.98) |
 | [Square: AKAO](akao.md) | 79 | 0.98 (0.95) | 0.38 (0.66) | 0.99 (0.96-1.02) | 1.00 (0.99) |
-| [Square: Secret of Mana's](secret-of-mana.md) | 68 | 0.93 (0.76) | 0.76 (1.39) | 0.97 (0.94-1.04) | 0.99 (0.97) |
-| **All** | 1108 | 0.97 (0.88) | 0.46 (1.00) | 1.00 (0.95-1.03) | 0.99 (0.98) |
+| [Square: Secret of Mana's](secret-of-mana.md) | 68 | 0.93 (0.76) | 0.75 (1.35) | 0.97 (0.94-1.04) | 0.99 (0.97) |
+| **All** | 1108 | 0.97 (0.88) | 0.46 (0.99) | 1.00 (0.96-1.03) | 0.99 (0.98) |
 <!-- end generated -->
 
 Voice tone is over the voices that carry at least 5 % of their song's
@@ -62,12 +62,17 @@ exposed each (`../../SPC-IMPORT.md` has the details):
 | A sample's C5Speed whole octaves off, so its notes land on IT's keys (a cell cannot write C-0) | [Rare](rare.md) (basses five octaves down) |
 | Channel volumes and the global volume traded: up where voices pass 64 under a low master, down where quiet notes sit on IT's coarse bottom steps | [Rare](rare.md), [N-SPC](n-spc.md) (EarthBound, Kirby Super Star) |
 | Rows on the driver's clock only where IT's tempo keeps pace with it through the song | [Factor 5](factor-5.md), [Ocean](ocean.md) |
+| An echo of delay 0, which is a tone control (its loop a sample long, through the filter): a coloured copy of each note at its own row | [Secret of Mana's](secret-of-mana.md) (Flammie Coming), [Rare](rare.md) (14 songs) |
 
 ## Known limits
 
 - **Held tones on echo delays that miss whole rows** (Mana's 176 ms): the
   repeats stack or cancel by chance. IT places notes no finer than a tick,
-  and players round their ticks differently.
+  and players round their ticks differently. The same goes for an echo a
+  composer writes as notes: Super Metroid's Wrecked Ship replays a voice's
+  notes on another voice, the same sample and pitch, 0.146 s later, and on
+  IT's 10 ms rows that is 0.150 s, enough to turn the held tones from adding
+  to cancelling: its trailing echoes fade faster.
 - **Samples played faster than the output rate**: the SNES chip aliases
   them (nothing filters them), libopenmpt filters; such a voice loses that
   energy (a hi-hat in Evermore's Regal Castle; some FFVI voices' top octave).
@@ -76,7 +81,9 @@ exposed each (`../../SPC-IMPORT.md` has the details):
   interpolation and libopenmpt's resampling part.
 - **IT's volume ceiling**: a voice needing more than 64 under a master
   volume near full is held at 64 (where the master leaves room, the global
-  volume takes up the rest).
+  volume takes up the rest). Uniracers' 3rd Race, whose loudest voices need
+  125 under a full master, plays at 0.63 of its level; no other song of the
+  1108 is held below 0.85 by it.
 - **The noise generator's position** is not in an SPC file: noise matches in
   level and colour, not sample for sample.
 

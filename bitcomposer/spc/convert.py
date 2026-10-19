@@ -167,6 +167,18 @@ def _sends(n) -> bool:
     return n.echo and n.echo_writes and n.echo_delay > 0
 
 
+def _sends_at_once(n) -> bool:
+    """Whether a note sends to an echo of delay 0 that is heard: a tone
+    control on it rather than an echo (snes_chip.echo_response)."""
+    return n.echo and n.echo_writes and n.echo_delay == 0 and any(n.echo_volume) and any(n.echo_filter) and not n.noise
+
+
+def _at_once_sign(n) -> int:
+    """-1 where both echo volumes are negative: an echo of delay 0 sounds with
+    the note, so its sign counts, and its copy is inverted."""
+    return -1 if max(n.echo_volume) < 0 else 1
+
+
 def _instrument_key(n):
     """Notes with the same key play one instrument: the same sample (or noise
     clock) and envelope setting. A note whose driver rewrites its envelope as
@@ -244,6 +256,9 @@ class _Song:
     copies: int = 0                                          # echo-coloured copies a sample has (later repeats play the last)
     echo_instrument_of: dict = field(default_factory=dict)   # (_instrument_key, k) -> IT instrument of copy k
     coloured_at: dict = field(default_factory=dict)          # (BRR addresses, k) -> (semitone, filter, fit) of copy k
+    at_once_instrument_of: dict = field(default_factory=dict)   # (key, filter, feedback, sign) -> IT instrument of a delay-0 echo's copy
+    at_once_colour: dict = field(default_factory=dict)       # (sample, filter, feedback, sign) -> (semitone, fit) of that copy
+    responses: dict = field(default_factory=dict)            # (filter, feedback) -> a delay-0 echo's response
     gains_of: dict = field(default_factory=dict)             # echo_gains, once each
     factors_of: dict = field(default_factory=dict)           # id(note) -> its envelope through its rows
     lift: float = 1.0                                        # channel volumes over it, the global volume times it
@@ -298,6 +313,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
     _bake_pitch_modulation(song, seconds)
     channels = _plan_echo(song)
     _add_echo_copies(song)
+    _add_at_once_copies(song)
     grid = it_song.Grid(run.seconds, row_hz, channels)
     placed, repeats, baked = _place_notes(song, grid)
     _master_channel(song, grid, channels - 1, fade)
@@ -431,12 +447,12 @@ def _plan_echo(song: _Song) -> int:
     feedback rings for seconds: FFVI's Dark World, 0.78 at 80 ms, for about
     1.1 s) within IT's 64 channels; the master volume last. Returns how
     many."""
-    sending = sorted({n.voice for n in song.notes if _sends(n)})
+    sending = sorted({n.voice for n in song.notes if _sends(n) or _sends_at_once(n)})
     taps = 0
     if sending:
-        needed = 1
+        needed = 1                       # an echo of delay 0 is one copy, on the first
         for ev, fb, filt in {(max(map(abs, n.echo_volume)), abs(n.echo_feedback), n.echo_filter)
-                             for n in song.notes if n.voice in sending}:
+                             for n in song.notes if n.voice in sending and not _sends_at_once(n)}:
             peak = snes_chip.echo_filter_peak(filt)
             loop = fb * peak
             k = TAPS if loop >= 1 else 1
@@ -481,6 +497,95 @@ def _add_echo_copies(song: _Song) -> None:
                 song.instruments.append(itf.ITInstrument(name=f"echo {k} {src.name}"[:25], sample=len(song.samples),
                                                          envelope=src.envelope))
                 song.echo_instrument_of[(key, k)] = len(song.instruments)
+
+
+def _at_once_response(song: _Song, filt, fb: float) -> list[float]:
+    if (filt, fb) not in song.responses:
+        song.responses[(filt, fb)] = snes_chip.echo_response(filt, feedback=fb)
+    return song.responses[(filt, fb)]
+
+
+def _add_at_once_copies(song: _Song) -> None:
+    """For notes sending to an echo of delay 0: a copy of each sample (or
+    pitch-modulation recording) they play as the echo's loop hands it back,
+    every trip summed (snes_chip.echo_response), at the pitch they mostly
+    have (a recording at its own rate, so exactly), each with instruments
+    beside the sample's own, as far as IT's samples and instruments allow.
+    Secret of Mana's Flammie Coming sends every voice to one; left out, its
+    lows came out at half and it sounded bright."""
+    groups = {}
+    for n in song.notes:
+        if _sends_at_once(n) and n.voice in song.echo_channels:
+            what = ("baked",) + song.baked_of[id(n)] if id(n) in song.baked_of else n.brr
+            groups.setdefault((what, n.echo_filter, n.echo_feedback, _at_once_sign(n)), []).append(n)
+    for (what, filt, fb, sign), ns in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+        if song.samples_left <= 0 or song.instruments_left <= 0:
+            break
+        h = _at_once_response(song, filt, fb)
+        if what[0] == "baked":
+            _, baked_ins, key = what
+            recording = song.samples[song.instruments[baked_ins - 1].keyboard[key][1] - 1]
+            pcm = array("h")
+            pcm.frombytes(recording.data)
+            data, fit = snes_chip.echo_coloured(pcm, None, 1.0, filt, feedback=fb)
+            mid = None
+        elif what in song.sample_of:
+            s = song.decoded[what]
+            semis = sorted(round(12 * math.log2(n.pitch / 0x1000)) for n in ns)
+            mid = semis[len(semis) // 2]
+            data, fit = snes_chip.echo_coloured(s.pcm, _loop(s), 2 ** (mid / 12), filt, feedback=fb)
+        else:
+            continue
+        if sign < 0:
+            data = array("h", (max(-32767, -v) for v in data))
+        if what[0] == "baked":
+            song.samples.append(itf.ITSample(name=f"echo 0 of {recording.name}"[:25], filename=f"e0{recording.filename}"[:12],
+                                             data=data.tobytes(), length=len(data), loop=False, c5_speed=recording.c5_speed))
+            where = (("baked", baked_ins), filt, fb, sign)
+            if where not in song.at_once_instrument_of:
+                song.instruments.append(itf.ITInstrument(name=f"echo 0 of pitch-modulated"[:25],
+                                                         keyboard=[(k, 0) for k in range(120)]))
+                song.at_once_instrument_of[where] = len(song.instruments)
+            song.instruments[song.at_once_instrument_of[where] - 1].keyboard[key] = (60, len(song.samples))
+        else:
+            dry = song.samples[song.sample_of[what] - 1]
+            song.samples.append(itf.ITSample(name=f"echo 0 of {what[0]:04X}", filename=f"e0{what[0]:04x}", data=data.tobytes(),
+                                             length=len(data), loop=dry.loop, loop_start=dry.loop_start,
+                                             loop_end=dry.loop_end, c5_speed=dry.c5_speed))
+            for key in sorted({_instrument_key(n) for n in ns if _instrument_key(n) in song.instrument_of}, key=str):
+                if song.instruments_left <= 0:
+                    break
+                src = song.instruments[song.instrument_of[key] - 1]
+                song.instruments.append(itf.ITInstrument(name=f"echo 0 {src.name}"[:25], sample=len(song.samples),
+                                                         envelope=src.envelope))
+                song.at_once_instrument_of[(key, filt, fb, sign)] = len(song.instruments)
+        song.at_once_colour[(what, filt, fb, sign)] = (mid, fit)
+
+
+def _at_once(song: _Song, n) -> tuple[int | None, float]:
+    """(the instrument, the gain over the note's volumes) of a note's delay-0
+    echo copy: its response's gain at the note's pitch over the copy's, and
+    over the factor the copy was scaled down by to fit."""
+    sign = _at_once_sign(n)
+    if id(n) in song.baked_of:
+        baked_ins, key = song.baked_of[id(n)]
+        ins = song.at_once_instrument_of.get((("baked", baked_ins), n.echo_filter, n.echo_feedback, sign))
+        colour = song.at_once_colour.get((("baked", baked_ins, key), n.echo_filter, n.echo_feedback, sign))
+        return (ins, 1 / colour[1]) if ins and colour else (None, 0.0)
+    ins = song.at_once_instrument_of.get((_instrument_key(n), n.echo_filter, n.echo_feedback, sign))
+    colour = song.at_once_colour.get((n.brr, n.echo_filter, n.echo_feedback, sign))
+    if not ins or not colour:
+        return None, 0.0
+    mid, fit = colour
+    s = song.decoded[n.brr]
+    h = _at_once_response(song, n.echo_filter, n.echo_feedback)
+    key = ("at once", n.brr, n.pitch, n.echo_filter, n.echo_feedback)
+    if key not in song.gains_of:
+        song.gains_of[key] = snes_chip.echo_response_gain(s.pcm, _loop(s), n.pitch, h)
+    mid_key = ("at once", n.brr, mid, n.echo_filter, n.echo_feedback)
+    if mid_key not in song.gains_of:
+        song.gains_of[mid_key] = snes_chip.echo_response_gain(s.pcm, _loop(s), round(0x1000 * 2 ** (mid / 12)), h)
+    return ins, (song.gains_of[key] / song.gains_of[mid_key] / fit if song.gains_of[mid_key] else 0.0)
 
 
 def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
@@ -532,6 +637,19 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
                 if _place(song, grid, n, song.echo_channels[n.voice][k - 1], note, echo_ins, shift, gl, gr, inverted,
                           id(n) in song.baked_of):
                     repeats += 1
+        # An echo of delay 0: one copy, on the note's own row, coloured by
+        # every trip round the loop, at the echo volume.
+        elif n.voice in song.echo_channels and _sends_at_once(n):
+            echo_ins, passed = _at_once(song, n)
+            ev = n.echo_volume
+            sides = sorted((abs(n.volume[0]), abs(n.volume[1])))
+            inverted = ev[0] * ev[1] < 0 and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
+            gl, gr = (abs(e) * passed * song.master.past(n.start) for e in ev)
+            if inverted:
+                gl = gr = max(gl, gr)
+            if echo_ins and max(gl, gr) >= QUIET and _place(song, grid, n, song.echo_channels[n.voice][0], note, echo_ins,
+                                                           0, gl, gr, inverted, id(n) in song.baked_of):
+                repeats += 1
     return placed, repeats, baked
 
 
@@ -547,7 +665,12 @@ def _lift(song: _Song) -> None:
     stops at 64."""
     def demand(n):
         dry = max((abs(left) + abs(right)) / 2 for left, right in (n.volume, *((sl, sr) for _, sl, sr in n.swells)))
-        return max(dry, dry * max(map(abs, n.echo_volume)) * song.master.past(n.start)) if _sends(n) else dry
+        if _sends(n):
+            return max(dry, dry * max(map(abs, n.echo_volume)) * song.master.past(n.start))
+        if _sends_at_once(n):
+            peak = snes_chip.response_peak(_at_once_response(song, n.echo_filter, n.echo_feedback))
+            return max(dry, dry * max(map(abs, n.echo_volume)) * song.master.past(n.start) * peak)
+        return dry
     master = song.master.loudest()
     lift = max(max(map(demand, song.notes), default=0) / 64, min(1.0, 32 / master))
     song.lift = song.master.lift = min(lift, max(1.0, 128 / master))

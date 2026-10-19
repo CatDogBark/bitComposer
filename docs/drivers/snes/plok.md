@@ -59,4 +59,6 @@ to hide in.
 
 ## Open
 
-- Uniracers' 3rd Race: 4.2 dB off, at 0.63 of its level.
+- Uniracers' 3rd Race (4.2 dB off, at 0.63 of its level): its loudest voices
+  need IT volume 125 under a master at full, past what the global volume
+  can make up ([known limits](README.md#known-limits)).

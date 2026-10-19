@@ -384,7 +384,12 @@ shared among the voices that send; three stopped Dark World's 1.1 s tail
 at 0.24 s), raised past the master volume (the SNES chip leaves the echo
 out of it, an IT global volume reaches every channel), played from a copy of its sample as the echo hands it back after that many trips round its loop (the filter once a trip: its colour, and its span, which rows alone leave out: Dark World's repeats came 7 samples a trip early and stacked a third brighter), coloured by the echo
 filter (at the pitch its echoing notes mostly have) and scaled by the echo
-volume, the feedback and the filter's gain over the note itself; when the
+volume, the feedback and the filter's gain over the note itself (an echo
+of delay 0 is no echo: its buffer holds a sample, so it is a loop of a
+sample through the filter and the feedback, a tone control on every voice
+that sends, and plays as one copy of each note at its own row, coloured by
+every trip round the loop: Flammie Coming's lows were at half without it);
+when the
 two echo volumes have opposite signs (Mega Man X's widening trick), a
 voice near the middle has its repeats play in surround, one side inverted
 (surround plays centred: a panned voice's echo there landed on the wrong
