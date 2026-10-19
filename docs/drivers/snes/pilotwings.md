@@ -1,0 +1,60 @@
+# Nintendo: Pilotwings'
+
+Nintendo's driver in Pilotwings, named for its game here. It shares only
+0.05 of its code with N-SPC's ([n-spc.md](n-spc.md)), but has a note-length
+table close to EarthBound's N-SPC one (33 66 80 99 against 33 66 7F 99): an
+earlier driver of Nintendo's, or an early N-SPC.
+
+## Games
+
+<!-- generated: games -->
+| Game | Composer (as the tags credit) | Songs (scored) |
+|---|---|---|
+| Pilotwings | Soyo Oka | 21 (21) |
+<!-- end generated -->
+
+## What the driver does
+
+<!-- generated: traits -->
+| Trait | Measured |
+|---|---|
+| Clock | 500 Hz, key-ons anywhere in a tick (21 songs) |
+| Envelopes | ADSR at key-on: 78 % of notes; rewritten as they sound: 0 % (0.0 writes a note) |
+| Pitch writes | 6.9 a note (90 %: 23.4) |
+| Pitch modulation | in 0 of 21 songs |
+| Noise | in 0 of 21 songs |
+| Echo | 64 ms, feedback 0.31 (16 songs); 64 ms, feedback 0.39 (5) |
+| Echo volume | 0.25 (15 songs); 0.42 (5) |
+| Echo sides inverted | in 0 of 21 songs |
+| Echo filter at DC | 1.03 (21 songs) |
+| Master volume | 127 (21 songs) |
+| Density | 589 notes in a song's first minute; a note 0.20 s |
+<!-- end generated -->
+
+- **Clock**: 500 Hz, key-ons anywhere in its ticks, as N-SPC's: modules use
+  100 rows a second.
+- **Envelopes**: ADSR at key-on for most notes, GAIN for the rest, left
+  alone while they sound.
+- **Echo**: 64 ms at 0.31 to 0.39 feedback in every song, through a filter
+  that boosts a little (1.03 at DC); the master full.
+
+## Scores
+
+<!-- generated: scores -->
+| Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
+|---|---|---|---|---|
+| 21 | 0.96 (0.92) | 0.61 (0.83) | 1.02 (1.00-1.05) | 0.99 (0.98) |
+<!-- end generated -->
+
+## The converter
+
+Nothing of its own: the converter as for N-SPC's games.
+
+## For generation
+
+One echo for the whole game, moderate and short; vibrato and slides
+(6.9 pitch writes a note).
+
+## Open
+
+Nothing found yet (the worst song, Bad Points, 1.6 dB off).

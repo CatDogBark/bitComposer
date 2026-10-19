@@ -1,6 +1,7 @@
-# Capcom
+# Capcom: Mega Man X's
 
-Capcom's SNES sound driver.
+Capcom's driver in Mega Man X. Super Ghouls'n Ghosts runs another, sharing
+almost none of its code ([super-ghouls-ghosts.md](super-ghouls-ghosts.md)).
 
 ## Games
 
@@ -45,7 +46,7 @@ Capcom's SNES sound driver.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 35 | 0.94 (0.86) | 0.48 (0.82) | 0.99 (0.97-1.01) | 1.00 (0.98) |
+| 35 | 0.94 (0.86) | 0.49 (0.84) | 0.98 (0.96-1.00) | 1.00 (0.98) |
 <!-- end generated -->
 
 ## The converter

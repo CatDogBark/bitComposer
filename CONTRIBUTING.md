@@ -157,6 +157,7 @@ python3 tools/spc_check.py sweep ~/spc /tmp/next --since /tmp/sweep/results.json
 python3 tools/spc_check.py report /tmp/next/results.jsonl --against /tmp/sweep/results.jsonl   # what moved
 python3 tools/spc_check.py traits ~/spc /tmp/traits.json             # what each song's driver does, per game
 python3 tools/spc_check.py doc ~/spc /tmp/traits.json /tmp/sweep/results.jsonl   # docs/drivers/'s measured tables
+python3 tools/spc_check.py family ~/spc                            # which games' drivers share code
 ```
 
 `docs/drivers/` records every game tested, by console and music driver
@@ -167,7 +168,7 @@ game updates it from a sweep.
 A `drivers.json` beside the game folders (`{"<game folder>": {"driver":
 "<driver file>", "game": "<its name>"}}`) names each game's music driver,
 which groups the report and decides which file in `docs/drivers/` a game
-belongs in. The SPC files and the converted modules
+belongs in. `family` helps choose: it compares the games' driver code. The SPC files and the converted modules
 are the user's and stay out of the repository.
 
 ## Style

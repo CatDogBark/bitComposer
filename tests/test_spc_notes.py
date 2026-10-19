@@ -70,6 +70,16 @@ class Notes(unittest.TestCase):
         found = notes.decode(snap, writes)
         self.assertEqual([(n.voice, n.pmon) for n in found], [(0, False), (1, True), (1, False)])
 
+    def test_keyed_on_as_its_key_off_clears(self):
+        # a driver keying voices off and on in one go and clearing KOFF just after (Factor 5's)
+        snap = snapshot(dsp={0x03: 0x10, 0x13: 0x10})
+        t = int(0.1 * CLOCK)
+        sample = CLOCK // emulate.RATE
+        writes = [Write(t, notes.KOFF, 0x03), Write(t, notes.KON, 0x03),
+                  Write(t + sample // 2, notes.KOFF, 0x02),          # voice 0 let go half a sample later: it sounds
+                  Write(t + 8 * sample, notes.KOFF, 0x00)]           # voice 1 eight samples later: released first
+        self.assertEqual([n.voice for n in notes.decode(snap, writes)], [0])
+
 
 class Tuning(unittest.TestCase):
     def test_a_loop_of_whole_cycles(self):
@@ -101,6 +111,15 @@ class Emulator(unittest.TestCase):
         self.assertEqual([(w.reg, w.value) for w in run.writes], [(notes.KON, 0x01)])
         self.assertAlmostEqual(run.seconds, 0.01, delta=0.001)
         self.assertEqual(len(notes.decode(snap, run.writes)), 1)
+
+    def test_a_key_on_under_key_off_sounds_as_the_snes_chip_says(self):
+        # KOFF, KON, then KOFF cleared at once (sounds) or left set (released before it sounds), against the emulator
+        from test_spc_convert import TINY, tiny
+        for after, sounds in (((0x5C, 0x00),), True), ((), False):
+            snap = tiny(TINY + ((0x5C, 0x01), (0x4C, 0x01)) + after)
+            run = emulate.run(snap, 0.1, audio=True)
+            self.assertEqual(max(map(abs, array("h", run.audio))) > 100, sounds)
+            self.assertEqual(len(notes.decode(snap, run.writes, keyons=run.keyons)), int(sounds))
 
     @unittest.skipUnless(emulate.available() and hasattr(__import__("bitcomposer_emu"), "solos"), "needs emulator 0.3")
     def test_each_voice_alone_from_one_run(self):

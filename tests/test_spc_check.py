@@ -34,6 +34,20 @@ class Measures(unittest.TestCase):
 
 @unittest.skipUnless(emulate.available() and _have_openmpt(), "needs the compiled emulator and libopenmpt")
 class Conversion(unittest.TestCase):
+    def test_a_voice_alone_leaves_out_the_snapshot_s_echo_tail(self):
+        # no note keyed, but the echo buffer (32 ms at 0x8000, echo writes on) holds what played
+        # before the snapshot: the mix plays that tail out, no voice alone does
+        from bitcomposer import spc
+        data = bytearray(tiny(()).raw)
+        for reg, v in ((0x6D, 0x80), (0x7D, 0x02), (0x2C, 0x40), (0x3C, 0x40), (0x0D, 0x40), (0x0F, 0x7F),
+                       (0x0C, 0x7F), (0x1C, 0x7F), (0x6C, 0x00)):
+            data[spc.DSP + reg] = v
+        r = random.Random(2)
+        data[spc.RAM + 0x8000:spc.RAM + 0x8000 + 4096] = bytes(r.randrange(256) for _ in range(4096))
+        snap = spc.read(bytes(data))
+        self.assertGreater(max(map(abs, check.emulated(snap, 0.1))), 1000)
+        self.assertEqual(max(max(map(abs, a)) for a in check.each_alone(snap, 0.1).values()), 0)
+
     def test_a_tiny_driver_measures_as_itself(self):
         # without its echo (a steady tone's repeats stack as the hardware's only by chance on IT's
         # 10 ms rows: docs/SPC-IMPORT.md) and at a volume IT can reach (50 a side is IT volume 50 of
@@ -100,6 +114,60 @@ class DriverRecord(unittest.TestCase):
         self.assertIn("| Clock | 50 Hz, on its ticks (6 songs) |", driver)         # both games, one driver
         self.assertIn("to write", driver)                                         # a new driver's file, to fill in
         self.assertIn("[shared](snes/shared.md)", index)
+
+
+def driver(base: int, body: bytes) -> bytes:
+    """An SPC file whose driver at `base` calls `body` (at base + 0x100) over and over, stopped
+    on body's RET: what it runs is found through the return address on its stack."""
+    from bitcomposer import spc
+    data = bytearray(spc.SIZE)
+    data[:len(spc.MAGIC)] = spc.MAGIC
+    data[0x23] = 27
+    sub = base + 0x100
+    data[spc.RAM + base:spc.RAM + base + 5] = bytes([0x3F, sub & 0xFF, sub >> 8, 0x2F, 0xFB])   # CALL sub; BRA base
+    data[spc.RAM + sub:spc.RAM + sub + len(body) + 1] = body + b"\x6F"                           # ...; RET
+    data[0x25:0x27] = (sub + len(body)).to_bytes(2, "little")
+    data[0x2B] = 0xEF
+    data[spc.RAM + 0x1F0:spc.RAM + 0x1F2] = (base + 3).to_bytes(2, "little")
+    return bytes(data)
+
+
+# sixteen instructions writing the SNES chip in a loop, and another driver's fifteen
+BODY = bytes([0xE8, 0x4C, 0xC4, 0xF2, 0xE8, 0x01, 0xC4, 0xF3, 0x8F, 0x5C, 0xF2, 0x8F, 0x00, 0xF3, 0x3D,
+              0xC8, 0x08, 0xD0, 0xED, 0xDD, 0x5D, 0x1C, 0x7D, 0xBC, 0xFC, 0x8D, 0x10])
+OTHER = bytes([0xCD, 0x07, 0xF5, 0x00, 0x30, 0xD4, 0x20, 0x1D, 0x10, 0xF8, 0xE4, 0x40, 0x9F, 0xCF, 0xEB, 0x41,
+               0xAB, 0x41, 0x6D, 0xEE, 0x0B, 0x42, 0x2D, 0xAE])
+
+
+class Family(unittest.TestCase):
+    def test_a_driver_moved_elsewhere_still_matches_itself(self):
+        from bitcomposer import spc
+        here, moved = spc.read(driver(0x0800, BODY)), spc.read(driver(0x2400, BODY.replace(b"\x4C", b"\x3C")))
+        other = spc.read(driver(0x0800, OTHER))
+        self.assertEqual(len(check.driver_code(here)), 2 + 16 + 1)               # the loop, the body and its RET
+        self.assertEqual(check.shared_code(check.code_runs(check.driver_code(here)), check.code_runs(check.driver_code(moved))), 1.0)
+        self.assertEqual(check.shared_code(check.code_runs(check.driver_code(here)), check.code_runs(check.driver_code(other))), 0.0)
+
+    def test_the_nearest_games_and_their_drivers(self):
+        import contextlib
+        import io
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            for game, base, body in (("one", 0x0800, BODY), ("two", 0x3000, BODY), ("three", 0x0800, OTHER)):
+                os.makedirs(os.path.join(d, game))
+                for i in range(3):
+                    with open(os.path.join(d, game, f"{i}.spc"), "wb") as fh:
+                        fh.write(driver(base + 0x10 * i, body))
+            with open(os.path.join(d, "drivers.json"), "w") as fh:
+                json.dump({"one": "known"}, fh)
+            class Args:
+                spc_root, workers = d, 1
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(check.cmd_family(Args), 0)
+        lines = out.getvalue().splitlines()
+        self.assertIn("two (not in drivers.json): one 1.00 (known), three 0.00 (not in drivers.json)", lines)
 
 
 class Sweeps(unittest.TestCase):
