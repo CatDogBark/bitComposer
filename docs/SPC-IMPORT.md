@@ -319,6 +319,8 @@ only difference that libgme stops at the length in the file's tag.
 
 ### 4. The translator
 
+In stages, with what is decided: `TRANSLATOR.md`.
+
 The SNES chip decoder turns the register log into events (the design,
 above), and the shared translator turns events into musical facts, then
 measurements.
