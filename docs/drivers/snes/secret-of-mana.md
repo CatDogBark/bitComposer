@@ -43,7 +43,7 @@ The driver of Secret of Mana, named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 68 | 0.93 (0.72) | 0.76 (1.43) | 0.97 (0.92-1.03) | 0.99 (0.97) |
+| 68 | 0.93 (0.74) | 0.76 (1.43) | 0.97 (0.92-1.04) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter

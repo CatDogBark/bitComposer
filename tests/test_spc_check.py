@@ -6,6 +6,9 @@ import random
 from array import array
 
 from support import ROOT, os, unittest  # noqa: F401
+
+if importlib.util.find_spec("numpy") is None:                       # the tools' one extra (CONTRIBUTING.md)
+    raise unittest.SkipTest("tools/spc_check.py needs numpy")
 from test_spc_convert import KON0, TINY, _have_openmpt, tiny  # noqa: E402
 from bitcomposer.spc import convert, emulate  # noqa: E402
 
@@ -97,6 +100,49 @@ class DriverRecord(unittest.TestCase):
         self.assertIn("| Clock | 50 Hz, on its ticks (6 songs) |", driver)         # both games, one driver
         self.assertIn("to write", driver)                                         # a new driver's file, to fill in
         self.assertIn("[shared](snes/shared.md)", index)
+
+
+class Sweeps(unittest.TestCase):
+    def rec(self, song, key, gap, tone, driver="d"):
+        return {"game": "g", "song": song, "driver": driver, "key": key, "emu_rms": 900, "contour": 0.95, "gap_db": gap,
+                "level": 1.0, "voices": {"0": {"rms": 900, "tone": tone, "contour": 0.95, "gap_db": gap, "level": 1.0}}}
+
+    def test_what_moved_between_two_sweeps(self):
+        before = [self.rec("same", "k1", 1.0, 0.9), self.rec("fixed", "k2", 3.0, 0.5), self.rec("broken", "k3", 0.5, 0.99)]
+        now = [self.rec("same", "k1", 1.0, 0.9), self.rec("fixed", "k2b", 0.4, 0.98), self.rec("broken", "k3b", 2.5, 0.6)]
+        lines = check.moved(now, before)
+        self.assertIn("2 songs' modules changed, 1 the same", lines[0])
+        better, worse = lines.index("Better (1):"), lines.index("Worse (1):")
+        self.assertIn("g/fixed", lines[better + 1])
+        self.assertIn("g/broken", lines[worse + 1])
+
+    def test_a_smoke_set_takes_each_driver_s_worst(self):
+        results = [self.rec(f"s{i}", None, gap=i / 10, tone=1 - i / 100, driver=d) for d in ("a", "b") for i in range(10)]
+        picked = check.smoke_set(results + [{"game": "g", "song": "failed", "error": "x"}], 4)
+        self.assertEqual(picked, {("g", "s9"), ("g", "s8"), ("g", "failed")})   # the same songs for both drivers here
+
+
+@unittest.skipUnless(emulate.available() and _have_openmpt(), "needs the compiled emulator and libopenmpt")
+class Reuse(unittest.TestCase):
+    def test_a_song_unchanged_is_not_measured_again(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "spc", "g")); os.makedirs(os.path.join(d, "out", "it"))
+            path = os.path.join(d, "spc", "g", "one.spc")
+            with open(path, "wb") as fh:
+                fh.write(tiny().raw)
+            check._init(os.path.join(d, "out"), {}, 1.0)
+            first = check.measure(path)
+            check._init(os.path.join(d, "out"), {}, 1.0, {("g", "one"): first})
+            again = check.measure(path)
+            self.assertTrue(again.get("reused"))
+            self.assertEqual((again["key"], again["voices"]), (first["key"], first["voices"]))
+            quieter = {0x00: 50, 0x01: 50}
+            with open(path, "wb") as fh:
+                fh.write(tiny(tuple((r, quieter.get(r, v)) for r, v in TINY) + KON0).raw)
+            changed = check.measure(path)
+            self.assertFalse(changed.get("reused"))
+            self.assertNotEqual(changed["key"], first["key"])
 
 
 @unittest.skipUnless(emulate.available(), "needs the compiled emulator")
