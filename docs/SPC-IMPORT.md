@@ -276,6 +276,16 @@ install everywhere, and IMPORT says what is missing there.
 The core is checked instruction by instruction against the SingleStepTests
 cases and the gilyon hardware tests before it runs a song.
 
+**Built so far** (`emu/`): the SNES sound CPU, every instruction, passing
+all 254,000 SingleStepTests cases; the sound unit around it (RAM, the I/O
+registers, the three timers kept lazily, the boot ROM) with the SNES chip
+as a register file and every write logged. On real songs from the four
+test games it runs at about 1,000 to 1,180 times real time (285 million
+instructions a second on a Ryzen 7 9800X3D), and its log is identical to
+the Python prototype's: the same writes, the same key-ons at the same
+cycles. Next: the SNES chip's voices, envelopes and echo, which Evermore's
+driver reads back.
+
 ### 4. The translator
 
 The SNES chip decoder turns the register log into events (the design,
