@@ -9,7 +9,8 @@ every root. A beat then keeps its neighbour's chord where that fits it
 nearly as well as its own best (a melody's passing note had split a bar of
 C into C, Csus4, C), and runs of one chord are its span. The key
 is the major or minor profile (Krumhansl and Kessler's) the whole song's
-pitch classes correlate with best."""
+pitch classes (every tonal voice alike, weighted by part they skewed it:
+Locke's G major read as G minor) correlate with best."""
 import math
 from dataclasses import dataclass
 
@@ -52,9 +53,12 @@ def _tonal(song, roles) -> tuple[list, dict]:
     return [p for p in song.notes if p.voice in weight and p.midi is not None], weight
 
 
-def profiles(song, grid, roles) -> list[list[float]]:
-    """Each beat's pitch-class weights."""
+def profiles(song, grid, roles, by_part: bool = True) -> list[list[float]]:
+    """Each beat's pitch-class weights (by_part: weighted by part, for chords;
+    else every tonal voice alike, for the key)."""
     notes, weight = _tonal(song, roles)
+    if not by_part:
+        weight = {v: 1.0 for v in weight}
     n = len(grid.beat_times)
     out = [[0.0] * 12 for _ in range(n)]
     for p in notes:
@@ -115,7 +119,7 @@ def chords(song, grid, roles) -> list[Chord]:
 def key(song, grid, roles) -> tuple[int, str, float]:
     """The key: (tonic pitch class, "major" or "minor", how well its profile correlates)."""
     total = [0.0] * 12
-    for pcs in profiles(song, grid, roles):
+    for pcs in profiles(song, grid, roles, by_part=False):
         for i, x in enumerate(pcs):
             total[i] += x
     best = (0, "major", -1.0)
