@@ -1,6 +1,6 @@
 [package]
 name = "bitcomposer-emu"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 description = "The SNES sound CPU (SPC700) and SNES chip (S-DSP) emulator behind bitComposer's SPC import"

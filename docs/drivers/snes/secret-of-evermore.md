@@ -47,7 +47,7 @@ States), named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 70 | 0.93 (0.52) | 0.63 (1.31) | 0.99 (0.92-1.02) | 0.99 (0.97) |
+| 70 | 0.94 (0.74) | 0.60 (1.20) | 0.99 (0.95-1.02) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter

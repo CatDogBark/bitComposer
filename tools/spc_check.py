@@ -10,8 +10,8 @@ so a problem shows up in the voice it is in.
 
 Usage:
     python3 tools/spc_check.py voice FILE.spc [--seconds 30] [--voices 0,3] [--trace 3] [--bands]
-    python3 tools/spc_check.py sweep SPC_ROOT OUT_DIR [--workers 8] [--seconds 30]
-    python3 tools/spc_check.py report OUT_DIR/results.jsonl
+    python3 tools/spc_check.py sweep SPC_ROOT OUT_DIR [--workers 8] [--seconds 30] [--since OLD] [--smoke OLD]
+    python3 tools/spc_check.py report OUT_DIR/results.jsonl [--against OLD]
     python3 tools/spc_check.py traits SPC_ROOT OUT.json [--workers 8]
     python3 tools/spc_check.py doc SPC_ROOT TRAITS.json RESULTS.jsonl [--docs docs/drivers]
 
@@ -42,7 +42,15 @@ written by hand around them stays. A driver family with no file yet gets one
 to fill in.
 
 A sweep converts every SPC under SPC_ROOT/<game>/ at full length (to catch
-failures and IT's limits) and measures the first --seconds. A drivers.json in
+failures and IT's limits) and measures the first --seconds (or to where the
+tag's fade begins). `--since OLD` reuses OLD's results for songs whose
+snapshot and converted module are byte for byte the same (with the same
+emulator and measures), and `report --against OLD` says what moved: after a
+change to one driver's handling, only that driver's songs are measured again,
+and a refactor that should change nothing reports nothing changed. `--smoke
+OLD` sweeps only each driver's worst songs in OLD (half by tone, half by
+loudness gap, and whatever failed), a check of a minute or so; a full sweep
+still comes before a pull request. A drivers.json in
 SPC_ROOT names each game folder's music driver, the unit a result says the
 most about: {"<game folder>": {"driver": "<driver file, as akao>", "game":
 "<its name>", "composer": "<a fuller credit than the tags'>"}} (game and
@@ -54,7 +62,6 @@ docs/SPC-IMPORT.md records what these measurements found.
 """
 import argparse
 import array
-import cmath
 import ctypes
 import glob
 import json
@@ -66,6 +73,8 @@ import time
 import traceback
 from collections import defaultdict
 from multiprocessing import Pool
+
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -86,10 +95,25 @@ def _s8(b: int) -> int:
 
 # Rendering -----------------------------------------------------------------
 
+def _undithered(m) -> None:
+    """libopenmpt dithers 16-bit output by default, random in the lowest bit,
+    so two renders of one module differed by a few parts in a million; the
+    measures should come out the same every time."""
+    from bitcomposer.player.openmpt import lib
+    L = lib()
+    try:
+        f = L.openmpt_module_ctl_set_integer
+    except AttributeError:                   # a libopenmpt older than 0.5: dithered, then
+        return
+    f.argtypes, f.restype = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int64], ctypes.c_int
+    f(m._mod, b"dither", 0)
+
+
 def render_it(path: str, seconds: float) -> array.array:
-    """A module's first `seconds` as libopenmpt plays it: 32 kHz stereo."""
+    """A module's first `seconds` as libopenmpt plays it: 32 kHz stereo, undithered."""
     from bitcomposer.player.openmpt import Module
     m = Module(path)
+    _undithered(m)
     buf = (ctypes.c_int16 * (2 * RATE))()
     pcm = array.array("h")
     while len(pcm) < 2 * RATE * seconds:
@@ -104,6 +128,19 @@ def emulated(snap, seconds: float, voice: int | None = None) -> array.array:
     """The emulator's output (32 kHz stereo), of one voice alone when given."""
     mute = 0 if voice is None else 0xFF ^ (1 << voice)
     return array.array("h", emulate.run(snap, seconds, audio=True, mute=mute).audio)
+
+
+def each_alone(snap, seconds: float) -> dict:
+    """Each voice's output alone (32 kHz stereo): from one run where the
+    emulator can (0.3: emulate.solos, a fifth of the time), else a muted run
+    for each voice; the same samples either way."""
+    solos = getattr(emulate, "solos", None)
+    if solos is not None:
+        try:
+            return solos(snap, seconds)
+        except emulate.EmulatorMissing:
+            pass
+    return {v: emulated(snap, seconds, v) for v in range(8)}
 
 
 def channels_of(song: dict, voice: int) -> tuple[int, list[int], int]:
@@ -140,60 +177,86 @@ def render_channels(song: dict, keep: set, seconds: float) -> array.array:
 
 
 # Measures ------------------------------------------------------------------
+# numpy for the arithmetic (a song's measures took ~19 s in plain Python and
+# take a fraction of a second); the tools and tests need it, the package not.
+
+def _f(x) -> np.ndarray:
+    """Samples as float64: an array('h') from a render, a list, or an ndarray."""
+    if isinstance(x, np.ndarray):
+        return x.astype(np.float64, copy=False)
+    if isinstance(x, array.array):
+        return np.frombuffer(x, dtype=np.int16).astype(np.float64)
+    return np.asarray(x, dtype=np.float64)
+
 
 def corr(a, b) -> float:
+    a, b = _f(a), _f(b)
     n = min(len(a), len(b))
     if n < 2:
         return 0.0
-    a, b = a[:n], b[:n]
-    ma, mb = sum(a) / n, sum(b) / n
-    num = sum((x - ma) * (y - mb) for x, y in zip(a, b))
-    den = math.sqrt(sum((x - ma) ** 2 for x in a) * sum((y - mb) ** 2 for y in b))
-    return num / den if den else 0.0
+    a, b = a[:n] - a[:n].mean(), b[:n] - b[:n].mean()
+    den = math.sqrt(float(a @ a) * float(b @ b))
+    return float(a @ b) / den if den else 0.0
 
 
 def rms(x) -> float:
-    return math.sqrt(sum(v * v for v in x) / len(x)) if len(x) else 0.0
+    x = _f(x)
+    return math.sqrt(float(x @ x) / len(x)) if len(x) else 0.0
 
 
-def contour(side, w: int = WINDOW) -> list[float]:
+def _windows(side, w: int) -> np.ndarray:
+    """side cut into whole w-sample windows starting every w samples, the last
+    ending before the side does (as range(0, len - w, w) steps)."""
+    x = _f(side)
+    k = max(0, (len(x) - w - 1) // w + 1)
+    return x[:k * w].reshape(k, w)
+
+
+def contour(side, w: int = WINDOW) -> np.ndarray:
     """RMS in w-sample windows, from every sample: a stride lands on the same
     points of a loop whose period it divides (a BRR loop of 8 or 16 samples
     read every fourth sample measured a softened square 4 dB low)."""
-    return [math.sqrt(sum(v * v for v in side[s:s + w]) / w) for s in range(0, len(side) - w, w)]
+    x = _windows(side, w)
+    return np.sqrt((x * x).mean(axis=1)) if len(x) else np.zeros(0)
 
 
 def ac_rms(side, w: int = WINDOW) -> float:
     """RMS with each window's mean taken out: a voice that is only DC (a noise
     voice whose clock never steps) counts as silent."""
-    tot = cnt = 0
-    for s0 in range(0, len(side) - w, w):
-        seg = side[s0:s0 + w:4]
-        m = sum(seg) / len(seg)
-        tot += sum((v - m) ** 2 for v in seg)
-        cnt += len(seg)
-    return math.sqrt(tot / cnt) if cnt else 0.0
+    x = _windows(side, w)[:, ::4]
+    if not x.size:
+        return 0.0
+    x = x - x.mean(axis=1, keepdims=True)
+    return math.sqrt(float((x * x).sum()) / x.size)
 
 
 def active_sides(stereo) -> tuple[int, ...]:
     """The sides the original sounds on: a voice panned hard to one side leaves
     the other silent, and silence correlates with nothing."""
-    a = [ac_rms(stereo[k::2]) for k in (0, 1)]
+    x = _f(stereo)
+    a = [ac_rms(x[k::2]) for k in (0, 1)]
     return tuple(k for k in (0, 1) if a[k] >= max(20.0, 0.05 * max(a)))
 
 
 def gap_db(rc, ic) -> float | None:
     """The median gap in dB between two contours, over the windows where the
     original (rc) sounds."""
-    floor = max(10.0, 0.01 * max(rc, default=0))
-    gaps = sorted(abs(20 * math.log10(max(1.0, b) / a)) for a, b in zip(rc, ic) if a > floor)
-    return gaps[len(gaps) // 2] if gaps else None
+    rc, ic = _f(rc), _f(ic)
+    n = min(len(rc), len(ic))
+    rc, ic = rc[:n], ic[:n]
+    floor = max(10.0, 0.01 * (rc.max() if n else 0.0))
+    on = rc > floor
+    if not on.any():
+        return None
+    gaps = np.sort(np.abs(20 * np.log10(np.maximum(1.0, ic[on]) / rc[on])))
+    return float(gaps[len(gaps) // 2])
 
 
 def compare(ref, it, sides=(0, 1)) -> dict:
     """contour, gap (dB) and level of `it` against `ref` (stereo) over `sides`."""
     if not sides:
         return {"contour": None, "gap_db": None, "level": None}
+    ref, it = _f(ref), _f(it)
     cs, gs = [], []
     for k in sides:
         rc, ic = contour(ref[k::2]), contour(it[k::2])
@@ -206,77 +269,66 @@ def compare(ref, it, sides=(0, 1)) -> dict:
             "level": rms(it) / r if r else None}
 
 
-_WIN = [0.5 - 0.5 * math.cos(2 * math.pi * i / N) for i in range(N)]
-_TWIDDLE = [cmath.exp(-2j * math.pi * k / N) for k in range(N // 2)]
-_REVERSE = [int(f"{i:0{N.bit_length() - 1}b}"[::-1], 2) for i in range(N)]
+_WIN = 0.5 - 0.5 * np.cos(2 * np.pi * np.arange(N) / N)
 
 
-def _fft(x) -> list[complex]:
-    a = [complex(x[_REVERSE[i]]) for i in range(N)]
-    size = 2
-    while size <= N:
-        half, step = size // 2, N // size
-        for start in range(0, N, size):
-            for k in range(half):
-                t = _TWIDDLE[k * step] * a[start + k + half]
-                u = a[start + k]
-                a[start + k], a[start + k + half] = u + t, u - t
-        size *= 2
-    return a
-
-
-def spectrum(side) -> list[float]:
+def spectrum(side) -> np.ndarray:
     """The averaged power spectrum (N/2 bins), a Hann frame every WINDOW samples."""
-    acc = [0.0] * (N // 2)
-    for s in range(0, len(side) - N, WINDOW):
-        sp = _fft([side[s + i] * _WIN[i] for i in range(N)])
-        for k in range(N // 2):
-            acc[k] += abs(sp[k]) ** 2
-    return acc
+    x = _f(side)
+    starts = np.arange(0, max(0, len(x) - N), WINDOW)
+    if not len(starts):
+        return np.zeros(N // 2)
+    frames = x[starts[:, None] + np.arange(N)] * _WIN
+    return (np.abs(np.fft.rfft(frames, axis=1)[:, :N // 2]) ** 2).sum(axis=0)
 
 
 def tone(ref, it, sides=(0, 1), lo_hz: int = 100, hi_hz: int = 12000) -> float | None:
     """The correlation of the averaged log spectra over `sides`: the timbre, whatever its timing."""
     if not sides:
         return None
+    ref, it = _f(ref), _f(it)
     lo, hi = int(lo_hz * N / RATE), int(hi_hz * N / RATE)
-    a, b = [], []
-    for c in sides:
-        a += [math.log10(1e-9 + x) for x in spectrum(ref[c::2])[lo:hi]]
-        b += [math.log10(1e-9 + x) for x in spectrum(it[c::2])[lo:hi]]
+    a = np.concatenate([np.log10(1e-9 + spectrum(ref[c::2])[lo:hi]) for c in sides])
+    b = np.concatenate([np.log10(1e-9 + spectrum(it[c::2])[lo:hi]) for c in sides])
     return corr(a, b)
 
 
 def band_levels(ref, it, side: int) -> list[float]:
     """Per octave in BANDS, the module's amplitude over the original's."""
-    sr, si = spectrum(ref[side::2]), spectrum(it[side::2])
+    sr, si = spectrum(_f(ref)[side::2]), spectrum(_f(it)[side::2])
     out = []
     for lo, hi in BANDS:
         k0, k1 = int(lo * N / RATE), int(hi * N / RATE) + 1
-        e = sum(sr[k0:k1])
-        out.append(math.sqrt(sum(si[k0:k1]) / e) if e else 0.0)
+        e = float(sr[k0:k1].sum())
+        out.append(math.sqrt(float(si[k0:k1].sum()) / e) if e else 0.0)
     return out
 
 
-def echo_split(snap, voice: int, seconds: float, solo=None) -> tuple[list[int], list[int]]:
+def echo_split(snap, voice: int, seconds: float, solo=None) -> tuple[np.ndarray, np.ndarray]:
     """The original's dry sound and echo for a voice, interleaved stereo: its
     own output, tapped, times its volumes and the master volume as the driver
     wrote them, and its solo output less that."""
     run = emulate.run(snap, seconds, taps=1 << voice)
     solo = solo if solo is not None else emulated(snap, seconds, voice)
-    regs = {r: _s8(snap.dsp[r]) for r in (voice * 0x10, voice * 0x10 + 1, MVOLL, MVOLR)}
-    events = sorted((w.cycle // 32, w.reg, _s8(w.value)) for w in run.writes if w.reg in regs)
-    tap, ei, dry, echo = run.tapped[voice], 0, [], []
-    for i in range(len(solo) // 2):
-        while ei < len(events) and events[ei][0] <= i:
-            regs[events[ei][1]] = events[ei][2]
-            ei += 1
-        o = tap[i] if i < len(tap) else 0
-        for side, vreg, mreg in ((0, voice * 0x10, MVOLL), (1, voice * 0x10 + 1, MVOLR)):
-            d = ((o * regs[vreg]) >> 7) * regs[mreg] >> 7
-            dry.append(d)
-            echo.append(solo[2 * i + side] - d)
-    return dry, echo
+    out = np.frombuffer(solo, dtype=np.int16).astype(np.int64) if isinstance(solo, array.array) \
+        else np.asarray(solo, dtype=np.int64)
+    n = len(out) // 2
+    tap = np.zeros(n, dtype=np.int64)
+    t = np.frombuffer(run.tapped[voice], dtype=np.int16)[:n]
+    tap[:len(t)] = t
+
+    def held(reg):
+        """The register's signed value at each sample: a write is seen from its sample on."""
+        times, values = [0], [_s8(snap.dsp[reg])]
+        for w in run.writes:
+            if w.reg == reg:
+                times.append(w.cycle // 32)
+                values.append(_s8(w.value))
+        return np.asarray(values, dtype=np.int64)[np.searchsorted(times, np.arange(n), side="right") - 1]
+    dry = np.empty(2 * n, dtype=np.int64)
+    for side, vreg, mreg in ((0, voice * 0x10, MVOLL), (1, voice * 0x10 + 1, MVOLR)):
+        dry[side::2] = ((tap * held(vreg)) >> 7) * held(mreg) >> 7
+    return dry, out[:2 * n] - dry
 
 
 def echo_settings(snap, writes, end_cycle: int | None = None) -> dict:
@@ -372,43 +424,83 @@ def _trace(snap, song, v, secs, step, ref, it, side, dry, echo):
 
 # sweep ---------------------------------------------------------------------
 
-_OUT, _DRIVERS, _SECONDS = None, {}, 30.0
+_OUT, _DRIVERS, _SECONDS, _SINCE = None, {}, 30.0, {}
+MEASURES = "2026-10-19b"         # bump when the measures change, so a sweep --since does not reuse older numbers
 
 
-def _init(out, drivers, seconds):
-    global _OUT, _DRIVERS, _SECONDS
-    _OUT, _DRIVERS, _SECONDS = out, drivers, seconds
+def _init(out, drivers, seconds, since=None):
+    global _OUT, _DRIVERS, _SECONDS, _SINCE
+    _OUT, _DRIVERS, _SECONDS, _SINCE = out, drivers, seconds, since or {}
+
+
+def window(song: dict, seconds: float) -> dict:
+    """The song cut to the patterns covering its first `seconds` (and one more),
+    for the voice checks: writing a long song's every pattern eight times over
+    costs more than measuring it."""
+    rows = math.ceil(seconds * song["info"]["row_hz"]) + 1
+    per = song["patterns"][0].rows if song["patterns"] else 1     # the song's own, whichever module lays it out
+    n = min(len(song["patterns"]), rows // per + 2)
+    return dict(song, patterns=song["patterns"][:n], orders=list(range(n)))
+
+
+def _key(spc_bytes: bytes, it_path: str, seconds: float) -> str:
+    """What a song's measures depend on: the snapshot, the module the converter
+    wrote, the emulator, the measures, the span measured."""
+    import hashlib
+    import bitcomposer_emu
+    h = hashlib.sha256(spc_bytes)
+    with open(it_path, "rb") as fh:
+        h.update(fh.read())
+    h.update(f"{bitcomposer_emu.__version__} {MEASURES} {seconds}".encode())
+    return h.hexdigest()[:20]
+
+
+MEASURED = ("emu_rms", "contour", "gap_db", "level", "voices")
 
 
 def measure(path: str) -> dict:
-    """One song for a sweep: converted at full length, then its mix and each voice measured."""
+    """One song for a sweep: converted at full length, then its mix and each
+    voice measured over the first seconds (to where a tag's fade begins: the
+    emulator's output does not fade). Reused from a sweep --since when the
+    snapshot and the converted module are the same."""
     game = os.path.basename(os.path.dirname(path))
     rec = {"game": game, "driver": _DRIVERS.get(game, game), "song": os.path.basename(path)[:-4]}
     t0 = time.time()
     try:
-        snap = spc.read(path)
+        with open(path, "rb") as fh:
+            raw = fh.read()
+        snap = spc.read(raw)
         it_path = os.path.join(_OUT, "it", f"{game} - {rec['song']}.it")
-        info = convert.convert(snap, None, it_path)["info"]
+        song = convert.convert(snap, None, it_path)
+        info = song["info"]
         rec.update({k: info.get(k) for k in ("notes", "samples", "instruments", "baked", "bakes", "unbaked",
                                              "repeats", "row_hz", "on_ticks", "seconds", "channels")})
         rec["size"] = os.path.getsize(it_path)
-        secs = min(_SECONDS, info["seconds"])
-        ref = emulated(snap, secs)
-        rec["emu_rms"] = rms(ref)
-        rec.update(compare(ref, render_it(it_path, secs), active_sides(ref)))
-        short = convert.convert(snap, secs + 2)   # small patterns, quick to rewrite per voice
-        rec["voices"] = {}
-        for v in range(8):
-            vref = emulated(snap, secs, v)
-            sides = active_sides(vref)
-            if not sides:
-                continue
-            own, echo, master = channels_of(short, v)
-            vit = render_channels(short, {own, master, *echo}, secs)
-            m = compare(vref, vit, sides)
-            rec["voices"][v] = {"rms": round(rms(vref)), "sides": "".join("LR"[k] for k in sides),
-                                "tone": round(tone(vref, vit, sides), 3),
-                                **{k: (round(x, 3) if x is not None else None) for k, x in m.items()}}
+        unfaded = info["seconds"] - info.get("fade", 0.0)
+        secs = min(_SECONDS, unfaded if unfaded > 1 else info["seconds"])
+        rec["key"] = _key(raw, it_path, secs)
+        old = _SINCE.get((game, rec["song"]))
+        if old and old.get("key") == rec["key"] and "error" not in old:
+            rec.update({k: old[k] for k in MEASURED if k in old})
+            rec["reused"] = True
+        else:
+            ref = emulated(snap, secs)
+            rec["emu_rms"] = rms(ref)
+            rec.update(compare(ref, render_it(it_path, secs), active_sides(ref)))
+            part = window(song, secs)
+            alone = each_alone(snap, secs)
+            rec["voices"] = {}
+            for v in range(8):
+                vref = alone[v]
+                sides = active_sides(vref)
+                if not sides:
+                    continue
+                own, echo, master = channels_of(part, v)
+                vit = render_channels(part, {own, master, *echo}, secs)
+                m = compare(vref, vit, sides)
+                rec["voices"][v] = {"rms": round(rms(vref)), "sides": "".join("LR"[k] for k in sides),
+                                    "tone": round(tone(vref, vit, sides), 3),
+                                    **{k: (round(x, 3) if x is not None else None) for k, x in m.items()}}
     except Exception as e:                       # noqa: BLE001 - a sweep reports every failure and goes on
         rec["error"] = f"{type(e).__name__}: {e}"
         rec["trace"] = traceback.format_exc()[-1500:]
@@ -416,24 +508,60 @@ def measure(path: str) -> dict:
     return rec
 
 
+def _load_results(path: str) -> list[dict]:
+    with open(path) as fh:
+        return [json.loads(line) for line in fh if line.strip()]
+
+
+def _badness(r: dict) -> tuple:
+    """How far off a song is: its worst voice's tone, then its loudness gap."""
+    tones = [x["tone"] for _, x in _voices_that_matter(r)]
+    return (min(tones) if tones else 1.0, -(r.get("gap_db") or 0.0))
+
+
+def smoke_set(results: list[dict], per_driver: int) -> set:
+    """The (game, song)s a quick check runs: each driver's worst, half by tone, half by loudness gap."""
+    picked, by_driver = set(), defaultdict(list)
+    for r in results:
+        if "error" not in r and r.get("contour") is not None:
+            by_driver[r.get("driver", r["game"])].append(r)
+    for rs in by_driver.values():
+        half = max(1, per_driver // 2)
+        for r in sorted(rs, key=_badness)[:half]:
+            picked.add((r["game"], r["song"]))
+        for r in sorted(rs, key=lambda r: -(r.get("gap_db") or 0.0))[:per_driver - half]:
+            picked.add((r["game"], r["song"]))
+    for r in results:
+        if "error" in r:                         # and whatever failed
+            picked.add((r["game"], r["song"]))
+    return picked
+
+
 def cmd_sweep(args) -> int:
     files = sorted(glob.glob(os.path.join(args.spc_root, "*", "*.spc")))
+    if args.smoke:
+        wanted = smoke_set(_load_results(args.smoke), args.per_driver)
+        files = [f for f in files if (os.path.basename(os.path.dirname(f)), os.path.basename(f)[:-4]) in wanted]
     if not files:
         print(f"spc_check: no SPC files under {args.spc_root}/<game>/", file=sys.stderr)
         return 1
     drivers = {k: v["driver"] for k, v in load_manifest(args.spc_root).items()}
+    since = {(r["game"], r["song"]): r for r in _load_results(args.since)} if args.since else {}
     os.makedirs(os.path.join(args.out_dir, "it"), exist_ok=True)
     results = os.path.join(args.out_dir, "results.jsonl")
     t0 = time.time()
-    with Pool(args.workers, initializer=_init, initargs=(args.out_dir, drivers, args.seconds)) as pool, \
+    reused = 0
+    with Pool(args.workers, initializer=_init, initargs=(args.out_dir, drivers, args.seconds, since)) as pool, \
             open(results, "w") as fh:
         for i, rec in enumerate(pool.imap_unordered(measure, files), 1):
+            reused += bool(rec.get("reused"))
             fh.write(json.dumps(rec) + "\n")
             fh.flush()
             if i % 25 == 0 or i == len(files):
                 print(f"{i}/{len(files)} songs, {time.time() - t0:.0f} s", flush=True)
-    print(f"{results}: {len(files)} songs in {time.time() - t0:.0f} s; "
-          f"python3 tools/spc_check.py report {results}")
+    again = f", {reused} unchanged since {args.since} and not measured again" if args.since else ""
+    print(f"{results}: {len(files)} songs in {time.time() - t0:.0f} s{again}; "
+          f"python3 tools/spc_check.py report {results}" + (f" --against {args.since}" if args.since else ""))
     return 0
 
 
@@ -676,8 +804,59 @@ def _voices_that_matter(r):
     return [(int(v), x) for v, x in vs.items() if x["rms"] >= 0.05 * loud and x.get("contour") is not None]
 
 
+def _worst_voice(r: dict) -> tuple:
+    """A song's worst voice: (its tone, its loudness gap), over the voices that matter."""
+    vs = [x for _, x in _voices_that_matter(r)]
+    return (min((x["tone"] for x in vs), default=None), max((x["gap_db"] or 0.0 for x in vs), default=None))
+
+
+def moved(now: list[dict], before: list[dict], top: int = 15) -> list[str]:
+    """What changed between two sweeps of the same songs: the lines a report prints."""
+    then = {(r["game"], r["song"]): r for r in before}
+    same = changed = 0
+    fixed, broke, rows = [], [], []
+    for r in now:
+        b = then.get((r["game"], r["song"]))
+        if b is None:
+            continue
+        if r.get("key") and r.get("key") == b.get("key"):
+            same += 1
+            continue
+        changed += 1
+        if "error" in b and "error" not in r:
+            fixed.append(r)
+        elif "error" in r and "error" not in b:
+            broke.append(r)
+        elif "error" not in r and r.get("contour") is not None and b.get("contour") is not None:
+            (tn, gn), (tb, gb) = _worst_voice(r), _worst_voice(b)
+            deltas = {"gap dB": (r["gap_db"] or 0) - (b["gap_db"] or 0), "level": (r["level"] or 0) - (b["level"] or 0),
+                      "worst voice tone": (tn or 0) - (tb or 0), "worst voice gap dB": (gn or 0) - (gb or 0)}
+            # better is a smaller gap, a level nearer 1, a higher tone
+            score = (-deltas["gap dB"] - deltas["worst voice gap dB"] / 4 + 3 * deltas["worst voice tone"]
+                     - abs((r["level"] or 1) - 1) + abs((b["level"] or 1) - 1))
+            rows.append((score, r, deltas))
+    out = [f"Since then: {changed} songs' modules changed, {same} the same"
+           + ("" if any(r.get("key") for r in before) else " (the earlier sweep kept no keys: every song counts as changed)")]
+    for label, rs in (("Now converting (failed before)", fixed), ("Now failing", broke)):
+        if rs:
+            out.append(f"{label}: " + ", ".join(f"{r['game']}/{r['song']}" for r in rs))
+    def line(score, r, d):
+        moves = ", ".join(f"{k} {v:+.2f}" for k, v in d.items() if abs(v) >= (0.02 if "tone" in k or k == "level" else 0.2))
+        return f"  {r['game']}/{r['song']}: {moves or 'small moves'}"
+    better = [x for x in sorted(rows, key=lambda x: -x[0]) if x[0] > 0.02][:top]
+    worse = [x for x in sorted(rows, key=lambda x: x[0]) if x[0] < -0.02][:top]
+    out.append(f"Better ({sum(1 for x in rows if x[0] > 0.02)}):" + ("" if better else " none"))
+    out += [line(*x) for x in better]
+    out.append(f"Worse ({sum(1 for x in rows if x[0] < -0.02)}):" + ("" if worse else " none"))
+    out += [line(*x) for x in worse]
+    return out
+
+
 def cmd_report(args) -> int:
-    recs = [json.loads(line) for line in open(args.results)]
+    recs = _load_results(args.results)
+    if args.against:
+        print("\n".join(moved(recs, _load_results(args.against), args.top)))
+        print()
     ok = [r for r in recs if "error" not in r]
     failed = [r for r in recs if "error" in r]
     silent = [r for r in ok if r["emu_rms"] < 50 or r.get("contour") is None]
@@ -734,6 +913,9 @@ def main(argv=None) -> int:
     s.add_argument("out_dir")
     s.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     s.add_argument("--seconds", type=float, default=30.0, help="seconds of each song measured")
+    s.add_argument("--since", metavar="RESULTS", help="reuse an earlier sweep's results where nothing changed")
+    s.add_argument("--smoke", metavar="RESULTS", help="only the worst songs of each driver in an earlier sweep")
+    s.add_argument("--per-driver", type=int, default=6, help="songs a driver brings to --smoke")
     d = sub.add_parser("doc", help="the measured parts of docs/drivers/, from traits and a sweep")
     d.add_argument("spc_root")
     d.add_argument("traits")
@@ -746,6 +928,7 @@ def main(argv=None) -> int:
     r = sub.add_parser("report", help="summarise a sweep's results.jsonl")
     r.add_argument("results")
     r.add_argument("--top", type=int, default=15, help="lines in each list")
+    r.add_argument("--against", metavar="RESULTS", help="an earlier sweep: what moved since")
     args = ap.parse_args(argv)
     try:
         return {"voice": cmd_voice, "sweep": cmd_sweep, "report": cmd_report, "traits": cmd_traits,

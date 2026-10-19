@@ -15,11 +15,11 @@ work (interpolation, envelope clock, echo, endings).
 <!-- generated: scores -->
 | Driver | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|---|
-| [Capcom](capcom.md) | 35 | 0.94 (0.61) | 0.48 (0.95) | 0.99 (0.88-1.01) | 1.00 (0.99) |
-| [Square Soft US: Secret of Evermore's](secret-of-evermore.md) | 70 | 0.93 (0.52) | 0.63 (1.31) | 0.99 (0.92-1.02) | 0.99 (0.97) |
-| [Square: AKAO](akao.md) | 79 | 0.98 (0.93) | 0.40 (0.74) | 0.99 (0.95-1.02) | 1.00 (0.99) |
-| [Square: Secret of Mana's](secret-of-mana.md) | 68 | 0.93 (0.72) | 0.76 (1.43) | 0.97 (0.92-1.03) | 0.99 (0.97) |
-| **All** | 252 | 0.95 (0.76) | 0.58 (1.22) | 0.99 (0.93-1.02) | 0.99 (0.98) |
+| [Capcom](capcom.md) | 35 | 0.94 (0.86) | 0.48 (0.82) | 0.99 (0.97-1.01) | 1.00 (0.98) |
+| [Square Soft US: Secret of Evermore's](secret-of-evermore.md) | 70 | 0.94 (0.74) | 0.60 (1.20) | 0.99 (0.95-1.02) | 0.99 (0.97) |
+| [Square: AKAO](akao.md) | 79 | 0.98 (0.93) | 0.40 (0.74) | 0.99 (0.96-1.02) | 1.00 (0.99) |
+| [Square: Secret of Mana's](secret-of-mana.md) | 68 | 0.93 (0.74) | 0.76 (1.43) | 0.97 (0.92-1.04) | 0.99 (0.97) |
+| **All** | 252 | 0.96 (0.81) | 0.56 (1.11) | 0.99 (0.95-1.02) | 0.99 (0.98) |
 <!-- end generated -->
 
 Voice tone is over the voices that carry at least 5 % of their song's

@@ -25,6 +25,11 @@ Python.
    python3 -m unittest discover -s tests -v
    ```
 
+   On a machine with many cores, `python3 tools/run_tests.py` runs the same
+   suite in parallel, each test in a process of its own (`--workers N` for
+   fewer; a module prefix such as `test_spc` for part of it): as long as its
+   longest test rather than all of them added up.
+
    The generator's tests need nothing. The player's (`tests/test_player.py`)
    skip without what CI installs: PySide6-Essentials and jeepney
    (`pip install PySide6-Essentials jeepney`), libopenmpt (`libopenmpt0` on
@@ -135,7 +140,8 @@ a driver run: `cargo run --release --example run_spc -- song.spc 10`.
 
 ### Checking the SPC converter
 
-`tools/spc_check.py` renders a conversion and the emulator's own output and
+`tools/spc_check.py` (it needs numpy, `pip install numpy`, for the arithmetic;
+the package does not) renders a conversion and the emulator's own output and
 compares them, the whole mix and then voice by voice (the emulator can play
 one voice alone): loudness over time, the gap in dB, the level, the tone,
 and each voice's echo against its dry sound. A converter change is judged
@@ -146,6 +152,9 @@ python3 tools/spc_check.py voice song.spc --seconds 30              # one song, 
 python3 tools/spc_check.py voice song.spc --trace 3 --bands         # voice 3 over time; octave levels
 python3 tools/spc_check.py sweep ~/spc /tmp/sweep --workers 12      # every <game>/*.spc under ~/spc
 python3 tools/spc_check.py report /tmp/sweep/results.jsonl          # the summary, by music driver
+python3 tools/spc_check.py sweep ~/spc /tmp/smoke --smoke /tmp/sweep/results.jsonl   # each driver's worst, a minute
+python3 tools/spc_check.py sweep ~/spc /tmp/next --since /tmp/sweep/results.jsonl    # only what changed is measured
+python3 tools/spc_check.py report /tmp/next/results.jsonl --against /tmp/sweep/results.jsonl   # what moved
 python3 tools/spc_check.py traits ~/spc /tmp/traits.json             # what each song's driver does, per game
 python3 tools/spc_check.py doc ~/spc /tmp/traits.json /tmp/sweep/results.jsonl   # docs/drivers/'s measured tables
 ```
