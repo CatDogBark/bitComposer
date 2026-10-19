@@ -326,8 +326,9 @@ These change how every note sounds, not what notes are played.
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
   own music driver and logs what it tells the DSP; a translator turns the
   log into notes, roles and measured habits. Two outputs: an SPC-to-IT
-  conversion, one to one (the translator's proof), and a pack in the SOUND
-  picker. Getting and unpacking the files is the user's business; the repo
+  conversion, one to one (the translator's proof), and a pack the generator
+  composes with, chosen in a PACKS panel of its own (beside MIX; imported
+  packs stay out of SOUND's random draw). Getting and unpacking the files is the user's business; the repo
   ships the code, never the samples, and imported packs stay on the
   user's machine. Built on the pack file format (Your own packs, above).
   Supersedes the per-game role map once planned here: the emulated notes

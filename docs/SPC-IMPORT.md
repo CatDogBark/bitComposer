@@ -149,14 +149,39 @@ The register log becomes musical events, then measurements:
 - **A pack.** The soundtrack's samples as the pack's voices (envelopes
   baked and loops kept, the way `samples.dsp` finishes the SNES voices),
   the roles from the translator with the user's corrections, the habits
-  measured over every song. It appears in the SOUND picker beside the
-  built-in packs, and the generator composes new songs with it.
+  measured over every song. The generator composes new songs with it,
+  as with any built-in pack; it is chosen in the player's PACKS panel
+  (below), kept apart from the built-in sounds.
 
-### 6. The player
+### 6. The player: PACKS
 
-An IMPORT entry: choose `.spc` files or a folder, a progress screen
-while songs are emulated, then the role picker (hear each sample, see
-what the translator decided and why, change it), then the new SOUND.
+Imported packs get their own place, apart from the built-in sounds and
+SET (decided 2026-10-18):
+
+- **A PACKS tile** after MIX in the tool row (AUTO, SET, MIX, PACKS),
+  opening a panel inside the window the way SET and MIX do. Room for it
+  comes from the GENERATE button, which can shorten from
+  "GENERATE NEW TRACK" to "GENERATE"; checked at the narrowest screens
+  the window is checked at.
+- **The list.** One row per imported pack: its name, the game (from the
+  files' ID666 tags), how many songs it was measured from, and USE,
+  ROLES (the role picker again) and DELETE.
+- **IMPORT** at the bottom of the panel: choose `.spc` files or a folder;
+  a progress screen over the window while each song is emulated, the way
+  the update screen shows its work ("emulating song 3 of 24"); then the
+  role picker (hear each sample, see what the translator decided and why,
+  change it); then the pack joins the list.
+- **USE** makes the pack the sound for GENERATE and auto-generate. One
+  sound is in use at a time: SET's SOUND row then reads
+  "imported: <name>", and choosing a built-in sound there switches back.
+- **Not in random.** SOUND's random draw never picks an imported pack
+  (decided 2026-10-18; an "include in random" switch can come later if
+  it is missed).
+- **Songs** from an imported pack are songs like any other: the mixer,
+  KEEP and the ten-song prune apply. The song message names the pack,
+  and a song keeps playing after its pack is deleted, since its samples
+  are inside the `.it` file.
+
 Imported packs live in the user's settings folder.
 
 ## Checking each step
@@ -191,7 +216,7 @@ Each step is its own branch and pull request, shippable on its own:
 3. The emulator, tested against reference renders. The long one.
 4. The translator and SPC to IT, which proves 3.
 5. The pack from a soundtrack, checked against the built-in packs.
-6. The player's IMPORT and role picker.
+6. The player's PACKS panel: the list, IMPORT, the role picker, USE.
 
 ## Risks
 
