@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 from .emulate import CLOCK, RATE
 
-KON, KOFF, FLG, EON, NON = 0x4C, 0x5C, 0x6C, 0x4D, 0x3D
+KON, KOFF, FLG, EON, NON, PMON = 0x4C, 0x5C, 0x6C, 0x4D, 0x3D, 0x2D
 MVOLL, MVOLR, EVOLL, EVOLR, EFB, EDL = 0x0C, 0x1C, 0x2C, 0x3C, 0x0D, 0x7D
 FIR = (0x0F, 0x1F, 0x2F, 0x3F, 0x4F, 0x5F, 0x6F, 0x7F)
 KEY_ON_DELAY = 6 / RATE
@@ -48,6 +48,7 @@ class Note:
     bends: list[tuple[float, int]] = field(default_factory=list)       # (time, pitch) while it sounds
     swells: list[tuple[float, int, int]] = field(default_factory=list)  # (time, left, right)
     envelopes: list[tuple[float, int, int, int]] = field(default_factory=list)   # (time, ADSR1, ADSR2, GAIN)
+    pmon: bool = False               # the voice below bent its pitch (PMON) at some point while it sounded
 
     @property
     def length(self) -> float | None:
@@ -89,7 +90,7 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
                              noise_rate=regs[FLG] & 0x1F, echo_delay=(regs[EDL] & 0x0F) * 0.016,
                              echo_volume=(_s8(regs[EVOLL]) / 128, _s8(regs[EVOLR]) / 128),
                              echo_feedback=_s8(regs[EFB]) / 128, echo_filter=tuple(_s8(regs[a]) for a in FIR),
-                             echo_writes=not regs[FLG] & 0x20)
+                             echo_writes=not regs[FLG] & 0x20, pmon=v > 0 and bool(regs[PMON] >> v & 1))
                     sounding[v] = n
                     notes.append(n)
             continue
@@ -103,6 +104,9 @@ def decode(snapshot, writes, until: float | None = None, keyons=None) -> list[No
         elif reg == FLG and val & 0x80:
             for v in list(sounding):
                 close(v, t)
+        elif reg == PMON:
+            for v, n in sounding.items():
+                n.pmon |= v > 0 and bool(val >> v & 1)
         elif reg < 0x80 and reg & 0x0F in (2, 3):
             n = sounding.get(reg >> 4)
             if n is not None:

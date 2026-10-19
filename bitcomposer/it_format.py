@@ -44,6 +44,7 @@ class ITInstrument:
     """
     name: str = ""
     sample: int = 1                  # 1-based: every note of the keyboard plays this sample
+    keyboard: list | None = None     # or per note 0-119, the (note, sample) it plays instead
     envelope: list = field(default_factory=list)
     sustain: int | None = None
     nna: int = 0                     # new note action: 0 cut, 1 continue, 2 note off, 3 fade
@@ -450,8 +451,8 @@ def _instrument_header(ins: "ITInstrument") -> bytes:
     h.extend(ins.name[:25].ljust(26, "\0").encode("ascii", errors="replace")[:26])
     h.extend(bytes([0, 0, 0, 0]))                           # filter cutoff, resonance, MIDI channel, program
     h.extend(struct.pack("<H", 0))                          # MIDI bank
-    for note in range(120):                                 # the keyboard: every note, this sample
-        h.extend(bytes([note, ins.sample]))
+    for note in range(120):                                 # the keyboard: every note, this sample, unless mapped
+        h.extend(bytes(ins.keyboard[note] if ins.keyboard else (note, ins.sample)))
     h.extend(_envelope(ins.envelope, ins.sustain))          # volume
     h.extend(_envelope([]))                                 # panning
     h.extend(_envelope([]))                                 # pitch

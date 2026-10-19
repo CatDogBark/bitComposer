@@ -126,7 +126,8 @@ def main(argv=None) -> int:
         print(f"{args.to_it}: {i['notes']} notes in {i['seconds']:.1f} s, {i['samples']} samples, "
               f"{i['instruments']} instruments; rows at {i['row_hz']:.1f} a second "
               f"({'the driver clock' if i['on_ticks'] else 'the finest grid'}; key-ons {i['aligned']:.2f} aligned with a "
-              f"{i['tick_hz']:.1f} Hz timer)")
+              f"{i['tick_hz']:.1f} Hz timer)" + (f"; {i['baked']} pitch-modulated notes kept as played, in {i['bakes']} "
+              f"recordings" if i['baked'] else "") + (f"; {i['unbaked']} more did not fit" if i['unbaked'] else ""))
         return 0
     if args.notes is not None:
         from .emulate import EmulatorMissing

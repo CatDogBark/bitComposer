@@ -19,7 +19,7 @@ mod python {
     use pyo3::prelude::*;
     use pyo3::types::PyBytes;
 
-    /// run(data, seconds, audio=False) -> (writes, keyons, audio, cycles, instructions)
+    /// run(data, seconds, audio=False, mute=0, taps=0) -> (writes, keyons, audio, tapped, cycles, instructions)
     ///
     /// Run an SPC snapshot's own driver for `seconds` of song. `writes` is
     /// every write it made to the SNES chip, 10 bytes each: the CPU cycle
@@ -27,16 +27,21 @@ mod python {
     /// chip acted on it, 14 bytes each: the sample count (u64), the voice,
     /// the directory entry, and the start and loop addresses it read (u16).
     /// All little-endian. `audio` is the mixed output (32 kHz, stereo,
-    /// 16-bit) when asked for, else None.
+    /// 16-bit) when asked for, else None; `mute` leaves voices out of it
+    /// (bit n, voice n). `tapped` is, for the voices in `taps`, each one's
+    /// own output (after its envelope, before its volumes), 16-bit, the
+    /// tapped voices interleaved in voice order; None when `taps` is 0.
     #[pyfunction]
-    #[pyo3(signature = (data, seconds, audio = false))]
+    #[pyo3(signature = (data, seconds, audio = false, mute = 0, taps = 0))]
     #[allow(clippy::type_complexity)]
-    fn run<'py>(py: Python<'py>, data: &[u8], seconds: f64, audio: bool)
-        -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>, Option<Bound<'py, PyBytes>>, u64, u64)> {
+    fn run<'py>(py: Python<'py>, data: &[u8], seconds: f64, audio: bool, mute: u8, taps: u8)
+        -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>, Option<Bound<'py, PyBytes>>, Option<Bound<'py, PyBytes>>, u64, u64)> {
         let (mut cpu, mut bus) = spc::load(data).map_err(PyValueError::new_err)?;
         if audio {
             bus.dsp.audio = Some(Vec::new());
         }
+        bus.dsp.mute = mute;
+        bus.dsp.taps = taps;
         let budget = (spc::CLOCK as f64 * seconds.max(0.0)) as u64;
         let n = py.allow_threads(|| spc::run(&mut cpu, &mut bus, budget));
         let mut out = Vec::with_capacity(bus.log.len() * 10);
@@ -53,14 +58,16 @@ mod python {
             kons.extend_from_slice(&k.start.to_le_bytes());
             kons.extend_from_slice(&k.loop_addr.to_le_bytes());
         }
-        let pcm = bus.dsp.audio.as_ref().map(|a| {
+        let bytes = |a: &[i16]| {
             let mut b = Vec::with_capacity(a.len() * 2);
             for s in a {
                 b.extend_from_slice(&s.to_le_bytes());
             }
             PyBytes::new(py, &b)
-        });
-        Ok((PyBytes::new(py, &out), PyBytes::new(py, &kons), pcm, cpu.cycles, n))
+        };
+        let pcm = bus.dsp.audio.as_deref().map(bytes);
+        let tapped = (taps != 0).then(|| bytes(&bus.dsp.tapped));
+        Ok((PyBytes::new(py, &out), PyBytes::new(py, &kons), pcm, tapped, cpu.cycles, n))
     }
 
     #[pymodule]
