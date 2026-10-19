@@ -359,8 +359,11 @@ fade-out) on a channel of their own. Noise plays the SNES chip's own
 noise, its 15-bit shift register rendered at the output rate for each
 noise clock a song uses, each value held as the hardware holds it, each
 note starting somewhere else in it. The echo as repeats: each note
-sending to the echo again on a channel of its own, an echo delay late, up
-to three times, played from a copy of its sample coloured by the echo
+sending to the echo again on a channel of its own, an echo delay late,
+until the repeats fall to -30 dB (as many as IT's 64 channels allow,
+shared among the voices that send; three stopped Dark World's 1.1 s tail
+at 0.24 s), raised past the master volume (the SNES chip leaves the echo
+out of it, an IT global volume reaches every channel), played from a copy of its sample coloured by the echo
 filter (at the pitch its echoing notes mostly have) and scaled by the echo
 volume, the feedback and the filter's gain over the note itself; when the
 two echo volumes have opposite signs (Mega Man X's widening trick), a

@@ -245,6 +245,21 @@ class Convert(unittest.TestCase):
             m, pcm = render(path, 0.5)
             self.assertGreater(max(abs(v) for v in pcm), 1000)
 
+    def test_the_echo_rings_out_and_stays_out_of_the_master_volume(self):
+        # master volume at half, echo volume 0.5 with feedback 0.75: the hardware leaves the echo
+        # out of the master volume, so the first repeat sounds as loud as the note (0.5 x 2), and
+        # repeats go on until they fall to -30 dB: 0.5 x 0.75^(k-1) >= 1/32 for k up to 10
+        voice = ((0x00, 50), (0x01, 50), (0x0C, 0x40), (0x1C, 0x40), (0x0D, 0x60))
+        song = convert.convert(tiny(TINY + voice + KON0), 3.0)
+        info = song["info"]
+        rows = [row for pat in song["patterns"] for row in pat.data]
+        master = [row[info["channels"] - 1] for row in rows if row[info["channels"] - 1].effect == convert.FX_SET_GLOBAL_VOLUME]
+        self.assertEqual(master[0].effect_val, 0x40)                      # the driver sets the master volume at the start
+        self.assertIn(len(info["echo_channels"][0]), (10, 11))
+        dry = next(row[0] for row in rows if 0 < row[0].note < 120)
+        first = next(row[info["echo_channels"][0][0]] for row in rows if 0 < row[info["echo_channels"][0][0]].note < 120)
+        self.assertAlmostEqual(first.volume / dry.volume, 1.0, delta=0.1)
+
     def test_a_note_shorter_than_a_row(self):
         # keyed on, its GAIN rewritten and keyed off within a millisecond: it takes its row, the cut the next
         snap = tiny(TINY + KON0 + ((0x07, 0x40), (0x5C, 0x01)))

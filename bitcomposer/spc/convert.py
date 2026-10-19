@@ -13,6 +13,12 @@ original. The pieces:
   a tick that their key-ons land anywhere in it (FFVI's, Secret of Mana's),
   or that tick faster than IT can (Mega Man X's 125 Hz), get IT's finest
   grid instead, 100 rows a second: every note within 5 ms of its time.
+  (Echo repeats of a held, looped tone stack in phase on the SNES chip, its
+  delay exact; on a 10 ms grid, and with each player rounding its ticks to
+  whole samples at its own rate, they stack or cancel by chance, so a held
+  tone's echo can come out stronger or weaker than the original's, right
+  on average. Choosing the row rate to fit the delay was tried and only
+  worked where one player's rounding happened to agree.)
 - One IT sample per SNES sample, its C5Speed set so the song's notes fall on
   whole semitones; what is left (a few cents) and every pitch write while a
   note sounds (vibrato, slides) become fine pitch slides, row by row. Each is
@@ -32,7 +38,9 @@ original. The pieces:
   the writes and carried in the volume column row by row (with one tick a
   row, as fine as an IT envelope), and is cut where it falls silent.
 - The echo as repeats: each echoing note again on a channel of its own, a
-  delay (EDL x 16 ms) late, up to three times, the k-th at the echo volume
+  delay (EDL x 16 ms) late, until the repeats fall below -30 dB (as far as
+  IT's 64 channels allow, shared among the voices that send), the k-th at
+  the echo volume
   times the feedback to the k-1 and the filter's gain through k passes,
   measured over the note's own spectrum (echo_gains), left and right as
   the echo volumes have them (in surround when their signs differ and the
@@ -54,6 +62,8 @@ original. The pieces:
 The echo's colour is right at one pitch per sample, its gain at every pitch.
 The files stay the user's: a converted song holds the game's samples.
 """
+import bisect
+import cmath
 import math
 import struct
 from array import array
@@ -78,7 +88,9 @@ RELEASE = 256                         # samples a released SNES voice takes to f
 # within 0.4 dB of it. Without it, bright samples played low came out up to 3 times too
 # strong above their own top (Secret of Evermore's wind), and every instrument too bright.
 GAUSS_RESPONSE = (0.615783, 0.199155, -0.010345, 0.004865, -0.002367)
-TAPS = 3                              # echo repeats carried over, at most
+TAPS = 24                             # echo repeats a voice can have, at most
+QUIET = 1 / 32                        # an echo repeat quieter than this against its note (-30 dB) is left out
+MAX_CHANNELS = 64                     # an IT module's channels
 FX_SET_GLOBAL_VOLUME = 22             # Vxx
 SURROUND_ON, SURROUND_OFF = 0x91, 0x90   # S91 / S90: one side phase-inverted, centred
 CENTRED = 0.7                         # a voice this close to the middle (quieter side / louder) can play centred
@@ -514,10 +526,26 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
             for n in group:
                 baked_of[id(n)] = (baked_ins, key)
 
-    # Channels: the eight voices; for each voice up to TAPS echo repeats; the master volume last.
-    voices_echo = any(n.echo and n.echo_writes and n.echo_delay > 0 for n in found)
-    taps = TAPS if voices_echo else 0
-    channels = 8 + 8 * taps + 1
+    # Channels: the eight voices; for each voice that sends to the echo, its
+    # repeats, as many as the echo needs to fall to QUIET (a strong feedback
+    # rings for seconds: FFVI's Dark World, 0.78 at 80 ms, for about 1.1 s)
+    # within IT's 64 channels; the master volume last.
+    sending = sorted({n.voice for n in found if n.echo and n.echo_writes and n.echo_delay > 0})
+    taps = 0
+    if sending:
+        needed = 1
+        for ev, fb, filt in {(max(map(abs, n.echo_volume)), abs(n.echo_feedback), n.echo_filter)
+                             for n in found if n.voice in sending}:
+            peak = max(abs(sum(c / 128 * cmath.exp(-2j * math.pi * f / 64 * k) for k, c in enumerate(filt))) for f in range(33))
+            loop = fb * peak
+            k = TAPS if loop >= 1 else 1
+            if loop < 1:
+                while k < TAPS and ev * peak * loop ** (k - 1) >= QUIET:
+                    k += 1
+            needed = max(needed, k)
+        taps = max(1, min(TAPS, needed, (MAX_CHANNELS - 9) // len(sending)))
+    echo_channels = {v: [8 + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
+    channels = 8 + len(sending) * taps + 1
     master_ch = channels - 1
     total_rows = int(run.seconds * row_hz) + 2
     n_patterns = min(200, math.ceil(total_rows / ROWS_PER_PATTERN))
@@ -651,6 +679,21 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
     def repeat_gains(n) -> list[float]:
         return gains_at("noise" if n.noise else n.brr, round(12 * math.log2(max(1, n.pitch) / 0x1000)), n.echo_filter)
 
+    # The master volume (volume / 128, as the voices') is the IT global volume. The
+    # SNES chip leaves the echo out of it (output = dry x master + echo x echo
+    # volume), and a global volume reaches every channel, so the repeats are
+    # raised by as much as the master volume lowers them: at FFVI's 63 the echo
+    # came out at half its strength.
+    mv = notes_mod.master_volume(snap, run.writes)
+    start_level = max(1, min(128, max(abs(mv[0][1]), abs(mv[0][2]))))
+    mv_times = [t for t, _, _ in mv]
+
+    def past_master(t: float) -> float:
+        """What a repeat at time t is raised by: 128 over the master volume then
+        (at least 8, so an echo under a silenced master cannot blow up)."""
+        _, ml, mr = mv[max(0, bisect.bisect_right(mv_times, t) - 1)]
+        return 128 / max(8, min(128, max(abs(ml), abs(mr))))
+
     placed = repeats = baked = 0
     for n in sorted(found, key=lambda n: (n.start, n.voice)):
         if id(n) in baked_of:
@@ -670,7 +713,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         # volume times the filter's gain through k passes and the feedback
         # to the k-1, played from the coloured copy of the sample where
         # there is one (which holds one pass of the filter at its pitch).
-        if taps and n.echo and n.echo_writes and n.echo_delay > 0:
+        if n.voice in echo_channels and n.echo and n.echo_writes and n.echo_delay > 0:
             gains, fb = repeat_gains(n), abs(n.echo_feedback)
             echo_ins, colour = echo_instrument_of.get(key_of(n)), coloured_at.get(n.brr)
             if id(n) in baked_of:
@@ -686,20 +729,18 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
             sides = sorted((abs(n.volume[0]), abs(n.volume[1])))
             inverted = ev[0] * ev[1] < 0 and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
             for k in range(1, taps + 1):
-                scale = passes[k - 1] * fb ** (k - 1)
+                scale = passes[k - 1] * fb ** (k - 1) * past_master(n.start + k * n.echo_delay)
                 gl, gr = abs(ev[0]) * scale, abs(ev[1]) * scale
                 if inverted:
                     gl = gr = max(gl, gr)
-                if max(gl, gr) < 1 / 32:
+                if max(gl, gr) < QUIET:
                     break
                 shift = round(k * n.echo_delay * row_hz)
-                if place(n, 8 + n.voice * taps + k - 1, note, echo_ins, shift, gl, gr, inverted, id(n) in baked_of):
+                if place(n, echo_channels[n.voice][k - 1], note, echo_ins, shift, gl, gr, inverted, id(n) in baked_of):
                     repeats += 1
 
-    # The master volume (volume / 128, as the voices') as IT global volume:
-    # the song's start in the header, then each change (fades, mostly).
-    mv = notes_mod.master_volume(snap, run.writes)
-    level = start_level = max(1, min(128, max(abs(mv[0][1]), abs(mv[0][2]))))
+    # The master volume's changes (fades, mostly) on the last channel.
+    level = start_level
     for t_mv, ml, mr in mv[1:]:
         gv = max(0, min(128, max(abs(ml), abs(mr))))
         c = cell(round(t_mv * row_hz), master_ch)
@@ -719,7 +760,8 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
     song = {"name": (t.title or "SPC")[:25], "samples": samples, "patterns": patterns, "global_volume": start_level,
             "orders": list(range(n_patterns)), "tempo": tempo, "speed": 1, "instruments": instruments,
             "message": message,
-            "info": {"notes": placed, "repeats": repeats, "channels": channels, "baked": baked, "unbaked": unbaked,
+            "info": {"notes": placed, "repeats": repeats, "channels": channels, "echo_channels": echo_channels,
+                     "baked": baked, "unbaked": unbaked,
                      "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": hz, "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
                      "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
     if path:
