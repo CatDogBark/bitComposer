@@ -46,7 +46,7 @@ Square's sound driver, known as AKAO.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 79 | 0.98 (0.93) | 0.40 (0.74) | 0.99 (0.96-1.02) | 1.00 (0.99) |
+| 79 | 0.98 (0.95) | 0.38 (0.66) | 0.99 (0.96-1.02) | 1.00 (0.99) |
 <!-- end generated -->
 
 ## The converter

@@ -47,7 +47,7 @@ States), named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 70 | 0.94 (0.74) | 0.60 (1.20) | 0.99 (0.95-1.02) | 0.99 (0.97) |
+| 70 | 0.96 (0.82) | 0.54 (1.12) | 1.00 (0.96-1.03) | 0.99 (0.98) |
 <!-- end generated -->
 
 ## The converter
@@ -59,7 +59,12 @@ their steps on the SNES chip's shared rate counter (counted from each note's
 start, it drifted a step on most switches); samples softened as the SNES
 chip's Gaussian interpolation softens them (the wind was three times too
 strong above its own top). The low tenth percentile of contour is the
-steady beds, whose gaps are small.
+steady beds, whose gaps are small. Single voices measured at 0.2 to 0.3 of
+their level were two things: held notes the driver pans as they sound,
+whose pan the module now follows (The Professor's Room, Pirates of
+Crustacia, The Seashore), and voices measured alone with the echo the
+snapshot held of what played before it (Bugmuck Tar Pits, Dark Forest,
+Underground Path), which the measuring now leaves out.
 
 ## For generation
 
@@ -70,9 +75,5 @@ registers) give the echo off in 47 of 72; in play it is on in 60
 
 ## Open
 
-- Single voices at 0.2 to 0.3 of their level, 20 to 58 dB off over time,
-  though their tone is right: Bugmuck Tar Pits (voice 3), The Professor's
-  Room (2), Pirates of Crustacia (5), The Seashore (1), Dark Forest (1, 7),
-  Underground Path (5).
 - A hi-hat played faster than the output rate (Regal Castle, voice 2) loses
   its aliasing ([known limits](README.md#known-limits)).

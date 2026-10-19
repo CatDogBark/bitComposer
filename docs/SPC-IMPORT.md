@@ -318,7 +318,12 @@ measurements.
 hands back every SNES chip write. `bitcomposer/spc/notes.py`, the SNES
 chip decoder, replays them into notes: the voice, the sample, the pitch,
 the volume and envelope at key-on, the bends and swells while it sounds,
-and its end (key-off, the voice's next key-on, or the soft reset).
+and its end (key-off, the voice's next key-on, or the soft reset). A
+key-on while the voice's KOFF bit is still set counts if KOFF clears before
+the SNES chip's next poll, as the hardware has it: Factor 5's driver keys
+voices off and on in one go and clears KOFF just after, and every Super
+Turrican 2 song converted silent until then. A note keyed at pitch 0 takes
+the pitch written just after (EarthBound sweeps up from 0).
 `bitcomposer/spc/tuning.py` measures each sample's own pitch (a loop's
 whole cycles; otherwise autocorrelation past the lag where the wave has
 moved on from itself, the peak placed between whole lags), so a note has
@@ -335,7 +340,10 @@ song. One IT sample
 per sample played, found by the addresses the SNES chip read as it keyed
 each voice on (Secret of Evermore's driver writes a voice's directory
 entry just before keying it; its snapshot's directory is placeholders), its
-C5Speed set so the notes fall on whole semitones, and filtered as the
+C5Speed set so the notes fall on whole semitones (and whole octaves off
+where that brings more of them onto IT's keys, 1-119: a cell cannot write
+C-0, and DKC2's bass, five octaves under its sample's rate, fell silent in
+stretches), and filtered as the
 SNES chip's Gaussian interpolation colours it (a lowpass in the sample's
 own terms, -4 dB at a quarter of its rate and -15 dB at the top, where an
 IT player interpolates almost ideally); one instrument per sample and
@@ -355,9 +363,15 @@ the original's, 1.70 on the counter, 0.95 with the interpolation's
 softness in the samples too). Volumes side for
 side: the SNES chip sets each side's level on its own, an IT player pans
 linearly (a centred note at half its volume each side), so a note's IT
-volume is its two sides' sum and its pan the right side's share; the SNES
-chip's master volume is the IT global volume, its changes (a driver's
-fade-out) on a channel of their own; the song runs as an SPC player plays
+volume is its two sides' sum and its pan the right side's share (followed
+row by row where the driver moves it while the note sounds: EarthBound
+pans held notes slowly from side to side); the SNES chip's master volume is
+the IT global volume, its changes (a driver's fade-out) on a channel of
+their own, and the two traded where one has room, since a note's loudness
+is their product and both are whole numbers: the channels up and the global
+volume down as far as the loudest voice allows (IT's volumes are coarse at
+the bottom: EarthBound's quiet voices rounded to silence), or the other way
+where voices pass IT's 64 under a low master (DKC2's 123 under 60); the song runs as an SPC player plays
 it, the tag's length and then its fade, and the module ends on its last
 row (rounded up to a whole pattern, held notes rang on past the end with
 their echo stacked, Dark World twice as loud). Noise plays the SNES chip's own
@@ -385,9 +399,11 @@ recording, the longest, on the keyboard of an instrument of recordings.
 10 of FFVI's 82 songs and 8 of Mana's 69 use it, none of Evermore's or
 Mega Man X's; the most recordings any of them needs is 28 (FFVI's New
 Continent). Rows are the driver's tick when its key-ons land on a running
-timer IT can run (Evermore's 50 Hz), else IT's finest grid, 100 a second
-(FFVI's and Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz
-is past IT's 102).
+timer IT can run, and keep pace with through the song (Evermore's 50 Hz,
+DKC2's 80), else IT's finest grid, 100 a second (FFVI's and Mana's drivers
+key on anywhere in a tick; Mega Man X's 125 Hz is past IT's 102; IT's tempo
+comes in steps of 0.4 rows a second, and Factor 5's 62.5 Hz on 62.4 rows
+fell a tenth of a second behind over a song).
 
 `drivers/` records every game tested so far by music driver (a file per
 driver family), with the latest scores and what each driver does. Measured against the
@@ -409,7 +425,10 @@ the emulator's -0.01); recorded, it is the hiss it should be (0.88). An
 echo copied at full range is worse than none where the filter passes
 little bass (Spark Mandrill 0.86 against 0.93), which is why the repeats
 are coloured: they then match the original's band levels without adding
-bass.
+bass. Twenty more games (862 songs, twelve more drivers) found six more of the
+SNES chip's ways that the converter now carries, listed with the driver
+that showed each in `drivers/snes/README.md`; over all 1108 songs scored,
+the median gap is 0.46 dB, 1.00 at the 90th percentile.
 
 For the SNES chip:
 

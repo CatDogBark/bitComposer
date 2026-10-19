@@ -43,7 +43,7 @@ The driver of Secret of Mana, named for its game here.
 <!-- generated: scores -->
 | Songs | Contour, median (10 %) | Gap dB, median (90 %) | Level, median (10-90 %) | Voice tone, median (10 %) |
 |---|---|---|---|---|
-| 68 | 0.93 (0.74) | 0.76 (1.43) | 0.97 (0.92-1.04) | 0.99 (0.97) |
+| 68 | 0.93 (0.76) | 0.76 (1.39) | 0.97 (0.94-1.04) | 0.99 (0.97) |
 <!-- end generated -->
 
 ## The converter
@@ -63,5 +63,5 @@ average the two kinds of echo into one ([the packs table](README.md#the-style-pa
 
 ## Open
 
-- 9a Flammie Coming (a pitch-modulated jingle): 14.5 dB off in loudness, its
-  voices 24 to 32 dB.
+- 9a Flammie Coming (a pitch-modulated jingle): 2.0 dB off (14.5 before
+  the twenty-game fixes), voices 2 and 3 at 0.49 and 0.61 of their level.
