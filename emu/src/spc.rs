@@ -3,11 +3,12 @@
 //! ports to the main CPU), the boot ROM, and a log of every write the
 //! driver makes to the SNES chip. Loaded from an SPC snapshot.
 //!
-//! The SNES chip is a register file here: writes are kept and logged, reads
-//! return what was written. Its voices, envelopes and echo (which drivers
-//! read back: docs/SPC-IMPORT.md) are the next piece.
+//! The SNES chip (dsp.rs) runs alongside, one sample every 32 CPU cycles
+//! (`run`), so what the driver reads back from it (envelope levels, end
+//! flags, the echo in RAM) is live.
 
 use crate::cpu::{Bus, Cpu};
+use crate::dsp::Dsp;
 
 /// The SNES sound unit's 64-byte boot ROM, mapped over 0xFFC0-0xFFFF while
 /// CONTROL bit 7 is set.
@@ -33,7 +34,8 @@ pub struct DspWrite {
 
 pub struct SpcBus {
     pub ram: Vec<u8>,
-    pub dsp: [u8; 128],
+    pub dsp: Dsp,
+    next_sample: u64,
     control: u8,
     dspaddr: u8,
     ports_in: [u8; 4],
@@ -71,7 +73,7 @@ impl Bus for SpcBus {
                 0xF3 => {
                     let reg = (self.dspaddr & 0x7F) as usize;
                     self.dsp_reads[reg] += 1;
-                    self.dsp[reg]
+                    self.dsp.regs[reg]
                 }
                 0xF4..=0xF7 => self.ports_in[(a - 0xF4) as usize],
                 0xF8 | 0xF9 => self.ram[a as usize],
@@ -121,7 +123,7 @@ impl Bus for SpcBus {
             0xF3 => {
                 let reg = self.dspaddr;
                 if reg < 0x80 {
-                    self.dsp[reg as usize] = if reg == 0x7C { 0 } else { v };   // writing ENDX clears it
+                    self.dsp.write(reg as usize, v);
                     self.log.push(DspWrite { cycle: now, reg, value: v });
                 }
             }
@@ -147,8 +149,8 @@ pub fn load(data: &[u8]) -> Result<(Cpu, SpcBus), String> {
         return Err(format!("{} bytes; an SPC file is at least {SIZE}", data.len()));
     }
     let ram = data[0x100..0x10100].to_vec();
-    let mut dsp = [0u8; 128];
-    dsp.copy_from_slice(&data[0x10100..0x10180]);
+    let mut regs = [0u8; 128];
+    regs.copy_from_slice(&data[0x10100..0x10180]);
     let r = |a: usize| ram[a];
     let target = |a: usize| if r(a) == 0 { 256 } else { r(a) as u32 };
     let bus = SpcBus {
@@ -164,7 +166,8 @@ pub fn load(data: &[u8]) -> Result<(Cpu, SpcBus), String> {
         dsp_reads: [0; 128],
         rom_reads: 0,
         ram,
-        dsp,
+        dsp: Dsp::new(regs),
+        next_sample: 32,
     };
     let mut cpu = Cpu {
         pc: data[0x25] as u16 | (data[0x26] as u16) << 8,
@@ -176,4 +179,20 @@ pub fn load(data: &[u8]) -> Result<(Cpu, SpcBus), String> {
     };
     cpu.set_psw(data[0x2A]);
     Ok((cpu, bus))
+}
+
+/// Run the sound unit for at least `cycles` CPU cycles: the CPU, with the
+/// SNES chip stepping a sample every 32 cycles. Returns the instructions run.
+pub fn run(cpu: &mut Cpu, bus: &mut SpcBus, cycles: u64) -> u64 {
+    let end = cpu.cycles + cycles;
+    let mut n = 0;
+    while cpu.cycles < end && !cpu.halted {
+        cpu.step(bus);
+        n += 1;
+        while bus.next_sample <= cpu.cycles {
+            bus.dsp.sample(&mut bus.ram);
+            bus.next_sample += 32;
+        }
+    }
+    n
 }
