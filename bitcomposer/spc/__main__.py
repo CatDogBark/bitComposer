@@ -2,6 +2,7 @@
 
     python -m bitcomposer.spc song.spc [...]              tags, echo, voices, samples
     python -m bitcomposer.spc --export DIR song.spc [...]  every sample, once, as WAV + samples.json
+    python -m bitcomposer.spc --notes [SECONDS] song.spc   run the driver: the notes it plays
 
 Exported samples are 16-bit mono at 32 kHz, the rate the DSP plays them at
 pitch 0x1000; samples.json gives each one's loop and the snapshots and
@@ -73,10 +74,32 @@ def _swapped(pcm) -> bytes:
     return a.tobytes()
 
 
+def show_notes(snap, seconds: float) -> str:
+    from . import emulate, notes, tuning
+    run = emulate.run(snap, seconds)
+    found = notes.decode(snap, run.writes)
+    f0 = {}
+    for n in found:
+        if n.sample not in f0:
+            s = snap.sample(n.sample)
+            f0[n.sample] = tuning.fundamental(s) if s is not None and not n.noise else None
+    lines = [f"== {Path(snap.source).name}: {len(found)} notes in {run.seconds:.1f} s "
+             f"({run.instructions / 1e6:.1f} M instructions, {len(run.writes)} SNES chip writes)"]
+    for n in found:
+        what = "noise" if n.noise else (tuning.name(tuning.midi(f0[n.sample], n.pitch)) if f0.get(n.sample) else "-")
+        length = f"{n.length:6.3f}" if n.length is not None else "  open"
+        extra = (f" {len(n.bends)} bends" if n.bends else "") + (f" {len(n.swells)} swells" if n.swells else "")
+        lines.append(f"  {n.start:8.3f}  voice {n.voice}  sample {n.sample:3d}  {what:10s} {length} s  "
+                     f"vol {n.volume[0]:+4d}/{n.volume[1]:+4d}{'  echo' if n.echo else ''}{extra}")
+    return "\n".join(lines)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m bitcomposer.spc", description=__doc__.split("\n\n")[0])
     ap.add_argument("files", nargs="+", metavar="FILE.spc")
     ap.add_argument("--export", metavar="DIR", help="write every sample, once, as WAV, with samples.json")
+    ap.add_argument("--notes", nargs="?", type=float, const=20.0, metavar="SECONDS",
+                    help="run the driver (default 20 s) and list the notes it plays")
     args = ap.parse_args(argv)
     snaps = []
     for f in args.files:
@@ -85,6 +108,14 @@ def main(argv=None) -> int:
         except SPCError as e:
             print(f"bitcomposer.spc: {e}", file=sys.stderr)
             return 1
+    if args.notes is not None:
+        from .emulate import EmulatorMissing
+        try:
+            print("\n\n".join(show_notes(s, args.notes) for s in snaps))
+        except EmulatorMissing as e:
+            print(f"bitcomposer.spc: {e}", file=sys.stderr)
+            return 1
+        return 0
     if args.export:
         n = export(snaps, Path(args.export))
         print(f"{n} samples from {len(snaps)} snapshot{'s' if len(snaps) != 1 else ''} -> {args.export}")

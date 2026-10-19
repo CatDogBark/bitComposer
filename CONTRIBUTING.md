@@ -62,7 +62,7 @@ Python.
 | `bitcomposer/mix.py` | written channel volumes, sustaining-arp level, pack trims, master gain |
 | `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
 | `emu/` | the SNES sound CPU and SNES chip emulator, in Rust (a second package, `bitcomposer-emu`); see Building the emulator |
-| `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); `python -m bitcomposer.spc` |
+| `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); running the driver (`emulate.py`, needs `bitcomposer-emu`), its writes as notes (`notes.py`), sample pitch (`tuning.py`); `python -m bitcomposer.spc` |
 | `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`) |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
 | `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
@@ -118,7 +118,7 @@ cargo test                          # the emulator alone; no Python involved
 maturin build --release -o dist     # the Python module, as a wheel for this machine
 ```
 
-The wheel is abi3: one file serves every Python from 3.10 on.
+The wheel is abi3: one file serves every Python from 3.10 on. Install it where the Python tests run (`pip install emu/dist/bitcomposer_emu-*.whl`) and they exercise it too; without it they skip.
 
 The SNES sound CPU is checked against the SingleStepTests suite, 1,000
 cases per instruction (81 MB, not in the repository): fetch
