@@ -260,6 +260,16 @@ class Convert(unittest.TestCase):
         first = next(row[info["echo_channels"][0][0]] for row in rows if 0 < row[info["echo_channels"][0][0]].note < 120)
         self.assertAlmostEqual(first.volume / dry.volume, 1.0, delta=0.1)
 
+    def test_the_module_ends_with_the_song_and_fades_as_a_player_would(self):
+        song = convert.convert(tiny(), 1.37, fade=0.5)
+        self.assertEqual(sum(p.rows for p in song["patterns"]), 137)          # to the last row, the last pattern short
+        master = song["info"]["channels"] - 1
+        levels = [(r, row[master].effect_val) for r, row in enumerate(song["patterns"][0].data)
+                  if row[master].effect == convert.FX_SET_GLOBAL_VOLUME and r > 0]     # row 0: the driver's own
+        self.assertGreaterEqual(levels[0][0], 85)                            # the fade starts 0.5 s from the end
+        self.assertEqual([v for _, v in levels], sorted((v for _, v in levels), reverse=True))
+        self.assertLessEqual(levels[-1][1], 3)                               # and ends near silence
+
     def test_a_note_shorter_than_a_row(self):
         # keyed on, its GAIN rewritten and keyed off within a millisecond: it takes its row, the cut the next
         snap = tiny(TINY + KON0 + ((0x07, 0x40), (0x5C, 0x01)))

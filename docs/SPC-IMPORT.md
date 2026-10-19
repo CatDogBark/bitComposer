@@ -355,7 +355,10 @@ side: the SNES chip sets each side's level on its own, an IT player pans
 linearly (a centred note at half its volume each side), so a note's IT
 volume is its two sides' sum and its pan the right side's share; the SNES
 chip's master volume is the IT global volume, its changes (a driver's
-fade-out) on a channel of their own. Noise plays the SNES chip's own
+fade-out) on a channel of their own; the song runs as an SPC player plays
+it, the tag's length and then its fade, and the module ends on its last
+row (rounded up to a whole pattern, held notes rang on past the end with
+their echo stacked, Dark World twice as loud). Noise plays the SNES chip's own
 noise, its 15-bit shift register rendered at the output rate for each
 noise clock a song uses, each value held as the hardware holds it, each
 note starting somewhere else in it. The echo as repeats: each note

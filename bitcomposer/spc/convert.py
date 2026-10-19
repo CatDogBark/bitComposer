@@ -50,7 +50,9 @@ original. The pieces:
   full-range copy at its level sounds like a second instrument.
 - The master volume as global volume, the song's start in the header and
   each change (a driver's fade-out) on a channel of its own: with the
-  volumes side for side, the module plays at the original's level.
+  volumes side for side, the module plays at the original's level. The
+  song runs as an SPC player plays it, the tag's length and then its fade
+  (most songs loop), and the module ends on its last row.
 - Noise voices play the SNES chip's own noise, rendered at its output rate
   for each noise clock a song uses (each value held until the next step,
   as the hardware holds it), so nothing is resampled.
@@ -392,11 +394,17 @@ def _noise_sample(rate: int) -> itf.ITSample:
                         loop_start=0, loop_end=RATE, c5_speed=RATE)
 
 
-def convert(snap, seconds: float | None = None, path: str | None = None) -> dict:
+def convert(snap, seconds: float | None = None, path: str | None = None, fade: float = 0.0) -> dict:
     """Convert a snapshot: run its driver, write the IT (to `path` if given).
-    Returns the song dict write_it_file takes, with a summary in "info"."""
+    Returns the song dict write_it_file takes, with a summary in "info".
+    Without `seconds`, the song as an SPC player plays it: the tag's length,
+    then its fade (most songs loop, and a player fades them out); with it,
+    that long, faded over its last `fade` seconds. The module ends where the
+    song does."""
     if seconds is None:
-        seconds = float(snap.tags.length_s or 90)
+        fade = (snap.tags.fade_ms or 0) / 1000
+        seconds = float(snap.tags.length_s or 90) + fade
+    fade = max(0.0, min(fade, seconds))
     run = emulate_run(snap, seconds)
     found = [n for n in notes_mod.decode(snap, run.writes, keyons=run.keyons) if n.pitch or n.noise]
     for n in found:                      # what each note played: the SNES chip's own reading, else the snapshot's
@@ -547,10 +555,14 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
     echo_channels = {v: [8 + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
     channels = 8 + len(sending) * taps + 1
     master_ch = channels - 1
-    total_rows = int(run.seconds * row_hz) + 2
+    # Patterns to the song's last row exactly (the last one short): rounded up
+    # to a whole pattern, notes still held at the end rang on for up to two
+    # seconds past it with their echo stacked on (FFVI's Dark World, twice as loud).
+    total_rows = max(1, round(run.seconds * row_hz))
     n_patterns = min(200, math.ceil(total_rows / ROWS_PER_PATTERN))
-    patterns = [itf.ITPattern(rows=ROWS_PER_PATTERN, channels=channels) for _ in range(n_patterns)]
-    last_row = n_patterns * ROWS_PER_PATTERN - 1
+    patterns = [itf.ITPattern(rows=min(ROWS_PER_PATTERN, total_rows - i * ROWS_PER_PATTERN), channels=channels)
+                for i in range(n_patterns)]
+    last_row = min(total_rows, n_patterns * ROWS_PER_PATTERN) - 1
 
     def cell(row, ch):
         return patterns[row // ROWS_PER_PATTERN].data[row % ROWS_PER_PATTERN][ch] if 0 <= row <= last_row else None
@@ -739,12 +751,21 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
                 if place(n, echo_channels[n.voice][k - 1], note, echo_ins, shift, gl, gr, inverted, id(n) in baked_of):
                     repeats += 1
 
-    # The master volume's changes (fades, mostly) on the last channel.
-    level = start_level
-    for t_mv, ml, mr in mv[1:]:
-        gv = max(0, min(128, max(abs(ml), abs(mr))))
-        c = cell(round(t_mv * row_hz), master_ch)
-        if c is not None and gv != level:
+    # On the last channel, the master volume's changes (a driver's own fades)
+    # and the fade over the song's last `fade` seconds, as a player fades it.
+    level, fade_from = start_level, run.seconds - fade
+    rows = {round(t * row_hz) for t, _, _ in mv[1:]}
+    if fade > 0:
+        rows |= set(range(round(fade_from * row_hz), last_row + 1))
+    for r in sorted(rows):
+        c = cell(r, master_ch)
+        if c is None:
+            continue
+        t = (r + 0.5) / row_hz
+        _, ml, mr = mv[max(0, bisect.bisect_right(mv_times, t) - 1)]
+        faded = 1.0 if fade <= 0 or t < fade_from else max(0.0, 1 - (t - fade_from) / fade)
+        gv = max(0, min(128, round(max(abs(ml), abs(mr)) * faded)))
+        if gv != level:
             c.effect, c.effect_val = FX_SET_GLOBAL_VOLUME, gv
             level = gv
 
@@ -760,7 +781,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
     song = {"name": (t.title or "SPC")[:25], "samples": samples, "patterns": patterns, "global_volume": start_level,
             "orders": list(range(n_patterns)), "tempo": tempo, "speed": 1, "instruments": instruments,
             "message": message,
-            "info": {"notes": placed, "repeats": repeats, "channels": channels, "echo_channels": echo_channels,
+            "info": {"notes": placed, "repeats": repeats, "channels": channels, "echo_channels": echo_channels, "fade": fade,
                      "baked": baked, "unbaked": unbaked,
                      "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": hz, "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
                      "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
