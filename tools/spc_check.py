@@ -34,7 +34,7 @@ The numbers:
 `traits` records what each song's driver does with the SNES chip, over its
 first minute: its clock, how it shapes envelopes, its pitch writes, pitch
 modulation and noise, its echo and master volume, its density; and prints
-them per game. docs/SPC-DRIVERS.md is written from these and a sweep.
+them per game. docs/drivers/ is written from these and a sweep.
 
 A sweep converts every SPC under SPC_ROOT/<game>/ at full length (to catch
 failures and IT's limits) and measures the first --seconds. A drivers.json in

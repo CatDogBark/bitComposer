@@ -149,9 +149,10 @@ python3 tools/spc_check.py report /tmp/sweep/results.jsonl          # the summar
 python3 tools/spc_check.py traits ~/spc /tmp/traits.json             # what each song's driver does, per game
 ```
 
-`docs/SPC-DRIVERS.md` records every game tested, by music driver: its
-composer, what the driver does with the SNES chip, the scores and what is
-still off. A converter change or a new game updates it from a sweep.
+`docs/drivers/` records every game tested, by console and music driver
+(a file per driver family): its composer, what the driver does with the
+sound chip, the scores and what is still off. A converter change or a new
+game updates it from a sweep.
 
 A `drivers.json` beside the game folders (`{"<game folder>": "<driver family>"}`)
 groups the report by music driver. The SPC files and the converted modules
