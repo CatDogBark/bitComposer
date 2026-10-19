@@ -35,9 +35,11 @@ def manifest(folder: str) -> dict:
 
 
 def beat_and_parts(song) -> tuple:
-    """The song's beat (None: free time) and each voice's part, the bar set again from the bass."""
-    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes])
-    roles = roles_mod.assign(song, grid)
+    """The song's beat (None: free time) and each voice's part, the bar set
+    again from the bass; a voice echoing another is left out of the beat."""
+    echoed = roles_mod.echoes(song)          # an echo's notes sit off the grid: left out of the beat
+    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes if p.voice not in echoed])
+    roles = roles_mod.assign(song, grid, echoed)
     if grid:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])

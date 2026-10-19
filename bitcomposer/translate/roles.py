@@ -9,6 +9,7 @@ driver's own pitch). Then the pitched voices by register and motion: the
 bass the lowest line, the melody the most varied line on top, held notes
 harmony, fast cycling ones an arp; a voice playing another's notes (the same
 pitches and rhythm, a delay or an octave apart) its doubling."""
+import bisect
 import math
 import statistics
 from collections import Counter
@@ -83,8 +84,48 @@ def _doubles(a, b, window: float = 0.5) -> tuple[float, float] | None:
     return best
 
 
-def assign(song, grid) -> list[Role]:
-    """Each voice's part over the song."""
+ECHO_DELAY = (0.025, 0.5)            # seconds an echo part may follow the part it copies
+ECHO_HELD = 0.6                      # the share of its notes that must be copies, one delay apart
+
+
+def echoes(song) -> dict:
+    """Voices playing another's notes a fixed delay later, all song long:
+    voice -> (the voice it copies, the delay). A driver's echo made of a
+    spare voice (Star Fox's Corneria: one part copying another 1.4 steps of
+    its grid later, 246 ms, every note off the grid). A copy is a note of
+    the same pitch class; the delay is the one most of them share, to 4 ms."""
+    by = {}
+    for p in song.notes:
+        if p.midi is not None and p.level > 0:
+            by.setdefault(p.voice, []).append((p.start, round(p.midi) % 12))
+    out = {}
+    for v, notes in by.items():
+        if len(notes) < 16:
+            continue
+        best = None
+        for u, theirs in by.items():
+            if u == v:
+                continue
+            starts = [t for t, _ in theirs]
+            delays = []
+            for t, pc in notes:
+                i = bisect.bisect_left(starts, t - ECHO_DELAY[1])
+                delays.append([t - s for s, q in theirs[i:bisect.bisect_right(starts, t - ECHO_DELAY[0])] if q == pc])
+            flat = Counter(round(d * 500) for ds in delays for d in ds)     # 2 ms bins
+            if not flat:
+                continue
+            mode = flat.most_common(1)[0][0] / 500
+            share = sum(1 for ds in delays if any(abs(d - mode) <= 0.004 for d in ds)) / len(notes)
+            if share >= ECHO_HELD and (best is None or share > best[0]):
+                best = (share, u, mode)
+        if best:
+            out[v] = (best[1], best[2])
+    return out
+
+
+def assign(song, grid, echoed: dict | None = None) -> list[Role]:
+    """Each voice's part over the song (echoed: voices found to be another's
+    echo, by echoes(), each that voice's double)."""
     by_voice = {}
     for p in song.notes:
         by_voice.setdefault(p.voice, []).append(p)
@@ -93,6 +134,9 @@ def assign(song, grid) -> list[Role]:
     for v, f in feats.items():
         if f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2):
             roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
+    for v, (u, delay) in (echoed or {}).items():
+        if v in feats and v not in roles:
+            roles[v] = Role(v, DOUBLE, of=u, evidence={"echo_ms": round(delay * 1000, 1)})
     tonal = [v for v in feats if v not in roles and feats[v]["median"] is not None]
     # doublings: a voice playing another's notes a fixed delay (or an octave) apart is that voice's double
     for v in tonal:

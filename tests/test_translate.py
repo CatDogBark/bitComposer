@@ -112,13 +112,13 @@ class Bar(unittest.TestCase):
         self.assertEqual((round(g.bpm), g.division), (110, 3))
 
     def test_a_bass_of_three_three_and_two_still_beats_in_twos(self):
-        # The Decisive Battle's: sixteenths, the bass on 0, 3 and 6 of eight, louder every three eighths
-        # than every two; the pattern repeats every eight sixteenths (and so every twelve eighths too)
+        # The Decisive Battle's: sixteenths, the bass and a chord on 0, 3 and 6 of eight, louder every three
+        # eighths than every two; the pattern repeats every eight sixteenths (and so every twelve eighths too)
         sixteenth, out = 60 / 104 / 4, []
         for i in range(16 * 32):
             out.append((i * sixteenth, 0.4, 0))
             if i % 8 in (0, 3, 6):
-                out.append((i * sixteenth, 1.0, 1))
+                out += [(i * sixteenth, 1.0, 1), (i * sixteenth, 0.5, 2)]
         g = beat.find(sorted(out))
         self.assertEqual((round(g.bpm), g.division, g.meter), (104, 4, 4))
 
