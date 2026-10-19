@@ -4,6 +4,19 @@ bitComposer is small on purpose: the generator is pure Python with no runtime
 dependencies (the player adds Qt), and every generator change is judged by
 measurement rather than by ear alone.
 
+## Branches
+
+`main` holds released code and nothing else. Work goes into `dev` through
+pull requests, one topic each; `dev` merges into `main` for a release.
+
+Pull requests into `dev` run no checks on GitHub (the Windows build alone
+takes ten minutes); the tests below, run locally with the player's
+dependencies, are the check. Pull requests into `main` run everything: the
+tests on every supported Python and the Windows build. Either workflow can
+also be started by hand on any branch (`gh workflow run ci.yml --ref
+<branch>`, or `windows.yml`) when a change could break Windows or an older
+Python.
+
 ## Before you open a pull request
 
 1. Run the tests:
@@ -108,8 +121,9 @@ it from there and the publish workflow refuses a tag that does not match it.
    `python3 -m bitcomposer.cli --sound megamanx -s 24 -o "docs/tracks/Grotto Charge.it" -v`,
    and bring the entry up to date from the `-v` output (key and tempo,
    voices) and its version. A changed title renames the file.
-5. Commit, push to main, wait for CI (tests on every Python) and the Windows
-   build to go green on that commit.
+5. Open a pull request from `dev` into `main`: CI (tests on every Python)
+   and the Windows build run on it. Merge when both are green, and wait for
+   them to go green again on main's merge commit.
 6. Tag and push the tag:
 
    ```bash
