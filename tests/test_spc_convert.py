@@ -146,6 +146,12 @@ class Echo(unittest.TestCase):
         self.assertAlmostEqual(convert.echo_gains(self.sine(200), (0, 3200), 0x1000 * 15, self.BANDPASS, 1)[0],
                                hi[0], delta=0.1)                             # the same sample, played 15x up
 
+    def test_each_trip_round_the_echo_adds_the_filter_s_span(self):
+        click = [0] * 100 + [10000] + [0] * 99
+        for k in (1, 2, 3):                                                  # one tap 7 samples back: 7 later a trip
+            data, _ = convert.echo_coloured(click, None, 1.0, (127, 0, 0, 0, 0, 0, 0, 0), k)
+            self.assertEqual(max(range(len(data)), key=lambda i: abs(data[i])), 100 + 7 * k)
+
     def test_the_coloured_copy_keeps_its_length_and_loses_the_bass(self):
         rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
         for hz, keep in ((3000, 0.9), (200, 0.25)):
@@ -166,7 +172,31 @@ class Noise(unittest.TestCase):
         self.assertGreater(rms, 15000)                                     # full scale, as the hardware's
 
 
+class Interpolation(unittest.TestCase):
+    def test_samples_soften_as_the_snes_chip_reads_them(self):
+        rms = lambda a: math.sqrt(sum(v * v for v in a) / len(a))      # noqa: E731
+        for f, gain in ((0.02, 1.0), (0.25, 0.63), (0.4, 0.30)):          # the hardware's Gaussian, measured
+            pcm = [round(10000 * math.sin(2 * math.pi * f * i)) for i in range(4000)]
+            out = convert.snes_interpolated(pcm, None)
+            self.assertAlmostEqual(rms(out[100:-100]) / rms(pcm[100:-100]), gain, delta=0.02)
+
+    def test_a_loop_is_filtered_as_it_repeats(self):
+        pcm = [1000] * 50 + [5000, -5000] * 25 + [7, 7, 7]                 # a tail past the loop end is dropped
+        out = convert.snes_interpolated(pcm, (50, 100))
+        self.assertEqual(len(out), 100)
+        self.assertEqual(out[10], 1000)                                       # DC as it was
+        self.assertAlmostEqual(abs(out[99]), 0.18 * 5000, delta=50)           # the loop's end, its start after it
+
+
 class Envelopes(unittest.TestCase):
+    def test_steps_fall_on_the_shared_counter(self):
+        # GAIN 0xC6: a linear rise at rate 6, a step every 640 samples where the sample number is 536 mod 640
+        on_note = convert.envelope_track(0x00, 0x00, 0xC6, [], 3000)
+        on_counter = convert.envelope_track(0x00, 0x00, 0xC6, [], 3000, start=1000)
+        self.assertEqual(on_note[:2], [(0, 32), (640, 64)])                  # from the note's start (an IT envelope)
+        self.assertEqual(on_counter[:2], [(0, 0), (176, 32)])                # sample 1176 = 640 + 536
+        self.assertEqual([s - t for (s, _), (t, _) in zip(on_counter[2:], on_counter[1:])], [640] * (len(on_counter) - 2))
+
     def test_a_gain_fade_written_mid_note(self):
         # ADSR FF/E0 holds at once; at sample 3200 the driver switches to GAIN 0x9E, a fast linear fade
         track = convert.envelope_track(0xFF, 0xE0, 0xB8, [(3200, 0x00, 0xE0, 0x9E)], 6400)
@@ -217,9 +247,35 @@ class Convert(unittest.TestCase):
             self.assertEqual((info["notes"], info["baked"], info["bakes"]), (2, 1, 1))
             keys = [ins.keyboard for ins in song["instruments"] if ins.keyboard]
             self.assertEqual(len(keys), 1)
-            self.assertEqual(keys[0][1], (60, info["samples"]))              # key 1: the recording, at its own rate
+            recording = next(i for i, smp in enumerate(song["samples"], 1) if smp.filename.startswith("pmon"))
+            self.assertEqual(keys[0][1], (60, recording))                    # key 1: the recording, at its own rate
             m, pcm = render(path, 0.5)
             self.assertGreater(max(abs(v) for v in pcm), 1000)
+
+    def test_the_echo_rings_out_and_stays_out_of_the_master_volume(self):
+        # master volume at half, echo volume 0.5 with feedback 0.75: the hardware leaves the echo
+        # out of the master volume, so the first repeat sounds as loud as the note (0.5 x 2), and
+        # repeats go on until they fall to -30 dB: 0.5 x 0.75^(k-1) >= 1/32 for k up to 10
+        voice = ((0x00, 50), (0x01, 50), (0x0C, 0x40), (0x1C, 0x40), (0x0D, 0x60))
+        song = convert.convert(tiny(TINY + voice + KON0), 3.0)
+        info = song["info"]
+        rows = [row for pat in song["patterns"] for row in pat.data]
+        master = [row[info["channels"] - 1] for row in rows if row[info["channels"] - 1].effect == convert.FX_SET_GLOBAL_VOLUME]
+        self.assertEqual(master[0].effect_val, 0x40)                      # the driver sets the master volume at the start
+        self.assertIn(len(info["echo_channels"][0]), (10, 11))
+        dry = next(row[0] for row in rows if 0 < row[0].note < 120)
+        first = next(row[info["echo_channels"][0][0]] for row in rows if 0 < row[info["echo_channels"][0][0]].note < 120)
+        self.assertAlmostEqual(first.volume / dry.volume, 1.0, delta=0.1)
+
+    def test_the_module_ends_with_the_song_and_fades_as_a_player_would(self):
+        song = convert.convert(tiny(), 1.37, fade=0.5)
+        self.assertEqual(sum(p.rows for p in song["patterns"]), 137)          # to the last row, the last pattern short
+        master = song["info"]["channels"] - 1
+        levels = [(r, row[master].effect_val) for r, row in enumerate(song["patterns"][0].data)
+                  if row[master].effect == convert.FX_SET_GLOBAL_VOLUME and r > 0]     # row 0: the driver's own
+        self.assertGreaterEqual(levels[0][0], 85)                            # the fade starts 0.5 s from the end
+        self.assertEqual([v for _, v in levels], sorted((v for _, v in levels), reverse=True))
+        self.assertLessEqual(levels[-1][1], 3)                               # and ends near silence
 
     def test_a_note_shorter_than_a_row(self):
         # keyed on, its GAIN rewritten and keyed off within a millisecond: it takes its row, the cut the next
@@ -236,7 +292,8 @@ class Convert(unittest.TestCase):
             song = convert.convert(snap, 1.0, path)
             info = song["info"]
             self.assertEqual(info["notes"], 1)
-            self.assertEqual((info["samples"], info["instruments"]), (2, 2))    # the sample and its echo-coloured copy
+            copies = len(info["echo_channels"][0])                          # a copy per repeat: k passes of the echo
+            self.assertEqual((info["samples"], info["instruments"]), (1 + copies, 1 + copies))
             self.assertGreaterEqual(info["repeats"], 1)                          # the echo, as repeats
             # the first repeat: voice 0's first echo channel, 32 ms after the note
             hits = [(r, ch) for p, pat in enumerate(song["patterns"]) for r, row in enumerate(pat.data)

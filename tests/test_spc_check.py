@@ -54,5 +54,21 @@ class Conversion(unittest.TestCase):
         self.assertGreater(check.rms(wet[0::2]) / check.rms(dry[0::2]), 0.2)  # the echo, apart from the dry sound
 
 
+@unittest.skipUnless(emulate.available(), "needs the compiled emulator")
+class Traits(unittest.TestCase):
+    def test_what_the_tiny_driver_does(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "tiny"))
+            path = os.path.join(d, "tiny", "one note.spc")
+            with open(path, "wb") as fh:
+                fh.write(tiny().raw)
+            t = check.song_traits(path)
+        self.assertEqual((t["game_folder"], t["song"], t["notes"]), ("tiny", "one note", 1))
+        self.assertEqual((t["echo_delay_ms"], t["echo_feedback"], t["echo_sending"]), (32, 0.5, 1))
+        self.assertEqual((t["adsr_share"], t["master_volume"]), (0.0, 127))      # GAIN direct, the master full
+        self.assertFalse(t["pitch_modulated"])
+
+
 if __name__ == "__main__":
     unittest.main()

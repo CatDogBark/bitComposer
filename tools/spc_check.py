@@ -12,6 +12,7 @@ Usage:
     python3 tools/spc_check.py voice FILE.spc [--seconds 30] [--voices 0,3] [--trace 3] [--bands]
     python3 tools/spc_check.py sweep SPC_ROOT OUT_DIR [--workers 8] [--seconds 30]
     python3 tools/spc_check.py report OUT_DIR/results.jsonl
+    python3 tools/spc_check.py traits SPC_ROOT OUT.json [--workers 8]
 
 The numbers:
 - contour: the correlation of the two loudness contours (RMS in 50 ms
@@ -29,6 +30,11 @@ The numbers:
   voice's solo output less its dry signal (its own output, tapped from the
   emulator, times its volumes and the master volume); the module's is its
   repeat channels against its own channel.
+
+`traits` records what each song's driver does with the SNES chip, over its
+first minute: its clock, how it shapes envelopes, its pitch writes, pitch
+modulation and noise, its echo and master volume, its density; and prints
+them per game. docs/SPC-DRIVERS.md is written from these and a sweep.
 
 A sweep converts every SPC under SPC_ROOT/<game>/ at full length (to catch
 failures and IT's limits) and measures the first --seconds. A drivers.json in
@@ -58,7 +64,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bitcomposer import it_format as itf  # noqa: E402
 from bitcomposer import spc  # noqa: E402
-from bitcomposer.spc import convert, emulate  # noqa: E402
+from bitcomposer.spc import convert, emulate, notes  # noqa: E402
 
 RATE = 32000
 WINDOW = 1600                 # samples: the 50 ms a loudness contour steps by
@@ -140,13 +146,14 @@ def corr(a, b) -> float:
 
 
 def rms(x) -> float:
-    s = x[::3]
-    return math.sqrt(sum(v * v for v in s) / len(s)) if len(s) else 0.0
+    return math.sqrt(sum(v * v for v in x) / len(x)) if len(x) else 0.0
 
 
 def contour(side, w: int = WINDOW) -> list[float]:
-    """RMS in w-sample windows (every fourth sample of each)."""
-    return [math.sqrt(sum(side[i] ** 2 for i in range(s, s + w, 4)) / (w / 4)) for s in range(0, len(side) - w, w)]
+    """RMS in w-sample windows, from every sample: a stride lands on the same
+    points of a loop whose period it divides (a BRR loop of 8 or 16 samples
+    read every fourth sample measured a softened square 4 dB low)."""
+    return [math.sqrt(sum(v * v for v in side[s:s + w]) / w) for s in range(0, len(side) - w, w)]
 
 
 def ac_rms(side, w: int = WINDOW) -> float:
@@ -265,19 +272,29 @@ def echo_split(snap, voice: int, seconds: float, solo=None) -> tuple[list[int], 
     return dry, echo
 
 
-def echo_settings(snap, writes) -> dict:
-    """The echo the song mostly runs with, and the voices it pitch-modulates."""
-    regs, seen, pmon = bytearray(snap.dsp), defaultdict(int), snap.dsp[PMON]
+def echo_settings(snap, writes, end_cycle: int | None = None) -> dict:
+    """The echo the song runs with for the longest (each setting weighed by
+    how long it holds, to `end_cycle` or the last write), and the voices it
+    pitch-modulates."""
+    echo_regs = {EDL, EFB, EVOLL, EVOLR, EON} | {0x0F + 0x10 * k for k in range(8)}
+    regs, held, pmon = bytearray(snap.dsp), defaultdict(int), snap.dsp[PMON]
+
+    def state():
+        return (regs[EDL] & 15, _s8(regs[EFB]), _s8(regs[EVOLL]), _s8(regs[EVOLR]),
+                tuple(_s8(regs[0x0F + 0x10 * k]) for k in range(8)), regs[EON])
+    since, current = 0, state()
     for w in writes:
-        regs[w.reg] = w.value
         if w.reg == PMON:
             pmon |= w.value
-        seen[(regs[EDL] & 15, _s8(regs[EFB]), _s8(regs[EVOLL]), _s8(regs[EVOLR]),
-              tuple(_s8(regs[0x0F + 0x10 * k]) for k in range(8)), regs[EON])] += 1
-    if not seen:
-        seen[(regs[EDL] & 15, _s8(regs[EFB]), _s8(regs[EVOLL]), _s8(regs[EVOLR]),
-              tuple(_s8(regs[0x0F + 0x10 * k]) for k in range(8)), regs[EON])] = 1
-    edl, efb, evl, evr, fir, eon = max(seen, key=seen.get)
+        if w.reg in echo_regs and regs[w.reg] != w.value:
+            held[current] += w.cycle - since
+            regs[w.reg] = w.value
+            since, current = w.cycle, state()
+        else:
+            regs[w.reg] = w.value
+    end = end_cycle if end_cycle is not None else (writes[-1].cycle if writes else 0)
+    held[current] += max(1, end - since)
+    edl, efb, evl, evr, fir, eon = max(held, key=held.get)
     return {"delay_ms": edl * 16, "feedback": efb / 128, "echo_volume": (evl / 128, evr / 128),
             "filter_dc": sum(fir) / 128, "sending": [v for v in range(8) if eon >> v & 1],
             "pitch_modulated": [v for v in range(1, 8) if pmon >> v & 1]}
@@ -294,7 +311,7 @@ def cmd_voice(args) -> int:
     secs = args.seconds
     song = convert.convert(snap, secs + 2)
     run = emulate.run(snap, secs)
-    e = echo_settings(snap, run.writes)
+    e = echo_settings(snap, run.writes, int(run.seconds * emulate.CLOCK))
     info = song["info"]
     print(f"{os.path.basename(args.file)}: {info['notes']} notes, {info['channels']} channels, rows at {info['row_hz']:.0f} a second; "
           f"echo {e['delay_ms']} ms, feedback {e['feedback']:+.2f}, volume {e['echo_volume'][0]:+.2f}/{e['echo_volume'][1]:+.2f}, "
@@ -414,6 +431,69 @@ def cmd_sweep(args) -> int:
     return 0
 
 
+# traits --------------------------------------------------------------------
+
+def song_traits(path: str) -> dict:
+    """What a song's driver does with the SNES chip over its first minute."""
+    snap = spc.read(path)
+    t = snap.tags
+    run = emulate.run(snap, min(60.0, float(t.length_s or 60)))
+    ns = [n for n in notes.decode(snap, run.writes, keyons=run.keyons) if n.pitch or n.noise]
+    hz, aligned = convert.tick_rate(snap, run.writes)
+    e = echo_settings(snap, run.writes, int(run.seconds * emulate.CLOCK))
+    masters, since = defaultdict(int), 0                     # each master volume weighed by how long it holds
+    current = max(abs(_s8(snap.dsp[MVOLL])), abs(_s8(snap.dsp[MVOLR])))
+    for when, left, right in convert.notes_mod.master_volume(snap, run.writes)[1:]:
+        cycle = int(when * emulate.CLOCK)
+        masters[current] += cycle - since
+        since, current = cycle, max(abs(left), abs(right))
+    masters[current] += max(1, int(run.seconds * emulate.CLOCK) - since)
+    pitched = [n for n in ns if not n.noise]
+    lengths = sorted(n.length for n in pitched if n.length)
+    share = lambda f: sum(1 for n in pitched if f(n)) / len(pitched) if pitched else 0.0   # noqa: E731
+    return {"game_folder": os.path.basename(os.path.dirname(path)), "song": os.path.basename(path)[:-4],
+            "game": t.game, "artist": t.artist, "title": t.title, "length_s": t.length_s,
+            "notes": len(ns), "voices": len({n.voice for n in ns}), "tick_hz": round(hz, 2), "on_ticks": aligned >= convert.ALIGNED,
+            "adsr_share": share(lambda n: n.adsr[0] & 0x80), "rewritten_share": share(lambda n: n.envelopes),
+            "envelope_writes_per_note": sum(len(n.envelopes) for n in pitched) / len(pitched) if pitched else 0.0,
+            "pitch_writes_per_note": sum(len(n.bends) for n in pitched) / len(pitched) if pitched else 0.0,
+            "noise_notes": sum(1 for n in ns if n.noise), "pitch_modulated": bool(e["pitch_modulated"]),
+            "echo_delay_ms": e["delay_ms"], "echo_feedback": e["feedback"], "echo_volume": max(map(abs, e["echo_volume"])),
+            "echo_inverted": e["echo_volume"][0] * e["echo_volume"][1] < 0, "echo_filter_dc": e["filter_dc"],
+            "echo_sending": len(e["sending"]), "master_volume": max(masters, key=masters.get),
+            "median_note_s": lengths[len(lengths) // 2] if lengths else None}
+
+
+def cmd_traits(args) -> int:
+    files = sorted(glob.glob(os.path.join(args.spc_root, "*", "*.spc")))
+    if not files:
+        print(f"spc_check: no SPC files under {args.spc_root}/<game>/", file=sys.stderr)
+        return 1
+    with Pool(args.workers) as pool:
+        recs = pool.map(song_traits, files)
+    with open(args.out, "w") as fh:
+        json.dump(recs, fh, indent=1)
+    for game in sorted({r["game_folder"] for r in recs}):
+        rs = [r for r in recs if r["game_folder"] == game]
+        busy = [r for r in rs if r["notes"] > 20]                # not a sound effect
+        common = lambda key, n=3: ", ".join(f"{k} ({c})" for k, c in sorted(               # noqa: E731
+            ((k, sum(1 for r in rs if key(r) == k)) for k in {key(r) for r in rs}), key=lambda kc: -kc[1])[:n])
+        print(f"{game}: {len(rs)} songs; game {common(lambda r: r['game'], 1)}; composer {common(lambda r: r['artist'], 2)}")
+        print(f"  clock: {common(lambda r: (round(r['tick_hz']), 'key-ons on it' if r['on_ticks'] else 'key-ons anywhere'))}")
+        print(f"  envelopes: ADSR at key-on {_pct([r['adsr_share'] for r in busy], .5):.2f} of notes; rewritten as they sound "
+              f"{_pct([r['rewritten_share'] for r in busy], .5):.2f}, {_pct([r['envelope_writes_per_note'] for r in busy], .5):.1f} writes a note")
+        print(f"  pitch writes a note: {_pct([r['pitch_writes_per_note'] for r in busy], .5):.1f} (90 %: "
+              f"{_pct([r['pitch_writes_per_note'] for r in busy], .9):.1f}); pitch modulation in {sum(r['pitch_modulated'] for r in rs)} songs, "
+              f"noise in {sum(1 for r in rs if r['noise_notes'])}")
+        print(f"  echo (ms, feedback): {common(lambda r: (r['echo_delay_ms'], round(r['echo_feedback'], 2)), 4)}; volume "
+              f"{common(lambda r: round(r['echo_volume'], 2), 2)}; sides inverted in {sum(r['echo_inverted'] for r in rs)}; "
+              f"filter at DC {common(lambda r: round(r['echo_filter_dc'], 2), 2)}")
+        print(f"  master volume {common(lambda r: r['master_volume'], 2)}; notes in the first minute "
+              f"{_pct([r['notes'] for r in rs], .5)}, a note {_pct([r['median_note_s'] for r in busy], .5):.2f} s (medians)")
+    print(f"{args.out}: {len(recs)} songs")
+    return 0
+
+
 # report --------------------------------------------------------------------
 
 def _pct(xs, p):
@@ -486,12 +566,16 @@ def main(argv=None) -> int:
     s.add_argument("out_dir")
     s.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     s.add_argument("--seconds", type=float, default=30.0, help="seconds of each song measured")
+    t = sub.add_parser("traits", help="what each song's driver does with the SNES chip, per game")
+    t.add_argument("spc_root")
+    t.add_argument("out")
+    t.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     r = sub.add_parser("report", help="summarise a sweep's results.jsonl")
     r.add_argument("results")
     r.add_argument("--top", type=int, default=15, help="lines in each list")
     args = ap.parse_args(argv)
     try:
-        return {"voice": cmd_voice, "sweep": cmd_sweep, "report": cmd_report}[args.cmd](args)
+        return {"voice": cmd_voice, "sweep": cmd_sweep, "report": cmd_report, "traits": cmd_traits}[args.cmd](args)
     except emulate.EmulatorMissing as e:
         print(f"spc_check: {e}", file=sys.stderr)
         return 1

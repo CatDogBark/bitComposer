@@ -333,26 +333,40 @@ so a converted song opens in a tracker as a tracker song. One IT sample
 per sample played, found by the addresses the SNES chip read as it keyed
 each voice on (Secret of Evermore's driver writes a voice's directory
 entry just before keying it; its snapshot's directory is placeholders), its
-C5Speed set so the notes fall on whole semitones; one instrument per
-sample and envelope setting, its volume envelope simulated from ADSR or
-GAIN (each tick holding its window's RMS, so a fast decay keeps the
-energy of its peak); bends as fine slides row by row; key-offs as cuts.
+C5Speed set so the notes fall on whole semitones, and filtered as the
+SNES chip's Gaussian interpolation colours it (a lowpass in the sample's
+own terms, -4 dB at a quarter of its rate and -15 dB at the top, where an
+IT player interpolates almost ideally); one instrument per sample and
+envelope setting, its volume envelope simulated from ADSR or GAIN (each
+tick holding its window's RMS, so a fast decay keeps the energy of its
+peak); bends as fine slides row by row; key-offs as cuts.
 A note whose envelope registers are written while it sounds plays an
 instrument without an envelope, its envelope simulated through the writes
 and carried whole in the volume column, and is cut where it falls silent:
 Mega Man X's driver keys every note on held and releases it with a GAIN
 fade a moment before the next, never with a key-off; Secret of Evermore's
-wind swells one held note for the length of a song. Volumes side for
+shapes every note itself with hundreds of GAIN ramps and holds, reading
+the envelope back to know when to switch, so the simulation steps where
+the SNES chip's shared rate counter does (counted from each note's start
+instead, it drifted a step on most switches: the wind's level 2.17 times
+the original's, 1.70 on the counter, 0.95 with the interpolation's
+softness in the samples too). Volumes side for
 side: the SNES chip sets each side's level on its own, an IT player pans
 linearly (a centred note at half its volume each side), so a note's IT
 volume is its two sides' sum and its pan the right side's share; the SNES
 chip's master volume is the IT global volume, its changes (a driver's
-fade-out) on a channel of their own. Noise plays the SNES chip's own
+fade-out) on a channel of their own; the song runs as an SPC player plays
+it, the tag's length and then its fade, and the module ends on its last
+row (rounded up to a whole pattern, held notes rang on past the end with
+their echo stacked, Dark World twice as loud). Noise plays the SNES chip's own
 noise, its 15-bit shift register rendered at the output rate for each
 noise clock a song uses, each value held as the hardware holds it, each
 note starting somewhere else in it. The echo as repeats: each note
-sending to the echo again on a channel of its own, an echo delay late, up
-to three times, played from a copy of its sample coloured by the echo
+sending to the echo again on a channel of its own, an echo delay late,
+until the repeats fall to -30 dB (as many as IT's 64 channels allow,
+shared among the voices that send; three stopped Dark World's 1.1 s tail
+at 0.24 s), raised past the master volume (the SNES chip leaves the echo
+out of it, an IT global volume reaches every channel), played from a copy of its sample as the echo hands it back after that many trips round its loop (the filter once a trip: its colour, and its span, which rows alone leave out: Dark World's repeats came 7 samples a trip early and stacked a third brighter), coloured by the echo
 filter (at the pitch its echoing notes mostly have) and scaled by the echo
 volume, the feedback and the filter's gain over the note itself; when the
 two echo volumes have opposite signs (Mega Man X's widening trick), a
@@ -373,7 +387,9 @@ timer IT can run (Evermore's 50 Hz), else IT's finest grid, 100 a second
 (FFVI's and Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz
 is past IT's 102).
 
-Measured against the emulator's own output (`tools/spc_check.py`;
+`SPC-DRIVERS.md` records every game tested so far by music driver, with
+the latest scores and what each driver does. Measured against the
+emulator's own output (`tools/spc_check.py`;
 loudness contours, 50 ms windows over the first 14 s, each side,
 averaged; the level is the IT's RMS over the emulator's): FFVI's battle theme 0.98 (level 0.99) and The
 Phantom Train 0.97 (0.90), Mana's Together Always 0.96 (0.98) and The

@@ -146,7 +146,12 @@ python3 tools/spc_check.py voice song.spc --seconds 30              # one song, 
 python3 tools/spc_check.py voice song.spc --trace 3 --bands         # voice 3 over time; octave levels
 python3 tools/spc_check.py sweep ~/spc /tmp/sweep --workers 12      # every <game>/*.spc under ~/spc
 python3 tools/spc_check.py report /tmp/sweep/results.jsonl          # the summary, by music driver
+python3 tools/spc_check.py traits ~/spc /tmp/traits.json             # what each song's driver does, per game
 ```
+
+`docs/SPC-DRIVERS.md` records every game tested, by music driver: its
+composer, what the driver does with the SNES chip, the scores and what is
+still off. A converter change or a new game updates it from a sweep.
 
 A `drivers.json` beside the game folders (`{"<game folder>": "<driver family>"}`)
 groups the report by music driver. The SPC files and the converted modules
