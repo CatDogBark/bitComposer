@@ -19,17 +19,20 @@ mod python {
     use pyo3::prelude::*;
     use pyo3::types::PyBytes;
 
-    /// run(data, seconds, audio=False) -> (writes, audio, cycles, instructions)
+    /// run(data, seconds, audio=False) -> (writes, keyons, audio, cycles, instructions)
     ///
     /// Run an SPC snapshot's own driver for `seconds` of song. `writes` is
     /// every write it made to the SNES chip, 10 bytes each: the CPU cycle
-    /// (u64), the register, the value, little-endian. `audio` is the mixed
-    /// output (32 kHz, stereo, 16-bit) when asked for, else None.
+    /// (u64), the register, the value. `keyons` is every key-on as the SNES
+    /// chip acted on it, 14 bytes each: the sample count (u64), the voice,
+    /// the directory entry, and the start and loop addresses it read (u16).
+    /// All little-endian. `audio` is the mixed output (32 kHz, stereo,
+    /// 16-bit) when asked for, else None.
     #[pyfunction]
     #[pyo3(signature = (data, seconds, audio = false))]
     #[allow(clippy::type_complexity)]
     fn run<'py>(py: Python<'py>, data: &[u8], seconds: f64, audio: bool)
-        -> PyResult<(Bound<'py, PyBytes>, Option<Bound<'py, PyBytes>>, u64, u64)> {
+        -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>, Option<Bound<'py, PyBytes>>, u64, u64)> {
         let (mut cpu, mut bus) = spc::load(data).map_err(PyValueError::new_err)?;
         if audio {
             bus.dsp.audio = Some(Vec::new());
@@ -42,6 +45,14 @@ mod python {
             out.push(w.reg);
             out.push(w.value);
         }
+        let mut kons = Vec::with_capacity(bus.dsp.keyons.len() * 14);
+        for k in &bus.dsp.keyons {
+            kons.extend_from_slice(&k.sample.to_le_bytes());
+            kons.push(k.voice);
+            kons.push(k.srcn);
+            kons.extend_from_slice(&k.start.to_le_bytes());
+            kons.extend_from_slice(&k.loop_addr.to_le_bytes());
+        }
         let pcm = bus.dsp.audio.as_ref().map(|a| {
             let mut b = Vec::with_capacity(a.len() * 2);
             for s in a {
@@ -49,7 +60,7 @@ mod python {
             }
             PyBytes::new(py, &b)
         });
-        Ok((PyBytes::new(py, &out), pcm, cpu.cycles, n))
+        Ok((PyBytes::new(py, &out), PyBytes::new(py, &kons), pcm, cpu.cycles, n))
     }
 
     #[pymodule]

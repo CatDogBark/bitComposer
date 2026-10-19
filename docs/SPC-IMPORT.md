@@ -327,6 +327,23 @@ F major chord, every instrument of it within a cent of the same offset
 (-8 cents: the game's own tuning, which the translator will calibrate
 out). `python -m bitcomposer.spc --notes FILE.spc` lists them.
 
+**SPC to IT** (`bitcomposer/spc/convert.py`, `python -m bitcomposer.spc
+--to-it OUT.it FILE.spc`): the notes as an IT module in instrument mode,
+so a converted song opens in a tracker as a tracker song. One IT sample
+per sample played, found by the addresses the SNES chip read as it keyed
+each voice on (Secret of Evermore's driver writes a voice's directory
+entry just before keying it; its snapshot's directory is placeholders), its
+C5Speed set so the notes fall on whole semitones; one instrument per
+sample and envelope setting, its volume envelope simulated from ADSR or
+GAIN; bends as fine slides row by row; key-offs as cuts. Rows are the
+driver's tick when its key-ons land on a running timer IT can run
+(Evermore's 50 Hz), else IT's finest grid, 100 a second (FFVI's and
+Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz is past
+IT's 102). Against the emulator's own output, the converted songs'
+loudness contours correlate at 0.92 (FFVI), 0.91 (Mana), 0.86 (Evermore)
+and 0.53 (Mega Man X). Not carried over yet: the echo, pitch modulation,
+the SNES chip's master volume.
+
 For the SNES chip:
 
 - **Notes.** A `KON` on a voice is a note: its sample (`SRCN` at that

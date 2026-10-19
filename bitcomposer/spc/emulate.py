@@ -29,8 +29,20 @@ class Write:
 
 
 @dataclass
+class KeyOn:
+    """A key-on as the SNES chip acted on it, with the directory entry it read
+    then (drivers often write it just before: the snapshot's need not hold it)."""
+    time: float
+    voice: int
+    srcn: int
+    start: int
+    loop: int
+
+
+@dataclass
 class Run:
     writes: list[Write]
+    keyons: list[KeyOn]
     seconds: float               # the song time run
     instructions: int
     audio: bytes | None          # 32 kHz stereo 16-bit little-endian, when asked for
@@ -51,6 +63,7 @@ def run(snapshot, seconds: float, audio: bool = False) -> Run:
     except ImportError:
         raise EmulatorMissing("running an SPC file's driver needs the emulator, the bitcomposer-emu package "
                               "(emu/ in the repository; CONTRIBUTING.md says how to build it)") from None
-    raw, pcm, cycles, n = emu.run(snapshot.raw, float(seconds), audio)
+    raw, kons, pcm, cycles, n = emu.run(snapshot.raw, float(seconds), audio)
     writes = [Write(c, r, v) for c, r, v in struct.iter_unpack("<QBB", raw)]
-    return Run(writes=writes, seconds=cycles / CLOCK, instructions=n, audio=pcm)
+    keyons = [KeyOn(s / RATE, v, srcn, a, b) for s, v, srcn, a, b in struct.iter_unpack("<QBBHH", kons)]
+    return Run(writes=writes, keyons=keyons, seconds=cycles / CLOCK, instructions=n, audio=pcm)

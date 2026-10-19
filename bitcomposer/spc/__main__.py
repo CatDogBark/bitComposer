@@ -3,6 +3,7 @@
     python -m bitcomposer.spc song.spc [...]              tags, echo, voices, samples
     python -m bitcomposer.spc --export DIR song.spc [...]  every sample, once, as WAV + samples.json
     python -m bitcomposer.spc --notes [SECONDS] song.spc   run the driver: the notes it plays
+    python -m bitcomposer.spc --to-it OUT.it [--seconds N] song.spc   the song as an IT module, one to one
 
 Exported samples are 16-bit mono at 32 kHz, the rate the DSP plays them at
 pitch 0x1000; samples.json gives each one's loop and the snapshots and
@@ -100,6 +101,8 @@ def main(argv=None) -> int:
     ap.add_argument("--export", metavar="DIR", help="write every sample, once, as WAV, with samples.json")
     ap.add_argument("--notes", nargs="?", type=float, const=20.0, metavar="SECONDS",
                     help="run the driver (default 20 s) and list the notes it plays")
+    ap.add_argument("--to-it", metavar="OUT.it", help="convert the song to an IT module, one to one")
+    ap.add_argument("--seconds", type=float, help="with --to-it: how much of the song (default: its tag's length, or 90 s)")
     args = ap.parse_args(argv)
     snaps = []
     for f in args.files:
@@ -108,6 +111,23 @@ def main(argv=None) -> int:
         except SPCError as e:
             print(f"bitcomposer.spc: {e}", file=sys.stderr)
             return 1
+    if args.to_it:
+        from .convert import convert
+        from .emulate import EmulatorMissing
+        if len(snaps) != 1:
+            print("bitcomposer.spc: --to-it converts one file at a time", file=sys.stderr)
+            return 1
+        try:
+            song = convert(snaps[0], args.seconds, args.to_it)
+        except EmulatorMissing as e:
+            print(f"bitcomposer.spc: {e}", file=sys.stderr)
+            return 1
+        i = song["info"]
+        print(f"{args.to_it}: {i['notes']} notes in {i['seconds']:.1f} s, {i['samples']} samples, "
+              f"{i['instruments']} instruments; rows at {i['row_hz']:.1f} a second "
+              f"({'the driver clock' if i['on_ticks'] else 'the finest grid'}; key-ons {i['aligned']:.2f} aligned with a "
+              f"{i['tick_hz']:.1f} Hz timer)")
+        return 0
     if args.notes is not None:
         from .emulate import EmulatorMissing
         try:
