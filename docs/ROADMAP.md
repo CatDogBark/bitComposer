@@ -3,7 +3,8 @@
 What is worth doing next, in the order it would be heard. Items are
 recorded here when they come up so they are not lost; nothing here is
 promised. See `ANALYSIS.md` for how changes are judged (measure first, ear
-second) and `CHANGELOG.md` for what has shipped.
+second), `CHANGELOG.md` for what has shipped, and `VISION.md` (at the top
+of the repository) for where it is all heading.
 
 ## Release (1.0.0, shipped 2026-10-18)
 
