@@ -89,6 +89,10 @@ the generator plays, and a change to one is a change to the songs).
    (`akao`, `capcom`, ...) where the game uses a known family, so its results
    pool with the others, or a new name for a new one; `"composer"` when the
    tags' credit is cut off or wrong and a fuller one is known for sure.
+   `tools/spc_check.py family` says which games' drivers share code: so far a
+   quarter of it or more has meant one family (N-SPC's), 0.05 or less
+   unrelated drivers, and Square's two drivers share 0.17 while behaving
+   apart, so the traits decide between.
 3. `tools/spc_check.py traits`, `sweep`, then `doc` (CONTRIBUTING.md): the
    measured tables here, in the driver files and in [the index](../README.md#games)
    are rewritten; a new driver family gets a file whose hand-written parts are

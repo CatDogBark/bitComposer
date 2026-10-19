@@ -14,6 +14,7 @@ Usage:
     python3 tools/spc_check.py report OUT_DIR/results.jsonl [--against OLD]
     python3 tools/spc_check.py traits SPC_ROOT OUT.json [--workers 8]
     python3 tools/spc_check.py doc SPC_ROOT TRAITS.json RESULTS.jsonl [--docs docs/drivers]
+    python3 tools/spc_check.py family SPC_ROOT [--workers 8]
 
 The numbers:
 - contour: the correlation of the two loudness contours (RMS in 50 ms
@@ -56,6 +57,15 @@ most about: {"<game folder>": {"driver": "<driver file, as akao>", "game":
 "<its name>", "composer": "<a fuller credit than the tags'>"}} (game and
 composer optional; a plain string is the driver alone). The converted modules
 go to OUT_DIR/it/: they hold the games' samples, and stay where they are.
+
+`family` says which games run related drivers, for drivers.json: each game's
+driver code (the SNES sound CPU's instructions reachable from where its
+snapshots stopped), compared game against game as runs of opcodes with the
+addresses left out, so a driver moved elsewhere in RAM still matches itself.
+Unrelated drivers share 0.05 of their runs or less; Nintendo's N-SPC in other
+companies' games shares 0.26 to 0.5 with Nintendo's own, and Square's two
+drivers 0.17: a share says the code has a common ancestor, the traits whether
+it behaves alike. It needs neither the emulator nor libopenmpt.
 
 Needs the emulator (bitcomposer-emu, CONTRIBUTING.md) and libopenmpt.
 docs/SPC-IMPORT.md records what these measurements found.
@@ -126,8 +136,25 @@ def render_it(path: str, seconds: float) -> array.array:
 
 def emulated(snap, seconds: float, voice: int | None = None) -> array.array:
     """The emulator's output (32 kHz stereo), of one voice alone when given."""
-    mute = 0 if voice is None else 0xFF ^ (1 << voice)
-    return array.array("h", emulate.run(snap, seconds, audio=True, mute=mute).audio)
+    if voice is None:
+        return array.array("h", emulate.run(snap, seconds, audio=True).audio)
+    return array.array("h", emulate.run(without_echo_tail(snap), seconds, audio=True, mute=0xFF ^ (1 << voice)).audio)
+
+
+def without_echo_tail(snap):
+    """The snapshot with its echo buffer cleared, for a voice's own sound. The
+    buffer is RAM, so a snapshot holds the echo of what played before it, and
+    every voice alone would play that tail (Super Bomberman 4's silent voices
+    measured alike); the module has no notes to make it. Only with echo writes
+    on: then the hardware overwrites the buffer anyway, where with them off a
+    driver may keep other data there."""
+    if snap.dsp[0x6C] & 0x20:
+        return snap
+    start, size = snap.dsp[0x6D] << 8, max(4, (snap.dsp[0x7D] & 0x0F) * 2048)
+    raw = bytearray(snap.raw)
+    for a in range(start, start + size):
+        raw[spc.RAM + (a & 0xFFFF)] = 0
+    return spc.read(bytes(raw), snap.source)
 
 
 def each_alone(snap, seconds: float) -> dict:
@@ -137,7 +164,7 @@ def each_alone(snap, seconds: float) -> dict:
     solos = getattr(emulate, "solos", None)
     if solos is not None:
         try:
-            return solos(snap, seconds)
+            return solos(without_echo_tail(snap), seconds)
         except emulate.EmulatorMissing:
             pass
     return {v: emulated(snap, seconds, v) for v in range(8)}
@@ -425,7 +452,7 @@ def _trace(snap, song, v, secs, step, ref, it, side, dry, echo):
 # sweep ---------------------------------------------------------------------
 
 _OUT, _DRIVERS, _SECONDS, _SINCE = None, {}, 30.0, {}
-MEASURES = "2026-10-19b"         # bump when the measures change, so a sweep --since does not reuse older numbers
+MEASURES = "2026-10-19c"         # bump when the measures change, so a sweep --since does not reuse older numbers
 
 
 def _init(out, drivers, seconds, since=None):
@@ -473,7 +500,7 @@ def measure(path: str) -> dict:
         it_path = os.path.join(_OUT, "it", f"{game} - {rec['song']}.it")
         song = convert.convert(snap, None, it_path)
         info = song["info"]
-        rec.update({k: info.get(k) for k in ("notes", "samples", "instruments", "baked", "bakes", "unbaked",
+        rec.update({k: info.get(k) for k in ("notes", "samples", "instruments", "baked", "bakes", "unbaked", "off_keys",
                                              "repeats", "row_hz", "on_ticks", "seconds", "channels")})
         rec["size"] = os.path.getsize(it_path)
         unfaded = info["seconds"] - info.get("fade", 0.0)
@@ -649,6 +676,120 @@ def trait_rows(recs) -> list[tuple[str, str]]:
         ("Master volume", _counted(recs, lambda r: r["master_volume"], 2)),
         ("Density", f"{_pct([r['notes'] for r in recs], .5)} notes in a song's first minute; a note {med(lambda r: r['median_note_s']):.2f} s"),
     ]
+
+
+# the driver's code ---------------------------------------------------------
+
+# the SNES sound CPU's (SPC700's) instruction lengths, a row an opcode's high nibble
+_LENGTHS = bytes(int(c) for c in (
+    "1123231223323131"  # 0x
+    "2123233231221133"  # 1x
+    "1123231223323132"  # 2x
+    "2123233231221123"  # 3x
+    "1123231223323132"  # 4x
+    "2123233231221133"  # 5x
+    "1123231223323131"  # 6x
+    "2123233231221121"  # 7x
+    "1123231223323213"  # 8x
+    "2123233231221111"  # 9x
+    "1123231223323211"  # Ax
+    "2123233231221111"  # Bx
+    "1123231223323211"  # Cx
+    "2123233222221131"  # Dx
+    "1123231223323111"  # Ex
+    "2123233222321121"  # Fx
+))
+_BRANCH = {0x10, 0x30, 0x50, 0x70, 0x90, 0xB0, 0xD0, 0xF0, 0xFE, 0x2F}        # the offset in the second byte
+_BRANCH3 = {0x2E, 0x6E, 0xDE} | {op for op in range(256) if op & 15 == 3}     # in the third (CBNE, DBNZ, BBS, BBC)
+_ENDS = {0x5F, 0x2F, 0x1F, 0x6F, 0x7F, 0x0F, 0xEF, 0xFF}                     # JMP, BRA, RET, RETI, BRK, SLEEP, STOP
+CODE_RUN = 10
+
+
+def driver_code(snap) -> dict[int, int]:
+    """{address: opcode} of the driver's instructions in a snapshot: those reachable from where
+    it stopped and from the return addresses on its stack, through calls, jumps, branches and
+    jump tables."""
+    ram = snap.ram
+    word = lambda a: ram[a & 0xFFFF] | ram[(a + 1) & 0xFFFF] << 8              # noqa: E731
+    seen, todo = {}, [snap.pc] + [word(0x100 + s) for s in range(snap.sp + 1, min(snap.sp + 17, 0xFF))]
+    while todo:
+        a = todo.pop() & 0xFFFF
+        while 0x0200 <= a < 0xFFC0 and a not in seen:
+            op = seen[a] = ram[a]
+            nxt = a + _LENGTHS[op]
+            if op in _BRANCH:
+                todo.append(nxt + (ram[a + 1] ^ 0x80) - 0x80)
+            elif op in _BRANCH3:
+                todo.append(nxt + (ram[a + 2] ^ 0x80) - 0x80)
+            elif op in (0x3F, 0x5F):                                          # CALL, JMP
+                todo.append(word(a + 1))
+            elif op == 0x4F:                                                  # PCALL
+                todo.append(0xFF00 | ram[a + 1])
+            elif op & 15 == 1:                                                # TCALL
+                todo.append(word(0xFFDE - 2 * (op >> 4)))
+            elif op == 0x1F:                                                  # JMP [!a+X]: its table, while it points at RAM
+                for i in range(64):
+                    target = word(word(a + 1) + 2 * i)
+                    if not 0x0200 <= target < 0xFFC0:
+                        break
+                    todo.append(target)
+            if op in _ENDS:
+                break
+            a = nxt
+    return seen
+
+
+def code_runs(code: dict[int, int]) -> set[bytes]:
+    """The runs of CODE_RUN opcodes in a row, operands left out: a driver moved elsewhere keeps them."""
+    out, run, end = set(), [], None
+    for a in sorted(code):
+        if a != end:
+            run = []
+        run.append(code[a])
+        end = a + _LENGTHS[code[a]]
+        if len(run) >= CODE_RUN:
+            out.add(bytes(run[-CODE_RUN:]))
+    return out
+
+
+def game_code(folder: str, songs: int = 10) -> set[bytes]:
+    """A game's driver as code runs: those in most of up to `songs` of its snapshots (the walk
+    strays into song data too, and that differs from song to song)."""
+    paths = sorted(glob.glob(os.path.join(folder, "*.spc")))
+    counts, n = defaultdict(int), 0
+    for p in paths[::max(1, len(paths) // songs)][:songs]:
+        try:
+            snap = spc.read(p)
+        except spc.SPCError:
+            continue
+        n += 1
+        for r in code_runs(driver_code(snap)):
+            counts[r] += 1
+    return {r for r, c in counts.items() if c >= 0.6 * n}
+
+
+def shared_code(a: set, b: set) -> float:
+    """The share of the smaller driver's code runs the other has too."""
+    return len(a & b) / min(len(a), len(b)) if a and b else 0.0
+
+
+def cmd_family(args) -> int:
+    manifest = load_manifest(args.spc_root)
+    games = sorted(g for g in os.listdir(args.spc_root) if glob.glob(os.path.join(args.spc_root, g, "*.spc")))
+    if not games:
+        print(f"spc_check: no SPC files under {args.spc_root}/<game>/", file=sys.stderr)
+        return 1
+    folders = [os.path.join(args.spc_root, g) for g in games]
+    if args.workers > 1:
+        with Pool(args.workers) as pool:
+            code = dict(zip(games, pool.map(game_code, folders)))
+    else:
+        code = dict(zip(games, map(game_code, folders)))
+    driver = lambda g: manifest.get(g, {}).get("driver", "not in drivers.json")     # noqa: E731
+    for g in games:
+        near = sorted(((shared_code(code[g], code[o]), o) for o in games if o != g), reverse=True)[:3]
+        print(f"{g} ({driver(g)}): " + ", ".join(f"{o} {s:.2f} ({driver(o)})" for s, o in near))
+    return 0
 
 
 # the driver record ---------------------------------------------------------
@@ -887,10 +1028,10 @@ def cmd_report(args) -> int:
     for r in sorted(scored, key=lambda r: r["contour"])[:args.top]:
         print(f"  contour {r['contour']:5.2f}  gap {_fmt(r['gap_db'], '4.1f')} dB  level {r['level']:4.2f}  {r['game']}/{r['song']}")
     limits = [r for r in ok if (r.get("instruments") or 0) >= convert.MAX_INSTRUMENTS or (r.get("samples") or 0) >= 255
-              or r.get("unbaked")]
-    print(f"\nAt an IT limit, or with pitch-modulated notes left unbaked: {len(limits)}")
+              or r.get("unbaked") or r.get("off_keys")]
+    print(f"\nAt an IT limit, with pitch-modulated notes left unbaked, or notes off IT's keys: {len(limits)}")
     for r in limits:
-        print(f"  {r['game']}/{r['song']}: {r['instruments']} instruments, {r['samples']} samples, {r['unbaked']} unbaked")
+        print(f"  {r['game']}/{r['song']}: {r['instruments']} instruments, {r['samples']} samples, {r['unbaked']} unbaked, {r.get('off_keys') or 0} off the keys")
     if silent:
         print("\nNear-silent in the emulator: " + ", ".join(f"{r['game']}/{r['song']}" for r in silent))
     for r in failed:
@@ -925,6 +1066,9 @@ def main(argv=None) -> int:
     t.add_argument("spc_root")
     t.add_argument("out")
     t.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
+    f = sub.add_parser("family", help="which games' drivers share code, for drivers.json")
+    f.add_argument("spc_root")
+    f.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     r = sub.add_parser("report", help="summarise a sweep's results.jsonl")
     r.add_argument("results")
     r.add_argument("--top", type=int, default=15, help="lines in each list")
@@ -932,7 +1076,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     try:
         return {"voice": cmd_voice, "sweep": cmd_sweep, "report": cmd_report, "traits": cmd_traits,
-                "doc": cmd_doc}[args.cmd](args)
+                "doc": cmd_doc, "family": cmd_family}[args.cmd](args)
     except emulate.EmulatorMissing as e:
         print(f"spc_check: {e}", file=sys.stderr)
         return 1

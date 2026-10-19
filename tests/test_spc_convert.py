@@ -326,6 +326,40 @@ class Convert(unittest.TestCase):
         start = next(r for r, c in enumerate(rows) if 0 < c.note < 120)
         self.assertEqual(rows[start + 1].note, itf.NOTE_CUT)
 
+    def test_notes_under_it_s_lowest_key(self):
+        # a sample played five octaves and more under its rate (DKC2's bass): pitch 0x0080 is C-0 on a
+        # 32 kHz C5Speed, which a cell cannot write (its note 0 reads as none), and 0x0070 is under it;
+        # the sample's C5Speed goes an octave down, and both sound as loud as in the emulator
+        dry = {0x4D: 0, 0x00: 50, 0x01: 50}
+        for pitch in (0x0080, 0x0070):
+            regs = tuple((r, dry.get(r, v)) for r, v in TINY if r not in (0x02, 0x03)) + ((0x02, pitch & 0xFF), (0x03, pitch >> 8))
+            snap = tiny(regs + KON0)
+            with tempfile.TemporaryDirectory() as d:
+                path = os.path.join(d, "low.it")
+                song = convert.convert(snap, 1.0, path)
+                m, pcm = render(path, 0.5)
+            self.assertEqual((song["info"]["notes"], song["info"]["off_keys"]), (1, 0))
+            self.assertAlmostEqual(song["samples"][0].c5_speed / 16000, 1.0, delta=0.03)       # an octave down
+            emu = struct.unpack(f"<{16000 * 2}h", emulate.run(snap, 0.5, audio=True).audio[:16000 * 4])
+            level = lambda a: math.sqrt(sum(v * v for v in a[6400:]) / len(a[6400:]))   # noqa: E731
+            self.assertAlmostEqual(level(pcm[:len(emu)]) / level(emu), 1.0, delta=0.1)
+
+    def test_a_voice_over_it_s_volume_ceiling_under_a_low_master(self):
+        # voice volume 100 (IT's stop at 64) under a master of 0x40: the global volume rises to 100
+        # and the channel's volume falls to 64, the product the same, so the note is as loud as played
+        regs = tuple((r, {0x4D: 0, 0x0C: 0x40, 0x1C: 0x40}.get(r, v)) for r, v in TINY) + KON0
+        snap = tiny(regs)
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "lifted.it")
+            song = convert.convert(snap, 1.0, path)
+            m, pcm = render(path, 0.5)
+        last = song["info"]["channels"] - 1
+        master = [row[last].effect_val for pat in song["patterns"] for row in pat.data if row[last].effect == it_song.FX_SET_GLOBAL_VOLUME]
+        self.assertEqual(master[0], 100)                                      # the driver's 0x40, lifted
+        emu = struct.unpack(f"<{16000 * 2}h", emulate.run(snap, 0.5, audio=True).audio[:16000 * 4])
+        level = lambda a: math.sqrt(sum(v * v for v in a[6400:]) / len(a[6400:]))   # noqa: E731
+        self.assertAlmostEqual(level(pcm[:len(emu)]) / level(emu), 1.0, delta=0.1)
+
     def test_a_tiny_driver_becomes_a_playable_module(self):
         snap = tiny()
         with tempfile.TemporaryDirectory() as d:

@@ -75,7 +75,7 @@ class Line:
     slides where the effect column is free."""
     row: int
     end: int
-    note: int                         # IT note 0-119
+    note: int                         # IT note 1-119 (a cell's 0, C-0, reads as none)
     instrument: int
     volumes: list[int]                # 0-64
     pan: int | None = None            # 0-255 (Xxx), set where it changes; None leaves the channel's

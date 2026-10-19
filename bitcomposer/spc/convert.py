@@ -186,6 +186,7 @@ class _Master:
     def __init__(self, snap, writes):
         self.changes = notes_mod.master_volume(snap, writes)
         self.times = [t for t, _, _ in self.changes]
+        self.lift = 1.0                  # what the global volume is raised by (_Song.lift)
 
     def at(self, t: float) -> tuple[int, int]:
         _, left, right = self.changes[max(0, bisect.bisect_right(self.times, t) - 1)]
@@ -194,7 +195,10 @@ class _Master:
     def start(self) -> int:
         """The song's start, as the IT global volume (1-128)."""
         _, left, right = self.changes[0]
-        return max(1, min(128, max(abs(left), abs(right))))
+        return max(1, min(128, round(max(abs(left), abs(right)) * self.lift)))
+
+    def loudest(self) -> int:
+        return max(1, max(max(abs(left), abs(right)) for _, left, right in self.changes))
 
     def past(self, t: float) -> float:
         """What an echo repeat at time t is raised by. The master volume (volume
@@ -224,6 +228,7 @@ class _Song:
     instrument_of: dict = field(default_factory=dict)        # _instrument_key -> IT instrument
     baked_of: dict = field(default_factory=dict)             # id(note) -> (instrument, key) of its recording
     unbaked: int = 0                                         # pitch-modulated notes IT had no room to record
+    off_keys: int = 0                                        # notes no octave of their sample's brings onto IT's keys
     echo_channels: dict = field(default_factory=dict)        # voice -> its repeats' channels
     taps: int = 0                                            # repeats each sending voice has
     copies: int = 0                                          # echo-coloured copies a sample has (later repeats play the last)
@@ -231,6 +236,7 @@ class _Song:
     coloured_at: dict = field(default_factory=dict)          # (BRR addresses, k) -> (semitone, filter, fit) of copy k
     gains_of: dict = field(default_factory=dict)             # echo_gains, once each
     factors_of: dict = field(default_factory=dict)           # id(note) -> its envelope through its rows
+    lift: float = 1.0                                        # channel volumes over it, the global volume times it
 
     @property
     def samples_left(self) -> int:
@@ -271,6 +277,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
     tempo, row_hz = it_song.tempo_for(hz if on_ticks else FINE_GRID)
 
     song = _Song(snap, run, found, row_hz, _Master(snap, run.writes))
+    _lift(song)
     _add_samples(song)
     _add_instruments(song)
     _bake_pitch_modulation(song, seconds)
@@ -294,7 +301,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
            "global_volume": song.master.start(), "orders": list(range(len(grid.patterns))), "tempo": tempo, "speed": 1,
            "instruments": instruments, "message": message,
            "info": {"notes": placed, "repeats": repeats, "channels": channels, "echo_channels": song.echo_channels,
-                    "fade": fade, "baked": baked, "unbaked": song.unbaked,
+                    "fade": fade, "baked": baked, "unbaked": song.unbaked, "off_keys": song.off_keys,
                     "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": hz,
                     "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
                     "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
@@ -318,11 +325,19 @@ def _add_samples(song: _Song) -> None:
         fracs = [12 * math.log2(n.pitch / 0x1000) for n in song.notes if n.brr == addr and not n.noise and n.pitch]
         ang = [2 * math.pi * (f - math.floor(f)) for f in fracs]
         mean = math.atan2(sum(map(math.sin, ang)), sum(map(math.cos, ang))) / (2 * math.pi) if ang else 0.0
+        # Whole octaves on top, so the sample's notes fall on IT's keys, 1-119 (a cell's note 0,
+        # C-0, reads as none): DKC2's bass plays five octaves under its sample's rate.
+        if fracs:
+            lo, hi = round(60 + min(fracs) - mean), round(60 + max(fracs) - mean)
+            if lo < 1:
+                mean -= 12 * math.ceil((1 - lo) / 12)
+            elif hi > 119:
+                mean += 12 * math.ceil((hi - 119) / 12)
         song.offset[addr] = mean                            # semitones the C5Speed sits off 32 kHz
         data = s.pcm.tobytes() if s.pcm.itemsize == 2 else array("h", s.pcm).tobytes()
         song.samples.append(itf.ITSample(name=f"SNES sample at {addr[0]:04X}", filename=f"brr{addr[0]:04x}", data=data,
                                          length=len(s), loop=s.loops, loop_start=s.loop_start or 0,
-                                         loop_end=s.loop_end or len(s), c5_speed=max(1000, round(RATE * 2 ** (mean / 12)))))
+                                         loop_end=s.loop_end or len(s), c5_speed=max(1, round(RATE * 2 ** (mean / 12)))))
         song.sample_of[addr] = len(song.samples)
     for rate in sorted({n.noise_rate for n in song.notes if n.noise and n.noise_rate}):
         song.samples.append(_noise_sample(rate))
@@ -466,7 +481,8 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
             if ins is None or (n.noise and not n.noise_rate):
                 continue
             note = round(song.it_semis(n, n.pitch))
-            if not 0 <= note <= 119:
+            if not 1 <= note <= 119:
+                song.off_keys += 1
                 continue
         if not _place(song, grid, n, n.voice, note, ins, 0, 1.0, 1.0, baked=id(n) in song.baked_of):
             continue
@@ -505,6 +521,18 @@ def _place_notes(song: _Song, grid: it_song.Grid) -> tuple[int, int, int]:
     return placed, repeats, baked
 
 
+def _lift(song: _Song) -> None:
+    """IT's volumes stop at 64 and the SNES chip's go to 127, but a note's
+    loudness is its volume times the master volume, and the master volume is
+    the IT global volume (up to 128): where the master leaves room, the global
+    volume is raised and every channel's volume lowered as far as the loudest
+    voice needs (DKC2's voices reach 123 under a master of 60). Only songs
+    with a voice over 64 change."""
+    loudest = max(((abs(left) + abs(right)) / 2 for n in song.notes
+                   for left, right in (n.volume, *((sl, sr) for _, sl, sr in n.swells))), default=0)
+    song.lift = song.master.lift = max(1.0, min(loudest / 64, 128 / song.master.loudest()))
+
+
 def _master_channel(song: _Song, grid: it_song.Grid, ch: int, fade: float) -> None:
     """On the last channel, the master volume's changes (a driver's own fades)
     and the fade over the song's last `fade` seconds, as a player fades it."""
@@ -517,7 +545,7 @@ def _master_channel(song: _Song, grid: it_song.Grid, ch: int, fade: float) -> No
         t = (r + 0.5) / row_hz
         left, right = song.master.at(t)
         faded = 1.0 if fade <= 0 or t < fade_from else max(0.0, 1 - (t - fade_from) / fade)
-        changes.append((r, max(0, min(128, round(max(abs(left), abs(right)) * faded)))))
+        changes.append((r, max(0, min(128, round(max(abs(left), abs(right)) * faded * song.master.lift)))))
     grid.global_volume(ch, song.master.start(), changes)
 
 
@@ -534,6 +562,7 @@ def _place(song: _Song, grid: it_song.Grid, n, ch: int, note: int, ins: int, shi
     row = round(n.start * row_hz) + shift
     if not grid.has(row):
         return False
+    gl, gr = gl / song.lift, gr / song.lift
     vol, pan = _loudness(*n.volume, gl, gr)
     if vol == 0 and not any(_loudness(sl, sr, gl, gr)[0] for _, sl, sr in n.swells):
         return False                     # silent throughout (a driver may key a note silent, then swell it up)

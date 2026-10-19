@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.0 — 2026-10-19
+## Unreleased
+
+- SPC import: a key-on while the voice's KOFF bit is set sounds when the driver clears the bit before the SNES chip's next poll, as the hardware has it. Factor 5's driver keys voices off and on in one go and clears KOFF just after: every Super Turrican 2 song converted silent, and now measures as played (contour 0.98, gap 0.5 dB).
+- SPC import: a sample played far under its own rate gets its C5Speed whole octaves down, so its notes land on IT's keys. A cell cannot write C-0 (its note 0 reads as none) and notes under it were dropped without a word: DKC2's bass plays five octaves down and fell silent in stretches. Notes no octave can place are counted (`off_keys`) and listed by `spc_check.py report`.
+- SPC import: where the master volume leaves room, the IT global volume is raised and every channel's volume lowered by as much, so a voice over IT's ceiling of 64 plays at its level. DKC2's voices reach 123 under a master of 60 and played at half: one song went from a 5.1 dB gap to 0.2. Songs with no voice over 64 are unchanged.
+- `tools/spc_check.py family`: which games' drivers share code, to say which family a new game belongs to in `drivers.json`. It compares the driver code each game's snapshots run, with the addresses left out.
+- `tools/spc_check.py` measures a voice alone without the echo of what played before the snapshot (its echo buffer is RAM, and every voice alone played that tail: Super Bomberman 4's unused voices measured alike).
 
 The player and the generator's built-in sounds are unchanged: the same songs, byte for byte but for the version in each song's message. New: pack files, a style pack as data (`--pack-file`); and, as a developer preview, SPC import: a game's own music, played by its own driver in an emulator of the SNES sound hardware, written as an IT module of its samples, notes, envelopes and echo, and measured against the original voice by voice. It is command-line only (`python -m bitcomposer.spc`) and needs the emulator, `bitcomposer-emu`, built from source (CONTRIBUTING.md), which is not on PyPI yet. Making a pack from a soundtrack, and the player's PACKS panel, come later.
 

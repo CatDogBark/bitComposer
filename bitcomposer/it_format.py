@@ -56,7 +56,7 @@ class ITInstrument:
 @dataclass
 class ITNote:
     """A single note event in a pattern."""
-    note: int = 0       # 0=none, 1-120=C-0 to B-9, 254=notecut, 255=noteoff
+    note: int = 0       # 0=none (so C-0 cannot be written), 1-119=C#0 to B-9, 254=notecut, 255=noteoff
     instrument: int = 0  # 0=none, 1-99
     volume: int = 255    # 255=none, 0-64=set volume
     effect: int = 0      # Effect command
