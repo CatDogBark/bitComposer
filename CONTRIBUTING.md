@@ -118,7 +118,7 @@ cargo test                          # the emulator alone; no Python involved
 maturin build --release -o dist     # the Python module, as a wheel for this machine
 ```
 
-The wheel is abi3: one file serves every Python from 3.10 on. Install it where the Python tests run (`pip install emu/dist/bitcomposer_emu-*.whl`) and they exercise it too; without it they skip.
+The wheel is abi3: one file serves every Python from 3.10 on. Install it where the Python tests run (`pip install emu/dist/bitcomposer_emu-*.whl`) and they exercise it too; without it they skip. `bitcomposer/spc/emulate.py` names the emulator version it calls (`NEEDS`); bump both together when the binding changes.
 
 The SNES sound CPU is checked against the SingleStepTests suite, 1,000
 cases per instruction (81 MB, not in the repository): fetch

@@ -62,6 +62,14 @@ class Notes(unittest.TestCase):
         self.assertEqual((n.adsr, n.gain), ((0xFF, 0xE0), 0xB8))
         self.assertEqual([e[1:] for e in n.envelopes], [(0x00, 0xE0, 0xB8), (0x00, 0xE0, 0x9E)])  # repeats and after-end writes left out
 
+    def test_pitch_modulation_while_a_note_sounds(self):
+        snap = snapshot(dsp={0x13: 0x10, 0x23: 0x10})
+        t = lambda s: int(s * CLOCK)                  # noqa: E731
+        writes = [Write(t(0.01), notes.KON, 0x03), Write(t(0.05), notes.PMON, 0x03),   # voice 0's bit does nothing
+                  Write(t(0.08), notes.PMON, 0x00), Write(t(0.10), notes.KON, 0x02)]
+        found = notes.decode(snap, writes)
+        self.assertEqual([(n.voice, n.pmon) for n in found], [(0, False), (1, True), (1, False)])
+
 
 class Tuning(unittest.TestCase):
     def test_a_loop_of_whole_cycles(self):

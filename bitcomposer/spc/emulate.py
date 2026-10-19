@@ -7,10 +7,12 @@ SNES chip running beside it so the driver reads live state back. This
 module calls it and hands back the writes; notes.py turns them into notes.
 """
 import struct
-from dataclasses import dataclass
+from array import array
+from dataclasses import dataclass, field
 
 CLOCK = 1_024_000            # SNES sound CPU cycles per second
 RATE = 32000                 # the SNES chip's output rate
+NEEDS = (0, 2)               # the emulator version this module calls (voice taps and mute)
 
 
 class EmulatorMissing(RuntimeError):
@@ -46,24 +48,40 @@ class Run:
     seconds: float               # the song time run
     instructions: int
     audio: bytes | None          # 32 kHz stereo 16-bit little-endian, when asked for
+    # for each tapped voice, its own output (after its envelope, before its
+    # volumes), one 16-bit sample per SNES chip sample from the snapshot on
+    tapped: dict[int, array] = field(default_factory=dict)
 
 
-def available() -> bool:
-    try:
-        import bitcomposer_emu  # noqa: F401
-    except ImportError:
-        return False
-    return True
-
-
-def run(snapshot, seconds: float, audio: bool = False) -> Run:
-    """Run `snapshot` (a bitcomposer.spc Snapshot) for `seconds` of song."""
+def _module():
     try:
         import bitcomposer_emu as emu
     except ImportError:
-        raise EmulatorMissing("running an SPC file's driver needs the emulator, the bitcomposer-emu package "
-                              "(emu/ in the repository; CONTRIBUTING.md says how to build it)") from None
-    raw, kons, pcm, cycles, n = emu.run(snapshot.raw, float(seconds), audio)
+        return None
+    version = tuple(int(p) for p in emu.__version__.split(".")[:2] if p.isdigit())
+    return emu if version >= NEEDS else None
+
+
+def available() -> bool:
+    return _module() is not None
+
+
+def run(snapshot, seconds: float, audio: bool = False, mute: int = 0, taps: int = 0) -> Run:
+    """Run `snapshot` (a bitcomposer.spc Snapshot) for `seconds` of song.
+    `mute` leaves voices out of `audio` (bit n, voice n), still running;
+    `taps` keeps those voices' own output in `tapped`."""
+    emu = _module()
+    if emu is None:
+        raise EmulatorMissing(f"running an SPC file's driver needs the emulator, the bitcomposer-emu package, "
+                              f"version {'.'.join(map(str, NEEDS))} or later "
+                              "(emu/ in the repository; CONTRIBUTING.md says how to build it)")
+    raw, kons, pcm, tap, cycles, n = emu.run(snapshot.raw, float(seconds), audio, mute, taps)
     writes = [Write(c, r, v) for c, r, v in struct.iter_unpack("<QBB", raw)]
     keyons = [KeyOn(s / RATE, v, srcn, a, b) for s, v, srcn, a, b in struct.iter_unpack("<QBBHH", kons)]
-    return Run(writes=writes, keyons=keyons, seconds=cycles / CLOCK, instructions=n, audio=pcm)
+    tapped = {}
+    if tap:
+        voices = [v for v in range(8) if taps >> v & 1]
+        both = array("h", tap)
+        for i, v in enumerate(voices):
+            tapped[v] = both[i::len(voices)]
+    return Run(writes=writes, keyons=keyons, seconds=cycles / CLOCK, instructions=n, audio=pcm, tapped=tapped)

@@ -5,7 +5,9 @@
 //!
 //! Drivers read its state back (Secret of Evermore's polls every voice's
 //! envelope level and the end flags), so it runs whether or not anyone
-//! listens; the mixed output exists to check it against a reference player.
+//! listens; the mixed output exists to check it against a reference player
+//! (and a conversion, a voice at a time: `mute`), and a voice's own output
+//! can be recorded (`taps`) for what a converter cannot rebuild.
 //!
 //! Written from Nocash's fullsnes ("SNES APU DSP" chapters): the Gaussian
 //! table and the interpolation's overflow behaviour, the envelope steps and
@@ -140,6 +142,14 @@ pub struct Dsp {
     fir_pos: usize,
     /// The mixed output, when kept: interleaved left, right.
     pub audio: Option<Vec<i16>>,
+    /// Voices left out of the mixed output and the echo (bit n, voice n),
+    /// still running: to hear one voice alone.
+    pub mute: u8,
+    /// Voices whose own output (after the envelope, before the volumes) is
+    /// kept in `tapped`, one sample each per sample, in voice order: what
+    /// pitch modulation made of a voice, for a converter to keep as it was.
+    pub taps: u8,
+    pub tapped: Vec<i16>,
     /// Samples run so far.
     pub samples: u64,
     /// Every key-on as the SNES chip acted on it, with the directory entry it
@@ -184,6 +194,9 @@ impl Dsp {
             fir: [[0; 2]; 8],
             fir_pos: 0,
             audio: None,
+            mute: 0,
+            taps: 0,
+            tapped: Vec::new(),
             samples: 0,
             keyons: Vec::new(),
         };
@@ -232,6 +245,8 @@ impl Dsp {
         let dir = (self.regs[DIR] as u16) << 8;
         let (mut main_l, mut main_r, mut echo_l, mut echo_r) = (0i32, 0i32, 0i32, 0i32);
         let mut prev_out = 0;
+        let mut outs = [0i32; 8];
+        let mute = self.mute;
         for vi in 0..8 {
             let base = vi * 0x10;
             let bit = 1u8 << vi;
@@ -304,6 +319,7 @@ impl Dsp {
             out = ((out * v.env) >> 11) & !1;
             v.out = out;
             prev_out = out;
+            outs[vi] = out;
 
             // The envelope.
             if v.kon_delay == 0 {
@@ -321,14 +337,24 @@ impl Dsp {
             // Into the mix.
             let al = (out * voll) >> 7;
             let ar = (out * volr) >> 7;
-            main_l = clamp16(main_l + al);
-            main_r = clamp16(main_r + ar);
-            if eon & bit != 0 {
-                echo_l = clamp16(echo_l + al);
-                echo_r = clamp16(echo_r + ar);
+            if mute & bit == 0 {
+                main_l = clamp16(main_l + al);
+                main_r = clamp16(main_r + ar);
+                if eon & bit != 0 {
+                    echo_l = clamp16(echo_l + al);
+                    echo_r = clamp16(echo_r + ar);
+                }
             }
             self.regs[base + V_ENVX] = (v.env >> 4) as u8;
             self.regs[base + V_OUTX] = (out >> 8) as u8;
+        }
+
+        if self.taps != 0 {
+            for (vi, out) in outs.iter().enumerate() {
+                if self.taps >> vi & 1 != 0 {
+                    self.tapped.push(*out as i16);
+                }
+            }
         }
 
         // The echo: read the oldest entry, filter, feed back, write.

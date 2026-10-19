@@ -335,38 +335,63 @@ each voice on (Secret of Evermore's driver writes a voice's directory
 entry just before keying it; its snapshot's directory is placeholders), its
 C5Speed set so the notes fall on whole semitones; one instrument per
 sample and envelope setting, its volume envelope simulated from ADSR or
-GAIN; bends as fine slides row by row; key-offs as cuts. Envelope
-registers written while a note sounds scale its volume column against the
-instrument's envelope and cut it where they silence it: Mega Man X's
-driver keys every note on held and releases it with a GAIN fade a moment
-before the next, never with a key-off. The echo as repeats: each note
+GAIN (each tick holding its window's RMS, so a fast decay keeps the
+energy of its peak); bends as fine slides row by row; key-offs as cuts.
+A note whose envelope registers are written while it sounds plays an
+instrument without an envelope, its envelope simulated through the writes
+and carried whole in the volume column, and is cut where it falls silent:
+Mega Man X's driver keys every note on held and releases it with a GAIN
+fade a moment before the next, never with a key-off; Secret of Evermore's
+wind swells one held note for the length of a song. Volumes side for
+side: the SNES chip sets each side's level on its own, an IT player pans
+linearly (a centred note at half its volume each side), so a note's IT
+volume is its two sides' sum and its pan the right side's share; the SNES
+chip's master volume is the IT global volume, its changes (a driver's
+fade-out) on a channel of their own. Noise plays the SNES chip's own
+noise, its 15-bit shift register rendered at the output rate for each
+noise clock a song uses, each value held as the hardware holds it, each
+note starting somewhere else in it. The echo as repeats: each note
 sending to the echo again on a channel of its own, an echo delay late, up
 to three times, played from a copy of its sample coloured by the echo
 filter (at the pitch its echoing notes mostly have) and scaled by the echo
 volume, the feedback and the filter's gain over the note itself; when the
-two echo volumes have opposite signs (Mega Man X's widening trick), the
-repeat channels play in surround, one side inverted. The SNES chip's
-master volume (a driver's fade-out) as IT global volume. Rows are the
-driver's tick when its key-ons land on a running timer IT can run
-(Evermore's 50 Hz), else IT's finest grid, 100 a second (FFVI's and
-Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz is past
-IT's 102).
+two echo volumes have opposite signs (Mega Man X's widening trick), a
+voice near the middle has its repeats play in surround, one side inverted
+(surround plays centred: a panned voice's echo there landed on the wrong
+side, 2.46 times its dry level on one and 0.12 on the other, against the
+original's 0.33 on both). Pitch modulation (a
+voice's pitch bent by the output of the voice below it, at audio rate: an
+FM timbre, or in The Phantom Train a tone shaken into a hiss by a noise
+voice) has no IT equivalent, so a pitch-modulated note is kept as the
+emulator played it: the emulator records the voice's own output (after
+its envelope, before its volumes), and notes played alike share one
+recording, the longest, on the keyboard of an instrument of recordings.
+10 of FFVI's 82 songs and 8 of Mana's 69 use it, none of Evermore's or
+Mega Man X's; the most recordings any of them needs is 28 (FFVI's New
+Continent). Rows are the driver's tick when its key-ons land on a running
+timer IT can run (Evermore's 50 Hz), else IT's finest grid, 100 a second
+(FFVI's and Mana's drivers key on anywhere in a tick; Mega Man X's 125 Hz
+is past IT's 102).
 
 Measured against the emulator's own output (loudness contours, 50 ms
-windows over the first 14 s, each side, averaged): FFVI's battle theme
-0.97 and The Phantom Train 0.97, Mana's Together Always 0.91 and The
-Oracle 0.93, Evermore's main title 0.96 and Southern Jungle 0.56, Mega
-Man X's Sigma Intro 0.80 and Spark Mandrill 0.91. Voice by voice,
+windows over the first 14 s, each side, averaged; the level is the IT's
+RMS over the emulator's): FFVI's battle theme 0.98 (level 0.99) and The
+Phantom Train 0.97 (0.90), Mana's Together Always 0.96 (0.98) and The
+Oracle 0.98 (1.01), Evermore's main title 0.98 (1.01) and Southern Jungle
+0.94 (1.10), Mega Man X's Sigma Intro 0.84 (0.95) and Spark Mandrill 0.95
+(0.99). The emulator can leave voices out of its output, so the same
+comparison runs voice by voice, which is how most of these were found:
 Spark Mandrill's melody went from 0.54 to 0.94 when the envelope writes
-were carried. An echo copied at
-full range is worse than none where the filter passes little bass (Spark
-Mandrill 0.86 against 0.93), which is why the repeats are coloured: they
-then match the original's band levels without adding bass. Not carried
-over yet: pitch modulation, one voice's output bending the next voice's
-pitch. 10 of FFVI's 82 songs and 8 of Mana's 69 use it (none of
-Evermore's or Mega Man X's), mostly with the modulating voice at an
-audible pitch, which makes a new timbre (FM) rather than a vibrato, and
-IT has no way to say that.
+were carried; Southern Jungle's wind was silent (a GAIN level of 16 in
+2047, which rounds to nothing in an IT envelope) until those notes played
+their envelope in the volume column, 0.56 to 0.94; Mana's songs played at
+half their level until volumes went side for side. The Phantom Train's
+pitch-modulated voice was a steady beep (its spectrum's correlation with
+the emulator's -0.01); recorded, it is the hiss it should be (0.88). An
+echo copied at full range is worse than none where the filter passes
+little bass (Spark Mandrill 0.86 against 0.93), which is why the repeats
+are coloured: they then match the original's band levels without adding
+bass.
 
 For the SNES chip:
 

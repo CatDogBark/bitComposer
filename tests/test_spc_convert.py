@@ -41,6 +41,33 @@ def block(shift, filt, nibbles, loop=False, end=False):
     return bytes(out)
 
 
+# the tiny driver's registers: DIR=0x10, voice 0 SRCN=0 PITCH=0x1000 VOL=100/100 GAIN direct 0x7F, KON voice 0;
+# with an echo: 32 ms (EDL 2), echo volume 0x40, feedback 0x40, FIR passing straight, voice 0 sending
+TINY = ((0x5D, 0x10), (0x04, 0), (0x02, 0x00), (0x03, 0x10), (0x00, 100), (0x01, 100),
+        (0x05, 0x00), (0x07, 0x7F), (0x0C, 0x7F), (0x1C, 0x7F), (0x6D, 0x80), (0x7D, 0x02),
+        (0x2C, 0x40), (0x3C, 0x40), (0x0D, 0x40), (0x0F, 0x7F), (0x4D, 0x01), (0x6C, 0x00))
+KON0 = ((0x4C, 0x01),)
+
+
+def tiny(regs=TINY + KON0):
+    """A snapshot whose driver writes `regs` to the SNES chip, then spins: a
+    looped square-ish sample at 0x0400, its directory entry 0 at 0x1000."""
+    data = bytearray(spc.SIZE)
+    data[:len(spc.MAGIC)] = spc.MAGIC
+    data[0x23] = 27
+    data[0x25:0x27] = (0x0200).to_bytes(2, "little")
+    data[0x2B] = 0xEF
+    smp = block(11, 0, [7, 7, 7, 7, -7, -7, -7, -7] * 2) + block(11, 0, [7, 7, 7, 7, -7, -7, -7, -7] * 2, loop=True, end=True)
+    data[spc.RAM + 0x0400:spc.RAM + 0x0400 + len(smp)] = smp
+    data[spc.RAM + 0x1000:spc.RAM + 0x1004] = (0x0400).to_bytes(2, "little") + (0x0409).to_bytes(2, "little")
+    code = bytearray()
+    for reg, val in regs:
+        code += bytes([0x8F, reg, 0xF2, 0x8F, val, 0xF3])
+    code += bytes([0x2F, 0xFE])
+    data[spc.RAM + 0x0200:spc.RAM + 0x0200 + len(code)] = code
+    return spc.read(bytes(data))
+
+
 class Instruments(unittest.TestCase):
     def write(self, d, instruments):
         n = 2000
@@ -70,6 +97,15 @@ class Instruments(unittest.TestCase):
             self.assertEqual(struct.unpack_from("<BH", env, 6 + 3), (32, 10))  # second node
             plain, _ = self.write(d, None)
             self.assertFalse(struct.unpack_from("<H", plain, 0x2C)[0] & 4)    # without: sample mode as before
+
+    def test_a_keyboard_maps_notes_to_samples(self):
+        with tempfile.TemporaryDirectory() as d:
+            keys = [(k, 0) for k in range(120)]
+            keys[5] = (60, 1)                                                   # note 5 plays sample 1 at C-5
+            raw, _ = self.write(d, [itf.ITInstrument(name="keys", keyboard=keys)])
+            at = struct.unpack_from("<I", raw, 0xC0 + struct.unpack_from("<H", raw, 0x20)[0])[0]
+            self.assertEqual(raw[at + 64 + 10:at + 64 + 12], bytes([60, 1]))
+            self.assertEqual(raw[at + 64:at + 66], bytes([0, 0]))
 
     @unittest.skipUnless(_have_openmpt(), "needs libopenmpt")
     def test_libopenmpt_plays_it_and_the_envelope_shapes_it(self):
@@ -119,6 +155,17 @@ class Echo(unittest.TestCase):
             self.assertGreater(ratio, keep) if hz == 3000 else self.assertLess(ratio, keep)
 
 
+class Noise(unittest.TestCase):
+    def test_the_hardware_noise_held_at_its_clock(self):
+        smp = convert._noise_sample(22)                                    # a step every 16 samples
+        v = struct.unpack(f"<{smp.length}h", smp.data)
+        self.assertEqual((smp.length, smp.c5_speed), (32000, 32000))
+        self.assertEqual(len(set(v[16:32])), 1)
+        self.assertNotEqual(v[15], v[16])
+        rms = math.sqrt(sum(x * x for x in v) / len(v))
+        self.assertGreater(rms, 15000)                                     # full scale, as the hardware's
+
+
 class Envelopes(unittest.TestCase):
     def test_a_gain_fade_written_mid_note(self):
         # ADSR FF/E0 holds at once; at sample 3200 the driver switches to GAIN 0x9E, a fast linear fade
@@ -142,29 +189,40 @@ class Envelopes(unittest.TestCase):
         self.assertTrue(all(level == 32 for _, level in nodes))
 
 
+@unittest.skipUnless(emulate.available(), "needs the compiled emulator")
+class Voices(unittest.TestCase):
+    def test_a_voice_muted_and_tapped(self):
+        snap = tiny()
+        loud = struct.unpack(f"<{6400 * 2}h", emulate.run(snap, 0.2, audio=True).audio[:6400 * 4])
+        quiet = emulate.run(snap, 0.2, audio=True, mute=0x01).audio
+        self.assertGreater(max(map(abs, loud)), 1000)
+        self.assertFalse(any(quiet))                                     # voice 0 and its echo left out
+        run = emulate.run(snap, 0.2, taps=0x03)
+        self.assertEqual(set(run.tapped), {0, 1})
+        self.assertAlmostEqual(len(run.tapped[0]), 0.2 * 32000, delta=2)
+        self.assertGreater(max(map(abs, run.tapped[0])), 1000)              # its own output, before its volumes
+        self.assertFalse(any(run.tapped[1]))                                # never keyed on
+
+
 @unittest.skipUnless(emulate.available() and _have_openmpt(), "needs the compiled emulator and libopenmpt")
 class Convert(unittest.TestCase):
+    def test_pitch_modulation_is_kept_as_played(self):
+        # voice 1 plays the same sample with its pitch bent by voice 0's output (PMON bit 1)
+        voice1 = ((0x14, 0), (0x12, 0x00), (0x13, 0x10), (0x10, 100), (0x11, 100), (0x15, 0x00), (0x17, 0x7F), (0x2D, 0x02))
+        snap = tiny(TINY + voice1 + ((0x4C, 0x03),))
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "fm.it")
+            song = convert.convert(snap, 1.0, path)
+            info = song["info"]
+            self.assertEqual((info["notes"], info["baked"], info["bakes"]), (2, 1, 1))
+            keys = [ins.keyboard for ins in song["instruments"] if ins.keyboard]
+            self.assertEqual(len(keys), 1)
+            self.assertEqual(keys[0][1], (60, info["samples"]))              # key 1: the recording, at its own rate
+            m, pcm = render(path, 0.5)
+            self.assertGreater(max(abs(v) for v in pcm), 1000)
+
     def test_a_tiny_driver_becomes_a_playable_module(self):
-        data = bytearray(spc.SIZE)
-        data[:len(spc.MAGIC)] = spc.MAGIC
-        data[0x23] = 27
-        data[0x25:0x27] = (0x0200).to_bytes(2, "little")
-        data[0x2B] = 0xEF
-        # a looped square-ish sample at 0x0400, its directory entry 0 at 0x1000
-        smp = block(11, 0, [7, 7, 7, 7, -7, -7, -7, -7] * 2) + block(11, 0, [7, 7, 7, 7, -7, -7, -7, -7] * 2, loop=True, end=True)
-        data[spc.RAM + 0x0400:spc.RAM + 0x0400 + len(smp)] = smp
-        data[spc.RAM + 0x1000:spc.RAM + 0x1004] = (0x0400).to_bytes(2, "little") + (0x0409).to_bytes(2, "little")
-        # driver: DIR=0x10, V0 SRCN=0 PITCH=0x1000 VOL=100/100 GAIN direct 0x7F, KON voice 0, then spin
-        code = bytearray()
-        # with an echo: 32 ms (EDL 2), echo volume 0x40, feedback 0x40, FIR passing straight, voice 0 sending
-        for reg, val in ((0x5D, 0x10), (0x04, 0), (0x02, 0x00), (0x03, 0x10), (0x00, 100), (0x01, 100),
-                         (0x05, 0x00), (0x07, 0x7F), (0x0C, 0x7F), (0x1C, 0x7F), (0x6D, 0x80), (0x7D, 0x02),
-                         (0x2C, 0x40), (0x3C, 0x40), (0x0D, 0x40), (0x0F, 0x7F), (0x4D, 0x01), (0x6C, 0x00),
-                         (0x4C, 0x01)):
-            code += bytes([0x8F, reg, 0xF2, 0x8F, val, 0xF3])
-        code += bytes([0x2F, 0xFE])
-        data[spc.RAM + 0x0200:spc.RAM + 0x0200 + len(code)] = code
-        snap = spc.read(bytes(data))
+        snap = tiny()
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "tiny.it")
             song = convert.convert(snap, 1.0, path)

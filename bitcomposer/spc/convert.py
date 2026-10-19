@@ -18,30 +18,41 @@ original. The pieces:
   note sounds (vibrato, slides) become fine pitch slides, row by row.
 - One IT instrument per sample and envelope setting, its volume envelope
   simulated from the ADSR or GAIN registers.
-- Note volume and pan from the voice's volumes; swells in the volume column;
-  a key-off is a note cut (the SNES chip's release takes under 8 ms).
-- Envelope registers written while a note sounds (a driver releasing notes
-  with a GAIN fade instead of a key-off, as Mega Man X's does) scale the
-  volume column by the envelope they make over the instrument's, and cut
-  the note where they silence it.
+- Note volume and pan from the voice's volumes, side for side: the SNES
+  chip sets each side's level on its own and an IT player pans linearly,
+  so the IT volume is the two sides' sum, the pan the right side's share.
+  Swells in the volume column; a key-off is a note cut (the SNES chip's
+  release takes under 8 ms).
+- A note whose envelope registers are written while it sounds (a driver
+  releasing notes with a GAIN fade instead of a key-off, as Mega Man X's
+  does, or swelling a held note, as Secret of Evermore's wind does) plays
+  an instrument without an envelope, its whole envelope simulated through
+  the writes and carried in the volume column row by row (with one tick a
+  row, as fine as an IT envelope), and is cut where it falls silent.
 - The echo as repeats: each echoing note again on a channel of its own, a
   delay (EDL x 16 ms) late, up to three times, the k-th at the echo volume
   times the feedback to the k-1 and the filter's gain through k passes,
   measured over the note's own spectrum (echo_gains), left and right as
-  the echo volumes have them (in surround when their signs differ). The
+  the echo volumes have them (in surround when their signs differ and the
+  voice is near the middle: surround plays centred). The
   repeats play a copy of the sample coloured by the filter (echo_coloured):
   a filter that passes little bass makes a thin, bright echo, and a
   full-range copy at its level sounds like a second instrument.
-- The master volume (a driver's fade-out) as global volume, relative to
-  the song's start, on a channel of its own.
-- Noise voices play a white-noise sample at the noise clock's rate.
+- The master volume as global volume, the song's start in the header and
+  each change (a driver's fade-out) on a channel of its own: with the
+  volumes side for side, the module plays at the original's level.
+- Noise voices play the SNES chip's own noise, rendered at its output rate
+  for each noise clock a song uses (each value held until the next step,
+  as the hardware holds it), so nothing is resampled.
+- Pitch modulation (a voice's pitch bent by the output of the voice below,
+  at audio rate: an FM timbre, or a noise-shaken tone) as the emulator
+  played it: the voice's own output through the note, recorded, one
+  recording for each way such notes are played.
 
-Not yet carried over: pitch modulation; the echo's colour is right at one
-pitch per sample, its gain at every pitch.
+The echo's colour is right at one pitch per sample, its gain at every pitch.
 The files stay the user's: a converted song holds the game's samples.
 """
 import math
-import random
 import struct
 from array import array
 
@@ -54,9 +65,14 @@ MAX_TICK_RATE = 102.0                 # IT tempo 255 is 102 ticks a second
 FINE_GRID = 100.0                     # rows a second when the driver's clock cannot be the grid
 ALIGNED = 0.6                         # how closely key-ons must line up with a timer to be its ticks
 MAX_INSTRUMENTS = 99
+MAX_SAMPLES = 255                     # what an instrument's keyboard can name
+KEYS = 119                            # bakes one instrument holds: notes 1-119 (0 reads as none)
+RELEASE = 256                         # samples a released SNES voice takes to fall silent
 TAPS = 3                              # echo repeats carried over, at most
 FX_SET_GLOBAL_VOLUME = 22             # Vxx
-SURROUND_ON, SURROUND_OFF = 0x91, 0x90   # S91 / S90: one side phase-inverted
+SURROUND_ON, SURROUND_OFF = 0x91, 0x90   # S91 / S90: one side phase-inverted, centred
+CENTRED = 0.7                         # a voice this close to the middle (quieter side / louder) can play centred
+FX_SAMPLE_OFFSET = 15                 # Oxx: start xx * 256 samples in
 ENV_NODES = 25
 
 # The SNES chip's envelope rates: samples between steps (rate 0 never steps).
@@ -150,10 +166,11 @@ def envelope(adsr1: int, adsr2: int, gain: int, tick_hz: float, seconds: float =
         period = RATE_PERIOD[rate]
         if period and n % period == 0:
             env, mode, hidden = _advance(env, mode, hidden, step, boundary)
-        acc += env
+        acc += env * env
         count += 1
-        if n + 1 >= next_tick:              # each tick carries its window's average: an IT envelope
-            levels.append(round(64 * acc / count / 0x7FF))      # holds nothing finer than a tick
+        if n + 1 >= next_tick:              # each tick carries its window's RMS: an IT envelope holds
+            levels.append(round(64 * math.sqrt(acc / count) / 0x7FF))   # nothing finer than a tick, and a
+            # fast decay's mean would lose the energy of its peak
             acc = count = 0
             next_tick += per_tick
             stable = stable + 1 if len(levels) > 1 and levels[-1] == levels[-2] else 0
@@ -195,7 +212,8 @@ def envelope_track(adsr1: int, adsr2: int, gain: int, changes, length: int) -> l
 
 
 def _row_means(track, bounds) -> list[float]:
-    """The mean level of a breakpoint track over each [bounds[i], bounds[i+1])."""
+    """The RMS level of a breakpoint track over each [bounds[i], bounds[i+1])
+    (as envelope() keeps its ticks)."""
     out, j = [], 0
     for a, b in zip(bounds, bounds[1:]):
         while j + 1 < len(track) and track[j + 1][0] <= a:
@@ -203,10 +221,10 @@ def _row_means(track, bounds) -> list[float]:
         total, k, x = 0.0, j, a
         while x < b:
             seg = min(b, track[k + 1][0]) if k + 1 < len(track) else b
-            total += track[k][1] * (seg - x)
+            total += track[k][1] ** 2 * (seg - x)
             x = seg
             k += 1
-        out.append(total / (b - a) if b > a else float(track[j][1]))
+        out.append(math.sqrt(total / (b - a)) if b > a else float(track[j][1]))
     return out
 
 
@@ -295,12 +313,21 @@ def echo_coloured(pcm, loop, ratio: float, taps) -> tuple[array, float]:
     return array("h", (round(v * fit) for v in y)), fit
 
 
-def _noise_sample() -> itf.ITSample:
-    r = random.Random(0x4000)
-    n = 8192
-    data = struct.pack(f"<{n}h", *(r.randint(-16384, 16383) for _ in range(n)))
-    return itf.ITSample(name="Noise", filename="noise", data=data, length=n, loop=True,
-                        loop_start=0, loop_end=n, c5_speed=RATE)
+def _noise_sample(rate: int) -> itf.ITSample:
+    """The SNES chip's noise at noise clock `rate`, as it comes out: a second
+    of 32 kHz, each step of the 15-bit shift register held until the next
+    (RATE_PERIOD[rate] samples), looped. Read as a signed number, each step
+    is half the last plus a new top bit, so the level and the tilt toward
+    the bass are the hardware's; held rather than interpolated, so are its
+    highs."""
+    n, out, per = 0x4000, [], RATE_PERIOD[rate]
+    while len(out) < RATE:
+        n = (n >> 1) | (((n << 14) ^ (n << 13)) & 0x4000)
+        v = (n << 17) & 0xFFFFFFFF                       # the emulator's ((n << 17) >> 16) & !1, in i32
+        out.extend([((v - (1 << 32) if v & 0x80000000 else v) >> 16) & ~1] * per)
+    data = struct.pack(f"<{RATE}h", *out[:RATE])
+    return itf.ITSample(name=f"Noise, clock {rate}", filename=f"noise{rate}", data=data, length=RATE, loop=True,
+                        loop_start=0, loop_end=RATE, c5_speed=RATE)
 
 
 def convert(snap, seconds: float | None = None, path: str | None = None) -> dict:
@@ -335,27 +362,31 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
                            c5_speed=max(1000, round(RATE * 2 ** (mean / 12))))
         samples.append(smp)
         sample_of[addr] = len(samples)
-    noise_sample = None
-    if any(n.noise for n in found):
-        samples.append(_noise_sample())
-        noise_sample = len(samples)
-        offset["noise"] = 0.0
+    noise_sample = {}
+    for rate in sorted({n.noise_rate for n in found if n.noise and n.noise_rate}):
+        samples.append(_noise_sample(rate))
+        noise_sample[rate] = len(samples)
 
-    # Instruments: one per sample and envelope setting.
+    # Instruments: one per sample and envelope setting, and one per sample
+    # without an envelope for notes whose driver rewrites the envelope as they
+    # sound (theirs is carried whole in the volume column).
     instruments, instrument_of = [], {}
     def key_of(n):
-        return ("noise" if n.noise else n.brr, n.adsr, n.gain if not n.adsr[0] & 0x80 else 0)
+        if n.envelopes:
+            return (("noise", n.noise_rate) if n.noise else n.brr, None, None)
+        return (("noise", n.noise_rate) if n.noise else n.brr, n.adsr, n.gain if not n.adsr[0] & 0x80 else 0)
 
     for n in found:
         key = key_of(n)
-        if key in instrument_of or (not n.noise and n.brr not in sample_of):
+        if key in instrument_of or (n.brr not in sample_of if not n.noise else n.noise_rate not in noise_sample):
             continue
         if len(instruments) >= MAX_INSTRUMENTS:
             continue
-        nodes = envelope(n.adsr[0], n.adsr[1], n.gain, row_hz)
-        sample = noise_sample if n.noise else sample_of[n.brr]
+        nodes = [] if key[1] is None else envelope(n.adsr[0], n.adsr[1], n.gain, row_hz)
+        sample = noise_sample[n.noise_rate] if n.noise else sample_of[n.brr]
         label = "noise" if n.noise else f"sample {n.brr[0]:04X}"
-        instruments.append(itf.ITInstrument(name=f"{label} env {len(instruments) + 1}", sample=sample, envelope=nodes))
+        kind = "no env" if key[1] is None else f"env {len(instruments) + 1}"
+        instruments.append(itf.ITInstrument(name=f"{label} {kind}", sample=sample, envelope=nodes))
         instrument_of[key] = len(instruments)
 
     # The echo's colour: for each sample an echoing note plays, a copy as the
@@ -384,6 +415,53 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
                 instruments.append(itf.ITInstrument(name=f"echo {src.name}"[:25], sample=len(samples), envelope=src.envelope))
                 echo_instrument_of[key] = len(instruments)
 
+    # Pitch modulation: a note whose pitch the voice below it bent (PMON) is
+    # kept as the emulator played it, the voice's own output through the
+    # note (after its envelope, before its volumes), since IT cannot bend a
+    # pitch at audio rate. Notes played alike (the same sample, pitch,
+    # envelope, bends, and the same notes below them, as far as they
+    # overlap) share one recording, the longest. The recordings sit on the
+    # keyboards of instruments of their own, KEYS to an instrument, each key
+    # playing its recording at its own rate.
+    baked_of, unbaked = {}, 0
+    modulated = [n for n in found if n.pmon and not n.noise and n.voice > 0]
+    if modulated:
+        tapped = emulate_run(snap, seconds, taps=sum({1 << n.voice for n in modulated})).tapped
+        below = {}
+        for n in found:
+            below.setdefault(n.voice + 1, []).append(n)
+        end_of = lambda n: n.end if n.end is not None else run.seconds        # noqa: E731
+
+        def played_alike(n):
+            return (n.brr, n.pitch, n.adsr, n.gain, tuple(p for _, p in n.bends), tuple(e[1:] for e in n.envelopes),
+                    tuple((round(m.start - n.start, 2), m.brr, m.pitch, m.adsr, m.gain, m.noise, m.noise_rate,
+                           tuple(p for _, p in m.bends), tuple(e[1:] for e in m.envelopes))
+                          for m in below.get(n.voice, []) if m.start < end_of(n) and end_of(m) > n.start))
+
+        groups = {}
+        for n in modulated:
+            groups.setdefault(played_alike(n), []).append(n)
+        baked_ins = None
+        for i, group in enumerate(sorted(groups.values(), key=len, reverse=True)):
+            if len(samples) >= MAX_SAMPLES or (i % KEYS == 0 and len(instruments) >= MAX_INSTRUMENTS):
+                unbaked += sum(len(g) for g in list(groups.values())[i:])
+                break
+            longest = max(group, key=lambda n: end_of(n) - n.start)
+            out = tapped[longest.voice]
+            pcm = out[max(0, round(longest.start * RATE) - 8):min(len(out), round(end_of(longest) * RATE) + RELEASE)]
+            if not any(pcm):
+                continue
+            samples.append(itf.ITSample(name=f"voice {longest.voice} pitch-modulated", filename=f"pmon{i}",
+                                        data=pcm.tobytes(), length=len(pcm), loop=False, c5_speed=RATE))
+            if i % KEYS == 0:
+                instruments.append(itf.ITInstrument(name=f"pitch-modulated {i // KEYS + 1}",
+                                                    keyboard=[(k, 0) for k in range(120)]))
+                baked_ins = len(instruments)
+            key = 1 + i % KEYS
+            instruments[baked_ins - 1].keyboard[key] = (60, len(samples))
+            for n in group:
+                baked_of[id(n)] = (baked_ins, key)
+
     # Channels: the eight voices; for each voice up to TAPS echo repeats; the master volume last.
     voices_echo = any(n.echo and n.echo_writes and n.echo_delay > 0 for n in found)
     taps = TAPS if voices_echo else 0
@@ -399,34 +477,36 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
 
     def it_semis(n, pitch):
         if n.noise:
-            per = RATE_PERIOD[n.noise_rate] or 1
-            return 60 + 12 * math.log2(1 / per)
+            return 60.0                  # its own sample, at the output rate
         return 60 + 12 * math.log2(pitch / 0x1000) - offset[n.brr]
 
     def loudness(left, right, gl, gr):
-        """(IT volume, IT pan or None) for voice volumes scaled by gains."""
+        """(IT volume, IT pan or None) for voice volumes scaled by gains. The
+        SNES chip sets each side's level on its own (volume / 128); an IT
+        player pans linearly, a centred note at half its volume each side,
+        so the IT volume is the two sides' sum over 128 (in 0-64), the pan
+        the right side's share."""
         l, r = abs(left) * gl, abs(right) * gr
-        vol = max(0, min(64, round(64 * max(l, r) / 127)))
-        pan = round(255 * (0.5 + 0.5 * (r - l) / (l + r))) if l + r > 0 else None
+        vol = max(0, min(64, round((l + r) / 2)))
+        pan = round(255 * r / (l + r)) if l + r > 0 else None
         return vol, pan
 
     pans = {}
     factors_of = {}
 
     def envelope_factors(n, first: int, stop: int):
-        """For a note whose envelope registers were written while it sounded:
-        per row from `first` to `stop` (unshifted), the envelope it had over
-        the one its instrument plays (the key-on registers'), and the row
-        from which it is silent for good (or None)."""
+        """For a note whose envelope registers were written while it sounded
+        (it plays an instrument without an envelope): per row from `first` to
+        `stop` (unshifted), its envelope's level (0-1), and the row from which
+        it is silent for good (or None)."""
         if id(n) in factors_of:
             return factors_of[id(n)]
         start = round(n.start * RATE)
         length = round(((n.end if n.end is not None else run.seconds) - n.start) * RATE)
         changes = [(round(t * RATE) - start, a1, a2, g) for t, a1, a2, g in n.envelopes]
         real = envelope_track(*n.adsr, n.gain, changes, length)
-        plain = envelope_track(*n.adsr, n.gain, [], length)
         bounds = [max(0, round(r / row_hz * RATE) - start) for r in range(first, stop + 1)]
-        f = [(a / b if b else float(a > 0)) for a, b in zip(_row_means(real, bounds), _row_means(plain, bounds))]
+        f = [level / 0x7FF for level in _row_means(real, bounds)]
         silent = None
         if real[-1][1] == 0 and real[-1][0] < length:
             silent = math.ceil((n.start + real[-1][0] / RATE) * row_hz)
@@ -435,11 +515,12 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
 
     surround = {}
 
-    def place(n, ch, note, ins, shift, gl, gr, inverted=False) -> bool:
+    def place(n, ch, note, ins, shift, gl, gr, inverted=False, baked=False) -> bool:
         """Write note n into channel ch, `shift` rows late, its volumes scaled
         by gl (left) and gr (right): the note, its pan (or surround, when the
         two sides are `inverted`), its bends, swells and envelope changes row
-        by row, its cut."""
+        by row, its cut. A `baked` note's recording holds its bends and
+        envelope already."""
         row = round(n.start * row_hz) + shift
         c = cell(row, ch)
         if c is None:
@@ -449,7 +530,7 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
             return False                 # silent throughout (a driver may key a note silent, then swell it up)
         end_row = (round(n.end * row_hz) + shift) if n.end is not None else last_row + 1
         factors = None
-        if n.envelopes:
+        if n.envelopes and not baked:
             factors, silent = envelope_factors(n, row - shift, end_row - shift)
             if silent is not None:
                 end_row = min(end_row, max(row + 1, silent + shift))
@@ -462,8 +543,10 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         elif not inverted and pan is not None and pan != pans.get(ch):
             c.effect, c.effect_val = itf.FX_SET_PAN, pan
             pans[ch] = pan
-        bends, swells = list(n.bends), list(n.swells)
-        cur, pitch, base, last_vol = 0, n.pitch, vol, c.volume
+        if n.noise and c.effect == 0:    # the hardware's noise runs on between notes: start each somewhere else
+            c.effect, c.effect_val = FX_SAMPLE_OFFSET, 1 + round(n.start * RATE) * 40503 % (RATE // 256 - 1)
+        bends, swells = [] if baked else list(n.bends), list(n.swells)
+        cur, pitch, base, last_vol = 0, 0 if baked else n.pitch, vol, c.volume
         for r in range(row, min(end_row, last_row + 1)):
             t = (r - shift + 0.5) / row_hz
             while bends and bends[0][0] <= t:
@@ -510,17 +593,21 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
     def repeat_gains(n) -> list[float]:
         return gains_at("noise" if n.noise else n.brr, round(12 * math.log2(max(1, n.pitch) / 0x1000)), n.echo_filter)
 
-    placed = repeats = 0
+    placed = repeats = baked = 0
     for n in sorted(found, key=lambda n: (n.start, n.voice)):
-        ins = instrument_of.get(key_of(n))
-        if ins is None or (n.noise and not n.noise_rate):
-            continue
-        note = round(it_semis(n, n.pitch))
-        if not 0 <= note <= 119:
-            continue
-        if not place(n, n.voice, note, ins, 0, 1.0, 1.0):
+        if id(n) in baked_of:
+            ins, note = baked_of[id(n)]
+        else:
+            ins = instrument_of.get(key_of(n))
+            if ins is None or (n.noise and not n.noise_rate):
+                continue
+            note = round(it_semis(n, n.pitch))
+            if not 0 <= note <= 119:
+                continue
+        if not place(n, n.voice, note, ins, 0, 1.0, 1.0, baked=id(n) in baked_of):
             continue
         placed += 1
+        baked += id(n) in baked_of
         # The echo, as repeats: the k-th comes k delays late, at the echo
         # volume times the filter's gain through k passes and the feedback
         # to the k-1, played from the coloured copy of the sample where
@@ -528,13 +615,18 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
         if taps and n.echo and n.echo_writes and n.echo_delay > 0:
             gains, fb = repeat_gains(n), abs(n.echo_feedback)
             echo_ins, colour = echo_instrument_of.get(key_of(n)), coloured_at.get(n.brr)
-            if echo_ins is not None and colour[1] == n.echo_filter:
+            if id(n) in baked_of:
+                echo_ins, passes = ins, gains
+            elif echo_ins is not None and colour[1] == n.echo_filter:
                 mid_gain = gains_at(n.brr, colour[0], n.echo_filter)[0]
                 passes = [g / mid_gain / colour[2] if mid_gain else 0.0 for g in gains]
             else:
                 echo_ins, passes = ins, gains
             ev = n.echo_volume
-            inverted = ev[0] * ev[1] < 0
+            # Echo volumes of opposite signs: surround inverts one side, but
+            # plays centred, so only a voice near the middle keeps its place.
+            sides = sorted((abs(n.volume[0]), abs(n.volume[1])))
+            inverted = ev[0] * ev[1] < 0 and sides[1] > 0 and sides[0] / sides[1] >= CENTRED
             for k in range(1, taps + 1):
                 scale = passes[k - 1] * fb ** (k - 1)
                 gl, gr = abs(ev[0]) * scale, abs(ev[1]) * scale
@@ -543,15 +635,15 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
                 if max(gl, gr) < 1 / 32:
                     break
                 shift = round(k * n.echo_delay * row_hz)
-                if place(n, 8 + n.voice * taps + k - 1, note, echo_ins, shift, gl, gr, inverted):
+                if place(n, 8 + n.voice * taps + k - 1, note, echo_ins, shift, gl, gr, inverted, id(n) in baked_of):
                     repeats += 1
 
-    # The master volume, relative to where the song starts (fades, mostly).
+    # The master volume (volume / 128, as the voices') as IT global volume:
+    # the song's start in the header, then each change (fades, mostly).
     mv = notes_mod.master_volume(snap, run.writes)
-    base = max(abs(mv[0][1]), abs(mv[0][2])) or 127
-    level = 128
+    level = start_level = max(1, min(128, max(abs(mv[0][1]), abs(mv[0][2]))))
     for t_mv, ml, mr in mv[1:]:
-        gv = max(0, min(128, round(128 * max(abs(ml), abs(mr)) / base)))
+        gv = max(0, min(128, max(abs(ml), abs(mr))))
         c = cell(round(t_mv * row_hz), master_ch)
         if c is not None and gv != level:
             c.effect, c.effect_val = FX_SET_GLOBAL_VOLUME, gv
@@ -561,18 +653,19 @@ def convert(snap, seconds: float | None = None, path: str | None = None) -> dict
     message = "\r".join([
         f"{t.title or 'SPC'}{' - ' + t.game if t.game else ''}{' - ' + t.artist if t.artist else ''}",
         "Converted from an SPC snapshot by bitComposer: the game's own samples and the notes its",
-        "driver played, one to one, the echo as repeats on channels of their own.",
-        "Not carried over yet: pitch modulation.",
+        "driver played, one to one, the echo as repeats on channels of their own,",
+        "pitch-modulated notes as the emulator played them.",
         (f"rows on the driver's clock, {hz:.2f} Hz" if on_ticks else
-         f"rows at {row_hz:.0f} a second (the driver's key-ons do not sit on a tick IT can run)") + f"; {placed} notes, {repeats} echo repeats",
+         f"rows at {row_hz:.0f} a second (the driver's key-ons do not sit on a tick IT can run)") + f"; {placed} notes ({baked} pitch-modulated), {repeats} echo repeats",
     ])
-    song = {"name": (t.title or "SPC")[:25], "samples": samples, "patterns": patterns,
+    song = {"name": (t.title or "SPC")[:25], "samples": samples, "patterns": patterns, "global_volume": start_level,
             "orders": list(range(n_patterns)), "tempo": tempo, "speed": 1, "instruments": instruments,
             "message": message,
-            "info": {"notes": placed, "repeats": repeats, "channels": channels, "tick_hz": hz, "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
+            "info": {"notes": placed, "repeats": repeats, "channels": channels, "baked": baked, "unbaked": unbaked,
+                     "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": hz, "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
                      "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
     if path:
         itf.write_it_file(path, song["name"], samples, patterns, song["orders"], tempo=tempo, speed=1,
-                          global_volume=128, mix_volume=128, num_channels=channels, channel_pans=[32] * channels,
+                          global_volume=start_level, mix_volume=128, num_channels=channels, channel_pans=[32] * channels,
                           message=message, instruments=instruments)
     return song
