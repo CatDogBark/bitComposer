@@ -25,15 +25,13 @@ for categories stage 4's vocabulary is to replace."""
 import json
 import math
 import re
-import shutil
 import tempfile
 import wave
-import zipfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import roles as R
+from . import archives, roles as R
 
 RATE = 32000                         # a sample plays at its own rate at pitch 0x1000
 VOICES = 6                           # the most samples a part draws from
@@ -41,8 +39,6 @@ SHARE = 0.03                         # a sample playing less of a part's notes t
 REPEATS = 4                          # a pool repeats its most used sample this many times, the rest by their share
 LONG = 0.5                           # seconds: a drum ringing this long is a cymbal
 WHY = "translator.json"              # beside pack.json: the songs read, and why each sample is where it is
-ZIP_SONGS = 2000                     # SPC files a zip may hold: far more than any game's
-ZIP_SPC_BYTES = 1 << 20              # a file in it bigger than this is no snapshot
 
 # the generator's pools each part fills
 POOLS = {R.MELODY: ("lead",), R.HARMONY: ("harmony",), R.ACCOMP: ("harmony",), R.COUNTER: ("counter",),
@@ -299,60 +295,13 @@ def _read(path):
         return RuntimeError(f"{path}: {type(e).__name__}: {e}"), None
 
 
-def is_zip(path) -> bool:
-    return Path(path).suffix.lower() == ".zip"
-
-
-def spc_files(paths, unpack_to: Path) -> list[Path]:
-    """The SPC files to read: each file given, each folder's own (not its
-    subfolders': a parent of several games would mix them), and every one
-    in a zip, its folders too (a zip is one game's set), unpacked into
-    unpack_to/<the zip's name>."""
-    files = []
-    for p in map(Path, paths):
-        if p.is_dir():
-            files += sorted(f for f in p.iterdir() if f.suffix.lower() == ".spc" and f.is_file())
-        elif is_zip(p):
-            files += _unzip_spc(p, unpack_to / p.stem)
-        else:
-            files.append(p)
-    return files
-
-
-def _unzip_spc(path: Path, into: Path) -> list[Path]:
-    """A zip's SPC files, each written by its own name alone (nothing it
-    names can land outside `into`); two of one name get (2), (3)."""
-    out = []
-    try:
-        z = zipfile.ZipFile(path)
-    except (OSError, zipfile.BadZipFile) as e:
-        raise ValueError(f"{path.name}: not a zip file ({e})") from None
-    with z:
-        members = sorted((m for m in z.infolist() if not m.is_dir() and m.filename.lower().endswith(".spc")),
-                         key=lambda m: m.filename.lower())
-        if len(members) > ZIP_SONGS:
-            raise ValueError(f"{path.name}: {len(members)} SPC files, more than one game's")
-        into.mkdir(parents=True, exist_ok=True)
-        for m in members:
-            if m.file_size > ZIP_SPC_BYTES:
-                continue                                 # not a snapshot (one is 64 KB of RAM and a header)
-            name = m.filename.replace("\\", "/").rsplit("/", 1)[-1]
-            target, n = into / name, 2
-            while target.exists():
-                target, n = into / f"{Path(name).stem} ({n}){Path(name).suffix}", n + 1
-            with z.open(m) as fin, open(target, "wb") as fout:
-                shutil.copyfileobj(fin, fout)
-            out.append(target)
-    return out
-
-
 def make(paths, out, name: str | None = None, workers: int | None = None, say=print, progress=None) -> Path:
-    """Read a game's SPC files (folders read whole, zips unpacked) and write
-    a thin pack of them into `out`: pack.json, its samples' WAVs and why
-    each is where it is (WHY). Returns the pack file. progress(done, total)
-    after each song."""
+    """Read a game's SPC files (folders read whole, archives unpacked:
+    archives.py) and write a thin pack of them into `out`: pack.json, its
+    samples' WAVs and why each is where it is (WHY). Returns the pack file.
+    progress(done, total) after each song."""
     with tempfile.TemporaryDirectory(prefix="bitcomposer-spc-") as unpack:
-        return _make(spc_files(paths, Path(unpack)), paths, out, name, workers, say, progress)
+        return _make(archives.spc_files(paths, Path(unpack)), paths, out, name, workers, say, progress)
 
 
 def _make(files, paths, out, name, workers, say, progress) -> Path:
@@ -386,7 +335,7 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
         return snes_chip.snes_interpolated(s.pcm, lp), lp
 
     first = Path(paths[0])
-    folder = first.name if first.is_dir() else first.stem if is_zip(first) else first.parent.name
+    folder = first.name if first.is_dir() else first.stem if archives.is_archive(first) else first.parent.name
     data, wavs = build(g, decode, name or name_for(folder))
     path = write(data, wavs, Path(out), why(g, data), len(readings))
     v = data["voices"]

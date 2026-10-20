@@ -4,7 +4,7 @@
     python -m bitcomposer.spc --export DIR song.spc [...]  every sample, once, as WAV + samples.json
     python -m bitcomposer.spc --notes [SECONDS] song.spc   run the driver: the notes it plays
     python -m bitcomposer.spc --to-it OUT.it [--seconds N] song.spc   the song as an IT module, one to one
-    python -m bitcomposer.spc --pack OUT [--name NAME] FOLDER|ZIP   a pack of a game's songs: its samples, its habits
+    python -m bitcomposer.spc --pack OUT [--name NAME] FOLDER|ARCHIVE   a pack of a game's songs: its samples, its habits
 
 Exported samples are 16-bit mono at 32 kHz, the rate the DSP plays them at
 pitch 0x1000; samples.json gives each one's loop and the snapshots and
@@ -98,7 +98,7 @@ def show_notes(snap, seconds: float) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m bitcomposer.spc", description=__doc__.split("\n\n")[0])
-    ap.add_argument("files", nargs="+", metavar="FILE.spc", help="snapshots (with --pack, folders or zips of them too)")
+    ap.add_argument("files", nargs="+", metavar="FILE.spc", help="snapshots (with --pack, folders of them too, or a set: zip, rsn, rar, 7z)")
     ap.add_argument("--export", metavar="DIR", help="write every sample, once, as WAV, with samples.json")
     ap.add_argument("--notes", nargs="?", type=float, const=20.0, metavar="SECONDS",
                     help="run the driver (default 20 s) and list the notes it plays")

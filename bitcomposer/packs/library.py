@@ -268,7 +268,7 @@ def can_import() -> bool:
 
 
 class Import:
-    """A game's SPC files (a folder of them, or a zip) made into a pack in a
+    """A game's SPC files (a folder of them, a zip, an .rsn, .rar or .7z) made into a pack in a
     process of its own (it is the emulator's work, a minute or so for a
     whole soundtrack), the pack made anew in its place when it is done.
 
@@ -276,9 +276,10 @@ class Import:
     reading thread."""
 
     def __init__(self, source, name: str | None = None, on_progress=None, on_done=None):
-        from ..translate.pack import is_zip, name_for
+        from ..translate.archives import is_archive
+        from ..translate.pack import name_for
         self.source = Path(source)
-        self.name = name or name_for(self.source.stem if is_zip(self.source) else self.source.name)
+        self.name = name or name_for(self.source.stem if is_archive(self.source) else self.source.name)
         check_name(self.name)
         self.stage = packs_dir() / (STAGE + self.name)
         self.on_progress = on_progress or (lambda done, total: None)
@@ -288,8 +289,11 @@ class Import:
         self._cancelled = False
 
     def start(self) -> None:
+        from ..translate import archives
         if not can_import():
             raise PackError("importing needs the SNES emulator (bitcomposer-emu), built from source: see CONTRIBUTING.md")
+        if self.source.suffix.lower() in archives.BY_PROGRAM and not archives.program():
+            raise PackError(f"{self.source.name}: unpacking it needs an archive program, {archives.INSTALL}")
         packs_dir().mkdir(parents=True, exist_ok=True)
         shutil.rmtree(self.stage, ignore_errors=True)
         package = Path(__file__).resolve().parents[2]     # the folder holding this bitcomposer, for the child

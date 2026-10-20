@@ -244,13 +244,15 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     backend.folderRequested.connect(choose_folder)
 
     def import_game():
-        # One dialog for both: a zip of a game's SPC files, or any SPC file
-        # in its folder, which imports the whole folder.
+        # One dialog for both: an archive of a game's SPC files (zip, rsn,
+        # rar, 7z), or any SPC file in its folder, which imports the folder.
+        from ..translate.archives import is_archive
+        kinds = " ".join(f"*.{x} *.{x.upper()}" for x in ("zip", "rsn", "rar", "7z", "spc"))
         chosen, _ = QFileDialog.getOpenFileName(
-            None, "Import a game: its zip of SPC files, or any SPC file in its folder", str(Path.home()),
-            "Game music (*.zip *.ZIP *.spc *.SPC)")
+            None, "Import a game: its SPC set (zip, rsn, rar, 7z), or any SPC file in its folder",
+            str(Path.home()), f"Game music ({kinds})")
         if chosen:
-            backend.import_from(chosen if chosen.lower().endswith(".zip") else str(Path(chosen).parent))
+            backend.import_from(chosen if is_archive(chosen) else str(Path(chosen).parent))
     backend.packImportRequested.connect(import_game)
 
     def add_pack():

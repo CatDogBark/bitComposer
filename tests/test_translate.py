@@ -343,32 +343,80 @@ class Pack(unittest.TestCase):
             self.assertTrue(song["patterns"])
 
 
-    def test_a_game_s_files_from_a_folder_or_a_zip(self):
+class Archives(unittest.TestCase):
+    """A game's SPC files from a folder, a zip, or a set an archive program unpacks."""
+
+    def setUp(self):
         import tempfile
-        import zipfile
         from pathlib import Path
-        from bitcomposer.translate import pack
-        with tempfile.TemporaryDirectory() as d:
-            d = Path(d)
-            game = d / "Test Quest"
-            (game / "extras").mkdir(parents=True)
-            for f in ("01 Title.spc", "02 Field.SPC", "notes.txt", "extras/99 Unused.spc"):
-                (game / f).write_bytes(b"SNES-SPC700")
-            self.assertEqual([f.name for f in pack.spc_files([game], d / "unpacked")],
-                             ["01 Title.spc", "02 Field.SPC"])              # the folder's own, any case
-            zipped = d / "Test Quest.zip"
-            with zipfile.ZipFile(zipped, "w") as z:
-                z.writestr("Test Quest/01 Title.spc", b"one")
-                z.writestr("Test Quest/disc 2/01 Title.spc", b"two")     # the same name in a folder of its own
-                z.writestr("../../02 Escape.spc", b"three")              # named out of the zip: lands inside
-                z.writestr("Test Quest/info.txt", b"x")
-            files = pack.spc_files([zipped], d / "unpacked")
-            self.assertEqual([f.name for f in files], ["02 Escape.spc", "01 Title.spc", "01 Title (2).spc"])
-            self.assertTrue(all(f.parent == d / "unpacked" / "Test Quest" for f in files))
-            self.assertEqual(sorted(f.read_bytes() for f in files), [b"one", b"three", b"two"])
-            (d / "broken.zip").write_bytes(b"not a zip")
-            with self.assertRaises(ValueError):
-                pack.spc_files([d / "broken.zip"], d / "unpacked")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.d = Path(self.tmp.name)
+
+    def test_a_folder_gives_its_own_files(self):
+        from bitcomposer.translate import archives
+        game = self.d / "Test Quest"
+        (game / "extras").mkdir(parents=True)
+        for f in ("01 Title.spc", "02 Field.SPC", "notes.txt", "extras/99 Unused.spc"):
+            (game / f).write_bytes(b"SNES-SPC700")
+        self.assertEqual([f.name for f in archives.spc_files([game], self.d / "unpacked")],
+                         ["01 Title.spc", "02 Field.SPC"])                  # the folder's own, any case
+
+    def test_a_zip_gives_every_one_in_it(self):
+        import zipfile
+        from bitcomposer.translate import archives
+        zipped = self.d / "Test Quest.zip"
+        with zipfile.ZipFile(zipped, "w") as z:
+            z.writestr("Test Quest/01 Title.spc", b"one")
+            z.writestr("Test Quest/disc 2/01 Title.spc", b"two")         # the same name in a folder of its own
+            z.writestr("../../02 Escape.spc", b"three")                  # named out of the zip: lands inside
+            z.writestr("Test Quest/info.txt", b"x")
+        files = archives.spc_files([zipped], self.d / "unpacked")
+        self.assertEqual([f.name for f in files], ["02 Escape.spc", "01 Title.spc", "01 Title (2).spc"])
+        self.assertTrue(all(f.parent == self.d / "unpacked" / "Test Quest" for f in files))
+        self.assertEqual(sorted(f.read_bytes() for f in files), [b"one", b"three", b"two"])
+        (self.d / "broken.zip").write_bytes(b"not a zip")
+        with self.assertRaises(ValueError):
+            archives.spc_files([self.d / "broken.zip"], self.d / "unpacked")
+
+    def seven_zip(self):
+        """A .7z set (what an .rsn's RAR goes through the same way), made by 7-Zip."""
+        import shutil
+        import subprocess
+        exe = shutil.which("7z") or shutil.which("7zz")
+        if not exe:
+            self.skipTest("no 7-Zip here")
+        src = self.d / "src"
+        (src / "disc 2").mkdir(parents=True)
+        for f, data in (("01 Title.spc", b"one"), ("disc 2/01 Title.spc", b"two"), ("info.txt", b"x")):
+            (src / f).write_bytes(data)
+        out = self.d / "Test Quest.7z"
+        subprocess.run([exe, "a", "-bd", str(out), "."], cwd=src, check=True, capture_output=True)
+        return out
+
+    def test_a_set_unpacked_by_7_zip(self):
+        from bitcomposer.translate import archives
+        files = archives.spc_files([self.seven_zip()], self.d / "unpacked")
+        self.assertEqual([f.name for f in files], ["01 Title.spc", "01 Title (2).spc"])
+        self.assertEqual([f.read_bytes() for f in files], [b"one", b"two"])
+        self.assertEqual(sorted(p.name for p in (self.d / "unpacked").iterdir()), ["Test Quest"])   # nothing left over
+
+    def test_a_set_unpacked_by_unar(self):
+        import shutil
+        from bitcomposer.translate import archives
+        if not (shutil.which("unar") and shutil.which("lsar")):
+            self.skipTest("no unar here")
+        files = archives.unpack(self.seven_zip(), self.d / "unpacked" / "Test Quest", ("unar", shutil.which("unar")))
+        self.assertEqual(sorted(f.read_bytes() for f in files), [b"one", b"two"])
+
+    def test_without_an_archive_program_it_says_what_to_install(self):
+        from bitcomposer.translate import archives
+        original = archives.program
+        archives.program = lambda: None
+        self.addCleanup(setattr, archives, "program", original)
+        (self.d / "Test Quest.rsn").write_bytes(b"Rar!")
+        with self.assertRaisesRegex(ValueError, "7-Zip or unar"):
+            archives.spc_files([self.d / "Test Quest.rsn"], self.d / "unpacked")
 
 
 class Measures(unittest.TestCase):
