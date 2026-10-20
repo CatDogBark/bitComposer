@@ -17,7 +17,7 @@ name: Windows build
 # break the Windows build.
 on:
   push:
-    branches: [main]
+    branches: [main, emu-wheels]      # temporary: proving the worker mode on this branch
     tags: ["v*"]
   pull_request:
     branches: [main]
