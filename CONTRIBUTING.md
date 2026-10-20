@@ -68,18 +68,19 @@ Python.
 | `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
 | `emu/` | the SNES sound CPU and SNES chip emulator, in Rust (a second package, `bitcomposer-emu`); see Building the emulator |
 | `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); running the driver (`emulate.py`, needs `bitcomposer-emu`), its writes as notes (`notes.py`), sample pitch (`tuning.py`), SPC to IT (`convert.py` decides, in stages, how IT carries a song; `snes_chip.py` is the SNES chip's sound from a note's registers; `it_song.py` writes the IT song on a row grid and knows nothing of the SNES); `python -m bitcomposer.spc` |
-| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`) |
+| `bitcomposer/translate/` | the translator (`docs/TRANSLATOR.md`): a song's played notes read as music (`events.py` the notes, `beat.py` beat and bar, `roles.py` each voice's part, `harmony.py` key and chords, `form.py` its parts and loop, `reading.py` all of it), kept in a database on the user's machine (`store.py`); `measures.py` the yardsticks shared by a soundtrack and the generator's songs; `pack.py` a thin pack from a game's songs; `archives.py` a game's SPC files from a folder, a zip or a set 7-Zip or unar unpacks; `python -m bitcomposer.translate` |
+| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`); `library.py` the packs on this machine, for the player's PACKS panel (import in a worker process, add, export, move a voice, previews) |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
 | `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
 | `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
 | `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
 | `bitcomposer/cli.py` | the command line; its parser is also the player's list of compose settings |
-| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check and UPDATE) |
+| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP, voice previews), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`; the PACKS panel is in them), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check, CANDIDATES, UPDATE and GET THE EMULATOR) |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
 | `tools/spc_check.py` | measures SPC-to-IT conversions against the emulator, voice by voice; sweeps a folder of SPC files and reports by music driver |
 | `tools/make_logo.py` | writes the README logo from the icon and the bundled font |
-| `tools/windows/` | the Windows build: PyInstaller launchers, the icon and version-details makers, the Inno Setup installer and its privacy page |
-| `docs/` | ANALYSIS, ROADMAP, PORTABILITY, PACKS (the pack file format), SPC-IMPORT (the plan); the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
+| `tools/windows/` | the Windows build: PyInstaller launchers (`launch_player.py` is also IMPORT's worker, started with `library.WORKER`), the icon and version-details makers, the Inno Setup installer and its privacy page |
+| `docs/` | ANALYSIS, ROADMAP, PORTABILITY, PACKS (the pack file format), SPC-IMPORT (the plan), TRANSLATOR (its stages); the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
 | `tests/` | one module per area, sharing `support.py` |
 
 A pack can also be a pack file, with no code at all (`docs/PACKS.md`). A habit or role the
@@ -88,8 +89,9 @@ the round-trip test in `tests/test_packfile.py` fails until it is.
 
 Adding a built-in pack: its module in `bitcomposer/packs/`, registered in
 `packs/__init__.py` (the import, `_MODULES` and `PACKS`); its name in the
-CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's SOUND
-row in `bitcomposer/player/qml/Main.qml`, where the mixer's voice labels
+CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's
+`builtinSounds` list in `bitcomposer/player/qml/Main.qml` (the SOUND row:
+the built-in sounds, then the packs on this machine), where the mixer's voice labels
 also drop each pack's voice-name prefix (`ffvi_`, `mmx_`, ...) by one
 pattern near the top of the file. The random sound draw picks a new pack
 up by itself.
@@ -225,6 +227,10 @@ it from there and the publish workflow refuses a tag that does not match it.
    one-paragraph summary at its top the way the earlier releases have.
 2. `bitcomposer/__init__.py`: `__version__ = "X.Y.Z"`.
 3. `docs/ROADMAP.md`: move what shipped out of the open items.
+   If the release calls a newer emulator (`emulate.NEEDS`), release that
+   first (Releasing the emulator, above) and raise the `import` extra's
+   floor in `pyproject.toml` to it; a test fails until the two agree, and
+   UPDATE then brings the new emulator with the release.
 4. If the sound changed, regenerate the listening page's tracks so the
    page people hear is the release. Each entry in `docs/tracks/tracks.json`
    names its seed and its sound (the pack in brackets in `arrangement`, or
@@ -232,6 +238,13 @@ it from there and the publish workflow refuses a tag that does not match it.
    `python3 -m bitcomposer.cli --sound megamanx -s 24 -o "docs/tracks/Grotto Charge.it" -v`,
    and bring the entry up to date from the `-v` output (key and tempo,
    voices) and its version. A changed title renames the file.
+   If the window changed, retake the README's picture of it after step 2,
+   so it shows the new version; a home folder of its own keeps the four
+   demo songs out of your Music folder and still shows `~/Music/bitComposer`:
+
+   ```bash
+   HOME=$(mktemp -d) sh -c 'python3 -m bitcomposer.player --screenshot docs/images/player.png --screen 800x1440 --scale 2 --music-dir "$HOME/Music/bitComposer"'
+   ```
 5. Open a pull request from `dev` into `main`: CI (tests on every Python)
    and the Windows build run on it. Merge when both are green, and wait for
    them to go green again on main's merge commit.
@@ -253,7 +266,8 @@ it from there and the publish workflow refuses a tag that does not match it.
    release page carries `bitComposer-windows.zip` and `bitComposer-setup.exe`.
 8. Start a player on the previous release (pipx on Linux, the installed
    one on Windows): it should offer UPDATE to the new version and come
-   back on it.
+   back on it. On a pipx install without the emulator, PACKS' GET THE
+   EMULATOR should add it and come back with IMPORT ready.
 
 The update path can be tried before any tag: `--try-update` makes the
 player offer a local file as the update. On a pipx install, build a wheel
@@ -264,4 +278,6 @@ installer from a Windows build.
 
 A pre-release tag (`v1.0.0rc1`) goes through the same path. PyPI lists it
 as a pre-release that `pip` and `pipx` only install by exact version, so it
-proves the pipeline without becoming anyone's default.
+proves the pipeline without becoming anyone's default. UPDATE offers it to
+a player on a candidate, and to a release player whose SET → PLAYER →
+CANDIDATES is on.

@@ -27,6 +27,10 @@ long. Seven sounds, picked with `--sound`:
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 
+And packs of your own: the player's PACKS panel makes one from a game's
+own SPC files, the game's samples as its voices ([Packs from your
+games](#packs-from-your-games)).
+
 **[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: one song per sound, straight from the generator, regenerated with each release.
 
 **Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws, and the song message records the version that wrote the file.
@@ -35,7 +39,8 @@ long. Seven sounds, picked with `--sound`:
 
 **Windows.** Every release carries `bitComposer-setup.exe`: the player, the
 command line, a Start menu entry and an uninstaller; or `bitComposer-windows.zip`,
-the same program as a folder with nothing to install. No Python needed. See
+the same program as a folder with nothing to install. No Python needed, and
+the SNES emulator for importing a game's music is inside. See
 [Windows](#windows).
 
 **Linux.** From PyPI with [pipx](https://pipx.pypa.io/), so it lands on your
@@ -52,7 +57,10 @@ bitcomposer-player
 That first launch adds bitComposer to your app menu (under Multimedia,
 with its icon); from then on start it from there like any other program.
 The command line is `bitcomposer`, e.g. `bitcomposer -d out -s 42 -v` for
-a reproducible song with details.
+a reproducible song with details. To make packs from a game's music
+([below](#packs-from-your-games)) the player needs the SNES emulator too:
+`pipx install "bitcomposer[import]"` installs both, or the PACKS panel's
+GET THE EMULATOR adds it later.
 
 The player needs libopenmpt (above) and an audio output: `paplay`
 (pulseaudio-utils), `pw-cat` (pipewire-bin) or `aplay` (alsa-utils).
@@ -183,27 +191,51 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
-## SPC import (developer preview)
+## Packs from your games
 
-bitComposer is starting to learn from the games its packs imitate.
-`python -m bitcomposer.spc --to-it song.it game.spc` runs an SPC file's own
-music driver in an emulator of the SNES sound hardware and writes the song as
-an IT module (its samples, notes, envelopes and echo), and
-`tools/spc_check.py` measures the module against the original, voice by
-voice. It needs the emulator, `bitcomposer-emu`, a compiled package of its
-own with a wheel for Linux (x86_64 and aarch64), Windows and macOS, so no
-toolchain is needed: `pipx install "bitcomposer[import]"` installs both, or
-`pipx install --force "bitcomposer[import]"` adds it to a player already
-installed; the player's UPDATE button then keeps both current
-(`pip install "bitcomposer[import]"` elsewhere). Where no wheel matches,
-it builds from source (Rust; CONTRIBUTING.md has how). Making a pack from a
-soundtrack comes later (`docs/SPC-IMPORT.md`; what has been tested, and how
-well it converts, is in `docs/drivers/`). The SPC files are yours:
-bitComposer ships none.
+New in 1.2, and early. The player's PACKS panel makes a pack from a game's
+own music. IMPORT a game's SPC set (a folder of `.spc` files, a zip, or
+snesmusic.org's `.rsn`, a `.rar` or a `.7z`, which 7-Zip or unar on your
+machine unpacks) and each song is run through an emulator of the SNES sound
+hardware, read as music (the beat and bar, which voice is the melody, the
+bass, the chords and the drums, the form) and the soundtrack made into a
+pack: the samples the game plays each part with most, as its voices, a kit
+of its drums, and the habits the readings give straight (tempo, major or
+minor, how often a song has no drums, the echo). OPEN a pack to hear each
+voice in its part, see why it was put there (in how many songs, how many
+notes) and move it; USE puts it in SOUND; EXPORT writes it as one zip, and
+ADD brings an exported pack, or a pack file, back. Importing a game again
+starts its pack fresh.
+
+A pack carries the game's sound; how a song is arranged is still
+bitComposer's own, measured against the game's songs. The next stages
+teach the generator to write the way the readings show the composers did
+(`docs/TRANSLATOR.md`).
+
+The emulator, `bitcomposer-emu`, is a compiled package of its own with a
+wheel for Linux (x86_64 and aarch64), Windows and macOS, so no toolchain
+is needed. The Windows build carries it. On Linux,
+`pipx install "bitcomposer[import]"` installs both, or the panel's GET THE
+EMULATOR adds it to a player already installed, and UPDATE keeps both
+current (`pip install "bitcomposer[import]"` elsewhere). Where no wheel
+matches, it builds from source (Rust; CONTRIBUTING.md has how).
+
+From the command line, `python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`
+makes a pack (`bitcomposer --pack-file OUT/pack.json` composes with it);
+`python -m bitcomposer.spc --to-it song.it game.spc` converts one song to
+an IT module, one to one, its samples, notes, envelopes and echo (how well,
+over 1836 songs of 39 games and 20 music drivers, is in `docs/drivers/`);
+and `python -m bitcomposer.translate FOLDER` prints each song's reading,
+with `--against PACK` measuring songs composed with a pack beside them.
+
+The SPC files are yours: bitComposer ships none, and the packs made from
+them stay on your machine, in your data folder
+(`~/.local/share/bitcomposer/packs` on Linux,
+`%LOCALAPPDATA%\bitComposer\packs` on Windows).
 
 ## The player
 
-<img src="docs/images/player.png" alt="The player: now playing, transport, gain, generate, settings and mix, the playlist" width="400">
+<img src="docs/images/player.png" alt="The player: now playing, transport, gain, generate, settings, mix and packs, the playlist" width="400">
 
 `bitcomposer-player` (Linux) and `bitComposer.exe` (Windows) are the same
 program: a folder of songs played through libopenmpt, GENERATE AND PLAY,
@@ -215,7 +247,7 @@ shuffle, and the playlist with KEEP: every track the player makes is
 provisional (`(auto) <Title>.it`, so a file browser sorts them together)
 and pruned after ten unless kept. It
 opens no taller than the screen it lands on, the
-SET and MIX panels open inside it (scrolling on a small or scaled
+SET, MIX and PACKS panels open inside it (scrolling on a small or scaled
 screen), and it keeps the size you give it; Ctrl + and
 Ctrl − zoom it, Ctrl 0 resets. Closing the window leaves the music playing
 in the tray (quit from the tray menu), and starting it again brings that
@@ -228,11 +260,12 @@ release exists an UPDATE button appears. It says what the update will do,
 then shows it happening: on Linux it reinstalls through pipx, pipx's
 output scrolling past, and restarts the player; on Windows it downloads
 the release's installer and runs it. A player installed from a release candidate is
-offered the next candidate; a release player only releases.
+offered the next candidate; a release player only releases, unless
+SET → PLAYER → CANDIDATES asks for candidates too.
 
 ## Windows
 
-Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same `bitComposer` folder, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with Qt and libopenmpt beside it; and `bitcomposer-cli.exe`, the command line. The installer installs for your user by default (no administrator prompt; all users is an option on its first page), and the player's UPDATE button runs the next one quietly and reopens the player. Each build also renders the player offscreen at common screen sizes and scalings (1366×768, 1920×1080 at 100% and 150%, 2560×1440 at 125%, 4K at 200%), kept as the workflow's `player-screenshots-windows` artifact. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Windows releases are to be code-signed through the SignPath Foundation's programme for open-source projects (see [Code signing policy](#code-signing-policy)); until that is in place they are unsigned, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
+Every release carries `bitComposer-setup.exe` (the installer) and `bitComposer-windows.zip` (the same `bitComposer` folder, no install), built by GitHub Actions on every push to main and attached on the tag: `bitComposer.exe`, the player, with Qt, libopenmpt and the SNES emulator (for importing a game's music) beside it; and `bitcomposer-cli.exe`, the command line. The installer installs for your user by default (no administrator prompt; all users is an option on its first page), and the player's UPDATE button runs the next one quietly and reopens the player. Each build also renders the player offscreen at common screen sizes and scalings (1366×768, 1920×1080 at 100% and 150%, 2560×1440 at 125%, 4K at 200%), kept as the workflow's `player-screenshots-windows` artifact. Songs are `.it` files; [OpenMPT](https://openmpt.org) and XMPlay play them too. Windows releases are to be code-signed through the SignPath Foundation's programme for open-source projects (see [Code signing policy](#code-signing-policy)); until that is in place they are unsigned, so SmartScreen asks once ("More info", "Run anyway"). With Python installed instead, `pipx install bitcomposer` gives the same programs as `bitcomposer-player` and `bitcomposer`.
 
 ## Code signing policy
 
@@ -251,14 +284,16 @@ Every release is approved by hand before it is signed. Everyone with these roles
 
 bitComposer composes and plays music on your computer. It collects nothing about you, your music or how you use it, and sends none of it anywhere.
 
-One thing goes over the network on its own: when the player starts, it asks GitHub's public releases list (`api.github.com`) whether a newer version exists, so it can offer the UPDATE button. That request carries only what any web request does (your IP address and the program's name), and [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) covers it. Turn it off in the player under SET → PLAYER → UPDATES. Updating itself downloads only when you press UPDATE: the installer from GitHub on Windows, the package from PyPI with pipx.
+One thing goes over the network on its own: when the player starts, it asks GitHub's public releases list (`api.github.com`) whether a newer version exists, so it can offer the UPDATE button. That request carries only what any web request does (your IP address and the program's name), and [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) covers it. Turn it off in the player under SET → PLAYER → UPDATES. Updating itself downloads only when you press UPDATE: the installer from GitHub on Windows, the package from PyPI with pipx. GET THE EMULATOR downloads the emulator from PyPI the same way, and only when you press it. Importing a game's music reads your files on your machine and sends nothing.
 
 The [listening page](https://catdogbark.github.io/bitComposer/) is a website: GitHub Pages serves it and Google Fonts serves its font, each under its own privacy policy. It plays the songs in your browser and keeps nothing.
 
 ## License and contact
 
 MIT, copyright 2026 Enlightened Solutions LLC (see [LICENSE](LICENSE)).
-Every instrument is synthesized; no samples were taken from any game.
+Every built-in instrument is synthesized; no samples were taken from any
+game. A pack you import is made on your machine from your own files and
+stays there.
 
 Bugs and ideas: [GitHub issues](https://github.com/CatDogBark/bitComposer/issues).
 Anything else: CatDogBark, catdogbark@pm.me.

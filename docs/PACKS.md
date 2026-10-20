@@ -4,8 +4,9 @@ A pack is a sound for the generator: a palette (the chip it imitates),
 voices for each part, and the habits of the scores it follows. The four
 built-in packs are code; a **pack file** is the same thing as data, so a
 pack can be added without touching the code. The SPC importer writes
-them from a game's songs (`python -m bitcomposer.spc --pack OUT FOLDER`,
-a first thin pack: `TRANSLATOR.md`, stage 2).
+them from a game's songs: the player's PACKS panel (IMPORT), or
+`python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`, a first thin pack
+(`TRANSLATOR.md`, stage 2).
 
 A pack file is a JSON file, with the pack's own voices as WAV files
 beside it. It is data only: a pack someone sends you cannot run anything.

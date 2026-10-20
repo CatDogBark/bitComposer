@@ -149,7 +149,10 @@ harmony moves less under the imported pack (0.16 notes a beat a voice,
 against 0.88 and FFVI's 0.98): the hand-made pack draws its harmony
 modes, and the imported one has none to draw (no classifier for them, as
 above). What the readings contradict in the hand-made pack is in the
-packs table of `drivers/snes/README.md`. Listening: still to do.
+packs table of `drivers/snes/README.md`. Listened (2026-10-20): decent
+for a thin pack, the game's sound in it; the arrangement is where the
+gap is, which is stages 3 and 4. Saving each import's readings in the
+database waits for them.
 
 ## Stage 3: the generator writes voices
 
@@ -213,14 +216,15 @@ in its part's register and says which parts the readings found it in,
 in how many songs, how many notes; MOVE TO puts it elsewhere), RENAME,
 EXPORT and DELETE. Importing a game again starts it fresh; to keep your
 changes, export the pack first. IMPORT needs the emulator, and says so
-without it.
+without it: the Windows build carries it, and on a pipx install GET THE
+EMULATOR adds it (`bitcomposer[import]`, from PyPI), which UPDATE then
+keeps current. On Windows the executable runs IMPORT's worker itself.
 
 ## Later
 
 Packs by composer or driver (queries over the database); Genesis, through
 VGM logs, into the same translator; MPTM output for timing finer than
-IT's ticks; the emulator's wheels on PyPI, so others can import without
-building it.
+IT's ticks.
 
 ## To settle as we go
 
