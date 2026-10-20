@@ -203,7 +203,8 @@ class Form(unittest.TestCase):
         beat, each note up to `jitter` off its time (AKAO's timer)."""
         r = random.Random(seed)
         tunes = {"I": [60, 62, 64, 65], "A": [67, 65, 64, 62, 60, 62, 64, 67], "B": [72, 71, 69, 67, 69, 71, 72, 74]}
-        bars = {"I": 2, "A": 4, "B": 4}
+        tunes["C"] = tunes["B"]                                       # B with a bar more: another ending
+        bars = {"I": 2, "A": 4, "B": 4, "C": 5}
         parts = {0: [], 1: [], 2: []}
         t = 0.0
         for name in order:
@@ -213,7 +214,7 @@ class Form(unittest.TestCase):
                     j = lambda: r.uniform(-jitter, jitter)
                     parts[0].append((at + j(), 0.4, tunes[name][(bar * 4 + beat) % len(tunes[name])]))
                     parts[2] += [(at + j(), 0.05, None), (at + 0.25 + j(), 0.05, None)]
-                parts[1].append((t + bar * 2 + j(), 1.8, {"I": 36, "A": 43, "B": 41}[name] + bar % 2))
+                parts[1].append((t + bar * 2 + j(), 1.8, {"I": 36, "A": 43, "B": 41, "C": 41}[name] + bar % 2))
             t += bars[name] * 2
         for v in parts:
             parts[v].sort()
@@ -226,6 +227,13 @@ class Form(unittest.TestCase):
         f = form.read(song, g)
         self.assertEqual((f.loop_bar, f.loop_bars), (2, 8))          # back to the first A, eight bars a pass
         self.assertEqual([(p.label, p.bar, p.bars) for p in f.parts], [("A", 0, 2), ("B", 2, 4), ("C", 6, 4)])
+
+    def test_a_loop_whose_second_time_through_runs_a_bar_longer(self):
+        # Kefka's: the second time round one part has a bar more, everything after it a bar later
+        from bitcomposer.translate import form
+        song = self.song_in_parts("IABACA")
+        f = form.read(song, beat.find([(p.start, p.level, p.voice) for p in song.notes]))
+        self.assertEqual((f.loop_bar, f.loop_bars), (2, 8))
 
     def test_a_part_played_again_has_its_letter_and_no_loop_is_heard_once(self):
         from bitcomposer.translate import form
