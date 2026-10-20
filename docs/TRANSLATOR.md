@@ -66,9 +66,14 @@ A song's music, measured and stored, read from its decoded notes.
   fraction of it the wave repeats at (fixed 2026-10-20: FFVI's bass loops
   hold 28 cycles of 169.14 samples and read at every 1184, seven cycles;
   four of its samples read 5 to 17 times low, their notes named wrong, and
-  its most played bass an octave low). A one-shot is measured where it
-  repeats best, past a gliding attack, and a shorter period is judged on
-  the wave smoothed to its low harmonics, the ones a pitch is heard by.
+  its most played bass an octave low). A one-shot is measured 50 ms in,
+  or further along a long one where two later places agree and each
+  repeats better (a struck tone's pitch falls through its attack), and a
+  shorter period is judged on the wave smoothed to its low harmonics, the
+  ones a pitch is heard by. Over the 39 games, 103 of 1736 samples moved,
+  all but one by a whole ratio (28 by octaves, 71 by 3 to 71), and the
+  songs whose bass's median pitch sat under MIDI 30 fell from 434 to 235
+  of 1500.
 - **Harmony.** Chords from the notes sounding together on each beat; key
   and mode per section.
 - **Roles.** Per voice and section, as the plan has them: drums (fixed-pitch
