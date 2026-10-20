@@ -2,8 +2,8 @@ name: Emulator wheels
 
 # The emulator (emu/, the package bitcomposer-emu) is the one compiled part
 # of bitComposer, released on its own tags: emu-vX.Y.Z builds a binary wheel
-# for each platform (Linux x86_64 and aarch64, Windows x64, macOS arm64 and
-# x86_64) and the sdist, runs the repository's SPC tests against each wheel,
+# for each platform (Linux x86_64 and aarch64, Windows x64, macOS universal2
+# for Intel and Apple silicon) and the sdist, runs the repository's SPC tests against each wheel,
 # and uploads them to PyPI through trusted publishing (the "pypi"
 # environment, this workflow file, registered on pypi.org for the project
 # bitcomposer-emu: no token anywhere). pip then installs the wheel for the
@@ -68,8 +68,10 @@ jobs:
           - { name: linux-x86_64,   os: ubuntu-latest,    target: x86_64 }
           - { name: linux-aarch64,  os: ubuntu-24.04-arm, target: aarch64 }
           - { name: windows-x64,    os: windows-latest,   target: x64 }
-          - { name: macos-arm64,    os: macos-14,         target: aarch64 }
-          - { name: macos-x86_64,   os: macos-13,         target: x86_64 }
+          # One macOS wheel for both Intel and Apple silicon, built on the
+          # arm64 runner (GitHub retired its Intel runners): the tests run
+          # the arm64 half, and the x86_64 half is the same Rust.
+          - { name: macos-universal2, os: macos-14,       target: universal2-apple-darwin }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
