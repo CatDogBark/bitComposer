@@ -343,6 +343,34 @@ class Pack(unittest.TestCase):
             self.assertTrue(song["patterns"])
 
 
+    def test_a_game_s_files_from_a_folder_or_a_zip(self):
+        import tempfile
+        import zipfile
+        from pathlib import Path
+        from bitcomposer.translate import pack
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            game = d / "Test Quest"
+            (game / "extras").mkdir(parents=True)
+            for f in ("01 Title.spc", "02 Field.SPC", "notes.txt", "extras/99 Unused.spc"):
+                (game / f).write_bytes(b"SNES-SPC700")
+            self.assertEqual([f.name for f in pack.spc_files([game], d / "unpacked")],
+                             ["01 Title.spc", "02 Field.SPC"])              # the folder's own, any case
+            zipped = d / "Test Quest.zip"
+            with zipfile.ZipFile(zipped, "w") as z:
+                z.writestr("Test Quest/01 Title.spc", b"one")
+                z.writestr("Test Quest/disc 2/01 Title.spc", b"two")     # the same name in a folder of its own
+                z.writestr("../../02 Escape.spc", b"three")              # named out of the zip: lands inside
+                z.writestr("Test Quest/info.txt", b"x")
+            files = pack.spc_files([zipped], d / "unpacked")
+            self.assertEqual([f.name for f in files], ["02 Escape.spc", "01 Title.spc", "01 Title (2).spc"])
+            self.assertTrue(all(f.parent == d / "unpacked" / "Test Quest" for f in files))
+            self.assertEqual(sorted(f.read_bytes() for f in files), [b"one", b"three", b"two"])
+            (d / "broken.zip").write_bytes(b"not a zip")
+            with self.assertRaises(ValueError):
+                pack.spc_files([d / "broken.zip"], d / "unpacked")
+
+
 class Measures(unittest.TestCase):
     """The yardsticks read from notes: a reading's and a generated song's alike."""
 

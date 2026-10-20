@@ -203,8 +203,9 @@ and why, change it), USE, delete. The packs and the database in the
 user's data folder.
 
 Where it stands (2026-10-20): the player's PACKS tile opens it
-(`packs/library.py` under it). IMPORT reads a game's folder in a process
-of its own, the songs read shown as they go; ADD brings in an exported
+(`packs/library.py` under it). IMPORT reads a game's SPC files, from a
+zip (its folders too) or from its folder (that folder's own), in a
+process of its own, the songs read shown as they go; ADD brings in an exported
 pack (one zip file) or a pack file; each pack has USE (it joins SOUND),
 its voices by part, the kit and what is left out (a click plays a voice
 in its part's register and says which parts the readings found it in,

@@ -117,6 +117,12 @@ class Library(unittest.TestCase):
             self.assertEqual(raw[:4], b"IMPM")
             self.assertEqual(int.from_bytes(raw[0x24:0x26], "little"), 1)   # one sample
 
+    def test_an_import_is_named_from_its_folder_or_zip(self):
+        self.assertEqual(library.Import(Path(self.dir.name) / "Test Quest").name, "test_quest_spc")
+        self.assertEqual(library.Import(Path(self.dir.name) / "Test Quest (SPC).zip").name, "test_quest_spc")
+        zipped = Path(self.dir.name) / "test_quest.zip"
+        self.assertEqual(library.Import(zipped).command()[-1], str(zipped))     # the zip goes to the child as it is
+
     def test_an_import_made_anew_replaces_the_pack(self):
         # the import's own process stood in for: it reports two songs and writes the pack
         library.add(self.src)

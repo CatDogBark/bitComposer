@@ -1483,7 +1483,7 @@ ApplicationWindow {
 
                 // ── Packs Panel ──
                 // The packs on this machine (packs/library.py): IMPORT a game's
-                // folder of SPC files (needs the emulator), ADD an exported pack;
+                // SPC files, a zip or a folder (needs the emulator), ADD an exported pack;
                 // each pack's USE, its voices by part (a click plays one and
                 // shows why it is there, MOVE TO puts it elsewhere), RENAME,
                 // EXPORT and DELETE. Importing a game again starts it fresh.
@@ -1565,7 +1565,7 @@ ApplicationWindow {
                         Text {
                             visible: backend.packs.length === 0 && !root.importBusy
                             Layout.fillWidth: true
-                            text: "no packs yet: IMPORT a game's folder of SPC files, or ADD an exported pack"
+                            text: "no packs yet: IMPORT a game's SPC files (a zip, or its folder), or ADD an exported pack"
                             color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
                             wrapMode: Text.WordWrap
                         }

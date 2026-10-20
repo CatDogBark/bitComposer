@@ -518,22 +518,22 @@ class Backend(QObject):
         if self._import is None:
             self.packImportRequested.emit()
 
-    def import_folder(self, folder: str):
-        """Read a game's folder of SPC files into a pack (from app.py's dialog)."""
+    def import_from(self, source: str):
+        """Read a game's SPC files into a pack: a folder of them or a zip (from app.py's dialog)."""
         def progress(done, total):
             self._dispatch.call.emit(lambda: self._import_progress(done, total))
 
         def finished(name, error):
             self._dispatch.call.emit(lambda: self._import_done(name, error))
         try:
-            job = library.Import(folder, on_progress=progress, on_done=finished)
+            job = library.Import(source, on_progress=progress, on_done=finished)
             job.start()
         except (PackError, OSError) as e:
             self._set_notice(str(e))
             return
         self._import = job
         self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": ""}
-        self._set_notice(f"importing {Path(folder).name}…")
+        self._set_notice(f"importing {Path(source).name}…")
         self.packsChanged.emit()
 
     def _import_progress(self, done, total):

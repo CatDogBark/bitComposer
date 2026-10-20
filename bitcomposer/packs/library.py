@@ -268,18 +268,19 @@ def can_import() -> bool:
 
 
 class Import:
-    """A game's SPC files made into a pack in a process of its own (it is
-    the emulator's work, a minute or so for a whole soundtrack), the pack
-    made anew in its place when it is done.
+    """A game's SPC files (a folder of them, or a zip) made into a pack in a
+    process of its own (it is the emulator's work, a minute or so for a
+    whole soundtrack), the pack made anew in its place when it is done.
 
     on_progress(done, total) and on_done(name, error) are called from the
     reading thread."""
 
-    def __init__(self, folder, name: str | None = None, on_progress=None, on_done=None):
-        from ..translate.pack import name_for
-        self.folder = Path(folder)
-        self.name = name or name_for(self.folder.name)
+    def __init__(self, source, name: str | None = None, on_progress=None, on_done=None):
+        from ..translate.pack import is_zip, name_for
+        self.source = Path(source)
+        self.name = name or name_for(self.source.stem if is_zip(self.source) else self.source.name)
         check_name(self.name)
+        self.stage = packs_dir() / (STAGE + self.name)
         self.on_progress = on_progress or (lambda done, total: None)
         self.on_done = on_done or (lambda name, error: None)
         self.done = self.total = 0
@@ -289,9 +290,7 @@ class Import:
     def start(self) -> None:
         if not can_import():
             raise PackError("importing needs the SNES emulator (bitcomposer-emu), built from source: see CONTRIBUTING.md")
-        root = packs_dir()
-        root.mkdir(parents=True, exist_ok=True)
-        self.stage = root / (STAGE + self.name)
+        packs_dir().mkdir(parents=True, exist_ok=True)
         shutil.rmtree(self.stage, ignore_errors=True)
         package = Path(__file__).resolve().parents[2]     # the folder holding this bitcomposer, for the child
         env = dict(os.environ, PYTHONPATH=os.pathsep.join(
@@ -301,7 +300,7 @@ class Import:
 
     def command(self) -> list[str]:
         return [sys.executable, "-m", "bitcomposer.spc", "--pack", str(self.stage), "--name", self.name,
-                "--progress", str(self.folder)]
+                "--progress", str(self.source)]
 
     def _follow(self) -> None:
         for line in self.proc.stdout:
