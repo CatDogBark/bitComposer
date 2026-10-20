@@ -119,6 +119,38 @@ for categories the plan is to outgrow.
 Check: songs from the imported FFVI pack and from the hand-made one, both
 measured against FFVI's own songs, and listened to.
 
+Where it stands (2026-10-19): `python -m bitcomposer.spc --pack OUT
+FOLDER` makes FFVI's pack from its 82 songs in about a minute: 22 samples
+(six a part at most, and a kit of kick, hi-hat and snare) and the habits
+above, with how often a song has no drums (`drumless`, 0.37), which the
+readings give as straight. `python -m bitcomposer.translate FOLDER
+--against PACK` measures songs composed with a pack beside the songs read
+(`translate/measures.py`, the yardsticks from notes): 20 from each pack
+against the 69 FFVI songs read on a beat, medians:
+
+| | FFVI | hand-made `ffvi` | imported |
+|---|---|---|---|
+| tempo (BPM) | 85 | 123 | 96 |
+| an arp | in 5 songs of 69 | in every song | in every song |
+| drum hits a bar | 3.6 (none in 22 songs) | 10.7 | 9.4 |
+| onsets off the eighths | 30 % | 7 % | 5 % |
+| of them, on a triplet | 19 % | 0 | 0 |
+| pitch classes a beat under the melody | 3.5 | 2.6 | 2.1 |
+| melody bars heard before | 29 % | 54 % | 44 % |
+| the melody's range (semitones) | 13 | 10 | 9 |
+| length, once through (s) | 70 | 129 | 160 |
+
+The pack moves what a pack can say toward the game (the tempo, songs
+without drums, the game's own sound); the rest is the generator's own
+writing, the same under either pack: an arp in every song, no triplets,
+few notes off the eighths, thinner chords, tunes that repeat more and
+range less. That is stages 3 and 4, as planned, not more habits. The
+harmony moves less under the imported pack (0.16 notes a beat a voice,
+against 0.88 and FFVI's 0.98): the hand-made pack draws its harmony
+modes, and the imported one has none to draw (no classifier for them, as
+above). What the readings contradict in the hand-made pack is in the
+packs table of `drivers/snes/README.md`. Listening: still to do.
+
 ## Stage 3: the generator writes voices
 
 One way of writing music for both directions: the translator reads voices,

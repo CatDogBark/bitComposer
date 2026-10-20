@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass, field
 
-from . import beat, events, form as form_mod, harmony, roles as roles_mod
+from . import beat, events, form as form_mod, harmony, measures as measures_mod, roles as roles_mod
 
 
 @dataclass
@@ -22,6 +22,7 @@ class Reading:
     key: tuple | None = None         # (tonic pitch class, "major"/"minor", fit)
     chords: list = field(default_factory=list)
     form: form_mod.Form | None = None   # its parts and loop
+    measures: dict = field(default_factory=dict)   # the yardsticks it shares with the generator's songs
 
 
 def manifest(folder: str) -> dict:
@@ -61,4 +62,6 @@ def read(snap, seconds: float | None = None, song: events.Song | None = None) ->
         r.key = harmony.key(song, grid, roles)
         r.chords = harmony.chords(song, grid, roles)
         r.form = form_mod.read(song, grid)
+        score = measures_mod.of_reading(r)
+        r.measures = measures_mod.measure(score) if score else {}
     return r

@@ -14,7 +14,7 @@ from array import array
 from pathlib import Path
 
 SCHEMA = 4                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level
-VERSION = "5"                        # the translator's; a song read by another is read again
+VERSION = "6"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -129,4 +129,16 @@ def keep(db, reading) -> None:
     rows = [(p, "part") for p in (f.parts if f else [])] + [(p, "section") for p in (f.sections if f else [])]
     for i, (p, level) in enumerate(rows):
         db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", (sid, i, p.label, p.bar, p.bars, p.start, p.of, level))
+    db.executemany("INSERT INTO features VALUES (?,?,?,?)",
+                   [(sid, "soundtrack", k, float(v)) for k, v in r.measures.items()])
     db.commit()
+
+
+def features(db, songs, source: str = "soundtrack") -> dict:
+    """The measures kept for these songs: name -> their values."""
+    out = {}
+    for sid in songs:
+        for name, value in db.execute("SELECT name, value FROM features WHERE song = ? AND source = ?",
+                                      (sid, source)):
+            out.setdefault(name, []).append(value)
+    return out
