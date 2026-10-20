@@ -257,6 +257,19 @@ class UpdateCheck(unittest.TestCase):
             self.assertEqual(lines[0], "$ pipx install --force bitcomposer[import]==9.9.9")
             self.assertIn("args: install --force --verbose bitcomposer[import]==9.9.9", lines)
 
+    def test_the_extra_asks_for_the_emulator_the_code_calls(self):
+        """The import extra's floor is the version emulate.py calls
+        (NEEDS): a release that needs a newer emulator and forgot to ask
+        pip for it would leave IMPORT greyed out after UPDATE."""
+        import re
+        from bitcomposer.spc import emulate
+        with open(os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")) as fh:
+            m = re.search(r'^import = \["bitcomposer-emu>=([0-9.]+),<([0-9.]+)"\]', fh.read(), re.M)
+        self.assertIsNotNone(m, "pyproject.toml's import extra is not the emulator with a floor and a cap")
+        self.assertEqual(tuple(int(x) for x in m.group(1).split(".")), emulate.NEEDS)
+        cap = tuple(int(x) for x in m.group(2).split("."))
+        self.assertGreater(cap, emulate.NEEDS)
+
     def test_try_update_offers_a_local_installer(self):
         """--try-update: the UPDATE button for a setup.exe on this machine,
         so the update path runs without a published release."""
@@ -492,6 +505,56 @@ class WindowHeadless(unittest.TestCase):
         self.assertTrue(self.pump(3, lambda: win.property("_sized")))
         self.pump(0.3)
         self.assertLess(win.height(), 1152 - 64)          # shrunk to the content, as a normal start
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
+    def test_get_the_emulator(self):
+        """PACKS' GET THE EMULATOR, on a pipx install: the update screen,
+        worded for it, asks first; GET IT runs pipx with the import extra at
+        this very version; a failure says why it may have failed and leaves
+        the player as it was; CLOSE goes back to a plain update screen."""
+        from pathlib import Path
+        from unittest import mock
+        from PySide6.QtCore import QObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        from bitcomposer import __version__
+        from bitcomposer.player import update as u
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1920, 1152)
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        win.show()
+        win.setProperty("showPacks", True)
+        self.pump(0.5)
+        with mock.patch.object(u, "install_kind", lambda: "other"):
+            self.b.getEmulator()                                  # a checkout: told what to run, nothing started
+        self.assertEqual(self.b.updateState, "")
+        ran = []
+
+        def fake(rel, report, restart=None):
+            ran.append(rel["spec"])
+            report(f"$ pipx install --force {rel['spec']}", None)
+            report("pipx exited with 1; the player is unchanged", None)
+            return False
+        with mock.patch.object(u, "install_kind", lambda: "pipx"), mock.patch.object(u, "apply_update", fake):
+            self.b.getEmulator()
+            self.pump(0.3)
+            self.assertEqual((self.b.updateState, self.b.updatePurpose), ("confirm", "emulator"))
+            self.assertTrue(win.findChild(QObject, "updatePanel").property("visible"))
+            self.b.confirmUpdate()
+            self.assertTrue(self.pump(3, lambda: self.b.updateState == "failed"))
+        self.assertEqual(ran, [f"bitcomposer[import]=={__version__}"])
+        self.assertIn("built from source", self.b.updateLog[-1])
+        self.b.closeUpdate()
+        self.pump(0.2)
+        self.assertEqual((self.b.updateState, self.b.updatePurpose), ("", ""))
         self.assertEqual(warnings, [])
         win.close()
         del eng

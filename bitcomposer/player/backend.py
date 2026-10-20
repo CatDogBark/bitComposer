@@ -84,6 +84,11 @@ class Backend(QObject):
         self._upd_state = ""
         self._upd_log = []
         self._upd_progress = -1.0           # 0..1, or -1 while it cannot be known
+        # What the update screen is doing: "" (an update to a newer release)
+        # or "emulator" (PACKS' GET THE EMULATOR: this version again, with
+        # the import extra), and the release-like record it runs.
+        self._purpose = ""
+        self._emu_release = None
         self._tray = False
         self._dirty = False
         self.restart_after_quit = False
@@ -211,6 +216,9 @@ class Backend(QObject):
     def _get_upd_kind(self): return upd.install_kind()
     updateKind = Property(str, _get_upd_kind, constant=True)
 
+    def _get_purpose(self): return self._purpose
+    updatePurpose = Property(str, _get_purpose, notify=updateChanged)
+
     def _get_tray(self): return self._tray
     trayAvailable = Property(bool, _get_tray, notify=trayChanged)
 
@@ -304,7 +312,7 @@ class Backend(QObject):
         self._set_notice(f"version {rel['version']} is out")
 
     def start_update(self):
-        rel = self._release
+        rel = self._emu_release if self._purpose == "emulator" else self._release
         if not rel or self._updating:
             return
         self._updating = True
@@ -336,6 +344,10 @@ class Backend(QObject):
     def _update_done(self, quit_now: bool):
         self._updating = False
         self._upd_state = "done" if quit_now else "failed"
+        if not quit_now and self._purpose == "emulator":
+            self._upd_log = self._upd_log + [
+                "the emulator was not installed. Where PyPI has no build of it for this machine, pip tries to "
+                "compile it and needs Rust; it can be built from source instead (CONTRIBUTING.md)"]
         self.updateChanged.emit()
         if quit_now:
             self.restart_after_quit = upd.install_kind() == "pipx"
@@ -451,6 +463,7 @@ class Backend(QObject):
     def applyUpdate(self):
         """UPDATE in the header: the update screen, asking first."""
         if self._release and not self._updating:
+            self._purpose = ""
             self._upd_state = "confirm"
             self._upd_log = []
             self._upd_progress = -1.0
@@ -465,12 +478,30 @@ class Backend(QObject):
     def closeUpdate(self):
         if not self._updating:
             self._upd_state = ""
+            self._purpose = ""
             self.updateChanged.emit()
 
     @Slot()
     def openReleasePage(self):
-        if self._release:
-            self.openUrlRequested.emit(self._release["page"])
+        rel = self._emu_release if self._purpose == "emulator" else self._release
+        if rel:
+            self.openUrlRequested.emit(rel["page"])
+
+    @Slot()
+    def getEmulator(self):
+        """PACKS: add the SNES emulator to this pipx install, through the
+        update screen: pipx install --force bitcomposer[import] at this very
+        version, then a restart. Asked for, never added by an update: where
+        no wheel matches, pip would fail the whole update trying to build it."""
+        if self._updating or upd.install_kind() != "pipx":
+            return
+        self._purpose = "emulator"
+        self._emu_release = {"version": __version__, "tag": "emulator", "page": upd.BUILD_HELP,
+                             "spec": upd.update_spec(__version__, emulator=True)}
+        self._upd_state = "confirm"
+        self._upd_log = []
+        self._upd_progress = -1.0
+        self.updateChanged.emit()
 
     @Slot(bool)
     def setCheckUpdates(self, on):

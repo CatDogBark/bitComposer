@@ -26,6 +26,7 @@ INSTALLER_NAME = "bitComposer-setup.exe"
 PACKAGE = "bitcomposer"
 EXTRA = "import"             # the extra that brings the emulator (pyproject.toml)
 EMULATOR = "bitcomposer-emu"
+BUILD_HELP = "https://github.com/CatDogBark/bitComposer/blob/main/CONTRIBUTING.md"   # building it from source
 
 
 def parse_version(text: str) -> tuple:
@@ -114,15 +115,16 @@ def emulator_installed() -> bool:
         return False
 
 
-def update_spec(version: str) -> str:
+def update_spec(version: str, emulator: bool | None = None) -> str:
     """What pipx is asked for: the exact version, with the import extra when
-    the emulator is installed here. pipx install --force keeps the venv and
+    the emulator is installed here (emulator=True asks for it regardless:
+    the PACKS panel's GET THE EMULATOR). pipx install --force keeps the venv and
     what is in it, so the emulator would survive an update without the
     extra; but pip would never move it to what the new release asks for,
     and pipx remembers only the last spec it was given, so a later
     `pipx reinstall` (a new system Python) would rebuild without it. With
     the extra in the spec, both follow the release."""
-    name = f"{PACKAGE}[{EXTRA}]" if emulator_installed() else PACKAGE
+    name = f"{PACKAGE}[{EXTRA}]" if (emulator_installed() if emulator is None else emulator) else PACKAGE
     return f"{name}=={version}"
 
 

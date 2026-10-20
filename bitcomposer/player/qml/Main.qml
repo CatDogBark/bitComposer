@@ -180,6 +180,7 @@ ApplicationWindow {
     property string packConfirm: ""
     property string packRenaming: ""
     readonly property bool importBusy: !!backend.importState.busy
+    readonly property bool gettingEmulator: backend.updatePurpose === "emulator"
     readonly property var builtinSounds: ["random", "chip", "genesis", "snes", "ffvi", "mana", "evermore", "megamanx"]
     readonly property var packNames: backend.packs.map(function(p) { return p.name })
     readonly property var soundOptions: builtinSounds.concat(packNames)
@@ -1517,12 +1518,28 @@ ApplicationWindow {
                             }
                             Chip { text: "ADD"; onClicked: backend.addPack() }
                         }
-                        Text {
+                        // Without the emulator: on a pipx install the player can
+                        // add it (the update screen); elsewhere, what to run.
+                        RowLayout {
                             visible: !backend.canImport
                             Layout.fillWidth: true
-                            text: "IMPORT needs the SNES emulator: pipx install --force 'bitcomposer[import]' (pip install 'bitcomposer[import]' without pipx). ADD works without it."
-                            color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
-                            wrapMode: Text.WordWrap
+                            spacing: 6
+                            Text {
+                                Layout.fillWidth: true
+                                text: backend.updateKind === "pipx"
+                                    ? "IMPORT needs the SNES emulator, which this player can add from PyPI. ADD works without it."
+                                    : backend.updateKind === "frozen"
+                                    ? "IMPORT needs the SNES emulator, which this Windows build does not include yet. ADD works without it."
+                                    : "IMPORT needs the SNES emulator: pip install 'bitcomposer[import]' (on pipx, pipx install --force 'bitcomposer[import]'). ADD works without it."
+                                color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                                wrapMode: Text.WordWrap
+                            }
+                            Chip {
+                                visible: backend.updateKind === "pipx"
+                                text: "GET THE EMULATOR"
+                                enabled: !backend.updating
+                                onClicked: backend.getEmulator()
+                            }
                         }
                         // An import running: the songs read so far.
                         RowLayout {
@@ -1936,11 +1953,11 @@ ApplicationWindow {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
-                Text { text: "[ UPDATE ]"; color: root.accentCyan; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); font.letterSpacing: 3 }
+                Text { text: root.gettingEmulator ? "[ SNES EMULATOR ]" : "[ UPDATE ]"; color: root.accentCyan; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); font.letterSpacing: 3 }
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(0, 1, 0.8, 0.15) }
             }
             Text {
-                text: "v" + backend.version + "  \u2192  v" + backend.updateVersion
+                text: root.gettingEmulator ? "v" + backend.version + "  +  bitcomposer-emu" : "v" + backend.version + "  \u2192  v" + backend.updateVersion
                 color: root.accentGreen
                 font.family: root.mono
                 font.pixelSize: Math.round(14 * root.ui)
@@ -1954,6 +1971,13 @@ ApplicationWindow {
                 font.pixelSize: Math.round(9 * root.ui)
                 text: {
                     var st = backend.updateState, kind = backend.updateKind
+                    if (root.gettingEmulator) {
+                        if (st === "confirm") return "pipx adds the SNES emulator from PyPI to this player, reinstalling it at the same version (Qt from pip's saved copy, when it has one), then the player restarts with IMPORT ready. The music stops while it does. Where PyPI has no build of the emulator for this machine, it stops and the player is unchanged."
+                        if (st === "running") return "Getting the emulator\u2026  " + root._updElapsed + " s"
+                        if (st === "done") return "Done. Restarting\u2026"
+                        if (st === "failed") return "The emulator was not installed; the player is unchanged. The log says why."
+                        return ""
+                    }
                     if (st === "confirm") {
                         if (kind === "pipx") return "pipx reinstalls bitComposer at the new version (with Qt, about 80 MB the first time), then the player restarts on it. The music stops while it does."
                         if (kind === "frozen") return "The new installer downloads here, then runs with its own progress window and opens bitComposer again when it is done."
@@ -2048,14 +2072,14 @@ ApplicationWindow {
                 }
                 PanelButton {
                     visible: backend.updateState === "failed" || (backend.updateState === "confirm" && backend.updateKind === "other")
-                    text: "RELEASE PAGE"
+                    text: root.gettingEmulator ? "BUILDING IT" : "RELEASE PAGE"
                     accent: root.accentCyan
                     onClicked: backend.openReleasePage()
                 }
                 PanelButton {
                     objectName: "updateNow"
                     visible: backend.updateState === "confirm" && backend.updateKind !== "other"
-                    text: "UPDATE NOW"
+                    text: root.gettingEmulator ? "GET IT" : "UPDATE NOW"
                     accent: root.accentPink
                     onClicked: backend.confirmUpdate()
                 }
