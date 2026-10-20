@@ -91,10 +91,13 @@ jobs:
         run: |
           python -m pip install --quiet --no-index --find-links emu/dist bitcomposer-emu
           python -c "import bitcomposer_emu as e; print('bitcomposer_emu', e.__version__)"
-          # The repository's own SPC tests, which skip without the emulator:
-          # a skip here would mean the wheel did not import, so it fails.
-          python -m unittest discover -s tests -p "test_spc_*.py" 2>&1 | tee tests.log
-          if grep -q "needs the compiled emulator" tests.log; then echo "the emulator's tests were skipped"; exit 1; fi
+          # The repository's own SPC tests skip without the emulator, and
+          # unittest does not say why a test skipped unless asked, so the
+          # gate the tests use is checked first: the wheel imports and is
+          # the version emulate.py calls. (Some of them also skip without
+          # libopenmpt, which the runners do not have; those are fine.)
+          python -c "from bitcomposer.spc import emulate; assert emulate.available(), 'the wheel is not the emulator the package needs'"
+          python -m unittest discover -s tests -p "test_spc_*.py"
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.name }}

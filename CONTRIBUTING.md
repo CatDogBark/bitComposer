@@ -160,7 +160,10 @@ emulator unless `NEEDS` moved). The version lives in `emu/Cargo.toml` and
 Where no wheel matches (another architecture, a free-threaded Python,
 which abi3 does not serve), pip takes the sdist and needs cargo; that is
 why `bitcomposer` asks for the emulator as the `import` extra and not as
-a dependency.
+a dependency. On a pipx install the player's UPDATE asks for the extra
+whenever the emulator is installed (`player/update.py`), so a release
+that raises `NEEDS` brings the emulator along, and pipx remembers the
+extra for a `pipx reinstall`.
 
 The SNES sound CPU is checked against the SingleStepTests suite, 1,000
 cases per instruction (81 MB, not in the repository): fetch

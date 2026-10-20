@@ -174,6 +174,7 @@ class UpdateCheck(unittest.TestCase):
             for code, expect in ((0, True), (1, False)):
                 lines = []
                 with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                        mock.patch.object(u, "emulator_installed", lambda: False), \
                         mock.patch.object(u, "pipx_command", lambda c=code: fake_pipx(c)):
                     self.assertEqual(u.apply_update(rel, lambda text, prog: lines.append(text)), expect)
                 self.assertEqual(lines[0], "$ pipx install --force bitcomposer==9.9.9")
@@ -201,6 +202,7 @@ class UpdateCheck(unittest.TestCase):
             for listed, expect in ((True, True), (False, False)):
                 lines = []
                 with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                        mock.patch.object(u, "emulator_installed", lambda: False), \
                         mock.patch.object(u, "pipx_command", lambda l=listed: fake_pipx(l)):
                     self.assertEqual(u.apply_update(rel, lambda text, prog: lines.append(text)), expect)
                 self.assertIn("$ PIP_NO_CACHE_DIR=1 pipx install --force bitcomposer==9.9.9", lines)
@@ -212,9 +214,48 @@ class UpdateCheck(unittest.TestCase):
             # any other failure is not retried
             lines = []
             with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                    mock.patch.object(u, "emulator_installed", lambda: False), \
                     mock.patch.object(u, "pipx_command", lambda: ["false"]):
                 self.assertFalse(u.apply_update(rel, lambda text, prog: lines.append(text)))
             self.assertFalse(any("PIP_NO_CACHE_DIR" in l for l in lines))
+
+    def test_pipx_update_carries_the_emulator(self):
+        """With the emulator installed, UPDATE asks for the import extra: pip
+        then moves the emulator to what the release asks for, and pipx
+        remembers the extra for a reinstall. Without it, the plain package,
+        so a player without the emulator never tries to build one."""
+        import re
+        from importlib import metadata
+        from unittest import mock
+        from bitcomposer.player import update as u
+        with mock.patch.object(u, "emulator_installed", lambda: True):
+            self.assertEqual(u.update_spec("9.9.9"), "bitcomposer[import]==9.9.9")
+        with mock.patch.object(u, "emulator_installed", lambda: False):
+            self.assertEqual(u.update_spec("9.9.9"), "bitcomposer==9.9.9")
+        # the extra is the one pyproject.toml declares
+        with open(os.path.join(os.path.dirname(__file__), "..", "pyproject.toml")) as fh:
+            pyproject = fh.read()
+        self.assertIsNotNone(re.search(rf"^{u.EXTRA} = \[\"{u.EMULATOR}", pyproject, re.M), "the updater's extra is not in pyproject.toml")
+        # "installed" is the package's presence, whatever its version: an
+        # emulator older than the release needs is the one that must move
+        with mock.patch.object(metadata, "distribution", lambda name: object()):
+            self.assertTrue(u.emulator_installed())
+        with mock.patch.object(metadata, "distribution", mock.Mock(side_effect=metadata.PackageNotFoundError)):
+            self.assertFalse(u.emulator_installed())
+        # and the spec with the extra is what pipx is given
+        with tempfile.TemporaryDirectory() as t:
+            f = os.path.join(t, "pipx")
+            with open(f, "w") as fh:
+                fh.write("#!/bin/sh\necho \"args: $*\"\nexit 0\n")
+            os.chmod(f, 0o755)
+            rel = {"version": "9.9.9", "tag": "v9.9.9", "page": "p"}
+            lines = []
+            with mock.patch.object(u, "install_kind", lambda: "pipx"), \
+                    mock.patch.object(u, "emulator_installed", lambda: True), \
+                    mock.patch.object(u, "pipx_command", lambda: [f]):
+                self.assertTrue(u.apply_update(rel, lambda text, prog: lines.append(text)))
+            self.assertEqual(lines[0], "$ pipx install --force bitcomposer[import]==9.9.9")
+            self.assertIn("args: install --force --verbose bitcomposer[import]==9.9.9", lines)
 
     def test_try_update_offers_a_local_installer(self):
         """--try-update: the UPDATE button for a setup.exe on this machine,

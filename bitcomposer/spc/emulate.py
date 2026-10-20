@@ -15,10 +15,12 @@ RATE = 32000                 # the SNES chip's output rate
 NEEDS = (0, 3, 1)            # the emulator version this module calls (the snapshot's KON keyed on at load)
 
 
-# How to get it, for every message that misses it: the wheel from PyPI (into
-# the player's own environment on a pipx install), or built from source.
-INSTALL = ("pip install bitcomposer-emu (on a pipx install, pipx inject bitcomposer bitcomposer-emu); "
-           "or build it from emu/ in the repository, CONTRIBUTING.md says how")
+# How to get it, for every message that misses it: the wheel from PyPI
+# through the package's import extra (on a pipx install, into the player's
+# own environment, where UPDATE then keeps it current: player/update.py),
+# or built from source.
+INSTALL = ("pipx install --force 'bitcomposer[import]' on a pipx install, pip install 'bitcomposer[import]' "
+           "elsewhere; or build it from emu/ in the repository, CONTRIBUTING.md says how")
 
 
 class EmulatorMissing(RuntimeError):

@@ -193,8 +193,9 @@ an IT module (its samples, notes, envelopes and echo), and
 voice. It needs the emulator, `bitcomposer-emu`, a compiled package of its
 own with a wheel for Linux (x86_64 and aarch64), Windows and macOS, so no
 toolchain is needed: `pipx install "bitcomposer[import]"` installs both, or
-`pipx inject bitcomposer bitcomposer-emu` adds it to a player already
-installed (`pip install bitcomposer-emu` elsewhere). Where no wheel matches,
+`pipx install --force "bitcomposer[import]"` adds it to a player already
+installed; the player's UPDATE button then keeps both current
+(`pip install "bitcomposer[import]"` elsewhere). Where no wheel matches,
 it builds from source (Rust; CONTRIBUTING.md has how). Making a pack from a
 soundtrack comes later (`docs/SPC-IMPORT.md`; what has been tested, and how
 well it converts, is in `docs/drivers/`). The SPC files are yours:
