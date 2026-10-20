@@ -46,9 +46,9 @@ def beat_and_parts(song) -> tuple:
     return grid, roles
 
 
-def read(snap, seconds: float | None = None) -> Reading:
-    """Read a snapshot as music."""
-    song = events.play(snap, seconds)
+def read(snap, seconds: float | None = None, song: events.Song | None = None) -> Reading:
+    """Read a snapshot as music (song: its notes, if already played)."""
+    song = song or events.play(snap, seconds)
     grid, roles = beat_and_parts(song)
     folder = os.path.basename(os.path.dirname(os.path.abspath(snap.source))) if snap.source else ""
     m = manifest(os.path.dirname(os.path.abspath(snap.source))) if snap.source else {}
