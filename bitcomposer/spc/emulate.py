@@ -15,6 +15,14 @@ RATE = 32000                 # the SNES chip's output rate
 NEEDS = (0, 3, 1)            # the emulator version this module calls (the snapshot's KON keyed on at load)
 
 
+# How to get it, for every message that misses it: the wheel from PyPI
+# through the package's import extra (on a pipx install, into the player's
+# own environment, where UPDATE then keeps it current: player/update.py),
+# or built from source.
+INSTALL = ("pipx install --force 'bitcomposer[import]' on a pipx install, pip install 'bitcomposer[import]' "
+           "elsewhere; or build it from emu/ in the repository, CONTRIBUTING.md says how")
+
+
 class EmulatorMissing(RuntimeError):
     """The compiled emulator is not installed."""
 
@@ -73,8 +81,7 @@ def run(snapshot, seconds: float, audio: bool = False, mute: int = 0, taps: int 
     emu = _module()
     if emu is None:
         raise EmulatorMissing(f"running an SPC file's driver needs the emulator, the bitcomposer-emu package, "
-                              f"version {'.'.join(map(str, NEEDS))} or later "
-                              "(emu/ in the repository; CONTRIBUTING.md says how to build it)")
+                              f"version {'.'.join(map(str, NEEDS))} or later: {INSTALL}")
     raw, kons, pcm, tap, cycles, n = emu.run(snapshot.raw, float(seconds), audio, mute, taps)
     writes = [Write(c, r, v) for c, r, v in struct.iter_unpack("<QBB", raw)]
     keyons = [KeyOn(s / RATE, v, srcn, a, b) for s, v, srcn, a, b in struct.iter_unpack("<QBBHH", kons)]
@@ -93,7 +100,7 @@ def solos(snapshot, seconds: float) -> dict[int, array]:
     kept apart): {voice: 32 kHz stereo 16-bit}. Needs emulator 0.3."""
     emu = _module()
     if emu is None or not hasattr(emu, "solos"):
-        raise EmulatorMissing("each voice alone from one run needs the emulator, bitcomposer-emu, version 0.3 or later")
+        raise EmulatorMissing(f"each voice alone from one run needs the emulator, bitcomposer-emu, version 0.3 or later: {INSTALL}")
     raw, frames = emu.solos(snapshot.raw, float(seconds))
     every = array("h", raw)
     return {v: every[2 * frames * v:2 * frames * (v + 1)] for v in range(8)}

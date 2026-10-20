@@ -329,9 +329,11 @@ These change how every note sounds, not what notes are played.
   plan is `docs/SPC-IMPORT.md`; shipped in 1.1.0 as a developer preview:
   the reader, the emulator, built from source, SPC-to-IT and its measuring
   tool, `docs/drivers/` the record of what it converts; 1.1.1 converts 39
-  games of 20 music drivers, its songs as SPC players play them; open: the
-  translator and a pack from a soundtrack, step 5, the PACKS panel, step
-  6, and the emulator's wheels on PyPI).** The import reads a soundtrack's `.spc`
+  games of 20 music drivers, its songs as SPC players play them; the
+  emulator's wheels on PyPI, `bitcomposer-emu`, from `emu.yml`, and the
+  Windows build carrying it, its executable running IMPORT's worker
+  itself; open: the translator and a pack from a soundtrack, step 5, and
+  the PACKS panel, step 6).** The import reads a soundtrack's `.spc`
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
   own music driver and logs what it tells the DSP; a translator turns the
   log into notes, roles and measured habits. Two outputs: an SPC-to-IT

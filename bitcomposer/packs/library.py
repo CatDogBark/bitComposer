@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import zipfile
 from pathlib import Path
 
@@ -267,13 +268,48 @@ def can_import() -> bool:
     return emulate.available()
 
 
-class Import:
-    """A game's SPC files (a folder of them, a zip, an .rsn, .rar or .7z) made into a pack in a
-    process of its own (it is the emulator's work, a minute or so for a
-    whole soundtrack), the pack made anew in its place when it is done.
+# The worker: an import runs `python -m bitcomposer.spc --pack ...` in a
+# process of its own. The Windows build has no Python to give -m to:
+# sys.executable is bitComposer.exe itself, so it is started with WORKER
+# first and runs the same command instead of opening the window
+# (tools/windows/launch_player.py). Its pool's helpers start that exe
+# again too, which multiprocessing.freeze_support() there tells apart.
+WORKER = "--bitcomposer-worker"
+POLL = 0.2                           # seconds between looks at the worker's progress file
 
-    on_progress(done, total) and on_done(name, error) are called from the
-    reading thread."""
+
+def worker_command(args: list[str]) -> list[str]:
+    """How to run `python -m bitcomposer.spc ARGS` from this program."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable, WORKER, *args]
+    return [sys.executable, "-m", "bitcomposer.spc", *args]
+
+
+def run_worker(args: list[str]) -> int:
+    """The worker mode: `python -m bitcomposer.spc ARGS` inside this program.
+    A windowed executable may start with no sys.stdout or sys.stderr; where
+    it was handed a file or a pipe for them, they are taken up again, so a
+    traceback still reaches whoever started it."""
+    for fd, name in ((1, "stdout"), (2, "stderr")):
+        if getattr(sys, name) is None:
+            try:
+                setattr(sys, name, open(fd, "w", encoding="utf-8", errors="replace", closefd=False))
+            except OSError:
+                pass
+    from ..spc.__main__ import main
+    return main(args)
+
+
+class Import:
+    """A game's SPC files (a folder of them, a zip, an .rsn, .rar or .7z)
+    made into a pack in a process of its own (it is the emulator's work, a
+    minute or so for a whole soundtrack), the pack made anew in its place
+    when it is done.
+
+    The worker says how far it is, and why it stopped, in a file beside the
+    pack being made (its --progress), not on its stdout: the Windows build
+    is a windowed program, which may have none. on_progress(done, total)
+    and on_done(name, error) are called from the following thread."""
 
     def __init__(self, source, name: str | None = None, on_progress=None, on_done=None):
         from ..translate.archives import is_archive
@@ -282,6 +318,8 @@ class Import:
         self.name = name or name_for(self.source.stem if is_archive(self.source) else self.source.name)
         check_name(self.name)
         self.stage = packs_dir() / (STAGE + self.name)
+        self.progress = packs_dir() / f"{STAGE}{self.name}.progress"
+        self.errors = packs_dir() / f"{STAGE}{self.name}.errors"
         self.on_progress = on_progress or (lambda done, total: None)
         self.on_done = on_done or (lambda name, error: None)
         self.done = self.total = 0
@@ -291,37 +329,66 @@ class Import:
     def start(self) -> None:
         from ..translate import archives
         if not can_import():
-            raise PackError("importing needs the SNES emulator (bitcomposer-emu), built from source: see CONTRIBUTING.md")
+            from ..spc.emulate import INSTALL
+            raise PackError(f"importing needs the SNES emulator, bitcomposer-emu: {INSTALL}")
         if self.source.suffix.lower() in archives.BY_PROGRAM and not archives.program():
             raise PackError(f"{self.source.name}: unpacking it needs an archive program, {archives.INSTALL}")
         packs_dir().mkdir(parents=True, exist_ok=True)
         shutil.rmtree(self.stage, ignore_errors=True)
+        self.progress.write_text("", encoding="utf-8")
         package = Path(__file__).resolve().parents[2]     # the folder holding this bitcomposer, for the child
         env = dict(os.environ, PYTHONPATH=os.pathsep.join(
             [str(package)] + ([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else [])))
-        self.proc = subprocess.Popen(self.command(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+        quiet = getattr(subprocess, "CREATE_NO_WINDOW", 0)   # Windows: a console python.exe opens no console
+        with open(self.errors, "w", encoding="utf-8") as errors:
+            self.proc = subprocess.Popen(self.command(), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                         stderr=errors, env=env, creationflags=quiet)
         threading.Thread(target=self._follow, daemon=True).start()
 
     def command(self) -> list[str]:
-        return [sys.executable, "-m", "bitcomposer.spc", "--pack", str(self.stage), "--name", self.name,
-                "--progress", str(self.source)]
+        return worker_command(["--pack", str(self.stage), "--name", self.name,
+                               "--progress", str(self.progress), str(self.source)])
 
-    def _follow(self) -> None:
-        for line in self.proc.stdout:
+    def _read_progress(self, seen: int) -> tuple[int, str]:
+        """Lines added to the progress file since `seen` characters: the songs
+        read are passed on; the last error line, if any, is returned."""
+        try:
+            text = self.progress.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return seen, ""
+        error = ""
+        end = text.rfind("\n") + 1                      # whole lines only
+        for line in text[seen:end].splitlines():
             words = line.split()
-            if len(words) == 3 and words[0] == "progress":
+            if len(words) == 3 and words[0] == "progress" and words[1].isdigit() and words[2].isdigit():
                 self.done, self.total = int(words[1]), int(words[2])
                 self.on_progress(self.done, self.total)
-        err = self.proc.stderr.read().strip().splitlines()
-        self.proc.stdout.close()
-        self.proc.stderr.close()
+            elif line.startswith("error "):
+                error = line[6:]
+        return max(seen, end), error
+
+    def _follow(self) -> None:
+        seen, error = 0, ""
+        while self.proc.poll() is None:
+            seen, e = self._read_progress(seen)
+            error = e or error
+            time.sleep(POLL)
+        seen, e = self._read_progress(seen)
+        error = e or error
         code = self.proc.wait()
+        try:
+            err = self.errors.read_text(encoding="utf-8", errors="replace").strip().splitlines()
+        except OSError:
+            err = []
+        for f in (self.progress, self.errors):
+            f.unlink(missing_ok=True)
         if self._cancelled:
             shutil.rmtree(self.stage, ignore_errors=True)
             self.on_done(None, "cancelled")
         elif code != 0 or not (self.stage / PACK).is_file():
             shutil.rmtree(self.stage, ignore_errors=True)
-            self.on_done(None, (err[-1] if err else f"the import stopped (exit {code})").removeprefix("bitcomposer.spc: "))
+            why = error or (err[-1] if err else f"the import stopped (exit {code})")
+            self.on_done(None, why.removeprefix("bitcomposer.spc: "))
         else:
             target = packs_dir() / self.name
             unload(self.name)

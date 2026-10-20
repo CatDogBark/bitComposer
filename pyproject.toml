@@ -30,6 +30,14 @@ classifiers = [
 bitcomposer = "bitcomposer.cli:main"
 bitcomposer-player = "bitcomposer.player.window:main"
 
+# SPC import runs on the emulator, a compiled package of its own with a wheel
+# per platform (emu/, released by emu.yml). An extra rather than a
+# dependency: where no wheel matches, pip would try to build it and fail
+# for want of a Rust toolchain, and the generator and the player must
+# install everywhere. bitcomposer/spc/emulate.py names the version it calls.
+[project.optional-dependencies]
+import = ["bitcomposer-emu>=0.3.1,<0.4"]
+
 [project.urls]
 Homepage = "https://github.com/CatDogBark/bitComposer"
 Repository = "https://github.com/CatDogBark/bitComposer"

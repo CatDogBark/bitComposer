@@ -190,8 +190,13 @@ bitComposer is starting to learn from the games its packs imitate.
 music driver in an emulator of the SNES sound hardware and writes the song as
 an IT module (its samples, notes, envelopes and echo), and
 `tools/spc_check.py` measures the module against the original, voice by
-voice. It needs the emulator, `bitcomposer-emu`, built from source (Rust;
-CONTRIBUTING.md has how); it is not on PyPI yet. Making a pack from a
+voice. It needs the emulator, `bitcomposer-emu`, a compiled package of its
+own with a wheel for Linux (x86_64 and aarch64), Windows and macOS, so no
+toolchain is needed: `pipx install "bitcomposer[import]"` installs both, or
+`pipx install --force "bitcomposer[import]"` adds it to a player already
+installed; the player's UPDATE button then keeps both current
+(`pip install "bitcomposer[import]"` elsewhere). Where no wheel matches,
+it builds from source (Rust; CONTRIBUTING.md has how). Making a pack from a
 soundtrack comes later (`docs/SPC-IMPORT.md`; what has been tested, and how
 well it converts, is in `docs/drivers/`). The SPC files are yours:
 bitComposer ships none.

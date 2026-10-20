@@ -1,9 +1,11 @@
 name: Windows build
 
 # Builds the player (bitComposer.exe, a folder build: Qt starts in a moment
-# from a folder, where a single file would unpack ~100 MB on every launch)
-# and the command line (bitcomposer-cli.exe, one file, no Qt) on a Windows
-# runner, renders the player offscreen at common screen sizes and scalings,
+# from a folder, where a single file would unpack ~100 MB on every launch,
+# with the SNES emulator built from the same commit so IMPORT works with
+# nothing more to install) and the command line (bitcomposer-cli.exe, one
+# file, no Qt) on a Windows runner, checks IMPORT's worker mode, renders the
+# player offscreen at common screen sizes and scalings, then
 # zips the folder with a short readme, builds the installer, keeps all of it
 # as workflow artifacts, and on a tag (or a manual run naming one) attaches
 # the zip and the installer to that GitHub release. The build runs on every
@@ -46,6 +48,18 @@ jobs:
         run: |
           python -m pip install --quiet --upgrade pip pyinstaller
           python -m pip install --quiet .
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the emulator
+        run: |
+          # The SNES emulator (emu/, the bitcomposer-emu wheel) from this very
+          # commit, installed so PyInstaller packs it in beside libopenmpt:
+          # the Windows build carries it, and its users never install it.
+          python -m pip install --quiet maturin
+          cd emu
+          maturin build --release --out ..\build\emu
+          cd ..
+          python -m pip install --quiet --no-index --find-links build\emu bitcomposer-emu
+          python -c "from bitcomposer.spc import emulate; assert emulate.available(), 'the emulator built is not the one the package calls'"
       - name: Smoke test
         run: |
           python -m bitcomposer.cli --version
@@ -84,7 +98,7 @@ jobs:
           python tools/windows/make_version_file.py build/version-cli.txt bitcomposer-cli.exe "bitComposer command line"
           python tools/windows/make_version_file.py build/version-player.txt bitComposer.exe "bitComposer"
           pyinstaller --noconfirm --onefile --name bitcomposer-cli --console --icon build/bitcomposer.ico --version-file build/version-cli.txt --collect-submodules bitcomposer --exclude-module PySide6 --exclude-module shiboken6 tools/windows/launch_cli.py
-          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --version-file build/version-player.txt --collect-submodules bitcomposer --collect-data bitcomposer --add-binary "dll/*.dll;." tools/windows/launch_player.py
+          pyinstaller --noconfirm --onedir --name bitComposer --windowed --icon build/bitcomposer.ico --version-file build/version-player.txt --collect-submodules bitcomposer --collect-data bitcomposer --hidden-import bitcomposer_emu --add-binary "dll/*.dll;." tools/windows/launch_player.py
           Copy-Item dist/bitcomposer-cli.exe dist/bitComposer/
           dist\bitComposer\bitcomposer-cli.exe --version
       # Code signing (Azure Artifact Signing, the certificate in the name of
@@ -148,6 +162,20 @@ jobs:
           $exe = "dist\bitComposer\bitComposer.exe"
           $p = Start-Process -FilePath $exe -ArgumentList "--check" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "bitComposer.exe --check exited $($p.ExitCode)" }
+          # IMPORT's worker: the exe started with its private marker runs the
+          # SPC import (packs/library.py, launch_player.py) on one synthetic
+          # song, the tests' tiny driver, instead of opening the window; and
+          # its pool's helpers, which Windows starts by running the exe again,
+          # do their task and go, where without freeze_support() each one
+          # opened a player that stayed.
+          python -c "import os, sys; sys.path.insert(0, 'tests'); from test_spc_convert import tiny; os.makedirs('worker/game', exist_ok=True); open('worker/game/01 Tiny.spc', 'wb').write(tiny().raw)"
+          $p = Start-Process -FilePath $exe -ArgumentList @("--bitcomposer-worker", "--pack", "worker\out", "--name", "tiny_check", "--progress", "worker\progress.txt", "worker\game") -Wait -PassThru
+          if (Test-Path worker\progress.txt) { Get-Content worker\progress.txt }
+          if ($p.ExitCode -ne 0 -or -not (Test-Path worker\out\pack.json)) { throw "the worker mode made no pack (exit $($p.ExitCode))" }
+          Start-Sleep 3
+          $left = Get-Process bitComposer -ErrorAction SilentlyContinue
+          if ($left) { $left | Stop-Process -Force; throw "bitComposer.exe was left running after the worker: its pool's helpers opened players" }
+          Write-Host "worker mode: a pack made, no player opened"
           New-Item -ItemType Directory -Force -Path shots | Out-Null
           $shots = @(
             @("1920x1080-150", "1920x1080", "1.5", ""),

@@ -123,26 +123,71 @@ class Library(unittest.TestCase):
         zipped = Path(self.dir.name) / "test_quest.zip"
         self.assertEqual(library.Import(zipped).command()[-1], str(zipped))     # the zip goes to the child as it is
 
-    def test_an_import_made_anew_replaces_the_pack(self):
-        # the import's own process stood in for: it reports two songs and writes the pack
-        library.add(self.src)
-        library.move("test_quest", "oboe", "out")
-        src, done, finished = self.src, [], threading.Event()
+    def run_import(self, script: str):
+        """An import whose worker is `script` run by this Python, with the
+        stage and the progress file as its arguments (nothing is emulated)."""
+        done, finished = [], threading.Event()
 
         class Fake(library.Import):
             def command(self):
-                return [sys.executable, "-c", "import shutil, sys; print('progress 1 2'); print('progress 2 2'); "
-                        f"shutil.copytree({str(src)!r}, sys.argv[1])", str(self.stage)]
+                return [sys.executable, "-c", script, str(self.stage), str(self.progress)]
         job = Fake(self.src, "test_quest", on_progress=lambda d, t: done.append((d, t)),
                    on_done=lambda name, error: (done.append((name, error)), finished.set()))
         original = library.can_import
-        library.can_import = lambda: True                              # no emulator needed: nothing is emulated
+        library.can_import = lambda: True
         self.addCleanup(setattr, library, "can_import", original)
         job.start()
         self.assertTrue(finished.wait(20))
+        return done
+
+    def test_an_import_made_anew_replaces_the_pack(self):
+        # the worker says how far it is in its progress file, then writes the pack
+        library.add(self.src)
+        library.move("test_quest", "oboe", "out")
+        done = self.run_import(
+            "import shutil, sys, time\n"
+            "for line in ('progress 1 2', 'progress 2 2'):\n"
+            "    open(sys.argv[2], 'a').write(line + '\\n'); time.sleep(0.3)\n"
+            f"shutil.copytree({str(self.src)!r}, sys.argv[1])")
         self.assertEqual(done, [(1, 2), (2, 2), ("test_quest", None)])
         self.assertEqual(library.listing()[0]["parts"]["lead"], ["flute", "oboe"])   # fresh: the move is gone
-        self.assertFalse(any(p.name.startswith(".") for p in library.packs_dir().iterdir()))
+        self.assertFalse(any(p.name.startswith(".") for p in library.packs_dir().iterdir()))   # nothing left over
+
+    def test_an_import_that_stops_says_why(self):
+        done = self.run_import("import sys; open(sys.argv[2], 'a').write('progress 1 9\\nerror no wheel here\\n'); "
+                               "sys.exit(1)")
+        self.assertEqual(done, [(1, 9), (None, "no wheel here")])
+        # without an error line, the worker's last word on stderr
+        done = self.run_import("import sys; sys.stderr.write('Traceback...\\nKeyError: 3\\n'); sys.exit(1)")
+        self.assertEqual(done, [(None, "KeyError: 3")])
+        self.assertEqual(library.listing(), [])
+
+    def test_the_worker_is_this_python_or_the_windows_exe(self):
+        args = ["--pack", "out", "game"]
+        self.assertEqual(library.worker_command(args), [sys.executable, "-m", "bitcomposer.spc", *args])
+        sys.frozen = True                                   # the Windows build: no -m, the marker instead
+        try:
+            self.assertEqual(library.worker_command(args), [sys.executable, library.WORKER, *args])
+        finally:
+            del sys.frozen
+
+    def test_the_windows_launcher_runs_the_worker_and_not_the_window(self):
+        import contextlib
+        import io
+        import runpy
+        launcher = Path(__file__).resolve().parent.parent / "tools" / "windows" / "launch_player.py"
+        empty, progress = Path(self.dir.name) / "empty", Path(self.dir.name) / "progress.txt"
+        empty.mkdir()
+        argv = sys.argv
+        sys.argv = [str(launcher), library.WORKER, "--pack", str(Path(self.dir.name) / "out"),
+                    "--progress", str(progress), str(empty)]
+        try:
+            with self.assertRaises(SystemExit) as stop, contextlib.redirect_stderr(io.StringIO()):
+                runpy.run_path(str(launcher), run_name="__main__")
+        finally:
+            sys.argv = argv
+        self.assertEqual(stop.exception.code, 1)
+        self.assertEqual(progress.read_text(), "error no SPC files to read\n")
 
 
 if __name__ == "__main__":
