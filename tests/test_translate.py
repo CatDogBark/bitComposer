@@ -80,6 +80,22 @@ class Beat(unittest.TestCase):
         self.assertEqual(g.ornaments, {3})
         self.assertAlmostEqual(g.unit, eighth / 2, delta=0.002)
 
+    def test_a_swing_no_grid_holds_is_followed_loosely(self):
+        # Swanky's Swing's: eighths swung 62:38, each note placed by hand (up to 12 ms off), at 103
+        r = random.Random(7)
+        period, out = 60 / 103, []
+        for b in range(96):
+            t = b * period
+            out.append((t + r.uniform(-0.012, 0.012), 0.6, 0))
+            out.append((t + 0.62 * period + r.uniform(-0.012, 0.012), 0.4, 0))
+            out.append((t + r.uniform(-0.008, 0.008), 0.8, 1))                  # the bass, on the beat
+            if b % 2 == 0:
+                out.append((t + r.uniform(-0.008, 0.008), 0.5, 2))              # chords, every other beat
+        g = beat.find(sorted(out))
+        self.assertTrue(g.loose)
+        self.assertAlmostEqual(g.bpm, 103, delta=1.5)
+        self.assertAlmostEqual(g.swing, 0.62, delta=0.04)
+
     def test_free_time_has_no_beat(self):
         r = random.Random(3)
         t, out = 0.0, []

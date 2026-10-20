@@ -13,8 +13,8 @@ import sqlite3
 from array import array
 from pathlib import Path
 
-SCHEMA = 1
-VERSION = "2"                        # the translator's; a song read by another is read again
+SCHEMA = 2                           # 2: songs.loose
+VERSION = "3"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS songs (
     id TEXT PRIMARY KEY, file TEXT, folder TEXT, game TEXT, title TEXT, composer TEXT, driver TEXT,
     seconds REAL, version TEXT,
     bpm REAL, meter INTEGER, division INTEGER, on_grid REAL, swing REAL,
-    key_tonic INTEGER, key_mode TEXT, key_fit REAL);
+    key_tonic INTEGER, key_mode TEXT, key_fit REAL, loose INTEGER);
 CREATE TABLE IF NOT EXISTS samples (
     song TEXT, idx INTEGER, key TEXT, start INTEGER, loop INTEGER, f0 REAL, offset REAL,
     frames INTEGER, loops INTEGER, PRIMARY KEY (song, idx));
@@ -46,7 +46,11 @@ def connect(path=None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path)
     db.executescript(TABLES)
-    db.execute("INSERT OR IGNORE INTO meta VALUES ('schema', ?)", (str(SCHEMA),))
+    row = db.execute("SELECT value FROM meta WHERE key = 'schema'").fetchone()
+    if row and int(row[0]) < 2:
+        db.execute("ALTER TABLE songs ADD COLUMN loose INTEGER")   # a beat followed loosely, on no grid
+    db.execute("INSERT OR REPLACE INTO meta VALUES ('schema', ?)", (str(SCHEMA),))
+    db.commit()
     return db
 
 
@@ -82,10 +86,11 @@ def keep(db, reading) -> None:
         db.execute(f"DELETE FROM {table} WHERE {'id' if table == 'songs' else 'song'} = ?", (sid,))
     db.execute("DELETE FROM features WHERE song = ? AND source = 'soundtrack'", (sid,))
     g = r.grid
-    db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
+    db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
         sid, r.file, r.folder, r.game, r.title, r.composer, r.driver, r.song.seconds, VERSION,
         g.bpm if g else None, g.meter if g else None, g.division if g else None, g.on_grid if g else None,
-        g.swing if g else None, r.key[0] if r.key else None, r.key[1] if r.key else None, r.key[2] if r.key else None))
+        g.swing if g else None, r.key[0] if r.key else None, r.key[1] if r.key else None, r.key[2] if r.key else None,
+        int(g.loose) if g else None))
     index = {}
     for i, s in enumerate(r.song.samples.values()):
         index[s.key] = i

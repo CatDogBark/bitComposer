@@ -72,6 +72,7 @@ class Grid:
     swing: float                     # where the off-beat falls in the beat (0.5: straight)
     lags: dict = field(default_factory=dict)   # voice -> seconds it plays behind the others (a tick late)
     ornaments: set = field(default_factory=set)  # voices left out of the grid (rolls)
+    loose: bool = False              # followed loosely, on no grid (beat_times then uneven)
 
     @property
     def bpm(self) -> float:
@@ -444,7 +445,8 @@ def _distance(rate: float, period: float) -> float:
 def find(onsets) -> Grid | None:
     """The beat of onsets [(time, weight)] or [(time, weight, voice)] (each
     voice's lag then taken out first, its rolls left out); None when they keep
-    to no grid, or too few of them to one (free time)."""
+    to no beat (free time). On a grid first; where none holds, or only one so
+    fine it holds anything (under FINEST), loosely (loose())."""
     lags, left, counts = {}, set(), {}
     if onsets and len(onsets[0]) == 3:
         left = ornaments(onsets)
@@ -453,7 +455,24 @@ def find(onsets) -> Grid | None:
                 counts[v] = counts.get(v, 0) + 1
         onsets, lags = align([o for o in onsets if o[2] not in left])
     onsets = [(t, w) for t, w in onsets if w > 0]
-    unit = tatum(onsets) if len(onsets) >= 8 else None
+    if len(onsets) < 8:
+        return None
+    times = sorted(t for t, _ in onsets)
+    span = (times[-1] - times[0]) or 1.0
+    distinct = sum(1 for x, y in zip(times, times[1:]) if y - x > 0.010) + 1
+    rate = statistics.median(counts.values()) / span if counts else distinct / span     # no voices: one
+    grid = _gridded(onsets, rate)
+    if grid is None or grid.unit < FINEST:
+        grid = loose(onsets, rate) or grid
+    if grid:
+        grid.lags, grid.ornaments = {v: x for v, x in lags.items() if x}, left
+    return grid
+
+
+def _gridded(onsets, rate: float) -> Grid | None:
+    """The beat on a grid of one unit (sections of it), the typical voice
+    playing `rate` notes a second; None when the onsets keep to none."""
+    unit = tatum(onsets)
     if unit is None:
         return None
     secs = [x for x in sections(onsets, unit) if x.end > x.start]
@@ -475,10 +494,6 @@ def find(onsets) -> Grid | None:
     pulse = min(k for k, f in fills.items() if f >= enough)
     # the beat: of the pulse, the levels it groups into and the ones it divides into (a beat resting on some
     # of its points: The Empire Gestahl's, at 90, under a pulse at 45), the one nearest a listener's
-    times = sorted(t for t, _ in onsets)
-    span = (times[-1] - times[0]) or 1.0
-    distinct = sum(1 for x, y in zip(times, times[1:]) if y - x > 0.010) + 1
-    rate = statistics.median(counts.values()) / span if counts else distinct / span     # no voices: one
     finer = [pulse // d for d in (2, 3) if pulse % d == 0 and _fill(keep, pulse // d) >= RESTED]
     levels = [k for k in _levels(keep, pulse) + finer if SLOW <= 60 / (k * mean_unit) <= FAST] or [pulse]
     k = min(levels, key=lambda k: _distance(rate, k * mean_unit))
@@ -498,7 +513,146 @@ def find(onsets) -> Grid | None:
             if (m - x.downbeat) % x.meter == 0:
                 bar_times.append(t)
     return Grid(mean_unit, k, [x for x, _ in keep], beat_times, bar_times, on_grid,
-                _swing(onsets, keep[0][0].period, keep[0][0].first), {v: x for v, x in lags.items() if x}, left)
+                _swing(onsets, keep[0][0].period, keep[0][0].first))
+
+
+# The loose beat, for a song no grid holds: a swing between straight and
+# triplet (Swanky's Swing, 62:38), off-beats placed by hand note by note
+# (Snakey Chantey), timing that drifts all song (Yoshi's Island's Athletic).
+# Its onsets make an envelope of strength in time; the envelope's repeats
+# give the beat's length (the finest strong one, and its multiples by twos,
+# or threes where those repeat more, the one nearest a listener's beat as
+# on a grid); the beats are then followed through the song by dynamic
+# programming (Ellis's), each one where onsets are strong and its gap
+# near the beat's length. The grid's beat is the surer, so it comes first;
+# loosely alone, 22 of the 25 songs heard by ear with a steady beat read as
+# heard, the three loose ones among them.
+
+FRAME = 0.01                         # seconds a frame of the envelope
+FINEST = 0.025                       # a grid's unit under this is doubted (Swanky's Swing fitted one of 19 ms, its swing
+                                     # held at the wrong tempo): the loose beat is tried, and kept if it holds
+TIGHT = 100.0                        # how hard the loose beat holds its length (Ellis's tightness)
+REPEAT = 0.35                        # the envelope's repeat at the beat's length a loose beat needs
+SPREAD = 0.06                        # the most its beats' gaps may vary (the spread of their logs)
+COVERED = 0.7                        # the share of its beats with an onset within a tenth of a beat
+
+
+def _envelope(onsets) -> list[float]:
+    """Onset strength a frame: each onset's weight, spread by a gaussian of
+    two frames, less the mean."""
+    n = int(max(t for t, _ in onsets) / FRAME) + 8
+    raw = [0.0] * n
+    for t, w in onsets:
+        raw[int(t / FRAME)] += w
+    kernel = [math.exp(-0.5 * (i / 2) ** 2) for i in range(-6, 7)]
+    env = [0.0] * n
+    for i, x in enumerate(raw):
+        if x:
+            for j, k in enumerate(kernel):
+                if 0 <= i + j - 6 < n:
+                    env[i + j - 6] += x * k
+    mean = sum(env) / n
+    return [x - mean for x in env]
+
+
+def _autocorrelation(env: list, lo: int, hi: int) -> dict:
+    den = sum(x * x for x in env) or 1.0
+    return {lag: sum(env[i] * env[i + lag] for i in range(len(env) - lag)) / den for lag in range(lo, hi + 1)}
+
+
+def _peak_near(acf: dict, lag: float) -> tuple | None:
+    """The repeat's strongest lag within 8 % of `lag` (frames), refined by a
+    parabola through its neighbours: (seconds, strength)."""
+    lo, hi = max(min(acf), int(lag * 0.92)), min(max(acf), int(lag * 1.08) + 1)
+    if lo > hi:
+        return None
+    m = max(range(lo, hi + 1), key=lambda x: acf[x])
+    d = 0.0
+    if m - 1 in acf and m + 1 in acf:
+        y0, y1, y2 = acf[m - 1], acf[m], acf[m + 1]
+        if y0 - 2 * y1 + y2:
+            d = max(-0.5, min(0.5, (y0 - y2) / (2 * (y0 - 2 * y1 + y2))))
+    return (m + d) * FRAME, acf[m]
+
+
+def _track(env: list, period: float) -> list[float]:
+    """The beats through the envelope: each frame's score its strength plus
+    the best earlier beat's score, less TIGHT times the squared log of the
+    gap over the beat's length; traced back from the best of the last beat."""
+    P = period / FRAME
+    sd = statistics.pstdev(env) or 1.0
+    o = [x / sd for x in env]
+    lo, hi = max(1, int(round(P / 2))), int(round(2 * P))
+    penalty = [0.0] * (hi + 1)
+    for d in range(lo, hi + 1):
+        penalty[d] = -TIGHT * math.log(d / P) ** 2
+    score, back = [0.0] * len(o), [-1] * len(o)
+    for t in range(len(o)):
+        best, at = 0.0, -1
+        for d in range(lo, min(hi, t) + 1):
+            v = score[t - d] + penalty[d]
+            if v > best:
+                best, at = v, t - d
+        score[t], back[t] = o[t] + best, at
+    t = max(range(max(0, len(o) - int(P) - 1), len(o)), key=score.__getitem__)
+    beats = []
+    while t >= 0:
+        beats.append(t * FRAME)
+        t = back[t]
+    return beats[::-1]
+
+
+def loose(onsets, rate: float) -> Grid | None:
+    """The beat of onsets no grid holds, followed loosely (see above); None
+    when they do not repeat, or the beats followed are not steady (free)."""
+    env = _envelope(onsets)
+    acf = _autocorrelation(env, 15, int(60 / SLOW / FRAME) * 2)
+    peaks = [(v, lag) for lag, v in acf.items() if acf.get(lag - 1, -9) < v >= acf.get(lag + 1, -9) and v >= REPEAT]
+    if not peaks:
+        return None
+    top = max(v for v, _ in peaks)
+    finest = min(lag for v, lag in peaks if v >= 0.6 * top)
+    near = lambda m: _peak_near(acf, finest * m) or (finest * m * FRAME, -1.0)
+    # by twos, unless the shortest repeat nearly as strong as any holds a three (as on a grid: Snakey
+    # Chantey repeats alike every two and every three, 0.78 and 0.79, and is in twos)
+    reps = {m: near(m)[1] for m in (2, 3, 4, 6, 8, 12)}
+    best = max(reps.values())
+    threes = best > 0 and min(m for m, v in reps.items() if v >= ALIKE * best) % 3 == 0
+    lengths = [near(m) for m in ((1, 2, 3, 6) if threes else (1, 2, 4, 8))]
+    lengths = [(sec, v) for sec, v in lengths if SLOW <= 60 / sec <= FAST and v >= REPEAT]
+    if not lengths:
+        return None
+    period = min((sec for sec, _ in lengths), key=lambda sec: _distance(rate, sec))
+    beats = _track(env, period)
+    gaps = [b - a for a, b in zip(beats, beats[1:])]
+    if len(gaps) < 8 or statistics.pstdev(math.log(g / period) for g in gaps) > SPREAD:
+        return None
+    times = sorted(t for t, _ in onsets)
+    covered = sum(1 for b in beats if (i := bisect.bisect_left(times, b - 0.1 * period)) < len(times)
+                  and times[i] <= b + 0.1 * period) / len(beats)
+    if covered < COVERED:
+        return None
+    # the beat's length from a line through all its beats: a gap is a whole number of frames, their median
+    # a tempo of 125.0 or 142.9
+    n = len(beats)
+    mean_i, mean_t = (n - 1) / 2, sum(beats) / n
+    period = sum((i - mean_i) * (t - mean_t) for i, t in enumerate(beats)) / sum((i - mean_i) ** 2 for i in range(n))
+    division = max(1, round(period / (finest * FRAME)))
+    # the bar from the accents on the beats, as on a grid; swing from where the off-beats fall between them
+    accents, offs = {}, []
+    for t, w in onsets:
+        i = bisect.bisect_right(beats, t) - 1
+        if 0 <= i < len(beats) - 1:
+            f = (t - beats[i]) / (beats[i + 1] - beats[i])
+            if f < 0.1 or f > 0.9:
+                j = i if f < 0.1 else i + 1
+                accents[j] = accents.get(j, 0.0) + w
+            elif 0.3 < f < 0.8:
+                offs.append((f, w))
+    meter, downbeat = _meter(accents, 1, 0) if accents else (4, 0)
+    section = Section(times[0], times[-1], period / division, beats[0], beats[0], meter, downbeat, division)
+    swing = sum(f * w for f, w in offs) / sum(w for _, w in offs) if offs else 0.5
+    return Grid(period / division, division, [section], beats, beats[downbeat::meter], covered, swing, loose=True)
 
 
 BASS_LIFT = 1.4                      # how much more than chance the bass must land on a bar's first beat
