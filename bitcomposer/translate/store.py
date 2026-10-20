@@ -13,8 +13,8 @@ import sqlite3
 from array import array
 from pathlib import Path
 
-SCHEMA = 3                           # 2: songs.loose; 3: songs.loop_*, form
-VERSION = "4"                        # the translator's; a song read by another is read again
+SCHEMA = 4                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level
+VERSION = "5"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS beats (song TEXT PRIMARY KEY, beats BLOB, bars BLOB);
 CREATE TABLE IF NOT EXISTS chords (song TEXT, start REAL, end REAL, root INTEGER, shape TEXT, fit REAL);
 CREATE TABLE IF NOT EXISTS features (song TEXT, source TEXT, name TEXT, value REAL, PRIMARY KEY (song, source, name));
 CREATE TABLE IF NOT EXISTS form (song TEXT, idx INTEGER, label TEXT, bar INTEGER, bars INTEGER, start REAL, of INTEGER,
-    PRIMARY KEY (song, idx));
+    level TEXT, PRIMARY KEY (song, idx));     -- level: 'part' (a phrase) or 'section' (a short phrase and its repeats)
 CREATE INDEX IF NOT EXISTS chords_song ON chords (song);
 """
 NOTE_FIELDS = 6                      # start and length in beats, midi (NaN: unpitched), level, pan, sample index (-1: noise)
@@ -56,6 +56,8 @@ def connect(path=None) -> sqlite3.Connection:
     if old < 3:
         for column in ("loop_bar INTEGER", "loop_bars INTEGER", "loop_seconds REAL"):
             db.execute(f"ALTER TABLE songs ADD COLUMN {column}")
+    if 3 <= old < 4:
+        db.execute("ALTER TABLE form ADD COLUMN level TEXT")
     db.execute("INSERT OR REPLACE INTO meta VALUES ('schema', ?)", (str(SCHEMA),))
     db.commit()
     return db
@@ -124,6 +126,7 @@ def keep(db, reading) -> None:
                                                        array("d", g.bar_times).tobytes()))
     for c in r.chords:
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, c.start, c.end, c.root, c.shape, c.fit))
-    for i, p in enumerate(f.parts if f else []):
-        db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?)", (sid, i, p.label, p.bar, p.bars, p.start, p.of))
+    rows = [(p, "part") for p in (f.parts if f else [])] + [(p, "section") for p in (f.sections if f else [])]
+    for i, (p, level) in enumerate(rows):
+        db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", (sid, i, p.label, p.bar, p.bars, p.start, p.of, level))
     db.commit()

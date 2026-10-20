@@ -241,6 +241,8 @@ class Form(unittest.TestCase):
         f = form.read(song, beat.find([(p.start, p.level, p.voice) for p in song.notes]))
         self.assertIsNone(f.loop_bar)
         self.assertEqual(f.letters, "A B B C")
+        # at the scale of sections, a four-bar part played twice at once is one section
+        self.assertEqual([(p.label, p.bar, p.bars) for p in f.sections], [("A", 0, 2), ("B", 2, 8), ("C", 10, 4)])
 
 
 class Events(unittest.TestCase):

@@ -4,7 +4,8 @@
 
 Each song's tempo, bar, key and the part each voice plays, one line a song
 (~ before the tempo: followed loosely, on no grid); --show adds its chords
-and form (its parts, each a letter and its bars, and where it loops). The readings are kept in a database on this machine
+and form (its parts, each a letter and its bars, and where it loops; its
+sections, a short part and its repeats as one). The readings are kept in a database on this machine
 (~/.local/share/bitcomposer/readings.db unless --db says), a song read
 again only when the translator has changed. Needs the emulator.
 """
@@ -77,6 +78,7 @@ def main(argv=None) -> int:
                     loop = (f", loops to bar {r.form.loop_bar + 1} ({r.form.loop_bars} bars)"
                             if r.form.loop_bar is not None else ", no loop heard")
                     print("    form " + " ".join(f"{p.label}{p.bars}" for p in r.form.parts) + loop)
+                    print("    sections " + " ".join(f"{p.label}{p.bars}" for p in r.form.sections))
     print(f"{len(todo) - failed} read, {len(files) - len(todo)} already kept, {failed} failed"
           f" ({args.db or store.default_path()})")
     return 1 if failed else 0
