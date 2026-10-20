@@ -649,7 +649,9 @@ def loose(onsets, rate: float) -> Grid | None:
                 accents[j] = accents.get(j, 0.0) + w
             elif 0.3 < f < 0.8:
                 offs.append((f, w))
-    meter, downbeat = _meter(accents, 1, 0) if accents else (4, 0)
+    # a bar of three only where the repeats hold a three (Mini Boss Confrontation's accents read three of
+    # its half notes, where it repeats every two and four of its quarters, hardly every six)
+    meter, downbeat = _meter(accents, 1, 0, (4, 3, 2) if threes else (4, 2)) if accents else (4, 0)
     section = Section(times[0], times[-1], period / division, beats[0], beats[0], meter, downbeat, division)
     swing = sum(f * w for f, w in offs) / sum(w for _, w in offs) if offs else 0.5
     return Grid(period / division, division, [section], beats, beats[downbeat::meter], covered, swing, loose=True)
@@ -683,7 +685,7 @@ def rebar(grid: Grid, bass_beats: list[float]) -> bool:
     return True
 
 
-def _meter(slots: dict, k: int, first: float) -> tuple[int, int]:
+def _meter(slots: dict, k: int, first: float, choices=(4, 3, 2)) -> tuple[int, int]:
     """Beats a bar, 2, 3 or 4, and the downbeat's place among them: the count
     whose accents repeat most strongly, the place where they are loudest."""
     start = round(first)
@@ -696,7 +698,7 @@ def _meter(slots: dict, k: int, first: float) -> tuple[int, int]:
     n = max(beats) + 1
     acc = [beats.get(b, 0.0) for b in range(n)]
     best = (4, 0, -1.0)
-    for m in (4, 3, 2):
+    for m in choices:
         if n < 2 * m:
             continue
         sums = [sum(acc[j::m]) for j in range(m)]
