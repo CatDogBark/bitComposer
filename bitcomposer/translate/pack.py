@@ -25,18 +25,20 @@ for categories stage 4's vocabulary is to replace."""
 import json
 import math
 import re
+import tempfile
 import wave
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import roles as R
+from . import archives, roles as R
 
 RATE = 32000                         # a sample plays at its own rate at pitch 0x1000
 VOICES = 6                           # the most samples a part draws from
 SHARE = 0.03                         # a sample playing less of a part's notes than this is left out
 REPEATS = 4                          # a pool repeats its most used sample this many times, the rest by their share
 LONG = 0.5                           # seconds: a drum ringing this long is a cymbal
+WHY = "translator.json"              # beside pack.json: the songs read, and why each sample is where it is
 
 # the generator's pools each part fills
 POOLS = {R.MELODY: ("lead",), R.HARMONY: ("harmony",), R.ACCOMP: ("harmony",), R.COUNTER: ("counter",),
@@ -56,6 +58,7 @@ class Gathered:
     game: str = ""
     songs: int = 0
     uses: dict = field(default_factory=lambda: defaultdict(Counter))       # part -> sample key -> notes
+    songs_in: dict = field(default_factory=lambda: defaultdict(Counter))   # part -> sample key -> songs
     where: dict = field(default_factory=dict)                             # sample key -> (snapshot path, (start, loop))
     f0: dict = field(default_factory=dict)                                # sample key -> Hz at its own rate
     pitches: dict = field(default_factory=lambda: defaultdict(Counter))   # sample key -> pitch registers played
@@ -72,12 +75,14 @@ def gather(readings, snaps) -> Gathered:
         g.songs += 1
         g.game = g.game or r.game
         part = {x.voice: x.role for x in r.roles}
+        heard = set()
         for p in r.song.notes:
             role = part.get(p.voice)
             if role is None or p.sample is None or role == R.DOUBLE:
                 continue
             k = p.sample.key
             g.uses[role][k] += 1
+            heard.add((role, k))
             g.where.setdefault(k, (snap.source, p.sample.addr))
             if p.sample.f0:
                 g.f0.setdefault(k, p.sample.f0)
@@ -88,6 +93,8 @@ def gather(readings, snaps) -> Gathered:
         if r.key:
             g.modes[r.key[1]] += 1
         g.drumless += not any(x.role == R.DRUMS for x in r.roles)
+        for role, k in heard:
+            g.songs_in[role][k] += 1
         e = snap.echo
         main = max(abs(x) for x in snap.main_volume) or 1.0
         on = bool(e.voices) and e.writes and e.delay_ms > 0 and max(abs(x) for x in e.volume) > 0
@@ -182,6 +189,11 @@ def habits(g: Gathered) -> dict:
     return out
 
 
+def voice_of(key: str) -> str:
+    """A sample's voice name in the pack, from its BRR data's hash."""
+    return "s" + key[:10]
+
+
 def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dict, dict]:
     """The pack file's data, and its samples to write: {voice: (pcm, rate)}.
     decode(key) gives a sample's (pcm, loop (start, end) or None) as the SNES
@@ -190,7 +202,6 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
     used = {k for ks in chosen.values() for k in ks} | set(g.uses.get(R.DRUMS, Counter()))
     decoded = {k: decode(k) for k in used}
     decoded = {k: d for k, d in decoded.items() if d is not None}
-    voice = lambda k: "s" + k[:10]      # noqa: E731
     sounds = {}
     for k in g.uses.get(R.DRUMS, Counter()):
         if k in decoded and g.pitches.get(k):
@@ -208,7 +219,7 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
             if k not in decoded or not g.f0.get(k):
                 continue                                 # no pitch found: not a tonal voice
             pcm, loop = decoded[k]
-            v = voice(k)
+            v = voice_of(k)
             if v not in samples:
                 spec = {"file": f"{v}.wav", "note": round(69 + 12 * math.log2(g.f0[k] / 440), 2), "volume": 58}
                 if loop:
@@ -222,7 +233,7 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
             del chosen[pool]
     drums = {}
     for piece, k in pieces.items():
-        v = voice(k)
+        v = voice_of(k)
         if v not in samples:
             samples[v] = {"file": f"{v}.wav", "percussion": True}
             files[v] = sounds[k]
@@ -235,8 +246,22 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
     return data, files
 
 
-def write(data: dict, files: dict, out: Path) -> Path:
-    """The pack file and its WAVs into `out`."""
+def why(g: Gathered, data: dict) -> dict:
+    """Why each of the pack's samples is where it is: the parts the readings
+    found it playing, in how many songs and how many notes, most first.
+    {voice: [[part, songs, notes], ...]}; the player's PACKS panel shows it."""
+    key_of = {voice_of(k): k for k in g.where}
+    out = {}
+    for v in data["samples"]:
+        k = key_of.get(v)
+        rows = [[role, g.songs_in[role][k], counts[k]] for role, counts in g.uses.items() if k in counts]
+        out[v] = sorted(rows, key=lambda x: -x[2])
+    return out
+
+
+def write(data: dict, files: dict, out: Path, reasons: dict | None = None, songs: int | None = None) -> Path:
+    """The pack file and its WAVs into `out`, with why its samples are where
+    they are (WHY: the songs read, and why()'s reasons) when given."""
     out.mkdir(parents=True, exist_ok=True)
     for v, (pcm, rate) in files.items():
         with wave.open(str(out / f"{v}.wav"), "wb") as w:
@@ -244,6 +269,8 @@ def write(data: dict, files: dict, out: Path) -> Path:
             w.setsampwidth(2)
             w.setframerate(rate)
             w.writeframes(pcm.tobytes())
+    if reasons is not None:
+        (out / WHY).write_text(json.dumps({"songs": songs, "why": reasons}, indent=1) + "\n", encoding="utf-8")
     path = out / "pack.json"
     path.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
     return path
@@ -268,22 +295,27 @@ def _read(path):
         return RuntimeError(f"{path}: {type(e).__name__}: {e}"), None
 
 
-def make(paths, out, name: str | None = None, workers: int | None = None, say=print) -> Path:
-    """Read a game's SPC files (folders read whole) and write a thin pack of
-    them into `out`: pack.json and its samples' WAVs. Returns the pack file."""
+def make(paths, out, name: str | None = None, workers: int | None = None, say=print, progress=None) -> Path:
+    """Read a game's SPC files (folders read whole, archives unpacked:
+    archives.py) and write a thin pack of them into `out`: pack.json, its
+    samples' WAVs and why each is where it is (WHY). Returns the pack file.
+    progress(done, total) after each song."""
+    with tempfile.TemporaryDirectory(prefix="bitcomposer-spc-") as unpack:
+        return _make(archives.spc_files(paths, Path(unpack)), paths, out, name, workers, say, progress)
+
+
+def _make(files, paths, out, name, workers, say, progress) -> Path:
     import os
     from multiprocessing import Pool
     from .. import spc
     from ..spc import brr, snes_chip
-    files = []
-    for p in paths:
-        p = Path(p)
-        files += sorted(p.glob("*.spc")) if p.is_dir() else [p]
     if not files:
         raise ValueError("no SPC files to read")
     readings, snaps = [], []
     with Pool(workers or max(1, (os.cpu_count() or 2) - 1)) as pool:
-        for r, snap in pool.imap(_read, [str(f) for f in files]):
+        for i, (r, snap) in enumerate(pool.imap(_read, [str(f) for f in files])):
+            if progress:
+                progress(i + 1, len(files))
             if isinstance(r, RuntimeError):
                 say(f"  skipped: {r}")
                 continue
@@ -302,9 +334,10 @@ def make(paths, out, name: str | None = None, workers: int | None = None, say=pr
         lp = (s.loop_start, s.loop_end) if s.loops and s.loop_end > s.loop_start else None
         return snes_chip.snes_interpolated(s.pcm, lp), lp
 
-    folder = Path(paths[0]).name if Path(paths[0]).is_dir() else Path(paths[0]).parent.name
+    first = Path(paths[0])
+    folder = first.name if first.is_dir() else first.stem if archives.is_archive(first) else first.parent.name
     data, wavs = build(g, decode, name or name_for(folder))
-    path = write(data, wavs, Path(out))
+    path = write(data, wavs, Path(out), why(g, data), len(readings))
     v = data["voices"]
     say(f"{path}: {len(readings)} songs read, {len(wavs)} samples; " +
         ", ".join(f"{pool} {len(set(ks))}" for pool, ks in v.items() if pool != "drums") +

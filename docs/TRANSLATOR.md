@@ -200,7 +200,20 @@ soundtrack's; the FFVI comparison again; listening.
 As `SPC-IMPORT.md` step 6: import a folder (progress while each song is
 emulated), the role picker (hear each sample, see the translator's guess
 and why, change it), USE, delete. The packs and the database in the
-user's settings folder.
+user's data folder.
+
+Where it stands (2026-10-20): the player's PACKS tile opens it
+(`packs/library.py` under it). IMPORT reads a game's SPC files, from its
+set (a zip; an .rsn, .rar or .7z unpacked by 7-Zip or unar, found on the
+machine, never shipped: `translate/archives.py`) or from its folder (that
+folder's own), in a process of its own, the songs read shown as they go; ADD brings in an exported
+pack (one zip file) or a pack file; each pack has USE (it joins SOUND),
+its voices by part, the kit and what is left out (a click plays a voice
+in its part's register and says which parts the readings found it in,
+in how many songs, how many notes; MOVE TO puts it elsewhere), RENAME,
+EXPORT and DELETE. Importing a game again starts it fresh; to keep your
+changes, export the pack first. IMPORT needs the emulator, and says so
+without it.
 
 ## Later
 
@@ -211,7 +224,8 @@ building it.
 
 ## To settle as we go
 
-- **Where the database lives**: the settings folder (with the packs) or the
-  user's data folder.
-- **Tuning to taste**: a user's corrections (roles, voices, habits) kept in
-  the database, so a pack can be made again from them, or only in the pack.
+- **Where the database lives**: settled (2026-10-20): the user's data
+  folder, with the packs (`~/.local/share/bitcomposer`, or
+  `BITCOMPOSER_DATA_DIR`).
+- **Tuning to taste**: settled (2026-10-20): only in the pack. Importing
+  again starts fresh; EXPORT keeps a pack as it is, ADD brings it back.

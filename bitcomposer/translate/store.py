@@ -8,7 +8,6 @@ beside what was read from them: the beat, the key, each voice's part, the
 chords, the form (its parts and loop), and features for the measures packs are made from and the
 generator's songs are held against."""
 import json
-import os
 import sqlite3
 from array import array
 from pathlib import Path
@@ -40,8 +39,8 @@ NOTE_FIELDS = 6                      # start and length in beats, midi (NaN: unp
 
 
 def default_path() -> Path:
-    base = os.environ.get("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share")
-    return Path(base) / "bitcomposer" / "readings.db"
+    from ..packs.library import data_dir      # beside the packs made from it
+    return data_dir() / "readings.db"
 
 
 def connect(path=None) -> sqlite3.Connection:

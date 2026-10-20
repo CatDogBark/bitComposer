@@ -111,6 +111,7 @@ ApplicationWindow {
     // than the window).
     onShowSettingsChanged: if (root.showSettings && root._sized) reveal.show(settingsPanel)
     onShowMasterChanged: if (root.showMaster && root._sized) reveal.show(masterPanel)
+    onShowPacksChanged: if (root.showPacks && root._sized) reveal.show(packsPanel)
     Timer {
         id: reveal
         interval: 40            // after the column has laid the panel out
@@ -170,6 +171,35 @@ ApplicationWindow {
     property bool autoGenerate: !!backend.state.autoGenerate
     property bool showSettings: false
     property bool showMaster: false
+    property bool showPacks: false
+    // PACKS (backend.packs, packs/library.py): the pack opened, the voice
+    // picked in it and the part it is in, a DELETE asking, a RENAME open.
+    property string packOpen: ""
+    property string packVoice: ""
+    property string packVoicePart: ""
+    property string packConfirm: ""
+    property string packRenaming: ""
+    readonly property bool importBusy: !!backend.importState.busy
+    readonly property var builtinSounds: ["random", "chip", "genesis", "snes", "ffvi", "mana", "evermore", "megamanx"]
+    readonly property var packNames: backend.packs.map(function(p) { return p.name })
+    readonly property var soundOptions: builtinSounds.concat(packNames)
+    readonly property var partOrder: ["lead", "alt_lead", "harmony", "counter", "arp", "bass"]
+    readonly property var kitPieces: ["kick", "snare", "hihat", "tom", "crash", "open_hihat", "rim"]
+    function isLibraryPack(name) { return packNames.indexOf(name) >= 0 }
+    // A pack deleted or renamed while SOUND used it: back to random.
+    onPackNamesChanged: if (!root._loading && builtinSounds.indexOf(root.settSound) < 0 && !isLibraryPack(root.settSound)) root.settSound = "random"
+    function pickVoice(pack, voice, part) {
+        root.packVoice = voice
+        root.packVoicePart = part
+        backend.previewVoice(pack, voice, part)
+    }
+    function shortVoice(v) { return v.length > 8 ? v.substring(0, 7) : v }
+    function whyText(p, v) {
+        var rows = p.why[v] || []
+        if (!rows.length) return "no readings kept for it (the pack was not imported here)"
+        return rows.map(function(r) { return r[0] + " in " + r[1] + (r[1] === 1 ? " song" : " songs") + " (" + r[2] + " notes)" }).join(", ")
+    }
+    function movesFor(p, v) { return (p.drums.indexOf(v) >= 0 ? kitPieces : partOrder).concat(["out"]) }
     property int settingsTab: 0  // 0=COMPOSE, 1=DRUMS, 2=PARTS
     onSettingsTabChanged: root._save()
 
@@ -374,7 +404,8 @@ ApplicationWindow {
         if (settTempo !== "random") flags += " --tempo " + settTempo
         if (settEnergy !== "random") flags += " --energy " + settEnergy
         if (settScale !== "random") flags += " --scale " + settScale
-        if (settSound !== "random") flags += " --sound " + settSound
+        if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)
+        else if (builtinSounds.indexOf(settSound) > 0) flags += " --sound " + settSound
         if (settDrumDensity !== "random") flags += " --drum-density " + settDrumDensity
         if (!settDrumFills) flags += " --no-fills"
         if (settDrumSwing !== "random") flags += " --swing " + settDrumSwing
@@ -529,6 +560,7 @@ ApplicationWindow {
             "gear": "M18.5 12 A6.5 6.5 0 1 1 5.5 12 A6.5 6.5 0 1 1 18.5 12 M14.5 12 A2.5 2.5 0 1 1 9.5 12 A2.5 2.5 0 1 1 14.5 12"
                   + " M18.5 12 H22 M16.6 7.4 L19.1 4.9 M12 5.5 V2 M7.4 7.4 L4.9 4.9 M5.5 12 H2 M7.4 16.6 L4.9 19.1 M12 18.5 V22 M16.6 16.6 L19.1 19.1",
             "faders": "M6 3 V21 M12 3 V21 M18 3 V21",
+            "packs": "M12 3 L21 7.5 L12 12 L3 7.5 Z M3 12 L12 16.5 L21 12 M3 16.5 L12 21 L21 16.5",
         })
         readonly property var fills: ({
             "faders": "M3.5 13 H8.5 V17 H3.5 Z M9.5 6 H14.5 V10 H9.5 Z M15.5 10.5 H20.5 V14.5 H15.5 Z",
@@ -643,6 +675,39 @@ ApplicationWindow {
             preventStealing: true
             onPressed: function(mouse) { fader.moved(Math.max(0, Math.min(1, mouse.x / width))) }
             onPositionChanged: function(mouse) { if (pressed) fader.moved(Math.max(0, Math.min(1, mouse.x / width))) }
+        }
+    }
+
+    // A pack's part (or its kit, or what is left out): its voices as chips,
+    // each heard and picked with a click. items: [{voice, part, text}].
+    component VoiceRow: RowLayout {
+        id: voiceRow
+        property string label: ""
+        property string pack: ""
+        property var items: []
+        Layout.fillWidth: true
+        spacing: 8
+        Text {
+            Layout.preferredWidth: Math.round(56 * root.ui)
+            Layout.alignment: Qt.AlignTop
+            topPadding: Math.round(4 * root.ui)
+            text: voiceRow.label
+            color: root.dimText
+            font.family: root.mono
+            font.pixelSize: Math.round(8 * root.ui)
+        }
+        Flow {
+            Layout.fillWidth: true
+            spacing: 3
+            Repeater {
+                model: voiceRow.items
+                Chip {
+                    required property var modelData
+                    text: modelData.text
+                    active: root.packVoice === modelData.voice && root.packVoicePart === modelData.part
+                    onClicked: root.pickVoice(voiceRow.pack, modelData.voice, modelData.part)
+                }
+            }
         }
     }
 
@@ -1055,6 +1120,11 @@ ApplicationWindow {
                         on: root.showMaster; onColor: root.accentPink
                         onClicked: root.showMaster = !root.showMaster
                     }
+                    ToolTile {
+                        icon: "packs"; caption: "PACKS"
+                        on: root.showPacks; onColor: root.accentGreen
+                        onClicked: root.showPacks = !root.showPacks
+                    }
                 }
 
                 // ── Settings summary (what GENERATE will do) ──
@@ -1132,7 +1202,7 @@ ApplicationWindow {
                             OptionRow { label: "TEMPO"; options: ["random", "slow", "medium", "fast"]; value: root.settTempo; onPicked: function(c) { root.settTempo = c } }
                             OptionRow { label: "ENERGY"; options: ["random", "chill", "normal", "intense"]; value: root.settEnergy; onPicked: function(c) { root.settEnergy = c } }
                             OptionRow { label: "SCALE"; options: ["random", "minor", "major", "pentatonic"]; value: root.settScale; onPicked: function(c) { root.settScale = c } }
-                            OptionRow { label: "SOUND"; options: ["random", "chip", "genesis", "snes", "ffvi", "mana", "evermore", "megamanx"]; value: root.settSound; onPicked: function(c) { root.settSound = c } }
+                            OptionRow { label: "SOUND"; options: root.soundOptions; value: root.settSound; onPicked: function(c) { root.settSound = c } }
                             OptionRow { label: "ECHO"; options: ["random", "on", "off"]; value: root.settEcho; onPicked: function(c) { root.settEcho = c } }
                             OptionRow { label: "WET"; options: ["random", "light", "normal", "wet"]; value: root.settEchoWet; onPicked: function(c) { root.settEchoWet = c } }
                             OptionRow { label: "BASS"; options: ["random", "heavy", "medium", "light"]; value: root.settBassWeight; onPicked: function(c) { root.settBassWeight = c } }
@@ -1407,6 +1477,251 @@ ApplicationWindow {
                                 font.family: root.mono; font.pixelSize: Math.round(9 * root.ui); font.letterSpacing: 2
                             }
                             MouseArea { id: saveMasterMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root._applyMasterToFile() }
+                        }
+                    }
+                }
+
+                // ── Packs Panel ──
+                // The packs on this machine (packs/library.py): IMPORT a game's
+                // SPC files, a set (zip, rsn, rar, 7z) or a folder (needs the emulator), ADD an exported pack;
+                // each pack's USE, its voices by part (a click plays one and
+                // shows why it is there, MOVE TO puts it elsewhere), RENAME,
+                // EXPORT and DELETE. Importing a game again starts it fresh.
+                Rectangle {
+                    id: packsPanel
+                    Layout.fillWidth: true
+                    visible: root.showPacks
+                    implicitHeight: packsCol.implicitHeight + 16
+                    color: root.tileBg
+                    radius: 4
+                    border.width: 1
+                    border.color: root.tileBorder
+
+                    ColumnLayout {
+                        id: packsCol
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 8
+                        spacing: 6
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            SectionHead { text: "PACKS"; accent: root.accentGreen; spacingLetters: 2 }
+                            Chip {
+                                text: "IMPORT"
+                                enabled: backend.canImport && !root.importBusy
+                                opacity: enabled ? 1 : 0.4
+                                onClicked: backend.importGame()
+                            }
+                            Chip { text: "ADD"; onClicked: backend.addPack() }
+                        }
+                        Text {
+                            visible: !backend.canImport
+                            Layout.fillWidth: true
+                            text: "IMPORT needs the SNES emulator (bitcomposer-emu), built from source: see CONTRIBUTING.md. ADD works without it."
+                            color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                            wrapMode: Text.WordWrap
+                        }
+                        // An import running: the songs read so far.
+                        RowLayout {
+                            visible: root.importBusy
+                            Layout.fillWidth: true
+                            spacing: 6
+                            Text {
+                                text: "IMPORTING " + String(backend.importState.name || "").toUpperCase()
+                                color: root.accentGreen; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                            }
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: Math.round(6 * root.ui)
+                                Rectangle { anchors.fill: parent; radius: 2; color: root.darkBg; border.width: 1; border.color: root.tileBorder }
+                                Rectangle {
+                                    height: parent.height; radius: 2; color: root.accentGreen; opacity: 0.6
+                                    width: backend.importState.total ? parent.width * backend.importState.done / backend.importState.total : 0
+                                }
+                            }
+                            Text {
+                                text: backend.importState.total ? backend.importState.done + " / " + backend.importState.total + " SONGS" : "STARTING"
+                                color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                            }
+                            Chip { text: "CANCEL"; accent: root.accentPink; onClicked: backend.cancelImport() }
+                        }
+                        // ADD found a pack of that name here already.
+                        RowLayout {
+                            visible: !!backend.importState.pendingAdd
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Text {
+                                Layout.fillWidth: true
+                                text: "A PACK NAMED " + String(backend.importState.pendingAdd || "").toUpperCase() + " IS HERE ALREADY"
+                                color: root.accentPink; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                                wrapMode: Text.WordWrap
+                            }
+                            Chip { text: "REPLACE"; accent: root.accentPink; onClicked: backend.confirmReplace(true) }
+                            Chip { text: "KEEP"; onClicked: backend.confirmReplace(false) }
+                        }
+                        Text {
+                            visible: backend.packs.length === 0 && !root.importBusy
+                            Layout.fillWidth: true
+                            text: "no packs yet: IMPORT a game's SPC set (zip, rsn, rar, 7z) or folder, or ADD an exported pack"
+                            color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                            wrapMode: Text.WordWrap
+                        }
+
+                        Repeater {
+                            model: backend.packs
+                            ColumnLayout {
+                                id: packItem
+                                required property var modelData
+                                readonly property var p: modelData
+                                readonly property bool open: root.packOpen === p.name
+                                readonly property bool inUse: root.settSound === p.name
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.tileBorder }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+                                    Text {
+                                        text: packItem.p.name
+                                        color: packItem.inUse ? root.accentGreen : root.textColor
+                                        font.family: root.mono; font.pixelSize: Math.round(9 * root.ui)
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: (packItem.p.songs ? packItem.p.songs + " songs · " : "") + packItem.p.samples + " samples"
+                                        color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                                        elide: Text.ElideRight
+                                    }
+                                    Chip {
+                                        text: packItem.inUse ? "IN USE" : "USE"
+                                        active: packItem.inUse
+                                        onClicked: root.settSound = packItem.inUse ? "random" : packItem.p.name
+                                    }
+                                    Chip {
+                                        text: packItem.open ? "CLOSE" : "OPEN"
+                                        onClicked: {
+                                            root.packOpen = packItem.open ? "" : packItem.p.name
+                                            root.packVoice = ""; root.packConfirm = ""; root.packRenaming = ""
+                                        }
+                                    }
+                                }
+                                Text {
+                                    visible: packItem.open
+                                    Layout.fillWidth: true
+                                    text: packItem.p.label + "  ·  click a voice to hear it"
+                                    color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                                    wrapMode: Text.WordWrap
+                                }
+                                Repeater {
+                                    model: packItem.open ? root.partOrder.filter(function(k) { return packItem.p.parts[k] !== undefined }) : []
+                                    VoiceRow {
+                                        required property string modelData
+                                        label: modelData.replace("_", " ").toUpperCase()
+                                        pack: packItem.p.name
+                                        items: packItem.p.parts[modelData].map(function(v) { return { voice: v, part: modelData, text: root.shortVoice(v) } })
+                                    }
+                                }
+                                VoiceRow {
+                                    visible: packItem.open && Object.keys(packItem.p.kit).length > 0
+                                    label: "KIT"
+                                    pack: packItem.p.name
+                                    items: root.kitPieces.filter(function(k) { return packItem.p.kit[k] !== undefined })
+                                        .map(function(k) { return { voice: packItem.p.kit[k], part: k, text: k.replace("_", " ") + " " + root.shortVoice(packItem.p.kit[k]) } })
+                                }
+                                VoiceRow {
+                                    visible: packItem.open && packItem.p.out.length > 0
+                                    label: "LEFT OUT"
+                                    pack: packItem.p.name
+                                    items: packItem.p.out.map(function(v) { return { voice: v, part: "out", text: root.shortVoice(v) } })
+                                }
+                                // The voice picked: why it is where it is, and where else it can go.
+                                ColumnLayout {
+                                    visible: packItem.open && root.packVoice !== ""
+                                    Layout.fillWidth: true
+                                    spacing: 4
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: root.packVoice + "  ·  " + root.packVoicePart.replace("_", " ").toUpperCase() + "  ·  " + root.whyText(packItem.p, root.packVoice)
+                                        color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    OptionRow {
+                                        label: "MOVE TO"
+                                        options: root.packVoice !== "" ? root.movesFor(packItem.p, root.packVoice) : []
+                                        value: root.packVoicePart
+                                        onPicked: function(c) {
+                                            // the list is made anew by the move: nothing of this row after it
+                                            var name = packItem.p.name, v = root.packVoice
+                                            root.packVoicePart = c
+                                            backend.movePack(name, v, c)
+                                        }
+                                    }
+                                }
+                                RowLayout {
+                                    visible: packItem.open && root.packRenaming !== packItem.p.name
+                                    Layout.fillWidth: true
+                                    spacing: 4
+                                    Item { Layout.fillWidth: true }
+                                    Chip { text: "RENAME"; onClicked: { root.packRenaming = packItem.p.name; root.packConfirm = "" } }
+                                    Chip { text: "EXPORT"; onClicked: backend.exportPack(packItem.p.name) }
+                                    Chip {
+                                        visible: root.packConfirm !== packItem.p.name
+                                        text: "DELETE"; accent: root.accentPink
+                                        onClicked: root.packConfirm = packItem.p.name
+                                    }
+                                    Text {
+                                        visible: root.packConfirm === packItem.p.name
+                                        text: "DELETE IT?"
+                                        color: root.accentPink; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
+                                    }
+                                    Chip {
+                                        visible: root.packConfirm === packItem.p.name
+                                        text: "YES"; active: true; accent: root.accentPink
+                                        onClicked: { var n = packItem.p.name; root.packConfirm = ""; root.packOpen = ""; root.packVoice = ""; backend.deletePack(n) }
+                                    }
+                                    Chip {
+                                        visible: root.packConfirm === packItem.p.name
+                                        text: "NO"
+                                        onClicked: root.packConfirm = ""
+                                    }
+                                }
+                                RowLayout {
+                                    visible: packItem.open && root.packRenaming === packItem.p.name
+                                    Layout.fillWidth: true
+                                    spacing: 4
+                                    TextField {
+                                        id: renameField
+                                        Layout.fillWidth: true
+                                        text: packItem.p.name
+                                        maximumLength: 24
+                                        color: root.textColor
+                                        font.family: root.mono
+                                        font.pixelSize: Math.round(9 * root.ui)
+                                        selectByMouse: true
+                                        background: Rectangle { color: root.darkBg; border.width: 1; border.color: root.accentGreen; radius: 3 }
+                                        onAccepted: saveRename.clicked()
+                                    }
+                                    Chip {
+                                        id: saveRename
+                                        text: "SAVE"
+                                        onClicked: {
+                                            var n = renameField.text.trim().toLowerCase(), old = packItem.p.name
+                                            var used = root.settSound === old
+                                            root.packRenaming = ""
+                                            if (n === old) return
+                                            backend.renamePack(old, n)          // the list is made anew: root only after this
+                                            if (root.isLibraryPack(n)) {
+                                                root.packOpen = n
+                                                if (used) root.settSound = n
+                                            }
+                                        }
+                                    }
+                                    Chip { text: "CANCEL"; onClicked: root.packRenaming = "" }
+                                }
+                            }
                         }
                     }
                 }
