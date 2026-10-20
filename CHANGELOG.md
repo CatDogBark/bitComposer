@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The translator's first stage, readings (`docs/TRANSLATOR.md`): `python -m bitcomposer.translate FILE.spc|FOLDER` reads songs as music and keeps the readings in a database on this machine (never in the repository): each song's beat and bar (on a grid, or followed loosely where no grid holds), each voice's part (drums, bass, melody, harmony, arp, counter-line, accompaniment, a doubling or an echo), key and chords, and form (its parts and sections, and where it loops). Checked by ear on 43 songs' beats and 24 songs' form, across 21 games; `--show` prints the chords and form. A developer tool for now: nothing in the player uses it yet.
+
 ## 1.1.1 — 2026-10-19
 
 The player and the generator's built-in sounds are unchanged: the same songs, byte for byte but for the version in each song's message. SPC import, still a developer preview, plays songs as SPC players do and converts them much closer: the emulator 0.3.1 (built from source, which `bitcomposer.spc` now needs) starts the notes a snapshot was taken on, missing in most songs before, and the converter carries ten more of the SNES chip's ways, found across 35 more games of 16 more music drivers. Over all 1836 songs of the 39 games in `docs/drivers/`, a converted module's loudness over time is 0.45 dB from the emulator's at the median, 0.93 at the 90th percentile.

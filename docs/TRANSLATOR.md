@@ -74,6 +74,27 @@ Check: a report per song from the command line (tempo, key, chords by
 section, roles, form) for a dozen FFVI songs, read against what is heard;
 songs whose conversion scores badly are marked and kept out of packs.
 
+Where it stands (2026-10-19): read, kept and printed by
+`python -m bitcomposer.translate`, all 1836 songs of the 39 games in under
+a minute from their played notes. Checked by ear, on 21 games, not FFVI
+alone:
+
+- The beat and bar, tapped on 43 songs: of the 41 the listener was sure
+  of, 40 read as heard (a clean double or half agreeing where the listener
+  did not tell them apart); the other is read from its notes, which the
+  taps drifted from. A grid holds most songs; a loose beat (an onset envelope and
+  dynamic-programming beats) those no grid holds, a swing off the
+  triplet or notes placed by hand.
+- Form, marked on 24 songs of 18 games (twelve of them twice, the second
+  time at the scale of sections): the loop is read as heard in 22 of 23; of the part
+  starts marked, 73 % to 86 % are read, and of those read, 56 % to 85 %
+  were marked (parts and sections both kept).
+- Known gaps: a grid section restarting where its timing slipped can
+  leave a half bar (Fourside); a tune that comes back re-arranged is read
+  as new; a long stretch of new material may stay one part; a loose song's
+  loop (Snakey Chantey) is missed; keys and the counter-line role are
+  rough, and are to be checked as stage 2 needs them.
+
 ## Stage 2: a thin first pack
 
 The whole chain, run once: the game's samples as voices, and only the
