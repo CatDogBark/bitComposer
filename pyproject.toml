@@ -14,7 +14,15 @@ requires-python = ">=3.10"
 # The player's window is Qt (QtQuick). Essentials is the part of PySide6 it
 # uses, a third of the full download.
 # jeepney speaks D-Bus for MPRIS (the media keys) on Linux; pure Python.
-dependencies = ["PySide6-Essentials>=6.5", "jeepney>=0.8; sys_platform == 'linux'"]
+# Not PySide6 6.12 on Python 3.10 and 3.11: it gives back a reference to
+# True that it never took each time a signal fires, and before 3.12 True
+# can be freed, so the player crashed after some minutes of playing
+# (Fatal Python error: bool_dealloc). 6.11 is clean, and from 3.12 on True
+# is immortal. tests/test_player.py's signal test tells when a newer
+# PySide6 may come back.
+dependencies = ["PySide6-Essentials>=6.5,!=6.12.*; python_version < '3.12'",
+                "PySide6-Essentials>=6.5; python_version >= '3.12'",
+                "jeepney>=0.8; sys_platform == 'linux'"]
 authors = [
     { name = "CatDogBark", email = "catdogbark@pm.me" },
 ]
@@ -29,6 +37,14 @@ classifiers = [
 [project.scripts]
 bitcomposer = "bitcomposer.cli:main"
 bitcomposer-player = "bitcomposer.player.window:main"
+
+# SPC import runs on the emulator, a compiled package of its own with a wheel
+# per platform (emu/, released by emu.yml). An extra rather than a
+# dependency: where no wheel matches, pip would try to build it and fail
+# for want of a Rust toolchain, and the generator and the player must
+# install everywhere. bitcomposer/spc/emulate.py names the version it calls.
+[project.optional-dependencies]
+import = ["bitcomposer-emu>=0.3.1,<0.4"]
 
 [project.urls]
 Homepage = "https://github.com/CatDogBark/bitComposer"

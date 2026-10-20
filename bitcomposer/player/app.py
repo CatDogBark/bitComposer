@@ -242,6 +242,32 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
         if chosen:
             backend.player.set_music_dir(Path(chosen))
     backend.folderRequested.connect(choose_folder)
+
+    def import_game():
+        # One dialog for both: an archive of a game's SPC files (zip, rsn,
+        # rar, 7z), or any SPC file in its folder, which imports the folder.
+        from ..translate.archives import is_archive
+        kinds = " ".join(f"*.{x} *.{x.upper()}" for x in ("zip", "rsn", "rar", "7z", "spc"))
+        chosen, _ = QFileDialog.getOpenFileName(
+            None, "Import a game: its SPC set (zip, rsn, rar, 7z), or any SPC file in its folder",
+            str(Path.home()), f"Game music ({kinds})")
+        if chosen:
+            backend.import_from(chosen if is_archive(chosen) else str(Path(chosen).parent))
+    backend.packImportRequested.connect(import_game)
+
+    def add_pack():
+        chosen, _ = QFileDialog.getOpenFileName(None, "Add a pack: an exported one, or a pack file",
+                                                str(Path.home()), "Packs (*.zip *.json)")
+        if chosen:
+            backend.add_path(chosen)
+    backend.packAddRequested.connect(add_pack)
+
+    def export_pack(name):
+        chosen, _ = QFileDialog.getSaveFileName(None, "Export the pack", str(Path.home() / f"{name}.zip"),
+                                                "Packs (*.zip)")
+        if chosen:
+            backend.export_to(name, chosen)
+    backend.packExportRequested.connect(export_pack)
     backend.openFolderRequested.connect(lambda p: QDesktopServices.openUrl(QUrl.fromLocalFile(p)))
 
     backend.openUrlRequested.connect(lambda u: QDesktopServices.openUrl(QUrl(u)))

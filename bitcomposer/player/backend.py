@@ -3,13 +3,18 @@ properties, its actions as slots. app.py owns the window, tray and dialogs;
 this owns nothing visual.
 """
 import os
+import shlex
+import shutil
 import sys
+import tempfile
 import threading
 from pathlib import Path
 
 from PySide6.QtCore import Property, QObject, QTimer, Qt, Signal, Slot
 
 from .. import __version__
+from ..packs import library
+from ..packs.packfile import PackError
 from .engine import Player, VOLUME_MAX, AUTOGEN_MAX, state_file
 from . import autostart as startup   # the module; `autostart` below is the Qt property
 from . import update as upd
@@ -53,6 +58,10 @@ class Backend(QObject):
     raiseRequested = Signal()
     autostartChanged = Signal()
     mediaKeysChanged = Signal()
+    packsChanged = Signal()
+    packImportRequested = Signal()
+    packAddRequested = Signal()
+    packExportRequested = Signal(str)
 
     def __init__(self, music_dir=None, quiet=False, output_kind=None):
         super().__init__()
@@ -75,6 +84,11 @@ class Backend(QObject):
         self._upd_state = ""
         self._upd_log = []
         self._upd_progress = -1.0           # 0..1, or -1 while it cannot be known
+        # What the update screen is doing: "" (an update to a newer release)
+        # or "emulator" (PACKS' GET THE EMULATOR: this version again, with
+        # the import extra), and the release-like record it runs.
+        self._purpose = ""
+        self._emu_release = None
         self._tray = False
         self._dirty = False
         self.restart_after_quit = False
@@ -83,6 +97,16 @@ class Backend(QObject):
         self._tick = QTimer(self)
         self._tick.setInterval(250)
         self._tick.timeout.connect(self._update_position)
+        # PACKS: the packs on this machine, an import while one runs, an ADD
+        # waiting for "replace?", and where voice previews are written.
+        self._packs = []
+        self._import = None
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": ""}
+        self._pending_add = ""
+        self._pending_name = ""
+        self._previews = None
+        self._can_import = None
+        self._load_packs()
         self.player.scan()
         self._refresh()
 
@@ -192,6 +216,9 @@ class Backend(QObject):
     def _get_upd_kind(self): return upd.install_kind()
     updateKind = Property(str, _get_upd_kind, constant=True)
 
+    def _get_purpose(self): return self._purpose
+    updatePurpose = Property(str, _get_purpose, notify=updateChanged)
+
     def _get_tray(self): return self._tray
     trayAvailable = Property(bool, _get_tray, notify=trayChanged)
 
@@ -203,6 +230,9 @@ class Backend(QObject):
 
     def _get_check_updates(self): return self.player.check_updates
     checkUpdates = Property(bool, _get_check_updates, notify=updateChanged)
+
+    def _get_prereleases(self): return self.player.prereleases
+    prereleases = Property(bool, _get_prereleases, notify=updateChanged)
 
     def _get_media_keys(self): return self._media_keys
     mediaKeys = Property(str, _get_media_keys, notify=mediaKeysChanged)
@@ -219,6 +249,18 @@ class Backend(QObject):
 
     def _get_autogen_max(self): return AUTOGEN_MAX
     autogenMax = Property(int, _get_autogen_max, constant=True)
+
+    def _get_packs(self): return self._packs
+    packs = Property("QVariantList", _get_packs, notify=packsChanged)
+
+    def _get_import_state(self): return dict(self._import_state, pendingAdd=self._pending_name)
+    importState = Property("QVariantMap", _get_import_state, notify=packsChanged)
+
+    def _get_can_import(self):
+        if self._can_import is None:
+            self._can_import = library.can_import()
+        return self._can_import
+    canImport = Property(bool, _get_can_import, constant=True)
 
     # ── for app.py ──
     def set_screen(self, w: int, h: int):
@@ -257,8 +299,10 @@ class Backend(QObject):
         if not self.player.check_updates:
             return
 
+        prereleases = self.player.prereleases
+
         def check():
-            rel = upd.newer_release(__version__)
+            rel = upd.newer_release(__version__, prereleases=prereleases)
             if rel:
                 self._dispatch.call.emit(lambda: self._offer(rel))
         threading.Thread(target=check, daemon=True).start()
@@ -273,7 +317,7 @@ class Backend(QObject):
         self._set_notice(f"version {rel['version']} is out")
 
     def start_update(self):
-        rel = self._release
+        rel = self._emu_release if self._purpose == "emulator" else self._release
         if not rel or self._updating:
             return
         self._updating = True
@@ -305,6 +349,10 @@ class Backend(QObject):
     def _update_done(self, quit_now: bool):
         self._updating = False
         self._upd_state = "done" if quit_now else "failed"
+        if not quit_now and self._purpose == "emulator":
+            self._upd_log = self._upd_log + [
+                "the emulator was not installed. Where PyPI has no build of it for this machine, pip tries to "
+                "compile it and needs Rust; it can be built from source instead (CONTRIBUTING.md)"]
         self.updateChanged.emit()
         if quit_now:
             self.restart_after_quit = upd.install_kind() == "pipx"
@@ -312,6 +360,10 @@ class Backend(QObject):
 
     def shutdown(self):
         self._tick.stop()
+        if self._import:
+            self._import.cancel()
+        if self._previews:
+            shutil.rmtree(self._previews, ignore_errors=True)
         if self.mpris:
             self.mpris.stop()
         self.player.shutdown()
@@ -416,6 +468,7 @@ class Backend(QObject):
     def applyUpdate(self):
         """UPDATE in the header: the update screen, asking first."""
         if self._release and not self._updating:
+            self._purpose = ""
             self._upd_state = "confirm"
             self._upd_log = []
             self._upd_progress = -1.0
@@ -430,12 +483,47 @@ class Backend(QObject):
     def closeUpdate(self):
         if not self._updating:
             self._upd_state = ""
+            self._purpose = ""
             self.updateChanged.emit()
 
     @Slot()
     def openReleasePage(self):
-        if self._release:
-            self.openUrlRequested.emit(self._release["page"])
+        rel = self._emu_release if self._purpose == "emulator" else self._release
+        if rel:
+            self.openUrlRequested.emit(rel["page"])
+
+    @Slot()
+    def getEmulator(self):
+        """PACKS: add the SNES emulator to this pipx install, through the
+        update screen: pipx install --force bitcomposer[import] at this very
+        version, then a restart. Asked for, never added by an update: where
+        no wheel matches, pip would fail the whole update trying to build it."""
+        if self._updating or upd.install_kind() != "pipx":
+            return
+        self._purpose = "emulator"
+        self._emu_release = {"version": __version__, "tag": "emulator", "page": upd.BUILD_HELP,
+                             "spec": upd.update_spec(__version__, emulator=True)}
+        self._upd_state = "confirm"
+        self._upd_log = []
+        self._upd_progress = -1.0
+        self.updateChanged.emit()
+
+    @Slot(bool)
+    def setPrereleases(self, on):
+        """SET > PLAYER > CANDIDATES: release candidates offered too. Turned
+        on, the check runs again now; turned off, a candidate offered to a
+        release player is withdrawn (on a candidate, they are its line)."""
+        self.player.prereleases = bool(on)
+        self.player.persist()
+        if on:
+            self._set_notice("offers release candidates too")
+            self.start()
+        else:
+            self._set_notice("offers releases only")
+            if self._release and not self._updating and upd.is_prerelease(self._release["version"]) \
+                    and not upd.is_prerelease(__version__):
+                self._release = None
+        self.updateChanged.emit()
 
     @Slot(bool)
     def setCheckUpdates(self, on):
@@ -457,6 +545,128 @@ class Backend(QObject):
         if not getattr(self, "_told_tray", False):
             self._told_tray = True
             self._set_notice("still playing in the tray; quit from its menu")
+
+    # ── PACKS ──
+    def _load_packs(self):
+        try:
+            self._packs = library.listing()
+        except OSError as e:
+            self._packs = []
+            self._set_notice(f"cannot read the packs folder: {e}")
+        self.packsChanged.emit()
+
+    def _pack_action(self, fn, done: str = ""):
+        """Run a library change, report it, and show the packs as they are now."""
+        try:
+            fn()
+        except (PackError, OSError) as e:
+            self._set_notice(str(e))
+        else:
+            if done:
+                self._set_notice(done)
+        self._load_packs()
+
+    @Slot()
+    def importGame(self):
+        if self._import is None:
+            self.packImportRequested.emit()
+
+    def import_from(self, source: str):
+        """Read a game's SPC files into a pack: a folder of them or a zip (from app.py's dialog)."""
+        def progress(done, total):
+            self._dispatch.call.emit(lambda: self._import_progress(done, total))
+
+        def finished(name, error):
+            self._dispatch.call.emit(lambda: self._import_done(name, error))
+        try:
+            job = library.Import(source, on_progress=progress, on_done=finished)
+            job.start()
+        except (PackError, OSError) as e:
+            self._set_notice(str(e))
+            return
+        self._import = job
+        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": ""}
+        self._set_notice(f"importing {Path(source).name}…")
+        self.packsChanged.emit()
+
+    def _import_progress(self, done, total):
+        self._import_state = dict(self._import_state, done=done, total=total)
+        self.packsChanged.emit()
+
+    def _import_done(self, name, error):
+        job, self._import = self._import, None
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or ""}
+        if name:
+            self._set_notice(f"imported {name}: {job.done} songs read")
+        else:
+            self._set_notice(f"import stopped: {error}")
+        self._load_packs()
+
+    @Slot()
+    def cancelImport(self):
+        if self._import:
+            self._import.cancel()
+
+    @Slot()
+    def addPack(self): self.packAddRequested.emit()
+
+    def add_path(self, path: str):
+        """ADD from app.py's dialog: an exported pack (.zip) or a pack file.
+        A pack of that name here already waits for confirmReplace."""
+        try:
+            name = library.add(path)
+        except library.Exists as e:
+            self._pending_add, self._pending_name = path, e.name
+            self.packsChanged.emit()
+            return
+        except (PackError, OSError) as e:
+            self._set_notice(str(e))
+            return
+        self._set_notice(f"added {name}")
+        self._load_packs()
+
+    @Slot(bool)
+    def confirmReplace(self, yes):
+        path, self._pending_add, self._pending_name = self._pending_add, "", ""
+        if yes and path:
+            self._pack_action(lambda: library.add(path, replace=True), "replaced")
+        else:
+            self.packsChanged.emit()
+
+    @Slot(str)
+    def exportPack(self, name): self.packExportRequested.emit(name)
+
+    def export_to(self, name: str, dest: str):
+        self._pack_action(lambda: self._set_notice(f"exported to {_short(library.export(name, dest))}"))
+
+    @Slot(str)
+    def deletePack(self, name):
+        self._pack_action(lambda: library.delete(name), f"deleted {name}")
+
+    @Slot(str, str)
+    def renamePack(self, name, new):
+        self._pack_action(lambda: library.rename(name, new.strip().lower()), f"renamed to {new.strip().lower()}")
+
+    @Slot(str, str, str)
+    def movePack(self, name, voice, to):
+        self._pack_action(lambda: library.move(name, voice, to))
+
+    @Slot(str, str, str)
+    def previewVoice(self, name, voice, part):
+        """Hear one of a pack's voices: a short phrase in its part's register."""
+        try:
+            if not self._previews:
+                self._previews = tempfile.mkdtemp(prefix="bitcomposer-preview-")
+            path = library.preview(name, voice, part, Path(self._previews) / "preview.it")
+        except (PackError, OSError, ValueError) as e:
+            self._set_notice(f"cannot preview {voice}: {e}")
+            return
+        self.player.preview(str(path))
+
+    @Slot(str, result=str)
+    def packFlags(self, name):
+        """What SOUND adds to the settings for one of these packs."""
+        return " --pack-file " + shlex.quote(str(library.pack_file(name)))
 
     # The window's own settings (compose choices, preset, tab, zoom), as the
     # QML hands them over: JSON beside the engine's player.json.

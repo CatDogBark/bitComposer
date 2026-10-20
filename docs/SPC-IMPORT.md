@@ -182,7 +182,7 @@ label, voices per role, habits, trims), with the pack's own voices as WAV
 files (tuning, loop, release family, volume). `bitcomposer/packs/packfile.py`
 checks it, registers its voices with the sample registry and the pack in
 `PACKS` (not in the random draw), and `--pack-file` composes with it; the
-player's PACKS panel will pass that same option. It carries every habit
+player's PACKS panel passes that same option. It carries every habit
 the composer reads (27) and every role.
 
 Changed from the first plan: the built-in packs stay Python. Their
@@ -267,11 +267,18 @@ a hundred. Hence Rust. The Python prototype stays useful as a second
 opinion: the same snapshot through both, logs compared, while the Rust
 emulator is written.
 
-**How it ships.** The emulator becomes a second, compiled package
-published from this repository, with wheels built per platform when a
-release is tagged (Linux, Windows, macOS) and bundled by the Windows
-build. It is optional where no wheel exists: the generator and the player
-install everywhere, and IMPORT says what is missing there.
+**How it ships.** The emulator is a second, compiled package published
+from this repository, `bitcomposer-emu`, with a wheel per platform built
+when an `emu-v*` tag is pushed (`emu.yml`: Linux x86_64 and aarch64,
+Windows x64, macOS arm64 and x86_64, abi3 so one wheel serves every
+Python) and the sdist for the rest. It is optional, the `import` extra:
+the generator and the player install everywhere, and IMPORT says what is
+missing and how to get it (on a pipx install, the panel's GET THE
+EMULATOR adds it). The Windows build carries it, built from the same
+commit: the executable has no `python -m` to run IMPORT's worker with, so
+started with a private marker it runs the import itself instead of the
+window (`tools/windows/launch_player.py`, `packs/library.py`), and the
+Windows build job checks that on the built executable.
 
 The core is checked instruction by instruction against the SingleStepTests
 cases and the gilyon hardware tests before it runs a song.
@@ -318,6 +325,13 @@ side on FFVI, Mana and two Evermore songs: identical and accurate, the
 only difference that libgme stops at the length in the file's tag.
 
 ### 4. The translator
+
+In stages, with what is decided: `TRANSLATOR.md`. Built for 1.2.0: the
+readings (stage 1: beat and bar, each voice's part, key and chords, form,
+kept in a database on the user's machine), a thin first pack from them
+(stage 2) and the player's PACKS panel (stage 5); next, the generator
+writing in voices and the vocabulary made anew from the readings
+(stages 3 and 4).
 
 The SNES chip decoder turns the register log into events (the design,
 above), and the shared translator turns events into musical facts, then
@@ -484,7 +498,11 @@ For the SNES chip:
   the roles from the translator with the user's corrections, the habits
   measured over every song. The generator composes new songs with it,
   as with any built-in pack; it is chosen in the player's PACKS panel
-  (below), kept apart from the built-in sounds.
+  (below), kept apart from the built-in sounds. Built for 1.2.0 as the
+  translator's thin first pack (`translate/pack.py`): the samples each
+  part plays most, a kit by brightness and ring, and only the habits the
+  readings give straight (tempo, scale family, songs without drums, echo);
+  the user's corrections are the panel's MOVE TO, kept in the pack.
 
 ### 6. The player: PACKS
 
@@ -516,6 +534,21 @@ SET (decided 2026-10-18):
   are inside the `.it` file.
 
 Imported packs live in the user's settings folder.
+
+**Built for 1.2.0** (`packs/library.py`, the panel in the player), where
+it differs from the plan above: the packs and the readings live in the
+user's data folder, not the settings folder (decided 2026-10-20); IMPORT
+and ADD sit at the panel's top, IMPORT taking a game's set (a folder, a
+zip, or an .rsn, .rar or .7z unpacked by the machine's 7-Zip or unar),
+its progress shown in the panel, not on a screen over the window; the
+role picker is each pack's OPEN, not a step after the import: its parts,
+kit and left-out samples, a click playing a voice in its part's register
+with why it is there, MOVE TO putting it elsewhere; SOUND shows the
+pack's own name among the sounds; GENERATE kept its name, the tile fit.
+Added: RENAME, EXPORT (one zip) and ADD (an exported pack or a pack
+file), and GET THE EMULATOR on a pipx install without it. Importing a
+game again starts its pack fresh (decided 2026-10-20): EXPORT keeps one
+as it is.
 
 ## Checking each step
 
@@ -556,19 +589,23 @@ Each step is its own branch and pull request, shippable on its own:
 1. The pack file format (built), proven on the built-in packs by a
    round-trip test.
 2. The SPC reader (built), checked against the research tools.
-3. The emulator, tested against reference renders. The long one.
-4. The translator and SPC to IT, which proves 3.
-5. The pack from a soundtrack, checked against the built-in packs.
-6. The player's PACKS panel: the list, IMPORT, the role picker, USE.
+3. The emulator (built, 1.1.0; wheels on PyPI and in the Windows build,
+   1.2.0), tested against reference renders. The long one.
+4. The translator and SPC to IT, which proves 3 (SPC to IT built, 1.1.0;
+   the translator's readings, 1.2.0).
+5. The pack from a soundtrack, checked against the built-in packs (a thin
+   first pack, 1.2.0; the vocabulary next, `TRANSLATOR.md` stage 4).
+6. The player's PACKS panel: the list, IMPORT, the role picker, USE
+   (built, 1.2.0).
 
 ## Risks
 
 - **Emulator accuracy.** Drivers lean on timer behaviour and odd
   instructions; one wrong flag stalls a song. The test set has four
   drivers; others will find new faults.
-- **Packaging a compiled core**: wheels on every platform from CI, the
-  Windows build bundling it, and a clear message where no wheel exists.
-  (Speed itself is settled: Rust.)
+- **Packaging a compiled core**: done, see How it ships: wheels from CI
+  (`emu.yml`), the Windows build bundling it, and the message where no
+  wheel matches. (Speed itself is settled: Rust.)
 - **Drivers that load samples during the song** (from the main CPU): a
   snapshot holds only what was loaded when it was taken; such songs
   import with what was there.

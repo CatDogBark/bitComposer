@@ -4,6 +4,7 @@
     python -m bitcomposer.spc --export DIR song.spc [...]  every sample, once, as WAV + samples.json
     python -m bitcomposer.spc --notes [SECONDS] song.spc   run the driver: the notes it plays
     python -m bitcomposer.spc --to-it OUT.it [--seconds N] song.spc   the song as an IT module, one to one
+    python -m bitcomposer.spc --pack OUT [--name NAME] FOLDER|ARCHIVE   a pack of a game's songs: its samples, its habits
 
 Exported samples are 16-bit mono at 32 kHz, the rate the DSP plays them at
 pitch 0x1000; samples.json gives each one's loop and the snapshots and
@@ -97,13 +98,37 @@ def show_notes(snap, seconds: float) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m bitcomposer.spc", description=__doc__.split("\n\n")[0])
-    ap.add_argument("files", nargs="+", metavar="FILE.spc")
+    ap.add_argument("files", nargs="+", metavar="FILE.spc", help="snapshots (with --pack, folders of them too, or a set: zip, rsn, rar, 7z)")
     ap.add_argument("--export", metavar="DIR", help="write every sample, once, as WAV, with samples.json")
     ap.add_argument("--notes", nargs="?", type=float, const=20.0, metavar="SECONDS",
                     help="run the driver (default 20 s) and list the notes it plays")
     ap.add_argument("--to-it", metavar="OUT.it", help="convert the song to an IT module, one to one")
     ap.add_argument("--seconds", type=float, help="with --to-it: how much of the song (default: its tag's length, or 90 s)")
+    ap.add_argument("--pack", metavar="OUT", help="read a game's songs and write a pack of them into OUT "
+                    "(pack.json and its samples; see docs/TRANSLATOR.md, stage 2); play it with bitcomposer --pack-file")
+    ap.add_argument("--name", help="with --pack: the pack's name (default: from the folder's)")
+    ap.add_argument("--progress", metavar="FILE",
+                    help="with --pack: add a line 'progress DONE TOTAL' to FILE after each song, and "
+                         "'error WHY' if it stops (the player's PACKS panel reads it)")
     args = ap.parse_args(argv)
+    if args.pack:
+        from ..translate import pack
+        from .emulate import EmulatorMissing
+
+        def note(line):
+            if args.progress:
+                with open(args.progress, "a", encoding="utf-8") as fh:
+                    fh.write(line + "\n")
+        try:
+            pack.make(args.files, args.pack, args.name, progress=lambda done, total: note(f"progress {done} {total}"))
+        except (EmulatorMissing, ValueError, SPCError) as e:
+            note(f"error {e}")
+            print(f"bitcomposer.spc: {e}", file=sys.stderr)
+            return 1
+        except Exception as e:                   # said where the player looks, then the traceback
+            note(f"error {type(e).__name__}: {e}")
+            raise
+        return 0
     snaps = []
     for f in args.files:
         try:

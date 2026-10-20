@@ -3,8 +3,10 @@
 A pack is a sound for the generator: a palette (the chip it imitates),
 voices for each part, and the habits of the scores it follows. The four
 built-in packs are code; a **pack file** is the same thing as data, so a
-pack can be added without touching the code. Later the SPC importer will
-write them (see `SPC-IMPORT.md`).
+pack can be added without touching the code. The SPC importer writes
+them from a game's songs: the player's PACKS panel (IMPORT), or
+`python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`, a first thin pack
+(`TRANSLATOR.md`, stage 2).
 
 A pack file is a JSON file, with the pack's own voices as WAV files
 beside it. It is data only: a pack someone sends you cannot run anything.
@@ -16,6 +18,12 @@ bitcomposer --pack-file mypack/pack.json -s 7 -v
 composes a song with it. `--pack-file` takes the place of `--pack` and
 `--sound`; the other options work as usual. A pack file is never drawn by
 a random sound, only used when named.
+
+In the player, PACKS keeps the packs on this machine, each a folder in the
+user's data folder (`~/.local/share/bitcomposer/packs`, or under
+`BITCOMPOSER_DATA_DIR`): ADD brings one in from its pack file or from an
+exported pack (one zip file of its folder, which EXPORT writes), and USE
+puts it in SOUND.
 
 ## An example
 

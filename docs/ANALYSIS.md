@@ -516,6 +516,16 @@ to zero (byte `0x80` + channel), render through libopenmpt (the player's
 ffmpeg's `ebur128` for loudness, a pitch track for register. The
 comparison pages used for the by-ear reviews live outside the repository.
 
+**Against a soundtrack.** `tools/analyze.py` reads the generator's channel
+layout, which a game's music does not have. `translate/measures.py` takes
+the same kind of yardsticks from notes instead (density per part, the
+melody's steps and leaps, repeats, notes off the eighths and on triplets,
+chord tones, strong-beat fit), so a game's songs, read by the translator,
+and the generator's are measured alike:
+`python3 -m bitcomposer.translate FOLDER --against PACK` prints both side
+by side. The first comparison, FFVI's songs against songs from the
+hand-made and the imported `ffvi` packs, is in `TRANSLATOR.md`, stage 2.
+
 ---
 
 ## 5. Roadmap for smarter generation

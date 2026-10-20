@@ -2,12 +2,15 @@
 
 Releases are read from GitHub; a newer one is offered. The update itself
 goes through whatever installed the player: pipx (the Linux path, and
-Windows with Python) reinstalls the exact version and the player restarts;
+Windows with Python) reinstalls the exact version, with the import extra
+when the emulator is installed so it follows the release, and the player
+restarts;
 the Windows executable downloads bitComposer-setup.exe from the release and
 runs it quietly, then quits so the installer can replace the files and
 start the new player. A checkout
 or a plain pip install is told what to run instead. A pre-release player
-sees pre-releases; a release player sees releases only.
+sees pre-releases; a release player sees releases only, unless its
+CANDIDATES setting asks for them too (for trying a release candidate).
 """
 import json
 import os
@@ -22,6 +25,9 @@ RELEASES_URL = "https://api.github.com/repos/CatDogBark/bitComposer/releases?per
 RELEASES_PAGE = "https://github.com/CatDogBark/bitComposer/releases"
 INSTALLER_NAME = "bitComposer-setup.exe"
 PACKAGE = "bitcomposer"
+EXTRA = "import"             # the extra that brings the emulator (pyproject.toml)
+EMULATOR = "bitcomposer-emu"
+BUILD_HELP = "https://github.com/CatDogBark/bitComposer/blob/main/CONTRIBUTING.md"   # building it from source
 
 
 def parse_version(text: str) -> tuple:
@@ -58,16 +64,18 @@ def local_release(path: str, current: str) -> dict:
     return rel
 
 
-def newer_release(current: str, fetch=None) -> dict | None:
+def newer_release(current: str, fetch=None, prereleases: bool = False) -> dict | None:
     """The newest release above `current`, as {"version", "tag", "page",
-    "installer"} or None. fetch(url) -> bytes is replaceable for tests."""
+    "installer"} or None: release candidates too when `current` is one, or
+    when asked (SET > PLAYER > CANDIDATES). fetch(url) -> bytes is
+    replaceable for tests."""
     fetch = fetch or (lambda url: urllib.request.urlopen(url, timeout=6).read())
     try:
         releases = json.loads(fetch(RELEASES_URL).decode("utf-8"))
     except Exception:
         return None
     cur = parse_version(current)
-    want_pre = is_prerelease(current)
+    want_pre = prereleases or is_prerelease(current)
     best = None
     for r in releases:
         if r.get("draft"):
@@ -95,6 +103,32 @@ def install_kind() -> str:
     if (Path(sys.prefix) / "pipx_metadata.json").exists():
         return "pipx"
     return "other"
+
+
+def emulator_installed() -> bool:
+    """Whether the emulator's package is in this environment, at any
+    version. By its presence, not by emulate.available(): an emulator
+    older than the release asks for is exactly the one an update must
+    move, and available() says no to it."""
+    from importlib import metadata
+    try:
+        metadata.distribution(EMULATOR)
+        return True
+    except metadata.PackageNotFoundError:
+        return False
+
+
+def update_spec(version: str, emulator: bool | None = None) -> str:
+    """What pipx is asked for: the exact version, with the import extra when
+    the emulator is installed here (emulator=True asks for it regardless:
+    the PACKS panel's GET THE EMULATOR). pipx install --force keeps the venv and
+    what is in it, so the emulator would survive an update without the
+    extra; but pip would never move it to what the new release asks for,
+    and pipx remembers only the last spec it was given, so a later
+    `pipx reinstall` (a new system Python) would rebuild without it. With
+    the extra in the spec, both follow the release."""
+    name = f"{PACKAGE}[{EXTRA}]" if (emulator_installed() if emulator is None else emulator) else PACKAGE
+    return f"{name}=={version}"
 
 
 def pipx_command():
@@ -158,7 +192,7 @@ def apply_update(release: dict, report, restart=None) -> bool:
             return False
     if kind == "pipx":
         cmd = pipx_command()
-        spec = release.get("spec") or f"{PACKAGE}=={release['version']}"
+        spec = release.get("spec") or update_spec(release["version"])
         if not cmd:
             report(f"pipx not found; run:  pipx install --force {spec}", None)
             return False

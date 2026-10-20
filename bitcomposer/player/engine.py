@@ -19,10 +19,11 @@ import shlex
 import struct
 import sys
 import threading
+import time
 from pathlib import Path
 
 from .openmpt import Module, SAMPLE_RATE, LibraryMissing
-from .audio import make_output, OutputUnavailable, CHANNELS
+from .audio import make_output, OutputUnavailable, CHANNELS, LATENCY_MS
 
 EXTENSIONS = {".mod", ".xm", ".it", ".s3m", ".mptm"}
 FRAMES_PER_BUFFER = 2048
@@ -158,6 +159,8 @@ class Player:
         self._pause_position = 0.0
         self._buf = (ctypes.c_int16 * (FRAMES_PER_BUFFER * CHANNELS))()
         self.on_change = None          # face callback: anything the face shows changed
+        self._preview_stop = threading.Event()
+        self._preview_resume = False   # a song paused for a preview, to go on after it
         self.on_log = print
         self.last_error = ""
         saved = self._load_state()
@@ -171,6 +174,9 @@ class Player:
         # The one thing the player sends over the network on its own: asking
         # GitHub's releases list for a newer version at start. Off = never.
         self.check_updates = bool(saved.get("check_updates", True))
+        # Release candidates offered to a release player too (a tester's
+        # choice, off by default); a candidate player always sees them.
+        self.prereleases = bool(saved.get("prereleases", False))
         if saved.get("music_dir") and music_dir is None and not os.environ.get("BITCOMPOSER_MUSIC_DIR"):
             self.music_dir = Path(saved["music_dir"])
 
@@ -192,6 +198,7 @@ class Player:
                            "auto_generate": self.auto_generate,
                            "auto_generate_settings": self.auto_generate_settings,
                            "check_updates": self.check_updates,
+                           "prereleases": self.prereleases,
                            "music_dir": str(self.music_dir)}, fh)
             os.replace(tmp, p)
         except OSError as e:
@@ -586,6 +593,50 @@ class Player:
         if on_done:
             on_done(path)
         self._changed()
+
+    def preview(self, path: str) -> None:
+        """Play a short module (a pack voice's phrase: packs.library.preview)
+        on an output of its own. A song playing pauses for it and goes on
+        after; a new preview cuts the one before."""
+        self._preview_stop.set()
+        resume = self.status == "Playing" or self._preview_resume
+        if self.status == "Playing":
+            self.pause()
+        self._preview_resume = resume
+        stop = self._preview_stop = threading.Event()
+        threading.Thread(target=self._play_preview, args=(path, stop), daemon=True).start()
+
+    def _play_preview(self, path: str, stop: threading.Event) -> None:
+        try:
+            module = Module(path)
+        except Exception as e:                      # a preview never takes the player down
+            self.on_log(f"[PACKS] cannot play the preview: {e}")
+            return
+        out = None
+        try:
+            out = make_output(SAMPLE_RATE, self.output_kind)
+            out.open()
+            buf = (ctypes.c_int16 * (FRAMES_PER_BUFFER * CHANNELS))()
+            while not stop.is_set():
+                frames = module.read_stereo(FRAMES_PER_BUFFER, buf)
+                if not frames:
+                    break
+                raw = bytes(buf)[:frames * CHANNELS * 2]
+                if self.volume != 1.0:
+                    raw = _apply_gain(raw, frames * CHANNELS, self.volume)
+                if not out.write(raw):
+                    break
+            if not stop.is_set():
+                time.sleep(LATENCY_MS / 1000 + 0.05)      # what the device still holds
+        except OutputUnavailable as e:
+            self.on_log(f"[AUDIO] {e}")
+        finally:
+            if out:
+                out.close()
+            module.destroy()
+        if not stop.is_set() and self._preview_resume:
+            self._preview_resume = False
+            self.schedule(lambda: self.status == "Paused" and self.pause())   # pause() on a paused song plays it
 
     def set_auto_generate(self, enabled: bool, flags: str | None = None) -> None:
         self.auto_generate = bool(enabled)
