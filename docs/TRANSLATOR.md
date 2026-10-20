@@ -59,7 +59,16 @@ A song's music, measured and stored, read from its decoded notes.
   beat from their periodicity, weighted by accent: the drums, the bass);
   the bar and its downbeat from repetition; swing from long-short offsets.
 - **Pitch.** Notes named from each sample's measured tuning, the game's own
-  offset taken out (FFVI's instruments sit 8 cents flat together).
+  offset taken out (FFVI's instruments sit 8 cents flat together). The
+  tuning is the sample's cycle (`spc/tuning.py`): a loop holding whole
+  cycles pins it down, but a cycle is rarely a whole number of samples, so
+  the shortest whole-sample lag the loop repeats at is followed down to the
+  fraction of it the wave repeats at (fixed 2026-10-20: FFVI's bass loops
+  hold 28 cycles of 169.14 samples and read at every 1184, seven cycles;
+  four of its samples read 5 to 17 times low, their notes named wrong, and
+  its most played bass an octave low). A one-shot is measured where it
+  repeats best, past a gliding attack, and a shorter period is judged on
+  the wave smoothed to its low harmonics, the ones a pitch is heard by.
 - **Harmony.** Chords from the notes sounding together on each beat; key
   and mode per section.
 - **Roles.** Per voice and section, as the plan has them: drums (fixed-pitch
@@ -218,20 +227,21 @@ time, with no key, or mostly silent or unfit are left out. FFVI:
 | | FFVI |
 |---|---|
 | songs counted | 67 of 82 (13 in free time, 2 mostly silent) |
-| chord spans, once through | 3929 (2100 of them a beat long) |
-| moves, major keys / minor keys | 1308 in 26 songs / 2465 in 41 |
-| distinct moves, shape kept | 620 / 963 (the most counted, IV -> I, 2 %) |
-| moves by degree alone | IV -> I 7 % / 5 %, I -> IV 6 % / 5 %, V -> I 3 % / 3 % |
-| moves to the same root's other shape | 14 % / 11 % |
-| chords held most, major | I, IV, vi, I5, iii, V |
+| chord spans, once through | 3926 (2096 of them a beat long) |
+| moves, major keys / minor keys | 1272 in 25 songs / 2495 in 42 |
+| distinct moves, shape kept | 600 / 899 (the most counted, IV -> I, 2 %) |
+| moves by degree alone | IV -> I 6 % / 6 %, I -> IV 5 % / 5 %, V -> I 3 % / 4 % |
+| moves to the same root's other shape | 14 % / 12 % |
+| chords held most, major | I, IV, I5, vi, iii, V |
 | minor | i, I5, VI, VII, iv, IV5, III |
-| the chord's tones sounding | root, third and fifth 29 %; root and fifth 19 %; the root alone 7 % |
-| the lowest note | the root 44 %, the fifth 23 %, the third 14 %, a sus tone 4 %, the seventh 7 %, none of the chord's 8 % |
+| the chord's tones sounding | root, third and fifth 29 %; root and fifth 20 %; the root alone 8 % |
+| the lowest note | the root 46 %, the fifth 23 %, the third 14 %, a sus tone 5 %, the seventh 8 %, none of the chord's 5 % |
 | pitches sounding a span | 4 [2-5] |
-| spread without the bass (semitones) | 12 [4-27] |
-| the bass on the root / fifth / third | 53 % / 19 % / 12 % of its beats |
-| the melody on a chord tone | 65 % of its beats (the fifth 25, the root 22, the third 18) |
-| the melody above the chord's top (semitones) | 1 [-11-11] |
+| spread, the bass to the top / without the bass (semitones) | 28 [10-36] / 8 [3-19] |
+| the bass on the root / fifth / third | 55 % / 22 % / 12 % of its beats |
+| the bass's median pitch, over the 75 songs with one | MIDI 36 (E2; 11 songs under 30, the lowest 11) |
+| the melody on a chord tone | 64 % of its beats (the fifth 25, the root 22, the third 17) |
+| the melody above the lowest note / the chord's top (semitones) | 30 [19-38] / 2 [-10-11] |
 
 What they say: FFVI's harmony moves between I and IV and to the relative
 minor far more than from V to I, in both modes, and its minor is the
@@ -243,16 +253,26 @@ parts within an octave at the median. The moves with the shape kept are
 spread thin (the top at 2 %): the chord reader changes chord every beat
 over half the time, so passing chords are moves too, and the habit shows
 by degree alone; a vocabulary would draw the degree moves and the shapes
-apart. What looks wrong: the bass is read octaves low in 29 songs (its
-median pitch at MIDI 20 to 29; Dancing Mad's parts at 2, 3 and -19: a
-sample's tuning read at a sub-harmonic), so the spread with the bass (31
-semitones) and the melody above the bass (34) are not to be believed;
-moves to the same root's other shape (I -> I5 -> I) are a held chord
-split when its third drops out, not harmony; VII -> biiidim and I -> i in
-major are the key or chord reading; and the melody sits at the chord's
-top, inside it a quarter of the time, because the accompaniment and
-counter-line are read as high as it. Rhythm, melody and drum patterns are
-the next slice.
+apart. The first count (2026-10-20) had the bass octaves low in 38 songs
+(its median pitch at MIDI 20 to 29, Dancing Mad's parts at 2, 3 and -19):
+six samples' tuning read at a multiple of their cycle, two of them an
+octave and four by 5 to 17 (the pitch bullet of stage 1). Read again, the
+bass sits at E2, two samples moved an octave and four moved by more
+(their notes' names with them: Mt. Koltz, Shadow, Mog, Strago, Dancing
+Mad's third part and one unnamed track changed key, their chords with it,
+and a sixth of the counted songs' chord beats moved, most in the songs
+those samples carry); the sample that read 5 times low left the bass
+part for the accompaniment, arp and melody it plays at MIDI 49 to 63; the
+bass part moved to another voice in 11 songs, and in 14 a low string or
+piano voice within three semitones of the bass joined it as a second
+bass; the beat, bar and tempo of every song held. What still
+looks wrong: a song's loop moved a bar in 7 songs, read from the notes'
+self-similarity; moves to the same root's other shape (I -> I5 -> I) are
+a held chord split when its third drops out, not harmony; VII -> biiidim
+and I -> i in major are the key or chord reading; and the melody sits at
+the chord's top, inside it a quarter of the time, because the
+accompaniment and counter-line are read as high as it. Rhythm, melody
+and drum patterns are the next slice.
 
 ## Stage 5: the player's PACKS panel
 
