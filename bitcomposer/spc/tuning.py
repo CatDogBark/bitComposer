@@ -11,7 +11,7 @@ the wave repeats at, since a cycle is rarely a whole number of samples
 seven cycles). Loops that are not a whole number of clean cycles (an
 ensemble, a chorus) and samples without a loop (a pluck) are measured by
 autocorrelation over the periods a note can have, 25 Hz to 4 kHz, a
-one-shot past its attack where it is steadiest. Either way a period only
+one-shot past its attack, a long one where it has settled. Either way a period only
 counts once the waveform has stopped resembling itself (at a short enough
 lag every smooth wave "repeats"), and a shorter period is judged on the
 wave smoothed to its low harmonics, the ones the ear names a pitch by: the
@@ -152,11 +152,14 @@ def fundamental(sample, rate: int = RATE) -> float | None:
             if _similarity(x, p) >= CLEAN:
                 return rate / _cycle(x, p, start)
         return _autocorrelation(x, rate)[0]
-    # a one-shot: past its attack, from the place along it where it repeats best
+    # a one-shot: past its attack, at 50 ms; a long one further along, where two places agree and each
+    # repeats better than it did at 50 ms (a struck tone's pitch falls through its attack)
     span = 2 * LONGEST + 256
-    found = [_autocorrelation(list(pcm[a:a + span]), rate)
-             for a in sorted({min(len(pcm) // 4, rate // 20), len(pcm) // 4, len(pcm) // 2})]
-    return max(found, key=lambda f: (f[0] is not None, f[1]))[0] if found else None
+    early = _autocorrelation(list(pcm[min(len(pcm) // 4, rate // 20):][:span]), rate)
+    later = [_autocorrelation(list(pcm[a:a + span]), rate) for a in (len(pcm) // 4, len(pcm) // 2) if a > rate // 20]
+    if len(later) == 2 and all(f and best > early[1] for f, best in later) and abs(later[0][0] / later[1][0] - 1) < 0.03:
+        return max(later, key=lambda f: f[1])[0]
+    return early[0]
 
 
 NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
