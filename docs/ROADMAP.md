@@ -175,9 +175,9 @@ These change how every note sounds, not what notes are played.
   (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
   mostly data plus the VGM reader and the patch renderer.
 - **Your own packs (after 1.0, asked for 2026-10-18; the format and
-  loader shipped in 1.1.0, `docs/PACKS.md`, `--pack-file`; open: the
-  player's PACKS panel, step 6 of the SPC import plan, and a pack folder
-  shared as one zip).** A pack added
+  loader shipped in 1.1.0, `docs/PACKS.md`, `--pack-file`; done in 1.2.0:
+  the player's PACKS panel, step 6 of the SPC import plan, with a pack
+  shared as one zip, EXPORT and ADD).** A pack added
   without touching the code: a pack file the player lists in its PACKS
   panel, apart from the built-in sounds. A pack is mostly data already
   (voices per role, weighted habits, channel trims), so the work is a
@@ -332,8 +332,11 @@ These change how every note sounds, not what notes are played.
   games of 20 music drivers, its songs as SPC players play them; the
   emulator's wheels on PyPI, `bitcomposer-emu`, from `emu.yml`, and the
   Windows build carrying it, its executable running IMPORT's worker
-  itself; open: the translator and a pack from a soundtrack, step 5, and
-  the PACKS panel, step 6).** The import reads a soundtrack's `.spc`
+  itself; 1.2.0 makes packs: the translator's readings, a thin first pack
+  from a soundtrack, step 5, and the PACKS panel, step 6, importing a
+  folder, a zip, or an .rsn, .rar or .7z through the machine's 7-Zip or
+  unar (`docs/TRANSLATOR.md`, stages 1, 2 and 5); open: the generator
+  writing the way the readings show, Generation below).** The import reads a soundtrack's `.spc`
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
   own music driver and logs what it tells the DSP; a translator turns the
   log into notes, roles and measured habits. Two outputs: an SPC-to-IT
@@ -392,6 +395,22 @@ and the hit-or-miss part. Two steps, in order.
 
 ## Generation
 
+- **Write the way the soundtracks do (next; `docs/TRANSLATOR.md`, stages
+  3 and 4).** 1.2.0's imported packs carry a game's sound and only the
+  habits the readings give straight, so a song from one is still
+  arranged the generator's way, and measured against the game's own it
+  shows (FFVI, 2026-10-19): an arp in every song where FFVI has one in 5
+  of 69, no triplets where a fifth of FFVI's off-beat notes are, two or
+  three pitch classes under the melody where FFVI has three or four,
+  tunes repeating more (44 to 54 % of melody bars heard before, FFVI's
+  29 %) and ranging less. Stage 3 has the
+  generator write in voices, through the SPC converter's back end (the IT
+  instruments item below comes with it); stage 4 makes the vocabulary
+  anew from the readings: voicings, how chords move, rhythms per part,
+  the melody's shapes, bass and drum patterns as played. Imported packs
+  use it first; the built-in packs move over only when chosen. Saving
+  each import's readings in the database waits for it (decided
+  2026-10-20).
 - **The generator writes IT instruments (a later version, with a listening
   review; decided 2026-10-18).** Today's songs are sample mode: release
   tails baked into the sample data (a sustain loop and a decaying copy

@@ -182,7 +182,7 @@ label, voices per role, habits, trims), with the pack's own voices as WAV
 files (tuning, loop, release family, volume). `bitcomposer/packs/packfile.py`
 checks it, registers its voices with the sample registry and the pack in
 `PACKS` (not in the random draw), and `--pack-file` composes with it; the
-player's PACKS panel will pass that same option. It carries every habit
+player's PACKS panel passes that same option. It carries every habit
 the composer reads (27) and every role.
 
 Changed from the first plan: the built-in packs stay Python. Their
@@ -326,7 +326,12 @@ only difference that libgme stops at the length in the file's tag.
 
 ### 4. The translator
 
-In stages, with what is decided: `TRANSLATOR.md`.
+In stages, with what is decided: `TRANSLATOR.md`. Built for 1.2.0: the
+readings (stage 1: beat and bar, each voice's part, key and chords, form,
+kept in a database on the user's machine), a thin first pack from them
+(stage 2) and the player's PACKS panel (stage 5); next, the generator
+writing in voices and the vocabulary made anew from the readings
+(stages 3 and 4).
 
 The SNES chip decoder turns the register log into events (the design,
 above), and the shared translator turns events into musical facts, then
@@ -493,7 +498,11 @@ For the SNES chip:
   the roles from the translator with the user's corrections, the habits
   measured over every song. The generator composes new songs with it,
   as with any built-in pack; it is chosen in the player's PACKS panel
-  (below), kept apart from the built-in sounds.
+  (below), kept apart from the built-in sounds. Built for 1.2.0 as the
+  translator's thin first pack (`translate/pack.py`): the samples each
+  part plays most, a kit by brightness and ring, and only the habits the
+  readings give straight (tempo, scale family, songs without drums, echo);
+  the user's corrections are the panel's MOVE TO, kept in the pack.
 
 ### 6. The player: PACKS
 
@@ -525,6 +534,21 @@ SET (decided 2026-10-18):
   are inside the `.it` file.
 
 Imported packs live in the user's settings folder.
+
+**Built for 1.2.0** (`packs/library.py`, the panel in the player), where
+it differs from the plan above: the packs and the readings live in the
+user's data folder, not the settings folder (decided 2026-10-20); IMPORT
+and ADD sit at the panel's top, IMPORT taking a game's set (a folder, a
+zip, or an .rsn, .rar or .7z unpacked by the machine's 7-Zip or unar),
+its progress shown in the panel, not on a screen over the window; the
+role picker is each pack's OPEN, not a step after the import: its parts,
+kit and left-out samples, a click playing a voice in its part's register
+with why it is there, MOVE TO putting it elsewhere; SOUND shows the
+pack's own name among the sounds; GENERATE kept its name, the tile fit.
+Added: RENAME, EXPORT (one zip) and ADD (an exported pack or a pack
+file), and GET THE EMULATOR on a pipx install without it. Importing a
+game again starts its pack fresh (decided 2026-10-20): EXPORT keeps one
+as it is.
 
 ## Checking each step
 
@@ -565,10 +589,14 @@ Each step is its own branch and pull request, shippable on its own:
 1. The pack file format (built), proven on the built-in packs by a
    round-trip test.
 2. The SPC reader (built), checked against the research tools.
-3. The emulator, tested against reference renders. The long one.
-4. The translator and SPC to IT, which proves 3.
-5. The pack from a soundtrack, checked against the built-in packs.
-6. The player's PACKS panel: the list, IMPORT, the role picker, USE.
+3. The emulator (built, 1.1.0; wheels on PyPI and in the Windows build,
+   1.2.0), tested against reference renders. The long one.
+4. The translator and SPC to IT, which proves 3 (SPC to IT built, 1.1.0;
+   the translator's readings, 1.2.0).
+5. The pack from a soundtrack, checked against the built-in packs (a thin
+   first pack, 1.2.0; the vocabulary next, `TRANSLATOR.md` stage 4).
+6. The player's PACKS panel: the list, IMPORT, the role picker, USE
+   (built, 1.2.0).
 
 ## Risks
 
