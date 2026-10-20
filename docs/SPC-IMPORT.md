@@ -267,11 +267,15 @@ a hundred. Hence Rust. The Python prototype stays useful as a second
 opinion: the same snapshot through both, logs compared, while the Rust
 emulator is written.
 
-**How it ships.** The emulator becomes a second, compiled package
-published from this repository, with wheels built per platform when a
-release is tagged (Linux, Windows, macOS) and bundled by the Windows
-build. It is optional where no wheel exists: the generator and the player
-install everywhere, and IMPORT says what is missing there.
+**How it ships.** The emulator is a second, compiled package published
+from this repository, `bitcomposer-emu`, with a wheel per platform built
+when an `emu-v*` tag is pushed (`emu.yml`: Linux x86_64 and aarch64,
+Windows x64, macOS arm64 and x86_64, abi3 so one wheel serves every
+Python) and the sdist for the rest. It is optional, the `import` extra:
+the generator and the player install everywhere, and IMPORT says what is
+missing and how to get it. Bundling it in the Windows build is still to
+do: the frozen player must first be able to run `bitcomposer.spc` as
+IMPORT's child process.
 
 The core is checked instruction by instruction against the SingleStepTests
 cases and the gilyon hardware tests before it runs a song.
@@ -568,9 +572,9 @@ Each step is its own branch and pull request, shippable on its own:
 - **Emulator accuracy.** Drivers lean on timer behaviour and odd
   instructions; one wrong flag stalls a song. The test set has four
   drivers; others will find new faults.
-- **Packaging a compiled core**: wheels on every platform from CI, the
-  Windows build bundling it, and a clear message where no wheel exists.
-  (Speed itself is settled: Rust.)
+- **Packaging a compiled core**: wheels from CI and the message where
+  none matches are done (`emu.yml`); the Windows build bundling it is
+  open, see How it ships. (Speed itself is settled: Rust.)
 - **Drivers that load samples during the song** (from the main CPU): a
   snapshot holds only what was loaded when it was taken; such songs
   import with what was there.

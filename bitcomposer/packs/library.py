@@ -291,7 +291,8 @@ class Import:
     def start(self) -> None:
         from ..translate import archives
         if not can_import():
-            raise PackError("importing needs the SNES emulator (bitcomposer-emu), built from source: see CONTRIBUTING.md")
+            from ..spc.emulate import INSTALL
+            raise PackError(f"importing needs the SNES emulator, bitcomposer-emu: {INSTALL}")
         if self.source.suffix.lower() in archives.BY_PROGRAM and not archives.program():
             raise PackError(f"{self.source.name}: unpacking it needs an archive program, {archives.INSTALL}")
         packs_dir().mkdir(parents=True, exist_ok=True)

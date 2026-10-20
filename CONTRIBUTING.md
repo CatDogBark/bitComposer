@@ -126,6 +126,42 @@ maturin build --release -o dist     # the Python module, as a wheel for this mac
 
 The wheel is abi3: one file serves every Python from 3.10 on. Install it where the Python tests run (`pip install emu/dist/bitcomposer_emu-*.whl`) and they exercise it too; without it they skip. `bitcomposer/spc/emulate.py` names the emulator version it calls (`NEEDS`); bump both together when the binding changes.
 
+`emu/Cargo.lock` is committed, so every wheel of a version is built from
+the same crates; `cargo update` is a change to review like any other.
+
+### Releasing the emulator
+
+The emulator is published on PyPI as `bitcomposer-emu`, with a binary
+wheel for each platform, on its own tags, apart from the package's
+releases (it changes rarely, and a `bitcomposer` release needs no new
+emulator unless `NEEDS` moved). The version lives in `emu/Cargo.toml` and
+`emu/pyproject.toml`, which must agree, and the tag names it:
+
+1. Bump both versions and, if the binding changed, `NEEDS` in
+   `bitcomposer/spc/emulate.py` and the extra's floor in `pyproject.toml`.
+2. Tag and push the tag, from `main` once the change is there:
+
+   ```bash
+   git tag -a emu-v0.3.2 -m "emulator 0.3.2: one line on what it is"
+   git push origin emu-v0.3.2
+   ```
+
+   `emu.yml` runs the Rust tests with the whole instruction suite (fetched
+   from SingleStepTests), builds a wheel for Linux x86_64 and aarch64,
+   Windows x64, macOS arm64 and x86_64, and the sdist, runs the SPC tests
+   against each wheel, and uploads them all through trusted publishing
+   (the `pypi` environment, the pending publisher registered on pypi.org
+   for this workflow file). Pull requests into `main` that touch `emu/`
+   build and test the same way and publish nothing, as does a run started
+   by hand (`gh workflow run emu.yml --ref <branch>`).
+3. Check: `pip install bitcomposer-emu==0.3.2` in a fresh venv, and
+   `python -m bitcomposer.spc --to-it song.it game.spc` runs on it.
+
+Where no wheel matches (another architecture, a free-threaded Python,
+which abi3 does not serve), pip takes the sdist and needs cargo; that is
+why `bitcomposer` asks for the emulator as the `import` extra and not as
+a dependency.
+
 The SNES sound CPU is checked against the SingleStepTests suite, 1,000
 cases per instruction (81 MB, not in the repository): fetch
 [ProcessorTests](https://github.com/SingleStepTests/ProcessorTests)'

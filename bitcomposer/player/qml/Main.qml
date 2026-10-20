@@ -1520,7 +1520,7 @@ ApplicationWindow {
                         Text {
                             visible: !backend.canImport
                             Layout.fillWidth: true
-                            text: "IMPORT needs the SNES emulator (bitcomposer-emu), built from source: see CONTRIBUTING.md. ADD works without it."
+                            text: "IMPORT needs the SNES emulator: pipx inject bitcomposer bitcomposer-emu (or pip install bitcomposer-emu). ADD works without it."
                             color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
                             wrapMode: Text.WordWrap
                         }

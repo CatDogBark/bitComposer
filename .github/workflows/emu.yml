@@ -1,0 +1,133 @@
+name: Emulator wheels
+
+# The emulator (emu/, the package bitcomposer-emu) is the one compiled part
+# of bitComposer, released on its own tags: emu-vX.Y.Z builds a binary wheel
+# for each platform (Linux x86_64 and aarch64, Windows x64, macOS arm64 and
+# x86_64) and the sdist, runs the repository's SPC tests against each wheel,
+# and uploads them to PyPI through trusted publishing (the "pypi"
+# environment, this workflow file, registered on pypi.org for the project
+# bitcomposer-emu: no token anywhere). pip then installs the wheel for the
+# user's machine and never needs a Rust toolchain; the abi3 wheels serve
+# every Python from 3.10 on. Where no wheel matches, pip falls back to the
+# sdist and fails for want of cargo, which is why bitcomposer asks for the
+# emulator as an extra (bitcomposer[import]) and not as a dependency.
+#
+# The emulator is checked before anything is uploaded: the instruction suite
+# (SingleStepTests, 254,000 cases) runs on every build, so a wheel that fails
+# an instruction never ships. Pull requests into main that touch emu/ and
+# runs started by hand build and test everything and publish nothing.
+on:
+  push:
+    tags: ["emu-v*"]
+  pull_request:
+    branches: [main]
+    paths: ["emu/**", ".github/workflows/emu.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Rust tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag matches the emulator's version
+        if: startsWith(github.ref, 'refs/tags/emu-v')
+        run: |
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' emu/Cargo.toml | head -1)
+          wheel=$(sed -n 's/^version = "\(.*\)"/\1/p' emu/pyproject.toml | head -1)
+          echo "Cargo.toml $cargo, pyproject.toml $wheel, tag ${GITHUB_REF_NAME}"
+          test "$cargo" = "$wheel" || { echo "emu/Cargo.toml and emu/pyproject.toml disagree"; exit 1; }
+          test "emu-v$cargo" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} but the emulator is $cargo"; exit 1; }
+      - name: The instruction suite (SingleStepTests, spc700/v1)
+        uses: actions/checkout@v4
+        with:
+          repository: SingleStepTests/ProcessorTests
+          path: single-step
+          sparse-checkout: spc700/v1
+          sparse-checkout-cone-mode: true
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test
+        working-directory: emu
+        env:
+          SPC700_TESTS: ${{ github.workspace }}/single-step/spc700/v1
+        run: |
+          test -f "$SPC700_TESTS/00.json" || { echo "the instruction suite was not fetched"; exit 1; }
+          cargo test --release -- --nocapture
+
+  wheels:
+    name: Wheel (${{ matrix.name }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64,   os: ubuntu-latest,    target: x86_64 }
+          - { name: linux-aarch64,  os: ubuntu-24.04-arm, target: aarch64 }
+          - { name: windows-x64,    os: windows-latest,   target: x64 }
+          - { name: macos-arm64,    os: macos-14,         target: aarch64 }
+          - { name: macos-x86_64,   os: macos-13,         target: x86_64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: emu
+          target: ${{ matrix.target }}
+          args: --release --out dist
+          # Linux builds run in the manylinux container for the target, so
+          # the wheel's glibc floor is the image's and not the runner's.
+          manylinux: auto
+      - name: The wheel installs and the SPC tests run on it
+        shell: bash
+        run: |
+          python -m pip install --quiet --no-index --find-links emu/dist bitcomposer-emu
+          python -c "import bitcomposer_emu as e; print('bitcomposer_emu', e.__version__)"
+          # The repository's own SPC tests, which skip without the emulator:
+          # a skip here would mean the wheel did not import, so it fails.
+          python -m unittest discover -s tests -p "test_spc_*.py" 2>&1 | tee tests.log
+          if grep -q "needs the compiled emulator" tests.log; then echo "the emulator's tests were skipped"; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.name }}
+          path: emu/dist/*.whl
+
+  sdist:
+    name: Source distribution
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: emu
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: emu/dist/*.tar.gz
+
+  publish:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/emu-v')
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+      - run: ls -l dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
