@@ -1,10 +1,10 @@
-"""A song read: its notes, beat, parts, key and chords, from its snapshot."""
+"""A song read: its notes, beat, parts, key, chords and form, from its snapshot."""
 import hashlib
 import json
 import os
 from dataclasses import dataclass, field
 
-from . import beat, events, harmony, roles as roles_mod
+from . import beat, events, form as form_mod, harmony, roles as roles_mod
 
 
 @dataclass
@@ -21,6 +21,7 @@ class Reading:
     roles: list = field(default_factory=list)
     key: tuple | None = None         # (tonic pitch class, "major"/"minor", fit)
     chords: list = field(default_factory=list)
+    form: form_mod.Form | None = None   # its parts and loop
 
 
 def manifest(folder: str) -> dict:
@@ -59,4 +60,5 @@ def read(snap, seconds: float | None = None, song: events.Song | None = None) ->
     if grid:
         r.key = harmony.key(song, grid, roles)
         r.chords = harmony.chords(song, grid, roles)
+        r.form = form_mod.read(song, grid)
     return r

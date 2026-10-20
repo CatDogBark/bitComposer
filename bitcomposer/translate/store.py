@@ -5,7 +5,7 @@ A song is kept by its snapshot's hash with the translator's version that
 read it, so only what changed is read again. Its notes are kept a voice at
 a time as packed arrays (a soundtrack is a few hundred thousand notes),
 beside what was read from them: the beat, the key, each voice's part, the
-chords, and features for the measures packs are made from and the
+chords, the form (its parts and loop), and features for the measures packs are made from and the
 generator's songs are held against."""
 import json
 import os
@@ -13,8 +13,8 @@ import sqlite3
 from array import array
 from pathlib import Path
 
-SCHEMA = 2                           # 2: songs.loose
-VERSION = "3"                        # the translator's; a song read by another is read again
+SCHEMA = 3                           # 2: songs.loose; 3: songs.loop_*, form
+VERSION = "4"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS songs (
     id TEXT PRIMARY KEY, file TEXT, folder TEXT, game TEXT, title TEXT, composer TEXT, driver TEXT,
     seconds REAL, version TEXT,
     bpm REAL, meter INTEGER, division INTEGER, on_grid REAL, swing REAL,
-    key_tonic INTEGER, key_mode TEXT, key_fit REAL, loose INTEGER);
+    key_tonic INTEGER, key_mode TEXT, key_fit REAL, loose INTEGER,
+    loop_bar INTEGER, loop_bars INTEGER, loop_seconds REAL);
 CREATE TABLE IF NOT EXISTS samples (
     song TEXT, idx INTEGER, key TEXT, start INTEGER, loop INTEGER, f0 REAL, offset REAL,
     frames INTEGER, loops INTEGER, PRIMARY KEY (song, idx));
@@ -31,6 +32,8 @@ CREATE TABLE IF NOT EXISTS voices (
 CREATE TABLE IF NOT EXISTS beats (song TEXT PRIMARY KEY, beats BLOB, bars BLOB);
 CREATE TABLE IF NOT EXISTS chords (song TEXT, start REAL, end REAL, root INTEGER, shape TEXT, fit REAL);
 CREATE TABLE IF NOT EXISTS features (song TEXT, source TEXT, name TEXT, value REAL, PRIMARY KEY (song, source, name));
+CREATE TABLE IF NOT EXISTS form (song TEXT, idx INTEGER, label TEXT, bar INTEGER, bars INTEGER, start REAL, of INTEGER,
+    PRIMARY KEY (song, idx));
 CREATE INDEX IF NOT EXISTS chords_song ON chords (song);
 """
 NOTE_FIELDS = 6                      # start and length in beats, midi (NaN: unpitched), level, pan, sample index (-1: noise)
@@ -47,8 +50,12 @@ def connect(path=None) -> sqlite3.Connection:
     db = sqlite3.connect(path)
     db.executescript(TABLES)
     row = db.execute("SELECT value FROM meta WHERE key = 'schema'").fetchone()
-    if row and int(row[0]) < 2:
+    old = int(row[0]) if row else SCHEMA
+    if old < 2:
         db.execute("ALTER TABLE songs ADD COLUMN loose INTEGER")   # a beat followed loosely, on no grid
+    if old < 3:
+        for column in ("loop_bar INTEGER", "loop_bars INTEGER", "loop_seconds REAL"):
+            db.execute(f"ALTER TABLE songs ADD COLUMN {column}")
     db.execute("INSERT OR REPLACE INTO meta VALUES ('schema', ?)", (str(SCHEMA),))
     db.commit()
     return db
@@ -82,15 +89,17 @@ def keep(db, reading) -> None:
     """Keep a song's reading, replacing an older one."""
     r = reading
     sid = r.id
-    for table in ("songs", "samples", "voices", "beats", "chords"):
+    for table in ("songs", "samples", "voices", "beats", "chords", "form"):
         db.execute(f"DELETE FROM {table} WHERE {'id' if table == 'songs' else 'song'} = ?", (sid,))
     db.execute("DELETE FROM features WHERE song = ? AND source = 'soundtrack'", (sid,))
     g = r.grid
-    db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
+    f = r.form
+    db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
         sid, r.file, r.folder, r.game, r.title, r.composer, r.driver, r.song.seconds, VERSION,
         g.bpm if g else None, g.meter if g else None, g.division if g else None, g.on_grid if g else None,
         g.swing if g else None, r.key[0] if r.key else None, r.key[1] if r.key else None, r.key[2] if r.key else None,
-        int(g.loose) if g else None))
+        int(g.loose) if g else None, f.loop_bar if f else None, f.loop_bars if f else None,
+        f.loop_seconds if f else None))
     index = {}
     for i, s in enumerate(r.song.samples.values()):
         index[s.key] = i
@@ -115,4 +124,6 @@ def keep(db, reading) -> None:
                                                        array("d", g.bar_times).tobytes()))
     for c in r.chords:
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, c.start, c.end, c.root, c.shape, c.fit))
+    for i, p in enumerate(f.parts if f else []):
+        db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?)", (sid, i, p.label, p.bar, p.bars, p.start, p.of))
     db.commit()

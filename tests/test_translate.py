@@ -193,6 +193,48 @@ class Parts(unittest.TestCase):
         self.assertEqual((double.role, double.of), (roles.DOUBLE, 0))
 
 
+class Form(unittest.TestCase):
+    """A song's parts and loop, from where it repeats itself."""
+
+    @staticmethod
+    def song_in_parts(order, jitter=0.004, seed=8):
+        """A song at 120 (bars of two seconds) played part by part: an intro of two bars, A and B of four,
+        each a melody of its own (a note a beat), a bass on each bar's first beat and a drum every half
+        beat, each note up to `jitter` off its time (AKAO's timer)."""
+        r = random.Random(seed)
+        tunes = {"I": [60, 62, 64, 65], "A": [67, 65, 64, 62, 60, 62, 64, 67], "B": [72, 71, 69, 67, 69, 71, 72, 74]}
+        bars = {"I": 2, "A": 4, "B": 4}
+        parts = {0: [], 1: [], 2: []}
+        t = 0.0
+        for name in order:
+            for bar in range(bars[name]):
+                for beat in range(4):
+                    at = t + bar * 2 + beat * 0.5
+                    j = lambda: r.uniform(-jitter, jitter)
+                    parts[0].append((at + j(), 0.4, tunes[name][(bar * 4 + beat) % len(tunes[name])]))
+                    parts[2] += [(at + j(), 0.05, None), (at + 0.25 + j(), 0.05, None)]
+                parts[1].append((t + bar * 2 + j(), 1.8, {"I": 36, "A": 43, "B": 41}[name] + bar % 2))
+            t += bars[name] * 2
+        for v in parts:
+            parts[v].sort()
+        return song_of(parts)
+
+    def test_a_loop_and_its_parts(self):
+        from bitcomposer.translate import form
+        song = self.song_in_parts("IABABAB")
+        g = beat.find([(p.start, p.level, p.voice) for p in song.notes])
+        f = form.read(song, g)
+        self.assertEqual((f.loop_bar, f.loop_bars), (2, 8))          # back to the first A, eight bars a pass
+        self.assertEqual([(p.label, p.bar, p.bars) for p in f.parts], [("A", 0, 2), ("B", 2, 4), ("C", 6, 4)])
+
+    def test_a_part_played_again_has_its_letter_and_no_loop_is_heard_once(self):
+        from bitcomposer.translate import form
+        song = self.song_in_parts("IAAB")
+        f = form.read(song, beat.find([(p.start, p.level, p.voice) for p in song.notes]))
+        self.assertIsNone(f.loop_bar)
+        self.assertEqual(f.letters, "A B B C")
+
+
 class Events(unittest.TestCase):
     def test_a_sample_s_notes_are_named_against_its_own_tuning(self):
         # notes 8 cents flat together are named on the semitone; the offset is the sample's
