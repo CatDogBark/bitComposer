@@ -664,24 +664,52 @@ def rebar(grid: Grid, bass_beats: list[float]) -> bool:
     """The bar again from where the bass lands: on the first of three beats
     in a waltz (oom-pah-pah), of two or four otherwise. Its notes falling on
     one beat of m more often than chance (1/m) by BASS_LIFT or more set the
-    bar and its downbeat; else the accents' bar stays. The Wedding Waltz's
-    bass lands on the first of three 87 % of the time, its accents had read
-    four. Returns whether the bar changed."""
+    bar, and each section's downbeat where its own bass lands most (a
+    section's beats restart where a held note moved the grid: Edgar and
+    Sabin's second section starts half a bar into a bar of the first's); a
+    bar the accents had read already stays as they read it. The Wedding
+    Waltz's bass lands on the first of three 87 % of the time, its accents
+    had read four. Returns whether the bar changed."""
     on = [round(b) for b in bass_beats if abs(b - round(b)) < 0.15 and b >= -0.15]
     if len(on) < 8:
         return False
+    # each section's beats, as indices into beat_times
+    spans, bt = [], grid.beat_times
+    for x in grid.sections:
+        tol = 0.5 * x.period
+        i0 = bisect.bisect_left(bt, x.first - tol)
+        i1 = bisect.bisect_right(bt, x.end + tol)
+        if spans and i0 < spans[-1][1]:
+            i0 = spans[-1][1]
+        spans.append((i0, max(i0, i1)))
+    def section_of(b):
+        for k, (i0, i1) in enumerate(spans):
+            if i0 <= b < i1:
+                return k
+        return None
     best = None
     for m in (4, 3, 2):
-        counts = [sum(1 for b in on if b % m == d) for d in range(m)]
-        lift = max(counts) / len(on) * m
+        counts = [[0] * m for _ in spans]
+        for b in on:
+            k = section_of(b)
+            if k is not None:
+                counts[k][(b - spans[k][0]) % m] += 1
+        placed = sum(sum(c) for c in counts)
+        if not placed:
+            continue
+        lift = sum(max(c) for c in counts) / placed * m
         if best is None or lift > best[0] * (1.0 if m != 2 else 1.1):
-            best = (lift, m, counts.index(max(counts)))
-    lift, m, d = best
-    if lift < BASS_LIFT:
+            best = (lift, m, [c.index(max(c)) if sum(c) else 0 for c in counts])
+    if best is None:
         return False
-    for x in grid.sections:
-        x.meter = m
-    grid.bar_times = grid.beat_times[d::m]
+    lift, m, downbeats = best
+    if lift < BASS_LIFT or all(x.meter == m for x in grid.sections):
+        return False
+    bars = []
+    for x, (i0, i1), d in zip(grid.sections, spans, downbeats):
+        x.meter, x.downbeat = m, d
+        bars += bt[i0 + d:i1:m]
+    grid.bar_times = bars
     return True
 
 

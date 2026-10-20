@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 NEAR = 0.015                         # seconds a repeated note may sit off its lag (AKAO places each note up to
                                      # 5 ms off its time, so two copies of it 10 ms apart)
 BIN = 0.01                           # seconds the lags are counted in
+EARLY = 0.02                         # seconds early a note may be and be its half bar's
 LAGS = 24                            # the most common lags tried
 HELD = 0.85                          # the share of a stretch's notes that must repeat
 ODD = 1                              # unrepeated half-bar cells in a row a repeat may hold (a fill)
@@ -93,30 +94,28 @@ def _lags(notes, shortest: float) -> list[float]:
     return [b * BIN for b in out]
 
 
-def _repeats(notes, by, lag: float, cell: float, shortest: float) -> list[tuple[float, float]]:
-    """The stretches (start, end) that repeat at `lag`: cut into cells of
-    `cell` seconds (half a bar), a cell repeats where its voices' notes have
-    their like sounding `lag` before, within NEAR, HELD of them on a voice's
-    average (each voice its own share: a drum on every beat repeats at any
-    lag, and would carry an intro's bar to a part's); a repeat is a run of such
-    cells (an empty one inside, a rest, and ODD unlike ones in a row, a fill,
-    allowed), at least `shortest` long. Cells, not a run of notes: a part
-    that repeats at any lag (a drum on every beat) would carry a run of
-    notes from one repeat to the next."""
-    t0 = notes[0][0]
+def _repeats(notes, by, lag: float, cells_of, shortest: int) -> list[tuple[int, int]]:
+    """The stretches (first half bar, past the last) that repeat at `lag`:
+    a half bar of the grid repeats where its voices' notes have their like
+    sounding `lag` before, within NEAR, HELD of them on a voice's average
+    (each voice its own share: a drum on every beat repeats at any lag, and
+    would carry an intro's bar to a part's); a repeat is a run of such half
+    bars (an empty one inside, a rest, and ODD unlike ones in a row, a
+    fill, allowed), at least `shortest` half bars. Half bars of the grid, not
+    of a mean bar: a song whose tempo drifts (Edgar and Sabin's) moves its
+    repeats half a bar off a fixed cell by its ninth bar."""
     cells = {}
-    for t, k in notes:
+    for (t, k), c in zip(notes, cells_of):
         ts = by[k]
         i = bisect.bisect_left(ts, t - lag - NEAR)
-        c = cells.setdefault(int((t - t0) / cell), {}).setdefault(k[0], [0, 0])
-        c[0] += i < len(ts) and ts[i] <= t - lag + NEAR
-        c[1] += 1
+        v = cells.setdefault(c, {}).setdefault(k[0], [0, 0])
+        v[0] += i < len(ts) and ts[i] <= t - lag + NEAR
+        v[1] += 1
     out, start, end, odd = [], None, None, 0
     for c in range(max(cells) + 1):
         voices = cells.get(c)
         if not voices:
             continue                                 # a rest: neither repeats nor breaks a repeat
-        # each voice's share alike: a drum repeating at any lag is one voice, not most of the notes
         if sum(h / n for h, n in voices.values()) >= HELD * len(voices):
             if start is None:
                 start = c
@@ -124,14 +123,14 @@ def _repeats(notes, by, lag: float, cell: float, shortest: float) -> list[tuple[
         elif start is not None:
             odd += 1
             if odd > ODD:
-                if (end - start + 1) * cell >= shortest:
-                    out.append((t0 + start * cell, t0 + (end + 1) * cell))
+                if end - start + 1 >= shortest:
+                    out.append((start, end + 1))
                 start, odd = None, 0
-    if start is not None and (end - start + 1) * cell >= shortest:
-        out.append((t0 + start * cell, t0 + (end + 1) * cell))
+    if start is not None and end - start + 1 >= shortest:
+        out.append((start, end + 1))
     joined = []                                      # repeats a bar or less apart are one (a loop with two odd cells)
     for a, b in out:
-        if joined and a - joined[-1][1] <= 2.5 * cell:
+        if joined and a - joined[-1][1] <= 2:
             joined[-1] = (joined[-1][0], b)
         else:
             joined.append((a, b))
@@ -152,7 +151,15 @@ def read(song, grid) -> Form:
     for t, k in notes:
         by[k].append(t)
     end = notes[-1][0]
-    repeats = {lag: _repeats(notes, by, lag, bar_len / 2, shortest) for lag in _lags(notes, shortest)}
+    edges = bars + [bars[-1] + bar_len * k for k in range(1, int((end - bars[-1]) / bar_len) + 3)]
+    def half_bar(t):                                 # the half bar of the grid a time falls in (a note a hair
+        t += EARLY                                   # early is its next one's: AKAO's 5 ms)
+        i = max(0, min(len(edges) - 2, bisect.bisect_right(edges, t) - 1))
+        return 2 * i + (t >= (edges[i] + edges[i + 1]) / 2)
+    at = lambda c: edges[c // 2] + (c % 2) * (edges[c // 2 + 1] - edges[c // 2]) / 2 if c // 2 + 1 < len(edges) else edges[-1]
+    cells_of = [half_bar(t) for t, _ in notes]
+    repeats = {lag: [(at(a), at(b)) for a, b in _repeats(notes, by, lag, cells_of, 2 * SHORTEST)]
+               for lag in _lags(notes, shortest)}
     form = Form()
     # the loop: the lag whose repeat reaches the end (the last bar may be fading out) and lasts a lag
     loop = None
@@ -170,22 +177,26 @@ def read(song, grid) -> Form:
         form.evidence["loop"] = {"seconds": round(lag, 3), "repeated_from": round(a, 2), "to": round(b, 2)}
         horizon = a                                  # the parts are read over the first pass
     last_bar = min(len(bars), _bar_at(bars, horizon) + (0 if loop else 1))
-    # the repeats as blocks of bars, (first, past the last, the first's source): the longest lags first,
+    # the repeats as blocks of bars, (first, past the last, each bar's source): the longest lags first,
     # a shorter one only over bars no longer one holds (a riff repeating every two bars inside a part
     # repeated every four is the part's)
     blocks, held = [], [False] * last_bar
     for lag in sorted(repeats, reverse=True):
         for a, b in repeats[lag]:
-            inside = [i for i in range(last_bar) if a <= bars[i] + bar_len / 2 <= b]
+            # a bar is the repeat's when its first half is (its last half may lead somewhere else: Terra's
+            # phrases each end on a pickup into what follows)
+            inside = [i for i in range(last_bar) if a - 1e-6 <= bars[i] and (bars[i] + edges[i + 1]) / 2 <= b + 1e-6]
             run = []
             for i in inside + [None]:
                 if i is not None and not held[i] and (not run or i == run[-1] + 1):
                     run.append(i)
                     continue
                 if len(run) >= PART:
-                    src = _bar_at(bars, bars[run[0]] + bar_len / 2 - lag)
-                    if src < run[0]:
-                        blocks.append((run[0], run[-1] + 1, src))
+                    # each bar's source by time: a source bar held long (Edgar and Sabin's seventh, a
+                    # fermata) is two bars' worth of its copy
+                    srcs = [_bar_at(bars, (bars[k] + edges[k + 1]) / 2 - lag) for k in run]
+                    if srcs[0] < run[0]:
+                        blocks.append((run[0], run[-1] + 1, srcs))
                         for k in run:
                             held[k] = True
                 run = [i] if i is not None and not held[i] else []
@@ -193,10 +204,11 @@ def read(song, grid) -> Form:
     # (novelty); a copy takes its source's cuts too (Terra's bars 21 to 36 copy 5 to 20 whole: B B C)
     novel = _novel(song, bars, bar_len, last_bar)
     cuts = {0} | novel
-    for i, j, src in blocks:
-        cuts.update((i, j, src, src + (j - i)))
+    for i, j, srcs in blocks:
+        cuts.update((i, j, srcs[0], srcs[-1] + 1))
     for _ in range(4):                               # a cut copied into a copy may be copied again
-        more = {i + (c - src) for i, j, src in blocks for c in cuts if src < c < src + (j - i)}
+        more = {i + n for i, j, srcs in blocks for c in cuts for n in range(1, j - i)
+                if srcs[n] == c and srcs[n - 1] != c}
         if more <= cuts:
             break
         cuts |= more
@@ -222,9 +234,9 @@ def read(song, grid) -> Form:
     for k, b in enumerate(starts):
         nb = (starts[k + 1] if k + 1 < len(starts) else last_bar) - b
         of = None
-        for i, j, src in blocks:
+        for i, j, srcs in blocks:
             if i <= b < j:
-                s0 = src + (b - i)
+                s0 = srcs[b - i]
                 of = next((m for m, p in enumerate(form.parts) if p.bar == s0), None)
                 if of is not None:
                     break
