@@ -138,8 +138,11 @@ class UpdateCheck(unittest.TestCase):
         self.assertEqual(u.newer_release("1.0.0rc2", fetch)["version"], "1.0.0rc3")
         self.assertEqual(u.newer_release("1.0.0rc2", fetch)["installer"], "u")
         self.assertIsNone(u.newer_release("0.9.1", fetch))
+        # ... unless it asks for candidates too (SET > PLAYER > CANDIDATES)
+        self.assertEqual(u.newer_release("0.9.1", fetch, prereleases=True)["version"], "1.0.0rc3")
         rels.append({"tag_name": "v1.0.0", "prerelease": False, "html_url": "r", "assets": []})
         self.assertEqual(u.newer_release("0.9.1", fetch)["version"], "1.0.0")
+        self.assertEqual(u.newer_release("0.9.1", fetch, prereleases=True)["version"], "1.0.0")   # the newest wins
         self.assertEqual(u.newer_release("1.0.0rc2", fetch)["version"], "1.0.0")
         self.assertIsNone(u.newer_release("1.0.0", fetch))
         # a dead network is no update, not an error
@@ -508,6 +511,32 @@ class WindowHeadless(unittest.TestCase):
         self.assertEqual(warnings, [])
         win.close()
         del eng
+
+    def test_candidates_setting(self):
+        """CANDIDATES on: saved, and the check runs again asking for release
+        candidates; off: a candidate offered to this release player goes."""
+        import json
+        from unittest import mock
+        from bitcomposer import __version__
+        from bitcomposer.player import update as u
+        from bitcomposer.player.engine import state_file
+        asked = []
+
+        def newer(current, fetch=None, prereleases=False):
+            asked.append(prereleases)
+            return {"version": "99.0.0rc1", "tag": "v99.0.0rc1", "page": "p", "installer": None} if prereleases else None
+        self.assertFalse(self.b.prereleases)
+        with mock.patch.object(u, "newer_release", newer):
+            self.b.setPrereleases(True)
+            self.assertTrue(self.pump(3, lambda: self.b.updateVersion == "99.0.0rc1"))
+            self.assertEqual(asked, [True])
+            with open(state_file()) as fh:
+                self.assertTrue(json.load(fh)["prereleases"])
+            self.b.setPrereleases(False)
+            if not u.is_prerelease(__version__):
+                self.assertEqual(self.b.updateVersion, "")      # withdrawn from a release player
+        with open(state_file()) as fh:
+            self.assertFalse(json.load(fh)["prereleases"])
 
     def test_get_the_emulator(self):
         """PACKS' GET THE EMULATOR, on a pipx install: the update screen,

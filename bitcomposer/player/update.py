@@ -9,7 +9,8 @@ the Windows executable downloads bitComposer-setup.exe from the release and
 runs it quietly, then quits so the installer can replace the files and
 start the new player. A checkout
 or a plain pip install is told what to run instead. A pre-release player
-sees pre-releases; a release player sees releases only.
+sees pre-releases; a release player sees releases only, unless its
+CANDIDATES setting asks for them too (for trying a release candidate).
 """
 import json
 import os
@@ -63,16 +64,18 @@ def local_release(path: str, current: str) -> dict:
     return rel
 
 
-def newer_release(current: str, fetch=None) -> dict | None:
+def newer_release(current: str, fetch=None, prereleases: bool = False) -> dict | None:
     """The newest release above `current`, as {"version", "tag", "page",
-    "installer"} or None. fetch(url) -> bytes is replaceable for tests."""
+    "installer"} or None: release candidates too when `current` is one, or
+    when asked (SET > PLAYER > CANDIDATES). fetch(url) -> bytes is
+    replaceable for tests."""
     fetch = fetch or (lambda url: urllib.request.urlopen(url, timeout=6).read())
     try:
         releases = json.loads(fetch(RELEASES_URL).decode("utf-8"))
     except Exception:
         return None
     cur = parse_version(current)
-    want_pre = is_prerelease(current)
+    want_pre = prereleases or is_prerelease(current)
     best = None
     for r in releases:
         if r.get("draft"):
