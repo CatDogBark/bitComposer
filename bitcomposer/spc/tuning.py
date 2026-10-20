@@ -4,13 +4,20 @@ that a voice's pitch register names a note.
 
 A looped sample's loop usually holds a whole number of cycles, which pins
 the period down: the shortest of the periods dividing the loop length that
-repeats nearly perfectly is the fundamental (its multiples repeat too; its
-fractions do not). Loops that are not a whole number of clean cycles (an
+repeats nearly perfectly is a whole number of cycles (its multiples repeat
+too; its fractions do not), and the cycle is the shortest fraction of it
+the wave repeats at, since a cycle is rarely a whole number of samples
+(FFVI's bass loops hold 28 cycles of 169.14 samples: every 1184 repeats,
+seven cycles). Loops that are not a whole number of clean cycles (an
 ensemble, a chorus) and samples without a loop (a pluck) are measured by
-autocorrelation over the periods a note can have, 25 Hz to 4 kHz. Either
-way a period only counts once the waveform has stopped resembling itself
-(at a short enough lag every smooth wave "repeats"). When nothing repeats
-(a drum, a noise burst) there is no pitch: None.
+autocorrelation over the periods a note can have, 25 Hz to 4 kHz, a
+one-shot past its attack where it is steadiest. Either way a period only
+counts once the waveform has stopped resembling itself (at a short enough
+lag every smooth wave "repeats"), and a shorter period is judged on the
+wave smoothed to its low harmonics, the ones the ear names a pitch by: the
+noise riding on a plucked bass's cycles matches an octave down a little
+better, but does not make a cycle two cycles long. When nothing repeats (a
+drum, a noise burst) there is no pitch: None.
 """
 import math
 
@@ -20,6 +27,8 @@ SHORTEST = RATE // 4000
 CLEAN = 0.95                 # how well a loop-dividing period must repeat
 PITCHED = 0.6                # below this, nothing repeats: no pitch
 APART = 0.5                  # a wave has moved on from itself once its similarity falls below this
+NEARLY = 0.9                 # a shorter period repeating this well, against a longer one, is the period
+HARMONICS = 8                # a shorter period is judged on the wave smoothed to this many of its harmonics
 
 
 def _similarity(x, lag: int) -> float:
@@ -33,6 +42,36 @@ def _similarity(x, lag: int) -> float:
     return num / den if den else 0.0
 
 
+def _at(x, lag: float) -> float:
+    """Similarity at a lag between whole samples, x interpolated."""
+    i = int(lag)
+    f = lag - i
+    if f < 1e-6:
+        return _similarity(x, i)
+    n = len(x) - i - 1
+    if n < 16:
+        return 0.0
+    a = x[:n]
+    b = [(1 - f) * p + f * q for p, q in zip(x[i:i + n], x[i + 1:i + 1 + n])]
+    num = sum(p * q for p, q in zip(a, b))
+    den = math.sqrt(sum(p * p for p in a) * sum(q * q for q in b))
+    return num / den if den else 0.0
+
+
+def _smoothed(x, width: int) -> list:
+    """x through a moving average `width` wide (its first null at the frequency of that period)."""
+    if width <= 1:
+        return x
+    out, acc = [], 0.0
+    for i, v in enumerate(x):
+        acc += v
+        if i >= width:
+            acc -= x[i - width]
+        if i >= width - 1:
+            out.append(acc)
+    return out
+
+
 def _apart(x, hi: int) -> int | None:
     """The first lag at which x no longer resembles itself."""
     lag = SHORTEST
@@ -43,26 +82,44 @@ def _apart(x, hi: int) -> int | None:
     return None
 
 
-def _autocorrelation(x, rate: int) -> float | None:
+def _cycle(x, period: float, lo: int) -> float:
+    """The shortest whole fraction of `period` (down to lag `lo`) the wave
+    repeats at nearly as well, each judged on the wave smoothed to HARMONICS
+    of it. A fraction of a period is a period only if every fraction it
+    divides is too, so only those are tried."""
+    found = {1}
+    k = 2
+    while period / k >= max(lo, SHORTEST):
+        q = period / k
+        if all(k // d in found for d in range(2, k) if k % d == 0) and _similarity(x, round(q)) >= 0.5 * _at(x, period):
+            s = _smoothed(x, round(q / HARMONICS))
+            if _at(s, q) >= NEARLY * _at(s, period):
+                found.add(k)
+        k += 1
+    return period / max(found)
+
+
+def _autocorrelation(x, rate: int) -> tuple[float | None, float]:
     """The fundamental by autocorrelation, past the lag where the wave has
     moved on from itself: coarse lags first, then the region of the first
     one repeating nearly as well as the best (a longer one may be a
-    multiple of it) at every lag."""
+    multiple of it) at every lag, then any fraction of that it repeats at.
+    With it, how well the wave repeats at best."""
     hi = min(LONGEST, len(x) // 2)
     start = _apart(x, hi) if hi > SHORTEST else None
     if start is None:
-        return None
+        return None, 0.0
     coarse, lag = [], start
     while lag <= hi:
         coarse.append((_similarity(x, lag), lag))
         lag += max(1, lag // 50)
     best = max(coarse, default=(0.0, 0))[0]
     if best < PITCHED:
-        return None
+        return None, best
     for s, lag in coarse:                      # the first region repeating nearly as well
-        if s >= 0.9 * best:
-            return rate / _peak(x, lag, start, hi)
-    return None
+        if s >= NEARLY * best:
+            return rate / _cycle(x, _peak(x, lag, start, hi), start), best
+    return None, best
 
 
 def _peak(x, lag: int, lo: int, hi: int) -> float:
@@ -93,10 +150,13 @@ def fundamental(sample, rate: int = RATE) -> float | None:
         periods = sorted({n // k for k in range(1, n // SHORTEST + 1) if n % k == 0 and start <= n // k <= LONGEST})
         for p in periods:
             if _similarity(x, p) >= CLEAN:
-                return rate / p
-        return _autocorrelation(x, rate)
-    start = min(len(pcm) // 4, rate // 20)          # past the attack
-    return _autocorrelation(list(pcm[start:start + 2 * LONGEST + 256]), rate)
+                return rate / _cycle(x, p, start)
+        return _autocorrelation(x, rate)[0]
+    # a one-shot: past its attack, from the place along it where it repeats best
+    span = 2 * LONGEST + 256
+    found = [_autocorrelation(list(pcm[a:a + span]), rate)
+             for a in sorted({min(len(pcm) // 4, rate // 20), len(pcm) // 4, len(pcm) // 2})]
+    return max(found, key=lambda f: (f[0] is not None, f[1]))[0] if found else None
 
 
 NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
