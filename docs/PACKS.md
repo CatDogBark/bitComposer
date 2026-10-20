@@ -18,6 +18,12 @@ composes a song with it. `--pack-file` takes the place of `--pack` and
 `--sound`; the other options work as usual. A pack file is never drawn by
 a random sound, only used when named.
 
+In the player, PACKS keeps the packs on this machine, each a folder in the
+user's data folder (`~/.local/share/bitcomposer/packs`, or under
+`BITCOMPOSER_DATA_DIR`): ADD brings one in from its pack file or from an
+exported pack (one zip file of its folder, which EXPORT writes), and USE
+puts it in SOUND.
+
 ## An example
 
 ```json

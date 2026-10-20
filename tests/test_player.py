@@ -367,6 +367,67 @@ class WindowHeadless(unittest.TestCase):
         win.close()
         del eng
 
+    def test_packs_panel(self):
+        """PACKS: a pack added shows in the panel and in SOUND; USE composes
+        with it; a voice previews (the song pauses for it) and moves; DELETE
+        takes it away and SOUND goes back to random."""
+        from pathlib import Path
+        from PySide6.QtCore import QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        import bitcomposer.player as pkg
+        from bitcomposer.packs import packfile
+        from test_library import make_pack
+        old = os.environ.get("BITCOMPOSER_DATA_DIR")
+        os.environ["BITCOMPOSER_DATA_DIR"] = os.path.join(self.tmp.name, "data")
+        self.addCleanup(lambda: os.environ.__setitem__("BITCOMPOSER_DATA_DIR", old) if old is not None
+                        else os.environ.pop("BITCOMPOSER_DATA_DIR", None))
+        self.addCleanup(packfile.unload, "test_quest")
+        src = Path(self.tmp.name) / "made"
+        src.mkdir()
+        make_pack(src)
+        b = self.b
+        b.add_path(str(src / "pack.json"))
+        self.assertEqual([p["name"] for p in b.packs], ["test_quest"])
+        b.add_path(str(src / "pack.json"))                       # again: it asks first
+        self.assertEqual(b.importState["pendingAdd"], "test_quest")
+        b.confirmReplace(False)
+        self.assertEqual(b.importState["pendingAdd"], "")
+
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        eng.rootContext().setContextProperty("backend", b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        win.show()
+        win.setProperty("showPacks", True)
+        win.setProperty("packOpen", "test_quest")
+        self.pump(0.5)
+        self.assertIn("test_quest", win.property("soundOptions").toVariant())   # a QJSValue: the QML array
+        win.setProperty("settSound", "test_quest")              # USE
+        self.pump(0.3)
+        self.assertIn("--pack-file", b.autoFlags())
+        self.assertIn("test_quest", b.autoFlags())
+
+        b.playIndex(1)
+        self.assertTrue(self.pump(2, lambda: b.state["status"] == "Playing"))
+        b.previewVoice("test_quest", "flute", "lead")           # the song pauses for it, then goes on
+        self.assertEqual(b.player.status, "Paused")
+        self.assertTrue(self.pump(5, lambda: b.state["status"] == "Playing"))
+        win.setProperty("packVoice", "flute")
+        win.setProperty("packVoicePart", "lead")
+        b.movePack("test_quest", "flute", "arp")
+        self.pump(0.3)
+        self.assertEqual(b.packs[0]["parts"]["arp"], ["flute"])
+        b.deletePack("test_quest")
+        self.pump(0.3)
+        self.assertEqual(b.packs, [])
+        self.assertEqual(win.property("settSound"), "random")
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
     def test_minimized_start_stays_in_the_tray(self):
         """--minimized (start at login): no window until asked for; shown
         later, it sizes itself as a normal start does."""

@@ -107,12 +107,15 @@ def main(argv=None) -> int:
     ap.add_argument("--pack", metavar="OUT", help="read a game's songs and write a pack of them into OUT "
                     "(pack.json and its samples; see docs/TRANSLATOR.md, stage 2); play it with bitcomposer --pack-file")
     ap.add_argument("--name", help="with --pack: the pack's name (default: from the folder's)")
+    ap.add_argument("--progress", action="store_true",
+                    help="with --pack: a line 'progress DONE TOTAL' after each song (for the player)")
     args = ap.parse_args(argv)
     if args.pack:
         from ..translate import pack
         from .emulate import EmulatorMissing
         try:
-            pack.make(args.files, args.pack, args.name)
+            report = (lambda done, total: print(f"progress {done} {total}", flush=True)) if args.progress else None
+            pack.make(args.files, args.pack, args.name, progress=report)
         except (EmulatorMissing, ValueError, SPCError) as e:
             print(f"bitcomposer.spc: {e}", file=sys.stderr)
             return 1
