@@ -273,9 +273,12 @@ when an `emu-v*` tag is pushed (`emu.yml`: Linux x86_64 and aarch64,
 Windows x64, macOS arm64 and x86_64, abi3 so one wheel serves every
 Python) and the sdist for the rest. It is optional, the `import` extra:
 the generator and the player install everywhere, and IMPORT says what is
-missing and how to get it. Bundling it in the Windows build is still to
-do: the frozen player must first be able to run `bitcomposer.spc` as
-IMPORT's child process.
+missing and how to get it (on a pipx install, the panel's GET THE
+EMULATOR adds it). The Windows build carries it, built from the same
+commit: the executable has no `python -m` to run IMPORT's worker with, so
+started with a private marker it runs the import itself instead of the
+window (`tools/windows/launch_player.py`, `packs/library.py`), and the
+Windows build job checks that on the built executable.
 
 The core is checked instruction by instruction against the SingleStepTests
 cases and the gilyon hardware tests before it runs a song.
@@ -572,9 +575,9 @@ Each step is its own branch and pull request, shippable on its own:
 - **Emulator accuracy.** Drivers lean on timer behaviour and odd
   instructions; one wrong flag stalls a song. The test set has four
   drivers; others will find new faults.
-- **Packaging a compiled core**: wheels from CI and the message where
-  none matches are done (`emu.yml`); the Windows build bundling it is
-  open, see How it ships. (Speed itself is settled: Rust.)
+- **Packaging a compiled core**: done, see How it ships: wheels from CI
+  (`emu.yml`), the Windows build bundling it, and the message where no
+  wheel matches. (Speed itself is settled: Rust.)
 - **Drivers that load samples during the song** (from the main CPU): a
   snapshot holds only what was loaded when it was taken; such songs
   import with what was there.
