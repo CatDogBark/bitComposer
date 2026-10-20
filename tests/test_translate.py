@@ -252,5 +252,148 @@ class Events(unittest.TestCase):
         self.assertAlmostEqual(events._offset([60.1, 62.1]), 0.1, places=6)
 
 
+def tone(hz, seconds, rate=32000, noise=0.0, decay=None, seed=3):
+    """A sine (and noise) as 16-bit samples, falling away over `decay` seconds if given."""
+    import math
+    from array import array
+    r = random.Random(seed)
+    out = array("h")
+    for i in range(int(seconds * rate)):
+        env = math.exp(-i / rate / decay) if decay else 1.0
+        out.append(int(20000 / (1 + noise) * env * (math.sin(2 * math.pi * hz * i / rate) + r.uniform(-noise, noise))))
+    return out
+
+
+class Pack(unittest.TestCase):
+    """A thin pack from a game's readings (no game files: what the readings counted, made up)."""
+
+    @staticmethod
+    def gathered():
+        from bitcomposer.translate import pack, roles as R
+        g = pack.Gathered(game="Test Quest", songs=4)
+        g.uses[R.MELODY].update({"flute": 60, "oboe": 30, "bell": 1})   # the bell plays too little of it
+        g.uses[R.ARP].update({"harp": 40, "hat": 5})                    # the hat read as an arp in a song
+        g.uses[R.BASS].update({"bass": 80})
+        g.uses[R.DRUMS].update({"hat": 200, "kick": 150, "snare": 120})
+        g.f0 = {"flute": 440.0, "oboe": 220.0, "bell": 880.0, "harp": 261.63, "bass": 110.0}
+        for k in ("hat", "kick", "snare"):
+            g.pitches[k][0x1000] = 9
+        g.tempos.update({"slow": 1, "medium": 2, "fast": 1})
+        g.modes.update({"minor": 3, "major": 1})
+        g.drumless = 1
+        # echo on in three songs of four: a slap at 100 BPM (0.5 rows: 75 ms), a quarter, another slap
+        g.echo = [(True, 0.5, 0.6, 0.5), (True, 4.1, 0.7, 0.9), (True, 0.45, 0.5, 0.2), (False, None, 0.0, 0.0)]
+        return g
+
+    def test_each_pool_takes_the_samples_its_part_is_played_with_most(self):
+        from bitcomposer.translate import pack
+        p = pack.pools(self.gathered())
+        self.assertEqual(p["lead"], ["flute"] * 4 + ["oboe"] * 2)      # repeated by their share; no bell
+        self.assertEqual(p["arp"], ["harp"] * 4)                        # a drum the game plays is no arp
+        self.assertEqual(p["bass_heavy"], p["bass_light"])
+
+    def test_the_kit_by_brightness_and_ring(self):
+        from collections import Counter
+        from bitcomposer.translate import pack
+        g = self.gathered()
+        sounds = {"kick": (tone(55, 0.2, decay=0.05), 32000), "snare": (tone(200, 0.2, noise=0.5, decay=0.05), 32000),
+                  "hat": (tone(3000, 0.1, noise=1.5, decay=0.02), 32000)}
+        self.assertEqual(pack.kit(g, sounds), {"kick": "kick", "hihat": "hat", "snare": "snare"})
+        g.uses["drums"]["crash"] = 20                                   # a long bright one: the crash
+        sounds["crash"] = (tone(2500, 1.5, noise=2.0, decay=0.6), 32000)
+        self.assertEqual(pack.kit(g, sounds), {"kick": "kick", "hihat": "hat", "crash": "crash", "snare": "snare"})
+        g.uses["drums"] = Counter({"kick": 9, "snare": 9})               # two drums: a kick and a snare
+        self.assertEqual(pack.kit(g, sounds), {"kick": "kick", "snare": "snare"})
+
+    def test_the_habits_the_readings_give_straight(self):
+        from bitcomposer.translate import pack
+        h = pack.habits(self.gathered())
+        self.assertEqual(h["tempo"], {"slow": 1, "medium": 2, "fast": 1})
+        self.assertEqual(h["scale_family"], {"minor": 3, "major": 1, "pentatonic": 0})
+        self.assertEqual(h["drumless"], 0.25)
+        self.assertEqual(h["echo"], 0.75)
+        self.assertEqual(h["echo_delay"], {"slap": 2, "row": 0, "eighth": 0, "dotted": 0, "quarter": 1})
+        self.assertEqual(h["echo_wet"], {"light": 1, "normal": 1, "wet": 1})
+        lo, hi = h["echo_feedback"]
+        self.assertTrue(0.5 <= lo <= hi <= 0.7)
+
+    def test_a_pack_made_loads_and_composes(self):
+        import tempfile
+        from pathlib import Path
+        from bitcomposer.composer import compose_song
+        from bitcomposer.packs import PACKS, packfile
+        from bitcomposer.translate import pack
+        g = self.gathered()
+        sounds = {"flute": 440, "oboe": 220, "bell": 880, "harp": 261.63, "bass": 110,
+                  "kick": 55, "snare": 200, "hat": 3000}
+
+        def decode(k):
+            pcm = tone(sounds[k], 0.25, noise=0.0 if g.f0.get(k) else 1.0, decay=None if g.f0.get(k) else 0.05)
+            return pcm, ((len(pcm) - 3200, len(pcm)) if g.f0.get(k) else None)
+        data, files = pack.build(g, decode, "test_quest_spc")
+        self.assertEqual(data["voices"]["lead"], ["sflute"] * 4 + ["soboe"] * 2)
+        self.assertEqual(data["samples"]["sflute"]["note"], 69.0)
+        self.assertEqual(data["samples"]["sbass"]["release"], "bass")
+        self.assertTrue(data["samples"]["skick"]["percussion"])
+        with tempfile.TemporaryDirectory() as d:
+            name = packfile.load_pack_file(pack.write(data, files, Path(d)))
+            self.addCleanup(packfile.unload, name)
+            self.assertIn(name, PACKS)
+            song = compose_song(seed=1, pack=name)
+            self.assertTrue(song["patterns"])
+
+
+class Measures(unittest.TestCase):
+    """The yardsticks read from notes: a reading's and a generated song's alike."""
+
+    def test_a_score_s_melody_harmony_and_bars(self):
+        from bitcomposer.translate.measures import Note, Score, measure
+        notes = []
+        tune = [(0, 72), (1, 74), (2, 76), (3, 77)]                  # a bar of quarters, played twice
+        for bar in (0, 4):
+            notes += [Note(bar + b, 1, m, "melody", 0) for b, m in tune]
+            notes.append(Note(bar, 4, 48, "bass", 1))
+            notes += [Note(bar, 4, m, "harmony", v) for v, m in ((2, 60), (3, 64), (4, 67))]
+        notes.append(Note(8 + 1 / 3, 1, 79, "melody", 0))            # and a triplet's second note
+        notes.append(Note(8, 1, None, "drums", 5))
+        notes.sort(key=lambda n: n.beat)
+        m = measure(Score(notes, [0, 4, 8], 12, 120, 6))
+        self.assertEqual(m["melody_per_beat"], 9 / 12)
+        self.assertEqual(m["mel_step_pct"], 100 * 7 / 8)            # C D E F, C D E F G: a leap back, the rest steps
+        self.assertEqual(m["mel_bar_repeat_pct"], 100 / 3)          # the second bar of three
+        self.assertEqual(m["mel_strong_fit_pct"], 100)              # C over C on beats one, E over C on beats three
+        self.assertEqual(m["chord_tones"], 3)
+        self.assertEqual(m["triplet_pct"], 100)
+        self.assertEqual(m["drums_per_bar"], 1 / 3)
+
+    def test_a_tune_heard_again_off_the_bar_lines_is_a_repeat(self):
+        # Kefka's: a tune of two bars from a bar line, and again from a bar line's second beat (a bar read a
+        # beat off): its three bars the second time are each a bar's length of it from an earlier beat
+        from bitcomposer.translate.measures import Note, Score, measure
+        tune = [60, 62, 64, 65, 67, 69, 71, 72]
+        notes = [Note(4 + b, 1, m, "melody", 0) for b, m in enumerate(tune)]
+        notes += [Note(17 + b, 1, m, "melody", 0) for b, m in enumerate(tune)]
+        m = measure(Score(notes, [0, 4, 8, 12, 16, 20, 24], 28, 120, 14))
+        self.assertEqual(m["mel_bar_repeat_pct"], 60)               # bars from 16, 20 and 24, of five with notes
+        self.assertEqual(m["bar_repeat_pct"], 60)
+
+    def test_a_composed_song_by_its_channel_layout(self):
+        from bitcomposer.it_format import FX_SPECIAL, ITNote, ITPattern, NOTE_CUT
+        from bitcomposer.translate.measures import of_composed
+        pat = ITPattern(rows=16, channels=19)
+        pat.data[0][0] = ITNote(note=72, instrument=1, volume=64)
+        pat.data[4][0] = ITNote(note=74, instrument=1, volume=64, effect=FX_SPECIAL, effect_val=0xD3)
+        pat.data[8][0] = ITNote(note=NOTE_CUT)
+        pat.data[2][12] = ITNote(note=72, instrument=1, volume=30)   # the echo: left out
+        pat.data[0][6] = ITNote(note=60, instrument=2, volume=64)    # a kick
+        s = of_composed({"patterns": [pat], "orders": [0, 0, 255], "speed": 6, "tempo": 120})
+        self.assertEqual(s.bpm, 120)
+        self.assertEqual(s.bars, [0, 4])
+        self.assertEqual(s.end, 8)
+        mel = [(n.beat, n.beats, n.midi) for n in s.notes if n.group == "melody"]
+        self.assertEqual(mel, [(0, 1.125, 72), (1.125, 0.875, 74), (4, 1.125, 72), (5.125, 0.875, 74)])
+        self.assertEqual([(n.beat, n.midi) for n in s.notes if n.group == "drums"], [(0, None), (4, None)])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The translator's first stage, readings (`docs/TRANSLATOR.md`): `python -m bitcomposer.translate FILE.spc|FOLDER` reads songs as music and keeps the readings in a database on this machine (never in the repository): each song's beat and bar (on a grid, or followed loosely where no grid holds), each voice's part (drums, bass, melody, harmony, arp, counter-line, accompaniment, a doubling or an echo), key and chords, and form (its parts and sections, and where it loops). Checked by ear on 43 songs' beats and 24 songs' form, across 21 games; `--show` prints the chords and form. A developer tool for now: nothing in the player uses it yet.
+- The translator's second stage, a thin first pack: `python -m bitcomposer.spc --pack OUT FOLDER` reads a game's songs and writes a pack file of them, for `--pack-file`: the samples the game plays each part with most, as WAVs (looped, coloured by the SNES chip's interpolation, tuned from each sample's measured pitch), a drum kit chosen by how bright each drum is and how long it rings, and the habits the readings give straight (tempo, scale family, how often a song has no drums, echo). `python -m bitcomposer.translate FOLDER --against PACK` measures songs composed with a pack beside the songs read, with one set of yardsticks taken from the notes on both sides.
 
 ## 1.1.1 — 2026-10-19
 

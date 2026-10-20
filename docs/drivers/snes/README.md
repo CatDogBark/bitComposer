@@ -116,6 +116,10 @@ the generator plays, and a change to one is a change to the songs).
 |---|---|---|---|
 | `ffvi` | echo feedback | 0.64 in every snapshot | chosen per song: 0.78 in 42 songs, 0.55 in 27, 0.62 in 7, 0.47 to 0.77 in the rest |
 | `ffvi` | echo against the main | (not stated) | the master volume (63) halves the voices and not the echo, so the echo (0.20) is about 0.4 of the main |
+| `ffvi` | tempo | slow 2, medium 3, fast 1 | read from the notes (the translator, 69 of 82 songs on a beat): 85 BPM at the median, 73 to 115 for the middle half; slow 48, medium 12, fast 9 |
+| `ffvi` | echo delay | slap 3, eighth 2, dotted 1 | 80 ms in every song (`akao.md`): at each song's tempo, nearest the slap (half a row) in 49 and a row in 10, never an eighth |
+| `ffvi` | drums | (not stated) | no drum voice in 22 of the 69 songs read on a beat |
+| `ffvi` | arp | an arp bed in 3 of 9 intros (and the generator's arp in every song) | an arp voice in 5 of the 69 |
 | `mana` | echo feedback and delay | 0.31 on average; delays 32 to 176 ms, 96 and 176 the most common | two kinds of echo, not one: short and dry (48 ms in 15 songs, 96 ms in 11, no feedback) or long and ringing (176 ms with 0.72 to 0.79 in 16, 96 ms with 0.81 in 4) |
 | `mana` | echo level | 0.34 of the main | 0.5 in 43 songs, 0.25 in 14, against a full master volume |
 | `mana` | echo sides | the same sign in 60 of 69 | the same sign in every song |
