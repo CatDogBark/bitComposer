@@ -527,6 +527,7 @@ ApplicationWindow {
         id: chip
         property string text: ""
         property bool active: false
+        property bool bright: false     // a call to action: the accent's text always, its outline under the mouse
         property color accent: root.accentGreen
         signal clicked()
         implicitWidth: chipLabel.implicitWidth + Math.round(10 * root.ui)
@@ -534,12 +535,12 @@ ApplicationWindow {
         radius: 3
         color: active ? "#1a2e26" : (chipMouse.containsMouse ? "#0f1a16" : "transparent")
         border.width: 1
-        border.color: active ? chip.accent : (chipMouse.containsMouse ? root.tileBorder : "transparent")
+        border.color: active ? chip.accent : (chipMouse.containsMouse ? (chip.bright ? chip.accent : root.tileBorder) : "transparent")
         Text {
             id: chipLabel
             anchors.centerIn: parent
             text: chip.text
-            color: chip.active ? chip.accent : root.dimText
+            color: chip.active || chip.bright ? chip.accent : root.dimText
             font.family: root.mono
             font.pixelSize: Math.round(8 * root.ui)
         }
@@ -1549,8 +1550,10 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                             }
                             Chip {
+                                objectName: "getEmulator"
                                 visible: backend.updateKind === "pipx"
                                 text: "GET THE EMULATOR"
+                                bright: true
                                 enabled: !backend.updating
                                 onClicked: backend.getEmulator()
                             }
