@@ -1289,6 +1289,20 @@ ApplicationWindow {
                                 font.pixelSize: Math.round(8 * root.ui)
                                 wrapMode: Text.WordWrap
                             }
+                            OptionRow {
+                                visible: backend.checkUpdates
+                                label: "CANDIDATES"; options: ["on", "off"]; value: backend.prereleases ? "on" : "off"
+                                onPicked: function(c) { if ((c === "on") !== backend.prereleases) backend.setPrereleases(c === "on") }
+                            }
+                            Text {
+                                visible: backend.checkUpdates
+                                Layout.fillWidth: true
+                                text: "On: UPDATE offers release candidates too, the next version before it is out, for trying it. Off: releases only. Turning it off does not go back from a candidate; the next release is newer anyway."
+                                color: root.dimText
+                                font.family: root.mono
+                                font.pixelSize: Math.round(8 * root.ui)
+                                wrapMode: Text.WordWrap
+                            }
                             Text {
                                 Layout.fillWidth: true
                                 text: "MEDIA KEYS  " + (backend.mediaKeys ? backend.mediaKeys.toUpperCase() : "NOT AVAILABLE HERE")

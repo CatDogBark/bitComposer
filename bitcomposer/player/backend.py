@@ -231,6 +231,9 @@ class Backend(QObject):
     def _get_check_updates(self): return self.player.check_updates
     checkUpdates = Property(bool, _get_check_updates, notify=updateChanged)
 
+    def _get_prereleases(self): return self.player.prereleases
+    prereleases = Property(bool, _get_prereleases, notify=updateChanged)
+
     def _get_media_keys(self): return self._media_keys
     mediaKeys = Property(str, _get_media_keys, notify=mediaKeysChanged)
 
@@ -296,8 +299,10 @@ class Backend(QObject):
         if not self.player.check_updates:
             return
 
+        prereleases = self.player.prereleases
+
         def check():
-            rel = upd.newer_release(__version__)
+            rel = upd.newer_release(__version__, prereleases=prereleases)
             if rel:
                 self._dispatch.call.emit(lambda: self._offer(rel))
         threading.Thread(target=check, daemon=True).start()
@@ -501,6 +506,23 @@ class Backend(QObject):
         self._upd_state = "confirm"
         self._upd_log = []
         self._upd_progress = -1.0
+        self.updateChanged.emit()
+
+    @Slot(bool)
+    def setPrereleases(self, on):
+        """SET > PLAYER > CANDIDATES: release candidates offered too. Turned
+        on, the check runs again now; turned off, a candidate offered to a
+        release player is withdrawn (on a candidate, they are its line)."""
+        self.player.prereleases = bool(on)
+        self.player.persist()
+        if on:
+            self._set_notice("offers release candidates too")
+            self.start()
+        else:
+            self._set_notice("offers releases only")
+            if self._release and not self._updating and upd.is_prerelease(self._release["version"]) \
+                    and not upd.is_prerelease(__version__):
+                self._release = None
         self.updateChanged.emit()
 
     @Slot(bool)
