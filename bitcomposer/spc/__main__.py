@@ -107,18 +107,27 @@ def main(argv=None) -> int:
     ap.add_argument("--pack", metavar="OUT", help="read a game's songs and write a pack of them into OUT "
                     "(pack.json and its samples; see docs/TRANSLATOR.md, stage 2); play it with bitcomposer --pack-file")
     ap.add_argument("--name", help="with --pack: the pack's name (default: from the folder's)")
-    ap.add_argument("--progress", action="store_true",
-                    help="with --pack: a line 'progress DONE TOTAL' after each song (for the player)")
+    ap.add_argument("--progress", metavar="FILE",
+                    help="with --pack: add a line 'progress DONE TOTAL' to FILE after each song, and "
+                         "'error WHY' if it stops (the player's PACKS panel reads it)")
     args = ap.parse_args(argv)
     if args.pack:
         from ..translate import pack
         from .emulate import EmulatorMissing
+
+        def note(line):
+            if args.progress:
+                with open(args.progress, "a", encoding="utf-8") as fh:
+                    fh.write(line + "\n")
         try:
-            report = (lambda done, total: print(f"progress {done} {total}", flush=True)) if args.progress else None
-            pack.make(args.files, args.pack, args.name, progress=report)
+            pack.make(args.files, args.pack, args.name, progress=lambda done, total: note(f"progress {done} {total}"))
         except (EmulatorMissing, ValueError, SPCError) as e:
+            note(f"error {e}")
             print(f"bitcomposer.spc: {e}", file=sys.stderr)
             return 1
+        except Exception as e:                   # said where the player looks, then the traceback
+            note(f"error {type(e).__name__}: {e}")
+            raise
         return 0
     snaps = []
     for f in args.files:

@@ -1529,7 +1529,7 @@ ApplicationWindow {
                                 text: backend.updateKind === "pipx"
                                     ? "IMPORT needs the SNES emulator, which this player can add from PyPI. ADD works without it."
                                     : backend.updateKind === "frozen"
-                                    ? "IMPORT needs the SNES emulator, which this Windows build does not include yet. ADD works without it."
+                                    ? "IMPORT needs the SNES emulator, which this Windows build is missing: reinstall bitComposer from its release page. ADD works without it."
                                     : "IMPORT needs the SNES emulator: pip install 'bitcomposer[import]' (on pipx, pipx install --force 'bitcomposer[import]'). ADD works without it."
                                 color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(8 * root.ui)
                                 wrapMode: Text.WordWrap
