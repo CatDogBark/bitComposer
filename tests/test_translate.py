@@ -471,5 +471,86 @@ class Measures(unittest.TestCase):
         self.assertEqual([(n.beat, n.midi) for n in s.notes if n.group == "drums"], [(0, None), (4, None)])
 
 
+class Vocab(unittest.TestCase):
+    """The harmony vocabulary counted from readings made up here: chord moves and voicings."""
+
+    def test_numerals_in_the_key_keep_the_shape(self):
+        from bitcomposer.translate.vocab import degree, numeral
+        c = 0
+        self.assertEqual([numeral(r, c, "major", s) for r, s in ((0, ""), (5, ""), (7, "7"), (2, "m7"), (10, ""),
+                                                                 (11, "dim"), (6, ""), (9, "m"), (0, "5"), (0, "maj7"))],
+                         ["I", "IV", "V7", "ii7", "bVII", "viidim", "#IV", "vi", "I5", "Imaj7"])
+        a = 9
+        self.assertEqual([numeral(r, a, "minor", s) for r, s in ((9, "m"), (7, ""), (8, "dim"), (5, ""), (4, ""),
+                                                                 (2, "m"), (11, "m7b5"), (10, ""))],
+                         ["i", "VII", "#viidim", "VI", "V", "iv", "ii7b5", "bII"])
+        self.assertEqual([degree(n) for n in ("ii7", "bVII", "#viidim", "Isus4", "ii7b5", "Imaj7")],
+                         ["II", "bVII", "#VII", "I", "II", "I"])
+
+    def test_a_known_progression_gives_its_moves(self):
+        from bitcomposer.translate.vocab import Song, Span, moves
+        # C major: C F G7 C Am F, a silent beat, then C (no move across silence), then an unfit span
+        major = Song("major", 0, "major", [Span(0, 4, 0, "", 0.9), Span(4, 6, 5, "", 0.9), Span(6, 8, 7, "7", 0.9),
+                                            Span(8, 12, 0, "", 0.9), Span(12, 14, 9, "m", 0.9), Span(14, 16, 5, "", 0.9),
+                                            Span(16, 17, None, "", 0.0), Span(17, 18, 0, "", 0.9),
+                                            Span(18, 19, 2, "m", 0.3), Span(19, 20, 7, "", 0.9)])
+        minor = Song("minor", 9, "minor", [Span(0, 2, 9, "m", 0.9), Span(2, 4, 2, "m", 0.9), Span(4, 6, 4, "", 0.9),
+                                            Span(6, 8, 9, "m", 0.9), Span(8, 10, 2, "m", 0.9)])
+        rows = {(m, a, b): (n, beats, held) for m, a, b, n, beats, held in moves([major, minor])}
+        self.assertEqual(rows, {
+            ("major", "I", "IV"): (1, 2, 2), ("major", "IV", "V7"): (1, 2, 2), ("major", "V7", "I"): (1, 4, 4),
+            ("major", "I", "vi"): (1, 2, 2), ("major", "vi", "IV"): (1, 2, 2),
+            ("minor", "i", "iv"): (2, 4, 2), ("minor", "iv", "V"): (1, 2, 2), ("minor", "V", "i"): (1, 2, 2)})
+        self.assertEqual([r[1:3] for r in moves([major, minor])][0], ("i", "iv"))   # the most counted first
+
+    def test_a_known_voicing_gives_its_tones_inversion_and_roles(self):
+        from bitcomposer.translate.vocab import Song, Span, voicings
+        # four beats of C major: the bass on E (first inversion), G C E held above, the melody on G then A;
+        # then two beats of G5 struck staccato (G and D alternating, a fifth of a beat each), no bass
+        s = Song("test", 0, "major", [Span(0, 4, 0, "", 0.9), Span(4, 6, 7, "5", 0.9)], {
+            "bass": [(0, 4, 40)],
+            "accompaniment": [(0, 4, 55), (0, 4, 60), (0, 4, 64)] + [(4 + i / 2, 0.2, 55 if i % 2 == 0 else 62) for i in range(4)],
+            "melody": [(0, 3, 67), (3, 1, 69)],
+        })
+        v = voicings([s])
+        self.assertEqual((v.songs, v.spans), (1, 2))
+        self.assertEqual(v.tones, {"R 3 5": 1, "R 5": 1})
+        self.assertEqual(v.inversion, {"third": 1, "root": 1})
+        self.assertEqual((v.spread, v.spread_upper, v.sounding), ([24, 7], [9, 7], [4, 2]))
+        self.assertEqual(v.by_role["bass"], {"third": 4})
+        self.assertEqual(v.by_role["accompaniment"], {"root": 5, "third": 4, "fifth": 5})   # the struck ones an eighth each
+        self.assertEqual(v.by_role["melody"], {"fifth": 3, "other": 1})
+        self.assertEqual((v.above_bass, v.above_top), ([27.5], [3.5]))
+
+    def test_songs_load_once_through_and_the_rest_are_left_out(self):
+        from array import array
+        from bitcomposer.translate import store
+        from bitcomposer.translate.vocab import load
+        db = store.connect(":memory:")
+        row = lambda sid, bpm, tonic, loop: (sid, "", "", "Test Quest", sid, "", None, 8.0, store.VERSION, bpm, 4, 2,
+                                             1.0, 0.5, tonic, "major" if tonic is not None else None, 0.8, 0,
+                                             loop, 2 if loop is not None else None, 2.0 if loop is not None else None)
+        for args in (("beat", 120.0, 0, 1), ("free", None, None, None), ("nokey", 120.0, None, None), ("quiet", 120.0, 0, None)):
+            db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", row(*args))
+        # 16 beats of half a second, bars of four; the song loops from bar two for two seconds: beat 8
+        db.execute("INSERT INTO beats VALUES (?,?,?)", ("beat", array("d", [b / 2 for b in range(16)]).tobytes(),
+                                                       array("d", [0.0, 2.0, 4.0, 6.0]).tobytes()))
+        for sid in ("beat", "nokey"):
+            for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):
+                db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "", 0.9))
+        db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 12, None, "", 0.0))
+        db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 12, 16, 0, "", 0.9))
+        notes = array("f", [0, 4, 36, 0.5, 0.5, 0, 4, 4, 41, 0.5, 0.5, 0, 8, 4, 43, 0.5, 0.5, 0,
+                            12, float("nan"), 36, 0.5, 0.5, 0])
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, notes.tobytes()))
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, notes.tobytes()))
+        songs, left_out = load(db)
+        self.assertEqual(left_out, {"free time": 1, "no key": 1, "unfit": 1})
+        self.assertEqual([s.title for s in songs], ["beat"])
+        self.assertEqual([(c.start, c.end, c.root) for c in songs[0].chords], [(0, 4, 0), (4, 8, 5)])
+        self.assertEqual(songs[0].notes, {"bass": [(0, 4, 36), (4, 4, 41)]})
+        self.assertEqual(load(db, "Other Quest"), ([], {}))
+
+
 if __name__ == "__main__":
     unittest.main()

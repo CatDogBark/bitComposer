@@ -198,6 +198,62 @@ use it first; the built-in packs move over only when chosen.
 Check: the same distributions measured in generated songs against the
 soundtrack's; the FFVI comparison again; listening.
 
+Where it stands (2026-10-20): the harmony half of "from the readings",
+counted. `python -m bitcomposer.translate.vocab --db PATH`
+(`translate/vocab.py`) prints two tables over a database's songs: how one
+chord moves to the next, as Roman numerals in the song's key with the
+chord's shape kept (I -> IV, ii7 -> V7, bVII -> I), counted once and in
+the beats the chord moved to is held, by mode (the numerals mean
+different degrees in major and minor), with the moves by degree alone
+under each; and the voicings over the chord spans: which of the chord's
+tones the bass, harmony, accompaniment and arp sound, the spread, the
+lowest note's tone (the inversion), which tone each part holds (the
+melody and counter-line too) and where the melody sits. Each song counts
+once through, to its loop, from the spans that fit (0.6: fewer than half
+a triad's tones sounding reads under it); a pitch sounds in a span when
+its notes cover a quarter of it, a struck note heard for an eighth at
+least (FFVI's accompaniment keys off in a fifth of a beat). Songs in free
+time, with no key, or mostly silent or unfit are left out. FFVI:
+
+| | FFVI |
+|---|---|
+| songs counted | 67 of 82 (13 in free time, 2 mostly silent) |
+| chord spans, once through | 3929 (2100 of them a beat long) |
+| moves, major keys / minor keys | 1308 in 26 songs / 2465 in 41 |
+| distinct moves, shape kept | 620 / 963 (the most counted, IV -> I, 2 %) |
+| moves by degree alone | IV -> I 7 % / 5 %, I -> IV 6 % / 5 %, V -> I 3 % / 3 % |
+| moves to the same root's other shape | 14 % / 11 % |
+| chords held most, major | I, IV, vi, I5, iii, V |
+| minor | i, I5, VI, VII, iv, IV5, III |
+| the chord's tones sounding | root, third and fifth 29 %; root and fifth 19 %; the root alone 7 % |
+| the lowest note | the root 44 %, the fifth 23 %, the third 14 %, a sus tone 4 %, the seventh 7 %, none of the chord's 8 % |
+| pitches sounding a span | 4 [2-5] |
+| spread without the bass (semitones) | 12 [4-27] |
+| the bass on the root / fifth / third | 53 % / 19 % / 12 % of its beats |
+| the melody on a chord tone | 65 % of its beats (the fifth 25, the root 22, the third 18) |
+| the melody above the chord's top (semitones) | 1 [-11-11] |
+
+What they say: FFVI's harmony moves between I and IV and to the relative
+minor far more than from V to I, in both modes, and its minor is the
+natural minor's (VI and VII major, v as often as V): modal, not the
+harmonic minor's cadences. Its chords are open: a bare fifth or a root
+alone in a quarter of the spans (the 1576 "5" shapes of stage 1), the
+bass on the root half its time and on the fifth a fifth of it, the upper
+parts within an octave at the median. The moves with the shape kept are
+spread thin (the top at 2 %): the chord reader changes chord every beat
+over half the time, so passing chords are moves too, and the habit shows
+by degree alone; a vocabulary would draw the degree moves and the shapes
+apart. What looks wrong: the bass is read octaves low in 29 songs (its
+median pitch at MIDI 20 to 29; Dancing Mad's parts at 2, 3 and -19: a
+sample's tuning read at a sub-harmonic), so the spread with the bass (31
+semitones) and the melody above the bass (34) are not to be believed;
+moves to the same root's other shape (I -> I5 -> I) are a held chord
+split when its third drops out, not harmony; VII -> biiidim and I -> i in
+major are the key or chord reading; and the melody sits at the chord's
+top, inside it a quarter of the time, because the accompaniment and
+counter-line are read as high as it. Rhythm, melody and drum patterns are
+the next slice.
+
 ## Stage 5: the player's PACKS panel
 
 As `SPC-IMPORT.md` step 6: import a folder (progress while each song is
