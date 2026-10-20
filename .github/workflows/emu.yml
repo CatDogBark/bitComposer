@@ -19,7 +19,6 @@ name: Emulator wheels
 on:
   push:
     tags: ["emu-v*"]
-    branches: [emu-wheels]   # TEMPORARY: proves the fixed check on this branch; removed before the PR
   pull_request:
     branches: [main]
     paths: ["emu/**", ".github/workflows/emu.yml"]
