@@ -37,8 +37,10 @@ from a game's SPC files to a pack the generator composes with.
 - The first pack is thin, in today's format, to run the whole chain; the
   vocabulary is then made anew from what the readings show, and that is
   the plan's main work (stage 4), not guessed before the readings exist.
-- The generator writes in voices (stage 3), as many as a setting says:
-  eight for the SNES palette, as the hardware had, more possible later.
+- The generator writes in voices (stage 3), as many as the arrangement is
+  best with (2026-10-20): off the hardware, the SNES chip's eight are not a
+  rule for generated songs. Songs converted from SPC files keep the game's
+  voices one to one, and with them its sound.
 - A new vocabulary serves imported packs first; the built-in packs sound
   as they do until moving them over is chosen.
 - Final Fantasy VI first, checked against the hand-made `ffvi` pack.
@@ -162,11 +164,12 @@ the generator writes them, and one back end makes the module.
 - **A score of voices.** The generator's parts (melody, harmony, bass, arp,
   counter-line, drums) given to voices, each note the decoder's kind: a
   sample, a pitch, volumes, an envelope (ADSR or GAIN), whether it sends to
-  the echo. How many voices is a setting: eight for the SNES palette, as
-  the hardware had, so an arrangement fits it the way a game's had to.
-  More is possible later at a cost: every voice is a channel, and IT's 64
-  leave the echo's repeats fewer to share (six voices sending get about
-  nine repeats each; sixteen about three).
+  the echo. How many voices is the arrangement's, not the hardware's: a
+  generated song is not held to the SNES chip's eight (a drum kit can take
+  a voice a sound, a chord a voice a tone), while a converted song keeps
+  the game's own voices. The cost to weigh is IT's 64 channels: every
+  voice is a channel, and the echo's repeats share what is left (six
+  voices sending get about nine repeats each; sixteen about three).
 - **One back end.** The converter's stages after decoding (samples,
   instruments, the echo plan and its copies, the notes' placement, the
   master volume) take a generated score the way they take a decoded one.
