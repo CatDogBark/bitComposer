@@ -26,6 +26,35 @@ def _have_openmpt():
 
 
 @unittest.skipUnless(_have_openmpt(), "libopenmpt is not installed")
+class QtReferences(unittest.TestCase):
+    """PySide6 6.12 gives back a reference to True that it never took each
+    time a signal fires. Before Python 3.12 True can be freed: the player,
+    whose position signal fires four times a second, crashed after some
+    minutes of playing (Fatal Python error: bool_dealloc), and this suite
+    at its exit. pyproject.toml keeps 6.12 out on those Pythons; this says
+    when a newer PySide6 is clean (or not). From 3.12 on True is immortal,
+    and there is nothing to count."""
+
+    @unittest.skipIf(sys.version_info >= (3, 12), "True is immortal from Python 3.12 on")
+    def test_a_signal_leaves_true_s_references_alone(self):
+        try:
+            from PySide6.QtCore import QObject, Signal
+        except ImportError:
+            self.skipTest("needs PySide6")
+
+        class Source(QObject):
+            fired = Signal()
+        source, heard = Source(), []
+        source.fired.connect(lambda: heard.append(1))   # a direct connection: no application needed
+        source.fired.emit()
+        before = sys.getrefcount(True)
+        for _ in range(200):
+            source.fired.emit()
+        self.assertEqual(len(heard), 201)
+        self.assertLess(before - sys.getrefcount(True), 20,
+                        "each signal fired took a reference to True away (PySide6 6.12's bug)")
+
+
 class EngineHeadless(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
