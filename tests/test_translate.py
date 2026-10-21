@@ -552,5 +552,123 @@ class Vocab(unittest.TestCase):
         self.assertEqual(load(db, "Other Quest"), ([], {}))
 
 
+class Rhythm(unittest.TestCase):
+    """The rhythm vocabulary counted from readings made up here: patterns per part and bar, the bass's and
+    the drums' figures, the melody's moves and lengths."""
+
+    def test_positions_on_the_grid_and_their_drawing(self):
+        from fractions import Fraction as F
+        from bitcomposer.translate.rhythm import draw, place, position, value
+        self.assertEqual([position(t, 4) for t in (0.0, 0.26, 1.49, 2.76)], [0, F(1, 4), F(3, 2), F(11, 4)])
+        self.assertEqual(position(0.34, 12), F(1, 3))
+        self.assertEqual([place(F(n, 12)) for n in (0, 6, 3, 4, 8, 2, 1, 18)],
+                         ["beat", "eighth", "sixteenth", "triplet", "triplet", "triplet", "finer", "eighth"])
+        self.assertEqual(draw([0, F(1, 2), 1, F(4, 3), F(5, 3), F(9, 4), F(23, 8)], 3), "x.x. xt.t .x.~")
+        self.assertEqual(draw([0, F(1, 8)], 1), "x...")                 # a finer onset at a quarter's cell yields to it
+        self.assertEqual(draw([], 4), "(rest)")
+        self.assertEqual(draw([0, 2], 4, {0: "R", 2: "5"}), "R... .... 5... ....")
+        self.assertEqual([value(F(1, 4)), value(F(1, 3)), value(F(1, 2)), value(F(3, 4)), value(1), value(F(7, 2)), value(9)],
+                         ["a sixteenth", "a triplet eighth", "an eighth", "a dotted eighth", "a beat", "four beats", "longer"])
+
+    def test_a_known_bar_gives_its_pattern(self):
+        from bitcomposer.translate.rhythm import Song, rhythms
+        # three bars of four, the last cut to two beats at a section join; chords struck in three voices on the
+        # beats in the first bar, eighths in the second, a triplet tune in the melody
+        chords = [(b, 1, m, "p") for b in range(4) for m in (60, 64, 67)] + [(4 + e / 2, 0.5, 60, "p") for e in range(8)]
+        tune = [(0, 1, 72, "l"), (1 / 3, 1, 74, "l"), (2 / 3, 1, 76, "l"), (1, 3, 77, "l"), (4, 4, 79, "l")]
+        s = Song("test", 4, 12, [(0, 4), (4, 8), (8, 10)], [], {"accompaniment": chords, "melody": tune})
+        r = rhythms([s])
+        self.assertEqual(dict(r.patterns["accompaniment", 4]), {"x... x... x... x...": 1, "x.x. x.x. x.x. x.x.": 1})
+        self.assertEqual(dict(r.patterns["melody", 4]), {"xt.t x... .... ....": 1, "x... .... .... ....": 1})
+        self.assertEqual(r.patterns["accompaniment", 4].songs["x... x... x... x..."], 1)
+        self.assertEqual((r.songs["accompaniment"], r.bars["accompaniment"], r.onsets["accompaniment"]), (1, 2, 12))
+        self.assertEqual(dict(r.places["accompaniment"]), {"beat": 8, "eighth": 4})
+        self.assertEqual(dict(r.places["melody"]), {"beat": 3, "triplet": 2})
+        self.assertEqual((dict(r.meters), dict(r.odd)), ({4: 1}, {4: 1}))
+        self.assertEqual(r.off_eighths, [100 * 2 / 25])                 # as stage 2 counts: every pitched note
+        self.assertEqual(r.triplets, [100.0])
+
+    def test_a_known_bass_line_gives_its_figure(self):
+        from bitcomposer.translate.rhythm import Song, bass
+        from bitcomposer.translate.vocab import Span
+        # a bar of C: C2 G2 C3 G2 (the octave bass); a bar of F: F A C and a B that is no tone of F
+        line = [(0, 1, 36, "b"), (1, 1, 43, "b"), (2, 1, 48, "b"), (3, 1, 43, "b"),
+                (4, 1, 41, "b"), (5, 1, 45, "b"), (6, 1, 48, "b"), (7, 1, 47, "b")]
+        s = Song("test", 4, 4, [(0, 4), (4, 8)], [Span(0, 4, 0, "", 0.9), Span(4, 8, 5, "", 0.9)], {"bass": line})
+        b = bass([s])
+        self.assertEqual((b.songs, b.bars), (1, 2))
+        self.assertEqual(dict(b.figures[4]), {"R... 5... r... 5...": 1, "R... 3... 5... +...": 1})
+        self.assertEqual(dict(b.moves), {("fifth", "up"): 1, ("fourth", "up"): 1, ("fourth", "down"): 1, ("step", "down"): 2,
+                                         ("third", "up"): 2})
+        self.assertEqual(dict(b.semitones), {7: 1, 5: 1, -5: 1, -2: 1, 4: 1, 3: 1, -1: 1})
+        # no chord read, or an unfit one, marks the note ?
+        s.chords = [Span(0, 4, None, "", 0.0), Span(4, 8, 5, "", 0.3)]
+        self.assertEqual(list(bass([s]).figures[4]), ["?... ?... ?... ?..."])
+
+    def test_drum_sounds_are_named_by_how_they_play(self):
+        from bitcomposer.translate.rhythm import Song, drums
+        # four bars: a kick on one and three, a snare on two and four, a hat on the eighths
+        hits = []
+        for bar in range(4):
+            hits += [(bar * 4, 0.3, float("nan"), "k"), (bar * 4 + 2, 0.3, float("nan"), "k")]
+            hits += [(bar * 4 + 1, 0.3, float("nan"), "s"), (bar * 4 + 3, 0.3, float("nan"), "s")]
+            hits += [(bar * 4 + e / 2, 0.1, float("nan"), "h") for e in range(8)]
+        s = Song("test", 4, 4, [(0, 4), (4, 8), (8, 12), (12, 16)], [], {"drums": hits})
+        d = drums([s])
+        self.assertEqual({k: v["name"] for k, v in d.sounds.items()}, {"k": "kick", "s": "snare", "h": "hat"})
+        self.assertEqual((d.sounds["h"]["a_bar"], d.sounds["k"]["one"], d.sounds["k"]["three"], d.sounds["s"]["back"]), (8, 4, 4, 8))
+        self.assertEqual(dict(d.figures[4]), {(("kick", "x... .... x... ...."), ("snare", ".... x... .... x..."),
+                                               ("hat", "x.x. x.x. x.x. x.x.")): 4})
+        self.assertEqual((d.songs, d.bars), (1, 4))
+
+    def test_a_known_melody_gives_its_moves_and_lengths(self):
+        from bitcomposer.translate.rhythm import Song, melody
+        # C D E G E C C, the G struck with a lower B that the line leaves out; a rest after the last E
+        tune = [(0, 0.5, 60, "l"), (0.5, 0.5, 62, "l"), (1, 1, 64, "l"), (2, 1, 67, "l"), (2, 1, 59, "l"),
+                (3, 1, 64, "l"), (5, 2, 60, "l"), (7, 1, 60, "l")]
+        s = Song("test", 4, 4, [(0, 4), (4, 8)], [], {"melody": tune})
+        m = melody([s])
+        self.assertEqual((m.songs, m.notes), (1, 7))
+        self.assertEqual(dict(m.moves), {("step", "up"): 2, ("third", "up"): 1, ("third", "down"): 2, ("repeat", ""): 1})
+        self.assertEqual(dict(m.semitones), {2: 2, 3: 1, -3: 1, -4: 1, 0: 1})
+        self.assertEqual({float(k): v for k, v in m.lengths.items()}, {0.5: 2, 1: 2, 2: 2})
+        self.assertEqual(m.sounded, [1, 1, 1, 1, 0.5, 1])
+
+    def test_songs_load_once_through_with_their_bars_and_drums(self):
+        from array import array
+        from bitcomposer.translate import store
+        from bitcomposer.translate.rhythm import load
+        db = store.connect(":memory:")
+        row = lambda sid, bpm, loop: (sid, "", "", "Test Quest", sid, "", None, 8.0, store.VERSION, bpm, 4, 2,
+                                      1.0, 0.5, 0, "major", 0.8, 0, loop, 2 if loop is not None else None,
+                                      2.0 if loop is not None else None)
+        for args in (("beat", 120.0, 1), ("free", None, None), ("quiet", 120.0, None)):
+            db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", row(*args))
+        # 16 beats of half a second, bars of four; the song loops from bar two for two seconds: beat 8
+        for sid in ("beat", "quiet"):
+            db.execute("INSERT INTO beats VALUES (?,?,?)", (sid, array("d", [b / 2 for b in range(16)]).tobytes(),
+                                                           array("d", [0.0, 2.0, 4.0, 6.0]).tobytes()))
+        for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):
+            db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("beat", a, b, root, "", 0.9))
+        db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 16, None, "", 0.0))
+        db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?)", ("beat", 0, "kickkey", 0, 0, None, 0, 100, 0))
+        bass = array("f", [0, 4, 36, 0.5, 0.5, 1, 4, 4, 41, 0.5, 0.5, 1, 6, 1, 43, 0, 0.5, 1, 8, 4, 43, 0.5, 0.5, 1])
+        drum = array("f", [0, 0.5, float("nan"), 0.5, 0.5, 0, 2, 0.5, float("nan"), 0.5, 0.5, -1])
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, bass.tobytes()))
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, drum.tobytes()))
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 2, "melody", None, '{"roll": true}', bass.tobytes()))
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 3, "double", 0, None, bass.tobytes()))
+        songs, left_out = load(db)
+        self.assertEqual(left_out, {"free time": 1, "mostly silent": 1})
+        self.assertEqual([s.title for s in songs], ["beat"])
+        s = songs[0]
+        self.assertEqual((s.meter, s.division, s.bars), (4, 2, [(0, 4), (4, 8)]))
+        self.assertEqual([(c.start, c.end, c.root) for c in s.chords], [(0, 4, 0), (4, 8, 5)])
+        self.assertEqual(s.notes["bass"], [(0, 4, 36, "noise"), (4, 4, 41, "noise")])   # the silent note and the loop's left out
+        self.assertEqual([n[3] for n in s.notes["drums"]], ["kickkey", "noise"])
+        self.assertEqual((list(s.rolls), len(s.rolls["melody"])), (["melody"], 2))
+        self.assertNotIn("double", s.notes)
+
+
 if __name__ == "__main__":
     unittest.main()
