@@ -279,6 +279,77 @@ the chord's top, inside it a quarter of the time, because the
 accompaniment and counter-line are read as high as it. Rhythm, melody
 and drum patterns are the next slice.
 
+Where it stands (2026-10-20), the rhythm half: `python -m
+bitcomposer.translate.rhythm --db PATH` (`translate/rhythm.py`) prints
+three tables over the same songs, once through. Each part's rhythms bar by
+bar: its voices' onsets together (a chord struck in three voices is one
+onset) on the song's grid, drawn four characters a beat, counted per meter
+with the share of the part's bars each covers and the songs it is heard
+in; with them, how dense each part plays and where its onsets fall (on the
+beat, an eighth, a sixteenth, a triplet, finer). The bass's figures, its
+rhythm with each note's chord tone in its place (the chord from the chords
+table), and the drums', which sound plays where: the readings keep a hit's
+sample, not what it is, so a sound is named by how the game plays it over
+all its songs (six hits a bar or more where it plays, the hat; of the rest,
+landing on the bar's first beat more than on its backbeats, the kick, the
+other way the snare), and the sounds are listed with their profiles. The
+melody's moves from note to note by size and direction, and its notes'
+lengths, the time to the next note on the song's grid. Only bars of the
+song's meter count: a bar of another length is a grid section restarting
+where its timing slipped (stage 1's known gap). FFVI:
+
+| | FFVI |
+|---|---|
+| songs counted | 67 of 82, the harmony's; 1824 bars of 2343 (519 of another length than the song's meter, 211 of them in Dancing Mad's three readings) |
+| meters | four beats in 63 songs, three in 4 |
+| onsets a bar | bass 4.4, accompaniment 7.5, arp 10.5, counter-line 4.6, melody 3.9, drums 8.0, held harmony 0.9 |
+| off the eighths / of those on a triplet | bass 25 % / 42 %, accompaniment 35 / 29, counter-line 26 / 46, melody 23 / 28, drums 41 / 31 |
+| as stage 2 counts them (the median song) | 28.7 % / 20.8 % (stage 2: 30 / 19) |
+| the bass's bars (301 patterns) | a whole note 13 % (31 songs), rest 13 %, four quarters 5 %, eighths 5 %, two halves 3 %; the 8 patterns heard in five songs or more cover 41 % of its bars |
+| the accompaniment's | eighths 16 % (18 songs), sixteenths 8 %, quarters 6 %, rest 7 %, a whole note 4 % |
+| the melody's | rest 21 % (45 songs), a whole note 8 %, quarters 5 %, eighths 4 %; 26 patterns in five songs or more cover 59 % |
+| the harmony's / the drums' | a whole note 50 % / sixteenths 10 %, rest 14 % |
+| bass figures | the root held a bar 10 % (25 songs), the fifth held 2 %, the third held 1 %, root eighths 2 %; a root an octave up in 20 % of bars, a non-chord tone in 21 %; the bass moves: a repeat 43 %, a step 23 %, a fourth 11 %, a third 8 %, a fifth 5 %, an octave 2 % |
+| drum sounds (32 samples) | 6 hats (six to twelve hits a bar; the most used in 19 songs), 10 kicks (one 4.1 a bar in 14 songs, one 1.6 a bar and two beats long in 21), 13 snares (one 2.8 a bar in 12 songs, 54 % of its hits on the off-eighths), 3 others |
+| drum figures (302 in the bars of four) | rest 13 %; a kick alone on the downbeat 3 % (11 songs); every other figure in one to three songs |
+| melody moves (8874 notes) | a step 57 %, a third 19 %, a repeat 8 %, a fourth 7 %, a fifth or more 8 %; up and down alike |
+| melody lengths | an eighth 33 %, a sixteenth 31 %, a beat 14 %, a triplet eighth 8 %, two beats 4 %, longer 6 %; the note sounds for 0.87 of it, a quarter detached |
+
+What they say: FFVI's rhythm is written in plain values. The bass holds
+the root for a bar, or walks it in quarters and eighths, an octave up in a
+fifth of its bars; the accompaniment keeps eighths or sixteenths; the
+melody moves by step in eighths and sixteenths, up as often as down,
+sounding most of each note; the held harmony is whole notes. What falls off
+the eighths is mostly sixteenths, and the bass's and counter-line's
+triplets are the songs in twelve-eight. The drums are thin: a hat keeping
+time, a kick on the downbeat the one figure many songs share, the rest
+each song's own. The patterns are spread thin as the chord moves were (the
+top rows of each table are one song's ostinato, which the songs column
+shows), so a vocabulary would weigh patterns by the songs they are heard
+in, not the bars. Against stage 2: the same songs give 30 % and 19 % their
+way, so the counts agree; the difference is notes at no volume, which
+stage 2 counts, and a song with nothing off the eighths, which it counts as
+none on a triplet. The melody's steps agree with stage 2's 58 %. Stage 2's
+3.6 drum hits a bar counts every bar of every song, with the 22 without
+drums; here it is 8.0 onsets a bar in the bars of the songs that have
+them. What looks wrong: in 11 of the 19 songs with a snare it lands between
+the beats more often than on them (Battle Theme, Fanfare, Techno de
+Chocobo, The Decisive Battle, Blackjack among them), with the bass and the
+melody on the beat as often as off: the backbeat written on the off-eighth,
+or the beat read half a beat off its phase, or at half the felt tempo (The
+Decisive Battle at 104, Blackjack at 72); to be checked by ear before drum
+figures are drawn from, since a bar read at twice its length also turns
+eighths into sixteenths, and a third to a half of the hats' hits fall on
+sixteenths or finer. A fifth of the bars are of another length than the
+song's meter, the grid restarting at section joins, worst in Dancing Mad
+(211 of its 275 bars), which also spreads the patterns thin. The melody
+rests in a fifth of its bars, and in 14 songs in a third or more: the tune
+passes to a voice read as counter-line or accompaniment, so the melody's
+counts are its one voice's. The bass's chord tones and moves, and which
+voice is the bass, wait on the bass fix: the waltzes' basses read at MIDI
+24 to 27, and the bass sits on a non-chord tone in a fifth of its bars,
+more than passing notes explain if its pitch is off by other than octaves.
+
 ## Stage 5: the player's PACKS panel
 
 As `SPC-IMPORT.md` step 6: import a folder (progress while each song is
