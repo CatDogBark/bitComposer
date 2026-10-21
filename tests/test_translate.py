@@ -737,6 +737,91 @@ class DrumsBySound(unittest.TestCase):
         self.assertEqual(d["snes_kick"]["held"], 0.3 * 60 / 120)
 
 
+class Games(unittest.TestCase):
+    """The counts across games on a database made up here: four games of two songs, two to a driver, the
+    headline numbers set by what each game's songs do."""
+
+    @staticmethod
+    def database():
+        from array import array
+        from bitcomposer.translate import store
+        db = store.connect(":memory:")
+        nan = float("nan")
+
+        def song(sid, game, composer, driver, mode, bpm, swing, walking, drums, fifths, free=False):
+            # 16 beats of four bars at 120 BPM (half a second a beat), looping over all of it
+            db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                       (sid, sid + ".spc", game, game, sid, composer, driver, 8.0, store.VERSION, None if free else bpm,
+                        4, 4, 1.0, swing, 0, mode, 0.8, 0, None, None, None))
+            if free:
+                return
+            db.execute("INSERT INTO beats VALUES (?,?,?)", (sid, array("d", [b / 2 for b in range(16)]).tobytes(),
+                                                           array("d", [0.0, 2.0, 4.0, 6.0]).tobytes()))
+            for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):     # I IV V I, a chord a bar
+                db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "5" if fifths else "", 0.9))
+            bass = array("f")
+            for bar, root in enumerate((36, 41, 43, 36)):
+                pitches = (root, root + 2, root + 4, root + 5) if walking else (root, root + 12, root, root + 12)
+                for beat, m in enumerate(pitches):
+                    bass.extend((bar * 4 + beat, 1, m, 0.5, 0.5, -1))
+            db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 0, "bass", None, None, bass.tobytes()))
+            tune = array("f")                                                       # eighths by step, C D E F G A B C
+            for i, m in enumerate((60, 62, 64, 65, 67, 69, 71, 72) * 4):
+                tune.extend((i / 2, 0.5, m, 0.8, 0.5, -1))
+            db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 1, "melody", None, None, tune.tobytes()))
+            if drums:
+                hits = array("f")
+                for beat in range(16):
+                    hits.extend((beat, 0.2, nan, 0.5, 0.5, -1))
+                db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 2, "drums", None, None, hits.tobytes()))
+        # Alpha and Beta share a driver and a composer; Gamma and Delta share the other driver
+        song("a1", "Alpha", "A. Composer", "one", "major", 120.0, 0.5, True, True, False)
+        song("a2", "Alpha", "A. Composer", "one", "major", 130.0, 0.5, True, True, False)
+        song("b1", "Beta", "A. Composer, B. Composer", "one", "major", 110.0, 0.5, True, False, False)
+        song("b2", "Beta", "A. Composer, B. Composer", "one", "minor", 120.0, 0.5, True, True, False)
+        song("b3", "Beta", "A. Composer, B. Composer", "one", "minor", 120.0, 0.5, True, True, False, free=True)
+        song("c1", "Gamma", "C. Composer", "two", "minor", 90.0, 0.67, False, True, True)
+        song("c2", "Gamma", "C. Composer", "two", "minor", 90.0, 0.67, False, True, True)
+        song("d1", "Delta", "D. Composer", "two", "minor", 80.0, 0.67, False, False, True)
+        song("d2", "Delta", "D. Composer", "two", "major", 100.0, 0.5, False, False, True)
+        db.commit()
+        return db
+
+    def test_each_game_s_headline_numbers_are_its_songs(self):
+        from bitcomposer.translate import games
+        table = games.games(self.database())
+        by = {g.name: g for g in table}
+        self.assertEqual([g.name for g in table], ["Alpha", "Beta", "Delta", "Gamma"])
+        self.assertEqual((by["Beta"].counted, by["Beta"].total, by["Beta"].left_out), (2, 3, {"free time": 1}))
+        a, c = by["Alpha"].numbers, by["Gamma"].numbers
+        self.assertEqual((a["tempo"], a["minor"], a["chords"], a["fifths"]), (125.0, 0.0, 1.0, 0.0))
+        self.assertEqual((c["minor"], c["fifths"], c["swung"], by["Alpha"].numbers["swung"]), (100.0, 100.0, 100.0, 0.0))
+        self.assertAlmostEqual(a["bass_step"], 100 * 12 / 15)                      # steps within the bar, leaps between
+        self.assertEqual(c["bass_step"], 0.0)
+        self.assertAlmostEqual(c["bass_oct"], 100 * 12 / 15)
+        self.assertEqual((a["iv_i"], round(a["v_i"]), by["Alpha"].top_move[:8]), (0.0, 33, "I -> IV ")) # I IV V I: I->IV, IV->V, V->I
+        self.assertEqual((a["mel_step"], a["mel16"], a["mel_trip"], a["mel_long"]), (100 * 28 / 31, 0.0, 0.0, 0.0))
+        self.assertEqual((a["off"], a["triplet"]), (0.0, 0.0))
+        self.assertEqual((a["drums"], a["drumless"], by["Beta"].numbers["drumless"], by["Delta"].numbers["drums"]), (4.0, 0.0, 50.0, 0.0))
+        self.assertEqual(games.composer_of(by["Beta"]), "A. Composer")
+
+    def test_the_spread_and_what_the_driver_explains(self):
+        from bitcomposer.translate import games
+        table = games.games(self.database())
+        rows = {r[0]: r for r in games.spread(table)}
+        self.assertEqual(rows["chords"][7], "shared")                               # a chord a bar in every game
+        self.assertEqual((rows["fifths"][7], rows["fifths"][4][1], rows["fifths"][5][1]), ("own", "Alpha", "Gamma"))
+        self.assertEqual(rows["bass_step"][7], "own")
+        exp = games.explained(table, lambda g: g.driver, shuffles=50)
+        self.assertEqual(exp["fifths"][:1] + exp["fifths"][2:], (1.0, 4, 2))      # the driver splits the fifths wholly
+        self.assertLess(exp["fifths"][1], 1.0)                                      # shuffled, it does not
+        self.assertEqual(games.explained(table, games.composer_of, shuffles=10), {})  # no two games share a composer
+        text = games.report(table, shuffles=10)
+        self.assertIn("4 games, 8 songs counted of 9", text)
+        self.assertIn("bare 5ths", text)
+        self.assertRegex(text, r"bare 5ths +1\.00 \(\d\.\d\d\)\*")
+
+
 class Against(unittest.TestCase):
     """A composed song read for the counts: its parts the generator's, its chords and key the reader's."""
 

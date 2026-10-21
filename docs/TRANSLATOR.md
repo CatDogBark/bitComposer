@@ -452,6 +452,210 @@ by the reader's rules, so a pulse figure reads as an arp in two songs,
 and no channel reads as a counter-line though the generator writes one
 in some chorus and bridge patterns.
 
+Where it stands (2026-10-20), drums by sound: `python -m
+bitcomposer.translate.drums --score`, and `--db PATH --spc DIR`
+(`translate/drums.py`), name a drum sample from the sample itself, and the
+rhythm counts and the comparison take the names when the game's SPC files
+are given (`--spc DIR`, the game folders' root or one game's folder;
+without them a sound is named by how it is played, as before, and the
+table says so). The measure is four numbers from the sample as the game
+plays it (at the pitch it plays it most, where its notes name one; a
+looped sample repeated as long as the game holds it): the share of its
+power under 200 Hz, the share under 1 kHz, its periodicity (the best
+normalised autocorrelation of its first 64 ms past the first zero crossing:
+a tone near one, noise near nought) and how long it rings (to 40 dB under
+its peak), with its centroid for brightness; the spectrum is of its first
+128 ms, by an FFT written on the standard library's complex numbers. The
+rule: power mostly under 200 Hz is a low drum, a kick when its centroid
+sits under 93 Hz, a tom when it holds a pitch, a deep snare when it is a
+noisy thud above the kick's range (Seiken Densetsu 3's, Top Gear's); noise
+(periodicity under 0.5, or a hiss centred over 5 kHz, since a looped hat
+repeats and reads periodic) is a cymbal when it rings 0.6 s, a click when
+it is over in 50 ms, a snare when a fifth of its power sits under 1 kHz, a
+closed hat when it has no such body and is over in 100 ms; a tone with a
+body under 200 Hz is a snare (FFVI's snare is one, a shell with its
+rattle), without one another sound (a rim, a block, an orchestra hit, a
+pitched instrument played as percussion). Four cases the sound leaves open
+are settled by where the game hits the sample, and only those: a low drum
+between 93 and 200 Hz holding no pitch (a short kick reads high: Donkey
+Kong Country 2's), a kick when it lands on the beats more than between
+them; a hiss over 5 kHz with a little body, a hat when it plays off the
+beat more than on; a bodiless burst ringing between 0.1 and 0.4 s (an open
+hat, a snare without a body, or a cymbal cut short: the built-in packs'
+snares are gated noise, told from their open hats by length alone), a
+cymbal when it lands on the first beat most, a snare on the other beats,
+else a hat; and noise ringing 0.4 to 0.6 s (a cymbal, or a snare with its
+room), a snare when it lands on the backbeats more than on the first.
+Why these: brightness and length, the pack kit's measures, tell a kick
+from a hat but not a snare from an open hat, nor a hat loop held long from
+a cymbal; the body under the hiss and the periodicity carry the rest.
+Checked: the generator's own named drums (the three palettes' and the four
+built-in packs' kits, 51 samples) come out as they are in 49 without being
+told, the two missed the chip palette's crash and open hat, bursts of 0.18
+and 0.11 s that read as a snare; in the comparison, with the play, 6 of 6
+of both packs' kits (the imported pack's snare slot holds FFVI's open hat,
+which `pack.py`'s kit picked by brightness; left as it is, the pack format
+being out of this slice). FFVI: 23 of its 32 drum samples change name,
+carrying 8102 of 14150 hits: by play 10 kicks, 13 snares, 6 hats and 3
+others, by sound 2 kicks, 7 snares, 6 hats and 17 others. The snare the
+game plays most (19 songs, 9.6 hits a bar, Terra's march) had read as a
+hat for its density, and so had the second snare (a looped noise with a
+body, Battle Theme's voice 5); Battle Theme's voice-6 open hat (270 ms of
+bodiless noise, 54 % of its hits on the off-eighths) had read as the
+snare, as the ear said; the cymbal (a looped wash held two beats, in 21
+songs) had read as the kick for landing on the downbeat; and 14 one-song
+samples that are pitched instruments the roles read as drums (looped
+tones at 300 to 1000 Hz) go from kick and snare to another sound. The drum
+figures again: the rest, 12 % (24 songs), and the cymbal alone on the
+downbeat, 3 % (11 songs: the "kick alone on the downbeat" of the table
+above), are the figures many songs share; every other figure is one to
+three songs' own, the snare's now showing its marches in eighths and
+triplets. The comparison's drum rows change on FFVI's side only: the
+generator's drums come named. Over the 39 games, 798 of 804 drum samples
+are named by their sound (the rest are silent, the voice playing the SNES
+chip's noise generator over them): 63 kicks, 179 snares, 103 hats, 459
+others. What looks wrong: most of the others are pitched instruments in
+voices the roles read as drums, one song each (stage 1's gap), but among
+the most played are tuned percussion keeping time at 9 to 17 hits a bar
+(Lufia II's, Chrono Trigger's, Ogre Battle's, Seiken Densetsu 3's) that
+the rule names nothing better than another sound; a dull 60 ms noise with
+a body that keeps the eighths in 63 Donkey Kong Country 2 songs reads as a
+snare; and a looped bodiless noise rings as long as its note, so a hat
+loop held long reads as a cymbal.
+
+Where it stands (2026-10-20), the 39 games: `python -m
+bitcomposer.translate.games --db PATH` (`translate/games.py`) prints, per
+game, the headline numbers of the two counts, each once through: the
+tempo, the share of songs in minor, how often the chord changes (fit chord
+spans a bar), the share of spans read as a bare fifth, IV -> I and V -> I by
+degree alone, the bass walking by step against bouncing octaves, the
+share of pitched onsets off the eighths and of those on a triplet (the
+median song), the melody's sixteenths, triplet eighths, notes a beat or
+longer and steps, the drums' onsets a bar, the share of songs without
+drums and the share swung (the off-beat past 0.6 of the beat); with the
+songs counted and left out, and the bars of another length than the
+meter. Then each number's spread over the games (the middle half's width
+against the median, each game once) and what the driver and the
+first-listed composer explain of it (the share of the variance between
+games their group means take, over the games sharing one, against the
+median of 200 shufflings of the labels). The database is all 1836 songs of
+the 39 games read with this code, 1469 counted (214 in free time, 153
+mostly unfit or silent). The spread:
+
+| | median over the 39 | middle half | lowest / highest | spread | shared or own |
+|---|---|---|---|---|---|
+| tempo (BPM) | 113 | 91 to 127 | Jurassic Park Part 2 62 / Kirby Super Star 165 | 0.32 | shared |
+| songs in minor | 51 % | 41 to 63 | Super Mario World 23 / Axelay 89 | 0.43 | mixed |
+| chords a bar | 1.9 | 1.8 to 2.2 | Jurassic Park Part 2 1.3 / Soul Blazer 2.6 | 0.22 | shared |
+| bare fifths, of spans | 28 % | 23 to 32 | Dragon Quest V 9 / Uniracers 46 | 0.32 | shared |
+| IV -> I, of degree moves | 6 % | 5 to 8 | Pocky & Rocky 3 / Jurassic Park Part 2 11 | 0.32 | shared |
+| V -> I | 4 % | 3 to 5 | Super Metroid 2 / Lufia II 8 | 0.16 | shared |
+| the bass by step | 20 % | 14 to 24 | Kirby Super Star 10 / Dragon Quest V 33 | 0.50 | mixed |
+| the bass by octave | 6 % | 4 to 8 | Uniracers 0 / Top Gear 34 | 0.37 | mixed |
+| onsets off the eighths | 38 % | 33 to 46 | Lufia II 20 / Donkey Kong Country 3 58 | 0.35 | mixed |
+| of them on a triplet | 17 % | 10 to 24 | Top Gear 0 / Plok 35 | 0.79 | own |
+| the melody's sixteenths | 43 % | 34 to 51 | Super Turrican 2 10 / Top Gear 77 | 0.38 | mixed |
+| its triplet eighths | 3 % | 2 to 6 | Uniracers 0 / Cybernator 18 | 0.41 | mixed |
+| its notes a beat or longer | 23 % | 17 to 27 | Top Gear 6 / Super Turrican 2 38 | 0.44 | mixed |
+| its steps | 44 % | 35 to 51 | Top Gear 14 / Romancing SaGa 3 65 | 0.35 | mixed |
+| drum onsets a bar | 8.0 | 7.2 to 9.1 | Super Ghouls'n Ghosts 0 / Pocky & Rocky 11.7 | 0.24 | shared |
+| songs without drums | 28 % | 13 to 41 | Uniracers 0 / Super Ghouls'n Ghosts 100 | 1.00 | own |
+| songs swung | 18 % | 13 to 25 | Final Fantasy VI 3 / Pilotwings 40 | 0.66 | mixed |
+
+What SNES music shares: the harmony. The chord changes about twice a bar
+in every game (1.3 to 2.6), a quarter of the spans are bare fifths (23 to
+32 % in the middle half, Dragon Quest V's 9 % and Uniracers' 46 % the
+ends), and the cadences are the same everywhere: IV -> I or I -> IV leads
+in 34 of 39 games (Dragon Quest V and Super Mario World put V -> I first,
+at 7 and 5 %; Pocky & Rocky VII -> I, Super Metroid IV -> bII, Uniracers
+IV -> VI), with V -> I at 2 to 8 % and never the habit the textbooks would
+make it. The drums
+play at 7 to 9 onsets a bar wherever a song has them, and the tempo's
+middle half is 91 to 127. The melody's steps (44 %) and the inversions are
+alike too. What a game makes its own: the grid and the kit. Triplets are
+Plok's, Bahamut Lagoon's, ActRaiser's and EarthBound's (28 to 35 % of
+their off-eighth onsets) and absent from Top Gear, Lufia II and Kirby
+Super Star (0 to 5 %); whether a game writes songs without drums at all
+runs from none (Uniracers, Mega Man X 3 %, Axelay 5 %) to most (ActRaiser
+65 %, Super Castlevania IV 78 %, Dragon Quest V 86 %, Super Ghouls'n
+Ghosts every song, no voice of its reading as drums); swing from FFVI's 3 % of
+songs to Pilotwings' 40 %; the bass walks by step in Dragon Quest V,
+Donkey Kong Country 2 and Soul Blazer (28 to 33 % of its moves) and
+bounces octaves in Top Gear and Super Bomberman 4 (29 to 34 %), where
+most games keep both under a tenth; the melody's values run from Super
+Turrican 2's long notes (10 % sixteenths, 38 % a beat or longer) to Top
+Gear's (77 % sixteenths). Minor keys, bare fifths and the melody's range
+of values sit between. Composer or driver: the composer, as far as the
+data can tell. The driver explains only the bare fifths and V -> I (0.41 and 0.47
+against 0.22 and 0.23 by chance), the share off the eighths (0.66 against
+0.22), the melody's steps and the swing (0.45 and 0.51 against 0.21 and
+0.23), over the 26 games sharing one (13 of them Nintendo's N-SPC, which range from 27 to 47
+% off the eighths and from 0 to 31 % on triplets among themselves); the
+first-listed composer, over the 9 games that share one (Nobuo Uematsu's
+Final Fantasy IV and VI, Hiroki Kikuta's Secret of Mana and Seiken
+Densetsu 3, Koji Kondo's Super Mario World, Zelda and Yoshi's Island, Dave
+Wise's two Donkey Kong Countries), explains the tempo, the mode, the chord
+rate, the fifths, the share off the eighths and on triplets, the melody's
+long notes and steps, the drumless songs and the swing (0.53 to 0.88
+against 0.31 to 0.39). The plainest
+case is Uematsu's two games on two drivers (FFIV's own and akao): tempo 86
+and 85, off the eighths 31 and 29 %, on a triplet 21 and 21, sixteenths
+34 and 32, a beat or longer 30 and 26, steps 53 and 57, swung 7 and 3;
+nearer each other than either is to any N-SPC game, or than Kikuta's two
+are (whose Seiken Densetsu 3 drums at 11.5 a bar against Mana's 7.5). The
+composer's share is read from few games and nine pairs would settle it
+better; but nothing here says the driver sets a habit beyond what its
+composers happened to write. The generator against all 39, the same
+comparison over the whole database (`--db games.db --spc ~/data/spc`), 20
+songs a pack as before: the games' counts sit where FFVI's did, and the
+generator's distance is the same. The melody's lengths over the 39: a
+sixteenth 44 %, an eighth 27 %, a beat 11 % (FFVI 32 / 31 / 14; the
+generator 0 / 15 / 35), a triplet eighth 4 %, detached 30 % (the
+generator 4 %); off the eighths, the median song 38 % (FFVI 29) against
+the generator's 7 and 5 %, and 19 % of those on a triplet (FFVI 19)
+against none; the bass 5.6 onsets a bar (FFVI 4.5) against 2.9 and 2.1,
+by step 20 % (FFVI 24) against 8 and 9, by octave 8 % (FFVI 7) against 18
+and 30, on a non-chord tone in 28 % of its bars (FFVI 23) against 4; the
+accompaniment 7.5 a bar in eighths or sixteenths (13 and 11 % of its
+bars) against 4.7 and 1.2 in one syncopation or in halves; the chord
+spans sounding four pitches [3-6] over 29 semitones, three octaves and
+more in 37 % of spans (FFVI 31 %), against 21 and 14 semitones and 9 and
+5 %; bare fifths 27 % of spans read (FFVI 24) against 46 and 44; and the
+degree moves in the same order on both sides, IV and I to and fro ahead of
+V -> I. The drum figures across the games are even thinner than FFVI's
+(the rest 8 %, hats in eighths 3 % in 34 songs, the cymbal alone on the
+downbeat in 106 songs at 1 %, every other figure under 2 %) against the
+generator's one figure in half its songs. So what the FFVI comparison
+said of the generator's writing holds for SNES music as a whole, not for
+one game. Quality: the 367 songs left out are EarthBound's above all (97
+of 206: its jingles and its free-time pieces), Secret of Evermore's (29
+of 72), Super Metroid's (17 of 36, its ambient music), Chrono Trigger's
+and Kirby Super Star's (18 and 19); 222 counted songs were followed
+loosely on no grid, 38 of Donkey Kong Country 2's 87 and 36 of Donkey
+Kong Country 3's 68 (their swung and shuffled rhythms; loose songs give
+the off-eighths and triplet shares as read, a grid's rounding not
+applied), and a fifth of the bars of Final Fantasy IV and VI, Romancing
+SaGa 3, ActRaiser and Top Gear are of another length than the meter (the
+grid restarting at section joins: Dancing Mad's five parts carry 227 of
+FFVI's); Top Gear (7 songs) and Uniracers (10) sit at the ends of several
+columns on few songs. What it means for the vocabulary: one shared
+vocabulary, with per-game weights, not a vocabulary per game, composer or
+driver. The habits a vocabulary is made of are the same across the 39
+(the chord rate, the open voicings, the modal cadences, the drum density,
+the melody's steps: the shared rows), so one table of chord moves,
+voicings, rhythms and figures drawn from all 39 games would be the SNES
+chip's own idiom and fuller than any one game's (FFVI's moves and
+patterns were spread thin at 2 to 3 % a row; the 39 together give the
+shared rows weight); what a game makes its own is which rows it draws
+and how often (its grid: triplets, swing, sixteenths; its kit and whether
+it plays; its bass's walk or bounce; its mode), which per-game weights
+over the shared tables carry, as the thin pack's habits already do for
+the tempo, the mode and the drumless share. A pack by composer, as the
+plan has it for later, would be the same weights counted over that
+composer's games, and the evidence above says those weights travel with
+the composer across drivers; a pack by driver would not add a habit the
+composers' do not already hold.
+
 ## Stage 5: the player's PACKS panel
 
 As `SPC-IMPORT.md` step 6: import a folder (progress while each song is
