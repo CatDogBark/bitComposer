@@ -241,6 +241,24 @@ class TimeMap:
         onsets = sorted({round(n[0], 4) for n in written})
         self.points = []                             # (written time, shift), aligned windows
         self.unaligned = 0                           # written onsets in windows no shift fits
+        starts = sorted(set(played.starts))
+
+        def refine(group: list, shift: float) -> tuple[int, float]:
+            """How many of the group's onsets a played onset meets within tol at this shift, after
+            the shift is nudged to the median of their residuals; and that nudged shift."""
+            res = []
+            for t in group:
+                x = t + shift
+                i = bisect.bisect_left(starts, x)
+                cands = [starts[j] - x for j in (i - 1, i) if 0 <= j < len(starts)]
+                if cands and abs(min(cands, key=abs)) <= 2 * tol:
+                    res.append(min(cands, key=abs))
+            if not res:
+                return 0, shift
+            adj = statistics.median(res)
+            return sum(1 for d in res if abs(d - adj) <= tol), shift + adj
+
+        previous = shift0
         start = onsets[0] if onsets else 0.0
         while onsets and start <= onsets[-1]:
             group = [t for t in onsets if start <= t < start + WINDOW]
@@ -248,28 +266,30 @@ class TimeMap:
             if len(group) < 3:
                 self.unaligned += len(group)
                 continue
-            bins = Counter()
-            for t in group:                          # every played onset within reach votes for its shift
-                x = shift0 + t
-                i = bisect.bisect_left(played.starts, x - REACH)
-                while i < len(played.starts) and played.starts[i] <= x + REACH:
-                    bins[round((played.starts[i] - x) / 0.004)] += 1
+            bins = Counter()                         # distinct written onsets a shift would place on a played one
+            for t in group:
+                seen = set()
+                i = bisect.bisect_left(starts, t + shift0 - REACH)
+                while i < len(starts) and starts[i] <= t + shift0 + REACH:
+                    seen.add(round((starts[i] - t - shift0) / 0.008))
                     i += 1
+                for b in seen:
+                    bins[b] += 1
             if not bins:
                 self.unaligned += len(group)
                 continue
-            centre = bins.most_common(1)[0][0] * 0.004
-            res = []
-            for t in group:
-                x = shift0 + t + centre
-                i = bisect.bisect_left(played.starts, x)
-                cands = [played.starts[j] - x for j in (i - 1, i) if 0 <= j < len(played.starts)]
-                if cands and abs(min(cands, key=abs)) <= 2 * tol:
-                    res.append(min(cands, key=abs))
-            if len(res) < max(3, 0.5 * len(group)):
+            top = bins.most_common(1)[0][1]
+            cands = {shift0 + b * 0.008 for b, n in bins.items() if n >= 0.6 * top} | {previous}
+            scored = [(refine(group, c), c) for c in cands]
+            (best_n, best_shift), _ = max(scored, key=lambda x: (x[0][0], -abs(x[1] - previous)))
+            keep_n, keep_shift = refine(group, previous)
+            if keep_n >= 0.85 * best_n and keep_n > 0:  # the old shift still fits: no jump
+                best_n, best_shift = keep_n, keep_shift
+            if best_n < max(3, 0.5 * len(group)):
                 self.unaligned += len(group)
                 continue
-            self.points.append((statistics.median(group), shift0 + centre + statistics.median(res)))
+            self.points.append((statistics.median(group), best_shift))
+            previous = best_shift
         if not self.points:
             self.points = [(0.0, shift0)]
         self.shift = self.points[0][1]
