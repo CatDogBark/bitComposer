@@ -87,9 +87,45 @@ class Tuning(unittest.TestCase):
         pcm = [12000 * math.sin(2 * math.pi * i / 64) + 3000 * math.sin(4 * math.pi * i / 64) for i in range(1280)]
         self.assertAlmostEqual(tuning.fundamental(sample(pcm, (640, 1280))), 500.0, delta=0.5)
 
+    def test_a_loop_of_cycles_a_fraction_of_a_sample_long(self):
+        # 312.5 Hz at 32 kHz: 102.4 samples a cycle, the loop holding five (FFVI's bass loops are so):
+        # no whole-sample divisor of the loop is one cycle, and the shortest clean one is all five
+        f = 2 * math.pi * 312.5 / 32000
+        pcm = [12000 * math.sin(f * i) + 6000 * math.sin(2 * f * i) + 2000 * math.sin(4 * f * i) for i in range(1024)]
+        self.assertAlmostEqual(tuning.fundamental(sample(pcm, (512, 1024))), 312.5, delta=0.5)
+
     def test_a_pluck_without_a_loop(self):
         pcm = [20000 * math.exp(-i / 9000) * math.sin(2 * math.pi * 220 * i / 32000) for i in range(8000)]
         self.assertAlmostEqual(tuning.fundamental(sample(pcm)), 220.0, delta=220 * 0.01)
+
+    def test_a_pluck_with_a_bright_noise_matching_an_octave_down(self):
+        # a bass cycle of 139 samples (230 Hz) under a bright noise that repeats every second cycle (a
+        # slap's, as FFVI's bass has): the wave as a whole repeats better two cycles on, but the cycle is the pitch
+        r = random.Random(5)
+        rough = [r.uniform(-4600, 4600) for _ in range(279)]
+        noise = [b - a for a, b in zip(rough, rough[1:])]
+        f = 2 * math.pi / 139
+        pcm = [math.exp(-i / 12000) * (12000 * math.sin(f * i) + 6000 * math.sin(2 * f * i) + 5000 * math.sin(3 * f * i)
+                                       + noise[i % 278]) for i in range(8000)]
+        self.assertAlmostEqual(tuning.fundamental(sample(pcm)), 32000 / 139, delta=230 * 0.01)
+
+    def test_a_struck_tone_whose_attack_glides(self):
+        # a tom's pitch falls through its first 150 ms and holds (FFVI's low drum, Mt. Koltz's bass):
+        # measured where it holds, not in the glide
+        phase, pcm = 0.0, []
+        for i in range(12000):
+            hz = 227 + 120 * math.exp(-i / 1500)
+            phase += 2 * math.pi * hz / 32000
+            pcm.append(14000 * math.exp(-i / 20000) * math.sin(phase))
+        self.assertAlmostEqual(tuning.fundamental(sample(pcm)), 227.0, delta=227 * 0.01)
+
+    def test_a_loop_with_a_true_sub_harmonic(self):
+        # 71 Hz under a stronger 142 Hz, the lower partial sounding (FFVI's strings' bass): the low
+        # harmonics say the cycle is the long one, however much better the short lag matches on top
+        f = 2 * math.pi * 71.2 / 32000
+        pcm = [3000 * math.sin(f * i) + 12000 * math.sin(2 * f * i) + 3000 * math.sin(3 * f * i) + 3000 * math.sin(4 * f * i)
+               for i in range(5840)]
+        self.assertAlmostEqual(tuning.fundamental(sample(pcm, (0, 5840))), 71.2, delta=0.5)
 
     def test_noise_has_no_pitch(self):
         r = random.Random(3)
