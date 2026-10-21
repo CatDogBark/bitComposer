@@ -158,6 +158,75 @@ Steps 1 to 3 run unattended and in parallel once the machine has the build
 tools; step 4 needs the listener for about an hour, its pages and scoring
 written first; step 5 waits on 2 to 4; step 6 on 5.
 
+## Where it stands
+
+**Steps 1 and 2 (2026-10-20): the independent decode, surveyed and compared.**
+VGMTrans (its shell build, `tools/vgmtrans_batch.py`) reads 1581 of the 1836
+songs: 33 of the 39 games in full or nearly (EarthBound's 57 unread are its
+jingles and sound-effect pieces), none of the six whose drivers it has no
+reader for (Cybernator, Secret of Evermore, Jurassic Park 2, Ogre Battle,
+Rendering Ranger, Super Turrican 2). Its shell exports with no loop repeat
+by default (the loop's end); a second build with one repeat gives the
+loop's start by alignment. `tools/decode_check.py` matches each MIDI to the
+decoder's notes under a piecewise time map (the two decodes' clocks differ
+by parts in ten thousand, one slips a note now and then, and a song dumped
+mid-way has no played intro) and to the readings. What it found, over the
+1468 songs both sides read:
+
+- **The notes.** Counting a written note the decoder plays as a pitch
+  change under a held note (a slur), the decoder has every written note in
+  every game: the median song matches 1.00 in 29 games and 0.93 to 0.99 in
+  the rest. Strictly by key-on, three drivers play most written notes
+  legato (DKC 0.32, Super Mario World 0.36, Pilotwings 0.16, the last two
+  from sets dumped mid-song), which the values vocabulary will have to
+  know: a slurred run and a held note are the same key-on.
+- **The pitch, and the tuning fix.** Over the pairs no pairing doubt
+  touches, the written pitch and the played agree after one whole-semitone
+  offset per sample in 1.00 of notes in 24 games, 0.98 in FFVI, and the
+  tuning check it was for holds: no sample's offset sits off a whole
+  semitone where the decode is right. Four readers disagree by several
+  semitones on some notes (Konami's games 0.68 to 0.86, Hudson's 0.69,
+  Rare's DKC 0.23, Super Mario World 0.50); the emulator's own output,
+  tapped at the disputed notes, sounded the decoder's pitch in 44 of 45 it
+  could measure. Those readers drop transposition the drivers apply;
+  VGMTrans's pitch is not ground truth there.
+- **The tempo.** Two readers emit one default tempo for a whole game
+  (Kirby Super Star 125 in 58 of 69 songs, Pilotwings 73 in all 21), so
+  the written tempo is a measure only where the reader has one. Over the
+  rest, the read tempo is the written one or exactly twice or half it in
+  79 % of songs; a compound against a simple level (4:3, 3:2, 3:4, the
+  triplet ambiguity the tap rounds met) in 11 %; and "other" in 10 %, of
+  which 104 of 129 are songs with over 15 % of written onsets off the
+  read grid: the swung and shuffled songs the beat reader follows loosely
+  (Donkey Kong Country, Super Mario World, Yoshi's Island). The written
+  onsets fall on the read grid's beats, sixteenths or triplets in 90 % or
+  more of notes in 25 games. Where both are clean the ratio sits at 1.000;
+  Super Mario World's reader runs 1.8 % fast against the emulator.
+- **The loop.** Where the read loop's length matches the written (744 of
+  the 923 songs a loop is read in), the read cut sits on the composer's
+  jump in 321, a whole number of bars from it in 100 (the same loop cut
+  elsewhere), and **a fraction of a bar off in 317**: composers jump on a
+  bar line, so the readings' bar phase is wrong in those songs, which the
+  tap rounds could not see (they checked the tempo and the bar's length,
+  not where the one falls). The reader misses 177 loops the composer
+  wrote, 43 of them under its four-bar floor, and reads a different length
+  in 123 (Axelay's Bravo: a 5 s repeat for a 32 s loop).
+- **Written lengths against played.** The played note runs 0.9 to 1.0 of
+  the written in most games (the drivers' gate), 1.3 to 1.4 in Rare's and
+  Capcom's, 1.9 in Dragon Quest V: the values vocabulary reads the written
+  value through the driver's gate, not the key-off.
+- **The sets.** Super Mario World's and Pilotwings' SPC files were dumped
+  mid-song (the written intro never plays, and the written start aligns
+  with the played song 3 to 20 s in), which their form and loop readings
+  inherit.
+
+What the readers need from this, in order: the bar phase and the loop
+reader (the composer's jump as ground truth on hundreds of songs); the
+swung grid; a convention for the compound-against-simple level, where the
+written tempo says what the composer counted. The tuning and the decoder
+need nothing. The MIDIs and the comparison stay on the machine with the
+readings; the tools are in `tools/` (on the phase's branch until its PR).
+
 ## Exit criteria, with the tolerances proposed before scoring
 
 - **Tempo:** the read tempo equals the written one, or exactly twice or
