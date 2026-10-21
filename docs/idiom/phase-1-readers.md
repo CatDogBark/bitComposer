@@ -220,12 +220,73 @@ mid-way has no played intro) and to the readings. What it found, over the
   with the played song 3 to 20 s in), which their form and loop readings
   inherit.
 
-What the readers need from this, in order: the bar phase and the loop
-reader (the composer's jump as ground truth on hundreds of songs); the
+What the readers need from this, in order: the bar phase (step 3 below)
+and the loop reader (the composer's jump as ground truth on hundreds of
+songs); the beat grid where the jump falls (step 3's finding); the
 swung grid; a convention for the compound-against-simple level, where the
 written tempo says what the composer counted. The tuning and the decoder
 need nothing. The MIDIs and the comparison stay on the machine with the
 readings; the tools are in `tools/` (on the phase's branch until its PR).
+
+**Step 3 (2026-10-21): the bar phase, from the composers' jumps.**
+`tools/bar_phase_check.py` scores where each composer's loop jump falls
+in the read bar, the games split in two by a fixed hash of the game's
+name: a development half to tune on, a held-out half to score. Before:
+right (on the line, or a pickup a beat before it) in 57 % of the
+development half's 300 steady songs and 67 % of the held-out's 589, a
+half bar off in 20 % and 16 %. A first fix, the bar from where the bass
+lands on a new pitch class, gained on the development half alone (63 %;
+held-out 67 %, 26 songs fixed and 22 broken) and was withdrawn. The data
+was then asked which beat-level signs sit on the downbeat at all
+(`~/diags/bitcomposer/idiom/downbeat_features.py` and `downbeat_combo.py`,
+on Ragnarok beside the readings): over the 580 songs in 4/4 whose jump
+lands on a read beat, accents by level put 30 % of their mass on the
+composer's beat (chance 25 %), the bass's onsets 34 %, its pitch-class
+changes 41 %, the chord reader's changes 36 %, a note held two beats or
+more 58 %, one held the whole bar 65 %, and where the song starts
+repeating itself (the form reader's own machinery, at beat resolution)
+57 % over every repeat weighted by its length and 63 to 73 % for the
+loop's second pass. Weights fitted over all 28 signs on the development
+half overfit (72 % there, 66 % held-out); a fixed five-sign rule (the
+loop's second pass, repeats by length, whole-bar notes, long notes, the
+accents) scores 74 % on the held-out half (84 % with a pickup) against
+the readings' 64 % (75 %), and a two-level table (the downbeat's share,
+the rest spread evenly) the same as the full one. That rule is
+`translate/phase.py`, run after `beat.rebar`, the phase set once a song.
+Re-read: development 71 % (a half bar off 8 %), held-out 76 % (9 %);
+on the line alone 53 to 59 % held-out; 102 held-out songs fixed, 46
+broken; every game gains but two (Mega Man X 62 to 38 % on 13 songs,
+DKC3 56 to 50 % on 18); the 41 tapped beats unchanged (40 right). The
+jumps that land a beat *before* the read line grew (78 to 100 held-out):
+a loop that starts on a pickup, or a repeat found a beat late; only a
+listener's downbeats can tell them apart, so a short tap round (the one,
+on the chord and tune sets' songs, about fifteen minutes) is proposed
+before the pickup is scored either way.
+
+Found on the way: in 36 to 41 % of the steady songs the composer's jump
+is not on a read beat at all (within 0.2 beat). In over half of those,
+two or more voices start together at the jump (within 60 ms), so the
+jump is a real onset the grid has no beat on: a syncopated song's beat
+locked a sixteenth off (The Decisive Battle), a half-tempo grid on the
+off-beats, and the grid's section joints, which drop or shift a beat
+(948 joints of 2.0 beats and 1364 of 1.25 to 1.75 over the 1836 songs;
+songs with five joints or more have their jump off the beat twice as
+often as songs with none, 48 % against 28 %). The rest fall at a rest
+or mid-phrase. This is the beat reader's next item, ahead of the swung
+grid; the verdicts above exclude these songs.
+
+On the chord check, the two songs marked so far calibrate the taps.
+Hyrule Field's changes sit on its bar lines (the bass's roots, one a
+bar); the raw marks sit 0.28 s after the nearest line on average, with a
+spread of 0.17 s, so a mark is moved 0.25 s earlier and matched within
+0.35 s, in seconds rather than the half beat proposed, since the hand's
+jitter does not scale with the tempo. With that, Hyrule Field: the
+readings' changes on bar lines match 23 of 24 marks (F1 0.96), every
+read change F1 0.70 (the reader changes twice a bar, 1.96 against the
+1.00 heard). Kefka (marked "hard", from the harmony voices alone): 13
+marks over 59 s, mostly one every two bars; the reader makes 3.6
+changes for each heard, F1 0.43 over every change and 0.52 on bar lines
+(`~/diags/bitcomposer/idiom/chord_score.py`).
 
 ## Exit criteria, with the tolerances proposed before scoring
 
