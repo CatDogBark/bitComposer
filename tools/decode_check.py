@@ -1,26 +1,29 @@
 """The readings against an independent decode of the same songs (phase 1 of docs/IDIOM.md).
 
 VGMTrans reads a driver's sequence data to MIDI by code that shares nothing with the emulator or
-the readers: the written tempo, the notes as written (onset, pitch, length), and, converted with
-no repeat and with one, where the song loops. This tool matches those MIDIs to the songs as the
-SNES chip played them (the decoder's notes) and to the readings (the beat, the loop), and says
-where they agree and where they do not. A developer tool, like spc_check.py; the MIDIs and the
-notes it caches stay on the machine with the readings.
+the readers: the notes as written (onset, pitch, length), the tempo where its reader emits one,
+and, converted with no repeat and with one, where the song loops. This tool matches those MIDIs to
+the songs as the SNES chip played them (the decoder's notes) and to the readings (the beat, the
+loop), and says where they agree and where they do not. A developer tool, like spc_check.py; the
+MIDIs and the notes it caches stay on the machine with the readings.
 
     python tools/decode_check.py notes SPC_ROOT NOTES_DIR [--workers N]
         the decoder's notes of every song under SPC_ROOT (game folders), cached as JSON
     python tools/decode_check.py compare --notes NOTES_DIR --midi0 DIR --midi1 DIR --db READINGS.db
-                                         --out REPORT.json [--tolerance 0.02]
-        per song: the time offset between the two decodes, the tempo written and read, the loop's
-        end and start both ways, the share of written notes matched by a played one, the pitch
-        agreement after one offset per sample, and the written lengths against the played
+                                         --out REPORT.json [--tolerance 0.02] [--workers N]
+        per song: the time map between the two decodes (a shift and a rate: the two clocks differ
+        by parts in ten thousand), the share of written notes a played note matches, the pitch
+        agreement after one offset per sample, the written onsets on the readings' beat grid, the
+        tempo written and read, the loop's length, end and start both ways, and the written lengths
+        against the played
     python tools/decode_check.py report REPORT.json [--game NAME] [--fails]
         the tables per game, and the songs outside the tolerances
 
 MIDI0 and MIDI1 hold one MIDI per song, named like the SPC with .mid, under the same game folders,
-converted with no loop repeat and with one.
+converted with no loop repeat and with one (tools/vgmtrans_batch.py).
 """
 import argparse
+import bisect
 import glob
 import json
 import math
@@ -36,7 +39,9 @@ from multiprocessing import Pool
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 TOLERANCE = 0.02                     # seconds: a written note and a played one are the same within this
+COARSE = 0.06                        # the first, looser match the time map is fitted from
 LOOP_NOTES = 24                      # written notes of the repeat's tail aligned with the body to find the loop's start
+GRID = 1 / 16                        # beats: a written onset this near a sixteenth or a triplet eighth is on the grid
 
 
 # ── MIDI ──
@@ -53,8 +58,8 @@ def _varlen(data: bytes, i: int) -> tuple[int, int]:
 
 def read_midi(path: str) -> dict:
     """A standard MIDI file as notes in seconds: {"notes": [(start, end, pitch, track, channel,
-    velocity)], "tempos": [(seconds, bpm)], "markers": [(seconds, text)], "programs":
-    {(track, channel): [program, ...]}, "end": seconds}."""
+    velocity)], "tempos": [(seconds, bpm)], "markers": [(seconds, text)], "division": ticks a
+    quarter, "end": seconds}."""
     data = open(path, "rb").read()
     if data[:4] != b"MThd":
         raise ValueError(f"{path}: not a MIDI file")
@@ -104,10 +109,7 @@ def read_midi(path: str) -> dict:
                 elif kind == 0x80 or kind == 0x90:
                     events.append((tick, "off", ch, (d1, 0)))
             elif kind in (0xC0, 0xD0):
-                d1 = chunk[i]
                 i += 1
-                if kind == 0xC0:
-                    events.append((tick, "program", ch, d1))
         tracks.append(events)
     tempos.sort()
     if not tempos or tempos[0][0] > 0:
@@ -122,7 +124,7 @@ def read_midi(path: str) -> dict:
             last_tick, bpm = t_tick, t_bpm
         return s + (tick - last_tick) * 60.0 / (bpm * division)
 
-    notes, programs, end = [], defaultdict(list), 0.0
+    notes, end = [], 0.0
     for k, events in enumerate(tracks):
         open_ = {}
         for tick, kind, ch, v in events:
@@ -137,15 +139,13 @@ def read_midi(path: str) -> dict:
                 if (ch, pitch) in open_:
                     t0, vel0 = open_.pop((ch, pitch))
                     notes.append((seconds(t0), seconds(tick), pitch, k, ch, vel0))
-            elif kind == "program":
-                programs[(k, ch)].append(v)
             elif kind == "end":
                 end = max(end, seconds(tick))
         for (ch, pitch), (t0, vel0) in open_.items():
             notes.append((seconds(t0), seconds(end if end else t0), pitch, k, ch, vel0))
     notes.sort()
-    return {"notes": notes, "tempos": [(seconds(t), b) for t, b in tempos],
-            "markers": [(seconds(t), s) for t, s in markers], "programs": dict(programs),
+    return {"notes": notes, "tempos": [(seconds(t), b) for t, b in tempos], "division": division,
+            "markers": [(seconds(t), s) for t, s in markers],
             "end": max([end] + [n[1] for n in notes]) if notes else end}
 
 
@@ -191,83 +191,112 @@ def cmd_notes(a) -> int:
 
 # ── matching ──
 
-def _offset(written: list, played: list, tol: float) -> float:
-    """The constant by which the written notes run ahead of (+) or behind (-) the played ones: the
-    shift of the written onsets that puts the most of them within tol of a played onset, tried over
-    the shifts that align any of the first written onsets with any of the first played ones."""
-    w = sorted({round(n[0], 3) for n in written})
-    p = sorted({round(n[0], 3) for n in played})
+class Played:
+    """The played notes indexed by onset."""
+
+    def __init__(self, notes: list):
+        self.notes = sorted(notes, key=lambda n: n[1])
+        self.starts = [n[1] for n in self.notes]
+        self.used = set()
+
+    def near(self, t: float, tol: float) -> list[int]:
+        i = bisect.bisect_left(self.starts, t - tol)
+        out = []
+        while i < len(self.starts) and self.starts[i] <= t + tol:
+            if i not in self.used:
+                out.append(i)
+            i += 1
+        return out
+
+
+def _shift(written: list, played: Played, tol: float) -> float:
+    """The constant by which the played onsets run behind the written ones, before the rate is
+    known: the shift of the written onsets that puts the most of the first stretch within tol of a
+    played onset, tried over the shifts aligning any early written onset with any early played one."""
+    w = sorted({round(n[0], 3) for n in written})[:60]
+    p = sorted({round(s, 3) for s in played.starts})
     if not w or not p:
         return 0.0
-    cands = {0.0} | {pp - ww for ww in w[:12] for pp in p[:40] if abs(pp - ww) < 8.0}
+    cands = {0.0} | {pp - ww for ww in w[:12] for pp in p[:60] if abs(pp - ww) < 8.0}
     best, best_n = 0.0, -1
     for d in sorted(cands):
-        j, n = 0, 0
-        for ww in w:
-            t = ww + d
-            while j < len(p) and p[j] < t - tol:
-                j += 1
-            if j < len(p) and abs(p[j] - t) <= tol:
-                n += 1
+        n = sum(1 for ww in w if played.near(ww + d, tol))
         if n > best_n or (n == best_n and abs(d) < abs(best)):
             best, best_n = d, n
     return best
 
 
-def _assign_tracks(written: list, played: list, shift: float, tol: float) -> dict:
-    """Which played voice each written track is: the voice its onsets coincide with most."""
-    by_voice = defaultdict(list)
-    for n in played:
-        by_voice[n[0]].append(n[1])
-    for v in by_voice:
-        by_voice[v].sort()
-    out = {}
-    for k in {n[3] for n in written}:
-        onsets = sorted({round(n[0] + shift, 3) for n in written if n[3] == k})
-        score = Counter()
-        for v, starts in by_voice.items():
-            j = 0
-            for t in onsets:
-                while j < len(starts) and starts[j] < t - tol:
-                    j += 1
-                if j < len(starts) and abs(starts[j] - t) <= tol:
-                    score[v] += 1
-        out[k] = score.most_common(1)[0][0] if score else None
-    return out
+def _time_map(written: list, played: Played, shift: float) -> tuple[float, float]:
+    """played time = shift + rate * written time, fitted on the written notes whose only played
+    neighbour within COARSE of the shifted time is one note (a least squares line through them;
+    the rate differs from one by parts in ten thousand where the two decodes assume clocks apart)."""
+    xs, ys = [], []
+    for n in written:
+        c = played.near(n[0] + shift, COARSE)
+        if len(c) == 1:
+            xs.append(n[0])
+            ys.append(played.starts[c[0]])
+    if len(xs) < 8 or xs[-1] - xs[0] < 5.0:
+        return shift, 1.0
+    mx, my = statistics.fmean(xs), statistics.fmean(ys)
+    sxx = sum((x - mx) ** 2 for x in xs)
+    rate = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx if sxx else 1.0
+    if not 0.98 < rate < 1.02:                       # not a clock difference: keep the shift alone
+        return shift, 1.0
+    return my - rate * mx, rate
 
 
-def _match(written: list, played: list, shift: float, tol: float, voices: dict) -> list:
-    """Pairs (written, played) by onset within the written track's voice, each played note used
-    once; written notes with no pair are paired with None."""
-    by_voice = defaultdict(list)
-    for n in played:
-        by_voice[n[0]].append(n)
-    used = set()
-    pairs = []
-    for w in written:
-        v = voices.get(w[3])
-        t = w[0] + shift
-        best, best_d = None, tol + 1
-        for idx, pnote in enumerate(by_voice.get(v, ())):
-            if (v, idx) in used:
-                continue
-            d = abs(pnote[1] - t)
-            if d < best_d:
-                best, best_d = (v, idx), d
-            elif pnote[1] > t + tol:
-                break
-        if best and best_d <= tol:
-            used.add(best)
-            pairs.append((w, by_voice[best[0]][best[1]]))
-        else:
-            pairs.append((w, None))
-    return pairs
+def _match(written: list, played: Played, shift: float, rate: float, tol: float) -> list:
+    """Pairs (written, played) by onset, any voice, each played note used once. Where more than one
+    played note is within tol, the one whose pitch stands at the offset its sample has shown so
+    far (a whole number of semitones apart) is taken, else the nearest in time. Two passes: the
+    unambiguous pairs first, which teach each sample's offset."""
+    offsets = defaultdict(Counter)                   # sample key -> rounded offset -> count
+    pairs = [None] * len(written)
+    order = sorted(range(len(written)), key=lambda i: written[i][0])
+    ambiguous = []
+    for i in order:
+        w = written[i]
+        c = played.near(shift + rate * w[0], tol)
+        if len(c) == 1:
+            j = c[0]
+            played.used.add(j)
+            p = played.notes[j]
+            pairs[i] = p
+            if p[3] is not None:
+                offsets[p[4]][round(p[3] - w[2])] += 1
+        elif c:
+            ambiguous.append(i)
+    for i in ambiguous:
+        w = written[i]
+        t = shift + rate * w[0]
+        c = played.near(t, tol)
+        if not c:
+            continue
+
+        def score(j):
+            p = played.notes[j]
+            fit = 1.0
+            if p[3] is not None and offsets.get(p[4]):
+                mode = offsets[p[4]].most_common(1)[0][0]
+                fit = 0.0 if abs((p[3] - w[2]) - mode) < 0.5 else 1.0
+            elif p[3] is not None:
+                frac = abs((p[3] - w[2]) - round(p[3] - w[2]))
+                fit = 0.3 if frac < 0.3 else 1.0
+            return (fit, abs(played.starts[j] - t))
+
+        j = min(c, key=score)
+        played.used.add(j)
+        p = played.notes[j]
+        pairs[i] = p
+        if p[3] is not None:
+            offsets[p[4]][round(p[3] - w[2])] += 1
+    return [(w, p) for w, p in zip(written, pairs)]
 
 
-def _loop_start(body: list, tail: list, end: float) -> float | None:
+def _loop_start(body: list, tail: list) -> float | None:
     """Where the song goes back to: the time in the body the repeat's first notes line up with
     (the same pitches at the same spacings, on the same tracks)."""
-    import bisect
     head = sorted(tail)[:LOOP_NOTES]
     if len(head) < 4:
         return None
@@ -292,10 +321,9 @@ def _loop_start(body: list, tail: list, end: float) -> float | None:
     return best if best_n >= max(4, len(head) * 0.6) else None
 
 
-def _beats_at(beats: array, t: float) -> float:
+def _beat_at(beats: list, t: float) -> float:
     if len(beats) < 2:
         return 0.0
-    import bisect
     if t <= beats[0]:
         return (t - beats[0]) / (beats[1] - beats[0])
     if t >= beats[-1]:
@@ -304,30 +332,53 @@ def _beats_at(beats: array, t: float) -> float:
     return i + (t - beats[i]) / (beats[i + 1] - beats[i])
 
 
-def _ratio_class(r: float) -> str:
+def _grid(onsets: list, beats: list) -> dict:
+    """Where the written onsets fall on the readings' beat grid: the share on a beat, within GRID of
+    a sixteenth, of a triplet eighth, and off both."""
+    out = Counter()
+    for t in onsets:
+        b = _beat_at(beats, t)
+        f = b - math.floor(b)
+        d16 = min(abs(f - k / 4) for k in range(5))
+        d12 = min(abs(f - k / 3) for k in range(4))
+        if min(f, 1 - f) <= GRID:
+            out["beat"] += 1
+        elif d16 <= GRID:
+            out["sixteenth"] += 1
+        elif d12 <= GRID:
+            out["triplet"] += 1
+        else:
+            out["off"] += 1
+    n = sum(out.values()) or 1
+    return {k: out[k] / n for k in ("beat", "sixteenth", "triplet", "off")} | {"onsets": n}
+
+
+def _ratio_class(r: float | None) -> str | None:
+    if r is None:
+        return None
     for name, x in (("same", 1), ("double", 2), ("half", 0.5), ("x4", 4), ("quarter", 0.25),
-                    ("x3", 3), ("third", 1 / 3), ("x1.5", 1.5), ("x2/3", 2 / 3)):
+                    ("x3", 3), ("third", 1 / 3), ("x1.5", 1.5), ("x2/3", 2 / 3), ("x4/3", 4 / 3), ("x3/4", 0.75)):
         if abs(r / x - 1) < 0.03:
             return name
     return "other"
 
 
-def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str | None, row, beats, bars,
-                 tol: float) -> dict:
+def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str | None, row: dict,
+                 beats: list | None, bars: list | None, tol: float) -> dict:
     played_doc = json.load(open(notes_path))
-    played = [tuple(n) for n in played_doc["notes"]]
+    played = Played([tuple(n) for n in played_doc["notes"]])
     m0 = read_midi(midi0)
     written = m0["notes"]
-    out = {"game": game, "song": name, "written": len(written), "played": len(played)}
+    out = {"game": game, "song": name, "written": len(written), "played": len(played.notes)}
     if not written:
         out["status"] = "no notes written"
         return out
-    shift = _offset(written, played, tol)
-    voices = _assign_tracks(written, played, shift, tol)
-    pairs = _match(written, played, shift, tol, voices)
+    shift0 = _shift(written, played, COARSE)
+    shift, rate = _time_map(written, played, shift0)
+    pairs = _match(written, played, shift, rate, tol)
     matched = [(w, p) for w, p in pairs if p is not None]
-    out.update(shift=round(shift, 3), tracks={str(k): v for k, v in voices.items()},
-               matched=len(matched), matched_share=len(matched) / len(written))
+    out.update(shift=round(shift, 4), rate=round(rate, 6), matched=len(matched),
+               matched_share=len(matched) / len(written))
     # pitch: one constant offset per played sample
     by_sample = defaultdict(list)
     for w, p in matched:
@@ -341,46 +392,64 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
         ok = sum(1 for o in offs if abs(o - mode) < 0.5)
         agree += ok
         total += len(offs)
-        samples[key] = {"notes": len(offs), "offset": mode, "fraction": round(frac, 3), "agree": ok / len(offs)}
+        samples[key] = {"notes": len(offs), "offset": mode, "fraction": round(frac, 3), "agree": round(ok / len(offs), 3)}
     out.update(pitch_pairs=total, pitch_agree=(agree / total) if total else None, samples=samples)
-    # lengths: played against written, where both are known
-    ratios = [((p[2] - p[1]) / (w[1] - w[0])) for w, p in matched if p[2] is not None and w[1] - w[0] > 0.02]
+    # lengths: played against written, where both are known and the written is not a grace note
+    ratios = [((p[2] - p[1]) / ((w[1] - w[0]) * rate)) for w, p in matched if p[2] is not None and w[1] - w[0] > 0.02]
     out["length_ratio_median"] = round(statistics.median(ratios), 3) if ratios else None
-    # tempo
+    # the written onsets on the readings' grid
+    if beats is not None and len(beats) > 1:
+        out["grid"] = _grid([shift + rate * w[0] for w in written], beats)
+        out["beat_seconds"] = round(statistics.median(beats[i + 1] - beats[i] for i in range(len(beats) - 1)), 4)
+    # tempo: the written meta (where the reader emits a real one) against the read
     tempos = m0["tempos"]
     spans = [(tempos[i][1], (tempos[i + 1][0] if i + 1 < len(tempos) else m0["end"]) - tempos[i][0]) for i in range(len(tempos))]
     spans = [(b, d) for b, d in spans if d > 0]
-    written_bpm = max(spans, key=lambda x: x[1])[0] if spans else None    # the tempo held longest
+    written_bpm = max(spans, key=lambda x: x[1])[0] if spans else None
     out["tempo_written"] = round(written_bpm, 2) if written_bpm else None
     out["tempo_changes"] = len({round(b, 1) for b, _ in spans})
-    read_bpm = row["bpm"]
-    out["tempo_read"] = read_bpm
-    if read_bpm and written_bpm:
-        r = read_bpm / written_bpm
-        out["tempo_ratio"] = round(r, 3)
-        out["tempo_class"] = _ratio_class(r)
-    # loop: the end from MIDI0, the start from MIDI1's tail
-    out["loop_end_written"] = round(m0["end"] - shift, 3) if m0["end"] else None   # in played time
+    out["tempo_read"] = row["bpm"]
+    if row["bpm"] and written_bpm:
+        out["tempo_ratio"] = round(row["bpm"] / written_bpm, 3)
+        out["tempo_class"] = _ratio_class(out["tempo_ratio"])
+    # the written unit: the commonest written length, in seconds of played time
+    lengths = Counter(round((w[1] - w[0]) * rate, 3) for w in written if w[1] - w[0] > 0.01)
+    if lengths:
+        unit = lengths.most_common(1)[0][0]
+        out["written_unit"] = unit
+        if out.get("beat_seconds"):
+            out["beat_over_unit"] = round(out["beat_seconds"] / unit, 2)
+    # loop: the end from MIDI0, the start from MIDI1's tail, in played time
+    end_w = shift + rate * m0["end"] if m0["end"] else None
+    out["loop_end_written"] = round(end_w, 3) if end_w else None
+    out["loops"] = None
     if midi1 and os.path.exists(midi1):
         m1 = read_midi(midi1)
         if m1["end"] > m0["end"] + 0.5:
             tail = [n for n in m1["notes"] if n[0] >= m0["end"] - 0.005]
             body = [n for n in m1["notes"] if n[0] < m0["end"] - 0.005]
-            s = _loop_start(body, tail, m0["end"])
-            out["loop_start_written"] = round(s - shift, 3) if s is not None else None
+            s = _loop_start(body, tail)
             out["loops"] = True
+            if s is not None:
+                out["loop_start_written"] = round(shift + rate * s, 3)
+                out["loop_len_written"] = round(rate * (m0["end"] - s), 3)
         else:
             out["loops"] = False
     if row["loop_bar"] is not None and row["loop_seconds"] and bars is not None and row["loop_bar"] < len(bars):
         start = bars[row["loop_bar"]]
         out["loop_start_read"] = round(start, 3)
+        out["loop_len_read"] = round(row["loop_seconds"], 3)
         out["loop_end_read"] = round(start + row["loop_seconds"], 3)
     if out.get("loop_end_written") and out.get("loop_end_read"):
         out["loop_end_diff"] = round(out["loop_end_read"] - out["loop_end_written"], 3)
     if out.get("loop_start_written") is not None and out.get("loop_start_read") is not None:
         out["loop_start_diff"] = round(out["loop_start_read"] - out["loop_start_written"], 3)
-    if beats is not None and len(beats) > 1:
-        out["beat_seconds"] = round(statistics.median(beats[i + 1] - beats[i] for i in range(len(beats) - 1)), 4)
+    if out.get("loop_len_written") and out.get("loop_len_read"):
+        out["loop_len_class"] = _ratio_class(out["loop_len_read"] / out["loop_len_written"])
+    elif out["loops"] and out.get("loop_len_read") is None:
+        out["loop_len_class"] = "none read"
+    elif out["loops"] is False and out.get("loop_len_read"):
+        out["loop_len_class"] = "none written"
     out["status"] = "ok"
     return out
 
@@ -435,8 +504,9 @@ def cmd_compare(a) -> int:
 
 # ── report ──
 
-def _pct(n, d) -> str:
-    return f"{100 * n / d:3.0f} %" if d else "  - "
+def _med(values, unit: str = "") -> str:
+    values = [v for v in values if v is not None]
+    return f"{statistics.median(values):.{2 if unit == '' else 0}f}{unit}" if values else "-"
 
 
 def cmd_report(a) -> int:
@@ -446,45 +516,64 @@ def cmd_report(a) -> int:
     games = defaultdict(list)
     for r in results:
         games[r["game"]].append(r)
-    print(f"{'game':24s} {'songs':>5s} {'conv':>5s} {'tempo same/2x/½/other':>22s} {'loop end ≤1 beat':>16s} {'start ≤1 bar':>12s} {'notes matched':>13s} {'pitch agree':>11s} {'len ratio':>9s}")
+    # a reader whose written tempo is one value for most of a game's songs emits a default, not a tempo
+    default_tempo = {}
+    for game, rs in games.items():
+        ts = [round(r["tempo_written"]) for r in rs if r.get("tempo_written")]
+        if ts:
+            top, n = Counter(ts).most_common(1)[0]
+            default_tempo[game] = n / len(ts) > 0.5 and len(ts) >= 6
+    print(f"{'game':22s} {'songs':>5s} {'cmp':>4s} {'notes':>6s} {'pitch':>6s} {'grid: beat/16th/trip/off':>24s}"
+          f" {'tempo same/2x/½/other':>22s} {'loop len same/sub/other/none':>28s} {'end≤beat':>8s} {'len':>5s}")
     tot = Counter()
     for game, rs in sorted(games.items()):
         ok = [r for r in rs if r.get("status") == "ok"]
-        tc = Counter(r.get("tempo_class") for r in ok if r.get("tempo_class"))
-        loop_end = [r for r in ok if r.get("loop_end_diff") is not None]
-        end_ok = sum(1 for r in loop_end if abs(r["loop_end_diff"]) <= r.get("beat_seconds", 0.5))
-        loop_start = [r for r in ok if r.get("loop_start_diff") is not None]
-        start_ok = sum(1 for r in loop_start if abs(r["loop_start_diff"]) <= 4 * r.get("beat_seconds", 0.5))
-        notes_share = statistics.median(r["matched_share"] for r in ok) if ok else None
+        notes = statistics.median(r["matched_share"] for r in ok) if ok else None
         pitch = [r["pitch_agree"] for r in ok if r.get("pitch_agree") is not None]
+        grids = [r["grid"] for r in ok if r.get("grid")]
+        g = {k: statistics.median(x[k] for x in grids) for k in ("beat", "sixteenth", "triplet", "off")} if grids else None
+        tc = Counter(r.get("tempo_class") for r in ok if r.get("tempo_class"))
+        same, dbl, half = tc["same"], tc["double"] + tc["x4"], tc["half"] + tc["quarter"]
+        other = sum(tc.values()) - same - dbl - half
+        lc = Counter(r.get("loop_len_class") for r in ok if r.get("loop_len_class"))
+        l_same = lc["same"]
+        l_sub = lc["half"] + lc["third"] + lc["quarter"]
+        l_none = lc["none read"]
+        l_other = sum(lc.values()) - l_same - l_sub - l_none - lc["none written"]
+        loop_end = [r for r in ok if r.get("loop_end_diff") is not None and r.get("beat_seconds")]
+        end_ok = sum(1 for r in loop_end if abs(r["loop_end_diff"]) <= r["beat_seconds"])
         lens = [r["length_ratio_median"] for r in ok if r.get("length_ratio_median")]
-        print(f"{game[:24]:24s} {len(rs):5d} {len(ok):5d} "
-              f"{tc['same']:5d}/{tc['double'] + tc['x4']:3d}/{tc['half'] + tc['quarter']:3d}/{sum(tc.values()) - tc['same'] - tc['double'] - tc['x4'] - tc['half'] - tc['quarter']:3d}"
-              f"{'':6s}{end_ok:4d}/{len(loop_end):<4d}{'':5s}{start_ok:4d}/{len(loop_start):<4d}"
-              f"{'':3s}{(100 * notes_share if notes_share is not None else 0):8.1f} %  {(100 * statistics.median(pitch) if pitch else 0):8.1f} %  {(statistics.median(lens) if lens else 0):8.2f}")
-        tot.update(songs=len(rs), ok=len(ok), end_ok=end_ok, end_n=len(loop_end), start_ok=start_ok, start_n=len(loop_start))
-        tot.update({f"tempo_{k}": v for k, v in tc.items()})
-    print(f"\n{tot['ok']} of {tot['songs']} songs compared; tempo same {tot['tempo_same']}, double {tot['tempo_double']}, half {tot['tempo_half']}, "
-          f"other {tot['ok'] - tot['tempo_same'] - tot['tempo_double'] - tot['tempo_half'] - tot['tempo_x4'] - tot['tempo_quarter']}; "
-          f"loop end within a beat {tot['end_ok']}/{tot['end_n']}, start within a bar {tot['start_ok']}/{tot['start_n']}")
+        flag = "*" if default_tempo.get(game) else " "
+        print(f"{game[:22]:22s} {len(rs):5d} {len(ok):4d} {_med([notes]) if notes is not None else '-':>6s} {_med(pitch):>6s} "
+              + (f"{g['beat']:5.2f}/{g['sixteenth']:4.2f}/{g['triplet']:4.2f}/{g['off']:4.2f}" if g else f"{'-':>22s}")
+              + f"   {same:4d}/{dbl:3d}/{half:3d}/{other:3d}{flag}"
+              + f"   {l_same:5d}/{l_sub:3d}/{l_other:5d}/{l_none:4d}{'':5s}{end_ok:3d}/{len(loop_end):<4d}{_med(lens):>5s}")
+        tot.update(songs=len(rs), ok=len(ok), end_ok=end_ok, end_n=len(loop_end), l_same=l_same, l_sub=l_sub, l_other=l_other, l_none=l_none,
+                   t_same=same, t_dbl=dbl, t_half=half, t_other=other)
+    print(f"\n{tot['ok']} of {tot['songs']} songs compared. Tempo (* = the reader emits one default tempo for the game, not a measure): "
+          f"same {tot['t_same']}, double {tot['t_dbl']}, half {tot['t_half']}, other {tot['t_other']}. "
+          f"Loop length: same {tot['l_same']}, a sub-period of the written {tot['l_sub']}, other {tot['l_other']}, none read where one is written {tot['l_none']}; "
+          f"end within a beat {tot['end_ok']}/{tot['end_n']}.")
     if a.fails:
         print("\nsongs outside the tolerances:")
         for r in results:
             if r.get("status") != "ok":
-                if r.get("status") not in ("not converted",):
+                if r.get("status") != "not converted":
                     print(f"  {r['game']}/{r['song']}: {r['status']}")
                 continue
             why = []
-            if r.get("tempo_class") not in (None, "same", "double", "half"):
-                why.append(f"tempo {r['tempo_read']} read vs {r['tempo_written']} written")
             if r["matched_share"] < 0.98:
                 why.append(f"notes matched {100 * r['matched_share']:.0f} %")
             if r.get("pitch_agree") is not None and r["pitch_agree"] < 0.99:
                 why.append(f"pitch {100 * r['pitch_agree']:.0f} %")
-            if r.get("loop_end_diff") is not None and abs(r["loop_end_diff"]) > r.get("beat_seconds", 0.5):
+            if r.get("grid") and r["grid"]["off"] > 0.1:
+                why.append(f"off the grid {100 * r['grid']['off']:.0f} %")
+            if r.get("tempo_class") not in (None, "same", "double", "half") and not default_tempo.get(r["game"]):
+                why.append(f"tempo {r['tempo_read']:.0f} read vs {r['tempo_written']:.0f} written")
+            if r.get("loop_len_class") not in (None, "same", "none written"):
+                why.append(f"loop {r['loop_len_class']} (read {r.get('loop_len_read')} s, written {r.get('loop_len_written')} s)")
+            elif r.get("loop_end_diff") is not None and r.get("beat_seconds") and abs(r["loop_end_diff"]) > r["beat_seconds"]:
                 why.append(f"loop end off {r['loop_end_diff']:+.2f} s")
-            if r.get("loop_start_diff") is not None and abs(r["loop_start_diff"]) > 4 * r.get("beat_seconds", 0.5):
-                why.append(f"loop start off {r['loop_start_diff']:+.2f} s")
             if why:
                 print(f"  {r['game']}/{r['song']}: " + "; ".join(why))
     return 0
