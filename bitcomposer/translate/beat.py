@@ -713,67 +713,6 @@ def rebar(grid: Grid, bass_beats: list[float]) -> bool:
     return True
 
 
-REPHASE_LIFT = 1.3                   # how much more of the bass's landings a bar line must hold to move the bar
-
-
-def rephase(grid: Grid, bass_notes: list[tuple[float, float]]) -> bool:
-    """The bar's phase again from where the bass lands on a new pitch: a
-    chord changes on the bar line far more often than mid-bar, where a
-    root-and-fifth bass hits beats one and three alike and a backbeat
-    snare is louder than beat one, which had both the accents and the
-    bass's hits set the bar a half bar off. For each section, the beat of
-    its meter the bass's pitch classes change on most takes the downbeat,
-    where it holds REPHASE_LIFT times the changes the current one does;
-    the bar stays otherwise. bass_notes: (beat, midi) of the bass voices'
-    notes. Returns whether the bar moved."""
-    if not grid.sections or not grid.bar_times:
-        return False
-    spans, bt = [], grid.beat_times
-    for x in grid.sections:
-        tol = 0.5 * x.period
-        i0 = bisect.bisect_left(bt, x.first - tol)
-        i1 = bisect.bisect_right(bt, x.end + tol)
-        if spans and i0 < spans[-1][1]:
-            i0 = spans[-1][1]
-        spans.append((i0, max(i0, i1)))
-    # the bass's pitch class on each beat: of the notes starting on it, the lowest
-    on_beat = {}
-    for b, midi in bass_notes:
-        if abs(b - round(b)) < 0.2 and b >= -0.2:
-            i = round(b)
-            if i not in on_beat or midi < on_beat[i]:
-                on_beat[i] = midi
-    if len(on_beat) < 8:
-        return False
-    landings = []                            # beats where the bass's pitch class differs from its last
-    last = None
-    for i in sorted(on_beat):
-        pc = round(on_beat[i]) % 12
-        if last is not None and pc != last:
-            landings.append(i)
-        last = pc
-    if len(landings) < 4:
-        return False
-    moved = False
-    bars = []
-    for x, (i0, i1) in zip(grid.sections, spans):
-        m = x.meter
-        counts = [0] * m
-        for i in landings:
-            if i0 <= i < i1:
-                counts[(i - i0) % m] += 1
-        d = x.downbeat % m
-        if sum(counts) >= 4:
-            best = max(range(m), key=lambda j: counts[j])
-            if best != d and counts[best] >= REPHASE_LIFT * max(1, counts[d]):
-                x.downbeat = best
-                moved = True
-        bars += bt[i0 + x.downbeat % m:i1:m]
-    if moved:
-        grid.bar_times = bars
-    return moved
-
-
 def _meter(slots: dict, k: int, first: float, choices=(4, 3, 2)) -> tuple[int, int]:
     """Beats a bar, 2, 3 or 4, and the downbeat's place among them: the count
     whose accents repeat most strongly, the place where they are loudest."""

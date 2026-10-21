@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass, field
 
-from . import beat, events, form as form_mod, harmony, measures as measures_mod, roles as roles_mod
+from . import beat, events, form as form_mod, harmony, measures as measures_mod, phase as phase_mod, roles as roles_mod
 
 
 @dataclass
@@ -38,14 +38,15 @@ def manifest(folder: str) -> dict:
 
 def beat_and_parts(song) -> tuple:
     """The song's beat (None: free time) and each voice's part, the bar set
-    again from the bass; a voice echoing another is left out of the beat."""
+    again from the bass and its phase from where the song repeats itself;
+    a voice echoing another is left out of the beat."""
     echoed = roles_mod.echoes(song)          # an echo's notes sit off the grid: left out of the beat
     grid = beat.find([(p.start, p.level, p.voice) for p in song.notes if p.voice not in echoed])
     roles = roles_mod.assign(song, grid, echoed)
     if grid:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
-        beat.rephase(grid, [(grid.beats(p.start), p.midi) for p in song.notes if p.voice in bass and p.midi is not None])
+        phase_mod.find(grid, song)
     return grid, roles
 
 
