@@ -656,6 +656,173 @@ composer's games, and the evidence above says those weights travel with
 the composer across drivers; a pack by driver would not add a habit the
 composers' do not already hold.
 
+Where it stands (2026-10-20), progressions by part and the melody's
+phrases, the last two items of "from the readings": `python -m
+bitcomposer.translate.phrases --db PATH` (`translate/phrases.py`; `--games`
+for the 39, `--against PACK` for the generator, `--heard JSON` for the parts
+marked by ear; `games.py` and `against.py` take `--phrases`) prints two
+tables over the harmony counts' songs that have a form read. The parts are
+the form reader's (stage 1, the form table's parts: a phrase, a short one
+played again two parts), a part repeating an earlier one left out of the
+progressions. The chord reader changes chord every beat over half the
+time, so a progression counted beat by beat is buried in passing chords;
+each half bar (a bar of three whole) takes the fit chord sounding most of
+it, the one sounding first at a tie, which keeps the chords on the strong
+beats: in FFVI's parts the half bar keeps 63 % of the beat-level moves
+and the bar 40 %, the bar losing the change on the third beat. The chords
+are named by degree alone (I, IV, bVII: the shapes were spread thin, and
+I, I5 and Isus4 are one chord held with its third coming and going). A
+part's progression is its chords through its bars with runs merged, and
+where they repeat a cycle (I IV V I IV V I) the cycle; with it the
+three-chord runs, the part's first and last chord, its cadence (V -> I,
+IV -> I, bVII -> I with the natural minor's VII -> I, another chord to I,
+a half cadence on V, elsewhere, one chord), what the song loops back on
+and how often the chord changes in the part's first bar, its middle bars
+and its last. The melody's phrases are the part, and four and two bars
+cut from its start; the tune is the melody voice's line, and where that
+voice rests through a phrase the counter-line's stands in (FFVI's tune
+passes to it; the accompaniment does not stand in, its line being the
+chord's top), a phrase with neither left out and the shares said. The
+contour is from the mean pitch of the phrase's thirds by time (an arch
+where the middle sits two semitones over both ends, a valley under, rising
+or falling where the ends differ by two, level otherwise), the peak the
+first highest note placed in the phrase's quarters, the range the highest
+to the lowest; the first note and the end note (the note held longest in
+the last bar, since a phrase's last notes are mostly the pickup into the
+next: counted as the last note, Terra's phrases ended on their upbeat and
+a phrase ended on the tonic 18 % of the time, not 21) are named against
+the key and the chord at their onset; and against the phrase before it in
+the song a phrase is repeated (three quarters of its notes match in place
+and pitch), moved up or down (they match shifted by one interval, a
+semitone's drift allowed for a diatonic sequence), answered (the rhythm
+matches, the tune not) or new. FFVI, 66 songs of 82 (13 in free time, 2
+unfit, 1 with no form read), 349 parts, 269 of them new and with a chord:
+
+| | FFVI |
+|---|---|
+| a part is built on | one chord 16 %, 2 to 4 chords 36 %, 5 to 8 19 %, more 28 % |
+| the progressions counted most, major (86 parts, 24 songs) | VI 3 %; I VI, V, I IV, III, I bVI, I 2 % each (2 to 3 parts each) |
+| minor (183 parts, 42 songs) | I 14 % (25 parts in 16 songs), I IV 4 % (8 parts in 8 songs), IV 3 %, IV I 3 %, I VI 2 %, IV VI 2 %, I #IV 2 % |
+| three-chord runs, major / minor | I IV I, I bVII I, IV I IV 2 % each / I IV I, I VI I, IV I IV, I bII I 2 % each |
+| a part begins on | I 41 %, IV 17 %, VI 11 %, III 10 %, VII 6 %, V 5 % |
+| ends on | I 37 %, IV 16 %, V 12 %, VI 12 %, III 6 % |
+| its cadence | IV -> I 9 %, V -> I 4 %, bVII -> I 4 %, another chord to I 9 %, half (on V) 11 %, elsewhere 46 %, one chord 16 % |
+| the song loops back (57 songs) | V -> I 18 %, IV -> I 9 %, another to I 14 %, the same chord 19 %, elsewhere 37 %; onto I 60 %, IV 16 % |
+| chord changes a bar: the part's first bar / middle / last | 2 [1-3] / 1.5 [1-2.3] / 2 [1-2]; the last bar changes more than the middle in 39 % of parts, less in 45 % |
+| phrases: the part / 4 bars / 2 bars | 349 / 636 / 1115; from the melody 74 / 76 / 70 %, the counter-line 12 / 12 / 14, resting 14 / 12 / 16 |
+| contour (4 bars) | falling 28 %, rising 24, level 33, valley 9, arch 5 (the part: valley 12, arch 6) |
+| the peak in the first / second / third / last quarter (4 bars) | 43 / 20 / 19 / 18 % |
+| range, semitones: the part / 4 bars / 2 bars | 13 [8-18] / 10 [7-15] / 8 [5-12]; within a fifth 22 / 31 / 44 %, over an octave 55 / 38 / 23 |
+| starts on the key's 1 / 3 / 5 / another degree / off the scale (4 bars) | 23 / 16 / 18 / 30 / 13 % |
+| ends on | 21 / 15 / 17 / 30 / 17 % (the part: 26 / 18 / 16 / 25 / 15) |
+| starts on the chord's root / third / fifth / another tone (4 bars) | 26 / 18 / 26 / 28 % |
+| ends on | 23 / 18 / 28 / 31 % |
+| a phrase ending a part ends on the tonic / one inside a part / the song's last before its loop (4 bars) | 24 % / 18 % / 25 % |
+| against the one before (4 bars) | repeated 6 %, moved up or down 2 %, answered 7 %, new 74 %, the first 12 % |
+
+What they say: FFVI's parts are not built on progressions. A part sits
+on one chord or two in half the cases (I alone in 25 minor parts of 16
+songs, I and IV to and fro in 8 songs), and the rest is each part's own
+sequence, the cycles no more shared than the chord moves were (3 parts at
+the top in major); the three-chord runs that recur are I IV I and IV I IV,
+I VI I in minor and I bVII I in major, the pendulum of stage 4's first
+count, with I bII I the Neapolitan colour. A part begins on I in two of
+five and ends on I in little more than one of three, and the cadence is
+mostly none: a part ends on IV, VI or V as often as it closes, and when it
+closes, IV -> I and another chord to I twice as often as V -> I; the half
+cadence on V is one part in nine. The song's loop is where FFVI cadences:
+V -> I in 18 % of loops against 4 % of parts, and the loop lands on I in
+three songs of five. The chord does not speed up into a part's end: the
+last bar changes as the middle does, and the first bar more (its first
+chord counts). The melody's four-bar phrases fall as often as they rise
+and sit level a third of the time, the arch (the textbook phrase) one in
+twenty: the peak is in the first quarter of the phrase in 43 % of them,
+and in the part's phrases the valley (high at both ends, low between)
+outdoes the arch two to one. The range is an octave in four bars and over
+one in the part, a fifth in two bars. The tune starts and ends on the
+chord's root or fifth more than its third, and on the key's tonic a
+quarter of the time at either end; a phrase ending a part ends on the
+tonic in 24 %, one inside a part in 18 %, so the tonic closes a part
+little more than it closes a phrase, and the song's last phrase before
+the loop no more. Phrases are new against the one before three times in
+four; the ones heard again are repeated outright (6 %) or answered, the
+same rhythm with another tune (7 %, Terra's consequent among them), and
+the sequence (the same shape moved up or down) is rare, 2 % at four bars
+and 5 % at two. Over the 39 games, 1307 songs with a form read, the
+shared rows are the harmony's again: a part on four chords or fewer (46
+%, 40 to 54 in the middle half), ending on I (33 %, 29 to 38), V -> I (4
+%, 3 to 7; Super Mario World 14 and Dragon Quest V 13 the ends, as in the
+moves table), bVII -> I (3 %), the chord rate into the end (38 % of parts
+change more in their last bar everywhere), and the melody's contours
+(rising 26 %, falling 26 %, the peak in the second half 40 %, the range
+12 semitones, all within 0.35). What a game makes its own is whether its
+phrases come back: repeated 6 % at the median but 0 in Pilotwings and 23 %
+in Top Gear, answered 6 % but 0 in Super Turrican 2 (every phrase new) and
+22 % in Soul Blazer (Seiken Densetsu 3 16, Secret of Evermore 17, Zelda
+17), spreads of 0.76 and 0.82; and between, the half cadence (Bahamut
+Lagoon 5 % to Romancing SaGa 3 24), a part beginning on I (Cybernator 11
+to Top Gear 55), a phrase ending a part on the tonic (Ogre Battle 9 to
+Super Mario World 42), the level phrases (Cybernator 11 to Donkey Kong
+Country 3 52) and the arch (2 to 16). The composer explains the cadences
+(V -> I 0.67, bVII -> I 0.78, the half cadence 0.64 against 0.29 to 0.34
+by chance), the level phrases (0.62), and whether phrases repeat, move or
+are new (0.68, 0.70, 0.80), as it explained the grid and the kit; the
+driver only a part ending on I (0.47), the half cadence (0.40) and the
+range (0.39). The generator against FFVI, the same comparison with
+`--phrases` (a composed song's parts are read by the same form reader
+over its notes placed in time, since its plan records its sections' kinds
+but not their lengths; the reader cuts 164 and 183 parts from 131 and 132
+planned sections, a four-bar pattern a part): its parts are built on as
+many chords as FFVI's (one chord 17 / 13 %, two to four 35 / 34) and
+change chord at the same rate into their end, but begin on I in a quarter
+against two fifths and on V in 15 % against 5, end on V in 29 / 25 %
+against 12 and on I in 20 / 21 % against 37, so the half cadence is one
+part in four (25 / 20 %) against one in nine, and bVII -> I is 1 % against
+4. Its four-bar phrases are level in 38 / 45 % against 33, their peak in
+the last quarter in 6 / 8 % against 18, their range 7 semitones against
+10, their end on the chord's root or fifth in 55 / 67 % against 51 and on
+the tonic when ending a part 16 / 18 % against 24; and the generator
+answers: 28 / 32 % of its phrases keep the one before's rhythm with
+another tune against FFVI's 7, and 1 / 0 % repeat it against 6. So what a
+pack could set: the chord a part opens and closes on and the loop's
+cadence (begins on I, ends on I, V -> I at the loop, not the half
+cadence), the phrase's range and where its peak falls, and that phrases
+come back repeated as often as answered; what needs the generator's
+writing (stage 4's next slice) is a tune that rests in bars the
+counter-line carries (none read in its songs), phrases that return across
+a part (a four-bar phrase repeated within the part is 6 % of FFVI's and 1
+% of its own), and an end note held on the tonic. How far the form
+reader's parts can be trusted for this: over the 23 songs marked by ear
+with their parts (12 marked by bar on the bar lines of the time, 11 in
+seconds), the reader's part starts agree within three quarters of a bar
+with 73 % of the marked ones (68 of 93) and 65 % of its own are marked
+(104 read; the 12 marked again at the scale of sections against its
+sections: 76 % and 57 %), the loop within a second in all but three
+(Athletic and Kakariko Village a bar or two off, Snakey Chantey's not
+read); counted on the marked parts instead of the read ones, those 23
+songs give 84 parts against 104 and the headline numbers move by five
+points or fewer (a part on four chords or fewer 41 to 37 %, begins on I
+32 to 37, ends on I 33 to 29, V -> I 7 to 4, the half cadence 12 to 15,
+a phrase ending a part on the tonic 35 to 30, repeated 5 to 8, answered 8
+to 10, new 85 to 81) except the chord rate into the end (29 to 41 % of
+parts change more in their last bar), which depends on which bar the part
+ends in; so the shares above hold within a few points, the part count
+runs a fifth high, and anything that turns on a part's last bar is the
+roughest. What looks wrong: a part cut by the reader where the repeats
+cut, not where the harmony closes, leaves a cadence "elsewhere" (46 %)
+that an ear would place a bar on; the phrases are cut four bars from the
+part's start, so a part read a bar late shifts every phrase and its
+pickup lands in the phrase before (the held end note mends the end, not
+the start); a part of 30 bars (Terra's last) is one "phrase" at the part
+scale, so the four-bar rows are the ones to draw from; the ends off the
+scale (17 %) are the key read for modal tunes and the melody's chromatic
+passing notes as much as the tune; "level" takes a tune circling a note
+within two semitones, and a tune in sixteenths that rises and falls
+within each third reads level too; and the counter-line stands in for a
+resting melody as one line, which is right where the tune passes to it
+and wrong where it is a countermelody under a rest, which the readings
+cannot tell apart.
+
 ## Stage 5: the player's PACKS panel
 
 As `SPC-IMPORT.md` step 6: import a folder (progress while each song is
