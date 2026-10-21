@@ -13,6 +13,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -63,7 +64,7 @@ def one(args) -> dict:
                 out["error"] = "export timeout"
             for tmp_target, target in targets:
                 if os.path.exists(tmp_target):
-                    os.replace(tmp_target, target)
+                    shutil.move(tmp_target, target)
                     out["exported"].append(os.path.basename(target))
     return out
 
