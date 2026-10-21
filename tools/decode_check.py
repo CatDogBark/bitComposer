@@ -210,17 +210,27 @@ class Played:
 
 
 def _shift(written: list, played: Played, tol: float) -> float:
-    """The constant by which the played onsets run behind the written ones, before the rate is
-    known: the shift of the written onsets that puts the most of the first stretch within tol of a
-    played onset, tried over the shifts aligning any early written onset with any early played one."""
-    w = sorted({round(n[0], 3) for n in written})[:60]
+    """The constant by which the played onsets run behind the written ones, to start from: the
+    shift under which the most distinct written onsets (a sample of them, from the whole song) land
+    within tol of a played onset, voted over every pairing of a sampled written onset with a played
+    one. A song dumped mid-way has no played intro, so the written start may align far in."""
+    w = sorted({round(n[0], 3) for n in written})
     p = sorted({round(s, 3) for s in played.starts})
     if not w or not p:
         return 0.0
-    cands = {0.0} | {pp - ww for ww in w[:12] for pp in p[:60] if abs(pp - ww) < 8.0}
+    step = max(1, len(w) // 150)
+    sample = w[::step]
+    bins = Counter()
+    for ww in sample:
+        for b in {round((pp - ww) / (2 * tol)) for pp in p}:
+            bins[b] += 1
+    if not bins:
+        return 0.0
+    top = bins.most_common(1)[0][1]
+    cands = sorted(b * 2 * tol for b, n in bins.items() if n >= 0.8 * top)
     best, best_n = 0.0, -1
-    for d in sorted(cands):
-        n = sum(1 for ww in w if played.near(ww + d, tol))
+    for d in cands:
+        n = sum(1 for ww in sample if played.near(ww + d, tol))
         if n > best_n or (n == best_n and abs(d) < abs(best)):
             best, best_n = d, n
     return best
@@ -442,9 +452,21 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
     pairs = _match(written, played, tmap, tol)
     matched = [(w, p) for w, p in pairs if p is not None]
     rate = tmap.rate
+    # a written note with no played onset may sit inside a note still sounding: a slur, written as
+    # a new note, played as a pitch change under one key-on
+    sounding = sorted((n[1], n[2] if n[2] is not None else float("inf")) for n in played.notes)
+    sound_starts = [s for s, _ in sounding]
+    inside = 0
+    for w, p in pairs:
+        if p is None:
+            t = tmap(w[0])
+            i = bisect.bisect_right(sound_starts, t)
+            if any(sounding[j][1] > t + tol for j in range(max(0, i - 8), i)):
+                inside += 1
     out.update(shift=round(tmap.shift, 4), rate=round(rate, 6), jumps=tmap.jumps,
                unaligned_share=round(tmap.unaligned / len(written), 3),
-               matched=len(matched), matched_share=len(matched) / len(written))
+               matched=len(matched), matched_share=len(matched) / len(written),
+               inside_held_share=round(inside / len(written), 3))
     # pitch: one constant offset per played sample
     by_sample = defaultdict(list)
     for w, p in matched:
@@ -589,12 +611,13 @@ def cmd_report(a) -> int:
         if ts:
             top, n = Counter(ts).most_common(1)[0]
             default_tempo[game] = n / len(ts) > 0.5 and len(ts) >= 6
-    print(f"{'game':22s} {'songs':>5s} {'cmp':>4s} {'notes':>6s} {'pitch':>6s} {'grid: beat/16th/trip/off':>24s}"
+    print(f"{'game':22s} {'songs':>5s} {'cmp':>4s} {'notes':>6s} {'+held':>6s} {'pitch':>6s} {'grid: beat/16th/trip/off':>24s}"
           f" {'tempo same/2x/½/other':>22s} {'loop len same/sub/other/none':>28s} {'end≤beat':>8s} {'len':>5s}")
     tot = Counter()
     for game, rs in sorted(games.items()):
         ok = [r for r in rs if r.get("status") == "ok"]
         notes = statistics.median(r["matched_share"] for r in ok) if ok else None
+        held = statistics.median(r["matched_share"] + r.get("inside_held_share", 0) for r in ok) if ok else None
         pitch = [r["pitch_agree"] for r in ok if r.get("pitch_agree") is not None]
         grids = [r["grid"] for r in ok if r.get("grid")]
         g = {k: statistics.median(x[k] for x in grids) for k in ("beat", "sixteenth", "triplet", "off")} if grids else None
@@ -610,7 +633,7 @@ def cmd_report(a) -> int:
         end_ok = sum(1 for r in loop_end if abs(r["loop_end_diff"]) <= r["beat_seconds"])
         lens = [r["length_ratio_median"] for r in ok if r.get("length_ratio_median")]
         flag = "*" if default_tempo.get(game) else " "
-        print(f"{game[:22]:22s} {len(rs):5d} {len(ok):4d} {_med([notes]) if notes is not None else '-':>6s} {_med(pitch):>6s} "
+        print(f"{game[:22]:22s} {len(rs):5d} {len(ok):4d} {_med([notes]) if notes is not None else '-':>6s} {_med([held]) if held is not None else '-':>6s} {_med(pitch):>6s} "
               + (f"{g['beat']:5.2f}/{g['sixteenth']:4.2f}/{g['triplet']:4.2f}/{g['off']:4.2f}" if g else f"{'-':>22s}")
               + f"   {same:4d}/{dbl:3d}/{half:3d}/{other:3d}{flag}"
               + f"   {l_same:5d}/{l_sub:3d}/{l_other:5d}/{l_none:4d}{'':5s}{end_ok:3d}/{len(loop_end):<4d}{_med(lens):>5s}")
