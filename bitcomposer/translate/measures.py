@@ -57,6 +57,7 @@ class Note:
     midi: float | None               # None: unpitched
     group: str                       # melody, bass, harmony, arp, drums
     voice: int
+    level: float = 1.0               # its loudness, 0 to 1 (the chord reader weighs by it)
 
 
 @dataclass
@@ -91,13 +92,28 @@ def of_reading(r) -> Score | None:
 
 
 def of_composed(song: dict) -> Score:
-    """A composed song's notes (compose_song's dict), by its channel layout."""
+    """A composed song's notes (compose_song's dict), by its channel layout.
+    A note's level is its loudness as the player sets it (the volume column
+    or the sample's default, the sample's global volume, the channel's), the
+    loudest pitched note's 1, as a decoded note's volume is 0 to 1."""
     from ..it_format import FX_SPECIAL, S_NOTE_DELAY, it_tempo_to_bpm
     from ..pattern import CHANNEL_ROLES, ROWS_PER_BEAT, ROWS_PER_BAR
     drum = {"kick", "snare", "hihat", "tom", "crash", "openhat"}
     group = {ch: DRUMS if role in drum else role for ch, role in enumerate(CHANNEL_ROLES)
              if role in drum or role in (MELODY, BASS, HARMONY, ARP)}
     speed = song["speed"]
+    samples = song.get("samples", [])
+    if song.get("info"):
+        from ..mix import channel_volumes_for
+        channel = channel_volumes_for(song["info"])
+    else:
+        channel = [64] * len(CHANNEL_ROLES)
+
+    def level(cell, ch: int) -> float:
+        s = samples[cell.instrument - 1] if 0 < cell.instrument <= len(samples) else None
+        column = cell.volume if cell.volume <= 64 else (s.default_volume if s else 64)
+        return column / 64 * (s.global_volume / 64 if s else 1.0) * channel[ch] / 64
+
     notes, open_ = [], {}
     row0 = 0
     for o in song["orders"]:
@@ -119,10 +135,13 @@ def of_composed(song: dict) -> Score:
                     before = open_.pop(ch)
                     before.beats = beat - before.beat
                 if cell.note < 120 and cell.volume != 0:
-                    n = Note(beat, None, None if g == DRUMS else float(cell.note), g, ch)
+                    n = Note(beat, None, None if g == DRUMS else float(cell.note), g, ch, level(cell, ch))
                     notes.append(n)
                     open_[ch] = n
         row0 += pat.rows
+    loudest = max((n.level for n in notes if n.midi is not None), default=1.0) or 1.0
+    for n in notes:
+        n.level /= loudest
     notes.sort(key=lambda n: n.beat)
     end = row0 / ROWS_PER_BEAT
     bpm = it_tempo_to_bpm(song["tempo"], speed)

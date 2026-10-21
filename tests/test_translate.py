@@ -670,5 +670,99 @@ class Rhythm(unittest.TestCase):
         self.assertNotIn("double", s.notes)
 
 
+class Against(unittest.TestCase):
+    """A composed song read for the counts: its parts the generator's, its chords and key the reader's."""
+
+    def _plain_song(self) -> dict:
+        """Four bars, C F C G held a bar each in the three harmony channels over the bass on the root, a tune
+        above, a kick on one and three, a snare on two and four, hats on the eighths."""
+        from bitcomposer.it_format import ITNote, ITPattern
+        pat = ITPattern(rows=64, channels=19)
+
+        def put(row, ch, note):
+            pat.data[row][ch] = ITNote(note=note, instrument=1, volume=64)
+        for row, notes in ((0, (60, 64, 67)), (16, (65, 69, 72)), (32, (60, 64, 67)), (48, (67, 71, 74))):
+            for ch, m in zip((1, 2, 3), notes):
+                put(row, ch, m)
+            put(row, 4, notes[0] - 24)
+        for row, m in ((0, 72), (4, 74), (8, 76), (12, 77), (16, 81), (24, 79), (32, 76), (40, 74), (48, 74), (56, 71)):
+            put(row, 0, m)
+        for bar in range(0, 64, 16):
+            put(bar, 6, 60)
+            put(bar + 8, 6, 60)
+            put(bar + 4, 7, 60)
+            put(bar + 12, 7, 60)
+            for e in range(0, 16, 2):
+                put(bar + e, 8, 60)
+        return {"name": "plain", "key": 60, "scale": "major", "speed": 6, "tempo": 120, "patterns": [pat], "orders": [0, 255]}
+
+    def test_a_plain_song_reads_as_written(self):
+        from collections import Counter
+        from bitcomposer.translate import against, measures
+        song = self._plain_song()
+        v, r, home = against.read(song)
+        self.assertEqual(home, (0, "major", "major"))
+        self.assertEqual((v.tonic, v.mode), (0, "major"))
+        self.assertEqual([(c.start, c.end, c.root, c.shape) for c in v.chords], [(0, 4, 0, ""), (4, 8, 5, ""), (8, 12, 0, ""), (12, 16, 7, "")])
+        self.assertEqual(against.parts(measures.of_composed(song)),
+                         {0: "melody", 1: "harmony", 2: "harmony", 3: "harmony", 4: "bass", 6: "drums", 7: "drums", 8: "drums"})
+        self.assertEqual(set(v.notes), {"melody", "harmony", "bass"})
+        self.assertEqual(v.notes["bass"][:3], [(0, 4, 36), (4, 4, 41), (8, 4, 36)])
+        self.assertEqual(v.notes["bass"][3][::2], (12, 43))                        # still sounding at the end: no length
+        self.assertEqual(r.bars, [(0, 4), (4, 8), (8, 12), (12, 16)])
+        self.assertEqual(Counter(n[3] for n in r.notes["drums"]), {"kick": 8, "snare": 8, "hihat": 32})
+        rows = against.rows([v], [r], [home], against.DRUMS)
+        self.assertEqual(rows["songs"][2], ("the key read is the generator's home key", "1 of 1 (the key its scale's notes spell 0, another 0)", None))
+        self.assertEqual(sorted(rows["chord moves by degree alone, major keys"]), [("I -> IV", "33 %", 1), ("I -> V", "33 %", 1), ("IV -> I", "33 %", 1)])
+        self.assertEqual(rows["chord shapes read (share of spans)"], [("major", "100 %", 4)])
+        self.assertEqual(rows["bass figures (R root, 3 third, 5 fifth, 7 seventh, + another, ? no chord, r the root an octave up)"],
+                         [("R... .... .... ....", "100 % (1)", 4)])
+        drums = dict((row[0], row[1]) for row in rows["drum sounds, named by how they are played"])
+        self.assertEqual(drums, {"named kick": "kick", "named snare": "snare", "named hat": "hihat", "named other": "",
+                                 "the rule names the generator's as it does": "3 of 3"})
+        self.assertEqual(rows["drum figures, bars of 4 beats (K kick, S snare, h hat, o another)"],
+                         [("K x... .... x... ....\nS .... x... .... x...\nh x.x. x.x. x.x. x.x.", "100 % (1)", 4)])
+        text = against.table({"game": rows, "pack": rows}, top=3)
+        self.assertIn("  I -> IV               33 %  33 %", text)
+        self.assertIn("  S .... x... .... x...\n  h x.x. x.x. x.x. x.x.", text)
+
+    def test_a_composed_song_s_parts_are_its_channels_and_its_plain_chords_read_as_written(self):
+        """A fixed seed of the hand-made ffvi pack (sustained chords, the bass driving): where the generator
+        plays a chord plain (the bass on one pitch class, the harmony channels striking the two other tones of
+        a major or minor triad on it), the chord read over the bar is that triad. The generator changing
+        changes the song: pick another seed that holds chords plain then."""
+        from collections import Counter
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import against, measures
+        song = compose_song(seed=16, sound="ffvi")
+        v, r, home = against.read(song)
+        s = measures.of_composed(song)
+        parts = against.parts(s)
+        self.assertEqual((parts[0], parts[4], parts[5]), ("melody", "bass", "arp"))
+        self.assertTrue(all(parts[ch] == "drums" for ch in parts if ch >= 6))
+        self.assertTrue(all(parts[ch] in ("harmony", "accompaniment", "counter", "arp") for ch in (1, 2, 3) if ch in parts))
+        self.assertEqual((v.tonic, v.mode), home[:2])
+        triads = {frozenset({r_, (r_ + 4) % 12, (r_ + 7) % 12}): (r_, "") for r_ in range(12)}
+        triads.update({frozenset({r_, (r_ + 3) % 12, (r_ + 7) % 12}): (r_, "m") for r_ in range(12)})
+        plain = agree = 0
+        for a, b in r.bars:
+            struck = lambda ok: {round(n.midi) % 12 for n in s.notes if ok(n) and a - 0.06 <= n.beat < b - 0.06}
+            bass, chord = struck(lambda n: parts[n.voice] == "bass"), struck(lambda n: n.voice in (1, 2, 3))
+            triad = triads.get(frozenset(chord | bass))
+            if len(bass) != 1 or not chord or not triad or triad[0] not in bass:
+                continue
+            plain += 1
+            held = Counter()
+            for c in v.chords:
+                if c.start < b and c.end > a and v.kept(c):
+                    held[c.root, c.shape] += min(c.end, b) - max(c.start, a)
+            agree += held and held.most_common(1)[0][0] == triad
+        self.assertGreater(plain, 0)
+        self.assertEqual(agree, plain)
+        rows = against.rows([v], [r], [home], against.DRUMS)
+        self.assertEqual(rows["songs"][2][1], "1 of 1 (the key its scale's notes spell 0, another 0)")
+        self.assertEqual(rows["the melody's moves"][0], ("songs / notes", f"1 / {len(r.notes['melody'])}", None))
+
+
 if __name__ == "__main__":
     unittest.main()

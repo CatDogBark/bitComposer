@@ -59,7 +59,8 @@ measures.py takes it), its moves from note to note in semitones by size
 sixth, a seventh, an octave, more) and direction, and the semitones
 themselves; its notes' lengths as the time to the next note, in beats (the
 value a score would write), on the song's grid, and how much of that the
-note sounds (a note cut short of three quarters of it is detached)."""
+note sounds (a note cut short of three quarters of it is detached).
+against.py sets songs composed with a pack beside these counts."""
 import argparse
 import bisect
 import math
@@ -325,10 +326,11 @@ def _name(profile: dict) -> str:
     return "kick" if profile["one"] > profile["back"] else "snare" if profile["back"] > profile["one"] else "other"
 
 
-def sounds(songs) -> dict:
+def sounds(songs, names: dict | None = None) -> dict:
     """Each drum sample's profile over the songs, and its name: {key: {songs,
     hits, a_bar (hits a bar where it plays), one, three, back, eighth, finer
-    (hits there), length (beats), name}}."""
+    (hits there), length (beats), name}} (names: a sound's name known
+    beforehand, by key, as the generator's drums are; the rule names the rest)."""
     out = defaultdict(lambda: Counter(songs=0, hits=0, one=0, three=0, back=0, eighth=0, finer=0))
     bars, lengths = defaultdict(set), defaultdict(list)
     for s in songs:
@@ -349,13 +351,13 @@ def sounds(songs) -> dict:
     for k, c in out.items():
         c["a_bar"] = c["hits"] / len(bars[k])
         c["length"] = statistics.median(lengths[k]) if lengths[k] else 0.0
-        c["name"] = _name(c)
+        c["name"] = (names or {}).get(k) or _name(c)
     return dict(out)
 
 
-def drums(songs) -> Drums:
-    """The drums' figures over the bars, the sounds named by how they are played."""
-    d = Drums(sounds=sounds(songs))
+def drums(songs, names: dict | None = None) -> Drums:
+    """The drums' figures over the bars, the sounds named by how they are played (or by `names`)."""
+    d = Drums(sounds=sounds(songs, names))
     for s in songs:
         if R.DRUMS not in s.notes:
             continue

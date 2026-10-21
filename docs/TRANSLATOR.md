@@ -356,6 +356,102 @@ that is the chord reading or passing tones, not the tuning; the melody's,
 the drums' and the accompaniment's counts moved by a point or two, the
 held harmony's onsets a bar from 0.9 to 0.8.
 
+Where it stands (2026-10-20), the generator against FFVI: `python -m
+bitcomposer.translate.against --db PATH --against ffvi --against
+PACK.json` (`translate/against.py`) composes stage 2's songs (20 a pack,
+seeds 1 to 20) and prints the harmony and rhythm tables with the game's
+beside them, each table's rows the top ones of every column. A composed
+song's parts are its channels' (the generator knows them; its drums come
+named), its three harmony channels told apart as the reader tells a game's
+voices (held chords, struck ones, an arp, a counter-line, by roles.py's
+rules in their order, since the counter-line takes a harmony channel the
+song does not record); its chords and key are read from its notes as
+FFVI's are, not taken from its plan, so a difference in the tables is the
+music's and not the reader's; a note's loudness is what the player sets
+(the volume column or the sample's default, the sample's global volume,
+the channel's), the loudest pitched note's 1, as a decoded note's is; its
+grid is the one it writes on (sixteenths and triplets) and it counts
+whole, having no loop. Its key is one for the song, as FFVI's: a chorus or
+bridge the generator moved to another key gives numerals in the key read,
+as a FFVI modulation does. The key read is the generator's home key in 9
+and 10 songs of 20, and in 8 and 5 the key its scale's notes spell (a
+mixolydian or dorian tune read as the major a fifth or a tone off, a
+phrygian as the minor a fourth up: the profile knows major and minor
+only), which FFVI's modal tunes get alike. The imported pack's 20 were
+composed from a copy of its `pack.json` named `ffvi_imported`: the pack
+file loader takes no space or capital in a name, and the import had been
+given "FFVI imported". FFVI, the hand-made `ffvi` pack and the imported
+one, the rows that differ, the largest and most audible first:
+
+| | FFVI | hand-made `ffvi` | imported |
+|---|---|---|---|
+| the melody's lengths: a sixteenth / an eighth / a beat or longer | 32 % / 31 % / 27 % | 0 / 15 / 75 | 0 / 18 / 70 |
+| the melody on a triplet eighth / detached | 8 % / 27 % | 0 / 4 % | 0 / 5 % |
+| the melody's moves: a step / a repeat / a fifth or more | 57 % / 9 % / 8 % | 49 / 18 / 5 | 48 / 19 / 6 |
+| onsets off the eighths, and of them on a triplet: bass / accompaniment / melody / drums | 23 % 47 / 36 30 / 24 33 / 41 31 | 1 0 / 18 0 / 10 0 / 28 0 | 4 0 / 11 0 / 10 0 / 37 26 |
+| onsets a bar: bass / accompaniment / melody | 4.5 / 7.1 / 3.9 | 2.9 / 4.7 / 2.6 | 2.1 / 1.2 / 2.6 |
+| the bass moves: a repeat / a step / a fourth / an octave | 40 % / 24 / 10 / 7 | 53 / 8 / 4 / 18 | 31 / 9 / 5 / 30 |
+| the bass's bars: the root held / the root on one and three / on a non-chord tone | 9 % / 1 % / 23 % | 8 / 10 / 4 | 25 / 3 / 4 |
+| the held harmony's bars: a chord struck / resting | 50 % / 33 % | 27 / 69 | 23 / 74 |
+| chords held, major: I / I5; minor: i / I5 | 18 % / 7; 15 / 15 | 6 / 10; 6 / 12 | 7 / 11; 7 / 15 |
+| chord shapes read: major / minor / bare fifth / sus4 | 29 % / 21 / 24 / 7 | 16 / 14 / 46 / 12 | 21 / 14 / 44 / 12 |
+| the chord's tones sounding: root, third and fifth / root and fifth with another / root and fifth | 17 % / 9 / 11 | 10 / 24 / 6 | 13 / 13 / 12 |
+| the harmony on a non-chord tone / the arp on the third | 8 % / 25 % | 23 / 14 | 14 / 16 |
+| spread, the bass to the top: three octaves and more / under one; semitones | 31 % / 27 %; 28 | 9 / 27; 21 | 5 / 43; 14 |
+| pitches sounding a span | 4 [2-5] | 4 [2-5] | 2 [1-4] |
+| the accompaniment's commonest bars | eighths 14 % (16 songs), sixteenths 7 %, quarters 5 % | one syncopation 40 % (8 songs), eighths 24 %, rest 31 % | halves 41 % (12), a whole note 22 %, rest 35 % |
+| the arp | in 5 songs, 10.6 a bar | in every song, 3.8 a bar, a quarter of its bars in quarters | in every song, 3.3 a bar |
+| the counter-line | in 51 songs, 4.6 a bar | none read | none read |
+| the drums' bars resting / the commonest figure | 13 % / one song's, 3 % | 19 % / kick on one and three, snare on three, hats in eighths, 6 % (9 songs) | 34 % / the same, 1 % |
+| the melody above the chord's top (semitones) | 1.7 [-10-11] | 6 [0-12] | 6.6 [0.5-12] |
+| chord moves by degree, major: IV -> I / I -> IV / I -> VI / V -> I | 6 % / 5 / 4 / 3 | 5 / 4 / 1 / 3 | 4 / 3 / 2 / 5 |
+| the lowest note: the root / the fifth / the third | 46 % / 23 / 14 | 49 / 22 / 11 | 53 / 23 / 13 |
+
+What they say: the generator's writing differs from FFVI's most in its
+values. FFVI's melody moves in eighths and sixteenths, with triplets, by
+step, sounding most of each note and cut short of a quarter; the
+generator's moves in beats and longer, never a sixteenth or a triplet,
+repeats a note twice as often, and holds every note to the next. Nothing
+the generator writes falls on a triplet (the imported pack's swung drums
+apart) and little off the eighths. Its bass repeats or bounces the octave
+(the octave bass) where FFVI's walks by step and fourth through passing
+tones, and plays half as often; so does its accompaniment, in one
+syncopated figure or in halves where FFVI keeps eighths and sixteenths.
+Its chords change every two or four bars (the held harmony rests in
+seven bars of ten, the tonic is a chord held in a twelfth of its beats
+against a sixth) and read as bare fifths half the time, their third
+faint; its parts sit within two octaves where FFVI spreads a third of its
+spans over three, and the imported pack's songs sound two pitches a
+span. It writes an arp in every song and no counter-line the reader
+finds, and its drums keep one figure in half the songs. Alike: the
+inversions, the bass on the root or fifth, the degree moves' order (IV
+and I to and fro ahead of V to I, in both modes), the melody's thirds and
+fourths. What a pack could change, as habits: the bass's bounce and
+repeats (`bass_style`), the accompaniment's one figure and the chords'
+holds (`harmony_mode`), the pitches a span (`harmony_voicing`), the bare
+fifths where `power_chords` asks for them, the drums' rests and swing
+(`drumless`, `drum_density`, `drum_swing`), the arp's presence and
+figures. What needs the generator's writing (stages 3 and 4): the
+melody's values (sixteenths, triplets, dotted figures, notes cut short),
+the bass's passing tones and its density, a chord a bar, chord tones
+spread over three octaves with the third sounding, a counter-line as a
+part, drum figures of each song's own, anything on a triplet. What not
+to trust: the key read for the generator's modal scales shifts those
+songs' numerals (the degree table is like for like with FFVI's modal
+tunes, and neither is the composer's numeral); the chord shapes depend on
+the parts' loudness (every note at one level, the bare fifths fall from
+46 % to 41 % and 44 % to 38 %, still far from 24 %: the generator's bass
+and arp sit on root and fifth and its harmony pad plays 2.6 times under
+its bass); a composed note's length runs to its cut or the next note, a
+decoded note's to its key-off, so "detached" is a different measure on
+the two sides and the generator's struck samples decay unmeasured; the
+rule that names FFVI's drum sounds names the generator's crash a kick
+and its toms and open hat snares, so FFVI's 10 kicks and 13 snares may
+hold crashes and toms; the generator's harmony channels are told apart
+by the reader's rules, so a pulse figure reads as an arp in two songs,
+and no channel reads as a counter-line though the generator writes one
+in some chorus and bridge patterns.
+
 ## Stage 5: the player's PACKS panel
 
 As `SPC-IMPORT.md` step 6: import a folder (progress while each song is

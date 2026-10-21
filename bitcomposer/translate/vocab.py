@@ -30,7 +30,8 @@ root, third (a sus chord's second or fourth is "sus"), fifth, seventh and
 others sound; the spread from the lowest sounding note to the highest, and
 how many; the inversion from the lowest; then which tone each part holds,
 by the beats its notes sound (the melody and counter-line too), and where
-the melody sits above the bass and the chord's top."""
+the melody sits above the bass and the chord's top. against.py sets songs
+composed with a pack beside these counts."""
 import argparse
 import bisect
 import math
