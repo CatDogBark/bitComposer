@@ -226,24 +226,39 @@ def _shift(written: list, played: Played, tol: float) -> float:
     return best
 
 
-def _time_map(written: list, played: Played, shift: float) -> tuple[float, float]:
-    """played time = shift + rate * written time, fitted on the written notes whose only played
-    neighbour within COARSE of the shifted time is one note (a least squares line through them;
-    the rate differs from one by parts in ten thousand where the two decodes assume clocks apart)."""
-    xs, ys = [], []
-    for n in written:
-        c = played.near(n[0] + shift, COARSE)
-        if len(c) == 1:
-            xs.append(n[0])
-            ys.append(played.starts[c[0]])
-    if len(xs) < 8 or xs[-1] - xs[0] < 5.0:
+def _time_map(written: list, played: Played, shift: float, tol: float = TOLERANCE) -> tuple[float, float]:
+    """played time = shift + rate * written time. The two decodes assume clocks apart by parts in
+    ten thousand, so the rate is searched over a narrow band, each rate scored by how many written
+    onsets land within tol of a played one once the shift is set to the median residual at that
+    rate; the best rate wins, the one nearest one at a tie."""
+    onsets = sorted({round(n[0], 4) for n in written})
+    if len(onsets) < 8:
         return shift, 1.0
-    mx, my = statistics.fmean(xs), statistics.fmean(ys)
-    sxx = sum((x - mx) ** 2 for x in xs)
-    rate = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx if sxx else 1.0
-    if not 0.98 < rate < 1.02:                       # not a clock difference: keep the shift alone
-        return shift, 1.0
-    return my - rate * mx, rate
+
+    def residuals(rate: float) -> list[float]:
+        out = []
+        for t in onsets:
+            x = shift + rate * t
+            i = bisect.bisect_left(played.starts, x)
+            cands = [played.starts[j] - x for j in (i - 1, i) if 0 <= j < len(played.starts)]
+            if cands:
+                d = min(cands, key=abs)
+                if abs(d) <= COARSE:
+                    out.append(d)
+        return out
+
+    best = (-1, 1.0, shift)
+    steps = 40
+    for k in range(-steps, steps + 1):
+        rate = 1.0 + k * 0.00005                     # ±0.2 % in steps of 0.005 %
+        res = residuals(rate)
+        if not res:
+            continue
+        adj = statistics.median(res)
+        n = sum(1 for d in res if abs(d - adj) <= tol)
+        if n > best[0] or (n == best[0] and abs(rate - 1) < abs(best[1] - 1)):
+            best = (n, rate, shift + adj)
+    return best[2], best[1]
 
 
 def _match(written: list, played: Played, shift: float, rate: float, tol: float) -> list:
