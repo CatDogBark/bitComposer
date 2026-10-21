@@ -236,6 +236,16 @@ def cmd_chords(a) -> int:
         if not os.path.exists(ogg):
             render(os.path.join(a.spc_root, folder, stem + ".spc"), length, wav)
             to_opus(wav, ogg)
+        # the harmony alone: the voices the readings call the tune, the counter-line and the drums
+        # muted (and a voice doubling one of those), so the chords can be heard on their own
+        roles = {v: (r, of) for v, r, of in db.execute("SELECT voice, role, of FROM voices WHERE song = ?", (row["id"],))}
+        quiet = {v for v, (r, _) in roles.items() if r in ("melody", "counter", "drums")}
+        quiet |= {v for v, (r, of) in roles.items() if r == "double" and of in quiet}
+        harmony = os.path.join(a.out_dir, name + " - harmony.ogg")
+        if not os.path.exists(harmony):
+            wav_h = os.path.join(a.out_dir, name + "-harmony.wav")
+            render(os.path.join(a.spc_root, folder, stem + ".spc"), length, wav_h, mute=sum(1 << v for v in quiet))
+            to_opus(wav_h, harmony)
         changes = [round(c[0], 3) for c in db.execute(
             "SELECT start FROM chords WHERE song = ? AND root IS NOT NULL AND fit >= 0.6 ORDER BY start", (row["id"],))]
         # a chord's start in beats to seconds on the grid
@@ -249,7 +259,8 @@ def cmd_chords(a) -> int:
             if k + 1 < len(beats):
                 return beats[k] + (beat - k) * (beats[k + 1] - beats[k])
             return beats[-1] + (beat - (len(beats) - 1)) * (beats[-1] - beats[-2])
-        manifest.append({"n": f"{i:02d}", "game": row["game"], "title": row["title"], "file": name + ".ogg", "folder": folder,
+        manifest.append({"n": f"{i:02d}", "game": row["game"], "title": row["title"], "file": name + ".ogg",
+                         "harmony_file": name + " - harmony.ogg", "muted_voices": sorted(quiet), "folder": folder,
                          "stem": stem, "why": why, "half": half[i - 1], "seconds": round(length, 2), "bpm": round(row["bpm"], 1),
                          "meter": row["meter"], "bars": [round(x, 3) for x in bars if x <= length + 1],
                          "read_changes": [round(at(c), 3) for c in changes if at(c) <= length + 1]})
