@@ -288,6 +288,54 @@ marks over 59 s, mostly one every two bars; the reader makes 3.6
 changes for each heard, F1 0.43 over every change and 0.52 on bar lines
 (`~/diags/bitcomposer/idiom/chord_score.py`).
 
+**Step 4 (2026-10-21): the chord changes, against the listener's marks.**
+All twelve songs are marked (the page's collection `chordtaps1`, kept as
+`~/diags/bitcomposer/idiom/chords/heard-chords.json` on both machines
+with `chord_review.py`, `chord_score.py` and `chord_eval.py` beside it):
+Kefka twice, the second pass counting, marked "hard"; three songs with
+no change heard at all (Underground Castle, Harid's Theme, Welcome to
+Your Sanctuary: "the same chord with things happening on top"). Against
+the notes themselves (the bass's most-sounded pitch class a bar and the
+chordal voices' pitch set, `note_changes.py`), the marks are confirmed
+in eight songs (F1 0.89 to 1.00), half caught in the one fast song
+(Gourmet Race, 169 BPM, a change every bar or two: the limit of tapping
+at speed), and differ in Harid's Theme and Hall of Collosia, where the
+listener hears a stable ground under moving lines, and in Kefka, where
+the marks fall half a bar from the read bar lines. The taps run 0.25 s
+late with a 0.17 s spread on Hyrule Field and about 0.4 s late on slow
+songs with soft attacks, so a mark is moved 0.25 s earlier and matched
+within 0.5 s. The beat-by-beat reader against those marks: F1 0.53 on
+the development six, 0.25 on the held-out six, making 1.4 to 39 times
+the changes heard (it relabelled on each note of an arpeggio, each step
+of a bass figure, and each time the texture thinned or filled; a chord
+that stopped and restarted counted twice). The reader is rewritten bar
+by bar (`harmony.chords`): a new chord where the bass settles on another
+root or the chordal voices' set changes by half, a bar with nothing
+tonal carrying the chord on, each span's chord the best shape on its
+pooled pitch classes with the bass's root preferred, a span with no
+chordal voice an implied chord (`Chord.stated`, the "no stated harmony"
+texture: 204 of the 1622 songs on a beat have no voice read as harmony,
+arpeggio or accompaniment). Tried on the development half and dropped:
+hysteresis on the bass root (settled Harid's riff, broke Crateria's
+alternation through a pitch the two chords share), the bass alone
+deciding where it sounds (lost Gourmet Race), half-bar spans (Kefka
+0.11 to 0.50, but Harid's and Collosia's changes doubled). Result:
+development F1 0.65, four of six at 0.75 or better (Kefka 0.17 and
+Harid 0.00 the misses); **held-out F1 0.85, five of six at 0.75 or
+better** (Underground Castle, Still of the Night, Crateria, Psycho Spin
+and Sanctuary at 0.95 to 1.00; Hall of Collosia 0.12, its arpeggio sets
+changing 28 times where four changes are heard, and no bass voice read).
+The exit criterion is met on five of the six. Over the collection the
+median root changes a bar falls from 1.45 (857 of 1136 steady songs over
+one a bar) to 0.52 (quartiles 0.30 to 0.71, none over one), which
+retires the handoff's "twice a bar everywhere" as a reader artifact,
+and with it the chord-rate and pitch-class-count rows of the
+shared-or-own table until they are counted again. Open: inner-voice
+motion over a static bass (Harid, Collosia), Kefka's half-bar offset
+(the downbeat round will say whether it is the bar's phase), the
+counting level for fast songs, and the role reader finding no bass in
+Collosia or Still of the Night.
+
 ## Exit criteria, with the tolerances proposed before scoring
 
 - **Tempo:** the read tempo equals the written one, or exactly twice or
@@ -327,8 +375,9 @@ pages did. Nothing else in the phase needs an ear.
 - Which songs the independent decode converts cleanly, and what its shell
   exposes beyond MIDI (the parsed events would give loop points and track
   order directly).
-- Whether the half bar survives as the harmony's counting level, or the
-  root-motion rule replaces it.
+- Answered in step 4: the bar is the harmony's counting level, read from
+  the bass's root and the chordal set; the half bar only arises in Kefka,
+  which may be its bar phase.
 - What to do with the 222 songs the beat reader follows loosely: scored
   separately, since a loose grid rounds nothing.
 - How much of the drum namer's rule survives the forty.
