@@ -3,7 +3,7 @@ rhythm half, counted: each part's rhythms bar by bar, the bass's and the
 drums' figures as played, and the melody's intervals and lengths, over a
 game's songs in the readings database.
 
-    python -m bitcomposer.translate.rhythm [--db PATH] [--game NAME] [--top N]
+    python -m bitcomposer.translate.rhythm [--db PATH] [--game NAME] [--top N] [--spc DIR]
 
 The songs are the harmony counts' (vocab.py): each once through, to where
 it loops; a song in free time, or whose chord beats are mostly unfit or
@@ -44,14 +44,17 @@ apart by octave). Of notes struck together the lowest is the bass's line,
 and its moves from note to note are counted by size, as the melody's.
 
 Drum figures. The drums' bar as which sound plays where. The readings keep
-each hit's sample, not what it is; a sound is named by how the game plays
-it, over all its songs: one playing DENSE hits a bar or more where it plays
-is the hat (hi-hats and rides keep time); of the rest, one landing on the
-bar's first beat more than on its backbeats is the kick, the other way the
-snare, as often one as the other another sound. The sounds are listed with
-their profiles so the names can be judged; FFVI's named kick and snare are
-the samples the pack's kit (pack.py, by brightness) picked for them. A bar's
-figure is each sound's positions, drawn as the parts' are.
+each hit's sample, not what it is; a sound is named by its sound (drums.py:
+kick, snare, hat or another) when the game's SPC files are at hand (--spc),
+its hits settling only a bodiless burst between a hat and a cymbal. Without
+them it is named by how the game plays it, over all its songs: one playing
+DENSE hits a bar or more where it plays is the hat (hi-hats and rides keep
+time); of the rest, one landing on the bar's first beat more than on its
+backbeats is the kick, the other way the snare, as often one as the other
+another sound; which misnames an open hat on the off-eighths a snare and a
+cymbal held long a kick (FFVI's did, checked by ear 2026-10-20). The sounds
+are listed with their profiles so the names can be judged. A bar's figure
+is each sound's positions, drawn as the parts' are.
 
 Melody. The melody as one line (of notes struck together, the highest, as
 measures.py takes it), its moves from note to note in semitones by size
@@ -71,7 +74,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from fractions import Fraction
 
-from . import roles as R, store
+from . import drums as drums_mod, roles as R, store
 from .vocab import FIT, Span, _beats_at, _median, _pct, tone_of
 
 NEAR = 0.06                          # beats: onsets this close are one, and this close to an eighth is on it
@@ -117,6 +120,7 @@ class Song:
     chords: list
     notes: dict = field(default_factory=dict)   # role -> [(start, length, midi, sample), ...]
     rolls: dict = field(default_factory=dict)   # role -> notes of its roll voices, left out of the patterns
+    bpm: float = 120.0                          # its tempo: how long a drum is held, in seconds
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -124,8 +128,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
     left out: {"free time": n, "mostly silent": n}; the harmony counts' songs."""
     songs, out = [], Counter()
     where, args = ("WHERE game = ?", (game,)) if game else ("", ())
-    for sid, title, meter, division, seconds, loop_bar, loop_seconds in db.execute(
-            f"SELECT id, title, meter, division, seconds, loop_bar, loop_seconds FROM songs {where}", args):
+    for sid, title, meter, division, seconds, loop_bar, loop_seconds, bpm in db.execute(
+            f"SELECT id, title, meter, division, seconds, loop_bar, loop_seconds, bpm FROM songs {where}", args):
         row = db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()
         if division is None or not row:
             out["free time"] += 1
@@ -146,7 +150,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         lines = [b for b in (_beats_at(beats, t) for t in bars) if b < end]
         ends = lines[1:] + [lines[-1] + meter] if lines else []
         song = Song(title, meter, division, [(a, min(b, end)) for a, b in zip(lines, ends) if min(b, end) - a >= 1 - NEAR],
-                    chords)
+                    chords, bpm=bpm or 120.0)
         keys = {idx: key for idx, key in db.execute("SELECT idx, key FROM samples WHERE song = ?", (sid,))}
         for role, evidence, blob in db.execute("SELECT role, evidence, notes FROM voices WHERE song = ?", (sid,)):
             if role in PARTS:
@@ -326,13 +330,16 @@ def _name(profile: dict) -> str:
     return "kick" if profile["one"] > profile["back"] else "snare" if profile["back"] > profile["one"] else "other"
 
 
-def sounds(songs, names: dict | None = None) -> dict:
+def sounds(songs, names: dict | None = None, bank=None) -> dict:
     """Each drum sample's profile over the songs, and its name: {key: {songs,
     hits, a_bar (hits a bar where it plays), one, three, back, eighth, finer
-    (hits there), length (beats), name}} (names: a sound's name known
-    beforehand, by key, as the generator's drums are; the rule names the rest)."""
+    (hits there), length (beats), held (seconds), midi (the pitch it plays
+    at most, or None), name, how}}. The name: known beforehand (names: by
+    key, as the generator's drums are), else by its sound (bank: drums.Bank
+    or drums.Kit, where it has the sample), else by how it is played
+    (_name); `how` says which."""
     out = defaultdict(lambda: Counter(songs=0, hits=0, one=0, three=0, back=0, eighth=0, finer=0))
-    bars, lengths = defaultdict(set), defaultdict(list)
+    bars, lengths, held, midis = defaultdict(set), defaultdict(list), defaultdict(list), defaultdict(Counter)
     for s in songs:
         seen = set()
         for i, (_, struck) in enumerate(bars_of(s, R.DRUMS)):
@@ -346,18 +353,26 @@ def sounds(songs, names: dict | None = None) -> dict:
                            else "eighth" if p.denominator == 2 else "finer"] += 1
                     if not math.isnan(n[1]):
                         lengths[k].append(n[1])
+                        held[k].append(n[1] * 60 / s.bpm)
+                    if not math.isnan(n[2]):
+                        midis[k][round(n[2])] += 1
         for k in seen:
             out[k]["songs"] += 1
     for k, c in out.items():
         c["a_bar"] = c["hits"] / len(bars[k])
         c["length"] = statistics.median(lengths[k]) if lengths[k] else 0.0
-        c["name"] = (names or {}).get(k) or _name(c)
+        c["held"] = statistics.median(held[k]) if held[k] else None
+        c["midi"] = midis[k].most_common(1)[0][0] if midis[k] else None
+    by_sound = drums_mod.names(bank, out) if bank else {}
+    for k, c in out.items():
+        c["name"], c["how"] = ((names[k], "known") if names and k in names else (by_sound[k], "sound") if k in by_sound
+                               else (_name(c), "play"))
     return dict(out)
 
 
-def drums(songs, names: dict | None = None) -> Drums:
-    """The drums' figures over the bars, the sounds named by how they are played (or by `names`)."""
-    d = Drums(sounds=sounds(songs, names))
+def drums(songs, names: dict | None = None, bank=None) -> Drums:
+    """The drums' figures over the bars, the sounds named as sounds() names them."""
+    d = Drums(sounds=sounds(songs, names, bank))
     for s in songs:
         if R.DRUMS not in s.notes:
             continue
@@ -424,9 +439,10 @@ def _moves_table(moves: Counter, semitones: Counter) -> list[str]:
     return out
 
 
-def report(songs: list, left_out: dict, top: int = 10, game: str = "") -> str:
+def report(songs: list, left_out: dict, top: int = 10, game: str = "", bank=None) -> str:
     """The three tables as text: the rhythms per part and bar, the bass's and
-    the drums' figures, the melody's moves and lengths."""
+    the drums' figures, the melody's moves and lengths (bank: the game's
+    samples, drums.Bank, to name the drums by their sound)."""
     total = len(songs) + sum(left_out.values())
     head = f"rhythm of {game + ': ' if game else ''}{len(songs)} songs"
     out = [head + (f" of {total} (" + ", ".join(f"{n} {why}" for why, n in left_out.items()) + ")" if left_out else "")]
@@ -470,14 +486,18 @@ def report(songs: list, left_out: dict, top: int = 10, game: str = "") -> str:
             out.append(f"    {figure:{5 * meter}s} {_pct(count, n)}  {c.songs[figure]:3d} songs")
     out.append("  the bass moves")
     out += _moves_table(b.moves, b.semitones)
-    d = drums(songs)
-    out.append(f"\ndrum sounds ({d.songs} songs with drums), by sample, named by how they are played")
+    d = drums(songs, bank=bank)
+    how = Counter(c["how"] for c in d.sounds.values())
+    out.append(f"\ndrum sounds ({d.songs} songs with drums), by sample, named "
+               + (f"by their sound ({how['sound']} of {len(d.sounds)}; the rest by how they are played)" if how["sound"]
+                  else "by how they are played (no SPC files given: --spc)"))
     out.append(f"  {'sound':10s} {'songs':>5s} {'hits':>6s} {'a bar':>5s} {'one':>5s} {'three':>5s} {'back':>5s}"
                f" {'8th':>5s} {'finer':>5s} {'beats':>6s}  named")
     for k, c in sorted(d.sounds.items(), key=lambda kv: -kv[1]["hits"])[:top + 2]:
         out.append(f"  {k[:10]:10s} {c['songs']:5d} {c['hits']:6d} {c['a_bar']:5.1f}"
                    + "".join(f" {_pct(c[w], c['hits']):>5s}" for w in ("one", "three", "back", "eighth", "finer"))
-                   + f" {c['length']:6.2f}  {c['name']}")
+                   + f" {c['length']:6.2f}  {c['name']}" + ("" if c["how"] == "sound" else f" (by {c['how']})"))
+    out.append("  named: " + ", ".join(f"{p} {n}" for p, n in Counter(c["name"] for c in d.sounds.values()).most_common()))
     out.append(f"\ndrum figures ({d.bars} bars; K kick, S snare, h hat, o another sound)")
     for meter in meters:
         c = d.figures.get(meter)
@@ -510,6 +530,7 @@ def main(argv=None) -> int:
     ap.add_argument("--db", help="the readings database (default: ~/.local/share/bitcomposer/readings.db)")
     ap.add_argument("--game", help="only this game's songs (the songs table's game)")
     ap.add_argument("--top", type=int, default=10, help="rows of each patterns table (default 10)")
+    ap.add_argument("--spc", metavar="DIR", help="the game folders' root, or one game's folder: the drums named by their sound")
     args = ap.parse_args(argv)
     db = store.connect(args.db)
     songs, left_out = load(db, args.game)
@@ -517,7 +538,8 @@ def main(argv=None) -> int:
         print("bitcomposer.translate.rhythm: no songs on a beat to count", file=sys.stderr)
         return 1
     games = [g for g, in db.execute("SELECT DISTINCT game FROM songs")]
-    print(report(songs, left_out, args.top, args.game or (games[0] if len(games) == 1 else "")))
+    print(report(songs, left_out, args.top, args.game or (games[0] if len(games) == 1 else ""),
+                 drums_mod.Bank(db, args.spc) if args.spc else None))
     return 0
 
 

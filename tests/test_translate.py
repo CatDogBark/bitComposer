@@ -616,6 +616,7 @@ class Rhythm(unittest.TestCase):
         s = Song("test", 4, 4, [(0, 4), (4, 8), (8, 12), (12, 16)], [], {"drums": hits})
         d = drums([s])
         self.assertEqual({k: v["name"] for k, v in d.sounds.items()}, {"k": "kick", "s": "snare", "h": "hat"})
+        self.assertEqual({v["how"] for v in d.sounds.values()}, {"play"})
         self.assertEqual((d.sounds["h"]["a_bar"], d.sounds["k"]["one"], d.sounds["k"]["three"], d.sounds["s"]["back"]), (8, 4, 4, 8))
         self.assertEqual(dict(d.figures[4]), {(("kick", "x... .... x... ...."), ("snare", ".... x... .... x..."),
                                                ("hat", "x.x. x.x. x.x. x.x.")): 4})
@@ -670,6 +671,72 @@ class Rhythm(unittest.TestCase):
         self.assertNotIn("double", s.notes)
 
 
+class DrumsBySound(unittest.TestCase):
+    """A drum sample named by its sound (drums.py): made-up sounds, the generator's named kits, and the
+    play settling what the sound leaves open."""
+
+    def test_made_up_sounds_are_named_by_what_they_are(self):
+        from bitcomposer.translate import drums
+        kick = drums.measure(tone(55, 0.3, decay=0.08), 32000)                 # a low decaying tone
+        hat = drums.measure(tone(6000, 0.1, noise=20.0, decay=0.015), 32000)    # a short noise burst
+        crash = drums.measure(tone(5000, 1.5, noise=20.0, decay=0.4), 32000)    # a longer bright ring
+        snare = drums.measure(tone(200, 0.3, noise=2.0, decay=0.06), 32000)     # a noise-and-tone hit
+        self.assertGreaterEqual(kick.low, 0.5)
+        self.assertLess(kick.bright, drums.KICK_HZ)
+        self.assertLess(hat.body, drums.BODY)
+        self.assertLess(hat.ring, drums.BURST)
+        self.assertGreaterEqual(crash.ring, drums.LONG)
+        self.assertGreaterEqual(snare.body, drums.BODY)
+        self.assertLess(snare.low, 0.5)
+        self.assertEqual([drums.name(x) for x in (kick, hat, crash, snare)], ["kick", "hat", "other", "snare"])
+        # a tom: a low tone pitched above the kick's range; a block: a mid tone with no body; silence
+        self.assertEqual(drums.name(drums.measure(tone(160, 0.3, decay=0.1), 32000)), "other")
+        self.assertEqual(drums.name(drums.measure(tone(2500, 0.05, decay=0.01), 32000)), "other")
+        # a looped sample rings as long as the game holds it: a short noise loop held long is a cymbal
+        loop = tone(5000, 0.05, noise=20.0)
+        self.assertEqual(drums.name(drums.measure(loop, 32000, (0, len(loop)), held=0.08)), "hat")
+        self.assertEqual(drums.name(drums.measure(loop, 32000, (0, len(loop)), held=1.0)), "other")
+
+    def test_the_play_settles_a_bodiless_burst_and_a_kick_in_the_margin(self):
+        from bitcomposer.translate import drums
+        burst = drums.measure(tone(5000, 0.3, noise=20.0, decay=0.04), 32000)   # between a closed hat and a cymbal
+        self.assertTrue(drums.BURST <= burst.ring < drums.RING and burst.body < drums.BODY)
+        self.assertEqual(drums.name(burst), "snare")                                      # alone: short of OPEN
+        self.assertEqual(drums.name(burst, {"hits": 10, "one": 1, "three": 0, "back": 7}), "snare")
+        self.assertEqual(drums.name(burst, {"hits": 10, "one": 1, "three": 1, "back": 1}), "hat")   # off the beat
+        self.assertEqual(drums.name(burst, {"hits": 10, "one": 7, "three": 1, "back": 1}), "other") # a crash on one
+        thud = drums.measure(tone(130, 0.05, decay=0.01), 32000)              # a short low thud pitched above KICK_HZ
+        self.assertTrue(thud.low >= 0.5 and drums.KICK_HZ <= thud.bright < drums.TOM_HZ and thud.tone < drums.PITCHED)
+        self.assertEqual(drums.name(thud), "other")
+        self.assertEqual(drums.name(thud, {"hits": 10, "one": 5, "three": 3, "back": 1}), "kick")
+        self.assertEqual(drums.name(thud, {"hits": 10, "one": 1, "three": 1, "back": 1}), "other")
+
+    def test_the_generator_s_named_drums_come_out_right(self):
+        from bitcomposer.translate import drums
+        right, total, missed = drums.score()
+        self.assertGreaterEqual(total, 40)
+        # the chip palette's crash and open hat are bursts of 0.18 and 0.11 s, under OPEN: the known misses
+        self.assertLessEqual({p for p, _, _ in missed}, {"crash", "open_hihat"})
+        self.assertGreaterEqual(right, total - 2)
+
+    def test_a_kit_names_a_song_s_drums_from_its_presets_and_the_rhythm_counts_take_them(self):
+        from bitcomposer.translate import drums
+        from bitcomposer.translate.rhythm import Song, sounds
+        hits = []
+        for bar in range(4):
+            hits += [(bar * 4, 0.3, float("nan"), "snes_kick"), (bar * 4 + 2, 0.3, float("nan"), "snes_kick")]
+            hits += [(bar * 4 + 1, 0.3, float("nan"), "snes_snare"), (bar * 4 + 3, 0.3, float("nan"), "snes_snare")]
+            hits += [(bar * 4 + e / 2, 0.1, float("nan"), "snes_crash") for e in range(8)]   # a crash kept as a hat
+            hits += [(bar * 4 + 1, 0.3, float("nan"), "unknown")]
+        s = Song("test", 4, 4, [(0, 4), (4, 8), (8, 12), (12, 16)], [], {"drums": hits})
+        d = sounds([s], bank=drums.Kit())
+        self.assertEqual({k: (v["name"], v["how"]) for k, v in d.items()},
+                         {"snes_kick": ("kick", "sound"), "snes_snare": ("snare", "sound"), "snes_crash": ("other", "sound"),
+                          "unknown": ("snare", "play")})
+        self.assertEqual(sounds([s], {"snes_crash": "hat"}, drums.Kit())["snes_crash"]["how"], "known")
+        self.assertEqual(d["snes_kick"]["held"], 0.3 * 60 / 120)
+
+
 class Against(unittest.TestCase):
     """A composed song read for the counts: its parts the generator's, its chords and key the reader's."""
 
@@ -717,9 +784,9 @@ class Against(unittest.TestCase):
         self.assertEqual(rows["chord shapes read (share of spans)"], [("major", "100 %", 4)])
         self.assertEqual(rows["bass figures (R root, 3 third, 5 fifth, 7 seventh, + another, ? no chord, r the root an octave up)"],
                          [("R... .... .... ....", "100 % (1)", 4)])
-        drums = dict((row[0], row[1]) for row in rows["drum sounds, named by how they are played"])
+        drums = dict((row[0], row[1]) for row in rows["drum sounds, named by their sound (the generator's as it names them)"])
         self.assertEqual(drums, {"named kick": "kick", "named snare": "snare", "named hat": "hihat", "named other": "",
-                                 "the rule names the generator's as it does": "3 of 3"})
+                                 "the namer names the generator's as they are": "3 of 3"})   # the chip palette's kick, snare and hihat
         self.assertEqual(rows["drum figures, bars of 4 beats (K kick, S snare, h hat, o another)"],
                          [("K x... .... x... ....\nS .... x... .... x...\nh x.x. x.x. x.x. x.x.", "100 % (1)", 4)])
         text = against.table({"game": rows, "pack": rows}, top=3)

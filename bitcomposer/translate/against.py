@@ -3,7 +3,7 @@ harmony and rhythm counts (vocab.py, rhythm.py) of songs composed with a
 pack, beside the game's own from the readings database, side by side.
 
     python -m bitcomposer.translate.against --against PACK ... [--db PATH] [--game NAME]
-                                             [--songs N] [--top N]
+                                             [--songs N] [--top N] [--spc DIR]
 
 The packs and seeds are stage 2's (__main__.py --against): a pack's name or
 a pack.json, --songs songs each, seeds 1 to N. Each table's rows are the
@@ -14,7 +14,10 @@ in after it.
 Reading a composed song. The generator knows its parts, so they are its
 channels' (measures.of_composed): the melody, the bass, the arp, and its
 drums by name (its kick and snare, its hi-hats the hat, its toms and crash
-another sound). Its three harmony channels carry held chords, struck
+another sound; each hit keeps its kit preset, so the drum namer, drums.py,
+is scored on the kit as played beside them). The game's drums are named by
+their sound too when its SPC files are given (--spc), else by how they are
+played. Its three harmony channels carry held chords, struck
 chords or, in a chorus or bridge, a counter-line, which the song does not
 record, so each is named as the reader names a game's voices (roles.py's
 rules, in their order): held harmony where its notes' median length is two
@@ -39,12 +42,13 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from fractions import Fraction
 
-from . import harmony, measures, rhythm, roles as R, store, vocab
+from . import drums as drums_mod, harmony, measures, rhythm, roles as R, store, vocab
 from .rhythm import LETTERS, PARTS, PIECES, PLACES, REST, SIZES, VALUES
 from .vocab import INVERSIONS, SPREADS, TONES, _median
 
 DIVISION = 12                        # the generator's grid: sixteenths and triplets
 DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "other", "crash": "other"}
+SLOTS = {"openhat": "open_hihat"}    # a drum channel's kit slot where the names differ
 MINOR = {"natural_minor", "harmonic_minor", "dorian", "phrygian", "minor_pentatonic"}
 
 
@@ -108,11 +112,19 @@ def parts(score: measures.Score) -> dict[int, str]:
     return out
 
 
+def kit(song: dict) -> dict:
+    """A composed song's drum keys to the piece each is (DRUMS): its kit
+    presets by slot (info.instruments), or its channels' names without."""
+    inst = song.get("info", {}).get("instruments", {})
+    return {inst.get(SLOTS.get(ch, ch), ch): piece for ch, piece in DRUMS.items()}
+
+
 def read(song: dict) -> tuple[vocab.Song, rhythm.Song, tuple]:
     """A composed song read for the counts: its chords and key by the reader
     (the module's account), and the generator's home key (tonic, mode) beside."""
     from ..pattern import CHANNEL_ROLES
     s = measures.of_composed(song)
+    inst = song.get("info", {}).get("instruments", {})
     role = parts(s)
     played = [Played(n.beat, s.end if n.beats is None else n.beat + n.beats, n.midi, n.level, n.voice) for n in s.notes]
     grid = _Grid(max(1, math.ceil(s.end)))
@@ -123,14 +135,16 @@ def read(song: dict) -> tuple[vocab.Song, rhythm.Song, tuple]:
     title = song.get("name", "")
     nan = float("nan")
     v = vocab.Song(title, tonic, mode, chords)
-    r = rhythm.Song(title, 4, DIVISION, [(b, b + 4) for b in s.bars if b + 4 <= s.end + 1e-9], chords)
+    r = rhythm.Song(title, 4, DIVISION, [(b, b + 4) for b in s.bars if b + 4 <= s.end + 1e-9], chords,
+                    bpm=float(song.get("tempo") or 120))
     for n in s.notes:
         part = role[n.voice]
         length = nan if n.beats is None else n.beats
         if part in vocab.ROLES:
             v.notes.setdefault(part, []).append((n.beat, length, n.midi))
         if part in PARTS:
-            key = CHANNEL_ROLES[n.voice] if part == R.DRUMS else str(n.voice)
+            ch = CHANNEL_ROLES[n.voice]
+            key = inst.get(SLOTS.get(ch, ch), ch) if part == R.DRUMS else str(n.voice)
             r.notes.setdefault(part, []).append((n.beat, length, nan if n.midi is None else n.midi, key))
     scale = song.get("scale", "major")
     return v, r, (song["key"] % 12, "minor" if scale in MINOR else "major", scale)
@@ -165,10 +179,12 @@ def _top(tally: Counter, total: int) -> list[tuple]:
             for k, n in tally.items()]
 
 
-def rows(vs: list, rs: list, homes: list | None = None, names: dict | None = None) -> dict:
+def rows(vs: list, rs: list, homes: list | None = None, names: dict | None = None, bank=None) -> dict:
     """One column's tables: section -> [(row, cell, rank)], a rank of None
     meaning every row is kept in its order, a number the top ones (homes:
-    the generator's home keys, a composed column; names: its drums')."""
+    the generator's home keys, a composed column; names: its drums', the
+    namer scored against them; bank: a game's samples, drums.Bank, its
+    drums named by their sound)."""
     out = defaultdict(list)
     spans = sum(1 for s in vs for c in s.chords if s.kept(c))
     out["songs"] += [("songs counted", str(len(vs)), None), ("chord spans", str(spans), None)]
@@ -242,20 +258,22 @@ def rows(vs: list, rs: list, homes: list | None = None, names: dict | None = Non
         out["the bass's bars"] += [("a root an octave up", _share(sum(x for k, x in c.items() if "r" in k), n), None),
                                    ("a non-chord tone", _share(sum(x for k, x in c.items() if "+" in k), n), None)]
     out["the bass's bars"] += _moves(b.moves, "the bass moves: ")
-    d = rhythm.drums(rs, names)
+    d = rhythm.drums(rs, names, bank)
     byname = defaultdict(list)
     for k, c in d.sounds.items():
         byname[c["name"]].append(k)
+    sec = "drum sounds, named by their sound (the generator's as it names them)"
     for piece in PIECES:
         keys = byname.get(piece, [])
-        out["drum sounds, named by how they are played"].append(
-            (f"named {piece}", ", ".join(sorted(keys)) if names else f"{len(keys)} samples", None))
-    if names:
-        rule = rhythm.sounds(rs)
+        out[sec].append((f"named {piece}", ", ".join(sorted(keys)) if names else f"{len(keys)} samples", None))
+    if not names:
+        how = Counter(c["how"] for c in d.sounds.values())
+        out[sec].append(("named by their sound / by how they are played", f"{how['sound']} / {how['play']}", None))
+    else:
+        rule = rhythm.sounds(rs, bank=drums_mod.Kit())
         differ = [f"{k} {c['name']}" for k, c in sorted(rule.items()) if c["name"] != names.get(k)]
-        out["drum sounds, named by how they are played"].append(
-            ("the rule names the generator's as it does", f"{len(rule) - len(differ)} of {len(rule)}"
-             + (f" (the rule: {', '.join(differ)})" if differ else ""), None))
+        out[sec].append(("the namer names the generator's as they are", f"{len(rule) - len(differ)} of {len(rule)}"
+                         + (f" (the namer: {', '.join(differ)})" if differ else ""), None))
     c = d.figures.get(4)
     if c:
         n = sum(c.values())
@@ -310,6 +328,7 @@ def main(argv=None) -> int:
                     help="a pack's name or a pack.json; more than one allowed")
     ap.add_argument("--songs", type=int, default=20, help="songs composed for each pack (default 20)")
     ap.add_argument("--top", type=int, default=8, help="rows of each column in the pattern and move tables (default 8)")
+    ap.add_argument("--spc", metavar="DIR", help="the game folders' root, or one game's folder: its drums named by their sound")
     args = ap.parse_args(argv)
     db = store.connect(args.db)
     vs, left = vocab.load(db, args.game)
@@ -318,13 +337,16 @@ def main(argv=None) -> int:
         return 1
     rs, _ = rhythm.load(db, args.game)
     games = [g for g, in db.execute("SELECT DISTINCT game FROM songs")]
-    game = args.game or (games[0] if len(games) == 1 else "the game")
-    columns = {game: rows(vs, rs)}
+    game = args.game or (games[0] if len(games) == 1 else "the games")
+    columns = {game: rows(vs, rs, bank=drums_mod.Bank(db, args.spc) if args.spc else None)}
     columns[game]["songs"][0] = ("songs counted", f"{len(vs)} of {len(vs) + sum(left.values())}", None)
     for pack in args.against:
         name, songs = compose(pack, args.songs)
         read_ = [read(s) for s in songs]
-        columns[name] = rows([v for v, _, _ in read_], [r for _, r, _ in read_], [h for _, _, h in read_], DRUMS)
+        names = {}
+        for s in songs:
+            names.update(kit(s))
+        columns[name] = rows([v for v, _, _ in read_], [r for _, r, _ in read_], [h for _, _, h in read_], names)
     print(table(columns, args.top))
     return 0
 
