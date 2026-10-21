@@ -117,6 +117,26 @@ class Bar(unittest.TestCase):
         g = beat.find(onsets(150, 48, 2, accent=(1.0, 0.7, 0.8, 0.7)))
         self.assertFalse(beat.rebar(g, [float(b) for b in range(48)]))
 
+    def test_the_bar_s_phase_follows_where_the_song_repeats(self):
+        # a four-bar phrase at 120 played four times: a melody a note a beat, a chord held through each bar from
+        # its first beat, a drum on every beat and two more on every third, which the accents take for the one
+        from bitcomposer.translate import phase
+        b = 0.5
+        tune = [60, 62, 64, 65, 67, 69, 71, 72, 74, 72, 71, 69, 67, 65, 64, 62]
+        song = song_of({
+            0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],
+            1: [(k * 4 * b, 4 * b, 48) for k in range(16)],
+            2: [(i * b, 0.05, None) for i in range(64)],
+            3: [((k * 4 + 2) * b, 0.05, None) for k in range(16)],
+            4: [((k * 4 + 2) * b, 0.05, None) for k in range(16)],
+        })
+        g = beat.find([(p.start, p.level) for p in song.notes])
+        self.assertEqual((round(g.bpm), g.meter), (120, 4))
+        self.assertAlmostEqual(g.bar_times[0], g.beat_times[2], places=3)      # the accents' one: the third beat
+        self.assertTrue(phase.find(g, song))
+        self.assertAlmostEqual(g.bar_times[0], g.beat_times[0], places=3)      # the phrase's: the first
+        self.assertEqual(len(g.bar_times), 16)
+
     def test_eighths_in_threes_of_twos_or_twos_of_threes(self):
         # one stream of eighths, its accents 3/4's (Kids Run Through the City) or 6/8's (dotted-quarter beats);
         # a loud downbeat makes the 3/4 louder every three eighths than every two, but it repeats every six
