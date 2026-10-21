@@ -267,21 +267,28 @@ def _match(written: list, played: list, shift: float, tol: float, voices: dict) 
 def _loop_start(body: list, tail: list, end: float) -> float | None:
     """Where the song goes back to: the time in the body the repeat's first notes line up with
     (the same pitches at the same spacings, on the same tracks)."""
+    import bisect
     head = sorted(tail)[:LOOP_NOTES]
     if len(head) < 4:
         return None
+    index = defaultdict(list)                        # (pitch, track) -> onsets, sorted
+    for b in body:
+        index[(b[2], b[3])].append(b[0])
+    for k in index:
+        index[k].sort()
+
+    def hit(h, t: float) -> bool:
+        onsets = index.get((h[2], h[3]), ())
+        i = bisect.bisect_left(onsets, t - 0.015)
+        return i < len(onsets) and onsets[i] < t + 0.015
+
     first = head[0]
-    cands = [b for b in body if b[2] == first[2] and b[3] == first[3]]
     best, best_n = None, 0
-    for c in cands:
-        d = c[0] - first[0]                          # body time = tail time + d
-        n = 0
-        for h in head:
-            t = h[0] + d
-            if any(abs(b[0] - t) < 0.015 and b[2] == h[2] and b[3] == h[3] for b in body):
-                n += 1
+    for start in index.get((first[2], first[3]), ()):
+        d = start - first[0]                         # body time = tail time + d
+        n = sum(1 for h in head if hit(h, h[0] + d))
         if n > best_n:
-            best, best_n = c[0], n
+            best, best_n = start, n
     return best if best_n >= max(4, len(head) * 0.6) else None
 
 
@@ -378,26 +385,33 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
     return out
 
 
+def _compare_job(args) -> dict:
+    game, name, notes_path, midi0, midi1, row, beats, bars, tol = args
+    try:
+        return compare_song(game, name, notes_path, midi0, midi1, row, beats, bars, tol)
+    except Exception as e:
+        return {"game": game, "song": name, "status": f"error: {type(e).__name__}: {e}"}
+
+
 def cmd_compare(a) -> int:
     db = sqlite3.connect(a.db)
     db.row_factory = sqlite3.Row
-    rows = {(r["folder"], r["file"]): r for r in db.execute("SELECT id, folder, file, bpm, meter, loop_bar, loop_seconds, seconds FROM songs")}
+    rows = {}
+    for r in db.execute("SELECT id, folder, file, bpm, meter, loop_bar, loop_seconds, seconds FROM songs"):
+        rows[(os.path.basename(r["folder"].rstrip("/")), r["file"])] = dict(r)
     grids = {}
     for sid, b, r in db.execute("SELECT song, beats, bars FROM beats"):
         beats, bars = array("d"), array("d")
         beats.frombytes(b)
         bars.frombytes(r)
-        grids[sid] = (beats, bars)
-    results = []
+        grids[sid] = (list(beats), list(bars))
+    results, jobs = [], []
     for notes_path in sorted(glob.glob(os.path.join(a.notes, "*", "*.json"))):
         game = os.path.basename(os.path.dirname(notes_path))
         name = os.path.basename(notes_path)[:-5]
         midi0 = os.path.join(a.midi0, game, name + ".mid")
         midi1 = os.path.join(a.midi1, game, name + ".mid") if a.midi1 else None
         row = rows.get((game, name + ".spc"))
-        if row is None:
-            folder_rows = [r for (f, _), r in rows.items() if f == game and r["file"] == name + ".spc"]
-            row = folder_rows[0] if folder_rows else None
         if not os.path.exists(midi0):
             results.append({"game": game, "song": name, "status": "not converted"})
             continue
@@ -405,10 +419,13 @@ def cmd_compare(a) -> int:
             results.append({"game": game, "song": name, "status": "not in the readings"})
             continue
         beats, bars = grids.get(row["id"], (None, None))
-        try:
-            results.append(compare_song(game, name, notes_path, midi0, midi1, row, beats, bars, a.tolerance))
-        except Exception as e:
-            results.append({"game": game, "song": name, "status": f"error: {type(e).__name__}: {e}"})
+        jobs.append((game, name, notes_path, midi0, midi1, row, beats, bars, a.tolerance))
+    with Pool(a.workers) as pool:
+        for i, r in enumerate(pool.imap_unordered(_compare_job, jobs), 1):
+            results.append(r)
+            if i % 200 == 0:
+                print(f"  {i} compared", flush=True)
+    results.sort(key=lambda r: (r["game"], r["song"]))
     with open(a.out, "w") as f:
         json.dump(results, f, indent=0)
     ok = sum(1 for r in results if r.get("status") == "ok")
@@ -488,6 +505,7 @@ def main(argv=None) -> int:
     p.add_argument("--db", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--tolerance", type=float, default=TOLERANCE)
+    p.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     p.set_defaults(run=cmd_compare)
     p = sub.add_parser("report")
     p.add_argument("report")
