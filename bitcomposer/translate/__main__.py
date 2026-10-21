@@ -14,7 +14,9 @@ again only when the translator has changed. Needs the emulator.
 composes --songs songs with it (seeds 1 to N) and measures them beside the
 songs read, the same yardsticks from notes on both sides (measures.py): a
 table of medians, the middle half of the songs in brackets. The generated
-songs' measures are kept in the database too.
+songs' measures are kept in the database too. The stage 4 counts (the
+harmony's and the rhythm's) are set beside a game's the same way by
+python -m bitcomposer.translate.against.
 """
 import argparse
 import glob
