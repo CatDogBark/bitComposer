@@ -226,42 +226,71 @@ def _shift(written: list, played: Played, tol: float) -> float:
     return best
 
 
-def _time_map(written: list, played: Played, shift: float, tol: float = TOLERANCE) -> tuple[float, float]:
-    """played time = shift + rate * written time. The two decodes assume clocks apart by parts in
-    ten thousand, so the rate is searched over a narrow band, each rate scored by how many written
-    onsets land within tol of a played one once the shift is set to the median residual at that
-    rate; the best rate wins, the one nearest one at a tie."""
-    onsets = sorted({round(n[0], 4) for n in written})
-    if len(onsets) < 8:
-        return shift, 1.0
-
-    def residuals(rate: float) -> list[float]:
-        out = []
-        for t in onsets:
-            x = shift + rate * t
-            i = bisect.bisect_left(played.starts, x)
-            cands = [played.starts[j] - x for j in (i - 1, i) if 0 <= j < len(played.starts)]
-            if cands:
-                d = min(cands, key=abs)
-                if abs(d) <= COARSE:
-                    out.append(d)
-        return out
-
-    best = (-1, 1.0, shift)
-    steps = 40
-    for k in range(-steps, steps + 1):
-        rate = 1.0 + k * 0.00005                     # ±0.2 % in steps of 0.005 %
-        res = residuals(rate)
-        if not res:
-            continue
-        adj = statistics.median(res)
-        n = sum(1 for d in res if abs(d - adj) <= tol)
-        if n > best[0] or (n == best[0] and abs(rate - 1) < abs(best[1] - 1)):
-            best = (n, rate, shift + adj)
-    return best[2], best[1]
+WINDOW = 4.0                         # seconds of written time a local shift is found over
+REACH = 0.5                          # seconds either side of the global shift a local shift may sit
 
 
-def _match(written: list, played: Played, shift: float, rate: float, tol: float) -> list:
+class TimeMap:
+    """played time as a function of written time, piecewise: the two decodes differ by a shift that
+    drifts (clocks apart by parts in ten thousand) and sometimes jumps (one decode slips a note, or
+    a stretch of the written song was never played, as an intro after a dump taken mid-song). Each
+    window of written onsets gets the shift that puts the most of them within tol of a played
+    onset; windows with too few agreeing onsets are unaligned and take their neighbours' shift."""
+
+    def __init__(self, written: list, played: Played, shift0: float, tol: float):
+        onsets = sorted({round(n[0], 4) for n in written})
+        self.points = []                             # (written time, shift), aligned windows
+        self.unaligned = 0                           # written onsets in windows no shift fits
+        start = onsets[0] if onsets else 0.0
+        while onsets and start <= onsets[-1]:
+            group = [t for t in onsets if start <= t < start + WINDOW]
+            start += WINDOW
+            if len(group) < 3:
+                self.unaligned += len(group)
+                continue
+            bins = Counter()
+            for t in group:                          # every played onset within reach votes for its shift
+                x = shift0 + t
+                i = bisect.bisect_left(played.starts, x - REACH)
+                while i < len(played.starts) and played.starts[i] <= x + REACH:
+                    bins[round((played.starts[i] - x) / 0.004)] += 1
+                    i += 1
+            if not bins:
+                self.unaligned += len(group)
+                continue
+            centre = bins.most_common(1)[0][0] * 0.004
+            res = []
+            for t in group:
+                x = shift0 + t + centre
+                i = bisect.bisect_left(played.starts, x)
+                cands = [played.starts[j] - x for j in (i - 1, i) if 0 <= j < len(played.starts)]
+                if cands and abs(min(cands, key=abs)) <= 2 * tol:
+                    res.append(min(cands, key=abs))
+            if len(res) < max(3, 0.5 * len(group)):
+                self.unaligned += len(group)
+                continue
+            self.points.append((statistics.median(group), shift0 + centre + statistics.median(res)))
+        if not self.points:
+            self.points = [(0.0, shift0)]
+        self.shift = self.points[0][1]
+        shifts = [s for _, s in self.points]
+        self.jumps = [(round(self.points[i][0], 1), round(shifts[i] - shifts[i - 1], 3))
+                      for i in range(1, len(shifts)) if abs(shifts[i] - shifts[i - 1]) > 0.015]
+        span = self.points[-1][0] - self.points[0][0]
+        self.rate = 1.0 + (shifts[-1] - shifts[0]) / span if span > 20 and not self.jumps else 1.0
+
+    def __call__(self, t: float) -> float:
+        pts = self.points
+        if t <= pts[0][0]:
+            return t + pts[0][1]
+        if t >= pts[-1][0]:
+            return t + pts[-1][1]
+        i = bisect.bisect_right([p[0] for p in pts], t) - 1
+        (t0, s0), (t1, s1) = pts[i], pts[i + 1]
+        return t + s0 + (s1 - s0) * (t - t0) / (t1 - t0)
+
+
+def _match(written: list, played: Played, tmap, tol: float) -> list:
     """Pairs (written, played) by onset, any voice, each played note used once. Where more than one
     played note is within tol, the one whose pitch stands at the offset its sample has shown so
     far (a whole number of semitones apart) is taken, else the nearest in time. Two passes: the
@@ -272,7 +301,7 @@ def _match(written: list, played: Played, shift: float, rate: float, tol: float)
     ambiguous = []
     for i in order:
         w = written[i]
-        c = played.near(shift + rate * w[0], tol)
+        c = played.near(tmap(w[0]), tol)
         if len(c) == 1:
             j = c[0]
             played.used.add(j)
@@ -284,7 +313,7 @@ def _match(written: list, played: Played, shift: float, rate: float, tol: float)
             ambiguous.append(i)
     for i in ambiguous:
         w = written[i]
-        t = shift + rate * w[0]
+        t = tmap(w[0])
         c = played.near(t, tol)
         if not c:
             continue
@@ -389,11 +418,13 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
         out["status"] = "no notes written"
         return out
     shift0 = _shift(written, played, COARSE)
-    shift, rate = _time_map(written, played, shift0)
-    pairs = _match(written, played, shift, rate, tol)
+    tmap = TimeMap(written, played, shift0, tol)
+    pairs = _match(written, played, tmap, tol)
     matched = [(w, p) for w, p in pairs if p is not None]
-    out.update(shift=round(shift, 4), rate=round(rate, 6), matched=len(matched),
-               matched_share=len(matched) / len(written))
+    rate = tmap.rate
+    out.update(shift=round(tmap.shift, 4), rate=round(rate, 6), jumps=tmap.jumps,
+               unaligned_share=round(tmap.unaligned / len(written), 3),
+               matched=len(matched), matched_share=len(matched) / len(written))
     # pitch: one constant offset per played sample
     by_sample = defaultdict(list)
     for w, p in matched:
@@ -414,7 +445,7 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
     out["length_ratio_median"] = round(statistics.median(ratios), 3) if ratios else None
     # the written onsets on the readings' grid
     if beats is not None and len(beats) > 1:
-        out["grid"] = _grid([shift + rate * w[0] for w in written], beats)
+        out["grid"] = _grid([tmap(w[0]) for w in written], beats)
         out["beat_seconds"] = round(statistics.median(beats[i + 1] - beats[i] for i in range(len(beats) - 1)), 4)
     # tempo: the written meta (where the reader emits a real one) against the read
     tempos = m0["tempos"]
@@ -435,7 +466,7 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
         if out.get("beat_seconds"):
             out["beat_over_unit"] = round(out["beat_seconds"] / unit, 2)
     # loop: the end from MIDI0, the start from MIDI1's tail, in played time
-    end_w = shift + rate * m0["end"] if m0["end"] else None
+    end_w = tmap(m0["end"]) if m0["end"] else None
     out["loop_end_written"] = round(end_w, 3) if end_w else None
     out["loops"] = None
     if midi1 and os.path.exists(midi1):
@@ -446,8 +477,8 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
             s = _loop_start(body, tail)
             out["loops"] = True
             if s is not None:
-                out["loop_start_written"] = round(shift + rate * s, 3)
-                out["loop_len_written"] = round(rate * (m0["end"] - s), 3)
+                out["loop_start_written"] = round(tmap(s), 3)
+                out["loop_len_written"] = round(tmap(m0["end"]) - tmap(s), 3)
         else:
             out["loops"] = False
     if row["loop_bar"] is not None and row["loop_seconds"] and bars is not None and row["loop_bar"] < len(bars):
