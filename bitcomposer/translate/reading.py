@@ -45,6 +45,7 @@ def beat_and_parts(song) -> tuple:
     if grid:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
+        beat.rephase(grid, [(grid.beats(p.start), p.midi) for p in song.notes if p.voice in bass and p.midi is not None])
     return grid, roles
 
 
