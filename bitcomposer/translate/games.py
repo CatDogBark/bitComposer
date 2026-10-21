@@ -4,7 +4,7 @@ then how far they spread across games, and whether a game's driver or its
 composer explains the wide ones; which says whether the vocabulary should
 be one for SNES music, or a game's, a composer's or a driver's own.
 
-    python -m bitcomposer.translate.games [--db PATH] [--shuffles N]
+    python -m bitcomposer.translate.games [--db PATH] [--shuffles N] [--phrases]
 
 Per game. The songs counted are the harmony and rhythm counts' (a song in
 free time, with no key, or mostly unfit or silent is left out; the table
@@ -148,17 +148,18 @@ def games(db) -> list[Game]:
     return out
 
 
-def spread(table: list[Game]) -> list[tuple]:
+def spread(table: list, kinds: dict = KINDS) -> list[tuple]:
     """Each number's spread over the games: (key, median, q1, q3, (low game,
-    its value), (high game, its value), spread, verdict)."""
+    its value), (high game, its value), spread, verdict); kinds: the numbers
+    and each one's kind (the module's, or another table's)."""
     out = []
-    for key in LABELS:
+    for key in kinds:
         have = [(g.numbers[key], g.name) for g in table if g.numbers]
         if len(have) < 4:
             continue
         values = sorted(x for x, _ in have)
         q1, med, q3 = statistics.quantiles(values, n=4)
-        width = (q3 - q1) / max(abs(med), FLOOR[KINDS[key]])
+        width = (q3 - q1) / max(abs(med), FLOOR[kinds[key]])
         verdict = "shared" if width < SHARED else "own" if width >= OWN else "mixed"
         out.append((key, med, q1, q3, min(have), max(have), width, verdict))
     return out
@@ -181,16 +182,16 @@ def _eta(values: list, labels: list) -> float:
     return sum(len(vs) * (statistics.fmean(vs) - mean) ** 2 for vs in by.values()) / total
 
 
-def explained(table: list[Game], by, shuffles: int = 200, seed: int = 1) -> dict:
-    """What a grouping (by: Game -> label) explains of each number over the
-    games sharing a label: {key: (eta squared, the shuffled median, games,
-    groups)}."""
+def explained(table: list, by, shuffles: int = 200, seed: int = 1, keys=LABELS) -> dict:
+    """What a grouping (by: Game -> label) explains of each number (keys:
+    the module's, or another table's) over the games sharing a label: {key:
+    (eta squared, the shuffled median, games, groups)}."""
     counts = Counter(by(g) for g in table if g.numbers)
     kept = [g for g in table if g.numbers and counts[by(g)] >= 2]
     labels = [by(g) for g in kept]
     rng = random.Random(seed)
     out = {}
-    for key in LABELS:
+    for key in keys:
         values = [g.numbers[key] for g in kept]
         if len(set(labels)) < 2:
             continue
@@ -250,12 +251,18 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m bitcomposer.translate.games", description=__doc__.split("\n\n")[0])
     ap.add_argument("--db", help="the readings database (default: ~/.local/share/bitcomposer/readings.db)")
     ap.add_argument("--shuffles", type=int, default=200, help="shufflings of the labels for the chance share (default 200)")
+    ap.add_argument("--phrases", action="store_true", help="the progressions' and phrases' headline numbers too (phrases.py)")
     args = ap.parse_args(argv)
-    table = games(store.connect(args.db))
+    db = store.connect(args.db)
+    table = games(db)
     if not any(g.numbers for g in table):
         print("bitcomposer.translate.games: no songs on a beat with a key to count", file=sys.stderr)
         return 1
     print(report(table, args.shuffles))
+    if args.phrases:
+        from . import phrases
+        print()
+        print(phrases.games_report(phrases.games(db), args.shuffles))
     return 0
 
 

@@ -3,7 +3,7 @@ harmony and rhythm counts (vocab.py, rhythm.py) of songs composed with a
 pack, beside the game's own from the readings database, side by side.
 
     python -m bitcomposer.translate.against --against PACK ... [--db PATH] [--game NAME]
-                                             [--songs N] [--top N] [--spc DIR]
+                                             [--songs N] [--top N] [--spc DIR] [--phrases]
 
 The packs and seeds are stage 2's (__main__.py --against): a pack's name or
 a pack.json, --songs songs each, seeds 1 to N. Each table's rows are the
@@ -329,6 +329,7 @@ def main(argv=None) -> int:
     ap.add_argument("--songs", type=int, default=20, help="songs composed for each pack (default 20)")
     ap.add_argument("--top", type=int, default=8, help="rows of each column in the pattern and move tables (default 8)")
     ap.add_argument("--spc", metavar="DIR", help="the game folders' root, or one game's folder: its drums named by their sound")
+    ap.add_argument("--phrases", action="store_true", help="the progressions by part and the melody's phrase shapes too (phrases.py)")
     args = ap.parse_args(argv)
     db = store.connect(args.db)
     vs, left = vocab.load(db, args.game)
@@ -340,6 +341,9 @@ def main(argv=None) -> int:
     game = args.game or (games[0] if len(games) == 1 else "the games")
     columns = {game: rows(vs, rs, bank=drums_mod.Bank(db, args.spc) if args.spc else None)}
     columns[game]["songs"][0] = ("songs counted", f"{len(vs)} of {len(vs) + sum(left.values())}", None)
+    if args.phrases:
+        from . import phrases
+        columns[game].update(phrases.rows(phrases.load(db, args.game)[0]))
     for pack in args.against:
         name, songs = compose(pack, args.songs)
         read_ = [read(s) for s in songs]
@@ -347,6 +351,8 @@ def main(argv=None) -> int:
         for s in songs:
             names.update(kit(s))
         columns[name] = rows([v for v, _, _ in read_], [r for _, r, _ in read_], [h for _, _, h in read_], names)
+        if args.phrases:
+            columns[name].update(phrases.rows([phrases.of_composed(s, v, r) for s, (v, r, _) in zip(songs, read_)]))
     print(table(columns, args.top))
     return 0
 

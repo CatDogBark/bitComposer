@@ -918,3 +918,143 @@ class Against(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Phrases(unittest.TestCase):
+    """Progressions by part and the melody's phrase shapes (phrases.py) on readings made up here."""
+
+    def test_a_known_progression_through_a_part_gives_its_numerals_and_cadence(self):
+        from bitcomposer.translate.phrases import Part, Song, cadence, cycle, progressions
+        from bitcomposer.translate.vocab import Span
+        self.assertEqual(cycle(["I", "IV", "V", "I", "IV", "V", "I"]), ("I", "IV", "V"))
+        self.assertEqual(cycle(["I", "IV", "V", "I"]), ("I", "IV", "V", "I"))
+        self.assertEqual((cycle(["I"]), cycle(["I", "IV", "I", "IV"])), (("I",), ("I", "IV")))
+        self.assertEqual([cadence(s) for s in (["I", "IV", "I"], ["IV", "V", "I"], ["I", "bVII", "I"], ["I", "VII", "I"],
+                                                ["I", "II", "I"], ["I", "V"], ["I", "IV"], ["I"], [])],
+                         ["IV -> I", "V -> I", "bVII -> I", "bVII -> I", "another -> I", "half (on V)", "elsewhere", "one chord", "elsewhere"])
+        # C major, bars of four: A is C | F G | C with a passing Dm on its fourth beat | G C; B is Am F twice;
+        # C repeats A (left out); D holds G; the song loops back to B
+        chords = [Span(0, 4, 0, "", 0.9), Span(4, 6, 5, "", 0.9), Span(6, 8, 7, "", 0.9), Span(8, 11, 0, "", 0.9),
+                  Span(11, 12, 2, "m", 0.9), Span(12, 14, 7, "", 0.9), Span(14, 16, 0, "", 0.9)]
+        chords += [Span(16 + 4 * k, 20 + 4 * k, 9 if k % 2 == 0 else 5, "m" if k % 2 == 0 else "", 0.9) for k in range(4)]
+        chords += [Span(32 + 4 * k, 36 + 4 * k, 0 if k < 2 else 5, "", 0.9) for k in range(4)] + [Span(48, 64, 7, "", 0.9)]
+        s = Song("test", 0, "major", 4, [(4 * b, 4 * b + 4) for b in range(16)], chords,
+                 parts=[Part("A", 0, 4), Part("B", 4, 4), Part("A", 8, 4, 0), Part("D", 12, 4)], loop_bar=4)
+        p = progressions([s])
+        self.assertEqual((p.songs, p.parts, p.counted), (1, 4, 3))
+        self.assertEqual(dict(p.built["major"]), {("I", "IV", "V", "I", "V", "I"): 1, ("VI", "IV"): 1, ("V",): 1})
+        self.assertEqual(p.built["major"].songs[("VI", "IV")], 1)
+        self.assertEqual(dict(p.runs["major"]), {("I", "IV", "V"): 1, ("IV", "V", "I"): 1, ("V", "I", "V"): 1, ("I", "V", "I"): 1,
+                                                 ("VI", "IV", "VI"): 1, ("IV", "VI", "IV"): 1})
+        self.assertEqual((dict(p.begins), dict(p.ends)), ({"I": 1, "VI": 1, "V": 1}, {"I": 1, "IV": 1, "V": 1}))
+        self.assertEqual(dict(p.cadences), {"V -> I": 1, "elsewhere": 1, "one chord": 1})
+        self.assertEqual(dict(p.lengths), {"5 to 8": 1, "2 to 4 chords": 1, "one chord": 1})
+        self.assertEqual((dict(p.loops), dict(p.loops_on)), ({"elsewhere": 1}, {"VI": 1}))     # G back to Am
+        self.assertEqual(p.levels, {"beat": 6 + 3 + 0, "half bar": 5 + 3 + 0, "bar": 3 + 3 + 0})  # the passing Dm counts at the beat only
+        self.assertEqual(p.rates, [(1, 2.0, 2), (1, 1.0, 1), (1, 0.0, 0)])
+
+    def test_a_known_melody_phrase_gives_its_contour_peak_range_ends_and_relation(self):
+        from bitcomposer.translate.phrases import Part, Song, phrases, shapes
+        from bitcomposer.translate.vocab import Span
+        # C major over one C chord; two-bar phrases of quarters: an arch, the arch moved up a step (diatonic), the arch
+        # again, the same rhythm with another tune, a dotted figure, a rest, and a bar the counter-line carries
+        tune = [(b, 1, m) for b, m in enumerate((60, 62, 64, 67, 72, 67, 64, 60))]
+        tune += [(8 + b, 1, m) for b, m in enumerate((62, 64, 65, 69, 74, 69, 65, 62))]
+        tune += [(16 + b, 1, m) for b, m in enumerate((60, 62, 64, 67, 72, 67, 64, 60))]
+        tune += [(24 + b, 1, m) for b, m in enumerate((60, 64, 67, 72, 67, 64, 55, 60))]
+        tune += [(32, 1.5, 60), (33.5, 1.5, 62), (35, 5, 64)]
+        counter = [(48 + b, 1, m) for b, m in enumerate((67, 65, 64, 62))]
+        s = Song("test", 0, "major", 4, [(4 * b, 4 * b + 4) for b in range(14)], [Span(0, 56, 0, "", 0.9)],
+                 {"melody": tune, "counter": counter}, [Part("A", 0, 8), Part("B", 8, 6)], loop_bar=0)
+        ph = phrases(s, 2)
+        self.assertEqual([(p.start, p.end, p.source, p.ends_part, p.last) for p in ph],
+                         [(0, 8, "melody", False, False), (8, 16, "melody", False, False), (16, 24, "melody", False, False),
+                          (24, 32, "melody", True, False), (32, 40, "melody", False, False), (40, 48, "resting", False, False),
+                          (48, 56, "counter", True, True)])
+        self.assertEqual([p.final[2] for p in ph if p.line], [60, 62, 60, 60, 64, 62])   # the longest held of the last bar, the later at a tie
+        c = shapes([s], 2)
+        self.assertEqual((c.phrases, dict(c.source)), (7, {"melody": 5, "resting": 1, "counter": 1}))
+        self.assertEqual(dict(c.contour), {"arch": 4, "rising": 1, "falling": 1})
+        self.assertEqual(dict(c.peak), {"third": 3, "second": 2, "first quarter": 1})
+        self.assertEqual(c.ranges, [12, 12, 12, 17, 4, 5])
+        self.assertEqual(dict(c.starts_key), {"1": 4, "another degree": 1, "5": 1})
+        self.assertEqual(dict(c.starts_chord), {"root": 4, "another tone": 1, "fifth": 1})
+        self.assertEqual(dict(c.ends_key), {"1": 3, "another degree": 2, "3": 1})
+        self.assertEqual(dict(c.ends_chord), {"root": 3, "another tone": 2, "third": 1})
+        self.assertEqual(dict(c.part_ends), {(False, True): 2, (False, False): 2, (True, True): 1, (True, False): 1})
+        self.assertEqual(dict(c.song_ends), {"another degree": 1})
+        self.assertEqual(dict(c.relation), {"first": 1, "moved up": 1, "moved down": 1, "answered": 1, "new": 2})
+        # the same at four bars and over the part: the part A's phrase is its eight bars
+        self.assertEqual([(p.start, p.end) for p in phrases(s, 4)], [(0, 16), (16, 32), (32, 48), (48, 56)])
+        self.assertEqual([(p.start, p.end) for p in phrases(s, "part")], [(0, 32), (32, 56)])
+
+    def test_songs_load_with_their_parts_and_a_composed_song_s_are_read(self):
+        from array import array
+        from bitcomposer.translate import against, phrases, store
+        db = store.connect(":memory:")
+        row = lambda sid: (sid, sid + ".spc", "test", "Test Quest", sid, "", None, 8.0, store.VERSION, 120.0, 4, 2,
+                           1.0, 0.5, 0, "major", 0.8, 0, 1, 2, 2.0)
+        for sid in ("form", "noform"):
+            db.execute("INSERT INTO songs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", row(sid))
+            db.execute("INSERT INTO beats VALUES (?,?,?)", (sid, array("d", [b / 2 for b in range(16)]).tobytes(),
+                                                           array("d", [0.0, 2.0, 4.0, 6.0]).tobytes()))
+            for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):
+                db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "", 0.9))
+            tune = array("f", [0, 1, 60, 0.8, 0.5, -1, 1, 1, 64, 0.8, 0.5, -1, 2, 1, 67, 0.8, 0.5, -1, 9, 1, 72, 0.8, 0.5, -1])
+            db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 0, "melody", None, None, tune.tobytes()))
+        db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 0, "A", 0, 2, 0.0, None, "part"))
+        db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 1, "A", 2, 2, 4.0, 0, "part"))
+        db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 2, "A", 0, 4, 0.0, None, "section"))
+        songs, left_out = phrases.load(db)
+        self.assertEqual((left_out, [s.title for s in songs]), ({"no form": 1}, ["form"]))
+        s = songs[0]
+        self.assertEqual((s.tonic, s.mode, s.meter, s.loop_bar), (0, "major", 4, 1))
+        self.assertEqual(s.bars, [(0, 4), (4, 8)])                                  # once through: to the loop's end at beat 8
+        self.assertEqual([(p.label, p.bar, p.bars, p.of) for p in s.parts], [("A", 0, 2, None), ("A", 2, 2, 0)])
+        self.assertEqual(s.notes, {"melody": [(0, 1, 60), (1, 1, 64), (2, 1, 67)]})
+        self.assertEqual(phrases.load(db, song="noform"), ([], {"no form": 1}))
+        # a composed song: a plain pattern twice, another twice, the first twice again; its parts read as a game's
+        plain = Against._plain_song(self)
+        other = Against._plain_song(self)
+        for ch, up in ((0, 5), (1, 3), (2, 3), (3, 3), (4, 3)):
+            for r in range(64):
+                cell = other["patterns"][0].data[r][ch]
+                if cell.note:
+                    cell.note += up
+        song = {**plain, "patterns": [plain["patterns"][0], other["patterns"][0]], "orders": [0, 0, 1, 1, 0, 0, 255],
+                "info": {"structure": ["verse", "chorus", "verse"]}}
+        v, r, _ = against.read(song)
+        p = phrases.of_composed(song, v, r)
+        self.assertEqual((p.tonic, p.mode, len(p.bars), set(p.notes)), (0, "major", 24, {"melody"}))
+        self.assertEqual([(x.label, x.bar) for x in p.parts], [("A", 0), ("A", 4), ("B", 8), ("B", 12), ("A", 16)])   # a pattern a part
+        self.assertEqual(phrases.progressions([p]).built["major"][("I", "IV", "I", "V")], 1)
+
+    def test_the_games_table_and_the_parts_marked_by_ear(self):
+        import json
+        import os
+        import tempfile
+        from bitcomposer.translate import phrases
+        db = Games.database()
+        for sid, in db.execute("SELECT id FROM songs WHERE bpm IS NOT NULL").fetchall():
+            db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", (sid, 0, "A", 0, 2, 0.0, None, "part"))
+            db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", (sid, 1, "B", 2, 2, 4.0, None, "part"))
+        table = phrases.games(db)
+        by = {g.name: g for g in table}
+        self.assertEqual([(g.name, g.counted, g.total) for g in table], [("Alpha", 2, 2), ("Beta", 2, 3), ("Delta", 2, 2), ("Gamma", 2, 2)])
+        a = by["Alpha"].numbers
+        self.assertEqual((a["parts"], a["short"], a["begin_i"], a["v_i"], a["half"]), (4, 100.0, 50.0, 50.0, 0.0))   # I IV | V I
+        self.assertEqual((a["rising"], a["repeated"], a["new"]), (100.0, 100.0, 0.0))       # a scale up, every bar alike
+        text = phrases.games_report(table, shuffles=10)
+        self.assertIn("4 games, 8 songs with a form counted of 9", text)
+        self.assertNotIn("\n  parts ", text.split("spread over")[1])                             # a count is no habit
+        # the parts marked by ear: one song's A at 0 and B marked a quarter bar late, a C the reader did not read
+        heard = {"_about": "", "Alpha/a1.spc": {"set": 2, "marks_s": [["A", 0.0], ["B", 4.5], ["C", 6.0]], "starts_over_s": None}}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "heard.json")
+            with open(path, "w") as fh:
+                json.dump(heard, fh)
+            lines, read, marked = phrases.heard(db, path)
+        self.assertEqual(lines[0], "a1                             part    1 of 2 marked starts read, 1 read")
+        self.assertEqual(lines[-1], "parts: 1 of 2 marked starts read (recall 0.50), 1 read (precision 1.00)")
+        self.assertEqual([(p.label, p.bar, p.bars) for p in read[0].parts], [("A", 0, 2), ("B", 2, 2)])
+        self.assertEqual([(p.label, p.bar, p.bars) for p in marked[0].parts], [("A", 0, 2), ("B", 2, 1), ("C", 3, 1)])
