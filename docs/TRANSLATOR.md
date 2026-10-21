@@ -170,6 +170,15 @@ the generator writes them, and one back end makes the module.
   the game's own voices. The cost to weigh is IT's 64 channels: every
   voice is a channel, and the echo's repeats share what is left (six
   voices sending get about nine repeats each; sixteen about three).
+  Considered (2026-10-20), not chosen: OpenMPT's MPTM format, should
+  generated songs outgrow IT. It holds 127 channels (sixteen voices
+  sending would get about seven repeats each), more samples and a finer
+  tempo, but plays only where libopenmpt does (the player and the web
+  player do), where an IT file plays nearly everywhere. So the score of
+  voices does not assume a format: once this stage writes real
+  arrangements, the channels they need with their echo are counted, IT
+  stays the default, and MPTM is only for a song that does not fit, if
+  any.
 - **One back end.** The converter's stages after decoding (samples,
   instruments, the echo plan and its copies, the notes' placement, the
   master volume) take a generated score the way they take a decoded one.
@@ -226,8 +235,9 @@ keeps current. On Windows the executable runs IMPORT's worker itself.
 ## Later
 
 Packs by composer or driver (queries over the database); Genesis, through
-VGM logs, into the same translator; MPTM output for timing finer than
-IT's ticks.
+VGM logs, into the same translator; MPTM output for converted songs, for
+timing finer than IT's ticks and more echo repeats (for generated songs,
+stage 3 says when).
 
 ## To settle as we go
 
