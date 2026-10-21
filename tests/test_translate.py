@@ -212,6 +212,42 @@ class Parts(unittest.TestCase):
         double = [r for r in roles.assign(song, g) if r.voice == 1][0]
         self.assertEqual((double.role, double.of), (roles.DOUBLE, 0))
 
+    def test_chords_change_by_the_bar_and_carry_through_a_rest(self):
+        # eight bars at 120: C held two bars, the chord voices resting a bar, C two bars more, then F two bars and
+        # the bass alone on F for the last: one C of five bars (a chord that stops and restarts is one chord), one F
+        from bitcomposer.translate import harmony, roles
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74]
+        held = lambda bars, midi: [(k * 4 * b, 4 * b, midi) for k in bars]
+        song = song_of({
+            0: [(i * b, 0.4, tune[i % 8]) for i in range(32)],
+            1: held((0, 1, 3, 4), 64) + held((5, 6), 69),
+            2: held((0, 1, 3, 4), 67) + held((5, 6), 72),
+            3: [n for k in range(5) for n in ((k * 4 * b, 2 * b, 36), (k * 4 * b + 2 * b, 2 * b, 43))]       # root and fifth
+               + [n for k in (5, 6, 7) for n in ((k * 4 * b, 2 * b, 41), (k * 4 * b + 2 * b, 2 * b, 48))],
+            4: [(i * b / 2, 0.05, None) for i in range(64)],
+        })
+        g = beat.find([(p.start, p.level) for p in song.notes])
+        rl = roles.assign(song, g)
+        self.assertEqual({r.voice: r.role for r in rl if r.voice in (1, 3)}, {1: roles.HARMONY, 3: roles.BASS})
+        cs = harmony.chords(song, g, rl)
+        self.assertEqual([(c.name, c.start, c.end, c.stated) for c in cs], [("C", 0, 20, True), ("F", 20, 32, True)])
+
+    def test_a_bass_figure_under_a_tune_is_one_implied_chord(self):
+        # Underground Castle's kind: a bass on D with a C under it every bar, a tune on top, no chord voice at all
+        from bitcomposer.translate import harmony, roles
+        b = 0.5
+        tune = [62, 65, 69, 72, 74, 72, 69, 65]
+        song = song_of({
+            0: [(i * b, 0.4, tune[i % 8]) for i in range(64)],
+            1: [n for k in range(16) for n in ((k * 4 * b, 3 * b, 38), (k * 4 * b + 3 * b, b, 36))],
+            2: [(i * b / 2, 0.05, None) for i in range(128)],
+        })
+        g = beat.find([(p.start, p.level) for p in song.notes])
+        cs = harmony.chords(song, g, roles.assign(song, g))
+        self.assertEqual(len(cs), 1)
+        self.assertEqual((cs[0].root, cs[0].stated, cs[0].start, cs[0].end), (2, False, 0, 64))
+
 
 class Form(unittest.TestCase):
     """A song's parts and loop, from where it repeats itself."""

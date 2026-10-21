@@ -13,7 +13,7 @@ from array import array
 from pathlib import Path
 
 SCHEMA = 4                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level
-VERSION = "6"                        # the translator's; a song read by another is read again
+VERSION = "7"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);

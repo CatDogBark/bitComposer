@@ -63,10 +63,11 @@ class Played:
 
 
 class _Grid:
-    """A grid already in beats: the generator's rows."""
+    """A grid already in beats: the generator's rows, its bars where the generator put them."""
 
-    def __init__(self, beats: int):
+    def __init__(self, beats: int, bars: list):
         self.beat_times = list(range(beats))
+        self.bar_times = [b for b in bars if b < beats]
 
     def beats(self, t: float) -> float:
         return t
@@ -127,7 +128,7 @@ def read(song: dict) -> tuple[vocab.Song, rhythm.Song, tuple]:
     inst = song.get("info", {}).get("instruments", {})
     role = parts(s)
     played = [Played(n.beat, s.end if n.beats is None else n.beat + n.beats, n.midi, n.level, n.voice) for n in s.notes]
-    grid = _Grid(max(1, math.ceil(s.end)))
+    grid = _Grid(max(1, math.ceil(s.end)), list(s.bars))
     rl = [R.Role(v, r) for v, r in role.items()]
     like = type("Song", (), {"notes": played})
     tonic, mode, _ = harmony.key(like, grid, rl)
