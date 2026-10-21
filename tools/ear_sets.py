@@ -7,6 +7,12 @@ built from. A developer tool for the machine that holds the games; the files go 
         end and a bar, at most 150 s), split into a development half and a held-out half by a
         fixed shuffle, with the readings' chord changes kept in the manifest for scoring (never
         shown on the page)
+    python tools/ear_sets.py drums SPC_ROOT READINGS.db DRAW.json OUT_DIR
+        the Drum Name Check: for each drawn sample, a stretch of the song that hits it most, the
+        voice alone and the full mix, a few seconds each; the namer's name kept in the manifest
+    python tools/ear_sets.py tune SPC_ROOT READINGS.db OUT_DIR
+        the Tune Check: the ten songs below, the full mix once through and each voice alone; the
+        readings' part for each voice kept in the manifest
 """
 import argparse
 import json
@@ -37,17 +43,163 @@ CHORD_SET = [
     ("earthbound", "045 Welcome to Your Sanctuary", "0.15/bar, slow"),
 ]
 SPLIT_SEED = 20261020
+# songs whose melody voice rests in most bars (the tune passes to other voices, or the roles read it
+# wrong): game, title, as the readings have them
+TUNE_SET = [
+    ("Super Mario World", "Overworld (Yoshi)"),
+    ("Yoshi's Island", "Overworld"),
+    ("Romancing SaGa 3", "Jungle"),
+    ("EarthBound", "Escargo Express at Your Service!"),
+    ("Final Fantasy VI", "Celes"),
+    ("Axelay", "Toughness (part 1)"),
+    ("Top Gear", "Title"),
+    ("Super Ghouls'n Ghosts", "Ghouls' Stomach"),
+    ("Chrono Trigger", "Chrono Trigger"),
+    ("Donkey Kong Country", "Gang-Plank Galleon"),
+]
+RATE = 32000
+FRAME = 4                            # bytes a stereo 16-bit frame
 
 
-def render(snap_path: str, seconds: float, out_wav: str) -> None:
+def render(snap_path: str, seconds: float, out_wav: str, mute: int = 0, crop: tuple | None = None) -> None:
+    """The emulator's own output to a WAV: the whole run, or crop=(from, to) seconds of it;
+    mute leaves voices out (bit n, voice n)."""
     from bitcomposer import spc
     from bitcomposer.spc import emulate
-    run = emulate.run(spc.read(snap_path), seconds, audio=True)
+    run = emulate.run(spc.read(snap_path), seconds, audio=True, mute=mute)
+    pcm = run.audio
+    if crop:
+        a, b = (max(0, int(crop[0] * RATE)) * FRAME, int(crop[1] * RATE) * FRAME)
+        pcm = pcm[a:b]
     with wave.open(out_wav, "wb") as w:
         w.setnchannels(2)
         w.setsampwidth(2)
-        w.setframerate(32000)
-        w.writeframes(run.audio)
+        w.setframerate(RATE)
+        w.writeframes(pcm)
+
+
+def beat_seconds(beats, beat: float) -> float:
+    """A time in beats to seconds on a list of beat times."""
+    if len(beats) < 2:
+        return beat
+    if beat <= 0:
+        return beats[0] + beat * (beats[1] - beats[0])
+    k = int(beat)
+    if k + 1 < len(beats):
+        return beats[k] + (beat - k) * (beats[k + 1] - beats[k])
+    return beats[-1] + (beat - (len(beats) - 1)) * (beats[-1] - beats[-2])
+
+
+def _song_grid(db, sid):
+    beats, bars = array("d"), array("d")
+    b = db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()
+    if b:
+        beats.frombytes(b[0])
+        bars.frombytes(b[1])
+    return beats, bars
+
+
+def cmd_drums(a) -> int:
+    from bitcomposer.translate import store
+    db = sqlite3.connect(a.db)
+    db.row_factory = sqlite3.Row
+    draw = json.load(open(a.draw))
+    os.makedirs(a.out_dir, exist_ok=True)
+    manifest = []
+    for i, d in enumerate(draw, 1):
+        key = d["key"]
+        # the song and voice that hit this sample most, on a grid where one exists
+        places = db.execute("SELECT v.song, v.voice, v.notes, s.idx, g.folder, g.file, g.game, g.title, g.bpm FROM samples s "
+                            "JOIN voices v ON v.song = s.song JOIN songs g ON g.id = s.song WHERE s.key = ? AND v.role = 'drums'",
+                            (key,)).fetchall()
+        best = None
+        for p in places:
+            notes = [n for n in store.unpack(p["notes"]) if int(n[5]) == p["idx"]]
+            if len(notes) >= 3 and (best is None or (p["bpm"] is not None, len(notes)) > (best[0]["bpm"] is not None, len(best[1]))):
+                best = (p, notes)
+        if best is None:
+            print(f"d{i:02d}: no place with three hits for {key[:10]}")
+            continue
+        p, notes = best
+        beats, _ = _song_grid(db, p["song"])
+        others = [n for n in store.unpack(p["notes"]) if int(n[5]) != p["idx"]]
+        # the 4 s window (in the song's seconds) with the most hits of this sample and none of others
+        times = sorted(beat_seconds(beats, n[0]) if len(beats) > 1 else n[0] for n in notes)
+        other_times = sorted(beat_seconds(beats, n[0]) if len(beats) > 1 else n[0] for n in others)
+        best_w = None
+        for t0 in times:
+            inside = [t for t in times if t0 <= t < t0 + 4.0]
+            clash = sum(1 for t in other_times if t0 - 0.05 <= t < t0 + 4.0)
+            score = (clash == 0, len(inside), -t0)
+            if best_w is None or score > best_w[0]:
+                best_w = (score, t0, len(inside), clash)
+        _, t0, hits, clash = best_w
+        start, end = max(0.0, t0 - 0.25), t0 + 4.5
+        snap = os.path.join(a.spc_root, p["folder"], p["file"])
+        name = f"d{i:02d}"
+        solo = os.path.join(a.out_dir, f"{name} alone.ogg")
+        mix = os.path.join(a.out_dir, f"{name} in the song.ogg")
+        if not os.path.exists(solo):
+            wav = os.path.join(a.out_dir, f"{name}-solo.wav")
+            render(snap, end, wav, mute=0xFF & ~(1 << p["voice"]), crop=(start, end))
+            to_opus(wav, solo)
+        if not os.path.exists(mix):
+            wav = os.path.join(a.out_dir, f"{name}-mix.wav")
+            render(snap, end, wav, crop=(start, end))
+            to_opus(wav, mix)
+        manifest.append({"n": name, "key": key, "game": p["game"], "title": p["title"], "voice": p["voice"], "from": round(start, 2),
+                         "to": round(end, 2), "hits_in_clip": hits, "other_sounds_in_clip": clash, "hits_total": d["hits"],
+                         "alone": os.path.basename(solo), "in_song": os.path.basename(mix)})
+        print(f"{name}: {p['game']} / {p['title']} voice {p['voice']} at {start:.1f} s, {hits} hits" + (f", {clash} other sounds" if clash else ""))
+    with open(os.path.join(a.out_dir, "drum-set.json"), "w") as f:
+        json.dump(manifest, f, indent=0)
+    return 0
+
+
+def cmd_tune(a) -> int:
+    from bitcomposer.translate import store
+    db = sqlite3.connect(a.db)
+    db.row_factory = sqlite3.Row
+    os.makedirs(a.out_dir, exist_ok=True)
+    manifest = []
+    for i, (game, title) in enumerate(TUNE_SET, 1):
+        row = db.execute("SELECT id, folder, file, bpm, meter, seconds, loop_bar, loop_seconds FROM songs WHERE game = ? AND title = ?",
+                         (game, title)).fetchone()
+        if row is None:
+            print(f"not in the readings: {game} / {title}")
+            continue
+        beats, bars = _song_grid(db, row["id"])
+        length = 90.0
+        if row["loop_bar"] is not None and row["loop_seconds"] and row["loop_bar"] < len(bars):
+            length = bars[row["loop_bar"]] + row["loop_seconds"] + (bars[1] - bars[0] if len(bars) > 1 else 2.0)
+        length = min(120.0, length, row["seconds"])
+        voices = {}
+        for v in db.execute("SELECT voice, role, of, notes FROM voices WHERE song = ? ORDER BY voice", (row["id"],)):
+            n = len(store.unpack(v["notes"]))
+            if n:
+                voices[v["voice"]] = {"role": v["role"], "of": v["of"], "notes": n}
+        name = f"t{i:02d} {game} - {title}"
+        snap = os.path.join(a.spc_root, row["folder"], row["file"])
+        files = {}
+        mix = os.path.join(a.out_dir, f"{name} - mix.ogg")
+        if not os.path.exists(mix):
+            wav = os.path.join(a.out_dir, f"{name}-mix.wav")
+            render(snap, length, wav)
+            to_opus(wav, mix)
+        files["mix"] = os.path.basename(mix)
+        for v in sorted(voices):
+            out = os.path.join(a.out_dir, f"{name} - voice {v + 1}.ogg")
+            if not os.path.exists(out):
+                wav = os.path.join(a.out_dir, f"{name}-v{v}.wav")
+                render(snap, length, wav, mute=0xFF & ~(1 << v))
+                to_opus(wav, out)
+            files[str(v + 1)] = os.path.basename(out)
+        manifest.append({"n": f"{i:02d}", "game": game, "title": title, "seconds": round(length, 2), "bpm": round(row["bpm"] or 0, 1),
+                         "files": files, "voices": {str(v + 1): voices[v] for v in sorted(voices)}})
+        print(f"{name}: {length:.0f} s, voices {sorted(v + 1 for v in voices)}")
+    with open(os.path.join(a.out_dir, "tune-set.json"), "w") as f:
+        json.dump(manifest, f, indent=0)
+    return 0
 
 
 def to_opus(wav: str, out: str) -> None:
@@ -115,6 +267,17 @@ def main(argv=None) -> int:
     p.add_argument("db")
     p.add_argument("out_dir")
     p.set_defaults(run=cmd_chords)
+    p = sub.add_parser("drums")
+    p.add_argument("spc_root")
+    p.add_argument("db")
+    p.add_argument("draw")
+    p.add_argument("out_dir")
+    p.set_defaults(run=cmd_drums)
+    p = sub.add_parser("tune")
+    p.add_argument("spc_root")
+    p.add_argument("db")
+    p.add_argument("out_dir")
+    p.set_defaults(run=cmd_tune)
     a = ap.parse_args(argv)
     return a.run(a)
 
