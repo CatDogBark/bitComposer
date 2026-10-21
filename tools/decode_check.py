@@ -228,12 +228,10 @@ def _shift(written: list, played: Played, tol: float) -> float:
         return 0.0
     top = bins.most_common(1)[0][1]
     cands = sorted(b * 2 * tol for b, n in bins.items() if n >= 0.8 * top)
-    best, best_n = 0.0, -1
-    for d in cands:
-        n = sum(1 for ww in sample if played.near(ww + d, tol))
-        if n > best_n or (n == best_n and abs(d) < abs(best)):
-            best, best_n = d, n
-    return best
+    scored = [(sum(1 for ww in sample if played.near(ww + d, tol)), d) for d in cands]
+    best_n = max(n for n, _ in scored)
+    # a song that repeats aligns as well a loop later: the smallest shift among those nearly as good
+    return min((d for n, d in scored if n >= 0.95 * best_n), key=abs)
 
 
 WINDOW = 4.0                         # seconds of written time a local shift is found over
@@ -327,6 +325,7 @@ def _match(written: list, played: Played, tmap, tol: float) -> list:
     unambiguous pairs first, which teach each sample's offset."""
     offsets = defaultdict(Counter)                   # sample key -> rounded offset -> count
     pairs = [None] * len(written)
+    sure = [False] * len(written)                    # paired with the only played note near: no pairing doubt
     order = sorted(range(len(written)), key=lambda i: written[i][0])
     ambiguous = []
     for i in order:
@@ -337,6 +336,7 @@ def _match(written: list, played: Played, tmap, tol: float) -> list:
             played.used.add(j)
             p = played.notes[j]
             pairs[i] = p
+            sure[i] = True
             if p[3] is not None:
                 offsets[p[4]][round(p[3] - w[2])] += 1
         elif c:
@@ -365,7 +365,7 @@ def _match(written: list, played: Played, tmap, tol: float) -> list:
         pairs[i] = p
         if p[3] is not None:
             offsets[p[4]][round(p[3] - w[2])] += 1
-    return [(w, p) for w, p in zip(written, pairs)]
+    return [(w, p, s) for w, p, s in zip(written, pairs, sure)]
 
 
 def _loop_start(body: list, tail: list) -> float | None:
@@ -432,7 +432,7 @@ def _ratio_class(r: float | None) -> str | None:
         return None
     for name, x in (("same", 1), ("double", 2), ("half", 0.5), ("x4", 4), ("quarter", 0.25),
                     ("x3", 3), ("third", 1 / 3), ("x1.5", 1.5), ("x2/3", 2 / 3), ("x4/3", 4 / 3), ("x3/4", 0.75)):
-        if abs(r / x - 1) < 0.03:
+        if abs(r / x - 1) < 0.05:
             return name
     return "other"
 
@@ -450,14 +450,15 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
     shift0 = _shift(written, played, COARSE)
     tmap = TimeMap(written, played, shift0, tol)
     pairs = _match(written, played, tmap, tol)
-    matched = [(w, p) for w, p in pairs if p is not None]
+    matched = [(w, p) for w, p, _ in pairs if p is not None]
+    sure = [(w, p) for w, p, s in pairs if p is not None and s]
     rate = tmap.rate
     # a written note with no played onset may sit inside a note still sounding: a slur, written as
     # a new note, played as a pitch change under one key-on
     sounding = sorted((n[1], n[2] if n[2] is not None else float("inf")) for n in played.notes)
     sound_starts = [s for s, _ in sounding]
     inside = 0
-    for w, p in pairs:
+    for w, p, _ in pairs:
         if p is None:
             t = tmap(w[0])
             i = bisect.bisect_right(sound_starts, t)
@@ -467,9 +468,9 @@ def compare_song(game: str, name: str, notes_path: str, midi0: str, midi1: str |
                unaligned_share=round(tmap.unaligned / len(written), 3),
                matched=len(matched), matched_share=len(matched) / len(written),
                inside_held_share=round(inside / len(written), 3))
-    # pitch: one constant offset per played sample
+    # pitch: one constant offset per played sample, over the pairs no pairing doubt touches
     by_sample = defaultdict(list)
-    for w, p in matched:
+    for w, p in sure:
         if p[3] is not None and p[4] is not None:
             by_sample[p[4]].append(p[3] - w[2])
     agree = total = 0
@@ -612,7 +613,7 @@ def cmd_report(a) -> int:
             top, n = Counter(ts).most_common(1)[0]
             default_tempo[game] = n / len(ts) > 0.5 and len(ts) >= 6
     print(f"{'game':22s} {'songs':>5s} {'cmp':>4s} {'notes':>6s} {'+held':>6s} {'pitch':>6s} {'grid: beat/16th/trip/off':>24s}"
-          f" {'tempo same/2x/½/other':>22s} {'loop len same/sub/other/none':>28s} {'end≤beat':>8s} {'len':>5s}")
+          f" {'tempo same/2x/½/other':>22s} {'ratio':>6s} {'loop len same/sub/other/none':>28s} {'end≤beat':>8s} {'len':>5s}")
     tot = Counter()
     for game, rs in sorted(games.items()):
         ok = [r for r in rs if r.get("status") == "ok"]
@@ -624,6 +625,8 @@ def cmd_report(a) -> int:
         tc = Counter(r.get("tempo_class") for r in ok if r.get("tempo_class"))
         same, dbl, half = tc["same"], tc["double"] + tc["x4"], tc["half"] + tc["quarter"]
         other = sum(tc.values()) - same - dbl - half
+        same_ratios = [r["tempo_ratio"] for r in ok if r.get("tempo_class") == "same"]
+        bias = f"{statistics.median(same_ratios):.3f}" if same_ratios else "  -  "
         lc = Counter(r.get("loop_len_class") for r in ok if r.get("loop_len_class"))
         l_same = lc["same"]
         l_sub = lc["half"] + lc["third"] + lc["quarter"]
@@ -635,7 +638,7 @@ def cmd_report(a) -> int:
         flag = "*" if default_tempo.get(game) else " "
         print(f"{game[:22]:22s} {len(rs):5d} {len(ok):4d} {_med([notes]) if notes is not None else '-':>6s} {_med([held]) if held is not None else '-':>6s} {_med(pitch):>6s} "
               + (f"{g['beat']:5.2f}/{g['sixteenth']:4.2f}/{g['triplet']:4.2f}/{g['off']:4.2f}" if g else f"{'-':>22s}")
-              + f"   {same:4d}/{dbl:3d}/{half:3d}/{other:3d}{flag}"
+              + f"   {same:4d}/{dbl:3d}/{half:3d}/{other:3d}{flag}{bias:>6s}"
               + f"   {l_same:5d}/{l_sub:3d}/{l_other:5d}/{l_none:4d}{'':5s}{end_ok:3d}/{len(loop_end):<4d}{_med(lens):>5s}")
         tot.update(songs=len(rs), ok=len(ok), end_ok=end_ok, end_n=len(loop_end), l_same=l_same, l_sub=l_sub, l_other=l_other, l_none=l_none,
                    t_same=same, t_dbl=dbl, t_half=half, t_other=other)
