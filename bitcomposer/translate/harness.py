@@ -64,6 +64,7 @@ from dataclasses import dataclass, field
 from ..spc import convert
 from . import harmony, reading, rhythm, store, writer
 from . import roles as R
+from . import roles as roles_mod
 
 NEAR = 0.06                           # beats: onsets this close are one event
 DOUBLING = 0.6                        # the share of the pair's events both voices sound at, for the second to double the first
@@ -153,6 +154,7 @@ def load_generated(song: dict, title: str, game: str, models: dict | None = None
     if r.grid is None:
         return None
     r.file, r.folder = f"{title}.generated", game
+    _pin_roles(r)
     db = store.connect(":memory:")
     store.keep(db, r)
     songs, _ = rhythm.load(db)
@@ -173,6 +175,39 @@ def load_generated(song: dict, title: str, game: str, models: dict | None = None
     for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (s.sid,)):
         ctx.by_voice[voice] = (role, [n for n in store.unpack(blob) if n[3] > 0])
     return ctx
+
+
+GENERATED_DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "tom", "crash": "cymbal"}
+PITCHED = {"melody": R.MELODY, "bass": R.BASS, "arp": R.ARP}   # the generator's channels whose part is fixed
+HARMONY_READS = {R.HARMONY, R.ACCOMP, R.COUNTER}               # what a generator harmony channel may read as
+
+
+def _pin_roles(r) -> None:
+    """A generated song's roles from its channels (pattern.CHANNEL_ROLES), not
+    the role reader: the generator knows its parts; a harmony channel keeps
+    the reader's call among harmony, accompaniment and counter-line; the
+    drum channels' samples are named by their channel, the pitched ones
+    unnamed, so a pitched sample is never a drum by sound."""
+    from ..pattern import CHANNEL_ROLES
+    read = {x.voice: x.role for x in r.roles}
+    voices = sorted({p.voice for p in r.song.notes})
+    roles = []
+    for v in voices:
+        name = CHANNEL_ROLES[v] if v < len(CHANNEL_ROLES) else "other"
+        if name in PITCHED:
+            role = PITCHED[name]
+        elif name in GENERATED_DRUMS:
+            role = R.DRUMS
+        elif name == "harmony":
+            role = read.get(v) if read.get(v) in HARMONY_READS else R.ACCOMP
+        else:
+            role = read.get(v, R.ACCOMP)
+        roles.append(roles_mod.Role(v, role))
+        piece = GENERATED_DRUMS.get(name, "none")
+        for p in r.song.notes:
+            if p.voice == v and p.sample is not None:
+                p.sample.piece = piece
+    r.roles = roles
 
 
 def looped(ctx: Context, notes: list) -> list:

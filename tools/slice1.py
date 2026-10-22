@@ -113,18 +113,19 @@ def main(argv=None) -> int:
     if args.db:
         db = store.connect(args.db)
         songs, _ = rhythm.load(db)
-        mine = [s for s in songs if s.game == game]
+        others = [s for s in songs if s.game != game]                  # the other games' idiom judges all three alike
         bass_all = rhythm.bass_units(songs)
-        bass_model = writer.fit(bass_all)
+        bass_model = writer.fit([u for u in bass_all if u.game != game])
         real_bass = [u for u in bass_all if u.game == game]
         rows = [("bass", bass_model, old_bass, new_bass, real_bass)]
         for letters in rhythm.DRUM_GROUPS:
             if letters not in new_drums and letters not in old_drums:
                 continue
             units = rhythm.drum_group_units(songs, letters)
-            rows.append(("drums-" + "".join(letters), writer.fit(units, name="drums-" + "".join(letters)),
+            rows.append(("drums-" + "".join(letters), writer.fit([u for u in units if u.game != game], name="drums-" + "".join(letters)),
                          old_drums.get(letters, []), new_drums.get(letters, []), [u for u in units if u.game == game]))
-        print(f"\nmeasures against the {len(songs)}-song tables (bits a bar as a held-out song; spread: distinct figures a song / ostinato share):")
+        print(f"\nmeasures against the other {len(others)} songs' tables ({game} out; bits a bar as a held-out song; "
+              f"spread: distinct figures a song / ostinato share):")
         print(f"{'part':10} {'old bits':>9} {'new bits':>9} {'old spread':>14} {'new spread':>14} {game[:20] + ' real':>26}")
         manifest["measures"] = {}
         for part, model, old, new, real in rows:
