@@ -34,18 +34,12 @@ def seeds_of(text: str) -> list[int]:
     return out
 
 
-def song_units(score: convert.Score, title: str, game: str) -> tuple:
-    """A score read as a song: its bass and drum units, for the measures."""
-    r = reading.of_score(score, game=game, title=title)
-    if r.grid is None:
+def song_units(score: convert.Score, song: dict, title: str, game: str) -> tuple:
+    """A score read as the generated song it stands on (its grid, its channels' roles): its bass and drum units."""
+    ctx = harness.context_of(score, song, title, game)
+    if ctx is None:
         return [], {}
-    r.file, r.folder = f"{title}.measured", game
-    db = store.connect(":memory:")
-    store.keep(db, r)
-    songs, _ = rhythm.load(db)
-    if not songs:
-        return [], {}
-    s = songs[0]
+    s = ctx.song
     groups = {letters: rhythm.drum_group_units([s], letters) for letters in rhythm.DRUM_GROUPS}
     return rhythm.bass_units([s]), {k: v for k, v in groups.items() if any(u.outcome != "-" for u in v)}
 
@@ -112,8 +106,8 @@ def main(argv=None) -> int:
         if args.stems:
             entry["stems"] = harness.stems(ctx, parts, os.path.join(args.out, "stems"))
         if args.db:
-            ob, od = song_units(ctx.original, title, game)
-            nb, nd = song_units(new, title, game)
+            ob, od = song_units(ctx.original, song, title, game)
+            nb, nd = song_units(new, song, title, game)
             old_bass += ob; new_bass += nb
             for k, v in od.items():
                 old_drums.setdefault(k, []).extend(v)

@@ -151,6 +151,13 @@ def load_generated(song: dict, title: str, game: str, models: dict | None = None
     if seconds is not None and seconds < original.seconds:
         original.notes = [n for n in original.notes if n.start < seconds]
         original.seconds = seconds
+    return context_of(original, song, title, game, models)
+
+
+def context_of(original: convert.Score, song: dict, title: str, game: str, models: dict | None = None) -> Context | None:
+    """The harness's view of a score that stands on a generated song's grid
+    (the song it was composed as, or that song with parts rewritten): read
+    on the generator's own beat, the roles from its channels."""
     r = reading.of_score(original, game=game, title=title, grid=_generated_grid(song, original.seconds))
     if r.grid is None:
         return None
