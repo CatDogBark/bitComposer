@@ -479,3 +479,49 @@ class PhraseUnitTests(unittest.TestCase):
         self.assertEqual(len(es), 4)
         self.assertEqual([u.values["place"] for u in es], ["first", "last", "first", "last"])
         self.assertEqual(es[0].values["part"], "melody")
+
+
+class ArrangementUnitTests(unittest.TestCase):
+    def _song(self):
+        # 4/4, six bars, two parts (0-3, 4-5): the bass plays bars 0-3 and holds a note from bar 3 into bar 4,
+        # the melody plays bars 1-5, the drums bars 0-5 but rest in bar 2 (a break)
+        s = rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4.0) for k in range(6)], [], bpm=100.0, sid="id", game="G",
+                        numbers=list(range(6)), parts=[(0, 4, None, "A"), (4, 2, None, "B")])
+        s.notes["bass"] = [(4.0 * k, 1.0, 36.0, "b") for k in range(3)] + [(12.0, 6.0, 36.0, "b")]
+        s.notes["melody"] = [(4.0 * k + 0.5, 0.5, 72.0, "m") for k in range(1, 6)]
+        s.notes["drums"] = [(4.0 * k, 0.25, float("nan"), "k") for k in (0, 1, 3, 4, 5)]
+        s.voices = [(0, "melody", None, {}), (1, "bass", None, {}), (2, "drums", None, {}),
+                    (3, "double", 0, {"echo_ms": 120}), (4, "double", 1, {"delay": 0.0})]
+        return s
+
+    def test_sounding_bars(self):
+        s = self._song()
+        self.assertEqual(rhythm.sounding_bars(s, "bass"), {0, 1, 2, 3, 4})      # held a whole beat into bar 4
+        self.assertEqual(rhythm.sounding_bars(s, "melody"), {1, 2, 3, 4, 5})
+        self.assertEqual(rhythm.sounding_bars(s, "drums"), {0, 1, 3, 4, 5})
+
+    def test_texture_and_presence_units(self):
+        ts = rhythm.texture_units([self._song()])
+        self.assertEqual([u.outcome for u in ts], ["bass drums", "bass drums melody", "bass melody", "bass drums melody",
+                                                   "bass drums melody", "drums melody"])
+        self.assertEqual([u.values["previous"] for u in ts][:2], [rhythm.START, "bass drums"])
+        self.assertEqual(ts[4].values["previous"], rhythm.START)                 # bar 4 opens the second part
+        self.assertEqual((ts[0].values["form"], ts[5].values["form"], ts[0].values["habit"]), ("first", "last", "bass drums melody"))
+        ps = rhythm.presence_units([self._song()])
+        drums = [u for u in ps if u.values["part"] == "drums"]
+        self.assertEqual([u.outcome for u in drums], ["plays", "plays", "rests", "plays", "plays", "plays"])
+        self.assertEqual([u.values["others"] for u in drums], ["1", "2", "2", "2", "2", "1"])
+        self.assertEqual([u.values["previous"] for u in drums], [rhythm.START, "plays", "plays", "rests", rhythm.START, "plays"])
+        self.assertEqual(drums[0].values["habit"], "mostly")
+        self.assertEqual([u.values["place"] for u in drums], ["first", "middle", "middle", "last", "first", "last"])
+
+    def test_song_level_units(self):
+        s = self._song()
+        self.assertEqual(rhythm.band_units([s])[0].outcome, "bass drums melody")
+        self.assertEqual((rhythm.voices_units([s])[0].outcome, rhythm.voices_units([s])[0].values["band"]), ("5", 3))
+        self.assertEqual(rhythm.double_units([s])[0].outcome, "bass unison / melody echo")
+        s.voices = s.voices[:3]
+        self.assertEqual(rhythm.double_units([s])[0].outcome, "none")
+        self.assertEqual(rhythm.layer_units([s]), [])
+        s.bass_voices = {1: [(4.0 * k, 3.0, 36.0, "b") for k in range(8)], 5: [(4.0 * k, 0.5, 48.0, "p") for k in range(8)]}
+        self.assertEqual(rhythm.layer_units([s])[0].outcome, "doubling")

@@ -477,6 +477,12 @@ SPECS = {
     "relations": ("phrases:relation_units", ("part", "mode"), ("place", "form", "previous", "habit")),
     "endings": ("phrases:ending_units", ("part", "mode"), ("ends_part", "last", "contour", "place", "previous", "habit")),
     "peaks": ("phrases:peak_units", ("part", "mode"), ("contour", "place", "previous")),
+    "texture": ("texture_units", ("part", "meter"), ("tempo", "place", "form", "previous", "habit")),
+    "presence": ("presence_units", ("part", "meter"), ("tempo", "place", "form", "others", "previous", "habit")),
+    "band": ("band_units", ("part",), ("meter", "tempo")),
+    "voices": ("voices_units", ("part",), ("band", "meter", "tempo")),
+    "doubles": ("double_units", ("part",), ("band",)),
+    "layers": ("layer_units", ("part",), ()),
 }
 FORM_TABLES = ("form", "lengths", "letters")   # the form's tables take a level (rhythm.LEVELS)
 SURE_ONLY = ("chords", "degrees", "shapes", "cadences", "loops")   # the tables by degree: only songs whose tonic is sure (rhythm.tonic_sure)

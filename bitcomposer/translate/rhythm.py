@@ -66,6 +66,7 @@ note sounds (a note cut short of three quarters of it is detached).
 against.py sets songs composed with a pack beside these counts."""
 import argparse
 import bisect
+import json
 import math
 import statistics
 import sys
@@ -133,6 +134,8 @@ class Song:
     tonic: int | None = None                      # the key reader's tonic and mode (the harmony units' degrees)
     mode: str = "major"
     loop_bar: int | None = None                   # the bar number the loop returns to
+    voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
+    bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -174,12 +177,21 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         for idx, key, piece in db.execute("SELECT idx, key, piece FROM samples WHERE song = ?", (sid,)):
             keys[idx] = key
             song.pieces[key] = piece
-        for role, evidence, blob in db.execute("SELECT role, evidence, notes FROM voices WHERE song = ?", (sid,)):
+        basses = {}
+        for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
+            try:
+                song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
+            except ValueError:
+                song.voices.append((voice, role, of, {}))
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
-                into.setdefault(role, []).extend(
-                    (s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in store.unpack(blob)
-                    if s < end and level > 0 and (role == R.DRUMS or not math.isnan(m)))
+                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in store.unpack(blob)
+                        if s < end and level > 0 and (role == R.DRUMS or not math.isnan(m))]
+                into.setdefault(role, []).extend(mine)
+                if role == R.BASS and into is song.notes:
+                    basses[voice] = mine
+        if len(basses) >= 2:
+            song.bass_voices = basses
         songs.append(song)
     return songs, dict(out)
 
@@ -983,6 +995,151 @@ def letters_units(songs, level: str = "part") -> list:
         size = next(name for top, name in FORM_SIZES if len(parts) <= top)
         out.append(tables.Unit(s.sid, s.game, " ".join(p[3] for p in parts),
                                {"part": "form", "meter": s.meter, "tempo": band(s.bpm), "parts": size}))
+    return out
+
+
+# --- the arrangement: which parts play in which bars, the band, the voices, doublings, layered basses ---
+
+ARRANGEMENT = "arrangement"
+SILENCE = "(rest)"
+OTHERS = ("0", "1", "2", "3+")            # other parts sounding in a bar
+PRESENCE = ((0.5, "sparse"), (0.9, "mostly"), (2, "always"))   # a part's share of its song's bars it sounds in
+SUSTAIN = 1.0                           # beats a held note must sound into a bar to count the part as playing in it
+ECHO = 0.02                             # seconds: a double delayed by more is an echo, else a unison double
+
+
+def sounding_bars(song: Song, role: str) -> set:
+    """The indices of the bars a part sounds in: a note struck in the bar, or
+    held into it for SUSTAIN beats or more."""
+    out = set()
+    starts = [a for a, _ in song.bars]
+    for st, length, _, _ in song.notes.get(role, ()):
+        k = bisect.bisect_right(starts, st + NEAR) - 1
+        if k >= 0 and st < song.bars[k][1] - NEAR:
+            out.add(k)
+        stop = st + (length if not math.isnan(length) else 0.25)
+        j = k + 1
+        while j < len(song.bars) and stop > song.bars[j][0] + SUSTAIN:
+            out.add(j)
+            j += 1
+    return out
+
+
+def _form_of_bars(song: Song) -> dict:
+    """Bar number -> its part's place in the form (form_place), for bars inside a part."""
+    out = {}
+    for i, (bar, n, *_) in enumerate(song.parts):
+        for num in range(bar, bar + n):
+            out[num] = form_place(song, i)
+    return out
+
+
+def texture_units(songs) -> list:
+    """Each bar of each song as a unit: its outcome the parts sounding in it
+    (their names in order, SILENCE for none); its values the part
+    (arrangement), the meter, the tempo band, the bar's place in its part
+    and its part's in the form, the bar before's texture (START at a part's
+    first bar and the song's) and the song's habit, its band (every part it
+    has)."""
+    out = []
+    for s in songs:
+        if not s.notes:
+            continue
+        plays = {role: sounding_bars(s, role) for role in s.notes}
+        the_band = " ".join(sorted(s.notes))
+        forms, tempo, previous = _form_of_bars(s), band(s.bpm), START
+        for k, num in enumerate(s.numbers):
+            where = place_in_part(s, num)
+            if where == "first":
+                previous = START
+            texture = " ".join(sorted(role for role, bars in plays.items() if k in bars)) or SILENCE
+            out.append(tables.Unit(s.sid, s.game, texture, {
+                "part": ARRANGEMENT, "meter": s.meter, "tempo": tempo, "place": where, "form": forms.get(num, "none"),
+                "previous": previous, "habit": the_band}))
+            previous = texture
+    return out
+
+
+def presence_units(songs) -> list:
+    """Each bar of each part of each song as a unit: its outcome whether the
+    part plays in the bar or rests; its values the part, the meter, the
+    tempo band, the bar's place in its part and its part's in the form, how
+    many other parts sound in the bar (OTHERS), the part's outcome in the bar
+    before (START at a part's first bar and the song's) and the part's habit
+    in the song (PRESENCE: the share of the song's bars it sounds in)."""
+    out = []
+    for s in songs:
+        if not s.notes or not s.bars:
+            continue
+        plays = {role: sounding_bars(s, role) for role in s.notes}
+        forms, tempo = _form_of_bars(s), band(s.bpm)
+        for role, bars in plays.items():
+            habit = habit_of(len(bars) / len(s.bars), PRESENCE)
+            previous = START
+            for k, num in enumerate(s.numbers):
+                where = place_in_part(s, num)
+                if where == "first":
+                    previous = START
+                others = sum(1 for other, theirs in plays.items() if other != role and k in theirs)
+                outcome = "plays" if k in bars else "rests"
+                out.append(tables.Unit(s.sid, s.game, outcome, {
+                    "part": role, "meter": s.meter, "tempo": tempo, "place": where, "form": forms.get(num, "none"),
+                    "others": OTHERS[min(others, 3)], "previous": previous, "habit": habit}))
+                previous = outcome
+    return out
+
+
+def band_units(songs) -> list:
+    """Each song as a unit: its outcome its band, the parts it has (their
+    names in order); its values the part (arrangement), the meter and the
+    tempo band."""
+    return [tables.Unit(s.sid, s.game, " ".join(sorted(s.notes)) or SILENCE,
+                        {"part": ARRANGEMENT, "meter": s.meter, "tempo": band(s.bpm)}) for s in songs]
+
+
+def voices_units(songs) -> list:
+    """Each song as a unit: its outcome how many voices it uses (the role
+    reader's, doubles and rolls included); its values the part (arrangement),
+    the size of its band in parts, the meter and the tempo band."""
+    return [tables.Unit(s.sid, s.game, str(len(s.voices)),
+                        {"part": ARRANGEMENT, "band": min(len(s.notes), 5), "meter": s.meter, "tempo": band(s.bpm)})
+            for s in songs if s.voices]
+
+
+def double_units(songs) -> list:
+    """Each song as a unit: its outcome what its double voices double and
+    how (the role doubled, unison or echo, as "melody echo"; "none" where
+    the song has no double); its values the part (arrangement) and the size
+    of its band."""
+    out = []
+    for s in songs:
+        roles = {voice: role for voice, role, _, _ in s.voices}
+        kinds = set()
+        for voice, role, of, evidence in s.voices:
+            if role != R.DOUBLE:
+                continue
+            delay = evidence.get("echo_ms", 0) / 1000 or evidence.get("delay", 0) or evidence.get("lag_ms", 0) / 1000
+            kinds.add(f"{roles.get(of, 'unknown')} {'echo' if delay > ECHO else 'unison'}")
+        out.append(tables.Unit(s.sid, s.game, " / ".join(sorted(kinds)) or "none",
+                               {"part": ARRANGEMENT, "band": min(len(s.notes), 5)}))
+    return out
+
+
+def layer_units(songs) -> list:
+    """Each song whose bass role holds two voices or more as a unit: its
+    outcome what the second voice does beside the line (the voice with the
+    longest notes): doubling, alternating or apart (harness.relation); its
+    value the part (bass)."""
+    from . import harness                                  # harness imports this module
+    out = []
+    for s in songs:
+        if len(s.bass_voices) < 2:
+            continue
+        lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in s.bass_voices.items()}
+        line = max(lengths, key=lambda v: (lengths[v], -v))
+        other = max((v for v in s.bass_voices if v != line), key=lambda v: len(s.bass_voices[v]))
+        kind = harness.relation(s.bass_voices[line], s.bass_voices[other])[0]
+        out.append(tables.Unit(s.sid, s.game, kind, {"part": R.BASS}))
     return out
 
 
