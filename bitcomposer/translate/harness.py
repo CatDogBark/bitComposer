@@ -328,7 +328,7 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
                                and (p := events.get((n.voice, round(n.start, 4)))) is not None
                                and p.sample is not None and p.sample.key == key), key=lambda n: n.start)
                 where[letter] = (v, found, share, c, mine)
-    log.append(f"kit on voices {sorted(kit_voices)}: " + ", ".join(f"{LETTERS.get(k, k)} on {v}" for k, (v, _, _, _) in sorted(where.items())))
+    log.append(f"kit on voices {sorted(kit_voices)}: " + ", ".join(f"{LETTERS.get(k, k)} on {v}" for k, (v, *_) in sorted(where.items())))
     own = [rhythm.drum_figure(struck, song) if struck else "-" for _, _, _, struck in rhythm.all_bars_of(song, R.DRUMS)]
     held = moments(ctx, kit_voices)
     models, group_locks = {}, {}
