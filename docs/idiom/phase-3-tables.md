@@ -519,6 +519,22 @@ first eight bars, then walks in quarters; the written one follows.
 For the generator: a layered bass (a line with an attack layer on a
 sustaining sample) is the arrangement table's to carry, with the
 sample's sustain; and the role reader's "bass" is a role, not a voice.
+
+"Much better, but it cuts out at 28 seconds and comes back later: a
+style choice, or a bug?" A bug: at 27.5 s the written line played one
+note where Locke's own line starts walking with five, and at 44.7 s a
+lone note on beat three. The manner's density window and downbeat rule
+were song-wide, and Locke's one-note intro bars (its line rests through
+most of its first eight) licensed one-note bars without a downbeat in
+the walking section. Density is the arrangement's, bar by bar, like the
+rests and the volume: a written bar now strikes between TIGHT (half and
+one and a half) times as often as the song's own bar and strikes the
+downbeat where that bar does (`writer.envelope`, `within`); the manner
+keeps the feel and the tones, song-wide. And where nothing passes in
+TRIES draws, the writer takes a figure in the manner and the envelope
+alone, else the song's own bar, never an unchecked draw (one such draw
+had put ninths of a beat into Locke's bar 14). Locke's walking section
+now plays through at two to four strikes a bar, every bar on the one.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
