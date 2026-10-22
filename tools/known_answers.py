@@ -26,7 +26,7 @@ from collections import Counter, defaultdict
 from bitcomposer import theory
 from bitcomposer.composer import compose_song
 from bitcomposer.pattern import CHANNEL_ROLES
-from bitcomposer.translate import against, drums as drums_mod, form as form_mod, harmony, measures, roles as R
+from bitcomposer.translate import against, drums as drums_mod, form as form_mod, harmony, measures, reading, roles as R
 
 FORMS = ("standard", "aaba", "rondo", "short", "linear")
 FAMILIES = ("minor", "major", "pentatonic")
@@ -63,6 +63,13 @@ class _Grid(against._Grid):
 
 def third(intervals) -> str:
     return "major" if 4 in intervals else "minor" if 3 in intervals else "none"
+
+
+def read_via_score(song: dict):
+    """The song read as a game is: as a score (score.of_song), the beat found by the beat reader."""
+    from bitcomposer import score as score_mod
+    r = reading.of_score(score_mod.of_song(song), title=song.get("name", ""))
+    return r
 
 
 def read(song: dict):
@@ -102,7 +109,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python tools/known_answers.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("--songs", type=int, default=120)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--via", choices=["layout", "score"], default="layout",
+                    help="layout: the readers on the generator's own grid and channel roles (the counts' path); "
+                         "score: the whole path a game goes through, the beat reader finding the grid")
     a = ap.parse_args(argv)
+    beat_kinds = Counter(); bar_place = Counter()
     key_kinds = Counter(); key_by_scale = defaultdict(Counter); scale_hits = Counter(); key_by_move = defaultdict(Counter)
     chord_beats = Counter(); change_hits = Counter(); form_hits = Counter(); parts = Counter(); drum_hits = Counter()
     scales, keys = Counter(), Counter()
@@ -113,7 +124,30 @@ def main(argv=None) -> int:
                             harmony_mode=("stabs", "sustain", "rhythmic")[i % 3], bass_weight=("heavy", "medium", "light")[(i // 3) % 3])
         info = song["info"]
         scales[info["scale"]] += 1; keys[info["key"]] += 1
-        like, grid, rl, (tonic, scale_name, _), chords, form = read(song)
+        if a.via == "score":
+            r = read_via_score(song)
+            if r.grid is None:
+                beat_kinds["free time"] += 1
+                continue
+            like, grid, rl, chords, form = r.song, r.grid, r.roles, r.chords, r.form
+            tonic, scale_name, _ = r.scale
+            # the beat: the tempo against the generator's (its half and double allowed, as the tap rounds did),
+            # and the planned bar lines against the read ones
+            bpm = info["tempo"]; ratio = grid.bpm / bpm
+            level = next((k for k in (1.0, 2.0, 0.5, 3.0, 1 / 3, 1.5, 2 / 3, 4 / 3, 0.75, 4.0, 0.25) if abs(ratio - k) <= 0.03 * k), None)
+            beat_kinds[{1.0: "same", 2.0: "double", 0.5: "half", None: "other"}.get(level, "compound")] += 1
+            beat_seconds = 60 / bpm
+            bars = list(grid.bar_times)
+            for k in range(1, int(like.seconds / (4 * beat_seconds))):
+                t = k * 4 * beat_seconds
+                i = max(0, min(len(bars) - 2, __import__("bisect").bisect_right(bars, t) - 1))
+                if bars[i] <= t < bars[i + 1]:
+                    f = (t - bars[i]) / (bars[i + 1] - bars[i]); d = min(f, 1 - f)
+                    bar_place["on the line" if d <= 0.12 else "a half bar off" if abs(f - 0.5) <= 0.12 else "elsewhere"] += 1
+            in_beats = grid.beats                                   # seconds -> read beats
+        else:
+            like, grid, rl, (tonic, scale_name, _), chords, form = read(song)
+            in_beats = lambda t: t * info["tempo"] / 60            # the generator's own beats
         mode = "major" if scale_name in harmony.MAJOR_MODES else "minor"
         # the key
         t_tonic = theory.NOTE_NAMES.index(info["key"]); t_mode = "minor" if info["scale"] in against.MINOR else "major"
@@ -132,14 +166,16 @@ def main(argv=None) -> int:
             misses["key"].append(f"seed {seed} {info['key']} {info['scale']} read {theory.NOTE_NAMES[tonic]} {scale_name} ({kind})")
         # the chords, beat by beat
         truth = truth_chords(song)
-        read_at = {}
-        for c in chords:
-            for b in range(int(c.start), int(math.ceil(c.end))):
-                read_at[b] = c
+        beat_seconds = 60 / info["tempo"]
+        starts = [c.start for c in chords]
+        def read_chord(beat_of_plan: int):
+            rb = in_beats((beat_of_plan + 0.5) * beat_seconds)
+            i = __import__("bisect").bisect_right(starts, rb) - 1
+            return chords[i] if 0 <= i < len(chords) and chords[i].start <= rb < chords[i].end else None
         for b, t in enumerate(truth):
             if t is None:
                 continue
-            c = read_at.get(b)
+            c = read_chord(b)
             chord_beats["beats"] += 1
             if c is None or c.root is None:
                 chord_beats["no chord read"] += 1
@@ -148,7 +184,7 @@ def main(argv=None) -> int:
                 chord_beats["root and family right"] += third(harmony.SHAPES[c.shape]) == t[1]
             else:
                 chord_beats["root wrong"] += 1
-        t_changes = [b for b in range(1, len(truth)) if truth[b] and truth[b - 1] and truth[b][0] != truth[b - 1][0]]
+        t_changes = [in_beats(b * beat_seconds) for b in range(1, len(truth)) if truth[b] and truth[b - 1] and truth[b][0] != truth[b - 1][0]]
         r_changes = []
         prev = None
         for c in chords:
@@ -161,8 +197,11 @@ def main(argv=None) -> int:
         change_hits["read planned"] += sum(1 for r in r_changes if any(abs(r - b) <= 1 for b in t_changes))
         # the form: section starts in bars
         per_pattern_bars = song["info"]["plan"]["rows_per_pattern"] // (song["info"]["plan"]["rows_per_beat"] * 4)
-        t_starts = [first * per_pattern_bars for name, first, n in song["info"]["plan"]["sections"] if first > 0]
+        t_starts = [in_beats(first * per_pattern_bars * 4 * beat_seconds) / 4 for name, first, n in song["info"]["plan"]["sections"] if first > 0]
         r_starts = [p.bar for p in form.parts if p.bar > 0]
+        if a.via == "score":                                        # the read bars, in read beats over the read bar
+            bar_beats = [grid.beats(t) for t in grid.bar_times]
+            r_starts = [bar_beats[p.bar] / 4 for p in form.parts if 0 < p.bar < len(bar_beats)]
         form_hits["planned"] += len(t_starts); form_hits["read"] += len(r_starts)
         form_hits["planned found"] += sum(1 for b in t_starts if any(abs(r - b) <= 1 for r in r_starts))
         form_hits["read planned"] += sum(1 for r in r_starts if any(abs(r - b) <= 1 for b in t_starts))
@@ -189,7 +228,11 @@ def main(argv=None) -> int:
             if got != piece:
                 misses["drums"].append(f"{preset} ({piece}) named {got}")
     n = sum(key_kinds.values())
-    print(f"{n} songs, seeds {a.seed} to {a.seed + a.songs - 1}; scales {dict(scales)}; keys {len(keys)} of 12")
+    print(f"{n} songs, seeds {a.seed} to {a.seed + a.songs - 1}, read via the {a.via}; scales {dict(scales)}; keys {len(keys)} of 12")
+    if a.via == "score":
+        t = sum(beat_kinds.values()); bp = sum(bar_place.values())
+        print(f"\nthe beat: tempo " + ", ".join(f"{k} {v} ({100 * v / t:.0f} %)" for k, v in beat_kinds.most_common())
+              + f"; the planned bar lines {bp}: " + ", ".join(f"{k} {v} ({100 * v / max(1, bp):.0f} %)" for k, v in bar_place.most_common()))
     print(f"\nthe key (tonic and major/minor): " + ", ".join(f"{k} {v} ({100 * v / n:.0f} %)" for k, v in key_kinds.most_common()))
     print(f"the scale by name: tonic and scale right in {scale_hits['scale and tonic right']} ({100 * scale_hits['scale and tonic right'] / n:.0f} %), the scale alone right in {scale_hits['scale right']} ({100 * scale_hits['scale right'] / n:.0f} %)")
     for mv, c in sorted(key_by_move.items()):
