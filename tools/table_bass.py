@@ -30,6 +30,7 @@ from collections import Counter
 
 NEAR = 0.06                           # beats: onsets this close are one event
 MOMENT = 0.65                         # a bar where the other parts' energy is under this share of the song's median is a moment
+MOMENT_BARS = 2                       # for at most this many bars in a row: a longer drop is a section, written like any other
 DOUBLING = 0.6                        # the share of the pair's events both voices sound at, for the second to double the first
 ALTERNATING = 0.6                     # the share of single-voice events that change voice, for the pair to alternate
 NOT_BOTH = 0.3                        # an alternating pair sounds together in under this share of its events
@@ -91,7 +92,8 @@ def relation(line, other) -> tuple:
 
 def moments(db, sid, song, bass_voices) -> set:
     """The song's moments: bars (indices among the bars of the meter) where every part but the bass drops to under
-    MOMENT of the song's median energy (level x sounded length)."""
+    MOMENT of the song's median energy (level x sounded length), for a run of at most MOMENT_BARS bars (Johnny C.
+    Bad's quieter ten-bar stretch is a section, not a moment)."""
     others = []
     for voice, blob in db.execute("SELECT voice, notes FROM voices WHERE song = ?", (sid,)):
         if voice not in bass_voices:
@@ -109,7 +111,19 @@ def moments(db, sid, song, bass_voices) -> set:
     if not energy:
         return set()
     median = statistics.median(energy)
-    return {k for k, e in enumerate(energy) if e < MOMENT * median}
+    low = [e < MOMENT * median for e in energy]
+    out, k = set(), 0
+    while k < len(low):
+        if low[k]:
+            j = k
+            while j < len(low) and low[j]:
+                j += 1
+            if j - k <= MOMENT_BARS:
+                out.update(range(k, j))
+            k = j
+        else:
+            k += 1
+    return out
 
 
 def main(argv=None) -> int:
