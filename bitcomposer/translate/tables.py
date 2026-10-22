@@ -33,6 +33,7 @@ whole distribution with a seed, never the mode.
 """
 import argparse
 import hashlib
+import itertools
 import math
 import random
 import sys
@@ -70,7 +71,7 @@ class Table:
         self.songs: Counter = Counter()  # context -> songs counted under it
         self.units: Counter = Counter()  # context -> units counted under it
         self.vocabulary: set = set()
-        self._dist: dict = {}            # context -> (outcomes, cumulative weights), for draws
+        self._dist: dict = {}            # context -> its votes laid out for draws (_level)
 
     def context(self, unit: Unit) -> tuple:
         return tuple(unit.game if c == GAME else unit.values.get(c, "?") for c in self.conditionings)
@@ -113,17 +114,33 @@ class Table:
             return float("nan")
         return sum(math.log2(self.p(u.outcome, self.context(u))) for u in units) / len(units)
 
-    def distribution(self, context: tuple) -> tuple[list, list]:
-        """Every known outcome and its weight under the context (the unseen slot's mass left out)."""
+    def _level(self, context: tuple):
+        """A context's own votes, for draws: (outcomes, cumulative votes, n, t), or None where it was never seen."""
         if context not in self._dist:
-            outcomes = sorted(self.vocabulary)
-            self._dist[context] = (outcomes, [self.p(o, context) for o in outcomes])
+            votes = self.votes.get(context)
+            if not votes:
+                self._dist[context] = None
+            else:
+                outcomes = list(votes)
+                cum = list(itertools.accumulate(votes[o] for o in outcomes))
+                self._dist[context] = (outcomes, cum, cum[-1], len(outcomes))
         return self._dist[context]
 
     def draw(self, context: tuple, rng: random.Random) -> str:
-        """An outcome drawn from the whole distribution under the context."""
-        outcomes, weights = self.distribution(context)
-        return rng.choices(outcomes, weights)[0]
+        """An outcome drawn from the whole distribution under the context:
+        from the finest level down, the level's own votes with the weight
+        n / (n + t) else the coarser level's; below the root, any known
+        outcome evenly (the unseen slot's share redrawn)."""
+        for k in range(len(context), -1, -1):
+            level = self._level(context[:k])
+            if level is None:
+                continue
+            outcomes, cum, n, t = level
+            if rng.random() * (n + t) < n:
+                return rng.choices(outcomes, cum_weights=cum)[0]
+        if "" not in self._dist:
+            self._dist[""] = sorted(self.vocabulary)
+        return rng.choice(self._dist[""])
 
     def entries(self) -> int:
         """How many (context, outcome) counts the table holds at its finest level."""
