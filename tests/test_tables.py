@@ -125,3 +125,48 @@ class RhythmUnitTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VotesFloorSplitTests(unittest.TestCase):
+    def test_share_votes_sum_to_one_a_song(self):
+        t = Table(("meter",), votes=tables.SHARES).fit(_units())
+        self.assertAlmostEqual(t.votes[(4,)]["x"], 4 / 5 + 3 / 4)       # s1: four of five bars; s2: three of four
+        self.assertAlmostEqual(sum(t.votes[(4,)].values()), 3.0)         # three songs, one vote each
+        self.assertEqual(t.songs[(4,)], 3)
+        back = Table.from_json(t.to_json())
+        self.assertEqual(back.by, tables.SHARES)
+
+    def test_a_floor_model_gives_unseen_outcomes_their_likelihood_and_draws(self):
+        class Floor:
+            def p(self, outcome, values):
+                return 0.5 if outcome == "never" else 0.1
+            def draw(self, values, rng):
+                return "floored"
+        t = Table(("meter",), floor=Floor()).fit(_units())
+        self.assertGreater(t.p("never", (4,)), Table(("meter",)).fit(_units()).p("never", (4,)))   # the floor lifts an unseen outcome
+        rng = random.Random(1)
+        self.assertIn("floored", {t.draw((9,), rng) for _ in range(50)})   # an unseen context draws from the floor
+        self.assertAlmostEqual(t.p("x", (4,), {}), (2 + 3 * 0.1) / (5 + 3))
+
+    def test_split_by_song_keeps_every_game_in_both_halves(self):
+        us = [Unit(f"s{i}", "G", "x", {}) for i in range(40)]
+        halves = {tables.half_of(u, tables.BY_SONG) for u in us}
+        self.assertEqual(halves, {tables.DEVELOPMENT, tables.HELD_OUT})
+        self.assertEqual({tables.half_of(u, tables.BY_GAME) for u in us}, {tables.half("G")})
+
+    def test_cells_round_trip_and_the_bar_cells_floor(self):
+        self.assertEqual(rhythm.cells("0 1/2 1 3/2 2 5/2 3 7/2", 4), ["0 1/2"] * 4)
+        self.assertEqual(rhythm.cells("0 2 11/4", 4), ["0", "-", "0 3/4", "-"])
+        self.assertEqual(rhythm.cells("-", 3), ["-", "-", "-"])
+        for drawn in ("0 1/2 1 3/2 2 5/2 3 7/2", "0 2 11/4", "-", "1/3 2/3 1"):
+            self.assertEqual(rhythm.pattern_of_cells(rhythm.cells(drawn, 4)), drawn)
+        us = [Unit("s1", "G", "0 2", {"part": "bass", "meter": 4}), Unit("s2", "G", "0 1 2 3", {"part": "bass", "meter": 4})]
+        floor = rhythm.BarCells(us)
+        values = {"part": "bass", "meter": 4}
+        self.assertGreater(floor.p("0 2", values), floor.p("1/3 1", values))       # a bar never seen whole still has mass
+        self.assertGreater(floor.p("0 1 2", values), 0)
+        drawn = floor.draw(values, random.Random(3))
+        self.assertEqual(len(rhythm.cells(drawn, 4)), 4)
+        t = Table(("part",), floor=floor).fit(us)
+        self.assertGreater(t.p("0 1 2", ("bass",), values), 0)
+        self.assertEqual(len(rhythm.cells(t.draw(("other",), random.Random(2), values), 4)), 4)

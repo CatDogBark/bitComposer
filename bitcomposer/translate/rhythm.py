@@ -272,6 +272,62 @@ def chord_change(song: Song, a: float, b: float) -> str:
     return out
 
 
+def cells(drawn: str, meter: int) -> list[str]:
+    """A bar's pattern (pattern()) as one cell a beat: the onset positions
+    within the beat as fractions of it, space-separated; an empty beat "-"."""
+    out = [[] for _ in range(meter)]
+    for x in ([] if drawn == "-" else drawn.split()):
+        p = Fraction(x)
+        b = math.floor(p)
+        if b < meter:
+            out[b].append(p - b)
+    return [" ".join(str(f) for f in c) or "-" for c in out]
+
+
+def pattern_of_cells(cells_: list[str]) -> str:
+    """The bar's pattern back from its cells."""
+    return pattern(b + Fraction(x) for b, c in enumerate(cells_) for x in ([] if c == "-" else c.split()))
+
+
+def cell_units(units_) -> list:
+    """Each beat of each bar unit as a unit of its own: the cell its outcome;
+    its values the part, the meter, the beat (from 0) and the cell before
+    it in the bar (START at the first beat)."""
+    out = []
+    for u in units_:
+        previous = START
+        for i, c in enumerate(cells(u.outcome, u.values["meter"])):
+            out.append(tables.Unit(u.song, u.game, c, {"part": u.values["part"], "meter": u.values["meter"],
+                                                         "beat": i, "previous": previous}))
+            previous = c
+    return out
+
+
+class BarCells:
+    """The floor under a bar-pattern table: the bar as a chain of beat
+    cells, each cell's table conditioned on the part, the meter, the beat
+    and the cell before it; so a bar never counted whole still has a
+    likelihood (the product of its cells') and can be drawn (cell by cell)."""
+    SHAPE = ("part", "meter", "beat", "previous")
+
+    def __init__(self, units_):
+        self.table = tables.Table(self.SHAPE, "cells", votes=tables.SHARES).fit(cell_units(units_))
+
+    def p(self, drawn: str, values: dict) -> float:
+        prob, previous = 1.0, START
+        for i, c in enumerate(cells(drawn, values["meter"])):
+            prob *= self.table.p(c, (values["part"], values["meter"], i, previous))
+            previous = c
+        return prob
+
+    def draw(self, values: dict, rng) -> str:
+        out, previous = [], START
+        for i in range(values["meter"]):
+            previous = self.table.draw((values["part"], values["meter"], i, previous), rng)
+            out.append(previous)
+        return pattern_of_cells(out)
+
+
 def units(songs) -> list:
     """Every bar of every part as a table's unit (tables.Unit): its outcome
     the bar's pattern, its values the part, the meter, the tempo band, the

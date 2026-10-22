@@ -4,13 +4,17 @@ will play from (docs/idiom/phase-3-tables.md, the framework).
 An outcome is a value drawn as a string (a bar's rhythm as its positions,
 a chord's voicing); a context is a tuple of conditioning values (the part,
 the meter, the tempo band, the game). A table counts, under each context,
-the songs playing each outcome: a song votes once for each distinct
-outcome it plays under a context, so one song's ostinato is one vote and
-a figure forty songs share is forty; the unit counts (bars, events) are
-kept beside for the report. The probability of an outcome under a context
-interpolates the votes with the next coarser context's (the tuple without
-its last value, down to no context at all, and below that an even share
-for every outcome the table knows and one slot for the ones it does not),
+the songs playing each outcome, each song's votes summing to one: once
+for each distinct outcome it plays under the context ("songs"), so one
+song's ostinato is one vote and a figure forty songs share is forty, or
+the share of its units each outcome is ("shares"), which keeps how much a
+song repeats itself; the unit counts (bars, events) are kept beside for
+the report. The probability of an outcome under a context interpolates
+the votes with the next coarser context's (the tuple without its last
+value, down to no context at all, and below that the floor: an even share
+for every outcome the table knows and one slot for the ones it does not,
+or a model given for it, such as the bar as a chain of beat cells, so an
+outcome never counted still has a likelihood and can be drawn),
 Witten-Bell's way: the coarser estimate gets the weight t / (n + t), t the
 distinct outcomes seen under the context and n its votes, so a context
 seen in few songs, or one whose songs all play something different, leans
@@ -19,8 +23,10 @@ last, backing off to the shared one; a conditioning proposed is tried by
 adding it.
 
 Shapes (which conditionings, in what backoff order) are compared by the
-mean log-likelihood, in bits per unit, of the held-out games' units under
-a table fitted on the development games (half(): the split phase 1 used);
+mean log-likelihood, in bits per unit, of the held-out units under a
+table fitted on the development ones, the games split in half (half():
+the split phase 1 used) or, to try a per-game table, the songs within
+each game (a held-out game is never seen, so its context backs off whole);
 the shape predicting the unseen songs best is kept, and the table then
 fitted on every song. Beside the fit, simulate() draws what the table
 would play for the held-out songs and measures its spread against theirs:
@@ -29,7 +35,7 @@ most common one (its ostinato), since a table that predicted well by
 playing the mode would make every song the same. A draw returns from the
 whole distribution with a seed, never the mode.
 
-    python -m bitcomposer.translate.tables rhythm [--db PATH] [--top N]
+    python -m bitcomposer.translate.tables rhythm [--db PATH] [--split game|song] [--votes songs|shares] [--floor none|cells]
 """
 import argparse
 import hashlib
@@ -43,11 +49,18 @@ from dataclasses import dataclass, field
 GAME = "game"                        # the conditioning that is the song's game (a per-game table)
 UNSEEN = "\x00"                      # the slot every outcome the table has not seen shares
 DEVELOPMENT, HELD_OUT = "development", "held-out"
+SONGS, SHARES = "songs", "shares"    # how a song votes (the module)
+BY_GAME, BY_SONG = "game", "song"    # how the halves are split
 
 
 def half(game: str) -> str:
     """Which half a game's songs are in: fitted on, or held out to score (phase 1's split)."""
     return DEVELOPMENT if int(hashlib.sha1(game.encode()).hexdigest(), 16) % 2 == 0 else HELD_OUT
+
+
+def half_of(unit, split: str = BY_GAME) -> str:
+    """The unit's half: its game's, or by its song within the game."""
+    return half(unit.game) if split == BY_GAME else half(unit.song)
 
 
 @dataclass
@@ -64,9 +77,11 @@ class Table:
     """Outcomes counted under contexts, each song voting once for each
     distinct outcome it plays under a context (see the module)."""
 
-    def __init__(self, conditionings=(), name: str = ""):
+    def __init__(self, conditionings=(), name: str = "", votes: str = SONGS, floor=None):
         self.conditionings = tuple(conditionings)
         self.name = name
+        self.by = votes                  # SONGS or SHARES (the module)
+        self.floor = floor               # below the root: None (an even share), or a model with p(outcome, values) and draw(values, rng)
         self.votes: dict = {}            # context -> {outcome: songs voting for it}
         self.songs: Counter = Counter()  # context -> songs counted under it
         self.units: Counter = Counter()  # context -> units counted under it
@@ -78,26 +93,35 @@ class Table:
 
     def fit(self, units) -> "Table":
         """Count the units; the table before was empty."""
-        pairs, songs = defaultdict(set), defaultdict(set)
+        played = defaultdict(Counter)                  # context -> (song, outcome) -> units
         for u in units:
             ctx = self.context(u)
             self.vocabulary.add(u.outcome)
             for k in range(len(ctx) + 1):              # the context and every coarser one
                 c = ctx[:k]
-                pairs[c].add((u.song, u.outcome))
-                songs[c].add(u.song)
+                played[c][u.song, u.outcome] += 1
                 self.units[c] += 1
-        for c, ps in pairs.items():
-            votes = Counter(outcome for _, outcome in ps)
+        for c, counts in played.items():
+            totals = Counter()
+            for (song, _), n in counts.items():
+                totals[song] += n
+            votes = defaultdict(float)
+            for (song, outcome), n in counts.items():
+                votes[outcome] += n / totals[song] if self.by == SHARES else 1
             self.votes[c] = dict(votes)
-            self.songs[c] = len(songs[c])
+            self.songs[c] = len(totals)
         self._dist.clear()
         return self
 
-    def p(self, outcome: str, context: tuple) -> float:
-        """The outcome's probability under the context (see the module)."""
-        o = outcome if outcome in self.vocabulary else UNSEEN
-        prob = 1.0 / (len(self.vocabulary) + 1)
+    def p(self, outcome: str, context: tuple, values: dict | None = None) -> float:
+        """The outcome's probability under the context (see the module);
+        `values` are the unit's, for a floor model that conditions on them."""
+        if self.floor is None:
+            o = outcome if outcome in self.vocabulary else UNSEEN
+            prob = 1.0 / (len(self.vocabulary) + 1)
+        else:
+            o = outcome
+            prob = self.floor.p(outcome, values or {})
         for k in range(len(context) + 1):
             votes = self.votes.get(context[:k])
             if not votes:
@@ -112,7 +136,7 @@ class Table:
         units = list(units)
         if not units:
             return float("nan")
-        return sum(math.log2(self.p(u.outcome, self.context(u))) for u in units) / len(units)
+        return sum(math.log2(self.p(u.outcome, self.context(u), u.values)) for u in units) / len(units)
 
     def _level(self, context: tuple):
         """A context's own votes, for draws: (outcomes, cumulative votes, n, t), or None where it was never seen."""
@@ -126,11 +150,12 @@ class Table:
                 self._dist[context] = (outcomes, cum, cum[-1], len(outcomes))
         return self._dist[context]
 
-    def draw(self, context: tuple, rng: random.Random) -> str:
+    def draw(self, context: tuple, rng: random.Random, values: dict | None = None) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
-        n / (n + t) else the coarser level's; below the root, any known
-        outcome evenly (the unseen slot's share redrawn)."""
+        n / (n + t) else the coarser level's; below the root, the floor
+        model's draw, or any known outcome evenly (the unseen slot's share
+        redrawn)."""
         for k in range(len(context), -1, -1):
             level = self._level(context[:k])
             if level is None:
@@ -138,6 +163,8 @@ class Table:
             outcomes, cum, n, t = level
             if rng.random() * (n + t) < n:
                 return rng.choices(outcomes, cum_weights=cum)[0]
+        if self.floor is not None:
+            return self.floor.draw(values or {}, rng)
         if "" not in self._dist:
             self._dist[""] = sorted(self.vocabulary)
         return rng.choice(self._dist[""])
@@ -147,13 +174,13 @@ class Table:
         return sum(len(v) for c, v in self.votes.items() if len(c) == len(self.conditionings))
 
     def to_json(self) -> dict:
-        return {"conditionings": list(self.conditionings), "vocabulary": sorted(self.vocabulary),
+        return {"conditionings": list(self.conditionings), "votes_by": self.by, "vocabulary": sorted(self.vocabulary),
                 "contexts": [{"context": list(c), "songs": self.songs[c], "units": self.units[c], "votes": v}
                              for c, v in sorted(self.votes.items(), key=lambda cv: (len(cv[0]), [str(x) for x in cv[0]]))]}
 
     @classmethod
     def from_json(cls, d: dict, name: str = "") -> "Table":
-        t = cls(d["conditionings"], name)
+        t = cls(d["conditionings"], name, d.get("votes_by", SONGS))
         t.vocabulary = set(d["vocabulary"])
         for row in d["contexts"]:
             c = tuple(row["context"])
@@ -184,19 +211,22 @@ def shapes(base: tuple, extras=(), game: bool = True) -> list[tuple]:
     return out
 
 
-def compare(units, shape_list, by: str | None = None, rng_seed: int = 1) -> list[Comparison]:
+def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: str = BY_GAME,
+            votes: str = SONGS, floor=None) -> list[Comparison]:
     """Fit each shape on the development half, score it on the held-out
     half (overall and by the value of `by`), and measure the spread of what
-    it draws; best first."""
+    it draws; best first. `floor`: a function of the development units
+    giving the floor model, fitted once for every shape."""
     units = list(units)
-    dev = [u for u in units if half(u.game) == DEVELOPMENT]
-    held = [u for u in units if half(u.game) == HELD_OUT]
+    dev = [u for u in units if half_of(u, split) == DEVELOPMENT]
+    held = [u for u in units if half_of(u, split) == HELD_OUT]
     groups = defaultdict(list)
     for u in held:
         groups[u.values.get(by, "") if by else ""].append(u)
+    bottom = floor(dev) if floor else None
     out = []
     for shape in shape_list:
-        t = Table(shape).fit(dev)
+        t = Table(shape, votes=votes, floor=bottom).fit(dev)
         out.append(Comparison(shape, t.score(held), {k: t.score(v) for k, v in groups.items()},
                               sum(1 for c in t.votes if len(c) == len(shape)), t.entries(),
                               simulate(t, held, random.Random(rng_seed))))
@@ -220,7 +250,7 @@ def simulate(table: Table, units, rng: random.Random, previous: str = "previous"
             values = dict(u.values)
             if chained:
                 values[previous] = last
-            last = table.draw(table.context(Unit(u.song, u.game, u.outcome, values)), rng)
+            last = table.draw(table.context(Unit(u.song, u.game, u.outcome, values)), rng, values)
             drawn.append(last)
         real = [u.outcome for u in us]
         distinct.append((len(set(drawn)), len(set(real))))
@@ -260,6 +290,12 @@ def main(argv=None) -> int:
     ap.add_argument("--game", help="only this game's songs")
     ap.add_argument("--parts", help="only these parts, comma-separated")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--split", choices=(BY_GAME, BY_SONG), default=BY_GAME)
+    ap.add_argument("--votes", choices=(SONGS, SHARES), default=SONGS)
+    ap.add_argument("--floor", choices=("none", "cells"), default="none")
+    ap.add_argument("--base", default="part,meter", help="the chain every shape starts from")
+    ap.add_argument("--extras", default="tempo,previous,place,chord", help="each tried on the chain's end")
+    ap.add_argument("--no-game", action="store_true", help="leave out the per-game shapes")
     args = ap.parse_args(argv)
     from . import rhythm, store
     db = store.connect(args.db)
@@ -270,11 +306,14 @@ def main(argv=None) -> int:
         keep = set(args.parts.split(","))
         units = [u for u in units if u.values["part"] in keep]
     parts = [p for p in rhythm.PARTS if any(u.values["part"] == p for u in units)]
-    base = ("part", "meter")
-    extras = ("tempo", "previous", "place", "chord")
-    cs = compare(units, shapes(base, extras), by="part", rng_seed=args.seed)
-    dev = sum(1 for u in units if half(u.game) == DEVELOPMENT)
-    print(report(cs, parts, f"rhythm: {len(units)} bars, {dev} development, {len(units) - dev} held-out"))
+    base = tuple(x for x in args.base.split(",") if x)
+    extras = tuple(x for x in args.extras.split(",") if x)
+    floor = rhythm.BarCells if args.floor == "cells" else None
+    cs = compare(units, shapes(base, extras, not args.no_game), by="part", rng_seed=args.seed, split=args.split,
+                 votes=args.votes, floor=floor)
+    dev = sum(1 for u in units if half_of(u, args.split) == DEVELOPMENT)
+    print(report(cs, parts, f"rhythm: {len(units)} bars, {dev} development, {len(units) - dev} held-out; "
+                            f"split by {args.split}, votes {args.votes}, floor {args.floor}"))
     return 0
 
 
