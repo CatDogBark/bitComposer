@@ -405,17 +405,26 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
-                fit = lambda f, _k=k, _env=env: manner.fits(f) and within_of(f, _env) and locked(f, lock.get(_k), lock_share)   # noqa: E731
                 values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit}
                 unit = tables.Unit(song.sid, song.game, "", values)
-                figure = model.draw(unit, previous, played, rng, keep=fit)
-                for _ in range(TRIES):
-                    if fit(figure):
+                # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
+                # without the envelope (the band asks more strikes than the habit); then the manner alone. Never the
+                # song's own bar: a free-written part copies nothing of the part it replaces.
+                ladder = [lambda f, _k=k, _e=env: manner.fits(f) and within_of(f, _e) and locked(f, lock.get(_k), lock_share),
+                          lambda f, _k=k: manner.fits(f) and locked(f, lock.get(_k), lock_share),
+                          lambda f, _e=env: manner.fits(f) and within_of(f, _e),
+                          manner.fits]
+                figure = None
+                for fit in ladder:
+                    candidate = model.draw(unit, previous, played, rng, keep=fit)
+                    for _ in range(TRIES):
+                        if fit(candidate):
+                            figure = candidate
+                            break
+                        candidate = model.table.draw(model.table.context(unit), rng, values)
+                    if figure is not None:
                         break
-                    figure = model.table.draw(model.table.context(unit), rng, values)
-                else:
-                    figure = next((f for f in played if fit(f)), own[k])
-                figures[k] = figure
+                figures[k] = figure if figure is not None else model.table.draw(model.table.context(unit), rng, values)
             played[figures[k]] += 1
             previous = figures[k]
     return figures
