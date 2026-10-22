@@ -303,18 +303,22 @@ def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
 
 
-def locked(figure: str, lock) -> bool:
-    """Whether a figure strikes every position in lock[0] and none in the beats of lock[1]."""
+LOCK_DRUMS = 2 / 3                    # the share of a bar's shared hits a drum group must strike (the readings' two in three)
+
+
+def locked(figure: str, lock, share: float = 1.0) -> bool:
+    """Whether a figure strikes `share` of the positions in lock[0] (all, by default) and none in the beats of lock[1]."""
     if not lock:
         return True
     must, rests = lock
     positions = {Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)}
-    return must <= positions and not any(math.floor(p) in rests for p in positions)
+    struck = len(must & positions)
+    return struck >= share * len(must) - 1e-9 and not any(math.floor(p) in rests for p in positions)
 
 
 def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
              rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0,
-             envelope_of=None, within_of=None) -> list[str]:
+             envelope_of=None, within_of=None, lock_share: float = 1.0) -> list[str]:
     """The figures written for a part, one a bar (the module): drawn as the
     song's own mixture, in its manner, each bar's envelope and lock, a
     pattern a span, the song's moments its own; `chord_at` and `reuse` let
@@ -333,7 +337,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         caller gives it)."""
         previous = state["previous"]
         meter = env[-1] if env[-1] else song.meter
-        fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at))   # noqa: E731
+        fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at), lock_share)   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
         values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
@@ -374,14 +378,14 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
             chord = chord_at(start + i) if chord_at else None
             if own[start + i] == REST:
                 figure = REST
-            elif exact and locked(base, lock.get(start + i)):
+            elif exact and locked(base, lock.get(start + i), lock_share):
                 figure = base
-            elif chord is not None and chord in seen and rhythm_of(seen[chord]) == rhythm_of(base) and locked(seen[chord], lock.get(start + i)) and rng.random() < reuse:
+            elif chord is not None and chord in seen and rhythm_of(seen[chord]) == rhythm_of(base) and locked(seen[chord], lock.get(start + i), lock_share) and rng.random() < reuse:
                 figure = seen[chord]                        # the same chord again: the same figure, as the readings' basses do
             else:
                 want = rhythm_of(base)
                 figure = draw(envelope_of(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=own[start + i], at=start + i)
-                if rhythm_of(figure) != want and locked(base, lock.get(start + i)):
+                if rhythm_of(figure) != want and locked(base, lock.get(start + i), lock_share):
                     figure = base
             if chord is not None and figure != REST:
                 seen.setdefault(chord, figure)
@@ -412,7 +416,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         mine = [u for u in rhythm.drum_group_units([song], letters)]
         habit = mine[0].values["habit"] if mine else "medium mixed"
         figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, habit, rng, hold, locks.get(letters),
-                           envelope_of=drum_envelope, within_of=drum_within)
+                           envelope_of=drum_envelope, within_of=drum_within, lock_share=LOCK_DRUMS)
         for k, f in enumerate(figures):
             merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
     figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]

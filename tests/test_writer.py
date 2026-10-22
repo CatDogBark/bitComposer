@@ -130,6 +130,8 @@ class WriterTests(unittest.TestCase):
         self.assertTrue(writer.locked("0:R 2:5", ({Fraction(0), Fraction(2)}, {1, 3})))
         self.assertFalse(writer.locked("0:R 1:5", ({Fraction(0), Fraction(2)}, set())))   # misses the hit on beat three
         self.assertFalse(writer.locked("0:R 3/2:5", (set(), {1})))                        # strikes in a stop beat
+        self.assertTrue(writer.locked("0:K 1:S", ({Fraction(0), Fraction(1), Fraction(2)}, set()), 2 / 3))   # two of three hits: enough for a drum group
+        self.assertFalse(writer.locked("0:K", ({Fraction(0), Fraction(1), Fraction(2)}, set()), 2 / 3))
         others = [_song("b"), _song("c")]
         others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
         others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 2.0)]
