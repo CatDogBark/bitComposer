@@ -127,7 +127,8 @@ class Song:
     sid: str = ""                               # its id in the readings
     game: str = ""
     numbers: list = field(default_factory=list)   # each bar's number in the reading (form's bars count them), beside `bars`
-    parts: list = field(default_factory=list)     # the form's parts: (first bar number, bars, the earlier part repeated or None)
+    parts: list = field(default_factory=list)     # the form's parts: (first bar number, bars, the earlier part repeated or None, letter)
+    sections: list = field(default_factory=list)  # the form's sections (a short part played again at once joined), the same shape
     pieces: dict = field(default_factory=dict)    # sample key -> the piece the reading named it (drums.PIECES, "none")
     tonic: int | None = None                      # the key reader's tonic and mode (the harmony units' degrees)
     mode: str = "major"
@@ -164,8 +165,10 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         kept = [(k, a, min(b, end)) for k, (a, b) in enumerate(zip(lines, ends)) if min(b, end) - a >= 1 - NEAR]
         song = Song(title, meter, division, [(a, b) for _, a, b in kept], chords, bpm=bpm or 120.0, sid=sid,
                     game=game_name or "", numbers=[k for k, _, _ in kept],
-                    parts=[(bar, n, of) for bar, n, of in db.execute(
-                        "SELECT bar, bars, [of] FROM form WHERE song = ? AND level = 'part' ORDER BY bar", (sid,))],
+                    parts=[(bar, n, of, label) for bar, n, of, label in db.execute(
+                        "SELECT bar, bars, [of], label FROM form WHERE song = ? AND level = 'part' ORDER BY bar", (sid,))],
+                    sections=[(bar, n, of, label) for bar, n, of, label in db.execute(
+                        "SELECT bar, bars, [of], label FROM form WHERE song = ? AND level = 'section' ORDER BY bar", (sid,))],
                     tonic=tonic, mode=mode or "major", loop_bar=loop_bar)
         keys, song.pieces = {}, {}
         for idx, key, piece in db.execute("SELECT idx, key, piece FROM samples WHERE song = ?", (sid,)):
@@ -896,6 +899,90 @@ def loop_units(songs, sure_only: bool = True) -> list:
         if k is None or not names:
             continue
         out.append(tables.Unit(s.sid, s.game, names[k], {"part": R.HARMONY, "mode": s.mode, "last": names[-1]}))
+    return out
+
+
+# --- the form: the parts' letters and lengths ---
+
+FORM_SIZES = ((1, "one part"), (4, "a few"), (8, "several"), (1e9, "many"))   # parts a song has
+PART_LENGTHS = ((4, "short"), (8, "medium"), (1e9, "long"))                 # a song's median part length, in bars
+LONG = 32                            # bars: a part this long or longer is one outcome
+KINDS = ("new", "again", "back")     # a part: new material, the part before once more, an earlier part returning
+LEVELS = ("part", "section")
+
+
+def level_parts(song: Song, level: str = "part") -> list:
+    return song.parts if level == "part" else song.sections
+
+
+def part_kind(parts: list, i: int) -> str:
+    """What a part is to the ones before (KINDS)."""
+    bar, n, of, label = parts[i]
+    if of is None:
+        return "new"
+    return "again" if parts[i - 1][3] == label else "back"
+
+
+def _length_name(n: int) -> str:
+    return str(n) if n < LONG else f"{LONG}+"
+
+
+def form_units(songs, level: str = "part") -> list:
+    """Each part of each song's form (at a level, LEVELS) as a unit: its
+    outcome what it is to the parts before (KINDS); its values the part
+    (form), the meter, the tempo band, its index in the form (1 to 5+), how
+    many letters came before it (0 to 4+), the kind of the part before
+    (START at the first) and the song's size in parts (FORM_SIZES)."""
+    out = []
+    for s in songs:
+        parts = level_parts(s, level)
+        if not parts:
+            continue
+        size = next(name for top, name in FORM_SIZES if len(parts) <= top)
+        tempo, previous, seen = band(s.bpm), START, set()
+        for i, (bar, n, of, label) in enumerate(parts):
+            kind = part_kind(parts, i)
+            out.append(tables.Unit(s.sid, s.game, kind, {
+                "part": "form", "meter": s.meter, "tempo": tempo, "index": min(i + 1, 5), "letters": min(len(seen), 4),
+                "previous": previous, "habit": size}))
+            seen.add(label)
+            previous = kind
+    return out
+
+
+def length_units(songs, level: str = "part") -> list:
+    """Each part of each song's form as a unit: its outcome its length in
+    bars (LONG and over one outcome); its values the part (form), the
+    meter, the tempo band, its kind (KINDS), its index, the length of the
+    part before (START at the first) and the song's habit, its median part
+    length (PART_LENGTHS)."""
+    out = []
+    for s in songs:
+        parts = level_parts(s, level)
+        if not parts:
+            continue
+        habit = next(name for top, name in PART_LENGTHS if statistics.median(p[1] for p in parts) <= top)
+        tempo, previous = band(s.bpm), START
+        for i, (bar, n, of, label) in enumerate(parts):
+            out.append(tables.Unit(s.sid, s.game, _length_name(n), {
+                "part": "form", "meter": s.meter, "tempo": tempo, "kind": part_kind(parts, i), "index": min(i + 1, 5),
+                "previous": previous, "habit": habit}))
+            previous = _length_name(n)
+    return out
+
+
+def letters_units(songs, level: str = "part") -> list:
+    """Each song's form as one unit: its outcome the parts' letters in order
+    (A B B C B B C D D E); its values the part (form), the meter, the tempo
+    band and the song's size in parts (FORM_SIZES)."""
+    out = []
+    for s in songs:
+        parts = level_parts(s, level)
+        if not parts:
+            continue
+        size = next(name for top, name in FORM_SIZES if len(parts) <= top)
+        out.append(tables.Unit(s.sid, s.game, " ".join(p[3] for p in parts),
+                               {"part": "form", "meter": s.meter, "tempo": band(s.bpm), "parts": size}))
     return out
 
 

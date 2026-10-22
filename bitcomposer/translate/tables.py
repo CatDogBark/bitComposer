@@ -470,7 +470,15 @@ SPECS = {
     "changes": ("change_units", ("part", "meter"), ("mode", "tempo", "place", "previous", "habit")),
     "cadences": ("cadence_units", ("part", "mode"), ("form", "length", "habit")),
     "loops": ("loop_units", ("part", "mode"), ("last",)),
+    "form": ("form_units", ("part", "meter"), ("tempo", "index", "letters", "previous", "habit")),
+    "lengths": ("length_units", ("part", "meter"), ("tempo", "kind", "index", "previous", "habit")),
+    "letters": ("letters_units", ("part", "meter"), ("tempo", "parts")),
+    "contours": ("phrases:contour_units", ("part", "mode"), ("place", "form", "source", "relation", "previous", "habit")),
+    "relations": ("phrases:relation_units", ("part", "mode"), ("place", "form", "previous", "habit")),
+    "endings": ("phrases:ending_units", ("part", "mode"), ("ends_part", "last", "contour", "place", "previous", "habit")),
+    "peaks": ("phrases:peak_units", ("part", "mode"), ("contour", "place", "previous")),
 }
+FORM_TABLES = ("form", "lengths", "letters")   # the form's tables take a level (rhythm.LEVELS)
 SURE_ONLY = ("chords", "degrees", "shapes", "cadences", "loops")   # the tables by degree: only songs whose tonic is sure (rhythm.tonic_sure)
 
 
@@ -492,13 +500,26 @@ def main(argv=None) -> int:
     ap.add_argument("--cache", action="store_true", help="each shape also as the song's own mixture over it (Cache)")
     ap.add_argument("--recall", action="store_true", help="print the recall shares by part (and habit) instead")
     ap.add_argument("--unsure", action="store_true", help="the tables by degree: count the songs whose tonic is unsure too")
+    ap.add_argument("--level", choices=("part", "section"), default="part", help="the form's tables: the form reader's level")
+    ap.add_argument("--length", default="4", help="the phrase tables: the phrase length in bars, or 'part' (default 4)")
     args = ap.parse_args(argv)
     from . import rhythm, store
     db = store.connect(args.db)
-    songs, left = rhythm.load(db, args.game)
-    print(f"{len(songs)} songs counted, left out: {left}", file=sys.stderr)
     builder, base, extras = SPECS[args.table]
-    units = getattr(rhythm, builder)(songs, sure_only=not args.unsure) if args.table in SURE_ONLY else getattr(rhythm, builder)(songs)
+    if builder.startswith("phrases:"):
+        from . import phrases
+        songs, left = phrases.load(db, args.game)
+        length = "part" if args.length == "part" else int(args.length)
+        units = getattr(phrases, builder.split(":", 1)[1])(songs, length=length)
+    else:
+        songs, left = rhythm.load(db, args.game)
+        if args.table in SURE_ONLY:
+            units = getattr(rhythm, builder)(songs, sure_only=not args.unsure)
+        elif args.table in FORM_TABLES:
+            units = getattr(rhythm, builder)(songs, level=args.level)
+        else:
+            units = getattr(rhythm, builder)(songs)
+    print(f"{len(songs)} songs counted, left out: {left}", file=sys.stderr)
     if args.parts:
         keep = set(args.parts.split(","))
         units = [u for u in units if u.values["part"] in keep]

@@ -420,3 +420,62 @@ class HarmonyUnitTests(unittest.TestCase):
         ls = rhythm.loop_units([self._song()])
         self.assertEqual((ls[0].outcome, ls[0].values["last"], ls[0].values["mode"]), ("I", "I", "major"))
         self.assertEqual(rhythm.loop_units([self._song(tonic=7)]), [])
+
+
+class FormUnitTests(unittest.TestCase):
+    def _song(self):
+        s = rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4.0) for k in range(24)], [], bpm=100.0, sid="id", game="G",
+                        numbers=list(range(24)))
+        s.parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 1, "B"), (12, 8, None, "C"), (20, 4, 1, "B")]
+        s.sections = [(0, 4, None, "A"), (4, 8, None, "B"), (12, 8, None, "C"), (20, 4, 1, "B")]
+        return s
+
+    def test_form_units(self):
+        us = rhythm.form_units([self._song()])
+        self.assertEqual([u.outcome for u in us], ["new", "new", "again", "new", "back"])
+        self.assertEqual([u.values["letters"] for u in us], [0, 1, 2, 2, 3])
+        self.assertEqual([u.values["previous"] for u in us], [rhythm.START, "new", "new", "again", "new"])
+        self.assertEqual((us[0].values["index"], us[4].values["index"], us[0].values["habit"]), (1, 5, "several"))
+        self.assertEqual([u.outcome for u in rhythm.form_units([self._song()], level="section")], ["new", "new", "new", "back"])
+
+    def test_length_and_letters_units(self):
+        us = rhythm.length_units([self._song()])
+        self.assertEqual([u.outcome for u in us], ["4", "4", "4", "8", "4"])
+        self.assertEqual([u.values["kind"] for u in us], ["new", "new", "again", "new", "back"])
+        self.assertEqual([u.values["previous"] for u in us][:2], [rhythm.START, "4"])
+        self.assertEqual(us[0].values["habit"], "short")
+        ls = rhythm.letters_units([self._song()])
+        self.assertEqual((ls[0].outcome, ls[0].values["parts"]), ("A B B C B", "several"))
+        self.assertEqual(rhythm.letters_units([self._song()], level="section")[0].outcome, "A B C B")
+        self.assertEqual(rhythm.form_units([rhythm.Song("t", 4, 4, [], [])]), [])
+
+
+class PhraseUnitTests(unittest.TestCase):
+    def _song(self):
+        from bitcomposer.translate import phrases
+        # C major, 4/4, two parts of four bars; a rising phrase, then the same phrase moved up a fifth
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        notes = [(4.0 * k + 1.0 * i, 1.0, 60 + 2 * i + 12 * (k // 4) * 0) for k in range(4) for i in range(4)]
+        rise = [(t, 1.0, 60 + i) for i, t in enumerate(range(0, 16))]            # 16 beats climbing a semitone a beat
+        again = [(t + 16.0, l, m + 7) for t, l, m in rise]
+        s = phrases.Song("t", 0, "major", 4, bars, [], notes={"melody": rise + again},
+                         parts=[phrases.Part("A", 0, 4), phrases.Part("B", 4, 4)], loop_bar=0, sid="id", game="G")
+        return s
+
+    def test_phrase_units(self):
+        from bitcomposer.translate import phrases
+        cs = phrases.contour_units([self._song()], length=4)
+        self.assertEqual([u.outcome for u in cs], ["rising", "rising"])
+        self.assertEqual([u.values["relation"] for u in cs], ["first", "moved up"])
+        self.assertEqual([u.values["previous"] for u in cs], [rhythm.START, "rising"])
+        self.assertEqual([u.values["form"] for u in cs], ["first", "last"])
+        self.assertEqual((cs[0].values["place"], cs[0].values["ends_part"], cs[0].values["last"], cs[1].values["last"]),
+                         ("only", "yes", "no", "yes"))
+        self.assertEqual(cs[0].values["habit"], "mixed")                       # one of two phrases moves the one before
+        rs = phrases.relation_units([self._song()], length=4)
+        self.assertEqual([u.outcome for u in rs], ["first", "moved up"])
+        self.assertEqual(rs[1].values["contour"], "rising")
+        es = phrases.ending_units([self._song()], length=2)
+        self.assertEqual(len(es), 4)
+        self.assertEqual([u.values["place"] for u in es], ["first", "last", "first", "last"])
+        self.assertEqual(es[0].values["part"], "melody")

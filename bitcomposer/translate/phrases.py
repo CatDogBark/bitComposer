@@ -81,7 +81,8 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 
 from . import form as form_mod, roles as R, store, vocab
-from .rhythm import NEAR, Tally, _chord_at, _line
+from .rhythm import NEAR, START, Tally, _chord_at, _line, habit_of
+from . import tables
 from .vocab import FIT, Span, _beats_at, _median, _pct, tone_of
 
 LENGTHS = ("part", 4, 2)             # the phrase lengths: the part, four bars, two bars
@@ -126,6 +127,8 @@ class Song:
     notes: dict = field(default_factory=dict)
     parts: list = field(default_factory=list)
     loop_bar: int | None = None
+    sid: str = ""                    # its id in the readings, and its game (the tables' split)
+    game: str = ""
 
 
 def load(db, game: str | None = None, song: str | None = None) -> tuple[list[Song], dict]:
@@ -134,8 +137,8 @@ def load(db, game: str | None = None, song: str | None = None) -> tuple[list[Son
     "no form": n}."""
     songs, out = [], Counter()
     where, args = ("WHERE id = ?", (song,)) if song else ("WHERE game = ?", (game,)) if game else ("", ())
-    for sid, title, bpm, meter, tonic, mode, seconds, loop_bar, loop_seconds in db.execute(
-            f"SELECT id, title, bpm, meter, key_tonic, key_mode, seconds, loop_bar, loop_seconds FROM songs {where}", args):
+    for sid, title, bpm, meter, tonic, mode, seconds, loop_bar, loop_seconds, game_name in db.execute(
+            f"SELECT id, title, bpm, meter, key_tonic, key_mode, seconds, loop_bar, loop_seconds, game FROM songs {where}", args):
         row = db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()
         if bpm is None or not row:
             out["free time"] += 1
@@ -164,7 +167,7 @@ def load(db, game: str | None = None, song: str | None = None) -> tuple[list[Son
         lines = [_beats_at(beats, t) for t in bars]
         s = Song(title, tonic, mode, meter,                  # the bars to the loop's end, a last sliver under a beat dropped
                  [(a, min(b, end)) for a, b in zip(lines, lines[1:] + [lines[-1] + meter]) if a < end - (1 - NEAR)],
-                 chords, parts=parts, loop_bar=loop_bar)
+                 chords, parts=parts, loop_bar=loop_bar, sid=sid, game=game_name or "")
         for role, evidence, blob in db.execute("SELECT role, evidence, notes FROM voices WHERE song = ?", (sid,)):
             if role in ROLES and not (evidence and '"roll"' in evidence):
                 s.notes.setdefault(role, []).extend(
@@ -479,6 +482,83 @@ def shapes(songs: list, length) -> Shapes:
             out.relation[relation(before, ph)] += 1
             before = ph
     return out
+
+
+# --- the phrases as a table's units (phase 3, item 6) ---
+
+REPEATS = ((1 / 3, "varied"), (2 / 3, "mixed"), (2, "repeating"))   # a song's share of phrases repeating or moving the one before
+YES_NO = {True: "yes", False: "no"}
+
+
+def _place(k: int, n: int) -> str:
+    return "only" if n == 1 else "first" if k == 0 else "last" if k == n - 1 else "middle"
+
+
+def phrase_rows(songs: list, length=4) -> list[list[dict]]:
+    """Each song's phrases with a tune, at one length, as rows of what the
+    tables take: the contour, the peak's quarter, the relation to the
+    phrase before, the end note against the key (KEY_NAMES), whether the
+    phrase ends its part and whether it is the song's last, its place in
+    its part and its part's place in the form, its source (melody or
+    counter-line), the mode, and the song's habit (REPEATS)."""
+    out = []
+    for s in songs:
+        rows, before = [], None
+        for pi, part in enumerate(s.parts):
+            ws = windows(s, part, length)
+            for k, (i, j) in enumerate(ws):
+                a, b = s.bars[i][0], s.bars[j - 1][1]
+                line, source = tune(s, a, b)
+                if not line:
+                    continue
+                ph = Phrase(a, b, line, source, s.bars[j - 1][0], ends_part=k == len(ws) - 1)
+                rows.append({"contour": contour(line, a, b), "peak": peak(line, a, b), "relation": relation(before, ph),
+                             "ending": against_key(ph.final[2], s), "ends_part": YES_NO[ph.ends_part],
+                             "place": _place(k, len(ws)), "form": _place(pi, len(s.parts)), "source": source,
+                             "mode": s.mode, "last": "no"})
+                before = ph
+        if rows:
+            if s.loop_bar is not None:
+                rows[-1]["last"] = "yes"
+            share = sum(1 for r in rows if r["relation"] in ("repeated", "moved up", "moved down")) / len(rows)
+            habit = habit_of(share, REPEATS)
+            for r in rows:
+                r["habit"] = habit
+            out.append((s, rows))
+    return out
+
+
+def _phrase_units(songs, outcome: str, length) -> list:
+    out = []
+    for s, rows in phrase_rows(songs, length):
+        previous = START
+        for r in rows:
+            values = {"part": R.MELODY, "previous": previous}
+            values.update((k, v) for k, v in r.items() if k != outcome)
+            out.append(tables.Unit(s.sid, s.game, r[outcome], values))
+            previous = r[outcome]
+    return out
+
+
+def contour_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome its contour (CONTOURS); the other
+    rows' names its values, and the phrase before's contour."""
+    return _phrase_units(songs, "contour", length)
+
+
+def relation_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome how it stands to the phrase before (RELATIONS)."""
+    return _phrase_units(songs, "relation", length)
+
+
+def ending_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome the note it ends on against the key (KEY_NAMES)."""
+    return _phrase_units(songs, "ending", length)
+
+
+def peak_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome where its first highest note falls (QUARTERS)."""
+    return _phrase_units(songs, "peak", length)
 
 
 # --- reports ---
