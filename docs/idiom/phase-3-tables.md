@@ -307,3 +307,47 @@ Articulation is a habit of the game and the song, not of the note; the
 writer draws it once a song. Tested next: the song's habit (its share of
 held notes, in thirds) as a conditioning, and a table of the habits
 themselves by game.
+
+### Bass figures (2026-10-21)
+
+The bass's bar as its positions with the chord tone of each onset's
+lowest note (R root, r a root an octave or more over the bar's lowest, 3,
+5, 7, s a sus chord's tone, + another tone, ? no chord fits), 33,320
+bars. Over its 190,943 onsets the marks are R 0.44, + 0.19, 5 0.15, 3
+0.07, r 0.07, 7 0.05, s 0.02; of consecutive bars 23 % keep the figure,
+20 % keep the rhythm and change marks (passing tones, or the chord
+reader's misses), 57 % change rhythm; a song plays 10.9 distinct figures
+against 6.9 distinct rhythms. Held-out bits a bar, the cell floor
+(keeping marks), share votes, discount 0.75: the floor −21.92, part+meter
+−21.48, with the chord's shape −21.53, the chord change in the bar −21.52
+or the next −21.51, the tempo −21.52; with the previous figure −21.00,
+and nothing on top of it helps (shape −21.02, chord −21.02, tempo −21.04,
+next −21.05) though each pulls the draws toward the songs (15 distinct a
+song, ostinato 0.36; real 10.4 / 0.39). By song within the games, a game's
+own table: −21.63 against −21.61 shared. **Kept:** part, meter, the
+previous figure, shared. The marks make the figures eleven bits a bar
+dearer than the bare rhythms (−9.9), a fifth of it the chord reader's
+noise at most; what the figures are worth is settled by the ear, in
+Terra.
+
+### Habits (2026-10-21)
+
+The plan's open question, a song's own habit as a conditioning, has one
+answer for the three tables: it does not raise the likelihood, and it is
+what makes the draws like songs. A habit is read from the song's own
+bars (the values: its share of held notes in thirds; rhythm: its onsets a
+bar in three tiers and its share of bars repeating the one before in
+thirds; bass: the density tier, its tones as roots / root-fifth / walking
+by the share of its marks on R r 5, and octaves) and a writer draws it
+once a song from the habits table, then the bars under it.
+
+| table | without the habit | with it | the habit's own table (bits a song and part, by song within games) | draws: distinct / ostinato (real) |
+|---|---|---|---|---|
+| values (held or detached) | −0.725 (part+value+previous) | **−0.449** (part+habit+previous) | −0.99 by game, −1.18 by part alone | 0.87 (0.88) |
+| rhythm | −10.526 | −10.521 | −2.66 by part and game, −2.68 by part | 10.3 / 0.47 (7.5 / 0.50), from 12.8 / 0.36 |
+| bass | −21.002 | −21.045 | −3.00 by part, −3.09 by game (the game hurts) | 16.8 / 0.33 (10.4 / 0.39), from 18.6 / 0.27 |
+
+The articulation habit is the exception: it carries a quarter of a bit a
+note, and is a game's (−0.99 against −1.18). The rhythm and bass habits
+are drawn by part, not by game. **Kept:** every table conditioned on
+its habit, the habit drawn once a song.

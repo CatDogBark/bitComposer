@@ -329,6 +329,8 @@ SPECS = {
     "habits": ("habit_units", ("part",), ()),
     "bass": ("bass_units", ("part", "meter"), ("tempo", "shape", "chord", "next", "previous", "habit")),
     "bass_habits": ("bass_habit_units", ("part",), ()),
+    "drums": ("drum_units", ("part", "meter"), ("tempo", "place", "kit", "previous", "habit")),
+    "drum_habits": ("drum_habit_units", ("part",), ()),
 }
 
 

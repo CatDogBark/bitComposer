@@ -393,6 +393,56 @@ def rhythm_habit_units(songs) -> list:
     return habits(units(songs))
 
 
+def drum_figure(struck, song: Song) -> str:
+    """A drum bar's figure as a table's outcome: each hit's position and
+    its piece's letter (LETTERS; a sample the reading named no drum, o),
+    "position:letter" tokens, two pieces struck together two tokens; a
+    bar rested through "-"."""
+    tokens = set()
+    for p, ns in struck:
+        for n in ns:
+            tokens.add((p, LETTERS.get(song.pieces.get(n[3]), "o")))
+    return " ".join(f"{p}:{letter}" for p, letter in sorted(tokens)) or "-"
+
+
+def _kit(mine: list) -> str:
+    """The pieces a song's drums strike at all, as their letters in LETTERS' order."""
+    letters = {t.partition(":")[2] for u in mine for t in _tokens(u.outcome)}
+    return "".join(x for x in LETTERS.values() if x in letters) or "-"
+
+
+def drum_units(songs) -> list:
+    """Every bar of the drums as a table's unit: its outcome the bar's
+    figure by piece (drum_figure()); its values the part, the meter, the
+    tempo band, the bar's place in its part of the form (fills land on the
+    last), the figure before it (START where none), the kit (which pieces
+    the song strikes at all) and the song's habit (_rhythm_habit: density
+    and repetition)."""
+    out = []
+    for s in songs:
+        if R.DRUMS not in s.notes:
+            continue
+        tempo, previous, last, mine = band(s.bpm), START, None, []
+        for k, a, struck in numbered_bars_of(s, R.DRUMS):
+            if last is not None and k != last + 1:
+                previous = START
+            drawn = drum_figure(struck, s)
+            mine.append(tables.Unit(s.sid, s.game, drawn, {
+                "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous}))
+            previous, last = drawn, k
+        if mine:
+            kit = _kit(mine)
+            _give_habit(mine, _rhythm_habit(mine))
+            for u in mine:
+                u.values["kit"] = kit
+            out += mine
+    return out
+
+
+def drum_habit_units(songs) -> list:
+    return habits(drum_units(songs))
+
+
 def bass_habit_units(songs) -> list:
     return habits(bass_units(songs))
 

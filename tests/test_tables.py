@@ -286,3 +286,20 @@ class StyleHabitTests(unittest.TestCase):
         self.assertEqual([(h.outcome, h.values["part"]) for h in rhythm.rhythm_habit_units([s])], [("medium repeating", "bass")])
         self.assertEqual(rhythm.habit_of(1.0, rhythm.DENSITIES), "sparse")
         self.assertEqual(rhythm.habit_of(7.0, rhythm.DENSITIES), "dense")
+
+
+class DrumUnitTests(unittest.TestCase):
+    def test_drum_units(self):
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1],
+                        parts=[(0, 2)], pieces={"k": "kick", "s": "snare", "h": "hat", "x": "none"})
+        s.notes["drums"] = [(0.0, 0.1, float("nan"), "k"), (0.0, 0.1, float("nan"), "h"), (1.0, 0.1, float("nan"), "s"),
+                            (2.0, 0.1, float("nan"), "k"), (3.0, 0.1, float("nan"), "s"), (3.5, 0.1, float("nan"), "x"),
+                            (4.0, 0.1, float("nan"), "k"), (5.0, 0.1, float("nan"), "s")]
+        us = rhythm.drum_units([s])
+        self.assertEqual([u.outcome for u in us], ["0:K 0:h 1:S 2:K 3:S 7/2:o", "0:K 1:S"])
+        self.assertEqual([u.values["place"] for u in us], ["first", "last"])
+        self.assertEqual({u.values["kit"] for u in us}, {"KSho"})
+        self.assertEqual(us[1].values["previous"], us[0].outcome)
+        self.assertEqual(rhythm.cells(us[0].outcome, 4), ["0:K 0:h", "0:S", "0:K", "0:S 1/2:o"])
+        self.assertEqual([h.outcome for h in rhythm.drum_habit_units([s])], ["medium varied"])
