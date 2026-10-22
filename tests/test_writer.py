@@ -110,6 +110,21 @@ class WriterTests(unittest.TestCase):
         self.assertEqual(len(set(figures[4:])), 1)
         self.assertNotEqual(writer.rhythm_of(figures[0]), writer.rhythm_of(figures[4]))
 
+    def test_a_bar_of_another_length_is_written_too(self):
+        others = [_song("b"), _song("c")]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        model = writer.fit(rhythm.bass_units(others))
+        s = _song(bars=4)
+        s.chords = [Span(0.0, 16.0, 0, "", 1.0)]
+        s.bars = [(0.0, 4.0), (4.0, 7.0), (7.0, 11.0), (11.0, 15.0)]           # a three-beat bar second
+        s.notes["bass"] = [(a + x, 0.4, 36.0 if x < 2 else 43.0, "k") for a, b in s.bars for x in range(int(b - a))]
+        notes, figures = writer.bass(s, model, random.Random(1), key=(0, "major"))
+        self.assertEqual(len(figures), 4)
+        self.assertNotEqual(figures[1], "-")                                    # written, not left silent
+        self.assertTrue(all(float(Fraction(t.partition(":")[0])) < 3 for t in rhythm._tokens(figures[1])))
+        self.assertTrue(all(4.0 <= a < b <= 7.0 for a, b, _ in notes if 4.0 <= a < 7.0))
+
     def test_a_held_bar_keeps_the_songs_own_figure(self):
         others = [_song("b"), _song("c")]
         others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
@@ -143,12 +158,14 @@ class WriterTests(unittest.TestCase):
         self.assertEqual((m.octaves, m.tones, m.pedal), (False, (2, 2), False))   # _song's bars: two tones each
         self.assertTrue(m.fits("0:R 1:5 2:R 3:5") and m.fits("0:R 1:R 2:5 3:5"))
         env = writer.envelope("0:R 1:R 2:5 3:5")                   # the song's own bar: four strikes, the one struck
-        self.assertEqual(env, (2, 6, True))
+        self.assertEqual(env, (2, 6, True, None))
+        self.assertFalse(writer.within("0:R 1:R 2:5 3:5", writer.envelope("0:R 1:R 2:5", 3)))   # beat four in a 3-beat bar
+        self.assertTrue(writer.within("0:R 1:R 2:5", writer.envelope("0:R 1:R 2:5", 3)))
         self.assertTrue(writer.within("0:R 1:5 2:R 3:5", env) and writer.within("0:R 2:5", env))
         self.assertFalse(writer.within("1:5 2:5 3:R", env))        # nothing on the one
         self.assertFalse(writer.within("0:R", env))                # too sparse for that bar
         self.assertFalse(writer.within("0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R", env))   # too dense for it
-        self.assertEqual(writer.envelope("2:R"), (1, 1, False))    # a one-note bar off the one allows one note, anywhere
+        self.assertEqual(writer.envelope("2:R"), (1, 1, False, None))   # a one-note bar off the one allows one note, anywhere
         self.assertFalse(m.fits("0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R"))   # eighths the song never plays
         self.assertFalse(m.fits("0:R 1:R 2:5 11/4:R"))             # a sixteenth the song never plays
         self.assertFalse(m.fits("0:R 4/3:5 5/3:R 2:R"))            # triplets the song never plays

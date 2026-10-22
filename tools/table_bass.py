@@ -91,14 +91,14 @@ def relation(line, other) -> tuple:
 
 
 def moments(db, sid, song, bass_voices) -> set:
-    """The song's moments: bars (indices among the bars of the meter) where every part but the bass drops to under
+    """The song's moments: bars (indices among the song's bars, every length) where every part but the bass drops to under
     MOMENT of the song's median energy (level x sounded length), for a run of at most MOMENT_BARS bars (Johnny C.
     Bad's quieter ten-bar stretch is a section, not a moment)."""
     others = []
     for voice, blob in db.execute("SELECT voice, notes FROM voices WHERE song = ?", (sid,)):
         if voice not in bass_voices:
             others += [n for n in store.unpack(blob) if n[3] > 0]
-    bars = [(a, b) for a, b in song.bars if round(b - a) == song.meter]
+    bars = list(song.bars)                           # every bar, as the writer counts them
     energy = []
     for a, b in bars:
         e = 0.0
@@ -166,7 +166,7 @@ def main(argv=None) -> int:
           + "".join(f"; voice {t} {k[0]}" + (f" {k[1]:+d} semitones" if k[0] == "doubling" else "") for t, k in kinds.items()))
     units = rhythm.bass_units(songs)
     table = writer.fit([u for u in units if u.song != sid])
-    own = [u.outcome for u in rhythm.bass_units([song])]
+    own = [rhythm.figure(struck, a, song) if struck else "-" for _, a, _, struck in rhythm.all_bars_of(song, rhythm.R.BASS)]
     held = moments(db, sid, song, set(by_voice))
     notes, figures = writer.bass(song, table, random.Random(a.seed), key=(tonic, mode) if tonic is not None else None, hold=held)
     print(f"  habit {rhythm.bass_units([song])[0].values['habit']}, {len(figures)} bars written, {len(notes)} notes"

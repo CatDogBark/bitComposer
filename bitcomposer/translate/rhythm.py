@@ -250,6 +250,21 @@ def numbered_bars_of(song: Song, role: str):
         yield k, a, sorted(seen.items())
 
 
+def all_bars_of(song: Song, role: str):
+    """Every bar of the song, whatever its length, with the part's onsets in
+    it: (number, start, end, [(position, [notes])]); bars_of keeps the
+    meter's bars only."""
+    notes = song.notes.get(role, [])
+    numbers = song.numbers or range(len(song.bars))
+    for k, (a, b) in zip(numbers, song.bars):
+        seen = {}
+        for t, ns in onsets(notes, a, b):
+            p = position(t - a, song.division)
+            if p < b - a:
+                seen.setdefault(p, []).extend(ns)
+        yield k, a, b, sorted(seen.items())
+
+
 def place_in_part(song: Song, number: int) -> str:
     """Where a bar sits in its part of the form: first, middle, last; none when no part holds it."""
     for bar, n in song.parts:

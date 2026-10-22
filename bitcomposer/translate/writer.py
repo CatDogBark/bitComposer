@@ -82,7 +82,11 @@ walks (placed in a fixed octave, Locke's leapt by thirds and fifths
 where its own moves by step); its length to the next onset in
 the bar or the bar's end, sounding the share of that the song's bass
 sounds of its own gaps (the median, between SOUNDS). A bar of another
-length than the meter's is left silent.
+length than the meter's is written too, with the table's figures for
+that many beats (the readings hold 3/4 and 2/4 songs) or, where nothing
+fits, the song's own bar: the first writer left such bars silent, and
+Johnny C. Bad's bass vanished for four bars the beat reader had put in
+3/4 and came back in at the song's stop-time.
 """
 import math
 import random
@@ -215,17 +219,21 @@ def spans(keys: list) -> list[tuple[int, int, int]]:
     return out
 
 
-def envelope(own: str) -> tuple[int, int, bool]:
-    """What the song's own bar allows a written one: strikes between TIGHT times its own, the downbeat where it strikes it."""
+def envelope(own: str, meter: int | None = None) -> tuple:
+    """What the song's own bar allows a written one: strikes between TIGHT
+    times its own, the downbeat where it strikes it, and (meter given)
+    positions inside the bar's length."""
     n = len(rhythm._tokens(own))
-    return (max(1, math.ceil(TIGHT[0] * n)), max(1, math.floor(TIGHT[1] * n)), own.startswith("0:") or own == "0")
+    return (max(1, math.ceil(TIGHT[0] * n)), max(1, math.floor(TIGHT[1] * n)), own.startswith("0:") or own == "0", meter)
 
 
-def within(figure: str, env: tuple[int, int, bool]) -> bool:
+def within(figure: str, env: tuple) -> bool:
     """Whether a figure is within the bar's envelope."""
     tokens = rhythm._tokens(figure)
-    low, high, downbeat = env
-    return low <= len(tokens) <= high and (not downbeat or (bool(tokens) and tokens[0].partition(":")[0] == "0"))
+    low, high, downbeat, meter = (env + (None,))[:4]
+    if not (low <= len(tokens) <= high and (not downbeat or (bool(tokens) and tokens[0].partition(":")[0] == "0"))):
+        return False
+    return meter is None or all(Fraction(t.partition(":")[0]) < meter for t in tokens)
 
 
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
@@ -248,7 +256,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     sounds = sounded(own)
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
-    bars = [(a, a + song.meter, struck) for _, a, struck in rhythm.numbered_bars_of(song, R.BASS)]
+    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.BASS)]
+    meters = [max(1, round(b - a)) for a, b, _ in bars]
     own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
     state = {"previous": None, "played": Counter()}
 
@@ -258,9 +267,10 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         passing in TRIES draws: one in the manner and the envelope alone, else
         the fallback (the song's own bar, where the caller gives it)."""
         previous = state["previous"]
+        meter = env[3] if len(env) > 3 and env[3] else song.meter
         fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
-        values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
+        values = {"part": R.BASS, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
         figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=full)
         nearly = None
@@ -284,7 +294,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         if length == 1:
             if own[start] != REST:
                 last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
-                figures[start] = draw(envelope(own[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start])
+                figures[start] = draw(envelope(own[start], meters[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start])
                 state["played"][figures[start]] += 1
             state["previous"] = figures[start]
             continue
@@ -297,7 +307,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             pattern = []
             for k in range(period):
                 avoid = {rhythm_of(f) for f in before + pattern}
-                pattern.append(draw(envelope(own[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k]))
+                pattern.append(draw(envelope(own[start + k], meters[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k]))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
         seen = {}                                           # the span's chords -> the figure written on each
@@ -312,7 +322,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 figure = seen[chord]                        # the same chord again: the same figure, as the readings' basses do
             else:
                 want = rhythm_of(base)
-                figure = draw(envelope(own[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=base)
+                figure = draw(envelope(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=base)
                 if rhythm_of(figure) != want:
                     figure = base
             if chord is not None and figure != REST:
