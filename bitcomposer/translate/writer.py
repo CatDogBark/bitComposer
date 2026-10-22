@@ -1,5 +1,10 @@
 """A part written from the tables into a real song, in place of the song's
-own (phase 3's acceptance by ear, docs/idiom/phase-3-tables.md): the bass.
+own (phase 3's acceptance by ear, docs/idiom/phase-3-tables.md): the bass,
+and the drums the same way (DrumManner, drums()): the drums' figures are
+each hit's position and piece, the manner the positions the song's drums
+strike and the pieces its kit has, the envelope each bar's own, the
+spans and moments and locking as the bass's; a hit's voice, sample and
+length are the harness's, from the song's own kit.
 
 The song is one of the readings (rhythm.load's Song: its bars and chords
 in beats, its parts' notes); the table is fitted on every other song in
@@ -124,10 +129,10 @@ TRIES = 40                            # draws before the writer gives up on a co
 SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
 
 
-def fit(units, floor_cls=rhythm.BarCells) -> tables.Cache:
+def fit(units, floor_cls=rhythm.BarCells, shape=SHAPE, name: str = "bass") -> tables.Cache:
     """The model the writer draws from, fitted on these units (the song written for left out by the caller)."""
     units = list(units)
-    return tables.Cache.fit(units, SHAPE, name="bass", votes=tables.SHARES, floor=floor_cls(units), discount=DISCOUNT,
+    return tables.Cache.fit(units, shape, name=name, votes=tables.SHARES, floor=floor_cls(units), discount=DISCOUNT,
                             covers=len(floor_cls.COVERS))
 
 
@@ -242,6 +247,28 @@ def within(figure: str, env: tuple) -> bool:
     return meter is None or all(Fraction(t.partition(":")[0]) < meter for t in tokens)
 
 
+class DrumManner:
+    """The song's own manner in its drums: the positions it strikes (feel)
+    and the pieces its kit has (kit), each in RARE of its hits or more."""
+
+    def __init__(self, song: rhythm.Song, known: set):
+        self.known = known
+        tokens = [t.partition(":") for _, struck in rhythm.bars_of(song, R.DRUMS) if struck
+                  for t in rhythm._tokens(rhythm.drum_figure(struck, song))]
+        n = len(tokens)
+        at = Counter(Fraction(t[0]) for t in tokens)
+        pieces = Counter(t[2] for t in tokens)
+        self.feel = ({p for p, c in at.items() if c / n >= RARE} | {Fraction(0)}) if n else set()
+        self.kit = {x for x, c in pieces.items() if c / n >= RARE} if n else set()
+
+    def fits(self, figure: str) -> bool:
+        """Whether a new figure is in the song's manner: a bar some song played, on the song's positions, with its pieces."""
+        if figure == REST or figure not in self.known:
+            return False
+        tokens = [t.partition(":") for t in rhythm._tokens(figure)]
+        return all(Fraction(t[0]) in self.feel and t[2] in self.kit for t in tokens)
+
+
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
@@ -256,27 +283,14 @@ def locked(figure: str, lock) -> bool:
     return must <= positions and not any(math.floor(p) in rests for p in positions)
 
 
-def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
-         key: tuple | None = None, hold=(), lock=None) -> tuple[list[tuple[float, float, float]], list[str]]:
-    """The bass written for the song: its notes (start, end in beats, midi)
-    and the figures drawn, one a bar; the bars in `hold` (indices among the
-    song's bars) keep the song's own figure; `lock` maps a bar's index to
-    (positions a figure must strike, beats it must leave), the song's own
-    locking to the band."""
+def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
+             rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0) -> list[str]:
+    """The figures written for a part, one a bar (the module): drawn as the
+    song's own mixture, in its manner, each bar's envelope and lock, a
+    pattern a span, the song's moments its own; `chord_at` and `reuse` let
+    a bar on a chord its span had take that bar's figure again (the bass)."""
     lock = lock or {}
-    own = song.notes.get(R.BASS, [])
-    manner = Manner(song, R.BASS, model.table.vocabulary)
-    if habit is None:
-        mine = rhythm.bass_units([song])
-        habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
-    pitched = sorted(n[2] for n in own if not math.isnan(n[2]))
-    low = round(pitched[int(LOW * (len(pitched) - 1))]) if pitched else 36
-    sounds = sounded(own)
-    tonic, mode = key if key else (0, "major")
-    scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
-    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.BASS)]
     meters = [max(1, round(b - a)) for a, b, _ in bars]
-    own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
     state = {"previous": None, "played": Counter()}
 
     def draw(env, keep=None, fallback: str = "0:R", at: int | None = None) -> str:
@@ -289,7 +303,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         meter = env[3] if len(env) > 3 and env[3] else song.meter
         fit = lambda f: manner.fits(f) and within(f, env) and locked(f, lock.get(at))   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
-        values = {"part": R.BASS, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
+        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
         figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=full)
         nearly = None
@@ -302,13 +316,6 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         return nearly or fallback
 
     figures, patterns = [REST] * len(bars), []
-    words = habit.split()
-    reuse = REUSE.get(words[1] if len(words) > 1 else "", 0.5)
-
-    def chord_at(k):
-        c = rhythm._chord_at(song.chords, bars[k][0])
-        return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
-
     for start, length, period in spans([rhythm_of(f) for f in own]):
         if length == 1:
             if own[start] != REST:
@@ -332,7 +339,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         seen = {}                                           # the span's chords -> the figure written on each
         for i in range(length):
             base = pattern[i % len(pattern)]
-            chord = chord_at(start + i)
+            chord = chord_at(start + i) if chord_at else None
             if own[start + i] == REST:
                 figure = REST
             elif exact and locked(base, lock.get(start + i)):
@@ -353,6 +360,57 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     for k in hold:                                          # the song's moments: its own bar
         if 0 <= k < len(figures) and own[k] != REST:
             figures[k] = own[k]
+    return figures
+
+
+def drums(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None, hold=(),
+          lock=None) -> tuple[list[tuple[float, str]], list[str]]:
+    """The drums written for the song: its hits (start in beats, piece
+    letter) and the figures drawn, one a bar; `hold` and `lock` as bass()."""
+    manner = DrumManner(song, model.table.vocabulary)
+    if habit is None:
+        mine = rhythm.drum_units([song])
+        habit = mine[0].values["habit"] if mine else "medium mixed"
+    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
+    own = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
+    figures = _figures(song, R.DRUMS, model, manner, own, bars, habit, rng, hold, lock)
+    hits = []
+    for (a, b, _), figure in zip(bars, figures):
+        for t in rhythm._tokens(figure):
+            at, _, letter = t.partition(":")
+            if a + float(Fraction(at)) < b:
+                hits.append((a + float(Fraction(at)), letter))
+    return hits, figures
+
+
+def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
+         key: tuple | None = None, hold=(), lock=None) -> tuple[list[tuple[float, float, float]], list[str]]:
+    """The bass written for the song: its notes (start, end in beats, midi)
+    and the figures drawn, one a bar; the bars in `hold` (indices among the
+    song's bars) keep the song's own figure; `lock` maps a bar's index to
+    (positions a figure must strike, beats it must leave), the song's own
+    locking to the band."""
+    lock = lock or {}
+    own = song.notes.get(R.BASS, [])
+    manner = Manner(song, R.BASS, model.table.vocabulary)
+    if habit is None:
+        mine = rhythm.bass_units([song])
+        habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
+    pitched = sorted(n[2] for n in own if not math.isnan(n[2]))
+    low = round(pitched[int(LOW * (len(pitched) - 1))]) if pitched else 36
+    sounds = sounded(own)
+    tonic, mode = key if key else (0, "major")
+    scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
+    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.BASS)]
+    own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
+
+    def chord_at(k):
+        c = rhythm._chord_at(song.chords, bars[k][0])
+        return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
+
+    words = habit.split()
+    figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
+                       chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))
     notes, last_root, previous = [], tonic, None
     for (a, b, _), figure in zip(bars, figures):
         new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous)

@@ -1,0 +1,392 @@
+"""The substitution harness: a part written from the tables into a real
+song in place of the song's own, the rest as decoded, rendered through
+the same back end (phase 3's acceptance by ear, docs/idiom/phase-3-tables.md).
+
+The song is one of the readings; the table is fitted on every other song
+in the database. The writer (writer.py) gives the part's figures and
+notes in beats; this module chooses the song's voices for them and sets
+each note in the voice's own sample, settings and register.
+
+The bass: of the voices the readers call bass, the one with the longest
+notes is the line, and its notes alone are the song's bass for the
+writer. A second bass voice is one of three things beside it (measured
+over the readings): DOUBLING it (sounding at the same events: it then
+plays what the written line plays, at its own pitch offset, on its own
+sample), ALTERNATING with it (the voices take turns so a note can ring
+past the next strike: the pair is one part, the written line is read
+from both and its notes ring as the pair's do, each going to the voice
+that is free), or APART (a second part in the bass register with a
+rhythm of its own: left as it is, the arrangement table's question and
+the known limitation here). A written note takes the volume of the
+song's own nearest bass note (a fade-in stays a fade-in) and the voice's
+usual sample, envelope and echo (its most common, not its first note's).
+
+The drums: every voice the readers call drums is the kit, one part; each
+piece the song strikes (kick, snare, hat, tom, cymbal, other, the namer's
+names on the samples) maps to the voice and sample the song strikes it
+with most, with that sample's usual settings, pitch register and note
+length; a written hit of a piece the song's kit lacks is dropped, and
+two pieces on one voice at the same instant keep the one the song
+strikes more.
+
+The song's moments (bars where every part but the one written drops to
+under MOMENT of the song's median energy, for at most MOMENT_BARS bars
+in a row) keep the song's own figure, and its locking to the band (the
+shared hits its part strikes, the stops it rests in) binds the written
+part, both read from the song itself: the arrangement is the song's.
+"""
+import bisect
+import math
+import os
+import random
+import statistics
+from array import array
+from collections import Counter
+from dataclasses import dataclass, field
+
+from ..spc import convert
+from . import harmony, reading, rhythm, store, writer
+from . import roles as R
+
+NEAR = 0.06                           # beats: onsets this close are one event
+DOUBLING = 0.6                        # the share of the pair's events both voices sound at, for the second to double the first
+ALTERNATING = 0.6                     # the share of single-voice events that change voice, for the pair to alternate
+NOT_BOTH = 0.3                        # an alternating pair sounds together in under this share of its events
+MOMENT = 0.65                         # a bar where the other parts' energy is under this share of the song's median is a moment
+MOMENT_BARS = 2                       # for at most this many bars in a row: a longer drop is a section, written like any other
+TOGETHER = 0.67                       # the share of the other playing parts striking a position together for it to be a shared hit
+LETTERS = {v: k for k, v in rhythm.LETTERS.items()}   # a figure's letter -> the piece's name
+
+
+@dataclass
+class Context:
+    """A song loaded for the harness: its reading, its score as decoded, and what the writers need of it."""
+    db: object
+    sid: str
+    game: str
+    title: str
+    key: tuple | None
+    song: rhythm.Song
+    songs: list
+    original: convert.Score
+    events: dict                      # (voice, start rounded) -> the reading's note event, with its midi and sample key
+    beats: array
+    keys: dict                        # sample index -> key
+    pieces: dict                      # sample key -> the piece the reading named it
+    by_voice: dict = field(default_factory=dict)   # voice -> (role, its notes as the store packs them)
+
+
+@dataclass
+class Written:
+    """A part written into the song."""
+    part: str
+    notes: list                       # convert notes on the song's voices
+    replaced: set                     # the voices they stand in for
+    figures: list
+    own: list
+    log: list = field(default_factory=list)
+
+
+def load(db, spc_path: str, seconds: float = 60.0) -> Context | None:
+    """The song by its file name in the readings, decoded to `seconds`; None when it is not read."""
+    from .. import spc
+    row = db.execute("SELECT id, game, title, key_tonic, key_mode FROM songs WHERE file = ?", (os.path.basename(spc_path),)).fetchone()
+    if not row:
+        return None
+    sid, game, title, tonic, mode = row
+    songs, _ = rhythm.load(db)
+    song = next((s for s in songs if s.sid == sid), None)
+    if song is None:
+        return None
+    snap = spc.read(spc_path)
+    original = convert.score_of(snap, seconds, fade=0.0)
+    r = reading.of_score(original)
+    events = {(p.voice, round(p.start, 4)): p for p in r.song.notes}
+    beats = array("d")
+    beats.frombytes(db.execute("SELECT beats FROM beats WHERE song = ?", (sid,)).fetchone()[0])
+    keys, pieces = {}, {}
+    for idx, key, piece in db.execute("SELECT idx, key, piece FROM samples WHERE song = ?", (sid,)):
+        keys[idx] = key
+        pieces[key] = piece
+    ctx = Context(db, sid, game, title, (tonic, mode) if tonic is not None else None, song, songs, original, events, beats, keys, pieces)
+    for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (sid,)):
+        ctx.by_voice[voice] = (role, [n for n in store.unpack(blob) if n[3] > 0])
+    return ctx
+
+
+def seconds_at(beats: array, b: float) -> float:
+    """A time in beats back to seconds on the beat times."""
+    if len(beats) < 2:
+        return b
+    i = min(max(int(math.floor(b)), 0), len(beats) - 2)
+    return beats[i] + (b - i) * (beats[i + 1] - beats[i])
+
+
+def settings_of(mine, events, sample_key=None):
+    """A voice's usual settings (sample, brr, volume, envelope, echo: its most
+    common) and a reference note on that sample: (usual, like, pitch_ref,
+    midi_ref); with `sample_key`, among its notes on that sample of the
+    reading's; None when there is no such note. midi_ref is None for an
+    unpitched sample."""
+    if sample_key is not None:
+        mine = [n for n in mine if (p := events.get((n.voice, round(n.start, 4)))) is not None
+                and p.sample is not None and p.sample.key == sample_key]
+    usual = Counter((n.sample, n.brr, n.volume, n.adsr, n.gain, n.echo, n.echo_delay, n.echo_volume, n.echo_feedback,
+                     n.echo_filter, n.echo_writes) for n in mine).most_common(1)
+    for n in mine:
+        p = events.get((n.voice, round(n.start, 4)))
+        if p is not None and usual and (n.sample, n.brr) == usual[0][0][:2]:
+            return usual[0][0], n, n.pitch, p.midi
+    return None
+
+
+def note_like(voice, start, end, usual, like, pitch, volume=None):
+    """A note on the voice in its usual settings at this pitch register (volume: the usual's unless given)."""
+    _, _, usual_volume, adsr, gain, echo, e_delay, e_volume, e_feedback, e_filter, e_writes = usual
+    return convert.notes_mod.Note(voice, start, like.sample, max(1, min(0x3FFF, round(pitch))), volume or usual_volume, adsr,
+                                  gain, echo, False, brr=like.brr, echo_delay=e_delay, echo_volume=e_volume,
+                                  echo_feedback=e_feedback, echo_filter=e_filter, echo_writes=e_writes, end=end)
+
+
+def pitch_for(midi: float, pitch_ref: int, midi_ref: float) -> float:
+    """The SNES pitch register for a midi note, from a reference note on the same sample."""
+    return pitch_ref * 2 ** ((midi - midi_ref) / 12)
+
+
+def relation(line, other) -> tuple:
+    """What a second bass voice does beside the line (the module): ("doubling", semitones above the line),
+    ("alternating",) or ("apart",)."""
+    onsets = sorted([(n[0], 0, n) for n in line] + [(n[0], 1, n) for n in other])
+    events = []
+    for t, who, n in onsets:
+        if events and t - events[-1][0] < NEAR:
+            events[-1][1][who] = n
+        else:
+            events.append((t, {who: n}))
+    both = sum(1 for _, d in events if len(d) == 2) / max(1, len(events))
+    singles = [next(iter(d)) for _, d in events if len(d) == 1]
+    alternation = sum(1 for a, b in zip(singles, singles[1:]) if a != b) / max(1, len(singles) - 1)
+    if both >= DOUBLING:
+        return ("doubling", round(statistics.median([d[1][2] - d[0][2] for _, d in events if len(d) == 2])))
+    if alternation >= ALTERNATING and both < NOT_BOTH:
+        return ("alternating",)
+    return ("apart",)
+
+
+def moments(ctx: Context, part_voices: set) -> set:
+    """The song's moments: bars (indices among the song's bars, every length) where every voice but the part's drops
+    to under MOMENT of the song's median energy (level x sounded length), for a run of at most MOMENT_BARS bars."""
+    others = [n for voice, (_, ns) in ctx.by_voice.items() if voice not in part_voices for n in ns]
+    energy = []
+    for a, b in ctx.song.bars:
+        e = 0.0
+        for n in others:
+            length = n[1] if not math.isnan(n[1]) else 0.25
+            lo, hi = max(a, n[0]), min(b, n[0] + length)
+            if hi > lo:
+                e += n[3] * (hi - lo)
+        energy.append(e)
+    if not energy:
+        return set()
+    median = statistics.median(energy)
+    low = [e < MOMENT * median for e in energy]
+    out, k = set(), 0
+    while k < len(low):
+        if low[k]:
+            j = k
+            while j < len(low) and low[j]:
+                j += 1
+            if j - k <= MOMENT_BARS:
+                out.update(range(k, j))
+            k = j
+        else:
+            k += 1
+    return out
+
+
+def locks(ctx: Context, part_voices: set, part_notes) -> dict:
+    """The song's own locking to the band, a bar at a time: the shared hits (positions where TOGETHER of the other
+    voices playing in the bar strike within NEAR) the part strikes too, and the stops (beats no other voice sounds
+    in) the part rests in; {bar index: (positions to strike, beats to leave)}."""
+    parts = {voice: ns for voice, (_, ns) in ctx.by_voice.items() if voice not in part_voices}
+    starts = sorted(n[0] for n in part_notes)
+    out = {}
+    for k, (a, b) in enumerate(ctx.song.bars):
+        playing = [ns for ns in parts.values() if any(a - NEAR <= n[0] < b - NEAR for n in ns)]
+        must, rests = set(), set()
+        if len(playing) >= 2:
+            for step in range(int(round(b - a)) * 4):
+                t = a + step / 4
+                if sum(1 for ns in playing if any(abs(n[0] - t) < NEAR for n in ns)) >= TOGETHER * len(playing):
+                    i = bisect.bisect_left(starts, t - NEAR)
+                    if i < len(starts) and starts[i] <= t + NEAR:
+                        must.add(rhythm.position(t - a, ctx.song.division))
+        for beat in range(int(round(b - a))):
+            t0, t1 = a + beat, a + beat + 1
+            if not any(n[0] < t1 - NEAR and n[0] + (n[1] if not math.isnan(n[1]) else 0.25) > t0 + NEAR for ns in parts.values() for n in ns):
+                if not any(n[0] < t1 - NEAR and n[0] + (n[1] if not math.isnan(n[1]) else 0.25) > t0 + NEAR for n in part_notes):
+                    rests.add(beat)
+        if must or rests:
+            out[k] = (must, rests)
+    return out
+
+
+def write_bass(ctx: Context, seed: int = 1) -> Written | None:
+    """The bass written into the song (the module)."""
+    song, original, events, beats = ctx.song, ctx.original, ctx.events, ctx.beats
+    by_voice = {v: [n for n in ns if not math.isnan(n[2])] for v, (role, ns) in ctx.by_voice.items() if role == R.BASS}
+    by_voice = {v: ns for v, ns in by_voice.items() if ns}
+    if not by_voice:
+        return None
+    log = []
+    length_of = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in by_voice.items()}
+    v = max(by_voice, key=lambda voice: (length_of[voice], len(by_voice[voice])))
+    end = song.bars[-1][1] if song.bars else math.inf
+    kinds = {t: relation(by_voice[v], by_voice[t]) for t in by_voice if t != v}
+    partners = [t for t, k in kinds.items() if k[0] == "alternating"]
+    doublings = [t for t, k in kinds.items() if k[0] == "doubling"]
+    part = sorted(n for t in [v] + partners for n in by_voice[t])          # the line: one part across an alternating pair
+    song.notes[R.BASS] = [(n[0], n[1], n[2], ctx.keys.get(int(n[5]), "noise")) for n in part if n[0] < end]
+    log.append(f"bass voices {sorted(by_voice)}; the line on {v} (notes {length_of[v]:.2f} beats)"
+               + "".join(f"; voice {t} {k[0]}" + (f" {k[1]:+d} semitones" if k[0] == "doubling" else "") for t, k in kinds.items()))
+    units = rhythm.bass_units(ctx.songs)
+    model = writer.fit([u for u in units if u.song != ctx.sid])
+    own = [rhythm.figure(struck, a, song) if struck else "-" for _, a, _, struck in rhythm.all_bars_of(song, R.BASS)]
+    held = moments(ctx, set(by_voice))
+    lock = locks(ctx, set(by_voice), part)
+    notes, figures = writer.bass(song, model, random.Random(seed), key=ctx.key, hold=held, lock=lock)
+    mine_units = rhythm.bass_units([song])
+    log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, {len(figures)} bars written, {len(notes)} notes"
+               + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
+               + f"; locked to the band in {len(lock)} bars ({sum(len(m) for m, _ in lock.values())} shared hits, "
+                 f"{sum(len(r) for _, r in lock.values())} stop beats)")
+    # the written line onto the song's voices: the line voice, an alternating partner when the line is still ringing,
+    # a doubling voice at every note; an apart voice is left as it is
+    pair = [v] + partners
+    settings = {t: settings_of([n for n in original.notes if n.voice == t], events) for t in pair + doublings}
+    pair = [t for t in pair if settings[t] is not None]
+    doublings = [t for t in doublings if settings[t] is not None]
+    if not pair:
+        log.append("no reference note on the bass voice")
+        return None
+    mine = [n for n in original.notes if n.voice == v]
+    starts = [n.start for n in mine]
+    ring = statistics.median([n[1] for n in part if not math.isnan(n[1])]) if partners else None   # beats a note of the pair rings
+    free = {t: -1.0 for t in pair}
+    new = []
+    for start_b, end_b, midi in notes:
+        start = seconds_at(beats, start_b)
+        if start >= original.seconds:
+            continue
+        stop = min(seconds_at(beats, max(end_b, start_b + ring) if ring else end_b), original.seconds)
+        idle = [t for t in pair if free[t] <= start + 0.001]
+        voice = v if v in idle else (idle[0] if idle else min(pair, key=lambda t: free[t]))
+        i = bisect.bisect_left(starts, start)
+        near = min((mine[j] for j in (i - 1, i) if 0 <= j < len(mine)), key=lambda n: abs(n.start - start), default=None)
+        at = near.volume if near is not None and abs(near.start - start) < 4.0 else None
+        usual, like, pitch_ref, midi_ref = settings[voice]
+        new.append(note_like(voice, start, stop, usual, like, pitch_for(midi, pitch_ref, midi_ref), at if voice == v else None))
+        free[voice] = stop
+        for t in doublings:
+            usual, like, pitch_ref, midi_ref = settings[t]
+            new.append(note_like(t, start, stop, usual, like, pitch_for(midi + kinds[t][1], pitch_ref, midi_ref)))
+    replaced = set(pair) | set(doublings)
+    if partners or doublings:
+        log.append(f"written onto voices {sorted(replaced)}: {len(new)} notes" + (f", ringing {ring:.2f} beats" if ring else ""))
+    return Written(R.BASS, new, replaced, figures, own, log)
+
+
+def write_drums(ctx: Context, seed: int = 1) -> Written | None:
+    """The drums written into the song (the module)."""
+    song, original, events, beats = ctx.song, ctx.original, ctx.events, ctx.beats
+    kit_voices = {v for v, (role, ns) in ctx.by_voice.items() if role == R.DRUMS and ns}
+    if not kit_voices or R.DRUMS not in song.notes:
+        return None
+    log = []
+    # each piece's voice and sample: the ones the song strikes it with most
+    strikes = Counter()
+    lengths = {}
+    for v in kit_voices:
+        for n in ctx.by_voice[v][1]:
+            letter = rhythm.LETTERS.get(ctx.pieces.get(ctx.keys.get(int(n[5]))), "o")
+            strikes[(letter, v, ctx.keys.get(int(n[5])))] += 1
+            lengths.setdefault(letter, []).append(n[1] if not math.isnan(n[1]) else 0.25)
+    where = {}
+    for (letter, v, key), c in strikes.most_common():
+        if letter not in where:
+            found = settings_of([n for n in original.notes if n.voice == v], events, key)
+            if found is not None:
+                where[letter] = (v, found, statistics.median(lengths[letter]), c)
+    log.append(f"kit on voices {sorted(kit_voices)}: " + ", ".join(f"{LETTERS.get(k, k)} on {v}" for k, (v, _, _, _) in sorted(where.items())))
+    units = rhythm.drum_units(ctx.songs)
+    model = writer.fit([u for u in units if u.song != ctx.sid], name="drums")
+    own = [rhythm.drum_figure(struck, song) if struck else "-" for _, _, _, struck in rhythm.all_bars_of(song, R.DRUMS)]
+    held = moments(ctx, kit_voices)
+    lock = locks(ctx, kit_voices, song.notes[R.DRUMS])
+    hits, figures = writer.drums(song, model, random.Random(seed), hold=held, lock=lock)
+    mine_units = rhythm.drum_units([song])
+    log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, kit {mine_units[0].values['kit'] if mine_units else '-'}, "
+               f"{len(figures)} bars written, {len(hits)} hits"
+               + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
+               + f"; locked to the band in {len(lock)} bars")
+    new, taken, dropped = [], {}, Counter()
+    for start_b, letter in hits:
+        if letter not in where:
+            dropped[letter] += 1
+            continue
+        v, (usual, like, pitch_ref, _), held_beats, weight = where[letter]
+        start = seconds_at(beats, start_b)
+        if start >= original.seconds:
+            continue
+        slot = (v, round(start, 3))
+        if slot in taken:                                   # two pieces on one voice at once: the one the song strikes more
+            if taken[slot][0] >= weight:
+                dropped[letter] += 1
+                continue
+            new.remove(taken[slot][1])
+        note = note_like(v, start, min(seconds_at(beats, start_b + held_beats), original.seconds), usual, like, pitch_ref)
+        new.append(note)
+        taken[slot] = (weight, note)
+    if dropped:
+        log.append("dropped hits: " + ", ".join(f"{LETTERS.get(k, k)} {c}" for k, c in dropped.most_common()))
+    return Written(R.DRUMS, new, set(kit_voices), figures, own, log)
+
+
+def score_with(ctx: Context, parts: list, title: str, message: list) -> convert.Score:
+    """The song as decoded, the written parts in place of the voices they stand in for."""
+    replaced = set().union(*(w.replaced for w in parts)) if parts else set()
+    kept = [n for n in ctx.original.notes if n.voice not in replaced]
+    new = [n for w in parts for n in w.notes]
+    o = ctx.original
+    return convert.Score(kept + new, o.seconds, o.voices, o.master, o.fade, title[:25], o.game, o.artist, o.row_hz, o.tempo,
+                         o.tick_hz, o.aligned, o.on_ticks, o.snap, dict(o.pcm_of), dict(o.key_of), message=message)
+
+
+def stems(ctx: Context, parts: list, out_dir: str) -> list[str]:
+    """Modules for a page that switches each part while the song plays: the rest (no written part's voices), and
+    each part as the song plays it and as written. Returns the paths."""
+    os.makedirs(out_dir, exist_ok=True)
+    replaced = set().union(*(w.replaced for w in parts)) if parts else set()
+    o = ctx.original
+    sets = [("rest", [n for n in o.notes if n.voice not in replaced])]
+    for w in parts:
+        sets.append((f"{w.part} original", [n for n in o.notes if n.voice in w.replaced]))
+        sets.append((f"{w.part} written", w.notes))
+    paths = []
+    for label, notes in sets:
+        sc = convert.Score(notes, o.seconds, o.voices, o.master, o.fade, f"{ctx.title} {label}"[:25], o.game, o.artist, o.row_hz,
+                           o.tempo, o.tick_hz, o.aligned, o.on_ticks, o.snap, dict(o.pcm_of), dict(o.key_of),
+                           message=[f"{ctx.title}: {label} (a stem for the Substitution Check)"])
+        path = os.path.join(out_dir, f"{ctx.title} {label}.it")
+        convert.render(sc, path)
+        paths.append(path)
+    return paths
+
+
+def readings_of(ctx: Context, score: convert.Score, voices: set) -> str:
+    """What the readers make of a score: the roles of these voices, the key, the tempo, the chords."""
+    rr = reading.of_score(score)
+    roles = {x.voice: x.role for x in rr.roles}
+    key = f"{harmony.NAMES[rr.key[0]]} {rr.key[1]}" if rr.key else "-"
+    return (" ".join(f"voice {v} {roles.get(v, '-')}" for v in sorted(voices)) +
+            f"; key {key}; tempo {rr.grid.bpm if rr.grid else 0:.1f}; chords {len(rr.chords)}")

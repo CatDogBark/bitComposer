@@ -224,3 +224,34 @@ class WriterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DrumWriterTests(unittest.TestCase):
+    def _kit_song(self, sid="d", bars=4, figure=((0.0, "k"), (1.0, "s"), (2.0, "k"), (3.0, "s"), (0.5, "h"), (1.5, "h"), (2.5, "h"), (3.5, "h"))):
+        chords = [Span(0.0, 4.0 * bars, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(4.0 * i, 4.0 * i + 4) for i in range(bars)], chords, bpm=120.0, sid=sid, game="G",
+                        numbers=list(range(bars)), pieces={"k": "kick", "s": "snare", "h": "hat", "t": "tom", "c": "cymbal"})
+        s.notes["drums"] = [(4.0 * i + x, 0.1, float("nan"), key) for i in range(bars) for x, key in figure]
+        return s
+
+    def test_drum_manner(self):
+        s = self._kit_song()
+        m = writer.DrumManner(s, {"0:K 1:S 2:K 3:S", "0:K 1/2:h 1:S", "0:t 1:t", "0:K 1/4:K 1:S"})
+        self.assertEqual(m.kit, {"K", "S", "h"})
+        self.assertEqual(m.feel, {Fraction(k, 2) for k in range(8)})
+        self.assertTrue(m.fits("0:K 1:S 2:K 3:S") and m.fits("0:K 1/2:h 1:S"))
+        self.assertFalse(m.fits("0:t 1:t"))                           # a tom the kit lacks
+        self.assertFalse(m.fits("0:K 1/4:K 1:S"))                      # a sixteenth the song never strikes
+        self.assertFalse(m.fits("-"))
+
+    def test_drums_written(self):
+        others = [self._kit_song("b"), self._kit_song("c", figure=((0.0, "k"), (2.0, "s"), (0.5, "h"), (1.5, "h"), (2.5, "h"), (3.5, "h")))]
+        model = writer.fit(rhythm.drum_units(others), name="drums")
+        s = self._kit_song()
+        hits, figures = writer.drums(s, model, random.Random(1))
+        self.assertEqual(len(figures), 4)
+        self.assertTrue(all(f in model.table.vocabulary for f in figures))
+        self.assertTrue(all(letter in {"K", "S", "h"} for _, letter in hits))
+        self.assertTrue(all(0.0 <= t < 16.0 for t, _ in hits))
+        again, _ = writer.drums(s, model, random.Random(1))
+        self.assertEqual(hits, again)
