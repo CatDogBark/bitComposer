@@ -74,7 +74,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from fractions import Fraction
 
-from . import drums as drums_mod, roles as R, store
+from . import drums as drums_mod, roles as R, store, tables
 from .vocab import FIT, Span, _beats_at, _median, _pct, tone_of
 
 NEAR = 0.06                          # beats: onsets this close are one, and this close to an eighth is on it
@@ -93,6 +93,8 @@ VALUES = ((Fraction(1, 4), "a sixteenth"), (Fraction(1, 3), "a triplet eighth"),
           (Fraction(4), "four beats"), (Fraction(1e9), "longer"))
 PLACES = ("beat", "eighth", "sixteenth", "triplet", "finer")
 REST = "(rest)"
+BANDS = ((85, "slow"), (130, "medium"), (1e9, "fast"))    # BPM: the readings' songs' tertiles (1562 songs, 2026-10-21)
+START = "start"                      # the previous bar's pattern where there is none: the part's first bar, or after a gap
 
 
 class Tally(Counter):
@@ -121,6 +123,11 @@ class Song:
     notes: dict = field(default_factory=dict)   # role -> [(start, length, midi, sample), ...]
     rolls: dict = field(default_factory=dict)   # role -> notes of its roll voices, left out of the patterns
     bpm: float = 120.0                          # its tempo: how long a drum is held, in seconds
+    sid: str = ""                               # its id in the readings
+    game: str = ""
+    numbers: list = field(default_factory=list)   # each bar's number in the reading (form's bars count them), beside `bars`
+    parts: list = field(default_factory=list)     # the form's parts: (first bar number, bars)
+    pieces: dict = field(default_factory=dict)    # sample key -> the piece the reading named it (drums.PIECES, "none")
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -128,8 +135,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
     left out: {"free time": n, "mostly silent": n}; the harmony counts' songs."""
     songs, out = [], Counter()
     where, args = ("WHERE game = ?", (game,)) if game else ("", ())
-    for sid, title, meter, division, seconds, loop_bar, loop_seconds, bpm in db.execute(
-            f"SELECT id, title, meter, division, seconds, loop_bar, loop_seconds, bpm FROM songs {where}", args):
+    for sid, title, meter, division, seconds, loop_bar, loop_seconds, bpm, game_name in db.execute(
+            f"SELECT id, title, meter, division, seconds, loop_bar, loop_seconds, bpm, game FROM songs {where}", args):
         row = db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()
         if division is None or not row:
             out["free time"] += 1
@@ -149,9 +156,15 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             continue
         lines = [b for b in (_beats_at(beats, t) for t in bars) if b < end]
         ends = lines[1:] + [lines[-1] + meter] if lines else []
-        song = Song(title, meter, division, [(a, min(b, end)) for a, b in zip(lines, ends) if min(b, end) - a >= 1 - NEAR],
-                    chords, bpm=bpm or 120.0)
-        keys = {idx: key for idx, key in db.execute("SELECT idx, key FROM samples WHERE song = ?", (sid,))}
+        kept = [(k, a, min(b, end)) for k, (a, b) in enumerate(zip(lines, ends)) if min(b, end) - a >= 1 - NEAR]
+        song = Song(title, meter, division, [(a, b) for _, a, b in kept], chords, bpm=bpm or 120.0, sid=sid,
+                    game=game_name or "", numbers=[k for k, _, _ in kept],
+                    parts=[(bar, n) for bar, n in db.execute(
+                        "SELECT bar, bars FROM form WHERE song = ? AND level = 'part' ORDER BY bar", (sid,))])
+        keys, song.pieces = {}, {}
+        for idx, key, piece in db.execute("SELECT idx, key, piece FROM samples WHERE song = ?", (sid,)):
+            keys[idx] = key
+            song.pieces[key] = piece
         for role, evidence, blob in db.execute("SELECT role, evidence, notes FROM voices WHERE song = ?", (sid,)):
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
@@ -192,6 +205,17 @@ def draw(positions, beats: int, marks: dict | None = None) -> str:
     return " ".join("".join(c) for c in cells) if positions else REST
 
 
+def band(bpm: float) -> str:
+    """The tempo band a tempo is in (BANDS)."""
+    return next(name for top, name in BANDS if bpm < top)
+
+
+def pattern(positions) -> str:
+    """A bar's onset positions as a table's outcome: fractions of a beat
+    from the bar line, space-separated; a bar rested through is "-"."""
+    return " ".join(str(p) for p in positions) or "-"
+
+
 def onsets(notes, start: float, end: float) -> list:
     """The notes struck in [start, end), grouped by onset: [(beat, [notes])],
     notes within NEAR of each other one onset at the first's time."""
@@ -207,8 +231,15 @@ def onsets(notes, start: float, end: float) -> list:
 def bars_of(song: Song, role: str):
     """Each bar of the song's meter with the part's onsets in it: (the bar's
     start, [(position, [notes])])."""
+    for _, a, struck in numbered_bars_of(song, role):
+        yield a, struck
+
+
+def numbered_bars_of(song: Song, role: str):
+    """bars_of with each bar's number in the reading first: (number, start, [(position, [notes])])."""
     notes = song.notes.get(role, [])
-    for a, b in song.bars:
+    numbers = song.numbers or range(len(song.bars))
+    for k, (a, b) in zip(numbers, song.bars):
         if round(b - a) != song.meter:
             continue
         seen = {}
@@ -216,7 +247,52 @@ def bars_of(song: Song, role: str):
             p = position(t - a, song.division)
             if p < song.meter:
                 seen.setdefault(p, []).extend(ns)
-        yield a, sorted(seen.items())
+        yield k, a, sorted(seen.items())
+
+
+def place_in_part(song: Song, number: int) -> str:
+    """Where a bar sits in its part of the form: first, middle, last; none when no part holds it."""
+    for bar, n in song.parts:
+        if bar <= number < bar + n:
+            return "first" if number == bar else "last" if number == bar + n - 1 else "middle"
+    return "none"
+
+
+def chord_change(song: Song, a: float, b: float) -> str:
+    """Whether the chord changes in the bar [a, b): "on" its first beat only,
+    "inside" it (on a later beat), or "same" (no change)."""
+    out = "same"
+    for i, c in enumerate(song.chords):
+        if c.root is None or c.fit < FIT or not (a - NEAR <= c.start < b - NEAR):
+            continue
+        before = song.chords[i - 1] if i else None
+        if before is not None and (before.root, before.shape) == (c.root, c.shape):
+            continue
+        out = "inside" if c.start >= a + NEAR else "on" if out == "same" else out
+    return out
+
+
+def units(songs) -> list:
+    """Every bar of every part as a table's unit (tables.Unit): its outcome
+    the bar's pattern, its values the part, the meter, the tempo band, the
+    previous bar's pattern of the part (START where none), the bar's place
+    in its part of the form and whether the chord changes in it."""
+    out = []
+    for s in songs:
+        tempo = band(s.bpm)
+        for role in PARTS:
+            if role not in s.notes:
+                continue
+            previous, last = START, None
+            for k, a, struck in numbered_bars_of(s, role):
+                if last is not None and k != last + 1:
+                    previous = START                      # a bar of another length between: the chain breaks
+                drawn = pattern(p for p, _ in struck)
+                out.append(tables.Unit(s.sid, s.game, drawn, {
+                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous,
+                    "place": place_in_part(s, k), "chord": chord_change(s, a, a + s.meter)}))
+                previous, last = drawn, k
+    return out
 
 
 @dataclass
