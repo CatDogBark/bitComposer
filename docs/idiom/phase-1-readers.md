@@ -381,6 +381,43 @@ or meter. Open: a carrier that varies in time (the plan's composite
 line), the harmonized second voice as a role of its own, the tune in the
 bass, and the beat's dependence on which voices it is read from.
 
+**Step 6 (2026-10-22): the drum names, against the listener's.** All
+forty sounds named (the page's collection `drumnames1`, kept as
+`~/diags/bitcomposer/idiom/drums/heard-drums.json` with `drum_score.py`
+and `drum_namer.py` beside it); four set aside where the voice plays
+several drums in the clip and the listener named the clip as a whole
+(Boss Battle, Cotton Island, Final Battle, Stage 9), a flaw of the page,
+which marked the sample's own hits but asked about "the sound". Of the
+thirty-six, he named a kick, snare or hat in fourteen, a tom in four, a
+cymbal in three, and "something else" in fifteen, with notes: bells, a
+whistle, a horn, an alarm, a shaker, a washboard, a cowbell, electronic
+noises, and one silence (the Noiseless Toughness rip mutes the voice; the
+sample is one empty block). So a third of the samples drawn as drums are
+no drums: the drum role takes any voice playing one or two pitches a
+sample, sound effects and one-note instruments with it. The namer as it
+was agreed with his kicks, snares and hats in 64 % by the sound and 43 %
+by how the sample is played; it refused snares with a little pitch
+(three), had no tom and no cymbal, and called nine of his non-drums hats.
+The rule is rewritten (`drums.name`, the play no longer consulted): a low
+sound is a kick, a tom (centroid under 500 Hz, ringing past a thud) or a
+deep snare; noise with a body a snare, or a rim when over within 50 ms;
+bodiless noise a closed hat, a gated snare when dark, an open hat or a
+cymbal by its ring; a plainly pitched tone held or looped no drum
+("none"); a pitched tone with a body a snare. Against the generator's own
+kits, whose names are known: 50 of 51 (the chip crash, a bright 0.18 s
+burst, reads as a hat). Against the ear: **his kicks, snares and hats
+agreed in 12 of 14 (86 %)**, the four toms all, one cymbal of three (the
+other two are bright bursts ringing under a quarter second, hats by
+every measure), and of his fifteen non-drums the namer says other or
+none for six, hat for five, snare for two, tom for one; over all
+thirty-six classes agree in 22 (61 %). The 85 % criterion is met on the
+set the rule was built from, so a second draw is needed before it
+counts. `PIECES` gains tom and cymbal (the packs' toms and crashes named
+as such, the figures' letters t and c). Open: a second draw, by the ear's
+classes; the drum role sweeping in sound effects; a bright short burst
+the ear calls a cymbal and the measures a hat; a "shaker" and a "rim"
+class if the kit wants them.
+
 ## Exit criteria, with the tolerances proposed before scoring
 
 - **Tempo:** the read tempo equals the written one, or exactly twice or
