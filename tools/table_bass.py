@@ -31,6 +31,7 @@ from collections import Counter
 NEAR = 0.06                           # beats: onsets this close are one event
 MOMENT = 0.65                         # a bar where the other parts' energy is under this share of the song's median is a moment
 MOMENT_BARS = 2                       # for at most this many bars in a row: a longer drop is a section, written like any other
+TOGETHER = 0.67                       # the share of the other playing parts striking a position together for it to be a shared hit
 DOUBLING = 0.6                        # the share of the pair's events both voices sound at, for the second to double the first
 ALTERNATING = 0.6                     # the share of single-voice events that change voice, for the pair to alternate
 NOT_BOTH = 0.3                        # an alternating pair sounds together in under this share of its events
@@ -126,6 +127,36 @@ def moments(db, sid, song, bass_voices) -> set:
     return out
 
 
+def locks(db, sid, song, bass_voices) -> dict:
+    """The song's own locking to the band, a bar at a time: the shared hits (positions where TOGETHER of the other
+    parts playing in the bar strike within NEAR) its bass strikes too, and the stops (beats no other part sounds in)
+    its bass rests in; {bar index: (positions to strike, beats to leave)}."""
+    parts = {}
+    for voice, blob in db.execute("SELECT voice, notes FROM voices WHERE song = ?", (sid,)):
+        if voice not in bass_voices:
+            parts[voice] = [n for n in store.unpack(blob) if n[3] > 0]
+    bass = sorted(n[0] for n in song.notes["bass"])
+    out = {}
+    for k, (a, b) in enumerate(song.bars):
+        playing = [ns for ns in parts.values() if any(a - NEAR <= n[0] < b - NEAR for n in ns)]
+        must, rests = set(), set()
+        if len(playing) >= 2:
+            for step in range(int(round(b - a)) * 4):
+                t = a + step / 4
+                if sum(1 for ns in playing if any(abs(n[0] - t) < NEAR for n in ns)) >= TOGETHER * len(playing):
+                    i = bisect.bisect_left(bass, t - NEAR)
+                    if i < len(bass) and bass[i] <= t + NEAR:
+                        must.add(rhythm.position(t - a, song.division))
+        for beat in range(int(round(b - a))):
+            t0, t1 = a + beat, a + beat + 1
+            if not any(n[0] < t1 - NEAR and n[0] + (n[1] if not math.isnan(n[1]) else 0.25) > t0 + NEAR for ns in parts.values() for n in ns):
+                if not any(n[0] < t1 - NEAR and n[0] + (n[1] if not math.isnan(n[1]) else 0.25) > t0 + NEAR for n in song.notes["bass"]):
+                    rests.add(beat)
+        if must or rests:
+            out[k] = (must, rests)
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python tools/table_bass.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("spc")
@@ -168,9 +199,12 @@ def main(argv=None) -> int:
     table = writer.fit([u for u in units if u.song != sid])
     own = [rhythm.figure(struck, a, song) if struck else "-" for _, a, _, struck in rhythm.all_bars_of(song, rhythm.R.BASS)]
     held = moments(db, sid, song, set(by_voice))
-    notes, figures = writer.bass(song, table, random.Random(a.seed), key=(tonic, mode) if tonic is not None else None, hold=held)
+    lock = locks(db, sid, song, set(by_voice))
+    notes, figures = writer.bass(song, table, random.Random(a.seed), key=(tonic, mode) if tonic is not None else None,
+                                 hold=held, lock=lock)
     print(f"  habit {rhythm.bass_units([song])[0].values['habit']}, {len(figures)} bars written, {len(notes)} notes"
-          + (f"; moments kept as the song's own: bars {sorted(held)}" if held else ""))
+          + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
+          + f"; locked to the band in {len(lock)} bars ({sum(len(m) for m, _ in lock.values())} shared hits, {sum(len(r) for _, r in lock.values())} stop beats)")
     for i, (f, o) in enumerate(zip(figures, own)):
         print(f"  bar {i:3d}  written {f:40.40}  own {o}")
     # the song as decoded, the line's notes swapped for the written ones, a layer rebuilt on them

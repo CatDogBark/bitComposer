@@ -125,6 +125,20 @@ class WriterTests(unittest.TestCase):
         self.assertTrue(all(float(Fraction(t.partition(":")[0])) < 3 for t in rhythm._tokens(figures[1])))
         self.assertTrue(all(4.0 <= a < b <= 7.0 for a, b, _ in notes if 4.0 <= a < 7.0))
 
+    def test_locked(self):
+        self.assertTrue(writer.locked("0:R 2:5", None))
+        self.assertTrue(writer.locked("0:R 2:5", ({Fraction(0), Fraction(2)}, {1, 3})))
+        self.assertFalse(writer.locked("0:R 1:5", ({Fraction(0), Fraction(2)}, set())))   # misses the hit on beat three
+        self.assertFalse(writer.locked("0:R 3/2:5", (set(), {1})))                        # strikes in a stop beat
+        others = [_song("b"), _song("c")]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        model = writer.fit(rhythm.bass_units(others))
+        s = _song(bars=4)
+        s.chords = [Span(0.0, 16.0, 0, "", 1.0)]
+        _, figures = writer.bass(s, model, random.Random(2), key=(0, "major"), lock={1: ({Fraction(0), Fraction(2)}, {1, 3})})
+        self.assertTrue(writer.locked(figures[1], ({Fraction(0), Fraction(2)}, {1, 3})))
+
     def test_a_held_bar_keeps_the_songs_own_figure(self):
         others = [_song("b"), _song("c")]
         others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]

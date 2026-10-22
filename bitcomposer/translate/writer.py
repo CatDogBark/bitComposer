@@ -66,7 +66,13 @@ other parts' energy drops under MOMENT of the song's median, The
 Decisive Battle's regear at 18 s, which the written bass "blasted
 through") keeps the song's own figure, since what a bass does in a break
 is the song's choice (over the readings' breaks it keeps its figure in
-35 %, rests in 32 %, thins in 27 %). Each token becomes a note:
+35 %, rests in 32 %, thins in 27 %); and so is its locking to the band: at
+a shared hit (a position where most of the other playing parts strike
+together) the readings' basses strike too two times in three, and on a
+stop (a beat no other part sounds in) they rest two times in three, so
+where the song's own bass does either, the written one must (`lock`: a
+bar's positions it must strike and beats it must leave). Each token
+becomes a note:
 its pitch the chord tone its mark names in the chord sounding at its
 onset (R the root, r the root an octave up, 3 5 7 the chord's own, s the
 sus tone, ? the root; no chord fitting, the last root, or the tonic),
@@ -241,11 +247,23 @@ def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
 
 
+def locked(figure: str, lock) -> bool:
+    """Whether a figure strikes every position in lock[0] and none in the beats of lock[1]."""
+    if not lock:
+        return True
+    must, rests = lock
+    positions = {Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)}
+    return must <= positions and not any(math.floor(p) in rests for p in positions)
+
+
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
-         key: tuple | None = None, hold=()) -> tuple[list[tuple[float, float, float]], list[str]]:
+         key: tuple | None = None, hold=(), lock=None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
-    bars of the meter) keep the song's own figure."""
+    song's bars) keep the song's own figure; `lock` maps a bar's index to
+    (positions a figure must strike, beats it must leave), the song's own
+    locking to the band."""
+    lock = lock or {}
     own = song.notes.get(R.BASS, [])
     manner = Manner(song, R.BASS, model.table.vocabulary)
     if habit is None:
@@ -261,14 +279,15 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
     state = {"previous": None, "played": Counter()}
 
-    def draw(env, keep=None, fallback: str = "0:R") -> str:
-        """One new figure from the song's mixture, in its manner and the bar's
-        envelope (and passing `keep`), the chain and the urn moved on. Nothing
-        passing in TRIES draws: one in the manner and the envelope alone, else
-        the fallback (the song's own bar, where the caller gives it)."""
+    def draw(env, keep=None, fallback: str = "0:R", at: int | None = None) -> str:
+        """One new figure from the song's mixture, in its manner, the bar's
+        envelope and its lock (and passing `keep`), the chain and the urn
+        moved on. Nothing passing in TRIES draws: one in the manner, envelope
+        and lock alone, else the fallback (the song's own bar, where the
+        caller gives it)."""
         previous = state["previous"]
         meter = env[3] if len(env) > 3 and env[3] else song.meter
-        fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
+        fit = lambda f: manner.fits(f) and within(f, env) and locked(f, lock.get(at))   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
         values = {"part": R.BASS, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
@@ -294,7 +313,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         if length == 1:
             if own[start] != REST:
                 last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
-                figures[start] = draw(envelope(own[start], meters[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start])
+                figures[start] = draw(envelope(own[start], meters[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start], at=start)
                 state["played"][figures[start]] += 1
             state["previous"] = figures[start]
             continue
@@ -307,7 +326,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             pattern = []
             for k in range(period):
                 avoid = {rhythm_of(f) for f in before + pattern}
-                pattern.append(draw(envelope(own[start + k], meters[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k]))
+                pattern.append(draw(envelope(own[start + k], meters[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k], at=start + k))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
         seen = {}                                           # the span's chords -> the figure written on each
@@ -316,14 +335,14 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             chord = chord_at(start + i)
             if own[start + i] == REST:
                 figure = REST
-            elif exact:
+            elif exact and locked(base, lock.get(start + i)):
                 figure = base
-            elif chord is not None and chord in seen and rhythm_of(seen[chord]) == rhythm_of(base) and rng.random() < reuse:
+            elif chord is not None and chord in seen and rhythm_of(seen[chord]) == rhythm_of(base) and locked(seen[chord], lock.get(start + i)) and rng.random() < reuse:
                 figure = seen[chord]                        # the same chord again: the same figure, as the readings' basses do
             else:
                 want = rhythm_of(base)
-                figure = draw(envelope(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=base)
-                if rhythm_of(figure) != want:
+                figure = draw(envelope(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=own[start + i], at=start + i)
+                if rhythm_of(figure) != want and locked(base, lock.get(start + i)):
                     figure = base
             if chord is not None and figure != REST:
                 seen.setdefault(chord, figure)
