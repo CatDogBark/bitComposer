@@ -211,9 +211,39 @@ on that test: a real FFVI song's own leave-one-out rank is not yet
 measured beside it, and phase 3 found figure tables shared across games,
 so a game's own table tells mostly by its vocabulary and recall shares.
 
-**What the slice added, for the listening:** the bass and the drums
-only. The melody, the harmony and arp, the form, the tempo, the mix and
-the samples are the old generator's; the drumless songs (the pack's
-habit, four of twelve) stay drumless; a written part rests where the old
-one rested. The listening page: the Substitution Check's form, the old
-part against the new in the same song.
+**What the slice added:** the bass and the drums only. The melody, the
+harmony and arp, the form, the tempo, the mix and the samples are the
+old generator's; the drumless songs (the pack's habit, four of twelve)
+stay drumless; a written part rests where the old one rested. The twelve
+songs, old and new, sit in the listener's folder (`~/Music/bitComposer-dev/Slice 1/`).
+
+**The listening moved to the gold standard** (the listener, 2026-10-22):
+not the new part against the old generator's but against the real song,
+so the free writing, slice 1's new thing, went onto the Substitution
+Check as a third option a part, Original / Written (the first round, the
+song's own manner followed) / Free, on the same four songs
+(`tools/table_parts.py --free --label free`, the tables fitted on every
+other song, the habit drawn from the game's other songs). Three more
+things the free logs showed before anything was heard, each fixed:
+
+- The habit's stream was the seed's alone, so four songs on one seed drew
+  one habit; it is the song's and the seed's now (`habit_rng`).
+- The habit ignored the tempo and the kit: Terra, whose grid the beat
+  reader doubles, drew a dense walking bass of fifteen notes a bar, and a
+  one-snare kit could draw a dense drum habit. The habit is drawn given
+  the tempo band, and the drums' given the kit too (`tempo_habits`,
+  `kit_habits`).
+- Where no figure passed the habit's envelope and the band's lock
+  together (a sparse habit under a band that strikes three shared hits a
+  bar), the draw fell back to the song's own bar, which leaked the
+  original into the "free" part. The filters now loosen in turn (the
+  envelope first, then the lock) and never copy the bar replaced.
+
+The free round as published (seed 1, 60 s): Terra bass medium walking,
+250 notes in 74 bars, drums sparse mixed on its one snare; The Decisive
+Battle bass medium walking, drums medium varied on its full kit;
+Searching for Friends bass medium walking, drums dense mixed on its one
+hat; Johnny C. Bad bass sparse roots (the band's lock asking more), drums
+dense mixed on its ride. Verdicts in the page's store as
+`verdicts/<id>bassfree` and `verdicts/<id>drumsfree`, the first round's
+kept beside them. **Awaiting the ear.**
