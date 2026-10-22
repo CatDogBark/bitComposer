@@ -146,7 +146,8 @@ class VotesFloorSplitTests(unittest.TestCase):
         self.assertGreater(t.p("never", (4,)), Table(("meter",)).fit(_units()).p("never", (4,)))   # the floor lifts an unseen outcome
         rng = random.Random(1)
         self.assertIn("floored", {t.draw((9,), rng) for _ in range(50)})   # an unseen context draws from the floor
-        self.assertAlmostEqual(t.p("x", (4,), {}), (2 + 3 * 0.1) / (5 + 3))
+        root = (2 + 3 * 0.1) / (5 + 3)
+        self.assertAlmostEqual(t.p("x", (4,), {}), (2 + 3 * root) / (5 + 3))
 
     def test_split_by_song_keeps_every_game_in_both_halves(self):
         us = [Unit(f"s{i}", "G", "x", {}) for i in range(40)]
