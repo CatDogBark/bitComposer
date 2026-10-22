@@ -772,6 +772,17 @@ past the minute, so it never showed). The harness now repeats the
 written notes as the song does, shifted by the loop's length from the
 bar it loops back to, to the render's end (`harness.looped`); the stems
 carry on past 54.6 s within a decibel or two of the originals.
+
+**Terra's drums belong** (the listener, 2026-10-22). Searching for
+Friends: "all closed hi-hat; the original has open hi-hat too: a choice
+or a bug?" A bug in the harness: its hat voice strikes two samples the
+namer both calls hat, a long one (the open hat, 329 hits, on beats one,
+two and four and the and of three) and a short one (the closed, 813
+hits, on the sixteenths between), and the harness had mapped the piece
+to the sample the song strikes most. A hit now takes the sample the
+song uses most at its position in the bar, the piece's usual where the
+song never strikes that position (`choice` in `write_drums`); The
+Decisive Battle's hat and snare (two samples each) choose the same way.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
