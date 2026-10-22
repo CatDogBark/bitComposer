@@ -33,6 +33,12 @@ pickups do not); a written hit of a piece the song's kit lacks is
 dropped, and two pieces on one voice at the same instant keep the one
 the song strikes more.
 
+The readings count a song once through to its loop, and the writers write
+those bars; where the render runs past the first pass, the written notes
+repeat as the song does, shifted by the loop's length from the bar it
+loops back to (The Decisive Battle's first pass ends at 54.6 s of a
+one-minute render, and both written parts fell silent there together).
+
 The song's moments (bars where every part but the one written drops to
 under MOMENT of the song's median energy, for at most MOMENT_BARS bars
 in a row) keep the song's own figure, and its locking to the band (the
@@ -77,6 +83,7 @@ class Context:
     beats: array
     keys: dict                        # sample index -> key
     pieces: dict                      # sample key -> the piece the reading named it
+    loop: tuple | None = None         # (the second the song loops back to, the loop's length in seconds), when heard
     by_voice: dict = field(default_factory=dict)   # voice -> (role, its notes as the store packs them)
 
 
@@ -113,9 +120,34 @@ def load(db, spc_path: str, seconds: float = 60.0) -> Context | None:
         keys[idx] = key
         pieces[key] = piece
     ctx = Context(db, sid, game, title, (tonic, mode) if tonic is not None else None, song, songs, original, events, beats, keys, pieces)
+    loop_bar, loop_seconds = db.execute("SELECT loop_bar, loop_seconds FROM songs WHERE id = ?", (sid,)).fetchone()
+    bars = array("d")
+    bars.frombytes(db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()[1])
+    if loop_bar is not None and loop_seconds and loop_bar < len(bars):
+        ctx.loop = (bars[loop_bar], loop_seconds)
     for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (sid,)):
         ctx.by_voice[voice] = (role, [n for n in store.unpack(blob) if n[3] > 0])
     return ctx
+
+
+def looped(ctx: Context, notes: list) -> list:
+    """The written notes, repeated as the song loops until the render's end (the module)."""
+    if not ctx.loop:
+        return notes
+    start, length = ctx.loop
+    end = start + length
+    out = list(notes)
+    k = 1
+    while start + k * length < ctx.original.seconds:
+        for n in notes:
+            if start - 1e-6 <= n.start < end - 1e-6 and n.start + k * length < ctx.original.seconds:
+                m = convert.notes_mod.Note(n.voice, n.start + k * length, n.sample, n.pitch, n.volume, n.adsr, n.gain, n.echo,
+                                           n.noise, brr=n.brr, echo_delay=n.echo_delay, echo_volume=n.echo_volume,
+                                           echo_feedback=n.echo_feedback, echo_filter=n.echo_filter, echo_writes=n.echo_writes,
+                                           end=None if n.end is None else min(n.end + k * length, ctx.original.seconds))
+                out.append(m)
+        k += 1
+    return out
 
 
 def seconds_at(beats: array, b: float) -> float:
@@ -297,6 +329,7 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     replaced = set(pair) | set(doublings)
     if partners or doublings:
         log.append(f"written onto voices {sorted(replaced)}: {len(new)} notes" + (f", ringing {ring:.2f} beats" if ring else ""))
+    new = looped(ctx, new)
     return Written(R.BASS, new, replaced, figures, own, log)
 
 
@@ -377,6 +410,7 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
     if dropped:
         log.append("dropped hits: " + ", ".join(f"{LETTERS.get(k, k)} {c}" for k, c in dropped.most_common()))
     log.append("hits sound " + ", ".join(f"{LETTERS.get(k, k)} {w[2]:.2f}" for k, w in sorted(where.items())) + " of their gaps, at the song's own volumes")
+    new = looped(ctx, new)
     return Written(R.DRUMS, new, set(kit_voices), figures, own, log)
 
 
