@@ -535,6 +535,21 @@ TRIES draws, the writer takes a figure in the manner and the envelope
 alone, else the song's own bar, never an unchecked draw (one such draw
 had put ninths of a beat into Locke's bar 14). Locke's walking section
 now plays through at two to four strikes a bar, every bar on the one.
+
+"Goes silent still around the same time, and later." Measured bar by
+bar (RMS of the stems, `loudness.py`): from 27.5 s to 38 s the written
+bass stem sat 4 to 10 dB under the original. Locke's second bass voice
+is not a blip layer in the walking section: there it doubles the line
+at unison with notes held a whole beat (0.84 s), and blips only in its
+own intro pattern, whose 207 short notes had set the voice's median
+length at 0.15 beats; the rebuilt doubling had that length everywhere,
+so the walking section lost its second voice. A doubling note at the
+attack now lasts as long as the line's note it doubles; a note at an
+offset after it keeps the layer's own length. The written stem now
+tracks the original within 2 dB through the walking section. The lesson
+for the arrangement table: a layer is described by what it does at each
+attack (length relative to the line's note, offset, pitch relation), not
+by one median.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
