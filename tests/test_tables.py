@@ -367,3 +367,50 @@ class VoicingUnitTests(unittest.TestCase):
         self.assertEqual(ws[0].values["parts"], "ha")
         self.assertEqual(ws[1].values["previous"], "3:wide")
         self.assertEqual([rhythm.width_of(x) for x in (0, 7, 8, 14, 15)], ["close", "close", "open", "open", "wide"])
+
+
+class HarmonyUnitTests(unittest.TestCase):
+    def _song(self, tonic=0):
+        # C major, 4/4, six bars once through, two parts (0-3, 4-5), loop at bar 0:
+        # | I | IV | V | I | vi (two beats) I | I |
+        chords = [Span(0.0, 4.0, 0, "", 1.0), Span(4.0, 8.0, 5, "", 1.0), Span(8.0, 12.0, 7, "", 1.0),
+                  Span(12.0, 16.0, 0, "", 1.0), Span(16.0, 18.0, 9, "m", 1.0), Span(18.0, 24.0, 0, "", 1.0)]
+        return rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4.0) for k in range(6)], chords, bpm=100.0, sid="id",
+                           game="G", numbers=list(range(6)), parts=[(0, 4, None), (4, 2, None)],
+                           tonic=tonic, mode="major", loop_bar=0)
+
+    def test_the_tonic_gate(self):
+        self.assertTrue(rhythm.tonic_sure(self._song()))
+        self.assertFalse(rhythm.tonic_sure(self._song(tonic=7)))        # G is played four beats of twenty-four
+        self.assertEqual(rhythm.chord_units([self._song(tonic=7)]), [])
+        self.assertEqual([u.outcome for u in rhythm.chord_units([self._song(tonic=7)], sure_only=False)][:2], ["IV", "bVII"])
+
+    def test_chord_units(self):
+        us = rhythm.chord_units([self._song()])
+        self.assertEqual([u.outcome for u in us], ["I", "IV", "V", "I", "vi", "I"])   # bar 4: a tie, the first chord
+        self.assertEqual([u.values["previous"] for u in us], [rhythm.START, "I", "IV", "V", rhythm.START, "vi"])
+        self.assertEqual([u.values["before"] for u in us], [rhythm.START, rhythm.START, "I", "IV", rhythm.START, rhythm.START])
+        self.assertEqual([u.values["place"] for u in us], ["first", "middle", "middle", "last", "first", "last"])
+        self.assertEqual([u.values["form"] for u in us], ["first"] * 4 + ["last"] * 2)
+        self.assertEqual((us[0].values["habit"], us[0].values["motion"]), ("several", "moving"))
+        self.assertEqual((us[0].values["part"], us[0].values["mode"], us[0].values["meter"], us[0].values["tempo"]),
+                         ("harmony", "major", 4, "medium"))
+        s = self._song()
+        s.parts = [(0, 4, None), (4, 2, 0)]                              # the second part repeats the first: left out
+        self.assertEqual(len(rhythm.chord_units([s])), 4)
+
+    def test_change_units(self):
+        us = rhythm.change_units([self._song()])
+        self.assertEqual([u.outcome for u in us], ["0", "0", "0", "0", "0 2", "none"])
+        self.assertEqual([u.values["previous"] for u in us], [rhythm.START, "0", "0", "0", rhythm.START, "0 2"])
+        self.assertEqual(us[0].values["habit"], "moving")
+        self.assertEqual(len(rhythm.change_units([self._song(tonic=7)])), 6)   # every song counts
+
+    def test_cadence_and_loop_units(self):
+        us = rhythm.cadence_units([self._song()])
+        self.assertEqual([u.outcome for u in us], ["V -> I", "another -> I"])
+        self.assertEqual([u.values["length"] for u in us], ["2 to 4 chords", "2 to 4 chords"])
+        self.assertEqual([u.values["form"] for u in us], ["first", "last"])
+        ls = rhythm.loop_units([self._song()])
+        self.assertEqual((ls[0].outcome, ls[0].values["last"], ls[0].values["mode"]), ("I", "I", "major"))
+        self.assertEqual(rhythm.loop_units([self._song(tonic=7)]), [])

@@ -464,7 +464,12 @@ SPECS = {
     "drum_habits": ("drum_habit_units", ("part",), ()),
     "voicings": ("voicing_units", ("part", "shape"), ("bass", "width", "previous", "habit")),
     "widths": ("width_units", ("part", "shape"), ("parts", "bass", "previous")),
+    "chords": ("chord_units", ("part", "mode"), ("meter", "tempo", "previous", "before", "place", "form", "habit", "motion")),
+    "changes": ("change_units", ("part", "meter"), ("mode", "tempo", "place", "previous", "habit")),
+    "cadences": ("cadence_units", ("part", "mode"), ("form", "length", "habit")),
+    "loops": ("loop_units", ("part", "mode"), ("last",)),
 }
+SURE_ONLY = ("chords", "cadences", "loops")   # the tables by degree: only songs whose tonic is sure (rhythm.tonic_sure)
 
 
 def main(argv=None) -> int:
@@ -484,13 +489,14 @@ def main(argv=None) -> int:
     ap.add_argument("--no-game", action="store_true", help="leave out the per-game shapes")
     ap.add_argument("--cache", action="store_true", help="each shape also as the song's own mixture over it (Cache)")
     ap.add_argument("--recall", action="store_true", help="print the recall shares by part (and habit) instead")
+    ap.add_argument("--unsure", action="store_true", help="the tables by degree: count the songs whose tonic is unsure too")
     args = ap.parse_args(argv)
     from . import rhythm, store
     db = store.connect(args.db)
     songs, left = rhythm.load(db, args.game)
     print(f"{len(songs)} songs counted, left out: {left}", file=sys.stderr)
     builder, base, extras = SPECS[args.table]
-    units = getattr(rhythm, builder)(songs)
+    units = getattr(rhythm, builder)(songs, sure_only=not args.unsure) if args.table in SURE_ONLY else getattr(rhythm, builder)(songs)
     if args.parts:
         keep = set(args.parts.split(","))
         units = [u for u in units if u.values["part"] in keep]

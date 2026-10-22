@@ -74,7 +74,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from fractions import Fraction
 
-from . import drums as drums_mod, roles as R, store, tables
+from . import drums as drums_mod, roles as R, store, tables, vocab
 from .vocab import FIT, MARKS, SOUNDS, Span, _beats_at, _buckets, _median, _pct, _sounding, tone_of
 from .vocab import TONES as CHORD_TONES
 
@@ -127,8 +127,11 @@ class Song:
     sid: str = ""                               # its id in the readings
     game: str = ""
     numbers: list = field(default_factory=list)   # each bar's number in the reading (form's bars count them), beside `bars`
-    parts: list = field(default_factory=list)     # the form's parts: (first bar number, bars)
+    parts: list = field(default_factory=list)     # the form's parts: (first bar number, bars, the earlier part repeated or None)
     pieces: dict = field(default_factory=dict)    # sample key -> the piece the reading named it (drums.PIECES, "none")
+    tonic: int | None = None                      # the key reader's tonic and mode (the harmony units' degrees)
+    mode: str = "major"
+    loop_bar: int | None = None                   # the bar number the loop returns to
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -136,8 +139,9 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
     left out: {"free time": n, "mostly silent": n}; the harmony counts' songs."""
     songs, out = [], Counter()
     where, args = ("WHERE game = ?", (game,)) if game else ("", ())
-    for sid, title, meter, division, seconds, loop_bar, loop_seconds, bpm, game_name in db.execute(
-            f"SELECT id, title, meter, division, seconds, loop_bar, loop_seconds, bpm, game FROM songs {where}", args):
+    for sid, title, meter, division, seconds, loop_bar, loop_seconds, bpm, game_name, tonic, mode in db.execute(
+            f"SELECT id, title, meter, division, seconds, loop_bar, loop_seconds, bpm, game, key_tonic, key_mode "
+            f"FROM songs {where}", args):
         row = db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()
         if division is None or not row:
             out["free time"] += 1
@@ -160,8 +164,9 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         kept = [(k, a, min(b, end)) for k, (a, b) in enumerate(zip(lines, ends)) if min(b, end) - a >= 1 - NEAR]
         song = Song(title, meter, division, [(a, b) for _, a, b in kept], chords, bpm=bpm or 120.0, sid=sid,
                     game=game_name or "", numbers=[k for k, _, _ in kept],
-                    parts=[(bar, n) for bar, n in db.execute(
-                        "SELECT bar, bars FROM form WHERE song = ? AND level = 'part' ORDER BY bar", (sid,))])
+                    parts=[(bar, n, of) for bar, n, of in db.execute(
+                        "SELECT bar, bars, [of] FROM form WHERE song = ? AND level = 'part' ORDER BY bar", (sid,))],
+                    tonic=tonic, mode=mode or "major", loop_bar=loop_bar)
         keys, song.pieces = {}, {}
         for idx, key, piece in db.execute("SELECT idx, key, piece FROM samples WHERE song = ?", (sid,)):
             keys[idx] = key
@@ -268,7 +273,7 @@ def all_bars_of(song: Song, role: str):
 
 def place_in_part(song: Song, number: int) -> str:
     """Where a bar sits in its part of the form: first, middle, last; none when no part holds it."""
-    for bar, n in song.parts:
+    for bar, n, *_ in song.parts:
         if bar <= number < bar + n:
             return "first" if number == bar else "last" if number == bar + n - 1 else "middle"
     return "none"
@@ -689,6 +694,187 @@ def units(songs) -> list:
             if mine:
                 _give_habit(mine, _rhythm_habit(mine))
                 out += mine
+    return out
+
+
+# --- harmony: the chords by degree, their rhythm in the bar, the cadences and the loop ---
+
+VARIETY = ((1, "one chord"), (3, "few"), (6, "several"), (1e9, "many"))   # distinct chords a song plays
+MOTION = ((1 / 3, "static"), (2 / 3, "mixed"), (2, "moving"))            # its share of bars that change chord
+NO_CHORD = "(none)"                  # a bar's chord where none sounds
+
+
+def tonic_sure(song: Song) -> bool:
+    """Whether the key reader's tonic is also the chord root the song plays
+    most: the harmony tables' gate (the ear round of 2026-10-22: this keeps
+    eight right tonics of the labelled dozen and no wrong one)."""
+    if song.tonic is None:
+        return False
+    time = Counter()
+    for c in song.chords:
+        if c.root is not None and c.fit >= FIT:
+            time[c.root] += c.beats
+    return bool(time) and max(time, key=time.get) == song.tonic
+
+
+def chord_in(chords, a: float, b: float):
+    """The fit chord sounding most of [a, b), the first at a tie; None when none."""
+    best = None
+    for c in chords:
+        if c.root is None or c.fit < FIT or c.end <= a or c.start >= b:
+            continue
+        cover = min(c.end, b) - max(c.start, a)
+        if best is None or cover > best[0] + 1e-9:
+            best = (cover, c)
+    return best[1] if best else None
+
+
+def numeral_of(song: Song, c) -> str:
+    """A chord as a numeral in the song's key, its shape kept (I, iv, V7, bVII)."""
+    return vocab.numeral(c.root, song.tonic, song.mode, c.shape)
+
+
+def bar_chords(song: Song) -> list[str]:
+    """Each bar's chord (the one sounding most of it) as a numeral, NO_CHORD where none."""
+    out = []
+    for a, b in song.bars:
+        c = chord_in(song.chords, a, b)
+        out.append(numeral_of(song, c) if c is not None else NO_CHORD)
+    return out
+
+
+def harmony_habits(names: list) -> tuple[str, str]:
+    """A song's variety (distinct chords, VARIETY) and motion (the share of
+    its bars changing chord from the bar before, MOTION) from its bars' chords."""
+    played = [n for n in names if n != NO_CHORD]
+    variety = next(name for top, name in VARIETY if len(set(played)) <= top)
+    changes = sum(1 for x, y in zip(played, played[1:]) if x != y)
+    motion = habit_of(changes / (len(played) - 1), MOTION) if len(played) > 1 else "static"
+    return variety, motion
+
+
+def form_place(song: Song, i: int) -> str:
+    """A part's place in the form: the only, first, middle or last part."""
+    n = len(song.parts)
+    return "only" if n == 1 else "first" if i == 0 else "last" if i == n - 1 else "middle"
+
+
+def _own_parts(song: Song):
+    """The form's parts that are not repeats of an earlier one: (index, first bar number, bars)."""
+    for i, (bar, n, *rest) in enumerate(song.parts):
+        if not rest or rest[0] is None:
+            yield i, bar, n
+
+
+def chord_units(songs, sure_only: bool = True) -> list:
+    """Each bar of each part of the form (a part repeating an earlier one
+    left out) as a table's unit: its outcome the bar's chord as a numeral in
+    the song's key (the chord sounding most of the bar, its shape kept;
+    NO_CHORD for a bar without one); its values the part (harmony), the
+    mode, the meter, the tempo band, the chord of the bar before and of the
+    one before that (START at the part's first bar), the bar's place in its
+    part, the part's place in the form, and the song's habits, its variety
+    and its motion. Songs whose tonic is not the chord root they play most
+    are left out (tonic_sure) unless `sure_only` is off."""
+    out = []
+    for s in songs:
+        if s.tonic is None or (sure_only and not tonic_sure(s)):
+            continue
+        names = bar_chords(s)
+        variety, motion = harmony_habits(names)
+        index = {num: k for k, num in enumerate(s.numbers)}
+        tempo = band(s.bpm)
+        for i, bar, n in _own_parts(s):
+            previous, before, form = START, START, form_place(s, i)
+            for num in range(bar, bar + n):
+                k = index.get(num)
+                if k is None:
+                    continue
+                out.append(tables.Unit(s.sid, s.game, names[k], {
+                    "part": R.HARMONY, "mode": s.mode, "meter": s.meter, "tempo": tempo, "previous": previous,
+                    "before": before, "place": place_in_part(s, num), "form": form, "habit": variety, "motion": motion}))
+                before, previous = previous, names[k]
+    return out
+
+
+def change_units(songs) -> list:
+    """Each bar of each song as a unit for the harmonic rhythm: its outcome
+    where in the bar the chord changes (beats from the bar line on the half
+    beat, "none" when it does not); its values the part (harmony), the
+    meter, the mode, the tempo band, the bar's place in its part, the bar
+    before's outcome (START at a part's first bar and the song's) and the
+    song's motion (MOTION). Every song counts: no tonic is needed."""
+    out = []
+    for s in songs:
+        names = bar_chords(s)
+        _, motion = harmony_habits(names)
+        tempo = band(s.bpm)
+        starts = []
+        for i, c in enumerate(s.chords):
+            if c.root is None or c.fit < FIT:
+                continue
+            earlier = s.chords[i - 1] if i else None
+            if earlier is None or (earlier.root, earlier.shape) != (c.root, c.shape):
+                starts.append(c.start)
+        previous = START
+        for k, (a, b) in enumerate(s.bars):
+            where = place_in_part(s, s.numbers[k])
+            if where == "first":
+                previous = START
+            inside = sorted({position(t - a, 2) for t in starts if a - NEAR <= t < b - NEAR})
+            outcome = " ".join(str(p) for p in inside) or "none"
+            out.append(tables.Unit(s.sid, s.game, outcome, {
+                "part": R.HARMONY, "meter": s.meter, "mode": s.mode, "tempo": tempo, "place": where,
+                "previous": previous, "habit": motion}))
+            previous = outcome
+    return out
+
+
+def cadence_units(songs, sure_only: bool = True) -> list:
+    """Each part of the form (repeats left out) of each sure song as a unit:
+    its outcome how the part's chord sequence ends (phrases.CADENCES); its
+    values the part (harmony), the mode, the part's place in the form, the
+    length of the progression it is built on (phrases.SPANS) and the song's
+    variety."""
+    from . import phrases                                  # phrases imports this module
+    out = []
+    for s in songs:
+        if s.tonic is None or (sure_only and not tonic_sure(s)):
+            continue
+        names = bar_chords(s)
+        variety, _ = harmony_habits(names)
+        index = {num: k for k, num in enumerate(s.numbers)}
+        for i, bar, n in _own_parts(s):
+            seq = []
+            for num in range(bar, bar + n):
+                k = index.get(num)
+                if k is None or names[k] == NO_CHORD:
+                    continue
+                d = vocab.degree(names[k])
+                if not seq or seq[-1] != d:
+                    seq.append(d)
+            if not seq:
+                continue
+            length = next(name for top, name in phrases.SPANS if len(phrases.cycle(seq)) <= top)
+            out.append(tables.Unit(s.sid, s.game, phrases.cadence(seq), {
+                "part": R.HARMONY, "mode": s.mode, "form": form_place(s, i), "length": length, "habit": variety}))
+    return out
+
+
+def loop_units(songs, sure_only: bool = True) -> list:
+    """Each sure song's loop as a unit: its outcome the chord the loop returns
+    to (the numeral at its first bar); its values the part (harmony), the
+    mode and the chord of the song's last bar (together, the loop's move)."""
+    out = []
+    for s in songs:
+        if s.tonic is None or s.loop_bar is None or (sure_only and not tonic_sure(s)):
+            continue
+        names = bar_chords(s)
+        index = {num: k for k, num in enumerate(s.numbers)}
+        k = index.get(s.loop_bar)
+        if k is None or not names:
+            continue
+        out.append(tables.Unit(s.sid, s.game, names[k], {"part": R.HARMONY, "mode": s.mode, "last": names[-1]}))
     return out
 
 
