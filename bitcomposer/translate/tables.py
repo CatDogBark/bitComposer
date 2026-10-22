@@ -302,7 +302,8 @@ def simulate(table: Table, units, rng: random.Random, previous: str = "previous"
 def report(comparisons, columns=(), title: str = "") -> str:
     """The comparison as text: each shape's held-out bits a unit (and the
     gain over no context), its bits by column, its size and its spread."""
-    base = next((c.bits for c in comparisons if c.shape == ()), None)
+    base = next((c.bits for c in comparisons if c.shape == ()),
+                next((c.bits for c in comparisons if c.shape == FLOOR), None))   # the gain over no context, or over the floor
     w = max(12, max(len(_shape(c.shape)) for c in comparisons))
     head = f"{'shape':{w}} {'bits':>6} {'gain':>6} " + " ".join(f"{str(col)[:7]:>7}" for col in columns) + \
         f" {'ctx':>6} {'entries':>7}  distinct drawn/real  ostinato drawn/real"
