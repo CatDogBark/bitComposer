@@ -701,6 +701,46 @@ these **known issues**, each the arrangement item's or a reader's:
 - The rhythm vocabulary checks the positions a song strikes, not how
   often (The Decisive Battle's straight eighths passed); weighting by
   frequency waits on the ear.
+
+**Johnny C. Bad nearly** (the listener, 2026-10-22: "much better, I can
+see it as more of a written choice"). The bass item closes at two
+belongs and two nearlies.
+
+### The drums written (2026-10-22)
+
+The harness is a module now (`translate/harness.py`: the song loaded
+once, `write_bass`, `write_drums`, the score with the written parts in
+place, the stems; `tools/table_parts.py --parts bass,drums`, and
+`tools/table_bass.py` a wrapper), the bass figures byte-identical to
+before the move. The drums: every voice the readers call drums is the
+kit, one part; each piece maps to the voice and sample the song strikes
+it with most, with its usual settings, pitch register and note length;
+two pieces on one voice at once keep the one the song strikes more. The
+first writer drew the whole kit's bar as one figure, and The Decisive
+Battle's full kit (kick and snare on one voice, snare and another piece
+on a second, a cymbal, a hat in sixteenths) came back as its own bars in
+most places: a whole kit's bar is too particular a figure for any
+inventory to hold many of, and a per-piece envelope (each piece's strikes
+within TIGHT of the song's own bar's, so a snare roll never stands in
+for the hat) left almost nothing to draw. So the drums are written a
+limb at a time (`rhythm.DRUM_GROUPS`: kick, snare and tom as one line;
+the hat; cymbals; the rest), each group from its own inventory over the
+readings (`rhythm.drum_group_units`), in the song's own manner for the
+group, its envelope piece by piece, its spans, the moments, and locked
+to the band two times in three (LOCK_DRUMS, the readings' rate; every
+shared hit pinned the kick and snare to the song's own). The four, bass
+and drums both written, on the Substitution Check with a switch and a
+verdict for each part: Terra's one snare voice, The Decisive Battle's
+full kit (its kick-snare line the song's own in 11 of 23 bars, where the
+moments and the exact spans hold it, the hat its own in 2 of 21), Searching
+for Friends' one hat voice (its own in 1 of 41), Johnny C. Bad's one
+ride-like voice (9 of 38). **Awaiting the ear.** Known beside the bass's
+issues: the groups are written independently of one another and of the
+written bass, each locked to the song's original band, so written parts
+lock to the song and not yet to each other; a kit with kick and snare
+on one voice can lose a hit where the written line strikes both at once
+(The Decisive Battle: 19 of 588); the hat's inventory is dominated by
+straight eighths and sixteenths.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
