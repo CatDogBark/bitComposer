@@ -336,6 +336,51 @@ motion over a static bass (Harid, Collosia), Kefka's half-bar offset
 counting level for fast songs, and the role reader finding no bass in
 Collosia or Still of the Night.
 
+**Step 5 (2026-10-22): the tune's carrier, against the listener's marks.**
+All ten songs are marked (the page's collection `tunemarks1`, kept as
+`~/diags/bitcomposer/idiom/tune/heard-tunes.json` with `tune_check_db.py`,
+`tune_rules.py` and `voice_features.py` beside it). Two have no tune at
+all: Jungle (drums, bass and noises where a tune would be) and Toughness
+(a distorted layer that the rip set's own "Noiseless" variant removes;
+our render matches Game Music Emu's within 2 dB in every band, so it is
+the song, not the emulator). One is a tune harmonized in a second voice
+(Yoshi's Island's Overworld, voices 1 and 6 striking together on 71 % of
+their notes, a sixth apart); one passes the tune between voices (Escargo
+Express: a fast plinking voice all through, a pair in thirds taking the
+lead two bars in four); one has its tune in the bass for its first 24 s
+(Top Gear's Title). The reader's melody voice was the marked carrier in
+20 % of the bars a carrier was marked in: three times it had chosen a
+voice with a handful of notes in the whole song (Super Mario World's
+Overworld, Escargo Express, Celes's intro voice), elsewhere a quiet high
+line under a louder one, and once the louder twin of an echo pair the
+listener named by the quieter (Gang-Plank Galleon's voice 6 repeats voice
+2's every note 150 to 200 ms later at a third of its level, missed by an
+echo rule asking for one delay to 4 ms). Changes, in `roles.py`: a melody
+candidate must have a note on a quarter of the song's beats, at a quarter
+of the loudest pitched voice's level, with its median below C6 (Jungle's
+noises sit above); its variety is weighed by the square root of presence
+times level and held back over two notes a beat (figuration); none
+passing, no melody. The echo detector allows a 30 ms wobble with a focus
+test, refuses a voice that repeats itself at the delay (a pumping bass,
+every eighth) and keeps only the quieter of a mutual pair. Result, on the
+same ten songs: **89 % of marked bars** (422 of 473; the 85 % criterion
+is met on the set the rule was built from, so a fresh ten is needed
+before it counts), the "no tune" bars read as no melody in 104 of 158
+(both tuneless songs whole; the interludes inside songs need a carrier
+that varies in time), the chord and bar-phase scores unchanged, the 41
+tapped beats 40 right as before. Misses: Escargo Express (the hocket:
+its constant voice is a quarter the level of the others and fails the
+loudness gate), Top Gear's bass intro, and 72 songs of the collection
+(4 %) with no melody voice. Found on the way: which voices the beat is
+read from moves its level and its grid in dozens of songs (48 to 91
+changed, a tapped song lost and one song fallen to free time, when the
+echoes the looser rule finds were left out of the beat), so the beat
+keeps the old 4 ms rule for leaving an echo out and the parts use the
+better one; the self-repeat refusal alone still changes 15 songs' tempo
+or meter. Open: a carrier that varies in time (the plan's composite
+line), the harmonized second voice as a role of its own, the tune in the
+bass, and the beat's dependence on which voices it is read from.
+
 ## Exit criteria, with the tolerances proposed before scoring
 
 - **Tempo:** the read tempo equals the written one, or exactly twice or
