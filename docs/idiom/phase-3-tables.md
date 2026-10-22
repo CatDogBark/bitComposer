@@ -412,6 +412,11 @@ Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
 (`~/Music/bitComposer-dev/Table bass/`): the readers read the written
 voice as the bass in all four, the key unchanged in three (Celes, three
-notes in a minute, moved to its relative major). **Awaiting the ear:**
-"belongs", "nearly", or not, for each; the Substitution Check page with
-per-voice toggles follows for the same four.
+notes in a minute, moved to its relative major). The Substitution Check
+page (the plan's listening instrument, first form) holds the same four:
+three stems a song (the rest without the bass, the bass as the song plays
+it, the bass as written; the converter's modules rendered through
+libopenmpt on Ragnarok) play in sync and a switch moves between Original,
+Written and None while the song plays; a verdict (belongs / nearly /
+doesn't belong) and a note a song are kept in the page's store.
+**Awaiting the ear** on all four.
