@@ -1246,10 +1246,20 @@ What the phase set out to produce: the tables for FFVI (the pack above)
 and for the 39 games (the readings database and `tables` CLI, every
 shape in this record); the likelihood table that justifies each shape
 (this record, item by item); the format 2 draft and a pack in it; the
-tune-copy reference set. The exit criteria: the bass and the drums
-written from their tables passed the listener's ear in substitution
-(eight of eight "belongs" on the Substitution Check); the key check by
-ear was done before the harmony tables counted, and set their gate.
+tune-copy reference set. The exit criteria, one by one: every table's
+shape recorded with its held-out likelihood against its alternatives
+(the record); shared or per game decided per table from the same
+numbers (by the songs' split within each game, the only split that can
+tell: shared everywhere but the voices a song, the drums' presence and
+the articulation habit); a format 2 pack written from a game and read
+back, format 1 still read (above); the tables printed and read as the
+music does to an ear that knows it (each table's shares are printed in
+this record and in the diagnostics' `*-dist.log`; the reading is the
+listener's, and the one criterion that is his rather than the numbers');
+and the two added: the bass and the drums written from their tables
+passed the listener's ear in substitution (eight of eight "belongs" on
+the Substitution Check), and the key check by ear was done before the
+harmony tables counted, and set their gate.
 Left open for phase 4: the voicings, harmony, form, phrase and
 arrangement tables have no writer yet and meet the ear through the
 generator's songs; the "apart" layered basses and the chord reader's
