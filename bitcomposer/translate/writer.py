@@ -224,28 +224,32 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
     state = {"previous": None, "played": Counter()}
 
-    def draw(env, keep=None) -> str:
-        """One new figure from the song's mixture, in its manner and the bar's envelope (and passing `keep`), the chain and the urn moved on."""
+    def draw(env, keep=None, fallback: str = "0:R") -> str:
+        """One new figure from the song's mixture, in its manner and the bar's
+        envelope (and passing `keep`), the chain and the urn moved on. Nothing
+        passing in TRIES draws: one in the manner and the envelope alone, else
+        the fallback (the song's own bar, where the caller gives it)."""
         previous = state["previous"]
-        inner = keep
-        keep = lambda f: manner.fits(f) and within(f, env) and (inner is None or inner(f))   # noqa: E731
+        fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
+        full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
         values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
-        figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=keep)
+        figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=full)
+        nearly = None
         for _ in range(TRIES):                              # the urn or the floor may still hand back what is refused
-            if keep(figure):
-                break
+            if full(figure):
+                return figure
+            if nearly is None and fit(figure):
+                nearly = figure
             figure = model.table.draw(model.table.context(unit), rng, values)
-        else:
-            figure = "0:R" if inner is None else figure
-        return figure
+        return nearly or fallback
 
     figures, patterns = [REST] * len(bars), []
     for start, length, period in spans([rhythm_of(f) for f in own]):
         if length == 1:
             if own[start] != REST:
                 last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
-                figures[start] = draw(envelope(own[start]), keep=lambda f: rhythm_of(f) != last)
+                figures[start] = draw(envelope(own[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start])
                 state["played"][figures[start]] += 1
             state["previous"] = figures[start]
             continue
@@ -258,7 +262,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             pattern = []
             for k in range(period):
                 avoid = {rhythm_of(f) for f in before + pattern}
-                pattern.append(draw(envelope(own[start + k]), keep=lambda f: rhythm_of(f) not in avoid))
+                pattern.append(draw(envelope(own[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k]))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
         for i in range(length):
@@ -269,7 +273,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 figure = base
             else:
                 want = rhythm_of(base)
-                figure = draw(envelope(own[start + i]), keep=lambda f: rhythm_of(f) == want)
+                figure = draw(envelope(own[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=base)
                 if rhythm_of(figure) != want:
                     figure = base
             figures[start + i] = figure

@@ -81,20 +81,22 @@ class WriterTests(unittest.TestCase):
         self.assertEqual(writer.spans([]), [])
 
     def test_a_span_holds_its_pattern(self):
-        others = [_song("b"), _song("c")]
-        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
-        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        others = [_song("b"), _song("c"), _song("d")]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        others[2].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0)]
         model = writer.fit(rhythm.bass_units(others))
         s = _song(bars=8)                                            # eight bars, the same figure in each: one span of period 1
         s.chords = [Span(0.0, 32.0, 0, "", 1.0)]                      # one chord, so the song's own figures repeat exactly
         _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))
         self.assertEqual(len(set(figures)), 1)
-        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0, "k") for i in range(8) for x in ((0.0, 2.0) if i % 2 else (0.0, 1.0, 2.0, 3.0))]
-        _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))   # a two-bar pattern through the song
+        # a two-bar pattern through the song: four strikes (roots and fifths), then two (roots)
+        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0 if (i % 2 or x < 2) else 43.0, "k") for i in range(8) for x in ((0.0, 2.0) if i % 2 else (0.0, 1.0, 2.0, 3.0))]
+        _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))
         self.assertEqual(figures[0::2], [figures[0]] * 4)
         self.assertEqual(figures[1::2], [figures[1]] * 4)
         self.assertNotEqual(writer.rhythm_of(figures[0]), writer.rhythm_of(figures[1]))   # the pattern alternates
-        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0, "k") for i in range(8) for x in ((0.0, 2.0) if i >= 4 else (0.0, 1.0, 2.0, 3.0))]
+        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0 if (i >= 4 or x < 2) else 43.0, "k") for i in range(8) for x in ((0.0, 2.0) if i >= 4 else (0.0, 1.0, 2.0, 3.0))]
         _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))   # two spans of four bars: a change between them
         self.assertEqual(len(set(figures[:4])), 1)
         self.assertEqual(len(set(figures[4:])), 1)
