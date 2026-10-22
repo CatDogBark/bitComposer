@@ -463,6 +463,36 @@ sixty songs the development half and the second the held-out:
   leans on it.
 - **The drums:** the kit's presets named by their sound, 50 of 51.
 
+**The loop reader (2026-10-22).** Against the written loops of the
+independent decode, over the 1040 songs with a read grid
+(`~/diags/bitcomposer/idiom/loop_eval.py`): the same length in 70 %, 44
+songs two bars short, 22 missed outright. Two bars short (Snowman's Town,
+Lostside Marshes): a short run at a lag two bars under the loop's chained
+onto the loop's own full run and won the tie as the shorter lag; the
+chain's lag is now the lag its runs cover the most time at. Missed
+(Sardius): a driver's timer runs a hair off the clock, so a 45 s loop's
+second pass sits 30 ms off the first by its end and nothing matched
+within 15 ms; the match window grows by a part in 1400 of the lag. After:
+**the same length in 78 %**, two bars short 5, missed 7; the remaining
+"other length" (89) are mostly the sets dumped mid-song and the songs
+whose loop runs under four bars or whose reading ends before a second
+pass. The form marks: set 1 loops 12 of 12, part starts recall 0.79 and
+precision 0.80; set 2 loops 10 of 11 (Snakey Chantey, loose), recall 0.82
+and precision 0.69 (from 0.73 and 0.61); the ear checks unchanged.
+
+**The beat's joints (2026-10-22).** Where two sections sat on the same
+beat with a rest or a held note between them the beat list had a hole,
+two periods where one belongs (954 such joints over the games, and 24 of
+three periods), and the bar count broke there. A section's beats now run
+up to the next section's first beat where that sits a whole number of
+periods on: 954 to 30, 24 to 3, songs with no joint at all 577 to 700;
+the bar phase on the held-out half 77 % (a half bar off 8 %), the tapped
+beats 40 of 41 as before. The composer's jumps that land on no read beat
+are unchanged at 355 of 938 steady songs: the holes were never their
+cause (12 of 300). What is left there is the syncopated song whose beat
+locks a sixteenth off (The Decisive Battle) and the half-tempo grid on
+the off-beats, which this phase leaves open with its numbers.
+
 ## Exit criteria, with the tolerances proposed before scoring
 
 - **Tempo:** the read tempo equals the written one, or exactly twice or
