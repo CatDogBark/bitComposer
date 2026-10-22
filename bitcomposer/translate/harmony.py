@@ -17,9 +17,17 @@ bar where nothing tonal sounds carries the chord on, so a chord that stops
 and restarts is one chord. Each span's chord is the shape on the root
 fitting its pooled pitch classes best, a root the bass holds preferred; a
 span with no chordal voice sounding is an implied chord (stated False).
-The key is the major or minor profile (Krumhansl and Kessler's) the whole
-song's pitch classes (every tonal voice alike, weighted by part they
-skewed it: Locke's G major read as G minor) correlate with best."""
+The key: the scale (MODES, the generator's eight: the modes and the
+pentatonics) holding the most of the song's pitch-class mass (every tonal
+voice alike), the smallest where several hold as much (a pentatonic song
+fits its diatonic supersets as well); where the scale's set is shared by
+several modes (C major is D dorian), the tonic is the pitch class the
+song leans on: the bass's, the whole mass's, the root the chords hold
+longest, the first chord's and the last chord's, weighed by TONIC_WEIGHTS.
+On the generator's own songs (tools/known_answers.py) the major-or-minor
+profile correlation it replaces had the tonic and mode right in 38 %,
+and the parent key or its relative in 21 %. key() folds the scale to
+major or minor for what counts by mode."""
 import bisect
 import math
 from dataclasses import dataclass
@@ -35,8 +43,19 @@ SHAPES = {                           # intervals from the root
 # simpler chords first where two fit alike (a triad over its seventh, a fifth over its triad)
 PLAIN = {"": 1.0, "m": 1.0, "5": 0.9, "7": 0.92, "m7": 0.92, "maj7": 0.9, "dim": 0.9, "sus4": 0.88,
          "sus2": 0.86, "m7b5": 0.86, "aug": 0.84}
-MAJOR = (6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88)
-MINOR = (6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
+MODES = {                            # a scale's pitch classes from its tonic, as the generator names them
+    "major": (0, 2, 4, 5, 7, 9, 11), "mixolydian": (0, 2, 4, 5, 7, 9, 10), "dorian": (0, 2, 3, 5, 7, 9, 10),
+    "natural_minor": (0, 2, 3, 5, 7, 8, 10), "phrygian": (0, 1, 3, 5, 7, 8, 10), "harmonic_minor": (0, 2, 3, 5, 7, 8, 11),
+    "major_pentatonic": (0, 2, 4, 7, 9), "minor_pentatonic": (0, 3, 5, 7, 10),
+}
+MAJOR_MODES = {"major", "mixolydian", "major_pentatonic"}
+INSIDE = 0.02                        # a scale holding within this of the most mass holds as much
+PENTATONIC = 0.9                     # a pentatonic holding this much of the mass is the scale, its diatonic supersets
+                                     # notwithstanding (the generator's pentatonic songs hold 0.87 to 0.98 in theirs,
+                                     # its diatonic songs 0.76 in their best pentatonic subset, nine in ten under 0.89)
+TONIC_WEIGHTS = {"bass": 1.0, "first": 0.5}    # what the song leans on: the bass's pitch-class mass, the first chord
+                                     # (within the right set, the bass alone names the tonic in 45 of 60 of the
+                                     # generator's songs; the mass, the held roots and the last chord did worse)
 QUIET = 0.15                         # a beat with less sounding than this (summed loudness x share) has no chord
 SOUNDING = 0.2                       # a bar with tonal notes through less of it than this (in beats a beat) is quiet
 SET_SHARE = 0.15                     # a pitch class with this share of the chordal voices' sounding in a bar is in its set
@@ -202,23 +221,41 @@ def chords(song, grid, roles) -> list[Chord]:
     return out
 
 
-def key(song, grid, roles) -> tuple[int, str, float]:
-    """The key: (tonic pitch class, "major" or "minor", how well its profile correlates)."""
-    total = [0.0] * 12
+def scale(song, grid, roles, chords: list | None = None) -> tuple[int, str, float]:
+    """The key as a scale: (tonic pitch class, the scale's name in MODES, the
+    share of the song's pitch-class mass inside it)."""
+    mass = [0.0] * 12
     for pcs in profiles(song, grid, roles, by_part=False):
         for i, x in enumerate(pcs):
-            total[i] += x
-    best = (0, "major", -1.0)
-    for tonic in range(12):
-        for mode, prof in (("major", MAJOR), ("minor", MINOR)):
-            r = _corr(total, [prof[(i - tonic) % 12] for i in range(12)])
-            if r > best[2]:
-                best = (tonic, mode, r)
-    return best
+            mass[i] += x
+    total = sum(mass) or 1.0
+    mass = [x / total for x in mass]
+    fits = [(sum(mass[(tonic + i) % 12] for i in ivs), name, tonic) for name, ivs in MODES.items() for tonic in range(12)]
+    five = [x for x in fits if len(MODES[x[1]]) == 5]
+    pool = five if max(f for f, _, _ in five) >= PENTATONIC else [x for x in fits if len(MODES[x[1]]) == 7]
+    top = max(f for f, _, _ in pool)
+    near = [(f, name, tonic) for f, name, tonic in pool if f >= top - INSIDE]
+    if len(near) == 1:
+        f, name, tonic = near[0]
+        return tonic, name, f
+    # several modes of one set: the tonic the song leans on
+    if chords is None:
+        chords = globals()["chords"](song, grid, roles)
+    bass = {r.voice for r in roles if r.role == roles_mod.BASS}
+    bass_mass = [0.0] * 12
+    for p in song.notes:
+        if p.voice in bass and p.midi is not None and p.level > 0:
+            end = p.end if p.end is not None else p.start + 0.5
+            bass_mass[round(p.midi) % 12] += max(0.0, end - p.start)
+    if not any(bass_mass):
+        bass_mass = list(mass)                       # no bass voice: the whole mass stands in
+    first = next((c.root for c in chords if c.root is not None), None)
+    lean = [TONIC_WEIGHTS["bass"] * bass_mass[pc] / (sum(bass_mass) or 1.0) + TONIC_WEIGHTS["first"] * (pc == first) for pc in range(12)]
+    f, name, tonic = max(near, key=lambda x: (lean[x[2]], x[0]))
+    return tonic, name, f
 
 
-def _corr(x, y) -> float:
-    mx, my = sum(x) / 12, sum(y) / 12
-    sx = math.sqrt(sum((a - mx) ** 2 for a in x))
-    sy = math.sqrt(sum((b - my) ** 2 for b in y))
-    return sum((a - mx) * (b - my) for a, b in zip(x, y)) / (sx * sy) if sx and sy else 0.0
+def key(song, grid, roles, chords: list | None = None) -> tuple[int, str, float]:
+    """The key: (tonic pitch class, "major" or "minor", how well the scale holds the song's notes)."""
+    tonic, name, fit = scale(song, grid, roles, chords)
+    return tonic, "major" if name in MAJOR_MODES else "minor", fit

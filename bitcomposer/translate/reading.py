@@ -20,6 +20,7 @@ class Reading:
     grid: beat.Grid | None           # None: free time
     roles: list = field(default_factory=list)
     key: tuple | None = None         # (tonic pitch class, "major"/"minor", fit)
+    scale: tuple | None = None       # (tonic pitch class, the scale's name in harmony.MODES, fit)
     chords: list = field(default_factory=list)
     form: form_mod.Form | None = None   # its parts and loop
     measures: dict = field(default_factory=dict)   # the yardsticks it shares with the generator's songs
@@ -64,8 +65,9 @@ def read(snap, seconds: float | None = None, song: events.Song | None = None) ->
                 m.get("game") or t.game or folder, t.title or "", m.get("composer") or t.artist or "",
                 m.get("driver"), song, grid, roles)
     if grid:
-        r.key = harmony.key(song, grid, roles)
         r.chords = harmony.chords(song, grid, roles)
+        r.scale = harmony.scale(song, grid, roles, r.chords)       # (tonic, the scale's name, fit)
+        r.key = (r.scale[0], "major" if r.scale[1] in harmony.MAJOR_MODES else "minor", r.scale[2])
         r.form = form_mod.read(song, grid)
         score = measures_mod.of_reading(r)
         r.measures = measures_mod.measure(score) if score else {}

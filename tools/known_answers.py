@@ -78,7 +78,8 @@ def read(song: dict):
     like = _Song(notes, s.end * 60 / s.bpm)
     grid = _Grid(max(1, math.ceil(s.end)), list(s.bars))
     rl = R.assign(like, grid, R.echoes(like))
-    return like, grid, rl, harmony.key(like, grid, rl), harmony.chords(like, grid, rl), form_mod.read(like, grid)
+    chords = harmony.chords(like, grid, rl)
+    return like, grid, rl, harmony.scale(like, grid, rl, chords), chords, form_mod.read(like, grid)
 
 
 def truth_chords(song: dict) -> list:
@@ -102,7 +103,7 @@ def main(argv=None) -> int:
     ap.add_argument("--songs", type=int, default=120)
     ap.add_argument("--seed", type=int, default=1)
     a = ap.parse_args(argv)
-    key_kinds = Counter(); key_by_scale = defaultdict(Counter)
+    key_kinds = Counter(); key_by_scale = defaultdict(Counter); scale_hits = Counter(); key_by_move = defaultdict(Counter)
     chord_beats = Counter(); change_hits = Counter(); form_hits = Counter(); parts = Counter(); drum_hits = Counter()
     scales, keys = Counter(), Counter()
     misses = defaultdict(list)
@@ -112,9 +113,12 @@ def main(argv=None) -> int:
                             harmony_mode=("stabs", "sustain", "rhythmic")[i % 3], bass_weight=("heavy", "medium", "light")[(i // 3) % 3])
         info = song["info"]
         scales[info["scale"]] += 1; keys[info["key"]] += 1
-        like, grid, rl, (tonic, mode, _), chords, form = read(song)
+        like, grid, rl, (tonic, scale_name, _), chords, form = read(song)
+        mode = "major" if scale_name in harmony.MAJOR_MODES else "minor"
         # the key
         t_tonic = theory.NOTE_NAMES.index(info["key"]); t_mode = "minor" if info["scale"] in against.MINOR else "major"
+        scale_hits["songs"] += 1; scale_hits["scale and tonic right"] += (tonic, scale_name) == (t_tonic, info["scale"])
+        scale_hits["scale right"] += scale_name == info["scale"]
         if (tonic, mode) == (t_tonic, t_mode):
             kind = "right"
         else:
@@ -122,8 +126,10 @@ def main(argv=None) -> int:
             relative = {(parent, "major"), ((parent + 9) % 12, "minor")}
             kind = "parent or relative" if (tonic, mode) in relative else "tonic right, mode wrong" if tonic == t_tonic else "other"
         key_kinds[kind] += 1; key_by_scale[info["scale"]][kind] += 1
+        moves = info.get("chorus_modulated") or any(v[0] for v in info.get("key_plan", {}).values())
+        key_by_move["modulating" if moves else "one key"][kind] += 1
         if kind != "right":
-            misses["key"].append(f"seed {seed} {info['key']} {info['scale']} read {theory.NOTE_NAMES[tonic]} {mode} ({kind})")
+            misses["key"].append(f"seed {seed} {info['key']} {info['scale']} read {theory.NOTE_NAMES[tonic]} {scale_name} ({kind})")
         # the chords, beat by beat
         truth = truth_chords(song)
         read_at = {}
@@ -184,7 +190,10 @@ def main(argv=None) -> int:
                 misses["drums"].append(f"{preset} ({piece}) named {got}")
     n = sum(key_kinds.values())
     print(f"{n} songs, seeds {a.seed} to {a.seed + a.songs - 1}; scales {dict(scales)}; keys {len(keys)} of 12")
-    print(f"\nthe key: " + ", ".join(f"{k} {v} ({100 * v / n:.0f} %)" for k, v in key_kinds.most_common()))
+    print(f"\nthe key (tonic and major/minor): " + ", ".join(f"{k} {v} ({100 * v / n:.0f} %)" for k, v in key_kinds.most_common()))
+    print(f"the scale by name: tonic and scale right in {scale_hits['scale and tonic right']} ({100 * scale_hits['scale and tonic right'] / n:.0f} %), the scale alone right in {scale_hits['scale right']} ({100 * scale_hits['scale right'] / n:.0f} %)")
+    for mv, c in sorted(key_by_move.items()):
+        t = sum(c.values()); print(f"    {mv:17s} {t:3d}: right {100 * c['right'] / t:3.0f} %, parent or relative {100 * c['parent or relative'] / t:3.0f} %, other {100 * c['other'] / t:3.0f} %")
     for sc, c in sorted(key_by_scale.items()):
         t = sum(c.values()); print(f"    {sc:17s} {t:3d}: right {100 * c['right'] / t:3.0f} %, parent or relative {100 * c['parent or relative'] / t:3.0f} %, mode wrong {100 * c['tonic right, mode wrong'] / t:3.0f} %, other {100 * c['other'] / t:3.0f} %")
     cb = chord_beats
