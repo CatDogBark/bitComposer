@@ -783,6 +783,24 @@ to the sample the song strikes most. A hit now takes the sample the
 song uses most at its position in the bar, the piece's usual where the
 song never strikes that position (`choice` in `write_drums`); The
 Decisive Battle's hat and snare (two samples each) choose the same way.
+
+**Searching for Friends' drums belong** (the listener, 2026-10-22).
+Johnny C. Bad's drums, nearly: "at 29 s the song calls on the drums for
+a fill and ours just keep doing their thing." The stems agree in level
+and density; what differs is the kind of bar. Johnny's stop-time leaves
+holes where nothing but the drums sounds (29.5 to 30.0 s, 31.5 to 32.0,
+34.0 to 34.5), and the original drummer answers each: a roll of triplet
+sixteenths at 30 s (11 strikes), a dense triplet roll after it, swing
+figures on. The written drums played straight eighths and the plain
+swing pattern there, within every rule (the envelope allowed 6 to 16
+strikes, the positions are the song's) and deaf to the hole, as the
+bass was at Decisive's 18 s; the moment rule missed it because the
+stop-time is a ten-bar section at low energy, not a two-bar drop. Now a
+bar holding a stop beat (no voice but the part's sounds in it) that the
+song's own part plays through keeps the song's own bar (`harness.stops`,
+on the detection `locks` already had): Johnny's drums answer in bars 0
+and 13 to 19. For the generator, the arrangement table's row: what a
+part does when the band stops (fill, hit, keep time, rest), per game.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
