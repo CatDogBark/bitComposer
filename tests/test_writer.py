@@ -26,8 +26,15 @@ class WriterTests(unittest.TestCase):
     def test_realize(self):
         s = _song()
         notes, root, last = writer.realize("0:R 1/2:r 1:5 2:3 3:+", 0.0, 4.0, s, 36, 0.5, {0, 2, 4, 5, 7, 9, 11}, 0)
+        # the passing tone at the end steps on from E (40) in the line's falling direction: D (38)
         self.assertEqual([(a, b, m) for a, b, m in notes], [(0.0, 0.25, 36.0), (0.5, 0.75, 48.0), (1.0, 1.5, 43.0), (2.0, 2.5, 40.0), (3.0, 3.5, 38.0)])
         self.assertEqual((root, last), (0, 38.0))
+        notes, _, _ = writer.realize("0:R 1:+ 2:3", 0.0, 4.0, s, 36, 1.0, {0, 2, 4, 5, 7, 9, 11}, 0)
+        self.assertEqual([m for _, _, m in notes], [36.0, 38.0, 40.0])    # C, then a step toward E: D, then E
+        notes, _, _ = writer.realize("0:5 1:+ 2:3", 0.0, 4.0, s, 36, 1.0, {0, 2, 4, 5, 7, 9, 11}, 0)
+        self.assertEqual([m for _, _, m in notes], [43.0, 41.0, 40.0])    # G, then a step down toward E: F, then E
+        notes, _, _ = writer.realize("0:+ 1:R", 0.0, 4.0, s, 36, 1.0, {0, 2, 4, 5, 7, 9, 11}, 0)
+        self.assertEqual([m for _, _, m in notes], [38.0, 36.0])          # nothing before: the step above the root
         notes, root, last = writer.realize("0:R 2:7", 8.0, 12.0, s, 36, 1.0, set(), 0, 38.0)   # the G minor seventh bar
         self.assertEqual([m for _, _, m in notes], [43.0, 41.0])
         self.assertEqual((root, last), (7, 41.0))
@@ -152,6 +159,7 @@ class WriterTests(unittest.TestCase):
         roots.notes["bass"] = [(4.0 * i + x, 0.4, 36.0, "k") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]   # roots only, a pedal song
         m = writer.Manner(roots, "bass", known)
         self.assertEqual((m.octaves, m.tones, m.anchors, m.roots, m.pedal), (False, (1, 1), (1.0, 1.0), (1.0, 1.0), True))
+        self.assertEqual(m.marks, {"R"})                               # the song plays roots and nothing else
         self.assertTrue(m.fits("0:R 1:R 2:R 3:R"))
         self.assertFalse(m.fits("0:5 1:5 2:5 3:5"))                 # a pedal on the fifth in a song of roots
         self.assertFalse(m.fits("0:R 1:R 2:3 3:5"))                 # three tones in a one-tone song
@@ -162,6 +170,8 @@ class WriterTests(unittest.TestCase):
         walking.notes["bass"] = [(4.0 * i + x, 0.4, m_, "k") for i in range(8) for x, m_ in ((0.0, 36.0), (1.0, 38.0), (2.0, 43.0), (3.0, 41.0))]   # R + 5 +
         m = writer.Manner(walking, "bass", known)
         self.assertEqual((m.tones, m.anchors, m.roots, m.pedal), ((3, 3), (0.5, 0.5), (0.25, 0.25), False))
+        self.assertEqual(m.marks, {"R", "5", "+"})
+        self.assertFalse(m.fits("0:R 1:s 2:5 3:+"))                  # a sus tone the song never plays
         self.assertTrue(m.fits("0:R 1:+ 2:5 3:+"))
         self.assertFalse(m.fits("0:5 1:5 2:5 3:5"))                  # a pedal in a walking song
         self.assertFalse(m.fits("0:R 1:R 2:R 3:R"))                  # one tone, all anchors

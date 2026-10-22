@@ -49,16 +49,26 @@ new span is a change, by construction), held through the span; where
 the song's own span repeats its
 figures exactly, the pattern repeats exactly, and where only the rhythm
 repeats, each bar is drawn anew with the pattern's rhythm, so the tones
-move. A bar in no span is drawn on its own. The bars the song's own bass
+move, except that a bar on a chord an earlier bar of the span had takes
+that bar's figure again with REUSE's chance (the readings' basses repeat
+their figure on a repeated chord inside a span 53 % of the time walking,
+59 % root-fifth, 73 % roots). A bar in no span is drawn on its own. A
+new figure uses only the marks the song's own bass uses in RARE of its
+notes or more (The Decisive Battle came back with sus tones it plays
+once). The bars the song's own bass
 rests through are left silent and never drawn for (the arrangement stays
 the song's: which bars the bass plays is the arrangement table's, not
 this one's), and a playing bar never draws a rest. Each token becomes a
 note:
 its pitch the chord tone its mark names in the chord sounding at its
 onset (R the root, r the root an octave up, 3 5 7 the chord's own, s the
-sus tone, + a passing tone: the key's scale step above the root, or the
-step below where the scale has none, ? the root; no chord fitting, the
-last root, or the tonic), in the octave nearest the note before it
+sus tone, ? the root; no chord fitting, the last root, or the tonic),
+in the octave nearest the note before it; a passing tone (+) passes: a
+scale step from the note before toward the next note of the bar, or on
+in the line's direction (over the readings' basses a passing tone is a
+step from its neighbour far more often than the second over the root,
+which is where the first writer put every one), the key's step above the
+root with no note before;
 within the song's own bass register (from the lowest tenth of its bass
 notes up to REACH above it, the first note lowest), so a walking line
 walks (placed in a fixed octave, Locke's leapt by thirds and fifths
@@ -89,6 +99,8 @@ ROOTS = {"R", "r"}
 MARGIN = 0.15                         # how far a figure's anchor share may stray outside the song's own bars' range
 PEDAL = 4                             # strikes: a bar on one tone this long is a pedal
 PEDAL_SHARE = 0.25                    # the song's own bars of PEDAL strikes or more that are pedals, for a new one to be
+RARE = 0.02                           # a mark under this share of the song's own notes is not the song's: a new figure leaves it out
+REUSE = {"walking": 0.53, "root-fifth": 0.59, "roots": 0.73}   # the chance a bar on a chord its span had takes that bar's figure
 PERIODS = (1, 2, 4)                   # bars: the periods a span may repeat with
 EARLIER = 0.35                        # a new span's chance of taking a pattern an earlier span had (the readings' basses, by rhythm)
 TRIES = 40                            # draws before the writer gives up on a constraint
@@ -136,6 +148,9 @@ class Manner:
         self.roots = (min(shares), max(shares)) if shares else (0.0, 1.0)
         long = [m for m in marks if len(m) >= PEDAL]
         self.pedal = not long or sum(1 for m in long if len(set(m)) == 1) / len(long) >= PEDAL_SHARE
+        counts = Counter(x for m in marks for x in m)
+        total = sum(counts.values())
+        self.marks = ({x for x, c in counts.items() if c / total >= RARE} | {"R"}) if total else {"R", "r", "3", "5", "7", "s", "+", "?"}
 
     def fits(self, figure: str) -> bool:
         """Whether a new figure is in the song's manner (the module): a bar some
@@ -149,6 +164,8 @@ class Manner:
         if not all(p.denominator in self.feel for p in positions):
             return False
         if not self.octaves and "r" in marks:
+            return False
+        if any(m not in self.marks for m in marks):
             return False
         distinct = len(set(marks))
         if len(marks) >= 2 and not (self.tones[0] <= distinct <= self.tones[1]):
@@ -245,6 +262,13 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         return nearly or fallback
 
     figures, patterns = [REST] * len(bars), []
+    words = habit.split()
+    reuse = REUSE.get(words[1] if len(words) > 1 else "", 0.5)
+
+    def chord_at(k):
+        c = rhythm._chord_at(song.chords, bars[k][0])
+        return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
+
     for start, length, period in spans([rhythm_of(f) for f in own]):
         if length == 1:
             if own[start] != REST:
@@ -265,17 +289,23 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 pattern.append(draw(envelope(own[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k]))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
+        seen = {}                                           # the span's chords -> the figure written on each
         for i in range(length):
             base = pattern[i % len(pattern)]
+            chord = chord_at(start + i)
             if own[start + i] == REST:
                 figure = REST
             elif exact:
                 figure = base
+            elif chord is not None and chord in seen and rhythm_of(seen[chord]) == rhythm_of(base) and rng.random() < reuse:
+                figure = seen[chord]                        # the same chord again: the same figure, as the readings' basses do
             else:
                 want = rhythm_of(base)
                 figure = draw(envelope(own[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=base)
                 if rhythm_of(figure) != want:
                     figure = base
+            if chord is not None and figure != REST:
+                seen.setdefault(chord, figure)
             figures[start + i] = figure
             if figure != REST:
                 state["played"][figure] += 1
@@ -300,23 +330,54 @@ def place(pc: int, low: int, previous: float | None, octave_up: bool = False) ->
     return min(options, key=lambda m: (abs(m - previous), m))
 
 
+def passing(previous: float | None, toward: int | None, scale: set, low: int, root: int) -> int:
+    """A passing tone: a scale step from the note before, toward the next
+    note where there is one (a semitone where the scale has no step that
+    way), else on in the line's last direction; the step above the root
+    where nothing came before."""
+    if previous is None:
+        return place(tone(root, "", "+", scale), low, None)
+    direction = 1 if toward is None or toward >= previous else -1
+    for d in (1, 2):
+        m = round(previous) + direction * d
+        if m % 12 in scale:
+            return m
+    return round(previous) + direction
+
+
 def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds: float, scale: set,
             last_root: int, previous: float | None = None) -> tuple[list, int, float | None]:
     """A figure's tokens as notes in the bar [a, b) (see the module); returns
     them, the last chord root used and the last note's midi."""
     tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
-    out = []
+    chords = []
+    for p, _ in tokens:
+        c = rhythm._chord_at(song.chords, a + float(p))
+        if c is not None and c.root is not None and c.fit >= FIT:
+            last_root, shape = c.root, c.shape
+        else:
+            shape = ""
+        chords.append((last_root, shape))
+    out, direction = [], 1
     for i, (p, mark) in enumerate(tokens):
         start = a + float(p)
         until = a + float(tokens[i + 1][0]) if i + 1 < len(tokens) else b
         if until <= start:
             continue
-        c = rhythm._chord_at(song.chords, start)
-        if c is not None and c.root is not None and c.fit >= FIT:
-            last_root, shape = c.root, c.shape
+        root, shape = chords[i]
+        if mark == "+":
+            toward = None
+            for j in range(i + 1, len(tokens)):                 # the next note of the bar that is not itself passing
+                if tokens[j][1] != "+":
+                    toward = place(tone(chords[j][0], chords[j][1], tokens[j][1], scale), low, previous, tokens[j][1] == "r")
+                    break
+            if toward is None and previous is not None:
+                toward = round(previous) + direction * 2
+            midi = passing(previous, toward, scale, low, root)
         else:
-            shape = ""
-        midi = place(tone(last_root, shape, mark, scale), low, previous, mark == "r")
+            midi = place(tone(root, shape, mark, scale), low, previous, mark == "r")
+        if previous is not None and midi != previous:
+            direction = 1 if midi > previous else -1
         out.append((start, start + (until - start) * sounds, float(midi)))
         previous = float(midi)
     return out, last_root, previous
