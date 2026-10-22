@@ -23,10 +23,15 @@ sixteenth pickup was the listener's "burst" and a bar with nothing on
 the one his "skip"); and in the song's tones as much as its rhythm: no
 octave-up roots where the song plays none, as many different tones in a
 bar as the song's own bars have (Terra's one, Locke's one to four), the
-roots and fifths' share of a bar within the song's own bars' range (by
-MARGIN), and a bar on one tone struck PEDAL times or more only where
-PEDAL_SHARE of the song's own such bars are (Locke's walking bass came
-back as sixteen fifths in a row).
+roots' share of a bar and the roots and fifths' share each within the
+song's own bars' range (by MARGIN; Terra's third span came back as a
+pedal on the fifth under a bass that plays nothing but roots), and a bar
+on one tone struck PEDAL times or more only where PEDAL_SHARE of the
+song's own such bars are (Locke's walking bass came back as sixteen
+fifths in a row). Where the song's own bass changes its rhythm bar to
+bar (a bar in no span), the written bar changes its rhythm from the one
+before too, since the song's mixture would otherwise bring one figure
+back again and again.
 
 A bass holds its figures over spans and changes with the music, which a
 bar drawn at a time cannot do (the listener: "no section awareness, no
@@ -74,6 +79,7 @@ LOW = 0.1                             # the register's floor: this quantile of t
 SLACK = 1                             # strikes: how far outside the middle half of the song's own bars a new figure may be
 DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
 ANCHORS = {"R", "r", "5"}             # the marks that anchor a bar: roots and fifths
+ROOTS = {"R", "r"}
 MARGIN = 0.15                         # how far a figure's anchor share may stray outside the song's own bars' range
 PEDAL = 4                             # strikes: a bar on one tone this long is a pedal
 PEDAL_SHARE = 0.25                    # the song's own bars of PEDAL strikes or more that are pedals, for a new one to be
@@ -101,7 +107,8 @@ class Manner:
     figure must strike the downbeat, the subdivisions of the beat it may
     use (feel), and its tones: whether it plays octave-up roots, how many
     different tones a bar (tones), the share of a bar's strikes on roots
-    and fifths (anchors), and whether a bar may sit on one tone (pedal)."""
+    (roots) and on roots and fifths (anchors), and whether a bar may sit
+    on one tone (pedal)."""
 
     def __init__(self, song: rhythm.Song, role: str, known: set, figure_of=None):
         self.known = known
@@ -119,6 +126,8 @@ class Manner:
         self.tones = (min(len(set(m)) for m in full), max(len(set(m)) for m in full)) if full else (1, 4)
         shares = [sum(1 for x in m if x in ANCHORS) / len(m) for m in full]
         self.anchors = (min(shares), max(shares)) if shares else (0.0, 1.0)
+        shares = [sum(1 for x in m if x in ROOTS) / len(m) for m in full]
+        self.roots = (min(shares), max(shares)) if shares else (0.0, 1.0)
         long = [m for m in marks if len(m) >= PEDAL]
         self.pedal = not long or sum(1 for m in long if len(set(m)) == 1) / len(long) >= PEDAL_SHARE
 
@@ -137,9 +146,10 @@ class Manner:
         distinct = len(set(marks))
         if len(marks) >= 2 and not (self.tones[0] <= distinct <= self.tones[1]):
             return False
-        share = sum(1 for m in marks if m in ANCHORS) / len(marks)
-        if len(marks) >= 2 and not (self.anchors[0] - MARGIN <= share <= self.anchors[1] + MARGIN):
-            return False
+        for which, span in ((ANCHORS, self.anchors), (ROOTS, self.roots)):
+            share = sum(1 for m in marks if m in which) / len(marks)
+            if len(marks) >= 2 and not (span[0] - MARGIN <= share <= span[1] + MARGIN):
+                return False
         return self.pedal or len(marks) < PEDAL or distinct > 1
 
 
@@ -212,7 +222,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     for start, length, period in spans([rhythm_of(f) for f in own]):
         if length == 1:
             if own[start] != REST:
-                figures[start] = draw()
+                last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
+                figures[start] = draw(keep=lambda f: manner.fits(f) and rhythm_of(f) != last)
                 state["played"][figures[start]] += 1
             state["previous"] = figures[start]
             continue
