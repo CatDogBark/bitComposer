@@ -599,6 +599,30 @@ Decisive Battle. The page and `~/Music/bitComposer-dev/Table bass/` hold
 those four. **Known limitation:** a song with a second bass-register
 part under the bass role (93 of 1,314 songs) keeps that part as it is
 while the line is rewritten; the arrangement item owns it.
+
+The Decisive Battle, the listener: "walking all over, doesn't conform
+to the structure of the piece, free spirited; it recognizes the walking
+style, it just doesn't know how to construct one." Its own bass is not a
+walk: a syncopated riff (strikes at the and-a before beats one and
+three) that repeats, labelled walking by its marks. Measured over the
+readings' basses (`walking.py`): a passing tone (a note the chord reader
+calls no chord tone) is a step from both neighbours in 24 % of cases and
+from neither in 40 % (the marks are noisy: a fifth of all bass onsets
+read as "other"); a bar's last note reaches the next bar's first by step
+29 % of the time in walking songs; bars on the same chord inside a span
+repeat their figure 53 % (walking), 59 % (root-fifth), 73 % (roots).
+The writer had realized every passing tone as the second over the root
+and every tone in isolation. Now: a passing tone passes, a scale step
+from the note before toward the next note of the bar or on in the line's
+direction (`writer.passing`); a new figure uses only the marks the song's
+own bass uses in RARE (2 %) of its notes; a bar on a chord its span
+already had takes that bar's figure again with the measured chance
+(REUSE); and the feel is the positions the song's bass strikes in RARE
+of its strikes, not their subdivisions. The Decisive Battle's figures
+came out the same (its bass does strike the and of two and use sus
+tones, just over the thresholds), its realization smoother; whether the
+rhythm vocabulary must weigh the song's frequent positions, not only
+its struck ones, waits on the ear.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
