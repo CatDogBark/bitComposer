@@ -225,6 +225,8 @@ class Score:
     decoder has it; beats are a reading."""
     notes: list                       # notes.Note, the notes that sound
     seconds: float                    # the song's length, as it is rendered
+    voices: int                       # the voices the notes are on (0 to voices - 1): the SNES chip's eight for a
+                                      # snapshot, the arrangement's for a generated song
     master: list                      # (time, left, right): the master volume through the song
     fade: float = 0.0                 # seconds the song fades over at its end, as a player fades a loop
     title: str = "SPC"
@@ -238,6 +240,7 @@ class Score:
     snap: object = None               # the snapshot, where there is one: the samples' RAM, pitch modulation's recording
     pcm_of: dict = field(default_factory=dict)   # a sample's addresses -> a brr.Sample, for a score with no snapshot
     key_of: dict = field(default_factory=dict)   # and -> its name across songs (the readers' sample key)
+    message: list | None = None       # the module's message, its first lines; None: a converted snapshot's
 
 
 class _Master:
@@ -351,7 +354,7 @@ def score_of(snap, seconds: float | None = None, fade: float = 0.0) -> Score:
     on_ticks = aligned >= ALIGNED and 0 < hz <= MAX_TICK_RATE and _keeps_pace(hz, run.seconds)
     tempo, row_hz = it_song.tempo_for(hz if on_ticks else FINE_GRID)
     t = snap.tags
-    return Score(found, run.seconds, notes_mod.master_volume(snap, run.writes), fade,
+    return Score(found, run.seconds, 8, notes_mod.master_volume(snap, run.writes), fade,
                  t.title or "SPC", t.game or "", t.artist or "", row_hz, tempo, hz, aligned, on_ticks, snap)
 
 
@@ -371,13 +374,16 @@ def render(score: Score, path: str | None = None) -> dict:
     placed, repeats, baked = _place_notes(song, grid)
     _master_channel(song, grid, channels - 1, score.fade)
 
-    message = "\r".join([
+    head = score.message or [
         f"{score.title}{' - ' + score.game if score.game else ''}{' - ' + score.artist if score.artist else ''}",
         "Converted from an SPC snapshot by bitComposer: the game's own samples and the notes its",
         "driver played, one to one, the echo as repeats on channels of their own,",
         "pitch-modulated notes as the emulator played them.",
+    ]
+    message = "\r".join(head + [
         (f"rows on the driver's clock, {score.tick_hz:.2f} Hz" if score.on_ticks else
-         f"rows at {score.row_hz:.0f} a second (the driver's key-ons do not sit on a tick IT can run)") + f"; {placed} notes ({baked} pitch-modulated), {repeats} echo repeats",
+         f"rows at {score.row_hz:.0f} a second" + ("" if score.snap is None else " (the driver's key-ons do not sit on a tick IT can run)"))
+        + f"; {placed} notes ({baked} pitch-modulated), {repeats} echo repeats",
     ])
     samples, instruments = song.samples, song.instruments
     out = {"name": score.title[:25], "samples": samples, "patterns": grid.patterns,
@@ -504,12 +510,13 @@ def _bake_pitch_modulation(song: _Song, seconds: float) -> None:
 
 
 def _plan_echo(song: _Song) -> int:
-    """The channels: the eight voices; for each voice that sends to the echo,
+    """The channels: the voices; for each voice that sends to the echo,
     its repeats, as many as the echo needs to fall to QUIET (a strong
     feedback rings for seconds: FFVI's Dark World, 0.78 at 80 ms, for about
     1.1 s) within IT's 64 channels; the master volume last. Returns how
     many."""
     sending = sorted({n.voice for n in song.notes if _sends(n) or _sends_at_once(n)})
+    voices = song.score.voices
     taps = 0
     if sending:
         needed = 1                       # an echo of delay 0 is one copy, on the first
@@ -522,10 +529,10 @@ def _plan_echo(song: _Song) -> int:
                 while k < TAPS and ev * peak * loop ** (k - 1) >= QUIET:
                     k += 1
             needed = max(needed, k)
-        taps = max(1, min(TAPS, needed, (MAX_CHANNELS - 9) // len(sending)))
+        taps = max(1, min(TAPS, needed, (MAX_CHANNELS - voices - 1) // len(sending)))
     song.taps = taps
-    song.echo_channels = {v: [8 + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
-    return 8 + len(sending) * taps + 1
+    song.echo_channels = {v: [voices + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
+    return voices + len(sending) * taps + 1
 
 
 def _add_echo_copies(song: _Song) -> None:
