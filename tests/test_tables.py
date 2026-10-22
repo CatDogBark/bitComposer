@@ -344,3 +344,26 @@ class CacheTests(unittest.TestCase):
         cs = tables.compare(us + [Unit("s4", "Chrono Trigger", "x", {"part": "bass", "habit": "h"})] * 3, [("part",)], cache=True)
         self.assertEqual({c.shape for c in cs}, {("part",), ("part", tables.CACHE)})
         self.assertIn("part+cache", tables.report(cs))
+
+
+class VoicingUnitTests(unittest.TestCase):
+    def test_voicing_and_width_units(self):
+        chords = [Span(0.0, 4.0, 0, "", 1.0), Span(4.0, 8.0, 7, "m", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1])
+        s.notes["bass"] = [(0.0, 4.0, 36.0, "k"), (4.0, 4.0, 43.0, "k")]                       # C under C; G under Gm
+        s.notes["harmony"] = [(0.0, 4.0, 64.0, "k"), (0.0, 4.0, 67.0, "k"), (4.0, 4.0, 70.0, "k"), (4.0, 4.0, 74.0, "k")]   # E G; Bb D
+        s.notes["accompaniment"] = [(0.0, 4.0, 48.0, "k"), (4.0, 4.0, 55.0, "k")]                # C; G
+        us = rhythm.voicing_units([s])
+        by = {(u.values["part"], u.values["shape"]): u for u in us}
+        self.assertEqual(by[("harmony", "major")].outcome, "3 5")
+        self.assertEqual(by[("harmony", "m")].outcome, "3 5")
+        self.assertEqual(by[("accompaniment", "major")].outcome, "R")
+        self.assertEqual(by[("harmony", "m")].values["previous"], "3 5")
+        self.assertEqual(by[("harmony", "major")].values["bass"], "R")
+        self.assertEqual(by[("harmony", "major")].values["width"], "wide")            # 48 to 67: 19 semitones
+        self.assertIn(by[("harmony", "major")].values["habit"], ("thin", "full", "rich"))
+        ws = rhythm.width_units([s])
+        self.assertEqual([w.outcome for w in ws], ["3:wide", "3:wide"])
+        self.assertEqual(ws[0].values["parts"], "ha")
+        self.assertEqual(ws[1].values["previous"], "3:wide")
+        self.assertEqual([rhythm.width_of(x) for x in (0, 7, 8, 14, 15)], ["close", "close", "open", "open", "wide"])

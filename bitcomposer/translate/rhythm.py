@@ -75,7 +75,8 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 
 from . import drums as drums_mod, roles as R, store, tables
-from .vocab import FIT, Span, _beats_at, _median, _pct, tone_of
+from .vocab import FIT, MARKS, SOUNDS, Span, _beats_at, _buckets, _median, _pct, _sounding, tone_of
+from .vocab import TONES as CHORD_TONES
 
 NEAR = 0.06                          # beats: onsets this close are one, and this close to an eighth is on it
 PARTS = (R.BASS, R.HARMONY, R.ACCOMP, R.ARP, R.COUNTER, R.MELODY, R.DRUMS)
@@ -459,6 +460,93 @@ def drum_habit_units(songs) -> list:
 
 
 DRUM_GROUPS = (("K", "S", "t"), ("h",), ("c",), ("o",))   # the kit's limbs: kick, snare and tom together; the hat; cymbals; the rest
+UPPER = (R.HARMONY, R.ACCOMP, R.ARP)   # the parts whose tones voice a chord over the bass
+WIDTHS = ((7, "close"), (14, "open"), (1e9, "wide"))   # semitones from the lowest upper note to the highest
+
+
+def width_of(semitones: float) -> str:
+    return next(name for top, name in WIDTHS if semitones <= top)
+
+
+def voicing_units(songs) -> list:
+    """Each chord span of each song, for each upper part sounding in it, as a
+    table's unit: its outcome the chord tones the part holds in the span
+    (vocab's marks, R 3 s 5 7 +, in order; a tone sounds when the part's
+    notes on it cover SOUNDS of the span); its values the part, the chord's
+    shape, the tone the bass holds under it (its lowest sounding tone, or
+    none), the width of the whole upper voicing in the span (WIDTHS), the
+    part's tones in the span before (START at its first), and the song's
+    habit for the part (how many tones it holds a span, in thirds of the
+    readings' range: thin, full, rich)."""
+    out = []
+    for s in songs:
+        buckets = {role: _buckets([(a, b, m) for a, b, m, _ in ns]) for role, ns in s.notes.items()}
+        if not any(role in buckets for role in UPPER):
+            continue
+        previous = {role: START for role in UPPER}
+        mine = {role: [] for role in UPPER}
+        for c in s.chords:
+            if c.root is None or c.fit < FIT:
+                continue
+            shape = c.shape or "major"
+            bass = "none"
+            if R.BASS in buckets:
+                low = [m for m, share in _sounding(buckets[R.BASS], c).items() if share >= SOUNDS - 1e-9]
+                if low:
+                    bass = MARKS[tone_of(min(low) % 12, c.root, c.shape)]
+            upper = [m for role in UPPER if role in buckets for m, share in _sounding(buckets[role], c).items() if share >= SOUNDS - 1e-9]
+            width = width_of(max(upper) - min(upper)) if upper else "none"
+            for role in UPPER:
+                if role not in buckets:
+                    continue
+                pitches = [m for m, share in _sounding(buckets[role], c).items() if share >= SOUNDS - 1e-9]
+                if not pitches:
+                    continue
+                tones = {tone_of(m % 12, c.root, c.shape) for m in pitches}
+                held = " ".join(MARKS[t] for t in CHORD_TONES if t in tones)
+                mine[role].append(tables.Unit(s.sid, s.game, held, {
+                    "part": role, "shape": shape, "bass": bass, "width": width, "previous": previous[role],
+                    "count": min(4, len(tones))}))
+                previous[role] = held
+        for role, units_ in mine.items():
+            if units_:
+                _give_habit(units_, habit_of(statistics.mean(u.values["count"] for u in units_) / 4, RICHNESS))
+                out += units_
+    return out
+
+
+RICHNESS = ((0.4, "thin"), (0.6, "full"), (2, "rich"))   # a part's mean tones a span, over four
+
+
+def width_units(songs) -> list:
+    """Each chord span as a unit: its outcome how the upper parts voice the
+    chord as a whole, the number of distinct pitches sounding (to 6) and
+    the width (WIDTHS); its values the shape, the parts present, the bass's
+    tone, and the voicing before."""
+    out = []
+    for s in songs:
+        buckets = {role: _buckets([(a, b, m) for a, b, m, _ in ns]) for role, ns in s.notes.items()}
+        parts = "".join(role[0] for role in UPPER if role in buckets)
+        if not parts:
+            continue
+        previous = START
+        for c in s.chords:
+            if c.root is None or c.fit < FIT:
+                continue
+            upper = sorted({m for role in UPPER if role in buckets for m, share in _sounding(buckets[role], c).items() if share >= SOUNDS - 1e-9})
+            if not upper:
+                continue
+            bass = "none"
+            if R.BASS in buckets:
+                low = [m for m, share in _sounding(buckets[R.BASS], c).items() if share >= SOUNDS - 1e-9]
+                if low:
+                    bass = MARKS[tone_of(min(low) % 12, c.root, c.shape)]
+            voicing = f"{min(6, len(upper))}:{width_of(upper[-1] - upper[0])}"
+            out.append(tables.Unit(s.sid, s.game, voicing, {"part": "upper", "shape": c.shape or "major", "parts": parts,
+                                                              "bass": bass, "previous": previous}))
+            previous = voicing
+    return out
+
 
 
 def drum_group(figure: str, letters) -> str:
