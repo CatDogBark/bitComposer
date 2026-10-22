@@ -442,18 +442,22 @@ def _distance(rate: float, period: float) -> float:
     return abs(math.log2(rate * period / TYPICAL)) + LEAN * abs(math.log2(60 / period / PREFER))
 
 
-def find(onsets) -> Grid | None:
+def find(onsets, aside=frozenset()) -> Grid | None:
     """The beat of onsets [(time, weight)] or [(time, weight, voice)] (each
     voice's lag then taken out first, its rolls left out); None when they keep
     to no beat (free time). On a grid first; where none holds, or only one so
-    fine it holds anything (under FINEST), loosely (loose())."""
+    fine it holds anything (under FINEST), loosely (loose()). Voices in
+    `aside` (echoes of other voices, whose notes sit off the grid) count
+    toward the typical voice's rate, which the beat's level is chosen by,
+    but not toward the grid: Gang-Plank Galleon's two echo voices, left out
+    of both, halved its tempo."""
     lags, left, counts = {}, set(), {}
     if onsets and len(onsets[0]) == 3:
         left = ornaments(onsets)
         for t, w, v in onsets:
             if w > 0 and v not in left:
                 counts[v] = counts.get(v, 0) + 1
-        onsets, lags = align([o for o in onsets if o[2] not in left])
+        onsets, lags = align([o for o in onsets if o[2] not in left and o[2] not in aside])
     onsets = [(t, w) for t, w in onsets if w > 0]
     if len(onsets) < 8:
         return None

@@ -40,8 +40,8 @@ def beat_and_parts(song) -> tuple:
     """The song's beat (None: free time) and each voice's part, the bar set
     again from the bass and its phase from where the song repeats itself;
     a voice echoing another is left out of the beat."""
-    echoed = roles_mod.echoes(song)          # an echo's notes sit off the grid: left out of the beat
-    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes if p.voice not in echoed])
+    echoed = roles_mod.echoes(song)          # an echo's notes sit off the grid: left out of the grid, not the rate
+    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes], aside=frozenset(echoed))
     roles = roles_mod.assign(song, grid, echoed)
     if grid:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
