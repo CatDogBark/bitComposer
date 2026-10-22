@@ -1200,6 +1200,62 @@ Phase 3's tables are all counted; what remains of the phase is the
 pack's second format and the reference set. The listening returns in
 phase 4, when the generator writes whole songs from these tables.
 
+### The pack's second format, and the reference set (2026-10-22)
+
+**Format 2.** `bitcomposer_pack: 2` adds one field, `tables`, beside the
+voices (docs/PACKS.md, "The tables"): the kept shapes of this record,
+fitted on one game's readings with share votes and the 0.75 discount,
+each written as `translate.tables` writes a table (its conditionings,
+vocabulary and the votes under each context), the figure tables with
+their bar-cell floor and every mixture with its recall table, so a
+model reads back whole (`Table.to_json/from_json`, `Cache` and
+`BarCells` the same; `translate/packtables.py` holds the list KEPT,
+`fit`, `build`, `read` and the CLI). The loader (`packs/packfile.py`)
+accepts 1 and 2, checks the field's shape and keeps it on the pack's
+table; the importer, export and add carry it as data; a format 1 file
+loads as before.
+
+**The FFVI pack in it.** The importer's thin pack from the 82 SPC files
+(`python -m bitcomposer.spc --pack`, 24 s on Ragnarok: 22 samples, a
+kit of kick, hat and snare), then `packtables --into` from the readings:
+28 tables of 67 songs (the free-time and silent ones out), 2.9 MB of
+JSON (the rhythm table's 1,183 bar patterns under 2,289 contexts, the
+bass's 715 figures, the chords' 95 numerals; the cell floors' tables
+inside). Read back through the loader: all 28 as models, the floors as
+BarCells; Terra's own bass bars score −2.53 bits a bar under the pack's
+bass mixture (a sanity check, the song being in the pack, not a
+measure); the pack composes a song through the 1.x generator unchanged
+(`bitcomposer --pack-file ... -s 7`), the tables riding along unread
+until phase 4. On Ragnarok at `~/diags/bitcomposer/idiom/phase3/pack2/ffvi/`.
+
+**The reference set.** `translate/reference.py` writes every four-bar
+phrase with a tune (phrases.py's windows and tunes) as its rhythm (onsets
+in twelfths of a beat from the phrase's start) and its intervals
+(semitone steps), with the song, game and bar: 8,691 phrases of 1,366
+songs, 2 MB, at `~/diags/bitcomposer/idiom/phase3/reference/phrases-4bar.json`
+on both machines, never in the repository. `reference.Index` looks a
+phrase up by rhythm and intervals together, or by either alone, for
+phase 4's tune-copy check. In the set itself 7,175 of the 8,691 are
+distinct; 964 keys are shared by two phrases or more, 137 of them across
+different songs: the games' own rate of a phrase reappearing, the
+baseline a written song is held to.
+
+### Phase 3 closed (2026-10-22)
+
+What the phase set out to produce: the tables for FFVI (the pack above)
+and for the 39 games (the readings database and `tables` CLI, every
+shape in this record); the likelihood table that justifies each shape
+(this record, item by item); the format 2 draft and a pack in it; the
+tune-copy reference set. The exit criteria: the bass and the drums
+written from their tables passed the listener's ear in substitution
+(eight of eight "belongs" on the Substitution Check); the key check by
+ear was done before the harmony tables counted, and set their gate.
+Left open for phase 4: the voicings, harmony, form, phrase and
+arrangement tables have no writer yet and meet the ear through the
+generator's songs; the "apart" layered basses and the chord reader's
+noise in the figures' marks stand as known limitations; the phrase
+endings off the read scale (18 %) are a caveat for the melody tables.
+
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
