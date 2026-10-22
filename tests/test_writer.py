@@ -244,6 +244,15 @@ class DrumWriterTests(unittest.TestCase):
         self.assertFalse(m.fits("0:K 1/4:K 1:S"))                      # a sixteenth the song never strikes
         self.assertFalse(m.fits("-"))
 
+    def test_drum_envelope(self):
+        env = writer.drum_envelope("0:K 1:S 2:K 3:S 0:h 1/2:h 1:h 3/2:h 2:h 5/2:h 3:h 7/2:h", 4)
+        self.assertEqual(env[0], {"K": (1, 3), "S": (1, 3), "h": (4, 12)})
+        self.assertTrue(writer.drum_within("0:K 1/2:h 1:S 3/2:h 2:K 5/2:h 3:S 7/2:h", env))
+        self.assertFalse(writer.drum_within("0:S 1/4:S 1/2:S 3/4:S 1:S 5/4:S 3/2:S 7/4:S", env))   # a snare roll for a hat bar
+        self.assertFalse(writer.drum_within("0:K 1:S 2:K 3:S", env))                               # no hat at all
+        self.assertFalse(writer.drum_within("0:K 1/2:h 1:S 3/2:h 2:K 5/2:h 3:S 7/2:h 0:c", env))   # a cymbal the bar lacks
+        self.assertFalse(writer.drum_within("1/2:h 1:S 3/2:h 2:K 5/2:h 3:S 7/2:h", env))         # nothing on the one
+
     def test_drums_written(self):
         others = [self._kit_song("b"), self._kit_song("c", figure=((0.0, "k"), (2.0, "s"), (0.5, "h"), (1.5, "h"), (2.5, "h"), (3.5, "h")))]
         model = writer.fit(rhythm.drum_units(others), name="drums")

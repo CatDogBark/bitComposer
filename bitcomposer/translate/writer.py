@@ -2,8 +2,11 @@
 own (phase 3's acceptance by ear, docs/idiom/phase-3-tables.md): the bass,
 and the drums the same way (DrumManner, drums()): the drums' figures are
 each hit's position and piece, the manner the positions the song's drums
-strike and the pieces its kit has, the envelope each bar's own, the
-spans and moments and locking as the bass's; a hit's voice, sample and
+strike and the pieces its kit has, the envelope each bar's own piece by
+piece (the hat keeps time in sixteenths and the snare does not: a bar's
+strikes of each piece stay within TIGHT of the song's own bar's, so a
+snare roll never stands in for the hat), the spans and moments and
+locking as the bass's; a hit's voice, sample and
 length are the harness's, from the song's own kit.
 
 The song is one of the readings (rhythm.load's Song: its bars and chords
@@ -238,6 +241,27 @@ def envelope(own: str, meter: int | None = None) -> tuple:
     return (max(1, math.ceil(TIGHT[0] * n)), max(1, math.floor(TIGHT[1] * n)), own.startswith("0:") or own == "0", meter)
 
 
+def drum_envelope(own: str, meter: int | None = None) -> tuple:
+    """What the song's own drum bar allows a written one: each piece's strikes
+    between TIGHT times its own (a piece the bar lacks: none), the downbeat
+    where it strikes it, positions inside the bar."""
+    counts = Counter(t.partition(":")[2] for t in rhythm._tokens(own))
+    return ({k: (max(1, math.ceil(TIGHT[0] * c)), max(1, math.floor(TIGHT[1] * c))) for k, c in counts.items()},
+            own.startswith("0:"), meter)
+
+
+def drum_within(figure: str, env: tuple) -> bool:
+    """Whether a drum figure is within the bar's envelope, piece by piece."""
+    pieces, downbeat, meter = env
+    tokens = [t.partition(":") for t in rhythm._tokens(figure)]
+    counts = Counter(t[2] for t in tokens)
+    if any(k not in pieces for k in counts) or any(not (lo <= counts.get(k, 0) <= hi) for k, (lo, hi) in pieces.items()):
+        return False
+    if downbeat and not any(t[0] == "0" for t in tokens):
+        return False
+    return meter is None or all(Fraction(t[0]) < meter for t in tokens)
+
+
 def within(figure: str, env: tuple) -> bool:
     """Whether a figure is within the bar's envelope."""
     tokens = rhythm._tokens(figure)
@@ -284,12 +308,15 @@ def locked(figure: str, lock) -> bool:
 
 
 def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
-             rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0) -> list[str]:
+             rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0,
+             envelope_of=None, within_of=None) -> list[str]:
     """The figures written for a part, one a bar (the module): drawn as the
     song's own mixture, in its manner, each bar's envelope and lock, a
     pattern a span, the song's moments its own; `chord_at` and `reuse` let
     a bar on a chord its span had take that bar's figure again (the bass)."""
     lock = lock or {}
+    envelope_of = envelope_of or envelope
+    within_of = within_of or within
     meters = [max(1, round(b - a)) for a, b, _ in bars]
     state = {"previous": None, "played": Counter()}
 
@@ -300,8 +327,8 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         and lock alone, else the fallback (the song's own bar, where the
         caller gives it)."""
         previous = state["previous"]
-        meter = env[3] if len(env) > 3 and env[3] else song.meter
-        fit = lambda f: manner.fits(f) and within(f, env) and locked(f, lock.get(at))   # noqa: E731
+        meter = env[-1] if env[-1] else song.meter
+        fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at))   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
         values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
@@ -320,7 +347,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         if length == 1:
             if own[start] != REST:
                 last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
-                figures[start] = draw(envelope(own[start], meters[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start], at=start)
+                figures[start] = draw(envelope_of(own[start], meters[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start], at=start)
                 state["played"][figures[start]] += 1
             state["previous"] = figures[start]
             continue
@@ -333,7 +360,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
             pattern = []
             for k in range(period):
                 avoid = {rhythm_of(f) for f in before + pattern}
-                pattern.append(draw(envelope(own[start + k], meters[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k], at=start + k))
+                pattern.append(draw(envelope_of(own[start + k], meters[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k], at=start + k))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
         seen = {}                                           # the span's chords -> the figure written on each
@@ -348,7 +375,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
                 figure = seen[chord]                        # the same chord again: the same figure, as the readings' basses do
             else:
                 want = rhythm_of(base)
-                figure = draw(envelope(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=own[start + i], at=start + i)
+                figure = draw(envelope_of(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=own[start + i], at=start + i)
                 if rhythm_of(figure) != want and locked(base, lock.get(start + i)):
                     figure = base
             if chord is not None and figure != REST:
@@ -373,7 +400,8 @@ def drums(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str
         habit = mine[0].values["habit"] if mine else "medium mixed"
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
     own = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
-    figures = _figures(song, R.DRUMS, model, manner, own, bars, habit, rng, hold, lock)
+    figures = _figures(song, R.DRUMS, model, manner, own, bars, habit, rng, hold, lock,
+                       envelope_of=drum_envelope, within_of=drum_within)
     hits = []
     for (a, b, _), figure in zip(bars, figures):
         for t in rhythm._tokens(figure):
