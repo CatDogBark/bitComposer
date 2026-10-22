@@ -47,7 +47,7 @@ from .rhythm import LETTERS, PARTS, PIECES, PLACES, REST, SIZES, VALUES
 from .vocab import INVERSIONS, SPREADS, TONES, _median
 
 DIVISION = 12                        # the generator's grid: sixteenths and triplets
-DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "other", "crash": "other"}
+DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "tom", "crash": "cymbal"}
 SLOTS = {"openhat": "open_hihat"}    # a drum channel's kit slot where the names differ
 MINOR = {"natural_minor", "harmonic_minor", "dorian", "phrygian", "minor_pentatonic"}
 

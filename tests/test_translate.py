@@ -728,8 +728,8 @@ class Rhythm(unittest.TestCase):
 
 
 class DrumsBySound(unittest.TestCase):
-    """A drum sample named by its sound (drums.py): made-up sounds, the generator's named kits, and the
-    play settling what the sound leaves open."""
+    """A drum sample named by its sound (drums.py): made-up sounds and the generator's named kits; how the
+    sample is played no longer decides anything (the drum check: it agreed with the ear in 43 % of sounds)."""
 
     def test_made_up_sounds_are_named_by_what_they_are(self):
         from bitcomposer.translate import drums
@@ -744,36 +744,35 @@ class DrumsBySound(unittest.TestCase):
         self.assertGreaterEqual(crash.ring, drums.LONG)
         self.assertGreaterEqual(snare.body, drums.BODY)
         self.assertLess(snare.low, 0.5)
-        self.assertEqual([drums.name(x) for x in (kick, hat, crash, snare)], ["kick", "hat", "other", "snare"])
-        # a tom: a low tone pitched above the kick's range; a block: a mid tone with no body; silence
-        self.assertEqual(drums.name(drums.measure(tone(160, 0.3, decay=0.1), 32000)), "other")
+        self.assertEqual([drums.name(x) for x in (kick, hat, crash, snare)], ["kick", "hat", "cymbal", "snare"])
+        # a tom: a low tone pitched above the kick's range that rings; a block: a mid tone with no body
+        self.assertEqual(drums.name(drums.measure(tone(160, 0.3, decay=0.1), 32000)), "tom")
         self.assertEqual(drums.name(drums.measure(tone(2500, 0.05, decay=0.01), 32000)), "other")
         # a looped sample rings as long as the game holds it: a short noise loop held long is a cymbal
         loop = tone(5000, 0.05, noise=20.0)
         self.assertEqual(drums.name(drums.measure(loop, 32000, (0, len(loop)), held=0.08)), "hat")
-        self.assertEqual(drums.name(drums.measure(loop, 32000, (0, len(loop)), held=1.0)), "other")
+        self.assertEqual(drums.name(drums.measure(loop, 32000, (0, len(loop)), held=1.0)), "cymbal")
 
-    def test_the_play_settles_a_bodiless_burst_and_a_kick_in_the_margin(self):
+    def test_the_sound_alone_settles_a_bright_burst_a_thud_and_a_held_tone(self):
         from bitcomposer.translate import drums
-        burst = drums.measure(tone(5000, 0.3, noise=20.0, decay=0.04), 32000)   # between a closed hat and a cymbal
-        self.assertTrue(drums.BURST <= burst.ring < drums.RING and burst.body < drums.BODY)
-        self.assertEqual(drums.name(burst), "snare")                                      # alone: short of OPEN
-        self.assertEqual(drums.name(burst, {"hits": 10, "one": 1, "three": 0, "back": 7}), "snare")
-        self.assertEqual(drums.name(burst, {"hits": 10, "one": 1, "three": 1, "back": 1}), "hat")   # off the beat
-        self.assertEqual(drums.name(burst, {"hits": 10, "one": 7, "three": 1, "back": 1}), "other") # a crash on one
+        burst = drums.measure(tone(5000, 0.3, noise=20.0, decay=0.04), 32000)   # a bright bodiless burst, 0.18 s
+        self.assertTrue(drums.BURST <= burst.ring < drums.OPEN and burst.body < drums.BODY and burst.bright >= drums.BRIGHT)
+        self.assertEqual(drums.name(burst), "hat")                                        # bright: a hat, not a gated snare
+        self.assertEqual(drums.name(burst, {"hits": 10, "one": 7, "three": 1, "back": 1}), "hat")   # the play changes nothing
         thud = drums.measure(tone(130, 0.05, decay=0.01), 32000)              # a short low thud pitched above KICK_HZ
-        self.assertTrue(thud.low >= 0.5 and drums.KICK_HZ <= thud.bright < drums.TOM_HZ and thud.tone < drums.PITCHED)
-        self.assertEqual(drums.name(thud), "other")
-        self.assertEqual(drums.name(thud, {"hits": 10, "one": 5, "three": 3, "back": 1}), "kick")
-        self.assertEqual(drums.name(thud, {"hits": 10, "one": 1, "three": 1, "back": 1}), "other")
+        self.assertTrue(thud.low >= 0.5 and drums.KICK_HZ <= thud.bright < drums.TOM_HZ and thud.ring < drums.THUD)
+        self.assertEqual(drums.name(thud), "kick")
+        held = drums.measure(tone(440, 1.0, decay=0.5), 32000)                # a pitched note held: no drum
+        self.assertTrue(held.tone >= drums.INSTRUMENT and held.ring >= drums.RING)
+        self.assertEqual(drums.name(held), "none")
 
     def test_the_generator_s_named_drums_come_out_right(self):
         from bitcomposer.translate import drums
         right, total, missed = drums.score()
         self.assertGreaterEqual(total, 40)
-        # the chip palette's crash and open hat are bursts of 0.18 and 0.11 s, under OPEN: the known misses
-        self.assertLessEqual({p for p, _, _ in missed}, {"crash", "open_hihat"})
-        self.assertGreaterEqual(right, total - 2)
+        # the chip palette's crash is a bright burst of 0.18 s, a hat by the rule: the known miss
+        self.assertLessEqual({p for p, _, _ in missed}, {"crash"})
+        self.assertGreaterEqual(right, total - 1)
 
     def test_a_kit_names_a_song_s_drums_from_its_presets_and_the_rhythm_counts_take_them(self):
         from bitcomposer.translate import drums
@@ -787,7 +786,7 @@ class DrumsBySound(unittest.TestCase):
         s = Song("test", 4, 4, [(0, 4), (4, 8), (8, 12), (12, 16)], [], {"drums": hits})
         d = sounds([s], bank=drums.Kit())
         self.assertEqual({k: (v["name"], v["how"]) for k, v in d.items()},
-                         {"snes_kick": ("kick", "sound"), "snes_snare": ("snare", "sound"), "snes_crash": ("other", "sound"),
+                         {"snes_kick": ("kick", "sound"), "snes_snare": ("snare", "sound"), "snes_crash": ("cymbal", "sound"),
                           "unknown": ("snare", "play")})
         self.assertEqual(sounds([s], {"snes_crash": "hat"}, drums.Kit())["snes_crash"]["how"], "known")
         self.assertEqual(d["snes_kick"]["held"], 0.3 * 60 / 120)

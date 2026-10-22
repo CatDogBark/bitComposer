@@ -16,35 +16,33 @@ autocorrelation past the first zero crossing, over the periods of 40 to
 (seconds to 40 dB under its peak). The spectrum is of its first 128 ms
 (FFT, the standard library's complex numbers); brightness is the centroid.
 
-The rule. Power mostly under LOW: a low drum; a kick when its centroid
-sits under KICK_HZ, a tom or another pitched drum when it is periodic
-(PITCHED) or sits above TOM_HZ and holds its pitch, a deep snare (a noisy
-thud above the kick's range: Seiken Densetsu 3's, Top Gear's) when it does
-not. Else noise (periodicity under TONE, or a hiss centred over HISS Hz
-that is not plainly pitched: a looped hat repeats, and reads periodic):
-ringing LONG seconds or more, a cymbal; over within CLICK seconds, a click
-(a rim); with a body under HIGH, a snare; with nearly none and over within
-BURST, a closed hat. Else a tone off the floor: with a body under LOW, a
-snare (a drum shell with its rattle: Final Fantasy VI's snare is one);
-without, another sound (a rim, a block, an orchestra hit, a pitched
-instrument played as percussion).
+The rule. Power mostly under LOW: a low sound; a kick when its centroid
+sits under KICK_HZ, or under TOM_HZ and over within THUD (a short kick
+reads high: Donkey Kong Country 2's); a tom when its centroid sits under
+TOM_TOP otherwise (Yoshi's Island's, Romancing SaGa 3's, Lufia II's, the
+packs' toms); a low note held and plainly pitched (INSTRUMENT, RING) no
+drum at all; a noisy thud above the tom's range (Seiken Densetsu 3's, Top
+Gear's, Zelda's deep snare, pitched a little) a snare. Else noise
+(periodicity under TONE, or a hiss centred over HISS Hz that is not plainly
+pitched: a looped hat repeats, and reads periodic): ringing LONG seconds
+or more, a cymbal; with a body under HIGH, a click (a rim) when over within
+CLICK and a snare otherwise; bodiless, a closed hat when over within
+BURST, then to OPEN a gated-noise snare when centred under BRIGHT (the
+packs' snares) and a hat above (Seiken Densetsu 3's closed hat rings
+0.11 s), then an open hat to RING, and a cymbal past it. Else a tone off
+the floor: plainly pitched (PITCHED) and ringing RING, an instrument
+played as percussion (a bell, an alarm, a horn: no drum, named "none");
+with a body under LOW (a drum shell with its rattle: Final Fantasy VI's
+snare), or a body under HIGH ringing past a click and not plainly pitched
+(Seiken Densetsu 3's and Secret of Mana's pitched snares), a snare; else
+another sound (a block, a cowbell, a wood ping, an orchestra hit).
 
-Four cases the sound alone cannot settle, and how the game plays the sample
-settles each (profile: the shares of its hits on the bar's first beat, on
-its other beats, off the beat), the sound deciding everything else: a low
-drum between KICK_HZ and TOM_HZ that holds no pitch (a short kick reads
-high; Donkey Kong Country 2's), a kick when it lands on the beats more
-than between them, else another drum; a hiss over HISS with a little body
-(a hat loop over a rumble, or a bright snare), a hat when it plays off the
-beat more than on, else a snare; a bodiless noise burst ringing between
-BURST and RING (the built-in packs' snares are gated noise, as are open hats
-and cymbals cut short), a cymbal when it lands on the first beat most, a
-snare on the other beats, else a hat; and noise ringing between RING and
-LONG (a cymbal, or a snare with its room: Seiken Densetsu 3's), a snare
-when it lands on the backbeats more than on the first. Without the play
-(the generator's samples scored alone) a low drum in the margin is the tom,
-a bright bodied hiss the snare, a bodiless burst the snare under OPEN
-seconds and the hat over, and long noise the cymbal.
+How the game plays a sample no longer decides anything. On the drum check
+(docs/idiom/phase-1-readers.md, forty samples named by ear, four set aside)
+the play agreed with the listener on 43 % of the kicks, snares and hats
+he named, the sound alone on 64 % under the earlier rule and 86 % under
+this one; a third of the samples drawn as drums were bells, whistles,
+alarms and electronic noises, which the earlier rule called hats.
 
 Why these. The pack's kit (pack.py) ranked by brightness and length, which
 tells a kick from a hat but not a snare from an open hat or a cymbal from a
@@ -73,12 +71,15 @@ RING = 0.4                           # seconds: a bodiless noise burst ringing t
 LONG = 0.6                           # and this long a cymbal
 CLICK = 0.05                         # seconds: noise with a body over within this is a click, not a snare
 BODY = 0.2                           # the share of the power under LOW (a tone) or under HIGH (noise) that is a body
-RUMBLE = 0.3                         # a hiss over HISS with a body under this may be a hat over a rumble
-BURST = 0.1                          # seconds: a bodiless noise burst ringing longer is an open hat, a snare or a short cymbal
-OPEN = 0.24                          # seconds: and without the play, one ringing longer is the open hat
+BURST = 0.1                          # seconds: a bodiless noise burst over within this is a closed hat
+OPEN = 0.24                          # seconds: one ringing to here is a gated-noise snare where dark, a hat where bright
+THUD = 0.06                          # seconds: a low thud over within this is a kick, not a tom
+TOM_TOP = 500                        # Hz: a tom's centroid stays under this; a low sound centred higher is a deep snare
+BRIGHT = 4700                        # Hz: the centroid that parts a hat's hiss (over) from a gated snare's (under)
+INSTRUMENT = 0.95                    # periodicity of a pitched instrument played as percussion
 RATE = 32000                         # a sample plays at its own rate at pitch 0x1000
 FRAMES = 4096                        # the spectrum's window, 128 ms at RATE
-PIECES = ("kick", "snare", "hat", "other")
+PIECES = ("kick", "snare", "hat", "tom", "cymbal", "other")   # and "none": a sound that is no drum
 
 
 @dataclass
@@ -155,45 +156,46 @@ def _play(profile: dict | None) -> tuple | None:
 
 
 def name(s: Sound, profile: dict | None = None) -> str:
-    """The piece a Sound is (PIECES; the module's rule). profile: how the
-    game plays it (rhythm.sounds's: hits, one, three, back), which settles
-    the four cases the sound leaves open."""
-    play = _play(profile)
-    if s.low >= 0.5:
+    """The piece a Sound is (PIECES, or "none" for a sound that is no drum),
+    by the module's rule. profile (how the game plays it) is taken and no
+    longer consulted: see the module's note on the drum check."""
+    if s.low >= 0.5:                                 # a low sound: a kick, a tom, a deep snare, a note
         if s.bright < KICK_HZ:
             return "kick"
-        if s.tone >= PITCHED or (s.bright >= TOM_HZ and s.tone >= TONE):
-            return "other"
-        if s.bright >= TOM_HZ:
-            return "snare"
-        return "kick" if play and play[0] + play[1] > play[2] else "other"
-    if s.tone < TONE or (s.bright >= HISS and s.tone < PITCHED):
+        if s.tone >= INSTRUMENT and s.ring >= RING:
+            return "none"
+        if s.bright < TOM_TOP:
+            return "kick" if s.bright < TOM_HZ and s.ring < THUD else "tom"
+        return "snare" if s.tone < PITCHED else "other"
+    if s.tone < TONE or (s.bright >= HISS and s.tone < PITCHED):   # noise
         if s.ring >= LONG:
-            return "other"
-        if s.ring >= RING and s.body < BODY:
-            return "snare" if play and play[1] > play[0] else "other"
+            return "cymbal"
         if s.body >= BODY:
-            if s.ring < CLICK:
-                return "other"
-            if s.bright >= HISS and s.body < RUMBLE and play and play[2] > play[0] + play[1]:
-                return "hat"
-            return "snare"
+            return "other" if s.ring <= CLICK else "snare"
         if s.ring < BURST:
             return "hat"
-        if play:
-            return ("other", "snare", "hat")[play.index(max(play))]
-        return "snare" if s.ring < OPEN else "hat"
-    return "snare" if s.low >= BODY else "other"
+        if s.ring < OPEN:
+            return "snare" if s.bright < BRIGHT else "hat"
+        return "hat" if s.ring < RING else "cymbal"
+    if s.tone >= PITCHED:                            # a tone off the floor, plainly pitched
+        if s.tone >= INSTRUMENT and s.ring >= RING:
+            return "none"
+        return "snare" if s.low >= BODY and not s.loops else "other"
+    if s.loops:
+        return "other"
+    if s.low >= BODY or (s.body >= BODY and s.ring > CLICK):
+        return "snare"
+    return "other"
 
 
 def generator() -> dict:
     """The generator's named drums: preset -> the piece it is, from the
-    built-in packs' kits and the palettes' names (open hats are hats; toms,
-    crashes and rims other sounds)."""
+    built-in packs' kits and the palettes' names (open hats are hats,
+    crashes cymbals, rims other sounds)."""
     from .. import packs
     from ..samples import INSTRUMENT_PRESETS, is_percussion
     piece = {"kick": "kick", "bassdrum": "kick", "snare": "snare", "hat": "hat", "hihat": "hat", "open_hihat": "hat",
-             "tom": "other", "crash": "other", "cymbal": "other", "rim": "other"}
+             "tom": "tom", "crash": "cymbal", "cymbal": "cymbal", "rim": "other"}
     out = {}
     for pack in packs.PACKS.values():
         for slot, preset in pack.get("voices", {}).get("drums", {}).items():
@@ -329,7 +331,7 @@ def report(db, root: str, game: str | None = None) -> str:
         cells = (f"{s.low:5.2f} {s.body:5.2f} {s.bright:6.0f} {s.tone:5.2f} {s.ring:5.2f} {'loop' if s.loops else '    '}"
                  if s else f"{'(no file)':>35s}")
         out.append(f"  {key[:10]:10s} {p['songs']:5d} {p['hits']:6d} {p['a_bar']:5.1f} {cells}  {by_sound:8s}  {rhythm._name(p)}")
-    out.append("  by sound: " + ", ".join(f"{k} {tally[k]}" for k in PIECES + ("?",) if tally[k]))
+    out.append("  by sound: " + ", ".join(f"{k} {tally[k]}" for k in PIECES + ("none", "?") if tally[k]))
     return "\n".join(out)
 
 
