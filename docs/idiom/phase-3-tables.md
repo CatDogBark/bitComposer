@@ -367,3 +367,51 @@ one addition that helps a chain anywhere), the habit −29.51, the kit
 −2.58. Draws: 13.6 distinct a song, ostinato 0.43 with the place (real
 8.0 / 0.51), 18.3 / 0.31 without. **Kept:** part, meter, the previous
 figure and the place in the part, shared, the habit drawn once a song.
+
+### The song's own mixture (2026-10-21)
+
+The plan's open question, settled: a song is loyal to its own figures in
+a way no bar's context captures, and the habit conditioning above only
+nudged the draws. `tables.Cache` sets the song's own outcomes as a
+mixture over a table: at each bar the song repeats the one before
+(same), returns to one it played earlier (earlier, each by how often so
+far) or draws a new one from the table; the three shares are a table of
+their own under the part and the habit (the bass: same 0.26, earlier
+0.32, new 0.42, much alike across habits). Scored song by song in order
+on the held-out games (the same split, share votes, discount 0.75, the
+cell floor), the mixture over the chosen shape against the shape alone:
+
+| table | the table alone | as the song's mixture | draws: distinct a song / ostinato (real) |
+|---|---|---|---|
+| rhythm (part+meter+previous) | −10.53 | **−6.78** | 7.0 / 0.46 (7.5 / 0.50), from 12.8 / 0.36 |
+| bass figures (part+meter+previous) | −21.00 | **−13.12** | 9.1 / 0.40 (10.4 / 0.39), from 18.6 / 0.27 |
+| drum figures (part+meter+previous) | −29.51 | **−12.79** | 9.1 / 0.41 (8.0 / 0.51), from 18.3 / 0.31 |
+
+The mixture over part+meter alone is within 0.03 to 0.10 bits of it, so
+the previous-bar chain matters little once the song remembers itself.
+**Kept:** every figure table is drawn as the song's mixture; the writer
+runs the urn.
+
+### The bass written into Terra (2026-10-21)
+
+`translate/writer.py` and `tools/table_bass.py`: the song's bass voice
+replaced by one written from the bass table fitted on every other song
+(the song never votes for its own bars), the habit the song's own, the
+figures drawn as the mixture, each mark a chord tone in the song's own
+register on its own bass sample, the rest of the song as decoded. Three
+versions before one worth hearing, each a lesson: the table's draws
+alone gave a bass with no two bars alike (the mixture fixed it); the
+mixture with the habit last in the chain locked onto rests and lone
+roots, since a rare context backed off to the pooled inventory where
+intros and rest bars weigh most (the habit now comes before the previous
+bar, so the backoff lands in the habit's own inventory); and the song's
+own rests are kept, a playing bar never drawing a rest (which bars the
+bass plays is the arrangement table's question). A new figure must sit
+on the song's own grid. Written for Terra (habit medium roots, 74 bars),
+Locke (dense walking), Celes (sparse roots) and The Decisive Battle
+(medium walking), seed 1, beside the originals, in the player's folder
+(`~/Music/bitComposer-dev/Table bass/`): the readers read the written
+voice as the bass in all four, the key unchanged in three (Celes, three
+notes in a minute, moved to its relative major). **Awaiting the ear:**
+"belongs", "nearly", or not, for each; the Substitution Check page with
+per-voice toggles follows for the same four.
