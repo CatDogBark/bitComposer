@@ -627,6 +627,15 @@ class BarCells:
     def __init__(self, units_):
         self.table = tables.Table(self.SHAPE, "cells", votes=tables.SHARES).fit(cell_units(units_))
 
+    def to_json(self) -> dict:
+        return {"kind": "cells", "table": self.table.to_json()}
+
+    @classmethod
+    def from_json(cls, d: dict) -> "BarCells":
+        floor = cls.__new__(cls)
+        floor.table = tables.Table.from_json(d["table"], "cells")
+        return floor
+
     def p(self, drawn: str, values: dict) -> float:
         prob, previous = 1.0, START
         for i, c in enumerate(cells(drawn, values["meter"])):
@@ -640,6 +649,9 @@ class BarCells:
             previous = self.table.draw((values["part"], values["meter"], i, previous), rng)
             out.append(previous)
         return pattern_of_cells(out)
+
+
+tables.FLOORS["cells"] = BarCells.from_json
 
 
 def value_units(songs) -> list:

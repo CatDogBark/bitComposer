@@ -2,7 +2,9 @@
 import json
 from collections import Counter
 import math
+import os
 import random
+import tempfile
 import unittest
 from fractions import Fraction
 
@@ -527,3 +529,68 @@ class ArrangementUnitTests(unittest.TestCase):
         self.assertEqual(rhythm.layer_units([s]), [])
         s.bass_voices = {1: [(4.0 * k, 3.0, 36.0, "b") for k in range(8)], 5: [(4.0 * k, 0.5, 48.0, "p") for k in range(8)]}
         self.assertEqual(rhythm.layer_units([s])[0].outcome, "doubling")
+
+
+class PackTableTests(unittest.TestCase):
+    def _bass_units(self):
+        songs = [RhythmUnitTests._song(self)]
+        s2 = RhythmUnitTests._song(self)
+        s2.sid, s2.game = "id2", "H"
+        s2.notes["bass"] = [(0.0, 0.5, 36.0, "k"), (1.0, 0.5, 36.0, "k"), (4.0, 0.5, 36.0, "k"), (5.0, 0.25, 43.0, "k")]
+        return rhythm.bass_units(songs + [s2])
+
+    def test_a_table_on_the_cell_floor_round_trips_with_its_floor(self):
+        us = self._bass_units()
+        t = Table(("part", "meter", "previous"), "bass", votes=tables.SHARES, floor=rhythm.BarCells(us), discount=0.75,
+                  covers=2).fit(us)
+        back = Table.from_json(json.loads(json.dumps(t.to_json())), "bass")
+        self.assertIsInstance(back.floor, rhythm.BarCells)
+        self.assertEqual(back.covers, 2)
+        for u in us:
+            self.assertAlmostEqual(back.p(u.outcome, back.context(u), u.values), t.p(u.outcome, t.context(u), u.values))
+        self.assertAlmostEqual(back.p("0 1/2 1 3/2 2", ("bass", 4, rhythm.START), us[0].values),   # a bar never counted: the floor's
+                               t.p("0 1/2 1 3/2 2", ("bass", 4, rhythm.START), us[0].values))
+
+    def test_a_mixture_round_trips(self):
+        us = self._bass_units()
+        m = tables.Cache.fit(us, ("part", "meter", "habit", "previous"), name="bass", votes=tables.SHARES,
+                             floor=rhythm.BarCells(us), discount=0.75, covers=2)
+        back = tables.Cache.from_json(json.loads(json.dumps(m.to_json())), "bass")
+        self.assertAlmostEqual(back.score(us), m.score(us))
+        rng1, rng2 = random.Random(3), random.Random(3)
+        self.assertEqual(tables.simulate_cache(back, us, rng1), tables.simulate_cache(m, us, rng2))
+
+    def test_kept_tables_fit_and_read_back(self):
+        from bitcomposer.translate import packtables
+        us = self._bass_units()
+        entry = packtables.fit("bass", us)
+        self.assertEqual((entry["mixture"], entry["shape"], entry["units"], entry["songs"]), (True, list(packtables.FIGURE), len(us), 2))
+        models = packtables.read(json.loads(json.dumps({"tables": {"bass": entry}})))
+        self.assertIsInstance(models["bass"], tables.Cache)
+        self.assertIsInstance(models["bass"].table.floor, rhythm.BarCells)
+        plain = packtables.fit("bass_habits", rhythm.habits(us))
+        self.assertFalse(plain["mixture"])
+        self.assertIsInstance(packtables.read({"tables": {"bass_habits": plain}})["bass_habits"], Table)
+        self.assertIsNone(packtables.fit("layers", []))
+        for name, (module, builder, *_) in packtables.KEPT.items():
+            self.assertTrue(hasattr(packtables.MODULES[module], builder), name)
+
+
+class ReferenceSetTests(unittest.TestCase):
+    def test_phrases_as_rhythm_and_intervals_and_their_lookup(self):
+        from bitcomposer.translate import reference
+        s = PhraseUnitTests._song(self)
+        rows = reference.phrases_of([s], 4)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["rhythm"], [12 * i for i in range(16)])
+        self.assertEqual(rows[0]["intervals"], [1] * 15)
+        self.assertEqual((rows[0]["bar"], rows[1]["bar"], rows[0]["song"]), (0, 4, "id"))
+        idx = reference.Index({"phrases": rows})
+        self.assertEqual(len(idx.matches(rows[0]["rhythm"], rows[0]["intervals"])), 2)          # the same tune twice
+        self.assertEqual(len(idx.matches(rows[0]["rhythm"], [2] * 15, how="rhythm")), 2)
+        self.assertEqual(idx.matches(rows[0]["rhythm"], [2] * 15), [])
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "ref.json")
+            data = {"phrases": rows}
+            json.dump(data, open(out, "w"))
+            self.assertEqual(len(reference.Index(reference.load(out)).rows), 2)

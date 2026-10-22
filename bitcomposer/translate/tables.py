@@ -210,14 +210,22 @@ class Table:
         return sum(len(v) for c, v in self.votes.items() if len(c) == len(self.conditionings))
 
     def to_json(self) -> dict:
-        return {"conditionings": list(self.conditionings), "votes_by": self.by, "discount": self.discount,
-                "covers": self.covers, "vocabulary": sorted(self.vocabulary),
-                "contexts": [{"context": list(c), "songs": self.songs[c], "units": self.units[c], "votes": v}
-                             for c, v in sorted(self.votes.items(), key=lambda cv: (len(cv[0]), [str(x) for x in cv[0]]))]}
+        out = {"conditionings": list(self.conditionings), "votes_by": self.by, "discount": self.discount,
+               "covers": self.covers, "vocabulary": sorted(self.vocabulary),
+               "contexts": [{"context": list(c), "songs": self.songs[c], "units": self.units[c], "votes": v}
+                            for c, v in sorted(self.votes.items(), key=lambda cv: (len(cv[0]), [str(x) for x in cv[0]]))]}
+        if self.floor is not None and hasattr(self.floor, "to_json"):
+            out["floor"] = self.floor.to_json()
+        return out
 
     @classmethod
-    def from_json(cls, d: dict, name: str = "") -> "Table":
-        t = cls(d["conditionings"], name, d.get("votes_by", SONGS), discount=d.get("discount"))
+    def from_json(cls, d: dict, name: str = "", floor=None) -> "Table":
+        """The table back from to_json(); `floor` the floor model, or None to
+        read the one written with it (FLOORS by its kind)."""
+        if floor is None and d.get("floor"):
+            floor = FLOORS[d["floor"]["kind"]](d["floor"])
+        t = cls(d["conditionings"], name, d.get("votes_by", SONGS), floor=floor, discount=d.get("discount"),
+                covers=d.get("covers", 0))
         t.vocabulary = set(d["vocabulary"])
         for row in d["contexts"]:
             c = tuple(row["context"])
@@ -226,6 +234,9 @@ class Table:
             t.units[c] = row.get("units", 0)
         t._weigh()
         return t
+
+
+FLOORS: dict = {}                    # a floor's kind -> a function of its JSON giving the floor back (rhythm registers its)
 
 
 @dataclass
@@ -284,6 +295,13 @@ class Cache:
         units = list(units)
         recall = Table(tuple(k for k in RECALL_SHAPE if units and k in units[0].values), "recall").fit(recall_units(units))
         return cls(Table(shape, **table_args).fit(units), recall)
+
+    def to_json(self) -> dict:
+        return {"table": self.table.to_json(), "recall": self.recall.to_json()}
+
+    @classmethod
+    def from_json(cls, d: dict, name: str = "", floor=None) -> "Cache":
+        return cls(Table.from_json(d["table"], name, floor), Table.from_json(d["recall"], "recall"))
 
     def shares(self, unit: Unit, previous, cache: Counter) -> tuple[float, float, float]:
         """The shares of same, earlier and new at this unit: the recall table's, what cannot apply given to new."""
