@@ -50,16 +50,27 @@ def song_units(score: convert.Score, title: str, game: str) -> tuple:
     return rhythm.bass_units([s]), {k: v for k, v in groups.items() if any(u.outcome != "-" for u in v)}
 
 
-def spread(units) -> tuple[float, float]:
-    """Distinct figures a song and the ostinato share (a bar repeating the one before), over the units' songs."""
+SPAN = 32                            # bars: the spread's distinct figures are counted over the first SPAN bars a song
+MIN_SONGS = 12                       # songs a game needs for its own table in the nearest-game test
+
+
+def spread(units) -> tuple[float, float, float]:
+    """Distinct figures a song over its first SPAN bars (songs differ in length), the ostinato share (a bar
+    repeating the one before), and the mean bars a song, over the units' songs."""
     by_song = {}
     for u in units:
         by_song.setdefault(u.song, []).append(u.outcome)
     if not by_song:
-        return 0.0, 0.0
-    distinct = statistics.mean(len(set(v)) for v in by_song.values())
+        return 0.0, 0.0, 0.0
+    distinct = statistics.mean(len(set(v[:SPAN])) for v in by_song.values())
     ostinato = statistics.mean(sum(1 for a, b in zip(v, v[1:]) if a == b) / max(1, len(v) - 1) for v in by_song.values())
-    return distinct, ostinato
+    return distinct, ostinato, statistics.mean(len(v) for v in by_song.values())
+
+
+def nearest_games(models_by_game: dict, units) -> list[tuple[str, float]]:
+    """Each game's table scoring the units, best first."""
+    out = [(g, m.score(units)) for g, m in models_by_game.items()]
+    return sorted(out, key=lambda x: -x[1])
 
 
 def main(argv=None) -> int:
@@ -125,16 +136,31 @@ def main(argv=None) -> int:
             rows.append(("drums-" + "".join(letters), writer.fit([u for u in units if u.game != game], name="drums-" + "".join(letters)),
                          old_drums.get(letters, []), new_drums.get(letters, []), [u for u in units if u.game == game]))
         print(f"\nmeasures against the other {len(others)} songs' tables ({game} out; bits a bar as a held-out song; "
-              f"spread: distinct figures a song / ostinato share):")
-        print(f"{'part':10} {'old bits':>9} {'new bits':>9} {'old spread':>14} {'new spread':>14} {game[:20] + ' real':>26}")
+              f"spread: distinct figures in the first {SPAN} bars / ostinato share / bars a song):")
+        print(f"{'part':10} {'old bits':>9} {'new bits':>9} {'old spread':>18} {'new spread':>18} {game[:20] + ' real':>32}")
         manifest["measures"] = {}
         for part, model, old, new, real in rows:
             ob = model.score(old) if old else float("nan")
             nb = model.score(new) if new else float("nan")
             rb = statistics.mean(model.score([u for u in real if u.song == sid]) for sid in {u.song for u in real}) if real else float("nan")
             so, sn, sr = spread(old), spread(new), spread(real)
-            print(f"{part:10} {ob:9.2f} {nb:9.2f} {so[0]:7.1f} / {so[1]:4.2f} {sn[0]:7.1f} / {sn[1]:4.2f}   {rb:7.2f} bits, {sr[0]:5.1f} / {sr[1]:4.2f}")
+            print(f"{part:10} {ob:9.2f} {nb:9.2f} {so[0]:6.1f} / {so[1]:4.2f} / {so[2]:3.0f} {sn[0]:6.1f} / {sn[1]:4.2f} / {sn[2]:3.0f}   {rb:7.2f} bits, {sr[0]:5.1f} / {sr[1]:4.2f} / {sr[2]:3.0f}")
             manifest["measures"][part] = {"old_bits": ob, "new_bits": nb, "real_bits_in_table": rb, "old_spread": so, "new_spread": sn, "real_spread": sr}
+        # the nearest game: each game's own bass and kick-snare tables score each song; where does the pack's game rank?
+        games = Counter(u.game for u in bass_all)
+        by_game = {g: writer.fit([u for u in bass_all if u.game == g]) for g, n in games.items() if n and len({u.song for u in bass_all if u.game == g}) >= MIN_SONGS}
+        print(f"\nthe nearest game by its own bass table ({len(by_game)} games with {MIN_SONGS} songs or more):")
+        ranks = {"old": [], "new": []}
+        for label, pool in (("old", old_bass), ("new", new_bass)):
+            for sid in sorted({u.song for u in pool}):
+                order = nearest_games(by_game, [u for u in pool if u.song == sid])
+                rank = next((i for i, (g, _) in enumerate(order) if g == game), None)
+                ranks[label].append(rank)
+                print(f"  {label} {sid[:12]:12}: {order[0][0][:22]} ({order[0][1]:.2f}); {game[:16]} rank {rank + 1 if rank is not None else '-'} ({dict(order).get(game, float('nan')):.2f})")
+        for label in ("old", "new"):
+            rs = [r for r in ranks[label] if r is not None]
+            print(f"  {label}: {game} nearest in {sum(1 for r in rs if r == 0)} of {len(rs)}; median rank {statistics.median(rs) + 1 if rs else '-'} of {len(by_game)}")
+        manifest["nearest"] = ranks
     with open(os.path.join(args.out, "slice1.json"), "w") as fh:
         json.dump(manifest, fh, indent=1)
     return 0
