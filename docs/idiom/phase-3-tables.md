@@ -351,3 +351,19 @@ The articulation habit is the exception: it carries a quarter of a bit a
 note, and is a game's (−0.99 against −1.18). The rhythm and bass habits
 are drawn by part, not by game. **Kept:** every table conditioned on
 its habit, the habit drawn once a song.
+
+### Drum figures by piece (2026-10-21)
+
+The drums' bar as each hit's position and piece (K S h t c, o a sample
+the reading named no drum; the namer's names from the readings), 26,722
+bars of 1,078 songs. Held-out bits a bar, the cell floor, share votes,
+discount 0.75: the floor −30.42, part+meter −30.11, with the kit (which
+pieces the song strikes at all) −30.07, the habit −30.10, the tempo
+−30.23, the place in the part −30.26; with the previous figure −29.51,
+and the place on top of it −29.46 (fills land on a part's last bar: the
+one addition that helps a chain anywhere), the habit −29.51, the kit
+−29.52, the tempo −29.55. By song within the games, a game's own table
+−28.55 against −28.56 shared; the drum habits by game −2.52 against
+−2.58. Draws: 13.6 distinct a song, ostinato 0.43 with the place (real
+8.0 / 0.51), 18.3 / 0.31 without. **Kept:** part, meter, the previous
+figure and the place in the part, shared, the habit drawn once a song.
