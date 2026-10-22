@@ -1,5 +1,6 @@
 """The tables framework: votes, backoff, scoring, draws, the round trip; and the rhythm units."""
 import json
+from collections import Counter
 import math
 import random
 import unittest
@@ -303,3 +304,43 @@ class DrumUnitTests(unittest.TestCase):
         self.assertEqual(us[1].values["previous"], us[0].outcome)
         self.assertEqual(rhythm.cells(us[0].outcome, 4), ["0:K 0:h", "0:S", "0:K", "0:S 1/2:o"])
         self.assertEqual([h.outcome for h in rhythm.drum_habit_units([s])], ["medium varied"])
+
+
+class CacheTests(unittest.TestCase):
+    def _units(self):
+        out = []
+        for song, seq in (("s1", "xxxyxxzx"), ("s2", "yyyy"), ("s3", "xzxzxz")):
+            for i, o in enumerate(seq):
+                out.append(Unit(song, "G", o, {"part": "bass", "habit": "h"}))
+        return out
+
+    def test_recall_units(self):
+        rs = tables.recall_units(self._units())
+        self.assertEqual([r.outcome for r in rs if r.song == "s1"], ["new", "same", "same", "new", "earlier", "same", "new", "earlier"])
+        self.assertEqual([r.outcome for r in rs if r.song == "s3"], ["new", "new", "earlier", "earlier", "earlier", "earlier"])
+        self.assertEqual(rs[0].values, {"part": "bass", "habit": "h"})
+
+    def test_the_mixture_is_a_distribution_and_scores_a_loyal_song_higher(self):
+        us = self._units()
+        m = tables.Cache.fit(us, ("part",))
+        unit = Unit("t", "G", "x", {"part": "bass", "habit": "h"})
+        for previous, cache in ((None, Counter()), ("x", Counter(x=3)), ("y", Counter(x=2, y=1, z=1))):
+            total = sum(m.p(Unit("t", "G", o, unit.values), previous, cache) for o in list(m.table.vocabulary) + ["never"])
+            self.assertAlmostEqual(total, 1.0, places=9, msg=str((previous, cache)))
+        loyal = [Unit("t", "G", o, unit.values) for o in "xxxxxxxx"]
+        fickle = [Unit("t", "G", o, unit.values) for o in "xyzxyzxy"]
+        self.assertGreater(m.score(loyal), m.table.score(loyal))
+        self.assertGreater(m.score(loyal), m.score(fickle))
+        self.assertTrue(math.isnan(m.score([])))
+
+    def test_draws_and_the_comparison(self):
+        us = self._units()
+        m = tables.Cache.fit(us, ("part",))
+        unit = Unit("t", "G", "x", {"part": "bass", "habit": "h"})
+        rng = random.Random(2)
+        self.assertEqual(m.draw(unit, None, Counter(), rng, keep=lambda o: o == "z"), "z")   # a new draw kept only when z
+        drawn = [m.draw(unit, "x", Counter(x=5, y=1), random.Random(i)) for i in range(200)]
+        self.assertGreater(drawn.count("x") / 200, 0.3)                      # loyal more often than the table alone would be
+        cs = tables.compare(us + [Unit("s4", "Chrono Trigger", "x", {"part": "bass", "habit": "h"})] * 3, [("part",)], cache=True)
+        self.assertEqual({c.shape for c in cs}, {("part",), ("part", tables.CACHE)})
+        self.assertIn("part+cache", tables.report(cs))

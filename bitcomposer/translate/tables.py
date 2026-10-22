@@ -28,6 +28,15 @@ all (the better fit where most outcomes are one song's). A per-game table is the
 last, backing off to the shared one; a conditioning proposed is tried by
 adding it.
 
+A song is loyal to its own outcomes in a way no context of a bar's
+captures: a bass holds one figure through a section. Cache sets a song's
+own outcomes as a mixture over a table: at each unit the song repeats the
+one before (same), returns to one it played earlier (earlier, each by how
+often so far) or plays a new one drawn from the table; the three shares
+are a table of their own (RECALL) under the part and the habit. Its
+likelihood is the mixture's, scored song by song in order, and its draws
+run the same urn, so a written part keeps the figures it has.
+
 Shapes (which conditionings, in what backoff order) are compared by the
 mean log-likelihood, in bits per unit, of the held-out units under a
 table fitted on the development ones, the games split in half (half():
@@ -242,15 +251,110 @@ def shapes(base: tuple, extras=(), game: bool = True, covers: int = 0) -> list[t
 
 
 FLOOR = ("floor",)                   # the shape that is the floor model alone, for the comparison
+CACHE = "cache"                      # the mark on a shape's name for its Cache mixture
+RECALL = ("same", "earlier", "new")  # what a unit is to its song so far (Cache)
+RECALL_SHAPE = ("part", "habit")     # what the recall shares are conditioned on (the values a unit has of these)
+
+
+def recall_units(units) -> list[Unit]:
+    """Each unit as what it is to its song so far: the same as the one
+    before, one played earlier in the song (not the one before), or new."""
+    out, by_song = [], defaultdict(list)
+    for u in units:
+        by_song[u.song, u.values.get("part", "")].append(u)
+    for us in by_song.values():
+        previous, seen = None, set()
+        for u in us:
+            kind = "same" if u.outcome == previous else "earlier" if u.outcome in seen else "new"
+            out.append(Unit(u.song, u.game, kind, {k: u.values[k] for k in RECALL_SHAPE if k in u.values}))
+            seen.add(u.outcome)
+            previous = u.outcome
+    return out
+
+
+class Cache:
+    """A song's own outcomes as a mixture over a table (the module)."""
+
+    def __init__(self, table: Table, recall: Table):
+        self.table = table
+        self.recall = recall
+
+    @classmethod
+    def fit(cls, units, shape, **table_args) -> "Cache":
+        units = list(units)
+        recall = Table(tuple(k for k in RECALL_SHAPE if units and k in units[0].values), "recall").fit(recall_units(units))
+        return cls(Table(shape, **table_args).fit(units), recall)
+
+    def shares(self, unit: Unit, previous, cache: Counter) -> tuple[float, float, float]:
+        """The shares of same, earlier and new at this unit: the recall table's, what cannot apply given to new."""
+        ctx = self.recall.context(unit)
+        same, earlier, new = (self.recall.p(k, ctx) for k in RECALL)
+        same, earlier, new = (x / (same + earlier + new) for x in (same, earlier, new))   # the table's unseen slot left out
+        pool = sum(cache.values()) - cache.get(previous, 0)
+        if previous is None:
+            new, same = new + same, 0.0
+        if pool <= 0:
+            new, earlier = new + earlier, 0.0
+        return same, earlier, new
+
+    def p(self, unit: Unit, previous, cache: Counter) -> float:
+        same, earlier, new = self.shares(unit, previous, cache)
+        pool = sum(cache.values()) - cache.get(previous, 0)
+        prob = new * self.table.p(unit.outcome, self.table.context(unit), unit.values)
+        if unit.outcome == previous:
+            prob += same
+        elif pool > 0 and unit.outcome in cache:
+            prob += earlier * cache[unit.outcome] / pool
+        return prob
+
+    def score(self, units) -> float:
+        """The mean log-likelihood of the units in bits, song by song in order."""
+        units = list(units)
+        if not units:
+            return float("nan")
+        total = 0.0
+        for us in _by_song(units).values():
+            previous, cache = None, Counter()
+            for u in us:
+                total += math.log2(self.p(u, previous, cache))
+                cache[u.outcome] += 1
+                previous = u.outcome
+        return total / len(units)
+
+    def draw(self, unit: Unit, previous, cache: Counter, rng: random.Random, keep=None) -> str:
+        """The next outcome for the song: the same, an earlier one by the urn,
+        or a new one from the table (`keep`: a test a new draw must pass,
+        tried a few times before any draw is taken)."""
+        same, earlier, _ = self.shares(unit, previous, cache)
+        x = rng.random()
+        if x < same:
+            return previous
+        if x < same + earlier:
+            pool = {k: v for k, v in cache.items() if k != previous}
+            return rng.choices(list(pool), list(pool.values()))[0]
+        ctx = self.table.context(unit)
+        for _ in range(20):
+            out = self.table.draw(ctx, rng, unit.values)
+            if keep is None or keep(out):
+                return out
+        return out
+
+
+def _by_song(units) -> dict:
+    by = defaultdict(list)
+    for u in units:
+        by[u.song, u.values.get("part", "")].append(u)
+    return by
 
 
 def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: str = BY_GAME,
-            votes: str = SONGS, floor=None, discount: float | None = None, covers: int = 0) -> list[Comparison]:
+            votes: str = SONGS, floor=None, discount: float | None = None, covers: int = 0,
+            cache: bool = False) -> list[Comparison]:
     """Fit each shape on the development half, score it on the held-out
     half (overall and by the value of `by`), and measure the spread of what
     it draws; best first. `floor`: a function of the development units
     giving the floor model, fitted once for every shape and scored alone
-    too (FLOOR)."""
+    too (FLOOR). `cache`: each shape also as the Cache mixture over it."""
     units = list(units)
     dev = [u for u in units if half_of(u, split) == DEVELOPMENT]
     held = [u for u in units if half_of(u, split) == HELD_OUT]
@@ -267,8 +371,35 @@ def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: 
         out.append(Comparison(shape, t.score(held), {k: t.score(v) for k, v in groups.items()},
                               sum(1 for c in t.votes if len(c) == len(shape)), t.entries(),
                               simulate(t, held, random.Random(rng_seed))))
+        if cache and shape != FLOOR:
+            m = Cache(t, Table(tuple(k for k in RECALL_SHAPE if dev and k in dev[0].values), "recall").fit(recall_units(dev)))
+            out.append(Comparison(shape + (CACHE,), m.score(held), {k: m.score(v) for k, v in groups.items()},
+                                  out[-1].contexts, out[-1].entries, simulate_cache(m, held, random.Random(rng_seed))))
     out.sort(key=lambda c: -c.bits)
     return out
+
+
+def simulate_cache(model: Cache, units, rng: random.Random, previous: str = "previous") -> tuple:
+    """simulate() for a Cache: the urn run song by song, the spread of its draws beside the songs' own."""
+    chained = previous in model.table.conditionings
+    distinct, ostinato = [], []
+    for us in _by_song(units).values():
+        drawn, last, cache = [], None, Counter()
+        for u in us:
+            values = dict(u.values)
+            if chained:
+                values[previous] = last if last is not None else values.get(previous, "start")
+            last = model.draw(Unit(u.song, u.game, u.outcome, values), last, cache, rng)
+            cache[last] += 1
+            drawn.append(last)
+        real = [u.outcome for u in us]
+        distinct.append((len(set(drawn)), len(set(real))))
+        ostinato.append((Counter(drawn).most_common(1)[0][1] / len(us), Counter(real).most_common(1)[0][1] / len(us)))
+    if not distinct:
+        return (0.0, 0.0, 0.0, 0.0)
+    n = len(distinct)
+    return (sum(a for a, _ in distinct) / n, sum(b for _, b in distinct) / n,
+            sum(a for a, _ in ostinato) / n, sum(b for _, b in ostinato) / n)
 
 
 def simulate(table: Table, units, rng: random.Random, previous: str = "previous") -> tuple:
@@ -349,6 +480,8 @@ def main(argv=None) -> int:
     ap.add_argument("--base", help="the chain every shape starts from (default: the table's)")
     ap.add_argument("--extras", help="each tried on the chain's end, comma-separated (default: the table's)")
     ap.add_argument("--no-game", action="store_true", help="leave out the per-game shapes")
+    ap.add_argument("--cache", action="store_true", help="each shape also as the song's own mixture over it (Cache)")
+    ap.add_argument("--recall", action="store_true", help="print the recall shares by part (and habit) instead")
     args = ap.parse_args(argv)
     from . import rhythm, store
     db = store.connect(args.db)
@@ -366,8 +499,15 @@ def main(argv=None) -> int:
         extras = tuple(x for x in args.extras.split(",") if x)
     floor = rhythm.BarCells if args.floor == "cells" else None
     covers = args.covers if args.covers is not None else (len(rhythm.BarCells.COVERS) if floor else 0)
+    if args.recall:
+        t = Table(tuple(k for k in RECALL_SHAPE if k in units[0].values), "recall").fit(recall_units(units))
+        for c in sorted(t.votes, key=lambda c: (len(c), [str(x) for x in c])):
+            n = sum(t.votes[c].values())
+            print(f"{'+'.join(str(x) for x in c) or '(all)':36} songs {t.songs[c]:5d}  " +
+                  "  ".join(f"{k} {t.votes[c].get(k, 0) / n:.2f}" for k in RECALL))
+        return 0
     cs = compare(units, shapes(base, extras, not args.no_game, covers), by="part", rng_seed=args.seed, split=args.split,
-                 votes=args.votes, floor=floor, discount=args.discount or None, covers=covers)
+                 votes=args.votes, floor=floor, discount=args.discount or None, covers=covers, cache=args.cache)
     dev = sum(1 for u in units if half_of(u, args.split) == DEVELOPMENT)
     print(report(cs, parts, f"{args.table}: {len(units)} units, {dev} development, {len(units) - dev} held-out; "
                             f"split by {args.split}, votes {args.votes}, floor {args.floor} (covers {covers}), "
