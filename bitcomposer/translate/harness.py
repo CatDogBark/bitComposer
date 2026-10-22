@@ -44,9 +44,13 @@ one-minute render, and both written parts fell silent there together).
 
 The song's moments (bars where every part but the one written drops to
 under MOMENT of the song's median energy, for at most MOMENT_BARS bars
-in a row) keep the song's own figure, and its locking to the band (the
-shared hits its part strikes, the stops it rests in) binds the written
-part, both read from the song itself: the arrangement is the song's.
+in a row) keep the song's own figure, and so does a bar holding a stop
+(a beat no other voice sounds in) that the song's own part plays
+through: the band leaves a hole and the part answers it, Johnny C. Bad's
+drummer with a roll of triplet sixteenths where the written drums kept
+time. Its locking to the band (the shared hits its part strikes, the
+stops it rests in) binds the written part. All of it read from the song
+itself: the arrangement is the song's.
 """
 import bisect
 import math
@@ -243,6 +247,21 @@ def moments(ctx: Context, part_voices: set) -> set:
     return out
 
 
+def stops(ctx: Context, part_voices: set, part_notes) -> set:
+    """The bars (indices among the song's bars) holding a beat no voice but the part's sounds in, that the part plays
+    through: the band's holes the part answers."""
+    parts = {voice: ns for voice, (_, ns) in ctx.by_voice.items() if voice not in part_voices}
+    out = set()
+    for k, (a, b) in enumerate(ctx.song.bars):
+        for beat in range(int(round(b - a))):
+            t0, t1 = a + beat, a + beat + 1
+            if not any(n[0] < t1 - NEAR and n[0] + (n[1] if not math.isnan(n[1]) else 0.25) > t0 + NEAR for ns in parts.values() for n in ns):
+                if any(n[0] < t1 - NEAR and n[0] + (n[1] if not math.isnan(n[1]) else 0.25) > t0 + NEAR for n in part_notes):
+                    out.add(k)
+                    break
+    return out
+
+
 def locks(ctx: Context, part_voices: set, part_notes) -> dict:
     """The song's own locking to the band, a bar at a time: the shared hits (positions where TOGETHER of the other
     voices playing in the bar strike within NEAR) the part strikes too, and the stops (beats no other voice sounds
@@ -292,11 +311,13 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     model = writer.fit([u for u in units if u.song != ctx.sid])
     own = [rhythm.figure(struck, a, song) if struck else "-" for _, a, _, struck in rhythm.all_bars_of(song, R.BASS)]
     held = moments(ctx, set(by_voice))
+    answered = stops(ctx, set(by_voice), part)
     lock = locks(ctx, set(by_voice), part)
-    notes, figures = writer.bass(song, model, random.Random(seed), key=ctx.key, hold=held, lock=lock)
+    notes, figures = writer.bass(song, model, random.Random(seed), key=ctx.key, hold=held | answered, lock=lock)
     mine_units = rhythm.bass_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, {len(figures)} bars written, {len(notes)} notes"
                + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
+               + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else "")
                + f"; locked to the band in {len(lock)} bars ({sum(len(m) for m, _ in lock.values())} shared hits, "
                  f"{sum(len(r) for _, r in lock.values())} stop beats)")
     # the written line onto the song's voices: the line voice, an alternating partner when the line is still ringing,
@@ -385,6 +406,7 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
     log.append(f"kit on voices {sorted(kit_voices)}: " + ", ".join(f"{LETTERS.get(k, k)} on {v}" for k, (v, *_) in sorted(where.items())))
     own = [rhythm.drum_figure(struck, song) if struck else "-" for _, _, _, struck in rhythm.all_bars_of(song, R.DRUMS)]
     held = moments(ctx, kit_voices)
+    answered = stops(ctx, kit_voices, song.notes[R.DRUMS])
     models, group_locks = {}, {}
     for letters in rhythm.DRUM_GROUPS:
         if all(rhythm.drum_group(f, letters) == "-" for f in own):
@@ -393,11 +415,12 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
         models[letters] = writer.fit([u for u in units if u.song != ctx.sid], name="drums-" + "".join(letters))
         notes_g = [n for n in song.notes[R.DRUMS] if rhythm.LETTERS.get(song.pieces.get(n[3]), "o") in letters]
         group_locks[letters] = locks(ctx, kit_voices, notes_g)
-    hits, figures = writer.drums(song, models, random.Random(seed), hold=held, locks=group_locks)
+    hits, figures = writer.drums(song, models, random.Random(seed), hold=held | answered, locks=group_locks)
     mine_units = rhythm.drum_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, kit {mine_units[0].values['kit'] if mine_units else '-'}, "
                f"groups {['+'.join(g) for g in models]}, {len(figures)} bars written, {len(hits)} hits"
-               + (f"; moments kept as the song's own: bars {sorted(held)}" if held else ""))
+               + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
+               + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else ""))
     placed, taken, dropped = {}, {}, Counter()        # (voice, start rounded) -> (letter, start, the sample's choice)
     for start_b, letter in hits:
         if letter not in where:
