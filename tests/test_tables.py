@@ -269,3 +269,20 @@ class BassUnitTests(unittest.TestCase):
         self.assertEqual({u.values["habit"] for u in us}, {"held"})
         hs = rhythm.habit_units([s])
         self.assertEqual([(h.song, h.outcome, h.values["part"]) for h in hs], [("id", "held", "melody")])
+
+
+class StyleHabitTests(unittest.TestCase):
+    def test_rhythm_and_bass_habits(self):
+        chords = [Span(0.0, 16.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0), (8.0, 12.0), (12.0, 16.0)], chords, bpm=100.0, sid="id",
+                        game="G", numbers=[0, 1, 2, 3])
+        s.notes["bass"] = [(b + x, 0.4, 36.0 if x < 2 else 48.0, "k") for b in (0.0, 4.0, 8.0, 12.0) for x in (0.0, 1.0, 2.0, 3.0)]
+        us = rhythm.bass_units([s])
+        self.assertEqual({u.outcome for u in us}, {"0:R 1:R 2:r 3:r"})
+        self.assertEqual({u.values["habit"] for u in us}, {"medium roots octaves"})
+        rs = rhythm.units([s])
+        self.assertEqual({u.values["habit"] for u in rs}, {"medium repeating"})
+        self.assertEqual([(h.outcome, h.values["part"]) for h in rhythm.bass_habit_units([s])], [("medium roots octaves", "bass")])
+        self.assertEqual([(h.outcome, h.values["part"]) for h in rhythm.rhythm_habit_units([s])], [("medium repeating", "bass")])
+        self.assertEqual(rhythm.habit_of(1.0, rhythm.DENSITIES), "sparse")
+        self.assertEqual(rhythm.habit_of(7.0, rhythm.DENSITIES), "dense")

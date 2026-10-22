@@ -316,31 +316,85 @@ def bass_units(songs) -> list:
     figure (figure()); its values the part, the meter, the tempo band, the
     shape of the chord at the bar's start (harmony's names; ? none fits),
     whether the chord changes in this bar and in the next (chord_change),
-    and the figure before it (START where none)."""
+    the figure before it (START where none), and the song's bass habit
+    (_bass_habit: its density, its tones, its octaves)."""
     out = []
     for s in songs:
         if R.BASS not in s.notes:
             continue
-        tempo, previous, last = band(s.bpm), START, None
+        tempo, previous, last, mine = band(s.bpm), START, None, []
         for k, a, struck in numbered_bars_of(s, R.BASS):
             if last is not None and k != last + 1:
                 previous = START
             c = _chord_at(s.chords, a)
             drawn = figure(struck, a, s)
-            out.append(tables.Unit(s.sid, s.game, drawn, {
+            mine.append(tables.Unit(s.sid, s.game, drawn, {
                 "part": R.BASS, "meter": s.meter, "tempo": tempo,
                 "shape": "?" if c is None or c.root is None or c.fit < FIT else (c.shape or "major"),
                 "chord": chord_change(s, a, a + s.meter), "next": chord_change(s, a + s.meter, a + 2 * s.meter),
                 "previous": previous}))
             previous, last = drawn, k
+        if mine:
+            _give_habit(mine, _bass_habit(mine))
+            out += mine
     return out
 
 
 HABITS = ((1 / 3, "detached"), (2 / 3, "mixed"), (2, "held"))   # a song's share of held notes -> its habit
+REPEATS = ((1 / 3, "varied"), (2 / 3, "mixed"), (2, "repeating"))   # its share of bars repeating the one before
+DENSITIES = ((2, "sparse"), (6, "medium"), (1e9, "dense"))        # its onsets a bar
+TONES = ((0.8, "roots", "Rr"), (0.8, "root-fifth", "Rr5"), (0, "walking", ""))   # the share of its bass notes on these marks
+OCTAVES = 0.2                        # the share of a bass's notes an octave up (r) for it to play octaves
 
 
-def habit_of(share: float) -> str:
-    return next(name for top, name in HABITS if share < top)
+def habit_of(share: float, scale=HABITS) -> str:
+    """A song's habit from one of its shares (HABITS, REPEATS) or its density a bar (DENSITIES)."""
+    return next(name for top, name in scale if share < top)
+
+
+def _tokens(drawn: str) -> list[str]:
+    return [] if drawn == "-" else drawn.split()
+
+
+def _give_habit(mine: list, habit: str) -> None:
+    for u in mine:
+        u.values["habit"] = habit
+
+
+def _rhythm_habit(mine: list) -> str:
+    """A song's habit for a part from its bars: how dense, and how much it repeats itself."""
+    density = sum(len(_tokens(u.outcome)) for u in mine) / len(mine)
+    repeats = sum(1 for u in mine if u.outcome == u.values["previous"]) / len(mine)
+    return f"{habit_of(density, DENSITIES)} {habit_of(repeats, REPEATS)}"
+
+
+def _bass_habit(mine: list) -> str:
+    """A song's bass habit from its figures: how dense, which tones (TONES), whether it plays octaves."""
+    marks = [t.partition(":")[2] for u in mine for t in _tokens(u.outcome)]
+    density = len(marks) / len(mine)
+    tones = "walking"
+    for floor_, name, on in TONES:
+        if marks and sum(1 for m in marks if m in on) / len(marks) >= floor_:
+            tones = name
+            break
+    octaves = "octaves" if marks and sum(1 for m in marks if m == "r") / len(marks) >= OCTAVES else "no-octaves"
+    return f"{habit_of(density, DENSITIES)} {tones} {octaves}"
+
+
+def habits(units_) -> list:
+    """The habits in units' values, one unit a song and part: what a writer draws once a song."""
+    seen = {}
+    for u in units_:
+        seen.setdefault((u.song, u.values["part"]), tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"]}))
+    return list(seen.values())
+
+
+def rhythm_habit_units(songs) -> list:
+    return habits(units(songs))
+
+
+def bass_habit_units(songs) -> list:
+    return habits(bass_units(songs))
 
 
 def cell_units(units_) -> list:
@@ -415,42 +469,41 @@ def value_units(songs) -> list:
                     "beat": math.floor(at), "previous": previous}))
                 previous = held
             if mine:
-                habit = habit_of(sum(1 for u in mine if u.outcome == "held") / len(mine))
-                for u in mine:
-                    u.values["habit"] = habit
+                _give_habit(mine, habit_of(sum(1 for u in mine if u.outcome == "held") / len(mine)))
                 out += mine
     return out
 
 
 def habit_units(songs) -> list:
-    """Each song's habit for the melody and the counter (value_units'), one
-    unit a song and part: what a writer draws once a song."""
-    seen = {}
-    for u in value_units(songs):
-        seen.setdefault((u.song, u.values["part"]), tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"]}))
-    return list(seen.values())
+    """Each song's articulation habit for the melody and the counter (value_units'), one unit a song and part."""
+    return habits(value_units(songs))
 
 
 def units(songs) -> list:
     """Every bar of every part as a table's unit (tables.Unit): its outcome
     the bar's pattern, its values the part, the meter, the tempo band, the
     previous bar's pattern of the part (START where none), the bar's place
-    in its part of the form and whether the chord changes in it."""
+    in its part of the form, whether the chord changes in it, and the
+    song's habit for the part (_rhythm_habit: its density and how much it
+    repeats itself, which a writer would draw once a song)."""
     out = []
     for s in songs:
         tempo = band(s.bpm)
         for role in PARTS:
             if role not in s.notes:
                 continue
-            previous, last = START, None
+            previous, last, mine = START, None, []
             for k, a, struck in numbered_bars_of(s, role):
                 if last is not None and k != last + 1:
                     previous = START                      # a bar of another length between: the chain breaks
                 drawn = pattern(p for p, _ in struck)
-                out.append(tables.Unit(s.sid, s.game, drawn, {
+                mine.append(tables.Unit(s.sid, s.game, drawn, {
                     "part": role, "meter": s.meter, "tempo": tempo, "previous": previous,
                     "place": place_in_part(s, k), "chord": chord_change(s, a, a + s.meter)}))
                 previous, last = drawn, k
+            if mine:
+                _give_habit(mine, _rhythm_habit(mine))
+                out += mine
     return out
 
 

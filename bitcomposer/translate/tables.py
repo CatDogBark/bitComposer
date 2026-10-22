@@ -323,10 +323,12 @@ def _shape(shape: tuple) -> str:
 
 #  table -> (its units from the rhythm module's songs, the chain every shape starts from, each extra tried on its end)
 SPECS = {
-    "rhythm": ("units", ("part", "meter"), ("tempo", "previous", "place", "chord")),
+    "rhythm": ("units", ("part", "meter"), ("tempo", "previous", "place", "chord", "habit")),
+    "rhythm_habits": ("rhythm_habit_units", ("part",), ()),
     "values": ("value_units", ("part", "value"), ("meter", "tempo", "place", "beat", "previous", "habit")),
     "habits": ("habit_units", ("part",), ()),
-    "bass": ("bass_units", ("part", "meter"), ("tempo", "shape", "chord", "next", "previous")),
+    "bass": ("bass_units", ("part", "meter"), ("tempo", "shape", "chord", "next", "previous", "habit")),
+    "bass_habits": ("bass_habit_units", ("part",), ()),
 }
 
 
