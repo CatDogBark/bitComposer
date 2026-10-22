@@ -29,6 +29,7 @@ from array import array
 from collections import Counter
 
 NEAR = 0.06                           # beats: onsets this close are one event
+MOMENT = 0.65                         # a bar where the other parts' energy is under this share of the song's median is a moment
 DOUBLING = 0.6                        # the share of the pair's events both voices sound at, for the second to double the first
 ALTERNATING = 0.6                     # the share of single-voice events that change voice, for the pair to alternate
 NOT_BOTH = 0.3                        # an alternating pair sounds together in under this share of its events
@@ -88,6 +89,29 @@ def relation(line, other) -> tuple:
     return ("apart",)
 
 
+def moments(db, sid, song, bass_voices) -> set:
+    """The song's moments: bars (indices among the bars of the meter) where every part but the bass drops to under
+    MOMENT of the song's median energy (level x sounded length)."""
+    others = []
+    for voice, blob in db.execute("SELECT voice, notes FROM voices WHERE song = ?", (sid,)):
+        if voice not in bass_voices:
+            others += [n for n in store.unpack(blob) if n[3] > 0]
+    bars = [(a, b) for a, b in song.bars if round(b - a) == song.meter]
+    energy = []
+    for a, b in bars:
+        e = 0.0
+        for n in others:
+            length = n[1] if not math.isnan(n[1]) else 0.25
+            lo, hi = max(a, n[0]), min(b, n[0] + length)
+            if hi > lo:
+                e += n[3] * (hi - lo)
+        energy.append(e)
+    if not energy:
+        return set()
+    median = statistics.median(energy)
+    return {k for k, e in enumerate(energy) if e < MOMENT * median}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python tools/table_bass.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("spc")
@@ -129,8 +153,10 @@ def main(argv=None) -> int:
     units = rhythm.bass_units(songs)
     table = writer.fit([u for u in units if u.song != sid])
     own = [u.outcome for u in rhythm.bass_units([song])]
-    notes, figures = writer.bass(song, table, random.Random(a.seed), key=(tonic, mode) if tonic is not None else None)
-    print(f"  habit {rhythm.bass_units([song])[0].values['habit']}, {len(figures)} bars written, {len(notes)} notes")
+    held = moments(db, sid, song, set(by_voice))
+    notes, figures = writer.bass(song, table, random.Random(a.seed), key=(tonic, mode) if tonic is not None else None, hold=held)
+    print(f"  habit {rhythm.bass_units([song])[0].values['habit']}, {len(figures)} bars written, {len(notes)} notes"
+          + (f"; moments kept as the song's own: bars {sorted(held)}" if held else ""))
     for i, (f, o) in enumerate(zip(figures, own)):
         print(f"  bar {i:3d}  written {f:40.40}  own {o}")
     # the song as decoded, the line's notes swapped for the written ones, a layer rebuilt on them

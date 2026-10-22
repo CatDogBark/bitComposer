@@ -60,8 +60,13 @@ notes or more (The Decisive Battle came back with sus tones it plays
 once). The bars the song's own bass
 rests through are left silent and never drawn for (the arrangement stays
 the song's: which bars the bass plays is the arrangement table's, not
-this one's), and a playing bar never draws a rest. Each token becomes a
-note:
+this one's), and a playing bar never draws a rest; so are the song's
+moments: a bar the caller names in `hold` (the harness: a bar where the
+other parts' energy drops under MOMENT of the song's median, The
+Decisive Battle's regear at 18 s, which the written bass "blasted
+through") keeps the song's own figure, since what a bass does in a break
+is the song's choice (over the readings' breaks it keeps its figure in
+35 %, rests in 32 %, thins in 27 %). Each token becomes a note:
 its pitch the chord tone its mark names in the chord sounding at its
 onset (R the root, r the root an octave up, 3 5 7 the chord's own, s the
 sus tone, ? the root; no chord fitting, the last root, or the tonic),
@@ -229,8 +234,10 @@ def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
 
 
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
-         key: tuple | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
-    """The bass written for the song: its notes (start, end in beats, midi) and the figures drawn, one a bar."""
+         key: tuple | None = None, hold=()) -> tuple[list[tuple[float, float, float]], list[str]]:
+    """The bass written for the song: its notes (start, end in beats, midi)
+    and the figures drawn, one a bar; the bars in `hold` (indices among the
+    bars of the meter) keep the song's own figure."""
     own = song.notes.get(R.BASS, [])
     manner = Manner(song, R.BASS, model.table.vocabulary)
     if habit is None:
@@ -314,6 +321,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             if figure != REST:
                 state["played"][figure] += 1
             state["previous"] = figure
+    for k in hold:                                          # the song's moments: its own bar
+        if 0 <= k < len(figures) and own[k] != REST:
+            figures[k] = own[k]
     notes, last_root, previous = [], tonic, None
     for (a, b, _), figure in zip(bars, figures):
         new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous)

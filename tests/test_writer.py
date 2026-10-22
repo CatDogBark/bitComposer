@@ -110,6 +110,18 @@ class WriterTests(unittest.TestCase):
         self.assertEqual(len(set(figures[4:])), 1)
         self.assertNotEqual(writer.rhythm_of(figures[0]), writer.rhythm_of(figures[4]))
 
+    def test_a_held_bar_keeps_the_songs_own_figure(self):
+        others = [_song("b"), _song("c")]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        model = writer.fit(rhythm.bass_units(others))
+        s = _song(bars=4)
+        s.chords = [Span(0.0, 16.0, 0, "", 1.0)]
+        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in ((0.0, 1.0, 2.0, 3.0) if i != 2 else (0.0, 2.5))]
+        _, figures = writer.bass(s, model, random.Random(1), key=(0, "major"), hold={2})
+        self.assertEqual(figures[2], "0:R 5/2:5")                       # the song's own bar, air and all
+        self.assertTrue(all(f in model.table.vocabulary for i, f in enumerate(figures) if i != 2))
+
     def test_a_changing_song_changes(self):
         others = [_song("b"), _song("c"), _song("d")]
         others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
