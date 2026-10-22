@@ -24,10 +24,14 @@ usual sample, envelope and echo (its most common, not its first note's).
 The drums: every voice the readers call drums is the kit, one part; each
 piece the song strikes (kick, snare, hat, tom, cymbal, other, the namer's
 names on the samples) maps to the voice and sample the song strikes it
-with most, with that sample's usual settings, pitch register and note
-length; a written hit of a piece the song's kit lacks is dropped, and
-two pieces on one voice at the same instant keep the one the song
-strikes more.
+with most, with that sample's usual settings and pitch register; a hit
+takes the volume of the song's nearest hit of the same piece (Terra's
+snare fades in with its bass and plays at four levels through the song)
+and lasts its gap to the next hit on its voice times the piece's own
+sounded share (a Terra snare hit sounds nearly to the next, its roll's
+pickups do not); a written hit of a piece the song's kit lacks is
+dropped, and two pieces on one voice at the same instant keep the one
+the song strikes more.
 
 The song's moments (bars where every part but the one written drops to
 under MOMENT of the song's median energy, for at most MOMENT_BARS bars
@@ -303,20 +307,27 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
     if not kit_voices or R.DRUMS not in song.notes:
         return None
     log = []
-    # each piece's voice and sample: the ones the song strikes it with most
+    # each piece's voice and sample: the ones the song strikes it with most; its sounded share: of the gap to the
+    # next hit on its voice, how much of it the song's hits of the piece sound (the median)
     strikes = Counter()
-    lengths = {}
+    shares = {}
     for v in kit_voices:
-        for n in ctx.by_voice[v][1]:
+        notes_v = sorted(ctx.by_voice[v][1])
+        for i, n in enumerate(notes_v):
             letter = rhythm.LETTERS.get(ctx.pieces.get(ctx.keys.get(int(n[5]))), "o")
             strikes[(letter, v, ctx.keys.get(int(n[5])))] += 1
-            lengths.setdefault(letter, []).append(n[1] if not math.isnan(n[1]) else 0.25)
+            if i + 1 < len(notes_v) and notes_v[i + 1][0] - n[0] > NEAR and not math.isnan(n[1]):
+                shares.setdefault(letter, []).append(min(1.0, n[1] / (notes_v[i + 1][0] - n[0])))
     where = {}
     for (letter, v, key), c in strikes.most_common():
         if letter not in where:
             found = settings_of([n for n in original.notes if n.voice == v], events, key)
             if found is not None:
-                where[letter] = (v, found, statistics.median(lengths[letter]), c)
+                share = statistics.median(shares[letter]) if shares.get(letter) else 0.8
+                mine = sorted((n for n in original.notes if n.voice == v
+                               and (p := events.get((n.voice, round(n.start, 4)))) is not None
+                               and p.sample is not None and p.sample.key == key), key=lambda n: n.start)
+                where[letter] = (v, found, share, c, mine)
     log.append(f"kit on voices {sorted(kit_voices)}: " + ", ".join(f"{LETTERS.get(k, k)} on {v}" for k, (v, _, _, _) in sorted(where.items())))
     own = [rhythm.drum_figure(struck, song) if struck else "-" for _, _, _, struck in rhythm.all_bars_of(song, R.DRUMS)]
     held = moments(ctx, kit_voices)
@@ -333,26 +344,39 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, kit {mine_units[0].values['kit'] if mine_units else '-'}, "
                f"groups {['+'.join(g) for g in models]}, {len(figures)} bars written, {len(hits)} hits"
                + (f"; moments kept as the song's own: bars {sorted(held)}" if held else ""))
-    new, taken, dropped = [], {}, Counter()
+    placed, taken, dropped = {}, {}, Counter()        # (voice, start rounded) -> (weight, letter, start)
     for start_b, letter in hits:
         if letter not in where:
             dropped[letter] += 1
             continue
-        v, (usual, like, pitch_ref, _), held_beats, weight = where[letter]
+        v, _, _, weight, _ = where[letter]
         start = seconds_at(beats, start_b)
         if start >= original.seconds:
             continue
         slot = (v, round(start, 3))
-        if slot in taken:                                   # two pieces on one voice at once: the one the song strikes more
-            if taken[slot][0] >= weight:
-                dropped[letter] += 1
-                continue
-            new.remove(taken[slot][1])
-        note = note_like(v, start, min(seconds_at(beats, start_b + held_beats), original.seconds), usual, like, pitch_ref)
-        new.append(note)
-        taken[slot] = (weight, note)
+        if slot in taken and taken[slot] >= weight:         # two pieces on one voice at once: the one the song strikes more
+            dropped[letter] += 1
+            continue
+        taken[slot] = weight
+        placed[slot] = (letter, start)
+    new = []
+    by_voice_starts = {}
+    for (v, _), (letter, start) in placed.items():
+        by_voice_starts.setdefault(v, []).append(start)
+    gaps = {v: sorted(starts) for v, starts in by_voice_starts.items()}
+    for (v, _), (letter, start) in sorted(placed.items(), key=lambda kv: kv[1][1]):
+        _, (usual, like, pitch_ref, _), share, _, mine = where[letter]
+        starts = gaps[v]
+        i = bisect.bisect_right(starts, start + 1e-6)
+        typical = statistics.median([b - a for a, b in zip(starts, starts[1:])]) if len(starts) > 1 else 0.5
+        gap = starts[i] - start if i < len(starts) else typical
+        j = bisect.bisect_left([n.start for n in mine], start)
+        near = min((mine[k] for k in (j - 1, j) if 0 <= k < len(mine)), key=lambda n: abs(n.start - start), default=None)
+        volume = near.volume if near is not None and abs(near.start - start) < 4.0 else None
+        new.append(note_like(v, start, min(start + share * gap, original.seconds), usual, like, pitch_ref, volume))
     if dropped:
         log.append("dropped hits: " + ", ".join(f"{LETTERS.get(k, k)} {c}" for k, c in dropped.most_common()))
+    log.append("hits sound " + ", ".join(f"{LETTERS.get(k, k)} {w[2]:.2f}" for k, w in sorted(where.items())) + " of their gaps, at the song's own volumes")
     return Written(R.DRUMS, new, set(kit_voices), figures, own, log)
 
 
