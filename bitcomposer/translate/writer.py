@@ -7,9 +7,14 @@ the database, so the song never votes for its own bars; the habit is the
 song's own, read from its bass (the generator's writer draws one from the
 habits table); then bar by bar a figure is drawn as the song's own
 mixture over the table (tables.Cache: the figure before again, one the
-song played earlier, or a new one under the part, the meter, the figure
-before and the habit; a new figure must sit on the song's own grid), and
-each token becomes a note:
+song played earlier, or a new one under the part, the meter, the habit
+and the figure before, in that order, so a figure never seen after this
+one backs off to the habit's own inventory, not the pooled one; a new
+figure must sit on the song's own grid). The bars the song's own bass
+rests through are left silent and never drawn for (the arrangement stays
+the song's: which bars the bass plays is the arrangement table's, not
+this one's), and a playing bar never draws a rest. Each token becomes a
+note:
 its pitch the chord tone its mark names in the chord sounding at its
 onset (R the root, r the root an octave up, 3 5 7 the chord's own, s the
 sus tone, + a passing tone: the key's scale step above the root, or the
@@ -29,7 +34,8 @@ from fractions import Fraction
 from . import harmony, rhythm, roles as R, tables
 from .vocab import FIT
 
-SHAPE = ("part", "meter", "previous", "habit")   # the bass table's shape (the record in the phase's doc)
+SHAPE = ("part", "meter", "habit", "previous")   # the bass table's shape, the habit before the chain (the module)
+REST = "-"
 DISCOUNT = 0.75
 LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
 SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
@@ -59,13 +65,20 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     sounds = sounded(own)
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
+    rests = {round(a, 6) for a, struck in rhythm.bars_of(song, R.BASS) if not struck}
     notes, figures, previous, last_root, played = [], [], None, tonic, Counter()
     for a, b in song.bars:
         if round(b - a) != song.meter:
             continue
+        if round(a, 6) in rests:
+            figures.append(REST)
+            previous = REST
+            continue
         values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
-        figure = model.draw(tables.Unit(song.sid, song.game, "", values), previous, played, rng,
-                            keep=lambda f: on_grid(f, song.division))
+        figure = model.draw(tables.Unit(song.sid, song.game, "", values), None if previous == REST else previous,
+                            played, rng, keep=lambda f: f != REST and on_grid(f, song.division))
+        if figure == REST:                                  # the urn's memory of the song's rests: draw a figure anew
+            figure = model.table.draw(model.table.context(tables.Unit(song.sid, song.game, "", values)), rng, values)
         new, last_root = realize(figure, a, b, song, low, sounds, scale, last_root)
         notes += new
         figures.append(figure)

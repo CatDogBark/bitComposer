@@ -41,7 +41,12 @@ class WriterTests(unittest.TestCase):
         self.assertIsInstance(model, tables.Cache)
         notes, figures = writer.bass(_song(), model, random.Random(1), key=(0, "major"))
         self.assertEqual(len(figures), 4)
-        self.assertTrue(all(writer.on_grid(f, 4) for f in figures))
+        self.assertTrue(all(writer.on_grid(f, 4) and f != "-" for f in figures))
+        resting = _song()
+        resting.notes["bass"] = [n for n in resting.notes["bass"] if n[0] >= 4.0]      # the first bar rests
+        _, figures = writer.bass(resting, model, random.Random(1), key=(0, "major"))
+        self.assertEqual(figures[0], "-")
+        self.assertTrue(all(f != "-" for f in figures[1:]))
         self.assertTrue(all(0.0 <= a < b <= 16.0 for a, b, _ in notes))
         self.assertTrue(all(36.0 <= m < 60.0 for _, _, m in notes))
         self.assertEqual(writer.sounded(_song().notes["bass"]), 0.4)
