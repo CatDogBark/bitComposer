@@ -66,7 +66,7 @@ reference.
 - Where a taste correction lives (`../TRANSLATOR.md`: only in the pack),
   and in what form when the pack is tables.
 
-## Planned in detail (2026-10-22)
+## Planned in detail (2026-10-21)
 
 What phases 1 and 2 changed about this phase: the readers are measured, so
 the line between the tables that can be counted now and the ones that
@@ -185,3 +185,45 @@ the harmony tables count.
   songs better, and which the writer can use.
 - Whether the previous bar's pattern (a chain) or the bar's place in the
   part predicts rhythms better, and what each costs in table size.
+
+## Record
+
+### The drum namer inside the role reader (2026-10-21)
+
+A reading names each sample by its sound as it names the samples
+(`events.of_notes`: drums.measure on the SNES chip's interpolation of the
+PCM at the voice's median pitch, then drums.name) and keeps the name on
+the sample (`Sample.piece`; store schema 5, translator version 8). The
+role reader's drum rule, now first: a voice whose notes sound on
+drum-named samples (kick, snare, hat, tom, cymbal; BY_SOUND 0.8 of them)
+and plays each sample at FEW_PITCHES (4) or fewer is a drum voice; one on
+kick and tom samples only (LOW_PIECES) is a drum voice by sound only where
+it sounds on under SPARSE (0.5) of the beats, as fills do, and a voice
+playing on is left to the other rules, since a bass on a low sample passes
+for a tom. What the two guards cost to learn: the first version made 728
+bass voices drums and lost Psycho Spin's bass, its three chord changes
+with it (chord check held-out 0.83 to 0.67); the pitch cap left 224; the
+playing-on guard 128.
+
+Against the phase 1 readings (attempt 13), 507 of 12,453 voice roles
+changed. Bass to drums 128: 42 of them play throughout, kits on kick,
+snare and tom samples the old rule had as the bass (Star Fox, Uniracers,
+Lufia II's battles, Mega Man X's Chill Penguin), each song now with
+another voice as its bass; the other 86 are sparse kick and tom fills.
+Drums to bass 45, accompaniment to drums 52, harmony to drums 45, drums
+to accompaniment 40, drums to harmony 37.
+
+The checks: the tune's carrier 424 of 475 marked bars (89 %, unchanged);
+chords held-out mean F1 0.83, five of six songs at 0.75 or better,
+development 0.65 and four of six (both as phase 1 left them); bar phase
+held-out 77 % (76 before); beats 40 of 41. The generator's known answers
+through the score path (60 songs, seed 1): the melody channel read as the
+melody in 60 of 60, the bass right in 58 (39 before), the drum channels
+read as drums 341 of 341 (the toms no longer take the bass's role); the
+beat still read at half the tempo in 57 (phase 2's finding, untouched).
+
+### One readings database (2026-10-21)
+
+All 39 games read again on Ragnarok with the readers as above:
+`~/diags/bitcomposer/idiom/phase3/readings.db`, 1,836 songs, translator
+version 8, notes cache key 5b1140535b27. Every table below counts from it.
