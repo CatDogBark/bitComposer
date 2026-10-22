@@ -101,6 +101,9 @@ MELODY_HEARD = 0.25                  # and of the loudest pitched voice's level 
 MELODY_CEILING = 84                  # the highest median pitch a tune sits at (C6)
 ECHO_DELAY = (0.025, 0.5)            # seconds an echo part may follow the part it copies
 ECHO_HELD = 0.6                      # the share of its notes that must be copies, one delay apart
+ECHO_SPREAD = 0.03                   # seconds the delay may wobble around its commonest value (Gang-Plank Galleon's
+                                     # echo voice follows 150 to 200 ms behind, by the driver's timer)
+MELODY_DENSE = 2.0                   # notes a beat beyond which a line is figuration more than tune
 
 
 def echoes(song) -> dict:
@@ -108,7 +111,8 @@ def echoes(song) -> dict:
     voice -> (the voice it copies, the delay). A driver's echo made of a
     spare voice (Star Fox's Corneria: one part copying another 1.4 steps of
     its grid later, 246 ms, every note off the grid). A copy is a note of
-    the same pitch class; the delay is the one most of them share, to 4 ms."""
+    the same pitch class; the delay is the one most of them share, within
+    ECHO_SPREAD of its commonest value."""
     by = {}
     for p in song.notes:
         if p.midi is not None and p.level > 0:
@@ -130,7 +134,7 @@ def echoes(song) -> dict:
             if not flat:
                 continue
             mode = flat.most_common(1)[0][0] / 500
-            share = sum(1 for ds in delays if any(abs(d - mode) <= 0.004 for d in ds)) / len(notes)
+            share = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SPREAD for d in ds)) / len(notes)
             if share >= ECHO_HELD and (best is None or share > best[0]):
                 best = (share, u, mode)
         if best:
@@ -177,10 +181,13 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
             roles[v] = Role(v, HARMONY, evidence={"length_beats": round(feats[v]["length_beats"], 2)})
     rest = [v for v in rest if v not in roles]
     # the melody: of the lines heard (present, loud enough, below the ceiling), the most varied, weighed by how
-    # much it is heard; none heard, no melody (a song of drums and bass, or noises where a tune would be)
+    # much it is heard and held back where it runs over MELODY_DENSE notes a beat (figuration: Super Mario World's
+    # Overworld had a louder, busier accompaniment outscore its tune); none heard, no melody (a song of drums
+    # and bass, or noises where a tune would be)
     def melodic(v):
         f = feats[v]
-        return f["entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
+        return (f["entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
+                * min(1.0, MELODY_DENSE / max(f["per_beat"], 1e-9)))
     heard = [v for v in rest if feats[v]["presence"] >= MELODY_PRESENT and feats[v]["level"] >= MELODY_HEARD * loudest
              and feats[v]["median"] <= MELODY_CEILING]
     if heard:
