@@ -62,6 +62,30 @@ class WriterTests(unittest.TestCase):
         self.assertFalse(writer.on_grid("0:R 1/3:R", 4))
         self.assertTrue(writer.on_grid("-", 1))
 
+    def test_spans_and_rhythm(self):
+        self.assertEqual(writer.rhythm_of("0:R 1/2:r 3:5"), "0 1/2 3")
+        self.assertEqual(writer.rhythm_of("-"), "-")
+        self.assertEqual(writer.spans(list("aaaa")), [(0, 4, 1)])
+        self.assertEqual(writer.spans(list("ababab")), [(0, 6, 2)])
+        self.assertEqual(writer.spans(list("abcdabcdx")), [(0, 8, 4), (8, 1, 1)])
+        self.assertEqual(writer.spans(list("xabab")), [(0, 1, 1), (1, 4, 2)])
+        self.assertEqual(writer.spans(list("ab")), [(0, 1, 1), (1, 1, 1)])
+        self.assertEqual(writer.spans([]), [])
+
+    def test_a_span_holds_its_pattern(self):
+        others = [_song("b"), _song("c")]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        model = writer.fit(rhythm.bass_units(others))
+        s = _song(bars=8)                                            # eight bars, the same figure in each: one span of period 1
+        s.chords = [Span(0.0, 32.0, 0, "", 1.0)]                      # one chord, so the song's own figures repeat exactly
+        _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))
+        self.assertEqual(len(set(figures)), 1)
+        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0, "k") for i in range(8) for x in ((0.0, 2.0) if i % 2 else (0.0, 1.0, 2.0, 3.0))]
+        _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))   # a two-bar pattern through the song
+        self.assertEqual(figures[0::2], [figures[0]] * 4)
+        self.assertEqual(figures[1::2], [figures[1]] * 4)
+
     def test_the_songs_manner(self):
         known = {"0:R 1:R", "0:R 2:R", "0:R 1:R 2:R 3:R", "1:R", "0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R",
                  "0:R 1:R 2:R 11/4:R", "0:R 4/3:R 5/3:R 2:R", "0:R", "-"}

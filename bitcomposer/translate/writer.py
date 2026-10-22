@@ -18,7 +18,21 @@ and no sparser than SPARSER times it; striking the downbeat where the
 song's bass strikes it in DOWNBEAT of its bars; and placed only on the
 subdivisions the song's bass uses (its feel: quarters and triplets in
 Terra, where a sixteenth pickup was the listener's "burst" and a bar
-with nothing on the one his "skip"). The bars the song's own bass
+with nothing on the one his "skip").
+
+A bass holds its figures over spans and changes with the music, which a
+bar drawn at a time cannot do (the listener: "no section awareness, no
+throughline"). Over the readings' 1,324 basses, 63 % of the bars sit in a
+span repeating a rhythm with a period of one, two or four bars (spans of
+6.6 bars on average), and a new span's rhythm is one an earlier span had
+in 35 % of cases (EARLIER). So the writer reads the song's own spans from
+its bass (by rhythm, marks dropped: a walking bass keeps its rhythm and
+moves its tones) and writes a pattern a span: one of an earlier span's
+patterns with EARLIER's chance, else as many new figures as the span's
+period, held through the span; where the song's own span repeats its
+figures exactly, the pattern repeats exactly, and where only the rhythm
+repeats, each bar is drawn anew with the pattern's rhythm, so the tones
+move. A bar in no span is drawn on its own. The bars the song's own bass
 rests through are left silent and never drawn for (the arrangement stays
 the song's: which bars the bass plays is the arrangement table's, not
 this one's), and a playing bar never draws a rest. Each token becomes a
@@ -49,6 +63,9 @@ LOW = 0.1                             # the register's floor: this quantile of t
 DENSER = 1.5                          # a new figure strikes at most this many times the song's own median a bar
 SPARSER = 0.5                         # and at least this many times it
 DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
+PERIODS = (1, 2, 4)                   # bars: the periods a span may repeat with
+EARLIER = 0.35                        # a new span's chance of taking a pattern an earlier span had (the readings' basses, by rhythm)
+TRIES = 40                            # draws before the writer gives up on a constraint
 SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
 
 
@@ -88,6 +105,35 @@ class Manner:
                 and all(p.denominator in self.feel for p in positions))
 
 
+def rhythm_of(figure: str) -> str:
+    """A figure's rhythm alone: its positions, the marks dropped."""
+    return " ".join(t.partition(":")[0] for t in rhythm._tokens(figure)) or REST
+
+
+def spans(keys: list) -> list[tuple[int, int, int]]:
+    """Maximal runs where the keys repeat with the smallest period in PERIODS
+    that fits (at least two periods long): [(start, length, period)]; a bar
+    in no run is its own span of length 1."""
+    out, i, n = [], 0, len(keys)
+    while i < n:
+        best = None
+        for p in PERIODS:
+            if i + p > n:
+                break
+            j = i + p
+            while j < n and keys[j] == keys[j - p]:
+                j += 1
+            if j - i >= 2 * p and (best is None or j - i > best[1]):
+                best = (p, j - i)
+        if best is None:
+            out.append((i, 1, 1))
+            i += 1
+        else:
+            out.append((i, best[1], best[0]))
+            i += best[1]
+    return out
+
+
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
@@ -106,29 +152,60 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     sounds = sounded(own)
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
-    rests = {round(a, 6) for a, struck in rhythm.bars_of(song, R.BASS) if not struck}
-    notes, figures, previous, last_root, played = [], [], None, tonic, Counter()
-    for a, b in song.bars:
-        if round(b - a) != song.meter:
-            continue
-        if round(a, 6) in rests:
-            figures.append(REST)
-            previous = REST
-            continue
+    bars = [(a, a + song.meter, struck) for _, a, struck in rhythm.numbered_bars_of(song, R.BASS)]
+    own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
+    state = {"previous": None, "played": Counter()}
+
+    def draw(keep=manner.fits) -> str:
+        """One new figure from the song's mixture, in its manner (and passing `keep`), the chain and the urn moved on."""
+        previous = state["previous"]
         values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
-        figure = model.draw(unit, None if previous == REST else previous, played, rng, keep=manner.fits)
-        for _ in range(40):                                 # the urn or the floor may still hand back what the manner refuses
-            if manner.fits(figure):
+        figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=keep)
+        for _ in range(TRIES):                              # the urn or the floor may still hand back what is refused
+            if keep(figure):
                 break
             figure = model.table.draw(model.table.context(unit), rng, values)
         else:
-            figure = "0:R"                                  # nothing fit: the root on the one
+            figure = "0:R" if keep is manner.fits else figure
+        return figure
+
+    figures, patterns = [REST] * len(bars), []
+    for start, length, period in spans([rhythm_of(f) for f in own]):
+        if length == 1:
+            if own[start] != REST:
+                figures[start] = draw()
+                state["played"][figures[start]] += 1
+            state["previous"] = figures[start]
+            continue
+        exact = all(own[j] == own[j - period] for j in range(start + period, start + length))
+        if patterns and rng.random() < EARLIER:
+            pattern = rng.choice(patterns)
+        else:
+            pattern = []
+            for _ in range(period):
+                pattern.append(draw())
+                state["previous"] = pattern[-1]
+        patterns.append(pattern)
+        for i in range(length):
+            base = pattern[i % len(pattern)]
+            if own[start + i] == REST:
+                figure = REST
+            elif exact:
+                figure = base
+            else:
+                want = rhythm_of(base)
+                figure = draw(keep=lambda f: manner.fits(f) and rhythm_of(f) == want)
+                if rhythm_of(figure) != want:
+                    figure = base
+            figures[start + i] = figure
+            if figure != REST:
+                state["played"][figure] += 1
+            state["previous"] = figure
+    notes, last_root = [], tonic
+    for (a, b, _), figure in zip(bars, figures):
         new, last_root = realize(figure, a, b, song, low, sounds, scale, last_root)
         notes += new
-        figures.append(figure)
-        played[figure] += 1
-        previous = figure
     return notes, figures
 
 
