@@ -891,6 +891,60 @@ tones a song in a shuffled order, the reader's tonic and the ear's,
 names off the page; `duel-map.json` beside `set.json` holds which is
 which), the listener choosing which sounds like home; eleven songs, The
 Little Sprite left out where the two agree.
+
+**The duel (2026-10-22, the second round).** The test turned out to need
+the ending, not the fit: a tone that fits while the music plays is
+consonant, and the fifth is as consonant as home, which is where the
+first round's fifths came from. The page got a Stop on A / Stop on B
+button a song: the song cuts out, the tone rings alone for two seconds,
+and the listener picks the stop that sounded like the end. The picks,
+with what the readings say the song leans on (`duel_evidence.py`: the
+bass's pitch-class time, the chord reader's roots by time, the roots at
+four-bar phrase starts and ends through the loop, Krumhansl-Kessler
+correlation on the notes' chroma):
+
+| song | reader | ear | duel | the song leans on |
+|---|---|---|---|---|
+| The Fierce Battle | A | E | E | A: roots 55 %, bass 42 %; E 0 % of chord time |
+| Unkai | B | D | B | B: bass 62 %, roots 53 % |
+| Misty Menace | C | G# | C | C: roots 52 % |
+| Autumn Sky / Womanheart | E | A | E | E roots 43 % / A 25 %; Krumhansl a tie |
+| Jojo | E | G | E | E: roots 88 % |
+| Sailing | D | B | D | D: Krumhansl D major 0.78 |
+| Few Paths Forbidden | G | D | D | D: bass 46 % vs 4 %, roots 57 % vs 17 %, Krumhansl D minor 0.93 |
+| Cavern | A# | F | F | A#: roots 50 %, phrase starts and ends 13 of 20 |
+| Vanilla Dome | A | D | D | D: bass 37 %, roots 39 %; A 0 % (chromatic, fit 0.75) |
+| Las Vegas | C | D# | C | C: bass 35 %, roots 42 % |
+| Snowman | C# | C | C | neither: F#/B (roots 32/20 %); the duel offered two wrong tones |
+
+The ear under the ending test: eight of ten scorable songs agree with
+the evidence; every relative-key case went to the reader's tonic, both
+of the reader's misses went to the ear's, and the two misses are the
+fifth held as home (The Fierce Battle, Cavern). **The reader on the
+labelled dozen: 9 of 11** (Snowman unsettled). Its two misses have
+causes: Few Paths Forbidden opens on a G minor chord before settling on
+D, and the tonic lean weighs the first chord 0.5 against the bass's
+share, which only beats it above 50 % (`TONIC_WEIGHTS`, tuned where the
+first chord is the tonic by construction, the generator's songs); Vanilla
+Dome is chromatic, its best set a harmonic minor with one named mode, so
+the tonic was forced onto a pitch class the song never sits on. Across
+the corpus (`tonic_corpus.py`, 1,571 songs with a key and chords) the
+reader's tonic is the top chord root in 52 % of songs, the top bass
+pitch class in 47 %, Krumhansl's tonic in 52 %; 60 % / 53 % / 59 % at
+fit 0.9 and better: consistent with the dozen's four in five, the errors
+in the low-fit songs. Alternative leans (bass + roots; any pitch class
+of the set as a candidate) each fix one miss and lose another on the
+dozen (The Little Sprite sits on its IV): eleven labels are not enough
+to retune the reader on, and the labels in hand (`keycheck/truth.json`
+beside the readings) stay for the day it is.
+
+**Gate decision (2026-10-22):** the harmony tables count over the songs
+whose reader tonic is also their most-played chord root: 816 of 1,571
+(`tonic_filter.py`). On the dozen that keeps eight right tonics and no
+wrong one (The Little Sprite and Snowman out with the two misses). The
+bias is toward tonic-heavy songs, accepted: the song's own chords (the
+mixture) carry the writing in any case, as they did for rhythm, bass and
+drums, and the general table is the fallback.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
