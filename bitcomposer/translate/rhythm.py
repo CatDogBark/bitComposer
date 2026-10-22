@@ -1125,6 +1125,28 @@ def double_units(songs) -> list:
     return out
 
 
+CHORDAL = (R.HARMONY, R.ACCOMP, R.ARP)   # the parts that state the harmony
+PARTS_ASKED = (R.DRUMS, R.BASS, R.MELODY, R.COUNTER, "chordal", R.DOUBLE)   # what a song has or has not
+
+
+def parts_units(songs) -> list:
+    """Each song, for each part a song may have (PARTS_ASKED: the drums, the
+    bass, the melody, the counter-line, a chordal part, a double voice), as a
+    unit: its outcome whether the song has it (yes, no); its values the part
+    asked and the size of the band otherwise. The coarse view of the band,
+    where a game's habit shows (the band as one string is too fine to)."""
+    out = []
+    for s in songs:
+        if not s.voices:
+            continue
+        roles = {role for _, role, _, _ in s.voices}
+        for part in PARTS_ASKED:
+            has = any(r in roles for r in CHORDAL) if part == "chordal" else part in roles
+            out.append(tables.Unit(s.sid, s.game, "yes" if has else "no",
+                                   {"part": part, "band": min(len(s.notes) - (part in s.notes), 4), "tempo": band(s.bpm)}))
+    return out
+
+
 def layer_units(songs) -> list:
     """Each song whose bass role holds two voices or more as a unit: its
     outcome what the second voice does beside the line (the voice with the

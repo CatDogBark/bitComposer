@@ -520,6 +520,8 @@ class ArrangementUnitTests(unittest.TestCase):
         self.assertEqual(rhythm.band_units([s])[0].outcome, "bass drums melody")
         self.assertEqual((rhythm.voices_units([s])[0].outcome, rhythm.voices_units([s])[0].values["band"]), ("5", 3))
         self.assertEqual(rhythm.double_units([s])[0].outcome, "bass unison / melody echo")
+        ps = {u.values["part"]: u.outcome for u in rhythm.parts_units([s])}
+        self.assertEqual(ps, {"drums": "yes", "bass": "yes", "melody": "yes", "counter": "no", "chordal": "no", "double": "yes"})
         s.voices = s.voices[:3]
         self.assertEqual(rhythm.double_units([s])[0].outcome, "none")
         self.assertEqual(rhythm.layer_units([s]), [])

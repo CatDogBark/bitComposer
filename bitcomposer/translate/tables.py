@@ -483,6 +483,7 @@ SPECS = {
     "voices": ("voices_units", ("part",), ("band", "meter", "tempo")),
     "doubles": ("double_units", ("part",), ("band",)),
     "layers": ("layer_units", ("part",), ()),
+    "parts": ("parts_units", ("part",), ("band", "tempo")),
 }
 FORM_TABLES = ("form", "lengths", "letters")   # the form's tables take a level (rhythm.LEVELS)
 SURE_ONLY = ("chords", "degrees", "shapes", "cadences", "loops")   # the tables by degree: only songs whose tonic is sure (rhythm.tonic_sure)
