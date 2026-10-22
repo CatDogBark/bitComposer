@@ -12,12 +12,13 @@ and the figure before, in that order, so a figure never seen after this
 one backs off to the habit's own inventory, not the pooled one). A new
 figure must be a bar some song played (the floor serves the likelihood,
 not the writer: its invented bars were the runs the listener heard in
-Terra) and must be in the song's own manner, read from its bass (Manner):
-its strikes a bar within the middle half of the song's own bars widened
-by SLACK each way (never its busiest bar: one rolled bar in Locke
-licensed sixteenths everywhere; and not half its median: that let a
-walking bass thin to two strikes); striking the downbeat where the song's
-bass strikes it in DOWNBEAT of its bars; placed only on the subdivisions
+Terra) and must be in the song's own manner, read from its bass (Manner),
+and within the song's own bar (envelope): striking between TIGHT times
+as often as the song's bass does in that bar, and the downbeat where
+that bar does (a song-wide window let Locke's one-note intro bars
+license a one-note bar where its line starts walking, and its busiest
+bar license sixteenths everywhere; density is the arrangement's, bar by
+bar, like the rests and the volume); placed only on the subdivisions
 the song's bass uses (its feel: quarters and triplets in Terra, where a
 sixteenth pickup was the listener's "burst" and a bar with nothing on
 the one his "skip"); and in the song's tones as much as its rhythm: no
@@ -80,7 +81,8 @@ REST = "-"
 DISCOUNT = 0.75
 LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
 REACH = 16                            # semitones above the floor a note may go (an octave and a third)
-SLACK = 1                             # strikes: how far outside the middle half of the song's own bars a new figure may be
+SLACK = 1                             # strikes: how far outside the middle half of the song's own bars (Manner's window, reported)
+TIGHT = (0.5, 1.5)                    # a written bar strikes between these multiples of the song's own bar (envelope)
 DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
 ANCHORS = {"R", "r", "5"}             # the marks that anchor a bar: roots and fifths
 ROOTS = {"R", "r"}
@@ -136,14 +138,15 @@ class Manner:
         self.pedal = not long or sum(1 for m in long if len(set(m)) == 1) / len(long) >= PEDAL_SHARE
 
     def fits(self, figure: str) -> bool:
-        """Whether a new figure may be written into the song (the module)."""
+        """Whether a new figure is in the song's manner (the module): a bar some
+        song played, in the song's feel and tones (its density and downbeat
+        are the bar's own: envelope and within)."""
         if figure == REST or figure not in self.known:
             return False
         tokens = [t.partition(":") for t in rhythm._tokens(figure)]
         positions = [Fraction(t[0]) for t in tokens]
         marks = [t[2] for t in tokens]
-        if not (self.low <= len(positions) <= self.high and (not self.downbeat or positions[0] == 0)
-                and all(p.denominator in self.feel for p in positions)):
+        if not all(p.denominator in self.feel for p in positions):
             return False
         if not self.octaves and "r" in marks:
             return False
@@ -186,6 +189,19 @@ def spans(keys: list) -> list[tuple[int, int, int]]:
     return out
 
 
+def envelope(own: str) -> tuple[int, int, bool]:
+    """What the song's own bar allows a written one: strikes between TIGHT times its own, the downbeat where it strikes it."""
+    n = len(rhythm._tokens(own))
+    return (max(1, math.ceil(TIGHT[0] * n)), max(1, math.floor(TIGHT[1] * n)), own.startswith("0:") or own == "0")
+
+
+def within(figure: str, env: tuple[int, int, bool]) -> bool:
+    """Whether a figure is within the bar's envelope."""
+    tokens = rhythm._tokens(figure)
+    low, high, downbeat = env
+    return low <= len(tokens) <= high and (not downbeat or (bool(tokens) and tokens[0].partition(":")[0] == "0"))
+
+
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
@@ -208,9 +224,11 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     own = [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
     state = {"previous": None, "played": Counter()}
 
-    def draw(keep=manner.fits) -> str:
-        """One new figure from the song's mixture, in its manner (and passing `keep`), the chain and the urn moved on."""
+    def draw(env, keep=None) -> str:
+        """One new figure from the song's mixture, in its manner and the bar's envelope (and passing `keep`), the chain and the urn moved on."""
         previous = state["previous"]
+        inner = keep
+        keep = lambda f: manner.fits(f) and within(f, env) and (inner is None or inner(f))   # noqa: E731
         values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
         figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=keep)
@@ -219,7 +237,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 break
             figure = model.table.draw(model.table.context(unit), rng, values)
         else:
-            figure = "0:R" if keep is manner.fits else figure
+            figure = "0:R" if inner is None else figure
         return figure
 
     figures, patterns = [REST] * len(bars), []
@@ -227,7 +245,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         if length == 1:
             if own[start] != REST:
                 last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
-                figures[start] = draw(keep=lambda f: manner.fits(f) and rhythm_of(f) != last)
+                figures[start] = draw(envelope(own[start]), keep=lambda f: rhythm_of(f) != last)
                 state["played"][figures[start]] += 1
             state["previous"] = figures[start]
             continue
@@ -238,9 +256,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             pattern = rng.choice(earlier)
         else:
             pattern = []
-            for _ in range(period):
+            for k in range(period):
                 avoid = {rhythm_of(f) for f in before + pattern}
-                pattern.append(draw(keep=lambda f: manner.fits(f) and rhythm_of(f) not in avoid))
+                pattern.append(draw(envelope(own[start + k]), keep=lambda f: rhythm_of(f) not in avoid))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
         for i in range(length):
@@ -251,7 +269,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 figure = base
             else:
                 want = rhythm_of(base)
-                figure = draw(keep=lambda f: manner.fits(f) and rhythm_of(f) == want)
+                figure = draw(envelope(own[start + i]), keep=lambda f: rhythm_of(f) == want)
                 if rhythm_of(figure) != want:
                     figure = base
             figures[start + i] = figure

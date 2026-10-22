@@ -51,7 +51,7 @@ class WriterTests(unittest.TestCase):
         self.assertEqual(len(figures), 4)
         self.assertTrue(all(writer.on_grid(f, 4) and f != "-" for f in figures))
         self.assertTrue(all(f in model.table.vocabulary for f in figures))        # only bars some song played
-        self.assertTrue(all(3 <= len(rhythm._tokens(f)) <= 5 for f in figures))   # _song plays 4 a bar: 3 to 5
+        self.assertTrue(all(2 <= len(rhythm._tokens(f)) <= 6 for f in figures))   # _song plays 4 a bar: 2 to 6
         self.assertTrue(writer.fits("0:R 1:R", _song(), {"0:R 1:R"}, 4))
         self.assertFalse(writer.fits("0:R 1:R", _song(), set(), 4))
         self.assertFalse(writer.fits("0:R 1:R 2:R", _song(), {"0:R 1:R 2:R"}, 2))
@@ -120,9 +120,14 @@ class WriterTests(unittest.TestCase):
         self.assertEqual((m.low, m.high, m.downbeat, m.feel), (3, 5, True, {1}))
         self.assertEqual((m.octaves, m.tones, m.pedal), (False, (2, 2), False))   # _song's bars: two tones each
         self.assertTrue(m.fits("0:R 1:5 2:R 3:5") and m.fits("0:R 1:R 2:5 3:5"))
-        self.assertFalse(m.fits("1:5 2:5 3:R"))                    # nothing on the one
-        self.assertFalse(m.fits("0:R") or m.fits("0:R 1:5"))       # too sparse
-        self.assertFalse(m.fits("0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R"))   # too dense, and eighths
+        env = writer.envelope("0:R 1:R 2:5 3:5")                   # the song's own bar: four strikes, the one struck
+        self.assertEqual(env, (2, 6, True))
+        self.assertTrue(writer.within("0:R 1:5 2:R 3:5", env) and writer.within("0:R 2:5", env))
+        self.assertFalse(writer.within("1:5 2:5 3:R", env))        # nothing on the one
+        self.assertFalse(writer.within("0:R", env))                # too sparse for that bar
+        self.assertFalse(writer.within("0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R", env))   # too dense for it
+        self.assertEqual(writer.envelope("2:R"), (1, 1, False))    # a one-note bar off the one allows one note, anywhere
+        self.assertFalse(m.fits("0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R"))   # eighths the song never plays
         self.assertFalse(m.fits("0:R 1:R 2:5 11/4:R"))             # a sixteenth the song never plays
         self.assertFalse(m.fits("0:R 4/3:5 5/3:R 2:R"))            # triplets the song never plays
         self.assertFalse(m.fits("-") or m.fits("0:R 3:5"))         # a rest; a bar no song played
