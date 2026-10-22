@@ -71,16 +71,22 @@ def main(argv=None) -> int:
     if v is None:
         print("no bass voice in the decoded song", file=sys.stderr)
         return 1
+    # the voice's usual settings (its most common sample, volume, envelope and echo), not its first note's:
+    # a song fading its bass in starts near silence (Terra's first bass note plays at 6 of 127, panned left)
     events = {(p.voice, round(p.start, 4)): p for p in r.song.notes if p.midi is not None}
+    mine = [n for n in original.notes if n.voice == v]
+    usual = Counter((n.sample, n.brr, n.volume, n.adsr, n.gain, n.echo, n.echo_delay, n.echo_volume, n.echo_feedback,
+                     n.echo_filter, n.echo_writes) for n in mine).most_common(1)
     like = pitch_ref = midi_ref = None
-    for n in original.notes:
+    for n in mine:
         p = events.get((n.voice, round(n.start, 4)))
-        if n.voice == v and p is not None:
+        if p is not None and usual and (n.sample, n.brr) == usual[0][0][:2]:
             like, pitch_ref, midi_ref = n, n.pitch, p.midi
             break
     if like is None:
         print("no reference note on the bass voice", file=sys.stderr)
         return 1
+    _, _, volume, adsr, gain, echo, e_delay, e_volume, e_feedback, e_filter, e_writes = usual[0][0]
     beats = array("d")
     beats.frombytes(db.execute("SELECT beats FROM beats WHERE song = ?", (sid,)).fetchone()[0])
     new = []
@@ -89,10 +95,9 @@ def main(argv=None) -> int:
         if start >= original.seconds:
             continue
         pitch = max(1, min(0x3FFF, round(pitch_ref * 2 ** ((midi - midi_ref) / 12))))
-        new.append(convert.notes_mod.Note(v, start, like.sample, pitch, like.volume, like.adsr, like.gain, like.echo, False,
-                                          brr=like.brr, echo_delay=like.echo_delay, echo_volume=like.echo_volume,
-                                          echo_feedback=like.echo_feedback, echo_filter=like.echo_filter,
-                                          echo_writes=like.echo_writes, end=min(end, original.seconds)))
+        new.append(convert.notes_mod.Note(v, start, like.sample, pitch, volume, adsr, gain, echo, False,
+                                          brr=like.brr, echo_delay=e_delay, echo_volume=e_volume, echo_feedback=e_feedback,
+                                          echo_filter=e_filter, echo_writes=e_writes, end=min(end, original.seconds)))
     kept = [n for n in original.notes if n.voice != v]
     swapped = convert.Score(kept + new, original.seconds, original.voices, original.master, original.fade,
                             (a.title or f"{title} [table bass]")[:25], original.game, original.artist, original.row_hz,
@@ -101,7 +106,7 @@ def main(argv=None) -> int:
                             message=[f"{title}: the bass written from the bass table (phase 3 of docs/IDIOM.md)",
                                      f"the table fitted on every other song; seed {a.seed}; the rest as decoded"])
     info = convert.render(swapped, a.out)["info"]
-    print(f"{a.out}: {info['notes']} notes, {info['channels']} channels; bass voice {v}, {len(new)} written notes")
+    print(f"{a.out}: {info['notes']} notes, {info['channels']} channels; bass voice {v}, {len(new)} written notes at volume {volume}")
     for label, sc in (("original", original), ("written", swapped)):
         rr = reading.of_score(sc)
         role = next((x.role for x in rr.roles if x.voice == v), "-")
