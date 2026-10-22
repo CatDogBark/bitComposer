@@ -440,7 +440,32 @@ uses (its feel: Terra's {1, 2, 3}). Terra came back as seven figures,
 quarter roots and eighth roots mostly, a root-third-fifth bar twice.
 These three are what the generator's bass habit should carry beside
 density and tones: a feel and a downbeat loyalty, drawn once a song
-(phase 4). Written for Terra (habit medium roots, 74 bars),
+(phase 4).
+
+His fourth round: "the bass has no section awareness, it does whatever
+it wants through the four beats in each part with no real throughline,
+free-forming while fitting each bar in isolation." That is the model: a
+bar drawn at a time, the song's mixture remembering which figures but
+not where it is. Measured on the readings' 1,324 basses: 63 % of bars
+sit in a span repeating a rhythm (marks dropped) with a period of one,
+two or four bars, spans 6.6 bars long on average (by exact figure only
+41 %: a walking bass keeps its rhythm and moves its tones), and a new
+span's rhythm is one an earlier span had 35 % of the time, never the one
+just before (by construction). Terra's own bass: four bars of one
+figure, forty-eight alternating two, twelve of one, then bits. So the
+writer reads the song's own spans and writes a pattern a span: an earlier
+span's pattern with that 35 % chance, else as many new figures as the
+period, their rhythms differing from one another and from the pattern
+before, held through the span (exactly where the song's own figures
+repeat exactly; bar by bar with the pattern's rhythm where only the
+rhythm repeats, so the tones move). The first try drew the same figure
+twice for Terra's two-bar span and the song came out as one figure for
+71 bars; the differing-rhythms rule fixed it. Terra now: four bars of
+quarter roots, forty-eight alternating eighth roots with a syncopated
+root figure, nineteen of a root-third-fifth, the rests kept. For the
+generator (phase 4) the spans come from the form reader's sections and a
+table of periods and span lengths by habit, not from the song itself.
+Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
 (`~/Music/bitComposer-dev/Table bass/`): the readers read the written
