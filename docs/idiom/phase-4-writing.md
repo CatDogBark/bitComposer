@@ -134,4 +134,74 @@ so the listening can focus on it.
 
 ## Record
 
-(Each slice's measures and the listener's verdicts, as they come.)
+### Slice 1: the bass and the drums into the old generator's songs (2026-10-22)
+
+**Built.** `harness.load_generated` reads a composed song (compose_song's
+dict) as a game's song: its score through `score.of_song`, the readers
+over it, the reading kept in a database of its own, the harness's
+Context from that; `harness.write_bass` and `write_drums` take a pack's
+tables (`Context.models`, from `packtables.read`) in place of fitting on
+the readings; `tools/slice1.py` composes seeds with a format 2 pack,
+writes the two parts, renders old and new songs and the page's stems,
+and measures. Three things the first runs taught, each fixed before
+anything was heard:
+
+- *The roles are the generator's, not the role reader's.* On the thin
+  FFVI pack a harmony sample read as a snare, so one song's harmony
+  channel was rewritten as drums. A generated song's parts come from its
+  channels (`_pin_roles`: melody, bass, arp fixed; a harmony channel the
+  reader's call among harmony, accompaniment and counter-line; the drum
+  channels' samples named by channel, the pitched ones unnamed).
+- *The beat is the generator's.* The beat reader read most generated
+  songs at half their tempo, so the figures stood on bars twice too long.
+  `reading.of_score` now takes a grid, and a generated song brings its
+  own (`_generated_grid`: its tempo, four beats a bar from the first row).
+  The same for the measures: a written song re-read on any other grid
+  counted figures split across bars, which showed as a spread twice the
+  real one and sent the first measures wrong.
+- *A generated song's old part is no manner to keep.* The substitution
+  harness reads the song's own part for its manner, envelope, spans and
+  habit, which for a real song is the idiom; for a generated song it is
+  the old generator. Free writing (`writer.FreeManner`, `free_envelope`,
+  `_free_figures`): the habit drawn once a song from the pack's habit
+  table (`bass_habits`, `drum_habits`), any bar the table knows on the
+  pieces the song has, the density the habit's, and the figures drawn bar
+  by bar from the song's own mixture, whose recall shares carry the
+  games' rate of repeating and returning (the span-and-pattern machinery,
+  which mirrors a real song's own repetition, forced onto a generated
+  song gave 17 distinct figures in 32 bars and an ostinato share of 0.04).
+  The form's repeated parts copy their figures; the bars the old part
+  rests in rest (the arrangement is slice 3's); the band's moments, stops
+  and locks are read from the other parts as before. The lock changes
+  the spread little (bass 9.9 distinct with it, 8.6 without).
+
+**Measured** (twelve seeds, the FFVI format 2 pack; the old and the new
+parts and FFVI's real songs scored by figure mixtures fitted on the
+other 38 games' 1,495 songs, so all three are held out alike; the
+spread as distinct figures in the first 32 bars / the ostinato share):
+
+| part | old bits | new bits | old spread | new spread | FFVI real |
+|---|---|---|---|---|---|
+| bass | −5.90 | −8.86 | 9.8 / 0.28 | 14.1 / 0.30 | −13.54, 11.8 / 0.23 |
+| kick, snare, toms | −5.62 | −4.99 | 7.4 / 0.50 | 8.0 / 0.54 | −8.81, 7.2 / 0.42 |
+| hat | −1.93 | −2.97 | 3.8 / 0.79 | 5.9 / 0.58 | −7.65, 6.4 / 0.54 |
+| cymbals | −0.80 | −0.85 | 2.3 / 0.84 | 2.7 / 0.84 | −3.63, 6.0 / 0.55 |
+
+The old generator's parts are the most "likely" of all under the shared
+idiom: roots on the beat, a kick and a snare. The new parts sit between
+them and FFVI's real ones in bits and match FFVI's spread (the cymbals
+excepted: the old arrangement has few crashes and a free-written part
+rests where the old one did). **The nearest game**, each of 36 games'
+own bass table scoring each song: the old basses never nearest FFVI
+(median rank 8.5 of 36); the new ones nearest FFVI in 4 of 12, median
+rank 2 (`tools/slice1.py`, the table in `slice1.json`). The two caveats
+on that test: a real FFVI song's own leave-one-out rank is not yet
+measured beside it, and phase 3 found figure tables shared across games,
+so a game's own table tells mostly by its vocabulary and recall shares.
+
+**What the slice added, for the listening:** the bass and the drums
+only. The melody, the harmony and arp, the form, the tempo, the mix and
+the samples are the old generator's; the drumless songs (the pack's
+habit, four of twelve) stay drumless; a written part rests where the old
+one rested. The listening page: the Substitution Check's form, the old
+part against the new in the same song.
