@@ -30,6 +30,8 @@ DRUM_PIECES = {"kick", "snare", "hat", "tom", "cymbal"}   # the drum namer's pie
 BY_SOUND = 0.8                        # the share of a voice's notes on drum samples (or on instruments held) that decides
 FEW_PITCHES = 4                       # pitches a sample a drum voice plays at most: a bass on a low sample plays many
                                       # (728 bass voices became drums without this, the namer calling their samples toms)
+LOW_PIECES = {"kick", "tom"}          # the pieces a bass sample can pass for; a voice on them is a drum voice only
+SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on
 
 
 @dataclass
@@ -61,6 +63,7 @@ def _features(notes, grid) -> dict:
         "notes": len(notes),
         "unpitched": sum(1 for p in notes if p.midi is None) / len(notes),
         "drum_sound": sum(c for k, c in pieces.items() if k in DRUM_PIECES) / len(notes),   # notes on a drum sample
+        "low_sound": sum(c for k, c in pieces.items() if k in LOW_PIECES) / len(notes),     # on a kick or a tom
         "no_drum_sound": sum(c for k, c in pieces.items() if k == "none") / len(notes),    # notes on an instrument held
         "pitches_per_sample": max((len(v) for v in per_sample.values()), default=0),
         "distinct": len(set(seq)),
@@ -199,8 +202,9 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
         # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
         # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)
-        if f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES:
-            roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"]})
+        if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES
+                and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)):
+            roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
         elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2)):
             roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
     for v, (u, delay, *_) in (echoed or {}).items():
