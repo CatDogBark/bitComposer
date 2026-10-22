@@ -105,6 +105,8 @@ ECHO_SPREAD = 0.03                   # seconds the delay may wobble around its c
                                      # echo voice follows 150 to 200 ms behind, by the driver's timer)
 ECHO_SHARP = 0.008                   # and within this of it, ECHO_FOCUS of the notes must still fall: a dense voice
 ECHO_FOCUS = 0.3                     # repeating a few pitches matches any delay by chance, spread evenly
+ECHO_SELF = 0.5                      # a voice repeating its own pitches at the delay (a pumping bass, every eighth)
+                                     # is matched by any voice sharing them: no echo
 MELODY_DENSE = 2.0                   # notes a beat beyond which a line is figuration more than tune
 
 
@@ -115,11 +117,16 @@ def echoes(song) -> dict:
     its grid later, 246 ms, every note off the grid). A copy is a note of
     the same pitch class; the delay is the one most of them share, within
     ECHO_SPREAD of its commonest value, ECHO_FOCUS of them within ECHO_SHARP
-    (chance matches in a dense voice spread evenly over the window)."""
-    by = {}
+    (chance matches in a dense voice spread evenly over the window), and the
+    copied voice not repeating itself at that delay (Gang-Plank Galleon's
+    bass and its doubling pump the same note every eighth, 236 ms, and
+    would each be the other's echo). Of two voices each the other's echo,
+    the quieter is the echo."""
+    by, levels = {}, {}
     for p in song.notes:
         if p.midi is not None and p.level > 0:
             by.setdefault(p.voice, []).append((p.start, round(p.midi) % 12))
+            levels[p.voice] = levels.get(p.voice, 0.0) + p.level
     out = {}
     for v, notes in by.items():
         if len(notes) < 16:
@@ -139,10 +146,22 @@ def echoes(song) -> dict:
             mode = flat.most_common(1)[0][0] / 500
             share = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SPREAD for d in ds)) / len(notes)
             focus = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SHARP for d in ds)) / len(notes)
-            if share >= ECHO_HELD and focus >= ECHO_FOCUS and (best is None or share > best[0]):
-                best = (share, u, mode)
+            if share < ECHO_HELD or focus < ECHO_FOCUS or (best is not None and share <= best[0]):
+                continue
+            own = 0
+            for t, pc in theirs:
+                lo = bisect.bisect_left(starts, t - mode - ECHO_SHARP)
+                hi = bisect.bisect_right(starts, t - mode + ECHO_SHARP)
+                own += any(q == pc for _, q in theirs[lo:hi])
+            if own / len(theirs) >= ECHO_SELF:
+                continue
+            best = (share, u, mode)
         if best:
             out[v] = (best[1], best[2])
+    for v in list(out):
+        u = out[v][0]
+        if u in out and out[u][0] == v:
+            del out[v if levels.get(v, 0) / len(by[v]) >= levels.get(u, 0) / len(by[u]) else u]
     return out
 
 
