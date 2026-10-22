@@ -817,6 +817,29 @@ spans, its moments, the band's stops and shared hits, its volumes and
 its voices, all read from the song; the generator will need each of
 those from a table of its own before a part written into a song it
 made can belong there the same way.
+
+### Voicings (2026-10-22)
+
+Two tables from the readings' chord spans (`rhythm.voicing_units`,
+`width_units`; a tone sounds in a span when a part's notes on it cover
+SOUNDS of it). **Which chord tones a part holds** (harmony,
+accompaniment, arp: 23,860 spans, the marks R 3 s 5 7 +), held-out bits
+a span, share votes, Witten-Bell: (none) −4.60, the part −4.57, the
+part and the chord's shape −3.78, with the bass's tone under it −3.81
+(nothing), the voicing's width −3.66, the span before −3.57, the song's
+habit (its tones a span, thin / full / rich) −3.34; as the song's
+mixture over part+shape+previous −3.37, its draws 5.0 distinct a song
+and 0.48 the most common's share against 5.3 and 0.48 real. By song
+within the games, a game's own table −3.78 against −3.58 shared: the
+game adds nothing. **Kept:** part, shape and the song's habit, as the
+song's mixture. **How wide the upper voicing sits** (distinct pitches
+to six, close / open / wide: 20,988 spans): the shape, the parts
+present and the bass's tone add nothing (−3.53 against −3.55 none), the
+span before +0.7, the song's mixture +0.9 (−2.67; with the span before
+−2.53, draws 4.1 / 0.54 against 3.8 / 0.60); a game's own table worse.
+Width is the song's habit, not the chord's. **Kept:** the song's
+mixture with the span before. Neither has a writer yet: the voicings
+are phase 4's, when the generator voices its own chords.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
