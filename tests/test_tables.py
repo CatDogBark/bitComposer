@@ -203,3 +203,26 @@ class DiscountTests(unittest.TestCase):
         self.assertEqual({c.shape for c in cs}, {(), ("meter",), tables.FLOOR})
         self.assertAlmostEqual(next(c.bits for c in cs if c.shape == tables.FLOOR), -2.0)
         self.assertIn("floor", tables.report(cs))
+
+
+class CoversTests(unittest.TestCase):
+    def test_a_covered_level_is_neither_counted_nor_backed_off_to(self):
+        class Floor:
+            def __init__(self, units=None):
+                pass
+            def p(self, outcome, values):
+                return 0.3 if outcome == "x" else 0.01
+            def draw(self, values, rng):
+                return "x"
+        us = _units()
+        t = Table(("meter", tables.GAME), floor=Floor(), covers=1).fit(us)
+        self.assertNotIn((), t.votes)                                    # the pooled root is never counted
+        self.assertIn((4,), t.votes)
+        root_free = (t.votes[(4,)]["x"] + 3 * 0.3) / (5 + 3)             # (4,) straight onto the floor
+        self.assertAlmostEqual(t.p("x", (4,)), root_free)
+        self.assertAlmostEqual(t.p("x", (4, "A")), (t.votes[(4, "A")]["x"] + 3 * root_free) / (4 + 3))   # x 2, y 1, z 1 under game A
+        self.assertAlmostEqual(t.p("x", (9,)), 0.3)                      # an unseen context: the floor alone
+        self.assertEqual(Table.from_json(t.to_json()).covers, 0)        # a floor is not in the json: nothing covered
+        self.assertEqual(tables.shapes(("part", "meter"), ("tempo",), game=False, covers=2),
+                         [("part", "meter"), ("part", "meter", "tempo")])
+        self.assertEqual(Table(("meter",), covers=1).covers, 0)          # no floor: nothing to cover

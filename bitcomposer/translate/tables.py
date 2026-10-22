@@ -14,7 +14,9 @@ the votes with the next coarser context's (the tuple without its last
 value, down to no context at all, and below that the floor: an even share
 for every outcome the table knows and one slot for the ones it does not,
 or a model given for it, such as the bar as a chain of beat cells, so an
-outcome never counted still has a likelihood and can be drawn),
+outcome never counted still has a likelihood and can be drawn; a floor
+that is itself conditioned on the first few values takes over below them,
+so the chain never passes through a pooled level coarser than the floor),
 Witten-Bell's way: the coarser estimate gets the weight t / (n + t), t the
 distinct outcomes seen under the context and n its votes, so a context
 seen in few songs, or one whose songs all play something different, leans
@@ -81,12 +83,14 @@ class Table:
     """Outcomes counted under contexts, each song voting once for each
     distinct outcome it plays under a context (see the module)."""
 
-    def __init__(self, conditionings=(), name: str = "", votes: str = SONGS, floor=None, discount: float | None = None):
+    def __init__(self, conditionings=(), name: str = "", votes: str = SONGS, floor=None, discount: float | None = None,
+                 covers: int = 0):
         self.conditionings = tuple(conditionings)
         self.name = name
         self.by = votes                  # SONGS or SHARES (the module)
         self.floor = floor               # below the root: None (an even share), or a model with p(outcome, values) and draw(values, rng)
         self.discount = discount         # None: Witten-Bell; else absolute discounting by this much a vote
+        self.covers = min(covers, len(self.conditionings)) if floor is not None else 0   # the leading conditionings the floor accounts for: no level coarser than them
         self._mass: dict = {}            # context -> (the votes kept at its level, the votes given to the coarser one)
         self.votes: dict = {}            # context -> {outcome: songs voting for it}
         self.songs: Counter = Counter()  # context -> songs counted under it
@@ -103,7 +107,7 @@ class Table:
         for u in units:
             ctx = self.context(u)
             self.vocabulary.add(u.outcome)
-            for k in range(len(ctx) + 1):              # the context and every coarser one
+            for k in range(self.covers, len(ctx) + 1):  # the context and every coarser one down to the floor's
                 c = ctx[:k]
                 played[c][u.song, u.outcome] += 1
                 self.units[c] += 1
@@ -140,7 +144,7 @@ class Table:
         else:
             o = outcome
             prob = self.floor.p(outcome, values or {})
-        for k in range(len(context) + 1):
+        for k in range(self.covers, len(context) + 1):
             c = context[:k]
             votes = self.votes.get(c)
             if not votes:
@@ -179,7 +183,7 @@ class Table:
         n / (n + t) else the coarser level's; below the root, the floor
         model's draw, or any known outcome evenly (the unseen slot's share
         redrawn)."""
-        for k in range(len(context), -1, -1):
+        for k in range(len(context), self.covers - 1, -1):
             level = self._level(context[:k])
             if level is None:
                 continue
@@ -198,7 +202,7 @@ class Table:
 
     def to_json(self) -> dict:
         return {"conditionings": list(self.conditionings), "votes_by": self.by, "discount": self.discount,
-                "vocabulary": sorted(self.vocabulary),
+                "covers": self.covers, "vocabulary": sorted(self.vocabulary),
                 "contexts": [{"context": list(c), "songs": self.songs[c], "units": self.units[c], "votes": v}
                              for c, v in sorted(self.votes.items(), key=lambda cv: (len(cv[0]), [str(x) for x in cv[0]]))]}
 
@@ -226,11 +230,12 @@ class Comparison:
     spread: tuple | None = None      # (distinct drawn, distinct real, ostinato share drawn, real), means over held-out songs
 
 
-def shapes(base: tuple, extras=(), game: bool = True) -> list[tuple]:
+def shapes(base: tuple, extras=(), game: bool = True, covers: int = 0) -> list[tuple]:
     """The standard shapes to compare: no context, each prefix of the base
-    chain, the chain with each extra conditioning added, and each of those
-    a game (the game last, backing off to the shared table)."""
-    out = [()] + [base[:k] for k in range(1, len(base) + 1)] + [base + (e,) for e in extras]
+    chain (from the ones the floor covers), the chain with each extra
+    conditioning added, and each of those a game (the game last, backing
+    off to the shared table)."""
+    out = [base[:k] for k in range(covers, len(base) + 1)] + [base + (e,) for e in extras]
     if game:
         out += [s + (GAME,) for s in out]
     return out
@@ -240,7 +245,7 @@ FLOOR = ("floor",)                   # the shape that is the floor model alone, 
 
 
 def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: str = BY_GAME,
-            votes: str = SONGS, floor=None, discount: float | None = None) -> list[Comparison]:
+            votes: str = SONGS, floor=None, discount: float | None = None, covers: int = 0) -> list[Comparison]:
     """Fit each shape on the development half, score it on the held-out
     half (overall and by the value of `by`), and measure the spread of what
     it draws; best first. `floor`: a function of the development units
@@ -258,7 +263,7 @@ def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: 
         if shape == FLOOR:
             t = Table((), floor=bottom)                # nothing counted: the floor's own likelihood and draws
         else:
-            t = Table(shape, votes=votes, floor=bottom, discount=discount).fit(dev)
+            t = Table(shape, votes=votes, floor=bottom, discount=discount, covers=covers).fit(dev)
         out.append(Comparison(shape, t.score(held), {k: t.score(v) for k, v in groups.items()},
                               sum(1 for c in t.votes if len(c) == len(shape)), t.entries(),
                               simulate(t, held, random.Random(rng_seed))))
@@ -326,6 +331,7 @@ def main(argv=None) -> int:
     ap.add_argument("--votes", choices=(SONGS, SHARES), default=SONGS)
     ap.add_argument("--floor", choices=("none", "cells"), default="none")
     ap.add_argument("--discount", type=float, default=0.0, help="absolute discounting by this much a vote; 0: Witten-Bell")
+    ap.add_argument("--covers", type=int, default=None, help="how many of the chain's first values the floor accounts for (cells: 2)")
     ap.add_argument("--base", default="part,meter", help="the chain every shape starts from")
     ap.add_argument("--extras", default="tempo,previous,place,chord", help="each tried on the chain's end")
     ap.add_argument("--no-game", action="store_true", help="leave out the per-game shapes")
@@ -342,11 +348,12 @@ def main(argv=None) -> int:
     base = tuple(x for x in args.base.split(",") if x)
     extras = tuple(x for x in args.extras.split(",") if x)
     floor = rhythm.BarCells if args.floor == "cells" else None
-    cs = compare(units, shapes(base, extras, not args.no_game), by="part", rng_seed=args.seed, split=args.split,
-                 votes=args.votes, floor=floor, discount=args.discount or None)
+    covers = args.covers if args.covers is not None else (len(rhythm.BarCells.COVERS) if floor else 0)
+    cs = compare(units, shapes(base, extras, not args.no_game, covers), by="part", rng_seed=args.seed, split=args.split,
+                 votes=args.votes, floor=floor, discount=args.discount or None, covers=covers)
     dev = sum(1 for u in units if half_of(u, args.split) == DEVELOPMENT)
     print(report(cs, parts, f"rhythm: {len(units)} bars, {dev} development, {len(units) - dev} held-out; "
-                            f"split by {args.split}, votes {args.votes}, floor {args.floor}, "
+                            f"split by {args.split}, votes {args.votes}, floor {args.floor} (covers {covers}), "
                             f"{'discount ' + str(args.discount) if args.discount else 'Witten-Bell'}"))
     return 0
 

@@ -309,6 +309,7 @@ class BarCells:
     and the cell before it; so a bar never counted whole still has a
     likelihood (the product of its cells') and can be drawn (cell by cell)."""
     SHAPE = ("part", "meter", "beat", "previous")
+    COVERS = ("part", "meter")           # what a bar table over this floor need not back off below
 
     def __init__(self, units_):
         self.table = tables.Table(self.SHAPE, "cells", votes=tables.SHARES).fit(cell_units(units_))
