@@ -1027,6 +1027,89 @@ these tables meet the ear with the generator's songs, later). The mode
 is the key reader's major/minor (the readings keep no finer name to
 fold). Next: item 6, phrases and form.
 
+### Phrases and form (2026-10-22)
+
+The plan's sixth item: the form's letters and lengths from the form
+reader at both of its levels, the melody's phrase shapes from phrases.py
+(`form_units`, `length_units`, `letters_units` in rhythm.py with
+`--level part|section`; `contour_units`, `relation_units`,
+`ending_units`, `peak_units` in phrases.py with `--length 4|part`;
+share votes, discount 0.75, the games split, the mixture tried on each).
+
+**The level.** The reader's parts against the 36 songs marked by ear
+(`heard-form.json`, `phrases --heard`): part starts recall 0.76,
+precision 0.66 (105 read against 91 marked); sections recall 0.73,
+precision 0.53 (51 against 37). The reader over-cuts at both levels, the
+parts less; the ear's own level lies between the two and nearer the
+parts. **Kept: the part level** (1,366 songs with a form, a median of
+three parts of four bars), the sections as the rule that joins a short
+part played again at once. No further ear round: the marks exist at both
+levels and nothing below turns on them.
+
+**The form as a chain.** The unit is a part's kind, new material, the
+part before once more (again) or an earlier part returning (back); 5,556
+parts. By index: the first part is new by definition, the second new
+90 % / again 10 %, the third new 73 / again 20 / back 7, the fifth and
+later new 58 / back 25 / again 17. Held-out bits a part: none −1.07; the
+index −0.84 (+0.23, part of it the first part's certainty), the letters
+so far −0.88, the kind before −0.90, the song's size in parts −0.94; the
+mixture a little worse than each (a song's kinds do not repeat). At the
+section level the same picture (none −0.81, the index −0.63) with fewer
+agains, as joining them makes. **Kept:** part+meter+index. Whole forms as
+one outcome a song: 274 distinct strings in 1,366 songs, 'A' 27 %, 'A B'
+18 %, 'A B C' 7 %, 'A B C D' 5 %, 'A B B C' 3 %, 'A A B' 2 % (held-out
+−5.0 bits a song, nothing conditions it): a quarter of the games' songs
+are one part looping, a tenth of a part's returns are the generator's
+AABA and rondo kind, and the chain above is the table to draw from, not
+the strings.
+
+**The lengths.** The unit is a part's length in bars (32 and over one
+outcome): 4 bars 32 % of new parts, 68 % of agains, 47 % of backs; 8 bars
+10 to 12 %; held-out bits none −3.45; the song's habit (its median part
+length: short, medium, long) −3.14 (+0.30: a short-habit song's parts are
+4 bars 61 %, a medium-habit song's 8 bars 21 %, 4 bars 17 %, 6 bars 13 %);
+the mixture −3.32; the kind, the index, the length before each +0.1
+under the mixture and nothing alone. **Kept:** part+meter+habit, the
+habit a song's choice.
+
+**The phrases** (1,366 songs with a key, fit chords and a form; 8,691
+four-bar phrases with a tune, 4,812 at the part's length; the melody
+voice 95 %, the counter-line standing in 5 %):
+- *Contour*: level 37 %, falling 25 %, rising 24 %, arch 7 %, valley 7 %.
+  Nothing conditions it: the phrase's place in its part, the part's in
+  the form, the source, the relation to the phrase before, the contour
+  before, the mode all within 0.01 of none (−2.04); the mixture +0.07.
+- *Peak*: follows the contour (+0.28: a falling phrase peaks in its first
+  quarter 72 %, a rising one in its last 45 % or third 31 %, an arch in
+  its second 55 %); nothing else.
+- *Ending* (the note held longest in the last bar, against the key):
+  another degree 36 to 39 %, off the scale 18 to 19 %, the tonic 16 % in
+  a phrase that does not end its part and 19 to 20 % in one that does,
+  the fifth 14 to 15 %, the third 11 to 12 %. Nothing conditions it beyond
+  the mixture (+0.11); whether the phrase ends its part, is the song's
+  last, where it sits, its contour, all within 0.01: **the games' phrases
+  do not close on the tonic**, by part or by song, and a fifth of their
+  endings sit off the read scale (chromatic melodies, or the key reader's
+  share of misses, or the pickup taken as the final: a caveat for item 4's
+  melody tables, not resolved here).
+- *Relation* to the phrase before (the song's first phrase left out, it
+  stands to nothing): new 74 to 83 %, repeated 8 to 14 %, answered 4 to
+  10 %, moved up or down 2 to 4 %. Held-out bits none −1.27 (four bars);
+  the song's habit with the mixture −1.15 (+0.12), the place +0.11; the
+  relation before and the part's place in the form nothing once the first
+  phrase is out (their earlier +0.68 and +0.75 were that phrase).
+  **Kept:** part+mode+habit as the mixture. phrases.py's thresholds
+  (SAME 0.75 of the notes in place and pitch) make "repeated" strict; a
+  varied repeat reads as new, which the writer should know when it reads
+  these numbers.
+
+**Item 6 closed:** the form at the part level as a chain of kinds by
+index and lengths by the song's habit; the phrase shapes nearly free, the
+peak following the contour; the ear's existing marks answer the level
+question, no new round. Next: item 7, the arrangement (which parts play
+in which bars, voices a song, echo voices and doublings, the layered
+basses and breaks the bass rounds left), then the pack's second format.
+
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
