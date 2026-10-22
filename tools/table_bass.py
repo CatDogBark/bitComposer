@@ -15,7 +15,7 @@ arrangement table's question, and the known limitation here).
 
 Prints the figures drawn and what the readers make of the original and the written song. --stems: three more
 modules beside, for a page that toggles the voice while the song plays: the rest of the song without the bass,
-the bass (line and layers) as the song plays it, and as written (NAME rest.it, NAME bass original.it,
+the bass voices written for, as the song plays them and as written (NAME rest.it, NAME bass original.it,
 NAME bass written.it).
 """
 import argparse

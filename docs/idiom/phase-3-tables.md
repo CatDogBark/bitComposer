@@ -580,6 +580,25 @@ write for (a doubling voice plays what the line plays; a free voice
 takes a note that would cut a ringing one); apart is two parts, the
 arrangement table's and the role reader's question, and the known
 limitation of the substitution harness and the writer until then.
+
+**Built (2026-10-22, the listener's go):** the layer code is gone from
+`tools/table_bass.py`; a second bass voice is read as doubling,
+alternating or apart (`relation`, by the shares above: DOUBLING 0.6,
+ALTERNATING 0.6 with under NOT_BOTH 0.3 together) and the written line
+goes onto the voices by that: a doubling voice plays every written note
+at its pitch offset on its own sample; an alternating pair is read as one
+part, the written notes ring as the pair's do (the pair's median note
+length) and each goes to the voice that is free, the line's own first;
+an apart voice stays as it is. Locke's second voice reads apart (its
+intro pattern outweighs its walking-section doubling), so Locke stays
+the arrangement item's case: **off the Substitution Check**, with Celes
+(three bass notes in its first minute). In their place two single-voice
+FFVI basses with real lines: Searching for Friends (medium walking, 41
+bars) and Johnny C. Bad (dense walking, 33 bars), beside Terra and The
+Decisive Battle. The page and `~/Music/bitComposer-dev/Table bass/` hold
+those four. **Known limitation:** a song with a second bass-register
+part under the bass role (93 of 1,314 songs) keeps that part as it is
+while the line is rewritten; the arrangement item owns it.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
