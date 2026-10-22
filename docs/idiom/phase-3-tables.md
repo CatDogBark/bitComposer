@@ -407,7 +407,13 @@ intros and rest bars weigh most (the habit now comes before the previous
 bar, so the backoff lands in the habit's own inventory); and the song's
 own rests are kept, a playing bar never drawing a rest (which bars the
 bass plays is the arrangement table's question). A new figure must sit
-on the song's own grid. Written for Terra (habit medium roots, 74 bars),
+on the song's own grid. A fourth lesson came from the listener's first
+minute with the page: the written voice took its volume and envelope
+from the voice's first note, and Terra fades its bass in, so the written
+line played 23 dB under the original and read as no bass at all; the
+voice's usual settings (its most common sample, volume, envelope and
+echo) are taken now, and the written stems measure within half a decibel
+of the originals. Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
 (`~/Music/bitComposer-dev/Table bass/`): the readers read the written
