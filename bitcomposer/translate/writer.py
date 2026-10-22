@@ -28,8 +28,11 @@ span repeating a rhythm with a period of one, two or four bars (spans of
 in 35 % of cases (EARLIER). So the writer reads the song's own spans from
 its bass (by rhythm, marks dropped: a walking bass keeps its rhythm and
 moves its tones) and writes a pattern a span: one of an earlier span's
-patterns with EARLIER's chance, else as many new figures as the span's
-period, held through the span; where the song's own span repeats its
+patterns with EARLIER's chance (never the one just before), else as
+many new figures as the span's period, their rhythms differing from one
+another and from the pattern before (a span's figures alternate, and a
+new span is a change, by construction), held through the span; where
+the song's own span repeats its
 figures exactly, the pattern repeats exactly, and where only the rhythm
 repeats, each bar is drawn anew with the pattern's rhythm, so the tones
 move. A bar in no span is drawn on its own. The bars the song's own bass
@@ -179,12 +182,15 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             state["previous"] = figures[start]
             continue
         exact = all(own[j] == own[j - period] for j in range(start + period, start + length))
-        if patterns and rng.random() < EARLIER:
-            pattern = rng.choice(patterns)
+        before = patterns[-1] if patterns else []
+        earlier = [x for x in patterns[:-1] if x != before]
+        if earlier and rng.random() < EARLIER:
+            pattern = rng.choice(earlier)
         else:
             pattern = []
             for _ in range(period):
-                pattern.append(draw())
+                avoid = {rhythm_of(f) for f in before + pattern}
+                pattern.append(draw(keep=lambda f: manner.fits(f) and rhythm_of(f) not in avoid))
                 state["previous"] = pattern[-1]
         patterns.append(pattern)
         for i in range(length):

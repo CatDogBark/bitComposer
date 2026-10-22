@@ -85,6 +85,12 @@ class WriterTests(unittest.TestCase):
         _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))   # a two-bar pattern through the song
         self.assertEqual(figures[0::2], [figures[0]] * 4)
         self.assertEqual(figures[1::2], [figures[1]] * 4)
+        self.assertNotEqual(writer.rhythm_of(figures[0]), writer.rhythm_of(figures[1]))   # the pattern alternates
+        s.notes["bass"] = [(4.0 * i + x, 0.4, 36.0, "k") for i in range(8) for x in ((0.0, 2.0) if i >= 4 else (0.0, 1.0, 2.0, 3.0))]
+        _, figures = writer.bass(s, model, random.Random(3), key=(0, "major"))   # two spans of four bars: a change between them
+        self.assertEqual(len(set(figures[:4])), 1)
+        self.assertEqual(len(set(figures[4:])), 1)
+        self.assertNotEqual(writer.rhythm_of(figures[0]), writer.rhythm_of(figures[4]))
 
     def test_the_songs_manner(self):
         known = {"0:R 1:R", "0:R 2:R", "0:R 1:R 2:R 3:R", "1:R", "0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R",
