@@ -318,17 +318,21 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
             if found is not None:
                 where[letter] = (v, found, statistics.median(lengths[letter]), c)
     log.append(f"kit on voices {sorted(kit_voices)}: " + ", ".join(f"{LETTERS.get(k, k)} on {v}" for k, (v, _, _, _) in sorted(where.items())))
-    units = rhythm.drum_units(ctx.songs)
-    model = writer.fit([u for u in units if u.song != ctx.sid], name="drums")
     own = [rhythm.drum_figure(struck, song) if struck else "-" for _, _, _, struck in rhythm.all_bars_of(song, R.DRUMS)]
     held = moments(ctx, kit_voices)
-    lock = locks(ctx, kit_voices, song.notes[R.DRUMS])
-    hits, figures = writer.drums(song, model, random.Random(seed), hold=held, lock=lock)
+    models, group_locks = {}, {}
+    for letters in rhythm.DRUM_GROUPS:
+        if all(rhythm.drum_group(f, letters) == "-" for f in own):
+            continue
+        units = rhythm.drum_group_units(ctx.songs, letters)
+        models[letters] = writer.fit([u for u in units if u.song != ctx.sid], name="drums-" + "".join(letters))
+        notes_g = [n for n in song.notes[R.DRUMS] if rhythm.LETTERS.get(song.pieces.get(n[3]), "o") in letters]
+        group_locks[letters] = locks(ctx, kit_voices, notes_g)
+    hits, figures = writer.drums(song, models, random.Random(seed), hold=held, locks=group_locks)
     mine_units = rhythm.drum_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, kit {mine_units[0].values['kit'] if mine_units else '-'}, "
-               f"{len(figures)} bars written, {len(hits)} hits"
-               + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
-               + f"; locked to the band in {len(lock)} bars")
+               f"groups {['+'.join(g) for g in models]}, {len(figures)} bars written, {len(hits)} hits"
+               + (f"; moments kept as the song's own: bars {sorted(held)}" if held else ""))
     new, taken, dropped = [], {}, Counter()
     for start_b, letter in hits:
         if letter not in where:

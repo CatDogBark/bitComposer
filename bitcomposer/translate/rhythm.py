@@ -458,6 +458,38 @@ def drum_habit_units(songs) -> list:
     return habits(drum_units(songs))
 
 
+DRUM_GROUPS = (("K", "S", "t"), ("h",), ("c",), ("o",))   # the kit's limbs: kick, snare and tom together; the hat; cymbals; the rest
+
+
+def drum_group(figure: str, letters) -> str:
+    """A drum figure's tokens on these pieces alone; "-" when none."""
+    return " ".join(t for t in _tokens(figure) if t.partition(":")[2] in letters) or "-"
+
+
+def drum_group_units(songs, letters) -> list:
+    """drum_units for one group of pieces: each bar's figure on those pieces alone (its part "drums-" + the
+    letters), with the group's own habit; a song without the group has no units."""
+    name = "drums-" + "".join(letters)
+    out = []
+    by_song = {}
+    for u in drum_units(songs):
+        by_song.setdefault(u.song, []).append(u)
+    for units_ in by_song.values():
+        mine = []
+        previous = START
+        for u in units_:
+            figure = drum_group(u.outcome, letters)
+            values = dict(u.values)
+            values["part"] = name
+            values["previous"] = previous if u.values["previous"] != START else START
+            mine.append(tables.Unit(u.song, u.game, figure, values))
+            previous = figure
+        if any(u.outcome != "-" for u in mine):
+            _give_habit(mine, _rhythm_habit(mine))
+            out += mine
+    return out
+
+
 def bass_habit_units(songs) -> list:
     return habits(bass_units(songs))
 

@@ -255,12 +255,18 @@ class DrumWriterTests(unittest.TestCase):
 
     def test_drums_written(self):
         others = [self._kit_song("b"), self._kit_song("c", figure=((0.0, "k"), (2.0, "s"), (0.5, "h"), (1.5, "h"), (2.5, "h"), (3.5, "h")))]
-        model = writer.fit(rhythm.drum_units(others), name="drums")
+        models = {g: writer.fit(rhythm.drum_group_units(others, g), name="drums-" + "".join(g)) for g in rhythm.DRUM_GROUPS
+                  if rhythm.drum_group_units(others, g)}
+        self.assertEqual(set(models), {("K", "S", "t"), ("h",)})
         s = self._kit_song()
-        hits, figures = writer.drums(s, model, random.Random(1))
+        hits, figures = writer.drums(s, models, random.Random(1))
         self.assertEqual(len(figures), 4)
-        self.assertTrue(all(f in model.table.vocabulary for f in figures))
+        for f in figures:
+            self.assertIn(rhythm.drum_group(f, ("K", "S", "t")), models[("K", "S", "t")].table.vocabulary)
+            self.assertIn(rhythm.drum_group(f, ("h",)), models[("h",)].table.vocabulary)
         self.assertTrue(all(letter in {"K", "S", "h"} for _, letter in hits))
         self.assertTrue(all(0.0 <= t < 16.0 for t, _ in hits))
-        again, _ = writer.drums(s, model, random.Random(1))
+        again, _ = writer.drums(s, models, random.Random(1))
         self.assertEqual(hits, again)
+        self.assertEqual(rhythm.drum_group("0:K 0:h 1:S 3/2:h", ("K", "S", "t")), "0:K 1:S")
+        self.assertEqual(rhythm.drum_group("0:K 0:h 1:S 3/2:h", ("c",)), "-")

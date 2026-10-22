@@ -1,12 +1,15 @@
 """A part written from the tables into a real song, in place of the song's
 own (phase 3's acceptance by ear, docs/idiom/phase-3-tables.md): the bass,
 and the drums the same way (DrumManner, drums()): the drums' figures are
-each hit's position and piece, the manner the positions the song's drums
-strike and the pieces its kit has, the envelope each bar's own piece by
-piece (the hat keeps time in sixteenths and the snare does not: a bar's
-strikes of each piece stay within TIGHT of the song's own bar's, so a
-snare roll never stands in for the hat), the spans and moments and
-locking as the bass's; a hit's voice, sample and
+each hit's position and piece, written a limb at a time (rhythm.DRUM_GROUPS:
+kick, snare and tom as one line, the hat as another, cymbals and the rest
+each their own, since a whole kit's bar is too particular a figure for
+any inventory to hold many of, and a kit is what its limbs do together),
+each group from its own inventory over the readings, in the song's own
+manner for that group (the positions it strikes, the pieces it has), the
+envelope each bar's own piece by piece (a bar's strikes of each piece
+stay within TIGHT of the song's own bar's, so a snare roll never stands
+in for the hat), the spans and moments and locking as the bass's; a hit's voice, sample and
 length are the harness's, from the song's own kit.
 
 The song is one of the readings (rhythm.load's Song: its bars and chords
@@ -272,13 +275,15 @@ def within(figure: str, env: tuple) -> bool:
 
 
 class DrumManner:
-    """The song's own manner in its drums: the positions it strikes (feel)
-    and the pieces its kit has (kit), each in RARE of its hits or more."""
+    """The song's own manner in its drums (or one group of them): the
+    positions it strikes (feel) and the pieces it has (kit), each in RARE of
+    its hits or more; from the song, or from a list of its own figures."""
 
-    def __init__(self, song: rhythm.Song, known: set):
+    def __init__(self, song: rhythm.Song | None, known: set, figures=None):
         self.known = known
-        tokens = [t.partition(":") for _, struck in rhythm.bars_of(song, R.DRUMS) if struck
-                  for t in rhythm._tokens(rhythm.drum_figure(struck, song))]
+        if figures is None:
+            figures = [rhythm.drum_figure(struck, song) for _, struck in rhythm.bars_of(song, R.DRUMS) if struck]
+        tokens = [t.partition(":") for f in figures for t in rhythm._tokens(f)]
         n = len(tokens)
         at = Counter(Fraction(t[0]) for t in tokens)
         pieces = Counter(t[2] for t in tokens)
@@ -390,18 +395,27 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
     return figures
 
 
-def drums(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None, hold=(),
-          lock=None) -> tuple[list[tuple[float, str]], list[str]]:
-    """The drums written for the song: its hits (start in beats, piece
-    letter) and the figures drawn, one a bar; `hold` and `lock` as bass()."""
-    manner = DrumManner(song, model.table.vocabulary)
-    if habit is None:
-        mine = rhythm.drum_units([song])
-        habit = mine[0].values["habit"] if mine else "medium mixed"
+def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None) -> tuple[list[tuple[float, str]], list[str]]:
+    """The drums written for the song, a group of pieces at a time (the
+    module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
+    to its Cache; `locks` a group to its lock; `hold` as bass(). Returns
+    the hits (start in beats, piece letter) and the merged figures."""
+    locks = locks or {}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
-    own = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
-    figures = _figures(song, R.DRUMS, model, manner, own, bars, habit, rng, hold, lock,
-                       envelope_of=drum_envelope, within_of=drum_within)
+    whole = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
+    merged = [[] for _ in bars]
+    for letters, model in models.items():
+        own = [rhythm.drum_group(f, letters) for f in whole]
+        if all(f == REST for f in own):
+            continue
+        manner = DrumManner(None, model.table.vocabulary, figures=[f for f in own if f != REST])
+        mine = [u for u in rhythm.drum_group_units([song], letters)]
+        habit = mine[0].values["habit"] if mine else "medium mixed"
+        figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, habit, rng, hold, locks.get(letters),
+                           envelope_of=drum_envelope, within_of=drum_within)
+        for k, f in enumerate(figures):
+            merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
+    figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]
     hits = []
     for (a, b, _), figure in zip(bars, figures):
         for t in rhythm._tokens(figure):
