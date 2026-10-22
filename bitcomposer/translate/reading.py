@@ -61,21 +61,25 @@ def read(snap, seconds: float | None = None, song: events.Song | None = None) ->
 
 
 def of_score(score, song: events.Song | None = None, id: str | None = None, game: str = "", title: str = "",
-             composer: str = "", driver: str | None = None) -> Reading:
+             composer: str = "", driver: str | None = None, grid: beat.Grid | None = None) -> Reading:
     """Read a score (spc.convert.Score) as music, through the readers a
     snapshot goes through: a snapshot's score names itself; a generated one
-    is named by the arguments."""
+    is named by the arguments, and may bring its own beat (`grid`: the
+    generator's, which it knows), the beat reader then left out."""
     song = song or events.of_score(score)
     if score.snap is not None:
-        return _read(song, score.snap)
-    r = _read(song, None)
+        return _read(song, score.snap, grid)
+    r = _read(song, None, grid)
     r.id = id or hashlib.sha1(repr([(p.voice, round(p.start, 4), p.midi) for p in song.notes]).encode()).hexdigest()[:20]
     r.game, r.title, r.composer, r.driver = game or score.game, title or score.title, composer or score.artist, driver
     return r
 
 
-def _read(song: events.Song, snap) -> Reading:
-    grid, roles = beat_and_parts(song)
+def _read(song: events.Song, snap, grid: beat.Grid | None = None) -> Reading:
+    if grid is None:
+        grid, roles = beat_and_parts(song)
+    else:
+        roles = roles_mod.assign(song, grid, roles_mod.echoes(song))
     source = snap.source if snap is not None else ""
     folder = os.path.basename(os.path.dirname(os.path.abspath(source))) if source else ""
     m = manifest(os.path.dirname(os.path.abspath(source))) if source else {}

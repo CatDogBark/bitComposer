@@ -150,7 +150,7 @@ def load_generated(song: dict, title: str, game: str, models: dict | None = None
     if seconds is not None and seconds < original.seconds:
         original.notes = [n for n in original.notes if n.start < seconds]
         original.seconds = seconds
-    r = reading.of_score(original, game=game, title=title)
+    r = reading.of_score(original, game=game, title=title, grid=_generated_grid(song, original.seconds))
     if r.grid is None:
         return None
     r.file, r.folder = f"{title}.generated", game
@@ -175,6 +175,20 @@ def load_generated(song: dict, title: str, game: str, models: dict | None = None
     for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (s.sid,)):
         ctx.by_voice[voice] = (role, [n for n in store.unpack(blob) if n[3] > 0])
     return ctx
+
+
+def _generated_grid(song: dict, seconds: float):
+    """The generator's own beat as the readers' grid: its tempo, four beats a
+    bar from the first row, sixteenths."""
+    from ..it_format import it_tempo_to_bpm
+    from ..pattern import ROWS_PER_BEAT
+    from . import beat
+    bpm = it_tempo_to_bpm(song["tempo"], song["speed"], ROWS_PER_BEAT)
+    period = 60.0 / bpm
+    n = max(2, int(math.ceil(seconds / period)) + 1)
+    beats = [k * period for k in range(n)]
+    section = beat.Section(0.0, beats[-1], period / 4, 0.0, first=0.0, meter=4, downbeat=0, division=4)
+    return beat.Grid(period / 4, 4, [section], beats, beats[::4], 1.0, 0.5)
 
 
 GENERATED_DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "tom", "crash": "cymbal"}
