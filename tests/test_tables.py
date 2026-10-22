@@ -226,3 +226,18 @@ class CoversTests(unittest.TestCase):
         self.assertEqual(tables.shapes(("part", "meter"), ("tempo",), game=False, covers=2),
                          [("part", "meter"), ("part", "meter", "tempo")])
         self.assertEqual(Table(("meter",), covers=1).covers, 0)          # no floor: nothing to cover
+
+
+class ValueUnitTests(unittest.TestCase):
+    def test_value_units(self):
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1])
+        # a line: a held quarter on the one, a detached eighth on the two, a note tied over the bar line, the last note (no next)
+        s.notes["melody"] = [(0.0, 0.9, 60.0, "k"), (1.0, 0.2, 62.0, "k"), (1.5, 2.6, 64.0, "k"), (4.25, 1.0, 65.0, "k")]
+        us = rhythm.value_units([s])
+        self.assertEqual([u.outcome for u in us], ["held", "detached", "held"])
+        self.assertEqual([u.values["value"] for u in us], ["1", "1/2", "11/4"])
+        self.assertEqual([u.values["place"] for u in us], ["beat", "beat", "eighth"])
+        self.assertEqual([u.values["beat"] for u in us], [0, 1, 1])
+        self.assertEqual([u.values["previous"] for u in us], [rhythm.START, "held", "detached"])
+        self.assertEqual(us[0].values["part"], "melody")

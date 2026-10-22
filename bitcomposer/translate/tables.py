@@ -41,7 +41,7 @@ most common one (its ostinato), since a table that predicted well by
 playing the mode would make every song the same. A draw returns from the
 whole distribution with a seed, never the mode.
 
-    python -m bitcomposer.translate.tables rhythm [--db PATH] [--split game|song] [--votes songs|shares] [--floor none|cells]
+    python -m bitcomposer.translate.tables rhythm|values [--db PATH] [--split game|song] [--votes songs|shares] [--floor none|cells]
 """
 import argparse
 import hashlib
@@ -320,9 +320,16 @@ def _shape(shape: tuple) -> str:
     return "+".join(shape) if shape else "(none)"
 
 
+#  table -> (its units from the rhythm module's songs, the chain every shape starts from, each extra tried on its end)
+SPECS = {
+    "rhythm": ("units", ("part", "meter"), ("tempo", "previous", "place", "chord")),
+    "values": ("value_units", ("part", "value"), ("meter", "tempo", "place", "beat", "previous")),
+}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="compare the shapes of a table on the readings")
-    ap.add_argument("table", choices=("rhythm",))
+    ap.add_argument("table", choices=sorted(SPECS))
     ap.add_argument("--db", help="the readings database (default: the product's)")
     ap.add_argument("--game", help="only this game's songs")
     ap.add_argument("--parts", help="only these parts, comma-separated")
@@ -332,27 +339,30 @@ def main(argv=None) -> int:
     ap.add_argument("--floor", choices=("none", "cells"), default="none")
     ap.add_argument("--discount", type=float, default=0.0, help="absolute discounting by this much a vote; 0: Witten-Bell")
     ap.add_argument("--covers", type=int, default=None, help="how many of the chain's first values the floor accounts for (cells: 2)")
-    ap.add_argument("--base", default="part,meter", help="the chain every shape starts from")
-    ap.add_argument("--extras", default="tempo,previous,place,chord", help="each tried on the chain's end")
+    ap.add_argument("--base", help="the chain every shape starts from (default: the table's)")
+    ap.add_argument("--extras", help="each tried on the chain's end, comma-separated (default: the table's)")
     ap.add_argument("--no-game", action="store_true", help="leave out the per-game shapes")
     args = ap.parse_args(argv)
     from . import rhythm, store
     db = store.connect(args.db)
     songs, left = rhythm.load(db, args.game)
     print(f"{len(songs)} songs counted, left out: {left}", file=sys.stderr)
-    units = rhythm.units(songs)
+    builder, base, extras = SPECS[args.table]
+    units = getattr(rhythm, builder)(songs)
     if args.parts:
         keep = set(args.parts.split(","))
         units = [u for u in units if u.values["part"] in keep]
     parts = [p for p in rhythm.PARTS if any(u.values["part"] == p for u in units)]
-    base = tuple(x for x in args.base.split(",") if x)
-    extras = tuple(x for x in args.extras.split(",") if x)
+    if args.base is not None:
+        base = tuple(x for x in args.base.split(",") if x)
+    if args.extras is not None:
+        extras = tuple(x for x in args.extras.split(",") if x)
     floor = rhythm.BarCells if args.floor == "cells" else None
     covers = args.covers if args.covers is not None else (len(rhythm.BarCells.COVERS) if floor else 0)
     cs = compare(units, shapes(base, extras, not args.no_game, covers), by="part", rng_seed=args.seed, split=args.split,
                  votes=args.votes, floor=floor, discount=args.discount or None, covers=covers)
     dev = sum(1 for u in units if half_of(u, args.split) == DEVELOPMENT)
-    print(report(cs, parts, f"rhythm: {len(units)} bars, {dev} development, {len(units) - dev} held-out; "
+    print(report(cs, parts, f"{args.table}: {len(units)} units, {dev} development, {len(units) - dev} held-out; "
                             f"split by {args.split}, votes {args.votes}, floor {args.floor} (covers {covers}), "
                             f"{'discount ' + str(args.discount) if args.discount else 'Witten-Bell'}"))
     return 0
