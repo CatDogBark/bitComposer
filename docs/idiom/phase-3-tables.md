@@ -945,6 +945,88 @@ wrong one (The Little Sprite and Snowman out with the two misses). The
 bias is toward tonic-heavy songs, accepted: the song's own chords (the
 mixture) carry the writing in any case, as they did for rhythm, bass and
 drums, and the general table is the fallback.
+### Harmony (2026-10-22)
+
+The plan's fifth item, behind the tonic gate: four tables from the
+bar-by-bar chord reader over the form's parts (a part that repeats an
+earlier one left out), `chord_units`, `change_units`, `cadence_units`,
+`loop_units` in rhythm.py (`tables chords|degrees|shapes|changes|cadences|loops`).
+The tables by degree count only the songs whose tonic is sure
+(`tonic_sure`: the key reader's tonic is the chord root the song plays
+most; 843 of 1,562, `--unsure` counts the rest too); the harmonic rhythm
+needs no tonic and counts every song. Share votes, discount 0.75, the
+games split.
+
+**Chords.** The unit is a bar's chord as a numeral in the song's key, the
+shape kept (I5, i, VI, i7, Isus4; 147 entries; a bar without a chord is
+one), the chain the bar before's. 16,689 bars, 7,153 development, 9,536
+held-out. Held-out bits a bar: none −5.27; the bar before −4.79 (the
+only conditioning that helps alone: after I5 the next bar is I5 69 %,
+after i it is i 53 %); the bar before that −5.16; the mode, the meter,
+the tempo band, the bar's place in its part, the part's place in the
+form, the song's variety (distinct chords: one, few, several, many) and
+its motion (the share of bars changing chord) each −5.37 to −5.67,
+below none (the discount's cost at a level that sorts nothing); a game
+nothing anywhere, by the games' split and by the songs'. **The song's own
+mixture is the table once more:** the mixture over no context −3.94,
+over part+mode −4.07, over the chain −4.10 (the chain's gain absorbed by
+"same" and "earlier"; its draws narrow to 5.2 distinct chords a song
+against 7.4 real, where the mixture over part+mode draws 6.0 and the
+unconditioned 7.2; the ostinato share 0.42 against 0.43). The recall
+shares: same 0.33, earlier 0.29, new 0.37 (a one-chord song same 0.50,
+new 0.50). With the unsure songs in (30,927 bars) the same picture a
+quarter-bit worse (none −5.71, the mixture −4.17): the gate's songs are
+the more predictable, as a tonic-heavy bias would be. **Kept:** the
+numerals as the song's mixture over the part+mode table; a song with no
+chords yet draws its first bars from the chain (part+mode+previous,
+−4.79 against −5.27), as the figure writers put the habit before the
+previous bar. Also measured, the progression factored: the degree alone
+(16 entries; none −2.65, the chain −2.28, the mixture over the chain
+−2.18, over part+mode −2.20; draws 3.8 to 4.0 distinct against 4.5) and
+the shape given the degree (12 entries; part+mode+degree −2.45, as the
+mixture −1.98, with the bar before −1.96); the two together −4.14 to
+−4.16 a bar against the joint mixture's −3.94 to −4.07, so the joint
+table is kept, its 147 entries no burden under the mixture. What the
+sure songs play: in minor I5 22 %, i 15 %, VI 4 %, i7 4 %, IV5 3 %; in
+major I 23 %, I5 14 %, IV 5 %, V 4 %, vi 3 %; 36 % of bars keep the bar
+before's chord.
+
+**The harmonic rhythm.** The unit is a bar's chord changes by position
+(beats from the bar line on the half beat; "none"): 37,947 bars of every
+song, two outcomes carry nearly all of it ("0" and "none"). Held-out bits
+a bar: none −1.006; the song's motion habit −0.834 (+0.17: a moving song
+changes chord on 82 % of its bar lines, a static one on 20 %); the bar
+before −0.935; the mode, the meter, the tempo, the bar's place in its
+part within 0.02 of none; the mixture nothing on top of the habit (−0.84).
+**Kept:** part+meter+habit; the writer changes chord on the bar line at
+the song's rate, and inside a bar almost never (the chord reader reads
+bar by bar).
+
+**Cadences.** The unit is a part's chord sequence's ending (phrases.py's
+seven: V -> I, IV -> I, bVII -> I, another -> I, half on V, elsewhere, one
+chord): 2,350 parts. A third of the form's parts sit on one chord (815);
+of the rest, "elsewhere" 45 to 49 %, a half cadence 15 to 21 %, a return
+to I 36 % (another -> I 14, IV -> I 7 to 9, V -> I 6 to 7, bVII -> I 6).
+Held-out bits: none −2.37; the progression's length +0.94 (definitional
+for the one-chord parts); the part's place in the form +0.015 (a last
+part halves on V 17 % against 8 % of first parts, and that is all); the
+mode and the variety nothing. **Kept:** part+mode+length, and the
+finding that the form reader's parts do not cadence: either game loops
+seldom do or the parts are cut mid-progression (item 6's question).
+
+**The loop.** The unit is the chord the loop returns to, 614 sure songs
+with a loop: the tonic degree 80 % (I5 32, i 19, I 14, i7 4, Isus4 4, I7
+3, Imaj7 2, Isus2 2), the same chord as the last bar 26 %. Neither the
+mode nor the last bar's chord predicts it beyond the base (none −3.66,
+with the last chord −3.90, 270 development units). **Kept:** the base
+distribution: the loop lands on the tonic, and the writer knows it.
+
+**Item 5 closed:** the harmony tables counted and recorded; no writer
+yet (a chord substitution into a real song would re-pitch every part, so
+these tables meet the ear with the generator's songs, later). The mode
+is the key reader's major/minor (the readings keep no finer name to
+fold). Next: item 6, phrases and form.
+
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
