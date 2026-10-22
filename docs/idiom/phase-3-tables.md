@@ -801,6 +801,22 @@ song's own part plays through keeps the song's own bar (`harness.stops`,
 on the detection `locks` already had): Johnny's drums answer in bars 0
 and 13 to 19. For the generator, the arrangement table's row: what a
 part does when the band stops (fill, hit, keep time, rest), per game.
+
+**The bass and drum items close (2026-10-22).** The listener's verdicts
+on the Substitution Check, read back from its store: Terra, The Decisive
+Battle, Searching for Friends and Johnny C. Bad, bass and drums, all
+eight **belong** ("Johnny C. Bad: the writing basically nails it now; I
+bumped them all up to belongs; I was questioning the bass on Decisive
+Battle, but that was my taste being injected"). The exit criterion for
+these two tables, a bass and a kit written from the tables passing the
+ear in substitution, is met. What the two writers share is the record's
+real finding: the tables give the inventory and the song's own mixture
+gives the loyalty, but a part belongs only when it is written in the
+song's own manner (feel, tones, pieces), each bar's own envelope, its
+spans, its moments, the band's stops and shared hits, its volumes and
+its voices, all read from the song; the generator will need each of
+those from a table of its own before a part written into a song it
+made can belong there the same way.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
