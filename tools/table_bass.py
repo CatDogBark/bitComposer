@@ -8,8 +8,10 @@ played on the song's own bass sample in its own register, the rest of the song a
 The bass written for is the bass LINE: of the voices the readers call bass, the one with the longest notes, and
 the manner is read from that voice alone. A song may layer its bass (Locke: a plucked line with a sustained tone
 blipping at each of its attacks and a sixteenth after); a bass voice whose notes are shorter than TICK beats is
-such a layer, and it is rebuilt on the written line with the song's own device (the same offsets after each
-attack, the same pitch relation, length and sample), so the edge follows the new line instead of the old.
+such a layer. Its notes that follow the line's attacks (the device: the offsets after an attack that DEVICE of
+the doubled attacks have) are rebuilt on the written line, the same offsets, pitch relation, length and sample,
+so the edge follows the new line instead of the old; its other notes, a rhythm of its own where the line rests
+(Locke's first eight bars), stay as they are.
 
 Prints the figures drawn and what the readers make of the original and the written song. --stems: three more
 modules beside, for a page that toggles the voice while the song plays: the rest of the song without the bass,
@@ -27,7 +29,8 @@ from array import array
 from collections import Counter
 
 TICK = 0.3                            # beats: a bass voice whose notes are shorter than this doubles the line's attacks
-DEVICE = 0.3                          # the share of the line's attacks an offset must follow to be part of the device
+DEVICE = 0.5                          # the share of the doubled attacks an offset must follow to be part of the device
+NEAR = 0.06                           # beats: a layer note this close to a line attack doubles it
 
 from bitcomposer import spc
 from bitcomposer.spc import convert
@@ -135,21 +138,32 @@ def main(argv=None) -> int:
     replaced = {v}
     line_starts = sorted(n[0] for n in by_voice[v])
     for t in layers:
-        offsets, diffs = Counter(), []
+        # the device: which of the line's attacks the layer doubles (a note within NEAR of it), and the offsets after
+        # a doubled attack its notes fall on; a layer note under neither is the layer's own and stays
+        doubled, offsets, diffs, following = set(), Counter(), [], set()
         for n in by_voice[t]:
-            i = bisect.bisect_right(line_starts, n[0] + 0.03) - 1
-            if i < 0 or n[0] - line_starts[i] >= 1.0:
+            i = bisect.bisect_right(line_starts, n[0] + NEAR) - 1
+            if i < 0:
                 continue
-            offsets[round((n[0] - line_starts[i]) * 4) / 4] += 1
-            if n[0] - line_starts[i] < 0.06:
+            off = n[0] - line_starts[i]
+            if off < NEAR:
+                doubled.add(i)
                 m = next((x[2] for x in by_voice[v] if abs(x[0] - line_starts[i]) < 0.03), None)
                 if m is not None:
                     diffs.append(n[2] - m)
-        device = sorted(off for off, c in offsets.items() if c >= DEVICE * len(line_starts))
+        for n in by_voice[t]:
+            i = bisect.bisect_right(line_starts, n[0] + NEAR) - 1
+            if i >= 0 and i in doubled and n[0] - line_starts[i] < 1.0:
+                offsets[round((n[0] - line_starts[i]) * 4) / 4] += 1
+        device = sorted(off for off, c in offsets.items() if c >= DEVICE * len(doubled)) if doubled else []
         found_t = settings_of([n for n in original.notes if n.voice == t], events)
         if not device or found_t is None:
-            print(f"  layer voice {t}: no device read ({dict(offsets)}); left as it is")
+            print(f"  layer voice {t}: doubles {len(doubled)} of the line's {len(line_starts)} attacks, no device read; left as it is")
             continue
+        for n in by_voice[t]:                              # the layer's notes on the device: replaced below
+            i = bisect.bisect_right(line_starts, n[0] + NEAR) - 1
+            if i >= 0 and i in doubled and round((n[0] - line_starts[i]) * 4) / 4 in device and n[0] - line_starts[i] < 1.0:
+                following.add(round(seconds_at(beats, n[0]), 3))
         usual_t, like_t, pitch_t, midi_t = found_t
         diff = round(statistics.median(diffs)) if diffs else 0
         held = length_of[t]
@@ -160,9 +174,11 @@ def main(argv=None) -> int:
                 if start < original.seconds:
                     ticks.append(note_like(t, start, min(seconds_at(beats, start_b + off + held), original.seconds),
                                            midi + diff, usual_t, like_t, pitch_t, midi_t))
-        new += ticks
+        own_layer = [n for n in original.notes if n.voice == t and round(n.start, 3) not in following]
+        new += ticks + own_layer
         replaced.add(t)
-        print(f"  layer voice {t} rebuilt on the written line: offsets {device} beats, {diff:+d} semitones, notes {held:.2f} beats, {len(ticks)} of them")
+        print(f"  layer voice {t}: doubles {len(doubled)} of the line's {len(line_starts)} attacks at offsets {device} beats, {diff:+d} semitones, "
+              f"notes {held:.2f} beats; {len(ticks)} rebuilt on the written line, {len(own_layer)} of its own kept")
     kept = [n for n in original.notes if n.voice not in replaced]
     swapped = convert.Score(kept + new, original.seconds, original.voices, original.master, original.fade,
                             (a.title or f"{title} [table bass]")[:25], original.game, original.artist, original.row_hz,
