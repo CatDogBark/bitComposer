@@ -379,15 +379,55 @@ def form_spans_of(song: rhythm.Song):
     return lambda own: form_spans(song, own)
 
 
+def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
+                  rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0) -> list[str]:
+    """The figures written for a part with no original to follow (the
+    module, phase 4): bar by bar from the song's own mixture, whose recall
+    shares carry the games' rate of repeating and returning, each bar in
+    the manner, the habit's envelope and the band's lock; a part of the
+    form that repeats an earlier one copies its figures; the bars the old
+    part rests in rest (the arrangement is not this slice's); the song's
+    moments and stops (`hold`) keep the old bar."""
+    lock = lock or {}
+    envelope_of = envelope_of or envelope
+    within_of = within_of or within
+    meters = [max(1, round(b - a)) for a, b, _ in bars]
+    figures, played, previous = [REST] * len(bars), Counter(), None
+    for start, length, _, copy_of in form_spans(song, own):
+        for i in range(length):
+            k = start + i
+            if own[k] == REST:
+                figures[k] = REST
+                continue
+            if copy_of is not None and figures[copy_of + i] != REST:
+                figures[k] = figures[copy_of + i]
+            elif k in hold:
+                figures[k] = own[k]
+            else:
+                env = envelope_of(own[k], meters[k])
+                fit = lambda f, _k=k, _env=env: manner.fits(f) and within_of(f, _env) and locked(f, lock.get(_k), lock_share)   # noqa: E731
+                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit}
+                unit = tables.Unit(song.sid, song.game, "", values)
+                figure = model.draw(unit, previous, played, rng, keep=fit)
+                for _ in range(TRIES):
+                    if fit(figure):
+                        break
+                    figure = model.table.draw(model.table.context(unit), rng, values)
+                else:
+                    figure = next((f for f in played if fit(f)), own[k])
+                figures[k] = figure
+            played[figures[k]] += 1
+            previous = figures[k]
+    return figures
+
+
 def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
              rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0,
-             envelope_of=None, within_of=None, lock_share: float = 1.0, spans_of=None) -> list[str]:
+             envelope_of=None, within_of=None, lock_share: float = 1.0) -> list[str]:
     """The figures written for a part, one a bar (the module): drawn as the
     song's own mixture, in its manner, each bar's envelope and lock, a
     pattern a span, the song's moments its own; `chord_at` and `reuse` let
-    a bar on a chord its span had take that bar's figure again (the bass);
-    `spans_of` gives the spans (form_spans for a free-written part), else
-    they are read from the part's own rhythms."""
+    a bar on a chord its span had take that bar's figure again (the bass)."""
     lock = lock or {}
     envelope_of = envelope_of or envelope
     within_of = within_of or within
@@ -417,15 +457,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         return nearly or fallback
 
     figures, patterns = [REST] * len(bars), []
-    runs = spans_of(own) if spans_of else [(a, b, c, None) for a, b, c in spans([rhythm_of(f) for f in own])]
-    for start, length, period, copy_of in runs:
-        if copy_of is not None:                                 # the form says this part is an earlier one again
-            for i in range(length):
-                figures[start + i] = figures[copy_of + i] if own[start + i] != REST else REST
-                if figures[start + i] != REST:
-                    state["played"][figures[start + i]] += 1
-            state["previous"] = figures[start + length - 1]
-            continue
+    for start, length, period in spans([rhythm_of(f) for f in own]):
         if length == 1:
             if own[start] != REST:
                 last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
@@ -498,9 +530,12 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             mine = [u for u in rhythm.drum_group_units([song], letters)]
             group_habit = habit or (mine[0].values["habit"] if mine else "medium mixed")
             envelope_of = drum_envelope
-        figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
-                           envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS,
-                           spans_of=form_spans_of(song) if free else None)
+        if free:
+            figures = _free_figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold,
+                                    locks.get(letters), envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
+        else:
+            figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
+                               envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
         for k, f in enumerate(figures):
             merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
     figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]
@@ -540,9 +575,11 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
 
     words = habit.split()
-    figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
-                       chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5),
-                       envelope_of=free_envelope(habit) if free else None, spans_of=form_spans_of(song) if free else None)
+    if free:
+        figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit))
+    else:
+        figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
+                           chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))
     notes, last_root, previous = [], tonic, None
     for (a, b, _), figure in zip(bars, figures):
         new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous)
