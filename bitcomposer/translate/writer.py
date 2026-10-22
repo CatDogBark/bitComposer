@@ -13,12 +13,19 @@ one backs off to the habit's own inventory, not the pooled one). A new
 figure must be a bar some song played (the floor serves the likelihood,
 not the writer: its invented bars were the runs the listener heard in
 Terra) and must be in the song's own manner, read from its bass (Manner):
-no denser than DENSER times its median strikes a bar (or its busiest bar)
-and no sparser than SPARSER times it; striking the downbeat where the
-song's bass strikes it in DOWNBEAT of its bars; and placed only on the
-subdivisions the song's bass uses (its feel: quarters and triplets in
-Terra, where a sixteenth pickup was the listener's "burst" and a bar
-with nothing on the one his "skip").
+no denser than DENSER times its median strikes a bar (never its busiest
+bar: one rolled bar in Locke licensed sixteenths everywhere) and no
+sparser than SPARSER times it; striking the downbeat where the song's
+bass strikes it in DOWNBEAT of its bars; placed only on the subdivisions
+the song's bass uses (its feel: quarters and triplets in Terra, where a
+sixteenth pickup was the listener's "burst" and a bar with nothing on
+the one his "skip"); and in the song's tones as much as its rhythm: no
+octave-up roots where the song plays none, as many different tones in a
+bar as the song's own bars have (Terra's one, Locke's one to four), the
+roots and fifths' share of a bar within the song's own bars' range (by
+MARGIN), and a bar on one tone struck PEDAL times or more only where
+PEDAL_SHARE of the song's own such bars are (Locke's walking bass came
+back as sixteen fifths in a row).
 
 A bass holds its figures over spans and changes with the music, which a
 bar drawn at a time cannot do (the listener: "no section awareness, no
@@ -66,6 +73,10 @@ LOW = 0.1                             # the register's floor: this quantile of t
 DENSER = 1.5                          # a new figure strikes at most this many times the song's own median a bar
 SPARSER = 0.5                         # and at least this many times it
 DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
+ANCHORS = {"R", "r", "5"}             # the marks that anchor a bar: roots and fifths
+MARGIN = 0.15                         # how far a figure's anchor share may stray outside the song's own bars' range
+PEDAL = 4                             # strikes: a bar on one tone this long is a pedal
+PEDAL_SHARE = 0.25                    # the song's own bars of PEDAL strikes or more that are pedals, for a new one to be
 PERIODS = (1, 2, 4)                   # bars: the periods a span may repeat with
 EARLIER = 0.35                        # a new span's chance of taking a pattern an earlier span had (the readings' basses, by rhythm)
 TRIES = 40                            # draws before the writer gives up on a constraint
@@ -85,27 +96,51 @@ def on_grid(figure: str, division: int) -> bool:
 
 
 class Manner:
-    """The song's own manner in a part, read from its bars: the strikes a
-    bar it allows a new figure (low, high), whether the figure must strike
-    the downbeat, and the subdivisions of the beat it may use (feel)."""
+    """The song's own manner in a part, read from its bars (the module):
+    the strikes a bar it allows a new figure (low, high), whether the
+    figure must strike the downbeat, the subdivisions of the beat it may
+    use (feel), and its tones: whether it plays octave-up roots, how many
+    different tones a bar (tones), the share of a bar's strikes on roots
+    and fifths (anchors), and whether a bar may sit on one tone (pedal)."""
 
-    def __init__(self, song: rhythm.Song, role: str, known: set):
+    def __init__(self, song: rhythm.Song, role: str, known: set, figure_of=None):
         self.known = known
-        bars = [struck for _, struck in rhythm.bars_of(song, role) if struck]
-        counts = [len(struck) for struck in bars]
+        figure_of = figure_of or rhythm.figure
+        bars = [(a, struck) for a, struck in rhythm.bars_of(song, role) if struck]
+        counts = [len(struck) for _, struck in bars]
         median = statistics.median(counts) if counts else 4
-        self.low = max(1, math.floor(SPARSER * median)) if counts else 1
-        self.high = max(max(counts), round(DENSER * median)) if counts else 8
-        self.downbeat = bool(bars) and sum(1 for struck in bars if struck[0][0] == 0) / len(bars) >= DOWNBEAT
-        self.feel = {p.denominator for struck in bars for p, _ in struck} | {1}
+        self.low = max(1, math.floor(SPARSER * median))
+        self.high = max(self.low, round(DENSER * median))
+        self.downbeat = bool(bars) and sum(1 for _, struck in bars if struck[0][0] == 0) / len(bars) >= DOWNBEAT
+        self.feel = {p.denominator for _, struck in bars for p, _ in struck} | {1}
+        marks = [[t.partition(":")[2] for t in rhythm._tokens(figure_of(struck, a, song))] for a, struck in bars]
+        full = [m for m in marks if len(m) >= 2]
+        self.octaves = any("r" in m for m in marks)
+        self.tones = (min(len(set(m)) for m in full), max(len(set(m)) for m in full)) if full else (1, 4)
+        shares = [sum(1 for x in m if x in ANCHORS) / len(m) for m in full]
+        self.anchors = (min(shares), max(shares)) if shares else (0.0, 1.0)
+        long = [m for m in marks if len(m) >= PEDAL]
+        self.pedal = not long or sum(1 for m in long if len(set(m)) == 1) / len(long) >= PEDAL_SHARE
 
     def fits(self, figure: str) -> bool:
         """Whether a new figure may be written into the song (the module)."""
         if figure == REST or figure not in self.known:
             return False
-        positions = [Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)]
-        return (self.low <= len(positions) <= self.high and (not self.downbeat or positions[0] == 0)
-                and all(p.denominator in self.feel for p in positions))
+        tokens = [t.partition(":") for t in rhythm._tokens(figure)]
+        positions = [Fraction(t[0]) for t in tokens]
+        marks = [t[2] for t in tokens]
+        if not (self.low <= len(positions) <= self.high and (not self.downbeat or positions[0] == 0)
+                and all(p.denominator in self.feel for p in positions)):
+            return False
+        if not self.octaves and "r" in marks:
+            return False
+        distinct = len(set(marks))
+        if len(marks) >= 2 and not (self.tones[0] <= distinct <= self.tones[1]):
+            return False
+        share = sum(1 for m in marks if m in ANCHORS) / len(marks)
+        if len(marks) >= 2 and not (self.anchors[0] - MARGIN <= share <= self.anchors[1] + MARGIN):
+            return False
+        return self.pedal or len(marks) < PEDAL or distinct > 1
 
 
 def rhythm_of(figure: str) -> str:

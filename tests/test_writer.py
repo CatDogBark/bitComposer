@@ -35,8 +35,8 @@ class WriterTests(unittest.TestCase):
 
     def test_a_bass_written_from_a_table(self):
         others = [_song("b"), _song("c")]
-        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
-        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 2.0)]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 2.0)]
         model = writer.fit(rhythm.bass_units(others))
         self.assertIsInstance(model, tables.Cache)
         notes, figures = writer.bass(_song(), model, random.Random(1), key=(0, "major"))
@@ -93,23 +93,44 @@ class WriterTests(unittest.TestCase):
         self.assertNotEqual(writer.rhythm_of(figures[0]), writer.rhythm_of(figures[4]))
 
     def test_the_songs_manner(self):
-        known = {"0:R 1:R", "0:R 2:R", "0:R 1:R 2:R 3:R", "1:R", "0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R",
-                 "0:R 1:R 2:R 11/4:R", "0:R 4/3:R 5/3:R 2:R", "0:R", "-"}
+        known = {"0:R 1:5", "0:R 2:5", "0:R 1:R 2:5 3:5", "1:5", "0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R",
+                 "0:R 1:R 2:5 11/4:R", "0:R 4/3:5 5/3:R 2:R", "0:R", "-"}
         m = writer.Manner(_song(), "bass", known)                 # quarters on every beat: 4 a bar, the one always struck
         self.assertEqual((m.low, m.high, m.downbeat, m.feel), (2, 6, True, {1}))
-        self.assertTrue(m.fits("0:R 1:R") and m.fits("0:R 2:R") and m.fits("0:R 1:R 2:R 3:R"))
-        self.assertFalse(m.fits("1:R"))                            # nothing on the one
+        self.assertEqual((m.octaves, m.tones, m.pedal), (False, (2, 2), False))   # _song's bars: two tones each
+        self.assertTrue(m.fits("0:R 1:5") and m.fits("0:R 2:5") and m.fits("0:R 1:R 2:5 3:5"))
+        self.assertFalse(m.fits("1:5"))                            # nothing on the one
         self.assertFalse(m.fits("0:R"))                            # too sparse
-        self.assertFalse(m.fits("0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R"))   # too dense, and eighths
-        self.assertFalse(m.fits("0:R 1:R 2:R 11/4:R"))             # a sixteenth the song never plays
-        self.assertFalse(m.fits("0:R 4/3:R 5/3:R 2:R"))            # triplets the song never plays
-        self.assertFalse(m.fits("-") or m.fits("0:R 3:R"))         # a rest; a bar no song played
+        self.assertFalse(m.fits("0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R"))   # too dense, and eighths
+        self.assertFalse(m.fits("0:R 1:R 2:5 11/4:R"))             # a sixteenth the song never plays
+        self.assertFalse(m.fits("0:R 4/3:5 5/3:R 2:R"))            # triplets the song never plays
+        self.assertFalse(m.fits("-") or m.fits("0:R 3:5"))         # a rest; a bar no song played
         s = _song()
         s.division = 12                                             # a grid that holds triplets (a sixteenth grid would round them)
-        s.notes["bass"] = [(4.0 * i + x, 0.3, 36.0, "k") for i in range(4) for x in (0.0, 1.0, 4 / 3, 5 / 3, 2.0)]
+        s.notes["bass"] = [(4.0 * i + x, 0.3, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 4 / 3, 5 / 3, 2.0)]
         m = writer.Manner(s, "bass", known)
         self.assertEqual(m.feel, {1, 3})
-        self.assertTrue(m.fits("0:R 4/3:R 5/3:R 2:R"))
+        self.assertTrue(m.fits("0:R 4/3:5 5/3:R 2:R"))
+
+    def test_the_songs_tones(self):
+        known = {"0:R 1:R 2:R 3:R", "0:R 1:R 2:3 3:5", "0:r 1:R 2:R 3:R", "0:R 1:+ 2:5 3:+", "0:5 1:5 2:5 3:5", "0:R 1:5 2:R"}
+        roots = _song(bars=8)
+        roots.chords = [Span(0.0, 32.0, 0, "", 1.0)]
+        roots.notes["bass"] = [(4.0 * i + x, 0.4, 36.0, "k") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]   # roots only, a pedal song
+        m = writer.Manner(roots, "bass", known)
+        self.assertEqual((m.octaves, m.tones, m.anchors, m.pedal), (False, (1, 1), (1.0, 1.0), True))
+        self.assertTrue(m.fits("0:R 1:R 2:R 3:R") and m.fits("0:5 1:5 2:5 3:5"))
+        self.assertFalse(m.fits("0:R 1:R 2:3 3:5"))                 # three tones in a one-tone song
+        self.assertFalse(m.fits("0:r 1:R 2:R 3:R"))                 # an octave the song never plays
+        self.assertFalse(m.fits("0:R 1:+ 2:5 3:+"))                 # passing tones in a song all on anchors
+        walking = _song(bars=8)
+        walking.chords = [Span(0.0, 32.0, 0, "", 1.0)]
+        walking.notes["bass"] = [(4.0 * i + x, 0.4, m_, "k") for i in range(8) for x, m_ in ((0.0, 36.0), (1.0, 38.0), (2.0, 43.0), (3.0, 41.0))]   # R + 5 +
+        m = writer.Manner(walking, "bass", known)
+        self.assertEqual((m.tones, m.anchors, m.pedal), ((3, 3), (0.5, 0.5), False))
+        self.assertTrue(m.fits("0:R 1:+ 2:5 3:+"))
+        self.assertFalse(m.fits("0:5 1:5 2:5 3:5"))                  # a pedal in a walking song
+        self.assertFalse(m.fits("0:R 1:R 2:R 3:R"))                  # one tone, all anchors
 
 
 if __name__ == "__main__":
