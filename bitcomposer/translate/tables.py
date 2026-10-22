@@ -465,11 +465,13 @@ SPECS = {
     "voicings": ("voicing_units", ("part", "shape"), ("bass", "width", "previous", "habit")),
     "widths": ("width_units", ("part", "shape"), ("parts", "bass", "previous")),
     "chords": ("chord_units", ("part", "mode"), ("meter", "tempo", "previous", "before", "place", "form", "habit", "motion")),
+    "degrees": ("degree_units", ("part", "mode"), ("meter", "tempo", "previous", "before", "place", "form", "habit", "motion")),
+    "shapes": ("shape_units", ("part", "mode", "degree"), ("tempo", "previous", "habit")),
     "changes": ("change_units", ("part", "meter"), ("mode", "tempo", "place", "previous", "habit")),
     "cadences": ("cadence_units", ("part", "mode"), ("form", "length", "habit")),
     "loops": ("loop_units", ("part", "mode"), ("last",)),
 }
-SURE_ONLY = ("chords", "cadences", "loops")   # the tables by degree: only songs whose tonic is sure (rhythm.tonic_sure)
+SURE_ONLY = ("chords", "degrees", "shapes", "cadences", "loops")   # the tables by degree: only songs whose tonic is sure (rhythm.tonic_sure)
 
 
 def main(argv=None) -> int:

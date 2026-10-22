@@ -398,6 +398,12 @@ class HarmonyUnitTests(unittest.TestCase):
         s = self._song()
         s.parts = [(0, 4, None), (4, 2, 0)]                              # the second part repeats the first: left out
         self.assertEqual(len(rhythm.chord_units([s])), 4)
+        ds = rhythm.degree_units([self._song()])
+        self.assertEqual([u.outcome for u in ds], ["I", "IV", "V", "I", "VI", "I"])
+        self.assertEqual([u.values["previous"] for u in ds][:3], [rhythm.START, "I", "IV"])
+        ss = rhythm.shape_units([self._song()])
+        self.assertEqual([u.outcome for u in ss], ["major"] * 4 + ["m", "major"])
+        self.assertEqual([u.values["degree"] for u in ss], ["I", "IV", "V", "I", "VI", "I"])
 
     def test_change_units(self):
         us = rhythm.change_units([self._song()])

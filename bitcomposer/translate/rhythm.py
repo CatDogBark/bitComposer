@@ -734,13 +734,17 @@ def numeral_of(song: Song, c) -> str:
     return vocab.numeral(c.root, song.tonic, song.mode, c.shape)
 
 
+def bar_spans(song: Song) -> list:
+    """Each bar's chord span (the one sounding most of it), None where none."""
+    return [chord_in(song.chords, a, b) for a, b in song.bars]
+
+
 def bar_chords(song: Song) -> list[str]:
     """Each bar's chord (the one sounding most of it) as a numeral, NO_CHORD where none."""
-    out = []
-    for a, b in song.bars:
-        c = chord_in(song.chords, a, b)
-        out.append(numeral_of(song, c) if c is not None else NO_CHORD)
-    return out
+    return [numeral_of(song, c) if c is not None else NO_CHORD for c in bar_spans(song)]
+
+
+BY = ("numeral", "degree", "shape")  # what a chord unit's outcome is: the numeral with its shape, the degree alone, the shape alone
 
 
 def harmony_habits(names: list) -> tuple[str, str]:
@@ -766,21 +770,27 @@ def _own_parts(song: Song):
             yield i, bar, n
 
 
-def chord_units(songs, sure_only: bool = True) -> list:
+def chord_units(songs, sure_only: bool = True, by: str = "numeral") -> list:
     """Each bar of each part of the form (a part repeating an earlier one
     left out) as a table's unit: its outcome the bar's chord as a numeral in
     the song's key (the chord sounding most of the bar, its shape kept;
-    NO_CHORD for a bar without one); its values the part (harmony), the
-    mode, the meter, the tempo band, the chord of the bar before and of the
-    one before that (START at the part's first bar), the bar's place in its
-    part, the part's place in the form, and the song's habits, its variety
-    and its motion. Songs whose tonic is not the chord root they play most
-    are left out (tonic_sure) unless `sure_only` is off."""
+    NO_CHORD for a bar without one), or by BY its degree alone (I, IV, bVII)
+    or its shape alone (major, m, 5, 7, sus4; then the degree is a value);
+    its values the part (harmony), the mode, the meter, the tempo band, the
+    outcome of the bar before and of the one before that (START at the
+    part's first bar), the bar's place in its part, the part's place in the
+    form, and the song's habits, its variety and its motion. Songs whose
+    tonic is not the chord root they play most are left out (tonic_sure)
+    unless `sure_only` is off."""
     out = []
     for s in songs:
         if s.tonic is None or (sure_only and not tonic_sure(s)):
             continue
-        names = bar_chords(s)
+        spans = bar_spans(s)
+        names = [numeral_of(s, c) if c is not None else NO_CHORD for c in spans]
+        degrees = [vocab.degree(x) if x != NO_CHORD else NO_CHORD for x in names]
+        shapes_ = [(c.shape or "major") if c is not None else NO_CHORD for c in spans]
+        outcomes = {"numeral": names, "degree": degrees, "shape": shapes_}[by]
         variety, motion = harmony_habits(names)
         index = {num: k for k, num in enumerate(s.numbers)}
         tempo = band(s.bpm)
@@ -790,11 +800,22 @@ def chord_units(songs, sure_only: bool = True) -> list:
                 k = index.get(num)
                 if k is None:
                     continue
-                out.append(tables.Unit(s.sid, s.game, names[k], {
+                out.append(tables.Unit(s.sid, s.game, outcomes[k], {
                     "part": R.HARMONY, "mode": s.mode, "meter": s.meter, "tempo": tempo, "previous": previous,
-                    "before": before, "place": place_in_part(s, num), "form": form, "habit": variety, "motion": motion}))
-                before, previous = previous, names[k]
+                    "before": before, "place": place_in_part(s, num), "form": form, "habit": variety, "motion": motion,
+                    "degree": degrees[k]}))
+                before, previous = previous, outcomes[k]
     return out
+
+
+def degree_units(songs, sure_only: bool = True) -> list:
+    """chord_units by degree alone: the progression without the chords' shapes."""
+    return chord_units(songs, sure_only, by="degree")
+
+
+def shape_units(songs, sure_only: bool = True) -> list:
+    """chord_units by shape alone, the degree a value: the chord's shape given its degree."""
+    return chord_units(songs, sure_only, by="shape")
 
 
 def change_units(songs) -> list:
