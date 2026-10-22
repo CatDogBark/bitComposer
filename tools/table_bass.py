@@ -5,14 +5,13 @@ played on the song's own bass sample in its own register, the rest of the song a
     python tools/table_bass.py FILE.spc --db READINGS.db -o OUT.it [--seed 1] [--seconds 60] [--title T] [--figures OUT.json]
                                [--stems DIR]
 
-The bass written for is the bass LINE: of the voices the readers call bass, the one with the longest notes, and
-the manner is read from that voice alone. A song may layer its bass (Locke: a plucked line with a sustained tone
-blipping at each of its attacks and a sixteenth after); a bass voice whose notes are shorter than TICK beats is
-such a layer. Its notes that follow the line's attacks (the device: the offsets after an attack that DEVICE of
-the doubled attacks have) are rebuilt on the written line, the same offsets, pitch relation and sample, a note
-at the attack itself lasting as long as the line's note it doubles (Locke's second voice holds the walking
-line's notes a whole beat, and blips only in its own intro pattern) and a note after it as long as the layer's
-own are; its other notes, a rhythm of its own where the line rests, stay as they are.
+The bass written for is the bass LINE: of the voices the readers call bass, the one with the longest notes. A
+second bass voice is one of three things beside it (measured over the readings, docs/idiom/phase-3-tables.md):
+DOUBLING it (sounding at the same events: it then plays what the written line plays, at its own pitch offset,
+on its own sample), ALTERNATING with it (the voices take turns so a note can ring past the next strike: the pair
+is one part, the written line is read from both and its notes ring as the pair's do, each note going to the
+voice that is free), or APART (a second part in the bass register with a rhythm of its own: left as it is, the
+arrangement table's question, and the known limitation here).
 
 Prints the figures drawn and what the readers make of the original and the written song. --stems: three more
 modules beside, for a page that toggles the voice while the song plays: the rest of the song without the bass,
@@ -29,9 +28,10 @@ import sys
 from array import array
 from collections import Counter
 
-TICK = 0.3                            # beats: a bass voice whose notes are shorter than this doubles the line's attacks
-DEVICE = 0.5                          # the share of the doubled attacks an offset must follow to be part of the device
-NEAR = 0.06                           # beats: a layer note this close to a line attack doubles it
+NEAR = 0.06                           # beats: onsets this close are one event
+DOUBLING = 0.6                        # the share of the pair's events both voices sound at, for the second to double the first
+ALTERNATING = 0.6                     # the share of single-voice events that change voice, for the pair to alternate
+NOT_BOTH = 0.3                        # an alternating pair sounds together in under this share of its events
 
 from bitcomposer import spc
 from bitcomposer.spc import convert
@@ -68,6 +68,26 @@ def note_like(voice, start, end, midi, usual, like, pitch_ref, midi_ref, volume=
                                   echo_filter=e_filter, echo_writes=e_writes, end=end)
 
 
+def relation(line, other) -> tuple:
+    """What a second bass voice does beside the line (the module): ("doubling", semitones above the line),
+    ("alternating",) or ("apart",)."""
+    onsets = sorted([(n[0], 0, n) for n in line] + [(n[0], 1, n) for n in other])
+    events = []
+    for t, who, n in onsets:
+        if events and t - events[-1][0] < NEAR:
+            events[-1][1][who] = n
+        else:
+            events.append((t, {who: n}))
+    both = sum(1 for _, d in events if len(d) == 2) / max(1, len(events))
+    singles = [next(iter(d)) for _, d in events if len(d) == 1]
+    alternation = sum(1 for a, b in zip(singles, singles[1:]) if a != b) / max(1, len(singles) - 1)
+    if both >= DOUBLING:
+        return ("doubling", round(statistics.median([d[1][2] - d[0][2] for _, d in events if len(d) == 2])))
+    if alternation >= ALTERNATING and both < NOT_BOTH:
+        return ("alternating",)
+    return ("apart",)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python tools/table_bass.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("spc")
@@ -99,10 +119,13 @@ def main(argv=None) -> int:
     length_of = {voice: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for voice, ns in by_voice.items()}
     v = max(by_voice, key=lambda voice: (length_of[voice], len(by_voice[voice])))
     end = song.bars[-1][1] if song.bars else math.inf
-    song.notes["bass"] = [(n[0], n[1], n[2], keys.get(int(n[5]), "noise")) for n in by_voice[v] if n[0] < end]
-    layers = [voice for voice in by_voice if voice != v and length_of[voice] < TICK]
-    print(f"{title} ({game}): bass voices {sorted(by_voice)} (notes {length_of[v]:.2f} beats long on {v}, the line"
-          + (f"; layers {layers}" if layers else "") + ")")
+    kinds = {t: relation(by_voice[v], by_voice[t]) for t in by_voice if t != v}
+    partners = [t for t, k in kinds.items() if k[0] == "alternating"]
+    doublings = [t for t, k in kinds.items() if k[0] == "doubling"]
+    part = sorted(n for t in [v] + partners for n in by_voice[t])          # the line: one part across an alternating pair
+    song.notes["bass"] = [(n[0], n[1], n[2], keys.get(int(n[5]), "noise")) for n in part if n[0] < end]
+    print(f"{title} ({game}): bass voices {sorted(by_voice)}; the line on {v} (notes {length_of[v]:.2f} beats)"
+          + "".join(f"; voice {t} {k[0]}" + (f" {k[1]:+d} semitones" if k[0] == "doubling" else "") for t, k in kinds.items()))
     units = rhythm.bass_units(songs)
     table = writer.fit([u for u in units if u.song != sid])
     own = [u.outcome for u in rhythm.bass_units([song])]
@@ -136,50 +159,32 @@ def main(argv=None) -> int:
         near = min((mine[j] for j in (i - 1, i) if 0 <= j < len(mine)), key=lambda n: abs(n.start - start), default=None)
         at = near.volume if near is not None and abs(near.start - start) < 4.0 else volume
         new.append(note_like(v, start, min(end, original.seconds), midi, usual, like, pitch_ref, midi_ref, at))
-    replaced = {v}
-    line_starts = sorted(n[0] for n in by_voice[v])
-    for t in layers:
-        # the device: which of the line's attacks the layer doubles (a note within NEAR of it), and the offsets after
-        # a doubled attack its notes fall on; a layer note under neither is the layer's own and stays
-        doubled, offsets, diffs, following = set(), Counter(), [], set()
-        for n in by_voice[t]:
-            i = bisect.bisect_right(line_starts, n[0] + NEAR) - 1
-            if i < 0:
-                continue
-            off = n[0] - line_starts[i]
-            if off < NEAR:
-                doubled.add(i)
-                m = next((x[2] for x in by_voice[v] if abs(x[0] - line_starts[i]) < 0.03), None)
-                if m is not None:
-                    diffs.append(n[2] - m)
-        for n in by_voice[t]:
-            i = bisect.bisect_right(line_starts, n[0] + NEAR) - 1
-            if i >= 0 and i in doubled and n[0] - line_starts[i] < 1.0:
-                offsets[round((n[0] - line_starts[i]) * 4) / 4] += 1
-        device = sorted(off for off, c in offsets.items() if c >= DEVICE * len(doubled)) if doubled else []
-        found_t = settings_of([n for n in original.notes if n.voice == t], events)
-        if not device or found_t is None:
-            print(f"  layer voice {t}: doubles {len(doubled)} of the line's {len(line_starts)} attacks, no device read; left as it is")
+    # the written line onto the song's voices: the line voice, an alternating partner when the line is still ringing,
+    # a doubling voice at every note; an apart voice is left as it is
+    pair = [v] + partners
+    settings = {t: settings_of([n for n in original.notes if n.voice == t], events) for t in pair + doublings}
+    pair = [t for t in pair if settings[t] is not None]
+    doublings = [t for t in doublings if settings[t] is not None]
+    ring = statistics.median([n[1] for n in part if not math.isnan(n[1])]) if partners else None   # beats a note of the pair rings
+    free = {t: -1.0 for t in pair}
+    new = []
+    for start_b, end_b, midi in notes:
+        start = seconds_at(beats, start_b)
+        if start >= original.seconds:
             continue
-        for n in by_voice[t]:                              # the layer's notes on the device: replaced below
-            i = bisect.bisect_right(line_starts, n[0] + NEAR) - 1
-            if i >= 0 and i in doubled and round((n[0] - line_starts[i]) * 4) / 4 in device and n[0] - line_starts[i] < 1.0:
-                following.add(round(seconds_at(beats, n[0]), 3))
-        usual_t, like_t, pitch_t, midi_t = found_t
-        diff = round(statistics.median(diffs)) if diffs else 0
-        held = length_of[t]
-        ticks = []
-        for start_b, end_b, midi in notes:
-            for off in device:
-                start = seconds_at(beats, start_b + off)
-                until = seconds_at(beats, end_b if off < NEAR else start_b + off + held)   # at the attack: as long as the line's note
-                if start < original.seconds:
-                    ticks.append(note_like(t, start, min(until, original.seconds), midi + diff, usual_t, like_t, pitch_t, midi_t))
-        own_layer = [n for n in original.notes if n.voice == t and round(n.start, 3) not in following]
-        new += ticks + own_layer
-        replaced.add(t)
-        print(f"  layer voice {t}: doubles {len(doubled)} of the line's {len(line_starts)} attacks at offsets {device} beats, {diff:+d} semitones, "
-              f"its own notes {held:.2f} beats; {len(ticks)} rebuilt on the written line, {len(own_layer)} of its own kept")
+        end = min(seconds_at(beats, max(end_b, start_b + ring) if ring else end_b), original.seconds)
+        idle = [t for t in pair if free[t] <= start + 0.001]
+        voice = v if v in idle else (idle[0] if idle else min(pair, key=lambda t: free[t]))
+        i = bisect.bisect_left(starts, start)
+        near = min((mine[j] for j in (i - 1, i) if 0 <= j < len(mine)), key=lambda n: abs(n.start - start), default=None)
+        at = near.volume if near is not None and abs(near.start - start) < 4.0 else None
+        new.append(note_like(voice, start, end, midi, *settings[voice], at if voice == v else None))
+        free[voice] = end
+        for t in doublings:
+            new.append(note_like(t, start, end, midi + kinds[t][1], *settings[t]))
+    replaced = set(pair) | set(doublings)
+    if partners or doublings:
+        print(f"  written onto voices {sorted(replaced)}: {len(new)} notes" + (f", ringing {ring:.2f} beats" if ring else ""))
     kept = [n for n in original.notes if n.voice not in replaced]
     swapped = convert.Score(kept + new, original.seconds, original.voices, original.master, original.fade,
                             (a.title or f"{title} [table bass]")[:25], original.game, original.artist, original.row_hz,
@@ -188,7 +193,7 @@ def main(argv=None) -> int:
                             message=[f"{title}: the bass written from the bass table (phase 3 of docs/IDIOM.md)",
                                      f"the table fitted on every other song; seed {a.seed}; the rest as decoded"])
     info = convert.render(swapped, a.out)["info"]
-    print(f"{a.out}: {info['notes']} notes, {info['channels']} channels; bass voices {sorted(replaced)}, {len(new)} written notes, usual volume {volume}")
+    print(f"{a.out}: {info['notes']} notes, {info['channels']} channels; bass voices {sorted(replaced)} written, {len(new)} notes, usual volume {volume}")
     for label, sc in (("original", original), ("written", swapped)):
         rr = reading.of_score(sc)
         role = next((x.role for x in rr.roles if x.voice == v), "-")
