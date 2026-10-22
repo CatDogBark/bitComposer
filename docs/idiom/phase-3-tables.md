@@ -967,7 +967,8 @@ the tempo band, the bar's place in its part, the part's place in the
 form, the song's variety (distinct chords: one, few, several, many) and
 its motion (the share of bars changing chord) each −5.37 to −5.67,
 below none (the discount's cost at a level that sorts nothing); a game
-nothing anywhere, by the games' split and by the songs'. **The song's own
+nothing, by the games' split and by the songs' (`--split song`: the
+mixture −4.11, with the game −4.15). **The song's own
 mixture is the table once more:** the mixture over no context −3.94,
 over part+mode −4.07, over the chain −4.10 (the chain's gain absorbed by
 "same" and "earlier"; its draws narrow to 5.2 distinct chords a song
@@ -1109,6 +1110,95 @@ peak following the contour; the ear's existing marks answer the level
 question, no new round. Next: item 7, the arrangement (which parts play
 in which bars, voices a song, echo voices and doublings, the layered
 basses and breaks the bass rounds left), then the pack's second format.
+
+### The arrangement (2026-10-22)
+
+The plan's seventh item, and the bass rounds' debts (breaks, layering,
+density by section): seven tables from the roles and the notes
+(`texture_units`, `presence_units`, `band_units`, `parts_units`,
+`voices_units`, `double_units`, `layer_units` in rhythm.py; `tables
+texture|presence|band|parts|voices|doubles|layers`). Share votes,
+discount 0.75; each run by the games' split and by the songs' within
+each game (the per-game question is only answerable by the second: a
+held-out game's own table is empty, and the harmony record's per-game
+claim is now made on the songs' split too). A part "plays" in a bar
+when it strikes a note there or holds one SUSTAIN (a beat) into it.
+
+**The texture** (which parts sound in a bar; 37,947 bars of 1,562
+songs; 96 textures in the development half). Held-out bits a bar: none
+−4.95; the song's band as its habit with the mixture −1.15 (the mixture
+alone −1.72, +3.2 of the +3.8: a song's textures are its own, two or
+three a song); the bar before with the mixture −1.25; a game +0.01 by
+the songs' split. 77 % of bars keep the bar before's texture. The draws:
+over the band habit 3.6 to 3.7 distinct textures a song against 2.1 to
+2.2 real (parts dropping in and out too much), over the bar before 2.4
+to 3.0 (with the game, 2.4). **Kept:** the mixture over
+part+meter+previous(+game), a tenth of a bit dearer and the spread
+right: the writer keeps the band from bar to bar and changes it the
+song's own way. Parts sounding a bar by the part's place in the form:
+3.60 in a first part, 3.91 in a middle one, 3.96 in a last (the intro
+thinner by a third of a part): density by section is that small.
+
+**The presence** (each part, plays or rests, a bar; 157,046 units).
+Parts rest 6 to 11 % of their songs' bars (the melody 8, the bass,
+accompaniment and drums 6, the counter-line and arp 11, held harmony
+19). Held-out bits none −0.39; the bar before with the mixture −0.205
+(+0.19; after a bar the drums play they play 99 %, after one they rest
+they rest 83 %: breaks run on); the part's habit (sparse, mostly,
+always) with the mixture −0.21; the bar's place and its part's place in
+the form +0.15 each; a game nothing. What conditions a rest: the band's
+thinness (the bass rests 16 % of the bars where one other part plays,
+4 % where three or more do), a first part (the drums rest 10 % of its
+bars against 5 to 6 % elsewhere: intros), the bar before. **Breaks**
+(a part that mostly plays resting inside a part, playing on both
+sides; `arrangement_dist.py`): 824 over the songs; one bar 67 %, two
+16 %, three 8 %, four and more 9 %; 68 % inside the part, 19 % its last
+bar (the stop before the next part), 13 % its first. **Kept:**
+part+meter+previous as the mixture, the others value kept beside it for
+a writer that knows the band.
+
+**The band.** As one string a song (76 bands in the development half:
+accompaniment bass drums melody 20 %, with a counter-line 17 %, without
+drums 7 %, ...), nothing conditions it, not the game (−4.74 none, −4.81
+with the game by the songs' split): too fine an outcome for 40 songs a
+game. As the coarse view, each part asked yes or no (`parts`): 31 % of
+songs have no drums, 15 % no bass, 9 % no melody, 11 % no chordal part,
+34 % a double voice. Held-out bits none −0.88; the band's size −0.70
+(+0.19); the game −0.70 alone and +0.08 on the drums (Super Ghouls'n
+Ghosts has drums in none of 23 songs, Dragon Quest V in 13 %, Super
+Castlevania IV 33 %, Super Mario World 47 %; the band-heavy games in
+nearly all), nothing on the melody or the bass. **Kept:** part+band for
+the parts, the drums per game.
+
+**The voices.** 8 of the chip's voices in 53 % of songs, 6 in 18 %, 7
+in 15 %, 5 in 8 %; a band of five parts uses eight voices 71 % of the
+time. Held-out bits none −1.92; the game −1.44 (+0.48, the one table
+that is a game's habit: its driver's and its composer's); the band's
+size with the game −1.35. **Kept:** part+band+game.
+
+**Doublings** (the role reader's double voices, with what they double
+and whether at unison or as an echo, ECHO 20 ms). 66 % of songs have
+none; melody echo 8 %, accompaniment echo 6 %, counter echo 3 %, bass
+unison 2 %, melody unison 2 %; by game from Soul Blazer 100 % and
+Donkey Kong Country 58 to 76 % to none. As the set a song (39 outcomes)
+nothing conditions it, the game −0.03; the coarse yes/no sits in the
+parts table above (34 % of songs). **Kept:** the base distribution a
+game for whether, the shared one for what.
+
+**Layered basses** (137 of 1,332 songs with a bass hold two bass
+voices): apart 72 %, doubling 14 %, alternating 14 % (harness.relation,
+the line the voice with the longest notes); EarthBound 19 songs (14
+apart), Final Fantasy VI 13 (all apart), Super Mario World 9. Nothing
+conditions it (137 units); the share a game is the table. The "apart"
+songs stay the known limitation: a second bass-register part the role
+reader lumps under the bass, for the role reader to split one day.
+
+**Item 7 closed:** the arrangement counted as the texture chain, the
+presence chain, the parts a song by band size (drums per game), the
+voices per game, the doublings and the layered basses as shares.
+Phase 3's tables are all counted; what remains of the phase is the
+pack's second format and the reference set. The listening returns in
+phase 4, when the generator writes whole songs from these tables.
 
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
