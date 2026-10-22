@@ -741,6 +741,26 @@ lock to the song and not yet to each other; a kit with kick and snare
 on one voice can lose a hit where the written line strikes both at once
 (The Decisive Battle: 19 of 588); the hat's inventory is dominated by
 straight eighths and sixteenths.
+
+Terra's drums, the listener: "nearly; is the snare cutting out short a
+style choice or a bug, and it isn't aware of the intro as the written
+bass is." Measured: Terra's snare fades in with its bass (its first hits
+at 6 of 127; the original drum stem rising from −53 to −41 dB over six
+seconds) and plays at four levels through the song, while the written
+drums sat at one level from the first bar: the drum writer took the
+piece's usual volume where the bass writer takes the song's nearest
+note's. And a main snare hit lasts 0.34 s in Terra, nearly to the next,
+its roll's pickups 0.09 s, while every written hit got the piece's
+median length, 0.15 s, which the pickups pull down: each main hit
+stopped halfway to the next. Both the bass's rules, unapplied: a drum
+hit now takes the volume of the song's nearest hit of the same piece,
+and lasts its gap to the next hit on its voice times the piece's own
+sounded share (Terra's snare 0.81; The Decisive Battle's kick 0.91,
+snare 0.82, hat 0.81, cymbal 0.94). The missing triplet pickup in
+alternate bars is a draw within the rules (a four-strike bar where the
+song's own has six). The written drum stem now fades in with the
+original (−56, −48, −42 dB over the first three pairs of bars against
+−53, −46, −41).
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
