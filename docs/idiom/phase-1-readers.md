@@ -418,6 +418,81 @@ classes; the drum role sweeping in sound effects; a bright short burst
 the ear calls a cymbal and the measures a hat; a "shaker" and a "rim"
 class if the kit wants them.
 
+**Step 3 (2026-10-22): songs with known answers.** The arrangement's plan
+is now recorded in a composed song's `info["plan"]` (each pattern's
+section, key, scale and chord segments; the sections as played; the
+melody and drum channels), read back by nothing, the 36 songs of the
+CONTRIBUTING byte check unchanged. `tools/known_answers.py` composes 120
+songs (seeds 1 to 120 cycling the three scale families, the five forms,
+home and moving keys, the harmony modes and bass weights; all twelve keys
+and all eight scales drawn, 6 to 24 songs each) and reads them through
+the readers themselves on the generator's grid. What it found, the first
+sixty songs the development half and the second the held-out:
+- **The chords:** the root right on 90 % of beats, root and shape family
+  on 72 %; the planned changes found at 93 % recall and 87 % precision
+  within a beat. The bar-by-bar reader holds up where the answer is known.
+- **The form:** the planned section starts found at 66 % recall and 46 %
+  precision within a bar: the reader cuts 1014 parts where 714 sections
+  were planned, mostly 4- and 8-bar phrases inside 16-bar sections. Noted,
+  not fixed; the form's level question stays open.
+- **The parts:** the melody channel read as the melody in 86 %, the misses
+  two kinds: the arpeggio channel out-scoring it on pitch entropy spread
+  over octaves, and a melody of half notes falling to the held-chord rule.
+  The melody's variety is now pitch-class entropy, and held notes make
+  harmony only where the line is sparse or plain: 95 % after, the bass
+  right in all 120, the drum channels all drums, the ear checks unchanged.
+- **The key:** the major-or-minor profile correlation had tonic and mode
+  right in 38 %, the parent key or its relative in 21 %, the modes and
+  pentatonics worst (11 to 31 %). The reader is replaced (`harmony.scale`,
+  `key()` folding it): the scale among the generator's eight by the share
+  of the pitch-class mass it holds, a pentatonic where one holds nine
+  tenths (the generator's pentatonic songs hold 0.87 to 0.98 in theirs,
+  its diatonic songs 0.76 in their best pentatonic subset), and the tonic
+  of a set several modes share by the bass's pitch-class mass with the
+  first chord as the tie break: within the right set the bass alone names
+  the tonic in 45 of 60, the whole mass, the held roots and the last chord
+  worse. Tonic and mode right in 62 % of the development half and 72 % of
+  the held-out, the scale by name in 55 and 65 %; modulating songs no
+  worse than one-key ones. The 95 % criterion is not met, and most of the
+  rest is the generator's own ambiguity: a loop drawn at random that leans
+  on another degree has no tonic a listener would swear to either. **Over
+  the collection the change is large and unverified:** 856 of 1623 keyed
+  songs keep their tonic, 391 move a fifth, the minor share goes from 47
+  to 66 %; the games have no key truth yet, so a key check by ear (a dozen
+  songs, the tonic hummed or named) is owed before the harmony vocabulary
+  leans on it.
+- **The drums:** the kit's presets named by their sound, 50 of 51.
+
+**The loop reader (2026-10-22).** Against the written loops of the
+independent decode, over the 1040 songs with a read grid
+(`~/diags/bitcomposer/idiom/loop_eval.py`): the same length in 70 %, 44
+songs two bars short, 22 missed outright. Two bars short (Snowman's Town,
+Lostside Marshes): a short run at a lag two bars under the loop's chained
+onto the loop's own full run and won the tie as the shorter lag; the
+chain's lag is now the lag its runs cover the most time at. Missed
+(Sardius): a driver's timer runs a hair off the clock, so a 45 s loop's
+second pass sits 30 ms off the first by its end and nothing matched
+within 15 ms; the match window grows by a part in 1400 of the lag. After:
+**the same length in 78 %**, two bars short 5, missed 7; the remaining
+"other length" (89) are mostly the sets dumped mid-song and the songs
+whose loop runs under four bars or whose reading ends before a second
+pass. The form marks: set 1 loops 12 of 12, part starts recall 0.79 and
+precision 0.80; set 2 loops 10 of 11 (Snakey Chantey, loose), recall 0.82
+and precision 0.69 (from 0.73 and 0.61); the ear checks unchanged.
+
+**The beat's joints (2026-10-22).** Where two sections sat on the same
+beat with a rest or a held note between them the beat list had a hole,
+two periods where one belongs (954 such joints over the games, and 24 of
+three periods), and the bar count broke there. A section's beats now run
+up to the next section's first beat where that sits a whole number of
+periods on: 954 to 30, 24 to 3, songs with no joint at all 577 to 700;
+the bar phase on the held-out half 77 % (a half bar off 8 %), the tapped
+beats 40 of 41 as before. The composer's jumps that land on no read beat
+are unchanged at 355 of 938 steady songs: the holes were never their
+cause (12 of 300). What is left there is the syncopated song whose beat
+locks a sixteenth off (The Decisive Battle) and the half-tempo grid on
+the off-beats, which this phase leaves open with its numbers.
+
 ## Exit criteria, with the tolerances proposed before scoring
 
 - **Tempo:** the read tempo equals the written one, or exactly twice or
@@ -460,6 +535,10 @@ pages did. Nothing else in the phase needs an ear.
 - Answered in step 4: the bar is the harmony's counting level, read from
   the bass's root and the chordal set; the half bar only arises in Kefka,
   which may be its bar phase.
+- A key check by ear, since the scale reader moved half the collection's
+  keys on the generator's evidence alone (step 3).
+- The form's level: the reader's 4- and 8-bar parts against the sections
+  the generator planned and the listener marked.
 - What to do with the 222 songs the beat reader follows loosely: scored
   separately, since a loose grid rounds nothing.
 - How much of the drum namer's rule survives the forty.
