@@ -427,7 +427,20 @@ volume of the song's own nearest bass note, so a fade-in stays a
 fade-in. Terra's bass came back as ten figures, all roots: quarter
 roots, eighth roots, a root on the one, a root with its pickup.
 **The goal, restated for the listener:** not Terra's line, a bass that
-could belong in Terra. Written for Terra (habit medium roots, 74 bars),
+could belong in Terra. His third minute: "nearly there", one "burst then
+pause skip" at 32 s: a bar with a sixteenth pickup (11/4) in a bass that
+moves in quarters and triplets, then a bar with one note on beat two in a
+bass that strikes every downbeat. Both are bars other songs play; neither
+is in Terra's manner. So the writer now reads the song's own manner for
+the part (`writer.Manner`) and holds a new figure to it: its strikes a
+bar between SPARSER (0.5) and DENSER (1.5) times the song's median (or
+up to its busiest bar); the downbeat struck where the song's bass strikes
+it in DOWNBEAT (0.9) of its bars; only the subdivisions the song's bass
+uses (its feel: Terra's {1, 2, 3}). Terra came back as seven figures,
+quarter roots and eighth roots mostly, a root-third-fifth bar twice.
+These three are what the generator's bass habit should carry beside
+density and tones: a feel and a downbeat loyalty, drawn once a song
+(phase 4). Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
 (`~/Music/bitComposer-dev/Table bass/`): the readers read the written
