@@ -3,6 +3,11 @@
 Agreed 2026-10-19. Step 4 of `SPC-IMPORT.md`, in detail:
 from a game's SPC files to a pack the generator composes with.
 
+What follows stage 4, the generator learning to write from the readings,
+is planned in phases in `IDIOM.md` (agreed 2026-10-20), which takes over
+from stage 3's second half and stage 4's; the stages below stand as the
+record of what was built and found.
+
 ## Where it starts
 
 - **Notes, per voice.** The SNES chip decoder (`bitcomposer/spc/notes.py`)
