@@ -233,10 +233,23 @@ def _pin_roles(r) -> None:
     r.roles = roles
 
 
-def game_habits(habit_units: list, ctx: Context):
+def game_habits(habit_units: list, ctx: Context, conditionings=("part",)):
     """A habits table of the song's game, the song itself left out (the pack's habit table, for a real song)."""
     mine = [u for u in habit_units if u.game == ctx.game and u.song != ctx.sid]
-    return tables.Table(("part",), "habits", votes=tables.SHARES).fit(mine) if mine else None
+    return tables.Table(conditionings, "habits", votes=tables.SHARES).fit(mine) if mine else None
+
+
+def habit_rng(ctx: Context, seed: int, part: str) -> random.Random:
+    """The stream a song's habit is drawn from: the song's and the seed's, so two songs on one seed differ."""
+    return random.Random(f"{ctx.sid}:{seed}:{part}")
+
+
+def kit_habits(units: list) -> list:
+    """The drum habits with the kit beside (one unit a song): what a writer draws given the song's pieces."""
+    seen = {}
+    for u in units:
+        seen.setdefault(u.song, tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"], "kit": u.values["kit"]}))
+    return list(seen.values())
 
 
 def looped(ctx: Context, notes: list) -> list:
@@ -418,7 +431,7 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
         model = writer.fit([u for u in units if u.song != ctx.sid])
         habits = game_habits(rhythm.habits(units), ctx) if free else None
     if free and habits is not None:                                 # the habit drawn once a song: the song's own part is no manner
-        habit = habits.draw((R.BASS,), random.Random(seed * 7 + 1))
+        habit = habits.draw((R.BASS,), habit_rng(ctx, seed, R.BASS))
         log.append(f"free writing: the habit drawn from the game's, {habit}")
     elif free:
         free = False
@@ -534,9 +547,13 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
         group_locks[letters] = locks(ctx, kit_voices, notes_g)
     habit, free = None, ctx.free
     if free:
-        habits = ctx.models.get("drum_habits") if ctx.models else game_habits(rhythm.habits(rhythm.drum_units(ctx.songs)), ctx)
-        if habits is not None:
-            habit = habits.draw((R.DRUMS,), random.Random(seed * 7 + 2))
+        if ctx.models and "drum_habits" in ctx.models:
+            habit = ctx.models["drum_habits"].draw((R.DRUMS,), habit_rng(ctx, seed, R.DRUMS))
+        else:                                                           # the game's habit given the song's kit (a one-snare song is no drum machine)
+            kit = mine_units[0].values["kit"] if (mine_units := rhythm.drum_units([song])) else ""
+            habits = game_habits(kit_habits(rhythm.drum_units(ctx.songs)), ctx, ("part", "kit"))
+            habit = habits.draw((R.DRUMS, kit), habit_rng(ctx, seed, R.DRUMS)) if habits is not None else None
+        if habit is not None:
             log.append(f"free writing: the habit drawn from the game's, {habit}")
         else:
             free = False
