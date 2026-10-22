@@ -9,9 +9,10 @@ The bass written for is the bass LINE: of the voices the readers call bass, the 
 the manner is read from that voice alone. A song may layer its bass (Locke: a plucked line with a sustained tone
 blipping at each of its attacks and a sixteenth after); a bass voice whose notes are shorter than TICK beats is
 such a layer. Its notes that follow the line's attacks (the device: the offsets after an attack that DEVICE of
-the doubled attacks have) are rebuilt on the written line, the same offsets, pitch relation, length and sample,
-so the edge follows the new line instead of the old; its other notes, a rhythm of its own where the line rests
-(Locke's first eight bars), stay as they are.
+the doubled attacks have) are rebuilt on the written line, the same offsets, pitch relation and sample, a note
+at the attack itself lasting as long as the line's note it doubles (Locke's second voice holds the walking
+line's notes a whole beat, and blips only in its own intro pattern) and a note after it as long as the layer's
+own are; its other notes, a rhythm of its own where the line rests, stay as they are.
 
 Prints the figures drawn and what the readers make of the original and the written song. --stems: three more
 modules beside, for a page that toggles the voice while the song plays: the rest of the song without the bass,
@@ -168,17 +169,17 @@ def main(argv=None) -> int:
         diff = round(statistics.median(diffs)) if diffs else 0
         held = length_of[t]
         ticks = []
-        for start_b, _, midi in notes:
+        for start_b, end_b, midi in notes:
             for off in device:
                 start = seconds_at(beats, start_b + off)
+                until = seconds_at(beats, end_b if off < NEAR else start_b + off + held)   # at the attack: as long as the line's note
                 if start < original.seconds:
-                    ticks.append(note_like(t, start, min(seconds_at(beats, start_b + off + held), original.seconds),
-                                           midi + diff, usual_t, like_t, pitch_t, midi_t))
+                    ticks.append(note_like(t, start, min(until, original.seconds), midi + diff, usual_t, like_t, pitch_t, midi_t))
         own_layer = [n for n in original.notes if n.voice == t and round(n.start, 3) not in following]
         new += ticks + own_layer
         replaced.add(t)
         print(f"  layer voice {t}: doubles {len(doubled)} of the line's {len(line_starts)} attacks at offsets {device} beats, {diff:+d} semitones, "
-              f"notes {held:.2f} beats; {len(ticks)} rebuilt on the written line, {len(own_layer)} of its own kept")
+              f"its own notes {held:.2f} beats; {len(ticks)} rebuilt on the written line, {len(own_layer)} of its own kept")
     kept = [n for n in original.notes if n.voice not in replaced]
     swapped = convert.Score(kept + new, original.seconds, original.voices, original.master, original.fade,
                             (a.title or f"{title} [table bass]")[:25], original.game, original.artist, original.row_hz,
