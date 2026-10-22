@@ -94,7 +94,19 @@ and, from slice 4, no four-bar phrase matching the reference set.
 
 ## The listening
 
-Two instruments, the listener's choice (2026-10-22):
+Two instruments, the listener's choice (2026-10-22), and the order he set
+after hearing slice 1's plan: **the gold standard first.** Comparing a
+written part against the old generator's measures "better than before",
+not "belongs in the music", and only the second trains the ear or proves
+the writing. So every slice that can be substituted into a real song goes
+onto the Substitution Check as a new toggle, on the same songs, before
+anything touches the generator: free-written bass and drums (slice 1's
+new thing), the accompaniment and its voicings, the melody, the
+counter-line. The two that cannot be substituted, the harmony progression
+(new chords under a real tune clash with it) and the form and
+arrangement (the form is the song), wait for the Song Check, when a whole
+written song is worth hearing. The old-generator comparison stays for
+plumbing and measures.
 
 - **Per slice, the Substitution Check** as phase 3 built it: the old part
   against the new inside the same generated song, several seeds on one
