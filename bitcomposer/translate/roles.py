@@ -5,7 +5,10 @@ accompaniment (chords struck in rhythm), or a doubling of another voice.
 Each guess keeps its evidence (the measures it was made from), and a
 correction overrides it. Drums first: noise, samples with no pitch, or one
 sample struck at one or two pitches (FFVI's percussion plays at G#3, the
-driver's own pitch). Then the pitched voices by register and motion: the
+driver's own pitch), or whose samples the drum namer calls drums (drums.py,
+named as a reading names its samples: a tom played at several pitches is a
+drum, a bass pumping one note on an instrument held is not). Then the
+pitched voices by register and motion: the
 bass the lowest line, held notes harmony, fast cycling ones an arp; a
 voice playing another's notes (the same pitches and rhythm, a delay or an
 octave apart) its doubling. The melody is the most varied line among the
@@ -23,6 +26,8 @@ from dataclasses import dataclass, field
 
 DRUMS, BASS, MELODY, COUNTER, HARMONY, ARP, ACCOMP, DOUBLE = (
     "drums", "bass", "melody", "counter", "harmony", "arp", "accompaniment", "double")
+DRUM_PIECES = {"kick", "snare", "hat", "tom", "cymbal"}   # the drum namer's pieces that make a voice a drum voice
+BY_SOUND = 0.8                        # the share of a voice's notes on drum samples (or on instruments held) that decides
 
 
 @dataclass
@@ -40,6 +45,7 @@ def _features(notes, grid) -> dict:
     per_sample = {}
     for p in pitched:
         per_sample.setdefault(p.sample.key, set()).add(round(p.midi))
+    pieces = Counter(p.sample.piece for p in notes if p.sample is not None)   # the drum namer's name of each note's sample
     lengths = [p.length for p in notes if p.length]
     beat = grid.period_at(notes[0].start) if grid else 0.5
     seq = [round(m) for m in mids]
@@ -52,6 +58,8 @@ def _features(notes, grid) -> dict:
     return {
         "notes": len(notes),
         "unpitched": sum(1 for p in notes if p.midi is None) / len(notes),
+        "drum_sound": sum(c for k, c in pieces.items() if k in DRUM_PIECES) / len(notes),   # notes on a drum sample
+        "no_drum_sound": sum(c for k, c in pieces.items() if k == "none") / len(notes),    # notes on an instrument held
         "pitches_per_sample": max((len(v) for v in per_sample.values()), default=0),
         "distinct": len(set(seq)),
         "median": statistics.median(mids) if mids else None,
@@ -186,7 +194,12 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     roles = {}
     for v, f in feats.items():
-        if f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2):
+        # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
+        # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
+        # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)
+        if f["drum_sound"] >= BY_SOUND:
+            roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2)})
+        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2)):
             roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
     for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:

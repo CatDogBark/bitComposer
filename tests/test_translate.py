@@ -708,7 +708,7 @@ class Rhythm(unittest.TestCase):
         for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):
             db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("beat", a, b, root, "", 0.9))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 16, None, "", 0.0))
-        db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?)", ("beat", 0, "kickkey", 0, 0, None, 0, 100, 0))
+        db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?,?)", ("beat", 0, "kickkey", 0, 0, None, 0, 100, 0, None))
         bass = array("f", [0, 4, 36, 0.5, 0.5, 1, 4, 4, 41, 0.5, 0.5, 1, 6, 1, 43, 0, 0.5, 1, 8, 4, 43, 0.5, 0.5, 1])
         drum = array("f", [0, 0.5, float("nan"), 0.5, 0.5, 0, 2, 0.5, float("nan"), 0.5, 0.5, -1])
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, bass.tobytes()))
