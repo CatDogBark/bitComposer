@@ -498,7 +498,7 @@ def report(songs: list, left_out: dict, top: int = 10, game: str = "", bank=None
                    + "".join(f" {_pct(c[w], c['hits']):>5s}" for w in ("one", "three", "back", "eighth", "finer"))
                    + f" {c['length']:6.2f}  {c['name']}" + ("" if c["how"] == "sound" else f" (by {c['how']})"))
     out.append("  named: " + ", ".join(f"{p} {n}" for p, n in Counter(c["name"] for c in d.sounds.values()).most_common()))
-    out.append(f"\ndrum figures ({d.bars} bars; K kick, S snare, h hat, o another sound)")
+    out.append(f"\ndrum figures ({d.bars} bars; K kick, S snare, h hat, t tom, c cymbal, o another sound)")
     for meter in meters:
         c = d.figures.get(meter)
         if not c:

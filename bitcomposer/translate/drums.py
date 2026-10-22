@@ -162,8 +162,8 @@ def name(s: Sound, profile: dict | None = None) -> str:
     if s.low >= 0.5:                                 # a low sound: a kick, a tom, a deep snare, a note
         if s.bright < KICK_HZ:
             return "kick"
-        if s.tone >= INSTRUMENT and s.ring >= RING:
-            return "none"
+        if s.tone >= INSTRUMENT and (s.ring >= RING or s.loops):
+            return "none"                            # a bass note held, a horn: an instrument
         if s.bright < TOM_TOP:
             return "kick" if s.bright < TOM_HZ and s.ring < THUD else "tom"
         return "snare" if s.tone < PITCHED else "other"

@@ -925,9 +925,9 @@ class Against(unittest.TestCase):
         self.assertEqual(rows["bass figures (R root, 3 third, 5 fifth, 7 seventh, + another, ? no chord, r the root an octave up)"],
                          [("R... .... .... ....", "100 % (1)", 4)])
         drums = dict((row[0], row[1]) for row in rows["drum sounds, named by their sound (the generator's as it names them)"])
-        self.assertEqual(drums, {"named kick": "kick", "named snare": "snare", "named hat": "hihat", "named other": "",
-                                 "the namer names the generator's as they are": "3 of 3"})   # the chip palette's kick, snare and hihat
-        self.assertEqual(rows["drum figures, bars of 4 beats (K kick, S snare, h hat, o another)"],
+        self.assertEqual(drums, {"named kick": "kick", "named snare": "snare", "named hat": "hihat", "named tom": "", "named cymbal": "",
+                                 "named other": "", "the namer names the generator's as they are": "3 of 3"})   # the chip palette's kick, snare and hihat
+        self.assertEqual(rows["drum figures, bars of 4 beats (K kick, S snare, h hat, t tom, c cymbal, o another)"],
                          [("K x... .... x... ....\nS .... x... .... x...\nh x.x. x.x. x.x. x.x.", "100 % (1)", 4)])
         text = against.table({"game": rows, "pack": rows}, top=3)
         self.assertIn("  I -> IV               33 %  33 %", text)

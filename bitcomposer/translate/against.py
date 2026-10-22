@@ -278,7 +278,7 @@ def rows(vs: list, rs: list, homes: list | None = None, names: dict | None = Non
     c = d.figures.get(4)
     if c:
         n = sum(c.values())
-        out["drum figures, bars of 4 beats (K kick, S snare, h hat, o another)"] += [
+        out["drum figures, bars of 4 beats (K kick, S snare, h hat, t tom, c cymbal, o another)"] += [
             ("\n".join(f"{LETTERS[piece]} {drawn}" for piece, drawn in fig) if fig else REST,
              f"{_share(x, n)} {_songs(c.songs[fig], 1)}", x) for fig, x in c.items()]
     m = rhythm.melody(rs)
