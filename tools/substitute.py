@@ -54,11 +54,14 @@ def main(argv=None) -> int:
     ap.add_argument("spc"); ap.add_argument("--voice", type=int, required=True); ap.add_argument("--take", type=int, default=0)
     ap.add_argument("--seed", type=int, default=1); ap.add_argument("--sound", default="snes"); ap.add_argument("--seconds", type=float, default=60.0)
     ap.add_argument("-o", "--out", required=True)
+    ap.add_argument("--title", help="the module's title (25 characters show in a player); default: the song's")
     a = ap.parse_args(argv)
     snap = spc.read(a.spc)
     original = convert.score_of(snap, a.seconds, fade=0.0)
     generated = score_mod.of_song(compose_song(seed=a.seed, sound=a.sound))
     swapped = substitute(original, a.voice, generated, a.take)
+    if a.title:
+        swapped.title = a.title[:25]
     info = convert.render(swapped, a.out)["info"]
     print(f"{a.out}: {info['notes']} notes, {info['repeats']} repeats, {info['channels']} channels")
     for label, sc in (("original", original), ("substituted", swapped)):
