@@ -550,6 +550,36 @@ tracks the original within 2 dB through the walking section. The lesson
 for the arrangement table: a layer is described by what it does at each
 attack (length relative to the line's note, offset, pitch relation), not
 by one median.
+
+"It completely drops out at 12 s. Do we keep patching it instead of
+finding the cause?" At 12.0 to 13.7 s the written stem is digital
+silence though the written score holds a line note there (11.10 to
+13.66 s) and its doubling: the layer's own intro blip at 11.60 to 12.00
+s, kept, overlaps the rebuilt doubling on the same voice, and a voice
+plays one note at a time, so the blip's end cuts the doubling; the
+line's own sample is a 0.2-second pluck, gone by 12.0 s. Five Locke
+rounds, one cause: the harness and the writer treat a bass as one voice
+with one figure a bar, and Locke's bass is a two-voice arrangement
+whose relation changes through the song; each round rebuilt one more
+piece of it from a song-wide median. **Measured** before deciding
+(`orchestration.py`, `layering.py`): of 1,314 songs with a bass, 1,177
+put it on one voice and 137 on two or more. A per-voice profile keyed
+on the event's class (on or off the beat, first in its bar or not)
+puts a layered song's own notes back on the right voice and length in
+71 % of (event, voice) pairs at the median, 22 of 127 songs at 85 % or
+better: too weak to build on. What the second voice does, song by song:
+**doubling** in 24 (it sounds at the same events as the first, 74 % of
+them at the median, 15 of 24 sharing a sample: Locke's walking section);
+**alternating** in 20 (the voices take turns note by note, 94 % at the
+median, a note ringing past the other voice's strike 76 % of the time,
+all 20 sharing a sample: the tracker's way of letting a note ring);
+**apart** in 93 (a second part in the bass register with a rhythm of its
+own: a pedal, a pad, Locke's intro pattern), which the role reader
+lumps under one role. Doubling and alternating are generic and small to
+write for (a doubling voice plays what the line plays; a free voice
+takes a note that would cut a ringing one); apart is two parts, the
+arrangement table's and the role reader's question, and the known
+limitation of the substitution harness and the writer until then.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
