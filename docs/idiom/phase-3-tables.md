@@ -492,6 +492,33 @@ rules: four bars of a five-strike root figure, the forty-eight-bar
 alternation, then eighteen bars of a six-strike pedal on the fifth,
 which Terra's own bass licenses (its intro bars are thirds and it has
 bars of fifths near its end): for the ear.
+
+Locke still off: "jumping around, doesn't know it's an organ, short
+abrasive notes; it understands bars, it's the choice within the bar
+given the instrument." The readings have two bass voices in Locke:
+voice 7, 89 notes about a beat long on a one-shot sample, the plucked
+line, moving by step; and voice 3, 207 notes of 0.15 beats on a looped,
+sustaining tone, a blip at the line's attacks and, where the line rests
+(its first eight bars), a rhythm of its own. The tool had taken the bass
+voice with the most notes, the blip layer, read the manner from both
+voices merged, and written a walking line in eighths onto the sustaining
+tone (the "organ") while the real line played on underneath: two basses
+at once. And each tone was placed in a fixed octave, so the written line
+leapt (thirds 12 %, fourths and fifths 23 % of its moves; Locke's own 3 %
+and 15 %). Now: the line is the bass voice with the longest notes and
+the manner is read from it alone; a layer (a bass voice with notes under
+TICK beats) has its doubling rebuilt on the written line, the song's own
+device (the offsets after an attack that DEVICE of the doubled attacks
+have, the same pitch relation, length and sample) and keeps its own
+notes elsewhere (Locke: 63 of 89 attacks doubled at the attack itself;
+30 blips rebuilt, 75 of its own kept); and each tone goes to the octave
+nearest the note before within the register (`writer.place`, REACH an
+octave and a third over the floor), so a walking line walks. Locke's
+line voice alone reads as "medium root-fifth", rests through most of its
+first eight bars, then walks in quarters; the written one follows.
+For the generator: a layered bass (a line with an attack layer on a
+sustaining sample) is the arrangement table's to carry, with the
+sample's sustain; and the role reader's "bass" is a role, not a voice.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
