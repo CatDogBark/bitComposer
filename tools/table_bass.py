@@ -3,8 +3,12 @@ the table fitted on every other song in the readings, the figures drawn bar by b
 played on the song's own bass sample in its own register, the rest of the song as decoded.
 
     python tools/table_bass.py FILE.spc --db READINGS.db -o OUT.it [--seed 1] [--seconds 60] [--title T] [--figures OUT.json]
+                               [--stems DIR]
 
-Prints the figures drawn and what the readers make of the original and the written song.
+Prints the figures drawn and what the readers make of the original and the written song. --stems: three more
+modules beside, for a page that toggles the voice while the song plays: the rest of the song without the bass,
+the bass alone as the song plays it, and the bass alone as written (NAME rest.it, NAME bass original.it,
+NAME bass written.it).
 """
 import argparse
 import bisect
@@ -38,6 +42,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seconds", type=float, default=60.0)
     ap.add_argument("--title", help="the module's title (25 characters show in a player)")
     ap.add_argument("--figures", help="write the figures drawn and the song's own beside, as JSON")
+    ap.add_argument("--stems", help="write the rest, the original bass and the written bass as modules of their own here")
     a = ap.parse_args(argv)
     db = store.connect(a.db)
     row = db.execute("SELECT id, game, title, key_tonic, key_mode FROM songs WHERE file = ?", (os.path.basename(a.spc),)).fetchone()
@@ -105,6 +110,16 @@ def main(argv=None) -> int:
     if a.figures:
         with open(a.figures, "w") as f:
             json.dump({"song": title, "game": game, "seed": a.seed, "written": figures, "own": own}, f, indent=1)
+    if a.stems:
+        os.makedirs(a.stems, exist_ok=True)
+        for label, part in (("rest", kept), ("bass original", [n for n in original.notes if n.voice == v]), ("bass written", new)):
+            stem = convert.Score(part, original.seconds, original.voices, original.master, original.fade,
+                                 f"{title} {label}"[:25], original.game, original.artist, original.row_hz, original.tempo,
+                                 original.tick_hz, original.aligned, original.on_ticks, original.snap,
+                                 dict(original.pcm_of), dict(original.key_of), message=[f"{title}: {label} (a stem for the Substitution Check)"])
+            path = os.path.join(a.stems, f"{title} {label}.it")
+            convert.render(stem, path)
+            print(f"  stem {path}: {len(part)} notes")
     return 0
 
 
