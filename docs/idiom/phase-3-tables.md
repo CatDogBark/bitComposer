@@ -623,6 +623,29 @@ came out the same (its bass does strike the and of two and use sus
 tones, just over the thresholds), its realization smoother; whether the
 rhythm vocabulary must weigh the song's frequent positions, not only
 its struck ones, waits on the ear.
+
+**The Decisive Battle: "nearly"** (the listener, "a not very good
+nearly, but that will happen with generation and I am fine with it; we
+aren't trying to generate bangers every time"). His one note: the song
+makes a moment at 18 s where everything drops out and regears, and the
+bass "blasts through it, deaf to the rest of the music." In the stems,
+the rest of the song drops 20 dB at 18.5 s for two seconds; the original
+bass keeps its riff there, six short strikes with three-quarter-beat
+gaps, and with the rest gone that air is the moment; the written bar was
+eight eighths held to the next, a wall. Measured (`breaks.py`,
+`energy.py`): a bar where the other parts' onsets fall under 0.4 of the
+song's median (1,517 bars in 444 songs) sees the bass keep its figure in
+35 %, rest in 32 %, thin in 27 %, thicken in 6 %: what a bass does in a
+break is the song's own choice, the arrangement's. By onsets Decisive's
+bar 7 is not a break (27 against 38); by energy (level x sounded length
+of every part but the bass) it is the song's quietest bar at 0.50 of
+the median, bar 8 next at 0.64. So the harness reads the song's moments
+(bars under MOMENT 0.65 of the median energy, in runs of at most
+MOMENT_BARS 2; Johnny C. Bad's quieter ten-bar stretch is a section,
+written like any other) and the written bass keeps the song's own
+figure in them, air included (`writer.bass(hold=...)`). For the
+generator: the arrangement table carries breaks (where, how long) and
+what the bass does in them, per game, from the shares above.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
