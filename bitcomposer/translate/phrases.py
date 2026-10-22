@@ -533,6 +533,8 @@ def _phrase_units(songs, outcome: str, length) -> list:
     for s, rows in phrase_rows(songs, length):
         previous = START
         for r in rows:
+            if outcome == "relation" and r["relation"] == "first":
+                continue                              # the song's first phrase stands to nothing: no choice to count
             values = {"part": R.MELODY, "previous": previous}
             values.update((k, v) for k, v in r.items() if k != outcome)
             out.append(tables.Unit(s.sid, s.game, r[outcome], values))

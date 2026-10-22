@@ -473,8 +473,8 @@ class PhraseUnitTests(unittest.TestCase):
                          ("only", "yes", "no", "yes"))
         self.assertEqual(cs[0].values["habit"], "mixed")                       # one of two phrases moves the one before
         rs = phrases.relation_units([self._song()], length=4)
-        self.assertEqual([u.outcome for u in rs], ["first", "moved up"])
-        self.assertEqual(rs[1].values["contour"], "rising")
+        self.assertEqual([u.outcome for u in rs], ["moved up"])              # the song's first phrase is no relation
+        self.assertEqual((rs[0].values["contour"], rs[0].values["previous"]), ("rising", rhythm.START))
         es = phrases.ending_units([self._song()], length=2)
         self.assertEqual(len(es), 4)
         self.assertEqual([u.values["place"] for u in es], ["first", "last", "first", "last"])
