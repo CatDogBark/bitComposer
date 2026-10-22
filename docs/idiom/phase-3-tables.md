@@ -840,6 +840,21 @@ span before +0.7, the song's mixture +0.9 (−2.67; with the span before
 Width is the song's habit, not the chord's. **Kept:** the song's
 mixture with the span before. Neither has a writer yet: the voicings
 are phase 4's, when the generator voices its own chords.
+
+### The key check by ear (2026-10-22, set)
+
+The gate before the harmony tables: a dozen songs with the tonic named
+by ear, the scale reader scored on them. The Key Check page: twelve
+30-second excerpts looping, a row of twelve keys to hold against the
+music (a soft two-octave tone), the listener marking the key that
+feels like home and whether the song feels bright or dark; the answers
+in the page's store (`keys/kNN`), the reader's tonic and mode off the
+page (`~/diags/bitcomposer/idiom/phase3/set.json`, on both machines).
+The songs, across games, six from each half, the reader's fit 0.6 or
+better, none of the substitution set: The Fierce Battle, Unkai, Misty
+Menace, Autumn Sky / Womanheart, Jojo, Sailing, Few Paths Forbidden,
+Cavern, Vanilla Dome, The Little Sprite, Las Vegas, Rude Awakening.
+Clips rendered through the converter and libopenmpt (`keycheck.py`).
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
