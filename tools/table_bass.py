@@ -89,12 +89,16 @@ def main(argv=None) -> int:
     _, _, volume, adsr, gain, echo, e_delay, e_volume, e_feedback, e_filter, e_writes = usual[0][0]
     beats = array("d")
     beats.frombytes(db.execute("SELECT beats FROM beats WHERE song = ?", (sid,)).fetchone()[0])
+    starts = [n.start for n in mine]                      # the song's own bass, for its volume at each moment (a fade-in kept)
     new = []
     for start_b, end_b, midi in notes:
         start, end = seconds_at(beats, start_b), seconds_at(beats, end_b)
         if start >= original.seconds:
             continue
         pitch = max(1, min(0x3FFF, round(pitch_ref * 2 ** ((midi - midi_ref) / 12))))
+        i = bisect.bisect_left(starts, start)
+        near = min((mine[j] for j in (i - 1, i) if 0 <= j < len(mine)), key=lambda n: abs(n.start - start), default=None)
+        volume = near.volume if near is not None and abs(near.start - start) < 4.0 else usual[0][0][2]
         new.append(convert.notes_mod.Note(v, start, like.sample, pitch, volume, adsr, gain, echo, False,
                                           brr=like.brr, echo_delay=e_delay, echo_volume=e_volume, echo_feedback=e_feedback,
                                           echo_filter=e_filter, echo_writes=e_writes, end=min(end, original.seconds)))
@@ -106,7 +110,7 @@ def main(argv=None) -> int:
                             message=[f"{title}: the bass written from the bass table (phase 3 of docs/IDIOM.md)",
                                      f"the table fitted on every other song; seed {a.seed}; the rest as decoded"])
     info = convert.render(swapped, a.out)["info"]
-    print(f"{a.out}: {info['notes']} notes, {info['channels']} channels; bass voice {v}, {len(new)} written notes at volume {volume}")
+    print(f"{a.out}: {info['notes']} notes, {info['channels']} channels; bass voice {v}, {len(new)} written notes, usual volume {usual[0][0][2]}")
     for label, sc in (("original", original), ("written", swapped)):
         rr = reading.of_score(sc)
         role = next((x.role for x in rr.roles if x.voice == v), "-")

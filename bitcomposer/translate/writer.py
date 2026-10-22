@@ -9,8 +9,12 @@ habits table); then bar by bar a figure is drawn as the song's own
 mixture over the table (tables.Cache: the figure before again, one the
 song played earlier, or a new one under the part, the meter, the habit
 and the figure before, in that order, so a figure never seen after this
-one backs off to the habit's own inventory, not the pooled one; a new
-figure must sit on the song's own grid). The bars the song's own bass
+one backs off to the habit's own inventory, not the pooled one). A new
+figure must be a bar some song played (the floor serves the likelihood,
+not the writer: its invented bars were the runs the listener heard in
+Terra), must sit on the song's own grid, and may not strike more than
+DENSER times the song's own bass does in a bar (its median over the bars
+it plays, or its busiest bar). The bars the song's own bass
 rests through are left silent and never drawn for (the arrangement stays
 the song's: which bars the bass plays is the arrangement table's, not
 this one's), and a playing bar never draws a rest. Each token becomes a
@@ -38,6 +42,7 @@ SHAPE = ("part", "meter", "habit", "previous")   # the bass table's shape, the h
 REST = "-"
 DISCOUNT = 0.75
 LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
+DENSER = 1.5                          # a new figure strikes at most this many times the song's own median a bar
 SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
 
 
@@ -53,10 +58,17 @@ def on_grid(figure: str, division: int) -> bool:
     return all(division % Fraction(t.partition(":")[0]).denominator == 0 for t in rhythm._tokens(figure))
 
 
+def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
+    """Whether a new figure may be written into the song (the module): a bar some song played, on the song's grid, no denser than cap."""
+    return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
+
+
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
          key: tuple | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi) and the figures drawn, one a bar."""
     own = song.notes.get(R.BASS, [])
+    playing = [len(struck) for _, struck in rhythm.bars_of(song, R.BASS) if struck]
+    cap = max(max(playing), round(DENSER * statistics.median(playing))) if playing else 8
     if habit is None:
         mine = rhythm.bass_units([song])
         habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
@@ -75,10 +87,15 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             previous = REST
             continue
         values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
-        figure = model.draw(tables.Unit(song.sid, song.game, "", values), None if previous == REST else previous,
-                            played, rng, keep=lambda f: f != REST and on_grid(f, song.division))
-        if figure == REST:                                  # the urn's memory of the song's rests: draw a figure anew
-            figure = model.table.draw(model.table.context(tables.Unit(song.sid, song.game, "", values)), rng, values)
+        unit = tables.Unit(song.sid, song.game, "", values)
+        figure = model.draw(unit, None if previous == REST else previous, played, rng,
+                            keep=lambda f: fits(f, song, model.table.vocabulary, cap))
+        for _ in range(40):                                 # the urn or the floor may still hand back what fits() refuses
+            if fits(figure, song, model.table.vocabulary, cap):
+                break
+            figure = model.table.draw(model.table.context(unit), rng, values)
+        else:
+            figure = "0:R"                                  # nothing fit: the root on the one
         new, last_root = realize(figure, a, b, song, low, sounds, scale, last_root)
         notes += new
         figures.append(figure)

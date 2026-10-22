@@ -35,13 +35,19 @@ class WriterTests(unittest.TestCase):
 
     def test_a_bass_written_from_a_table(self):
         others = [_song("b"), _song("c")]
-        for s in others:
-            s.notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5)]
+        others[0].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 1.0, 2.0, 3.0)]
+        others[1].notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 2.0)]
         model = writer.fit(rhythm.bass_units(others))
         self.assertIsInstance(model, tables.Cache)
         notes, figures = writer.bass(_song(), model, random.Random(1), key=(0, "major"))
         self.assertEqual(len(figures), 4)
         self.assertTrue(all(writer.on_grid(f, 4) and f != "-" for f in figures))
+        self.assertTrue(all(f in model.table.vocabulary for f in figures))        # only bars some song played
+        self.assertTrue(all(len(rhythm._tokens(f)) <= 6 for f in figures))        # _song plays 4 a bar: at most 6
+        self.assertTrue(writer.fits("0:R 1:R", _song(), {"0:R 1:R"}, 4))
+        self.assertFalse(writer.fits("0:R 1:R", _song(), set(), 4))
+        self.assertFalse(writer.fits("0:R 1:R 2:R", _song(), {"0:R 1:R 2:R"}, 2))
+        self.assertFalse(writer.fits("-", _song(), {"-"}, 4))
         resting = _song()
         resting.notes["bass"] = [n for n in resting.notes["bass"] if n[0] >= 4.0]      # the first bar rests
         _, figures = writer.bass(resting, model, random.Random(1), key=(0, "major"))
