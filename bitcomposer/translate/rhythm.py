@@ -273,20 +273,74 @@ def chord_change(song: Song, a: float, b: float) -> str:
 
 
 def cells(drawn: str, meter: int) -> list[str]:
-    """A bar's pattern (pattern()) as one cell a beat: the onset positions
-    within the beat as fractions of it, space-separated; an empty beat "-"."""
+    """A bar's pattern (pattern(), or a figure's "position:mark" tokens) as
+    one cell a beat: the onset positions within the beat as fractions of
+    it, their marks kept, space-separated; an empty beat "-"."""
     out = [[] for _ in range(meter)]
     for x in ([] if drawn == "-" else drawn.split()):
-        p = Fraction(x)
+        at, _, mark = x.partition(":")
+        p = Fraction(at)
         b = math.floor(p)
         if b < meter:
-            out[b].append(p - b)
-    return [" ".join(str(f) for f in c) or "-" for c in out]
+            out[b].append(f"{p - b}:{mark}" if mark else str(p - b))
+    return [" ".join(c) or "-" for c in out]
 
 
 def pattern_of_cells(cells_: list[str]) -> str:
     """The bar's pattern back from its cells."""
-    return pattern(b + Fraction(x) for b, c in enumerate(cells_) for x in ([] if c == "-" else c.split()))
+    tokens = []
+    for b, c in enumerate(cells_):
+        for x in ([] if c == "-" else c.split()):
+            at, _, mark = x.partition(":")
+            tokens.append(f"{b + Fraction(at)}:{mark}" if mark else str(b + Fraction(at)))
+    return " ".join(tokens) or "-"
+
+
+def figure(struck, start: float, song: Song) -> str:
+    """A bass bar's figure as a table's outcome: each onset's position and
+    the chord tone of its lowest note (TONE_MARKS, ? where no chord fits;
+    r a root an octave or more over the bar's lowest note), as
+    "position:mark" tokens; a bar rested through "-"."""
+    low = [min(n[2] for n in ns) for _, ns in struck]
+    lowest = min(low, default=0.0)
+    tokens = []
+    for (p, _), midi in zip(struck, low):
+        c = _chord_at(song.chords, start + p)
+        mark = "?" if c is None or c.root is None or c.fit < FIT else TONE_MARKS[tone_of(round(midi) % 12, c.root, c.shape)]
+        tokens.append(f"{p}:{'r' if mark == 'R' and midi >= lowest + 11.5 else mark}")
+    return " ".join(tokens) or "-"
+
+
+def bass_units(songs) -> list:
+    """Every bar of the bass as a table's unit: its outcome the bar's
+    figure (figure()); its values the part, the meter, the tempo band, the
+    shape of the chord at the bar's start (harmony's names; ? none fits),
+    whether the chord changes in this bar and in the next (chord_change),
+    and the figure before it (START where none)."""
+    out = []
+    for s in songs:
+        if R.BASS not in s.notes:
+            continue
+        tempo, previous, last = band(s.bpm), START, None
+        for k, a, struck in numbered_bars_of(s, R.BASS):
+            if last is not None and k != last + 1:
+                previous = START
+            c = _chord_at(s.chords, a)
+            drawn = figure(struck, a, s)
+            out.append(tables.Unit(s.sid, s.game, drawn, {
+                "part": R.BASS, "meter": s.meter, "tempo": tempo,
+                "shape": "?" if c is None or c.root is None or c.fit < FIT else (c.shape or "major"),
+                "chord": chord_change(s, a, a + s.meter), "next": chord_change(s, a + s.meter, a + 2 * s.meter),
+                "previous": previous}))
+            previous, last = drawn, k
+    return out
+
+
+HABITS = ((1 / 3, "detached"), (2 / 3, "mixed"), (2, "held"))   # a song's share of held notes -> its habit
+
+
+def habit_of(share: float) -> str:
+    return next(name for top, name in HABITS if share < top)
 
 
 def cell_units(units_) -> list:
@@ -335,17 +389,19 @@ def value_units(songs) -> list:
     is held (sounding SHORT of the way to the next note or more) or
     detached; its values the part, the value (beats to the next note on
     the song's grid, what a score would write), the meter, the tempo band,
-    the note's place in its bar (PLACES), its beat in the bar (from 0) and
-    the articulation before it (START at the line's first note). The
-    values themselves follow from the bars' patterns (the onsets), so they
-    condition this table rather than being drawn from one."""
+    the note's place in its bar (PLACES), its beat in the bar (from 0), the
+    articulation before it (START at the line's first note) and the song's
+    habit for the part (HABITS: its share of held notes, which a writer
+    would draw once a song). The values themselves follow from the bars'
+    patterns (the onsets), so they condition this table rather than being
+    drawn from one."""
     out = []
     for s in songs:
         tempo, starts = band(s.bpm), [a for a, _ in s.bars]
         for role in (R.MELODY, R.COUNTER):
             if role not in s.notes:
                 continue
-            line, previous = _line(s.notes[role]), START
+            line, previous, mine = _line(s.notes[role]), START, []
             for n, after in zip(line, line[1:]):
                 gap = after[0] - n[0]
                 value = position(gap, s.division)
@@ -354,11 +410,25 @@ def value_units(songs) -> list:
                     continue
                 at = position(n[0] - s.bars[i][0], s.division)
                 held = "held" if n[1] / gap >= SHORT else "detached"
-                out.append(tables.Unit(s.sid, s.game, held, {
+                mine.append(tables.Unit(s.sid, s.game, held, {
                     "part": role, "value": str(value), "meter": s.meter, "tempo": tempo, "place": place(at),
                     "beat": math.floor(at), "previous": previous}))
                 previous = held
+            if mine:
+                habit = habit_of(sum(1 for u in mine if u.outcome == "held") / len(mine))
+                for u in mine:
+                    u.values["habit"] = habit
+                out += mine
     return out
+
+
+def habit_units(songs) -> list:
+    """Each song's habit for the melody and the counter (value_units'), one
+    unit a song and part: what a writer draws once a song."""
+    seen = {}
+    for u in value_units(songs):
+        seen.setdefault((u.song, u.values["part"]), tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"]}))
+    return list(seen.values())
 
 
 def units(songs) -> list:

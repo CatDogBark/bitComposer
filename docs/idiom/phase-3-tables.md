@@ -227,3 +227,83 @@ beat still read at half the tempo in 57 (phase 2's finding, untouched).
 All 39 games read again on Ragnarok with the readers as above:
 `~/diags/bitcomposer/idiom/phase3/readings.db`, 1,836 songs, translator
 version 8, notes cache key 5b1140535b27. Every table below counts from it.
+
+### The framework (2026-10-21)
+
+`translate/tables.py` as planned (a Table of outcomes under contexts,
+songs voting, backoff to the coarser context, held-out bits a unit, draws
+from the whole distribution, the spread of draws measured), with four
+things the first comparisons on the rhythm table forced:
+
+- **A floor model.** The even share below the root is not a distribution:
+  every pattern never counted gets the whole unseen slot, and a quarter of
+  the held-out bars are patterns no development song played (80 % of the
+  distinct patterns are one song's). So a floor can be a model: the bar as
+  a chain of beat cells (`rhythm.BarCells`, each beat's onsets conditioned
+  on the part, the meter, the beat and the cell before it), under which a
+  bar never counted whole still has a likelihood and can be drawn. A
+  table over a floor backs off no lower than what the floor covers (the
+  part and the meter): passing through the pooled root cost 0.4 bits.
+- **Votes by shares.** Beside the plan's one vote a distinct outcome a
+  song, a song can vote its bars' shares (summing to one a song, so an
+  ostinato is still at most one vote): shares predict the held-out bars
+  better (−10.48 against −10.76 bits a bar for the chosen shape under
+  Witten-Bell) and keep how much a song repeats itself.
+- **Absolute discounting.** With nearly as many distinct patterns as
+  votes, Witten-Bell gives half the mass to the coarser level at every
+  level. A discount of 0.75 a vote scores within 0.05 bits of it and its
+  draws are far more like songs (below).
+- **A split by song.** A held-out game's per-game context backs off whole,
+  so the shared-against-per-game question is asked with the songs split
+  within each game (`half_of`), the games' split kept for everything else.
+
+### Rhythm (2026-10-21)
+
+152,029 bars of seven parts in 1,562 songs (213 in free time and 61 mostly
+silent left out), the games split: 68,710 development, 83,319 held-out.
+Held-out bits a bar, the cell floor under every shape (covers the part
+and the meter), share votes:
+
+| shape | Witten-Bell | discount 0.75 | draws: distinct a song / ostinato share (real 7.5 / 0.50) |
+|---|---|---|---|
+| the floor alone | −11.81 | −11.81 | 22.7 / 0.16 |
+| part+meter | −11.53 | −11.32 | 17.4 / 0.23 |
+| part+meter+tempo | −11.44 | −11.45 | |
+| part+meter+chord (changes in the bar) | −11.44 | −11.49 | |
+| part+meter+place (in its part) | −11.45 | −11.50 | |
+| **part+meter+previous** (the bar before) | −10.48 | **−10.53** | 12.8 / 0.36 |
+| part+meter+previous+chord | | −10.58 | 10.0 / 0.46 |
+| part+meter+previous+place | | −10.58 | 9.7 / 0.46 |
+| part+meter+previous+tempo | | −10.61 | 10.2 / 0.45 |
+
+Song votes (the plan's) under Witten-Bell: part+meter −11.79, with the
+previous bar −10.76. A discount of 1.0: −10.54. By song within the games
+(76,791 / 75,238): part+meter+previous −10.26, the same a game −10.27, so
+the rhythm table is shared, not a game's. **Kept:** the part, the meter
+and the previous bar's pattern over the cell floor, share votes, discount
+0.75: 1.28 bits a bar over the floor, 0.79 over the inventory without the
+chain. Bits by part: bass −9.9, harmony −3.5, accompaniment −10.5, arp
+−12.7, counter −11.1, melody −10.7, drums −11.5 (the arp and the drums
+vary most; the drums' bars are every piece's onsets together, the drum
+table of its own counts them by piece). The tempo band, the chord change
+and the place in the part add nothing to the likelihood once the chain
+is there, though each makes the draws more like songs (10 distinct a
+song, ostinato 0.46). **Open:** the draws are still more varied than
+songs (12.8 distinct a song against 7.5; the ostinato 0.36 of the bars
+against 0.50): the song's own habit, drawn once a song, is the plan's
+open question, tested first on the values table below.
+
+### Values (2026-10-21)
+
+Whether a note of the melody's or the counter's line is held (SHORT of
+the way to the next note or more) or detached, 254,940 notes. The note's
+value, its place in the bar, its beat, the meter and the tempo predict
+nothing on held-out games (each a little below the unconditioned −0.83
+bits a note under Witten-Bell; the value's 456 contexts fit the
+development games' habits). The articulation before it helps (+0.10),
+and by song within the games the game helps most: (none) −0.86, game
+−0.71, part+value+previous −0.69, part+value+previous+game −0.61.
+Articulation is a habit of the game and the song, not of the note; the
+writer draws it once a song. Tested next: the song's habit (its share of
+held notes, in thirds) as a conditioning, and a table of the habits
+themselves by game.

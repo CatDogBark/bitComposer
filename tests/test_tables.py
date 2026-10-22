@@ -241,3 +241,31 @@ class ValueUnitTests(unittest.TestCase):
         self.assertEqual([u.values["beat"] for u in us], [0, 1, 1])
         self.assertEqual([u.values["previous"] for u in us], [rhythm.START, "held", "detached"])
         self.assertEqual(us[0].values["part"], "melody")
+
+
+class BassUnitTests(unittest.TestCase):
+    def test_cells_keep_marks(self):
+        self.assertEqual(rhythm.cells("0:R 1/2:r 2:5 11/4:?", 4), ["0:R 1/2:r", "-", "0:5 3/4:?", "-"])
+        self.assertEqual(rhythm.pattern_of_cells(rhythm.cells("0:R 1/2:r 2:5 11/4:?", 4)), "0:R 1/2:r 2:5 11/4:?")
+
+    def test_bass_units(self):
+        chords = [Span(0.0, 4.0, 0, "", 1.0), Span(4.0, 8.0, 7, "m", 1.0)]      # C major, then G minor
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=140.0, sid="id", game="G", numbers=[0, 1])
+        s.notes["bass"] = [(0.0, 0.5, 36.0, "k"), (1.0, 0.5, 48.0, "k"), (2.0, 0.5, 43.0, "k"),   # C, C up an octave, G
+                           (4.0, 0.5, 43.0, "k"), (5.0, 0.5, 46.0, "k")]                           # G, Bb
+        us = rhythm.bass_units([s])
+        self.assertEqual([u.outcome for u in us], ["0:R 1:r 2:5", "0:R 1:3"])
+        self.assertEqual([u.values["shape"] for u in us], ["major", "m"])
+        self.assertEqual([u.values["next"] for u in us], ["on", "same"])
+        self.assertEqual([u.values["previous"] for u in us], [rhythm.START, "0:R 1:r 2:5"])
+        self.assertEqual(us[0].values["tempo"], "fast")
+
+    def test_habits(self):
+        self.assertEqual([rhythm.habit_of(x) for x in (0.0, 0.33, 0.5, 0.67, 1.0)], ["detached", "detached", "mixed", "held", "held"])
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1])
+        s.notes["melody"] = [(0.0, 0.9, 60.0, "k"), (1.0, 0.9, 62.0, "k"), (2.0, 0.2, 64.0, "k"), (3.0, 1.0, 65.0, "k")]
+        us = rhythm.value_units([s])
+        self.assertEqual({u.values["habit"] for u in us}, {"held"})
+        hs = rhythm.habit_units([s])
+        self.assertEqual([(h.song, h.outcome, h.values["part"]) for h in hs], [("id", "held", "melody")])
