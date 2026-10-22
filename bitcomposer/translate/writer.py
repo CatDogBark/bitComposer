@@ -12,9 +12,13 @@ and the figure before, in that order, so a figure never seen after this
 one backs off to the habit's own inventory, not the pooled one). A new
 figure must be a bar some song played (the floor serves the likelihood,
 not the writer: its invented bars were the runs the listener heard in
-Terra), must sit on the song's own grid, and may not strike more than
-DENSER times the song's own bass does in a bar (its median over the bars
-it plays, or its busiest bar). The bars the song's own bass
+Terra) and must be in the song's own manner, read from its bass (Manner):
+no denser than DENSER times its median strikes a bar (or its busiest bar)
+and no sparser than SPARSER times it; striking the downbeat where the
+song's bass strikes it in DOWNBEAT of its bars; and placed only on the
+subdivisions the song's bass uses (its feel: quarters and triplets in
+Terra, where a sixteenth pickup was the listener's "burst" and a bar
+with nothing on the one his "skip"). The bars the song's own bass
 rests through are left silent and never drawn for (the arrangement stays
 the song's: which bars the bass plays is the arrangement table's, not
 this one's), and a playing bar never draws a rest. Each token becomes a
@@ -43,6 +47,8 @@ REST = "-"
 DISCOUNT = 0.75
 LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
 DENSER = 1.5                          # a new figure strikes at most this many times the song's own median a bar
+SPARSER = 0.5                         # and at least this many times it
+DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
 SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
 
 
@@ -58,8 +64,32 @@ def on_grid(figure: str, division: int) -> bool:
     return all(division % Fraction(t.partition(":")[0]).denominator == 0 for t in rhythm._tokens(figure))
 
 
+class Manner:
+    """The song's own manner in a part, read from its bars: the strikes a
+    bar it allows a new figure (low, high), whether the figure must strike
+    the downbeat, and the subdivisions of the beat it may use (feel)."""
+
+    def __init__(self, song: rhythm.Song, role: str, known: set):
+        self.known = known
+        bars = [struck for _, struck in rhythm.bars_of(song, role) if struck]
+        counts = [len(struck) for struck in bars]
+        median = statistics.median(counts) if counts else 4
+        self.low = max(1, math.floor(SPARSER * median)) if counts else 1
+        self.high = max(max(counts), round(DENSER * median)) if counts else 8
+        self.downbeat = bool(bars) and sum(1 for struck in bars if struck[0][0] == 0) / len(bars) >= DOWNBEAT
+        self.feel = {p.denominator for struck in bars for p, _ in struck} | {1}
+
+    def fits(self, figure: str) -> bool:
+        """Whether a new figure may be written into the song (the module)."""
+        if figure == REST or figure not in self.known:
+            return False
+        positions = [Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)]
+        return (self.low <= len(positions) <= self.high and (not self.downbeat or positions[0] == 0)
+                and all(p.denominator in self.feel for p in positions))
+
+
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
-    """Whether a new figure may be written into the song (the module): a bar some song played, on the song's grid, no denser than cap."""
+    """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
 
 
@@ -67,8 +97,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          key: tuple | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi) and the figures drawn, one a bar."""
     own = song.notes.get(R.BASS, [])
-    playing = [len(struck) for _, struck in rhythm.bars_of(song, R.BASS) if struck]
-    cap = max(max(playing), round(DENSER * statistics.median(playing))) if playing else 8
+    manner = Manner(song, R.BASS, model.table.vocabulary)
     if habit is None:
         mine = rhythm.bass_units([song])
         habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
@@ -88,10 +117,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             continue
         values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
-        figure = model.draw(unit, None if previous == REST else previous, played, rng,
-                            keep=lambda f: fits(f, song, model.table.vocabulary, cap))
-        for _ in range(40):                                 # the urn or the floor may still hand back what fits() refuses
-            if fits(figure, song, model.table.vocabulary, cap):
+        figure = model.draw(unit, None if previous == REST else previous, played, rng, keep=manner.fits)
+        for _ in range(40):                                 # the urn or the floor may still hand back what the manner refuses
+            if manner.fits(figure):
                 break
             figure = model.table.draw(model.table.context(unit), rng, values)
         else:

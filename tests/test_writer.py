@@ -62,6 +62,25 @@ class WriterTests(unittest.TestCase):
         self.assertFalse(writer.on_grid("0:R 1/3:R", 4))
         self.assertTrue(writer.on_grid("-", 1))
 
+    def test_the_songs_manner(self):
+        known = {"0:R 1:R", "0:R 2:R", "0:R 1:R 2:R 3:R", "1:R", "0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R",
+                 "0:R 1:R 2:R 11/4:R", "0:R 4/3:R 5/3:R 2:R", "0:R", "-"}
+        m = writer.Manner(_song(), "bass", known)                 # quarters on every beat: 4 a bar, the one always struck
+        self.assertEqual((m.low, m.high, m.downbeat, m.feel), (2, 6, True, {1}))
+        self.assertTrue(m.fits("0:R 1:R") and m.fits("0:R 2:R") and m.fits("0:R 1:R 2:R 3:R"))
+        self.assertFalse(m.fits("1:R"))                            # nothing on the one
+        self.assertFalse(m.fits("0:R"))                            # too sparse
+        self.assertFalse(m.fits("0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R"))   # too dense, and eighths
+        self.assertFalse(m.fits("0:R 1:R 2:R 11/4:R"))             # a sixteenth the song never plays
+        self.assertFalse(m.fits("0:R 4/3:R 5/3:R 2:R"))            # triplets the song never plays
+        self.assertFalse(m.fits("-") or m.fits("0:R 3:R"))         # a rest; a bar no song played
+        s = _song()
+        s.division = 12                                             # a grid that holds triplets (a sixteenth grid would round them)
+        s.notes["bass"] = [(4.0 * i + x, 0.3, 36.0, "k") for i in range(4) for x in (0.0, 1.0, 4 / 3, 5 / 3, 2.0)]
+        m = writer.Manner(s, "bass", known)
+        self.assertEqual(m.feel, {1, 3})
+        self.assertTrue(m.fits("0:R 4/3:R 5/3:R 2:R"))
+
 
 if __name__ == "__main__":
     unittest.main()
