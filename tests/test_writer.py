@@ -299,3 +299,17 @@ class GeneratedSongTests(unittest.TestCase):
         self.assertTrue(drums.notes)
         new = harness.score_with(ctx, [bass, drums], "seed 5 new", ["test"])
         self.assertEqual(len([n for n in new.notes if n.voice in bass.replaced]), len(bass.notes))
+
+
+class FreeWritingTests(unittest.TestCase):
+    def test_a_free_manner_takes_any_known_figure_on_the_kit(self):
+        m = writer.FreeManner({"0:R 2:5", "0:K 2:S", "1:h"}, kit={"K", "S"})
+        self.assertTrue(m.fits("0:K 2:S"))
+        self.assertFalse(m.fits("1:h"))                          # a piece the song lacks
+        self.assertFalse(m.fits("0:R 1:R"))                      # a bar no song played
+        self.assertTrue(writer.FreeManner({"0:R 2:5"}).fits("0:R 2:5"))
+        self.assertEqual(writer.free_envelope("sparse walking no-octaves")("0:R", 4), (1, 3, False, 4))
+        self.assertEqual(writer.free_envelope("dense roots octaves")("0:R", 3)[:2], (5, 16))
+        env = writer.free_drum_envelope({"K", "S"})("0:K", 4)
+        self.assertTrue(writer.drum_within("0:K 2:S 7/2:S", env))
+        self.assertFalse(writer.drum_within("0:K 2:h", env))

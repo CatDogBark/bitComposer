@@ -94,6 +94,7 @@ class Context:
     loop: tuple | None = None         # (the second the song loops back to, the loop's length in seconds), when heard
     by_voice: dict = field(default_factory=dict)   # voice -> (role, its notes as the store packs them)
     models: dict | None = None        # the tables to write from (a pack's, packtables.read), else fitted on `songs`
+    generated: bool = False           # a song the generator composed: its old parts are no manner to keep (free writing)
 
 
 @dataclass
@@ -169,7 +170,7 @@ def load_generated(song: dict, title: str, game: str, models: dict | None = None
         keys[idx] = key
         pieces[key] = piece
     key = (r.key[0], r.key[1]) if r.key else None
-    ctx = Context(db, s.sid, game, title, key, s, songs, original, events, beats, keys, pieces, models=models)
+    ctx = Context(db, s.sid, game, title, key, s, songs, original, events, beats, keys, pieces, models=models, generated=True)
     if r.form and r.form.loop_bar is not None and r.form.loop_seconds and r.form.loop_bar < len(r.grid.bar_times):
         ctx.loop = (r.grid.bar_times[r.form.loop_bar], r.form.loop_seconds)
     for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (s.sid,)):
@@ -394,8 +395,13 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     song.notes[R.BASS] = [(n[0], n[1], n[2], ctx.keys.get(int(n[5]), "noise")) for n in part if n[0] < end]
     log.append(f"bass voices {sorted(by_voice)}; the line on {v} (notes {length_of[v]:.2f} beats)"
                + "".join(f"; voice {t} {k[0]}" + (f" {k[1]:+d} semitones" if k[0] == "doubling" else "") for t, k in kinds.items()))
+    habit, free = None, False
     if ctx.models and "bass" in ctx.models:
         model = ctx.models["bass"]                                  # the pack's table
+        if ctx.generated and "bass_habits" in ctx.models:           # and its habit, drawn once a song: the old part is no manner
+            habit = ctx.models["bass_habits"].draw((R.BASS,), random.Random(seed * 7 + 1))
+            free = True
+            log.append(f"free writing: the habit drawn from the pack, {habit}")
     else:
         units = rhythm.bass_units(ctx.songs)
         model = writer.fit([u for u in units if u.song != ctx.sid])
@@ -403,7 +409,7 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     held = moments(ctx, set(by_voice))
     answered = stops(ctx, set(by_voice), part)
     lock = locks(ctx, set(by_voice), part)
-    notes, figures = writer.bass(song, model, random.Random(seed), key=ctx.key, hold=held | answered, lock=lock)
+    notes, figures = writer.bass(song, model, random.Random(seed), habit=habit, key=ctx.key, hold=held | answered, lock=lock, free=free)
     mine_units = rhythm.bass_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, {len(figures)} bars written, {len(notes)} notes"
                + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
@@ -509,7 +515,12 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
             models[letters] = writer.fit([u for u in units if u.song != ctx.sid], name=name)
         notes_g = [n for n in song.notes[R.DRUMS] if rhythm.LETTERS.get(song.pieces.get(n[3]), "o") in letters]
         group_locks[letters] = locks(ctx, kit_voices, notes_g)
-    hits, figures = writer.drums(song, models, random.Random(seed), hold=held | answered, locks=group_locks)
+    habit, free = None, False
+    if ctx.models and ctx.generated and "drum_habits" in ctx.models:
+        habit = ctx.models["drum_habits"].draw((R.DRUMS,), random.Random(seed * 7 + 2))
+        free = True
+        log.append(f"free writing: the habit drawn from the pack, {habit}")
+    hits, figures = writer.drums(song, models, random.Random(seed), hold=held | answered, locks=group_locks, habit=habit, free=free)
     mine_units = rhythm.drum_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, kit {mine_units[0].values['kit'] if mine_units else '-'}, "
                f"groups {['+'.join(g) for g in models]}, {len(figures)} bars written, {len(hits)} hits"

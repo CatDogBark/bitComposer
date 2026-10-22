@@ -298,6 +298,38 @@ class DrumManner:
         return all(Fraction(t[0]) in self.feel and t[2] in self.kit for t in tokens)
 
 
+FREE_STRIKES = {"sparse": (1, 3), "medium": (2, 6), "dense": (5, 16)}   # strikes a bar a free-written part allows, by its habit's density
+FREE_HITS = (0, 16)                   # hits a bar a piece may take in a free-written drum bar
+
+
+class FreeManner:
+    """The manner of a part written with no original to follow (a generated
+    song's, phase 4): any bar the table knows, on the pieces the song has
+    (drums); the density and the downbeat the habit's and the band's, not a
+    bar's own."""
+
+    def __init__(self, known: set, kit: set | None = None):
+        self.known = known
+        self.kit = kit
+
+    def fits(self, figure: str) -> bool:
+        if figure == REST or figure not in self.known:
+            return False
+        return self.kit is None or all(t.partition(":")[2] in self.kit for t in rhythm._tokens(figure))
+
+
+def free_envelope(habit: str):
+    """An envelope_of for a free-written part: strikes a bar by the habit's density, no downbeat demanded."""
+    low, high = FREE_STRIKES.get(habit.split()[0], FREE_STRIKES["medium"])
+    return lambda own, meter=None: (low, high, False, meter)
+
+
+def free_drum_envelope(letters) -> object:
+    """An envelope_of for a free-written drum group: any count a piece, no downbeat demanded."""
+    pieces = {k: FREE_HITS for k in letters}
+    return lambda own, meter=None: (pieces, False, meter)
+
+
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
@@ -399,24 +431,34 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
     return figures
 
 
-def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None) -> tuple[list[tuple[float, str]], list[str]]:
+def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None, habit: str | None = None,
+          free: bool = False) -> tuple[list[tuple[float, str]], list[str]]:
     """The drums written for the song, a group of pieces at a time (the
     module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
-    to its Cache; `locks` a group to its lock; `hold` as bass(). Returns
-    the hits (start in beats, piece letter) and the merged figures."""
+    to its Cache; `locks` a group to its lock; `hold` as bass(). `free`: no
+    original to follow (FreeManner, free_drum_envelope), the `habit` given
+    (drawn from a pack's table) and the kit the song's pieces. Returns the
+    hits (start in beats, piece letter) and the merged figures."""
     locks = locks or {}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
     whole = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
+    kit = {rhythm.LETTERS.get(piece, "o") for piece in song.pieces.values() if piece and piece != "none"}
     merged = [[] for _ in bars]
     for letters, model in models.items():
         own = [rhythm.drum_group(f, letters) for f in whole]
-        if all(f == REST for f in own):
+        if all(f == REST for f in own) and not (free and kit & set(letters)):
             continue
-        manner = DrumManner(None, model.table.vocabulary, figures=[f for f in own if f != REST])
-        mine = [u for u in rhythm.drum_group_units([song], letters)]
-        habit = mine[0].values["habit"] if mine else "medium mixed"
-        figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, habit, rng, hold, locks.get(letters),
-                           envelope_of=drum_envelope, within_of=drum_within, lock_share=LOCK_DRUMS)
+        if free:
+            manner = FreeManner(model.table.vocabulary, kit & set(letters))
+            group_habit = habit or "medium mixed"
+            envelope_of = free_drum_envelope(kit & set(letters))
+        else:
+            manner = DrumManner(None, model.table.vocabulary, figures=[f for f in own if f != REST])
+            mine = [u for u in rhythm.drum_group_units([song], letters)]
+            group_habit = habit or (mine[0].values["habit"] if mine else "medium mixed")
+            envelope_of = drum_envelope
+        figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
+                           envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
         for k, f in enumerate(figures):
             merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
     figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]
@@ -430,18 +472,19 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
 
 
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
-         key: tuple | None = None, hold=(), lock=None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         key: tuple | None = None, hold=(), lock=None, free: bool = False) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
     (positions a figure must strike, beats it must leave), the song's own
-    locking to the band."""
+    locking to the band. `free`: no original to follow (FreeManner,
+    free_envelope by the habit, which the caller then gives)."""
     lock = lock or {}
     own = song.notes.get(R.BASS, [])
-    manner = Manner(song, R.BASS, model.table.vocabulary)
     if habit is None:
         mine = rhythm.bass_units([song])
         habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
+    manner = FreeManner(model.table.vocabulary) if free else Manner(song, R.BASS, model.table.vocabulary)
     pitched = sorted(n[2] for n in own if not math.isnan(n[2]))
     low = round(pitched[int(LOW * (len(pitched) - 1))]) if pitched else 36
     sounds = sounded(own)
@@ -456,7 +499,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
 
     words = habit.split()
     figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
-                       chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))
+                       chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5),
+                       envelope_of=free_envelope(habit) if free else None)
     notes, last_root, previous = [], tonic, None
     for (a, b, _), figure in zip(bars, figures):
         new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous)
