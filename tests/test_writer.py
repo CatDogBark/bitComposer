@@ -1,5 +1,6 @@
 """The bass writer: tones from marks, a figure realized, a bass written from a table."""
 import random
+from fractions import Fraction
 import unittest
 
 from bitcomposer.translate import rhythm, tables, writer
@@ -126,7 +127,7 @@ class WriterTests(unittest.TestCase):
         known = {"0:R 1:5", "0:R 1:5 2:R 3:5", "0:R 1:R 2:5 3:5", "1:5 2:5 3:R", "0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:5 7/2:R",
                  "0:R 1:R 2:5 11/4:R", "0:R 4/3:5 5/3:R 2:R", "0:R", "-"}
         m = writer.Manner(_song(), "bass", known)                 # quarters on every beat: 4 a bar, the one always struck
-        self.assertEqual((m.low, m.high, m.downbeat, m.feel), (3, 5, True, {1}))
+        self.assertEqual((m.low, m.high, m.downbeat, m.feel), (3, 5, True, {Fraction(0), Fraction(1), Fraction(2), Fraction(3)}))
         self.assertEqual((m.octaves, m.tones, m.pedal), (False, (2, 2), False))   # _song's bars: two tones each
         self.assertTrue(m.fits("0:R 1:5 2:R 3:5") and m.fits("0:R 1:R 2:5 3:5"))
         env = writer.envelope("0:R 1:R 2:5 3:5")                   # the song's own bar: four strikes, the one struck
@@ -144,8 +145,9 @@ class WriterTests(unittest.TestCase):
         s.division = 12                                             # a grid that holds triplets (a sixteenth grid would round them)
         s.notes["bass"] = [(4.0 * i + x, 0.3, 36.0 if x < 2 else 43.0, "k") for i in range(4) for x in (0.0, 1.0, 4 / 3, 5 / 3, 2.0)]
         m = writer.Manner(s, "bass", known)
-        self.assertEqual((m.feel, m.low, m.high), ({1, 3}, 4, 6))
+        self.assertEqual((m.feel, m.low, m.high), ({Fraction(0), Fraction(1), Fraction(4, 3), Fraction(5, 3), Fraction(2)}, 4, 6))
         self.assertTrue(m.fits("0:R 4/3:5 5/3:R 2:R"))
+        self.assertFalse(m.fits("0:R 1:R 2:5 3:5"))                  # beat four: a position the song never strikes
         spread = _song(bars=8)
         spread.notes["bass"] = [(4.0 * i + x, 0.3, 36.0 if x < 2 else 43.0, "k") for i in range(8)
                                 for x in ((0.0, 2.0), (0.0, 1.0, 2.0, 3.0), (0.0, 1.0, 2.0), (0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5))[i % 4]]

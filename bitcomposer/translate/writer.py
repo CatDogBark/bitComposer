@@ -18,10 +18,12 @@ as often as the song's bass does in that bar, and the downbeat where
 that bar does (a song-wide window let Locke's one-note intro bars
 license a one-note bar where its line starts walking, and its busiest
 bar license sixteenths everywhere; density is the arrangement's, bar by
-bar, like the rests and the volume); placed only on the subdivisions
-the song's bass uses (its feel: quarters and triplets in Terra, where a
-sixteenth pickup was the listener's "burst" and a bar with nothing on
-the one his "skip"); and in the song's tones as much as its rhythm: no
+bar, like the rests and the volume); placed only on positions in the bar
+the song's bass strikes in RARE of its strikes or more (its feel: Terra
+strikes quarters and triplets, so a sixteenth pickup was the listener's
+"burst"; The Decisive Battle's riff strikes the and-a before beats one
+and three and never the and of two, so straight eighths were his "free
+spirited"); and in the song's tones as much as its rhythm: no
 octave-up roots where the song plays none, as many different tones in a
 bar as the song's own bars have (Terra's one, Locke's one to four), the
 roots' share of a bar and the roots and fifths' share each within the
@@ -137,7 +139,9 @@ class Manner:
         self.low = max(1, math.ceil(q1) - SLACK)
         self.high = max(self.low, math.floor(q3) + SLACK)
         self.downbeat = bool(bars) and sum(1 for _, struck in bars if struck[0][0] == 0) / len(bars) >= DOWNBEAT
-        self.feel = {p.denominator for _, struck in bars for p, _ in struck} | {1}
+        struck_at = Counter(p for _, struck in bars for p, _ in struck)
+        strikes = sum(struck_at.values())
+        self.feel = {p for p, c in struck_at.items() if c / strikes >= RARE} | {Fraction(0)} if strikes else set()
         marks = [[t.partition(":")[2] for t in rhythm._tokens(figure_of(struck, a, song))] for a, struck in bars]
         full = [m for m in marks if len(m) >= 2]
         self.octaves = any("r" in m for m in marks)
@@ -161,7 +165,7 @@ class Manner:
         tokens = [t.partition(":") for t in rhythm._tokens(figure)]
         positions = [Fraction(t[0]) for t in tokens]
         marks = [t[2] for t in tokens]
-        if not all(p.denominator in self.feel for p in positions):
+        if not all(p in self.feel for p in positions):
             return False
         if not self.octaves and "r" in marks:
             return False
