@@ -1,16 +1,26 @@
-"""The chords under a song, beat by beat, and its key.
+"""The chords under a song, bar by bar, and its key.
 
-On each beat, the pitch classes sounding (each note weighted by its
-loudness, how much of the beat it sounds and its part: the bass twice, since
-it most often holds the root, held and struck chords one and a half, the
-melody and counter-line a half, since their passing notes are not the
-chord; drums and doublings left out) are matched against chord shapes on
-every root. A beat then keeps its neighbour's chord where that fits it
-nearly as well as its own best (a melody's passing note had split a bar of
-C into C, Csus4, C), and runs of one chord are its span. The key
-is the major or minor profile (Krumhansl and Kessler's) the whole song's
-pitch classes (every tonal voice alike, weighted by part they skewed it:
-Locke's G major read as G minor) correlate with best."""
+A chord lasts bars, and a listener hears it change where the ground moves:
+the bass settles on another root, or the chordal voices sound another set
+of pitch classes. On the chord check (twelve songs, docs/idiom/phase-1-
+readers.md) a reader that relabelled every beat made 1.4 to 39 times the
+changes the listener marked, flipping on each note of an arpeggio, each
+step of a bass figure, and each time the texture thinned or filled; the
+bass's most-sounded pitch class in the bar and the chordal voices' pitch
+set, compared bar to bar, matched the marks on most songs. So: each bar's
+pitch classes are gathered (each note weighted by its loudness, how much
+of the bar it sounds and its part: the bass twice, held and struck chords
+one and a half, the melody and counter-line a half, drums and doublings
+left out); a bar starts a new chord where its bass root differs from the
+last sounding bar's or its chordal set has changed by half (Jaccard); a
+bar where nothing tonal sounds carries the chord on, so a chord that stops
+and restarts is one chord. Each span's chord is the shape on the root
+fitting its pooled pitch classes best, a root the bass holds preferred; a
+span with no chordal voice sounding is an implied chord (stated False).
+The key is the major or minor profile (Krumhansl and Kessler's) the whole
+song's pitch classes (every tonal voice alike, weighted by part they
+skewed it: Locke's G major read as G minor) correlate with best."""
+import bisect
 import math
 from dataclasses import dataclass
 
@@ -28,6 +38,11 @@ PLAIN = {"": 1.0, "m": 1.0, "5": 0.9, "7": 0.92, "m7": 0.92, "maj7": 0.9, "dim":
 MAJOR = (6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88)
 MINOR = (6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
 QUIET = 0.15                         # a beat with less sounding than this (summed loudness x share) has no chord
+SOUNDING = 0.2                       # a bar with tonal notes through less of it than this (in beats a beat) is quiet
+SET_SHARE = 0.15                     # a pitch class with this share of the chordal voices' sounding in a bar is in its set
+SET_CHANGE = 0.5                     # the Jaccard distance between two bars' sets that is a new chord
+BASS_ROOT = 1.1                      # the fit's lift for the root the bass holds
+HALF_BARS = False                    # read the chords on half bars (an experiment's switch)
 
 
 @dataclass
@@ -37,6 +52,7 @@ class Chord:
     root: int | None                 # pitch class; None: no chord
     shape: str
     fit: float                       # how well the shape fits what sounds, 0-1
+    stated: bool = True              # a chordal voice sounds it; False: implied by the bass and the tune alone
 
     @property
     def name(self) -> str:
@@ -45,7 +61,6 @@ class Chord:
 
 WEIGHTS = {roles_mod.BASS: 2.0, roles_mod.HARMONY: 1.5, roles_mod.ACCOMP: 1.5, roles_mod.ARP: 1.5,
            roles_mod.MELODY: 0.5, roles_mod.COUNTER: 0.5}
-KEEP = 0.9                           # a neighbour's chord kept on a beat it fits this nearly as well
 
 
 def _tonal(song, roles) -> tuple[list, dict]:
@@ -90,29 +105,100 @@ def _match(pcs: list[float]) -> tuple[int | None, str, float]:
     return best
 
 
+def _bars(grid) -> list[int]:
+    """The bar lines as beat indices, from the first beat to past the last."""
+    n = len(grid.beat_times)
+    lines = sorted({min(n, max(0, round(grid.beats(t)))) for t in grid.bar_times})
+    if not lines or lines[0] > 0:
+        lines = [0] + lines
+    if lines[-1] < n:
+        lines.append(n)
+    lines = [x for i, x in enumerate(lines) if i == 0 or x > lines[i - 1]]
+    if HALF_BARS:
+        halves = [(a + b) // 2 for a, b in zip(lines, lines[1:]) if b - a >= 4]
+        lines = sorted(set(lines) | set(halves))
+    return lines
+
+
 def chords(song, grid, roles) -> list[Chord]:
-    """The chords, beat by beat, a beat keeping its neighbour's where that fits
-    it nearly as well, runs of one merged."""
-    pcs_all = profiles(song, grid, roles)
-    best = [_match(pcs) for pcs in pcs_all]
-    for _ in range(2):                   # each pass lets a run grow by a beat either way
-        for b in range(len(best)):
-            here = best[b]
-            if here[0] is None:
-                continue
-            for nb in (b - 1, b + 1):
-                if 0 <= nb < len(best) and best[nb][0] is not None and best[nb][:2] != here[:2]:
-                    fit = _fit(pcs_all[b], best[nb][0], best[nb][1])
-                    if fit * PLAIN[best[nb][1]] >= KEEP * here[2] * PLAIN[here[1]]:
-                        here = (best[nb][0], best[nb][1], fit)
-            best[b] = here
-    out = []
-    for b, (root, shape, fit) in enumerate(best):
-        if out and out[-1].root == root and out[-1].shape == shape:
-            out[-1].end = b + 1
-            out[-1].fit = max(out[-1].fit, fit)
+    """The chords bar by bar: a bar starts a new chord where the bass's root
+    (its most-sounded pitch class) differs from the last sounding bar's or the
+    chordal voices' pitch-class set has changed by SET_CHANGE; a bar where
+    nothing tonal sounds carries the chord on. Each span's chord is the
+    shape fitting its pooled pitch classes best, the bass's root preferred."""
+    notes, weight = _tonal(song, roles)
+    bass = {r.voice for r in roles if r.role == roles_mod.BASS}
+    chordal = {r.voice for r in roles if r.role in (roles_mod.HARMONY, roles_mod.ACCOMP, roles_mod.ARP)}
+    edges = _bars(grid)
+    nb = len(edges) - 1
+    if nb < 1:
+        return []
+    prof = [[0.0] * 12 for _ in range(nb)]
+    sounding = [0.0] * nb                             # beats of tonal notes in the bar (voices summed)
+    bass_dur = [[0.0] * 12 for _ in range(nb)]
+    set_dur = [[0.0] * 12 for _ in range(nb)]
+    for p in notes:
+        b0 = grid.beats(p.start)
+        b1 = grid.beats(p.end) if p.end is not None else b0 + 1
+        pc = round(p.midi) % 12
+        i = max(0, bisect.bisect_right(edges, b0) - 1)
+        while i < nb and edges[i] < b1:
+            share = min(b1, edges[i + 1]) - max(b0, edges[i])
+            if share > 0:
+                prof[i][pc] += p.level * weight[p.voice] * share
+                sounding[i] += share
+                if p.voice in bass:
+                    bass_dur[i][pc] += share
+                if p.voice in chordal:
+                    set_dur[i][pc] += share
+            i += 1
+    def root_of(d):
+        return max(range(12), key=d.__getitem__) if sum(d) > 0 else None
+    def set_of(d):
+        total = sum(d)
+        return frozenset(k for k in range(12) if total and d[k] / total >= SET_SHARE)
+    spans = []                                        # [first bar, past the last]
+    last = None                                       # the last sounding bar's (root, set)
+    for i in range(nb):
+        if sounding[i] < SOUNDING * (edges[i + 1] - edges[i]):
+            if spans:
+                spans[-1][1] = i + 1
+            else:
+                spans.append([i, i + 1])
+            continue
+        root, pcs = root_of(bass_dur[i]), set_of(set_dur[i])
+        new = not spans
+        if last is not None:
+            if root is not None and last[0] is not None and root != last[0]:
+                new = True                            # the bass settles on another root
+            if pcs and last[1] and 1 - len(pcs & last[1]) / len(pcs | last[1]) >= SET_CHANGE:
+                new = True                            # the chordal voices sound another set
+        if new:
+            spans.append([i, i + 1])
         else:
-            out.append(Chord(b, b + 1, root, shape, fit))
+            spans[-1][1] = i + 1
+        last = (root, pcs)
+    out = []
+    for a, b in spans:
+        pooled = [sum(prof[i][k] for i in range(a, b)) for k in range(12)]
+        if sum(sounding[a:b]) < SOUNDING * (edges[b] - edges[a]):
+            c = Chord(edges[a], edges[b], None, "", 0.0)
+        else:
+            root, shape, fit = _match(pooled)
+            held = root_of([sum(bass_dur[i][k] for i in range(a, b)) for k in range(12)])
+            if held is not None and root != held:
+                shape_h = max(SHAPES, key=lambda sh: _fit(pooled, held, sh) * PLAIN[sh])
+                fit_h = _fit(pooled, held, shape_h)
+                if fit_h * PLAIN[shape_h] * BASS_ROOT >= fit * PLAIN[shape]:
+                    root, shape, fit = held, shape_h, fit_h
+            stated = any(sum(set_dur[i]) > 0 for i in range(a, b))
+            c = Chord(edges[a], edges[b], root, shape, fit, stated)
+        if out and out[-1].root == c.root and out[-1].shape == c.shape:
+            out[-1].end = c.end
+            out[-1].fit = max(out[-1].fit, c.fit)
+            out[-1].stated = out[-1].stated or c.stated
+        else:
+            out.append(c)
     return out
 
 

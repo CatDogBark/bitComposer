@@ -81,8 +81,8 @@ NEAR = 0.06                          # beats: onsets this close are one, and thi
 PARTS = (R.BASS, R.HARMONY, R.ACCOMP, R.ARP, R.COUNTER, R.MELODY, R.DRUMS)
 PITCHED = PARTS[:-1]
 DENSE = 6                            # hits a bar a drum sound plays, where it plays, to be the hat
-PIECES = ("kick", "snare", "hat", "other")
-LETTERS = dict(zip(PIECES, "KSho"))
+PIECES = ("kick", "snare", "hat", "tom", "cymbal", "other")     # drums.PIECES; a sample named "none" is no drum
+LETTERS = dict(zip(PIECES, "KShtco"))
 SHORT = 0.75                         # a melody note sounding less of its length than this is detached
 TONE_MARKS = {"root": "R", "third": "3", "sus": "s", "fifth": "5", "seventh": "7", "other": "+"}
 SIZES = ((0, "repeat"), (2, "step"), (4, "third"), (5, "fourth"), (6, "tritone"), (7, "fifth"), (9, "sixth"),
@@ -498,7 +498,7 @@ def report(songs: list, left_out: dict, top: int = 10, game: str = "", bank=None
                    + "".join(f" {_pct(c[w], c['hits']):>5s}" for w in ("one", "three", "back", "eighth", "finer"))
                    + f" {c['length']:6.2f}  {c['name']}" + ("" if c["how"] == "sound" else f" (by {c['how']})"))
     out.append("  named: " + ", ".join(f"{p} {n}" for p, n in Counter(c["name"] for c in d.sounds.values()).most_common()))
-    out.append(f"\ndrum figures ({d.bars} bars; K kick, S snare, h hat, o another sound)")
+    out.append(f"\ndrum figures ({d.bars} bars; K kick, S snare, h hat, t tom, c cymbal, o another sound)")
     for meter in meters:
         c = d.figures.get(meter)
         if not c:

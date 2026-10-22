@@ -47,7 +47,7 @@ from .rhythm import LETTERS, PARTS, PIECES, PLACES, REST, SIZES, VALUES
 from .vocab import INVERSIONS, SPREADS, TONES, _median
 
 DIVISION = 12                        # the generator's grid: sixteenths and triplets
-DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "other", "crash": "other"}
+DRUMS = {"kick": "kick", "snare": "snare", "hihat": "hat", "openhat": "hat", "tom": "tom", "crash": "cymbal"}
 SLOTS = {"openhat": "open_hihat"}    # a drum channel's kit slot where the names differ
 MINOR = {"natural_minor", "harmonic_minor", "dorian", "phrygian", "minor_pentatonic"}
 
@@ -63,10 +63,11 @@ class Played:
 
 
 class _Grid:
-    """A grid already in beats: the generator's rows."""
+    """A grid already in beats: the generator's rows, its bars where the generator put them."""
 
-    def __init__(self, beats: int):
+    def __init__(self, beats: int, bars: list):
         self.beat_times = list(range(beats))
+        self.bar_times = [b for b in bars if b < beats]
 
     def beats(self, t: float) -> float:
         return t
@@ -127,7 +128,7 @@ def read(song: dict) -> tuple[vocab.Song, rhythm.Song, tuple]:
     inst = song.get("info", {}).get("instruments", {})
     role = parts(s)
     played = [Played(n.beat, s.end if n.beats is None else n.beat + n.beats, n.midi, n.level, n.voice) for n in s.notes]
-    grid = _Grid(max(1, math.ceil(s.end)))
+    grid = _Grid(max(1, math.ceil(s.end)), list(s.bars))
     rl = [R.Role(v, r) for v, r in role.items()]
     like = type("Song", (), {"notes": played})
     tonic, mode, _ = harmony.key(like, grid, rl)
@@ -277,7 +278,7 @@ def rows(vs: list, rs: list, homes: list | None = None, names: dict | None = Non
     c = d.figures.get(4)
     if c:
         n = sum(c.values())
-        out["drum figures, bars of 4 beats (K kick, S snare, h hat, o another)"] += [
+        out["drum figures, bars of 4 beats (K kick, S snare, h hat, t tom, c cymbal, o another)"] += [
             ("\n".join(f"{LETTERS[piece]} {drawn}" for piece, drawn in fig) if fig else REST,
              f"{_share(x, n)} {_songs(c.songs[fig], 1)}", x) for fig, x in c.items()]
     m = rhythm.melody(rs)

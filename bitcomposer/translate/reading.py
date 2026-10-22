@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass, field
 
-from . import beat, events, form as form_mod, harmony, measures as measures_mod, roles as roles_mod
+from . import beat, events, form as form_mod, harmony, measures as measures_mod, phase as phase_mod, roles as roles_mod
 
 
 @dataclass
@@ -38,13 +38,18 @@ def manifest(folder: str) -> dict:
 
 def beat_and_parts(song) -> tuple:
     """The song's beat (None: free time) and each voice's part, the bar set
-    again from the bass; a voice echoing another is left out of the beat."""
-    echoed = roles_mod.echoes(song)          # an echo's notes sit off the grid: left out of the beat
-    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes if p.voice not in echoed])
+    again from the bass and its phase from where the song repeats itself;
+    a voice echoing another is left out of the beat."""
+    echoed = roles_mod.echoes(song)          # an echo's notes sit off the grid: a sure one is left out of the beat
+    sure = {v for v, (u, delay, sureness) in echoed.items() if sureness >= roles_mod.ECHO_HELD}
+    # (an echo found by the looser rule names a doubling but stays in the beat: which voices the beat is read
+    #  from moves its level and its grid in dozens of songs, an open item of docs/idiom/phase-1-readers.md)
+    grid = beat.find([(p.start, p.level, p.voice) for p in song.notes if p.voice not in sure])
     roles = roles_mod.assign(song, grid, echoed)
     if grid:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
+        phase_mod.find(grid, song)
     return grid, roles
 
 
