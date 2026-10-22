@@ -13,9 +13,10 @@ one backs off to the habit's own inventory, not the pooled one). A new
 figure must be a bar some song played (the floor serves the likelihood,
 not the writer: its invented bars were the runs the listener heard in
 Terra) and must be in the song's own manner, read from its bass (Manner):
-no denser than DENSER times its median strikes a bar (never its busiest
-bar: one rolled bar in Locke licensed sixteenths everywhere) and no
-sparser than SPARSER times it; striking the downbeat where the song's
+its strikes a bar within the middle half of the song's own bars widened
+by SLACK each way (never its busiest bar: one rolled bar in Locke
+licensed sixteenths everywhere; and not half its median: that let a
+walking bass thin to two strikes); striking the downbeat where the song's
 bass strikes it in DOWNBEAT of its bars; placed only on the subdivisions
 the song's bass uses (its feel: quarters and triplets in Terra, where a
 sixteenth pickup was the listener's "burst" and a bar with nothing on
@@ -70,8 +71,7 @@ SHAPE = ("part", "meter", "habit", "previous")   # the bass table's shape, the h
 REST = "-"
 DISCOUNT = 0.75
 LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
-DENSER = 1.5                          # a new figure strikes at most this many times the song's own median a bar
-SPARSER = 0.5                         # and at least this many times it
+SLACK = 1                             # strikes: how far outside the middle half of the song's own bars a new figure may be
 DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
 ANCHORS = {"R", "r", "5"}             # the marks that anchor a bar: roots and fifths
 MARGIN = 0.15                         # how far a figure's anchor share may stray outside the song's own bars' range
@@ -108,9 +108,9 @@ class Manner:
         figure_of = figure_of or rhythm.figure
         bars = [(a, struck) for a, struck in rhythm.bars_of(song, role) if struck]
         counts = [len(struck) for _, struck in bars]
-        median = statistics.median(counts) if counts else 4
-        self.low = max(1, math.floor(SPARSER * median))
-        self.high = max(self.low, round(DENSER * median))
+        q1, _, q3 = statistics.quantiles(counts, n=4) if len(counts) >= 2 else (counts[0], counts[0], counts[0]) if counts else (4, 4, 4)
+        self.low = max(1, math.ceil(q1) - SLACK)
+        self.high = max(self.low, math.floor(q3) + SLACK)
         self.downbeat = bool(bars) and sum(1 for _, struck in bars if struck[0][0] == 0) / len(bars) >= DOWNBEAT
         self.feel = {p.denominator for _, struck in bars for p, _ in struck} | {1}
         marks = [[t.partition(":")[2] for t in rhythm._tokens(figure_of(struck, a, song))] for a, struck in bars]
