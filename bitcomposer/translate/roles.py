@@ -107,12 +107,15 @@ ECHO_SHARP = 0.008                   # and within this of it, ECHO_FOCUS of the 
 ECHO_FOCUS = 0.3                     # repeating a few pitches matches any delay by chance, spread evenly
 ECHO_SELF = 0.5                      # a voice repeating its own pitches at the delay (a pumping bass, every eighth)
                                      # is matched by any voice sharing them: no echo
+ECHO_SURE = 0.004                    # seconds: the share within this of the delay is the echo's sureness (the
+                                     # detector's old rule; the beat trusts an echo sure to ECHO_HELD)
 MELODY_DENSE = 2.0                   # notes a beat beyond which a line is figuration more than tune
 
 
 def echoes(song) -> dict:
     """Voices playing another's notes a fixed delay later, all song long:
-    voice -> (the voice it copies, the delay). A driver's echo made of a
+    voice -> (the voice it copies, the delay, the share of its notes within
+    ECHO_SURE of that delay). A driver's echo made of a
     spare voice (Star Fox's Corneria: one part copying another 1.4 steps of
     its grid later, 246 ms, every note off the grid). A copy is a note of
     the same pitch class; the delay is the one most of them share, within
@@ -121,7 +124,9 @@ def echoes(song) -> dict:
     copied voice not repeating itself at that delay (Gang-Plank Galleon's
     bass and its doubling pump the same note every eighth, 236 ms, and
     would each be the other's echo). Of two voices each the other's echo,
-    the quieter is the echo."""
+    the quieter is the echo. The beat trusts only an echo whose share within
+    ECHO_SURE reaches ECHO_HELD (the detector's old rule); the looser ones
+    serve the parts (see reading.beat_and_parts)."""
     by, levels = {}, {}
     for p in song.notes:
         if p.midi is not None and p.level > 0:
@@ -155,10 +160,13 @@ def echoes(song) -> dict:
                 own += any(q == pc for _, q in theirs[lo:hi])
             if own / len(theirs) >= ECHO_SELF:
                 continue
-            best = (share, u, mode)
+            sure = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SURE for d in ds)) / len(notes)
+            best = (share, u, mode, sure)
         if best:
-            out[v] = (best[1], best[2])
+            out[v] = (best[1], best[2], best[3])
     for v in list(out):
+        if v not in out:
+            continue
         u = out[v][0]
         if u in out and out[u][0] == v:
             del out[v if levels.get(v, 0) / len(by[v]) >= levels.get(u, 0) / len(by[u]) else u]
@@ -176,7 +184,7 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     for v, f in feats.items():
         if f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2):
             roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
-    for v, (u, delay) in (echoed or {}).items():
+    for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:
             roles[v] = Role(v, DOUBLE, of=u, evidence={"echo_ms": round(delay * 1000, 1)})
     tonal = [v for v in feats if v not in roles and feats[v]["median"] is not None]
