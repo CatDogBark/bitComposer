@@ -132,3 +132,39 @@ phase 3 changes the music.
 voice replaced by a generated one, the generated voice keeping its own
 tempo and length, its preset as its sample and the decoded voice's echo,
 rendered through the same back end and read by the same readers.
+
+**The listen, and what it decided (2026-10-22).** Six whole songs rendered
+both ways, and two substitutions. The whole songs answered nothing about
+the back end: the music going in is the old generator's, and bad notes
+render faithfully; the listener found them a muffled copy of something
+already poor and the comparison with real SNES music unfair to make. The
+substitutions answered the real question: Hyrule Field with a generated
+melody holds up, so the rendering is sound when the notes are; Terra with
+a generated bass does not, because the bass is wrong for FFVI, which is
+the generator's problem and phase 3's work. Decided:
+- The old SNES path stays the shipped default; the "release of its own"
+  question is closed, not deferred. The score path is the development
+  path for the new generator, and ships when the new music beats the old
+  by the listener's ear and the measures.
+- Listening tests for phases 3 and 4 are substitutions, one generated
+  voice inside a real song against the original; whole generated songs
+  come back when phase 4 has slices worth hearing. A whole song of the
+  old generator asks the listener to project the aim onto it, which is
+  too much to ask.
+- The tempo question is withdrawn: the reader hearing the old songs at
+  half tempo says they are half as dense as a game's, which the readings
+  had said; the reader is asked again on the new music, not tuned on this.
+
+**Exit criteria, met:** a decoded song through the new path byte for byte
+(322 songs); a generated song and a decoded song read by the same code;
+chip and Genesis unchanged; a substituted song renders and reads; the
+channels a song needs reported (13 to 54 across the set, inside IT's 64).
+Phase 2 closes as plumbing, which is what it was.
+
+**Carried into phase 3:** toms at several pitches taking the bass's role
+(naming drum samples by their sound inside the role reader settles it);
+the chip's interpolation colouring applied to the built-in synthesized
+presets as to game samples, perhaps a double softening, which matters
+only if those presets survive the overhaul (imported packs play real game
+samples, where it is right); the tempo rule's level on music sparser than
+the games', asked again when there is new music.
