@@ -761,6 +761,17 @@ alternate bars is a draw within the rules (a four-strike bar where the
 song's own has six). The written drum stem now fades in with the
 original (−56, −48, −42 dB over the first three pairs of bars against
 −53, −46, −41).
+
+**The Decisive Battle's drums belong** (the listener, 2026-10-22). His
+one suspicion: both written parts cut out at 54 s. Not a choice and not
+a patch: the readings count a song once through to its loop, the
+writers write those bars, and The Decisive Battle loops back to its
+first bar after 52.9 s, its first pass ending at 54.6 s of a one-minute
+render, where both written parts had no bars left (the other three loop
+past the minute, so it never showed). The harness now repeats the
+written notes as the song does, shifted by the loop's length from the
+bar it loops back to, to the render's end (`harness.looped`); the stems
+carry on past 54.6 s within a decibel or two of the originals.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
