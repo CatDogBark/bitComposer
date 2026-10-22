@@ -413,7 +413,21 @@ from the voice's first note, and Terra fades its bass in, so the written
 line played 23 dB under the original and read as no bass at all; the
 voice's usual settings (its most common sample, volume, envelope and
 echo) are taken now, and the written stems measure within half a decibel
-of the originals. Written for Terra (habit medium roots, 74 bars),
+of the originals. The listener's second minute: Terra's written bass
+"holds and then spazzes out" from 25 s on, rapid runs with thirds and
+passing tones, and plays over the intro the song's own bass only fades
+into. Every run was a bar no song ever played, invented by the cell
+floor (bars 17, 25, 41, 49, 56, 57 of 74), and the one real dense bar
+came from a song nothing like Terra, while Terra's own habit inventory
+(189 figures, 43 song-shares) is peaked on quarter and eighth roots. So
+the writer now plays only bars some song played (the floor serves the
+likelihood, not the writer), no denser than DENSER (1.5) times the song's
+own median a bar or its busiest bar, and each written note takes the
+volume of the song's own nearest bass note, so a fade-in stays a
+fade-in. Terra's bass came back as ten figures, all roots: quarter
+roots, eighth roots, a root on the one, a root with its pickup.
+**The goal, restated for the listener:** not Terra's line, a bass that
+could belong in Terra. Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
 (`~/Music/bitComposer-dev/Table bass/`): the readers read the written
