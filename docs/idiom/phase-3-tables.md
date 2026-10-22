@@ -646,6 +646,61 @@ written like any other) and the written bass keeps the song's own
 figure in them, air included (`writer.bass(hold=...)`). For the
 generator: the arrangement table carries breaks (where, how long) and
 what the bass does in them, per game, from the shares above.
+
+**Searching for Friends belongs** (the listener, 2026-10-22). Johnny C.
+Bad: "so close, then blows at 29 s when the bass cuts out in the
+original and the written clashes with the section." The stems: the
+written bass was silent from 23.6 to 30 s while the original walked,
+then came in at 30.0 s, exactly the original's stop-time. The beat
+reader had put four 3-beat bars there (and a 1.5-beat bar near the end)
+and the writer left any bar not of the meter silent: a shortcut from
+its first day, not a decision. Now every bar is written, with the
+table's figures for its own number of beats (the readings hold 135
+songs in 3/4 and 58 in 2/4) or the song's own bar where nothing fits
+(`rhythm.all_bars_of`, the envelope bounding positions to the bar).
+
+"The bass needs to be aware of everything else going on; a lot of good
+bass is about awareness." Measured (`locking.py`): at a shared hit (a
+position where two thirds or more of the other playing parts strike
+together; 1,244 songs have them, 52 a song at the median) the readings'
+basses strike too in 63 to 66 % of cases; on a stop (a beat no other
+part sounds in: rare, 184 in all) they rest in 53 to 69 %. Two times in
+three either way: a tendency, not a law, and the song's own choice where
+it isn't. So the harness reads the song's own locking a bar at a time
+(the shared hits its bass strikes, the stops it rests in; `locks`) and
+the written bass must do the same (`writer.locked`), falling back to
+the song's own bar where no figure can. Terra locks in 49 of 74 bars,
+The Decisive Battle in 22 of 23, Johnny C. Bad in 37 of 38.
+
+**Where the bass stands (2026-10-22):** Terra belongs; Searching for
+Friends belongs; The Decisive Battle nearly ("a not very good nearly,
+and that will happen with generation; we aren't trying to generate
+bangers every time"); Johnny C. Bad to be heard again with every bar
+written and the band locked. The bass table's acceptance by ear is met
+on two of four with one nearly, and the bass item closes here, with
+these **known issues**, each the arrangement item's or a reader's:
+
+- A second bass-register part under the bass role (93 of 1,314 songs:
+  Locke's intro pattern) stays as it is while the line is rewritten;
+  the role reader may be lumping two parts, and the arrangement table
+  owns layered basses.
+- The writer hears the band through the song's own rests, volume,
+  density, moments and locking, all read from the song being written
+  for; the generator will need each from a table (arrangement: breaks,
+  locking, layering, density by section) and the form reader's sections
+  in place of the song's own spans.
+- The figures' tone marks carry the chord reader's noise (a fifth of
+  bass onsets read as "other"; a passing tone is a step from both
+  neighbours in only a quarter of cases); the writer realizes marks
+  defensively (passing tones pass, the song's own marks only), and a
+  contour representation (intervals beside marks) is the next step if
+  walking lines still wander.
+- The beat reader doubles Terra's tempo and puts four 3/4 bars in Johnny
+  C. Bad's walking passage; the writer now follows such bars rather than
+  skipping them, but their figures come from the 3/4 inventory.
+- The rhythm vocabulary checks the positions a song strikes, not how
+  often (The Decisive Battle's straight eighths passed); weighting by
+  frequency waits on the ear.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
