@@ -855,6 +855,42 @@ better, none of the substitution set: The Fierce Battle, Unkai, Misty
 Menace, Autumn Sky / Womanheart, Jojo, Sailing, Few Paths Forbidden,
 Cavern, Vanilla Dome, The Little Sprite, Las Vegas, Rude Awakening.
 Clips rendered through the converter and libopenmpt (`keycheck.py`).
+Two clips re-cut from where the song's pitched parts settle (Misty
+Menace's at 51 s; `recut.py`) and one song swapped (Rude Awakening is
+atmosphere throughout; Snowman in its place). The tone tuned to each
+song from its notes' absolute frequencies (`abs_tuning.py`: Misty Menace
+and Cavern sit 37 cents sharp of A=440, the rest within 9; the readings'
+per-sample offsets are not that measure).
+
+**The ear against the reader (2026-10-22, the first round):**
+
+| song | reader | ear | the ear's note is |
+|---|---|---|---|
+| The Fierce Battle | A minor | E minor | the fifth |
+| Unkai | B minor | D minor | the relative major's root |
+| Misty Menace | C minor | G# minor | the minor sixth |
+| Autumn Sky / Womanheart | E major | A major | the fourth |
+| Jojo | E minor | G minor | the relative major's root |
+| Sailing | D major | B minor | the relative minor |
+| Few Paths Forbidden | G minor | D minor | the fifth |
+| Cavern | A# major | F minor | the fifth |
+| Vanilla Dome | A minor | D minor | the fourth |
+| The Little Sprite | A minor | A major | the same note |
+| Las Vegas | C minor | D# major | the relative major |
+| Snowman | C# minor | C minor | a semitone below |
+
+The same note once, a fifth or fourth away five times, the relative key
+four, elsewhere twice; bright or dark agreed eight of twelve. The picks
+are never random: ten of twelve sit in the key's own family, exactly
+where a tonic is ambiguous to ears and readers alike (the dominant that
+feels like home, the relative pair). So the round cannot score the
+reader by itself: on each disagreement either could be right. Snowman's
+bass sits on C# at concert pitch (69.1 and 139.1 Hz), so that one is the
+ear's miss. **Second round:** the Tonic Duel page (the same clips, two
+tones a song in a shuffled order, the reader's tonic and the ear's,
+names off the page; `duel-map.json` beside `set.json` holds which is
+which), the listener choosing which sounds like home; eleven songs, The
+Little Sprite left out where the two agree.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
