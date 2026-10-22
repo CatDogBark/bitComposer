@@ -37,14 +37,19 @@ class WriterTests(unittest.TestCase):
         others = [_song("b"), _song("c")]
         for s in others:
             s.notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(4) for x in (0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5)]
-        table = writer.fit(rhythm.bass_units(others))
-        notes, figures = writer.bass(_song(), table, random.Random(1), key=(0, "major"))
+        model = writer.fit(rhythm.bass_units(others))
+        self.assertIsInstance(model, tables.Cache)
+        notes, figures = writer.bass(_song(), model, random.Random(1), key=(0, "major"))
         self.assertEqual(len(figures), 4)
+        self.assertTrue(all(writer.on_grid(f, 4) for f in figures))
         self.assertTrue(all(0.0 <= a < b <= 16.0 for a, b, _ in notes))
         self.assertTrue(all(36.0 <= m < 60.0 for _, _, m in notes))
         self.assertEqual(writer.sounded(_song().notes["bass"]), 0.4)
-        again, _ = writer.bass(_song(), table, random.Random(1), key=(0, "major"))
+        again, _ = writer.bass(_song(), model, random.Random(1), key=(0, "major"))
         self.assertEqual(notes, again)                                        # the seed settles it
+        self.assertTrue(writer.on_grid("0:R 1/2:r 3:5", 2))
+        self.assertFalse(writer.on_grid("0:R 1/3:R", 4))
+        self.assertTrue(writer.on_grid("-", 1))
 
 
 if __name__ == "__main__":

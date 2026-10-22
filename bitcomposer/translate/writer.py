@@ -5,8 +5,11 @@ The song is one of the readings (rhythm.load's Song: its bars and chords
 in beats, its parts' notes); the table is fitted on every other song in
 the database, so the song never votes for its own bars; the habit is the
 song's own, read from its bass (the generator's writer draws one from the
-habits table); then bar by bar a figure is drawn under the part, the
-meter, the figure before and the habit, and each token becomes a note:
+habits table); then bar by bar a figure is drawn as the song's own
+mixture over the table (tables.Cache: the figure before again, one the
+song played earlier, or a new one under the part, the meter, the figure
+before and the habit; a new figure must sit on the song's own grid), and
+each token becomes a note:
 its pitch the chord tone its mark names in the chord sounding at its
 onset (R the root, r the root an octave up, 3 5 7 the chord's own, s the
 sus tone, + a passing tone: the key's scale step above the root, or the
@@ -20,6 +23,7 @@ length than the meter's is left silent.
 import math
 import random
 import statistics
+from collections import Counter
 from fractions import Fraction
 
 from . import harmony, rhythm, roles as R, tables
@@ -31,13 +35,19 @@ LOW = 0.1                             # the register's floor: this quantile of t
 SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
 
 
-def fit(units, floor_cls=rhythm.BarCells) -> tables.Table:
-    """The table the writer draws from, fitted on these units (the song written for left out by the caller)."""
-    return tables.Table(SHAPE, "bass", votes=tables.SHARES, floor=floor_cls(units), discount=DISCOUNT,
-                        covers=len(floor_cls.COVERS)).fit(units)
+def fit(units, floor_cls=rhythm.BarCells) -> tables.Cache:
+    """The model the writer draws from, fitted on these units (the song written for left out by the caller)."""
+    units = list(units)
+    return tables.Cache.fit(units, SHAPE, name="bass", votes=tables.SHARES, floor=floor_cls(units), discount=DISCOUNT,
+                            covers=len(floor_cls.COVERS))
 
 
-def bass(song: rhythm.Song, table: tables.Table, rng: random.Random, habit: str | None = None,
+def on_grid(figure: str, division: int) -> bool:
+    """Whether a figure's positions all sit on a grid of this many steps a beat."""
+    return all(division % Fraction(t.partition(":")[0]).denominator == 0 for t in rhythm._tokens(figure))
+
+
+def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
          key: tuple | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi) and the figures drawn, one a bar."""
     own = song.notes.get(R.BASS, [])
@@ -49,15 +59,17 @@ def bass(song: rhythm.Song, table: tables.Table, rng: random.Random, habit: str 
     sounds = sounded(own)
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
-    notes, figures, previous, last_root = [], [], rhythm.START, tonic
+    notes, figures, previous, last_root, played = [], [], None, tonic, Counter()
     for a, b in song.bars:
         if round(b - a) != song.meter:
             continue
-        values = {"part": R.BASS, "meter": song.meter, "previous": previous, "habit": habit}
-        figure = table.draw(table.context(tables.Unit(song.sid, song.game, "", values)), rng, values)
+        values = {"part": R.BASS, "meter": song.meter, "previous": previous or rhythm.START, "habit": habit}
+        figure = model.draw(tables.Unit(song.sid, song.game, "", values), previous, played, rng,
+                            keep=lambda f: on_grid(f, song.division))
         new, last_root = realize(figure, a, b, song, low, sounds, scale, last_root)
         notes += new
         figures.append(figure)
+        played[figure] += 1
         previous = figure
     return notes, figures
 
