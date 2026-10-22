@@ -6,9 +6,15 @@ Each guess keeps its evidence (the measures it was made from), and a
 correction overrides it. Drums first: noise, samples with no pitch, or one
 sample struck at one or two pitches (FFVI's percussion plays at G#3, the
 driver's own pitch). Then the pitched voices by register and motion: the
-bass the lowest line, the melody the most varied line on top, held notes
-harmony, fast cycling ones an arp; a voice playing another's notes (the same
-pitches and rhythm, a delay or an octave apart) its doubling."""
+bass the lowest line, held notes harmony, fast cycling ones an arp; a
+voice playing another's notes (the same pitches and rhythm, a delay or an
+octave apart) its doubling. The melody is the most varied line among the
+voices that are heard: on the tune check (ten songs, docs/idiom/phase-1-
+readers.md) the most varied line outright was a voice playing six notes in
+a song or a quiet high line under a louder one in two songs of three, so a
+candidate must sound on a quarter of the beats, at a quarter of the loudest
+voice's level, with its median below C6 (Jungle's noises sit above), and
+its variety is weighed by how much it is heard."""
 import bisect
 import math
 import statistics
@@ -39,6 +45,10 @@ def _features(notes, grid) -> dict:
     seq = [round(m) for m in mids]
     moves = [abs(b - a) for a, b in zip(seq, seq[1:])]
     span = (notes[-1].start - notes[0].start) or 1.0
+    if grid and grid.beat_times:
+        presence = len({math.floor(grid.beats(p.start)) for p in notes}) / len(grid.beat_times)
+    else:
+        presence = min(1.0, len(notes) / max(1.0, span / beat))
     return {
         "notes": len(notes),
         "unpitched": sum(1 for p in notes if p.midi is None) / len(notes),
@@ -49,7 +59,9 @@ def _features(notes, grid) -> dict:
         "length_beats": statistics.median(lengths) / beat if lengths else 0.0,
         "per_beat": len(notes) / (span / beat) if beat else 0.0,
         "steps": sum(1 for m in moves if 0 < m <= 2) / len(moves) if moves else 0.0,
+        "leaps": sum(1 for m in moves if m >= 5) / len(moves) if moves else 0.0,
         "repeats": sum(1 for m in moves if m == 0) / len(moves) if moves else 0.0,
+        "presence": presence,            # the share of the song's beats the voice has a note on
         "entropy": _entropy(Counter(seq)) if seq else 0.0,
         "level": statistics.median(p.level for p in notes),
     }
@@ -84,6 +96,9 @@ def _doubles(a, b, window: float = 0.5) -> tuple[float, float] | None:
     return best
 
 
+MELODY_PRESENT = 0.25                # the share of the song's beats a melody candidate has a note on
+MELODY_HEARD = 0.25                  # and of the loudest pitched voice's level it has
+MELODY_CEILING = 84                  # the highest median pitch a tune sits at (C6)
 ECHO_DELAY = (0.025, 0.5)            # seconds an echo part may follow the part it copies
 ECHO_HELD = 0.6                      # the share of its notes that must be copies, one delay apart
 
@@ -149,6 +164,7 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     tonal = [v for v in tonal if v not in roles]
     if not tonal:
         return sorted(roles.values(), key=lambda r: r.voice)
+    loudest = max(feats[v]["level"] for v in tonal)
     lowest = min(tonal, key=lambda v: feats[v]["median"])
     for v in tonal:
         f = feats[v]
@@ -160,13 +176,16 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         if feats[v]["length_beats"] >= 2.0:
             roles[v] = Role(v, HARMONY, evidence={"length_beats": round(feats[v]["length_beats"], 2)})
     rest = [v for v in rest if v not in roles]
-    # the melody: the most varied line, leaning toward the top
+    # the melody: of the lines heard (present, loud enough, below the ceiling), the most varied, weighed by how
+    # much it is heard; none heard, no melody (a song of drums and bass, or noises where a tune would be)
     def melodic(v):
         f = feats[v]
-        return f["entropy"] * (1 + f["steps"]) * (1 - f["repeats"]) + (f["median"] - 60) / 24
-    if rest:
-        top = max(rest, key=melodic)
-        roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("entropy", "steps", "median")})
+        return f["entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
+    heard = [v for v in rest if feats[v]["presence"] >= MELODY_PRESENT and feats[v]["level"] >= MELODY_HEARD * loudest
+             and feats[v]["median"] <= MELODY_CEILING]
+    if heard:
+        top = max(heard, key=melodic)
+        roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("entropy", "steps", "leaps", "presence", "level", "median")})
     for v in rest:
         if v in roles:
             continue
