@@ -236,7 +236,8 @@ class Score:
     aligned: float = 0.0              # how closely the key-ons lined up with that timer
     on_ticks: bool = False
     snap: object = None               # the snapshot, where there is one: the samples' RAM, pitch modulation's recording
-    pcm_of: dict = field(default_factory=dict)   # a sample's addresses -> a brr.Sample for a score with no snapshot
+    pcm_of: dict = field(default_factory=dict)   # a sample's addresses -> a brr.Sample, for a score with no snapshot
+    key_of: dict = field(default_factory=dict)   # and -> its name across songs (the readers' sample key)
 
 
 class _Master:
