@@ -313,3 +313,14 @@ class FreeWritingTests(unittest.TestCase):
         env = writer.free_drum_envelope({"K", "S"})("0:K", 4)
         self.assertTrue(writer.drum_within("0:K 2:S 7/2:S", env))
         self.assertFalse(writer.drum_within("0:K 2:h", env))
+
+    def test_form_spans_follow_the_parts_and_copy_a_repeat(self):
+        song = rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4.0) for k in range(14)], [], numbers=list(range(14)),
+                           parts=[(0, 8, None, "A"), (8, 4, None, "B"), (12, 2, None, "C")])
+        own = ["0:R"] * 14
+        self.assertEqual(writer.form_spans(song, own), [(0, 8, 4, None), (8, 4, 4, None), (12, 2, 2, None)])
+        song.parts = [(0, 4, None, "A"), (4, 4, 0, "A"), (8, 4, None, "B"), (12, 2, None, "C")]
+        self.assertEqual(writer.form_spans(song, own)[1], (4, 4, 4, 0))          # A again: copied from bar 0
+        song.parts = [(0, 4, None, "A"), (4, 8, 0, "A")]                          # a repeat of another length: written anew
+        self.assertEqual(writer.form_spans(song, own)[1], (4, 8, 4, None))
+        self.assertEqual(writer.form_spans(song, own)[2:], [(12, 1, 1, None), (13, 1, 1, None)])
