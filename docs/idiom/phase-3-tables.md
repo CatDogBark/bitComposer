@@ -465,6 +465,33 @@ quarter roots, forty-eight alternating eighth roots with a syncopated
 root figure, nineteen of a root-third-fifth, the rests kept. For the
 generator (phase 4) the spans come from the form reader's sections and a
 table of periods and span lengths by habit, not from the song itself.
+
+**Terra belongs** (the listener, 2026-10-22, the fifth version). His
+Locke: "crowding out the rest of the song, jumping around, covering the
+melody; the voice sounds right." Measured: Locke's own bass strikes 5 a
+bar (mean 6.9), the written 8 (mean 9.6), seven of its last eight bars
+sixteenth bars of 16 strikes, all on one tone (sixteen fifths in a row)
+and the recurring pattern opening on an octave-up root Locke never
+plays; no register collision (the melody's floor 58, the written bass's
+top 50). The density ceiling's "or its busiest bar" clause had let one
+rolled 21-strike bar license sixteenths everywhere, and the manner knew
+nothing of tones. Three rounds: (1) the ceiling from the typical bar and
+the manner extended to tones (octave-up roots only where the song plays
+them, as many different tones a bar as its own bars have, the roots and
+fifths' share within its own range, a one-tone bar of PEDAL strikes
+only where PEDAL_SHARE of its own such bars are), after which Locke
+thinned to two-strike bars (half the median is too loose for a walking
+bass); (2) the strikes a bar from the middle half of the song's own bars
+widened by SLACK, after which one eight-strike figure heavy in passing
+tones came back nine times where Locke's second half changes every bar;
+(3) the roots' share held like the anchors', and a bar in no span must
+change its rhythm from the bar before. Locke now: roots 56 % (own 45),
+passing tones 21 (21), fifths 14 (21), thirds 8 (13); three- and
+eight-strike bars; no bar repeating the one before. Terra under the same
+rules: four bars of a five-strike root figure, the forty-eight-bar
+alternation, then eighteen bars of a six-strike pedal on the fifth,
+which Terra's own bass licenses (its intro bars are thirds and it has
+bars of fifths near its end): for the ear.
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
 (medium walking), seed 1, beside the originals, in the player's folder
