@@ -63,6 +63,8 @@ def _features(notes, grid) -> dict:
         "repeats": sum(1 for m in moves if m == 0) / len(moves) if moves else 0.0,
         "presence": presence,            # the share of the song's beats the voice has a note on
         "entropy": _entropy(Counter(seq)) if seq else 0.0,
+        "pc_entropy": _entropy(Counter(m % 12 for m in seq)) if seq else 0.0,   # of pitch classes: an arpeggio
+                                                                                # over octaves is not a varied line
         "level": statistics.median(p.level for p in notes),
     }
 
@@ -110,6 +112,8 @@ ECHO_SELF = 0.5                      # a voice repeating its own pitches at the 
 ECHO_SURE = 0.004                    # seconds: the share within this of the delay is the echo's sureness (the
                                      # detector's old rule; the beat trusts an echo sure to ECHO_HELD)
 MELODY_DENSE = 2.0                   # notes a beat beyond which a line is figuration more than tune
+HELD_SPARSE = 0.25                   # held notes (HARMONY) on fewer of the beats than this are a pad; a line held
+PAD_VARIETY = 2.3                    # on more and over this pitch-class entropy is a slow tune, not harmony
 
 
 def echoes(song) -> dict:
@@ -206,10 +210,12 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         if f["median"] <= feats[lowest]["median"] + 3 and f["median"] < 55:
             roles[v] = Role(v, BASS, evidence={"median": round(f["median"], 1)})
     rest = [v for v in tonal if v not in roles]
-    # held chords: notes of two beats and more
+    # held chords: notes of two beats and more, unless the line is present and varied (a slow tune: on the
+    # generator's own songs a melody of half notes read as harmony and its arpeggio as the melody)
     for v in rest:
-        if feats[v]["length_beats"] >= 2.0:
-            roles[v] = Role(v, HARMONY, evidence={"length_beats": round(feats[v]["length_beats"], 2)})
+        f = feats[v]
+        if f["length_beats"] >= 2.0 and (f["presence"] < HELD_SPARSE or f["pc_entropy"] < PAD_VARIETY):
+            roles[v] = Role(v, HARMONY, evidence={"length_beats": round(f["length_beats"], 2)})
     rest = [v for v in rest if v not in roles]
     # the melody: of the lines heard (present, loud enough, below the ceiling), the most varied, weighed by how
     # much it is heard and held back where it runs over MELODY_DENSE notes a beat (figuration: Super Mario World's
@@ -217,13 +223,13 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     # and bass, or noises where a tune would be)
     def melodic(v):
         f = feats[v]
-        return (f["entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
+        return (f["pc_entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
                 * min(1.0, MELODY_DENSE / max(f["per_beat"], 1e-9)))
     heard = [v for v in rest if feats[v]["presence"] >= MELODY_PRESENT and feats[v]["level"] >= MELODY_HEARD * loudest
              and feats[v]["median"] <= MELODY_CEILING]
     if heard:
         top = max(heard, key=melodic)
-        roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("entropy", "steps", "leaps", "presence", "level", "median")})
+        roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("pc_entropy", "steps", "leaps", "presence", "level", "median")})
     for v in rest:
         if v in roles:
             continue
