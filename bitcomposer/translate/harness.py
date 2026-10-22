@@ -62,7 +62,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 from ..spc import convert
-from . import harmony, reading, rhythm, store, writer
+from . import harmony, reading, rhythm, store, tables, writer
 from . import roles as R
 from . import roles as roles_mod
 
@@ -95,6 +95,7 @@ class Context:
     by_voice: dict = field(default_factory=dict)   # voice -> (role, its notes as the store packs them)
     models: dict | None = None        # the tables to write from (a pack's, packtables.read), else fitted on `songs`
     generated: bool = False           # a song the generator composed: its old parts are no manner to keep (free writing)
+    free: bool = False                # write free of the song's own part (set for a generated song; may be set for a real one)
 
 
 @dataclass
@@ -177,7 +178,7 @@ def context_of(original: convert.Score, song: dict, title: str, game: str, model
         keys[idx] = key
         pieces[key] = piece
     key = (r.key[0], r.key[1]) if r.key else None
-    ctx = Context(db, s.sid, game, title, key, s, songs, original, events, beats, keys, pieces, models=models, generated=True)
+    ctx = Context(db, s.sid, game, title, key, s, songs, original, events, beats, keys, pieces, models=models, generated=True, free=True)
     if r.form and r.form.loop_bar is not None and r.form.loop_seconds and r.form.loop_bar < len(r.grid.bar_times):
         ctx.loop = (r.grid.bar_times[r.form.loop_bar], r.form.loop_seconds)
     for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (s.sid,)):
@@ -230,6 +231,12 @@ def _pin_roles(r) -> None:
             if p.voice == v and p.sample is not None:
                 p.sample.piece = piece
     r.roles = roles
+
+
+def game_habits(habit_units: list, ctx: Context):
+    """A habits table of the song's game, the song itself left out (the pack's habit table, for a real song)."""
+    mine = [u for u in habit_units if u.game == ctx.game and u.song != ctx.sid]
+    return tables.Table(("part",), "habits", votes=tables.SHARES).fit(mine) if mine else None
 
 
 def looped(ctx: Context, notes: list) -> list:
@@ -402,16 +409,19 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     song.notes[R.BASS] = [(n[0], n[1], n[2], ctx.keys.get(int(n[5]), "noise")) for n in part if n[0] < end]
     log.append(f"bass voices {sorted(by_voice)}; the line on {v} (notes {length_of[v]:.2f} beats)"
                + "".join(f"; voice {t} {k[0]}" + (f" {k[1]:+d} semitones" if k[0] == "doubling" else "") for t, k in kinds.items()))
-    habit, free = None, False
+    habit, free = None, ctx.free
     if ctx.models and "bass" in ctx.models:
         model = ctx.models["bass"]                                  # the pack's table
-        if ctx.generated and "bass_habits" in ctx.models:           # and its habit, drawn once a song: the old part is no manner
-            habit = ctx.models["bass_habits"].draw((R.BASS,), random.Random(seed * 7 + 1))
-            free = True
-            log.append(f"free writing: the habit drawn from the pack, {habit}")
+        habits = ctx.models.get("bass_habits") if free else None
     else:
         units = rhythm.bass_units(ctx.songs)
         model = writer.fit([u for u in units if u.song != ctx.sid])
+        habits = game_habits(rhythm.habits(units), ctx) if free else None
+    if free and habits is not None:                                 # the habit drawn once a song: the song's own part is no manner
+        habit = habits.draw((R.BASS,), random.Random(seed * 7 + 1))
+        log.append(f"free writing: the habit drawn from the game's, {habit}")
+    elif free:
+        free = False
     own = [rhythm.figure(struck, a, song) if struck else "-" for _, a, _, struck in rhythm.all_bars_of(song, R.BASS)]
     held = moments(ctx, set(by_voice))
     answered = stops(ctx, set(by_voice), part)
@@ -522,11 +532,14 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
             models[letters] = writer.fit([u for u in units if u.song != ctx.sid], name=name)
         notes_g = [n for n in song.notes[R.DRUMS] if rhythm.LETTERS.get(song.pieces.get(n[3]), "o") in letters]
         group_locks[letters] = locks(ctx, kit_voices, notes_g)
-    habit, free = None, False
-    if ctx.models and ctx.generated and "drum_habits" in ctx.models:
-        habit = ctx.models["drum_habits"].draw((R.DRUMS,), random.Random(seed * 7 + 2))
-        free = True
-        log.append(f"free writing: the habit drawn from the pack, {habit}")
+    habit, free = None, ctx.free
+    if free:
+        habits = ctx.models.get("drum_habits") if ctx.models else game_habits(rhythm.habits(rhythm.drum_units(ctx.songs)), ctx)
+        if habits is not None:
+            habit = habits.draw((R.DRUMS,), random.Random(seed * 7 + 2))
+            log.append(f"free writing: the habit drawn from the game's, {habit}")
+        else:
+            free = False
     hits, figures = writer.drums(song, models, random.Random(seed), hold=held | answered, locks=group_locks, habit=habit, free=free)
     mine_units = rhythm.drum_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, kit {mine_units[0].values['kit'] if mine_units else '-'}, "
@@ -583,16 +596,16 @@ def score_with(ctx: Context, parts: list, title: str, message: list) -> convert.
                          o.tick_hz, o.aligned, o.on_ticks, o.snap, dict(o.pcm_of), dict(o.key_of), message=message)
 
 
-def stems(ctx: Context, parts: list, out_dir: str) -> list[str]:
+def stems(ctx: Context, parts: list, out_dir: str, label: str = "written") -> list[str]:
     """Modules for a page that switches each part while the song plays: the rest (no written part's voices), and
-    each part as the song plays it and as written. Returns the paths."""
+    each part as the song plays it and as written (named `label`). Returns the paths."""
     os.makedirs(out_dir, exist_ok=True)
     replaced = set().union(*(w.replaced for w in parts)) if parts else set()
     o = ctx.original
     sets = [("rest", [n for n in o.notes if n.voice not in replaced])]
     for w in parts:
         sets.append((f"{w.part} original", [n for n in o.notes if n.voice in w.replaced]))
-        sets.append((f"{w.part} written", w.notes))
+        sets.append((f"{w.part} {label}", w.notes))
     paths = []
     for label, notes in sets:
         sc = convert.Score(notes, o.seconds, o.voices, o.master, o.fade, f"{ctx.title} {label}"[:25], o.game, o.artist, o.row_hz,

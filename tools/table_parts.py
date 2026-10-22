@@ -29,12 +29,15 @@ def main(argv=None) -> int:
     ap.add_argument("--title", help="the module's title (25 characters show in a player)")
     ap.add_argument("--figures", help="write each part's figures drawn and the song's own beside, as JSON")
     ap.add_argument("--stems", help="write the rest and each part's original and written as modules of their own here")
+    ap.add_argument("--free", action="store_true", help="write free of the song's own part (phase 4): the habit drawn from the game's, any figure the table knows, bar by bar from the mixture")
+    ap.add_argument("--label", default="written", help="the stems' name for the written part (default written; e.g. free)")
     a = ap.parse_args(argv)
     db = store.connect(a.db)
     ctx = harness.load(db, a.spc, a.seconds)
     if ctx is None:
         print(f"{a.spc}: not in the readings, or not counted", file=sys.stderr)
         return 1
+    ctx.free = a.free
     wanted = [p.strip() for p in a.parts.split(",") if p.strip()]
     writers = {"bass": harness.write_bass, "drums": harness.write_drums}
     parts = []
@@ -68,7 +71,7 @@ def main(argv=None) -> int:
             json.dump({"song": ctx.title, "game": ctx.game, "seed": a.seed,
                        "parts": {w.part: {"written": w.figures, "own": w.own, "voices": sorted(w.replaced)} for w in parts}}, f, indent=1)
     if a.stems:
-        for path in harness.stems(ctx, parts, a.stems):
+        for path in harness.stems(ctx, parts, a.stems, label=a.label):
             print(f"  stem {os.path.basename(path)}")
     return 0
 
