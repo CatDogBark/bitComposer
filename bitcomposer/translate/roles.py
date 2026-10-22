@@ -103,6 +103,8 @@ ECHO_DELAY = (0.025, 0.5)            # seconds an echo part may follow the part 
 ECHO_HELD = 0.6                      # the share of its notes that must be copies, one delay apart
 ECHO_SPREAD = 0.03                   # seconds the delay may wobble around its commonest value (Gang-Plank Galleon's
                                      # echo voice follows 150 to 200 ms behind, by the driver's timer)
+ECHO_SHARP = 0.008                   # and within this of it, ECHO_FOCUS of the notes must still fall: a dense voice
+ECHO_FOCUS = 0.3                     # repeating a few pitches matches any delay by chance, spread evenly
 MELODY_DENSE = 2.0                   # notes a beat beyond which a line is figuration more than tune
 
 
@@ -112,7 +114,8 @@ def echoes(song) -> dict:
     spare voice (Star Fox's Corneria: one part copying another 1.4 steps of
     its grid later, 246 ms, every note off the grid). A copy is a note of
     the same pitch class; the delay is the one most of them share, within
-    ECHO_SPREAD of its commonest value."""
+    ECHO_SPREAD of its commonest value, ECHO_FOCUS of them within ECHO_SHARP
+    (chance matches in a dense voice spread evenly over the window)."""
     by = {}
     for p in song.notes:
         if p.midi is not None and p.level > 0:
@@ -135,7 +138,8 @@ def echoes(song) -> dict:
                 continue
             mode = flat.most_common(1)[0][0] / 500
             share = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SPREAD for d in ds)) / len(notes)
-            if share >= ECHO_HELD and (best is None or share > best[0]):
+            focus = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SHARP for d in ds)) / len(notes)
+            if share >= ECHO_HELD and focus >= ECHO_FOCUS and (best is None or share > best[0]):
                 best = (share, u, mode)
         if best:
             out[v] = (best[1], best[2])
