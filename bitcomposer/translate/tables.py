@@ -18,7 +18,11 @@ outcome never counted still has a likelihood and can be drawn),
 Witten-Bell's way: the coarser estimate gets the weight t / (n + t), t the
 distinct outcomes seen under the context and n its votes, so a context
 seen in few songs, or one whose songs all play something different, leans
-on the broader one. A per-game table is the shared context with the game
+on the broader one; or by absolute discounting (a discount D given): each
+outcome gives up D of its votes, or all of them if it has fewer, and what
+is given up goes to the coarser estimate, so an outcome one song played a
+little gives up nearly everything and one forty songs play keeps nearly
+all (the better fit where most outcomes are one song's). A per-game table is the shared context with the game
 last, backing off to the shared one; a conditioning proposed is tried by
 adding it.
 
@@ -77,11 +81,13 @@ class Table:
     """Outcomes counted under contexts, each song voting once for each
     distinct outcome it plays under a context (see the module)."""
 
-    def __init__(self, conditionings=(), name: str = "", votes: str = SONGS, floor=None):
+    def __init__(self, conditionings=(), name: str = "", votes: str = SONGS, floor=None, discount: float | None = None):
         self.conditionings = tuple(conditionings)
         self.name = name
         self.by = votes                  # SONGS or SHARES (the module)
         self.floor = floor               # below the root: None (an even share), or a model with p(outcome, values) and draw(values, rng)
+        self.discount = discount         # None: Witten-Bell; else absolute discounting by this much a vote
+        self._mass: dict = {}            # context -> (the votes kept at its level, the votes given to the coarser one)
         self.votes: dict = {}            # context -> {outcome: songs voting for it}
         self.songs: Counter = Counter()  # context -> songs counted under it
         self.units: Counter = Counter()  # context -> units counted under it
@@ -110,8 +116,20 @@ class Table:
                 votes[outcome] += n / totals[song] if self.by == SHARES else 1
             self.votes[c] = dict(votes)
             self.songs[c] = len(totals)
-        self._dist.clear()
+        self._weigh()
         return self
+
+    def _weigh(self) -> None:
+        """Each context's mass kept at its level and given to the coarser one (the module's two smoothings)."""
+        self._mass.clear()
+        self._dist.clear()
+        for c, votes in self.votes.items():
+            n = sum(votes.values())
+            if self.discount is None:
+                self._mass[c] = (n, len(votes))
+            else:
+                given = sum(min(v, self.discount) for v in votes.values())
+                self._mass[c] = (n - given, given)
 
     def p(self, outcome: str, context: tuple, values: dict | None = None) -> float:
         """The outcome's probability under the context (see the module);
@@ -123,12 +141,13 @@ class Table:
             o = outcome
             prob = self.floor.p(outcome, values or {})
         for k in range(len(context) + 1):
-            votes = self.votes.get(context[:k])
+            c = context[:k]
+            votes = self.votes.get(c)
             if not votes:
                 continue                                # a context never seen: the coarser estimate stands
-            n = sum(votes.values())
-            t = len(votes)
-            prob = (votes.get(o, 0) + t * prob) / (n + t)
+            kept, given = self._mass[c]
+            own = votes.get(o, 0) if self.discount is None else max(votes.get(o, 0) - self.discount, 0)
+            prob = (own + given * prob) / (kept + given)
         return prob
 
     def score(self, units) -> float:
@@ -139,15 +158,19 @@ class Table:
         return sum(math.log2(self.p(u.outcome, self.context(u), u.values)) for u in units) / len(units)
 
     def _level(self, context: tuple):
-        """A context's own votes, for draws: (outcomes, cumulative votes, n, t), or None where it was never seen."""
+        """A context's own votes, for draws: (outcomes, their cumulative
+        weights, the mass kept at this level, the mass given to the coarser
+        one), or None where the context was never seen or keeps nothing."""
         if context not in self._dist:
             votes = self.votes.get(context)
-            if not votes:
-                self._dist[context] = None
-            else:
-                outcomes = list(votes)
-                cum = list(itertools.accumulate(votes[o] for o in outcomes))
-                self._dist[context] = (outcomes, cum, cum[-1], len(outcomes))
+            level = None
+            if votes:
+                weights = {o: v if self.discount is None else max(v - self.discount, 0) for o, v in votes.items()}
+                outcomes = [o for o, w in weights.items() if w > 0]
+                if outcomes:
+                    cum = list(itertools.accumulate(weights[o] for o in outcomes))
+                    level = (outcomes, cum) + self._mass[context]
+            self._dist[context] = level
         return self._dist[context]
 
     def draw(self, context: tuple, rng: random.Random, values: dict | None = None) -> str:
@@ -160,8 +183,8 @@ class Table:
             level = self._level(context[:k])
             if level is None:
                 continue
-            outcomes, cum, n, t = level
-            if rng.random() * (n + t) < n:
+            outcomes, cum, kept, given = level
+            if rng.random() * (kept + given) < kept:
                 return rng.choices(outcomes, cum_weights=cum)[0]
         if self.floor is not None:
             return self.floor.draw(values or {}, rng)
@@ -174,19 +197,21 @@ class Table:
         return sum(len(v) for c, v in self.votes.items() if len(c) == len(self.conditionings))
 
     def to_json(self) -> dict:
-        return {"conditionings": list(self.conditionings), "votes_by": self.by, "vocabulary": sorted(self.vocabulary),
+        return {"conditionings": list(self.conditionings), "votes_by": self.by, "discount": self.discount,
+                "vocabulary": sorted(self.vocabulary),
                 "contexts": [{"context": list(c), "songs": self.songs[c], "units": self.units[c], "votes": v}
                              for c, v in sorted(self.votes.items(), key=lambda cv: (len(cv[0]), [str(x) for x in cv[0]]))]}
 
     @classmethod
     def from_json(cls, d: dict, name: str = "") -> "Table":
-        t = cls(d["conditionings"], name, d.get("votes_by", SONGS))
+        t = cls(d["conditionings"], name, d.get("votes_by", SONGS), discount=d.get("discount"))
         t.vocabulary = set(d["vocabulary"])
         for row in d["contexts"]:
             c = tuple(row["context"])
             t.votes[c] = dict(row["votes"])
             t.songs[c] = row["songs"]
             t.units[c] = row.get("units", 0)
+        t._weigh()
         return t
 
 
@@ -211,12 +236,16 @@ def shapes(base: tuple, extras=(), game: bool = True) -> list[tuple]:
     return out
 
 
+FLOOR = ("floor",)                   # the shape that is the floor model alone, for the comparison
+
+
 def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: str = BY_GAME,
-            votes: str = SONGS, floor=None) -> list[Comparison]:
+            votes: str = SONGS, floor=None, discount: float | None = None) -> list[Comparison]:
     """Fit each shape on the development half, score it on the held-out
     half (overall and by the value of `by`), and measure the spread of what
     it draws; best first. `floor`: a function of the development units
-    giving the floor model, fitted once for every shape."""
+    giving the floor model, fitted once for every shape and scored alone
+    too (FLOOR)."""
     units = list(units)
     dev = [u for u in units if half_of(u, split) == DEVELOPMENT]
     held = [u for u in units if half_of(u, split) == HELD_OUT]
@@ -225,8 +254,11 @@ def compare(units, shape_list, by: str | None = None, rng_seed: int = 1, split: 
         groups[u.values.get(by, "") if by else ""].append(u)
     bottom = floor(dev) if floor else None
     out = []
-    for shape in shape_list:
-        t = Table(shape, votes=votes, floor=bottom).fit(dev)
+    for shape in list(shape_list) + ([FLOOR] if bottom else []):
+        if shape == FLOOR:
+            t = Table((), floor=bottom)                # nothing counted: the floor's own likelihood and draws
+        else:
+            t = Table(shape, votes=votes, floor=bottom, discount=discount).fit(dev)
         out.append(Comparison(shape, t.score(held), {k: t.score(v) for k, v in groups.items()},
                               sum(1 for c in t.votes if len(c) == len(shape)), t.entries(),
                               simulate(t, held, random.Random(rng_seed))))
@@ -293,6 +325,7 @@ def main(argv=None) -> int:
     ap.add_argument("--split", choices=(BY_GAME, BY_SONG), default=BY_GAME)
     ap.add_argument("--votes", choices=(SONGS, SHARES), default=SONGS)
     ap.add_argument("--floor", choices=("none", "cells"), default="none")
+    ap.add_argument("--discount", type=float, default=0.0, help="absolute discounting by this much a vote; 0: Witten-Bell")
     ap.add_argument("--base", default="part,meter", help="the chain every shape starts from")
     ap.add_argument("--extras", default="tempo,previous,place,chord", help="each tried on the chain's end")
     ap.add_argument("--no-game", action="store_true", help="leave out the per-game shapes")
@@ -310,10 +343,11 @@ def main(argv=None) -> int:
     extras = tuple(x for x in args.extras.split(",") if x)
     floor = rhythm.BarCells if args.floor == "cells" else None
     cs = compare(units, shapes(base, extras, not args.no_game), by="part", rng_seed=args.seed, split=args.split,
-                 votes=args.votes, floor=floor)
+                 votes=args.votes, floor=floor, discount=args.discount or None)
     dev = sum(1 for u in units if half_of(u, args.split) == DEVELOPMENT)
     print(report(cs, parts, f"rhythm: {len(units)} bars, {dev} development, {len(units) - dev} held-out; "
-                            f"split by {args.split}, votes {args.votes}, floor {args.floor}"))
+                            f"split by {args.split}, votes {args.votes}, floor {args.floor}, "
+                            f"{'discount ' + str(args.discount) if args.discount else 'Witten-Bell'}"))
     return 0
 
 

@@ -170,3 +170,35 @@ class VotesFloorSplitTests(unittest.TestCase):
         t = Table(("part",), floor=floor).fit(us)
         self.assertGreater(t.p("0 1 2", ("bass",), values), 0)
         self.assertEqual(len(rhythm.cells(t.draw(("other",), random.Random(2), values), 4)), 4)
+
+
+class DiscountTests(unittest.TestCase):
+    def test_absolute_discounting_sums_to_one_and_keeps_a_common_outcome_more(self):
+        us = _units() + [Unit(f"s{i}", "A", "x", {"meter": 4}) for i in range(10, 30)] + \
+            [Unit(f"s{i}", "A", f"rare{i}", {"meter": 4}) for i in range(30, 50)]      # x in 22 songs, 20 one-song outcomes
+        wb = Table(("meter",)).fit(us)
+        ad = Table(("meter",), discount=0.75).fit(us)
+        for t in (wb, ad):
+            total = sum(t.p(o, (4,)) for o in t.vocabulary) + t.p("never", (4,))
+            self.assertAlmostEqual(total, 1.0, places=9)
+        self.assertGreater(ad.p("x", (4,)), wb.p("x", (4,)))
+        self.assertLess(ad.p("rare30", (4,)), wb.p("rare30", (4,)))
+        rng = random.Random(5)
+        drawn = [ad.draw((4,), rng) for _ in range(1000)]
+        self.assertAlmostEqual(drawn.count("x") / 1000, ad.p("x", (4,)) / sum(ad.p(o, (4,)) for o in ad.vocabulary), delta=0.05)
+        back = Table.from_json(json.loads(json.dumps(ad.to_json())))
+        self.assertAlmostEqual(back.p("x", (4,)), ad.p("x", (4,)))
+
+    def test_the_floor_alone_is_compared_too(self):
+        class Floor:
+            def __init__(self, units):
+                pass
+            def p(self, outcome, values):
+                return 0.25
+            def draw(self, values, rng):
+                return "x"
+        us = _units() + [Unit("s4", "Chrono Trigger", "y", {"meter": 4}), Unit("s5", "EarthBound", "x", {"meter": 4})]
+        cs = tables.compare(us, [(), ("meter",)], floor=Floor, discount=0.5)
+        self.assertEqual({c.shape for c in cs}, {(), ("meter",), tables.FLOOR})
+        self.assertAlmostEqual(next(c.bits for c in cs if c.shape == tables.FLOOR), -2.0)
+        self.assertIn("floor", tables.report(cs))
