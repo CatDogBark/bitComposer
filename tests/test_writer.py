@@ -25,13 +25,21 @@ class WriterTests(unittest.TestCase):
 
     def test_realize(self):
         s = _song()
-        notes, root = writer.realize("0:R 1/2:r 1:5 2:3 3:+", 0.0, 4.0, s, 36, 0.5, {0, 2, 4, 5, 7, 9, 11}, 0)
+        notes, root, last = writer.realize("0:R 1/2:r 1:5 2:3 3:+", 0.0, 4.0, s, 36, 0.5, {0, 2, 4, 5, 7, 9, 11}, 0)
         self.assertEqual([(a, b, m) for a, b, m in notes], [(0.0, 0.25, 36.0), (0.5, 0.75, 48.0), (1.0, 1.5, 43.0), (2.0, 2.5, 40.0), (3.0, 3.5, 38.0)])
-        self.assertEqual(root, 0)
-        notes, root = writer.realize("0:R 2:7", 8.0, 12.0, s, 36, 1.0, set(), 0)   # the G minor seventh bar
+        self.assertEqual((root, last), (0, 38.0))
+        notes, root, last = writer.realize("0:R 2:7", 8.0, 12.0, s, 36, 1.0, set(), 0, 38.0)   # the G minor seventh bar
         self.assertEqual([m for _, _, m in notes], [43.0, 41.0])
-        self.assertEqual(root, 7)
-        self.assertEqual(writer.realize("-", 0.0, 4.0, s, 36, 1.0, set(), 5), ([], 5))
+        self.assertEqual((root, last), (7, 41.0))
+        self.assertEqual(writer.realize("-", 0.0, 4.0, s, 36, 1.0, set(), 5, 40.0), ([], 5, 40.0))
+
+    def test_place(self):
+        self.assertEqual(writer.place(0, 36, None), 36)                     # the first note: lowest
+        self.assertEqual(writer.place(0, 36, 46.0), 48)                     # C nearest to 46: 48, not 36
+        self.assertEqual(writer.place(0, 36, 42.0), 36)                     # as near either way: the lower
+        self.assertEqual(writer.place(7, 36, 36.0), 43)
+        self.assertEqual(writer.place(7, 36, 50.0), 43)                     # 55 is beyond the reach (36 + 16)
+        self.assertEqual(writer.place(0, 36, 50.0, octave_up=True), 48)
 
     def test_a_bass_written_from_a_table(self):
         others = [_song("b"), _song("c")]

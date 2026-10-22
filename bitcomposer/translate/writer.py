@@ -57,8 +57,11 @@ its pitch the chord tone its mark names in the chord sounding at its
 onset (R the root, r the root an octave up, 3 5 7 the chord's own, s the
 sus tone, + a passing tone: the key's scale step above the root, or the
 step below where the scale has none, ? the root; no chord fitting, the
-last root, or the tonic), in the song's own bass register (the octave up
-from the lowest tenth of its bass notes); its length to the next onset in
+last root, or the tonic), in the octave nearest the note before it
+within the song's own bass register (from the lowest tenth of its bass
+notes up to REACH above it, the first note lowest), so a walking line
+walks (placed in a fixed octave, Locke's leapt by thirds and fifths
+where its own moves by step); its length to the next onset in
 the bar or the bar's end, sounding the share of that the song's bass
 sounds of its own gaps (the median, between SOUNDS). A bar of another
 length than the meter's is left silent.
@@ -76,6 +79,7 @@ SHAPE = ("part", "meter", "habit", "previous")   # the bass table's shape, the h
 REST = "-"
 DISCOUNT = 0.75
 LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
+REACH = 16                            # semitones above the floor a note may go (an octave and a third)
 SLACK = 1                             # strikes: how far outside the middle half of the song's own bars a new figure may be
 DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
 ANCHORS = {"R", "r", "5"}             # the marks that anchor a bar: roots and fifths
@@ -254,16 +258,30 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             if figure != REST:
                 state["played"][figure] += 1
             state["previous"] = figure
-    notes, last_root = [], tonic
+    notes, last_root, previous = [], tonic, None
     for (a, b, _), figure in zip(bars, figures):
-        new, last_root = realize(figure, a, b, song, low, sounds, scale, last_root)
+        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous)
         notes += new
     return notes, figures
 
 
+def place(pc: int, low: int, previous: float | None, octave_up: bool = False) -> int:
+    """The midi note of a pitch class in the register: the octave nearest the
+    note before (the lower when as near), the lowest with no note before;
+    an octave up (r) is the lowest placing raised an octave."""
+    bottom = low + (pc - low) % 12
+    if octave_up:
+        return bottom + 12
+    if previous is None:
+        return bottom
+    options = [m for m in range(bottom, low + REACH + 1, 12)] or [bottom]
+    return min(options, key=lambda m: (abs(m - previous), m))
+
+
 def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds: float, scale: set,
-            last_root: int) -> tuple[list, int]:
-    """A figure's tokens as notes in the bar [a, b) (see the module); returns them and the last chord root used."""
+            last_root: int, previous: float | None = None) -> tuple[list, int, float | None]:
+    """A figure's tokens as notes in the bar [a, b) (see the module); returns
+    them, the last chord root used and the last note's midi."""
     tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
     out = []
     for i, (p, mark) in enumerate(tokens):
@@ -276,10 +294,10 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
             last_root, shape = c.root, c.shape
         else:
             shape = ""
-        pc = tone(last_root, shape, mark, scale)
-        midi = low + (pc - low) % 12 + (12 if mark == "r" else 0)
+        midi = place(tone(last_root, shape, mark, scale), low, previous, mark == "r")
         out.append((start, start + (until - start) * sounds, float(midi)))
-    return out, last_root
+        previous = float(midi)
+    return out, last_root, previous
 
 
 def tone(root: int, shape: str, mark: str, scale: set) -> int:
