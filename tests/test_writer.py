@@ -272,3 +272,30 @@ class DrumWriterTests(unittest.TestCase):
         self.assertEqual(hits, again)
         self.assertEqual(rhythm.drum_group("0:K 0:h 1:S 3/2:h", ("K", "S", "t")), "0:K 1:S")
         self.assertEqual(rhythm.drum_group("0:K 0:h 1:S 3/2:h", ("c",)), "-")
+
+
+class GeneratedSongTests(unittest.TestCase):
+    def test_a_generated_song_is_read_and_its_bass_and_drums_written_from_tables(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=30.0)
+        self.assertIsNotNone(ctx)
+        roles = {role for role, _ in ctx.by_voice.values()}
+        self.assertIn("bass", roles)
+        self.assertIn("drums", roles)
+        self.assertTrue(ctx.song.bars)
+        # the song's own bars as the pack's tables: enough to run the writers through the pack path
+        models = packtables.read({"tables": {k: v for k, v in {
+            "bass": packtables.fit("bass", rhythm.bass_units([ctx.song])),
+            **{"drums-" + "".join(g): packtables.fit("drums-" + "".join(g), rhythm.drum_group_units([ctx.song], g))
+               for g in rhythm.DRUM_GROUPS}}.items() if v is not None}})
+        ctx.models = models
+        bass = harness.write_bass(ctx, seed=1)
+        drums = harness.write_drums(ctx, seed=1)
+        self.assertIsNotNone(bass)
+        self.assertTrue(bass.notes and bass.figures)
+        self.assertIsNotNone(drums)
+        self.assertTrue(drums.notes)
+        new = harness.score_with(ctx, [bass, drums], "seed 5 new", ["test"])
+        self.assertEqual(len([n for n in new.notes if n.voice in bass.replaced]), len(bass.notes))

@@ -92,6 +92,7 @@ class Context:
     pieces: dict                      # sample key -> the piece the reading named it
     loop: tuple | None = None         # (the second the song loops back to, the loop's length in seconds), when heard
     by_voice: dict = field(default_factory=dict)   # voice -> (role, its notes as the store packs them)
+    models: dict | None = None        # the tables to write from (a pack's, packtables.read), else fitted on `songs`
 
 
 @dataclass
@@ -133,6 +134,43 @@ def load(db, spc_path: str, seconds: float = 60.0) -> Context | None:
     if loop_bar is not None and loop_seconds and loop_bar < len(bars):
         ctx.loop = (bars[loop_bar], loop_seconds)
     for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (sid,)):
+        ctx.by_voice[voice] = (role, [n for n in store.unpack(blob) if n[3] > 0])
+    return ctx
+
+
+def load_generated(song: dict, title: str, game: str, models: dict | None = None, seconds: float | None = None) -> Context | None:
+    """A song the generator composed (compose_song's dict), read as a game's
+    would be: its score (score.of_song), the readers over it, the reading kept
+    in a database of its own, and the harness's view of it; None when the
+    readers find no beat or no bass and no drums. `models`: the pack's tables
+    (packtables.read) the writers draw from."""
+    from .. import score as score_mod
+    original = score_mod.of_song(song)
+    if seconds is not None and seconds < original.seconds:
+        original.notes = [n for n in original.notes if n.start < seconds]
+        original.seconds = seconds
+    r = reading.of_score(original, game=game, title=title)
+    if r.grid is None:
+        return None
+    r.file, r.folder = f"{title}.generated", game
+    db = store.connect(":memory:")
+    store.keep(db, r)
+    songs, _ = rhythm.load(db)
+    if not songs:
+        return None
+    s = songs[0]
+    events = {(p.voice, round(p.start, 4)): p for p in r.song.notes}
+    beats = array("d")
+    beats.frombytes(db.execute("SELECT beats FROM beats WHERE song = ?", (s.sid,)).fetchone()[0])
+    keys, pieces = {}, {}
+    for idx, key, piece in db.execute("SELECT idx, key, piece FROM samples WHERE song = ?", (s.sid,)):
+        keys[idx] = key
+        pieces[key] = piece
+    key = (r.key[0], r.key[1]) if r.key else None
+    ctx = Context(db, s.sid, game, title, key, s, songs, original, events, beats, keys, pieces, models=models)
+    if r.form and r.form.loop_bar is not None and r.form.loop_seconds and r.form.loop_bar < len(r.grid.bar_times):
+        ctx.loop = (r.grid.bar_times[r.form.loop_bar], r.form.loop_seconds)
+    for voice, role, blob in db.execute("SELECT voice, role, notes FROM voices WHERE song = ?", (s.sid,)):
         ctx.by_voice[voice] = (role, [n for n in store.unpack(blob) if n[3] > 0])
     return ctx
 
@@ -307,8 +345,11 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     song.notes[R.BASS] = [(n[0], n[1], n[2], ctx.keys.get(int(n[5]), "noise")) for n in part if n[0] < end]
     log.append(f"bass voices {sorted(by_voice)}; the line on {v} (notes {length_of[v]:.2f} beats)"
                + "".join(f"; voice {t} {k[0]}" + (f" {k[1]:+d} semitones" if k[0] == "doubling" else "") for t, k in kinds.items()))
-    units = rhythm.bass_units(ctx.songs)
-    model = writer.fit([u for u in units if u.song != ctx.sid])
+    if ctx.models and "bass" in ctx.models:
+        model = ctx.models["bass"]                                  # the pack's table
+    else:
+        units = rhythm.bass_units(ctx.songs)
+        model = writer.fit([u for u in units if u.song != ctx.sid])
     own = [rhythm.figure(struck, a, song) if struck else "-" for _, a, _, struck in rhythm.all_bars_of(song, R.BASS)]
     held = moments(ctx, set(by_voice))
     answered = stops(ctx, set(by_voice), part)
@@ -411,8 +452,12 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
     for letters in rhythm.DRUM_GROUPS:
         if all(rhythm.drum_group(f, letters) == "-" for f in own):
             continue
-        units = rhythm.drum_group_units(ctx.songs, letters)
-        models[letters] = writer.fit([u for u in units if u.song != ctx.sid], name="drums-" + "".join(letters))
+        name = "drums-" + "".join(letters)
+        if ctx.models and name in ctx.models:
+            models[letters] = ctx.models[name]                      # the pack's table
+        else:
+            units = rhythm.drum_group_units(ctx.songs, letters)
+            models[letters] = writer.fit([u for u in units if u.song != ctx.sid], name=name)
         notes_g = [n for n in song.notes[R.DRUMS] if rhythm.LETTERS.get(song.pieces.get(n[3]), "o") in letters]
         group_locks[letters] = locks(ctx, kit_voices, notes_g)
     hits, figures = writer.drums(song, models, random.Random(seed), hold=held | answered, locks=group_locks)
