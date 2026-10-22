@@ -72,6 +72,11 @@ the last: the samples, the instruments, the pitch-modulation recordings,
 the echo's channels, the echo's coloured copies, then every note and its
 repeats, then the master volume. IT's 255 samples and 99 instruments go
 in that order: first the notes' own, then the recordings, then the copies.
+
+The stages take a Score: a snapshot's, from score_of (the decoder's notes
+with the samples' RAM and the master volume), or one written for a SNES
+pack by the generator (phase 2 of docs/IDIOM.md), the same stages for
+both; render() makes the module from either, convert() is the two in one.
 """
 import bisect
 import math
@@ -210,11 +215,39 @@ def _loudness(left, right, gl, gr):
     return vol, pan
 
 
+@dataclass
+class Score:
+    """A song as voices and notes in time: what render() makes a module from.
+    score_of() reads one from a snapshot (the decoder's notes, the SNES
+    chip's samples and master volume); the generator will write one for a
+    SNES pack (phase 2 of docs/IDIOM.md), so the two go through the same
+    stages and are measured by the same readers. Time is in seconds, as the
+    decoder has it; beats are a reading."""
+    notes: list                       # notes.Note, the notes that sound
+    seconds: float                    # the song's length, as it is rendered
+    voices: int                       # the voices the notes are on (0 to voices - 1): the SNES chip's eight for a
+                                      # snapshot, the arrangement's for a generated song
+    master: list                      # (time, left, right): the master volume through the song
+    fade: float = 0.0                 # seconds the song fades over at its end, as a player fades a loop
+    title: str = "SPC"
+    game: str = ""
+    artist: str = ""
+    row_hz: float = FINE_GRID         # rows a second the module is written at
+    tempo: int = 250                  # the IT tempo that gives row_hz at one tick a row (it_song.tempo_for)
+    tick_hz: float = 0.0              # the driver's timer the rows follow, where they do (on_ticks)
+    aligned: float = 0.0              # how closely the key-ons lined up with that timer
+    on_ticks: bool = False
+    snap: object = None               # the snapshot, where there is one: the samples' RAM, pitch modulation's recording
+    pcm_of: dict = field(default_factory=dict)   # a sample's addresses -> a brr.Sample, for a score with no snapshot
+    key_of: dict = field(default_factory=dict)   # and -> its name across songs (the readers' sample key)
+    message: list | None = None       # the module's message, its first lines; None: a converted snapshot's
+
+
 class _Master:
     """The SNES chip's master volume through the song (notes.master_volume)."""
 
-    def __init__(self, snap, writes):
-        self.changes = notes_mod.master_volume(snap, writes)
+    def __init__(self, changes: list):
+        self.changes = changes
         self.times = [t for t, _, _ in self.changes]
         self.lift = 1.0                  # what the global volume is raised by (_Song.lift)
 
@@ -244,10 +277,7 @@ class _Master:
 @dataclass
 class _Song:
     """What a conversion's stages build, each from what the ones before built."""
-    snap: object
-    run: object                       # the emulator's run, the song's length
-    notes: list                       # the notes that sound (notes.decode)
-    row_hz: float
+    score: Score
     master: _Master
     samples: list = field(default_factory=list)              # IT samples, numbered from 1 in this order
     instruments: list = field(default_factory=list)          # IT instruments, the same
@@ -272,6 +302,18 @@ class _Song:
     lift: float = 1.0                                        # channel volumes over it, the global volume times it
 
     @property
+    def snap(self):
+        return self.score.snap
+
+    @property
+    def notes(self) -> list:
+        return self.score.notes
+
+    @property
+    def row_hz(self) -> float:
+        return self.score.row_hz
+
+    @property
     def samples_left(self) -> int:
         return MAX_SAMPLES - len(self.samples)
 
@@ -280,7 +322,7 @@ class _Song:
         return MAX_INSTRUMENTS - len(self.instruments)
 
     def end_of(self, n) -> float:
-        return n.end if n.end is not None else self.run.seconds
+        return n.end if n.end is not None else self.score.seconds
 
     def it_semis(self, n, pitch: int) -> float:
         """Where a pitch falls on the IT note scale, on the note's sample."""
@@ -289,13 +331,11 @@ class _Song:
         return 60 + 12 * math.log2(pitch / 0x1000) - self.offset[n.brr]
 
 
-def convert(snap, seconds: float | None = None, path: str | None = None, fade: float = 0.0) -> dict:
-    """Convert a snapshot: run its driver, write the IT (to `path` if given).
-    Returns the song dict write_it_file takes, with a summary in "info".
+def score_of(snap, seconds: float | None = None, fade: float = 0.0) -> Score:
+    """A snapshot's song as a score: its driver run, its notes decoded.
     Without `seconds`, the song as an SPC player plays it: the tag's length,
     then its fade (most songs loop, and a player fades them out); with it,
-    that long, faded over its last `fade` seconds. The module ends where the
-    song does."""
+    that long, faded over its last `fade` seconds."""
     if seconds is None:
         fade = (snap.tags.fade_ms or 0) / 1000
         seconds = float(snap.tags.length_s or 90) + fade
@@ -313,40 +353,57 @@ def convert(snap, seconds: float | None = None, path: str | None = None, fade: f
     hz, aligned = tick_rate(snap, run.writes)
     on_ticks = aligned >= ALIGNED and 0 < hz <= MAX_TICK_RATE and _keeps_pace(hz, run.seconds)
     tempo, row_hz = it_song.tempo_for(hz if on_ticks else FINE_GRID)
+    t = snap.tags
+    return Score(found, run.seconds, 8, notes_mod.master_volume(snap, run.writes), fade,
+                 t.title or "SPC", t.game or "", t.artist or "", row_hz, tempo, hz, aligned, on_ticks, snap)
 
-    song = _Song(snap, run, found, row_hz, _Master(snap, run.writes))
+
+def render(score: Score, path: str | None = None) -> dict:
+    """The module a score makes: through the stages, written to `path` if
+    given. Returns the song dict write_it_file takes, with a summary in
+    "info". The module ends where the song does."""
+    song = _Song(score, _Master(score.master))
     _lift(song)
     _add_samples(song)
     _add_instruments(song)
-    _bake_pitch_modulation(song, seconds)
+    _bake_pitch_modulation(song, score.seconds)
     channels = _plan_echo(song)
     _add_echo_copies(song)
     _add_at_once_copies(song)
-    grid = it_song.Grid(run.seconds, row_hz, channels)
+    grid = it_song.Grid(score.seconds, score.row_hz, channels)
     placed, repeats, baked = _place_notes(song, grid)
-    _master_channel(song, grid, channels - 1, fade)
+    _master_channel(song, grid, channels - 1, score.fade)
 
-    t = snap.tags
-    message = "\r".join([
-        f"{t.title or 'SPC'}{' - ' + t.game if t.game else ''}{' - ' + t.artist if t.artist else ''}",
+    head = score.message or [
+        f"{score.title}{' - ' + score.game if score.game else ''}{' - ' + score.artist if score.artist else ''}",
         "Converted from an SPC snapshot by bitComposer: the game's own samples and the notes its",
         "driver played, one to one, the echo as repeats on channels of their own,",
         "pitch-modulated notes as the emulator played them.",
-        (f"rows on the driver's clock, {hz:.2f} Hz" if on_ticks else
-         f"rows at {row_hz:.0f} a second (the driver's key-ons do not sit on a tick IT can run)") + f"; {placed} notes ({baked} pitch-modulated), {repeats} echo repeats",
+    ]
+    message = "\r".join(head + [
+        (f"rows on the driver's clock, {score.tick_hz:.2f} Hz" if score.on_ticks else
+         f"rows at {score.row_hz:.0f} a second" + ("" if score.snap is None else " (the driver's key-ons do not sit on a tick IT can run)"))
+        + f"; {placed} notes ({baked} pitch-modulated), {repeats} echo repeats",
     ])
     samples, instruments = song.samples, song.instruments
-    out = {"name": (t.title or "SPC")[:25], "samples": samples, "patterns": grid.patterns,
-           "global_volume": song.master.start(), "orders": list(range(len(grid.patterns))), "tempo": tempo, "speed": 1,
+    out = {"name": score.title[:25], "samples": samples, "patterns": grid.patterns,
+           "global_volume": song.master.start(), "orders": list(range(len(grid.patterns))), "tempo": score.tempo, "speed": 1,
            "instruments": instruments, "message": message,
            "info": {"notes": placed, "repeats": repeats, "channels": channels, "echo_channels": song.echo_channels,
-                    "fade": fade, "baked": baked, "unbaked": song.unbaked, "off_keys": song.off_keys, "lift": song.lift,
-                    "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": hz,
-                    "aligned": aligned, "on_ticks": on_ticks, "row_hz": row_hz,
-                    "samples": len(samples), "instruments": len(instruments), "seconds": run.seconds}}
+                    "fade": score.fade, "baked": baked, "unbaked": song.unbaked, "off_keys": song.off_keys, "lift": song.lift,
+                    "bakes": sum(1 for smp in samples if smp.filename.startswith("pmon")), "tick_hz": score.tick_hz,
+                    "aligned": score.aligned, "on_ticks": score.on_ticks, "row_hz": score.row_hz,
+                    "samples": len(samples), "instruments": len(instruments), "seconds": score.seconds}}
     if path:
         it_song.write(path, out)
     return out
+
+
+def convert(snap, seconds: float | None = None, path: str | None = None, fade: float = 0.0) -> dict:
+    """Convert a snapshot: its score (score_of), rendered (render), written to
+    `path` if given. Returns the song dict write_it_file takes, with a summary
+    in "info"."""
+    return render(score_of(snap, seconds, fade), path)
 
 
 # The stages ----------------------------------------------------------------
@@ -356,7 +413,10 @@ def _add_samples(song: _Song) -> None:
     chip's interpolation colours it, its C5Speed on the song's semitone
     lattice; one per noise clock a song uses."""
     for addr in sorted({n.brr for n in song.notes if not n.noise}):
-        s = brr.decode(song.snap.ram, *addr) if 0 < addr[0] < 0xFFC0 else None
+        if addr in song.score.pcm_of:
+            s = song.score.pcm_of[addr]
+        else:
+            s = brr.decode(song.snap.ram, *addr) if 0 < addr[0] < 0xFFC0 else None
         if s is None or len(s) < 16:
             continue
         s.pcm = snes_chip.snes_interpolated(s.pcm, _loop(s))       # from here on, the sample as the voice plays it
@@ -450,12 +510,13 @@ def _bake_pitch_modulation(song: _Song, seconds: float) -> None:
 
 
 def _plan_echo(song: _Song) -> int:
-    """The channels: the eight voices; for each voice that sends to the echo,
+    """The channels: the voices; for each voice that sends to the echo,
     its repeats, as many as the echo needs to fall to QUIET (a strong
     feedback rings for seconds: FFVI's Dark World, 0.78 at 80 ms, for about
     1.1 s) within IT's 64 channels; the master volume last. Returns how
     many."""
     sending = sorted({n.voice for n in song.notes if _sends(n) or _sends_at_once(n)})
+    voices = song.score.voices
     taps = 0
     if sending:
         needed = 1                       # an echo of delay 0 is one copy, on the first
@@ -468,10 +529,10 @@ def _plan_echo(song: _Song) -> int:
                 while k < TAPS and ev * peak * loop ** (k - 1) >= QUIET:
                     k += 1
             needed = max(needed, k)
-        taps = max(1, min(TAPS, needed, (MAX_CHANNELS - 9) // len(sending)))
+        taps = max(1, min(TAPS, needed, (MAX_CHANNELS - voices - 1) // len(sending)))
     song.taps = taps
-    song.echo_channels = {v: [8 + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
-    return 8 + len(sending) * taps + 1
+    song.echo_channels = {v: [voices + i * taps + k for k in range(taps)] for i, v in enumerate(sending)}
+    return voices + len(sending) * taps + 1
 
 
 def _add_echo_copies(song: _Song) -> None:
@@ -709,7 +770,7 @@ def _lift(song: _Song) -> None:
 def _master_channel(song: _Song, grid: it_song.Grid, ch: int, fade: float) -> None:
     """On the last channel, the master volume's changes (a driver's own fades)
     and the fade over the song's last `fade` seconds, as a player fades it."""
-    row_hz, fade_from = song.row_hz, song.run.seconds - fade
+    row_hz, fade_from = song.row_hz, song.score.seconds - fade
     rows = {round(t * row_hz) for t, _, _ in song.master.changes[1:]}
     if fade > 0:
         rows |= set(range(round(fade_from * row_hz), grid.last_row + 1))

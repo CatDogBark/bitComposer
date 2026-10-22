@@ -85,13 +85,39 @@ def play(snap, seconds: float | None = None) -> Song:
             if n.brr is None and not n.noise:
                 n.brr = snap.entry(n.sample)
             found.append(n)
+    decoded = lambda addr: brr.decode(snap.ram, *addr) if 0 < addr[0] < 0xFFC0 else None     # noqa: E731
+    return of_notes(found, decoded, lambda addr: _key(snap.ram, addr[0]), seconds, snap.source, snap.tags, run.writes)
+
+
+def of_score(score, source: str = "") -> Song:
+    """The readers' song from a score (spc.convert.Score): a snapshot's, or one
+    the generator wrote. The same naming as play(), without running the
+    driver again."""
+    snap = score.snap
+    def decoded(addr):
+        if addr in score.pcm_of:
+            return score.pcm_of[addr]
+        return brr.decode(snap.ram, *addr) if snap is not None and 0 < addr[0] < 0xFFC0 else None
+    def key(addr):
+        if addr in score.key_of:
+            return score.key_of[addr]
+        return _key(snap.ram, addr[0]) if snap is not None else f"{addr[0]:04x}-{addr[1]:04x}"
+    return of_notes(score.notes, decoded, key, score.seconds, source or (snap.source if snap is not None else score.title),
+                    snap.tags if snap is not None else None)
+
+
+def of_notes(found: list, decoded, key, seconds: float, source: str = "", tags=None, writes: list | None = None) -> Song:
+    """The notes named: each sample's fundamental and the fraction of a
+    semitone its notes sit at (taken out of their midi), each note's level and
+    pan. decoded(addr): the sample as a brr.Sample (None: none); key(addr):
+    its name across songs."""
     samples = {}
     for n in found:
         if n.noise or n.brr in samples:
             continue
-        s = brr.decode(snap.ram, *n.brr) if 0 < n.brr[0] < 0xFFC0 else None
+        s = decoded(n.brr)
         f0 = tuning.fundamental(s) if s is not None and len(s.pcm) >= 16 else None
-        samples[n.brr] = Sample(n.brr, _key(snap.ram, n.brr[0]), f0, len(s.pcm) if s else 0, bool(s and s.loops))
+        samples[n.brr] = Sample(n.brr, key(n.brr), f0, len(s.pcm) if s else 0, bool(s and s.loops))
     raw = [(n, samples.get(n.brr) if not n.noise else None) for n in found]
     for s in samples.values():
         if s.f0:
@@ -103,7 +129,7 @@ def play(snap, seconds: float | None = None) -> Song:
         played.append(Played(n.voice, n.start, n.end, s, m, (left + right) / 256,
                              right / (left + right) if left + right else 0.5, n))
     played.sort(key=lambda p: (p.start, p.voice))
-    return Song(snap.source, seconds, played, samples, snap.tags, run.writes)
+    return Song(source, seconds, played, samples, tags, writes or [])
 
 
 def _offset(midis: list[float]) -> float:
