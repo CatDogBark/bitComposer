@@ -630,8 +630,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             continue
         unit = lambda extra: tables.Unit(song.sid, song.game, "", {"part": R.MELODY, "mode": mode, **extra})   # noqa: E731
         relation = "first" if previous_tune is None else models["relations"].draw(unit({"habit": habit_rel(models)}), prev["relations"], played["relations"], rng)
-        played["relations"][relation] += 1
-        prev["relations"] = relation
+        if relation == "first" and previous_tune is not None:
+            relation = "new"                                    # "first" is no relation to draw again: the urn handed back the opening
+        if relation != "first":
+            played["relations"][relation] += 1
+            prev["relations"] = relation
         shape = models["contours"].draw(unit({}), prev["contours"], played["contours"], rng)
         played["contours"][shape] += 1
         prev["contours"] = shape
