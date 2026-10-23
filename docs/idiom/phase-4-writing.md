@@ -872,4 +872,71 @@ short, each a cause of the same kind as before:
   cells grew more various, and an echoed cell is re-rooted within a
   tritone of the last note. To measure after the two changes above.
 
-**Round 5** (after these): see below.
+**Rounds 5 and 6.** Round 5 had the kit worse still (13 strikes a bar,
+20 distinct bars, no repeats): the whole-kit group's figures were drawn
+under a part name the table had never seen ("drums-KShtco"), so every
+level backed off and the floor invented every bar; the kit table's part is
+"drums" (`writer.drums`, `part_of`). Round 6, with that: drums 8.7
+strikes a bar, 10 distinct bars in 32, repeats 0.25 (FFVI 6.9, 6, 0.32):
+whole bars again, a little busier and more various than FFVI's (a "new"
+draw at one rate a song gives 8 new bars in 32 where a kit's new bars come
+early and stop). The tune after a new cell always took a new rhythm:
+distinct rhythms 6.5 (FFVI 9, from 3.5), repeats 0.11 (0.10), strikes 5.0
+(4.5); but its distinct cells 17.5 (12.5) and echoes 0.26 (0.34): too
+various now. In the readings a new cell takes a rhythm new to the tune in
+77 % of cases, the bar before's in 10 %, an earlier one's in 13 % (FFVI
+79 / 7 / 14): **a new cell's rhythm is drawn by that table**
+(`cell_rhythms`, `rhythm.new_cell_rhythm_units`). Steps 0.60 against 0.67
+and leaps 0.09 against 0.05 stay a little off; measured on the written
+notes, the read-back agrees to the hundredth (seeds 1-4), and the leaps
+sit at phrase starts (0.10 of their moves) and bar joins (0.04), inside a
+bar 0.02.
+
+**Round 7** (the same twenty seeds; the pack at 52 tables; medians,
+written / FFVI's own):
+
+| measure | written | FFVI | | measure | written | FFVI |
+|---|---|---|---|---|---|---|
+| band (parts with notes) | 5 | 5 | | tune: chord tones on the beat | 0.63 | 0.56 |
+| seconds, once through | 71 | 70 | | tune: repeated notes | 0.12 | 0.12 |
+| bass: strikes a bar | 4.8 | 4.3 | | tune: steps among moves | 0.58 | 0.67 |
+| bass: distinct bars in 32 | 8 | 8 | | tune: leaps among moves | 0.09 | 0.05 |
+| bass: bar repeats | 0.25 | 0.30 | | tune: distinct cells in 32 | 15 | 12.5 |
+| accompaniment: strikes | 6.7 | 6.3 | | tune: bars echoing an earlier bar | 0.23 | 0.34 |
+| accompaniment: distinct | 7 | 8 | | tune: range, semitones | 14 | 21.5 |
+| accompaniment: repeats | 0.31 | 0.32 | | melody: strikes a bar | 5.1 | 4.5 |
+| counter: strikes | 5.3 | 4.9 | | melody: distinct rhythms in 32 | 5 | 9 |
+| counter: distinct | 6 | 10.5 | | melody: bar repeats | 0.14 | 0.10 |
+| counter: repeats | 0.15 | 0.13 | | drums: strikes a bar | 8.7 | 6.9 |
+| harmony: strikes | 1.4 | 1.2 | | drums: distinct bars | 10 | 6 |
+| the reader's parts (looped) | 2 | 4 | | drums: bar repeats | 0.25 | 0.32 |
+
+**Where the integration stands (2026-10-23).** The bass, the
+accompaniment, the counter-line's density and repeats, the band, the
+length, the tune's chord tones and repeated notes sit on FFVI's numbers.
+Still off, each with its cause named: the tune's echoes (0.23 against
+0.34: an echoed cell re-rooted on a new chord and snapped is no longer the
+same cell, so the urn's "earlier" draws come out as variants; real echoes
+are exact), its steps and leaps (0.58 / 0.09 against 0.67 / 0.05: the
+leaps sit at phrase starts, the shift table's draw taken as a jump, and
+at bar joins), its range (14 against 21.5), the melody's distinct rhythms
+(5 against 9, the counter's 6 against 10.5); the kit a little busy and
+various (a kit's new bars come early and stop; the urn's one rate a song
+does not); the reader finds two parts where it finds four in FFVI. Open
+too: the band's energy is not read in generation (the texture is the
+arrangement); the 12 % of parts whose first bar is an entrance; the
+within-bar chord changes (`changes`) and cadences unused; the counter is
+a second tune, not a response line; the lock acts on no part now (the
+upper parts see too few voices written, the melody writer takes no lock);
+the rendering's levels, pans, voice allotment and sample pools are
+hand-set. Twenty songs a round are at Ragnarok
+`~/diags/bitcomposer/idiom/phase4/whole/round7/` (a module and a record
+a seed); the Song Check page is to be designed with the owner before it
+is built.
+
+What the integration added, for the ear: whole songs with no original
+under them, every part free on a skeleton the tables gave (key, tempo,
+form with its repeats and loop, a band with its balance, chords a bar, a
+texture a part), the kit as one figure, the counter-line, the tune's
+chord-tone and repeat rates and its phrase shifts and contour sizes from
+the game's songs, and a pack's tables drawn on the data.
