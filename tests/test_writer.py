@@ -346,6 +346,8 @@ class UpperPartTests(unittest.TestCase):
         self.assertLess(writer.BREAKDOWN, 1.0)                                          # a bar a hair under the median is not a breakdown
         self.assertTrue(writer.voiced("R 3 +") and writer.voiced("sus 5"))
         self.assertFalse(writer.voiced("+") or writer.voiced(""))
+        self.assertFalse(writer.voiced("5 +", 2))                                      # a full voicing needs two chord tones; "+" counts for nothing
+        self.assertTrue(writer.voiced("R 5 +", 2) and not writer.voiced("R 5", 3))
         self.assertEqual(writer.sounding_pcs([(0.0, 1.0, 60.0, "x"), (1.0, 1.0, 62.0, "x")], 0.5), {0})
         self.assertEqual(writer.unclashed(61, [61, 64, 67], {0}), 64)                  # a C# against the tune's C moves to E
         self.assertEqual(writer.unclashed(61, [61, 64, 67], {3}), 61)                  # nothing a semitone away: stays

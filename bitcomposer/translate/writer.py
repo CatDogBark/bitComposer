@@ -375,9 +375,15 @@ CHORD_MARKS = {"R", "3", "5", "7", "sus"}   # a written voicing holds one of the
 CLASH = (1, 11)                       # semitones (mod 12) a written tone may not sit from a note the tune sounds at the same time
 
 
-def voiced(outcome: str) -> bool:
-    """Whether a voicing from the table may be written: it holds a chord tone (a non-chord tone only beside one)."""
-    return bool(set(outcome.split()) & CHORD_MARKS)
+RICH_TONES = {"thin": 1, "full": 2, "rich": 3}   # chord tones a written voicing holds at least, by the richness habit
+PEDAL_VOICE = 2                       # semitones: a voice whose own register is this narrow or narrower is a pedal and keeps its note
+
+
+def voiced(outcome: str, tones: int = 1) -> bool:
+    """Whether a voicing from the table may be written: it holds `tones` chord
+    tones at least (the table's "+" counts for nothing: it is mostly the chord
+    reader's noise, and realized it was a ninth in every strum)."""
+    return len(set(outcome.split()) & CHORD_MARKS) >= tones
 
 
 def sounding_pcs(line: list, at: float) -> set:
@@ -400,13 +406,15 @@ def unclashed(midi: int, options: list, tune: set) -> int:
 
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
-          motion: str = "block", energy: list | None = None) -> tuple[list, list, list]:
+          motion: str = "block", energy: list | None = None, pedals: dict | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
     mixture, laid onto the part's voices (lowest first; a lone arp voice
     cycles the tones). `voices`: the part's voices low to high; `registers`:
-    voice -> its register (low, high); `models`: rhythm and voicings (Caches).
+    voice -> its register (low, high); `pedals`: voice -> the note a pedal
+    voice (a register PEDAL_VOICE semitones or narrower) holds; `models`:
+    rhythm and voicings (Caches).
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -415,6 +423,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
                             habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy)
     step = MOTION_STEP.get(motion, 0)
+    pedals = pedals or {}
     walked = 0.0                                            # how far along the stack the voices have moved (motion)
     tune_line = sorted(song.notes.get(R.MELODY, []) + song.notes.get(R.COUNTER, []))   # what the written part must not clash with
     tonic, mode = key if key else (0, "major")
@@ -438,12 +447,14 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             if chord != last_chord or not bar_voicing:
                 shape = chord[1] or "major"
                 v_unit = tables.Unit(song.sid, song.game, "", {"part": role, "shape": shape, "habit": richness, "previous": prev_v or rhythm.START})
-                drawn = models["voicings"].draw(v_unit, prev_v, played_v, rng, keep=voiced)
+                need = min(RICH_TONES.get(richness, 2), max(1, len(voices)))   # a lone voice needs one tone, a trio up to three
+                full = lambda o, _n=need: voiced(o, _n)   # noqa: E731
+                drawn = models["voicings"].draw(v_unit, prev_v, played_v, rng, keep=full)
                 for _ in range(TRIES):
-                    if voiced(drawn):
+                    if full(drawn):
                         break
                     drawn = models["voicings"].table.draw(models["voicings"].table.context(v_unit), rng, v_unit.values)
-                marks = [m for m in drawn.split() if m in CHORD_MARKS] if voiced(drawn) else ["R", "5"]
+                marks = [m for m in drawn.split() if m in CHORD_MARKS] if full(drawn) else (["R", "5"] if need > 1 else ["R"])
                 played_v[drawn] += 1
                 prev_v = drawn
                 last_chord = chord
@@ -465,6 +476,10 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 stacked = [stacked[0]] + stacked[-(len(voices) - 1):] if len(voices) > 1 else [stacked[0]]
             offset = int(walked) if len(pitches) > 1 else 0
             for j, v in enumerate(voices):
+                low_v, high_v = registers[v]
+                if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
+                    notes.append((start, start + (until - start) * sounds, float(pedals.get(v, low_v)), v))
+                    continue
                 midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
                 midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
                 notes.append((start, start + (until - start) * sounds, float(midi), v))

@@ -671,10 +671,11 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
     for role in roles_present:
         voices = sorted((v for v, (r, ns) in ctx.by_voice.items() if r == role and any(not math.isnan(n[2]) for n in ns)),
                         key=lambda v: statistics.median(n[2] for n in ctx.by_voice[v][1] if not math.isnan(n[2])))
-        registers = {}
+        registers, pedals = {}, {}
         for v in voices:
             pitched = sorted(n[2] for n in ctx.by_voice[v][1] if not math.isnan(n[2]))
             registers[v] = (round(pitched[int(writer.UPPER_LOW * (len(pitched) - 1))]), round(pitched[int(writer.UPPER_HIGH * (len(pitched) - 1))]))
+            pedals[v] = round(statistics.median(pitched))
         own_notes = song.notes.get(role, [])
         rng = random.Random(f"{seed}:{role}")
         habits = models.get("habits")
@@ -690,8 +691,10 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         lock = locks(ctx, set(voices), own_notes)
         notes, figures, voicings = writer.upper(song, role, voices, registers, models, rng, habit, richness, sounds,
                                                 key=ctx.key, hold=held | answered, lock=lock, motion=motion,
-                                                energy=band_energy(ctx, set(voices)))
-        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); weight {rhythm.part_weights(song).get(role, '-')}, habit {habit}, voicing {richness}, motion {motion}, sounded {sounds:.2f}; "
+                                                energy=band_energy(ctx, set(voices)), pedals=pedals)
+        pedal_voices = [v for v in voices if registers[v][1] - registers[v][0] <= writer.PEDAL_VOICE]
+        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}" + (f", pedals {pedal_voices}" if pedal_voices else "")
+                   + f"); weight {rhythm.part_weights(song).get(role, '-')}, habit {habit}, voicing {richness}, motion {motion}, sounded {sounds:.2f}; "
                    f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes"
                    + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
                    + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else "")
