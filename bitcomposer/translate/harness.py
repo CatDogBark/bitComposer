@@ -341,10 +341,11 @@ def relation(line, other) -> tuple:
     return ("apart",)
 
 
-def band_energy(ctx: Context, part_voices: set) -> list:
-    """The band's energy a bar (level x sounded length of every voice but the part's), against its median over the
-    song: 1.0 a usual bar, under it a breakdown; what a free-written part thins with."""
-    others = [n for voice, (_, ns) in ctx.by_voice.items() if voice not in part_voices for n in ns]
+def band_energy(ctx: Context, part_voices: set, drums: bool = False) -> list:
+    """The band's energy a bar (level x sounded length of every voice but the part's; the drums left out unless
+    `drums`: a breakdown with a drum feature is still a breakdown for the pitched parts), against its median over
+    the song: 1.0 a usual bar, under it a breakdown; what a free-written part thins with."""
+    others = [n for voice, (role, ns) in ctx.by_voice.items() if voice not in part_voices and (drums or role != R.DRUMS) for n in ns]
     energy = []
     for a, b in ctx.song.bars:
         e = 0.0
