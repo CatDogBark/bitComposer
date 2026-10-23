@@ -373,4 +373,41 @@ accompaniment 1 to 2; Terra's intro bars thin the same way. A
 band-reading rule, so it carries into generation, where the parts
 written earlier set the energy; the arrangement slice adds the table
 version for songs with no band yet. The bass and chord stems of all four
-songs republished. **Awaiting the ear.**
+songs republished. Heard: Johnny "better, the harmony and bass play a
+couple of notes along and the drums take the show" (as the original
+does); Terra "very off: strums a handful of chords, many off pitch, a
+spazz near the end".
+
+**Terra's handful of chords, off pitch, and the spazz** (2026-10-22).
+Four causes, found in the numbers before anything was changed, none of
+them Terra's: (1) "thin" was any bar under the band's median, half the
+song by definition, so the writer dropped its lock in half the bars and
+nothing lifted the sparse habit it had drawn; now a breakdown is under
+half the median (BREAKDOWN). (2) The filter ladder dropped the density
+limit before the lock, so a bar whose band struck more shared hits than
+the habit allows got the one figure that strikes them all: Terra's bass
+bar 39, sixteen sixteenth-note fifths, the spazz; the ladder now gives
+up the lock before the density, a part keeps its habit and locks where
+it can. (3) The voicings' "+" was realized as a ninth in block chords,
+the off pitch; Terra's own accompaniment plays a non-chord tone 4 % of
+the time and the table's "+" is mostly the chord reader's mislabel, so a
+written voicing realizes its chord tones only. (4) The habit itself: the
+accompaniment drew "sparse mixed" for a part that is 62 % of Terra's
+band, and the readings say that never happens: **a part's density
+follows its weight in the band** (its share of the pitched strikes;
+`rhythm.part_weights`: an accompaniment that is the main part is dense
+in 76 % of songs and sparse in 1 %, a minor one sparse in 40 %; the bass
+alike), so the habit is drawn given the part's weight and the tempo
+(`rhythm.habits` carries both; the pack's `habits` and `bass_habits`
+tables take the shape part+tempo+weight; the drums keep tempo and kit).
+And drawn from every game's songs rather than the song's game: phase 3
+found the figure habits shared, and a game's own songs are too few by
+tempo and weight (FFVI has one fast song whose accompaniment is its
+main part, so Terra, read fast by the beat reader's doubling, backed off
+to eight songs and drew a 5 % outcome). Terra after: the accompaniment
+dense mixed at nine to twelve strikes a bar, the bass two strikes where
+it spazzed, no ninths. All twelve free stems of the four songs
+republished (every habit redrawn). The open question the pack path
+keeps: a generated song draws from its pack's tables alone, and a thin
+pack will meet the same thinness; the product may carry the shared
+tables as a floor (the plan's open question). **Awaiting the ear.**
