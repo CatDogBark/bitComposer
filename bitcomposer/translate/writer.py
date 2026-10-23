@@ -686,7 +686,8 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
     if strong and chord_pcs and not over_chord and any(on_chord) and not all(on_chord):
         mc = sum(w for w, c in zip(weights, on_chord) if c)
         mo = sum(w for w, c in zip(weights, on_chord) if not c)
-        weights = [w * (chord_rate / mc if c else (1 - chord_rate) / mo) for w, c in zip(weights, on_chord)]
+        if mc > 0 and mo > 0:                                # a side with no mass (the repeated note at a rate of none) is left as it is
+            weights = [w * (chord_rate / mc if c else (1 - chord_rate) / mo) for w, c in zip(weights, on_chord)]
     return _weighted(rng, options, weights)
 
 

@@ -404,6 +404,9 @@ class MelodyTests(unittest.TestCase):
         self.assertNotIn(12, steps)                              # an octave up leaves the register
         self.assertTrue(steps[2] > steps[-2])                    # the table's weights hold among the fitting moves
         self.assertEqual(writer.draw_move(t, "start", "major", 60, random.Random(1), (60, 60), major, False, None, set(), None), 0)
+        # a song whose tune never repeats a note: the repeated note (D over C, the only move off the chord) has no mass, and the
+        # chord's share is not forced over an empty side
+        self.assertIn(writer.draw_move(t, "start", "major", 62, random.Random(1), (60, 64), major, True, (0, ""), set(), None, repeat_rate=0.0), (-2, 2))
 
     def test_contour_targets_and_a_phrase_on_the_tables(self):
         self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))
