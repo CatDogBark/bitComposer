@@ -196,3 +196,18 @@ its exit criteria are the gate to the next.
   rechecked against everything heard so far.
 - The counts so far are a starting point, not a final truth; the tests and
   the data will change as the work teaches, and the changes are recorded.
+- A writer is not patched past what its vocabulary says. When the
+  written songs miss something the games do, the first question is
+  whether the vocabulary has a word for it. If it does not (the theme, a
+  part's second voice, the share of a tune's beats on the chord), the
+  answer is a new unit counted from the readings and kept as a table,
+  never a weight, a constant or a rule in the writer that steers a draw
+  toward the effect. Where a word exists and the writer still misses, the
+  fault is in how the tables are drawn from, and that is fixed as a fault
+  (the smoothing that mixed every part's registers, the floor's invented
+  bars). Where the choice between patching an existing vocabulary beyond
+  what it was counted to say and counting a new one is open, it is put to
+  the owner first and decided together; it is not made in the code
+  (decided 2026-10-23, after the hook: weighting the urn's "earlier"
+  draws toward the opening would have moved the number without naming
+  the thing).
