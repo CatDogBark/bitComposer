@@ -608,6 +608,15 @@ def move_units(songs: list, length=4) -> list:
     return out
 
 
+def step_habit_units(songs: list, length=4) -> list:
+    """Each song's stepwise habit for its tune (STEPS), one unit a song, the tempo band beside."""
+    from .rhythm import band, habits
+    units = move_units(songs, length)
+    for u in units:
+        u.values["tempo"] = band(next((s.bpm for s in songs if s.sid == u.song), 120.0)) if hasattr(songs[0], "bpm") else "medium"
+    return habits(units)
+
+
 # --- reports ---
 
 def _band(x: float) -> str:

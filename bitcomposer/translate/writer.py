@@ -614,14 +614,15 @@ def _weighted(rng: random.Random, options: list, weights: list):
 
 
 def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Random, register: tuple, scale: set,
-              strong: bool, chord, tune: set, aim: float | None) -> int:
+              strong: bool, chord, tune: set, aim: float | None, habit: str | None = None) -> int:
     """One move of the tune from the moves table, drawn among the moves that
     fit (the register; off the chords' semitones; steered toward the
     contour when the line strays CONTOUR_RANGE from it), the fitting moves
     weighted by the table and, on a strong beat, the chord's tones given
     CHORD_ON_BEAT of the mass. Returns the move in semitones."""
     low, high = register
-    ctx = (R.MELODY, mode, previous or rhythm.START)
+    values = {"part": R.MELODY, "mode": mode, "previous": previous or rhythm.START, "habit": habit or "mixed"}
+    ctx = tuple(values.get(c, "?") for c in moves_table.conditionings)
     chord_pcs = set()
     if chord is not None:
         root, shape = chord
@@ -667,7 +668,7 @@ def _chord_in_bar(song: rhythm.Song, t: float):
 
 def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, rng: random.Random, habit: str,
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
-           recall=None) -> tuple[list, list, list]:
+           recall=None, step_habit: str = "mixed") -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -759,7 +760,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             third = min(2, int(3 * (t - a0) / max(1e-9, b0 - a0)))
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
-            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim)
+            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim, step_habit)
             midi = midi + step
             move = f"{step:+d}" if step else "0"
             pitches.append(midi)
@@ -767,7 +768,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         return realize(k, positions, pitches)
 
     def again(k: int, cell: Cell) -> Cell:
-        """An earlier cell in bar k: re-rooted on the bar's chord, its moves as scale steps."""
+        """An earlier cell in bar k: re-rooted on the bar's chord, its moves as
+        scale steps, and its strong-beat notes on the bar's chord tones (a
+        sequence lands its beats on the new chord, as a player's does)."""
         nonlocal last_midi, last_move
         a, b, _ = bars[k]
         chord = _chord_in_bar(song, a)
@@ -775,7 +778,18 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         pc = (root + cell.entry) % 12
         low, high = register
         first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
-        pitches = from_steps(first, cell.steps, scale)
+        pitches = [first]
+        idx = scale_index(first, scale)
+        for p, st in zip(cell.positions[1:], cell.steps):
+            idx += st
+            m = scale_pitch(idx, scale)
+            here = _chord_in_bar(song, a + p)
+            if here is not None and abs(p - round(p)) < rhythm.NEAR:
+                pcs = {(here[0] + i) % 12 for i in harmony.SHAPES.get(here[1], harmony.SHAPES[""])}
+                if m % 12 not in pcs:
+                    m = min((x for x in range(m - 2, m + 3) if x % 12 in pcs), key=lambda x: (abs(x - m), x), default=m)
+                    idx = scale_index(m, scale)
+            pitches.append(m)
         pitches = [min(high, max(low, m)) for m in pitches]
         last_midi = float(pitches[-1]) if pitches else last_midi
         last_move = f"{pitches[-1] - pitches[-2]:+d}" if len(pitches) >= 2 and pitches[-1] != pitches[-2] else ("0" if len(pitches) >= 2 else last_move)
