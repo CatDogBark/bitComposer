@@ -27,9 +27,9 @@ FIGURE = ("part", "meter", "habit", "previous")   # the figure tables' shape: th
 KEPT = {
     "rhythm": ("rhythm", "units", {}, FIGURE, True, True, "a part's bar as an onset pattern"),
     "values": ("rhythm", "value_units", {}, ("part", "value", "habit"), False, False, "a melody note held or detached, by its value"),
-    "habits": ("rhythm", "rhythm_habit_units", {}, ("part",), False, False, "a part's articulation and repetition habit, drawn once a song"),
+    "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
-    "bass_habits": ("rhythm", "bass_habit_units", {}, ("part",), False, False, "the bass's habit (density, tones, octaves), drawn once a song"),
+    "bass_habits": ("rhythm", "bass_habit_units", {}, ("part", "tempo", "weight"), False, False, "the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight"),
     "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, FIGURE, True, True, "the kick, snare and toms' bar"),
     "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, FIGURE, True, True, "the hat's bar"),
     "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, FIGURE, True, True, "the cymbals' bar"),

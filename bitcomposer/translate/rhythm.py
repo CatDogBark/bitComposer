@@ -359,13 +359,14 @@ def bass_units(songs) -> list:
         if R.BASS not in s.notes:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
+        weight = part_weights(s).get(R.BASS, "minor")
         for k, a, struck in numbered_bars_of(s, R.BASS):
             if last is not None and k != last + 1:
                 previous = START
             c = _chord_at(s.chords, a)
             drawn = figure(struck, a, s)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
-                "part": R.BASS, "meter": s.meter, "tempo": tempo,
+                "part": R.BASS, "meter": s.meter, "tempo": tempo, "weight": weight,
                 "shape": "?" if c is None or c.root is None or c.fit < FIT else (c.shape or "major"),
                 "chord": chord_change(s, a, a + s.meter), "next": chord_change(s, a + s.meter, a + 2 * s.meter),
                 "previous": previous}))
@@ -417,11 +418,30 @@ def _bass_habit(mine: list) -> str:
     return f"{habit_of(density, DENSITIES)} {tones} {octaves}"
 
 
+WEIGHTS = ((0.2, "minor"), (0.5, "half"), (2, "main"))   # a pitched part's share of the band's pitched strikes
+
+
+def part_weights(song: Song) -> dict:
+    """Each pitched part's weight in the song (WEIGHTS): its share of the
+    pitched parts' strikes. The density a part plays at follows it (an
+    accompaniment that is the band's main part is dense in 76 % of songs,
+    a minor one in 8 %), so a writer draws the habit given it."""
+    counts = {role: len(ns) for role, ns in song.notes.items() if role != R.DRUMS}
+    total = sum(counts.values()) or 1
+    return {role: habit_of(n / total, WEIGHTS) for role, n in counts.items()}
+
+
 def habits(units_) -> list:
-    """The habits in units' values, one unit a song and part: what a writer draws once a song."""
+    """The habits in units' values, one unit a song and part, with the tempo
+    band and the part's weight beside where the units carry them: what a
+    writer draws once a song, given those."""
     seen = {}
     for u in units_:
-        seen.setdefault((u.song, u.values["part"]), tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"]}))
+        values = {"part": u.values["part"]}
+        for k in ("tempo", "weight"):
+            if k in u.values:
+                values[k] = u.values[k]
+        seen.setdefault((u.song, u.values["part"]), tables.Unit(u.song, u.game, u.values["habit"], values))
     return list(seen.values())
 
 
@@ -742,6 +762,7 @@ def units(songs) -> list:
     out = []
     for s in songs:
         tempo = band(s.bpm)
+        weights = part_weights(s)
         for role in PARTS:
             if role not in s.notes:
                 continue
@@ -751,7 +772,7 @@ def units(songs) -> list:
                     previous = START                      # a bar of another length between: the chain breaks
                 drawn = pattern(p for p, _ in struck)
                 mine.append(tables.Unit(s.sid, s.game, drawn, {
-                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous,
+                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous, "weight": weights.get(role, "minor"),
                     "place": place_in_part(s, k), "chord": chord_change(s, a, a + s.meter)}))
                 previous, last = drawn, k
             if mine:

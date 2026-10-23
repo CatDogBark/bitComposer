@@ -254,12 +254,18 @@ def kit_habits(units: list) -> list:
 
 
 def tempo_habits(units: list) -> list:
-    """A part's habits with the tempo band beside (one unit a song and part)."""
-    seen = {}
-    for u in units:
-        seen.setdefault((u.song, u.values["part"]), tables.Unit(u.song, u.game, u.values["habit"],
-                                                                {"part": u.values["part"], "tempo": u.values["tempo"]}))
-    return list(seen.values())
+    """A part's habits with the tempo band and its weight in the band beside (one unit a song and part): rhythm.habits."""
+    return rhythm.habits(units)
+
+
+HABIT_SHAPE = ("part", "tempo", "weight")   # what a free-written part's habit is drawn given
+
+
+def draw_habit(table, part: str, song: rhythm.Song, rng: random.Random) -> str:
+    """A part's habit from a habits table, given what the table is conditioned on (the part, the tempo band, the
+    part's weight in the band: whatever of HABIT_SHAPE it has)."""
+    values = {"part": part, "tempo": rhythm.band(song.bpm), "weight": rhythm.part_weights(song).get(part, "minor")}
+    return table.draw(tuple(values[c] for c in table.conditionings), rng)
 
 
 def looped(ctx: Context, notes: list) -> list:
@@ -457,10 +463,9 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     else:
         units = rhythm.bass_units(ctx.songs)
         model = writer.fit([u for u in units if u.song != ctx.sid])
-        habits = game_habits(tempo_habits(units), ctx, ("part", "tempo")) if free else None
-    if free and habits is not None:                                 # the habit drawn once a song, given the tempo: the song's own part is no manner
-        habit = habits.draw((R.BASS, rhythm.band(song.bpm)) if habits.conditionings == ("part", "tempo") else (R.BASS,),
-                            habit_rng(ctx, seed, R.BASS))
+        habits = game_habits(tempo_habits(units), ctx, HABIT_SHAPE) if free else None
+    if free and habits is not None:                                 # the habit drawn once a song, given the tempo and the part's weight
+        habit = draw_habit(habits, R.BASS, song, habit_rng(ctx, seed, R.BASS))
         log.append(f"free writing: the habit drawn from the game's, {habit}")
     elif free:
         free = False
@@ -657,7 +662,7 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         models.setdefault("rhythm", writer.fit(units, name="rhythm"))
         models.setdefault("voicings", tables.Cache.fit(rhythm.voicing_units(others), ("part", "shape", "habit"), name="voicings",
                                                         votes=tables.SHARES, discount=writer.DISCOUNT))
-        models.setdefault("habits", game_habits(tempo_habits(units), ctx, ("part", "tempo")))
+        models.setdefault("habits", game_habits(tempo_habits(units), ctx, HABIT_SHAPE))
         models.setdefault("voicing_habits", game_habits(rhythm.voicing_habit_units(others), ctx))
         models.setdefault("motions", game_habits(rhythm.upper_motion_units(others), ctx, ("part", "tempo")))
     for role in roles_present:
@@ -670,8 +675,7 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         own_notes = song.notes.get(role, [])
         rng = random.Random(f"{seed}:{role}")
         habits = models.get("habits")
-        habit = (habits.draw((role, rhythm.band(song.bpm)) if habits.conditionings == ("part", "tempo") else (role,), habit_rng(ctx, seed, role))
-                 if habits is not None else "medium mixed")
+        habit = draw_habit(habits, role, song, habit_rng(ctx, seed, role)) if habits is not None else "medium mixed"
         vh = models.get("voicing_habits")
         richness = vh.draw((role,), habit_rng(ctx, seed, role + " voicing")) if vh is not None else "full"
         mo = models.get("motions")
@@ -684,7 +688,7 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         notes, figures, voicings = writer.upper(song, role, voices, registers, models, rng, habit, richness, sounds,
                                                 key=ctx.key, hold=held | answered, lock=lock, motion=motion,
                                                 energy=band_energy(ctx, set(voices)))
-        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, motion {motion}, sounded {sounds:.2f}; "
+        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); weight {rhythm.part_weights(song).get(role, '-')}, habit {habit}, voicing {richness}, motion {motion}, sounded {sounds:.2f}; "
                    f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes"
                    + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
                    + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else "")

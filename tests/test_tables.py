@@ -104,6 +104,13 @@ class RhythmUnitTests(unittest.TestCase):
         s.notes["bass"] = [(0.0, 0.5, 36.0, "k"), (2.0, 0.5, 36.0, "k"), (4.0, 0.5, 36.0, "k"), (6.5, 0.25, 43.0, "k")]
         return s
 
+    def test_part_weights_and_the_habits_carry_them(self):
+        s = self._song()
+        s.notes["melody"] = [(0.0, 1.0, 72.0, "m")]                          # one melody note against four of bass
+        self.assertEqual(rhythm.part_weights(s), {"bass": "main", "melody": "minor"})
+        hs = rhythm.habits(rhythm.bass_units([s]))
+        self.assertEqual((hs[0].values["part"], hs[0].values["tempo"], hs[0].values["weight"]), ("bass", "medium", "main"))
+
     def test_units_carry_the_pattern_and_the_conditionings(self):
         us = rhythm.units([self._song()])
         self.assertEqual([u.outcome for u in us], ["0 2", "0 5/2", "-"])
