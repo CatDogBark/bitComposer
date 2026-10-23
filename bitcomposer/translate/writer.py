@@ -561,15 +561,17 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
-                if energy is not None and k < len(energy) and energy[k] < 1.0:
+                thin = energy is not None and k < len(energy) and energy[k] < 1.0
+                if thin:
                     env = thinned(env, energy[k])
+                bar_lock = None if thin else lock.get(k)        # in a breakdown the band's hits are not the band: no lock
                 values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit}
                 unit = tables.Unit(song.sid, song.game, "", values)
                 # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
                 # without the envelope (the band asks more strikes than the habit); then the manner alone. Never the
                 # song's own bar: a free-written part copies nothing of the part it replaces.
-                ladder = [lambda f, _k=k, _e=env: manner.fits(f) and within_of(f, _e) and locked(f, lock.get(_k), lock_share),
-                          lambda f, _k=k: manner.fits(f) and locked(f, lock.get(_k), lock_share),
+                ladder = [lambda f, _l=bar_lock, _e=env: manner.fits(f) and within_of(f, _e) and locked(f, _l, lock_share),
+                          lambda f, _l=bar_lock: manner.fits(f) and locked(f, _l, lock_share),
                           lambda f, _e=env: manner.fits(f) and within_of(f, _e),
                           manner.fits]
                 figure = None
