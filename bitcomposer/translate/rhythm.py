@@ -137,6 +137,8 @@ class Song:
     voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
     bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
     voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
+    copies: dict = field(default_factory=dict)        # a planned song: role -> [(first bar, bars, the bar copied from)], the band
+                                                      # coming back with the theme (the writers copy their own earlier bars there)
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -1032,6 +1034,46 @@ def theme_body_units(songs) -> list:
                     break
                 same += 1
             out.append(tables.Unit(s.sid, s.game, str(same), {"part": R.MELODY}))
+    return out
+
+
+RETURN_PARTS = ("chords", R.BASS, R.ACCOMP)   # what may come back with the tune's theme, as the readings showed it does
+RETURN_SAME = 0.5                    # the share of a return's bars that are the theme's, for a part to count as back
+
+
+def return_band_units(songs) -> list:
+    """Each return of the theme in each song as a unit: its outcome which of
+    the band comes back with it, "chords", "bass" and "accompaniment" in
+    any set (the part's bars under the returning phrase the same as under
+    the theme phrase in RETURN_SAME of them or more; "none" where nothing
+    does, and a part the song has not is left out of the question); its
+    value the part (return). FFVI (2026-10-23): all three come back in 17
+    of 46 returns, one of them in 23, none in 4; the written songs' returns
+    brought the tune back over new chords and a new accompaniment every
+    time, and were not heard as returns."""
+    out = []
+    for s in songs:
+        cells = melody_cells(s)
+        heads = [(w, next((cells[k] for k in w if cells[k]), None)) for i, w in phrase_windows(s) if i is not None]
+        heads = [(w, h) for w, h in heads if h]
+        if len(heads) < 2:
+            continue
+        theme_w, theme = heads[0]
+        names = bar_chords(s) if s.tonic is not None else None
+        bass = [figure(struck, a, s) if struck else None for _, a, _, struck in all_bars_of(s, R.BASS)] if R.BASS in s.notes else None
+        acc = [pattern(p for p, _ in struck) if struck else None for _, _, _, struck in all_bars_of(s, R.ACCOMP)] if R.ACCOMP in s.notes else None
+        for w, h in heads[1:]:
+            if h != theme:
+                continue
+            m = min(len(theme_w), len(w))
+            back = []
+            for key, seq in (("chords", names), (R.BASS, bass), (R.ACCOMP, acc)):
+                if seq is None:
+                    continue
+                pairs = [(seq[a], seq[b]) for a, b in zip(theme_w[:m], w[:m]) if seq[a] is not None or seq[b] is not None]
+                if pairs and sum(1 for x, y in pairs if x == y) / len(pairs) >= RETURN_SAME:
+                    back.append(key)
+            out.append(tables.Unit(s.sid, s.game, " ".join(back) or "none", {"part": "return"}))
     return out
 
 

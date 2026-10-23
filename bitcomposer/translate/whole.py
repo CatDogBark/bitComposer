@@ -117,7 +117,8 @@ class Plan:
                 "form": self.letters, "parts": [list(p) for p in self.parts], "loop_bar": self.loop_bar, "chords": self.names,
                 "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays,
                 "registers": {k: list(v) for k, v in self.registers.items()},
-                "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log}
+                "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log,
+                "theme": {"bars": self.extras.get(R.MELODY, {}).get("theme_bars"), "returns": self.extras.get(R.MELODY, {}).get("returns")}}
 
 
 @dataclass
@@ -458,6 +459,39 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             letters[i] = " ".join(drawn)
         extras.setdefault(R.MELODY, {})["letters"] = letters
         log.append("phrases " + " | ".join(f"{parts[i][3]}: {v}" for i, v in letters.items()))
+        # the theme's bars and its returns, and what comes back with each (the return-band table: the chords, the bass,
+        # the accompaniment, in any set); the chords copied here, the band's bars by the writers (song.copies)
+        theme_bars, returns = None, []
+        for i, (bar, n, of, label) in enumerate(parts):
+            if i not in letters:
+                continue
+            windows = []
+            for j in range(0, n, rhythm.PHRASE):
+                chunk = list(range(bar + j, bar + min(n, j + rhythm.PHRASE)))
+                if len(chunk) < rhythm.PHRASE and windows:
+                    windows[-1] += chunk
+                else:
+                    windows.append(chunk)
+            live = [w for w in windows if any(plays[R.MELODY][k] for k in w)]
+            for w, letter in zip(live, letters[i].split()):
+                if letter != rhythm.THEME:
+                    continue
+                if theme_bars is None:
+                    theme_bars = w[:rhythm.PHRASE]
+                    continue
+                back = _draw(models, "return_band", ("return",), rng, log) if "return_band" in models else "none"
+                with_ = [x for x in back.split() if x != "none" and (x == "chords" or x in band)]
+                returns.append({"bars": w[:len(theme_bars)], "with": with_})
+        if theme_bars is not None:
+            extras[R.MELODY]["theme_bars"] = theme_bars
+            extras[R.MELODY]["returns"] = returns
+            for r in returns:
+                if "chords" in r["with"]:
+                    for a, b in zip(theme_bars, r["bars"]):
+                        names[b], chords[b] = names[a], chords[a]
+            if returns:
+                log.append("theme at bars " + "-".join(str(theme_bars[0]) + "" if len(theme_bars) == 1 else [str(theme_bars[0]), str(theme_bars[-1])]) + "; returns "
+                           + ", ".join(f"bar {r['bars'][0]} with {' + '.join(r['with']) or 'the tune alone'}" for r in returns))
     for role in band:
         log.append(f"{role}: " + ", ".join(x for x in (
             f"weight {weights[role]}" if role in weights else "", f"register {registers[role]}" if role in registers else "",
@@ -476,6 +510,12 @@ def song_of(plan: Plan, kit=()) -> rhythm.Song:
     song = rhythm.Song(plan.title, METER, DIVISION, bars, chords, bpm=plan.bpm, sid=plan.sid, game=plan.game,
                        numbers=list(range(plan.bars)), parts=list(plan.parts), tonic=plan.tonic, mode=plan.mode, loop_bar=plan.loop_bar)
     song.pieces = {name: KIT_PIECES[name] for name in kit if name in KIT_PIECES}
+    x = plan.extras.get(R.MELODY, {})
+    if x.get("theme_bars") and x.get("returns"):            # the band back with the theme: each part copies its theme bars there
+        for r in x["returns"]:
+            for role in r["with"]:
+                if role != "chords":
+                    song.copies.setdefault(role, []).append((r["bars"][0], len(r["bars"]), x["theme_bars"][0]))
     return song
 
 

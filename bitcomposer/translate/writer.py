@@ -1237,6 +1237,11 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = figure if figure is not None else model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
             played[figures[k]] += 1
             previous = figures[k]
+    for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
+        for i in range(length):
+            k, src = start + i, copy_of + i
+            if k < len(figures) and src < len(figures) and own[k] != REST and figures[src] != REST:
+                figures[k] = figures[src]
     return figures
 
 

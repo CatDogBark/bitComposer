@@ -218,6 +218,31 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual([u.outcome for u in rhythm.theme_body_units([s])], ["1"])   # within one part: bar 5 repeats the theme's bar 1, bar 6 does not
         self.assertEqual(rhythm.phrase_letter_units([s])[0].outcome, "T T")
 
+    def test_what_comes_back_with_the_theme(self):
+        s = self._song()
+        s.parts = [(0, 8, None, "A")]
+        tune = {0: (67, 69, 71, 72), 1: (72, 71, 69, 67), 2: (60, 62, 64, 65), 3: (65, 64, 62, 60),
+                4: (67, 69, 71, 72), 5: (72, 71, 69, 67), 6: (74, 76, 77, 79), 7: (79, 77, 76, 74)}
+        s.notes["melody"] = [(4.0 * bar + x, 0.9, float(m), "m") for bar, ms in tune.items() for x, m in zip((0.0, 1.0, 2.0, 3.0), ms)]
+        from bitcomposer.translate.vocab import Span
+        s.chords = [Span(0.0, 32.0, 0, "", 1.0)]               # one chord throughout: the bass's two-note bar and the chord come back with the theme
+        units = rhythm.return_band_units([s])
+        self.assertEqual(len(units), 1)
+        self.assertEqual(units[0].outcome, "chords bass")
+        s.chords = [Span(0.0, 16.0, 0, "", 1.0), Span(16.0, 32.0, 7, "", 1.0)]   # the chord changes under the return: the bass's marks change with it
+        self.assertEqual(rhythm.return_band_units([s])[0].outcome, "none")
+        from bitcomposer.translate import writer
+        s2 = self._song()
+        s2.copies = {"bass": [(4, 2, 0)]}                       # the plan: the bass comes back with the theme at bar 4, two bars
+        units = [tables.Unit(f"s{i}", "g", f, {"part": "bass", "meter": 4, "habit": "medium walking no-octaves", "previous": rhythm.START})
+                 for i, f in enumerate(("0:R 2:5", "0:R 1:+ 2:5 3:+", "0:R 3/2:R 2:5", "0:R 1:R 2:R 3:R"))]
+        cache = tables.Cache.fit(units, ("part", "meter", "habit", "previous"), name="bass", votes=tables.SHARES)
+        bars = [(a, b, []) for a, b in s2.bars]
+        figs = writer._free_figures(s2, "bass", cache, writer.FreeManner(cache.table.vocabulary, division=4), ["0"] * 8, bars,
+                                    "medium walking no-octaves", random.Random(3), (), {}, envelope_of=writer.free_envelope("medium"))
+        self.assertEqual(figs[4:6], figs[0:2])                 # the theme's bars again under the return
+        self.assertTrue(all(f in cache.table.vocabulary for f in figs))
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

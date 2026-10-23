@@ -55,6 +55,7 @@ KEPT = {
     "letters": ("rhythm", "letters_units", {}, ("part",), False, False, "a song's form as its parts' letters in order (A B A B C), drawn whole"),
     "phrase_letters": ("rhythm", "phrase_letter_units", {}, ("part", "phrases", "form"), False, False, "a part's phrases as letters: the theme head again, an earlier head again, or new"),
     "theme_body": ("rhythm", "theme_body_units", {}, ("part",), False, False, "how much of the theme phrase comes back with its head"),
+    "return_band": ("rhythm", "return_band_units", {}, ("part",), False, False, "which of the chords, the bass and the accompaniment come back with the theme"),
     "contours": ("phrases", "contour_units", {}, ("part", "mode"), False, True, "a four-bar phrase's contour"),
     "peaks": ("phrases", "peak_units", {}, ("part", "mode", "contour"), False, False, "where a phrase peaks, by its contour"),
     "endings": ("phrases", "ending_units", {}, ("part", "mode"), False, True, "the note a phrase ends on, against the key"),
