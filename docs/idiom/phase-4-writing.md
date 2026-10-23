@@ -283,4 +283,24 @@ three-voice accompaniment (sparse mixed, rich); The Decisive Battle a
 two-voice accompaniment (dense varied, rich); Searching for Friends a
 three-voice harmony (sparse varied, thin) and one accompaniment voice
 (sparse mixed, full); Johnny C. Bad a three-voice accompaniment (medium
-repeating, full). **Awaiting the ear.**
+repeating, full).
+
+**Terra's bell** (the listener, 2026-10-22: "that one voice at a high
+pitch just sounds like a really high bell or ring, super abrasive; a bug
+or a writing choice?"). A bug. Terra's accompaniment voices 4 and 3,
+whose own notes sit at midi 56 to 61 and 58 to 68, were written at 63 to
+90 and 70 to 94: 235 and 271 of their 318 notes above the song's own
+top for the voice, a sample two octaves above where the game plays it.
+The cause: the widths table says how wide the whole upper voicing sits
+across all the chordal parts (Terra reads "wide" because its pad sits an
+octave over its accompaniment), and the writer had turned "wide" into
+"lift each tone of the stack an octave more than the last", with a
+register cap three octaves over the voice's floor. Fixed: the stack is
+close (each tone the nearest above the last), every voice's note is
+moved by octaves into the voice's own register (its own notes' 10th to
+90th percentile; `writer.in_register`), and the spread between parts is
+left to where their voices already sit (a real song's given; a generated
+song's the pack's registers). The widths table is measured but no longer
+drives the writer. Terra after the fix: no written note above any
+voice's own top; the pad on 68 to 78 against its own 71 to 78. The four
+songs rewritten and the page republished. **Awaiting the ear.**
