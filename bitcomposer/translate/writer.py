@@ -523,6 +523,7 @@ CONTOUR_RANGE = 5                     # semitones a line may stray from its cont
 LEAP = 12                             # semitones: the moves table folds a move beyond an octave to LEAP + 1 (phrases.LEAP)
 MOVES = [f"{m:+d}" if m else "0" for m in range(-LEAP - 1, LEAP + 2)]   # every move the moves table names
 ECHO_SHARES = {"same": 0.3, "earlier": 0.3, "new": 0.4}   # the urn's shares where no recall table is given
+CONTINUE = 0.8                        # when the bar before echoed an earlier bar, the share of "earlier" draws that go on with the bar after it
 
 
 class Cell:
@@ -712,6 +713,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     figures = [REST] * len(bars)
     cells = {}                                              # bar index -> Cell
     played, by_key = Counter(), {}                          # the urn: cell key -> times played; key -> a Cell
+    source = {}                                             # bar index -> the earlier bar it echoed (a passage recalled goes on)
+    choices = {}                                            # bar index -> how the bar came (same, earlier, new, answered, copy)
     prev_cell, last_midi, last_move = None, float((register[0] + register[1]) // 2), rhythm.START
     rhythm_played, rhythm_prev = Counter(), None
     draws = {k: (Counter(), None) for k in ("contours", "endings", "relations")}
@@ -780,6 +783,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         pc = (root + cell.entry) % 12
         low, high = register
         first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
+        if chord is not None and cell.positions and abs(cell.positions[0] - round(cell.positions[0])) < rhythm.NEAR:
+            pcs = {(chord[0] + i) % 12 for i in harmony.SHAPES.get(chord[1], harmony.SHAPES[""])}
+            if first % 12 not in pcs:                       # the first note on the beat lands on the chord too
+                first = min((x for x in range(first - 3, first + 4) if x % 12 in pcs and low <= x <= high), key=lambda x: (abs(x - first), x), default=first)
         pitches = [first]
         idx = scale_index(first, scale)
         for p, st in zip(cell.positions[1:], cell.steps):
@@ -817,22 +824,38 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     src = Cell(src.positions, [m + shift for m in src.pitches], 0, scale)
                     src.entry = (src.entry + shift) % 12
                 phrase_cells.append(again(k, src))
+                choices[k] = "copy"
         else:
             for attempt in range(COPY_TRIES):
                 phrase_cells, start_midi = [], None
-                snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell)
+                snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices))
                 for i, k in enumerate(live):
                     if relation == "answered" and prev_phrase and i < len(prev_phrase):
                         cell = new_cell(k, prev_phrase[i].positions, shape, start_midi, a0, b0)
+                        choices[k] = "answered"
                     else:
                         choice = urn.choose(rng, prev_cell, played)
+                        before = k - 1 if k - 1 in cells else None
                         if choice == "same" and prev_cell is not None:
                             cell = again(k, prev_cell)
+                            source[k] = source.get(before, before) if before is not None else None
                         elif choice == "earlier":
-                            pool = [(c, n) for key_, n in played.items() for c in [by_key[key_]] if prev_cell is None or key_ != prev_cell.key]
-                            cell = again(k, _weighted(rng, [c for c, _ in pool], [n for _, n in pool])) if pool else new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                            follow = source.get(before)
+                            if follow is not None and follow + 1 in cells and follow + 1 < k and rng.random() < CONTINUE:
+                                cell = again(k, cells[follow + 1])      # the passage recalled goes on with its next bar
+                                source[k] = follow + 1
+                            else:
+                                pool = [(j, c) for j, c in cells.items() if j < k and (prev_cell is None or c.key != prev_cell.key)]
+                                if pool:
+                                    j, c = _weighted(rng, pool, [played.get(c.key, 1) for _, c in pool])
+                                    cell = again(k, c)
+                                    source[k] = j
+                                else:
+                                    cell = new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                                    choice = "new"
                         else:
                             cell = new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                        choices[k] = choice
                     if start_midi is None and cell.pitches:
                         start_midi = float(cell.pitches[0])
                     played[cell.key] += 1
@@ -846,6 +869,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 if not [r for r in reference.matches(probe.rhythm, probe.intervals) if r.get("song") != song.sid]:
                     break
                 played, by_key, last_midi, last_move, rhythm_played, rhythm_prev, prev_cell = (Counter(snapshot[0]), dict(snapshot[1]), snapshot[2], snapshot[3], Counter(snapshot[4]), snapshot[5], snapshot[6])
+                source, choices = dict(snapshot[7]), dict(snapshot[8])
             else:
                 log.append(f"phrase at bar {w[0]}: a game's phrase drawn {COPY_TRIES} times running; the last kept")
         # the ending: the phrase's last note onto the drawn degree
@@ -857,7 +881,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
                 last_midi = float(last.pitches[-1])
         prev_phrase, prev_phrase_start = phrase_cells, a0
-        log.append(f"bar {w[0]}: {relation}, {shape}, ends {ending}, cells {[('new' if c.key not in by_key or by_key[c.key] is c else 'again') for c in phrase_cells]}")
+        log.append(f"bar {w[0]}: {relation}, {shape}, ends {ending}, bars {[choices.get(k, '-') for k in live]}")
     # the notes, with their lengths from the articulation table
     notes = []
     for k in sorted(cells):
