@@ -349,4 +349,28 @@ tone of the voicing (`unclashed`; the band-awareness rule the bass has
 for hits, here for pitches; in a generated song the parts written
 earlier are the tune to avoid). Johnny after: clashes 8 % against the
 original's 7 %, no chordless voicing; the four songs' chords rewritten
-and republished. **Awaiting the ear.**
+and republished. Heard: "much better".
+
+**The 28-second stretch** (the listener, 2026-10-22: "all the free
+styles seem to struggle in the 28 sec part on that song"). An
+arrangement event, not a phrase one: from bar 13 Johnny's band drops to
+a drum feature for four bars (the accompaniment from 22 to 37 strikes a
+bar to 1, the bass from 6 to 1 or 2, the counter-line from 6 to 1, the
+drums up from 10 to 20) and the free parts played through it: the free
+writer's density was the habit's, the moments rule holds only drops of
+two bars or less (a longer quiet stretch in this very song was a section
+to write, phase 3 found), and the form reader sees no boundary there.
+**Fixed: a free-written pitched part follows the band's energy bar by
+bar** (`harness.band_energy`: level x sounded length of every other
+voice, the drums left out, since a drum feature is still a breakdown for
+the pitched parts, against the song's median; `writer.thinned` scales
+the habit's strikes to it; under THIN 0.05 the bar rests; and in a
+thinned bar the band's shared hits are not locked to, since the ladder
+otherwise dropped the envelope to meet the drums' fill and wrote eight
+strikes where the band had one). Johnny after: the bass 1 strike a bar
+through bars 13 to 17 where the band sits at 0.30 of its median, the
+accompaniment 1 to 2; Terra's intro bars thin the same way. A
+band-reading rule, so it carries into generation, where the parts
+written earlier set the energy; the arrangement slice adds the table
+version for songs with no band yet. The bass and chord stems of all four
+songs republished. **Awaiting the ear.**
