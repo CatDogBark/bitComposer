@@ -465,3 +465,34 @@ guessed. A game nothing (by the songs' split −3.54 against −3.48). Draws
 under the chain and the mixture: 11.9 distinct intervals a song against
 11.9 real, the repeat share 0.29 against 0.33. **Kept:** part+mode+previous
 as the song's mixture (in the pack as `moves`).
+
+**The melody written free** (`writer.melody`, `harness.write_melody`,
+`tools/table_parts.py --parts melody`). The rhythm a bar from the
+melody's bar table (the habit drawn by tempo and the part's weight; no
+lock, the tune leads; rests where the song's tune rests). Phrases of
+four bars over the form's parts (a leftover joining the phrase before).
+For each phrase: its relation to the one before from the relations
+mixture (repeated: the phrase again; moved up or down: shifted a scale
+step; answered: the rhythm kept, the tune new; new: both new), its
+contour from the contours mixture, its ending from the endings mixture.
+The tune then note by note from the moves mixture, the move before as the
+chain, each move kept in the voice's register, in the scale on the beat,
+off any semitone the chordal parts sound at that moment, and steered
+toward the contour's thirds (CONTOUR_STEP 2 semitones apart) when the
+line strays from them; the last note moved to the drawn ending's degree
+where the table named one (1, 3, 5). A phrase whose rhythm and intervals
+match a game's phrase in the reference set (`harness.reference_index`,
+the song itself excepted) is drawn again, up to COPY_TRIES (12). Each
+note's length from the articulation table (held or detached by its
+value, the song's articulation habit drawn once). The tune never read:
+only where it rests, and its register. On the Substitution Check as a
+fourth switch, Melody (Original / Free / None), the rest stem now without
+the melody voice; the page opens with the melody free and the other
+parts original. The four songs' draws (seed 1): Terra medium varied,
+held, phrases all new but the first, mostly level and falling; The
+Decisive Battle dense varied, detached, falling then rising; Searching
+for Friends sparse varied, held; Johnny C. Bad sparse mixed, held. No
+phrase copied a game's (the copy check never ran out its tries).
+**Awaiting the ear.** What to listen for: whether the tune belongs over
+the real band, whether its phrases breathe and end, and whether it
+rings as FFVI or as a generator.
