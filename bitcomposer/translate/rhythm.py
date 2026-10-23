@@ -538,6 +538,11 @@ def voicing_units(songs) -> list:
 RICHNESS = ((0.4, "thin"), (0.6, "full"), (2, "rich"))   # a part's mean tones a span, over four
 
 
+def voicing_habit_units(songs) -> list:
+    """The upper parts' richness habits, one unit a song and part (what a writer draws once a song)."""
+    return habits(voicing_units(songs))
+
+
 def width_units(songs) -> list:
     """Each chord span as a unit: its outcome how the upper parts voice the
     chord as a whole, the number of distinct pitches sounding (to 6) and

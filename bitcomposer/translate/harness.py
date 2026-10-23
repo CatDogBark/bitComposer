@@ -614,6 +614,81 @@ def write_drums(ctx: Context, seed: int = 1) -> Written | None:
     return Written(R.DRUMS, new, set(kit_voices), figures, own, log)
 
 
+UPPER_SOUNDS = {R.HARMONY: 1.0}       # a held part sounds to its next strike; the others at the song's own share
+
+
+def write_upper(ctx: Context, seed: int = 1) -> Written | None:
+    """The upper parts (harmony, accompaniment, arp: every one the song has)
+    written into the song under its own chords (the module), as one written
+    part named "upper"."""
+    song, original, events, beats = ctx.song, ctx.original, ctx.events, ctx.beats
+    roles_present = [r for r in rhythm.UPPER if any(role == r and any(not math.isnan(n[2]) for n in ns) for role, ns in ctx.by_voice.values())]
+    if not roles_present:
+        return None
+    log, all_notes, all_figures, all_own, replaced = [], [], [], [], set()
+    models = dict(ctx.models) if ctx.models else {}
+    if not all(k in models for k in ("rhythm", "voicings", "widths")):
+        others = [s for s in ctx.songs if s.sid != ctx.sid]
+        units = [u for u in rhythm.units(others) if u.values["part"] in rhythm.UPPER]
+        models.setdefault("rhythm", writer.fit(units, name="rhythm"))
+        models.setdefault("voicings", tables.Cache.fit(rhythm.voicing_units(others), ("part", "shape", "habit"), name="voicings",
+                                                        votes=tables.SHARES, discount=writer.DISCOUNT))
+        models.setdefault("widths", tables.Cache.fit(rhythm.width_units(others), ("part", "shape", "previous"), name="widths",
+                                                      votes=tables.SHARES, discount=writer.DISCOUNT))
+        models.setdefault("habits", game_habits(tempo_habits(units), ctx, ("part", "tempo")))
+        models.setdefault("voicing_habits", game_habits(rhythm.voicing_habit_units(others), ctx))
+    for role in roles_present:
+        voices = sorted((v for v, (r, ns) in ctx.by_voice.items() if r == role and any(not math.isnan(n[2]) for n in ns)),
+                        key=lambda v: statistics.median(n[2] for n in ctx.by_voice[v][1] if not math.isnan(n[2])))
+        registers = {}
+        for v in voices:
+            pitched = sorted(n[2] for n in ctx.by_voice[v][1] if not math.isnan(n[2]))
+            registers[v] = round(pitched[int(writer.UPPER_LOW * (len(pitched) - 1))])
+        own_notes = song.notes.get(role, [])
+        rng = random.Random(f"{seed}:{role}")
+        habits = models.get("habits")
+        habit = (habits.draw((role, rhythm.band(song.bpm)) if habits.conditionings == ("part", "tempo") else (role,), habit_rng(ctx, seed, role))
+                 if habits is not None else "medium mixed")
+        vh = models.get("voicing_habits")
+        richness = vh.draw((role,), habit_rng(ctx, seed, role + " voicing")) if vh is not None else "full"
+        sounds = UPPER_SOUNDS.get(role) or writer.sounded(own_notes)
+        held = moments(ctx, set(voices))
+        answered = stops(ctx, set(voices), own_notes)
+        lock = locks(ctx, set(voices), own_notes)
+        notes, figures, voicings = writer.upper(song, role, voices, registers, models, rng, habit, richness, sounds,
+                                                key=ctx.key, hold=held | answered, lock=lock)
+        log.append(f"{role}: voices {voices} (floors {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, sounded {sounds:.2f}; "
+                   f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes"
+                   + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
+                   + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else "")
+                   + f"; locked to the band in {len(lock)} bars")
+        settings = {v: settings_of([n for n in original.notes if n.voice == v], events) for v in voices}
+        kept_bars = {k for k in (held | answered) if k < len(song.bars)}
+        windows = [(seconds_at(beats, song.bars[k][0]), seconds_at(beats, song.bars[k][1])) for k in kept_bars]
+        mine = {v: sorted((n for n in original.notes if n.voice == v), key=lambda n: n.start) for v in voices}
+        new = []
+        for start_b, end_b, midi, v in notes:
+            if settings[v] is None:
+                continue
+            start = seconds_at(beats, start_b)
+            if start >= original.seconds or any(w0 <= start < w1 for w0, w1 in windows):
+                continue
+            stop = min(seconds_at(beats, end_b), original.seconds)
+            starts = [n.start for n in mine[v]]
+            i = bisect.bisect_left(starts, start)
+            near = min((mine[v][j] for j in (i - 1, i) if 0 <= j < len(mine[v])), key=lambda n: abs(n.start - start), default=None)
+            at = near.volume if near is not None and abs(near.start - start) < 4.0 else None
+            usual, like, pitch_ref, midi_ref = settings[v]
+            new.append(note_like(v, start, stop, usual, like, pitch_for(midi, pitch_ref, midi_ref), at))
+        for v in voices:                                       # the song's own notes where its moments and stops are kept
+            new += [n for n in mine[v] if any(w0 <= n.start < w1 for w0, w1 in windows)]
+        all_notes += looped(ctx, new)
+        all_figures += [f"{role}: {f} / {vc}" for f, vc in zip(figures, voicings)]
+        all_own += [f"{role}: {o}" for o in (rhythm.pattern(p for p, _ in struck) if struck else writer.REST for _, _, _, struck in rhythm.all_bars_of(song, role))]
+        replaced |= set(voices)
+    return Written("upper", all_notes, replaced, all_figures, all_own, log)
+
+
 def score_with(ctx: Context, parts: list, title: str, message: list) -> convert.Score:
     """The song as decoded, the written parts in place of the voices they stand in for."""
     replaced = set().union(*(w.replaced for w in parts)) if parts else set()

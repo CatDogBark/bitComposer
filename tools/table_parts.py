@@ -23,7 +23,7 @@ def main(argv=None) -> int:
     ap.add_argument("spc")
     ap.add_argument("--db", required=True)
     ap.add_argument("-o", "--out", required=True)
-    ap.add_argument("--parts", default="bass,drums", help="which parts to write, comma-separated (bass, drums)")
+    ap.add_argument("--parts", default="bass,drums", help="which parts to write, comma-separated (bass, drums, upper: the harmony, accompaniment and arp together)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--seconds", type=float, default=60.0)
     ap.add_argument("--title", help="the module's title (25 characters show in a player)")
@@ -39,7 +39,7 @@ def main(argv=None) -> int:
         return 1
     ctx.free = a.free
     wanted = [p.strip() for p in a.parts.split(",") if p.strip()]
-    writers = {"bass": harness.write_bass, "drums": harness.write_drums}
+    writers = {"bass": harness.write_bass, "drums": harness.write_drums, "upper": harness.write_upper}
     parts = []
     print(f"{ctx.title} ({ctx.game}):")
     for name in wanted:

@@ -37,6 +37,7 @@ KEPT = {
     "drum_habits": ("rhythm", "drum_habit_units", {}, ("part",), False, False, "the drums' density habit, drawn once a song"),
     "voicings": ("rhythm", "voicing_units", {}, ("part", "shape", "habit"), False, True, "which chord tones an upper part holds in a span"),
     "widths": ("rhythm", "width_units", {}, ("part", "shape", "previous"), False, True, "how wide the upper voicing sits"),
+    "voicing_habits": ("rhythm", "voicing_habit_units", {}, ("part",), False, False, "an upper part's richness habit, drawn once a song"),
     "chords": ("rhythm", "chord_units", {}, ("part", "mode", "previous"), False, True, "a bar's chord as a numeral in the key, after the bar before's"),
     "changes": ("rhythm", "change_units", {}, ("part", "meter", "habit"), False, False, "where in the bar the chord changes, by the song's motion"),
     "cadences": ("rhythm", "cadence_units", {}, ("part", "mode", "length"), False, False, "how a part's progression ends"),

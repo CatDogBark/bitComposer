@@ -324,3 +324,37 @@ class FreeWritingTests(unittest.TestCase):
         song.parts = [(0, 4, None, "A"), (4, 8, 0, "A")]                          # a repeat of another length: written anew
         self.assertEqual(writer.form_spans(song, own)[1], (4, 8, 4, None))
         self.assertEqual(writer.form_spans(song, own)[2:], [(12, 1, 1, None), (13, 1, 1, None)])
+
+
+class UpperPartTests(unittest.TestCase):
+    def test_a_stack_follows_the_width_and_the_register(self):
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual(writer.stack(["R", "3", "5"], 0, "", scale, 60, "close", None), [60, 64, 67])
+        self.assertEqual(writer.stack(["R", "3", "5"], 0, "", scale, 60, "open", None), [60, 76, 67])
+        self.assertEqual(writer.stack(["R", "5"], 7, "", scale, 60, "wide", None), [67, 86])
+        self.assertEqual(writer.stack(["R", "sus"], 0, "sus4", scale, 60, "close", None), [60, 65])
+        self.assertEqual(writer.stack([], 0, "", scale, 60, "close", None), [])
+
+    def test_the_upper_parts_of_a_generated_song_are_written_from_tables(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        for seed in range(1, 13):                                # a seed whose harmony sustains enough to voice
+            song = compose_song(seed=seed, pack="ffvi")
+            ctx = harness.load_generated(song, f"seed {seed}", "test", seconds=30.0)
+            if ctx is not None and rhythm.voicing_units([ctx.song]):
+                break
+        songs = [ctx.song]
+        entries = {"rhythm": packtables.fit("rhythm", [u for u in rhythm.units(songs) if u.values["part"] in rhythm.UPPER]),
+                   "voicings": packtables.fit("voicings", rhythm.voicing_units(songs)),
+                   "widths": packtables.fit("widths", rhythm.width_units(songs)),
+                   "habits": packtables.fit("habits", rhythm.rhythm_habit_units(songs)),
+                   "voicing_habits": packtables.fit("voicing_habits", rhythm.voicing_habit_units(songs))}
+        self.assertTrue(all(v is not None for v in entries.values()), entries.keys())
+        ctx.models = packtables.read({"tables": entries})
+        w = harness.write_upper(ctx, seed=1)
+        self.assertIsNotNone(w)
+        self.assertEqual(w.part, "upper")
+        self.assertTrue(w.notes and w.figures and w.replaced)
+        self.assertTrue(all(n.voice in w.replaced for n in w.notes))
+        new = harness.score_with(ctx, [w], "seed 5 upper", ["test"])
+        self.assertEqual(len([n for n in new.notes if n.voice in w.replaced]), len(w.notes))
