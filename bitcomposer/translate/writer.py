@@ -370,7 +370,8 @@ UPPER_LOCK = {R.HARMONY: 0.0, R.ACCOMP: 2 / 3, R.ARP: 2 / 3}   # the share of th
 
 
 MOTION_STEP = {"block": 0, "mixed": 0.5, "arpeggiated": 1}   # how far along the stack a voice moves a strike
-CHORD_MARKS = {"R", "3", "5", "7", "sus"}   # a written voicing holds one of these at least: "+" alone is the chord reader's noise
+CHORD_MARKS = {"R", "3", "5", "7", "sus"}   # a written voicing holds one of these at least, and only these are realized: the
+                                      # table's "+" is mostly the chord reader's noise (Terra's own accompaniment plays 4 % other)
 CLASH = (1, 11)                       # semitones (mod 12) a written tone may not sit from a note the tune sounds at the same time
 
 
@@ -442,7 +443,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                     if voiced(drawn):
                         break
                     drawn = models["voicings"].table.draw(models["voicings"].table.context(v_unit), rng, v_unit.values)
-                marks = drawn.split() if voiced(drawn) else ["R", "5"]
+                marks = [m for m in drawn.split() if m in CHORD_MARKS] if voiced(drawn) else ["R", "5"]
                 played_v[drawn] += 1
                 prev_v = drawn
                 last_chord = chord
@@ -522,6 +523,7 @@ def form_spans_of(song: rhythm.Song):
 
 
 THIN = 0.05                           # the band's energy (against its median) under which a free-written pitched part sits a bar out
+BREAKDOWN = 0.5                       # under this share of the median the band is thin: the part thins with it and does not lock to it
 
 
 def thinned(env: tuple, ratio: float) -> tuple:
@@ -561,18 +563,19 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
-                thin = energy is not None and k < len(energy) and energy[k] < 1.0
+                thin = energy is not None and k < len(energy) and energy[k] < BREAKDOWN
                 if thin:
                     env = thinned(env, energy[k])
                 bar_lock = None if thin else lock.get(k)        # in a breakdown the band's hits are not the band: no lock
                 values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit}
                 unit = tables.Unit(song.sid, song.game, "", values)
                 # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
-                # without the envelope (the band asks more strikes than the habit); then the manner alone. Never the
-                # song's own bar: a free-written part copies nothing of the part it replaces.
+                # without the lock (the band asks more strikes than the habit: the part keeps its density and locks
+                # where it can); then without the envelope; then the manner alone. Never the song's own bar: a
+                # free-written part copies nothing of the part it replaces.
                 ladder = [lambda f, _l=bar_lock, _e=env: manner.fits(f) and within_of(f, _e) and locked(f, _l, lock_share),
-                          lambda f, _l=bar_lock: manner.fits(f) and locked(f, _l, lock_share),
                           lambda f, _e=env: manner.fits(f) and within_of(f, _e),
+                          lambda f, _l=bar_lock: manner.fits(f) and locked(f, _l, lock_share),
                           manner.fits]
                 figure = None
                 for fit in ladder:

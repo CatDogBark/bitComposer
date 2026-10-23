@@ -343,6 +343,7 @@ class UpperPartTests(unittest.TestCase):
         self.assertEqual(writer.thinned((2, 6, False, 4), 0.5), (1, 3, False, 4))
         self.assertEqual(writer.thinned((2, 6, False, 4), 0.1), (1, 1, False, 4))
         self.assertEqual(writer.thinned((2, 6, False, 4), 1.4), (2, 6, False, 4))       # a loud bar does not thicken the part
+        self.assertLess(writer.BREAKDOWN, 1.0)                                          # a bar a hair under the median is not a breakdown
         self.assertTrue(writer.voiced("R 3 +") and writer.voiced("sus 5"))
         self.assertFalse(writer.voiced("+") or writer.voiced(""))
         self.assertEqual(writer.sounding_pcs([(0.0, 1.0, 60.0, "x"), (1.0, 1.0, 62.0, "x")], 0.5), {0})
