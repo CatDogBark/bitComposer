@@ -774,7 +774,7 @@ def write_melody(ctx: Context, seed: int = 1) -> Written | None:
         return None
     v = max(by_voice, key=lambda voice: len(by_voice[voice]))
     pitched = sorted(n[2] for n in by_voice[v])
-    register = (round(pitched[int(writer.UPPER_LOW * (len(pitched) - 1))]), round(pitched[int(writer.UPPER_HIGH * (len(pitched) - 1))]))
+    register = (round(pitched[0]), round(pitched[-1]))             # the tune's whole ambitus: a tune uses its extremes
     log = [f"melody on voice {v} (register {register})"]
     models = melody_models(ctx)
     rng = random.Random(f"{seed}:melody")

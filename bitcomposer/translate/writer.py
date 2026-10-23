@@ -637,8 +637,8 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
             continue
         if strong and STRONG_SCALE and pc not in scale:
             continue
-        if aim is not None and abs(midi - aim) > CONTOUR_RANGE and step and (step > 0) != (aim > midi):
-            continue
+        if aim is not None and abs(midi - aim) > CONTOUR_RANGE and (step == 0 or (step > 0) != (aim > midi)):
+            continue                                        # steered back toward the contour: standing still is no move toward it
         w = moves_table.p(o, ctx)
         if w <= 0:
             continue
@@ -647,6 +647,12 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
         on_chord.append(pc in chord_pcs)
     if not options:
         return 0
+    if 0 in options and len(options) > 1:
+        # the repeated note passes every filter every time; its share among the fitting moves is held to the table's,
+        # so the filters never funnel the line onto one pitch
+        p0 = moves_table.p("0", ctx)
+        rest = sum(w for st, w in zip(options, weights) if st != 0)
+        weights = [w if st != 0 else p0 * rest / max(1e-9, 1 - p0) for st, w in zip(options, weights)]
     if strong and chord_pcs and any(on_chord) and not all(on_chord):
         mc = sum(w for w, c in zip(weights, on_chord) if c)
         mo = sum(w for w, c in zip(weights, on_chord) if not c)
