@@ -312,14 +312,14 @@ def allot(band: list, counts: dict | None = None) -> dict:
 DENSITY_WORDS = ("sparse", "medium", "dense")
 
 
-def habit_near(models: dict, role: str, tempo: str, weight: str, rng: random.Random, first: str, density: str) -> str:
-    """A second line's habit, drawn as the first's was but of the density the layers table says it has against the
-    first (sparser, like, denser), the last draw where none in twenty is."""
+def habit_near(models: dict, role: str, tempo: str, weight: str, rng: random.Random, first: str, density: str, table: str = "habits") -> str:
+    """A second line's habit, drawn as the first's was (from `table`) but of the density the layers table says it has
+    against the first (sparser, like, denser), the last draw where none in twenty is."""
     tier = next((i for i, w in enumerate(DENSITY_WORDS) if first.startswith(w)), 1)
     want = {"sparser": lambda t: t < tier, "like": lambda t: t == tier, "denser": lambda t: t > tier}.get(density, lambda t: True)
     habit = first
     for _ in range(20):
-        habit = _draw(models, "habits", (role, tempo, weight), rng)
+        habit = _draw(models, table, (role, tempo, weight), rng)
         if want(next((i for i, w in enumerate(DENSITY_WORDS) if habit.startswith(w)), 1)):
             return habit
     return habit
@@ -518,9 +518,22 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0], sounds=plan.sounds[R.BASS])
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
-        written[R.BASS] = Part(R.BASS, [(a, b, m, 0) for a, b, m in notes], figures,
-                               [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
-                                f"{len(notes)} notes; locked to the band in {len(lock)} bars"])
+        line = [(a, b, m, 0) for a, b, m in notes]
+        log = [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
+               f"{len(notes)} notes; locked to the band in {len(lock)} bars"]
+        layer = layer_of(plan.extras.get(R.BASS))
+        if plan.voices.get(R.BASS, 1) >= 2 and layer[0] == "apart":   # a second bass line of its own (FFVI's layered basses are all apart)
+            _, offset, density = layer
+            habit2 = habit_near(models, R.BASS, rhythm.band(plan.bpm), plan.weights.get(R.BASS, "half"), random.Random(f"{seed}:bass:second habit"),
+                                plan.habits[R.BASS], density, table="bass_habits")
+            notes2, figures2 = writer.bass(song, models["bass"], random.Random(f"{seed}:bass:second"), habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
+                                           free=True, plays=plan.plays[R.BASS], register=max(24, plan.registers[R.BASS][0] + offset), sounds=plan.sounds[R.BASS])
+            song.notes[R.BASS] += [(a, b - a, m, "bass") for a, b, m in notes2]
+            line += [(a, b, m, 1) for a, b, m in notes2]
+            figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
+            log.append(f"a second line apart: floor {max(24, plan.registers[R.BASS][0] + offset)} ({offset:+d}), habit {habit2} ({density}); "
+                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
+        written[R.BASS] = Part(R.BASS, line, figures, log)
     tempo = rhythm.band(plan.bpm)
     for role in rhythm.UPPER:
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
