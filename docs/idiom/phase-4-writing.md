@@ -447,3 +447,21 @@ melody: its moves table counted first (phase 3 never did), then phrases
 written free from contour, peak, ending and relation, on the Substitution
 Check as a Melody switch, with the tune-copy check against the reference
 set.
+
+### Slice 3 (reordered): the melody (2026-10-22, begun)
+
+**The moves table, counted.** The unit is a move of the tune, note to
+note within a four-bar phrase (phrases.py's tune: the melody's line, the
+counter-line's where it rests), its outcome the interval in semitones
+signed, beyond an octave folded (`phrases.move_units`): 171,905 moves of
+1,366 songs, 27 outcomes. Held-out bits a move (share votes, discount
+0.75, the games split): none −3.75; **the move before −3.43 (+0.32), as
+the song's mixture −3.31 (+0.43)**; the tone the note left stands on
+(root, third, fifth, other, none) as the mixture −3.45; the phrase's
+contour, its quarter, the beat's strength and the song's stepwise habit
+each within 0.01 of the mixture alone (−3.47): the phrase's shape is a
+target the moves serve, not a predictor of each move, as the vocabulary
+guessed. A game nothing (by the songs' split −3.54 against −3.48). Draws
+under the chain and the mixture: 11.9 distinct intervals a song against
+11.9 real, the repeat share 0.29 against 0.33. **Kept:** part+mode+previous
+as the song's mixture (in the pack as `moves`).

@@ -49,6 +49,7 @@ KEPT = {
     "peaks": ("phrases", "peak_units", {}, ("part", "mode", "contour"), False, False, "where a phrase peaks, by its contour"),
     "endings": ("phrases", "ending_units", {}, ("part", "mode"), False, True, "the note a phrase ends on, against the key"),
     "relations": ("phrases", "relation_units", {}, ("part", "mode", "habit"), False, True, "how a phrase stands to the one before"),
+    "moves": ("phrases", "move_units", {}, ("part", "mode", "previous"), False, True, "the tune's move note to note, after the move before"),
     "texture": ("rhythm", "texture_units", {}, ("part", "meter", "previous"), False, True, "which parts sound in a bar, after the bar before's"),
     "presence": ("rhythm", "presence_units", {}, ("part", "meter", "previous"), False, True, "a part playing or resting in a bar"),
     "parts": ("rhythm", "parts_units", {}, ("part", "band"), False, False, "whether a song has each part, by the band's size"),
