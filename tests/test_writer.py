@@ -378,3 +378,37 @@ class UpperPartTests(unittest.TestCase):
         self.assertTrue(all(n.voice in w.replaced for n in w.notes))
         new = harness.score_with(ctx, [w], "seed 5 upper", ["test"])
         self.assertEqual(len([n for n in new.notes if n.voice in w.replaced]), len(w.notes))
+
+
+class MelodyTests(unittest.TestCase):
+    def test_contour_targets_and_a_phrase_on_the_tables(self):
+        self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))
+        self.assertEqual(writer.contour_targets("level"), (0, 0, 0))
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables, phrases
+        for seed in range(1, 13):
+            song = compose_song(seed=seed, pack="ffvi")
+            ctx = harness.load_generated(song, f"seed {seed}", "test", seconds=40.0)
+            if ctx is None or "melody" not in ctx.song.notes:
+                continue
+            psongs = [s for s in phrases.load(ctx.db)[0]]
+            if psongs and phrases.move_units(psongs):
+                break
+        songs = [ctx.song]
+        entries = {"rhythm": packtables.fit("rhythm", [u for u in rhythm.units(songs) if u.values["part"] == "melody"]),
+                   "habits": packtables.fit("habits", rhythm.rhythm_habit_units(songs)),
+                   "values": packtables.fit("values", rhythm.value_units(songs)),
+                   "moves": packtables.fit("moves", phrases.move_units(psongs)),
+                   "contours": packtables.fit("contours", phrases.contour_units(psongs)),
+                   "endings": packtables.fit("endings", phrases.ending_units(psongs)),
+                   "relations": packtables.fit("relations", phrases.relation_units(psongs))}
+        missing = [k for k, v in entries.items() if v is None]
+        self.assertEqual(missing, [], missing)
+        ctx.models = packtables.read({"tables": entries})
+        w = harness.write_melody(ctx, seed=1)
+        self.assertIsNotNone(w)
+        self.assertEqual(w.part, "melody")
+        self.assertTrue(w.notes)
+        self.assertTrue(any("bar" in line for line in w.log))
+        new = harness.score_with(ctx, [w], "melody", ["test"])
+        self.assertEqual(len([n for n in new.notes if n.voice in w.replaced]), len(w.notes))

@@ -488,6 +488,209 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     return notes, figures, voicings
 
 
+# --- the melody: phrases written free from the tables (phase 4, the melody slice) ---
+
+PHRASE = 4                            # bars a phrase, as the phrase tables were counted
+CONTOUR_STEP = 2.0                    # semitones a contour's thirds aim apart (phrases.LEVEL)
+DETACHED = 0.5                        # the share of its gap a detached melody note sounds (the readings: under 0.75)
+HELD = 0.95                           # and a held one
+COPY_TRIES = 12                       # tunes drawn again when one copies a game's phrase (the reference set)
+MOVED = {"moved up": 2, "moved down": -2}   # semitones a moved phrase shifts (a scale step; the scale then corrects each note)
+DEGREE_PCS = {"1": (0,), "3": (3, 4), "5": (7,)}   # a phrase's ending degree -> intervals from the tonic it may land on
+STRONG_SCALE = True                   # a note arriving on the beat sits in the scale
+
+
+def contour_targets(shape: str) -> tuple:
+    """Where a phrase's thirds sit against its start, by its contour (CONTOURS): semitones."""
+    up = CONTOUR_STEP
+    return {"rising": (0, up, 2 * up), "falling": (0, -up, -2 * up), "arch": (0, up, 0), "valley": (0, -up, 0)}.get(shape, (0, 0, 0))
+
+
+class Tune:
+    """The notes of one written phrase: (start, end in beats, midi), and its rhythm and intervals for the copy check."""
+
+    def __init__(self, notes: list, a: float):
+        self.notes = notes
+        self.rhythm = [int(round((n[0] - a) * 12)) for n in notes]
+        pitches = [int(round(n[2])) for n in notes]
+        self.intervals = [y - x for x, y in zip(pitches, pitches[1:])]
+
+
+def melody_phrase(song: rhythm.Song, strikes: list, a: float, b: float, models: dict, rng: random.Random, start_midi: float,
+                  register: tuple, scale: set, key: tuple, shape: str, ending: str, previous_move: str, tune_line: list,
+                  reference=None) -> list:
+    """One phrase's pitches for its strikes (beats): each note a move from the
+    one before, drawn from the moves mixture (the move before as the chain),
+    kept in the register and, on the beat, in the scale; the contour's
+    thirds steer the draw when the line strays CONTOUR_STEP from them; the
+    last note lands on the ending's degree where the table named one; a
+    note a semitone from what the chordal parts sound at that moment moves
+    on. Returns [(start, midi)] (lengths are the articulation's)."""
+    if not strikes:
+        return []
+    tonic, mode = key
+    played = Counter()
+    targets = contour_targets(shape)
+    low, high = register
+    out = []
+    midi = float(max(low, min(high, round(start_midi))))
+    previous = previous_move
+    for i, t in enumerate(strikes):
+        third = min(2, int(3 * (t - a) / max(1e-9, b - a)))
+        aim = midi if i == 0 else out[0][1] + targets[third]
+        strong = abs(t - round(t)) < rhythm.NEAR
+        tune = sounding_pcs(tune_line, t)
+        values = {"part": R.MELODY, "mode": mode, "previous": previous or rhythm.START}
+        unit = tables.Unit(song.sid, song.game, "", values)
+
+        def fits(outcome: str, _midi=midi, _aim=aim, _strong=strong, _tune=tune, _first=(i == 0)) -> bool:
+            if _first:
+                return True                                     # the first note's move is from the phrase before: any
+            try:
+                step = int(outcome)
+            except ValueError:
+                return False
+            m = _midi + step
+            if not (low <= m <= high):
+                return False
+            if _strong and STRONG_SCALE and round(m) % 12 not in scale:
+                return False
+            if any((round(m) - pc) % 12 in CLASH for pc in _tune):
+                return False
+            if abs(_midi - _aim) > CONTOUR_STEP and step and (step > 0) != (_aim > _midi):
+                return False                                    # steer toward the contour's third
+            return True
+
+        if i == 0:
+            move = "0"
+        else:
+            move = models["moves"].draw(unit, None if previous == rhythm.START else previous, played, rng, keep=fits)
+            for _ in range(TRIES):
+                if fits(move):
+                    break
+                move = models["moves"].table.draw(models["moves"].table.context(unit), rng, values)
+            else:
+                move = "0" if fits("0") else next((o for o in ("+2", "-2", "+1", "-1", "+3", "-3") if fits(o)), "0")
+            midi = midi + int(move)
+            played[move] += 1
+            previous = move
+        out.append((t, float(midi)))
+    # the ending: the last note onto the drawn degree, by the nearest such pitch in the register
+    if ending in DEGREE_PCS and len(out) >= 2:
+        want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
+        last_t, last_m = out[-1]
+        options = [m for m in range(low, high + 1) if m % 12 in want]
+        if options:
+            out[-1] = (last_t, float(min(options, key=lambda m: (abs(m - last_m), m))))
+    return out
+
+
+def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, rng: random.Random, habit: str,
+           key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed") -> tuple[list, list, list]:
+    """The melody written for the song (the module): its rhythm a bar from
+    the melody's bar table (free of the song's own tune), its phrases of
+    PHRASE bars over the form's parts, each phrase's relation to the one
+    before drawn (repeated: the phrase again; moved: shifted a step;
+    answered: the rhythm kept, a new tune; new), its contour, peak quarter
+    and ending drawn, its tune from the moves mixture under them; a phrase
+    that copies a game's (the reference set) is drawn again; each note's
+    length by the articulation table. Returns the notes
+    [(start, end in beats, midi)], the figures and a log of the phrases."""
+    tonic, mode = key if key else (0, "major")
+    scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
+    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.MELODY)]
+    own = [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
+    figures = _free_figures(song, R.MELODY, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division),
+                            own, bars, habit, rng, hold, {}, envelope_of=free_envelope(habit), lock_share=0.0)
+    tune_line = sorted(n for role in rhythm.UPPER for n in song.notes.get(role, []))   # the chordal parts: what the tune must not clash with
+    index = {num: k for k, num in enumerate(song.numbers)}
+    windows = []
+    for bar, n, *_ in song.parts:
+        ks = [index[num] for num in range(bar, bar + n) if num in index]
+        for i in range(0, len(ks), PHRASE):
+            chunk = ks[i:i + PHRASE]
+            if len(chunk) < PHRASE and windows and windows[-1][-1] + 1 == chunk[0]:
+                windows[-1] = windows[-1] + chunk          # a leftover joins the phrase before
+            else:
+                windows.append(chunk)
+    covered = {k for w in windows for k in w}
+    windows += [[k] for k in range(len(bars)) if k not in covered]
+    windows.sort()
+    notes, log = [], []
+    previous_tune, previous_move, previous_shape = None, rhythm.START, None
+    last_midi = float((register[0] + register[1]) // 2)
+    played = {k: Counter() for k in ("contours", "endings", "relations", "values")}
+    prev = {k: None for k in played}
+    art_habit = articulation
+    for w in windows:
+        a, b = bars[w[0]][0], bars[w[-1]][1]
+        strikes = [a_k + float(Fraction(t.partition(":")[0])) for k in w for a_k, _, _ in [bars[k]]
+                   for t in (rhythm._tokens(figures[k]) if figures[k] != REST else [])]
+        if not strikes:
+            continue
+        unit = lambda extra: tables.Unit(song.sid, song.game, "", {"part": R.MELODY, "mode": mode, **extra})   # noqa: E731
+        relation = "first" if previous_tune is None else models["relations"].draw(unit({"habit": habit_rel(models)}), prev["relations"], played["relations"], rng)
+        played["relations"][relation] += 1
+        prev["relations"] = relation
+        shape = models["contours"].draw(unit({}), prev["contours"], played["contours"], rng)
+        played["contours"][shape] += 1
+        prev["contours"] = shape
+        ending = models["endings"].draw(unit({}), prev["endings"], played["endings"], rng)
+        played["endings"][ending] += 1
+        prev["endings"] = ending
+        tune = None
+        if relation in ("repeated", "moved up", "moved down") and previous_tune is not None:
+            shift = MOVED.get(relation, 0)
+            moved = []
+            for (t0, m0) in previous_tune:
+                t = a + (t0 - previous_tune_start)
+                if t >= b - rhythm.NEAR:
+                    break
+                m = m0 + shift
+                if shift and round(m) % 12 not in scale:      # a moved phrase stays in the scale
+                    m += 1 if shift > 0 else -1
+                moved.append((t, float(max(register[0], min(register[1], m)))))
+            tune = moved if moved else None
+        if tune is None:
+            if relation == "answered" and previous_tune is not None:   # the rhythm kept, the tune new
+                strikes = [a + (t0 - previous_tune_start) for t0, _ in previous_tune if a + (t0 - previous_tune_start) < b - rhythm.NEAR] or strikes
+            for attempt in range(COPY_TRIES):
+                tune = melody_phrase(song, strikes, a, b, models, rng, last_midi, register, scale, (tonic, mode), shape, ending,
+                                     previous_move, tune_line, reference)
+                if reference is None or not tune:
+                    break
+                probe = Tune([(t, t, m) for t, m in tune], a)
+                hits = [r for r in reference.matches(probe.rhythm, probe.intervals) if r.get("song") != song.sid]
+                if not hits:
+                    break
+            else:
+                log.append(f"phrase at bar {w[0]}: a game's phrase drawn {COPY_TRIES} times running; the last kept")
+        previous_tune, previous_tune_start = tune, a
+        if tune:
+            last_midi = tune[-1][1]
+        # the lengths: held or detached a note, by the value and the song's articulation habit
+        for i, (t, m) in enumerate(tune):
+            until = tune[i + 1][0] if i + 1 < len(tune) else b
+            gap = until - t
+            if gap <= rhythm.NEAR:
+                continue
+            value = str(rhythm.position(gap, song.division))
+            held = models["values"].draw((R.MELODY, value, art_habit), rng) if "values" in models else "held"
+            notes.append((t, t + gap * (HELD if held == "held" else DETACHED), m))
+        log.append(f"bar {w[0]}: {relation}, {shape}, ends {ending}, {len(tune)} notes")
+    return notes, figures, log
+
+
+def habit_rel(models: dict) -> str:
+    """The relation table's habit value a song draws under: its commonest, where it has one."""
+    t = models["relations"].table if hasattr(models["relations"], "table") else models["relations"]
+    habits = Counter()
+    for c, votes in t.votes.items():
+        if len(c) == len(t.conditionings) and "habit" in t.conditionings:
+            habits[c[t.conditionings.index("habit")]] += sum(votes.values())
+    return habits.most_common(1)[0][0] if habits else "mixed"
+
+
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
     return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap

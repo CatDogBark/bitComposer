@@ -726,6 +726,84 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
     return Written("upper", all_notes, replaced, all_figures, all_own, log)
 
 
+REFERENCE = os.path.expanduser("~/diags/bitcomposer/idiom/phase3/reference/phrases-4bar.json")   # the tune-copy reference set, machine-local
+_reference = {}
+
+
+def reference_index(path: str = REFERENCE):
+    """The reference set's index, loaded once; None where the file is not on this machine."""
+    if path not in _reference:
+        from . import reference
+        _reference[path] = reference.Index(reference.load(path)) if os.path.exists(path) else None
+    return _reference[path]
+
+
+def melody_models(ctx: Context) -> dict:
+    """The tables the melody writer draws from: the pack's, or fitted on every other song in the readings."""
+    models = dict(ctx.models) if ctx.models else {}
+    need = ("rhythm", "moves", "contours", "endings", "relations", "values", "habits")
+    if all(k in models for k in need):
+        return models
+    from . import phrases
+    others = [s for s in ctx.songs if s.sid != ctx.sid]
+    units = [u for u in rhythm.units(others) if u.values["part"] in (R.MELODY, R.COUNTER)]
+    models.setdefault("rhythm", writer.fit(units, name="rhythm"))
+    models.setdefault("habits", game_habits(tempo_habits(units), ctx, HABIT_SHAPE))
+    values = [u for u in rhythm.value_units(others) if u.values["part"] == R.MELODY]
+    models.setdefault("values", tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES, discount=writer.DISCOUNT).fit(values))
+    models.setdefault("articulation", game_habits(rhythm.habits(values), ctx))
+    psongs = [s for s in phrases.load(ctx.db)[0] if s.sid != ctx.sid]
+    mix = lambda units_, shape, name: tables.Cache.fit(units_, shape, name=name, votes=tables.SHARES, discount=writer.DISCOUNT)   # noqa: E731
+    models.setdefault("moves", mix(phrases.move_units(psongs), ("part", "mode", "previous"), "moves"))
+    models.setdefault("contours", mix(phrases.contour_units(psongs), ("part", "mode"), "contours"))
+    models.setdefault("endings", mix(phrases.ending_units(psongs), ("part", "mode"), "endings"))
+    models.setdefault("relations", mix(phrases.relation_units(psongs), ("part", "mode", "habit"), "relations"))
+    return models
+
+
+def write_melody(ctx: Context, seed: int = 1) -> Written | None:
+    """The melody written into the song free (the module): its own tune
+    never read, only where it rests (the arrangement) and its register."""
+    song, original, events, beats = ctx.song, ctx.original, ctx.events, ctx.beats
+    by_voice = {v: [n for n in ns if not math.isnan(n[2])] for v, (role, ns) in ctx.by_voice.items() if role == R.MELODY}
+    by_voice = {v: ns for v, ns in by_voice.items() if ns}
+    if not by_voice or R.MELODY not in song.notes:
+        return None
+    v = max(by_voice, key=lambda voice: len(by_voice[voice]))
+    pitched = sorted(n[2] for n in by_voice[v])
+    register = (round(pitched[int(writer.UPPER_LOW * (len(pitched) - 1))]), round(pitched[int(writer.UPPER_HIGH * (len(pitched) - 1))]))
+    log = [f"melody on voice {v} (register {register})"]
+    models = melody_models(ctx)
+    rng = random.Random(f"{seed}:melody")
+    habit = draw_habit(models["habits"], R.MELODY, song, habit_rng(ctx, seed, R.MELODY)) if models.get("habits") is not None else "medium mixed"
+    art = models["articulation"].draw((R.MELODY,), habit_rng(ctx, seed, "articulation")) if models.get("articulation") is not None else "mixed"
+    reference = reference_index()
+    notes, figures, phrase_log = writer.melody(song, by_voice[v], register, models, rng, habit, key=ctx.key, hold=(),
+                                               reference=reference, articulation=art)
+    own = [rhythm.pattern(p for p, _ in struck) if struck else writer.REST for _, _, _, struck in rhythm.all_bars_of(song, R.MELODY)]
+    log.append(f"habit {habit}, articulation {art}; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; "
+               f"the reference set {'checked' if reference is not None else 'not on this machine'}")
+    log += phrase_log
+    settings = settings_of([n for n in original.notes if n.voice == v], events)
+    if settings is None:
+        log.append("no reference note on the melody voice")
+        return None
+    usual, like, pitch_ref, midi_ref = settings
+    mine = sorted((n for n in original.notes if n.voice == v), key=lambda n: n.start)
+    starts = [n.start for n in mine]
+    new = []
+    for start_b, end_b, midi in notes:
+        start = seconds_at(beats, start_b)
+        if start >= original.seconds:
+            continue
+        stop = min(seconds_at(beats, end_b), original.seconds)
+        i = bisect.bisect_left(starts, start)
+        near = min((mine[j] for j in (i - 1, i) if 0 <= j < len(mine)), key=lambda n: abs(n.start - start), default=None)
+        at = near.volume if near is not None and abs(near.start - start) < 4.0 else None
+        new.append(note_like(v, start, stop, usual, like, pitch_for(midi, pitch_ref, midi_ref), at))
+    return Written(R.MELODY, looped(ctx, new), {v}, figures, own, log)
+
+
 def score_with(ctx: Context, parts: list, title: str, message: list) -> convert.Score:
     """The song as decoded, the written parts in place of the voices they stand in for."""
     replaced = set().union(*(w.replaced for w in parts)) if parts else set()
