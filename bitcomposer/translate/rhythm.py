@@ -946,6 +946,95 @@ def sound_units(songs) -> list:
     return out
 
 
+PHRASE = 4                           # bars a phrase, as the phrase tables were counted (writer.PHRASE)
+THEME = "T"                          # a phrase opening with the song's theme head (the first phrase's opening bar: the hook)
+AGAIN = "r"                          # a phrase opening with a bar an earlier phrase opened with, the theme's aside
+NEW = "n"                            # a phrase opening with a bar no phrase opened with yet
+
+
+def phrase_windows(song: Song, length: int = PHRASE) -> list:
+    """The tune's phrases as windows of bar indices, a part of the form at a
+    time (a short tail joins the window before it): [(part index, [bar
+    indices])]; bars in no part are windows of their own."""
+    index = {num: k for k, num in enumerate(song.numbers or range(len(song.bars)))}
+    out, covered = [], set()
+    for i, (bar, n, *_) in enumerate(song.parts):
+        ks = [index[num] for num in range(bar, bar + n) if num in index]
+        mine = []
+        for j in range(0, len(ks), length):
+            chunk = ks[j:j + length]
+            if len(chunk) < length and mine and mine[-1][-1] + 1 == chunk[0]:
+                mine[-1] = mine[-1] + chunk
+            else:
+                mine.append(chunk)
+        out += [(i, w) for w in mine]
+        covered |= set(ks)
+    out += [(None, [k]) for k in range(len(song.bars)) if k not in covered]
+    return sorted(out, key=lambda x: x[1][0])
+
+
+def phrase_heads(song: Song, role: str = None) -> list:
+    """Each phrase's head, the cell of its first sounding bar: [(part index, window, head or None)]."""
+    cells = melody_cells(song, role)
+    return [(i, w, next((cells[k] for k in w if cells[k]), None)) for i, w in phrase_windows(song)]
+
+
+def phrase_letter_units(songs) -> list:
+    """Each part of each song's form (a repeat left out) as a unit: its
+    outcome the letters of its phrases, each THEME where the phrase opens
+    with the song's theme head (the first sounding phrase's opening bar),
+    AGAIN where it opens with a bar an earlier phrase opened with, NEW
+    otherwise ("T n T n"); its values the part (melody), how many phrases
+    the part has (to 5) and the part's place in the form. FFVI (2026-10-23):
+    a later phrase opens with the theme head in 43 % of songs, and half the
+    tune's echoes point at its first four bars; the written tunes echoed as
+    much but anywhere, and the theme never headed a phrase again."""
+    out = []
+    for s in songs:
+        heads = [(i, h) for i, w, h in phrase_heads(s) if i is not None]
+        if sum(1 for _, h in heads if h) < 2:
+            continue
+        theme = next((h for _, h in heads if h), None)
+        seen, by_part = set(), {}
+        for i, h in heads:
+            if h is None:
+                continue
+            letter = THEME if h == theme else AGAIN if h in seen else NEW
+            seen.add(h)
+            by_part.setdefault(i, []).append(letter)
+        own = {i for i, bar, n in _own_parts(s)}
+        for i, letters in by_part.items():
+            if i in own and len(letters) >= 1:
+                out.append(tables.Unit(s.sid, s.game, " ".join(letters), {"part": R.MELODY, "phrases": str(min(len(letters), 5)), "form": form_place(s, i)}))
+    return out
+
+
+def theme_body_units(songs) -> list:
+    """Each return of the theme (a later phrase opening with the theme head)
+    as a unit: its outcome how many of its next bars (to three) are the
+    theme phrase's bars again, in order ("0": the head alone comes back,
+    "3": the whole phrase); its value the part (melody)."""
+    out = []
+    for s in songs:
+        cells = melody_cells(s)
+        heads = [(w, h) for i, w, h in phrase_heads(s) if i is not None and h]
+        if len(heads) < 2:
+            continue
+        theme_w, theme = heads[0]
+        theme_cells = [cells[k] for k in theme_w if cells[k]]
+        for w, h in heads[1:]:
+            if h != theme:
+                continue
+            mine = [cells[k] for k in w if cells[k]]
+            same = 0
+            for a, b in zip(mine[1:4], theme_cells[1:4]):
+                if a != b:
+                    break
+                same += 1
+            out.append(tables.Unit(s.sid, s.game, str(same), {"part": R.MELODY}))
+    return out
+
+
 def melody_recall_units(songs) -> list:
     """What each tune bar is to its song so far (same, earlier, new): the urn's shares, by part and echo habit."""
     return tables.recall_units(melody_cell_units(songs))

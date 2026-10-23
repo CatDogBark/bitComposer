@@ -699,7 +699,8 @@ def _chord_in_bar(song: rhythm.Song, t: float):
 def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, rng: random.Random, habit: str,
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
-           role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None) -> tuple[list, list, list]:
+           role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
+           letters: dict | None = None, theme_body=None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -723,8 +724,15 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     without one), held the same way. A phrase after the first sits where
     the phrase-shifts table puts it against the one before (a moved
     phrase moved that far; a new one starting that far from where the
-    last left off). Returns [(start, end, midi)], the bars' rhythms and a
-    log."""
+    last left off). `letters`: {part index: the part's phrases as
+    letters} (rhythm.THEME, AGAIN, NEW; the plan's draw from the
+    phrase-letters table): a THEME phrase after the first opens with the
+    theme's head again and keeps as many of its next bars as the
+    theme-body table draws (`theme_body`), then goes on new; an AGAIN
+    phrase brings back the last phrase whose head was not the theme's; a
+    NEW phrase is new, or answers the one before. Without letters the
+    phrases stand only to the one before (the relations table). Returns
+    [(start, end, midi)], the bars' rhythms and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -770,6 +778,35 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     draws = {k: (Counter(), None) for k in ("contours", "endings", "relations")}
     log, prev_phrase, prev_phrase_start = [], None, None
     written_windows = {}                                    # a window's first bar -> (its live bars, their cells), for the form's repeats
+    part_of_window = {}                                     # a window's first bar -> (its part's index, its place among the part's windows)
+    for i, (mine, _, _) in by_part.items():
+        for j, w in enumerate(mine):
+            if w:
+                part_of_window[w[0]] = (i, j)
+    theme = None                                            # the theme phrase's cells (the first phrase's), once written
+    others = []                                             # the phrases written whose head is not the theme's, latest last
+
+    def letter_of(w0: int) -> str | None:
+        if not letters or w0 not in part_of_window:
+            return None
+        i, j = part_of_window[w0]
+        mine = letters.get(i) or letters.get(str(i))
+        if not mine:
+            return None
+        mine = mine.split() if isinstance(mine, str) else list(mine)
+        return mine[j] if j < len(mine) else mine[-1]
+
+    def end_phrase(cells_: list):
+        """The writer's state after a phrase copied whole or in part."""
+        nonlocal prev_cell, last_midi, last_move
+        if not cells_:
+            return
+        prev_cell = cells_[-1]
+        if prev_cell.pitches:
+            last_midi = float(prev_cell.pitches[-1])
+            if len(prev_cell.pitches) >= 2:
+                d = prev_cell.pitches[-1] - prev_cell.pitches[-2]
+                last_move = f"{d:+d}" if d else "0"
     phrase_size = None                                      # how far the phrase's contour goes (contour_targets)
     moves_seen = [0, 0, None]                               # the tune's repeated moves, all its moves, the last pitch written, so far
     rep_rate = repeat_rate if repeat_rate is not None else REPEAT_RATE.get(repeat_habit, REPEAT_RATE["some"])
@@ -917,19 +954,59 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 choices[k] = "form"
                 played[c.key] += 1
                 by_key.setdefault(c.key, c)
-            prev_cell = phrase_cells[-1]
-            if prev_cell.pitches:
-                last_midi = float(prev_cell.pitches[-1])
-                if len(prev_cell.pitches) >= 2:
-                    d = prev_cell.pitches[-1] - prev_cell.pitches[-2]
-                    last_move = f"{d:+d}" if d else "0"
+            end_phrase(phrase_cells)
             prev_phrase, prev_phrase_start = phrase_cells, a0
             written_windows[w[0]] = (live, phrase_cells)
             log.append(f"bar {w[0]}: the form's repeat of bar {src0}, its tune again")
             continue
+        letter = letter_of(w[0])
+        if letter == rhythm.THEME and theme is not None:   # the hook comes back: its head, as much of its body as the table says, then on
+            keep = 1 + (int(theme_body.draw((R.MELODY,), rng, floored=False)) if theme_body is not None else 0)
+            shape = draw_shape("contours", {})
+            phrase_size = size_of(shape)
+            ending = draw_shape("endings", {})
+            phrase_cells, start_midi = [], None
+            for i, k in enumerate(live):
+                if i < keep and i < len(theme):
+                    cell = again(k, theme[i])
+                    choices[k] = "theme"
+                else:
+                    cell = new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                    choices[k] = "new"
+                if start_midi is None and cell.pitches:
+                    start_midi = float(cell.pitches[0])
+                played[cell.key] += 1
+                by_key.setdefault(cell.key, cell)
+                prev_cell = cell
+                phrase_cells.append(cell)
+            if keep < len(live) and ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches:
+                want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
+                last = phrase_cells[-1]
+                options = [m for m in range(register[0], register[1] + 1) if m % 12 in want]
+                if options:
+                    last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
+            end_phrase(phrase_cells)
+            prev_phrase, prev_phrase_start = phrase_cells, a0
+            written_windows[w[0]] = (live, phrase_cells)
+            log.append(f"bar {w[0]}: the theme again, {min(keep, len(live))} of its bars, then {shape}, ends {ending}")
+            continue
+        if letter == rhythm.AGAIN and others:               # an earlier phrase again, the last whose head was not the theme's
+            src_phrase = others[-1]
+            phrase_cells = [again(k, src_phrase[i % len(src_phrase)]) for i, k in enumerate(live)]
+            for k, c in zip(live, phrase_cells):
+                choices[k] = "again"
+                played[c.key] += 1
+                by_key.setdefault(c.key, c)
+            end_phrase(phrase_cells)
+            prev_phrase, prev_phrase_start = phrase_cells, a0
+            written_windows[w[0]] = (live, phrase_cells)
+            log.append(f"bar {w[0]}: an earlier phrase again")
+            continue
         relation = "first" if prev_phrase is None else draw_shape("relations", {"habit": habit_rel(models)})
         if relation == "first" and prev_phrase is not None:
             relation = "new"
+        if letter is not None and relation in ("repeated", "moved up", "moved down"):
+            relation = "new"                                # the letters said a new head: the phrase is new, or answers the one before
         shape = draw_shape("contours", {})
         phrase_size = size_of(shape)
         ending = draw_shape("endings", {})
@@ -1004,6 +1081,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 last_midi = float(last.pitches[-1])
         prev_phrase, prev_phrase_start = phrase_cells, a0
         written_windows[w[0]] = (live, phrase_cells)
+        if letters is not None and phrase_cells:
+            if theme is None and letter_of(w[0]) == rhythm.THEME:
+                theme = list(phrase_cells)                  # the song's theme: the first phrase the letters name so
+            elif letter_of(w[0]) == rhythm.NEW:
+                others.append(list(phrase_cells))
         log.append(f"bar {w[0]}: {relation}, {shape}" + (f" {phrase_size:.0f}" if phrase_size is not None else "") + f", ends {ending}, bars {[choices.get(k, '-') for k in live]}")
     if on_beat[1]:
         log.append(f"strong-beat notes on the chord: {on_beat[0]}/{on_beat[1]} ({on_beat[0] / on_beat[1]:.2f}; the song's rate {rate:.2f})")

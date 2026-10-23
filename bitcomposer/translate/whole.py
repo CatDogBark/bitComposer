@@ -149,12 +149,32 @@ def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
 
 
 def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None) -> list:
-    """The form: how many parts (the sizes table), each part new, again or
-    back by its index (the form table), a new part's length by the song's
+    """The form: one of the game's forms whole (the letters table: "A B A B
+    C", a part returning after another in 29 % of FFVI's songs where a
+    chain by index returned in 15 %), each new part's length by the song's
     length habit (the lengths table), a repeat as long as the part it
-    repeats; (first bar, bars, the part repeated or None, letter)."""
-    size = max(1, min(MAX_PARTS, int(_draw(models, "sizes", ("form",), rng, log))))
+    repeats; without a letters table, how many parts (the sizes table) and
+    each part new, again or back by its index (the form table). (first
+    bar, bars, the part repeated or None, letter)."""
     habit = _draw(models, "length_habits", ("form",), rng, log)
+    if "letters" in models:
+        letters = _draw(models, "letters", ("form",), rng, log).split()[:MAX_PARTS]
+        parts, bar = [], 0
+        for i, label in enumerate(letters):
+            of = letters.index(label) if label in letters[:i] else None
+            if of is None:
+                drawn = _draw(models, "lengths", ("form", METER, habit), rng, log)
+                n = rhythm.LONG if drawn.endswith("+") else max(1, int(drawn))
+            else:
+                n = parts[of][1]
+            if max_bars is not None and parts and bar + n > max_bars:
+                log.append(f"the form cut at {len(parts)} parts: {bar + n} bars would pass {max_bars}")
+                break
+            parts.append((bar, n, of, label))
+            bar += n
+        log.append(f"form {' '.join(p[3] for p in parts)}: {bar} bars, parts of {[p[1] for p in parts]} (length habit {habit})")
+        return parts
+    size = max(1, min(MAX_PARTS, int(_draw(models, "sizes", ("form",), rng, log))))
     parts, labels, bar = [], [], 0
     for i in range(size):
         kind = _draw(models, "form", ("form", METER, min(i + 1, 5)), rng, log) if i else "new"
@@ -414,6 +434,19 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     for role in band:                                       # a part with two voices or more: what its second voice does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
+    if R.MELODY in band and "phrase_letters" in models:   # the tune's phrases a part: the theme again, an earlier head again, or new
+        letters, n_parts = {}, len(parts)
+        for i, (bar, n, of, label) in enumerate(parts):
+            if of is not None:
+                continue
+            count = max(1, -(-n // rhythm.PHRASE)) if n >= rhythm.PHRASE else 1
+            form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
+            drawn = _draw(models, "phrase_letters", (R.MELODY, str(min(count, 5)), form), rng, log).split()
+            if i == 0 or not letters:
+                drawn[0] = rhythm.THEME                     # the song's theme is its first phrase
+            letters[i] = " ".join((drawn + [rhythm.NEW] * count)[:count])
+        extras.setdefault(R.MELODY, {})["letters"] = letters
+        log.append("phrases " + " | ".join(f"{parts[i][3]}: {v}" for i, v in letters.items()))
     for role in band:
         log.append(f"{role}: " + ", ".join(x for x in (
             f"weight {weights[role]}" if role in weights else "", f"register {registers[role]}" if role in registers else "",
@@ -579,10 +612,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures, plog = writer.melody(song, [], plan.registers[role], models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                              key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                              recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                             role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"))
+                                             role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"),
+                                             letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"))
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
-        log = [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items() if k != "layer")
+        log = [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items() if k not in ("layer", "letters"))
                + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
                + ("checked" if reference is not None else "not on this machine")] + plog
         n, layer = plan.voices[role], layer_of(x)
@@ -680,11 +714,14 @@ def voice_map(plan: Plan, written: dict) -> dict:
     return out
 
 
-def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None):
+def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0):
     """The written parts as a score (spc.convert.Score) on the pack's
     samples: the form once, then the loop (from the loop's bar to the
-    form's end) `loops` - 1 times more, fading at the end; the echo as given
-    (echo_of). Returns the score and {role: first voice}."""
+    form's end) `loops` - 1 times more, fading at the end; with
+    `tail_bars`, the loop's first bars once more after the last pass,
+    fading through them, so a listener hears the song come back round to
+    its hook; the echo as given (echo_of). Returns the score and {role:
+    first voice}."""
     from .. import score as score_mod
     from ..drums import KIT_NOTE
     from ..spc import convert, it_song, notes as notes_mod
@@ -692,7 +729,10 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     form_beats = plan.bars * METER
     loop_start = plan.loop_bar * METER
     loop_beats = form_beats - loop_start
-    seconds = (form_beats + max(0, loops - 1) * loop_beats) * beat_s
+    tail = min(max(0, tail_bars), plan.bars - plan.loop_bar) * METER
+    seconds = (form_beats + max(0, loops - 1) * loop_beats + tail) * beat_s
+    if tail:
+        fade = max(fade, tail * beat_s)
     first = voice_map(plan, written)
     n_voices = sum(plan.voices[r] for r in first)
     pcm_of, key_of, instruments = {}, {}, {}
@@ -715,6 +755,8 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
     offsets = [0.0] + [form_beats - loop_start + j * loop_beats for j in range(max(0, loops - 1))]
+    if tail:
+        offsets.append(form_beats - loop_start + max(0, loops - 1) * loop_beats)
     for role, part in written.items():
         if role not in first:
             continue
@@ -722,6 +764,8 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
             for n in part.notes:
                 a, b = n[0], n[1]
                 if j and a < loop_start - 1e-9:
+                    continue
+                if tail and j == len(offsets) - 1 and a >= loop_start + tail - 1e-9:
                     continue
                 t0, t1 = (a + offset) * beat_s, (b + offset) * beat_s
                 if t0 >= seconds:
@@ -743,7 +787,8 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     return score, first
 
 
-def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int = 1, fade: float = 3.0, echo: dict | None = None) -> list[str]:
+def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int = 1, fade: float = 3.0, echo: dict | None = None,
+             tail_bars: int = 0) -> list[str]:
     """Each written part alone as a module of its own (`<title> <part>.it`),
     for a page that plays the parts in sync and switches each: the same
     length, echo and samples as the whole, so their sum is the whole.
@@ -755,7 +800,7 @@ def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int 
     for role, part in written.items():
         if not part.notes:
             continue
-        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo)
+        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
         score.title = f"{plan.title} {role}"[:25]
         score.message = [f"{plan.title}: the {role} alone (a stem for the Song Check)"] + list(score.message or [])[1:]
         path = os.path.join(out_dir, f"{plan.title} {role}.it")
@@ -817,10 +862,16 @@ def tune_measures(song: rhythm.Song) -> dict:
         if struck:
             ms = [max(ns, key=lambda x: x[2])[2] for _, ns in struck]
             cells.append((tuple(float(p) for p, _ in struck), tuple(round(y - x) for x, y in zip(ms, ms[1:]))))
+    heads = [h for i, w, h in rhythm.phrase_heads(song) if i is not None and h]
+    theme_back = sum(1 for h in heads[1:] if h == heads[0]) / max(1, len(heads) - 1) if heads else 0.0
+    live = [c for c in rhythm.melody_cells(song) if c]
+    echoes_at = [i for i in range(len(live)) if live[i] in live[:i]]
+    of_opening = sum(1 for i in echoes_at if live[i] in set(live[:4])) / max(1, len(echoes_at))
     return {"chord_tones": on_chord / max(1, len(strong)), "repeats": (len(moves) - len(moving)) / max(1, len(moves)),
             "steps": sum(1 for m in moving if abs(m) <= 2) / max(1, len(moving)), "leaps": sum(1 for m in moving if abs(m) >= 7) / max(1, len(moving)),
             "distinct": len(set(cells[:SPAN])), "echoes": sum(1 for i, c in enumerate(cells) if c in cells[:i]) / max(1, len(cells)),
-            "range": max(n[2] for n in line) - min(n[2] for n in line)}
+            "range": max(n[2] for n in line) - min(n[2] for n in line),
+            "theme_heads": theme_back, "theme_returns": int(theme_back > 0), "echoes_of_opening": of_opening}
 
 
 def measures(song: rhythm.Song) -> dict:
@@ -844,7 +895,7 @@ def measures(song: rhythm.Song) -> dict:
 
 def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game: str = "", title: str | None = None,
             max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True, fade: float = 2.0,
-            min_bars: int | None = None) -> dict:
+            min_bars: int | None = None, tail_bars: int = 0) -> dict:
     """One whole song: the plan, the parts written, the score (and {role: first voice}), the song read back and its
     measures; {"plan", "song", "written", "score", "first", "samples", "echo", "read", "measures"}."""
     p = plan(models, seed, game, title, max_bars, min_bars)
@@ -854,7 +905,7 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     rng = random.Random(f"whole:{seed}:render")
     samples = samples_for(p, pack, own, pack_name, rng, models)
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
-    score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo)
+    score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}
     if read:
         once, _ = score_of(p, written, samples, loops=1, fade=0.0, echo=echo)

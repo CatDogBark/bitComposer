@@ -197,6 +197,27 @@ class NewTablesTests(unittest.TestCase):
         major = {0, 2, 4, 5, 7, 9, 11}
         self.assertEqual([m for _, _, m, _ in whole.diatonic([(0.0, 1.0, 60.0, 0), (1.0, 2.0, 62.0, 0)], 4, major, 1)], [64.0, 65.0])   # a third up: E, then F
 
+    def test_phrase_letters_and_the_theme_body(self):
+        s = self._song()
+        # the tune over the song's eight bars: two parts of four; bars 0 and 4 open alike (the theme head), bar 4's phrase
+        # keeps the theme's second bar too, bars 2-3 and 6-7 differ
+        s.parts = [(0, 4, None, "A"), (4, 4, None, "B")]
+        tune = {0: (67, 69, 71, 72), 1: (72, 71, 69, 67), 2: (60, 62, 64, 65), 3: (65, 64, 62, 60),
+                4: (67, 69, 71, 72), 5: (72, 71, 69, 67), 6: (74, 76, 77, 79), 7: (79, 77, 76, 74)}
+        s.notes["melody"] = [(4.0 * bar + x, 0.9, float(m), "m") for bar, ms in tune.items() for x, m in zip((0.0, 1.0, 2.0, 3.0), ms)]
+        s.parts = [(0, 4, None, "A"), (4, 4, None, "B")]
+        windows = rhythm.phrase_windows(s)
+        self.assertEqual([w for _, w in windows], [[0, 1, 2, 3], [4, 5, 6, 7]])
+        heads = rhythm.phrase_heads(s)
+        self.assertEqual(heads[0][2], heads[1][2])
+        units = rhythm.phrase_letter_units([s])
+        self.assertEqual([(u.outcome, u.values["phrases"], u.values["form"]) for u in units], [("T", "1", "first"), ("T", "1", "last")])
+        body = rhythm.theme_body_units([s])
+        self.assertEqual([u.outcome for u in body], ["1"])                  # bar 5 repeats the theme's bar 1, bar 6 does not
+        s.parts = [(0, 8, None, "A")]
+        self.assertEqual([u.outcome for u in rhythm.theme_body_units([s])], ["1"])   # within one part: bar 5 repeats the theme's bar 1, bar 6 does not
+        self.assertEqual(rhythm.phrase_letter_units([s])[0].outcome, "T T")
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

@@ -84,6 +84,7 @@ def main(argv=None) -> int:
     ap.add_argument("--min-bars", type=int, default=0, help="forms shorter than this are drawn again (default 0: a game's jingles stay)")
     ap.add_argument("--loops", type=int, default=1, help="how many times the loop plays in all (default 1: the form once)")
     ap.add_argument("--fade", type=float, default=3.0, help="seconds the module fades over at its end")
+    ap.add_argument("--tail-bars", type=int, default=0, help="the loop's first bars once more after the form, fading (a listener hears the song come back round)")
     ap.add_argument("--game", help="the game the songs are written as (the title's game; default the pack's label)")
     ap.add_argument("--title-prefix", default="Whole")
     ap.add_argument("--db", help="the readings: with --game, the game's own songs' measures beside the written songs'")
@@ -103,12 +104,12 @@ def main(argv=None) -> int:
     for seed in seeds_of(a.seeds):
         title = f"{a.title_prefix} {seed:02d}"
         out = whole.compose(models, pack, own, name, seed, game, title, max_bars=a.max_bars, loops=a.loops, reference=reference, read=not a.no_read, fade=a.fade,
-                            min_bars=a.min_bars or None)
+                            min_bars=a.min_bars or None, tail_bars=a.tail_bars)
         p = out["plan"]
         path = os.path.join(a.out, f"{title}.it")
         convert.render(out["score"], path)
         if a.stems:
-            whole.stems_of(p, out["written"], out["samples"], a.stems, loops=a.loops, fade=a.fade, echo=out["echo"])
+            whole.stems_of(p, out["written"], out["samples"], a.stems, loops=a.loops, fade=a.fade, echo=out["echo"], tail_bars=a.tail_bars)
         record = {"plan": p.to_json(), "echo": out["echo"], "voices": out["first"],
                   "samples": {r: (s[0] if isinstance(s, tuple) else {k: v[0] for k, v in s.items()}) for r, s in out["samples"].items()},
                   "parts": {r: {"log": w.log, "figures": w.figures} for r, w in out["written"].items()},
