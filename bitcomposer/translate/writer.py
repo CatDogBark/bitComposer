@@ -332,25 +332,35 @@ def free_drum_envelope(letters) -> object:
 
 # --- the upper parts: harmony, accompaniment and arp under the song's own chords (phase 4) ---
 
-UPPER_LOW = 0.1                       # the register's floor: this quantile of the voice's own notes
-UPPER_HIGH = 0.9                      # and its ceiling
-WIDTH_LIFT = {"close": 0, "open": 1, "wide": 2}   # octaves lifted onto the stack beyond the nearest-above placing
+UPPER_LOW = 0.1                       # a voice's register: from this quantile of its own notes
+UPPER_HIGH = 0.9                      # to this one; a written note is moved by octaves to sit inside it
 TONE_MARKS = {"sus": "s"}             # the voicing table's marks as tone() reads them
 
 
-def stack(marks: list, root: int, shape: str, scale: set, low: int, width: str, previous: float | None) -> list[int]:
+def stack(marks: list, root: int, shape: str, scale: set, low: int, previous: float | None) -> list[int]:
     """A voicing's tones as midi notes, lowest first: the first mark placed in
-    the register nearest the note before, each next the nearest above, the
-    stack opened by the width (every second tone up an octave for open, each
-    tone an octave more for wide)."""
+    the register nearest the note before, each next the nearest above (a
+    close stack; the spread between parts is their voices' own registers)."""
     if not marks:
         return []
     pcs = [tone(root, shape, TONE_MARKS.get(m, m), scale) for m in marks]
-    close = [place(pcs[0], low, previous)]
+    out = [place(pcs[0], low, previous)]
     for pc in pcs[1:]:
-        close.append(close[-1] + ((pc - close[-1]) % 12 or 12))
-    kind = WIDTH_LIFT.get(width, 0)
-    return [m + (12 * (i % 2) if kind == 1 else 12 * i if kind == 2 else 0) for i, m in enumerate(close)]
+        out.append(out[-1] + ((pc - out[-1]) % 12 or 12))
+    return out
+
+
+def in_register(midi: int, register: tuple) -> int:
+    """The note moved by octaves into the voice's register (low, high); where the register is under an
+    octave and no octave fits, the one just under its ceiling."""
+    low, high = register
+    while midi > high:
+        midi -= 12
+    while midi < low:
+        midi += 12
+    while midi > high:
+        midi -= 12
+    return midi
 
 
 UPPER_LOCK = {R.HARMONY: 0.0, R.ACCOMP: 2 / 3, R.ARP: 2 / 3}   # the share of the band's shared hits an upper part strikes (a pad holds through)
@@ -363,7 +373,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     chord tones a span from the voicings mixture, the spread from the widths
     mixture, laid onto the part's voices (lowest first; a lone arp voice
     cycles the tones). `voices`: the part's voices low to high; `registers`:
-    voice -> its floor (midi); `models`: rhythm, voicings, widths (Caches).
+    voice -> its register (low, high); `models`: rhythm and voicings (Caches).
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -374,8 +384,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     notes, voicings = [], []
-    played_v, played_w, prev_v, prev_w = Counter(), Counter(), None, None
-    last_chord, marks, width, previous_low = None, ["R", "3", "5"], "close", None
+    played_v, prev_v = Counter(), None
+    last_chord, marks, previous_low = None, ["R", "3", "5"], None
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         if figure == REST:
             voicings.append(REST)
@@ -396,17 +406,12 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 marks = drawn.split() or ["R"]
                 played_v[drawn] += 1
                 prev_v = drawn
-                w_unit = tables.Unit(song.sid, song.game, "", {"part": "upper", "shape": shape, "previous": prev_w or rhythm.START})
-                w = models["widths"].draw(w_unit, prev_w, played_w, rng)
-                played_w[w] += 1
-                prev_w = w
-                width = w.partition(":")[2] or "close"
                 last_chord = chord
-                bar_voicing.append(f"{drawn} {width}")
-            pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]], width, previous_low)
+                bar_voicing.append(drawn)
+            pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]][0], previous_low)
             previous_low = float(pitches[0]) if pitches else previous_low
             if role == R.ARP and len(voices) == 1:
-                midi = pitches[i % len(pitches)]
+                midi = in_register(pitches[i % len(pitches)], registers[voices[0]])
                 notes.append((start, start + (until - start) * sounds, float(midi), voices[0]))
                 continue
             # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped from the middle
@@ -416,10 +421,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             if len(stacked) > len(voices):
                 stacked = [stacked[0]] + stacked[-(len(voices) - 1):] if len(voices) > 1 else [stacked[0]]
             for v, midi in zip(voices, stacked):
-                top = registers[v] + 12 * 3
-                while midi > top:
-                    midi -= 12
-                notes.append((start, start + (until - start) * sounds, float(midi), v))
+                notes.append((start, start + (until - start) * sounds, float(in_register(midi, registers[v])), v))
         voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)
     return notes, figures, voicings
 

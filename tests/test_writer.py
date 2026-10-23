@@ -329,11 +329,13 @@ class FreeWritingTests(unittest.TestCase):
 class UpperPartTests(unittest.TestCase):
     def test_a_stack_follows_the_width_and_the_register(self):
         scale = {0, 2, 4, 5, 7, 9, 11}
-        self.assertEqual(writer.stack(["R", "3", "5"], 0, "", scale, 60, "close", None), [60, 64, 67])
-        self.assertEqual(writer.stack(["R", "3", "5"], 0, "", scale, 60, "open", None), [60, 76, 67])
-        self.assertEqual(writer.stack(["R", "5"], 7, "", scale, 60, "wide", None), [67, 86])
-        self.assertEqual(writer.stack(["R", "sus"], 0, "sus4", scale, 60, "close", None), [60, 65])
-        self.assertEqual(writer.stack([], 0, "", scale, 60, "close", None), [])
+        self.assertEqual(writer.stack(["R", "3", "5"], 0, "", scale, 60, None), [60, 64, 67])
+        self.assertEqual(writer.stack(["R", "5"], 7, "", scale, 60, None), [67, 74])
+        self.assertEqual(writer.stack(["R", "sus"], 0, "sus4", scale, 60, None), [60, 65])
+        self.assertEqual(writer.stack([], 0, "", scale, 60, None), [])
+        self.assertEqual(writer.in_register(94, (58, 68)), 58)                  # a bell two octaves up comes back down
+        self.assertEqual(writer.in_register(50, (58, 68)), 62)
+        self.assertEqual(writer.in_register(66, (60, 64)), 54)                  # under an octave of room: just under the ceiling
 
     def test_the_upper_parts_of_a_generated_song_are_written_from_tables(self):
         from bitcomposer.composer import compose_song

@@ -627,14 +627,12 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         return None
     log, all_notes, all_figures, all_own, replaced = [], [], [], [], set()
     models = dict(ctx.models) if ctx.models else {}
-    if not all(k in models for k in ("rhythm", "voicings", "widths")):
+    if not all(k in models for k in ("rhythm", "voicings")):
         others = [s for s in ctx.songs if s.sid != ctx.sid]
         units = [u for u in rhythm.units(others) if u.values["part"] in rhythm.UPPER]
         models.setdefault("rhythm", writer.fit(units, name="rhythm"))
         models.setdefault("voicings", tables.Cache.fit(rhythm.voicing_units(others), ("part", "shape", "habit"), name="voicings",
                                                         votes=tables.SHARES, discount=writer.DISCOUNT))
-        models.setdefault("widths", tables.Cache.fit(rhythm.width_units(others), ("part", "shape", "previous"), name="widths",
-                                                      votes=tables.SHARES, discount=writer.DISCOUNT))
         models.setdefault("habits", game_habits(tempo_habits(units), ctx, ("part", "tempo")))
         models.setdefault("voicing_habits", game_habits(rhythm.voicing_habit_units(others), ctx))
     for role in roles_present:
@@ -643,7 +641,7 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         registers = {}
         for v in voices:
             pitched = sorted(n[2] for n in ctx.by_voice[v][1] if not math.isnan(n[2]))
-            registers[v] = round(pitched[int(writer.UPPER_LOW * (len(pitched) - 1))])
+            registers[v] = (round(pitched[int(writer.UPPER_LOW * (len(pitched) - 1))]), round(pitched[int(writer.UPPER_HIGH * (len(pitched) - 1))]))
         own_notes = song.notes.get(role, [])
         rng = random.Random(f"{seed}:{role}")
         habits = models.get("habits")
@@ -657,7 +655,7 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         lock = locks(ctx, set(voices), own_notes)
         notes, figures, voicings = writer.upper(song, role, voices, registers, models, rng, habit, richness, sounds,
                                                 key=ctx.key, hold=held | answered, lock=lock)
-        log.append(f"{role}: voices {voices} (floors {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, sounded {sounds:.2f}; "
+        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, sounded {sounds:.2f}; "
                    f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes"
                    + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
                    + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else "")
