@@ -999,3 +999,46 @@ ambitus restored). The counter's distinct bars fell from 6 to 3 with the
 habit floor and are not yet run down. For listening rounds `--min-bars`
 draws a form again under a length (12 bars for the second set: the
 first drew three songs of three to four bars, FFVI's jingles).
+
+### Depth: the orchestration FFVI has and the written songs lacked (2026-10-23)
+
+The owner's second-set note: the songs sound like FFVI but not like its
+epic ones; "little pieces, not epic orchestration", though a song like
+Terra is simple and only fills the space. Measured on FFVI's 67 songs
+against the written twenty (`fullness.py`, `coverage.py` on Ragnarok):
+
+- FFVI uses all eight voices in every song; at any instant a median 6.7
+  notes sound (quartiles 5.5 / 8.0; Shadow, Blackjack, Dancing Mad, The
+  Decisive Battle at 8.7 to 9.8). The written songs used 6 voices (5 / 7)
+  and sounded 4.2 (3.0 / 5.0).
+- Not continuity: each part fills as much of the song as FFVI's (bass
+  0.83 against 0.85, accompaniment 0.89 against 0.92, counter 0.77 against
+  0.84, melody 0.68 against 0.78).
+- Depth: FFVI's accompaniment has 2 voices (1 to 3), its counter-line 2
+  (1 to 2), its harmony 2, its arp 2; the written songs gave the counter
+  and the arp one. And a second voice is a line of its own, not a chord
+  tone of the first: apart in 65 % of accompaniments with two voices and
+  79 % of counter-lines (`harness.relation`), doubling at a third, fourth
+  or fifth in a quarter, alternating in 5 %. The layered basses (13 songs)
+  are all apart, mostly in the same register.
+
+So: **the balance table carries each part's voice count** beside its
+weight, register and note length (the song's whole arrangement in one
+draw; `allot` takes the counts and trims to eight); **the layers table,
+generalized to every part**, says what a second voice does ("doubling +4",
+"alternating", or "apart" with its register offset to REGISTER_BIN and its
+density against the line: sparser, like, denser); and **an apart second
+voice is written as a line of its own**: the accompaniment's as a second
+`upper` line with its own figures, register and voicing at the measured
+density (`habit_near`), the counter's as a second tune clear of the melody
+and the first counter, the bass's as a second bass line; a doubling voice
+is the line again at the interval, in the scale (`diatonic`). Melody
+second voices (rare) are doubled only.
+
+**Round 10** (after; FFVI's own in brackets): notes sounding at once 5.4
+(3.6 / 6.4; FFVI 6.7, 5.5 / 8.0), voices a song 8 (6.3 / 8); the
+accompaniment 8.4 strikes a bar, 9 distinct bars, repeats 0.20 (6.3, 8,
+0.32: two lines' onsets merged count denser than FFVI's two do); the
+counter 5.4 / 4.5 / 0.13 (4.9 / 10.5 / 0.13); the bass and drums as
+before; the tune's steps 0.59, range 14.5, echoes 0.27 unchanged. The
+third listening set (Song Check 3) is written from this.
