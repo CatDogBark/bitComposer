@@ -107,7 +107,7 @@ class RhythmUnitTests(unittest.TestCase):
     def test_part_weights_and_the_habits_carry_them(self):
         s = self._song()
         s.notes["melody"] = [(0.0, 1.0, 72.0, "m")]                          # one melody note against four of bass
-        self.assertEqual(rhythm.part_weights(s), {"bass": "main", "melody": "minor"})
+        self.assertEqual(rhythm.part_weights(s), {"bass": "main", "melody": "half"})   # a fifth of the strikes: half, not minor
         hs = rhythm.habits(rhythm.bass_units([s]))
         self.assertEqual((hs[0].values["part"], hs[0].values["tempo"], hs[0].values["weight"]), ("bass", "medium", "main"))
 

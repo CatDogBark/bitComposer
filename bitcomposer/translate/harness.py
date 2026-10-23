@@ -234,8 +234,11 @@ def _pin_roles(r) -> None:
 
 
 def game_habits(habit_units: list, ctx: Context, conditionings=("part",)):
-    """A habits table of the song's game, the song itself left out (the pack's habit table, for a real song)."""
-    mine = [u for u in habit_units if u.game == ctx.game and u.song != ctx.sid]
+    """A habits table for a real song written free: every game's songs but
+    the song itself (phase 3 found the rhythm, bass and drum habits shared
+    across games, and a game's own songs are too few at one tempo band and
+    weight: FFVI has one fast song whose accompaniment is its main part)."""
+    mine = [u for u in habit_units if u.song != ctx.sid]
     return tables.Table(conditionings, "habits", votes=tables.SHARES).fit(mine) if mine else None
 
 
