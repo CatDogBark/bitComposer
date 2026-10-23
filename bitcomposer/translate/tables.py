@@ -272,6 +272,7 @@ def shapes(base: tuple, extras=(), game: bool = True, covers: int = 0) -> list[t
 FLOOR = ("floor",)                   # the shape that is the floor model alone, for the comparison
 CACHE = "cache"                      # the mark on a shape's name for its Cache mixture
 RECALL = ("same", "earlier", "new")  # what a unit is to its song so far (Cache)
+NEW_TRIES = 20                       # draws a Cache makes for an outcome new to the song before taking one it played
 RECALL_SHAPE = ("part", "habit")     # what the recall shares are conditioned on (the values a unit has of these)
 
 
@@ -349,8 +350,15 @@ class Cache:
 
     def draw(self, unit: Unit, previous, cache: Counter, rng: random.Random, keep=None) -> str:
         """The next outcome for the song: the same, an earlier one by the urn,
-        or a new one from the table (`keep`: a test a new draw must pass,
-        tried a few times before any draw is taken)."""
+        or a new one from the table, new to the song (an outcome the song
+        has not played: the three are drawn as they were counted,
+        recall_units' partition; a "new" draw that could hand back the bar
+        before had the written songs repeating a bar in a third of their
+        bars under a "varied" habit where the songs do in a sixth, the
+        table's own chain repeating on top of the share: docs/idiom/phase-
+        4-writing.md, the integration). `keep`: a test a new draw must
+        pass, tried a few times before any draw is taken; when no outcome
+        new to the song passes, one the song played may."""
         same, earlier, _ = self.shares(unit, previous, cache)
         x = rng.random()
         if x < same:
@@ -359,7 +367,12 @@ class Cache:
             pool = {k: v for k, v in cache.items() if k != previous}
             return rng.choices(list(pool), list(pool.values()))[0]
         ctx = self.table.context(unit)
-        for _ in range(20):
+        out = None
+        for _ in range(NEW_TRIES):
+            out = self.table.draw(ctx, rng, unit.values)
+            if out not in cache and (keep is None or keep(out)):
+                return out
+        for _ in range(NEW_TRIES):
             out = self.table.draw(ctx, rng, unit.values)
             if keep is None or keep(out):
                 return out

@@ -566,6 +566,16 @@ class PackTableTests(unittest.TestCase):
         self.assertAlmostEqual(back.p("0 1/2 1 3/2 2", ("bass", 4, rhythm.START), us[0].values),   # a bar never counted: the floor's
                                t.p("0 1/2 1 3/2 2", ("bass", 4, rhythm.START), us[0].values))
 
+    def test_a_mixture_draws_new_as_new_to_the_song(self):
+        """A "new" draw is an outcome the song has not played, as recall_units counts it; the same and earlier draws as before."""
+        units = [tables.Unit("s", "g", o, {"part": "p", "previous": p}) for o, p in (("a", "start"), ("a", "a"), ("b", "a"), ("c", "b"), ("a", "c"))]
+        m = tables.Cache.fit(units, ("part", "previous"), name="x", votes=tables.SHARES)
+        played = Counter({"a": 3, "b": 1})
+        draws = Counter(m.draw(tables.Unit("s", "g", "", {"part": "p", "previous": "b"}), "b", played, random.Random(i)) for i in range(300))
+        self.assertTrue(draws["b"] > 0 and draws["a"] > 0 and draws["c"] > 0, draws)
+        shares = m.shares(tables.Unit("s", "g", "", {"part": "p", "previous": "b"}), "b", played)
+        self.assertAlmostEqual(draws["c"] / 300, shares[2], delta=0.08)     # the new draws are c, the one outcome not yet played
+
     def test_a_mixture_round_trips(self):
         us = self._bass_units()
         m = tables.Cache.fit(us, ("part", "meter", "habit", "previous"), name="bass", votes=tables.SHARES,

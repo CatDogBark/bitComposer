@@ -767,4 +767,41 @@ chord-tone share landed within a tenth of its draw in 13 songs of 18.
   count is now taken on the looped render, as a player hears it; the
   plan's own parts are the form.
 
-**Round 3** (after these): see below.
+**Round 3** (the same twenty seeds after these; the pack at 50 tables):
+
+| measure | round 1 | round 2 | round 3 | FFVI's own |
+|---|---|---|---|---|
+| band (parts with notes) | 4 | 4 | 4.5 | 5 |
+| seconds, once through | 80 | 76 | 71 | 70 |
+| drums: strikes a bar | 12.0 | 5.9 | 6.5 | 6.9 |
+| drums: share of bars played | 0.74 | 0.58 | 1.00 | 0.93 |
+| drums: distinct bars in 32 | 7 | 5 | 7 | 6 |
+| bass: strikes a bar | 3.8 | 3.7 | 2.3 | 4.3 |
+| bass: distinct bars in 32 | 4 | 4 | 4 | 8 |
+| bass: bar repeats the one before | 0.41 | 0.51 | 0.38 | 0.30 |
+| accompaniment: strikes a bar | 8.0 | 7.3 | 6.2 | 6.3 |
+| accompaniment: distinct bars in 32 | 2.5 | 2.0 | 4 | 8 |
+| accompaniment: bar repeats | 0.60 | 0.67 | 0.42 | 0.32 |
+| counter: strikes a bar | - | 3.6 | 3.9 | 4.9 |
+| counter: distinct bars in 32 | - | 3 | 3 | 10.5 |
+| melody: strikes a bar | 3.2 | 3.8 | 4.4 | 4.5 |
+| melody: distinct bars in 32 | 4 | 4 | 4 | 9 |
+| tune: strong-beat notes on the chord | 0.75 | 0.62 | 0.60 | 0.56 |
+| tune: repeated notes | 0.20 | 0.31 | 0.12 | 0.12 |
+| tune: steps among moves | 0.68 | 0.67 | 0.64 | 0.67 |
+| tune: range, semitones | 12 | 12 | 16 | 21.5 |
+| tune: distinct bar cells in 32 | 10 | 13 | 13 | 12.5 |
+| tune: bars echoing an earlier bar | 0.33 | 0.31 | 0.38 | 0.34 |
+| the reader's parts (looped render from round 3) | 1 | 1 | 2 | 4 |
+| the reader hears the loop | - | - | 1.00 | - |
+
+The habits drawn match the pack's (bass medium walking 9 of 18, FFVI
+0.40; accompaniment varied 13 of 19, FFVI 0.46; melody medium varied 9
+of 19, 0.46). What the tune does note to note now sits on FFVI: chord
+tones, repeats, steps, leaps, its cells and echoes; its range is two
+thirds of the way. The drums and the accompaniment's density and
+presence sit on FFVI. Still short: the distinct bars of every rhythm
+part (bass 4, accompaniment 4, counter 3, melody 4 against 8, 8, 10.5,
+9), the bass's density (2.3 against 4.3), and the reader finds two parts
+where it finds four in FFVI (the plan's parts are 2 to 8; the reader
+hears every loop now).
