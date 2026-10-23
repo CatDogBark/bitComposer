@@ -410,4 +410,30 @@ it spazzed, no ninths. All twelve free stems of the four songs
 republished (every habit redrawn). The open question the pack path
 keeps: a generated song draws from its pack's tables alone, and a thin
 pack will meet the same thinness; the product may carry the shared
-tables as a floor (the plan's open question). **Awaiting the ear.**
+tables as a floor (the plan's open question).
+
+**Johnny C. Bad's chords "repetitive and off pitch"** (the listener,
+2026-10-22, after the round above; Terra's chords passed). Measured: the
+rhythm was as varied as the song's own (23 distinct bars of 38 against
+27, the ostinato share 0.24 for both), but the voicings were 9 distinct
+over 38 bars, the commonest "5 +" and "7 +", which the chord-tones-only
+rule had reduced to a single tone: twenty bars arpeggiating one pitch
+class, and a bare seventh is the "off pitch". The richness habit had
+drawn "full" (two tones), with the table's "+" counted as one; a written
+voicing now holds its richness in chord tones (`voiced(outcome, tones)`,
+RICH_TONES thin 1 / full 2 / rich 3, capped at the part's voices), the
+"+" counting for nothing. And voice 4, which plays one note all song (a
+G sharp pedal under the comping), had been given moving chord tones in
+the bass register, a second moving low line against the bass: a voice
+whose own register is PEDAL_VOICE (2) semitones or narrower is a pedal
+and keeps its note, struck on the figure. Johnny after: voicings R 7, R
+5, R 5 +, R 3 5, R 3 7; voice 4 on its G sharp; the upper voices on E,
+B, G sharp, C sharp and A against the original's C sharp, B, D sharp and
+E, A, G sharp; clashes with the melody 11 % (the fuller voicings have
+more tones to clash; the original 7 %). **Known limitation, the chord
+reader on blues harmony:** in 8 of Johnny's 38 bars the song's own
+accompaniment mostly plays outside the chord the reader named (dominant
+sevenths with blue notes over them), and a written chord follows the
+reader, so in those bars it is the wrong chord by any writing. Reader
+work, not writer work; the melody slice does not touch it. The four
+songs' chords rewritten and republished. **Awaiting the ear.**
