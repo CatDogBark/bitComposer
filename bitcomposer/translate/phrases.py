@@ -81,7 +81,8 @@ from dataclasses import dataclass, field
 from types import SimpleNamespace
 
 from . import form as form_mod, roles as R, store, vocab
-from .rhythm import NEAR, Tally, _chord_at, _line
+from .rhythm import NEAR, START, Tally, _chord_at, _line, habit_of
+from . import tables
 from .vocab import FIT, Span, _beats_at, _median, _pct, tone_of
 
 LENGTHS = ("part", 4, 2)             # the phrase lengths: the part, four bars, two bars
@@ -126,6 +127,8 @@ class Song:
     notes: dict = field(default_factory=dict)
     parts: list = field(default_factory=list)
     loop_bar: int | None = None
+    sid: str = ""                    # its id in the readings, and its game (the tables' split)
+    game: str = ""
 
 
 def load(db, game: str | None = None, song: str | None = None) -> tuple[list[Song], dict]:
@@ -134,8 +137,8 @@ def load(db, game: str | None = None, song: str | None = None) -> tuple[list[Son
     "no form": n}."""
     songs, out = [], Counter()
     where, args = ("WHERE id = ?", (song,)) if song else ("WHERE game = ?", (game,)) if game else ("", ())
-    for sid, title, bpm, meter, tonic, mode, seconds, loop_bar, loop_seconds in db.execute(
-            f"SELECT id, title, bpm, meter, key_tonic, key_mode, seconds, loop_bar, loop_seconds FROM songs {where}", args):
+    for sid, title, bpm, meter, tonic, mode, seconds, loop_bar, loop_seconds, game_name in db.execute(
+            f"SELECT id, title, bpm, meter, key_tonic, key_mode, seconds, loop_bar, loop_seconds, game FROM songs {where}", args):
         row = db.execute("SELECT beats, bars FROM beats WHERE song = ?", (sid,)).fetchone()
         if bpm is None or not row:
             out["free time"] += 1
@@ -164,7 +167,7 @@ def load(db, game: str | None = None, song: str | None = None) -> tuple[list[Son
         lines = [_beats_at(beats, t) for t in bars]
         s = Song(title, tonic, mode, meter,                  # the bars to the loop's end, a last sliver under a beat dropped
                  [(a, min(b, end)) for a, b in zip(lines, lines[1:] + [lines[-1] + meter]) if a < end - (1 - NEAR)],
-                 chords, parts=parts, loop_bar=loop_bar)
+                 chords, parts=parts, loop_bar=loop_bar, sid=sid, game=game_name or "")
         for role, evidence, blob in db.execute("SELECT role, evidence, notes FROM voices WHERE song = ?", (sid,)):
             if role in ROLES and not (evidence and '"roll"' in evidence):
                 s.notes.setdefault(role, []).extend(
@@ -373,8 +376,8 @@ def phrases(song: Song, length) -> list[Phrase]:
     return out
 
 
-def contour(line: list, a: float, b: float) -> str:
-    """The phrase's shape from the mean pitch of its thirds by time (CONTOURS)."""
+def thirds(line: list, a: float, b: float) -> tuple:
+    """The mean pitch of the phrase's thirds by time (an empty third takes its neighbour's)."""
     third = (b - a) / 3
     sums, weights = [0.0] * 3, [0.0] * 3
     for start, length, midi in line:
@@ -387,7 +390,12 @@ def contour(line: list, a: float, b: float) -> str:
     for k in range(3):
         if means[k] is None:                          # an empty third takes its neighbour's
             means[k] = means[k - 1] if k else next(m for m in means if m is not None)
-    x, y, z = means
+    return tuple(means)
+
+
+def contour(line: list, a: float, b: float) -> str:
+    """The phrase's shape from the mean pitch of its thirds by time (CONTOURS)."""
+    x, y, z = thirds(line, a, b)
     if y - max(x, z) >= LEVEL:
         return "arch"
     if min(x, z) - y >= LEVEL:
@@ -479,6 +487,232 @@ def shapes(songs: list, length) -> Shapes:
             out.relation[relation(before, ph)] += 1
             before = ph
     return out
+
+
+# --- the phrases as a table's units (phase 3, item 6) ---
+
+REPEATS = ((1 / 3, "varied"), (2 / 3, "mixed"), (2, "repeating"))   # a song's share of phrases repeating or moving the one before
+YES_NO = {True: "yes", False: "no"}
+
+
+def _place(k: int, n: int) -> str:
+    return "only" if n == 1 else "first" if k == 0 else "last" if k == n - 1 else "middle"
+
+
+def phrase_rows(songs: list, length=4) -> list[list[dict]]:
+    """Each song's phrases with a tune, at one length, as rows of what the
+    tables take: the contour, the peak's quarter, the relation to the
+    phrase before, the end note against the key (KEY_NAMES), whether the
+    phrase ends its part and whether it is the song's last, its place in
+    its part and its part's place in the form, its source (melody or
+    counter-line), the mode, and the song's habit (REPEATS)."""
+    out = []
+    for s in songs:
+        rows, before = [], None
+        for pi, part in enumerate(s.parts):
+            ws = windows(s, part, length)
+            for k, (i, j) in enumerate(ws):
+                a, b = s.bars[i][0], s.bars[j - 1][1]
+                line, source = tune(s, a, b)
+                if not line:
+                    continue
+                ph = Phrase(a, b, line, source, s.bars[j - 1][0], ends_part=k == len(ws) - 1)
+                rows.append({"contour": contour(line, a, b), "peak": peak(line, a, b), "relation": relation(before, ph),
+                             "ending": against_key(ph.final[2], s), "ends_part": YES_NO[ph.ends_part],
+                             "place": _place(k, len(ws)), "form": _place(pi, len(s.parts)), "source": source,
+                             "mode": s.mode, "last": "no"})
+                before = ph
+        if rows:
+            if s.loop_bar is not None:
+                rows[-1]["last"] = "yes"
+            share = sum(1 for r in rows if r["relation"] in ("repeated", "moved up", "moved down")) / len(rows)
+            habit = habit_of(share, REPEATS)
+            for r in rows:
+                r["habit"] = habit
+            out.append((s, rows))
+    return out
+
+
+def _phrase_units(songs, outcome: str, length) -> list:
+    out = []
+    for s, rows in phrase_rows(songs, length):
+        previous = START
+        for r in rows:
+            if outcome == "relation" and r["relation"] == "first":
+                continue                              # the song's first phrase stands to nothing: no choice to count
+            values = {"part": R.MELODY, "previous": previous}
+            values.update((k, v) for k, v in r.items() if k != outcome)
+            out.append(tables.Unit(s.sid, s.game, r[outcome], values))
+            previous = r[outcome]
+    return out
+
+
+SIZE_BIN = 2                         # semitones: the grain a contour's size is kept to
+CONTOUR_CAP = 14                     # semitones: a contour this far or farther is one outcome
+
+
+def contour_size_units(songs, length=4) -> list:
+    """Each phrase with a shape (its contour not level) as a unit: its
+    outcome how far the contour goes, in semitones to SIZE_BIN (rising and
+    falling: the last third against the first; arch and valley: the middle
+    against the ends' mean; CONTOUR_CAP and over one outcome); its values
+    the part (melody), the mode and the contour. What the melody writer
+    aims a phrase's thirds apart by: LEVEL (2 semitones) is the threshold a
+    contour is heard at, not its size (the first whole songs' tunes spanned
+    an octave where FFVI's span nearly two, 2026-10-23)."""
+    out = []
+    for s in songs:
+        for part in s.parts:
+            for i, j in windows(s, part, length):
+                a, b = s.bars[i][0], s.bars[j - 1][1]
+                line, _ = tune(s, a, b)
+                if not line:
+                    continue
+                shape = contour(line, a, b)
+                if shape == "level":
+                    continue
+                x, y, z = thirds(line, a, b)
+                size = abs(z - x) if shape in ("rising", "falling") else abs(y - (x + z) / 2)
+                out.append(tables.Unit(s.sid, s.game, str(min(CONTOUR_CAP, SIZE_BIN * round(size / SIZE_BIN))),
+                                       {"part": R.MELODY, "mode": s.mode, "contour": shape}))
+    return out
+
+
+SHIFT_BIN = 2                        # semitones: the grain a phrase's shift is kept to
+SHIFT_CAP = 12                       # semitones: a shift this far or farther, either way, is one outcome
+
+
+def phrase_shift_units(songs, length=4) -> list:
+    """Each phrase after the first as a unit: its outcome how far its mean
+    pitch sits from the phrase before's, in semitones to SHIFT_BIN (within
+    SHIFT_CAP either way; up positive); its values the part (melody), the
+    mode and the phrase's relation to the one before. What moves a tune
+    between phrases: a phrase moved up or down is moved this far, a new
+    one starts this far from where the last left off (the first whole
+    songs' tunes spanned an octave where FFVI's span nearly two, their
+    phrases each starting where the last ended; MOVED's two semitones were
+    hand-set)."""
+    out = []
+    for s in songs:
+        before = None
+        for part in s.parts:
+            ws = windows(s, part, length)
+            for k, (i, j) in enumerate(ws):
+                a, b = s.bars[i][0], s.bars[j - 1][1]
+                line, source = tune(s, a, b)
+                if not line:
+                    continue
+                ph = Phrase(a, b, line, source, s.bars[j - 1][0], ends_part=k == len(ws) - 1)
+                if before is not None:
+                    shift = statistics.mean(n[2] for n in line) - statistics.mean(n[2] for n in before.line)
+                    shift = max(-SHIFT_CAP, min(SHIFT_CAP, SHIFT_BIN * round(shift / SHIFT_BIN)))
+                    out.append(tables.Unit(s.sid, s.game, str(int(shift)), {"part": R.MELODY, "mode": s.mode, "relation": relation(before, ph)}))
+                before = ph
+    return out
+
+
+RATE_BIN = 0.05                      # the grain the tune's repeat rate is kept to
+
+
+def repeat_rate_units(songs: list, length=4) -> list:
+    """Each song as a unit: its outcome the share of the tune's moves that
+    repeat the note (to RATE_BIN); its value the part (melody). The melody
+    writer holds its tune to the drawn share (the tiers of
+    repeat_habit_units, realized through hand-set rates, gave the first
+    whole songs' tunes a median 0.31 against FFVI's 0.12)."""
+    counts = {}
+    for u in move_units(songs, length):
+        zeros, total = counts.get(u.song, (0, 0))
+        counts[u.song] = (zeros + (u.outcome == "0"), total + 1)
+    games = {s.sid: s.game for s in songs}
+    return [tables.Unit(sid, games.get(sid, ""), f"{round(zeros / total / RATE_BIN) * RATE_BIN:.2f}", {"part": R.MELODY})
+            for sid, (zeros, total) in counts.items() if total >= 8]
+
+
+def contour_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome its contour (CONTOURS); the other
+    rows' names its values, and the phrase before's contour."""
+    return _phrase_units(songs, "contour", length)
+
+
+def relation_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome how it stands to the phrase before (RELATIONS)."""
+    return _phrase_units(songs, "relation", length)
+
+
+def ending_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome the note it ends on against the key (KEY_NAMES)."""
+    return _phrase_units(songs, "ending", length)
+
+
+def peak_units(songs, length=4) -> list:
+    """Each phrase as a unit, its outcome where its first highest note falls (QUARTERS)."""
+    return _phrase_units(songs, "peak", length)
+
+
+# --- the melody's moves as a table's units (phase 4, the melody slice) ---
+
+LEAP = 12                            # semitones: a move beyond an octave either way is one outcome ("+13" / "-13")
+STEPS = ((0.5, "leaping"), (0.75, "mixed"), (2, "stepwise"))   # a song's share of its moving melody moves that are steps (2 semitones or less)
+NOTE_REPEATS = ((0.05, "rare"), (0.2, "some"), (2, "many"))   # a song's share of melody moves that repeat the note (the games' quartiles)
+STRONG = {"beat": "strong", "eighth": "weak", "sixteenth": "weak", "triplet": "weak", "finer": "weak"}
+
+
+def move_units(songs: list, length=4) -> list:
+    """Each move of the tune, note to note within a phrase, as a table's
+    unit: its outcome the interval in semitones, signed, beyond an octave
+    folded to LEAP + 1 ("+13", "-13"); its values the part (melody), the
+    mode, where the arriving note falls in its beat (STRONG: on the beat
+    or off it), the tone the note left stands on against the chord
+    (CHORD_NAMES), the phrase's contour (CONTOURS) and the quarter of the
+    phrase the move lands in (QUARTERS), the move before (START at the
+    phrase's first move), and the song's habit (STEPS: how stepwise its
+    tune is, drawn once a song)."""
+    from .rhythm import START, habit_of, place as place_of, position
+    out = []
+    for s in songs:
+        mine = []
+        for ph in phrases(s, length):
+            if len(ph.line) < 2:
+                continue
+            shape = contour(ph.line, ph.start, ph.end)
+            previous = START
+            for a, b in zip(ph.line, ph.line[1:]):
+                move = round(b[2]) - round(a[2])
+                move = max(-LEAP - 1, min(LEAP + 1, move))
+                outcome = f"{move:+d}" if move else "0"
+                beat_pos = position(b[0] - math.floor(b[0]), 12)
+                quarter = QUARTERS[min(3, int(4 * (b[0] - ph.start) / (ph.end - ph.start)))]
+                mine.append(tables.Unit(s.sid, s.game, outcome, {
+                    "part": R.MELODY, "mode": s.mode, "place": STRONG[place_of(beat_pos)], "tone": against_chord(a[2], a[0], s),
+                    "contour": shape, "quarter": quarter, "previous": previous}))
+                previous = outcome
+        if mine:
+            moving = [u for u in mine if u.outcome != "0"]
+            steps = sum(1 for u in moving if abs(int(u.outcome)) <= 2) / max(1, len(moving))
+            habit = habit_of(steps, STEPS)
+            repeats = habit_of(1 - len(moving) / len(mine), NOTE_REPEATS)
+            for u in mine:
+                u.values["habit"] = habit
+                u.values["repeats"] = repeats
+            out += mine
+    return out
+
+
+def repeat_habit_units(songs: list, length=4) -> list:
+    """Each song's repeat habit for its tune (REPEATS), one unit a song."""
+    seen = {}
+    for u in move_units(songs, length):
+        seen.setdefault(u.song, tables.Unit(u.song, u.game, u.values["repeats"], {"part": R.MELODY}))
+    return list(seen.values())
+
+
+def step_habit_units(songs: list, length=4) -> list:
+    """Each song's stepwise habit for its tune (STEPS), one unit a song."""
+    seen = {}
+    for u in move_units(songs, length):
+        seen.setdefault(u.song, tables.Unit(u.song, u.game, u.values["habit"], {"part": R.MELODY}))
+    return list(seen.values())
 
 
 # --- reports ---

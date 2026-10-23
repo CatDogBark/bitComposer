@@ -5,6 +5,7 @@ import random
 import struct
 import unittest
 import wave
+from pathlib import Path
 
 from support import compose_song, os, samples, tempfile, unittest  # noqa: F401,F811
 from bitcomposer import cli  # noqa: E402
@@ -117,7 +118,7 @@ class PackFiles(unittest.TestCase):
             with self.assertRaises(pf.PackError) as cm:
                 pf.load_pack_file(self.save(pack))
             self.assertIn(expect, str(cm.exception))
-        broken(lambda p: p.pop("bitcomposer_pack"), "bitcomposer_pack: must be 1")
+        broken(lambda p: p.pop("bitcomposer_pack"), "bitcomposer_pack: must be 1 or 2")
         broken(lambda p: p.update(name="ffvi"), "name: 'ffvi' is a built-in sound")
         broken(lambda p: p.update(name="Bad Name"), "name: lower-case")
         broken(lambda p: p.update(palette="nes"), "palette: one of")
@@ -133,6 +134,34 @@ class PackFiles(unittest.TestCase):
         broken(lambda p: p["samples"].update(snes_brass=p["samples"]["flute"]), "samples.snes_brass: a built-in voice")
         broken(lambda p: p.update(trims={"kick": 99}), "trims.kick: a channel volume")
         broken(lambda p: p.update(extra=1), "extra: not a pack field")
+
+    def test_the_second_format_carries_tables_and_still_composes(self):
+        """A format 2 pack: the tables field beside the voices, checked for
+        shape, kept on the table, and the generator composes as before."""
+        model = {"conditionings": ["part"], "votes_by": "shares", "discount": 0.75, "covers": 0, "vocabulary": ["4"],
+                 "contexts": [{"context": [], "songs": 1, "units": 1, "votes": {"4": 1.0}},
+                              {"context": ["form"], "songs": 1, "units": 1, "votes": {"4": 1.0}}]}
+        pack = json.loads(json.dumps(self.pack))
+        pack["bitcomposer_pack"] = 2
+        pack["tables"] = {"source": {"game": "Test", "songs": 1},
+                          "tables": {"lengths": {"what": "a part's length", "shape": ["part"], "mixture": False,
+                                                 "units": 1, "songs": 1, "model": model}}}
+        name = self.load(pack)
+        self.assertEqual(PACKS[name]["tables"]["tables"]["lengths"]["model"]["vocabulary"], ["4"])
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.read(PACKS[name]["tables"])["lengths"].p("4", ("form",)) > 0.5, True)
+        song = compose_song(seed=3, pack=name)
+        self.assertEqual(song["info"]["pack"], name)
+        broken = json.loads(json.dumps(pack))
+        broken["tables"]["tables"]["lengths"].pop("model")
+        with self.assertRaises(pf.PackError) as cm:
+            pf.parse(broken, Path(self.dir.name), source="t")
+        self.assertIn("tables.tables.lengths: missing model", str(cm.exception))
+        plain = json.loads(json.dumps(self.pack))
+        plain["tables"] = {}
+        with self.assertRaises(pf.PackError) as cm:
+            pf.parse(plain, Path(self.dir.name), source="t")
+        self.assertIn("tables: not a pack field", str(cm.exception))
 
     def test_wav_sample_formats(self):
         """8, 16 and 24-bit, mono and stereo all come out as the same 16-bit voice."""

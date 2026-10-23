@@ -32,8 +32,11 @@ from ..instruments import PALETTES
 from ..mix import CHANNEL_ROLES
 from . import PACKS, PACK_NAMES
 
-FORMAT = 1
-KEY = "bitcomposer_pack"          # the key that marks a file as one, holding FORMAT
+FORMAT = 1                        # the format a pack without tables is written in
+TABLED = 2                        # the format that carries the tables (translate.packtables) beside the voices
+FORMATS = (FORMAT, TABLED)
+KEY = "bitcomposer_pack"          # the key that marks a file as one, holding FORMAT or TABLED
+TABLES = "tables"                 # the format 2 field: {"source": {...}, "tables": {name: {"what", "shape", "mixture", "units", "songs", "model"}}}
 
 # The habits a pack may set: weighted draws over these names (the plain
 # pools and the names only packs use), chances from 0 to 1, switches, and a
@@ -133,10 +136,12 @@ def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
 
     if not isinstance(data, dict):
         fail("file", "a pack file is one JSON object")
-    if data.get(KEY) != FORMAT:
-        fail(KEY, f"must be {FORMAT} (this is how a file says it is a bitComposer pack, "
+    if data.get(KEY) not in FORMATS:
+        fail(KEY, f"must be {FORMAT} or {TABLED} (this is how a file says it is a bitComposer pack, "
                   f"and which version of the format)")
     known = {KEY, "name", "label", "palette", "voices", "habits", "trims", "samples"}
+    if data[KEY] == TABLED:
+        known.add(TABLES)
     for k in data:
         if k not in known:
             fail(k, f"not a pack field (fields: {', '.join(sorted(known))})")
@@ -222,7 +227,28 @@ def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
         trims[role] = vol
 
     table = {"palette": palette, "label": label, "voices": voices, "habits": habits, "trims": trims}
+    if data[KEY] == TABLED:
+        table[TABLES] = _tables(data.get(TABLES), fail)
     return {"name": name, "table": table}, own
+
+
+def _tables(t, fail) -> dict:
+    """The format 2 tables, checked for shape only (their contents are read
+    by translate.packtables when a writer draws from them)."""
+    where = TABLES
+    if not isinstance(t, dict) or not isinstance(t.get("source"), dict) or not isinstance(t.get("tables"), dict):
+        fail(where, "an object with \"source\" (the game, its songs) and \"tables\" (the tables by name)")
+    for name, entry in t["tables"].items():
+        if not isinstance(name, str) or not isinstance(entry, dict):
+            fail(f"{where}.tables.{name}", "a table is an object")
+        for k in ("what", "shape", "mixture", "units", "songs", "model"):
+            if k not in entry:
+                fail(f"{where}.tables.{name}", f"missing {k}")
+        model = entry["model"]
+        inner = model.get("table") if entry["mixture"] else model
+        if not isinstance(inner, dict) or not isinstance(inner.get("contexts"), list) or "vocabulary" not in inner:
+            fail(f"{where}.tables.{name}.model", "a table as translate.tables writes it (conditionings, vocabulary, contexts)")
+    return t
 
 
 def _habit(h, v, where, voice_name, fail):

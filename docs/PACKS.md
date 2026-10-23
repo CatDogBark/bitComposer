@@ -55,8 +55,9 @@ puts it in SOUND.
 
 ## Fields
 
-- **`bitcomposer_pack`**: `1`. Marks the file as a pack file and says
-  which version of this format it is.
+- **`bitcomposer_pack`**: `1`, or `2` for a file that carries the
+  `tables` (below). Marks the file as a pack file and says which version
+  of this format it is.
 - **`name`**: lower-case letters, digits and `_`, starting with a letter,
   at most 24 characters, and not the name of a built-in sound. The pack's
   own voices are known by `<name>_<voice>` in songs and the mixer.
@@ -158,6 +159,49 @@ Others:
 The program checks all of this when it loads a pack, and a mistake is
 reported with where it is (`habits.tempo.medum: not one of slow, medium,
 fast`).
+
+## The tables (format 2)
+
+A pack file whose `bitcomposer_pack` is `2` may carry a `tables` field
+beside the voices: what the game's songs do, counted from their readings
+(`docs/idiom/phase-3-tables.md` records each table and why its shape was
+kept). Everything else is as in format 1, and a format 1 file still
+loads. The importer's pack is written in format 2 when its tables are
+counted (`python -m bitcomposer.translate.packtables --db READINGS
+--game NAME --into pack.json`); the generator's use of them is phase 4's.
+
+```json
+"tables": {
+  "source": {"game": "Final Fantasy VI", "songs": 82, "version": 1, "votes": "shares", "discount": 0.75},
+  "tables": {
+    "bass": {"what": "the bass's bar as a figure: positions with chord-tone marks",
+             "shape": ["part", "meter", "habit", "previous"], "mixture": true,
+             "units": 4210, "songs": 71,
+             "model": {"table": {"conditionings": [...], "vocabulary": [...], "contexts": [...], "floor": {...}},
+                       "recall": {...}}},
+    "lengths": {"what": "a part's length in bars, by the song's habit", "shape": ["part", "meter", "habit"],
+                "mixture": false, "units": 410, "songs": 80, "model": {...}}
+  }
+}
+```
+
+- **`source`**: the game, how many of its songs were read, the tables'
+  layout version, and how they were counted (share votes, the discount).
+- **`tables`**: by name (`rhythm`, `values`, `habits`, `bass`,
+  `bass_habits`, `drums-KSt`, `drums-h`, `drums-c`, `drums-o`,
+  `drum_habits`, `voicings`, `widths`, `chords`, `changes`, `cadences`,
+  `loops`, `form`, `lengths`, `contours`, `peaks`, `endings`,
+  `relations`, `texture`, `presence`, `parts`, `voices`, `doubles`,
+  `layers`; a table with nothing to count is left out). Each says what it
+  is (`what`), its conditionings in order (`shape`), whether it is drawn
+  as the song's own mixture (`mixture`: the model then holds the `table`
+  and the `recall` shares), how much it was counted from (`units`,
+  `songs`), and the `model` as `translate.tables` writes it: the
+  vocabulary, the votes under each context, and for the figure tables
+  the bar-cell `floor` that gives a bar never counted its likelihood.
+
+The loader checks the field's shape only; `translate.packtables.read`
+turns it back into the models.
 
 ## Where it is checked
 
