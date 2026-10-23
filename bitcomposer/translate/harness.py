@@ -341,6 +341,23 @@ def relation(line, other) -> tuple:
     return ("apart",)
 
 
+def band_energy(ctx: Context, part_voices: set) -> list:
+    """The band's energy a bar (level x sounded length of every voice but the part's), against its median over the
+    song: 1.0 a usual bar, under it a breakdown; what a free-written part thins with."""
+    others = [n for voice, (_, ns) in ctx.by_voice.items() if voice not in part_voices for n in ns]
+    energy = []
+    for a, b in ctx.song.bars:
+        e = 0.0
+        for n in others:
+            length = n[1] if not math.isnan(n[1]) else 0.25
+            lo, hi = max(a, n[0]), min(b, n[0] + length)
+            if hi > lo:
+                e += n[3] * (hi - lo)
+        energy.append(e)
+    median = statistics.median(energy) if energy else 0.0
+    return [e / median if median > 0 else 1.0 for e in energy]
+
+
 def moments(ctx: Context, part_voices: set) -> set:
     """The song's moments: bars (indices among the song's bars, every length) where every voice but the part's drops
     to under MOMENT of the song's median energy (level x sounded length), for a run of at most MOMENT_BARS bars."""
@@ -450,7 +467,13 @@ def write_bass(ctx: Context, seed: int = 1) -> Written | None:
     held = moments(ctx, set(by_voice))
     answered = stops(ctx, set(by_voice), part)
     lock = locks(ctx, set(by_voice), part)
-    notes, figures = writer.bass(song, model, random.Random(seed), habit=habit, key=ctx.key, hold=held | answered, lock=lock, free=free)
+    energy = band_energy(ctx, set(by_voice)) if free else None
+    notes, figures = writer.bass(song, model, random.Random(seed), habit=habit, key=ctx.key, hold=held | answered, lock=lock, free=free,
+                                 energy=energy)
+    if energy is not None:
+        thin = [k for k, r in enumerate(energy) if r < 0.5]
+        if thin:
+            log.append(f"the band thins (under half its median energy) in bars {thin}: the part thins with it")
     mine_units = rhythm.bass_units([song])
     log.append(f"habit {mine_units[0].values['habit'] if mine_units else '-'}, {len(figures)} bars written, {len(notes)} notes"
                + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
@@ -658,7 +681,8 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
         answered = stops(ctx, set(voices), own_notes)
         lock = locks(ctx, set(voices), own_notes)
         notes, figures, voicings = writer.upper(song, role, voices, registers, models, rng, habit, richness, sounds,
-                                                key=ctx.key, hold=held | answered, lock=lock, motion=motion)
+                                                key=ctx.key, hold=held | answered, lock=lock, motion=motion,
+                                                energy=band_energy(ctx, set(voices)))
         log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, motion {motion}, sounded {sounds:.2f}; "
                    f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes"
                    + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")

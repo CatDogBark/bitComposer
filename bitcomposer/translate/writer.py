@@ -399,7 +399,7 @@ def unclashed(midi: int, options: list, tune: set) -> int:
 
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
-          motion: str = "block") -> tuple[list, list, list]:
+          motion: str = "block", energy: list | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -412,7 +412,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
     own = [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
     figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
-                            habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0))
+                            habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy)
     step = MOTION_STEP.get(motion, 0)
     walked = 0.0                                            # how far along the stack the voices have moved (motion)
     tune_line = sorted(song.notes.get(R.MELODY, []) + song.notes.get(R.COUNTER, []))   # what the written part must not clash with
@@ -521,15 +521,29 @@ def form_spans_of(song: rhythm.Song):
     return lambda own: form_spans(song, own)
 
 
+THIN = 0.05                           # the band's energy (against its median) under which a free-written pitched part sits a bar out
+
+
+def thinned(env: tuple, ratio: float) -> tuple:
+    """A free envelope scaled to the band's energy in the bar: the strikes allowed shrink with the band, to one
+    where the band is nearly gone (under THIN, the caller rests the bar)."""
+    low, high, downbeat, meter = env
+    r = min(1.0, max(0.0, ratio))
+    return (max(1, round(low * r)), max(1, round(high * r)), downbeat, meter)
+
+
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
-                  rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0) -> list[str]:
+                  rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
+                  energy: list | None = None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
     the manner, the habit's envelope and the band's lock; a part of the
     form that repeats an earlier one copies its figures; the bars the old
     part rests in rest (the arrangement is not this slice's); the song's
-    moments and stops (`hold`) keep the old bar."""
+    moments and stops (`hold`) keep the old bar; `energy`, the band's
+    energy a bar against its median, thins the part where the band thins
+    (a breakdown) and rests it where the band is nearly gone (THIN)."""
     lock = lock or {}
     envelope_of = envelope_of or envelope
     within_of = within_of or within
@@ -538,7 +552,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     for start, length, _, copy_of in form_spans(song, own):
         for i in range(length):
             k = start + i
-            if own[k] == REST:
+            if own[k] == REST or (energy is not None and k < len(energy) and energy[k] < THIN):
                 figures[k] = REST
                 continue
             if copy_of is not None and figures[copy_of + i] != REST:
@@ -547,6 +561,8 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
+                if energy is not None and k < len(energy) and energy[k] < 1.0:
+                    env = thinned(env, energy[k])
                 values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit}
                 unit = tables.Unit(song.sid, song.game, "", values)
                 # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
@@ -700,7 +716,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
 
 
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
-         key: tuple | None = None, hold=(), lock=None, free: bool = False) -> tuple[list[tuple[float, float, float]], list[str]]:
+         key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -727,7 +743,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
 
     words = habit.split()
     if free:
-        figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit))
+        figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit), energy=energy)
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))
