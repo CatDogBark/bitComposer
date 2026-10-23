@@ -802,17 +802,29 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         return out
 
     def new_rhythm(k: int) -> list:
-        """A new bar's onsets from the melody's bar table, in the manner and
-        the habit's envelope: a rhythm new to the tune where one fits (the
-        cell urn chose new; the rhythm table's own urn is not run again, which
-        had given new cells old rhythms: three distinct rhythms in 32 bars
-        against FFVI's nine)."""
+        """A new bar's onsets for a new cell: by the cell-rhythms table's draw
+        (rhythm.new_cell_rhythm_units: new to the tune in 77 % of the games'
+        new cells, the bar before's in 10 %, an earlier one's in 13 %), a
+        rhythm new to the tune from the melody's bar table (in the manner
+        and the habit's envelope), the bar before's, or one the tune played;
+        the rhythm table's own urn is not run again (it had given new cells
+        old rhythms: three distinct rhythms in 32 bars against FFVI's nine;
+        always new gave 16.5 distinct cells against 12.5)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
         values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
         fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
-        figure = models["rhythm"].draw_new(unit, rhythm_played, rng, keep=fit) if hasattr(models["rhythm"], "draw_new") else models["rhythm"].draw(unit, rhythm_prev, rhythm_played, rng, keep=fit)
+        kind = models["cell_rhythms"].draw((R.MELODY,), rng, floored=False) if "cell_rhythms" in models else "new"
+        figure = None
+        if kind == "previous" and rhythm_prev is not None and fit(rhythm_prev):
+            figure = rhythm_prev
+        elif kind == "earlier":
+            pool = {f: n for f, n in rhythm_played.items() if f != rhythm_prev and fit(f)}
+            if pool:
+                figure = rng.choices(list(pool), list(pool.values()))[0]
+        if figure is None:
+            figure = models["rhythm"].draw_new(unit, rhythm_played, rng, keep=fit) if hasattr(models["rhythm"], "draw_new") else models["rhythm"].draw(unit, rhythm_prev, rhythm_played, rng, keep=fit)
         for _ in range(TRIES):
             if fit(figure):
                 break

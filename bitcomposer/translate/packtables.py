@@ -60,6 +60,7 @@ KEPT = {
     "step_habits": ("phrases", "step_habit_units", {}, ("part",), False, False, "how stepwise a song's tune is (leaping, mixed, stepwise), drawn once a song"),
     "repeat_habits": ("phrases", "repeat_habit_units", {}, ("part",), False, False, "how often a song's tune repeats a note (rare, some, many), drawn once a song"),
     "melody_recall": ("rhythm", "melody_recall_units", {}, ("part", "habit"), False, False, "the tune's urn: a bar the same as the one before, an earlier one again, or new, by the song's echo habit"),
+    "cell_rhythms": ("rhythm", "new_cell_rhythm_units", {}, ("part",), False, False, "a new cell's rhythm: new to the tune, the bar before's, or an earlier one's"),
     "echo_habits": ("rhythm", "echo_habit_units", {}, ("part", "tempo", "weight"), False, False, "how much of its tune a song echoes bar by bar, drawn once a song"),
     "texture": ("rhythm", "texture_units", {}, ("part", "meter", "previous"), False, True, "which parts sound in a bar, after the bar before's"),
     "presence": ("rhythm", "presence_units", {}, ("part", "meter", "previous"), False, True, "a part playing or resting in a bar"),

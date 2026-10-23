@@ -841,6 +841,36 @@ def melody_cell_units(songs) -> list:
     return out
 
 
+CELL_RHYTHMS = ("new", "previous", "earlier")   # a new cell's rhythm: new to the tune, the bar before's, or an earlier one's
+
+
+def new_cell_rhythm_units(songs) -> list:
+    """Each new cell of each song's tune (a bar whose rhythm and intervals
+    the tune has not played) as a unit: its outcome whether its rhythm is
+    new to the tune too, the bar before's, or one played earlier
+    (CELL_RHYTHMS); its value the part (melody). The readings: a new
+    rhythm in 77 % of new cells, the bar before's 10 %, an earlier one 13 %
+    (FFVI 79 / 7 / 14; 2026-10-23). What the melody writer draws a new
+    cell's rhythm by: always new had the written tunes more various than
+    the games' (16.5 distinct cells in 32 against 12.5), a second urn had
+    them less (3.5 distinct rhythms against 9)."""
+    out = []
+    for s in songs:
+        cells = [c for c in melody_cells(s) if c]
+        if len(cells) < 8:
+            continue
+        seen_cells, seen_rhythms, previous = set(), set(), None
+        for cell in cells:
+            rhy = cell.split(" | ")[0]
+            if cell not in seen_cells:
+                kind = "previous" if rhy == previous else "earlier" if rhy in seen_rhythms else "new"
+                out.append(tables.Unit(s.sid, s.game, kind, {"part": R.MELODY}))
+            seen_cells.add(cell)
+            seen_rhythms.add(rhy)
+            previous = rhy
+    return out
+
+
 REGISTER_BIN = 4                     # semitones: a part's register (its notes' 10th and 90th percentiles) is kept to this grain
 TEMPO_BIN = 5                        # beats a minute: a song's tempo is kept to this grain
 

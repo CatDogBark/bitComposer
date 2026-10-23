@@ -167,6 +167,14 @@ class NewTablesTests(unittest.TestCase):
         self.assertTrue(all(f in model.table.vocabulary for f in figures), figures)
         self.assertTrue(hits)
 
+    def test_new_cell_rhythms(self):
+        s = self._song()
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "m") for i in range(8) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0 + (i % 3)))]
+        units = rhythm.new_cell_rhythm_units([s])
+        self.assertEqual(units[0].outcome, "new")                      # the first bar's cell is new, its rhythm too
+        self.assertTrue(all(u.outcome == "previous" for u in units[1:3]))   # the same rhythm with a changed last interval: the bar before's rhythm
+        self.assertEqual(len(units), 3)                                # three distinct cells in eight bars (i % 3)
+
     def test_chord_tone_habit_and_contour_sizes(self):
         units = rhythm.chord_tone_habit_units([self._song()])
         self.assertEqual(len(units), 1)
