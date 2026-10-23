@@ -63,12 +63,13 @@ class PlanTests(unittest.TestCase):
         names, chords_ = whole.plan_chords({"chords": chords}, parts, 0, 0, "major", random.Random(2), [])
         self.assertEqual(names[:4], names[8:])
         self.assertEqual(chords_[0], (0, ""))
-        tunits = [tables.Unit("s", "g", o, {"part": rhythm.ARRANGEMENT, "meter": 4, "previous": p})
-                  for o, p in (("bass", rhythm.START), ("bass drums melody", "bass"), ("bass drums melody", "bass drums melody"))]
-        texture = tables.Cache.fit(tunits, ("part", "meter", "previous"), name="texture", votes=tables.SHARES)
-        textures, plays = whole.plan_texture({"texture": texture}, parts, ["bass", "drums", "melody"], random.Random(2), [])
+        tunits = [tables.Unit("s", "g", o, {"part": rhythm.ARRANGEMENT, "form": f, "index": i, "previous": p})
+                  for o, f, i, p in (("bass", "first", 1, rhythm.START), ("bass drums melody", "middle", 2, "bass"), ("bass drums harmony melody", "last", 3, "bass drums melody"))]
+        texture = tables.Table(("part", "form", "previous"), "part textures", votes=tables.SHARES).fit(tunits)
+        textures, plays = whole.plan_texture({"part_textures": texture}, parts, ["bass", "drums", "melody"], random.Random(2), [])
         self.assertEqual(textures[:4], textures[8:])
-        self.assertTrue(all(set(t.split()) <= {"bass", "drums", "melody"} for t in textures))
+        self.assertEqual(len(set(textures[:4])), 1)                   # a texture a part
+        self.assertTrue(all(set(t.split()) <= {"bass", "drums", "melody"} for t in textures))   # the harmony is not in this band
         self.assertEqual(sorted(plays), ["bass", "drums", "melody"])
 
 
@@ -89,8 +90,6 @@ class WholeSongTests(unittest.TestCase):
         self.assertTrue(p.band)
         self.assertLessEqual(p.bars, 32)
         for role in p.band:
-            if role in (R.COUNTER,):
-                continue
             self.assertIn(role, written, role)
             if any(p.plays[role]):
                 self.assertTrue(written[role].notes, role)
@@ -117,3 +116,50 @@ class WholeSongTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NewTablesTests(unittest.TestCase):
+    """The tables the whole-song plan added to the kept set."""
+
+    def _song(self, sid="a"):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * i, 4.0 * i + 4) for i in range(8)]
+        chords = [Span(0.0, 16.0, 0, "", 1.0), Span(16.0, 32.0, 7, "", 1.0)]          # C, then G
+        s = rhythm.Song("t", 4, 4, bars, chords, bpm=120.0, sid=sid, game="G", numbers=list(range(8)),
+                        parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.notes["bass"] = [(4.0 * i + x, 0.5, 36.0, "k") for i in range(8) for x in (0.0, 2.0)]
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "m") for i in range(4, 8) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0))]
+        s.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "kick") for i in range(8) for x in (0.0, 2.0)] + \
+                           [(4.0 * i + x, 0.25, float("nan"), "crash") for i in range(8) for x in (0.0,) if i % 4 == 0]
+        s.pieces = {"kick": "kick", "crash": "cymbal"}
+        return s
+
+    def test_part_textures(self):
+        units = rhythm.part_texture_units([self._song()])
+        self.assertEqual([u.outcome for u in units], ["bass drums", "bass drums melody"])
+        self.assertEqual([u.values["form"] for u in units], ["first", "last"])
+        self.assertEqual(units[1].values["previous"], "bass drums")
+
+    def test_drum_group_habits_and_rests(self):
+        units = rhythm.drum_group_habit_units([self._song()])
+        parts = {u.values["part"]: u for u in units}
+        self.assertIn("drums-KSt", parts)
+        self.assertIn("drums-c", parts)
+        self.assertTrue(all(u.values["habit"] == parts["drums-KSt"].values["habit"] for u in units))   # the kit's habit beside each group's own
+        self.assertTrue(parts["drums-c"].outcome.startswith("sparse"))
+        from bitcomposer.translate import writer
+        self.assertFalse(writer.FreeManner({"0:K", "-"}).fits("-"))
+        self.assertTrue(writer.FreeManner({"0:K", "-"}, rests=True).fits("-"))
+
+    def test_chord_tone_habit_and_contour_sizes(self):
+        units = rhythm.chord_tone_habit_units([self._song()])
+        self.assertEqual(len(units), 1)
+        self.assertEqual(units[0].outcome, "0.5")            # G and B on the G chord, A and C off it
+        from bitcomposer.translate import phrases, writer
+        line = [(0.0, 1.0, 60.0), (4.0, 1.0, 64.0), (8.0, 1.0, 67.0), (12.0, 1.0, 72.0)]
+        self.assertEqual(phrases.contour(line, 0.0, 16.0), "rising")
+        x, y, z = phrases.thirds(line, 0.0, 16.0)
+        self.assertLess(x, z)
+        self.assertEqual(writer.contour_targets("rising", 8.0), (0, 4.0, 8.0))
+        self.assertEqual(writer.contour_targets("valley", 3.0), (0, -3.0, 0))
+        self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))   # without a size, as before

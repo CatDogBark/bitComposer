@@ -1,12 +1,12 @@
 """Whole songs written from a pack's tables (phase 4 of docs/IDIOM.md, the integration), rendered as modules, read back
 and measured.
 
-    python tools/whole.py --pack PACK.json --seeds 1-20 -o DIR [--max-bars 64] [--loops 2] [--game NAME]
+    python tools/whole.py --pack PACK.json --seeds 1-20 -o DIR [--max-bars 48] [--loops 1] [--fade 3] [--game NAME]
                           [--db READINGS.db] [--tables TABLES.json] [--title-prefix Whole] [--no-read]
 
 --pack a pack file (format 2, its tables inside) or a built-in pack's name (then --tables gives the tables). Writes
-DIR/<title>.it (the form once and the loop again, fading) and DIR/<title>.json (the plan, each part's log and figures,
-the measures of the song read back). Prints each song's plan and, at the end, the measures over the seeds; with --db
+DIR/<title>.it (the form once, then the loop --loops - 1 times more, fading at the end) and DIR/<title>.json (the plan,
+each part's log and figures, the measures of the song read back). Prints each song's plan and, at the end, the measures over the seeds; with --db
 (the readings) and --game, the game's own songs' numbers beside them.
 """
 import argparse
@@ -80,8 +80,9 @@ def main(argv=None) -> int:
     ap.add_argument("--tables", help="a tables file (packtables --out) for a built-in pack, or to replace a pack file's")
     ap.add_argument("--seeds", default="1")
     ap.add_argument("-o", "--out", required=True)
-    ap.add_argument("--max-bars", type=int, default=64)
-    ap.add_argument("--loops", type=int, default=2)
+    ap.add_argument("--max-bars", type=int, default=48, help="forms longer than this are drawn again (default 48)")
+    ap.add_argument("--loops", type=int, default=1, help="how many times the loop plays in all (default 1: the form once)")
+    ap.add_argument("--fade", type=float, default=3.0, help="seconds the module fades over at its end")
     ap.add_argument("--game", help="the game the songs are written as (the title's game; default the pack's label)")
     ap.add_argument("--title-prefix", default="Whole")
     ap.add_argument("--db", help="the readings: with --game, the game's own songs' measures beside the written songs'")
@@ -99,7 +100,7 @@ def main(argv=None) -> int:
     rows = []
     for seed in seeds_of(a.seeds):
         title = f"{a.title_prefix} {seed:02d}"
-        out = whole.compose(models, pack, own, name, seed, game, title, max_bars=a.max_bars, loops=a.loops, reference=reference, read=not a.no_read)
+        out = whole.compose(models, pack, own, name, seed, game, title, max_bars=a.max_bars, loops=a.loops, reference=reference, read=not a.no_read, fade=a.fade)
         p = out["plan"]
         path = os.path.join(a.out, f"{title}.it")
         convert.render(out["score"], path)

@@ -11,18 +11,20 @@ part it repeats) and the bar the loop returns to (after an intro: a first
 part the form never comes back to); the band with each part's weight (one
 of the game's songs' balances); the chords, bar by bar from the chord
 mixture (a repeated part keeps its chords; the loop's first bar from the
-loops table); the texture, bar by bar from the texture mixture (which
-parts play in the bar, among the band's); each part's register, sounded
-share and habits. Then the parts are written in turn by the free writers
-on a Song built from the plan: the drums, the bass, the upper parts
-(harmony, accompaniment, arp) and the melody, each reading the band
-written before it (its shared hits to lock to, its sounding tones to stay
-clear of), as a part substituted into a game's song reads the song. The
-band's energy is not read here: the texture is the arrangement, and a
-part the plan has play alone plays. Last the notes become a score on the
-pack's samples, rendered by the converter's back end as a game's song is
-(spc.convert.render), and the score is read back by the readers for the
-measures.
+loops table); the texture a part of the form (which parts sound through
+it, among the band's: the part-textures table, a part keeping one texture
+through nine bars in ten in the readings); each part's register, sounded
+share and habits, the drums' each group's own. Then the parts are written
+in turn by the free writers on a Song built from the plan: the drums, the
+bass, the upper parts (harmony, accompaniment, arp), the melody and the
+counter-line, each reading the band written before it (its shared hits
+to lock to, counted against the band the plan has playing in the bar; its
+sounding tones to stay clear of), as a part substituted into a game's
+song reads the song. The band's energy is not read here: the texture is
+the arrangement, and a part the plan has play alone plays. Last the notes
+become a score on the pack's samples, rendered by the converter's back
+end as a game's song is (spc.convert.render), and the score is read back
+by the readers for the measures.
 
 What is hand-set here is the rendering, not the writing: the voices'
 levels and pans (LEVELS, PANS), how the eight voices are shared out
@@ -58,10 +60,12 @@ POOLS = {R.MELODY: "lead", R.COUNTER: "counter", R.HARMONY: "harmony", R.ARP: "a
 BASS_POOLS = {"main": "bass_heavy", "half": "bass_medium", "minor": "bass_light"}      # accompaniment's by its motion, the bass's by its weight
 SENDS = {R.MELODY, R.COUNTER, R.HARMONY, R.ACCOMP, R.ARP}   # the parts that send to the echo (score.SENDS; the accompaniment is a harmony channel there)
 DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "short", "form": "new", "lengths": "4",
-            "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "bass_habits": "medium roots no-octaves",
-            "habits": "medium mixed", "voicing_habits": "full", "motions": "block", "articulation": "mixed", "echo_habits": "mixed",
-            "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
+            "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
+            "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
+            "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
+FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
 NUMERAL = re.compile(r"^([b#]?)([ivIV]+)(.*)$")
 TOGETHER = harness.TOGETHER           # the share of the playing voices striking a position together for it to be a shared hit
 NEAR = rhythm.NEAR
@@ -225,32 +229,37 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
 
 
 def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log: list) -> tuple[list, dict]:
-    """Which parts sound in each bar: drawn bar by bar from the texture
-    mixture among the band's parts (a new part starts the chain over), a
-    repeated part keeping its texture; the textures and each part's bars."""
+    """Which parts sound in each bar: a texture a part of the form, drawn
+    from the part-textures table among the band's parts (given the part's
+    place in the form and the part before's texture), a repeated part
+    keeping its texture; a bar's texture is its part's. Returns the
+    textures a bar and each part's bars."""
     total = parts[-1][0] + parts[-1][1]
     textures = [None] * total
-    cache = models.get("texture")
-    allowed = lambda t: t == rhythm.SILENCE or set(t.split()) <= set(band)   # noqa: E731
-    played, previous = Counter(), None
-    for bar, n, of, _ in parts:
+    table = models.get("part_textures")
+    allowed = lambda t: t != rhythm.SILENCE and set(t.split()) <= set(band)   # noqa: E731
+    previous = rhythm.START
+    n_parts = len(parts)
+    for i, (bar, n, of, _) in enumerate(parts):
         if of is not None:
             src = parts[of][0]
             textures[bar:bar + n] = textures[src:src + n]
             continue
-        prev_name = rhythm.START
-        for k in range(bar, bar + n):
-            if cache is None:
-                t = " ".join(band)
+        if table is None:
+            t = " ".join(band)
+        else:
+            form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
+            ctx = (rhythm.ARRANGEMENT, form, previous)
+            for _ in range(20):
+                t = table.draw(ctx, rng)
+                if allowed(t):
+                    break
             else:
-                unit = tables.Unit("", "", "", {"part": rhythm.ARRANGEMENT, "meter": METER, "previous": prev_name})
-                t = cache.draw(unit, previous, played, rng, keep=allowed)
-                if not allowed(t):
-                    t = " ".join(sorted(set(t.split()) & set(band))) or rhythm.SILENCE
-            played[t] += 1
-            previous = prev_name = t
-            textures[k] = t
+                t = " ".join(sorted(set(t.split()) & set(band))) or " ".join(band)
+        textures[bar:bar + n] = [t] * n
+        previous = t
     plays = {role: [role in (textures[k] or "").split() for k in range(total)] for role in band}
+    log.append("textures " + " | ".join(f"{p[3]}: {textures[p[0]]}" for p in parts))
     return textures, plays
 
 
@@ -284,7 +293,12 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     bpm = float(_draw(models, "tempos", ("song",), rng, log))
     tempo = rhythm.band(bpm)
     log.append(f"key {harmony.NAMES[tonic]} {mode}, {bpm:.0f} BPM ({tempo})")
-    parts = plan_form(models, rng, log, max_bars)
+    for attempt in range(FORM_TRIES):                       # a form longer than asked is drawn again (the form's own distribution, cut to length)
+        form_log = []
+        parts = plan_form(models, rng, form_log, max_bars if attempt == FORM_TRIES - 1 else None)
+        if max_bars is None or parts[-1][0] + parts[-1][1] <= max_bars:
+            break
+    log += form_log + ([f"the form drawn {attempt + 1} times to fit {max_bars} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights = [], {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
@@ -304,6 +318,7 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     for role in band:
         if role == R.DRUMS:
             habits[role] = _draw(models, "drum_habits", (R.DRUMS,), rng, log)
+            extras[role] = {"".join(g): _draw(models, "drum_group_habits", ("drums-" + "".join(g), habits[role]), rng, log) for g in rhythm.DRUM_GROUPS}
             continue
         low, high = _draw(models, "registers", (role,), rng, log).split("-")
         registers[role] = (int(low), int(high))
@@ -315,11 +330,12 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             habits[role] = _draw(models, "habits", (role, tempo, weight), rng, log)
         if role in rhythm.UPPER:
             extras[role] = {"richness": _draw(models, "voicing_habits", (role,), rng, log), "motion": _draw(models, "motions", (role,), rng, log)}
-        elif role == R.MELODY:
-            extras[role] = {"articulation": _draw(models, "articulation", (R.MELODY,), rng, log),
+        elif role in (R.MELODY, R.COUNTER):                  # the phrase tables count both lines as the tune's: drawn under the melody's part
+            extras[role] = {"articulation": _draw(models, "articulation", (role,), rng, log),
                             "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log),
                             "steps": _draw(models, "step_habits", (R.MELODY,), rng, log),
-                            "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log)}
+                            "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
+                            "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log))}
     for role in band:
         log.append(f"{role}: " + ", ".join(x for x in (
             f"weight {weights[role]}" if role in weights else "", f"register {registers[role]}" if role in registers else "",
@@ -357,20 +373,27 @@ def _voices_of(song: rhythm.Song, exclude: set) -> list:
     return out
 
 
-def locks_of(song: rhythm.Song, exclude: set) -> dict:
+def locks_of(song: rhythm.Song, exclude: set, plan: "Plan | None" = None) -> dict:
     """The band's shared hits a bar (harness.locks on the parts written so
     far): positions where TOGETHER of the voices playing in the bar strike
-    within NEAR; {bar index: (positions, no stop beats)}."""
+    within NEAR; {bar index: (positions, no stop beats)}. With a plan, the
+    voices playing are counted as the plan has them in the bar (every
+    part but the one written, written yet or not), so a part written early
+    locks to nothing (two drum voices alone are no band) and one written
+    late locks to the band's real accents."""
     voices = _voices_of(song, exclude)
     out = {}
     for k, (a, b) in enumerate(song.bars):
         playing = [starts for starts in voices if any(a - NEAR <= t < b - NEAR for t in starts)]
         if len(playing) < 2:
             continue
+        total = len(playing)
+        if plan is not None:
+            total = max(total, sum(plan.voices.get(r, 0) for r in plan.band if r not in exclude and k < len(plan.plays[r]) and plan.plays[r][k]))
         must = set()
         for step in range(int(round(b - a)) * 4):
             t = a + step / 4
-            if sum(1 for starts in playing if any(abs(x - t) < NEAR for x in starts)) >= TOGETHER * len(playing):
+            if sum(1 for starts in playing if any(abs(x - t) < NEAR for x in starts)) >= TOGETHER * total:
                 must.add(rhythm.position(t - a, song.division))
         if must:
             out[k] = (must, set())
@@ -386,7 +409,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     if R.DRUMS in plan.band and kit_letters:
         groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
         if groups:
-            hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=plan.habits[R.DRUMS], free=True, plays=plan.plays[R.DRUMS])
+            group_habits = {g: plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS] for g in groups}
+            hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS])
             by_voice, notes, dropped = {}, [], Counter()
             for t, letter in hits:
                 sample = next((name for name in KIT_FOR.get(letter, ()) if name in song.pieces), None)
@@ -405,11 +429,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     after = next((u for u, *_ in mine[i + 1:] if u > t + NEAR), None)
                     notes.append((t, min(after if after is not None else t + DRUM_LENGTH, t + DRUM_LENGTH), letter, v, sample))
             song.notes[R.DRUMS] = [(t, end - t, float("nan"), sample) for t, end, _, _, sample in notes]
-            written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"habit {plan.habits[R.DRUMS]}, groups {['+'.join(g) for g in groups]}, "
-                                                              f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
+            written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"kit habit {plan.habits[R.DRUMS]}; groups " + ", ".join(f"{'+'.join(g)} {h}" for g, h in group_habits.items())
+                                                              + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
                                                               + (f"; dropped (no sample) {dict(dropped)}" if dropped else "")])
     if R.BASS in plan.band and "bass" in models:
-        lock = locks_of(song, {R.BASS})
+        lock = locks_of(song, {R.BASS}, plan)
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0], sounds=plan.sounds[R.BASS])
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
@@ -424,7 +448,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         registers = {v: (low, high) for v in voices}
         pedals = {v: (low + high) // 2 for v in voices}
         sounds = harness.UPPER_SOUNDS.get(role) or plan.sounds[role]
-        lock = locks_of(song, {role})
+        lock = locks_of(song, {role}, plan)
         notes, figures, voicings = writer.upper(song, role, voices, registers, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
                                                 pedals=pedals, plays=plan.plays[role])
@@ -433,18 +457,19 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                              [f"voices {len(voices)}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
                               f"motion {plan.extras[role]['motion']}, sounded {sounds:.2f}; {sum(1 for f in figures if f != writer.REST)} bars written, "
                               f"{len(notes)} notes; locked to the band in {len(lock)} bars"])
-    if R.MELODY in plan.band and all(k in models for k in ("rhythm", "moves", "contours", "endings", "relations", "values")):
-        x = plan.extras[R.MELODY]
-        notes, figures, plog = writer.melody(song, [], plan.registers[R.MELODY], models, random.Random(f"{seed}:melody"), plan.habits[R.MELODY],
+    for role in (R.MELODY, R.COUNTER):                    # the counter-line written as the melody is, after it and clear of it
+        if role not in plan.band or not all(k in models for k in ("rhythm", "moves", "contours", "endings", "relations", "values")):
+            continue
+        x = plan.extras[role]
+        notes, figures, plog = writer.melody(song, [], plan.registers[role], models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                              key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
-                                             recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[R.MELODY])
-        song.notes[R.MELODY] = [(a, b - a, m, "melody") for a, b, m in notes]
-        written[R.MELODY] = Part(R.MELODY, [(a, b, m, 0) for a, b, m in notes], figures,
-                                 [f"register {plan.registers[R.MELODY]}, habit {plan.habits[R.MELODY]}, " + ", ".join(f"{k} {v}" for k, v in x.items())
-                                  + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
-                                  + ("checked" if reference is not None else "not on this machine")] + plog)
-    if R.COUNTER in plan.band:
-        written[R.COUNTER] = Part(R.COUNTER, [], [], ["no counter-line writer yet: the part rests"])
+                                             recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
+                                             role=role, chord_rate=x.get("chord_tones"))
+        song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
+        written[role] = Part(role, [(a, b, m, 0) for a, b, m in notes], figures,
+                             [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items())
+                              + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
+                              + ("checked" if reference is not None else "not on this machine")] + plog)
     return written
 
 
@@ -498,7 +523,7 @@ def voice_map(plan: Plan, written: dict) -> dict:
     """The score's voices: {role: first voice}, the parts in the band's order, each its allotted voices."""
     out, n = {}, 0
     for role in plan.band:
-        if role in written and (written[role].notes or role == R.COUNTER):
+        if role in written and written[role].notes:
             out[role] = n
             n += plan.voices[role]
     return out
@@ -577,7 +602,7 @@ def read_back(score, plan: Plan, first: dict, samples: dict) -> rhythm.Song | No
     n = max(2, int(math.ceil(score.seconds / period)) + 1)
     beats = [k * period for k in range(n)]
     section = beat.Section(0.0, beats[-1], period / DIVISION, 0.0, first=0.0, meter=METER, downbeat=0, division=DIVISION)
-    grid = beat.Grid(period / DIVISION, DIVISION, [section], beats, beats[::METER], 1.0, 0.5)
+    grid = beat.Grid(period / DIVISION, DIVISION, [section], beats, [t for t in beats[::METER] if t < score.seconds - 1e-6], 1.0, 0.5)
     r = reading.of_score(score, game=plan.game, title=plan.title, grid=grid)
     if r.grid is None:
         return None
@@ -591,6 +616,7 @@ def read_back(score, plan: Plan, first: dict, samples: dict) -> rhythm.Song | No
     db = store.connect(":memory:")
     store.keep(db, r)
     songs, _ = rhythm.load(db)
+    db.close()
     return songs[0] if songs else None
 
 
@@ -645,7 +671,7 @@ def measures(song: rhythm.Song) -> dict:
 
 
 def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game: str = "", title: str | None = None,
-            max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True) -> dict:
+            max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True, fade: float = 2.0) -> dict:
     """One whole song: the plan, the parts written, the score (and {role: first voice}), the song read back and its
     measures; {"plan", "song", "written", "score", "first", "samples", "echo", "read", "measures"}."""
     p = plan(models, seed, game, title, max_bars)
@@ -655,7 +681,7 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     rng = random.Random(f"whole:{seed}:render")
     samples = samples_for(p, pack, own, pack_name, rng)
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
-    score, first = score_of(p, written, samples, loops=loops, echo=echo)
+    score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}
     if read:
         once, _ = score_of(p, written, samples, loops=1, fade=0.0, echo=echo)

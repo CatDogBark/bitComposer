@@ -69,6 +69,10 @@ KEPT = {
     "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each pitched part's weight in it, drawn once a song"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
+    "part_textures": ("rhythm", "part_texture_units", {}, ("part", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by its place in the form and the part before's"),
+    "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
+    "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of the tune's notes on a beat that are chord tones, drawn once a song"),
+    "contour_sizes": ("phrases", "contour_size_units", {}, ("part", "mode", "contour"), False, False, "how far a phrase's contour goes, in semitones, by its shape"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
 

@@ -658,6 +658,25 @@ def bass_habit_units(songs) -> list:
     return habits(bass_units(songs))
 
 
+def drum_group_habit_units(songs) -> list:
+    """Each drum group of each song as a unit: its outcome the group's own
+    habit (the density and repetition of its bars, rests counted), its
+    values the group (part) and the kit's habit. A kit written free draws
+    each group's habit given the kit's: the cymbals and the other sounds
+    are sparse under a dense kit (the readings, 2026-10-23), and a group's
+    rest rate follows its own habit (sparse groups rest in six bars of ten)."""
+    kit = {u.song: u.values["habit"] for u in drum_units(songs)}
+    out = []
+    for letters in DRUM_GROUPS:
+        seen = set()
+        for u in drum_group_units(songs, letters):
+            if u.song in seen:
+                continue
+            seen.add(u.song)
+            out.append(tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"], "habit": kit.get(u.song, "medium mixed")}))
+    return out
+
+
 def cell_units(units_) -> list:
     """Each beat of each bar unit as a unit of its own: the cell its outcome;
     its values the part, the meter, the beat (from 0) and the cell before
@@ -1347,6 +1366,59 @@ def parts_units(songs) -> list:
             has = any(r in roles for r in CHORDAL) if part == "chordal" else part in roles
             out.append(tables.Unit(s.sid, s.game, "yes" if has else "no",
                                    {"part": part, "band": min(len(s.notes) - (part in s.notes), 4), "tempo": band(s.bpm)}))
+    return out
+
+
+def part_texture_units(songs) -> list:
+    """Each part of each song's form (a repeat left out) as a unit: its
+    outcome the texture most of its bars have (the parts sounding, as
+    texture_units names them); its values the part (arrangement), the
+    part's place in the form, its index and the outcome of the part before
+    (START at the first). A part keeps one texture through nine bars in
+    ten (the readings, 2026-10-23: the modal texture covers a median 100 %
+    of a part's bars, a mean 91 %), so a song written with no original
+    draws a texture a part, not a bar."""
+    out = []
+    for s in songs:
+        if not s.notes or not s.parts:
+            continue
+        plays = {role: sounding_bars(s, role) for role in s.notes}
+        index = {num: k for k, num in enumerate(s.numbers)}
+        previous = START
+        for i, bar, n in _own_parts(s):
+            ks = [index[num] for num in range(bar, bar + n) if num in index]
+            if not ks:
+                continue
+            textures = Counter(" ".join(sorted(role for role, bars in plays.items() if k in bars)) or SILENCE for k in ks)
+            modal = textures.most_common(1)[0][0]
+            out.append(tables.Unit(s.sid, s.game, modal, {"part": ARRANGEMENT, "form": form_place(s, i), "index": min(i + 1, 5), "previous": previous}))
+            previous = modal
+    return out
+
+
+CHORD_TONE_BIN = 0.1                 # the grain a tune's chord-tone share is kept to
+
+
+def chord_tone_habit_units(songs) -> list:
+    """Each song with a melody as a unit: its outcome the share of the tune's
+    notes on a beat that are tones of the chord sounding (to
+    CHORD_TONE_BIN); its value the part (melody). The melody writer holds
+    its tune to the drawn share (FFVI's songs: a median 0.56; the writer's
+    constant gave 0.75 in the first whole songs, 2026-10-23)."""
+    out = []
+    for s in songs:
+        line = _line(s.notes.get(R.MELODY, []))
+        hits, total = 0, 0
+        for n in line:
+            if abs(n[0] - round(n[0])) >= NEAR:
+                continue
+            c = _chord_at(s.chords, n[0])
+            if c is None or c.root is None or c.fit < FIT:
+                continue
+            total += 1
+            hits += vocab.tone_of(round(n[2]) % 12, c.root, c.shape) != "other"
+        if total >= 8:
+            out.append(tables.Unit(s.sid, s.game, f"{round(hits / total / CHORD_TONE_BIN) * CHORD_TONE_BIN:.1f}", {"part": R.MELODY}))
     return out
 
 

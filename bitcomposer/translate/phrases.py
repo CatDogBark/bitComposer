@@ -376,8 +376,8 @@ def phrases(song: Song, length) -> list[Phrase]:
     return out
 
 
-def contour(line: list, a: float, b: float) -> str:
-    """The phrase's shape from the mean pitch of its thirds by time (CONTOURS)."""
+def thirds(line: list, a: float, b: float) -> tuple:
+    """The mean pitch of the phrase's thirds by time (an empty third takes its neighbour's)."""
     third = (b - a) / 3
     sums, weights = [0.0] * 3, [0.0] * 3
     for start, length, midi in line:
@@ -390,7 +390,12 @@ def contour(line: list, a: float, b: float) -> str:
     for k in range(3):
         if means[k] is None:                          # an empty third takes its neighbour's
             means[k] = means[k - 1] if k else next(m for m in means if m is not None)
-    x, y, z = means
+    return tuple(means)
+
+
+def contour(line: list, a: float, b: float) -> str:
+    """The phrase's shape from the mean pitch of its thirds by time (CONTOURS)."""
+    x, y, z = thirds(line, a, b)
     if y - max(x, z) >= LEVEL:
         return "arch"
     if min(x, z) - y >= LEVEL:
@@ -539,6 +544,37 @@ def _phrase_units(songs, outcome: str, length) -> list:
             values.update((k, v) for k, v in r.items() if k != outcome)
             out.append(tables.Unit(s.sid, s.game, r[outcome], values))
             previous = r[outcome]
+    return out
+
+
+SIZE_BIN = 2                         # semitones: the grain a contour's size is kept to
+CONTOUR_CAP = 14                     # semitones: a contour this far or farther is one outcome
+
+
+def contour_size_units(songs, length=4) -> list:
+    """Each phrase with a shape (its contour not level) as a unit: its
+    outcome how far the contour goes, in semitones to SIZE_BIN (rising and
+    falling: the last third against the first; arch and valley: the middle
+    against the ends' mean; CONTOUR_CAP and over one outcome); its values
+    the part (melody), the mode and the contour. What the melody writer
+    aims a phrase's thirds apart by: LEVEL (2 semitones) is the threshold a
+    contour is heard at, not its size (the first whole songs' tunes spanned
+    an octave where FFVI's span nearly two, 2026-10-23)."""
+    out = []
+    for s in songs:
+        for part in s.parts:
+            for i, j in windows(s, part, length):
+                a, b = s.bars[i][0], s.bars[j - 1][1]
+                line, _ = tune(s, a, b)
+                if not line:
+                    continue
+                shape = contour(line, a, b)
+                if shape == "level":
+                    continue
+                x, y, z = thirds(line, a, b)
+                size = abs(z - x) if shape in ("rising", "falling") else abs(y - (x + z) / 2)
+                out.append(tables.Unit(s.sid, s.game, str(min(CONTOUR_CAP, SIZE_BIN * round(size / SIZE_BIN))),
+                                       {"part": R.MELODY, "mode": s.mode, "contour": shape}))
     return out
 
 
