@@ -81,6 +81,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seeds", default="1")
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--max-bars", type=int, default=48, help="forms longer than this are drawn again (default 48)")
+    ap.add_argument("--min-bars", type=int, default=0, help="forms shorter than this are drawn again (default 0: a game's jingles stay)")
     ap.add_argument("--loops", type=int, default=1, help="how many times the loop plays in all (default 1: the form once)")
     ap.add_argument("--fade", type=float, default=3.0, help="seconds the module fades over at its end")
     ap.add_argument("--game", help="the game the songs are written as (the title's game; default the pack's label)")
@@ -101,7 +102,8 @@ def main(argv=None) -> int:
     rows = []
     for seed in seeds_of(a.seeds):
         title = f"{a.title_prefix} {seed:02d}"
-        out = whole.compose(models, pack, own, name, seed, game, title, max_bars=a.max_bars, loops=a.loops, reference=reference, read=not a.no_read, fade=a.fade)
+        out = whole.compose(models, pack, own, name, seed, game, title, max_bars=a.max_bars, loops=a.loops, reference=reference, read=not a.no_read, fade=a.fade,
+                            min_bars=a.min_bars or None)
         p = out["plan"]
         path = os.path.join(a.out, f"{title}.it")
         convert.render(out["score"], path)

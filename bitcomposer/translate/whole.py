@@ -294,8 +294,9 @@ def allot(band: list) -> dict:
     return out
 
 
-def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None) -> Plan:
-    """The skeleton of song `seed` from the tables."""
+def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None, min_bars: int | None = None) -> Plan:
+    """The skeleton of song `seed` from the tables; forms longer than `max_bars` or shorter than `min_bars` are drawn
+    again (a listening round has no use for a four-bar jingle, which the game's tables hold)."""
     rng = random.Random(f"whole:{seed}")
     log = []
     tonic_s, mode = _draw(models, "keys", ("song",), rng, log).split()
@@ -306,9 +307,10 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     for attempt in range(FORM_TRIES):                       # a form longer than asked is drawn again (the form's own distribution, cut to length)
         form_log = []
         parts = plan_form(models, rng, form_log, max_bars if attempt == FORM_TRIES - 1 else None)
-        if max_bars is None or parts[-1][0] + parts[-1][1] <= max_bars:
+        total = parts[-1][0] + parts[-1][1]
+        if (max_bars is None or total <= max_bars) and (min_bars is None or total >= min_bars):
             break
-    log += form_log + ([f"the form drawn {attempt + 1} times to fit {max_bars} bars"] if attempt else [])
+    log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares = [], {}, {}, {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
@@ -729,10 +731,11 @@ def measures(song: rhythm.Song) -> dict:
 
 
 def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game: str = "", title: str | None = None,
-            max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True, fade: float = 2.0) -> dict:
+            max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True, fade: float = 2.0,
+            min_bars: int | None = None) -> dict:
     """One whole song: the plan, the parts written, the score (and {role: first voice}), the song read back and its
     measures; {"plan", "song", "written", "score", "first", "samples", "echo", "read", "measures"}."""
-    p = plan(models, seed, game, title, max_bars)
+    p = plan(models, seed, game, title, max_bars, min_bars)
     kit = (pack.get("voices") or {}).get("drums") or {}
     song = song_of(p, kit)
     written = write(p, song, models, seed, reference)

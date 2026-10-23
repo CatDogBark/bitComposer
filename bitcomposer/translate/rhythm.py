@@ -1480,13 +1480,14 @@ def is_roll(figure: str, meter: int) -> bool:
     return len(tokens) > ROLL * max(1, meter)
 
 
-def part_register(notes) -> tuple | None:
+def part_register(notes, ambitus: bool = False) -> tuple | None:
     """A part's register as the registers table keeps it: (low, high) midi to REGISTER_BIN, the notes' 10th and 90th
-    percentiles; None where the part has under eight pitched notes."""
+    percentiles, or the whole ambitus (`ambitus`: the melody's, a tune uses its extremes); None where the part has
+    under eight pitched notes."""
     pitched = sorted(n[2] for n in notes if not math.isnan(n[2]))
     if len(pitched) < 8:
         return None
-    low, high = pitched[int(0.1 * (len(pitched) - 1))], pitched[int(0.9 * (len(pitched) - 1))]
+    low, high = (pitched[0], pitched[-1]) if ambitus else (pitched[int(0.1 * (len(pitched) - 1))], pitched[int(0.9 * (len(pitched) - 1))])
     return int(round(low / REGISTER_BIN)) * REGISTER_BIN, int(round(high / REGISTER_BIN)) * REGISTER_BIN
 
 
@@ -1509,7 +1510,7 @@ def balance_units(songs) -> list:
             if role not in weights:
                 tokens.append(role)
                 continue
-            reg, share = part_register(s.notes[role]), sounded_share(s.notes[role])
+            reg, share = part_register(s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
             tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ""))
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
