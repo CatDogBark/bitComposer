@@ -940,3 +940,62 @@ form with its repeats and loop, a band with its balance, chords a bar, a
 texture a part), the kit as one figure, the counter-line, the tune's
 chord-tone and repeat rates and its phrase shifts and contour sizes from
 the game's songs, and a pack's tables drawn on the data.
+
+### The Song Check, first notes (2026-10-23)
+
+Twenty whole songs on a page (per-part switches, a verdict and a note a
+song; verdicts in its store). Song 4 in, the owner's word: "definitely
+Final Fantasy, and much better than our other generator, in song
+diversity alone and nuance". Ten notes asked bug or writing. Run down in
+the tables, two causes behind most of them:
+
+- *A part's register from another part's.* Whole 04's counter at midi
+  32 to 44, Whole 05's harmony at 28 to 36 (four octaves under its
+  sample: the loop crawls and the baked-in vibrato slows to a warble),
+  Whole 08's arp and Whole 12's counter likewise; Whole 19's bass at 56
+  to 60 above its accompaniment at 28 to 36; Whole 13's bass at 44 to 68.
+  Under Witten-Bell a table keyed by part keeps only 50 to 68 % of a
+  register draw at the part's level and gives the rest to the root, where
+  every part's registers are mixed: a counter drew a bass-depth register
+  in 7.6 % of draws (its own level: never), a bass a floor above middle C
+  in 18.6 % (own level: 1.5 %). The sounded shares and habits went the
+  same way. **A plan's one-shot draw now stops at the part's level**
+  (`Table.draw(floor_k=1)`) and passes over a finer level a single song
+  stands behind (`min_songs` 2). **The balance table now carries each
+  part's register and sounded share**, so a song's layout is one FFVI
+  song's whole (the bass under the accompaniment under the tune), and
+  **a pitched part's sample is one the game played in that register**
+  (`ranges`, by sample id: the readings' sample keys are the pack's ids).
+- *A figure table forgot the habit.* The bass's habit level kept 5 to
+  21 % of draws (seven "sparse roots" songs), the rest the whole game's
+  bass bars of every habit; so Whole 13's "sparse roots" bass wrote 310
+  notes, two of them tremolo bars the reader had kept as figures (44
+  strikes). The free-run numbers had shown it (sparse habits at 4.5
+  strikes a bar against 1.5, dense under theirs) and were misread. **A
+  chain's draw now backs off from the bar before when thin but never
+  past the part, meter and habit** (`Table.chain_floor`), and **rolls are
+  dropped from the figure tables** (`rhythm.is_roll`: over six strikes a
+  beat on a pitched part, over four a beat on one drum piece; 17 of
+  FFVI's 715 bass bars). After: sparse roots 2.1 strikes a bar (real
+  1.5), sparse walking 1.9 (1.7), dense walking 8.4 (8.5), dense roots
+  10.3 (14.2).
+
+Writing, not bugs: Whole 01's one-note accompaniment (a 56-56 register,
+a real FFVI drone accompaniment, on a two-voice "full" part: the pedal
+rule holds both voices to the note); Whole 10's run of notes in its last
+bar (a real fill bar); Whole 16 (thin high accompaniment, a sparse bass
+at 60 BPM, a chord sequence with reader artifacts); Whole 17's 28 seconds
+(a five-bar A and a two-bar B drawn from tables that hold FFVI's jingles;
+the render plays the form once).
+
+**Rounds 8 and 9** (after the fixes; FFVI's own in the earlier table):
+drums 7.1 strikes / 6.5 distinct / 0.29 repeats (6.9 / 6 / 0.32); bass
+4.3 / 6 / 0.26 (4.3 / 8 / 0.30); accompaniment 6.4 / 6 / 0.35 (6.3 / 8 /
+0.32); counter 4.9 / 3 / 0.15 (4.9 / 10.5 / 0.13); tune chord tones 0.64
+(0.56), steps 0.61 (0.67), leaps 0.07 (0.05), repeats 0.17 (0.12), cells
+12.5 (12.5), echoes 0.27 (0.34), range 14.5 (21.5: round 8 had 8, the
+balance having taken the melody's 10th to 90th percentiles; its whole
+ambitus restored). The counter's distinct bars fell from 6 to 3 with the
+habit floor and are not yet run down. For listening rounds `--min-bars`
+draws a form again under a length (12 bars for the second set: the
+first drew three songs of three to four bars, FFVI's jingles).
