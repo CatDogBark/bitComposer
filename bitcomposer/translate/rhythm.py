@@ -136,6 +136,7 @@ class Song:
     loop_bar: int | None = None                   # the bar number the loop returns to
     voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
     bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
+    voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -188,6 +189,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in store.unpack(blob)
                         if s < end and level > 0 and (role == R.DRUMS or not math.isnan(m))]
                 into.setdefault(role, []).extend(mine)
+                if into is song.notes:
+                    song.voice_notes[voice] = (role, mine)
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
@@ -1505,13 +1508,15 @@ def balance_units(songs) -> list:
         if not s.notes:
             continue
         weights = part_weights(s)
+        voices = Counter(role for role, _ in s.voice_notes.values())
         tokens = []
         for role in sorted(s.notes):
             if role not in weights:
                 tokens.append(role)
                 continue
             reg, share = part_register(s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
-            tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ""))
+            tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
+                          + f":{max(1, voices.get(role, 1))}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
@@ -1537,21 +1542,50 @@ def sample_range_units(songs) -> list:
     return out
 
 
+LAYER_DENSITY = ((0.5, "sparser"), (2.0, "like"), (1e9, "denser"))   # a second voice's strikes against the line's
+LAYER_OFFSET = 24                    # semitones: a second voice's register against the line's is kept within this, to REGISTER_BIN
+
+
 def layer_units(songs) -> list:
-    """Each song whose bass role holds two voices or more as a unit: its
-    outcome what the second voice does beside the line (the voice with the
-    longest notes): doubling, alternating or apart (harness.relation); its
-    value the part (bass)."""
+    """Each part of each song that holds two voices or more (the drums left
+    out) as a unit: its outcome what the second voice does beside the line
+    (the voice with the most notes; the bass's, with the longest notes):
+    "doubling +4" (harness.relation's interval), "alternating", or "apart"
+    with how far its register sits from the line's (to REGISTER_BIN,
+    within LAYER_OFFSET) and how dense it is against it (LAYER_DENSITY);
+    its value the part. FFVI's second accompaniment voice is apart in 65 %
+    of its songs with two, its second counter-line in 79 % (2026-10-23):
+    the orchestration a song written whole was missing."""
     from . import harness                                  # harness imports this module
     out = []
     for s in songs:
-        if len(s.bass_voices) < 2:
-            continue
-        lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in s.bass_voices.items()}
-        line = max(lengths, key=lambda v: (lengths[v], -v))
-        other = max((v for v in s.bass_voices if v != line), key=lambda v: len(s.bass_voices[v]))
-        kind = harness.relation(s.bass_voices[line], s.bass_voices[other])[0]
-        out.append(tables.Unit(s.sid, s.game, kind, {"part": R.BASS}))
+        by_role = {}
+        for v, (role, ns) in s.voice_notes.items():
+            if role != R.DRUMS and ns:
+                by_role.setdefault(role, {})[v] = ns
+        for role, voices in by_role.items():
+            if len(voices) < 2:
+                continue
+            if role == R.BASS:
+                lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
+                line = max(lengths, key=lambda v: (lengths[v], -v))
+            else:
+                line = max(voices, key=lambda v: (len(voices[v]), -v))
+            other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
+            kind = harness.relation(voices[line], voices[other])
+            if kind[0] == "doubling":
+                outcome = f"doubling {kind[1]:+d}"
+            elif kind[0] == "alternating":
+                outcome = "alternating"
+            else:
+                a, b = part_register(voices[line]), part_register(voices[other])
+                if a is None or b is None:
+                    continue
+                offset = int(round(((b[0] + b[1]) - (a[0] + a[1])) / 2 / REGISTER_BIN)) * REGISTER_BIN
+                offset = max(-LAYER_OFFSET, min(LAYER_OFFSET, offset))
+                density = habit_of(len(voices[other]) / max(1, len(voices[line])), LAYER_DENSITY)
+                outcome = f"apart {offset:+d} {density}"
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": role}))
     return out
 
 

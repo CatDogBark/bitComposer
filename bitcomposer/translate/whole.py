@@ -39,6 +39,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 from . import harmony, harness, rhythm, tables, vocab, writer
+from .writer import scale_index, scale_pitch
 from . import roles as R
 from .vocab import Span
 
@@ -273,13 +274,27 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
     return textures, plays
 
 
-def allot(band: list) -> dict:
-    """How the eight voices are shared out: the drums two, the bass and the
-    melody one each, every upper part one, then the harmony up to three
-    and the accompaniment up to two while voices remain, the counter last."""
+def allot(band: list, counts: dict | None = None) -> dict:
+    """How the eight voices are shared out. With the balance's counts (a
+    song's voices a part, FFVI: the accompaniment and the counter-line two
+    each as often as not), each pitched part takes its count and the drums
+    two, trimmed from the largest parts down while the eight are passed.
+    Without counts: the drums two, the bass and the melody one each, every
+    upper part one, then the harmony up to three and the accompaniment up
+    to two while voices remain, the counter last."""
     out = {}
     if R.DRUMS in band:
         out[R.DRUMS] = 2
+    if counts:
+        for role in band:
+            if role != R.DRUMS:
+                out[role] = max(1, counts.get(role, 1))
+        while sum(out.values()) > VOICES:
+            biggest = max((r for r in out if r != R.DRUMS and out[r] > 1), key=lambda r: out[r], default=None)
+            if biggest is None:
+                break
+            out[biggest] -= 1
+        return out
     for role in (R.BASS, R.MELODY):
         if role in band:
             out[role] = 1
@@ -292,6 +307,40 @@ def allot(band: list) -> dict:
         out[role] += give
         spare -= give
     return out
+
+
+DENSITY_WORDS = ("sparse", "medium", "dense")
+
+
+def habit_near(models: dict, role: str, tempo: str, weight: str, rng: random.Random, first: str, density: str) -> str:
+    """A second line's habit, drawn as the first's was but of the density the layers table says it has against the
+    first (sparser, like, denser), the last draw where none in twenty is."""
+    tier = next((i for i, w in enumerate(DENSITY_WORDS) if first.startswith(w)), 1)
+    want = {"sparser": lambda t: t < tier, "like": lambda t: t == tier, "denser": lambda t: t > tier}.get(density, lambda t: True)
+    habit = first
+    for _ in range(20):
+        habit = _draw(models, "habits", (role, tempo, weight), rng)
+        if want(next((i for i, w in enumerate(DENSITY_WORDS) if habit.startswith(w)), 1)):
+            return habit
+    return habit
+
+
+def layer_of(extras: dict) -> tuple:
+    """A part's second voice as the plan drew it: ("apart", offset, density), ("doubling", interval) or ("alternating",)."""
+    words = (extras or {}).get("layer", "").split()
+    if not words:
+        return ("stack",)
+    if words[0] == "apart" and len(words) >= 3:
+        return ("apart", int(words[1]), words[2])
+    if words[0] == "doubling" and len(words) >= 2:
+        return ("doubling", int(words[1]))
+    return (words[0],)
+
+
+def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
+    """A line again at an interval, in the scale (a third, fourth or fifth stays diatonic), on another voice."""
+    steps = int(round(interval * 7 / 12))
+    return [(a, b, float(scale_pitch(scale_index(int(round(m)), scale) + steps, scale)), voice) for a, b, m, *_ in notes]
 
 
 def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None, min_bars: int | None = None) -> Plan:
@@ -312,19 +361,22 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights, layout, shares = [], {}, {}, {}
+    band, weights, layout, shares, counts = [], {}, {}, {}, {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
         band.append(role)
         if rest:
             fields = rest.split(":")
             weights[role] = fields[0]
-            if len(fields) > 1 and "-" in fields[1]:        # the song's layout and note lengths come with its balance
+            if len(fields) > 1 and "-" in fields[1]:        # the song's layout, note lengths and voices a part come with its balance
                 lo, hi = fields[1].split("-")
                 layout[role] = (int(lo), int(hi))
             if len(fields) > 2 and fields[2]:
                 shares[role] = float(fields[2])
-    log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") if r in weights else r for r in band))
+            if len(fields) > 3 and fields[3]:
+                counts[role] = int(fields[3])
+    log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
+                                  if r in weights else r for r in band))
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
     textures, plays = plan_texture(models, parts, band, rng, log)
     silent = [r for r in band if not any(plays[r])]
@@ -358,14 +410,18 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
                             "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
                             "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
                             "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng)}
+    voices = allot(band, counts)
+    for role in band:                                       # a part with two voices or more: what its second voice does (the layers table)
+        if role != R.DRUMS and voices.get(role, 1) >= 2:
+            extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
     for role in band:
         log.append(f"{role}: " + ", ".join(x for x in (
             f"weight {weights[role]}" if role in weights else "", f"register {registers[role]}" if role in registers else "",
-            f"sounds {sounds[role]:.1f}" if role in sounds else "", f"habit {habits[role]}",
+            f"sounds {sounds[role]:.1f}" if role in sounds else "", f"voices {voices.get(role, 1)}", f"habit {habits[role]}",
             " ".join(f"{k} {v}" for k, v in extras.get(role, {}).items()),
             f"plays {sum(plays[role])}/{len(plays[role])} bars") if x))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, allot(band), log)
+                registers, sounds, habits, extras, voices, log)
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -465,10 +521,14 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS] = Part(R.BASS, [(a, b, m, 0) for a, b, m in notes], figures,
                                [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
                                 f"{len(notes)} notes; locked to the band in {len(lock)} bars"])
+    tempo = rhythm.band(plan.bpm)
     for role in rhythm.UPPER:
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
             continue
-        voices = list(range(plan.voices[role]))
+        n = plan.voices[role]
+        layer = layer_of(plan.extras.get(role))
+        apart = layer[0] == "apart" and n >= 2                # the second voice its own line: the first takes the rest as a stack
+        voices = list(range(n - 1 if apart else n))
         low, high = plan.registers[role]
         registers = {v: (low, high) for v in voices}
         pedals = {v: (low + high) // 2 for v in voices}
@@ -478,10 +538,27 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
                                                 pedals=pedals, plays=plan.plays[role])
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
-        written[role] = Part(role, notes, [f"{f} / {vc}" for f, vc in zip(figures, voicings)],
-                             [f"voices {len(voices)}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
-                              f"motion {plan.extras[role]['motion']}, sounded {sounds:.2f}; {sum(1 for f in figures if f != writer.REST)} bars written, "
-                              f"{len(notes)} notes; locked to the band in {len(lock)} bars"])
+        log = [f"voices {len(voices)}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
+               f"motion {plan.extras[role]['motion']}, sounded {sounds:.2f}; {sum(1 for f in figures if f != writer.REST)} bars written, "
+               f"{len(notes)} notes; locked to the band in {len(lock)} bars"]
+        all_figures = [f"{f} / {vc}" for f, vc in zip(figures, voicings)]
+        if apart:
+            _, offset, density = layer
+            reg2 = (max(24, low + offset), min(100, high + offset))
+            habit2 = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:second habit"), plan.habits[role], density)
+            rng2 = random.Random(f"{seed}:{role}:second")
+            richness2 = _draw(models, "voicing_habits", (role,), rng2) if "voicing_habits" in models else plan.extras[role]["richness"]
+            motion2 = _draw(models, "motions", (role,), rng2) if "motions" in models else plan.extras[role]["motion"]
+            v2 = n - 1
+            notes2, figures2, voicings2 = writer.upper(song, role, [v2], {v2: reg2}, models, rng2, habit2, richness2, sounds, key=key,
+                                                       lock=locks_of(song, {role}, plan), motion=motion2, pedals={v2: (reg2[0] + reg2[1]) // 2}, plays=plan.plays[role])
+            song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes2]
+            notes = notes + notes2
+            all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures2, voicings2)]
+            log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}), voicing {richness2}, motion {motion2}; "
+                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
+        written[role] = Part(role, notes, all_figures, log)
+    tempo = rhythm.band(plan.bpm)
     for role in (R.MELODY, R.COUNTER):                    # the counter-line written as the melody is, after it and clear of it
         if role not in plan.band or not all(k in models for k in ("rhythm", "moves", "contours", "endings", "relations", "values")):
             continue
@@ -491,10 +568,32 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                              recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                              role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"))
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
-        written[role] = Part(role, [(a, b, m, 0) for a, b, m in notes], figures,
-                             [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items())
-                              + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
-                              + ("checked" if reference is not None else "not on this machine")] + plog)
+        line = [(a, b, m, 0) for a, b, m in notes]
+        log = [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items() if k != "layer")
+               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
+               + ("checked" if reference is not None else "not on this machine")] + plog
+        n, layer = plan.voices[role], layer_of(x)
+        if n >= 2 and layer[0] == "doubling" and notes:     # the line again at the interval, in the scale
+            scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+            second = diatonic(line, layer[1], scale, 1)
+            song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in second]
+            line = line + second
+            log.append(f"doubled {layer[1]:+d} semitones, in the scale, on a second voice")
+        elif n >= 2 and layer[0] == "apart" and role == R.COUNTER:   # a second counter-line of its own, clear of the first
+            _, offset, density = layer
+            low, high = plan.registers[role]
+            reg2 = (max(24, low + offset), min(100, high + offset))
+            habit2 = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:second habit"), plan.habits[role], density)
+            notes2, figures2, plog2 = writer.melody(song, [], reg2, models, random.Random(f"{seed}:{role}:second"), habit2,
+                                                    key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
+                                                    recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
+                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"))
+            song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
+            line = line + [(a, b, m, 1) for a, b, m in notes2]
+            figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
+            log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}); {sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
+            log += [f"second: {l}" for l in plog2[-2:]]
+        written[role] = Part(role, line, figures, log)
     return written
 
 

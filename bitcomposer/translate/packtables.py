@@ -67,7 +67,7 @@ KEPT = {
     "parts": ("rhythm", "parts_units", {}, ("part", "band"), False, False, "whether a song has each part, by the band's size"),
     "voices": ("rhythm", "voices_units", {}, ("part", "band"), False, False, "how many voices a song uses"),
     "doubles": ("rhythm", "double_units", {}, ("part",), False, False, "what a song's double voices double, and how"),
-    "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a second bass voice does beside the line"),
+    "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a part's second voice does beside its line: doubling at an interval, alternating, or apart (how far off, how dense)"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
     "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),

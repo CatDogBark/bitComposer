@@ -732,7 +732,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     meters = [max(1, round(b - a)) for a, b, _ in bars]
     manner = FreeManner(models["rhythm"].table.vocabulary, division=song.division)
     envelope_of = free_envelope(habit)
-    clear_of = rhythm.UPPER + ((R.MELODY,) if role != R.MELODY else ())
+    clear_of = rhythm.UPPER + ((R.MELODY, R.COUNTER) if role != R.MELODY else ())   # a second counter-line stays clear of the first too
     tune_line = sorted(n for r in clear_of for n in song.notes.get(r, []))
     rate = chord_rate if chord_rate is not None else CHORD_ON_BEAT
     on_beat = [0, 0]                                        # the tune's strong-beat notes on the chord, and all of them, so far

@@ -176,10 +176,26 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
         self.assertEqual(tokens[1], "drums")
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 2, tokens)   # weight:register:sounded share
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 3, tokens)   # weight:register:sounded share:voices
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
         self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
+
+    def test_layers_and_the_voices_a_part(self):
+        s = self._song()
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]),
+                         2: ("melody", [(t + d, 0.2, m - 12.0, "m") for t, _, m, _ in s.notes["melody"] if t % 2 == 0 for d in (0.5, 0.75)])}   # a second voice an octave under, its own rhythm, as dense
+        units = rhythm.layer_units([s])
+        self.assertEqual(len(units), 1)
+        self.assertEqual(units[0].values["part"], "melody")
+        self.assertEqual(units[0].outcome, "apart -12 like")
+        self.assertIn("melody=main:67-72:0.9:2", rhythm.balance_units([s])[0].outcome)
+        self.assertEqual(whole.allot(["bass", "drums", "melody", "counter"], {"bass": 1, "melody": 1, "counter": 2}), {"drums": 2, "bass": 1, "melody": 1, "counter": 2})
+        self.assertEqual(sum(whole.allot(["bass", "accompaniment", "counter", "harmony", "melody", "drums"], {"accompaniment": 3, "counter": 3, "harmony": 3}).values()), 8)
+        self.assertEqual(whole.layer_of({"layer": "apart -8 sparser"}), ("apart", -8, "sparser"))
+        self.assertEqual(whole.layer_of({"layer": "doubling +4"}), ("doubling", 4))
+        major = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual([m for _, _, m, _ in whole.diatonic([(0.0, 1.0, 60.0, 0), (1.0, 2.0, 62.0, 0)], 4, major, 1)], [64.0, 65.0])   # a third up: E, then F
 
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
