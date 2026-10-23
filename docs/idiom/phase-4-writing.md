@@ -1042,3 +1042,57 @@ accompaniment 8.4 strikes a bar, 9 distinct bars, repeats 0.20 (6.3, 8,
 counter 5.4 / 4.5 / 0.13 (4.9 / 10.5 / 0.13); the bass and drums as
 before; the tune's steps 0.59, range 14.5, echoes 0.27 unchanged. The
 third listening set (Song Check 3) is written from this.
+
+### The theme: the hook as vocabulary (2026-10-23)
+
+The owner's third-set note: the songs never carry a tune; Whole 14 opens
+with a hook it never comes back to; Terra states its tune, goes away,
+and comes back to it. Measured (`hooks.py`, `heads.py` on Ragnarok,
+FFVI's 65 songs with a tune against the written set):
+
+- Exact repeats are not the difference. Keyed by rhythm and intervals,
+  FFVI repeats a four-bar phrase exactly as rarely as the written songs
+  do (a median of none heard before in a pass; the opening phrase back
+  exactly in 11 % of songs). A hook comes back as its head, varied, and
+  through the loop, which the readings cut off and the page never played.
+- Where the echoes point is the difference. Both echo an earlier bar in a
+  third of bars (0.33 against 0.30), but half of FFVI's echoes point at
+  the song's first four tune bars (median 0.50, a quarter of songs above
+  0.80; the written songs 0.38, a quarter at none), and in 43 % of FFVI's
+  songs a later phrase opens with the first phrase's opening bar (the
+  written songs 15 %, none in the median). A part returns after another
+  in 29 % of FFVI's forms (ours 15 %). Whole 14 echoed its opening in 44 %
+  of its echoes and never at a phrase head.
+- The vocabulary had no word for it. A phrase stood only to the phrase
+  before (repeated, moved, answered, new: 73 to 78 % new in FFVI), the
+  cell urn's "earlier" took any bar by its count, and the form was a chain
+  of kinds by index.
+
+Counted and kept, as vocabulary rather than a weight: **the phrase
+letters of a part** (`rhythm.phrase_letter_units`: each phrase THEME
+where it opens with the song's theme head, the first sounding phrase's
+opening bar; AGAIN where it opens with an earlier head; NEW; by the
+part's phrase count and its place in the form: a one-phrase middle part
+opens with the theme in 19 % of FFVI's, a two-phrase middle part is "T n"
+in 43 %), **how much of the theme phrase comes back with its head**
+(`theme_body_units`: the whole phrase 35 %, the head alone 30 %), and
+**the forms whole** (`letters`, one unit a song: "A B" 24 %, "A B C" 11 %,
+"A B C B D" 6 %). The melody writer takes the letters: a THEME phrase
+after the first opens with the theme's head again (re-rooted on the bar's
+chord), keeps as many of its next bars as the table draws, then goes on
+new under a drawn contour and ending; an AGAIN phrase brings back the
+last non-theme phrase; a NEW phrase is new or answers the one before. The
+plan draws the letters a part for the phrases the tune plays in (an
+intro without the tune had taken the theme's place at first) and the
+form from the game's own letters. The listening render plays the loop's
+first bars once more after the form, fading through them (`--tail-bars
+4`), so a return through the loop is heard. The measures gain the theme's
+returns (`theme_heads`, `theme_returns`) and the echoes of the opening.
+
+After, by the plan's own count: 8 of 20 songs return to their theme
+(FFVI 43 %); read back under the reader's own segmentation (which finds
+two parts in the written songs where it finds four in FFVI's) the return
+shows in fewer. Round 11: the melody's distinct rhythms 7 (FFVI 9, from
+4), range 16 (21.5), chord tones 0.57 (0.56); steps 0.54 (0.67) and the
+accompaniment's merged onsets 9.1 (6.3) are the open numbers. The fourth
+listening set (Song Check 4) is written from this.
