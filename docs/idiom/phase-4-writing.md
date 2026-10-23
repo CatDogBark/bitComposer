@@ -246,4 +246,41 @@ Searching for Friends bass medium walking, drums dense mixed on its one
 hat; Johnny C. Bad bass sparse roots (the band's lock asking more), drums
 dense mixed on its ride. Verdicts in the page's store as
 `verdicts/<id>bassfree` and `verdicts/<id>drumsfree`, the first round's
-kept beside them. **Awaiting the ear.**
+kept beside them.
+
+**The free round heard** (the listener, 2026-10-22): free bass and drums
+belong in six of eight; two "nearly", both the bass, with notes that say
+one thing: The Decisive Battle's "loses the tune some", Johnny C. Bad's
+"flops on its opportunity to do some phrasing around 28 seconds". The
+free writer hears the band as hits and energy, never as phrases; that
+knowledge comes with the melody's phrases and the arrangement's breaks,
+and the bass is to be re-heard then. **Known issue: the phrase-blind
+bass.** "Overall it's fine, and way better than anything we could have
+generated before": the round passed, the slice moved on.
+
+### Slice 2 (reordered): the accompaniment under the song's own chords (2026-10-22)
+
+The chordal parts, harmony, accompaniment and arp (whichever the song
+has), written free under the song's own chords and put onto its own
+voices: the rhythm a bar from the bar table (the part's; the cell floor;
+the song's mixture; the habit drawn from the game's by tempo), the chord
+tones a span from the voicings mixture (part, shape, the richness habit
+drawn once a song), the spread from the widths mixture, stacked lowest
+first in the lowest voice's register (nearest above for close, every
+second tone up an octave for open, each tone an octave more for wide),
+the tones laid onto the part's voices lowest first (spare voices double
+the stack an octave up, spare tones dropped from the middle; a lone arp
+voice cycles the tones); a held part sounds to its next strike, the
+others at the song's own sounded share. A pad does not lock to the
+band's hits; the accompaniment and arp lock at the drums' share.
+`writer.stack`, `writer.upper`, `harness.write_upper` (the part named
+"upper", every chordal voice replaced), `tools/table_parts.py --parts
+upper`; the pack gains a `voicing_habits` table. On the Substitution
+Check as a third switch, Chords (Original / Free / None), the rest stem
+now without the chordal voices, verdicts as `verdicts/<id>upperfree`.
+What the four drew: Terra a held harmony (sparse repeating, thin) and a
+three-voice accompaniment (sparse mixed, rich); The Decisive Battle a
+two-voice accompaniment (dense varied, rich); Searching for Friends a
+three-voice harmony (sparse varied, thin) and one accompaniment voice
+(sparse mixed, full); Johnny C. Bad a three-voice accompaniment (medium
+repeating, full). **Awaiting the ear.**
