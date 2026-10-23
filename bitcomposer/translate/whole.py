@@ -435,16 +435,27 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
     if R.MELODY in band and "phrase_letters" in models:   # the tune's phrases a part: the theme again, an earlier head again, or new
-        letters, n_parts = {}, len(parts)
+        letters, n_parts, themed = {}, len(parts), False
         for i, (bar, n, of, label) in enumerate(parts):
             if of is not None:
                 continue
-            count = max(1, -(-n // rhythm.PHRASE)) if n >= rhythm.PHRASE else 1
+            windows = []                                    # the part's phrases the tune plays in, as the writer cuts them (a short tail joins the one before)
+            for j in range(0, n, rhythm.PHRASE):
+                chunk = list(range(bar + j, bar + min(n, j + rhythm.PHRASE)))
+                if len(chunk) < rhythm.PHRASE and windows:
+                    windows[-1] += chunk
+                else:
+                    windows.append(chunk)
+            count = sum(1 for w in windows if any(plays[R.MELODY][k] for k in w))
+            if not count:
+                continue
             form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
             drawn = _draw(models, "phrase_letters", (R.MELODY, str(min(count, 5)), form), rng, log).split()
-            if i == 0 or not letters:
-                drawn[0] = rhythm.THEME                     # the song's theme is its first phrase
-            letters[i] = " ".join((drawn + [rhythm.NEW] * count)[:count])
+            drawn = (drawn + [rhythm.NEW] * count)[:count]
+            if not themed:
+                drawn[0] = rhythm.THEME                     # the song's theme is the first phrase its tune plays
+                themed = True
+            letters[i] = " ".join(drawn)
         extras.setdefault(R.MELODY, {})["letters"] = letters
         log.append("phrases " + " | ".join(f"{parts[i][3]}: {v}" for i, v in letters.items()))
     for role in band:

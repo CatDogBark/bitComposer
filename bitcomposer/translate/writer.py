@@ -778,11 +778,13 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     draws = {k: (Counter(), None) for k in ("contours", "endings", "relations")}
     log, prev_phrase, prev_phrase_start = [], None, None
     written_windows = {}                                    # a window's first bar -> (its live bars, their cells), for the form's repeats
-    part_of_window = {}                                     # a window's first bar -> (its part's index, its place among the part's windows)
-    for i, (mine, _, _) in by_part.items():
-        for j, w in enumerate(mine):
-            if w:
+    part_of_window = {}                                     # a window's first bar -> (its part's index, its place among the part's windows
+    for i, (mine, _, _) in by_part.items():                 # the tune plays in: the letters count sounding phrases, as the counts did)
+        j = 0
+        for w in mine:
+            if w and any(own[k] != REST for k in w):
                 part_of_window[w[0]] = (i, j)
+                j += 1
     theme = None                                            # the theme phrase's cells (the first phrase's), once written
     others = []                                             # the phrases written whose head is not the theme's, latest last
 
