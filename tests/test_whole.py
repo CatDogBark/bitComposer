@@ -189,7 +189,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(len(units), 1)
         self.assertEqual(units[0].values["part"], "melody")
         self.assertEqual(units[0].outcome, "apart -12 like")
-        self.assertIn("melody=main:67-72:0.9:2", rhythm.balance_units([s])[0].outcome)
+        self.assertIn("melody=main:68-72:0.9:2", rhythm.balance_units([s])[0].outcome)   # the tune's ambitus to the grain, two voices
         self.assertEqual(whole.allot(["bass", "drums", "melody", "counter"], {"bass": 1, "melody": 1, "counter": 2}), {"drums": 2, "bass": 1, "melody": 1, "counter": 2})
         self.assertEqual(sum(whole.allot(["bass", "accompaniment", "counter", "harmony", "melody", "drums"], {"accompaniment": 3, "counter": 3, "harmony": 3}).values()), 8)
         self.assertEqual(whole.layer_of({"layer": "apart -8 sparser"}), ("apart", -8, "sparser"))

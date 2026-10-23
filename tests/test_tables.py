@@ -542,8 +542,8 @@ class ArrangementUnitTests(unittest.TestCase):
         s.voices = s.voices[:3]
         self.assertEqual(rhythm.double_units([s])[0].outcome, "none")
         self.assertEqual(rhythm.layer_units([s]), [])
-        s.bass_voices = {1: [(4.0 * k, 3.0, 36.0, "b") for k in range(8)], 5: [(4.0 * k, 0.5, 48.0, "p") for k in range(8)]}
-        self.assertEqual(rhythm.layer_units([s])[0].outcome, "doubling")
+        s.voice_notes = {1: ("bass", [(4.0 * k, 3.0, 36.0, "b") for k in range(8)]), 5: ("bass", [(4.0 * k, 0.5, 48.0, "p") for k in range(8)])}
+        self.assertEqual(rhythm.layer_units([s])[0].outcome, "doubling +12")      # the second bass voice an octave over the line, struck with it
 
 
 class PackTableTests(unittest.TestCase):
