@@ -1096,3 +1096,33 @@ shows in fewer. Round 11: the melody's distinct rhythms 7 (FFVI 9, from
 4), range 16 (21.5), chord tones 0.57 (0.56); steps 0.54 (0.67) and the
 accompaniment's merged onsets 9.1 (6.3) are the open numbers. The fourth
 listening set (Song Check 4) is written from this.
+
+### What comes back with the theme (2026-10-23)
+
+The owner heard the callback in one of the fourth set's twenty (Whole
+11) where the plan's letters had eight songs return to their theme, and
+asked whether FFVI holds the tune in the melody alone. Measured on FFVI's
+46 theme returns, bar for bar against the theme phrase (`theme_band.py`,
+`theme_band2.py`): the chords under the returning phrase are the theme's
+in 41 % of bars (19 % at any other phrase), the bass's figures in 54 %
+(12 %), the accompaniment's bars in 56 % (15 %), the texture no more than
+elsewhere (49 % against 44 %). Per return, with half the bars or more
+the same: the chords come back in 22 of 46, the bass in 27 of 46, the
+accompaniment in 29 of 43; all three together in 17, one of them in 23,
+none in 4. The tune itself comes back whole in 14 of 46, three bars in
+13, two in 14, one in 5. And the theme travels: another part plays the
+theme's head cell somewhere in 12 of 52 counter-lines, 11 of 62 basses,
+9 of 57 accompaniments. The fourth set's nine returns had brought the
+tune back over new chords in eight (0 of 4 bars the same) and a new
+accompaniment in all: a melody event where FFVI's is a band event half
+the time, and Whole 11 landed because its form brought B back whole.
+
+Counted and kept: **what comes back with the theme** (`return_band`:
+"chords bass accompaniment", "bass", "none"..., one unit a return). The
+plan draws it a return: the theme bars' chords are copied under the
+returning phrase when the chords come back, and the bass and the
+accompaniment copy their own theme bars there when they do
+(`song.copies`, applied at the end of `_free_figures` as a form's repeat
+is). The theme travelling to the counter or the bass (a fifth of songs)
+is left for later. The fifth listening set is drawn from forty seeds,
+keeping the songs whose theme returns, each card naming where.
