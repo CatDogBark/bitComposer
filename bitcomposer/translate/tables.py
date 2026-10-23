@@ -495,6 +495,7 @@ SPECS = {
     "relations": ("phrases:relation_units", ("part", "mode"), ("place", "form", "previous", "habit")),
     "endings": ("phrases:ending_units", ("part", "mode"), ("ends_part", "last", "contour", "place", "previous", "habit")),
     "peaks": ("phrases:peak_units", ("part", "mode"), ("contour", "place", "previous")),
+    "moves": ("phrases:move_units", ("part", "mode"), ("place", "tone", "contour", "quarter", "previous", "habit")),
     "texture": ("texture_units", ("part", "meter"), ("tempo", "place", "form", "previous", "habit")),
     "presence": ("presence_units", ("part", "meter"), ("tempo", "place", "form", "others", "previous", "habit")),
     "band": ("band_units", ("part",), ("meter", "tempo")),

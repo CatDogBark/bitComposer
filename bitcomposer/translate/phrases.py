@@ -563,6 +563,51 @@ def peak_units(songs, length=4) -> list:
     return _phrase_units(songs, "peak", length)
 
 
+# --- the melody's moves as a table's units (phase 4, the melody slice) ---
+
+LEAP = 12                            # semitones: a move beyond an octave either way is one outcome ("+13" / "-13")
+STEPS = ((0.5, "leaping"), (0.75, "mixed"), (2, "stepwise"))   # a song's share of melody moves that are steps or repeats (2 semitones or less)
+STRONG = {"beat": "strong", "eighth": "weak", "sixteenth": "weak", "triplet": "weak", "finer": "weak"}
+
+
+def move_units(songs: list, length=4) -> list:
+    """Each move of the tune, note to note within a phrase, as a table's
+    unit: its outcome the interval in semitones, signed, beyond an octave
+    folded to LEAP + 1 ("+13", "-13"); its values the part (melody), the
+    mode, where the arriving note falls in its beat (STRONG: on the beat
+    or off it), the tone the note left stands on against the chord
+    (CHORD_NAMES), the phrase's contour (CONTOURS) and the quarter of the
+    phrase the move lands in (QUARTERS), the move before (START at the
+    phrase's first move), and the song's habit (STEPS: how stepwise its
+    tune is, drawn once a song)."""
+    from .rhythm import START, habit_of, place as place_of, position
+    out = []
+    for s in songs:
+        mine = []
+        for ph in phrases(s, length):
+            if len(ph.line) < 2:
+                continue
+            shape = contour(ph.line, ph.start, ph.end)
+            previous = START
+            for a, b in zip(ph.line, ph.line[1:]):
+                move = round(b[2]) - round(a[2])
+                move = max(-LEAP - 1, min(LEAP + 1, move))
+                outcome = f"{move:+d}" if move else "0"
+                beat_pos = position(b[0] - math.floor(b[0]), 12)
+                quarter = QUARTERS[min(3, int(4 * (b[0] - ph.start) / (ph.end - ph.start)))]
+                mine.append(tables.Unit(s.sid, s.game, outcome, {
+                    "part": R.MELODY, "mode": s.mode, "place": STRONG[place_of(beat_pos)], "tone": against_chord(a[2], a[0], s),
+                    "contour": shape, "quarter": quarter, "previous": previous}))
+                previous = outcome
+        if mine:
+            steps = sum(1 for u in mine if abs(int(u.outcome)) <= 2) / len(mine)
+            habit = habit_of(steps, STEPS)
+            for u in mine:
+                u.values["habit"] = habit
+            out += mine
+    return out
+
+
 # --- reports ---
 
 def _band(x: float) -> str:
