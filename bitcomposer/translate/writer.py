@@ -370,6 +370,31 @@ UPPER_LOCK = {R.HARMONY: 0.0, R.ACCOMP: 2 / 3, R.ARP: 2 / 3}   # the share of th
 
 
 MOTION_STEP = {"block": 0, "mixed": 0.5, "arpeggiated": 1}   # how far along the stack a voice moves a strike
+CHORD_MARKS = {"R", "3", "5", "7", "sus"}   # a written voicing holds one of these at least: "+" alone is the chord reader's noise
+CLASH = (1, 11)                       # semitones (mod 12) a written tone may not sit from a note the tune sounds at the same time
+
+
+def voiced(outcome: str) -> bool:
+    """Whether a voicing from the table may be written: it holds a chord tone (a non-chord tone only beside one)."""
+    return bool(set(outcome.split()) & CHORD_MARKS)
+
+
+def sounding_pcs(line: list, at: float) -> set:
+    """The pitch classes a line (start, length, midi, ...) sounds at a time."""
+    out = set()
+    for n in line:
+        length = n[1] if not math.isnan(n[1]) else 0.25
+        if n[0] - rhythm.NEAR <= at < n[0] + length - rhythm.NEAR and not math.isnan(n[2]):
+            out.add(round(n[2]) % 12)
+    return out
+
+
+def unclashed(midi: int, options: list, tune: set) -> int:
+    """The note, or where it sits a semitone from the tune, the nearest of the voicing's other tones that does not."""
+    if not tune or not any((midi - pc) % 12 in CLASH for pc in tune):
+        return midi
+    clear = [m for m in options if not any((m - pc) % 12 in CLASH for pc in tune)]
+    return min(clear, key=lambda m: (abs(m - midi), m)) if clear else midi
 
 
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
@@ -390,6 +415,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                             habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0))
     step = MOTION_STEP.get(motion, 0)
     walked = 0.0                                            # how far along the stack the voices have moved (motion)
+    tune_line = sorted(song.notes.get(R.MELODY, []) + song.notes.get(R.COUNTER, []))   # what the written part must not clash with
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     notes, voicings = [], []
@@ -411,16 +437,22 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             if chord != last_chord or not bar_voicing:
                 shape = chord[1] or "major"
                 v_unit = tables.Unit(song.sid, song.game, "", {"part": role, "shape": shape, "habit": richness, "previous": prev_v or rhythm.START})
-                drawn = models["voicings"].draw(v_unit, prev_v, played_v, rng)
-                marks = drawn.split() or ["R"]
+                drawn = models["voicings"].draw(v_unit, prev_v, played_v, rng, keep=voiced)
+                for _ in range(TRIES):
+                    if voiced(drawn):
+                        break
+                    drawn = models["voicings"].table.draw(models["voicings"].table.context(v_unit), rng, v_unit.values)
+                marks = drawn.split() if voiced(drawn) else ["R", "5"]
                 played_v[drawn] += 1
                 prev_v = drawn
                 last_chord = chord
                 bar_voicing.append(drawn)
             pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]][0], previous_low)
             previous_low = float(pitches[0]) if pitches else previous_low
+            tune = sounding_pcs(tune_line, start)
             if role == R.ARP and len(voices) == 1:
                 midi = in_register(pitches[i % len(pitches)], registers[voices[0]])
+                midi = unclashed(midi, [in_register(m, registers[voices[0]]) for m in pitches], tune)
                 notes.append((start, start + (until - start) * sounds, float(midi), voices[0]))
                 continue
             # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
@@ -432,8 +464,9 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 stacked = [stacked[0]] + stacked[-(len(voices) - 1):] if len(voices) > 1 else [stacked[0]]
             offset = int(walked) if len(pitches) > 1 else 0
             for j, v in enumerate(voices):
-                midi = pitches[(j + offset) % len(pitches)] if offset else stacked[j]
-                notes.append((start, start + (until - start) * sounds, float(in_register(midi, registers[v])), v))
+                midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
+                midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
+                notes.append((start, start + (until - start) * sounds, float(midi), v))
             walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)
     return notes, figures, voicings
