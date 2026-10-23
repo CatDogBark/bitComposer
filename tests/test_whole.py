@@ -243,6 +243,26 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(figs[4:6], figs[0:2])                 # the theme's bars again under the return
         self.assertTrue(all(f in cache.table.vocabulary for f in figs))
 
+    def test_a_themed_plan_returns_to_its_theme(self):
+        """With phrase letters and the tune playing throughout, a themed plan has a later phrase open with the theme."""
+        letters = tables.Table(("part", "phrases", "form"), "phrase letters", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "melody", "phrases": "2", "form": f}) for i, (o, f) in enumerate(
+                (("T n", "first"), ("n n", "last"), ("n n", "last"), ("n T", "last"), ("n n", "middle")))])
+        returns = tables.Table(("part",), "return band", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "return"}) for i, o in enumerate(("none", "none", "chords bass accompaniment", "accompaniment"))])
+        sizes = tables.Table(("part",), "sizes", votes=tables.SHARES).fit([tables.Unit("s", "g", "2", {"part": "form"}), tables.Unit("t", "g", "2", {"part": "form"})])
+        lengths = tables.Table(("part", "meter", "habit"), "lengths", votes=tables.SHARES).fit(
+            [tables.Unit(sid, "g", "8", {"part": "form", "meter": 4, "habit": "short"}) for sid in ("s", "t")])
+        habits = tables.Table(("part",), "length habits", votes=tables.SHARES).fit([tables.Unit(sid, "g", "short", {"part": "form"}) for sid in ("s", "t")])
+        models = {"phrase_letters": letters, "return_band": returns, "sizes": sizes, "lengths": lengths, "length_habits": habits}
+        themed = sum(1 for seed in range(1, 13) if any(r for r in whole.plan(models, seed, "test", themed=True, band_returns=True).extras.get("melody", {}).get("returns", [])))
+        self.assertEqual(themed, 12)                            # every themed plan returns to its theme
+        p = whole.plan(models, 3, "test", themed=True, band_returns=True)
+        self.assertTrue(all(r["with"] for r in p.extras["melody"]["returns"]))   # and never with the tune alone
+        self.assertEqual(p.extras["options"], {"themed": True, "band_returns": True})
+        plain = sum(1 for seed in range(1, 13) if whole.plan(models, seed, "test").extras.get("melody", {}).get("returns"))
+        self.assertLess(plain, 12)                              # without the switch, the table's own rate
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

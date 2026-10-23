@@ -364,9 +364,17 @@ def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
     return [(a, b, float(scale_pitch(scale_index(int(round(m)), scale) + steps, scale)), voice) for a, b, m, *_ in notes]
 
 
-def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None, min_bars: int | None = None) -> Plan:
+THEME_TRIES = 40                      # letter draws before a themed song is given up as unthemed (none in forty: a game without returns)
+
+
+def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None, min_bars: int | None = None,
+         themed: bool = False, band_returns: bool = False) -> Plan:
     """The skeleton of song `seed` from the tables; forms longer than `max_bars` or shorter than `min_bars` are drawn
-    again (a listening round has no use for a four-bar jingle, which the game's tables hold)."""
+    again (a listening round has no use for a four-bar jingle, which the game's tables hold). `themed`: the tune's
+    phrase letters are drawn again until the theme comes back later in the song (the game's songs that carry a tune,
+    43 % of FFVI's; the tables are the same, the draw is conditioned on what they count). `band_returns`: a return
+    never comes with the tune alone; one of the chords, the bass and the accompaniment comes back with it, in the
+    game's own mix of which."""
     rng = random.Random(f"whole:{seed}")
     log = []
     tonic_s, mode = _draw(models, "keys", ("song",), rng, log).split()
@@ -436,7 +444,8 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
     if R.MELODY in band and "phrase_letters" in models:   # the tune's phrases a part: the theme again, an earlier head again, or new
-        letters, n_parts, themed = {}, len(parts), False
+        n_parts = len(parts)
+        counts_by_part = {}
         for i, (bar, n, of, label) in enumerate(parts):
             if of is not None:
                 continue
@@ -448,15 +457,22 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
                 else:
                     windows.append(chunk)
             count = sum(1 for w in windows if any(plays[R.MELODY][k] for k in w))
-            if not count:
-                continue
-            form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
-            drawn = _draw(models, "phrase_letters", (R.MELODY, str(min(count, 5)), form), rng, log).split()
-            drawn = (drawn + [rhythm.NEW] * count)[:count]
-            if not themed:
-                drawn[0] = rhythm.THEME                     # the song's theme is the first phrase its tune plays
-                themed = True
-            letters[i] = " ".join(drawn)
+            if count:
+                counts_by_part[i] = count
+        for attempt in range(THEME_TRIES if themed else 1):
+            letters, first_set = {}, False
+            for i, count in counts_by_part.items():
+                form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
+                drawn = _draw(models, "phrase_letters", (R.MELODY, str(min(count, 5)), form), rng, log).split()
+                drawn = (drawn + [rhythm.NEW] * count)[:count]
+                if not first_set:
+                    drawn[0] = rhythm.THEME                 # the song's theme is the first phrase its tune plays
+                    first_set = True
+                letters[i] = " ".join(drawn)
+            if not themed or sum(v.split().count(rhythm.THEME) for v in letters.values()) > 1:
+                break
+        if themed and attempt:
+            log.append(f"themed: the phrase letters drawn {attempt + 1} times until the theme came back")
         extras.setdefault(R.MELODY, {})["letters"] = letters
         log.append("phrases " + " | ".join(f"{parts[i][3]}: {v}" for i, v in letters.items()))
         # the theme's bars and its returns, and what comes back with each (the return-band table: the chords, the bass,
@@ -480,6 +496,11 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
                     theme_bars = w[:rhythm.PHRASE]
                     continue
                 back = _draw(models, "return_band", ("return",), rng, log) if "return_band" in models else "none"
+                if band_returns:                            # never the tune alone: the game's own mix of what comes back, the "none" left out
+                    for _ in range(20):
+                        if back != "none" and any(x == "chords" or x in band for x in back.split()):
+                            break
+                        back = _draw(models, "return_band", ("return",), rng, log) if "return_band" in models else "chords"
                 with_ = [x for x in back.split() if x != "none" and (x == "chords" or x in band)]
                 returns.append({"bars": w[:len(theme_bars)], "with": with_})
         if theme_bars is not None:
@@ -498,6 +519,8 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             f"sounds {sounds[role]:.1f}" if role in sounds else "", f"voices {voices.get(role, 1)}", f"habit {habits[role]}",
             " ".join(f"{k} {v}" for k, v in extras.get(role, {}).items()),
             f"plays {sum(plays[role])}/{len(plays[role])} bars") if x))
+    if themed or band_returns:
+        extras.setdefault("options", {}).update({"themed": themed, "band_returns": band_returns})
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log)
 
@@ -946,10 +969,10 @@ def measures(song: rhythm.Song) -> dict:
 
 def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game: str = "", title: str | None = None,
             max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True, fade: float = 2.0,
-            min_bars: int | None = None, tail_bars: int = 0) -> dict:
+            min_bars: int | None = None, tail_bars: int = 0, themed: bool = False, band_returns: bool = False) -> dict:
     """One whole song: the plan, the parts written, the score (and {role: first voice}), the song read back and its
     measures; {"plan", "song", "written", "score", "first", "samples", "echo", "read", "measures"}."""
-    p = plan(models, seed, game, title, max_bars, min_bars)
+    p = plan(models, seed, game, title, max_bars, min_bars, themed=themed, band_returns=band_returns)
     kit = (pack.get("voices") or {}).get("drums") or {}
     song = song_of(p, kit)
     written = write(p, song, models, seed, reference)

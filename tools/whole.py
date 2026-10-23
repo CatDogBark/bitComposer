@@ -85,6 +85,8 @@ def main(argv=None) -> int:
     ap.add_argument("--loops", type=int, default=1, help="how many times the loop plays in all (default 1: the form once)")
     ap.add_argument("--fade", type=float, default=3.0, help="seconds the module fades over at its end")
     ap.add_argument("--tail-bars", type=int, default=0, help="the loop's first bars once more after the form, fading (a listener hears the song come back round)")
+    ap.add_argument("--themed", action="store_true", help="draw the tune's phrases again until its theme comes back later in the song")
+    ap.add_argument("--band-returns", action="store_true", help="a theme never comes back with the tune alone: the chords, the bass or the accompaniment come with it")
     ap.add_argument("--game", help="the game the songs are written as (the title's game; default the pack's label)")
     ap.add_argument("--title-prefix", default="Whole")
     ap.add_argument("--db", help="the readings: with --game, the game's own songs' measures beside the written songs'")
@@ -104,7 +106,7 @@ def main(argv=None) -> int:
     for seed in seeds_of(a.seeds):
         title = f"{a.title_prefix} {seed:02d}"
         out = whole.compose(models, pack, own, name, seed, game, title, max_bars=a.max_bars, loops=a.loops, reference=reference, read=not a.no_read, fade=a.fade,
-                            min_bars=a.min_bars or None, tail_bars=a.tail_bars)
+                            min_bars=a.min_bars or None, tail_bars=a.tail_bars, themed=a.themed, band_returns=a.band_returns)
         p = out["plan"]
         path = os.path.join(a.out, f"{title}.it")
         convert.render(out["score"], path)
