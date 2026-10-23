@@ -436,4 +436,14 @@ accompaniment mostly plays outside the chord the reader named (dominant
 sevenths with blue notes over them), and a written chord follows the
 reader, so in those bars it is the wrong chord by any writing. Reader
 work, not writer work; the melody slice does not touch it. The four
-songs' chords rewritten and republished. **Awaiting the ear.**
+songs' chords rewritten and republished. Heard: "that's good"; the
+chords round closed on the listener's word (no verdict rows clicked for
+the chords; the free bass and drums stand at six belongs and two nearly).
+
+**Slice 2 closed (2026-10-22).** Carried as known issues: the
+phrase-blind bass (re-hear after the melody and arrangement slices); the
+chord reader on blues harmony. Next: slice 3 in the reordered plan, the
+melody: its moves table counted first (phase 3 never did), then phrases
+written free from contour, peak, ending and relation, on the Substitution
+Check as a Melody switch, with the tune-copy check against the reference
+set.
