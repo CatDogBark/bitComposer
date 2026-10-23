@@ -66,6 +66,10 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
+PLAN_FLOOR = 1                        # a plan's one-shot draw never backs off past the part (the first conditioning): the root of a
+                                      # table keyed by part mixes every part, and under Witten-Bell a register draw reached it in a
+                                      # third of draws (a counter at bass depth 8 % of the time, a bass above middle C 19 %)
+PLAN_SONGS = 2                        # a finer level is used only with this many songs behind it
 NUMERAL = re.compile(r"^([b#]?)([ivIV]+)(.*)$")
 TOGETHER = harness.TOGETHER           # the share of the playing voices striking a position together for it to be a shared hit
 NEAR = rhythm.NEAR
@@ -135,7 +139,7 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
             log.append(f"no {name} table: {default!r} assumed")
         return default
     t = t.table if hasattr(t, "table") else t
-    return t.draw(tuple(context), rng, floored=False)
+    return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS)
 
 
 def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
@@ -306,13 +310,19 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {max_bars} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights = [], {}
+    band, weights, layout, shares = [], {}, {}, {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
-        role, _, w = token.partition("=")
+        role, _, rest = token.partition("=")
         band.append(role)
-        if w:
-            weights[role] = w
-    log.append("band " + " ".join(f"{r}={weights[r]}" if r in weights else r for r in band))
+        if rest:
+            fields = rest.split(":")
+            weights[role] = fields[0]
+            if len(fields) > 1 and "-" in fields[1]:        # the song's layout and note lengths come with its balance
+                lo, hi = fields[1].split("-")
+                layout[role] = (int(lo), int(hi))
+            if len(fields) > 2 and fields[2]:
+                shares[role] = float(fields[2])
+    log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") if r in weights else r for r in band))
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
     textures, plays = plan_texture(models, parts, band, rng, log)
     silent = [r for r in band if not any(plays[r])]
@@ -326,9 +336,12 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             habits[role] = _draw(models, "drum_habits", (R.DRUMS,), rng, log)
             extras[role] = {"".join(g): _draw(models, "drum_group_habits", ("drums-" + "".join(g), habits[role]), rng, log) for g in rhythm.DRUM_GROUPS}
             continue
-        low, high = _draw(models, "registers", (role,), rng, log).split("-")
-        registers[role] = (int(low), int(high))
-        sounds[role] = float(_draw(models, "sounds", (role,), rng, log))
+        if role in layout:                                  # the song's own layout; the tables a part at a time where the pack has none
+            registers[role] = layout[role]
+        else:
+            low, high = _draw(models, "registers", (role,), rng, log).split("-")
+            registers[role] = (int(low), int(high))
+        sounds[role] = shares[role] if role in shares else float(_draw(models, "sounds", (role,), rng, log))
         weight = weights.get(role, "half")
         if role == R.BASS:
             habits[role] = _draw(models, "bass_habits", (R.BASS, tempo, weight), rng, log)
@@ -485,14 +498,27 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
 
 # --- the rendering: the written notes on the pack's samples, through the converter's back end ---
 
-def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random) -> dict:
+def sample_fits(ranges, name: str, register: tuple, rng: random.Random) -> bool | None:
+    """Whether a sample was played in the part's register in the game: a range the ranges table draws for it overlaps the
+    register's middle octave; None where the table knows nothing of the sample."""
+    if ranges is None or ranges.songs.get((name,), 0) == 0:
+        return None
+    lo, hi = (int(x) for x in ranges.draw((name,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
+    centre = (register[0] + register[1]) / 2
+    return lo - 6 <= centre <= hi + 6
+
+
+def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random, models: dict | None = None) -> dict:
     """Each part's sample from the pack's pools: {role: (voice name, ITSample)}; the drums' kit {piece: (name, ITSample)}.
-    `own`: the pack file's own sample names (registered as pack_name_voice), the rest built-in voices."""
+    `own`: the pack file's own sample names (registered as pack_name_voice), the rest built-in voices. With the pack's
+    ranges table, a pitched part takes a sample of its pool the game played in the part's register (the pool's own
+    weights among those); the pool's draw where none is known to fit."""
     from ..instruments import _make_sample
 
     def make(name):
         return name, _make_sample(f"{pack_name}_{name}" if name in own else name)
     voices = pack["voices"]
+    ranges = (models or {}).get("ranges")
     out = {}
     for role in plan.band:
         if role == R.DRUMS:
@@ -503,8 +529,9 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
             pool = BASS_POOLS.get(plan.weights.get(R.BASS, "half"), "bass_medium")
         elif role == R.ACCOMP:
             pool = "arp" if plan.extras.get(R.ACCOMP, {}).get("motion") == "arpeggiated" else "harmony"
-        names = voices.get(pool) or voices.get("harmony") or voices.get("lead")
-        out[role] = make(rng.choice(list(names)))
+        names = list(voices.get(pool) or voices.get("harmony") or voices.get("lead"))
+        fitting = [n for n in names if sample_fits(ranges, n, plan.registers[role], rng)] if role in plan.registers else []
+        out[role] = make(rng.choice(fitting or names))
     return out
 
 
@@ -710,7 +737,7 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     song = song_of(p, kit)
     written = write(p, song, models, seed, reference)
     rng = random.Random(f"whole:{seed}:render")
-    samples = samples_for(p, pack, own, pack_name, rng)
+    samples = samples_for(p, pack, own, pack_name, rng, models)
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
     score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}

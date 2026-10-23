@@ -1461,18 +1461,78 @@ def chord_tone_habit_units(songs) -> list:
     return out
 
 
+ROLL = 6                             # strikes a beat, a bar over: a roll or tremolo the reader kept as a figure, not a bar to write
+ROLL_PIECE = 4                       # strikes a beat on one drum piece, a bar over: a roll on that piece
+
+
+def is_roll(figure: str, meter: int) -> bool:
+    """Whether a figure is a roll read as a bar: more than ROLL strikes a
+    beat on a pitched part, or more than ROLL_PIECE a beat on one drum
+    piece (the readings keep 17 such bass bars of FFVI's 715: a tremolo
+    under a "sparse" habit wrote 44 notes in a bar, 2026-10-23)."""
+    tokens = _tokens(figure)
+    if not tokens:
+        return False
+    marks = [t.partition(":")[2] for t in tokens]
+    pieces = set(LETTERS.values())
+    if marks and all(m in pieces for m in marks):
+        return max(Counter(marks).values()) > ROLL_PIECE * max(1, meter)
+    return len(tokens) > ROLL * max(1, meter)
+
+
+def part_register(notes) -> tuple | None:
+    """A part's register as the registers table keeps it: (low, high) midi to REGISTER_BIN, the notes' 10th and 90th
+    percentiles; None where the part has under eight pitched notes."""
+    pitched = sorted(n[2] for n in notes if not math.isnan(n[2]))
+    if len(pitched) < 8:
+        return None
+    low, high = pitched[int(0.1 * (len(pitched) - 1))], pitched[int(0.9 * (len(pitched) - 1))]
+    return int(round(low / REGISTER_BIN)) * REGISTER_BIN, int(round(high / REGISTER_BIN)) * REGISTER_BIN
+
+
 def balance_units(songs) -> list:
-    """Each song as a unit: its outcome its band with each pitched part's
-    weight in it ("accompaniment=main bass=half drums melody=half"); its
-    value the part (arrangement). What a song written with no original
-    draws its band and balance from, as one of the game's songs has them."""
+    """Each song as a unit: its outcome its band with, for each pitched
+    part, its weight, its register and the share of its gap a note sounds
+    ("accompaniment=main:56-68:0.8 bass=half:28-40:0.9 drums
+    melody=half:64-84:0.9"); its value the part (arrangement). What a song
+    written with no original draws its band, balance and layout from, as
+    one of the game's songs has them together: drawn a part at a time, a
+    bass sat above the accompaniment and a counter-line two octaves under
+    its instrument (the Song Check's notes, 2026-10-23)."""
     out = []
     for s in songs:
         if not s.notes:
             continue
         weights = part_weights(s)
-        out.append(tables.Unit(s.sid, s.game, " ".join(f"{role}={weights[role]}" if role in weights else role for role in sorted(s.notes)),
-                               {"part": ARRANGEMENT}))
+        tokens = []
+        for role in sorted(s.notes):
+            if role not in weights:
+                tokens.append(role)
+                continue
+            reg, share = part_register(s.notes[role]), sounded_share(s.notes[role])
+            tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ""))
+        out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
+    return out
+
+
+def sample_range_units(songs) -> list:
+    """Each sample a song plays pitched, as a unit: its outcome the register
+    the song played it in (part_register's grain), its value the sample's
+    id as a pack names it ("s" and the key's first ten characters). What a
+    planned song picks a part's sample by: one the game played in the
+    part's register, never a flute four octaves under its recording."""
+    out = []
+    for s in songs:
+        by_key = {}
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            for n in ns:
+                by_key.setdefault(n[3], []).append(n)
+        for key, ns in by_key.items():
+            reg = part_register(ns)
+            if reg is not None and isinstance(key, str):
+                out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10]}))
     return out
 
 

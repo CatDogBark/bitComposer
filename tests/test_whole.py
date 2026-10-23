@@ -38,15 +38,15 @@ class PlanTests(unittest.TestCase):
         self.assertTrue(any("assumed" in line for line in p.log))
 
     def test_the_form_follows_the_tables(self):
-        units = [tables.Unit("s", "g", "3", {"part": "form"}), tables.Unit("s", "g", "long", {"part": "form"})]
-        sizes = tables.Table(("part",), "sizes", votes=tables.SHARES).fit(units[:1])
-        habits = tables.Table(("part",), "length habits", votes=tables.SHARES).fit(units[1:])
+        songs = ("s", "t")                                   # two songs: a plan's draw passes over a level one song alone stands behind
+        units = [tables.Unit(sid, "g", "3", {"part": "form"}) for sid in songs] + [tables.Unit(sid, "g", "long", {"part": "form"}) for sid in songs]
+        sizes = tables.Table(("part",), "sizes", votes=tables.SHARES).fit(units[:2])
+        habits = tables.Table(("part",), "length habits", votes=tables.SHARES).fit(units[2:])
         form = tables.Table(("part", "meter", "index"), "form", votes=tables.SHARES).fit([
-            tables.Unit("s", "g", "new", {"part": "form", "meter": 4, "index": 1}),
-            tables.Unit("s", "g", "new", {"part": "form", "meter": 4, "index": 2}),
-            tables.Unit("s", "g", "back", {"part": "form", "meter": 4, "index": 3})])
+            tables.Unit(sid, "g", kind, {"part": "form", "meter": 4, "index": i})
+            for sid in songs for i, kind in ((1, "new"), (2, "new"), (3, "back"))])
         lengths = tables.Table(("part", "meter", "habit"), "lengths", votes=tables.SHARES).fit([
-            tables.Unit("s", "g", "8", {"part": "form", "meter": 4, "habit": "long"})])
+            tables.Unit(sid, "g", "8", {"part": "form", "meter": 4, "habit": "long"}) for sid in songs])
         log = []
         parts = whole.plan_form({"sizes": sizes, "length_habits": habits, "form": form, "lengths": lengths}, random.Random(1), log)
         self.assertEqual([p[3] for p in parts], ["A", "B", "A"])
@@ -166,6 +166,28 @@ class NewTablesTests(unittest.TestCase):
         hits, figures = writer.drums(s, {tuple(rhythm.LETTERS.values()): model}, random.Random(1), habit="medium repeating", free=True, plays=[True] * 8)
         self.assertTrue(all(f in model.table.vocabulary for f in figures), figures)
         self.assertTrue(hits)
+
+    def test_rolls_and_the_balance_with_its_layout(self):
+        self.assertTrue(rhythm.is_roll(" ".join(f"{i}/12:R" for i in range(0, 48)), 4))
+        self.assertFalse(rhythm.is_roll("0:R 1/2:5 1:R 3/2:5 2:R 5/2:5 3:R 7/2:5", 4))
+        self.assertTrue(rhythm.is_roll(" ".join(f"{i}/12:h" for i in range(0, 20)) + " 0:K 2:S", 4))   # a hat roll
+        self.assertFalse(rhythm.is_roll(" ".join(f"{i}/4:h" for i in range(0, 16)) + " 0:K 2:S", 4))   # sixteenth hats are a bar
+        units = rhythm.balance_units([self._song()])
+        self.assertEqual(len(units), 1)
+        tokens = units[0].outcome.split()
+        self.assertEqual(tokens[1], "drums")
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 2, tokens)   # weight:register:sounded share
+        self.assertIn("36-36", tokens[0])                                                       # the bass on one note
+        ranges = rhythm.sample_range_units([self._song()])
+        self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
+
+    def test_a_plan_draw_stays_at_the_part(self):
+        """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
+        units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]
+        t = tables.Table(("part",), "registers", votes=tables.SHARES).fit(units)
+        draws = {t.draw(("counter",), random.Random(i), floored=False, floor_k=1) for i in range(200)}
+        self.assertNotIn("28-40", draws)
+        self.assertIn("28-40", {t.draw(("counter",), random.Random(i), floored=False) for i in range(200)})   # without the floor it could
 
     def test_new_cell_rhythms(self):
         s = self._song()

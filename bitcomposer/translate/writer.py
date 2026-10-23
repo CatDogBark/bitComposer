@@ -460,7 +460,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 for _ in range(TRIES):
                     if full(drawn):
                         break
-                    drawn = models["voicings"].table.draw(models["voicings"].table.context(v_unit), rng, v_unit.values, floored=False)
+                    drawn = models["voicings"].table.draw(models["voicings"].table.context(v_unit), rng, v_unit.values, floored=False, floor_k=models["voicings"].table.chain_floor)
                 marks = [m for m in drawn.split() if m in CHORD_MARKS] if full(drawn) else (["R", "5"] if need > 1 else ["R"])
                 played_v[drawn] += 1
                 prev_v = drawn
@@ -828,7 +828,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         for _ in range(TRIES):
             if fit(figure):
                 break
-            figure = models["rhythm"].table.draw(models["rhythm"].table.context(unit), rng, values, floored=False)
+            figure = models["rhythm"].table.draw(models["rhythm"].table.context(unit), rng, values, floored=False, floor_k=models["rhythm"].table.chain_floor)
         else:
             figure = next((f for f in rhythm_played if fit(f)), figure if manner.fits(figure) else "0")
         rhythm_played[figure] += 1
@@ -1147,10 +1147,10 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                         if fit(candidate):
                             figure = candidate
                             break
-                        candidate = model.table.draw(model.table.context(unit), rng, values, floored=False)
+                        candidate = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
                     if figure is not None:
                         break
-                figures[k] = figure if figure is not None else model.table.draw(model.table.context(unit), rng, values, floored=False)
+                figures[k] = figure if figure is not None else model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
             played[figures[k]] += 1
             previous = figures[k]
     return figures
@@ -1188,7 +1188,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
                 return figure
             if nearly is None and fit(figure):
                 nearly = figure
-            figure = model.table.draw(model.table.context(unit), rng, values, floored=False)
+            figure = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
         return nearly or fallback
 
     figures, patterns = [REST] * len(bars), []
@@ -1294,7 +1294,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             unit = tables.Unit(song.sid, song.game, "", values)
             env = free_drum_envelope(kit & set(main))(None, values["meter"])
             for _ in range(TRIES):
-                f = model.table.draw(model.table.context(unit), rng, values, floored=False)
+                f = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
                 if manner.fits(f) and drum_within(f, env):
                     by_group[main][k] = f
                     merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]

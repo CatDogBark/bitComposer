@@ -76,6 +76,7 @@ KEPT = {
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
     "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each pitched part's weight in it, drawn once a song"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
+    "ranges": ("rhythm", "sample_range_units", {}, ("part",), False, False, "the register a sample is played in, by the sample"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
     "part_textures": ("rhythm", "part_texture_units", {}, ("part", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by its place in the form and the part before's"),
     "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
@@ -91,9 +92,11 @@ def fit(name: str, units) -> dict | None:
     """One kept table fitted on its units, as the JSON entry a pack holds;
     None where there are no units."""
     units = list(units)
+    _, _, _, shape, on_floor, mixture, what = KEPT[name]
+    if on_floor:                                            # a figure table: rolls the reader kept as bars are no bars to write
+        units = [u for u in units if not rhythm.is_roll(u.outcome, u.values.get("meter", 4))]
     if not units:
         return None
-    _, _, _, shape, on_floor, mixture, what = KEPT[name]
     floor = rhythm.BarCells(units) if on_floor else None
     covers = len(rhythm.BarCells.COVERS) if on_floor else 0
     if mixture:
