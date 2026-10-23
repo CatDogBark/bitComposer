@@ -19,10 +19,13 @@ from . import phrases, rhythm, tables
 
 VERSION = 1                          # of the tables' layout inside a pack
 VOTES = tables.SHARES
-DISCOUNT = 0.75                      # the mixtures' and the figure tables' smoothing (phase 3's choice, by bits); the plain
-                                     # tables (habits, registers, forms: one or a few units a song) are Witten-Bell smoothed,
-                                     # under which a draw stays on the data: absolute discounting gave 56 % of a one-vote-an-
-                                     # outcome table's draws to the vocabulary evenly (the first whole songs' registers)
+DISCOUNT = None                      # Witten-Bell for every table a pack carries: a pack's tables are drawn from, not scored
+                                     # (phase 3 chose absolute discounting at 0.75 a vote for held-out bits), and under
+                                     # absolute discounting a draw left the data: a one-vote-an-outcome table (registers,
+                                     # balances) gave 56 % of its draws to the vocabulary evenly, and the figure tables gave
+                                     # their long tail (a bar one song played) wholly to the cell floor, whose runs the
+                                     # manner refuses, so a "new" bar was mostly a common bar again (the whole songs'
+                                     # rounds 1 to 3, docs/idiom/phase-4-writing.md)
 FIGURE = ("part", "meter", "habit", "previous")   # the figure tables' shape: the habit before the chain (writer.SHAPE)
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
@@ -94,7 +97,7 @@ def fit(name: str, units) -> dict | None:
     if mixture:
         model = tables.Cache.fit(units, shape, name=name, votes=VOTES, floor=floor, discount=DISCOUNT, covers=covers)
     else:
-        model = tables.Table(shape, name, votes=VOTES, floor=floor, discount=DISCOUNT if on_floor else None, covers=covers).fit(units)
+        model = tables.Table(shape, name, votes=VOTES, floor=floor, discount=DISCOUNT, covers=covers).fit(units)
     return {"what": what, "shape": list(shape), "mixture": mixture, "units": len(units),
             "songs": len({u.song for u in units}), "model": model.to_json()}
 

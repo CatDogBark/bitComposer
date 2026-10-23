@@ -268,7 +268,7 @@ def draw_habit(table, part: str, song: rhythm.Song, rng: random.Random) -> str:
     """A part's habit from a habits table, given what the table is conditioned on (the part, the tempo band, the
     part's weight in the band: whatever of HABIT_SHAPE it has)."""
     values = {"part": part, "tempo": rhythm.band(song.bpm), "weight": rhythm.part_weights(song).get(part, "minor")}
-    return table.draw(tuple(values[c] for c in table.conditionings), rng)
+    return table.draw(tuple(values[c] for c in table.conditionings), rng, floored=False)
 
 
 def looped(ctx: Context, notes: list) -> list:

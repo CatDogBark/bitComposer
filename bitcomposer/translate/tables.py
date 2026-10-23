@@ -368,12 +368,12 @@ class Cache:
             return rng.choices(list(pool), list(pool.values()))[0]
         ctx = self.table.context(unit)
         out = None
-        for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values)
+        for _ in range(NEW_TRIES):                          # on the data: a bar some song played, never the floor's (a run of
+            out = self.table.draw(ctx, rng, unit.values, floored=False)   # cells no song played whole, which the manner refuses)
             if out not in cache and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values)
+            out = self.table.draw(ctx, rng, unit.values, floored=False)
             if keep is None or keep(out):
                 return out
         return out
