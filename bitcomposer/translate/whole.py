@@ -602,6 +602,27 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     return score, first
 
 
+def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int = 1, fade: float = 3.0, echo: dict | None = None) -> list[str]:
+    """Each written part alone as a module of its own (`<title> <part>.it`),
+    for a page that plays the parts in sync and switches each: the same
+    length, echo and samples as the whole, so their sum is the whole.
+    Returns the paths."""
+    import os
+    from ..spc import convert
+    os.makedirs(out_dir, exist_ok=True)
+    paths = []
+    for role, part in written.items():
+        if not part.notes:
+            continue
+        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo)
+        score.title = f"{plan.title} {role}"[:25]
+        score.message = [f"{plan.title}: the {role} alone (a stem for the Song Check)"] + list(score.message or [])[1:]
+        path = os.path.join(out_dir, f"{plan.title} {role}.it")
+        convert.render(score, path)
+        paths.append(path)
+    return paths
+
+
 def read_back(score, plan: Plan, first: dict, samples: dict) -> rhythm.Song | None:
     """The score read by the readers on the plan's own beat, the roles the
     plan's (its voices are known), the kit's pieces the pack's: the Song

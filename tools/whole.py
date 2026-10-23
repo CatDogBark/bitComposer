@@ -2,7 +2,7 @@
 and measured.
 
     python tools/whole.py --pack PACK.json --seeds 1-20 -o DIR [--max-bars 48] [--loops 1] [--fade 3] [--game NAME]
-                          [--db READINGS.db] [--tables TABLES.json] [--title-prefix Whole] [--no-read]
+                          [--db READINGS.db] [--tables TABLES.json] [--title-prefix Whole] [--no-read] [--stems DIR]
 
 --pack a pack file (format 2, its tables inside) or a built-in pack's name (then --tables gives the tables). Writes
 DIR/<title>.it (the form once, then the loop --loops - 1 times more, fading at the end) and DIR/<title>.json (the plan,
@@ -87,6 +87,7 @@ def main(argv=None) -> int:
     ap.add_argument("--title-prefix", default="Whole")
     ap.add_argument("--db", help="the readings: with --game, the game's own songs' measures beside the written songs'")
     ap.add_argument("--no-read", action="store_true", help="do not read the songs back (no measures)")
+    ap.add_argument("--stems", help="write each part alone as a module here too (NAME <part>.it), for a page that switches the parts")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args(argv)
     pack, own, name, models, label = load_pack(a.pack, a.tables)
@@ -104,6 +105,8 @@ def main(argv=None) -> int:
         p = out["plan"]
         path = os.path.join(a.out, f"{title}.it")
         convert.render(out["score"], path)
+        if a.stems:
+            whole.stems_of(p, out["written"], out["samples"], a.stems, loops=a.loops, fade=a.fade, echo=out["echo"])
         record = {"plan": p.to_json(), "echo": out["echo"], "voices": out["first"],
                   "samples": {r: (s[0] if isinstance(s, tuple) else {k: v[0] for k, v in s.items()}) for r, s in out["samples"].items()},
                   "parts": {r: {"log": w.log, "figures": w.figures} for r, w in out["written"].items()},
