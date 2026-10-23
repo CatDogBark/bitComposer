@@ -1231,7 +1231,8 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
           free: bool = False, plays: list | None = None) -> tuple[list[tuple[float, str]], list[str]]:
     """The drums written for the song, a group of pieces at a time (the
     module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
-    to its Cache; `locks` a group to its lock; `hold` as bass(). `free`: no
+    to its Cache (a group of every letter: the whole kit, its table's part
+    "drums"); `locks` a group to its lock; `hold` as bass(). `free`: no
     original to follow (FreeManner, free_drum_envelope), the `habit` given
     (drawn from a pack's table: the kit's, or {group: its own}) and the kit
     the song's pieces; with `plays` (a planned song's bars) a group may
@@ -1243,6 +1244,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
     kit = {rhythm.LETTERS.get(piece, "o") for piece in song.pieces.values() if piece and piece != "none"}
     merged = [[] for _ in bars]
     by_group = {}
+    part_of = lambda letters: R.DRUMS if set(letters) >= set(rhythm.LETTERS.values()) else "drums-" + "".join(letters)   # noqa: E731
     for letters, model in models.items():
         own = plays_as_own(plays, bars) if plays is not None else [rhythm.drum_group(f, letters) for f in whole]
         if all(f == REST for f in own) and not (free and kit & set(letters)):
@@ -1257,10 +1259,10 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             group_habit = habit or (mine[0].values["habit"] if mine else "medium mixed")
             envelope_of = drum_envelope
         if free:
-            figures = _free_figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold,
+            figures = _free_figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold,
                                     locks.get(letters), envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
         else:
-            figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
+            figures = _figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
                                envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
         by_group[letters] = figures
         for k, f in enumerate(figures):
@@ -1276,7 +1278,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             if not (k < len(plays) and plays[k]) or merged[k]:
                 continue
             before = by_group[main][k - 1] if k else REST
-            values = {"part": "drums-" + "".join(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit}
+            values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit}
             unit = tables.Unit(song.sid, song.game, "", values)
             env = free_drum_envelope(kit & set(main))(None, values["meter"])
             for _ in range(TRIES):

@@ -842,4 +842,34 @@ them, beside FFVI's own songs of that habit):
   0.36, melody 0.17 against 0.27, counter 0.21 against 0.30): real, small,
   left for later (the recall shape is part+habit).
 
-**Round 4** (after these): see below.
+**Round 4** (the same twenty seeds after these; written / FFVI's own,
+medians): bass strikes 4.8 / 4.3, distinct bars 8 / 8, repeats 0.25 /
+0.30; accompaniment strikes 6.1 / 6.3, distinct 7 / 8, repeats 0.31 /
+0.32; counter strikes 5.5 / 4.9; harmony strikes 1.4 / 1.2; the band 5 /
+5; tune chord tones 0.62 / 0.56, repeats 0.11 / 0.12, cells 12.5 / 12.5,
+echoes 0.32 / 0.34, leaps 0.08 / 0.05, range 15 / 21.5; the bass and the
+accompaniment sit on FFVI on every measure. Two came apart or stayed
+short, each a cause of the same kind as before:
+
+- *The drums: 11.9 strikes a bar, 20 distinct bars in 32, repeats 0.03
+  (FFVI 6.9, 6, 0.32).* The four groups (kick-snare-toms, hat, cymbals,
+  the rest) each drew their own new bars; with the draws on the data and
+  new to the song, the kit changed in nearly every bar. The earlier
+  rounds had hidden this: a discounted "new" draw mostly handed back a
+  common bar, so the groups rarely changed. A kit repeats and varies as a
+  whole: **a planned song's kit is now one figure from a whole-kit
+  mixture** (the "drums" table, kept beside the groups, which the
+  substitution harness keeps using).
+- *The tune's rhythms: 3.5 distinct in 32 (FFVI 9), a bar's rhythm the
+  one before's in 0.40 of bars (0.10), while its distinct cells (rhythm
+  and intervals) were FFVI's 12.5.* A new cell drew its rhythm through
+  the rhythm table's own urn (same / earlier / new again), which handed
+  new cells old rhythms. **A new cell now draws a rhythm new to the tune**
+  (`Cache.draw_new`: the "new" draw alone; the cell urn is the tune's one
+  urn).
+- *Steps among the tune's moves fell to 0.52 (round 3: 0.64; FFVI 0.67).*
+  Not yet run down: the joins between cells grew more frequent as the
+  cells grew more various, and an echoed cell is re-rooted within a
+  tritone of the last note. To measure after the two changes above.
+
+**Round 5** (after these): see below.

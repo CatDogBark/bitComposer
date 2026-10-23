@@ -154,6 +154,19 @@ class NewTablesTests(unittest.TestCase):
         self.assertFalse(writer.FreeManner({"0:K", "-"}).fits("-"))
         self.assertTrue(writer.FreeManner({"0:K", "-"}, rests=True).fits("-"))
 
+    def test_the_whole_kit_writes_from_its_own_table(self):
+        """A group of every letter is the kit: its figures come from the kit table's bars (part "drums"), not the floor's runs."""
+        from bitcomposer.translate import packtables, writer
+        s = self._song()
+        s.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "kick") for i in range(8) for x in (0.0, 2.0)] + \
+                           [(4.0 * i + x, 0.25, float("nan"), "snare") for i in range(8) for x in (1.0, 3.0)]
+        s.pieces = {"kick": "kick", "snare": "snare"}
+        entry = packtables.fit("drums", rhythm.drum_units([s]))
+        model = packtables.read({"tables": {"drums": entry}})["drums"]
+        hits, figures = writer.drums(s, {tuple(rhythm.LETTERS.values()): model}, random.Random(1), habit="medium repeating", free=True, plays=[True] * 8)
+        self.assertTrue(all(f in model.table.vocabulary for f in figures), figures)
+        self.assertTrue(hits)
+
     def test_chord_tone_habit_and_contour_sizes(self):
         units = rhythm.chord_tone_habit_units([self._song()])
         self.assertEqual(len(units), 1)
