@@ -752,6 +752,9 @@ def melody_models(ctx: Context) -> dict:
     values = [u for u in rhythm.value_units(others) if u.values["part"] == R.MELODY]
     models.setdefault("values", tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES, discount=writer.DISCOUNT).fit(values))
     models.setdefault("articulation", game_habits(rhythm.habits(values), ctx))
+    cells = rhythm.melody_cell_units(others)
+    models.setdefault("melody_recall", tables.Table(("part", "habit"), "recall", votes=tables.SHARES).fit(tables.recall_units(cells)))
+    models.setdefault("echo_habits", game_habits(rhythm.habits(cells), ctx, HABIT_SHAPE))
     psongs = [s for s in phrases.load(ctx.db)[0] if s.sid != ctx.sid]
     mix = lambda units_, shape, name: tables.Cache.fit(units_, shape, name=name, votes=tables.SHARES, discount=writer.DISCOUNT)   # noqa: E731
     models.setdefault("moves", mix(phrases.move_units(psongs), ("part", "mode", "previous"), "moves"))
@@ -777,11 +780,12 @@ def write_melody(ctx: Context, seed: int = 1) -> Written | None:
     rng = random.Random(f"{seed}:melody")
     habit = draw_habit(models["habits"], R.MELODY, song, habit_rng(ctx, seed, R.MELODY)) if models.get("habits") is not None else "medium mixed"
     art = models["articulation"].draw((R.MELODY,), habit_rng(ctx, seed, "articulation")) if models.get("articulation") is not None else "mixed"
+    echo = draw_habit(models["echo_habits"], R.MELODY, song, habit_rng(ctx, seed, "echo")) if models.get("echo_habits") is not None else "mixed"
     reference = reference_index()
     notes, figures, phrase_log = writer.melody(song, by_voice[v], register, models, rng, habit, key=ctx.key, hold=(),
-                                               reference=reference, articulation=art)
+                                               reference=reference, articulation=art, echo_habit=echo, recall=models.get("melody_recall"))
     own = [rhythm.pattern(p for p, _ in struck) if struck else writer.REST for _, _, _, struck in rhythm.all_bars_of(song, R.MELODY)]
-    log.append(f"habit {habit}, articulation {art}; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; "
+    log.append(f"habit {habit}, articulation {art}, echo {echo}; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; "
                f"the reference set {'checked' if reference is not None else 'not on this machine'}")
     log += phrase_log
     settings = settings_of([n for n in original.notes if n.voice == v], events)

@@ -1,5 +1,6 @@
 """The bass writer: tones from marks, a figure realized, a bass written from a table."""
 import random
+from collections import Counter
 from fractions import Fraction
 import unittest
 
@@ -381,6 +382,29 @@ class UpperPartTests(unittest.TestCase):
 
 
 class MelodyTests(unittest.TestCase):
+    def test_scale_steps_round_trip_and_the_urn(self):
+        major = {0, 2, 4, 5, 7, 9, 11}
+        line = [60, 62, 64, 67, 65, 64]
+        self.assertEqual(writer.from_steps(60, writer.to_steps(line, major), major), line)
+        self.assertEqual(writer.from_steps(62, writer.to_steps(line, major), major), [62, 64, 65, 69, 67, 65])   # the same motif a step up, in the scale
+        self.assertEqual(writer.to_steps([60, 61], major), [0])                                               # a chromatic note: the tone below
+        cell = writer.Cell([0.0, 1.0, 2.0], [64, 67, 69], 0, major)
+        self.assertEqual((cell.entry, cell.intervals, cell.steps), (4, [3, 2], [2, 1]))
+        urn = writer.Urn(None, "mixed")
+        self.assertEqual(urn.choose(random.Random(1), None, Counter()), "new")                              # nothing played yet
+        picks = Counter(urn.choose(random.Random(i), cell, Counter({cell.key: 1, "x": 2})) for i in range(300))
+        self.assertTrue(picks["same"] > 50 and picks["earlier"] > 50 and picks["new"] > 50)
+
+    def test_a_move_is_drawn_among_the_fitting_ones(self):
+        t = tables.Table(("part", "mode", "previous"), "moves", votes=tables.SHARES).fit(
+            [tables.Unit("s", "g", o, {"part": "melody", "mode": "major", "previous": "start"}) for o in ("+2", "+2", "-2", "+12", "0", "+1")])
+        major = {0, 2, 4, 5, 7, 9, 11}
+        steps = Counter(writer.draw_move(t, "start", "major", 60, random.Random(i), (55, 70), major, True, (0, ""), set(), None) for i in range(200))
+        self.assertNotIn(1, steps)                               # C sharp is off the scale on a strong beat
+        self.assertNotIn(12, steps)                              # an octave up leaves the register
+        self.assertTrue(steps[2] > steps[-2])                    # the table's weights hold among the fitting moves
+        self.assertEqual(writer.draw_move(t, "start", "major", 60, random.Random(1), (60, 60), major, False, None, set(), None), 0)
+
     def test_contour_targets_and_a_phrase_on_the_tables(self):
         self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))
         self.assertEqual(writer.contour_targets("level"), (0, 0, 0))
@@ -401,7 +425,9 @@ class MelodyTests(unittest.TestCase):
                    "moves": packtables.fit("moves", phrases.move_units(psongs)),
                    "contours": packtables.fit("contours", phrases.contour_units(psongs)),
                    "endings": packtables.fit("endings", phrases.ending_units(psongs)),
-                   "relations": packtables.fit("relations", phrases.relation_units(psongs))}
+                   "relations": packtables.fit("relations", phrases.relation_units(psongs)),
+                   "melody_recall": packtables.fit("melody_recall", rhythm.melody_recall_units(songs)),
+                   "echo_habits": packtables.fit("echo_habits", rhythm.echo_habit_units(songs))}
         missing = [k for k, v in entries.items() if v is None]
         self.assertEqual(missing, [], missing)
         ctx.models = packtables.read({"tables": entries})

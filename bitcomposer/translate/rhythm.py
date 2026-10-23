@@ -781,6 +781,57 @@ def units(songs) -> list:
     return out
 
 
+# --- the melody's bar cells: a bar of the tune as its rhythm and intervals, what a tune repeats and returns to ---
+
+ECHOES = ((1 / 3, "varied"), (2 / 3, "mixed"), (2, "repeating"))   # a song's share of tune bars that echo an earlier bar
+
+
+def melody_cells(song: Song, role: str = None) -> list:
+    """Each bar's cell of the tune (the melody's line, notes struck together
+    the highest): its onsets in twelfths from the bar line and its
+    intervals, as one key; None where the bar has no note."""
+    role = role or R.MELODY
+    line = sorted(_line(song.notes.get(role, [])))
+    out = []
+    for a, b in song.bars:
+        mine = [n for n in line if a - NEAR <= n[0] < b - NEAR]
+        if not mine:
+            out.append(None)
+            continue
+        ps = [round(n[2]) for n in mine]
+        out.append(" ".join(str(round((n[0] - a) * 12)) for n in mine) + " | " + " ".join(f"{y - x:+d}" for x, y in zip(ps, ps[1:])))
+    return out
+
+
+def melody_cell_units(songs) -> list:
+    """Each bar of each song's tune as a unit: its outcome the bar's cell
+    (melody_cells), its values the part, the tempo band, the part's weight
+    and the song's echo habit (ECHOES: how many of its tune's bars echo an
+    earlier bar). The recall shares over these (tables.recall_units) are
+    what a tune writer's urn runs on."""
+    out = []
+    for s in songs:
+        cells = [c for c in melody_cells(s) if c]
+        if len(cells) < 2:
+            continue
+        echo = sum(1 for i, c in enumerate(cells) if c in cells[:i]) / len(cells)
+        habit = habit_of(echo, ECHOES)
+        weight = part_weights(s).get(R.MELODY, "minor")
+        for c in cells:
+            out.append(tables.Unit(s.sid, s.game, c, {"part": R.MELODY, "tempo": band(s.bpm), "weight": weight, "habit": habit}))
+    return out
+
+
+def melody_recall_units(songs) -> list:
+    """What each tune bar is to its song so far (same, earlier, new): the urn's shares, by part and echo habit."""
+    return tables.recall_units(melody_cell_units(songs))
+
+
+def echo_habit_units(songs) -> list:
+    """Each song's echo habit for the tune, one unit a song, with the tempo band and the melody's weight beside."""
+    return habits(melody_cell_units(songs))
+
+
 # --- harmony: the chords by degree, their rhythm in the bar, the cadences and the loop ---
 
 VARIETY = ((1, "one chord"), (3, "few"), (6, "several"), (1e9, "many"))   # distinct chords a song plays
