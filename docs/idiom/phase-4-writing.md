@@ -303,4 +303,31 @@ left to where their voices already sit (a real song's given; a generated
 song's the pack's registers). The widths table is measured but no longer
 drives the writer. Terra after the fix: no written note above any
 voice's own top; the pad on 68 to 78 against its own 71 to 78. The four
-songs rewritten and the page republished. **Awaiting the ear.**
+songs rewritten and the page republished.
+
+**The Decisive Battle's chop** (the listener, 2026-10-22: "super choppy
+and staccato, which seems off for that voice"). The writing, in two
+places, not the voice: the song's own accompaniment is two voices of
+staccato sixteenths (15 and 19 strikes a bar, notes of 0.20 beats, the
+same looping sample), as short and dense as the written one (11 a bar,
+0.20 beats), but it *moves*, each voice running through the chord's
+tones; the writer restruck the same stacked chord on both voices, which
+is a machine gun. The voicings table says which tones sound in a span,
+and nothing in phase 3 measured how a part travels through them in time.
+And the free figures came from other songs' bars with no check against
+this song's grid: positions on twelfths and thirty-seconds in a song on
+sixteenths, heard as stutters. Fixed: (1) a free-written figure must sit
+on the song's grid (FreeManner takes the division; the bass and the drums
+too); (2) **the motion habit**, an upper part's share of strike times
+whose pitches differ from the strike before's, in thirds (block, mixed,
+arpeggiated; `rhythm.upper_motion`), a table in the pack (`motions`, by
+part) and drawn once a song given the tempo band, realized by walking
+each voice along the stack a step a strike (half a step for mixed), the
+voices interlocking. The four drew: Terra's accompaniment mixed, its pad
+arpeggiated; The Decisive Battle arpeggiated; Searching for Friends' pad
+arpeggiated, its accompaniment mixed; Johnny C. Bad arpeggiated. The
+grid check also changed the free bass and drums (Johnny C. Bad's bass
+186 to 145 notes, its ride 562 to 324 hits: the off-grid figures gone),
+so all twelve free stems were republished. This is the first piece of
+slice 4's question, how a part moves through its tones, which the melody
+needs in full. **Awaiting the ear.**
