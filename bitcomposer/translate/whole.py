@@ -110,7 +110,8 @@ class Plan:
     def to_json(self) -> dict:
         return {"seed": self.seed, "game": self.game, "title": self.title, "key": f"{harmony.NAMES[self.tonic]} {self.mode}", "bpm": self.bpm,
                 "form": self.letters, "parts": [list(p) for p in self.parts], "loop_bar": self.loop_bar, "chords": self.names,
-                "band": self.band, "weights": self.weights, "textures": self.textures, "registers": {k: list(v) for k, v in self.registers.items()},
+                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays,
+                "registers": {k: list(v) for k, v in self.registers.items()},
                 "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log}
 
 
@@ -134,7 +135,12 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
             log.append(f"no {name} table: {default!r} assumed")
         return default
     t = t.table if hasattr(t, "table") else t
-    return t.draw(tuple(context), rng)
+    return t.draw(tuple(context), rng, floored=False)
+
+
+def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
+    """A one-shot draw as a number, None where the pack has no such table."""
+    return float(_draw(models, name, context, rng)) if name in models else None
 
 
 def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None) -> list:
@@ -230,14 +236,14 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
 
 def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log: list) -> tuple[list, dict]:
     """Which parts sound in each bar: a texture a part of the form, drawn
-    from the part-textures table among the band's parts (given the part's
-    place in the form and the part before's texture), a repeated part
-    keeping its texture; a bar's texture is its part's. Returns the
-    textures a bar and each part's bars."""
+    from the part-textures table against the band (ALL, or the band's
+    parts that rest: "no drums melody"; given the part's place in the form
+    and the part before's outcome), a repeated part keeping its texture;
+    a bar's texture is its part's. Returns the textures a bar and each
+    part's bars."""
     total = parts[-1][0] + parts[-1][1]
     textures = [None] * total
     table = models.get("part_textures")
-    allowed = lambda t: t != rhythm.SILENCE and set(t.split()) <= set(band)   # noqa: E731
     previous = rhythm.START
     n_parts = len(parts)
     for i, (bar, n, of, _) in enumerate(parts):
@@ -245,19 +251,19 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
             src = parts[of][0]
             textures[bar:bar + n] = textures[src:src + n]
             continue
-        if table is None:
-            t = " ".join(band)
-        else:
+        t, outcome = " ".join(band), rhythm.ALL
+        if table is not None:
             form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
-            ctx = (rhythm.ARRANGEMENT, form, previous)
             for _ in range(20):
-                t = table.draw(ctx, rng)
-                if allowed(t):
+                outcome = table.draw((rhythm.ARRANGEMENT, form, previous), rng, floored=False)
+                resting = set(outcome[3:].split()) if outcome.startswith("no ") else set()
+                t = " ".join(r for r in band if r not in resting)
+                if t:
                     break
             else:
-                t = " ".join(sorted(set(t.split()) & set(band))) or " ".join(band)
+                t = " ".join(band)
         textures[bar:bar + n] = [t] * n
-        previous = t
+        previous = outcome
     plays = {role: [role in (textures[k] or "").split() for k in range(total)] for role in band}
     log.append("textures " + " | ".join(f"{p[3]}: {textures[p[0]]}" for p in parts))
     return textures, plays
@@ -335,7 +341,8 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
                             "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log),
                             "steps": _draw(models, "step_habits", (R.MELODY,), rng, log),
                             "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
-                            "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log))}
+                            "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
+                            "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng)}
     for role in band:
         log.append(f"{role}: " + ", ".join(x for x in (
             f"weight {weights[role]}" if role in weights else "", f"register {registers[role]}" if role in registers else "",
@@ -464,7 +471,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures, plog = writer.melody(song, [], plan.registers[role], models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                              key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                              recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                             role=role, chord_rate=x.get("chord_tones"))
+                                             role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"))
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         written[role] = Part(role, [(a, b, m, 0) for a, b, m in notes], figures,
                              [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items())
@@ -688,4 +695,9 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
         back = read_back(once, p, first, samples)
         out["read"] = back
         out["measures"] = measures(back) if back is not None else None
+        if out["measures"] is not None:                      # the reader's form, heard as a player hears it: with the loop
+            twice, _ = score_of(p, written, samples, loops=2, fade=0.0, echo=echo)
+            looped = read_back(twice, p, first, samples)
+            out["measures"]["parts"] = len(looped.parts) if looped is not None else 0
+            out["measures"]["loop_heard"] = int(looped is not None and looped.loop_bar is not None)
     return out

@@ -64,13 +64,16 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(names[:4], names[8:])
         self.assertEqual(chords_[0], (0, ""))
         tunits = [tables.Unit("s", "g", o, {"part": rhythm.ARRANGEMENT, "form": f, "index": i, "previous": p})
-                  for o, f, i, p in (("bass", "first", 1, rhythm.START), ("bass drums melody", "middle", 2, "bass"), ("bass drums harmony melody", "last", 3, "bass drums melody"))]
+                  for o, f, i, p in (("no drums melody", "first", 1, rhythm.START), ("all", "middle", 2, "no drums melody"), ("no harmony", "last", 3, "all"))]
         texture = tables.Table(("part", "form", "previous"), "part textures", votes=tables.SHARES).fit(tunits)
         textures, plays = whole.plan_texture({"part_textures": texture}, parts, ["bass", "drums", "melody"], random.Random(2), [])
         self.assertEqual(textures[:4], textures[8:])
         self.assertEqual(len(set(textures[:4])), 1)                   # a texture a part
-        self.assertTrue(all(set(t.split()) <= {"bass", "drums", "melody"} for t in textures))   # the harmony is not in this band
+        self.assertEqual(textures[0], "bass")                         # the first part: no drums, no melody
+        self.assertEqual(textures[4], "bass drums melody")
         self.assertEqual(sorted(plays), ["bass", "drums", "melody"])
+        t = tables.Table(("part",), "x", votes=tables.SHARES, discount=0.75).fit([tables.Unit(str(i), "g", f"o{i}", {"part": "p"}) for i in range(6)])
+        self.assertTrue(all(t.draw(("p",), random.Random(i), floored=False).startswith("o") for i in range(40)))
 
 
 class WholeSongTests(unittest.TestCase):
@@ -136,9 +139,9 @@ class NewTablesTests(unittest.TestCase):
 
     def test_part_textures(self):
         units = rhythm.part_texture_units([self._song()])
-        self.assertEqual([u.outcome for u in units], ["bass drums", "bass drums melody"])
+        self.assertEqual([u.outcome for u in units], ["no melody", "all"])
         self.assertEqual([u.values["form"] for u in units], ["first", "last"])
-        self.assertEqual(units[1].values["previous"], "bass drums")
+        self.assertEqual(units[1].values["previous"], "no melody")
 
     def test_drum_group_habits_and_rests(self):
         units = rhythm.drum_group_habit_units([self._song()])

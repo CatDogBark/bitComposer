@@ -1369,15 +1369,22 @@ def parts_units(songs) -> list:
     return out
 
 
+ALL = "all"                           # a part's texture: every part of the band sounds
+
+
 def part_texture_units(songs) -> list:
     """Each part of each song's form (a repeat left out) as a unit: its
-    outcome the texture most of its bars have (the parts sounding, as
-    texture_units names them); its values the part (arrangement), the
-    part's place in the form, its index and the outcome of the part before
-    (START at the first). A part keeps one texture through nine bars in
-    ten (the readings, 2026-10-23: the modal texture covers a median 100 %
-    of a part's bars, a mean 91 %), so a song written with no original
-    draws a texture a part, not a bar."""
+    outcome the texture most of its bars have, against the song's band:
+    ALL where every part of the band sounds, else "no" and the parts of
+    the band that rest ("no drums melody": an intro); its values the part
+    (arrangement), the part's place in the form, its index and the
+    outcome of the part before (START at the first). A part keeps one
+    texture through nine bars in ten (the readings, 2026-10-23: the modal
+    texture covers a median 100 % of a part's bars, a mean 91 %), so a
+    song written with no original draws a texture a part, not a bar; and
+    it draws it against its own band, so a band's parts are heard (the
+    plain textures drawn a part had left a band's drums out of every
+    part in a song of four)."""
     out = []
     for s in songs:
         if not s.notes or not s.parts:
@@ -1389,10 +1396,12 @@ def part_texture_units(songs) -> list:
             ks = [index[num] for num in range(bar, bar + n) if num in index]
             if not ks:
                 continue
-            textures = Counter(" ".join(sorted(role for role, bars in plays.items() if k in bars)) or SILENCE for k in ks)
+            textures = Counter(frozenset(role for role, bars in plays.items() if k in bars) for k in ks)
             modal = textures.most_common(1)[0][0]
-            out.append(tables.Unit(s.sid, s.game, modal, {"part": ARRANGEMENT, "form": form_place(s, i), "index": min(i + 1, 5), "previous": previous}))
-            previous = modal
+            resting = sorted(set(s.notes) - modal)
+            outcome = ALL if not resting else "no " + " ".join(resting)
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": ARRANGEMENT, "form": form_place(s, i), "index": min(i + 1, 5), "previous": previous}))
+            previous = outcome
     return out
 
 

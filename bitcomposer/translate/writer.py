@@ -298,7 +298,10 @@ class DrumManner:
         return all(Fraction(t[0]) in self.feel and t[2] in self.kit for t in tokens)
 
 
-FREE_STRIKES = {"sparse": (1, 3), "medium": (2, 6), "dense": (5, 16)}   # strikes a bar a free-written part allows, by its habit's density
+FREE_STRIKES = (1, 64)                # strikes a bar a free-written part allows: any bar the table gives (the habit conditions the
+                                      # table already; a second envelope by the habit's density, sparse 1-3 / medium 2-6 / dense 5-16,
+                                      # had cut a dense-habit accompaniment to three distinct bars in 32 where the table alone gives
+                                      # five to nine, FFVI's eight: docs/idiom/phase-4-writing.md, the integration)
 FREE_HITS = (0, 16)                   # hits a bar a piece may take in a free-written drum bar
 
 
@@ -325,8 +328,8 @@ class FreeManner:
 
 
 def free_envelope(habit: str):
-    """An envelope_of for a free-written part: strikes a bar by the habit's density, no downbeat demanded."""
-    low, high = FREE_STRIKES.get(habit.split()[0], FREE_STRIKES["medium"])
+    """An envelope_of for a free-written part: any strikes a bar (FREE_STRIKES: the habit conditions the table), no downbeat demanded."""
+    low, high = FREE_STRIKES
     return lambda own, meter=None: (low, high, False, meter)
 
 
@@ -629,13 +632,17 @@ def _weighted(rng: random.Random, options: list, weights: list):
 
 def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Random, register: tuple, scale: set,
               strong: bool, chord, tune: set, aim: float | None, habit: str | None = None, repeats: str = "some",
-              chord_rate: float = CHORD_ON_BEAT) -> int:
+              chord_rate: float = CHORD_ON_BEAT, repeat_rate: float | None = None, over_repeats: bool = False,
+              over_chord: bool = False) -> int:
     """One move of the tune from the moves table, drawn among the moves that
     fit (the register; off the chords' semitones; steered toward the
     contour when the line strays CONTOUR_RANGE from it), the fitting moves
     weighted by the table and, on a strong beat, the chord's tones given
     `chord_rate` of the mass (the song's chord-tone share, CHORD_ON_BEAT
-    without one). Returns the move in semitones."""
+    without one) unless the tune is already over its share (`over_chord`);
+    the repeated note given `repeat_rate` of the mass (the song's, else
+    the habit's tier) and none while the tune is over it (`over_repeats`).
+    Returns the move in semitones."""
     low, high = register
     values = {"part": R.MELODY, "mode": mode, "previous": previous or rhythm.START, "habit": habit or "mixed"}
     ctx = tuple(values.get(c, "?") for c in moves_table.conditionings)
@@ -666,11 +673,17 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
         return 0
     if 0 in options and len(options) > 1:
         # the repeated note passes every filter every time, and the chain feeds on itself after one; its share among
-        # the fitting moves is held to the song's repeat habit, so the filters never funnel the line onto one pitch
-        r = REPEAT_RATE.get(repeats, REPEAT_RATE["some"])
-        rest = sum(w for st, w in zip(options, weights) if st != 0)
-        weights = [w if st != 0 else r * rest / (1 - r) for st, w in zip(options, weights)]
-    if strong and chord_pcs and any(on_chord) and not all(on_chord):
+        # the fitting moves is held to the song's repeat rate, so the filters never funnel the line onto one pitch,
+        # and it is left out while the tune (its echoed cells too) is over the rate
+        if over_repeats:
+            kept = [st != 0 for st in options]
+            options, weights, on_chord = ([x for x, k in zip(xs, kept) if k] for xs in (options, weights, on_chord))
+        else:
+            r = repeat_rate if repeat_rate is not None else REPEAT_RATE.get(repeats, REPEAT_RATE["some"])
+            r = min(0.95, max(0.0, r))
+            rest = sum(w for st, w in zip(options, weights) if st != 0)
+            weights = [w if st != 0 else r * rest / (1 - r) for st, w in zip(options, weights)]
+    if strong and chord_pcs and not over_chord and any(on_chord) and not all(on_chord):
         mc = sum(w for w, c in zip(weights, on_chord) if c)
         mo = sum(w for w, c in zip(weights, on_chord) if not c)
         weights = [w * (chord_rate / mc if c else (1 - chord_rate) / mo) for w, c in zip(weights, on_chord)]
@@ -685,7 +698,7 @@ def _chord_in_bar(song: rhythm.Song, t: float):
 def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, rng: random.Random, habit: str,
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
-           role: str = R.MELODY, chord_rate: float | None = None) -> tuple[list, list, list]:
+           role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -704,8 +717,13 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     tune's), clear of the melody as well as the upper parts; `chord_rate`:
     the song's share of strong-beat notes on the chord (the chord-tones
     table's draw), held by the moves drawn and by what an echoed cell's
-    beats are snapped to. Returns [(start, end, midi)], the bars' rhythms
-    and a log."""
+    beats are snapped to; `repeat_rate`: the song's share of moves that
+    repeat the note (the repeat-rates table's draw; the habit's tier
+    without one), held the same way. A phrase after the first sits where
+    the phrase-shifts table puts it against the one before (a moved
+    phrase moved that far; a new one starting that far from where the
+    last left off). Returns [(start, end, midi)], the bars' rhythms and a
+    log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -752,6 +770,19 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     log, prev_phrase, prev_phrase_start = [], None, None
     written_windows = {}                                    # a window's first bar -> (its live bars, their cells), for the form's repeats
     phrase_size = None                                      # how far the phrase's contour goes (contour_targets)
+    moves_seen = [0, 0, None]                               # the tune's repeated moves, all its moves, the last pitch written, so far
+    rep_rate = repeat_rate if repeat_rate is not None else REPEAT_RATE.get(repeat_habit, REPEAT_RATE["some"])
+
+    def over_repeats() -> bool:
+        return moves_seen[1] > 0 and moves_seen[0] / moves_seen[1] > rep_rate
+
+    def over_chord() -> bool:
+        return on_beat[1] > 0 and on_beat[0] / on_beat[1] > rate
+
+    def shift_of(relation: str) -> float:
+        """How far the phrase sits from the one before, by their relation: the table's draw, else MOVED."""
+        t = models.get("phrase_shifts")
+        return float(t.draw((R.MELODY, mode, relation), rng)) if t is not None else float(MOVED.get(relation, 0))
 
     def wants_chord() -> bool:
         """Whether an echoed cell's beat is snapped onto the chord: while the tune's share so far is under the song's."""
@@ -793,6 +824,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         cell = Cell(positions, pitches, chord[0] if chord else tonic, scale)
         figures[k] = " ".join(str(Fraction(p)) for p in positions)
         cells[k] = cell
+        for m in pitches:
+            if moves_seen[2] is not None:
+                moves_seen[1] += 1
+                moves_seen[0] += int(round(m)) == int(round(moves_seen[2]))
+            moves_seen[2] = m
         for p, m in zip(positions, pitches):
             here = _chord_in_bar(song, a + p) if abs(p - round(p)) < rhythm.NEAR else None
             if here is not None:
@@ -812,7 +848,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
             step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim,
-                             step_habit, repeat_habit, rate)
+                             step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord())
             midi = midi + step
             move = f"{step:+d}" if step else "0"
             pitches.append(midi)
@@ -882,7 +918,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         ending = draw_shape("endings", {})
         phrase_cells = []
         if relation in ("repeated", "moved up", "moved down") and prev_phrase:
-            shift = MOVED.get(relation, 0)
+            shift = int(round(shift_of(relation))) if relation != "repeated" else 0
             for i, k in enumerate(live):
                 src = prev_phrase[i % len(prev_phrase)]
                 if shift:
@@ -891,9 +927,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 phrase_cells.append(again(k, src))
                 choices[k] = "copy"
         else:
+            if prev_phrase is not None:                     # the new phrase starts where the table puts it against the last
+                last_midi = float(min(register[1], max(register[0], last_midi + shift_of(relation))))
             for attempt in range(COPY_TRIES):
                 phrase_cells, start_midi = [], None
-                snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat))
+                snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen))
                 for i, k in enumerate(live):
                     if relation == "answered" and prev_phrase and i < len(prev_phrase):
                         cell = new_cell(k, prev_phrase[i].positions, shape, start_midi, a0, b0)
@@ -936,6 +974,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 played, by_key, last_midi, last_move, rhythm_played, rhythm_prev, prev_cell = (Counter(snapshot[0]), dict(snapshot[1]), snapshot[2], snapshot[3], Counter(snapshot[4]), snapshot[5], snapshot[6])
                 source, choices = dict(snapshot[7]), dict(snapshot[8])
                 on_beat[:] = snapshot[9]
+                moves_seen[:] = snapshot[10]
             else:
                 log.append(f"phrase at bar {w[0]}: a game's phrase drawn {COPY_TRIES} times running; the last kept")
         # the ending: the phrase's last note onto the drawn degree
@@ -951,6 +990,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         log.append(f"bar {w[0]}: {relation}, {shape}" + (f" {phrase_size:.0f}" if phrase_size is not None else "") + f", ends {ending}, bars {[choices.get(k, '-') for k in live]}")
     if on_beat[1]:
         log.append(f"strong-beat notes on the chord: {on_beat[0]}/{on_beat[1]} ({on_beat[0] / on_beat[1]:.2f}; the song's rate {rate:.2f})")
+    if moves_seen[1]:
+        log.append(f"repeated notes: {moves_seen[0]}/{moves_seen[1]} ({moves_seen[0] / moves_seen[1]:.2f}; the song's rate {rep_rate:.2f})")
     # the notes, with their lengths from the articulation table
     notes = []
     for k in sorted(cells):
@@ -1196,6 +1237,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
     whole = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
     kit = {rhythm.LETTERS.get(piece, "o") for piece in song.pieces.values() if piece and piece != "none"}
     merged = [[] for _ in bars]
+    by_group = {}
     for letters, model in models.items():
         own = plays_as_own(plays, bars) if plays is not None else [rhythm.drum_group(f, letters) for f in whole]
         if all(f == REST for f in own) and not (free and kit & set(letters)):
@@ -1215,8 +1257,29 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         else:
             figures = _figures(song, "drums-" + "".join(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
                                envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
+        by_group[letters] = figures
         for k, f in enumerate(figures):
             merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
+    if free and plays is not None and by_group:
+        # a bar the plan has the drums in never rests whole: where every group drew a rest, the kit's main group (the
+        # one playing the most bars) plays a figure of its own there, drawn without the rest
+        main = max(by_group, key=lambda g: sum(1 for f in by_group[g] if f != REST))
+        model = models[main]
+        manner = FreeManner(model.table.vocabulary, kit & set(main), song.division, rests=False)
+        group_habit = (habit.get(main) if isinstance(habit, dict) else habit) or "medium mixed"
+        for k, (a, b, _) in enumerate(bars):
+            if not (k < len(plays) and plays[k]) or merged[k]:
+                continue
+            before = by_group[main][k - 1] if k else REST
+            values = {"part": "drums-" + "".join(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit}
+            unit = tables.Unit(song.sid, song.game, "", values)
+            env = free_drum_envelope(kit & set(main))(None, values["meter"])
+            for _ in range(TRIES):
+                f = model.table.draw(model.table.context(unit), rng, values)
+                if manner.fits(f) and drum_within(f, env):
+                    by_group[main][k] = f
+                    merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
+                    break
     figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]
     hits = []
     for (a, b, _), figure in zip(bars, figures):

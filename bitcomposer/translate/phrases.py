@@ -578,6 +578,57 @@ def contour_size_units(songs, length=4) -> list:
     return out
 
 
+SHIFT_BIN = 2                        # semitones: the grain a phrase's shift is kept to
+SHIFT_CAP = 12                       # semitones: a shift this far or farther, either way, is one outcome
+
+
+def phrase_shift_units(songs, length=4) -> list:
+    """Each phrase after the first as a unit: its outcome how far its mean
+    pitch sits from the phrase before's, in semitones to SHIFT_BIN (within
+    SHIFT_CAP either way; up positive); its values the part (melody), the
+    mode and the phrase's relation to the one before. What moves a tune
+    between phrases: a phrase moved up or down is moved this far, a new
+    one starts this far from where the last left off (the first whole
+    songs' tunes spanned an octave where FFVI's span nearly two, their
+    phrases each starting where the last ended; MOVED's two semitones were
+    hand-set)."""
+    out = []
+    for s in songs:
+        before = None
+        for part in s.parts:
+            ws = windows(s, part, length)
+            for k, (i, j) in enumerate(ws):
+                a, b = s.bars[i][0], s.bars[j - 1][1]
+                line, source = tune(s, a, b)
+                if not line:
+                    continue
+                ph = Phrase(a, b, line, source, s.bars[j - 1][0], ends_part=k == len(ws) - 1)
+                if before is not None:
+                    shift = statistics.mean(n[2] for n in line) - statistics.mean(n[2] for n in before.line)
+                    shift = max(-SHIFT_CAP, min(SHIFT_CAP, SHIFT_BIN * round(shift / SHIFT_BIN)))
+                    out.append(tables.Unit(s.sid, s.game, str(int(shift)), {"part": R.MELODY, "mode": s.mode, "relation": relation(before, ph)}))
+                before = ph
+    return out
+
+
+RATE_BIN = 0.05                      # the grain the tune's repeat rate is kept to
+
+
+def repeat_rate_units(songs: list, length=4) -> list:
+    """Each song as a unit: its outcome the share of the tune's moves that
+    repeat the note (to RATE_BIN); its value the part (melody). The melody
+    writer holds its tune to the drawn share (the tiers of
+    repeat_habit_units, realized through hand-set rates, gave the first
+    whole songs' tunes a median 0.31 against FFVI's 0.12)."""
+    counts = {}
+    for u in move_units(songs, length):
+        zeros, total = counts.get(u.song, (0, 0))
+        counts[u.song] = (zeros + (u.outcome == "0"), total + 1)
+    games = {s.sid: s.game for s in songs}
+    return [tables.Unit(sid, games.get(sid, ""), f"{round(zeros / total / RATE_BIN) * RATE_BIN:.2f}", {"part": R.MELODY})
+            for sid, (zeros, total) in counts.items() if total >= 8]
+
+
 def contour_units(songs, length=4) -> list:
     """Each phrase as a unit, its outcome its contour (CONTOURS); the other
     rows' names its values, and the phrase before's contour."""

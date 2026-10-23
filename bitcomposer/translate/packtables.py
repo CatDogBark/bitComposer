@@ -19,7 +19,10 @@ from . import phrases, rhythm, tables
 
 VERSION = 1                          # of the tables' layout inside a pack
 VOTES = tables.SHARES
-DISCOUNT = 0.75
+DISCOUNT = 0.75                      # the mixtures' and the figure tables' smoothing (phase 3's choice, by bits); the plain
+                                     # tables (habits, registers, forms: one or a few units a song) are Witten-Bell smoothed,
+                                     # under which a draw stays on the data: absolute discounting gave 56 % of a one-vote-an-
+                                     # outcome table's draws to the vocabulary evenly (the first whole songs' registers)
 FIGURE = ("part", "meter", "habit", "previous")   # the figure tables' shape: the habit before the chain (writer.SHAPE)
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
@@ -73,6 +76,8 @@ KEPT = {
     "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
     "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of the tune's notes on a beat that are chord tones, drawn once a song"),
     "contour_sizes": ("phrases", "contour_size_units", {}, ("part", "mode", "contour"), False, False, "how far a phrase's contour goes, in semitones, by its shape"),
+    "phrase_shifts": ("phrases", "phrase_shift_units", {}, ("part", "mode", "relation"), False, False, "how far a phrase sits above or below the one before, in semitones, by its relation to it"),
+    "repeat_rates": ("phrases", "repeat_rate_units", {}, ("part",), False, False, "the share of the tune's moves that repeat the note, drawn once a song"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
 
@@ -89,7 +94,7 @@ def fit(name: str, units) -> dict | None:
     if mixture:
         model = tables.Cache.fit(units, shape, name=name, votes=VOTES, floor=floor, discount=DISCOUNT, covers=covers)
     else:
-        model = tables.Table(shape, name, votes=VOTES, floor=floor, discount=DISCOUNT, covers=covers).fit(units)
+        model = tables.Table(shape, name, votes=VOTES, floor=floor, discount=DISCOUNT if on_floor else None, covers=covers).fit(units)
     return {"what": what, "shape": list(shape), "mixture": mixture, "units": len(units),
             "songs": len({u.song for u in units}), "model": model.to_json()}
 

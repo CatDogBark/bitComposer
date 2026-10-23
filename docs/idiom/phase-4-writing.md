@@ -555,3 +555,216 @@ measure; where they sit far from the song's own it is a habit the song
 drew (Decisive's many repeats, Terra's leaps), which is the free design
 and will be said beside each song. The melody stems republished.
 **Awaiting the ear.**
+
+### The integration: whole songs from the pack (2026-10-23, begun)
+
+**What was built.** `translate/whole.py` writes a whole song from a
+format-2 pack with no original to follow, and `tools/whole.py` writes
+seeds to a directory, renders them, reads them back and prints the
+measures beside a game's own songs'. The plan comes first, each draw
+from the pack's tables once a song: the key and the tempo (`keys`,
+`tempos`); the form, part by part (`sizes`, then `form` by index: new,
+again or back; a new part's length from `lengths` under the song's
+`length_habits` draw, a repeat as long as the part it repeats; forms
+longer than asked drawn again, FORM_TRIES 20), and the loop's bar (after
+an intro: a first part the form never comes back to); the band with each
+part's weight (`balance`: one of the game's songs' bands with its
+weights, one unit a song); the chords, a bar at a time from the chord
+mixture (a new part starts the chain's context over, the song's urn goes
+on; a repeated part keeps its chords; the loop's first bar from `loops`;
+a numeral back to its chord by `chord_of`, the inverse of
+`vocab.numeral`); the texture (which parts sound) a part of the form
+(`part_textures`); each part's register (`registers`: the melody's its
+whole ambitus, the others' 10th to 90th percentile), sounded share
+(`sounds`) and habits (the drums' each group's own, `drum_group_habits`
+given the kit's). Then the parts are written in turn by the free writers
+on a `rhythm.Song` built from the plan (bars of four beats on a grid of
+twelve, the chords as spans, the form as the reader's parts), each
+writer taking the plan's bars to play (`plays`) where it read an
+original's: the drums, the bass, the upper parts, the melody, the
+counter-line (the melody writer with `role`, clear of the melody). Each
+part reads the band written before it: its shared hits to lock to and
+its sounding tones to stay clear of; the band's energy is not read (the
+texture is the arrangement; a part the plan has play alone plays). Last
+the notes become a `convert.Score` on the pack's samples (`samples_for`:
+the lead, harmony, arp and bass pools as the generator uses them, the
+kit by piece; the echo as the pack's habits give it, as `score.of_song`
+read the generator's), rendered by the converter's back end, and read
+back by the readers on the plan's own beat with the plan's roles pinned
+(`read_back`) for the measures (`measures`, `tune_measures`: the same
+numbers over a written song and a game's).
+
+**Tables added to the kept set** for this: registers, keys, tempos,
+weights, sizes, length_habits, balance, sounds, articulation (the
+melody's value habit, which `write_melody` had drawn from a table the
+pack did not carry, "mixed" assumed), part_textures, drum_group_habits,
+chord_tones and contour_sizes. The FFVI pack rebuilt with all 48.
+
+**Hand-set here** is the rendering, not the writing: the voices' levels
+and pans (LEVELS, PANS), how the eight voices are shared out (the drums
+two, the harmony up to three, the accompaniment up to two: `allot`), the
+pool a part's sample comes from (POOLS), a drum hit's length (to the
+next hit on its voice, a beat at most). These wait for the product's
+mixing, not the tables.
+
+**The first twenty songs, read back beside FFVI's 67** (the quartiles a
+quarter under / the median / three quarters; `tools/whole.py --db`):
+
+| measure | written (round 1) | FFVI's own |
+|---|---|---|
+| bars | 12 / 28 / 35 | 20 / 29 / 36 |
+| seconds, once through | 48 / 80 / 122 | 55 / 70 / 93 |
+| band (parts with notes) | 4 / 4 / 4 | 4 / 5 / 5 |
+| form parts the reader finds | 1 / 1 / 4 | 2 / 4 / 6 |
+| drums: strikes a bar | 10.4 / 12.0 / 13.4 | 3.0 / 6.9 / 12.3 |
+| drums: share of bars played | 0.58 / 0.74 / 1.00 | 0.75 / 0.93 / 1.00 |
+| bass: strikes a bar | 2.9 / 3.8 / 6.6 | 2.9 / 4.3 / 6.0 |
+| bass: distinct bars in 32 | 2 / 4 / 6 | 3 / 8 / 13 |
+| accompaniment: strikes a bar | 4.8 / 8.0 / 9.3 | 4.8 / 6.3 / 8.5 |
+| accompaniment: bar repeats the one before | 0.34 / 0.60 / 0.92 | 0.14 / 0.32 / 0.71 |
+| accompaniment: distinct bars in 32 | 1.8 / 2.5 / 5.3 | 4 / 8 / 15 |
+| melody: strikes a bar | 2.9 / 3.2 / 3.8 | 3.2 / 4.5 / 6.1 |
+| tune: strong-beat notes on the chord | 0.62 / 0.75 / 0.84 | 0.48 / 0.56 / 0.68 |
+| tune: range, semitones | 7 / 12 / 19 | 14 / 21.5 / 26 |
+| tune: repeated notes | 0.13 / 0.20 / 0.29 | 0.04 / 0.12 / 0.22 |
+| tune: steps among moves | 0.54 / 0.68 / 0.78 | 0.60 / 0.67 / 0.75 |
+| tune: distinct bar cells in 32 | 7 / 10 / 17 | 8.8 / 12.5 / 18.3 |
+
+**The causes found, each in the readings before the change:**
+
+- *The texture flipped bar by bar.* The bar-level texture mixture (which
+  parts sound, after the bar before's) had the band in and out every bar
+  or two: the urn's "earlier" share returns to a texture played before,
+  and with two textures in the song it flips between them. In the
+  readings a part of the form keeps one texture: the modal texture covers
+  a median 100 % of a part's bars (quartiles 0.86 / 1.0 / 1.0, a mean
+  0.91; FFVI 0.75 / 1.0 / 1.0, 0.86); a part has a median 1 distinct
+  texture (mean 1.4); the first bar differs from the modal texture in 12 %
+  of parts (an entrance); texture runs a median 2 an 8-bar part. So the
+  plan draws **a texture a part** (`part_textures`: the modal texture by
+  the part's place in the form and the part before's), a bar's texture its
+  part's. Left for later: the 12 % of parts whose first bar is an entrance.
+- *The drums struck twelve positions a bar against FFVI's seven.* Every
+  drum group (kick-snare-toms, hat, cymbals, other) wrote every bar the
+  plan had drums in, under the kit's habit, and a group's figure may not
+  rest (FreeManner refuses a rested bar). In the readings the groups'
+  habits differ from the kit's and from each other: under a dense kit the
+  cymbals and the other sounds are "sparse" (FFVI: 7 of 8 cymbal groups
+  sparse), and a sparse group rests in six to nine bars of ten (rest share
+  by group habit: sparse repeating 0.66 to 0.81, sparse mixed 0.58 to
+  0.61, dense 0.04 to 0.11). So the plan draws **each group's habit given
+  the kit's** (`drum_group_habits`), and a group of a planned song **may
+  draw a rested bar** at its table's rate (FreeManner `rests`, on only
+  with `plays`: substitution's free drums are as they were).
+- *No counter-line.* FFVI has one in 52 of 67 songs; the written band
+  was four parts to FFVI's five. The phrase tables count both lines as
+  the tune's (`phrases.ROLES`, labelled melody), the rhythm, value and
+  habit tables have the counter's own rows: **the melody writer writes
+  the counter-line** after the melody (`role`), clear of the melody as
+  well as the upper parts, in the counter's register and habit.
+- *The tunes sat on the chord three beats in four, FFVI's two in four,
+  and spanned an octave against nearly two.* CHORD_ON_BEAT 0.65 was a
+  constant from the games' band, and an echoed cell's beats were always
+  snapped onto the chord; CONTOUR_STEP 2 semitones a third was
+  `phrases.LEVEL`, the threshold a contour is heard at, not how far one
+  goes. Now **a chord-tone share drawn once a song** (`chord_tones`:
+  FFVI's median 0.56) weights the moves and gates the snapping (an echoed
+  cell's beat is snapped only while the tune's share so far is under the
+  song's), and **a phrase's contour goes as far as the contour-size table
+  draws** (`contour_sizes`, by shape and mode).
+- *The accompaniment and the bass had a quarter of FFVI's distinct bars
+  and twice its repeats.* The lock: shared hits were counted among the
+  voices written so far, and with two drum voices and a bass written the
+  kick-and-hat coincidences on every beat passed TOGETHER (0.67), so the
+  accompaniment had to strike most beats and the few figures that did
+  came again and again. In the readings a shared hit is a tutti of a
+  five-to-seven-voice band. Now a shared hit is counted **against the
+  voices the plan has playing in the bar**, written yet or not: a part
+  written early locks to nothing, one written late locks to the band's
+  accents.
+
+Also: the form drawn is kept whole (drawn again when longer than asked,
+rather than cut); the listening renders play the form once and fade
+(`--loops 1`, 48 bars at most), a 60-bar form at 75 BPM having run six
+minutes with the loop twice.
+
+**Round 2** (the same twenty seeds after the changes, the FFVI pack
+rebuilt with 48 tables; FFVI's own in the table above): drums 5.9
+strikes a bar (from 12.0; FFVI 6.9); the tune's strong-beat chord tones
+0.62 (from 0.75; FFVI 0.56); the counter-line written in 9 of 19 songs;
+the band's median 4 parts still (5); the tune's range 12 still (21.5);
+the accompaniment's distinct bars 2 (from 2.5; FFVI 8) and its repeats
+0.67 (from 0.60; 0.32); the bass's distinct bars 4 (8); the tune's
+repeated notes 0.31 (from 0.20; 0.12); the drums' share of bars played
+0.58 (from 0.74; 0.93). Each measured against its draw, song by song
+(`tools/whole.py`'s JSON records): the accompaniment's distinct bars as
+written equal the distinct bars read back (the measure is faithful); a
+"rare" repeat habit gave 0.03 to 0.18 and "some" 0.08 to 0.42; the
+chord-tone share landed within a tenth of its draw in 13 songs of 18.
+
+**The causes found, round 2:**
+
+- *The mixture is not the collapse.* `tables.simulate_cache` over FFVI's
+  own units with the pack's mixtures (the urn run song by song on the
+  real contexts): the accompaniment's distinct bars drawn 8.2 against 10.0
+  real, the bass's 9.9 against 13.3, the melody's 8.4 against 11.0; bar
+  repeats drawn 0.40 / 0.31 / 0.35 against 0.43 / 0.23 / 0.24. A little
+  short on variety, nowhere near two bars in 32. A "new" draw made new to
+  the song (an outcome not yet played) over-shoots the other way (11.6,
+  12.9, 11.4 distinct) and was not taken.
+- *The envelope was.* `_free_figures` on a plain 32-bar song with the
+  pack's rhythm mixture: under "dense mixed" 2.6 distinct bars with the
+  free envelope (strikes a bar 5 to 16 for a dense habit), 5.0 without;
+  "dense repeating" 1.8 against 2.9; "medium repeating" 2.2 against 5.0;
+  "dense varied" 6.0 against 9.4; the grid filter changed nothing. The
+  habit conditions the table already; the second envelope by the habit's
+  density (FREE_STRIKES, hand-set tiers) kept only the densest figures of
+  a dense song's table, and the urn then fed on those. **FREE_STRIKES is
+  now any count** (1 to 64): the table under the habit is the envelope.
+- *A plain table's draw went to the vocabulary evenly.* Under absolute
+  discounting (0.75 a vote), a table with one vote an outcome (registers,
+  balance, textures a part, contour sizes: one unit a song) keeps a
+  quarter of its mass at each level and gives the rest down, and below the
+  root `Table.draw` picks any known outcome evenly: 56 % of such draws.
+  The melody registers drawn had a median width of 14 semitones where the
+  table's votes have 20 (FFVI's ambitus median 21.5, the range measure's
+  own value). Now **the plain tables are Witten-Bell smoothed** (the
+  discount kept for the mixtures and the figure tables, phase 3's
+  choice by bits) and **a plan's one-shot draws stay on the data**
+  (`Table.draw(floored=False)`: the coarsest level seen draws from its
+  votes alone).
+- *The textures drawn a part left a band's parts out.* A part's texture
+  was drawn among all songs' textures, kept only if inside the band: four
+  parts drawn so can all lack the drums the balance gave the song (Whole
+  01 lost its drums; "first" parts are 51 % drumless in FFVI, drumless
+  songs included). Now a part's texture is counted **against its song's
+  band** (`part_texture_units`: ALL, or "no drums melody", the band's
+  parts that rest) and drawn so.
+- *A planned drum bar rested whole.* With every group drawing its own
+  rests, a sparse kit's groups all rested together in a third of its
+  bars (Whole 16: 20 bars planned, 8 written). The plan's texture says the
+  drums sound in the bar: **where every group drew a rest, the kit's main
+  group plays a figure drawn without one** (`writer.drums`).
+- *The tune repeated notes at the tiers' hand-set rates.* REPEAT_RATE's
+  rare 0.02 / some 0.12 / many 0.35 realized 0.10 / 0.30 / 0.33: the
+  echoed cells carry their repeats in, and the tiers were cut at 0.05 and
+  0.2. Now **the song's repeat rate is drawn** (`repeat_rates`: the share
+  of the tune's moves that repeat the note, one unit a song) and **held**:
+  the repeated note gets its share of the mass while the tune is under
+  the rate and none while over it (the chord-tone share held the same
+  way, its boost off while the tune is over its share).
+- *Each phrase started where the last ended.* The tunes used an octave of
+  registers 16 to 24 wide: a new phrase's first move came from the last
+  phrase's last note, and a moved phrase moved MOVED's hand-set two
+  semitones. Now **a phrase sits where the phrase-shifts table puts it**
+  against the one before (`phrase_shifts`: the mean pitch against the
+  last phrase's, by relation; a moved phrase moved that far, a new one
+  starting that far from where the last left off).
+- *The reader's form.* The reader found one part in most written songs
+  (FFVI: four) because it read a once-through render: it segments by
+  repeats and the loop, and the forms drawn are new-heavy (FFVI's form
+  table: "new" in 65 to 92 % of parts after the first). The reader's part
+  count is now taken on the looped render, as a player hears it; the
+  plan's own parts are the form.
+
+**Round 3** (after these): see below.

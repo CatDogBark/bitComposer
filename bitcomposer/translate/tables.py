@@ -186,19 +186,27 @@ class Table:
             self._dist[context] = level
         return self._dist[context]
 
-    def draw(self, context: tuple, rng: random.Random, values: dict | None = None) -> str:
+    def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
         n / (n + t) else the coarser level's; below the root, the floor
         model's draw, or any known outcome evenly (the unseen slot's share
-        redrawn)."""
+        redrawn). `floored` off: the coarsest level seen draws from its
+        votes alone, never the floor or the even share (a song planned
+        from a game's tables takes the game's own keys, registers and
+        bands, weighted as the game has them, not its vocabulary evenly)."""
+        coarsest = None
         for k in range(len(context), self.covers - 1, -1):
             level = self._level(context[:k])
             if level is None:
                 continue
             outcomes, cum, kept, given = level
+            coarsest = level
             if rng.random() * (kept + given) < kept:
                 return rng.choices(outcomes, cum_weights=cum)[0]
+        if not floored and coarsest is not None:
+            outcomes, cum, _, _ = coarsest
+            return rng.choices(outcomes, cum_weights=cum)[0]
         if self.floor is not None:
             return self.floor.draw(values or {}, rng)
         if "" not in self._dist:
