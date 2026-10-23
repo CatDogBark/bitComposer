@@ -414,9 +414,12 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     written, key = {}, (plan.tonic, plan.mode)
     kit_letters = {rhythm.LETTERS[p] for p in song.pieces.values() if p in rhythm.LETTERS}
     if R.DRUMS in plan.band and kit_letters:
-        groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
+        if "drums" in models:                               # the kit as one figure: its bars repeat and vary together, as a kit's do
+            groups = {tuple(rhythm.LETTERS.values()): models["drums"]}
+        else:                                               # a pack with the groups alone: each its own habit and rests
+            groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
         if groups:
-            group_habits = {g: plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS] for g in groups}
+            group_habits = {g: (plan.habits[R.DRUMS] if len(g) > 3 else plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS]) for g in groups}
             hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS])
             by_voice, notes, dropped = {}, [], Counter()
             for t, letter in hits:

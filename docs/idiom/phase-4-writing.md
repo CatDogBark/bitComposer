@@ -805,3 +805,41 @@ part (bass 4, accompaniment 4, counter 3, melody 4 against 8, 8, 10.5,
 9), the bass's density (2.3 against 4.3), and the reader finds two parts
 where it finds four in FFVI (the plan's parts are 2 to 8; the reader
 hears every loop now).
+
+**The causes found, round 3** (the mixtures run free, `freerun2.py` on
+Ragnarok: from START for 32 bars under each habit, as the writer runs
+them, beside FFVI's own songs of that habit):
+
+- *The urn's "same" sat on top of the chain's.* Under a "varied" habit
+  the free run repeated a bar in 0.31 to 0.37 of its bars where FFVI's
+  varied songs do in 0.09 to 0.19, with half their distinct bars: a "new"
+  draw from the table could hand back the bar before at the chain's own
+  rate, on top of the recall table's "same" share, though `recall_units`
+  had counted the three as a partition. **A "new" draw is now new to the
+  song** (an outcome not yet played; one played only when none new passes
+  the keep). In-sample over FFVI's real contexts (`sim_cache.py`) that
+  draw gives the bass 12.9 distinct bars a song against 13.3 real (the
+  old draw 9.9), the melody 11.4 against 11.0 (8.4), the counter 12.2
+  against 11.2 (8.6); the accompaniment 11.6 against 10.0 and the
+  kick-snare group 11.3 against 7.8, over the song's full length, where
+  a real song's new bars come early and thin out (the recall shares are
+  one rate a song).
+- *The floor's runs and the tail.* With the floor counted, a sixth of
+  the figure draws came from the cell floor, whose cell-by-cell bars the
+  manner refuses unless some song played them whole; and absolute
+  discounting (0.75 a vote, phase 3's choice for held-out bits) had given
+  the figure tables' long tail, a bar one song played with a small share,
+  wholly to that floor. So a "new" bar was mostly a common bar again, and
+  a dense habit struck as a medium one (the floor knows no habit: free
+  run, dense varied accompaniment 5.7 strikes a bar against 8.7, dense
+  walking bass 5.4 against 8.5). **A pack's tables are now Witten-Bell
+  smoothed throughout, and a mixture's new draw and the writers' fallback
+  draws stay on the coarsest level seen** (`Table.draw(floored=False)`):
+  a bar some song played, weighted as the game plays it, the tail in. The
+  floor stays for likelihoods.
+- *"same" by place.* A part's first bar repeats the bar before less than
+  its other bars (FFVI: accompaniment 0.40 against 0.46, bass 0.28 against
+  0.36, melody 0.17 against 0.27, counter 0.21 against 0.30): real, small,
+  left for later (the recall shape is part+habit).
+
+**Round 4** (after these): see below.

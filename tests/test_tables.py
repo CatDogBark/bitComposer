@@ -575,6 +575,8 @@ class PackTableTests(unittest.TestCase):
         self.assertTrue(draws["b"] > 0 and draws["a"] > 0 and draws["c"] > 0, draws)
         shares = m.shares(tables.Unit("s", "g", "", {"part": "p", "previous": "b"}), "b", played)
         self.assertAlmostEqual(draws["c"] / 300, shares[2], delta=0.08)     # the new draws are c, the one outcome not yet played
+        self.assertEqual(m.draw_new(tables.Unit("s", "g", "", {"part": "p", "previous": "b"}), played, random.Random(3)), "c")
+        self.assertIn(m.draw_new(tables.Unit("s", "g", "", {"part": "p", "previous": "b"}), Counter({"a": 1, "b": 1, "c": 1}), random.Random(3)), ("a", "b", "c"))
 
     def test_a_mixture_round_trips(self):
         us = self._bass_units()

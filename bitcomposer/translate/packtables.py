@@ -36,6 +36,7 @@ KEPT = {
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
     "bass_habits": ("rhythm", "bass_habit_units", {}, ("part", "tempo", "weight"), False, False, "the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight"),
+    "drums": ("rhythm", "drum_units", {}, FIGURE, True, True, "the kit's bar as one figure, every piece: what a song written whole repeats and varies as a kit does"),
     "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, FIGURE, True, True, "the kick, snare and toms' bar"),
     "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, FIGURE, True, True, "the hat's bar"),
     "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, FIGURE, True, True, "the cymbals' bar"),

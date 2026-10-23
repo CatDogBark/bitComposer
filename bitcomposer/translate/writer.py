@@ -802,13 +802,17 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         return out
 
     def new_rhythm(k: int) -> list:
-        """A new bar's onsets from the melody's bar table, in the manner and the habit's envelope."""
+        """A new bar's onsets from the melody's bar table, in the manner and
+        the habit's envelope: a rhythm new to the tune where one fits (the
+        cell urn chose new; the rhythm table's own urn is not run again, which
+        had given new cells old rhythms: three distinct rhythms in 32 bars
+        against FFVI's nine)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
         values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit}
         unit = tables.Unit(song.sid, song.game, "", values)
         fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
-        figure = models["rhythm"].draw(unit, rhythm_prev, rhythm_played, rng, keep=fit)
+        figure = models["rhythm"].draw_new(unit, rhythm_played, rng, keep=fit) if hasattr(models["rhythm"], "draw_new") else models["rhythm"].draw(unit, rhythm_prev, rhythm_played, rng, keep=fit)
         for _ in range(TRIES):
             if fit(figure):
                 break

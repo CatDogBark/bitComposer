@@ -366,10 +366,19 @@ class Cache:
         if x < same + earlier:
             pool = {k: v for k, v in cache.items() if k != previous}
             return rng.choices(list(pool), list(pool.values()))[0]
+        return self.draw_new(unit, cache, rng, keep)
+
+    def draw_new(self, unit: Unit, cache: Counter, rng: random.Random, keep=None) -> str:
+        """The "new" draw alone: an outcome from the table new to the song
+        (not in `cache`), on the data (never the floor's: a run of cells no
+        song played whole, which a writer's manner refuses); one the song
+        played when none new passes `keep`. For a writer whose own urn has
+        already chosen new (the tune's cells: a new cell takes a new
+        rhythm, not a second urn's draw)."""
         ctx = self.table.context(unit)
         out = None
-        for _ in range(NEW_TRIES):                          # on the data: a bar some song played, never the floor's (a run of
-            out = self.table.draw(ctx, rng, unit.values, floored=False)   # cells no song played whole, which the manner refuses)
+        for _ in range(NEW_TRIES):
+            out = self.table.draw(ctx, rng, unit.values, floored=False)
             if out not in cache and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
