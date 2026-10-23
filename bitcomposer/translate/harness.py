@@ -635,6 +635,7 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
                                                         votes=tables.SHARES, discount=writer.DISCOUNT))
         models.setdefault("habits", game_habits(tempo_habits(units), ctx, ("part", "tempo")))
         models.setdefault("voicing_habits", game_habits(rhythm.voicing_habit_units(others), ctx))
+        models.setdefault("motions", game_habits(rhythm.upper_motion_units(others), ctx, ("part", "tempo")))
     for role in roles_present:
         voices = sorted((v for v, (r, ns) in ctx.by_voice.items() if r == role and any(not math.isnan(n[2]) for n in ns)),
                         key=lambda v: statistics.median(n[2] for n in ctx.by_voice[v][1] if not math.isnan(n[2])))
@@ -649,13 +650,16 @@ def write_upper(ctx: Context, seed: int = 1) -> Written | None:
                  if habits is not None else "medium mixed")
         vh = models.get("voicing_habits")
         richness = vh.draw((role,), habit_rng(ctx, seed, role + " voicing")) if vh is not None else "full"
+        mo = models.get("motions")
+        motion = (mo.draw((role, rhythm.band(song.bpm)) if mo.conditionings == ("part", "tempo") else (role,), habit_rng(ctx, seed, role + " motion"))
+                  if mo is not None else "block")
         sounds = UPPER_SOUNDS.get(role) or writer.sounded(own_notes)
         held = moments(ctx, set(voices))
         answered = stops(ctx, set(voices), own_notes)
         lock = locks(ctx, set(voices), own_notes)
         notes, figures, voicings = writer.upper(song, role, voices, registers, models, rng, habit, richness, sounds,
-                                                key=ctx.key, hold=held | answered, lock=lock)
-        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, sounded {sounds:.2f}; "
+                                                key=ctx.key, hold=held | answered, lock=lock, motion=motion)
+        log.append(f"{role}: voices {voices} (registers {[registers[v] for v in voices]}); habit {habit}, voicing {richness}, motion {motion}, sounded {sounds:.2f}; "
                    f"{sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes"
                    + (f"; moments kept as the song's own: bars {sorted(held)}" if held else "")
                    + (f"; the band's stops answered with the song's own: bars {sorted(answered)}" if answered else "")

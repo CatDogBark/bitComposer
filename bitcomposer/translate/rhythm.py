@@ -543,6 +543,37 @@ def voicing_habit_units(songs) -> list:
     return habits(voicing_units(songs))
 
 
+MOTIONS = ((1 / 3, "block"), (2 / 3, "mixed"), (2, "arpeggiated"))   # an upper part's share of strikes that change its pitches
+
+
+def upper_motion(notes) -> float:
+    """How an upper part moves through its tones: the share of its strike
+    times (notes within NEAR of each other one strike) whose pitches differ
+    from the strike before's. A chord restruck is 0, an arpeggio 1."""
+    strikes, last = [], None
+    for st, _, m, _ in sorted(n for n in notes if not math.isnan(n[2])):
+        if last is not None and st - last < NEAR:
+            strikes[-1].add(round(m))
+        else:
+            strikes.append({round(m)})
+            last = st
+    if len(strikes) < 2:
+        return 0.0
+    return sum(1 for a, b in zip(strikes, strikes[1:]) if a != b) / (len(strikes) - 1)
+
+
+def upper_motion_units(songs) -> list:
+    """Each upper part of each song as a unit: its outcome its motion
+    (MOTIONS), its values the part and the tempo band; drawn once a song."""
+    out = []
+    for s in songs:
+        for role in UPPER:
+            if s.notes.get(role):
+                out.append(tables.Unit(s.sid, s.game, habit_of(upper_motion(s.notes[role]), MOTIONS),
+                                       {"part": role, "tempo": band(s.bpm)}))
+    return out
+
+
 def width_units(songs) -> list:
     """Each chord span as a unit: its outcome how the upper parts voice the
     chord as a whole, the number of distinct pitches sounding (to 6) and

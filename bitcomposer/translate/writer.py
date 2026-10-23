@@ -304,16 +304,19 @@ FREE_HITS = (0, 16)                   # hits a bar a piece may take in a free-wr
 
 class FreeManner:
     """The manner of a part written with no original to follow (a generated
-    song's, phase 4): any bar the table knows, on the pieces the song has
-    (drums); the density and the downbeat the habit's and the band's, not a
-    bar's own."""
+    song's, phase 4): any bar the table knows, on the song's grid, on the
+    pieces the song has (drums); the density and the downbeat the habit's
+    and the band's, not a bar's own."""
 
-    def __init__(self, known: set, kit: set | None = None):
+    def __init__(self, known: set, kit: set | None = None, division: int | None = None):
         self.known = known
         self.kit = kit
+        self.division = division
 
     def fits(self, figure: str) -> bool:
         if figure == REST or figure not in self.known:
+            return False
+        if self.division is not None and not on_grid(figure, self.division):
             return False
         return self.kit is None or all(t.partition(":")[2] in self.kit for t in rhythm._tokens(figure))
 
@@ -366,8 +369,12 @@ def in_register(midi: int, register: tuple) -> int:
 UPPER_LOCK = {R.HARMONY: 0.0, R.ACCOMP: 2 / 3, R.ARP: 2 / 3}   # the share of the band's shared hits an upper part strikes (a pad holds through)
 
 
+MOTION_STEP = {"block": 0, "mixed": 0.5, "arpeggiated": 1}   # how far along the stack a voice moves a strike
+
+
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
-          habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None) -> tuple[list, list, list]:
+          habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
+          motion: str = "block") -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -379,8 +386,10 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     lock = lock or {}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
     own = [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
-    figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary), own, bars, habit, rng,
-                            hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0))
+    figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
+                            habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0))
+    step = MOTION_STEP.get(motion, 0)
+    walked = 0.0                                            # how far along the stack the voices have moved (motion)
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     notes, voicings = [], []
@@ -414,14 +423,18 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 midi = in_register(pitches[i % len(pitches)], registers[voices[0]])
                 notes.append((start, start + (until - start) * sounds, float(midi), voices[0]))
                 continue
-            # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped from the middle
+            # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
+            # from the middle; with motion, each voice walks along the stack a step a strike (the voices interlocking)
             stacked = list(pitches)
             while len(stacked) < len(voices):
                 stacked.append(stacked[len(stacked) - len(pitches)] + 12)
             if len(stacked) > len(voices):
                 stacked = [stacked[0]] + stacked[-(len(voices) - 1):] if len(voices) > 1 else [stacked[0]]
-            for v, midi in zip(voices, stacked):
+            offset = int(walked) if len(pitches) > 1 else 0
+            for j, v in enumerate(voices):
+                midi = pitches[(j + offset) % len(pitches)] if offset else stacked[j]
                 notes.append((start, start + (until - start) * sounds, float(in_register(midi, registers[v])), v))
+            walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)
     return notes, figures, voicings
 
@@ -627,7 +640,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         if all(f == REST for f in own) and not (free and kit & set(letters)):
             continue
         if free:
-            manner = FreeManner(model.table.vocabulary, kit & set(letters))
+            manner = FreeManner(model.table.vocabulary, kit & set(letters), song.division)
             group_habit = habit or "medium mixed"
             envelope_of = free_drum_envelope(kit & set(letters))
         else:
@@ -666,7 +679,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     if habit is None:
         mine = rhythm.bass_units([song])
         habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
-    manner = FreeManner(model.table.vocabulary) if free else Manner(song, R.BASS, model.table.vocabulary)
+    manner = FreeManner(model.table.vocabulary, division=song.division) if free else Manner(song, R.BASS, model.table.vocabulary)
     pitched = sorted(n[2] for n in own if not math.isnan(n[2]))
     low = round(pitched[int(LOW * (len(pitched) - 1))]) if pitched else 36
     sounds = sounded(own)

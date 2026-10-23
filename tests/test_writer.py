@@ -336,6 +336,12 @@ class UpperPartTests(unittest.TestCase):
         self.assertEqual(writer.in_register(94, (58, 68)), 58)                  # a bell two octaves up comes back down
         self.assertEqual(writer.in_register(50, (58, 68)), 62)
         self.assertEqual(writer.in_register(66, (60, 64)), 54)                  # under an octave of room: just under the ceiling
+        block = [(k * 0.5, 0.4, m, "x") for k in range(8) for m in (60.0, 64.0, 67.0)]
+        arp = [(k * 0.5, 0.4, (60.0, 64.0, 67.0)[k % 3], "x") for k in range(9)]
+        self.assertEqual(rhythm.upper_motion(block), 0.0)
+        self.assertEqual(rhythm.upper_motion(arp), 1.0)
+        self.assertFalse(writer.FreeManner({"0 1/12 1/2"}, division=4).fits("0 1/12 1/2"))   # a triplet figure off a sixteenth grid
+        self.assertTrue(writer.FreeManner({"0 1/12 1/2"}, division=12).fits("0 1/12 1/2"))
 
     def test_the_upper_parts_of_a_generated_song_are_written_from_tables(self):
         from bitcomposer.composer import compose_song
@@ -350,7 +356,8 @@ class UpperPartTests(unittest.TestCase):
                    "voicings": packtables.fit("voicings", rhythm.voicing_units(songs)),
                    "widths": packtables.fit("widths", rhythm.width_units(songs)),
                    "habits": packtables.fit("habits", rhythm.rhythm_habit_units(songs)),
-                   "voicing_habits": packtables.fit("voicing_habits", rhythm.voicing_habit_units(songs))}
+                   "voicing_habits": packtables.fit("voicing_habits", rhythm.voicing_habit_units(songs)),
+                   "motions": packtables.fit("motions", rhythm.upper_motion_units(songs))}
         self.assertTrue(all(v is not None for v in entries.values()), entries.keys())
         ctx.models = packtables.read({"tables": entries})
         w = harness.write_upper(ctx, seed=1)
