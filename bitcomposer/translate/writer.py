@@ -353,6 +353,9 @@ def stack(marks: list, root: int, shape: str, scale: set, low: int, width: str, 
     return [m + (12 * (i % 2) if kind == 1 else 12 * i if kind == 2 else 0) for i, m in enumerate(close)]
 
 
+UPPER_LOCK = {R.HARMONY: 0.0, R.ACCOMP: 2 / 3, R.ARP: 2 / 3}   # the share of the band's shared hits an upper part strikes (a pad holds through)
+
+
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
@@ -367,7 +370,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
     own = [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
     figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary), own, bars, habit, rng,
-                            hold, lock, envelope_of=free_envelope(habit))
+                            hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0))
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     notes, voicings = [], []
