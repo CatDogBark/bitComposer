@@ -490,7 +490,7 @@ class PhraseUnitTests(unittest.TestCase):
         self.assertEqual((ms[0].values["previous"], ms[1].values["previous"]), (rhythm.START, "+1"))
         self.assertEqual(ms[0].values["place"], "strong")
         self.assertEqual((ms[0].values["contour"], ms[0].values["quarter"], ms[14].values["quarter"]), ("rising", "first quarter", "last"))
-        self.assertEqual(ms[0].values["habit"], "stepwise")
+        self.assertEqual((ms[0].values["habit"], ms[0].values["repeats"]), ("stepwise", "rare"))
         self.assertEqual(ms[0].values["tone"], "no chord")                   # the fixture has no chords
         es = phrases.ending_units([self._song()], length=2)
         self.assertEqual(len(es), 4)

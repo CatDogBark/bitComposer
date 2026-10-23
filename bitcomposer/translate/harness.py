@@ -759,7 +759,8 @@ def melody_models(ctx: Context) -> dict:
     mix = lambda units_, shape, name: tables.Cache.fit(units_, shape, name=name, votes=tables.SHARES, discount=writer.DISCOUNT)   # noqa: E731
     move_units = phrases.move_units(psongs)
     models.setdefault("moves", mix(move_units, ("part", "mode", "habit", "previous"), "moves"))
-    models.setdefault("step_habits", tables.Table(("part",), "step habits", votes=tables.SHARES).fit(rhythm.habits(move_units)))
+    models.setdefault("step_habits", tables.Table(("part",), "step habits", votes=tables.SHARES).fit(phrases.step_habit_units(psongs)))
+    models.setdefault("repeat_habits", tables.Table(("part",), "repeat habits", votes=tables.SHARES).fit(phrases.repeat_habit_units(psongs)))
     models.setdefault("contours", mix(phrases.contour_units(psongs), ("part", "mode"), "contours"))
     models.setdefault("endings", mix(phrases.ending_units(psongs), ("part", "mode"), "endings"))
     models.setdefault("relations", mix(phrases.relation_units(psongs), ("part", "mode", "habit"), "relations"))
@@ -784,12 +785,13 @@ def write_melody(ctx: Context, seed: int = 1) -> Written | None:
     art = models["articulation"].draw((R.MELODY,), habit_rng(ctx, seed, "articulation")) if models.get("articulation") is not None else "mixed"
     echo = draw_habit(models["echo_habits"], R.MELODY, song, habit_rng(ctx, seed, "echo")) if models.get("echo_habits") is not None else "mixed"
     steps = draw_habit(models["step_habits"], R.MELODY, song, habit_rng(ctx, seed, "steps")) if models.get("step_habits") is not None else "mixed"
+    repeats = draw_habit(models["repeat_habits"], R.MELODY, song, habit_rng(ctx, seed, "repeats")) if models.get("repeat_habits") is not None else "some"
     reference = reference_index()
     notes, figures, phrase_log = writer.melody(song, by_voice[v], register, models, rng, habit, key=ctx.key, hold=(),
                                                reference=reference, articulation=art, echo_habit=echo, recall=models.get("melody_recall"),
-                                               step_habit=steps)
+                                               step_habit=steps, repeat_habit=repeats)
     own = [rhythm.pattern(p for p, _ in struck) if struck else writer.REST for _, _, _, struck in rhythm.all_bars_of(song, R.MELODY)]
-    log.append(f"habit {habit}, articulation {art}, echo {echo}, steps {steps}; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; "
+    log.append(f"habit {habit}, articulation {art}, echo {echo}, steps {steps}, repeats {repeats}; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; "
                f"the reference set {'checked' if reference is not None else 'not on this machine'}")
     log += phrase_log
     settings = settings_of([n for n in original.notes if n.voice == v], events)

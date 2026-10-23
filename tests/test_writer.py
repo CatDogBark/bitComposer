@@ -428,6 +428,7 @@ class MelodyTests(unittest.TestCase):
                    "relations": packtables.fit("relations", phrases.relation_units(psongs)),
                    "melody_recall": packtables.fit("melody_recall", rhythm.melody_recall_units(songs)),
                    "step_habits": packtables.fit("step_habits", phrases.step_habit_units(psongs)),
+                   "repeat_habits": packtables.fit("repeat_habits", phrases.repeat_habit_units(psongs)),
                    "echo_habits": packtables.fit("echo_habits", rhythm.echo_habit_units(songs))}
         missing = [k for k, v in entries.items() if v is None]
         self.assertEqual(missing, [], missing)

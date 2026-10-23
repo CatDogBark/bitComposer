@@ -566,7 +566,8 @@ def peak_units(songs, length=4) -> list:
 # --- the melody's moves as a table's units (phase 4, the melody slice) ---
 
 LEAP = 12                            # semitones: a move beyond an octave either way is one outcome ("+13" / "-13")
-STEPS = ((0.5, "leaping"), (0.75, "mixed"), (2, "stepwise"))   # a song's share of melody moves that are steps or repeats (2 semitones or less)
+STEPS = ((0.5, "leaping"), (0.75, "mixed"), (2, "stepwise"))   # a song's share of its moving melody moves that are steps (2 semitones or less)
+NOTE_REPEATS = ((0.05, "rare"), (0.2, "some"), (2, "many"))   # a song's share of melody moves that repeat the note (the games' quartiles)
 STRONG = {"beat": "strong", "eighth": "weak", "sixteenth": "weak", "triplet": "weak", "finer": "weak"}
 
 
@@ -600,21 +601,31 @@ def move_units(songs: list, length=4) -> list:
                     "contour": shape, "quarter": quarter, "previous": previous}))
                 previous = outcome
         if mine:
-            steps = sum(1 for u in mine if abs(int(u.outcome)) <= 2) / len(mine)
+            moving = [u for u in mine if u.outcome != "0"]
+            steps = sum(1 for u in moving if abs(int(u.outcome)) <= 2) / max(1, len(moving))
             habit = habit_of(steps, STEPS)
+            repeats = habit_of(1 - len(moving) / len(mine), NOTE_REPEATS)
             for u in mine:
                 u.values["habit"] = habit
+                u.values["repeats"] = repeats
             out += mine
     return out
 
 
+def repeat_habit_units(songs: list, length=4) -> list:
+    """Each song's repeat habit for its tune (REPEATS), one unit a song."""
+    seen = {}
+    for u in move_units(songs, length):
+        seen.setdefault(u.song, tables.Unit(u.song, u.game, u.values["repeats"], {"part": R.MELODY}))
+    return list(seen.values())
+
+
 def step_habit_units(songs: list, length=4) -> list:
-    """Each song's stepwise habit for its tune (STEPS), one unit a song, the tempo band beside."""
-    from .rhythm import band, habits
-    units = move_units(songs, length)
-    for u in units:
-        u.values["tempo"] = band(next((s.bpm for s in songs if s.sid == u.song), 120.0)) if hasattr(songs[0], "bpm") else "medium"
-    return habits(units)
+    """Each song's stepwise habit for its tune (STEPS), one unit a song."""
+    seen = {}
+    for u in move_units(songs, length):
+        seen.setdefault(u.song, tables.Unit(u.song, u.game, u.values["habit"], {"part": R.MELODY}))
+    return list(seen.values())
 
 
 # --- reports ---

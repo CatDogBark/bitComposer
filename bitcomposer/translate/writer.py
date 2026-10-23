@@ -517,6 +517,8 @@ class Tune:
 
 
 CHORD_ON_BEAT = 0.65                  # the share of a tune's strong-beat notes that are chord tones (the games: 58 to 68 %)
+REPEAT_RATE = {"rare": 0.02, "some": 0.12, "many": 0.35}   # a song's share of repeated notes by its repeat habit (the games: a
+                                      # quarter of songs under 5 %, the median 13 %, a quarter over 30 %)
 CONTOUR_RANGE = 5                     # semitones a line may stray from its contour's third before the draw is steered back
 LEAP = 12                             # semitones: the moves table folds a move beyond an octave to LEAP + 1 (phrases.LEAP)
 MOVES = [f"{m:+d}" if m else "0" for m in range(-LEAP - 1, LEAP + 2)]   # every move the moves table names
@@ -614,7 +616,7 @@ def _weighted(rng: random.Random, options: list, weights: list):
 
 
 def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Random, register: tuple, scale: set,
-              strong: bool, chord, tune: set, aim: float | None, habit: str | None = None) -> int:
+              strong: bool, chord, tune: set, aim: float | None, habit: str | None = None, repeats: str = "some") -> int:
     """One move of the tune from the moves table, drawn among the moves that
     fit (the register; off the chords' semitones; steered toward the
     contour when the line strays CONTOUR_RANGE from it), the fitting moves
@@ -649,11 +651,11 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
     if not options:
         return 0
     if 0 in options and len(options) > 1:
-        # the repeated note passes every filter every time; its share among the fitting moves is held to the table's,
-        # so the filters never funnel the line onto one pitch
-        p0 = moves_table.p("0", ctx)
+        # the repeated note passes every filter every time, and the chain feeds on itself after one; its share among
+        # the fitting moves is held to the song's repeat habit, so the filters never funnel the line onto one pitch
+        r = REPEAT_RATE.get(repeats, REPEAT_RATE["some"])
         rest = sum(w for st, w in zip(options, weights) if st != 0)
-        weights = [w if st != 0 else p0 * rest / max(1e-9, 1 - p0) for st, w in zip(options, weights)]
+        weights = [w if st != 0 else r * rest / (1 - r) for st, w in zip(options, weights)]
     if strong and chord_pcs and any(on_chord) and not all(on_chord):
         mc = sum(w for w, c in zip(weights, on_chord) if c)
         mo = sum(w for w, c in zip(weights, on_chord) if not c)
@@ -668,7 +670,7 @@ def _chord_in_bar(song: rhythm.Song, t: float):
 
 def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, rng: random.Random, habit: str,
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
-           recall=None, step_habit: str = "mixed") -> tuple[list, list, list]:
+           recall=None, step_habit: str = "mixed", repeat_habit: str = "some") -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -760,7 +762,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             third = min(2, int(3 * (t - a0) / max(1e-9, b0 - a0)))
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
-            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim, step_habit)
+            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim, step_habit, repeat_habit)
             midi = midi + step
             move = f"{step:+d}" if step else "0"
             pitches.append(midi)
@@ -787,7 +789,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if here is not None and abs(p - round(p)) < rhythm.NEAR:
                 pcs = {(here[0] + i) % 12 for i in harmony.SHAPES.get(here[1], harmony.SHAPES[""])}
                 if m % 12 not in pcs:
-                    m = min((x for x in range(m - 2, m + 3) if x % 12 in pcs), key=lambda x: (abs(x - m), x), default=m)
+                    near = [x for x in range(m - 3, m + 4) if x % 12 in pcs and (x != pitches[-1] or st == 0)]   # a move stays a move
+                    m = min(near, key=lambda x: (abs(x - m), x)) if near else m
                     idx = scale_index(m, scale)
             pitches.append(m)
         pitches = [min(high, max(low, m)) for m in pitches]
