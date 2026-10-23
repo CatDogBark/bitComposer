@@ -344,7 +344,7 @@ class UpperPartTests(unittest.TestCase):
         self.assertFalse(writer.voiced("+") or writer.voiced(""))
         self.assertEqual(writer.sounding_pcs([(0.0, 1.0, 60.0, "x"), (1.0, 1.0, 62.0, "x")], 0.5), {0})
         self.assertEqual(writer.unclashed(61, [61, 64, 67], {0}), 64)                  # a C# against the tune's C moves to E
-        self.assertEqual(writer.unclashed(61, [61, 64, 67], {2}), 61)                  # nothing a semitone away: stays
+        self.assertEqual(writer.unclashed(61, [61, 64, 67], {3}), 61)                  # nothing a semitone away: stays
         self.assertFalse(writer.FreeManner({"0 1/12 1/2"}, division=4).fits("0 1/12 1/2"))   # a triplet figure off a sixteenth grid
         self.assertTrue(writer.FreeManner({"0 1/12 1/2"}, division=12).fits("0 1/12 1/2"))
 

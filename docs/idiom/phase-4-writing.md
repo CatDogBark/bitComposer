@@ -330,4 +330,23 @@ grid check also changed the free bass and drums (Johnny C. Bad's bass
 186 to 145 notes, its ride 562 to 324 hits: the off-grid figures gone),
 so all twelve free stems were republished. This is the first piece of
 slice 4's question, how a part moves through its tones, which the melody
-needs in full. **Awaiting the ear.**
+needs in full.
+
+**Johnny C. Bad "doing its own thing"** (the listener, 2026-10-22: "having
+a hard time following the tune"; Terra, The Decisive Battle and
+Searching for Friends' chords passed). Measured: the written
+accompaniment sat a semitone from a sounding melody note in 17 % of its
+notes against the song's own 7 %. Two causes. The voicings table holds
+spans where a part sounds no chord tone at all ("+" alone: 4.6 % of the
+games' accompaniment spans, the chord reader's noise where the part
+plays blues colour the reader's shapes do not name; Johnny's own
+accompaniment reads 29 % "other"), and one such draw, repeated by the
+urn, gave six bars of nothing but a ninth. And the writer never looked
+at the tune. Fixed: a written voicing must hold a chord tone (`voiced`;
+"+" only beside one), and a tone that would sit a semitone from what the
+melody or counter-line sounds at that moment moves to the nearest other
+tone of the voicing (`unclashed`; the band-awareness rule the bass has
+for hits, here for pitches; in a generated song the parts written
+earlier are the tune to avoid). Johnny after: clashes 8 % against the
+original's 7 %, no chordless voicing; the four songs' chords rewritten
+and republished. **Awaiting the ear.**
