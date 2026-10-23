@@ -493,6 +493,65 @@ held, phrases all new but the first, mostly level and falling; The
 Decisive Battle dense varied, detached, falling then rising; Searching
 for Friends sparse varied, held; Johnny C. Bad sparse mixed, held. No
 phrase copied a game's (the copy check never ran out its tries).
-**Awaiting the ear.** What to listen for: whether the tune belongs over
-the real band, whether its phrases breathe and end, and whether it
-rings as FFVI or as a generator.
+What to listen for: whether the tune belongs over the real band,
+whether its phrases breathe and end, and whether it rings as FFVI or as
+a generator.
+
+**Heard** (the listener, 2026-10-22): "definitely sounds like a
+generator, doesn't belong over the real band in any of them, closer to
+random than anything else; not close to even being a melody; the voice
+is right and sometimes the notes hit, but it's kinda just doing
+whatever." **Measured**, the song's own tune against the written one,
+four songs: repeated notes 1 to 19 % of moves against 50 to 64 %; steps
+of a tone or less 35 to 74 % against 83 to 92 %; leaps over a fourth 6
+to 21 % against 0 to 4 %; a phrase's range 5 to 12 semitones against 3
+to 7; strong-beat notes on chord tones 58 to 68 % against 40 to 60 %;
+and no motifs: Terra's own tune echoes an earlier bar 84 % of the time
+and a two-bar stretch 74 %, the written 49 % and 15 %. The cause was
+the architecture: a tune drawn one interval at a time under filters
+(register, scale on the beat, the chords' semitones, the contour)
+collapses onto the repeated note, which passes every filter every time,
+and never builds a motif, since the urn remembered intervals. The bass
+and the drums are written as bar figures through the urn, drawn, kept
+and returned to, and that is the mechanism of a tune too.
+
+**Rewritten as bar cells through the urn** (2026-10-22). A bar's cell
+is its rhythm and its intervals (`Cell`: onsets, intervals, the first
+note's offset from the bar's chord root, the moves as scale steps). For
+each bar the urn (`Urn`, on a recall table over the games' tune cells,
+`rhythm.melody_cell_units`, by the song's echo habit drawn once a song)
+keeps the bar before's cell, returns to an earlier one or makes a new
+one; a recalled passage goes on with its next bar (CONTINUE 0.8); a cell
+that comes back is re-rooted on the bar's chord, its moves as scale
+steps (a sequence), its strong beats on the chord's tones. A new cell's
+rhythm comes from the melody's bar table and its notes from the moves
+table, each move drawn among the moves that fit (`draw_move`: the
+register, the scale on the beat, off the chords' semitones, toward the
+contour when the line strays CONTOUR_RANGE 5 from its third) with the
+table's weights, chord tones on the beat given CHORD_ON_BEAT 0.65 of the
+mass, and the repeated note's share held to the song's repeat habit
+(REPEAT_RATE rare 2 %, some 12 %, many 35 %: the games' quartiles are
+5 % and 30 %, the median 13 %), drawn once a song like the stepwise
+habit (the moves table's shape gained the habit: part+mode+habit+previous).
+The phrases over the form, their relation, contour and ending, the
+ending's degree, the copy check and the articulation as before. The
+register is the tune's whole ambitus (its 10th to 90th percentile had
+held Terra to seven semitones). Six rounds of measuring, each caught by
+the numbers before a note was heard: the chain's stickiness on the
+repeated note; the register; the echoed cells landing off the chord
+(15 to 27 % of their strong beats on chord tones, fixed by snapping to
+the bar's chord: 69 %); the snapping creating repeats (kept a move a
+move); the one-note first beat of an echoed cell; the urn's "earlier"
+picking a random bar where a tune continues a passage.
+
+**Measured after** (the song's own → the written, seed 1): strong-beat
+chord tones Terra 68 → 82 %, Decisive 67 → 69, Friends 67 → 68, Johnny
+58 → 49; repeated notes 2 → 17, 1 → 38 (Decisive drew the "many" repeat
+habit), 6 → 6, 19 → 5; leaps over a fourth 8 → 8, 21 → 2, 7 → 8, 6 → 22
+(Terra and Johnny drew "leaping"); a phrase's range 10 → 10, 12 → 12,
+7 → 6, 5 → 10; two-bar echoes Terra 74 → 19 (from 2), the others near
+their own. The written tunes now sit inside the games' bands on every
+measure; where they sit far from the song's own it is a habit the song
+drew (Decisive's many repeats, Terra's leaps), which is the free design
+and will be said beside each song. The melody stems republished.
+**Awaiting the ear.**
