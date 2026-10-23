@@ -822,6 +822,78 @@ def melody_cell_units(songs) -> list:
     return out
 
 
+REGISTER_BIN = 4                     # semitones: a part's register (its notes' 10th and 90th percentiles) is kept to this grain
+TEMPO_BIN = 5                        # beats a minute: a song's tempo is kept to this grain
+
+
+def register_units(songs) -> list:
+    """Each pitched part of each song as a unit: its outcome the register it
+    plays in, "low-high" (midi, the part's notes' 10th and 90th percentiles,
+    REGISTER_BIN semitones a step); its values the part. What a song written
+    with no original draws a part's register from."""
+    out = []
+    for s in songs:
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            pitched = sorted(n[2] for n in ns if not math.isnan(n[2]))
+            if len(pitched) < 8:
+                continue
+            if role == R.MELODY:                           # a tune uses its extremes: the melody writer's register is the whole ambitus
+                low, high = pitched[0], pitched[-1]
+            else:
+                low, high = pitched[int(0.1 * (len(pitched) - 1))], pitched[int(0.9 * (len(pitched) - 1))]
+            out.append(tables.Unit(s.sid, s.game, f"{int(round(low / REGISTER_BIN)) * REGISTER_BIN}-{int(round(high / REGISTER_BIN)) * REGISTER_BIN}",
+                                   {"part": role}))
+    return out
+
+
+def key_units(songs) -> list:
+    """Each song as a unit: its outcome its key, "tonic mode" (the tonic a pitch class)."""
+    return [tables.Unit(s.sid, s.game, f"{s.tonic} {s.mode}", {"part": "song"}) for s in songs if s.tonic is not None]
+
+
+def tempo_units(songs) -> list:
+    """Each song as a unit: its outcome its tempo to TEMPO_BIN beats a minute, its value the band."""
+    return [tables.Unit(s.sid, s.game, str(int(round(s.bpm / TEMPO_BIN)) * TEMPO_BIN), {"part": "song", "tempo": band(s.bpm)}) for s in songs if s.bpm]
+
+
+def weight_units(songs) -> list:
+    """Each pitched part of each song as a unit: its outcome its weight in the band (WEIGHTS), its value the part."""
+    return [tables.Unit(s.sid, s.game, w, {"part": role}) for s in songs for role, w in part_weights(s).items()]
+
+
+def form_size_units(songs) -> list:
+    """Each song's form as a unit: its outcome how many parts it has (to 12), its value the part (form)."""
+    return [tables.Unit(s.sid, s.game, str(min(len(s.parts), 12)), {"part": "form"}) for s in songs if s.parts]
+
+
+SOUND_BIN = 0.1                      # the grain a part's sounded share is kept to
+
+
+def sounded_share(notes) -> float | None:
+    """The share of its gap to the next note a part's note sounds, the median
+    over the part; None where no two notes stand apart."""
+    line = sorted(n for n in notes if not math.isnan(n[1]))
+    shares = [min(1.0, n[1] / (m[0] - n[0])) for n, m in zip(line, line[1:]) if m[0] - n[0] > NEAR]
+    return statistics.median(shares) if shares else None
+
+
+def sound_units(songs) -> list:
+    """Each pitched part of each song as a unit: its outcome the share of its
+    gap a note sounds (to SOUND_BIN), its value the part. What a song written
+    with no original gives a part's note lengths."""
+    out = []
+    for s in songs:
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            share = sounded_share(ns)
+            if share is not None:
+                out.append(tables.Unit(s.sid, s.game, f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role}))
+    return out
+
+
 def melody_recall_units(songs) -> list:
     """What each tune bar is to its song so far (same, earlier, new): the urn's shares, by part and echo habit."""
     return tables.recall_units(melody_cell_units(songs))
@@ -1103,6 +1175,17 @@ def length_units(songs, level: str = "part") -> list:
     return out
 
 
+def length_habit_units(songs, level: str = "part") -> list:
+    """Each song's form as a unit: its outcome its part-length habit (PART_LENGTHS: the median part's length), its value the part (form)."""
+    out = []
+    for s in songs:
+        parts = level_parts(s, level)
+        if parts:
+            out.append(tables.Unit(s.sid, s.game, next(name for top, name in PART_LENGTHS if statistics.median(p[1] for p in parts) <= top),
+                                   {"part": "form"}))
+    return out
+
+
 def letters_units(songs, level: str = "part") -> list:
     """Each song's form as one unit: its outcome the parts' letters in order
     (A B B C B B C D D E); its values the part (form), the meter, the tempo
@@ -1264,6 +1347,21 @@ def parts_units(songs) -> list:
             has = any(r in roles for r in CHORDAL) if part == "chordal" else part in roles
             out.append(tables.Unit(s.sid, s.game, "yes" if has else "no",
                                    {"part": part, "band": min(len(s.notes) - (part in s.notes), 4), "tempo": band(s.bpm)}))
+    return out
+
+
+def balance_units(songs) -> list:
+    """Each song as a unit: its outcome its band with each pitched part's
+    weight in it ("accompaniment=main bass=half drums melody=half"); its
+    value the part (arrangement). What a song written with no original
+    draws its band and balance from, as one of the game's songs has them."""
+    out = []
+    for s in songs:
+        if not s.notes:
+            continue
+        weights = part_weights(s)
+        out.append(tables.Unit(s.sid, s.game, " ".join(f"{role}={weights[role]}" if role in weights else role for role in sorted(s.notes)),
+                               {"part": ARRANGEMENT}))
     return out
 
 

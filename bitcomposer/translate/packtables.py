@@ -60,6 +60,15 @@ KEPT = {
     "voices": ("rhythm", "voices_units", {}, ("part", "band"), False, False, "how many voices a song uses"),
     "doubles": ("rhythm", "double_units", {}, ("part",), False, False, "what a song's double voices double, and how"),
     "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a second bass voice does beside the line"),
+    "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
+    "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
+    "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),
+    "weights": ("rhythm", "weight_units", {}, ("part",), False, False, "a part's weight in the band (minor, half, main)"),
+    "sizes": ("rhythm", "form_size_units", {}, ("part",), False, False, "how many parts a song's form has"),
+    "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
+    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each pitched part's weight in it, drawn once a song"),
+    "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
+    "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
 
