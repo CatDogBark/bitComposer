@@ -1564,3 +1564,64 @@ Open from this round: FFVI's voices share a pitch class at an octave in
 a quarter of its two-voice onsets (the doubling layer's intervals) where
 the writing has one in a hundred; the extra voice's interval steadiness
 still stands open from round 20.
+
+### The exit checks, run (2026-10-24; checks only, nothing in the writer changed)
+
+Set 15 passed the owner's ear ("almost every song is good now, the misses
+are acceptable"), so two of the exit criteria were measured on its twenty
+songs (seeds 1-20, both switches). The scripts sit beside the others on
+Ragnarok (`fourbar_check.py`, `nearest_check.py`, `nearest_tables.py`,
+`octave_check.py`); the games' tables they fit are cached under
+`~/diags/bitcomposer/idiom/phase4/nearest/tables/`.
+
+- **No four-bar phrase matches a game's: passed.** Every part's line
+  (melody, counter, bass, accompaniment), windows of four bars at every
+  bar as rhythm in twelfths and intervals, against the tune-copy reference
+  set (every game's four-bar tune phrases) and against FFVI's own parts
+  from the readings: no exact match in 461 melody, 322 counter, 437 bass
+  and 425 accompaniment windows of six notes or more. Forty-two melody
+  windows share a four-bar rhythm with an FFVI tune on other pitches. At
+  two bars the backing matches FFVI exactly fourteen times (bass 7 of
+  307, accompaniment 7 of 409): stock cells, an alternating bass from
+  Returners, arpeggio figures from Cyan and the Ending Theme.
+- **Songs written with FFVI's vocabulary fall nearest FFVI: passed, 20 of
+  20.** Each of the 35 games with twelve readings or more got its own 67
+  tables (the pack's KEPT set, `packtables.build`); each written song was
+  rendered once, read back by the readers as the measures are, its units
+  counted table by table, and every game's tables scored them (bits a
+  unit, summed over the units, summed over the tables). FFVI is nearest
+  for every song. By family: the figure tables (the upper figures, bass,
+  drums, the kit's groups) put FFVI first in 11 songs and second in the
+  other 9 (Super Ghouls'n Ghosts first there, a game of 23 songs whose
+  thin tables score common bars high); the plan tables first in 8, median
+  rank 2; the tune's tables first in only 5, median rank 5.5 (Bahamut
+  Lagoon first in 5). Table by table, the `rhythm` figures put FFVI first
+  in 20 of 20, `drums` 15 of 16, `bass` 14 of 19; `moves`, the tune's
+  bulk (137 units a song), puts it first in 5 of 20 at a mean rank of 9.
+  The remaining tune tables and nearly every plan table hold one to
+  seven units a song, and their rankings are not a measure: the winners
+  are the games with the smallest vocabularies (Jurassic Park Part 2's
+  one-outcome tables win `balance`, `layer_samples` and `theme_doubling`
+  outright), the known bias of a likelihood toward low-entropy tables on
+  common outcomes. A fair per-table distance would score each song
+  against the game's own songs' spread under its table; not built.
+  Reading: the backing and the plan are FFVI's by the tables; the tune is
+  where the songs are least FFVI, which is where the owner's ear put it.
+- **The octave, measured while the writing items were listed.** FFVI's
+  voices beside a line share a pitch class in 0.286 of the two-voice
+  onsets where the voices' rhythms differ (an octave apart in 15 %, the
+  same midi in 8 %) and in 0.122 where they double; the written songs
+  0.000 and 0.009. The layers table has the word for it (`apart +0
+  like`: bass 31 %, counter 21 % of second voices sit in the line's own
+  register), but the voice beside the line takes a tone of the voicing
+  up from its own, never the line's pitch an octave off. The word that
+  would carry both this and the voice's interval steadiness (round 20,
+  0.65 against 0.27): the voice's interval to the line at each onset,
+  drawn in context, in place of the rank's tone.
+
+Not run: the spread over twenty seeds against the game's own (slice 1's
+distinct-figures and ostinato measure, over the whole song); the blind
+pick rate, on hold by the owner's call until a game he does not know by
+heart; the nearest-game test in the other direction, which needs a second
+game's pack (Mega Man X, after phase 5 by his call). The owner holds the
+writer where it is for now and has ideas of his own to put first.
