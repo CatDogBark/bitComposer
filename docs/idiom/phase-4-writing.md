@@ -1696,3 +1696,65 @@ word, not by `harness.relation` on its notes: the mask's coincidence
 makes nearly every written voice beside a line a "doubling" by the
 reader's rule, and a first after-measure had ranked the voices by note
 count and read a doubling voice's notes as an apart voice's.
+
+### Round 24: a sample given a job the game never gave it (2026-10-24, from the owner's notes on set 17)
+
+Five new seeds (21 to 25, Song Check 17) on round 23's writing. The owner
+heard a staccato pluck in Whole 22's bass and a chirp in Whole 24's
+counter, and Whole 23 had no drums though its plan played them in 32 of 46
+bars. Three drawing faults and a kit rule of mine, all one family: a
+sample, or a bar, given a job the game never gave it.
+
+- **The pair of samples by halves, from another part, out of reach.**
+  Whole 22's second bass voice played sample 48bab384c7 at midi 54 to 68;
+  FFVI plays it at 36 to 48 (Dancing Mad's low second bass). The pair
+  table had drawn Dancing Mad's pair, the pack lacked its first sample,
+  and the second was applied anyway under the line's own choice, at the
+  layer word's +8 from a different song. Whole 24's second counter voice
+  played 5d5fe2fd48 at 80 to 92; FFVI plays it at 64 to 76 (a mallet it
+  gives Kefka's, Strago's and Gogo's tunes). The pair table counted no
+  counter-lines (`layer_sample_units` looked at the chord parts and the
+  bass), so the draw fell through to the root and took Under Martial Law's
+  accompaniment pair. Fixed as faults: `pair_for` draws from the part's
+  own pairs alone and only where the pack holds both samples; the pair
+  applies only where each sample reaches its voice's register by the
+  ranges table (`reaches`, REACH at both ends), else the second voice's
+  sample is chosen as the line's is, by its register and speed
+  (`second_register`, `part_speed(second=True)`); the pair table counts
+  the counter-line and the tune. After: Whole 22's second bass on
+  cab1413363, Whole 24's second counter on 72f0a1e88e, both FFVI samples
+  of those registers.
+- **A chain floored on a context with one outcome.** Whole 23's kit habit,
+  "sparse repeating", has one FFVI song in triple feel, and that song's
+  counted kit bars are all rests; the drum chain, floored on the habit,
+  drew rest 46 times. Fixed as a fault in `tables.Table.draw`
+  (`floor_outcomes`, FLOOR_OUTCOMES 2): a chain's floor steps down to the
+  deepest level that holds a choice. A first cut stepped down from any
+  one-song context (FLOOR_SONGS) and re-densified every part whose habit
+  one song had (Whole 24's counter from 46 notes to 117); a one-song
+  context with bars of its own is the game's vocabulary and stays. With
+  it the figure tables' shape puts the habit before the feel
+  (`packtables.FIGURE`), so a step-down lets the feel go and keeps the
+  habit. Whole 23's kit now plays 11 hits in 7 bars: FFVI's sparse
+  repeating kit, which is what the habit word says, under a plan whose
+  presence word has the drums in 32 bars (two words drawn apart, noted).
+- **The kit's rim was a melody instrument.** Round 17 filled the rim slot
+  with the busiest sample the drum namer calls "other"; in FFVI that is
+  the mallet above, a tune in sixteen songs with a few drum-role notes.
+  No FFVI figure strikes the rim letter, so it never sounded in a Song
+  Check; it reached the ear only through the pair fallback. Fixed:
+  `pack.drum_uses`, a kit slot takes only a sample whose drum-role notes
+  are half its notes or more; the rim is now 63d84c8c76, a drum. The thin
+  pack was rebuilt from the SPCs (69 tables; the pair table 96 units of 64
+  songs, 28 of them counter-lines).
+
+**Measured after, seeds 1 to 30.** Of 29 second voices, 7 share the line's
+sample (no pair, the fit's own choice) and, by the most-voted range of
+their sample, 13 still sit more than REACH outside it at one end. Those
+are not the samples' fault: the voices' registers are. A second voice's
+register is the line's at the layer word's offset, and the offset is drawn
+without regard to where the line sits, so a counter line at 64 to 76 with
+"apart +16" puts its voice at 80 to 92, where FFVI plays nothing; the fit
+then takes the least bad sample. The word that would carry it: the layer
+offset conditioned on the line's register, or the voice's register as a
+word of its own. Not built; the owner's call. Open from before stands.

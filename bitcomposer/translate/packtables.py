@@ -26,7 +26,8 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # their long tail (a bar one song played) wholly to the cell floor, whose runs the
                                      # manner refuses, so a "new" bar was mostly a common bar again (the whole songs'
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
-FIGURE = ("part", "meter", "feel", "habit", "previous")   # the figure tables' shape: the song's feel and the habit before the chain (writer.SHAPE)
+FIGURE = ("part", "meter", "habit", "feel", "previous")   # the figure tables' shape: the habit, then the song's feel, before the chain (writer.SHAPE);
+                                                           # a floor stepping down from a one-song context lets the feel go first and keeps the habit
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
 # mixture, what the table says), in the record's order

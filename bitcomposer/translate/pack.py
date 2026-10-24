@@ -158,10 +158,23 @@ def kit_from_names(uses: Counter, labels: dict) -> dict:
     return out if "kick" in out and "snare" in out else {}
 
 
+def drum_uses(g: Gathered) -> Counter:
+    """The samples the game plays as drums more than not: {sample key: drum-role notes} for those whose drum-role notes
+    are at least half their notes over every role. A sample the namer could not place ("other") is a drum only if the
+    game treats it as one: FFVI's mallet sample, a melody instrument in sixteen songs with a few drum-role notes, had
+    taken the kit's rim slot as the busiest "other"."""
+    drum = g.uses.get(R.DRUMS, Counter())
+    total = Counter()
+    for counts in g.uses.values():
+        total.update(counts)
+    return Counter({k: n for k, n in drum.items() if 2 * n >= total[k]})
+
+
 def kit_by_name(g: Gathered, sounds: dict) -> dict:
     """The kit from the drum namer's names of the game's drum samples (as
-    the game plays them: `sounds`), kit_from_names; {} where it names too
-    few."""
+    the game plays them: `sounds`), kit_from_names over the samples the
+    game plays as drums (drum_uses); a slot the names leave empty the pack
+    format fills from its palette; {} where it names too few."""
     from . import drums
     labels = {}
     for k, (pcm, rate, *more) in sounds.items():
@@ -172,7 +185,7 @@ def kit_by_name(g: Gathered, sounds: dict) -> dict:
         except Exception:                                   # a sound the namer cannot measure is left unnamed
             labels[k] = "none"
     g.names = labels
-    return kit_from_names(g.uses.get(R.DRUMS, Counter()), labels)
+    return kit_from_names(drum_uses(g), labels)
 
 
 def kit(g: Gathered, sounds: dict) -> dict:

@@ -193,7 +193,7 @@ class Table:
         return self.conditionings.index("previous") if "previous" in self.conditionings else len(self.conditionings)
 
     def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True,
-             floor_k: int | None = None, min_songs: int = 0) -> str:
+             floor_k: int | None = None, min_songs: int = 0, floor_outcomes: int = 0) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
         n / (n + t) else the coarser level's; below the root, the floor
@@ -207,7 +207,14 @@ class Table:
         weight given to anything coarser (a bass habit's bars never mix
         with every habit's; a part's register never with every part's).
         `min_songs`: a finer level than the floor with fewer songs than
-        this is passed over (the data does not reach it)."""
+        this is passed over (the data does not reach it). `floor_outcomes`:
+        the floor itself steps down to the deepest level holding that many
+        outcomes (a figure chain floored on a context with one outcome
+        would write that outcome alone: a kit of rests). A one-song context
+        with bars of its own stays the floor: those bars are the game's."""
+        if floor_k is not None and floor_outcomes:
+            while floor_k > self.covers and len(self.votes.get(context[:floor_k]) or {}) < floor_outcomes:
+                floor_k -= 1
         coarsest = None
         for k in range(len(context), self.covers - 1, -1):
             level = self._level(context[:k])
@@ -287,6 +294,8 @@ FLOOR = ("floor",)                   # the shape that is the floor model alone, 
 CACHE = "cache"                      # the mark on a shape's name for its Cache mixture
 RECALL = ("same", "earlier", "new")  # what a unit is to its song so far (Cache)
 NEW_TRIES = 20                       # draws a Cache makes for an outcome new to the song before taking one it played
+FLOOR_OUTCOMES = 2                   # outcomes a floor level needs: a context with one outcome is no vocabulary to draw from, and a chain
+                                     # floored on it wrote that outcome alone (a kit habit one triple-feel song had, all rests: no drums for a song)
 RECALL_SHAPE = ("part", "habit")     # what the recall shares are conditioned on (the values a unit has of these)
 
 
@@ -393,11 +402,11 @@ class Cache:
         floor_k = self.table.chain_floor                    # the bar before may be let go when thin; the part, meter and habit never
         out = None
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES)
             if out not in cache and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES)
             if keep is None or keep(out):
                 return out
         return out

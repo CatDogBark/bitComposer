@@ -107,12 +107,19 @@ said otherwise. Counting code: `translate/rhythm.py` and
   two-voice bass is a sustained line under a staccato voice; the part's one
   share had given both the same).
 - **layer_samples** — the samples a layered part's line and second voice
-  play, as a pair of the pack's sample names. Drawn once a song at
-  rendering: the line and the second voice take the game's own pair where
-  the pack holds both samples (FFVI's bass: a long sustained sample under
-  a short one, the same long sample in ten of its thirteen two-voice
-  songs); on one sample for both, the busy voice had played on the long
-  bass.
+  play, as a pair of the pack's sample names, for every part the plan
+  gives layers (the chord parts, the counter-line, the tune, the bass).
+  Drawn once a song at rendering, from the part's own pairs alone and
+  taken whole or not at all: the line and the second voice take the game's
+  pair where the pack holds both samples and each reaches its voice's
+  register by the ranges table; otherwise the second voice's sample is
+  chosen as the line's is, by its own register and speed (FFVI's bass: a
+  long sustained sample under a short one, the same long sample in ten of
+  its thirteen two-voice songs). On one sample for both, the busy voice
+  had played on the long bass; a pair applied by halves had put Dancing
+  Mad's low second-bass sample an octave and a half above its range, and
+  a counter-line with no pairs of its own had drawn an accompaniment's
+  (round 24).
 - **voice_intervals** — a voice beside the line (apart or alternating), at
   each onset it strikes WITH the line: its interval from the line's note in
   scale steps (7 an octave, 2 a third, signed), by the part, the relation

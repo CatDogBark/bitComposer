@@ -500,6 +500,48 @@ class NewTablesTests(unittest.TestCase):
         # smoothing leaves the table's other outcome a few percent at every draw: the seed is one where the words' own answers come up)
         self.assertTrue(all(int(m) != 60 for a, b, m, v in notes))
 
+    def test_a_floor_steps_down_from_a_one_outcome_context(self):
+        """A chain floored on a habit context with one outcome draws that outcome alone (all rests: a song without drums);
+        with FLOOR_OUTCOMES the floor steps down to a level that holds a choice. A one-song context with bars of its own stays."""
+        from bitcomposer.translate import tables
+        units = [tables.Unit("s1", "g", "-", {"part": "drums", "habit": "thin", "previous": rhythm.START})] * 6
+        units += [tables.Unit(f"s{i}", "g", "0:K 2:S", {"part": "drums", "habit": "full", "previous": rhythm.START}) for i in range(2, 6)]
+        t = tables.Table(("part", "habit", "previous"), "x").fit(units)
+        rng = random.Random(1)
+        floored = {t.draw(("drums", "thin", rhythm.START), rng, floored=False, floor_k=2) for _ in range(30)}
+        self.assertEqual(floored, {"-"})
+        stepped = {t.draw(("drums", "thin", rhythm.START), rng, floored=False, floor_k=2, floor_outcomes=tables.FLOOR_OUTCOMES) for _ in range(30)}
+        self.assertIn("0:K 2:S", stepped)
+        self.assertEqual(tables.FLOOR_OUTCOMES, 2)
+        units2 = [tables.Unit("s1", "g", o, {"part": "drums", "habit": "own", "previous": rhythm.START}) for o in ("-", "0:K", "0:K 2:S")] * 3
+        t2 = tables.Table(("part", "habit", "previous"), "x").fit(units2 + units[6:])
+        stays = {t2.draw(("drums", "own", rhythm.START), rng, floored=False, floor_k=2, floor_outcomes=tables.FLOOR_OUTCOMES) for _ in range(40)}
+        self.assertTrue(stays <= {"-", "0:K", "0:K 2:S"})                                  # one song, three bars: its own vocabulary, kept
+
+    def test_the_pair_of_samples_applies_whole_and_within_reach(self):
+        """layer_samples counts the counter-line's pairs too; a pair is taken only from the part's own pairs and only where the
+        pack holds both samples; a kit slot takes only a sample the game plays as a drum."""
+        from bitcomposer.translate import tables, pack
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(2)]
+        line = [(4.0 * k + i, 0.9, 72.0, "aaaaaaaaaa1") for k in range(2) for i in range(4)]
+        other = [(4.0 * k + i + 0.5, 0.4, 60.0, "bbbbbbbbbb2") for k in range(2) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"counter": line + other}, sid="s", game="g")
+        s.voice_notes = {3: ("counter", line), 4: ("counter", other)}
+        self.assertEqual([(u.values["part"], u.outcome) for u in rhythm.layer_sample_units([s])], [("counter", "saaaaaaaaaa sbbbbbbbbbb")])
+        pairs = tables.Table(("part",), "layer_samples", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "sline ssecond", {"part": "accompaniment"}) for i in range(3)])
+        rng = random.Random(1)
+        self.assertIsNone(whole.pair_for({"layer_samples": pairs}, "counter", {"sline", "ssecond"}, rng))      # no counter pairs: none, not another part's
+        self.assertIsNone(whole.pair_for({"layer_samples": pairs}, "accompaniment", {"ssecond"}, rng))         # the pack lacks the line's: none, not half
+        self.assertEqual(whole.pair_for({"layer_samples": pairs}, "accompaniment", {"sline", "ssecond"}, rng), ("sline", "ssecond"))
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "36-48", {"part": "slow"}) for i in range(3)])
+        self.assertFalse(whole.reaches(ranges, "slow", (52, 64), rng))                                          # a bass sample under a voice an octave above it
+        self.assertTrue(whole.reaches(ranges, "slow", (40, 52), rng))
+        self.assertTrue(whole.reaches(ranges, "unknown", (80, 92), rng))
+        g = pack.Gathered(game="g")
+        g.uses["drums"].update({"kick": 50, "mallet": 57}); g.uses["melody"].update({"mallet": 300}); g.uses["counter"].update({"mallet": 347})
+        self.assertEqual(pack.drum_uses(g), {"kick": 50})
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""

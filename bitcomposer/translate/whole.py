@@ -1036,14 +1036,51 @@ def sample_fits(ranges, name: str, register: tuple, rng: random.Random) -> bool 
     return lo - 6 <= centre <= hi + 6
 
 
-def part_speed(plan: Plan, written: dict | None, role: str) -> float:
-    """A part's fastest bar as written, notes a second on its line and the voices doubling it (a layered part's own second
-    voice plays the pair's other sample)."""
+def part_speed(plan: Plan, written: dict | None, role: str, second: bool = False) -> float:
+    """A part's fastest bar as written, notes a second on its line and the voices doubling it, or (`second`) on the
+    voices beside the line, which play their own sample."""
     if not written or role not in written:
         return 0.0
-    second = {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}
-    counts = Counter((n[3], int(n[0] // METER)) for n in written[role].notes if n[3] not in second)
+    beside = {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}
+    counts = Counter((n[3], int(n[0] // METER)) for n in written[role].notes if (n[3] in beside) == second)
     return max(counts.values(), default=0) * plan.bpm / (60.0 * METER)
+
+
+def second_register(plan: Plan, role: str) -> tuple:
+    """The register of a layered part's first voice beside the line, as write() gives it: the part's at the layer word's
+    offset (apart), or the part's own (alternating)."""
+    low, high = plan.registers[role]
+    for w in layers_of(plan, role):
+        rel = layer_of({"layer": w})
+        if rel[0] != "doubling":
+            offset = rel[1] if rel[0] == "apart" else 0
+            return (max(24, low + offset), min(100, high + offset))
+    return (low, high)
+
+
+def reaches(ranges, rid: str, register: tuple, rng: random.Random) -> bool:
+    """Whether a sample's game-played range (the ranges table) comes within REACH of a register at both ends; True where
+    the table knows nothing of the sample."""
+    if ranges is None or ranges.songs.get((rid,), 0) == 0:
+        return True
+    lo, hi = (int(x) for x in ranges.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
+    return register[1] - hi <= REACH and lo - register[0] <= REACH
+
+
+def pair_for(models: dict | None, role: str, own: set, rng: random.Random) -> tuple | None:
+    """The game's own pair of samples for a layered part (layer_samples), drawn from the part's pairs alone and only
+    where the pack holds both: (line's, second's) as the pack's own ids; None otherwise. A pair drawn from another
+    part's (a counter-line with no pairs of its own took an accompaniment's) or applied by halves (the pack lacking the
+    line's sample, the second's taken anyway) had put a bass sample an octave and a half above where the game plays it
+    (Song Check 17's Whole 22, Whole 24)."""
+    t = (models or {}).get("layer_samples")
+    if t is None:
+        return None
+    t = t.table if hasattr(t, "table") else t
+    if t.songs.get((role,), 0) == 0:
+        return None
+    pair = t.draw((role,), rng, floored=False, floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS).split()
+    return (pair[0], pair[1]) if len(pair) == 2 and pair[0] in own and pair[1] in own else None
 
 
 def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random, models: dict | None = None, written: dict | None = None) -> dict:
@@ -1073,13 +1110,19 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         tonal = sorted(n for n in own if n not in drums)
         out[role] = make(best_sample(ranges, names, plan.registers[role], rng, raw, tonal, speed=part_speed(plan, written, role), models=models)
                          if role in plan.registers else rng.choice(names))
-        # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples), where the
-        # pack holds them; the second voice on the line's sample otherwise
-        if any(not w.startswith("doubling") for w in layers_of(plan, role)) and "layer_samples" in models_or_empty(models):
-            pair = _draw(models, "layer_samples", (role,), rng).split()   # the pack's own sample ids (`own`), registered as pack_name_id
-            if len(pair) == 2 and pair[0] in own:
+        # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples) where the
+        # pack holds both and each reaches its voice's register; else the second voice's sample by its own register and
+        # speed, as the line's is chosen
+        if any(not w.startswith("doubling") for w in layers_of(plan, role)) and role in plan.registers:
+            reg2 = second_register(plan, role)
+            pair = pair_for(models, role, own, rng)
+            second = None
+            if pair is not None and reaches(ranges, pair[0], plan.registers[role], rng) and reaches(ranges, pair[1], reg2, rng):
                 out[role] = make(pair[0])
-            out[f"{role}:second"] = make(pair[1]) if len(pair) == 2 and pair[1] in own else out[role]
+                second = make(pair[1])
+            if second is None:
+                second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=part_speed(plan, written, role, second=True), models=models))
+            out[f"{role}:second"] = second
     floors = {}                                             # each chosen sample's shortest note in the game (sample_lengths): a note's floor on it
     for key, chosen in list(out.items()):
         if isinstance(chosen, tuple):

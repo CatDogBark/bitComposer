@@ -1268,8 +1268,8 @@ def layer_sample_units(songs) -> list:
     for both, the busy voice had played on the long bass (2026-10-23)."""
     out = []
     for s in songs:
-        for role in UPPER + (R.BASS,):
-            voices = part_voices(s, role)
+        for role in UPPER + (R.COUNTER, R.MELODY, R.BASS):   # every part the plan gives layers (the counter-line had no pairs of its
+            voices = part_voices(s, role)                   # own, and a draw for it fell through to the root: an accompaniment pair)
             if len(voices) < 2:
                 continue
             line = line_voice(voices, role)
