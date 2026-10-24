@@ -1393,3 +1393,25 @@ go.
   four cymbal hits or more, eighteen such bars of 415; after: none.
 - Song Check 10 is written from this: the first set on FFVI's own snare
   and cymbal.
+
+### Round 18: the second line's tempo and feel, the layered part's samples (2026-10-23, from the owner's note on set 10)
+
+Whole 03's second bass line went "super fast": a 22-strike bar, Dancing
+Mad's tremolo bass, which FFVI plays at 60 BPM (5.5 notes a second, its
+fastest bass voice) drawn into a 115 BPM song at 10.5 a second, on the
+long sustained bass sample. Two words were missing.
+
+- **`second_figures` by feel and tempo.** The second line's table had been
+  conditioned on the line's density and figure only; it is counted on
+  FFVI's thirteen two-voice basses, so Dancing Mad's 48 tremolo bars were
+  a large share of its pool. Now (part, feel, tempo band, density, line).
+  Twenty songs' fastest second bass line: 2.3 notes a second.
+- **`layer_samples`.** FFVI's layered bass plays on two samples, the
+  sustained line on a long one (the same sample in ten of thirteen songs)
+  and the busy voice on a short one; the writer had given a part one
+  sample a song. The pair is counted once a song per layered part (the
+  line's and the second voice's most-played samples, as the pack names
+  them) and drawn at rendering; the second voice's notes go to its own
+  sample in the score and the stems (`samples_for`, `score_of`). Set 11's
+  layered basses: the long sample under the short one, as FFVI pairs them.
+- The pack: 65 tables. Song Check 11 is written from this.

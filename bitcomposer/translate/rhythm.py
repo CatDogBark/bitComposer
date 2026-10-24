@@ -1142,10 +1142,43 @@ def second_figure_units(songs) -> list:
             others = [n for v, ns in voices.items() if v != line for n in ns]
             key = (lambda struck, a: figure(struck, a, s)) if role == R.BASS else (lambda struck, a: pattern(p for p, _ in struck))
             line_bars = {k: key(struck, a) for k, a, struck in numbered_bars_of(s, role, voices[line])}
+            tempo, feel = band(s.bpm), song_feel(s)
             for k, a, struck in numbered_bars_of(s, role, others):
                 if line_bars.get(k, "-") != "-":
                     out.append(tables.Unit(s.sid, s.game, key(struck, a) if struck else "-",
-                                           {"part": role, "density": density_bin(len(line_bars[k].split())), "line": line_bars[k]}))
+                                           {"part": role, "feel": feel, "tempo": tempo, "density": density_bin(len(line_bars[k].split())), "line": line_bars[k]}))
+    return out
+
+
+def sample_id(key: str) -> str:
+    """A reading's sample key as a pack names the sample (pack.voice_of): "s" and its first ten characters."""
+    return "s" + key[:10]
+
+
+def layer_sample_units(songs) -> list:
+    """Each layered part of each song (two voices or more, the drums left
+    out) as a unit: its outcome the samples its line and its second voice
+    play, as a pair of the pack's sample names ("sa692eac0a6 sb34cb55c14"),
+    each voice's the sample it plays most; its value the part. Drawn once
+    a song: FFVI's two-voice bass is a long sustained sample under a short
+    one, the same long sample in ten of its thirteen songs; on one sample
+    for both, the busy voice had played on the long bass (2026-10-23)."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.BASS,):
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
+            keys = []
+            for v in (line, other):
+                played = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
+                if not played:
+                    break
+                keys.append(sample_id(played.most_common(1)[0][0]))
+            if len(keys) == 2:
+                out.append(tables.Unit(s.sid, s.game, " ".join(keys), {"part": role}))
     return out
 
 

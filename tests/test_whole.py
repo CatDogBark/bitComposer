@@ -296,7 +296,8 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(patterns, {"0 1/2 1 3/2 2 5/2 3 7/2"})                                 # the line's bar, not the voices merged
         units = rhythm.second_figure_units([s])
         self.assertEqual(len(units), 4)
-        self.assertEqual((units[0].outcome, units[0].values), ("0 1 2 3", {"part": "accompaniment", "density": "7-9", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        self.assertEqual((units[0].outcome, units[0].values), ("0 1 2 3", {"part": "accompaniment", "feel": "duple", "tempo": rhythm.band(120.0), "density": "7-9", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        self.assertEqual([u.outcome for u in rhythm.layer_sample_units([s])], ["sa sa"])      # both voices on sample "a" here
         self.assertEqual([rhythm.density_bin(n) for n in (1, 3, 4, 6, 7, 9, 10, 24)], ["1-3", "1-3", "4-6", "4-6", "7-9", "7-9", "10+", "10+"])
         s.voice_notes = {3: ("accompaniment", line)}
         self.assertIsNone(rhythm.line_notes(s, "accompaniment"))                                 # one voice: the part's bar
@@ -409,6 +410,9 @@ class NewTablesTests(unittest.TestCase):
         sounds = {(u.values["voice"]): u.outcome for u in rhythm.layer_sound_units([s3])}
         self.assertGreater(float(sounds["line"]), float(sounds["second"]))
         self.assertEqual(sounds["second"], "0.4")
+        s3.voice_notes = {2: ("bass", [(t, u, m, "long1234567890") for t, u, m, _ in long]), 5: ("bass", [(t, u, m, "short123456789") for t, u, m, _ in busy])}
+        self.assertEqual([(u.outcome, u.values) for u in rhythm.layer_sample_units([s3])], [("slong123456 sshort12345", {"part": "bass"})])
+        self.assertEqual([u.values["tempo"] for u in rhythm.second_figure_units([s3])][:1], [rhythm.band(120.0)])
 
     def test_the_kit_from_the_namers_names_and_the_group_caps(self):
         """The pack's kit takes each piece's most-played sample by the drum namer's name, a second hat as the open hat and the

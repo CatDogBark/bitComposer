@@ -88,6 +88,13 @@ said otherwise. Counting code: `translate/rhythm.py` and
   once a part; the line and the second line take their own lengths (FFVI's
   two-voice bass is a sustained line under a staccato voice; the part's one
   share had given both the same).
+- **layer_samples** — the samples a layered part's line and second voice
+  play, as a pair of the pack's sample names. Drawn once a song at
+  rendering: the line and the second voice take the game's own pair where
+  the pack holds both samples (FFVI's bass: a long sustained sample under
+  a short one, the same long sample in ten of its thirteen two-voice
+  songs); on one sample for both, the busy voice had played on the long
+  bass.
 
 ## The form
 
@@ -168,9 +175,12 @@ said otherwise. Counting code: `translate/rhythm.py` and
   times a bar against FFVI's 7.3.)
 - **second_figures** — a layered part's second line: its bar under the
   line's own bar, where the part holds two voices or more (an upper part's
-  pattern, the bass's figure; `-` where it rests), by the line's density
-  class and pattern. Drawn a bar for a second line apart, given the line's
-  bar; the same line bar gets the same second bar within a song. FFVI's
+  pattern, the bass's figure; `-` where it rests), by the song's feel and
+  tempo band and the line's density class and pattern. Drawn a bar for a
+  second line apart, given the line's bar; the same line bar gets the same
+  second bar within a song. Without the tempo, Dancing Mad's 60 BPM
+  tremolo bass bar had landed in a 115 BPM song at ten notes a second,
+  twice FFVI's fastest bass. FFVI's
   second accompaniment voice strikes 4.5 times a bar beside a line of 6.6,
   two of five of its onsets with the line's; its second bass voice is the
   busy staccato one under a sustained line in the same register (the bass
