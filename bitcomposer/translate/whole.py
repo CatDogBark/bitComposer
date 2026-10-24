@@ -414,6 +414,7 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             p.log.append(f"themed: the plan drawn {attempt + 1} times until the tune had a phrase to come back in")
         if not p.extras.get(R.MELODY, {}).get("returns"):
             p.log.append(f"themed: no return in {PLAN_TRIES} plans; the song is unthemed")
+    _plan_counter(models, p, rng)
     return p
 
 
@@ -603,17 +604,27 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log))} if R.BASS in band and R.DRUMS in band else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
-    if R.COUNTER in band and R.MELODY in band:            # the counter-line beside the tune (round 29): on the tune's sample or another
-        have = models_or_empty(models)                      # (counter_samples: the kind its voice words are drawn under, and its sample at
-        if "counter_samples" in have:                       # the rendering), and its level as a share of the tune's (counter_levels: FFVI's
-            extras[R.COUNTER]["sample"] = _draw(models, "counter_samples", (R.COUNTER,), rng, log)   # counter as loud as its tune; the two
-        if "counter_levels" in have:                        # parts' levels drawn apart had put the written counter at 0.74 of the tune)
-            share = float(_draw(models, "counter_levels", (R.COUNTER,), rng, log))
-            extras[R.COUNTER]["level"] = share
-            levels[R.COUNTER] = levels[R.MELODY] * share
-        log.append(f"counter beside the tune: {extras[R.COUNTER].get('sample', 'any')} sample" + (f", level {extras[R.COUNTER]['level']:.1f} of the tune's" if "level" in extras[R.COUNTER] else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks)
+
+
+def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
+    """The counter-line beside the tune (round 29), drawn once a song after every other plan draw: on the tune's sample or
+    another (counter_samples: the kind its voice words are drawn under, and its sample at the rendering), and its level
+    as a share of the tune's (counter_levels: FFVI's counter as loud as its tune; the two parts' levels drawn apart had
+    put the written counter at 0.74 of the tune). Drawn here, after `plan`'s retries, not inside `_plan_once`: a themed
+    plan is drawn again on the same stream when its tune cannot come back, and two draws inside the attempt had shifted
+    every draw of the next one (Whole 14's band, key and form changed)."""
+    if R.COUNTER not in p.band or R.MELODY not in p.band:
+        return
+    have = models_or_empty(models)
+    x = p.extras[R.COUNTER]
+    if "counter_samples" in have:
+        x["sample"] = _draw(models, "counter_samples", (R.COUNTER,), rng, p.log)
+    if "counter_levels" in have:
+        x["level"] = float(_draw(models, "counter_levels", (R.COUNTER,), rng, p.log))
+        p.levels[R.COUNTER] = p.levels[R.MELODY] * x["level"]
+    p.log.append(f"counter beside the tune: {x.get('sample', 'any')} sample" + (f", level {x['level']:.1f} of the tune's" if "level" in x else ""))
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
