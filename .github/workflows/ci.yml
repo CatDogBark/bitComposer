@@ -1,6 +1,9 @@
 name: CI
 
-# main and pull requests into it (a release): every supported Python. Pull
+# Pull requests into main (a release): every supported Python. The run on a
+# push to main repeats the pull request's (main takes nothing else, so the
+# merge commit is the tree the pull request tested); it is kept only so the
+# README's badge shows main's latest run, and nothing waits on it. Pull
 # requests into dev run nothing here; the tests are run locally before them
 # (CONTRIBUTING.md), and a run can be started by hand on any branch.
 on:
