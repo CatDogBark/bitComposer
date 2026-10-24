@@ -333,6 +333,7 @@ def free_envelope(habit: str):
     return lambda own, meter=None: (low, high, False, meter)
 
 
+ANY_TONE = -1                         # upper(tone_index=ANY_TONE): a voice beside the line takes any tone of the line's voicing but its own, drawn a span
 DENSITY_CAPS = {"sparse": 2, "medium": 6, "dense": FREE_HITS[1]}   # a drum group's hits a bar at its density tier's top (rhythm.DENSITIES)
 
 
@@ -430,7 +431,8 @@ def unclashed(midi: int, options: list, tune: set) -> int:
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
-          plays: list | None = None, figures: list | None = None) -> tuple[list, list, list]:
+          plays: list | None = None, figures: list | None = None, shared: dict | None = None,
+          tone_index: int = 0) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -440,7 +442,10 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     voice (a register PEDAL_VOICE semitones or narrower) holds; `models`:
     rhythm and voicings (Caches); `figures`: the bars given (a second line's,
     drawn under the line's own bars from the second_figures table) instead
-    of drawn here.
+    of drawn here; `shared`: the part's voicing at each (bar, position),
+    filled by the line's call (tone_index 0) and read by a voice beside it
+    (tone_index 1, 2...), which takes the tone that many steps up the same
+    voicing rather than a voicing of its own.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -462,6 +467,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     last_chord, marks, previous_low = None, ["R", "3", "5"], None
     periods = getattr(song, "periods", {}).get(role, {})   # a held bar of the part's period takes its source bar's voicing too, on the same chord
     by_bar = {}
+    own_tone = max(1, tone_index)                           # the tone a voice beside the line takes of the line's voicing (a span at a time with ANY_TONE)
+    in_bar = {}                                             # bar -> positions the line's voicing is known at (shared), for a voice beside it
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         if figure == REST:
             voicings.append(REST)
@@ -476,7 +483,21 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             if chord is None:
                 continue
             src = by_bar.get(k - periods[k], {}).get(i) if k in periods else None
-            if src is not None and src[0] == chord and src[1] is not None and (chord != last_chord or not bar_voicing):
+            known = None
+            if shared is not None and tone_index:           # a voice beside the line: the line's voicing at this onset, or the last before it
+                at = shared.get((k, p))
+                if at is None:
+                    before = [q for (kk, q) in shared if kk == k and q <= p]
+                    at = shared.get((k, max(before))) if before else None
+                known = at if at is not None and at[0] == chord else None
+            if known is not None:
+                prev_v, marks = known[1], list(known[2])
+                if chord != last_chord or not bar_voicing:      # a new span: the tone this voice takes of the line's voicing (ANY_TONE: drawn)
+                    own_tone = rng.randrange(1, max(2, len(marks))) if tone_index == ANY_TONE else tone_index
+                last_chord = chord
+                if not bar_voicing or bar_voicing[-1] != prev_v:
+                    bar_voicing.append(prev_v)
+            elif src is not None and src[0] == chord and src[1] is not None and (chord != last_chord or not bar_voicing):
                 prev_v, marks = src[1], src[2]                  # the period's bar again: its voicing with it
                 last_chord = chord
                 bar_voicing.append(prev_v)
@@ -496,6 +517,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 last_chord = chord
                 bar_voicing.append(drawn)
             by_bar.setdefault(k, {})[i] = (chord, prev_v, list(marks))
+            if shared is not None and not tone_index:
+                shared[(k, p)] = (chord, prev_v, list(marks))
             pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]][0], previous_low)
             previous_low = float(pitches[0]) if pitches else previous_low
             tune = sounding_pcs(tune_line, start)
@@ -517,7 +540,10 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
                     notes.append((start, start + (until - start) * sounds, float(pedals.get(v, low_v)), v))
                     continue
-                midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
+                if tone_index and len(voices) == 1:        # a voice beside the line: a tone up the line's voicing (its rank's, or one drawn a span), walking with the motion
+                    midi = in_register(pitches[(own_tone + int(walked)) % len(pitches)], registers[v])
+                else:
+                    midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
                 midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
                 notes.append((start, start + (until - start) * sounds, float(midi), v))
             walked += step

@@ -1442,3 +1442,36 @@ Whole 01's accompaniment from more than three voices an onset to 1.23,
 them too). Levels stay hand-set a part; the readings keep no note levels
 (the raw readings do; storing them is import work). Song Check 12 is
 written from this.
+
+### Round 20: the voice beside the line (2026-10-23, from the owner's note on set 12)
+
+Set 12's Whole 01 and 02 came out garbled: round 19 had made each voice
+beside an upper part's line an independent line, its own figure drawn
+under the line's bar, its own voicing, motion, habit and lengths. Whole
+01 had four arpeggios in one register whose onsets fell on the line's 14
+to 32 % of the time, at unrelated intervals; Whole 02 a staccato line (a
+0.4 note-length draw) over two busy lines an octave below it in the bass's
+range. No wrong notes (no semitone, seventh or tritone clashes between the
+voices): four unrelated things at once. FFVI's voices beside an
+arpeggiated line, measured on every upper part with two voices or more:
+0.60 of the line's strikes, the line's note lengths (1.02), two thirds of
+their onsets on the line's onsets, the interval to the line steady in 27
+% of notes only; a doubling voice 1.0, 1.0, 0.99. Bar by bar, a voice
+beside the line plays in 79 % of the line's bars, strikes with half its
+onsets (median; a third of the bars every onset), and adds 1.2 of its own.
+
+Built: `second_figures` for an upper part re-encoded as a mask over the
+line's onsets plus the voice's own (`rhythm.second_mask`, `apply_mask`),
+by the song's feel and tempo band and the line's onset count (a mask read
+onset by onset; one from a shorter line read around a longer one had
+filled it, so the draw never backs off below the count, `MASK_FLOOR`),
+drawn a bar; the voice takes a tone of the line's own voicing (the
+line's voicing shared through `writer.upper(shared=, tone_index=)`, the
+tone drawn a span) and the line's lengths; the bass's second voice keeps
+its own figure. Twenty songs, voices beside an arpeggiated line: strikes
+0.72 of the line's (FFVI 0.60; drawn once a line figure 0.88), lengths
+1.00 (1.02), onsets with the line 0.98 (0.67: the own onsets are rarely
+drawn), interval steady 0.65 (0.27: the voice walks the arpeggio in step
+with the line); voices striking together 2.06 to an onset (FFVI 1.46; set
+11's stack three and more, set 12 1.81). Doubling voices 1.0 throughout,
+as FFVI's. Song Check 13 is written from this.

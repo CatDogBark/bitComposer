@@ -300,7 +300,12 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(patterns, {"0 1/2 1 3/2 2 5/2 3 7/2"})                                 # the line's bar, not the voices merged
         units = rhythm.second_figure_units([s])
         self.assertEqual(len(units), 4)
-        self.assertEqual((units[0].outcome, units[0].values), ("0 1 2 3", {"part": "accompaniment", "feel": "duple", "tempo": rhythm.band(120.0), "density": "7-9", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        self.assertEqual((units[0].outcome, units[0].values), ("1 0 1 0 1 0 1 0", {"part": "accompaniment", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "8", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        F = __import__("fractions").Fraction
+        self.assertEqual(rhythm.second_mask([F(0), F(1), F(2), F(3)], [F(0), F(2), F(7, 2)]), "1 0 1 0 | 7/2")
+        self.assertEqual(rhythm.apply_mask("0 1/2 1 3/2 2 5/2 3 7/2", "1 0 1 0 1 0 1 0"), "0 1 2 3")
+        self.assertEqual(rhythm.apply_mask("0 1 2 3", "1 0 | 7/2"), "0 2 7/2")                       # a short mask read around the line
+        self.assertEqual(rhythm.apply_mask("0 1 2 3", "-"), "-")
         self.assertEqual([u.outcome for u in rhythm.layer_sample_units([s])], ["sa sa"])      # both voices on sample "a" here
         self.assertEqual([rhythm.density_bin(n) for n in (1, 3, 4, 6, 7, 9, 10, 24)], ["1-3", "1-3", "4-6", "4-6", "7-9", "7-9", "10+", "10+"])
         s.voice_notes = {3: ("accompaniment", line)}
@@ -409,7 +414,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual({u.outcome for u in rhythm.bass_units([s3])}, {"0:R"})                 # the line's bar, one root held
         seconds = rhythm.second_figure_units([s3])
         self.assertEqual(len(seconds), 4)
-        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["density"]), ("bass", "0:R", "1-3"))
+        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["onsets"]), ("bass", "0:R", "1"))
         self.assertEqual(seconds[0].outcome.count("R"), 8)                                      # eight roots a bar under the held one
         sounds = {(u.values["voice"]): u.outcome for u in rhythm.layer_sound_units([s3])}
         self.assertGreater(float(sounds["line"]), float(sounds["second"]))

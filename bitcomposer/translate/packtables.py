@@ -78,7 +78,7 @@ KEPT = {
     "layer_sounds": ("rhythm", "layer_sound_units", {}, ("part", "voice"), False, False, "the share of its gap a note sounds for a layered part's line and for its second voice"),
     "periods": ("rhythm", "period_units", {}, ("part", "length", "tempo"), False, False, "a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo"),
     "period_holds": ("rhythm", "period_hold_units", {}, ("part", "period"), False, False, "inside a backing part's period, a bar playing the bar a period before again (held) or not (varied)"),
-    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "feel", "tempo", "density", "line"), False, False, "a layered part's second line (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
+    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "feel", "tempo", "onsets", "line"), False, False, "a layered part's second line (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
     "layer_samples": ("rhythm", "layer_sample_units", {}, ("part",), False, False, "the samples a layered part's line and its second voice play, as a pair, drawn once a song"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),

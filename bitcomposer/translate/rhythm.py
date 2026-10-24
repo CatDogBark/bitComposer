@@ -1142,12 +1142,44 @@ def second_figure_units(songs) -> list:
             others = [n for v, ns in voices.items() if v != line for n in ns]
             key = (lambda struck, a: figure(struck, a, s)) if role == R.BASS else (lambda struck, a: pattern(p for p, _ in struck))
             line_bars = {k: key(struck, a) for k, a, struck in numbered_bars_of(s, role, voices[line])}
+            line_struck = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, role, voices[line])}
             tempo, feel = band(s.bpm), song_feel(s)
             for k, a, struck in numbered_bars_of(s, role, others):
                 if line_bars.get(k, "-") != "-":
-                    out.append(tables.Unit(s.sid, s.game, key(struck, a) if struck else "-",
-                                           {"part": role, "feel": feel, "tempo": tempo, "density": density_bin(len(line_bars[k].split())), "line": line_bars[k]}))
+                    # the bass's second voice as its own figure (its chord-tone marks realize it); an upper part's beside the line's
+                    # onsets: which of them it strikes with, and the onsets of its own (second_mask)
+                    outcome = (key(struck, a) if struck else "-") if role == R.BASS else second_mask(line_struck[k], [p for p, _ in struck])
+                    out.append(tables.Unit(s.sid, s.game, outcome,                   # by the line's onset count: a mask is read onset by onset
+                                           {"part": role, "feel": feel, "tempo": tempo, "onsets": str(len(line_bars[k].split())), "line": line_bars[k]}))
     return out
+
+
+def second_mask(line_positions: list, other_positions: list) -> str:
+    """An upper part's second voice's bar beside the line's: a flag an onset of the line (1: the voice strikes with it, 0:
+    not), then, after a bar, the voice's own onsets off the line's ("1 0 1 0 | 7/2"); "-" where it rests. FFVI's voices
+    beside an arpeggiated line strike with two thirds of their onsets on the line's, at 0.6 of its density (2026-10-23):
+    a pattern drawn on its own had fallen with the line's a seventh of the time, four unrelated lines in one register."""
+    if not other_positions:
+        return "-"
+    on = set(line_positions)
+    flags = " ".join("1" if p in other_positions else "0" for p in line_positions)
+    own = [p for p in other_positions if p not in on]
+    return flags + (" | " + " ".join(str(p) for p in own) if own else "")
+
+
+def apply_mask(line_pattern: str, outcome: str) -> str:
+    """The second voice's bar (a pattern) from the line's bar and a second_mask outcome: the line's onsets it strikes with (a
+    mask shorter or longer than the line's onsets is read around it) and its own onsets; "-" where it rests."""
+    if outcome == "-" or line_pattern in ("-", ""):
+        return "-"
+    line = [Fraction(t.partition(":")[0]) for t in line_pattern.split()]
+    flags, _, own = outcome.partition("|")
+    bits = flags.split()
+    if not bits or all(b not in ("0", "1") for b in bits):
+        return outcome if ":" not in outcome else "-"          # an old-style absolute pattern: as it stands
+    positions = {line[i] for i in range(len(line)) if bits[i % len(bits)] == "1"}
+    positions |= {Fraction(p) for p in own.split()}
+    return pattern(sorted(positions))
 
 
 def sample_id(key: str) -> str:

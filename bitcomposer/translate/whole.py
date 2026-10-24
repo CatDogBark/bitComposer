@@ -67,6 +67,9 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
+SECOND_MEMO = False                   # a voice beside the line: its mask drawn a bar (on: the same line bar gets the same mask within a song; that
+                                      # had put voices at 0.88 of the line's strikes against FFVI's 0.60, a bar at a time 0.72)
+SECOND_ANY_TONE = True                # ...and takes any tone of the line's voicing but the line's, drawn a span (off: its rank's tone)
 PLAN_FLOOR = 1                        # a plan's one-shot draw never backs off past the part (the first conditioning): the root of a
                                       # table keyed by part mixes every part, and under Witten-Bell a register draw reached it in a
                                       # third of draws (a counter at bass depth 8 % of the time, a bass above middle C 19 %)
@@ -131,8 +134,13 @@ class Part:
     log: list = field(default_factory=list)
 
 
-def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list | None = None) -> str:
-    """A draw from a pack's table under a context (a mixture's own table alone); the default where the pack has no such table."""
+MASK_FLOOR = 4                        # second_figures' draw never backs off below the line's onset count (part, feel, tempo, onsets): a mask is
+                                      # read onset by onset, and one from a shorter line read around a longer one had filled it
+
+
+def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list | None = None, floor_k: int | None = None) -> str:
+    """A draw from a pack's table under a context (a mixture's own table alone; `floor_k` the level the draw never backs off
+    below, PLAN_FLOOR, the part, without); the default where the pack has no such table."""
     t = models.get(name)
     if t is None:
         default = DEFAULTS[name]
@@ -142,7 +150,7 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
             log.append(f"no {name} table: {default!r} assumed")
         return default
     t = t.table if hasattr(t, "table") else t
-    return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS)
+    return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS)
 
 
 def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
@@ -821,7 +829,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             given = None
             if "second_figures" in models:                  # the second voice's figure under the line's, as the game's second basses play
                 memo = {}
-                given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), rhythm.density_bin(len(f.split())), f), rng2))
+                given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f), rng2, floor_k=MASK_FLOOR))
                          for f in figures]
             sounds2 = float(_draw(models, "layer_sounds", (R.BASS, "second"), rng2)) if "layer_sounds" in models else plan.sounds[R.BASS]
             notes2, figures2 = writer.bass(song, models["bass"], rng2, habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
@@ -847,9 +855,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         # table: doubling at an interval, alternating, apart). An upper part is about one note loud an onset in FFVI (1.2 to
         # 1.5 of its voices strike together); a stack of voices all striking at every onset had been the writer's own
         # construction, three to four notes loud where the tune has one (Song Check 11's Whole 01).
+        shared = {}                                         # the line's voicing at each onset, for the voices beside it
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
-                                                pedals={0: (low + high) // 2}, plays=plan.plays[role])
+                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
                f"motion {plan.extras[role]['motion']}, sounded {sounds:.2f}; {sum(1 for f in figures if f != writer.REST)} bars written, "
@@ -863,24 +872,23 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 notes_v = diatonic(line_notes, rel[1], scale, v)
                 figures_v, voicings_v = figures, [f"doubling {rel[1]:+d}"] * len(figures)
                 log.append(f"voice {v + 1} doubles the line at {rel[1]:+d}: {len(notes_v)} notes")
-            else:                                           # alternating, or apart: its own line under the line's bars
+            else:                                           # alternating, or apart: beside the line, on the line's own voicing and lengths
                 offset, density = (rel[1], rel[2]) if rel[0] == "apart" else (0, "like")
                 reg_v = (max(24, low + offset), min(100, high + offset))
                 rng_v = random.Random(f"{seed}:{role}:voice {v}")
-                habit_v = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:voice {v} habit"), plan.habits[role], density)
-                richness_v = _draw(models, "voicing_habits", (role,), rng_v) if "voicing_habits" in models else plan.extras[role]["richness"]
-                motion_v = _draw(models, "motions", (role,), rng_v) if "motions" in models else plan.extras[role]["motion"]
-                sounds_v = float(_draw(models, "layer_sounds", (role, "second"), rng_v)) if "layer_sounds" in models else sounds
                 given = None
-                if "second_figures" in models:              # its bars under the line's own, as the game's second voices play
+                if "second_figures" in models:              # which of the line's onsets it strikes with, and its own (second_mask), bar by bar
                     memo = {}
-                    given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (role, plan.feel, rhythm.band(plan.bpm), rhythm.density_bin(len(f.split())), f), rng_v))
-                             for f in figures]
-                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: reg_v}, models, rng_v, habit_v, richness_v, sounds_v, key=key,
-                                                              lock=locks_of(song, {role}, plan), motion=motion_v, pedals={v: (reg_v[0] + reg_v[1]) // 2},
-                                                              plays=plan.plays[role], figures=given)
-                log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}), habit {habit_v} ({density}), voicing {richness_v}, motion {motion_v}, "
-                           f"sounds {sounds_v:.1f}; {sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars drawn under the line's" if given else ""))
+                    def masked(f):
+                        drawn = _draw(models, "second_figures", (role, plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f), rng_v, floor_k=MASK_FLOOR)
+                        return rhythm.apply_mask(f, drawn)
+                    given = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in figures]
+                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: reg_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], sounds,
+                                                              key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],
+                                                              pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,
+                                                              tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v))
+                log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}, {density}), the line's voicing {v} tone{'s' if v > 1 else ''} up, "
+                           f"{sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars beside the line's" if given else ""))
             song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
             notes = notes + notes_v
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]

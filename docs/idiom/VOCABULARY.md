@@ -63,7 +63,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   far off, how dense). Drawn once a voice for a part with two voices or
   more: a doubling voice is written diatonically at the interval; an
   alternating or apart voice becomes a line of its own under the line's
-  bars (`second_figures`), in its register, with its own lengths and
+  bars (`second_figures`), in its register, on a tone of the line's own
+  voicing (drawn a span) with the line's lengths and the pair's second
   sample. An upper part is the line plus its voices so drawn, never a
   stack: FFVI's accompaniment voices strike together 1.2 to 1.5 to an
   onset, and a stack of voices all striking at every onset had been three
@@ -179,14 +180,21 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the line's figures. (Counted merged, a dense bar held two voices'
   onsets, and a line written to it with a second line beside struck 10.3
   times a bar against FFVI's 7.3.)
-- **second_figures** — a layered part's second line: its bar under the
-  line's own bar, where the part holds two voices or more (an upper part's
-  pattern, the bass's figure; `-` where it rests), by the song's feel and
-  tempo band and the line's density class and pattern. Drawn a bar for a
-  second line apart, given the line's bar; the same line bar gets the same
-  second bar within a song. Without the tempo, Dancing Mad's 60 BPM
-  tremolo bass bar had landed in a 115 BPM song at ten notes a second,
-  twice FFVI's fastest bass. FFVI's
+- **second_figures** — a voice beside a layered part's line, bar by bar,
+  where the part holds two voices or more, by the song's feel and tempo
+  band, the line's onset count and its pattern. The bass's second voice is
+  its own figure (its chord-tone marks realize it). An upper part's is a
+  mask over the line's onsets, which of them the voice strikes with and
+  any onsets of its own (`1 0 1 0 | 7/2`; `-` resting): FFVI's voices
+  beside an arpeggiated line strike with a sparser subset of the line's
+  own rhythm (two thirds of their onsets on the line's, 0.6 of its
+  density), on other tones of the same voicing, with the line's note
+  lengths; drawn as a pattern of their own they had fallen with the line
+  a seventh of the time, four unrelated lines in one register (Song Check
+  12). The draw never backs off below the line's onset count (a mask from
+  a shorter line read around a longer one had filled it). Without the
+  tempo, Dancing Mad's 60 BPM tremolo bass bar had landed in a 115 BPM
+  song at ten notes a second, twice FFVI's fastest bass. FFVI's
   second accompaniment voice strikes 4.5 times a bar beside a line of 6.6,
   two of five of its onsets with the line's; its second bass voice is the
   busy staccato one under a sustained line in the same register (the bass
