@@ -261,9 +261,10 @@ def bars_of(song: Song, role: str):
         yield a, struck
 
 
-def numbered_bars_of(song: Song, role: str):
-    """bars_of with each bar's number in the reading first: (number, start, [(position, [notes])])."""
-    notes = song.notes.get(role, [])
+def numbered_bars_of(song: Song, role: str, notes: list | None = None):
+    """bars_of with each bar's number in the reading first: (number, start, [(position, [notes])]); `notes` in place of
+    the part's (one voice's own)."""
+    notes = song.notes.get(role, []) if notes is None else notes
     numbers = song.numbers or range(len(song.bars))
     for k, (a, b) in zip(numbers, song.bars):
         if round(b - a) != song.meter:
@@ -791,7 +792,7 @@ def units(songs) -> list:
             if role not in s.notes:
                 continue
             previous, last, mine = START, None, []
-            for k, a, struck in numbered_bars_of(s, role):
+            for k, a, struck in numbered_bars_of(s, role, line_notes(s, role)):
                 if last is not None and k != last + 1:
                     previous = START                      # a bar of another length between: the chain breaks
                 drawn = pattern(p for p, _ in struck)
@@ -1074,6 +1075,141 @@ def return_band_units(songs) -> list:
                 if pairs and sum(1 for x, y in pairs if x == y) / len(pairs) >= RETURN_SAME:
                     back.append(key)
             out.append(tables.Unit(s.sid, s.game, " ".join(back) or "none", {"part": "return"}))
+    return out
+
+
+def part_voices(song: Song, role: str) -> dict:
+    """An upper part's voices with notes: voice -> its notes (the rolls left out)."""
+    return {v: ns for v, (r, ns) in song.voice_notes.items() if r == role and ns}
+
+
+def line_notes(song: Song, role: str) -> list | None:
+    """An upper part's own line where it holds two voices or more: the notes
+    of the voice with the most (layer_units' line); None for every other
+    part, whose bar is the part's. The figure table counts the line, not the
+    voices merged: FFVI's two-voice accompaniments strike 7.3 times a bar
+    together, the line 6.6 and the second voice 4.5, and a line written to
+    the merged count with a second line beside it had struck 10.3
+    (2026-10-23)."""
+    if role not in UPPER:
+        return None
+    voices = part_voices(song, role)
+    if len(voices) < 2:
+        return None
+    return voices[max(voices, key=lambda v: (len(voices[v]), -v))]
+
+
+DENSITY_BINS = ((3, "1-3"), (6, "4-6"), (9, "7-9"), (1e9, "10+"))   # a bar's onsets, for the second line's draw under the line's bar
+
+
+def density_bin(onsets: int) -> str:
+    """A bar's onset count as a class (DENSITY_BINS)."""
+    return next(name for top, name in DENSITY_BINS if onsets <= top)
+
+
+def second_figure_units(songs) -> list:
+    """Each bar of each upper part holding two voices or more as a unit: its
+    outcome the bar's pattern of the voices beside the line (the second
+    line; "-" where they rest), its values the part, the line's density
+    class in the bar (DENSITY_BINS) and the line's own pattern. The second
+    line is drawn under the line's bar, bar by bar, the pattern backing off
+    to the density class where the pattern is rare: FFVI's second
+    accompaniment voice strikes 4.5 times a bar beside a line of 6.6, two
+    of five of its onsets with the line's."""
+    out = []
+    for s in songs:
+        for role in UPPER:
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = max(voices, key=lambda v: (len(voices[v]), -v))
+            others = [n for v, ns in voices.items() if v != line for n in ns]
+            line_bars = {k: pattern(p for p, _ in struck) for k, _, struck in numbered_bars_of(s, role, voices[line])}
+            for k, _, struck in numbered_bars_of(s, role, others):
+                if line_bars.get(k, "-") != "-":
+                    out.append(tables.Unit(s.sid, s.game, pattern(p for p, _ in struck),
+                                           {"part": role, "density": density_bin(len(line_bars[k].split())), "line": line_bars[k]}))
+    return out
+
+
+THEME_PARTS = (R.COUNTER, R.BASS, R.ACCOMP, R.HARMONY)   # the parts that double or carry the tune's theme
+
+
+def _theme_of(song: Song):
+    """The tune's cells, its phrase windows (the live ones) and its theme: the head cell of its first sounding phrase
+    and that phrase's window; (cells, windows, theme window, theme) or None without two sounding phrases."""
+    cells = melody_cells(song)
+    windows = [(w, next((cells[k] for k in w if cells[k]), None)) for i, w in phrase_windows(song) if i is not None]
+    heads = [(w, h) for w, h in windows if h]
+    if len(heads) < 2:
+        return None
+    return cells, windows, heads[0][0], heads[0][1]
+
+
+def theme_doubling_units(songs) -> list:
+    """Each bar in which a song's tune plays its theme cell (the head of its
+    first sounding phrase: its statement, and its echoes later) as a unit:
+    its outcome which other parts play the same cell in that bar and how
+    far from the tune ("counter:+0 bass:-24"; "none"), its values the part
+    (theme) and the place (statement: inside the theme's own phrase;
+    later). FFVI (2026-10-23): where another part plays the theme's cell,
+    the tune is playing it too in three places of four, the counter in the
+    tune's octave, the bass two below: the hook doubled by a second
+    instrument, a bar at a time, in a quarter of the songs."""
+    out = []
+    for s in songs:
+        found = _theme_of(s)
+        if found is None:
+            continue
+        cells, _, theme_w, theme = found
+        tune = sorted(_line(s.notes.get(R.MELODY, [])))
+        others = {role: (melody_cells(s, role), sorted(_line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
+        for k, c in enumerate(cells):
+            if c != theme:
+                continue
+            a = s.bars[k][0]
+            t0 = next((n for n in tune if n[0] >= a - NEAR), None)
+            tokens = []
+            for role, (oc, line) in others.items():
+                if k < len(oc) and oc[k] == theme:
+                    o0 = next((n for n in line if n[0] >= a - NEAR), None)
+                    if t0 is not None and o0 is not None:
+                        tokens.append(f"{role}:{round(o0[2] - t0[2]):+d}")
+            out.append(tables.Unit(s.sid, s.game, " ".join(sorted(tokens)) or "none",
+                                   {"part": "theme", "place": "statement" if k in theme_w else "later"}))
+    return out
+
+
+def theme_carrier_units(songs) -> list:
+    """Each phrase of a song's tune after its theme phrase whose head is not
+    the theme (the tune resting through it too) as a unit: its outcome the
+    part that carries the theme phrase there instead, its bars the theme
+    phrase's from the phrase's first bar, two or more (the bass, the
+    counter or the accompaniment), "none" where no part does; its value
+    the part (carrier). FFVI (2026-10-23): the bass carries four bars of
+    the theme in nine places, the counter a few; a hand-off a fifth of the
+    songs make once."""
+    out = []
+    for s in songs:
+        found = _theme_of(s)
+        if found is None:
+            continue
+        cells, windows, theme_w, theme = found
+        theme_cells = [cells[k] for k in theme_w]
+        need = min(2, sum(1 for c in theme_cells if c))
+        others = {role: melody_cells(s, role) for role in (R.BASS, R.COUNTER, R.ACCOMP) if s.notes.get(role)}
+        for w, h in windows:
+            if w[0] <= theme_w[0] or h == theme:
+                continue
+            carrier = "none"
+            for role, oc in others.items():
+                run = 0
+                while run < len(theme_cells) and w[0] + run < len(oc) and theme_cells[run] is not None and oc[w[0] + run] == theme_cells[run]:
+                    run += 1
+                if run >= need:
+                    carrier = role
+                    break
+            out.append(tables.Unit(s.sid, s.game, carrier, {"part": "carrier"}))
     return out
 
 

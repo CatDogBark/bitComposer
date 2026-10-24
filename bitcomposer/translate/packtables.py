@@ -31,7 +31,7 @@ FIGURE = ("part", "meter", "habit", "previous")   # the figure tables' shape: th
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
 # mixture, what the table says), in the record's order
 KEPT = {
-    "rhythm": ("rhythm", "units", {}, FIGURE, True, True, "a part's bar as an onset pattern"),
+    "rhythm": ("rhythm", "units", {}, FIGURE, True, True, "a part's bar as an onset pattern (an upper part's own line where it holds two voices or more)"),
     "values": ("rhythm", "value_units", {}, ("part", "value", "habit"), False, False, "a melody note held or detached, by its value"),
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
@@ -56,6 +56,8 @@ KEPT = {
     "phrase_letters": ("rhythm", "phrase_letter_units", {}, ("part", "phrases", "form"), False, False, "a part's phrases as letters: the theme head again, an earlier head again, or new"),
     "theme_body": ("rhythm", "theme_body_units", {}, ("part",), False, False, "how much of the theme phrase comes back with its head"),
     "return_band": ("rhythm", "return_band_units", {}, ("part",), False, False, "which of the chords, the bass and the accompaniment come back with the theme"),
+    "theme_doubling": ("rhythm", "theme_doubling_units", {}, ("part", "place"), False, False, "which other parts double the theme's cell where the tune plays it, and how far from the tune, at its statement or later"),
+    "theme_carrier": ("rhythm", "theme_carrier_units", {}, ("part",), False, False, "the part that carries the theme phrase where the tune's phrase is not the theme: the bass, the counter, the accompaniment, or none"),
     "contours": ("phrases", "contour_units", {}, ("part", "mode"), False, True, "a four-bar phrase's contour"),
     "peaks": ("phrases", "peak_units", {}, ("part", "mode", "contour"), False, False, "where a phrase peaks, by its contour"),
     "endings": ("phrases", "ending_units", {}, ("part", "mode"), False, True, "the note a phrase ends on, against the key"),
@@ -72,6 +74,7 @@ KEPT = {
     "voices": ("rhythm", "voices_units", {}, ("part", "band"), False, False, "how many voices a song uses"),
     "doubles": ("rhythm", "double_units", {}, ("part",), False, False, "what a song's double voices double, and how"),
     "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a part's second voice does beside its line: doubling at an interval, alternating, or apart (how far off, how dense)"),
+    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "density", "line"), False, False, "an upper part's second line: its bar's pattern under the line's own bar, where the part holds two voices or more"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
     "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),

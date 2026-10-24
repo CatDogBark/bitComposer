@@ -610,6 +610,120 @@ def locks_of(song: rhythm.Song, exclude: set, plan: "Plan | None" = None) -> dic
     return out
 
 
+def _replace_bars(part, song: rhythm.Song, role: str, a: float, b: float, copied: list) -> None:
+    """The part's notes in [a, b) replaced by `copied` [(start, end, midi, voice)], in the written part and the song."""
+    inside = lambda t: a - rhythm.NEAR <= t < b - rhythm.NEAR   # noqa: E731
+    part.notes[:] = sorted([n for n in part.notes if not inside(n[0])] + copied, key=lambda n: n[0])
+    song.notes[role] = sorted([n for n in song.notes.get(role, []) if not inside(n[0])] + [(t, u - t, m, role) for t, u, m, _ in copied], key=lambda n: n[0])
+
+
+def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
+    """Where the tune plays its theme cell (its statement and its echoes), the parts the theme_doubling table draws
+    play the cell with it, at the drawn interval, in the tune's rhythm: FFVI's hook doubled by a second instrument a
+    bar at a time. Returns a log line a bar doubled."""
+    x = plan.extras.get(R.MELODY, {})
+    if R.MELODY not in written or "theme_doubling" not in models or not x.get("theme_bars"):
+        return []
+    cells = rhythm.melody_cells(song)
+    theme_bars = x["theme_bars"]
+    theme = next((cells[k] for k in theme_bars if k < len(cells) and cells[k]), None)
+    if theme is None:
+        return []
+    tune = [n for n in written[R.MELODY].notes if n[3] == 0]
+    log = []
+    for k, c in enumerate(cells):
+        if c != theme:
+            continue
+        drawn = _draw(models, "theme_doubling", ("theme", "statement" if k in theme_bars else "later"), rng)
+        a, b = song.bars[k]
+        bar_notes = [n for n in tune if a - rhythm.NEAR <= n[0] < b - rhythm.NEAR]
+        for token in drawn.split():
+            role, _, off = token.partition(":")
+            if role not in plan.band or role not in written or role == R.MELODY or not off or not bar_notes:
+                continue
+            low, high = plan.registers.get(role, (24, 100))
+            copied = []
+            for t, u, m, _ in bar_notes:
+                p = m + int(off)
+                while p < low:
+                    p += 12
+                while p > high:
+                    p -= 12
+                copied.append((t, u, float(p), 0))
+            _replace_bars(written[role], song, role, a, b, copied)
+            log.append(f"bar {k}: the {role} doubles the theme's cell ({int(off):+d})")
+    return log
+
+
+def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
+    """A phrase whose tune is not the theme may have the theme phrase carried by another part (the theme_carrier
+    table: the bass, the counter, the accompaniment, mostly none), the tune's own theme bars played there in that
+    part's register while the tune plays what it drew. Returns a log line a phrase carried."""
+    x = plan.extras.get(R.MELODY, {})
+    if R.MELODY not in written or "theme_carrier" not in models or not x.get("theme_bars") or not x.get("letters"):
+        return []
+    theme_bars = x["theme_bars"]
+    tune = [n for n in written[R.MELODY].notes if n[3] == 0]
+    a0, b0 = song.bars[theme_bars[0]][0], song.bars[theme_bars[-1]][1]
+    theme_notes = [n for n in tune if a0 - rhythm.NEAR <= n[0] < b0 - rhythm.NEAR]
+    if not theme_notes:
+        return []
+    letters = {int(k): v for k, v in x["letters"].items()}
+    counts, log = {}, []
+    for i, w in rhythm.phrase_windows(song):
+        if i is None or not any(plan.plays[R.MELODY][k] for k in w if k < len(plan.plays[R.MELODY])):
+            continue                                        # the letters count the live windows only
+        j = counts.get(i, 0)
+        counts[i] = j + 1
+        ls = str(letters.get(i, "")).split()
+        if w[0] <= theme_bars[0] or (ls[j] if j < len(ls) else rhythm.NEW) == rhythm.THEME:
+            continue
+        carrier = _draw(models, "theme_carrier", ("carrier",), rng)
+        if carrier == "none" or carrier not in plan.band or carrier not in written:
+            continue
+        n = min(len(theme_bars), len(w))
+        shift = song.bars[w[0]][0] - a0
+        a, b = song.bars[w[0]][0], song.bars[w[0] + n - 1][1]
+        low, high = plan.registers.get(carrier, (24, 100))
+        octaves = round(((low + high) / 2 - statistics.median(m for _, _, m, _ in theme_notes)) / 12)
+        copied = [(t + shift, u + shift, float(min(high, max(low, m + 12 * octaves))), 0) for t, u, m, _ in theme_notes if t + shift < b - rhythm.NEAR]
+        _replace_bars(written[carrier], song, carrier, a, b, copied)
+        log.append(f"bar {w[0]}: the {carrier} carries the theme phrase ({12 * octaves:+d})")
+    return log
+
+
+def copy_repeats(plan: Plan, song: rhythm.Song, written: dict) -> list:
+    """A part of the form that repeats an earlier one plays it note for note in every part written, as a driver replays
+    a part (the writers copy their own figures for it already; the notes under them, the second lines and the voicings
+    had been written fresh, so the form reader, which finds parts by such repeats, heard one part where the plan had
+    four). Returns a log line a repeat."""
+    log = []
+    for i, (bar, n, of, label) in enumerate(plan.parts):
+        if of is None:
+            continue
+        src_bar, src_n = plan.parts[of][0], plan.parts[of][1]
+        m = min(n, src_n)
+        if m <= 0 or bar + m > len(song.bars) or src_bar + m > len(song.bars):
+            continue
+        shift = song.bars[bar][0] - song.bars[src_bar][0]
+        lo_s, hi_s = song.bars[src_bar][0], song.bars[src_bar + m - 1][1]
+        lo_t, hi_t = song.bars[bar][0], song.bars[bar + m - 1][1]
+        inside = lambda t, lo, hi: lo - rhythm.NEAR <= t < hi - rhythm.NEAR   # noqa: E731
+        for role, part in written.items():
+            kept = [x for x in part.notes if not inside(x[0], lo_t, hi_t)]
+            copied = [(x[0] + shift, x[1] + shift) + tuple(x[2:]) for x in part.notes if inside(x[0], lo_s, hi_s)]
+            part.notes[:] = sorted(kept + copied, key=lambda x: x[0])
+            for k in range(m):
+                if bar + k < len(part.figures) and src_bar + k < len(part.figures):
+                    part.figures[bar + k] = part.figures[src_bar + k]
+            if role in song.notes:
+                kept = [x for x in song.notes[role] if not inside(x[0], lo_t, hi_t)]
+                copied = [(x[0] + shift,) + tuple(x[1:]) for x in song.notes[role] if inside(x[0], lo_s, hi_s)]
+                song.notes[role] = sorted(kept + copied, key=lambda x: x[0])
+        log.append(f"{label} (bars {bar}-{bar + m - 1}) plays {plan.parts[of][3]} (bars {src_bar}-{src_bar + m - 1}) again note for note")
+    return log
+
+
 def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None) -> dict:
     """The parts written in turn on the song: the drums, the bass, the upper
     parts, the melody; each put into song.notes for the next to read.
@@ -695,13 +809,19 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             richness2 = _draw(models, "voicing_habits", (role,), rng2) if "voicing_habits" in models else plan.extras[role]["richness"]
             motion2 = _draw(models, "motions", (role,), rng2) if "motions" in models else plan.extras[role]["motion"]
             v2 = n - 1
+            given = None
+            if "second_figures" in models:                  # the second line's bars under the line's own, as the game's second voices play
+                memo = {}
+                given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (role, rhythm.density_bin(len(f.split())), f), rng2))
+                         for f in figures]
             notes2, figures2, voicings2 = writer.upper(song, role, [v2], {v2: reg2}, models, rng2, habit2, richness2, sounds, key=key,
-                                                       lock=locks_of(song, {role}, plan), motion=motion2, pedals={v2: (reg2[0] + reg2[1]) // 2}, plays=plan.plays[role])
+                                                       lock=locks_of(song, {role}, plan), motion=motion2, pedals={v2: (reg2[0] + reg2[1]) // 2}, plays=plan.plays[role],
+                                                       figures=given)
             song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes2]
             notes = notes + notes2
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures2, voicings2)]
             log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}), voicing {richness2}, motion {motion2}; "
-                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
+                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes" + ("; its bars drawn under the line's" if given else ""))
         written[role] = Part(role, notes, all_figures, log)
     tempo = rhythm.band(plan.bpm)
     for role in (R.MELODY, R.COUNTER):                    # the counter-line written as the melody is, after it and clear of it
@@ -740,6 +860,13 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}); {sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
             log += [f"second: {l}" for l in plog2[-2:]]
         written[role] = Part(role, line, figures, log)
+    if R.MELODY in written:                                 # the theme in the band: doubled where the tune plays it, carried where it does not
+        rng_theme = random.Random(f"{seed}:theme band")
+        for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):
+            written[R.MELODY].log.append(line)
+    for line in copy_repeats(plan, song, written):
+        for part in written.values():
+            part.log.append(line)
     return written
 
 

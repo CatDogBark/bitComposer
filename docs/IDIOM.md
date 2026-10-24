@@ -122,7 +122,10 @@ Stage 4's own "what looks wrong", gathered (the detail is there):
 ## The vocabulary's shape
 
 What the tables are and what each is conditioned on, provisionally; phase
-3 settles each by held-out likelihood.
+3 settles each by held-out likelihood. The tables as a pack keeps them
+today, each with what it counts, what conditions it and what the writers
+do with it, are listed in [idiom/VOCABULARY.md](idiom/VOCABULARY.md);
+that list is kept current when a table is added or its counting changes.
 
 - **Form:** the parts (how many, how long, which come back), where the song
   loops and what the loop lands on.

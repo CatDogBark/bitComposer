@@ -1227,3 +1227,55 @@ has no copy of a repeated part (`_free_figures` copies for the bass and
 the drums, the melody writer for the tune). With two to four of eight
 voices playing new material the reader hears no repeat and no boundary.
 A writing fault, not vocabulary.
+
+### Round 14: the four open items built (2026-10-23, on the owner's go)
+
+Each as the investigation above named it: a writing fault fixed as a
+fault, a vocabulary gap given a table.
+
+- **A repeat is a repeat** (`whole.copy_repeats`). A part of the form that
+  repeats an earlier one now replays every part note for note, second
+  lines and voicings included; the writers had copied their own figures
+  only, and the upper writer nothing. The form reader finds the plan's
+  parts on the ten songs of twenty that have a repeat (`A9 B4 C7 B4 D4`
+  read back as `A9 B4 C7 B4 D4`); the ten without still read as one or two
+  parts, and the median stays 2 against FFVI's 4. What remains is FFVI's
+  backing repeating itself inside a part as a block (a riff of two or four
+  bars in every part at once), which our parts' mixtures do not do
+  together: a vocabulary question (the backing's period), put to the
+  owner.
+- **The line and its second** (`rhythm.line_notes`, `second_figure_units`;
+  tables `rhythm` recounted, `second_figures` new). The figure table counts
+  an upper part's own line where it holds two voices or more, and a second
+  line apart is drawn bar by bar under the line's bar, by the line's
+  density class and pattern (the pattern alone backed off to the whole
+  part for rare bars and gave a sparse line a dense second). The line's
+  density by habit sits on FFVI's (medium 5.2 to 5.9 against 4.9 to 5.2,
+  dense 8.4 to 10.1 against 7.6 to 10.5); two-voice accompaniments 10.4
+  onsets a bar merged before, 8.6 now, FFVI 7.3; one voice 8.7 before, 6.8
+  now, FFVI 5.8.
+- **The hook doubled, the theme carried** (`theme_doubling_units`,
+  `theme_carrier_units`; `whole.double_theme`, `whole.carry_theme`). Where
+  the tune plays its theme cell the table draws which parts play it with
+  it and how far from the tune (FFVI: none in 65 %, the bass two octaves
+  down most often); a phrase whose tune is not the theme draws a carrier
+  (FFVI: none in 99 %). Set 7: the hook doubled in 13 of 20 songs (25
+  bars: the accompaniment 11, the bass 9, the counter 3, the harmony 2),
+  the theme carried in none, as one phrase in a hundred predicts.
+- **Steps.** A new phrase is steered to where the shift table puts it over
+  its first third rather than jumped there (phrase-start steps 0.29 to
+  0.34; FFVI 0.50), and an echoed cell is moved whole to the start that
+  lands the most strong beats on the chord instead of having single notes
+  bent (its intervals kept). The counter-line's "loss" after its draw was
+  the investigation's own measure merging its two voices; measured on its
+  first voice it loses nothing (0.59 drawn, 0.58 finished). The tune's
+  steps inside a bar stay 0.58 against 0.65: three points are the chord
+  weighting on strong beats, which holds the chord-tone rate; recovering
+  them means moves counted by whether they land on a chord tone, a
+  vocabulary choice left open.
+- **Elsewhere:** the player's music folder renamed on the owner's machine
+  (`~/Music/bitComposer`; the code already defaulted there, the old folder
+  had won as a fallback); the vocabulary documented, every table with what
+  it counts and what it controls (`VOCABULARY.md`).
+
+Song Check 7 is written from this (set 6's options, the same seeds).

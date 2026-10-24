@@ -283,6 +283,81 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(p.extras["options"]["plan_draws"], whole.PLAN_TRIES)
         self.assertTrue(any("unthemed" in line for line in p.log))
 
+    def test_the_line_and_its_second_voice(self):
+        """The figure table counts an upper part's own line where it holds two voices; the second voice's bar is its own unit
+        under the line's bar."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + 0.5 * i, 0.4, 60.0, "a") for k in range(4) for i in range(8)]        # every eighth
+        second = [(4.0 * k + i, 0.9, 52.0, "a") for k in range(4) for i in range(4)]            # the beats, with the line
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"accompaniment": line + second}, sid="s", game="g")
+        s.voice_notes = {3: ("accompaniment", line), 4: ("accompaniment", second)}
+        self.assertEqual(rhythm.line_notes(s, "accompaniment"), line)
+        patterns = {u.outcome for u in rhythm.units([s]) if u.values["part"] == "accompaniment"}
+        self.assertEqual(patterns, {"0 1/2 1 3/2 2 5/2 3 7/2"})                                 # the line's bar, not the voices merged
+        units = rhythm.second_figure_units([s])
+        self.assertEqual(len(units), 4)
+        self.assertEqual((units[0].outcome, units[0].values), ("0 1 2 3", {"part": "accompaniment", "density": "7-9", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        self.assertEqual([rhythm.density_bin(n) for n in (1, 3, 4, 6, 7, 9, 10, 24)], ["1-3", "1-3", "4-6", "4-6", "7-9", "7-9", "10+", "10+"])
+        s.voice_notes = {3: ("accompaniment", line)}
+        self.assertIsNone(rhythm.line_notes(s, "accompaniment"))                                 # one voice: the part's bar
+        self.assertEqual(rhythm.second_figure_units([s]), [])
+
+    def test_the_theme_doubled_and_carried(self):
+        """Where the tune plays its theme cell another part may play it too (theme_doubling, with the interval); a phrase
+        whose tune is not the theme may have it carried by the bass (theme_carrier)."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        cell = lambda a, base: [(a, 0.9, base, "m"), (a + 1.0, 0.9, base + 2.0, "m"), (a + 2.0, 1.9, base + 4.0, "m")]   # noqa: E731
+        other = lambda a, base: [(a, 0.4, base + 7.0, "m"), (a + 0.5, 0.4, base + 5.0, "m"), (a + 1.0, 2.9, base + 4.0, "m")]   # noqa: E731
+        tune = cell(0.0, 60.0) + other(4.0, 60.0) + other(8.0, 60.0) + other(12.0, 60.0) + cell(16.0, 60.0) + other(20.0, 60.0) + other(24.0, 60.0) + other(28.0, 60.0)
+        counter = other(0.0, 72.0) + other(4.0, 72.0) + other(8.0, 72.0) + other(12.0, 72.0) + cell(16.0, 72.0) + other(20.0, 72.0)
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune, "counter": counter}, sid="s", game="g", parts=[(0, 8, None, "A")])
+        units = rhythm.theme_doubling_units([s])
+        self.assertEqual([(u.outcome, u.values["place"]) for u in units], [("none", "statement"), ("counter:+12", "later")])
+        self.assertEqual([u.outcome for u in rhythm.theme_carrier_units([s])], [])             # the second phrase opens with the theme: nothing to carry
+        tune2 = cell(0.0, 60.0) + other(4.0, 60.0) + other(8.0, 60.0) + other(12.0, 60.0) + other(16.0, 62.0) + other(20.0, 60.0) + other(24.0, 60.0) + other(28.0, 60.0)
+        bass = other(0.0, 36.0) + other(4.0, 36.0) + other(8.0, 36.0) + other(12.0, 36.0) + cell(16.0, 36.0) + other(20.0, 36.0) + other(24.0, 36.0) + other(28.0, 36.0)
+        s2 = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune2, "bass": bass}, sid="s", game="g", parts=[(0, 8, None, "A")])
+        self.assertEqual([u.outcome for u in rhythm.theme_carrier_units([s2])], ["bass"])      # bars 4-5 of the bass are the theme phrase's first two
+        self.assertEqual([u.outcome for u in rhythm.theme_doubling_units([s2])], ["none"])
+
+    def test_the_band_passes_copy_the_theme_and_the_repeats(self):
+        """double_theme copies the tune's theme bar into the drawn part at the drawn interval; carry_theme puts the theme phrase into
+        the bass's register under a phrase that is not the theme; copy_repeats makes a repeated part note for note."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g", parts=[(0, 4, None, "A"), (4, 4, 0, "A")])
+        tune = [(0.0, 0.9, 60.0, 0), (1.0, 1.9, 62.0, 0), (2.0, 3.9, 64.0, 0)] + [(4.0 + k + 0.5 * i, 4.4 + k + 0.5 * i, 67.0 + i, 0) for k in range(0, 12, 4) for i in range(2)]
+        s.notes["melody"] = [(a, b - a, m, "melody") for a, b, m, _ in tune]
+        counter = [(t, u, m + 12.0, 0) for t, u, m, _ in tune]
+        s.notes["counter"] = [(a, b - a, m, "counter") for a, b, m, _ in counter]
+        bass = [(4.0 * k, 3.9, 36.0, 0) for k in range(8)]
+        s.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        written = {"melody": whole.Part("melody", list(tune), ["0 1 2"] + ["0 1/2 1 3/2"] * 7),
+                   "counter": whole.Part("counter", list(counter), ["0 1 2"] + ["0 1/2 1 3/2"] * 7),
+                   "bass": whole.Part("bass", list(bass), ["0"] * 8)}
+        plays = [True] * 8
+        plan = whole.Plan(1, "g", "t", 0, "major", 120.0, s.parts, 0, ["I"] * 8, [None] * 8, ["bass", "melody", "counter"], {}, [], {"melody": plays, "bass": plays, "counter": plays},
+                          {"melody": (60, 80), "counter": (60, 84), "bass": (30, 45)}, {}, {}, {"melody": {"theme_bars": [0, 1, 2, 3], "letters": {0: "T"}}}, {}, [])
+        doubling = tables.Table(("part", "place"), "theme doubling", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "counter:+12", {"part": "theme", "place": p}) for i, p in enumerate(("statement", "later", "statement"))])
+        carrier = tables.Table(("part",), "theme carrier", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "bass", {"part": "carrier"}) for i in range(3)])
+        models = {"theme_doubling": doubling, "theme_carrier": carrier}
+        rng = random.Random(1)
+        log = whole.double_theme(plan, s, written, models, rng)
+        self.assertEqual(log, ["bar 0: the counter doubles the theme's cell (+12)"])
+        self.assertEqual([n for n in written["counter"].notes if n[0] < 4.0], [(0.0, 0.9, 72.0, 0), (1.0, 1.9, 74.0, 0), (2.0, 3.9, 76.0, 0)])
+        self.assertEqual([n[2] for n in s.notes["counter"] if n[0] < 4.0], [72.0, 74.0, 76.0])
+        plan.extras["melody"]["letters"] = {0: "T", 1: "n"}
+        log = whole.carry_theme(plan, s, written, models, rng)
+        self.assertEqual(log, ["bar 4: the bass carries the theme phrase (-24)"])
+        self.assertEqual([n for n in written["bass"].notes if 16.0 <= n[0] < 20.0][:3], [(16.0, 16.9, 36.0, 0), (17.0, 17.9, 38.0, 0), (18.0, 19.9, 40.0, 0)])
+        log = whole.copy_repeats(plan, s, written)
+        self.assertEqual(log, ["A (bars 4-7) plays A (bars 0-3) again note for note"])
+        for role in ("melody", "counter", "bass"):
+            first = [(round(t, 6), round(u, 6), m) for t, u, m, _ in written[role].notes if t < 16.0]
+            again = [(round(t - 16.0, 6), round(u - 16.0, 6), m) for t, u, m, _ in written[role].notes if t >= 16.0]
+            self.assertEqual(first, again, role)
+            self.assertEqual(written[role].figures[4:], written[role].figures[:4])
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

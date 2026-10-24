@@ -413,7 +413,7 @@ def unclashed(midi: int, options: list, tune: set) -> int:
 def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
-          plays: list | None = None) -> tuple[list, list, list]:
+          plays: list | None = None, figures: list | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -421,14 +421,19 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     cycles the tones). `voices`: the part's voices low to high; `registers`:
     voice -> its register (low, high); `pedals`: voice -> the note a pedal
     voice (a register PEDAL_VOICE semitones or narrower) holds; `models`:
-    rhythm and voicings (Caches).
+    rhythm and voicings (Caches); `figures`: the bars given (a second line's,
+    drawn under the line's own bars from the second_figures table) instead
+    of drawn here.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
     own = plays_as_own(plays, bars) if plays is not None else [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
-    figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
-                            habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy)
+    if figures is None:
+        figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
+                                habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy)
+    else:
+        figures = [f if o != REST else REST for f, o in zip(figures, own)]
     step = MOTION_STEP.get(motion, 0)
     pedals = pedals or {}
     walked = 0.0                                            # how far along the stack the voices have moved (motion)
@@ -922,23 +927,33 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         pc = (root + cell.entry) % 12
         low, high = register
         first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
-        if chord is not None and cell.positions and abs(cell.positions[0] - round(cell.positions[0])) < rhythm.NEAR and wants_chord():
-            pcs = {(chord[0] + i) % 12 for i in harmony.SHAPES.get(chord[1], harmony.SHAPES[""])}
-            if first % 12 not in pcs:                       # the first note on the beat lands on the chord too, at the song's rate
-                first = min((x for x in range(first - 3, first + 4) if x % 12 in pcs and low <= x <= high), key=lambda x: (abs(x - first), x), default=first)
-        pitches = [first]
-        idx = scale_index(first, scale)
-        for p, st in zip(cell.positions[1:], cell.steps):
-            idx += st
-            m = scale_pitch(idx, scale)
-            here = _chord_in_bar(song, a + p)
-            if here is not None and abs(p - round(p)) < rhythm.NEAR and wants_chord():
-                pcs = {(here[0] + i) % 12 for i in harmony.SHAPES.get(here[1], harmony.SHAPES[""])}
-                if m % 12 not in pcs:
-                    near = [x for x in range(m - 3, m + 4) if x % 12 in pcs and (x != pitches[-1] or st == 0)]   # a move stays a move
-                    m = min(near, key=lambda x: (abs(x - m), x)) if near else m
-                    idx = scale_index(m, scale)
-            pitches.append(m)
+
+        def build(start: int) -> list:
+            """The cell from its first note by its own scale steps: its intervals kept whole."""
+            out, idx = [start], scale_index(start, scale)
+            for st in cell.steps:
+                idx += st
+                out.append(scale_pitch(idx, scale))
+            return out
+
+        def on_chord(pitches: list) -> int:
+            """How many of the cell's strong-beat notes land on their beat's chord."""
+            n = 0
+            for p, m in zip(cell.positions, pitches):
+                here = _chord_in_bar(song, a + p)
+                if here is not None and abs(p - round(p)) < rhythm.NEAR:
+                    n += int(m % 12 in {(here[0] + i) % 12 for i in harmony.SHAPES.get(here[1], harmony.SHAPES[""])})
+            return n
+
+        pitches = build(first)
+        if wants_chord() and any(_chord_in_bar(song, a + p) is not None and abs(p - round(p)) < rhythm.NEAR for p in cell.positions):
+            # the sequence lands its beats on the new chord as a player's does: the whole cell moved to the nearest scale
+            # note within a third that puts the most strong beats on the chord. No single note is bent, so the cell's
+            # intervals, and with them the tune's steps, stay what the table drew (bending one note had cost the melody
+            # a point of steps and the counter-line eleven).
+            best = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
+                       key=lambda x: (on_chord(build(x)), -abs(x - first), -x), default=first)
+            pitches = build(best)
         pitches = [min(high, max(low, m)) for m in pitches]
         last_midi = float(pitches[-1]) if pitches else last_midi
         last_move = f"{pitches[-1] - pitches[-2]:+d}" if len(pitches) >= 2 and pitches[-1] != pitches[-2] else ("0" if len(pitches) >= 2 else last_move)
@@ -1023,10 +1038,12 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 phrase_cells.append(again(k, src))
                 choices[k] = "copy"
         else:
-            if prev_phrase is not None:                     # the new phrase starts where the table puts it against the last
-                last_midi = float(min(register[1], max(register[0], last_midi + shift_of(relation))))
+            # the new phrase sits where the shift table puts it against the last (the table counts mean pitches): the line
+            # is steered there over the phrase's first third by draw_move's contour aim, not jumped there in one move
+            # (FFVI's phrase-start moves are half steps; the jump had made them a quarter)
+            aim0 = float(min(register[1], max(register[0], last_midi + shift_of(relation)))) if prev_phrase is not None else None
             for attempt in range(COPY_TRIES):
-                phrase_cells, start_midi = [], None
+                phrase_cells, start_midi = [], aim0
                 snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen))
                 for i, k in enumerate(live):
                     if relation == "answered" and prev_phrase and i < len(prev_phrase):
