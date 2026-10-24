@@ -615,6 +615,25 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(writer.mask_figure("0:R 1:R 2:5 3:5", "-"), writer.REST)
         self.assertEqual(writer.mask_figure(writer.REST, "1 1"), writer.REST)
 
+    def test_the_bass_locks_to_the_kits_accents(self):
+        """The kit's accents are the positions where two pieces strike together; bass_locks counts the share of them the bass
+        strikes with; a table's floor may step down where its context has too few songs."""
+        from bitcomposer.translate import tables
+        bars = [(0.0, 4.0), (4.0, 8.0)]
+        drums = [(t, 0.1, float("nan"), "kick") for t in (0.0, 2.0, 4.0, 6.0)] + [(t, 0.1, float("nan"), "hat") for t in (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)]
+        self.assertEqual(rhythm.kit_accents(drums, bars, 12), {0: {0, 2}, 1: {0, 2}})
+        bass = [(0.0, 0.9, 36.0, "b"), (2.0, 0.9, 36.0, "b"), (4.0, 0.9, 36.0, "b"), (5.5, 0.4, 38.0, "b")]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": bass, "drums": drums}, sid="s", game="g")
+        s.voice_notes = {1: ("bass", bass)}
+        self.assertEqual([u.outcome for u in rhythm.bass_lock_units([s])], ["0.8"])                 # three of the four accents carry a bass note
+        units = [tables.Unit("s1", "g", "1 1", {"part": "bass", "onsets": "2"})] * 4 + [tables.Unit(f"s{i}", "g", "1 0 | 1/2", {"part": "bass", "onsets": "3"}) for i in range(2, 6)]
+        t = tables.Table(("part", "onsets"), "m").fit(units)
+        rng = random.Random(1)
+        held = {t.draw(("bass", "2"), rng, floored=False, floor_k=2) for _ in range(20)}
+        self.assertEqual(held, {"1 1"})                                                               # the one-song floor, as it stands
+        stepped = {t.draw(("bass", "2"), rng, floored=False, floor_k=2, floor_songs=2) for _ in range(40)}
+        self.assertIn("1 0 | 1/2", stepped)                                                           # the floor steps down to the part: its other songs' masks reach
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""

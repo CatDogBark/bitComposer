@@ -1936,3 +1936,89 @@ Song Check 21 is Whole 28 a fourth time beside set 18's, round 25's and
 round 26's renders. Open: the slap's fills (the thin bass mask contexts);
 the line's lurch between a one-note bar and a run in thin figure
 contexts; and round 25's list.
+
+### Round 28: the bass on the kit (2026-10-24, from the owner's question on Song Check 21)
+
+**His question.** The sustained bass line starts and stops and leaves
+odd empty space; a bass holds the rhythm, that is its job; does FFVI's?
+And then: check FFVI's themed songs with a bass in particular.
+
+**Measured first (discussion only).** By pattern FFVI's bass holds the
+rhythm less than ours: a recent pattern held in 0.29 of its bars (themed
+0.35) against the written 0.59, the downbeat rested on in 0.38 (themed
+0.36) against 0.07. What it does is sit on the drums: three quarters of
+its notes strike with some drum (0.75 themed, 0.77 all), and where two
+drum pieces strike together, a bass note is there in 0.94 of the cases.
+The written bass had 0.44 and 0.67: `locks_of` had locked the bass to
+the whole planned band, a threshold the bass, written second with two
+drum voices to hand, met in no bar, so it had been locked to nothing.
+The slap's own fills were at half FFVI's rate (0.35 of its onsets off
+the line's; FFVI 0.67), the bass mask table's floor standing on
+one-song contexts.
+
+**Built, on his go.** `bass_locks` (`rhythm.kit_accents`,
+`rhythm.bass_lock_units`): the share of the kit's accents (positions
+where two pieces strike together, on the figure grid) carrying a bass
+note, in tenths, drawn once a song and given to the bass writer as the
+lock's share (`writer.bass(lock_share=)`, `locked`); the lock's
+positions are the written kit's accents. `tables.Table.draw` gained
+`floor_songs`: the floor steps down to the deepest level that many
+songs reach; the bass mask draw passes `PLAN_SONGS` (2) so the slap's
+fills come from more than one song's bars. A test for each.
+
+**Measured after, seeds 1 to 20 (15 songs with a bass and drums):**
+the bass's strikes with any drum 0.44 to 0.52 (FFVI 0.75), the kit's
+accents carrying a bass note 0.67 to 0.78 (FFVI 0.94); the slap's own
+onsets 0.35 to 0.38 of its strikes (FFVI 0.67), its strikes 1.29 to
+1.36 of the line's (FFVI 1.93). Whole 28: the lock applied in no bar,
+and the slap's own onsets 0.10 to 0.18.
+
+**Found: the lock has nothing to hold in this kit, and FFVI's themed
+kits are the same kind.** By exact onset time FFVI's kit strikes two
+pieces at once 0.04 times a bar; on the figure grid (`position`, as the
+figures and `kit_accents` count) 2.63 times a bar in the 28 kits that
+stack at all, and the other 17 kits with a bass never stack and have no
+kick or snare voice (a hat, a cymbal or an unnamed piece under once a
+bar). FFVI's themed kits: the low voice (kick, snare, toms) 8.95 times a
+bar, the high (hat, cymbals, the rest) 0.65, stacks 0.37 a bar at the
+median, four of twelve never. The written kits: 0.36 stacks a bar, five
+of fifteen never; Whole 28's kit is the kick 64 times, the snare 260,
+the hat 32, in 36 bars, no two together. The kit is not the fault; the
+word is silent for a kick-and-snare kit. What FFVI's bass does there,
+label-free: it follows one piece of the kit at 0.81 of that piece's hits
+(themed 0.91; the piece once or twice a bar; the readings label it a
+cymbal in 13 songs of 44, a snare in 10, a kick in 7, so the label is
+no handle, and the pack's kick sample is struck in 14 songs only), and
+its strikes fall on some kit onset at 0.77 of its notes (kits of two
+pieces or more 0.82; by bar, all of its strikes on the kit in 0.58 of
+bars, most in 0.19, fewer than half in 0.06, none in 0.16).
+
+**Found: the line's lurch is the figure chain's depth, and a coarser
+memory does not mend it.** Whole 28's line strikes 1, 10, 2, 1 a bar
+through its A part; FFVI's bass under the same habit (medium walking)
+keeps within one strike of the bar before in 0.59 of bar pairs and
+jumps four or more in 0.18 (held-out songs overall: 0.74 and 0.09).
+The bass table conditions a bar on the exact figure before it, and
+under this habit 174 of 182 previous-figure contexts hold one song, so
+a bar after a figure FFVI never played (the ten-note run, the two-note
+bar) is drawn from the habit's whole spread (0.14 empty bars, 0.17 of
+seven strikes or more) with no memory of the bar before. The candidate
+was a coarser memory, the previous bar's strike count or onset pattern,
+before or instead of its figure. Scored as phase 3 scored shapes
+(held-out bits a unit, FFVI's 1874 bass bars split by song, the cache
+mixture over each): the shape as it stands is best (-10.08 bits; the
+pattern -10.10, the count -10.15), and what each writes keeps within one
+strike in 0.64 to 0.68 of bar pairs (FFVI 0.74) and jumps four or more
+in 0.15 to 0.17 (FFVI 0.09): the chain is not where the steadiness
+lives. The unchained shape writes 0.64 too; the Cache's recall carries
+it (its ostinato share drawn 0.34 against FFVI's 0.40). No shape change.
+`~/diags/bitcomposer/idiom/phase4/prev_shape.py` scores any candidate
+in a minute.
+
+Song Check 22 is Whole 28 a fifth time beside the other four; the fifth
+differs from the fourth in the slap's fills only, and the page says so.
+Open, for his decision: a counted word for the bass on the kit's onsets
+(`bass_on_kit`: the share of the line's strikes on some kit onset, by
+the song, drawn and asked of each bar's figure), which reaches every
+kit and would turn the ten-note run off the kit away; the slap's fills
+against the line's density; the recall share; and round 25's list.

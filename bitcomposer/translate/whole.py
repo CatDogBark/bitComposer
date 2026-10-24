@@ -66,7 +66,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
-            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8",
+            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -107,6 +107,7 @@ class Plan:
     log: list = field(default_factory=list)
     feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
     gap_sounds: dict = field(default_factory=dict)    # a chord part or the bass -> {only/line/second: {gap class: the share a note sounds}}
+    locks: dict = field(default_factory=dict)         # the bass -> the share of the kit's accents it strikes with (bass_locks)
     levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the levels table)
     layer_levels: dict = field(default_factory=dict)  # a layered part -> its second voice's level against its line's
 
@@ -144,7 +145,8 @@ MASK_FLOOR = 4                        # second_figures' draw never backs off bel
                                       # read onset by onset, and one from a shorter line read around a longer one had filled it
 
 
-def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list | None = None, floor_k: int | None = None) -> str:
+def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list | None = None, floor_k: int | None = None,
+          floor_songs: int = 0) -> str:
     """A draw from a pack's table under a context (a mixture's own table alone; `floor_k` the level the draw never backs off
     below, PLAN_FLOOR, the part, without); the default where the pack has no such table."""
     t = models.get(name)
@@ -156,7 +158,7 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
             log.append(f"no {name} table: {default!r} assumed")
         return default
     t = t.table if hasattr(t, "table") else t
-    return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS)
+    return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS, floor_songs=floor_songs)
 
 
 def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
@@ -598,10 +600,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     gap_sounds = {role: {voice: {g: float(_draw(models, "gap_sounds", (role, voice, g), rng, log)) for _, g in rhythm.GAP_CLASSES}
                          for voice in ("only", "line", "second")}
                   for role in band if role in rhythm.UPPER + (R.BASS,)} if "gap_sounds" in models_or_empty(models) else {}
+    locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log))} if R.BASS in band and R.DRUMS in band else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds)
+                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks)
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -822,18 +825,21 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
                                                               + (f"; dropped (no sample) {dict(dropped)}" if dropped else "")])
     if R.BASS in plan.band and "bass" in models:
-        lock = locks_of(song, {R.BASS}, plan)
+        # the bass sits on the kit's accents (two pieces together) at the game's share (bass_locks): FFVI's on 0.94 of them;
+        # locked to the whole planned band it had met the threshold in no bar, written second with two drum voices to hand
+        lock = {k: (ps, set()) for k, ps in rhythm.kit_accents(song.notes.get(R.DRUMS, []), song.bars, song.division).items()} if R.BASS in plan.locks else locks_of(song, {R.BASS}, plan)
+        lock_share = plan.locks.get(R.BASS, 1.0)
         layered = plan.voices.get(R.BASS, 1) >= 2 and layer_of(plan.extras.get(R.BASS))[0] == "apart"
         sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
         gs = plan.gap_sounds.get(R.BASS)                    # the share a note sounds by its gap (gap_sounds), the one share without it
         shared_bass = {}                                    # the line's notes, for a second voice following it
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0],
-                                     sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass)
+                                     sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         log = [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
-               f"{len(notes)} notes; locked to the band in {len(lock)} bars"]
+               f"{len(notes)} notes; " + (f"on the kit's accents in {len(lock)} bars at {lock_share:.1f}" if R.BASS in plan.locks else f"locked to the band in {len(lock)} bars")]
         layer = layer_of(plan.extras.get(R.BASS))
         if plan.voices.get(R.BASS, 1) >= 2 and layer[0] == "apart":   # a second bass line of its own (FFVI's layered basses are all apart)
             _, offset, density = layer
@@ -843,7 +849,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             given = None
             if "second_figures" in models:                  # the second voice's bar as a mask over the line's onsets (which it strikes with,
                 line_pat = [f if f == writer.REST else rhythm.pattern(Fraction(t.partition(":")[0]) for t in rhythm._tokens(f)) for f in figures]
-                masks = [p if p == writer.REST else _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), str(len(p.split())), p), rng2, floor_k=MASK_FLOOR)
+                masks = [p if p == writer.REST else _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), str(len(p.split())), p), rng2, floor_k=MASK_FLOOR, floor_songs=PLAN_SONGS)
                          for p in line_pat]                 # plus its own), drawn a bar as the chord parts' are (round 20): one draw a line
                                                             # pattern had given a whole song the doubling mask where FFVI's slap fills half its bars
                 given = [writer.mask_figure(f, m) for f, m in zip(figures, masks)]

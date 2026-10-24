@@ -2236,6 +2236,42 @@ def voice_move_units(songs) -> list:
     return out
 
 
+def kit_accents(drum_notes, bars, division: int) -> dict:
+    """The kit's accents a bar: the positions where two or more drum pieces strike together, {bar index: set of positions};
+    a bar with none is left out."""
+    out = {}
+    for k, (a, b) in enumerate(bars):
+        at = Counter()
+        for n in drum_notes:
+            if a - NEAR <= n[0] < b - NEAR:
+                at[position(n[0] - a, division)] += 1
+        strong = {p for p, c in at.items() if c >= 2}
+        if strong:
+            out[k] = strong
+    return out
+
+
+def bass_lock_units(songs) -> list:
+    """Each song with a bass and drums as a unit: its outcome the share of the kit's accents (two pieces together) that
+    carry a bass note, in tenths, its value the part. FFVI's bass sits on 0.94 of the kit's accents at the median and
+    strikes with some drum at three quarters of its notes; written locked to nothing (the writer's lock had counted the
+    whole planned band, which the bass, written second, never met) it had sat on 0.67 and 0.44 (2026-10-24)."""
+    out = []
+    for s in songs:
+        if R.BASS not in s.notes or R.DRUMS not in s.notes:
+            continue
+        voices = part_voices(s, R.BASS)
+        line = voices[line_voice(voices, R.BASS)] if len(voices) >= 2 else s.notes[R.BASS]
+        bs = sorted(n[0] for n in line if not math.isnan(n[2]))
+        accents = kit_accents(s.notes[R.DRUMS], s.bars, s.division)
+        total = sum(len(v) for v in accents.values())
+        if not bs or not total:
+            continue
+        hit = sum(1 for k, ps in accents.items() for p in ps if any(abs(t - (s.bars[k][0] + float(p))) < NEAR for t in bs))
+        out.append(tables.Unit(s.sid, s.game, f"{round(hit / total, 1):.1f}", {"part": R.BASS}))
+    return out
+
+
 def level_units(songs) -> list:
     """Each part of each song as a unit: its outcome its notes' median level as a share of the song's loudest part's, in
     tenths ("1.0" the loudest part, "0.7"), its value the part. FFVI's parts sit close, the bass loudest (0.28 of full),

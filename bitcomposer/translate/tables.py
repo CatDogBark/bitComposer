@@ -193,7 +193,7 @@ class Table:
         return self.conditionings.index("previous") if "previous" in self.conditionings else len(self.conditionings)
 
     def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True,
-             floor_k: int | None = None, min_songs: int = 0, floor_outcomes: int = 0) -> str:
+             floor_k: int | None = None, min_songs: int = 0, floor_outcomes: int = 0, floor_songs: int = 0) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
         n / (n + t) else the coarser level's; below the root, the floor
@@ -211,9 +211,16 @@ class Table:
         the floor itself steps down to the deepest level holding that many
         outcomes (a figure chain floored on a context with one outcome
         would write that outcome alone: a kit of rests). A one-song context
-        with bars of its own stays the floor: those bars are the game's."""
+        with bars of its own stays the floor: those bars are the game's.
+        `floor_songs`: the floor steps down to the deepest level that many
+        songs reach (a mask drawn for the bass from a thirteen-song table
+        under a floor one song held had doubled the line where the game
+        fills)."""
         if floor_k is not None and floor_outcomes:
             while floor_k > self.covers and len(self.votes.get(context[:floor_k]) or {}) < floor_outcomes:
+                floor_k -= 1
+        if floor_k is not None and floor_songs:
+            while floor_k > self.covers and self.songs.get(context[:floor_k], 0) < floor_songs:
                 floor_k -= 1
         coarsest = None
         for k in range(len(context), self.covers - 1, -1):

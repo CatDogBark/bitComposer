@@ -1672,7 +1672,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
-         models: dict | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         models: dict | None = None, lock_share: float = 1.0) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -1704,7 +1704,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     if figures is not None:                                 # a second line's figures given (the second_figures table, under the line's own)
         figures = [f if o != REST else REST for f, o in zip(figures, own)]
     elif free:
-        figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit), energy=energy)
+        figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit), energy=energy,
+                                lock_share=lock_share)
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))

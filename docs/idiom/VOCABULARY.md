@@ -171,6 +171,27 @@ said otherwise. Counting code: `translate/rhythm.py` and
   `layer_sounds`, which stay for the parts without this word) left the
   slap bass a hole where the game holds, and a note ended at the bar line
   had dropped into a hole when the next bar began late (round 26).
+- **bass_locks** — the share of the kit's accents (positions where two
+  drum pieces strike together, `rhythm.kit_accents`) that carry a bass
+  note, in tenths, by the part. Drawn once a song; the bass writer's lock
+  (the figure ladder's `locked`) then asks each bar's figure to strike
+  that share of the kit's accents in the bar. FFVI's bass sits on 0.94 of
+  them at the median and strikes with some drum at three quarters of its
+  notes; by pattern it repeats itself less than the written bass did (a
+  recent pattern held in 0.29 of bars against 0.59, the downbeat rested on
+  in 0.38 against 0.07), so holding the rhythm is being on the drums, not
+  repeating. The writer's lock had counted the whole planned band, which
+  the bass, written second with two drum voices to hand, met in no bar:
+  0.67 of the accents, 0.44 of its notes with a drum; with the lock 0.78
+  and 0.52 on seeds 1-20 (round 28). The word is silent where the kit
+  never strikes two pieces at once: 17 of FFVI's 45 kits with a bass, and
+  its themed kits in particular (kick and snare nine times a bar, a hat
+  under once; four of twelve never stack), so a written kit of that kind
+  (Whole 28) locks to nothing. What holds there is label-free: the bass's
+  strikes fall on a kit onset at 0.77 of its notes (by bar: all of them in
+  0.58 of bars, none in 0.16), and the bass keeps its density from bar to
+  bar (0.59 of FFVI's bar pairs within one strike under the walking habit,
+  0.18 jumping four or more); neither is counted yet.
 - **levels** — a part's level as a share of the song's loudest part's, in
   tenths ("1.0" the loudest part), by the part; from the readings' own note
   levels. Drawn once a song for every part; the loudest plays at
@@ -302,7 +323,10 @@ said otherwise. Counting code: `translate/rhythm.py` and
   line's notes and twice as often in all, the written one had struck with
   two fifths; `writer.mask_figure` keeps the line's marks where the slap
   strikes with it and gives its own onsets the root, both re-pitched by
-  the voice words): FFVI's voices
+  the voice words; the bass mask's floor steps down where its context
+  holds under two songs, the thirteen two-voice basses being thin at the
+  onset count, which had doubled the line where FFVI fills: round 28):
+  FFVI's voices
   beside an arpeggiated line strike with a sparser subset of the line's
   own rhythm (two thirds of their onsets on the line's, 0.6 of its
   density), on other tones of the same voicing, with the line's note
