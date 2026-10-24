@@ -1838,3 +1838,54 @@ register (the layer offset drawn without regard to the line's height),
 the melody sitting a shade under the accompaniment in the drawn levels
 (FFVI's tune is 1.16 times its accompaniment; the shares are drawn a part
 at a time), and `PACKS.md` naming the envelope field.
+
+### Round 26: the bass that would not finish (2026-10-24, from the owner's notes on Song Check 19)
+
+The owner took round 25's account of Whole 28 (the bass's notes identical,
+its samples and levels changed) and heard, in both renders, a bass that
+"isn't quite finishing what it's doing": notes ending abruptly, and the
+second voice playing notes of its own instead of carrying the line. He
+asked for a bug check. Measured (bass28_check.py, bass28_check2.py), one
+bug and two missing words; the triplet runs are the writing (the song is
+in triple feel, and FFVI's "medium walking" bass runs so in its shuffle
+songs, in two-voice songs too, 4 of 13).
+
+- **The bug: a bar's last note cut at the bar line.** The sounded-share
+  word (`sounds`, `layer_sounds`) was counted against the gap to the
+  voice's next onset wherever it falls; the bass and upper writers applied
+  it against the bar's end. Every bar-final note of the written bass line
+  ended on the bar line; FFVI's do 2 % of the time, running on into the
+  next bar's first note. Where the next bar began late (Whole 28's bar 2
+  at beat 0.5) the line held four beats, dropped into a half-beat hole and
+  came back. Fixed in both writers (`writer.first_onset`, `realize(...,
+  runs_to=)`): the last note runs to the next bar's first onset; at a rest
+  bar or the song's end the bar line stays. After: 0.60 of the line's
+  bar-final notes end on the bar line, those whose next bar begins on the
+  beat (the note then ends where the next begins) or rests.
+- **The share by the gap** (`gap_sounds`, VOCABULARY.md). FFVI's bass
+  plays half its gap under two beats and nearly all of it from two beats
+  on (one voice 0.83 / 0.46 / 0.97 / 0.99 by gap class; the second voice
+  0.50 / 0.45 / 0.97 / 0.99); one share a voice had put the slap bass at
+  0.50 of a three-beat gap and left a hole where the game holds. Counted a
+  note on the chord parts and the bass, by part, voice (only, line,
+  second) and gap class; the plan draws a share per class; the writers
+  take it by each note's gap (`writer.share_at`); `sounds` and
+  `layer_sounds` stay for the parts without the word. After, Whole 28's
+  second voice: 0.40 under a beat, 0.20 at one to two, 0.90 at two to four
+  (the 0.20 a draw within FFVI's spread for that class).
+- **The second bass voice on the line's pitch.** FFVI's slap plays the
+  sustained line's pitch class at 78 % of their shared onsets; the written
+  second bass, drawing its own chord roles over the second_figures
+  rhythm, at 31 %: that was the "random notes". The voice_intervals and
+  voice_moves words are now counted on the bass too (`_beside_lines`),
+  and `writer.bass(shared=, kind=, models=)` re-pitches the second voice's
+  notes with them (`writer.beside_pitch`, the same product draw as the
+  upper parts', factored out), the line recording its notes in `shared`.
+  After: the same pitch class at 88 % of shared onsets.
+
+Song Check 20 is Whole 28 three times: set 18's render, round 25's and
+this round's, the bass figures the same notes in all three. Open: the
+one share the upper parts' voices beside the line still take from the
+line (gap_sounds gives them "second" now; measure), the melody writer's
+own lengths (articulation, not this word), and the rest of round 25's
+list.

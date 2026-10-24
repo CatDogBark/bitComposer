@@ -65,7 +65,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
-            "levels": "0.8", "layer_levels": "0.9",
+            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -105,6 +105,7 @@ class Plan:
     voices: dict                      # a part -> how many voices it gets
     log: list = field(default_factory=list)
     feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
+    gap_sounds: dict = field(default_factory=dict)    # a chord part or the bass -> {only/line/second: {gap class: the share a note sounds}}
     levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the levels table)
     layer_levels: dict = field(default_factory=dict)  # a layered part -> its second voice's level against its line's
 
@@ -593,10 +594,13 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             f"plays {sum(plays[role])}/{len(plays[role])} bars") if x))
     if themed or band_returns:
         extras.setdefault("options", {}).update({"themed": themed, "band_returns": band_returns})
+    gap_sounds = {role: {voice: {g: float(_draw(models, "gap_sounds", (role, voice, g), rng, log)) for _, g in rhythm.GAP_CLASSES}
+                         for voice in ("only", "line", "second")}
+                  for role in band if role in rhythm.UPPER + (R.BASS,)} if "gap_sounds" in models_or_empty(models) else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels)
+                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds)
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -820,8 +824,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         lock = locks_of(song, {R.BASS}, plan)
         layered = plan.voices.get(R.BASS, 1) >= 2 and layer_of(plan.extras.get(R.BASS))[0] == "apart"
         sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
+        gs = plan.gap_sounds.get(R.BASS)                    # the share a note sounds by its gap (gap_sounds), the one share without it
+        shared_bass = {}                                    # the line's notes, for a second voice following it
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
-                                     free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0], sounds=sounds_line)
+                                     free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0],
+                                     sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         log = [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
@@ -839,7 +846,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                          for f in figures]
             sounds2 = float(_draw(models, "layer_sounds", (R.BASS, "second"), rng2)) if "layer_sounds" in models else plan.sounds[R.BASS]
             notes2, figures2 = writer.bass(song, models["bass"], rng2, habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
-                                           free=True, plays=plan.plays[R.BASS], register=max(24, plan.registers[R.BASS][0] + offset), sounds=sounds2, figures=given)
+                                           free=True, plays=plan.plays[R.BASS], register=max(24, plan.registers[R.BASS][0] + offset),
+                                           sounds=gs["second"] if gs else sounds2, figures=given, shared=shared_bass,
+                                           kind=layer_of(plan.extras.get(R.BASS))[0], models=models)
             song.notes[R.BASS] += [(a, b - a, m, "bass") for a, b, m in notes2]
             line += [(a, b, m, 1) for a, b, m in notes2]
             figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
@@ -856,6 +865,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         sounds = harness.UPPER_SOUNDS.get(role) or plan.sounds[role]
         if layers and "layer_sounds" in models:               # a layered part's line takes its own note lengths
             sounds = float(_draw(models, "layer_sounds", (role, "line"), random.Random(f"{seed}:{role}:line sounds")))
+        gs = plan.gap_sounds.get(role)                        # by the gap (gap_sounds) where the pack has the word
+        if gs and not harness.UPPER_SOUNDS.get(role):
+            sounds = gs["line" if layers else "only"]
         lock = locks_of(song, {role}, plan)
         # the line, one voice, on the part's own figures and voicing; each voice beside it by its own relation (the layers
         # table: doubling at an interval, alternating, apart). An upper part is about one note loud an onset in FFVI (1.2 to
@@ -867,7 +879,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                 pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
-               f"motion {plan.extras[role]['motion']}, sounded {sounds:.2f}; {sum(1 for f in figures if f != writer.REST)} bars written, "
+               f"motion {plan.extras[role]['motion']}, sounded {_sounds_text(sounds)}; {sum(1 for f in figures if f != writer.REST)} bars written, "
                f"{len(notes)} notes; locked to the band in {len(lock)} bars"]
         all_figures = [f"{f} / {vc}" for f, vc in zip(figures, voicings)]
         line_notes = list(notes)
@@ -891,7 +903,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     given = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in figures]
                 drawn_pitch = "voice_intervals" in models and "voice_moves" in models
                 span_v = (max(24, low - rhythm.LAYER_OFFSET), min(100, high + rhythm.LAYER_OFFSET)) if drawn_pitch else reg_v   # the voice's pitch is its drawn
-                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], sounds,   # interval from the
+                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], gs["second"] if gs else sounds,   # interval from the
                                                               key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
                                                               pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,   # voices beside a line sit in
                                                               tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v), kind=rel[0])   # (the layer offset's cap), not folded into its offset register
@@ -1050,6 +1062,13 @@ def part_speed(plan: Plan, written: dict | None, role: str, second: bool = False
     beside = {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}
     counts = Counter((n[3], int(n[0] // METER)) for n in written[role].notes if (n[3] in beside) == second)
     return max(counts.values(), default=0) * plan.bpm / (60.0 * METER)
+
+
+def _sounds_text(sounds) -> str:
+    """A sounded share for a log: one share, or the gap_sounds word's by gap class."""
+    if isinstance(sounds, dict):
+        return " ".join(f"{g} {sounds[g]:.1f}" for _, g in rhythm.GAP_CLASSES if g in sounds)
+    return f"{float(sounds):.2f}"
 
 
 def second_register(plan: Plan, role: str) -> tuple:

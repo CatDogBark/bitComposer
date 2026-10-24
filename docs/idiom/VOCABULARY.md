@@ -122,8 +122,9 @@ said otherwise. Counting code: `translate/rhythm.py` and
   Mad's low second-bass sample an octave and a half above its range, and
   a counter-line with no pairs of its own had drawn an accompaniment's
   (round 24).
-- **voice_intervals** — a voice beside the line (apart or alternating), at
-  each onset it strikes WITH the line: its interval from the line's note in
+- **voice_intervals** — a voice beside the line (apart or alternating), in
+  the chord parts and, since round 26, the bass, at each onset it strikes
+  WITH the line: its interval from the line's note in
   scale steps (7 an octave, 2 a third, signed), by the part, the relation
   and its interval at the previous such onset (the chain). FFVI's voice
   beside an arpeggiated line sits a third below most, an octave off in
@@ -144,7 +145,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
   interval weighs its own probability under voice_intervals times the
   probability, under voice_moves, of the move it implies from the voice's
   last note (the line's own move between the two onsets known); alone,
-  the move alone. Never an interval or a move the game never made; a
+  the move alone. The second bass voice takes the same two words
+  (`writer.beside_pitch`, over the figure the second_figures word gave
+  it): FFVI's slap plays the sustained line's pitch class at 78 % of their
+  shared onsets, a second bass drawn on its own chord roles had at 31 %
+  (round 26). Never an interval or a move the game never made; a
   pitch another voice of the part holds at that onset is drawn again,
   and the onset skipped when every try lands on one. The voice sits in
   the span FFVI's voices beside a line sit in (the line's register widened
@@ -152,6 +157,20 @@ said otherwise. Counting code: `translate/rhythm.py` and
   which had turned a drawn third below into a sixth above. A voice placed
   against the line alone, without its move, had leapt five steps or more
   at 43 % of its onsets, FFVI 11 %; with the product 3 %.
+- **gap_sounds** — the share of its gap a note sounds, by the part, the
+  voice (only; line or second where the part has two) and the gap's
+  length to the voice's next onset (under a beat, one to two, two to four,
+  a bar or more); counted a note on the chord parts and the bass. Drawn
+  once a song for each part, voice and gap class; the bass and upper
+  writers take the share by each note's gap (`writer.share_at`), and a
+  bar's last note runs to the next bar's first onset, the gap the share
+  was counted against (`writer.first_onset`). FFVI's bass plays half of a
+  gap under two beats and nearly all of one from two beats on (one voice:
+  0.83 under a beat, 0.46 at one to two, 0.97 at two to four; the second
+  of two: 0.50, 0.45, 0.97); the one share a voice had (`sounds`,
+  `layer_sounds`, which stay for the parts without this word) left the
+  slap bass a hole where the game holds, and a note ended at the bar line
+  had dropped into a hole when the next bar began late (round 26).
 - **levels** — a part's level as a share of the song's loudest part's, in
   tenths ("1.0" the loudest part), by the part; from the readings' own note
   levels. Drawn once a song for every part; the loudest plays at

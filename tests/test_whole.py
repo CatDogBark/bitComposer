@@ -566,6 +566,38 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(pack.other_slot(g, {"snare": 1, "mallet": 1}), "snare")
         self.assertIsNone(pack.other_slot(g, {}))
 
+    def test_a_notes_gap_runs_into_the_next_bar_and_its_share_follows_the_gap(self):
+        """A bar's last note runs to the next bar's first onset (the gap the share was counted against); the share a note
+        sounds may come by the gap's class (gap_sounds); the second bass voice follows the line's pitch where they strike together."""
+        from bitcomposer.translate import writer, tables, vocab
+        bars = [(0.0, 4.0), (4.0, 8.0)]
+        song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 8.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        figures = ["0:R 3:R", "1/2:R 2:R"]
+        self.assertEqual(writer.first_onset(figures, bars, 1), 4.5)
+        self.assertIsNone(writer.first_onset(figures, bars, 2))
+        notes, _, _ = writer.realize(figures[0], 0.0, 4.0, song, 36, 1.0, {0, 2, 4, 5, 7, 9, 11}, 0, None, runs_to=4.5)
+        self.assertEqual([(a, b) for a, b, m in notes], [(0.0, 3.0), (3.0, 4.5)])                 # the last note runs on to 4.5, not 4.0
+        shares = {"<1": 0.5, "1-2": 0.5, "2-4": 1.0, "4+": 1.0}
+        self.assertEqual((writer.share_at(shares, 0.5), writer.share_at(shares, 3.0), writer.share_at(0.7, 3.0)), (0.5, 1.0, 0.7))
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g")
+        line = [(0.0, 3.9, 36.0, "a"), (4.0, 1.0, 36.0, "a"), (6.0, 1.9, 38.0, "a")]
+        second = [(0.0, 0.25, 36.0, "b"), (0.5, 0.25, 36.0, "b"), (1.0, 2.9, 36.0, "b"), (4.0, 0.25, 36.0, "b"), (4.5, 3.4, 36.0, "b")]
+        s.notes = {"bass": line + second}; s.voice_notes = {1: ("bass", line), 2: ("bass", second)}
+        units = rhythm.gap_sound_units([s])
+        by = {(u.values["voice"], u.values["gap"]): u.outcome for u in units}
+        self.assertEqual((by[("line", "4+")], by[("second", "<1")], by[("second", "2-4")]), ("1.0", "0.5", "1.0"))
+        self.assertEqual(rhythm.gap_class(0.5), "<1"); self.assertEqual(rhythm.gap_class(4.0), "4+")
+        # the second bass voice on the line's pitch: a table that says "the same note" with the line and "hold" alone
+        iv = tables.Table(("part", "kind", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "0", {"part": "bass", "kind": "apart", "previous": p}) for i in range(20) for p in (rhythm.START, "0")])
+        mv = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "bass", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("2", "with"), ("0", "alone"))])   # with the line it moves as the line does
+        shared = {("line", (0, __import__("fractions").Fraction(0))): 40.0, ("line", (0, __import__("fractions").Fraction(2))): 43.0}
+        midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), 43.0, "0", 40.0, 2)
+        self.assertEqual((midi, steps), (43, 0))
+        midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), None, "0", 43.0, 0)
+        self.assertEqual((midi, steps), (43, None))
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""

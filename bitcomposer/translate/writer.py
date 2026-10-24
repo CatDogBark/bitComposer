@@ -503,9 +503,10 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             continue
         positions = [Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)]
         bar_voicing = []
+        runs_to = first_onset(figures, bars, k + 1)        # the bar's last note runs to the next bar's first, as the share was counted
         for i, p in enumerate(positions):
             start = a + float(p)
-            until = a + float(positions[i + 1]) if i + 1 < len(positions) else b
+            until = a + float(positions[i + 1]) if i + 1 < len(positions) else (runs_to if runs_to is not None and runs_to > b - rhythm.NEAR else b)
             c = rhythm._chord_at(song.chords, start)
             chord = (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else last_chord
             if chord is None:
@@ -553,7 +554,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             if role == R.ARP and len(voices) == 1:
                 midi = in_register(pitches[i % len(pitches)], registers[voices[0]])
                 midi = unclashed(midi, [in_register(m, registers[voices[0]]) for m in pitches], tune)
-                notes.append((start, start + (until - start) * sounds, float(midi), voices[0]))
+                notes.append((start, start + (until - start) * share_at(sounds, until - start), float(midi), voices[0]))
                 continue
             # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
             # from the middle; with motion, each voice walks along the stack a step a strike (the voices interlocking)
@@ -566,7 +567,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             for j, v in enumerate(voices):
                 low_v, high_v = registers[v]
                 if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
-                    notes.append((start, start + (until - start) * sounds, float(pedals.get(v, low_v)), v))
+                    notes.append((start, start + (until - start) * share_at(sounds, until - start), float(pedals.get(v, low_v)), v))
                     continue
                 taken = shared.setdefault(("taken", (k, p)), set()) if shared is not None else None   # the part's notes at this onset (a 2-tuple key: the voicing look-up unpacks every key)
                 if beside and len(voices) == 1:            # a voice beside the line: with the line, its interval to the line's note (voice_intervals);
@@ -629,7 +630,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
                 if taken is not None:
                     taken.add(int(round(midi)))
-                notes.append((start, start + (until - start) * sounds, float(midi), v))
+                notes.append((start, start + (until - start) * share_at(sounds, until - start), float(midi), v))
             walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)
     return notes, figures, voicings
@@ -645,6 +646,63 @@ COPY_TRIES = 12                       # tunes drawn again when one copies a game
 ARC_ABOVE = {"0": 0, "1-2": 2, "3-5": 4, "6+": 7}             # the summit table's classes, as semitones the climax may rise above the register
 ARC_BELOW = {"0": 1, "1-2": 2, "3-5": 4, "6-9": 7, "10+": 11}   # the arc table's classes, as semitones a phrase's ceiling sits under the climax
 ARC_ROOM = 7                          # semitones a phrase keeps above the register's floor whatever the arc says
+BESIDE_SPAN = 24                      # semitones above its floor a second bass voice may sit when its pitch follows the line
+
+
+def share_at(sounds, gap: float) -> float:
+    """The share of a gap a note sounds: one share (a float), or the gap_sounds word's by the gap's class (a dict)."""
+    if isinstance(sounds, dict):
+        return float(sounds.get(rhythm.gap_class(gap), sounds.get("<1", 0.8)))
+    return float(sounds)
+
+
+def first_onset(figures: list, bars: list, k: int) -> float | None:
+    """When bar k's first note strikes, from its figure; None where it rests or there is no bar k. A bar's last note runs to
+    it: the sounded share was counted against the gap to the voice's next onset, and a note ended at the bar line had
+    dropped into a hole when the next bar began late (2026-10-24)."""
+    if k >= len(figures) or k >= len(bars) or figures[k] == REST or not figures[k]:
+        return None
+    toks = rhythm._tokens(figures[k])
+    return bars[k][0] + float(Fraction(toks[0].partition(":")[0])) if toks else None
+
+
+def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Random, ref: float | None, prev_steps: str,
+                 prev_midi: float | None, moved: int, refused=()) -> tuple[int | None, int | None]:
+    """The note of a voice beside the line, as the voice_intervals and voice_moves words give it: with the line (`ref`, the
+    line's note; `moved`, the line's move in scale steps since the voice's last onset with it), the interval both words
+    agree on, drawn from their product; alone, the voice's own move. (midi, the interval drawn or None); (None, None)
+    where nothing can be drawn."""
+    t_iv = models["voice_intervals"].table if hasattr(models["voice_intervals"], "table") else models["voice_intervals"]
+    t_mv = models["voice_moves"].table if hasattr(models["voice_moves"], "table") else models["voice_moves"]
+    total = 0.0
+
+    def weighted(weights: dict):
+        tot = sum(weights.values())
+        if tot <= 0:
+            return None
+        x, acc = rng.random() * tot, 0.0
+        for key_, w in weights.items():
+            acc += w
+            if x < acc:
+                return key_
+        return next(reversed(weights))
+    if ref is not None:
+        ref_i = scale_index(int(round(ref)), scale)
+        ctx = (role, kind, prev_steps)
+        if prev_steps != rhythm.START and prev_midi is not None:
+            before = int(prev_steps)
+            weights = {c: t_iv.p(str(c), ctx) * t_mv.p(str(c - before + moved), (role, kind, "with"))
+                       for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
+                       if c not in refused and str(c) in t_iv.vocabulary and str(c - before + moved) in t_mv.vocabulary}
+        else:
+            weights = {c: t_iv.p(str(c), ctx) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1) if c not in refused and str(c) in t_iv.vocabulary}
+        steps = weighted(weights)
+        return (scale_pitch(ref_i + steps, scale), steps) if steps is not None else (None, None)
+    if prev_midi is None:
+        return (None, None)
+    move = weighted({c: t_mv.p(str(c), (role, kind, "alone")) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
+                     if c not in refused and str(c) in t_mv.vocabulary})
+    return (scale_pitch(scale_index(int(round(prev_midi)), scale) + move, scale), None) if move is not None else (None, None)
 MOVED = {"moved up": 2, "moved down": -2}   # semitones a moved phrase shifts (a scale step; the scale then corrects each note)
 DEGREE_PCS = {"1": (0,), "3": (3, 4), "5": (7,)}   # a phrase's ending degree -> intervals from the tonic it may land on
 STRONG_SCALE = True                   # a note arriving on the beat sits in the scale
@@ -1598,8 +1656,9 @@ def plays_as_own(plays, bars: list) -> list:
 
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
-         plays: list | None = None, register: int | None = None, sounds: float | None = None,
-         figures: list | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         plays: list | None = None, register: int | None = None, sounds=None,
+         figures: list | None = None, shared: dict | None = None, kind: str | None = None,
+         models: dict | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -1636,8 +1695,31 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))
     notes, last_root, previous = [], tonic, None
-    for (a, b, _), figure in zip(bars, figures):
-        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous)
+    beside = kind in VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
+    prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
+    for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
+        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous, runs_to=first_onset(figures, bars, k + 1))
+        if shared is not None and not beside:               # the line: its notes for the voice beside it
+            for start, _, midi in new:
+                shared[("line", (k, rhythm.position(start - a, song.division)))] = midi
+        elif beside:                                        # the second voice: with the line, the note both words agree on; alone, its own
+            repitched = []                                  # move (voice_intervals, voice_moves, counted on the bass too: FFVI's second bass
+            for start, end, midi in new:                    # plays the line's pitch class at 78 % of their shared onsets; drawn apart, 31 %)
+                p = rhythm.position(start - a, song.division)
+                ref = shared.get(("line", (k, p)))
+                if ref is not None:
+                    moved = (scale_index(int(round(ref)), scale) - scale_index(int(round(last_with)), scale)) if last_with is not None else 0
+                    target, steps = beside_pitch(models, R.BASS, kind, scale, rng, ref, prev_steps, prev_midi, moved)
+                    if target is not None:
+                        prev_steps, last_with = str(steps), ref
+                else:
+                    target, _ = beside_pitch(models, R.BASS, kind, scale, rng, None, prev_steps, prev_midi, 0)
+                if target is not None:
+                    midi = float(in_register(target, (low, low + BESIDE_SPAN)))
+                prev_midi = midi
+                repitched.append((start, end, midi))
+            new = repitched
+            previous = new[-1][2] if new else previous
         notes += new
     return notes, figures
 
@@ -1670,8 +1752,8 @@ def passing(previous: float | None, toward: int | None, scale: set, low: int, ro
     return round(previous) + direction
 
 
-def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds: float, scale: set,
-            last_root: int, previous: float | None = None) -> tuple[list, int, float | None]:
+def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds, scale: set,
+            last_root: int, previous: float | None = None, runs_to: float | None = None) -> tuple[list, int, float | None]:
     """A figure's tokens as notes in the bar [a, b) (see the module); returns
     them, the last chord root used and the last note's midi."""
     tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
@@ -1686,7 +1768,7 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
     out, direction = [], 1
     for i, (p, mark) in enumerate(tokens):
         start = a + float(p)
-        until = a + float(tokens[i + 1][0]) if i + 1 < len(tokens) else b
+        until = a + float(tokens[i + 1][0]) if i + 1 < len(tokens) else (runs_to if runs_to is not None and runs_to > b - rhythm.NEAR else b)
         if until <= start:
             continue
         root, shape = chords[i]
@@ -1703,7 +1785,7 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
             midi = place(tone(root, shape, mark, scale), low, previous, mark == "r")
         if previous is not None and midi != previous:
             direction = 1 if midi > previous else -1
-        out.append((start, start + (until - start) * sounds, float(midi)))
+        out.append((start, start + (until - start) * share_at(sounds, until - start), float(midi)))
         previous = float(midi)
     return out, last_root, previous
 

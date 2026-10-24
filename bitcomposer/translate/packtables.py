@@ -93,6 +93,7 @@ KEPT = {
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
     "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each pitched part's weight in it, drawn once a song"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
+    "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "gap"), False, False, "the share of its gap a note sounds, by the voice and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "levels": ("rhythm", "level_units", {}, ("part",), False, False, "a part's level as a share of the song's loudest part's, in tenths"),
     "layer_levels": ("rhythm", "layer_level_units", {}, ("part",), False, False, "a layered part's second voice's level against its line's, in tenths"),
     "climax": ("phrases", "climax_units", {}, ("part",), False, False, "the place among a song's tune phrases of the one holding the tune's highest note"),

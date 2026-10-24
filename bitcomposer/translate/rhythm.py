@@ -962,6 +962,40 @@ def sounded_share(notes) -> float | None:
     return statistics.median(shares) if shares else None
 
 
+GAP_CLASSES = ((1.0, "<1"), (2.0, "1-2"), (4.0, "2-4"), (1e9, "4+"))   # beats to a voice's next onset: a note's sounded share depends on it
+
+
+def gap_class(gap: float) -> str:
+    return next(name for top, name in GAP_CLASSES if gap < top - NEAR)
+
+
+def gap_sound_units(songs) -> list:
+    """Each note of a chord part or the bass as a unit: its outcome the share of its gap it sounds (to SOUND_BIN), its values
+    the part, the voice (only; line or second where the part has two) and the gap's class. FFVI's bass plays half its gap
+    under two beats and nearly all of it from two beats on (one voice: 0.83 under a beat, 0.46 at one to two, 0.97 at two
+    to four; the second voice of two: 0.50, 0.45, 0.97): one share a voice had left the slap bass a hole where the game
+    holds (2026-10-24)."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.BASS,):
+            voices = part_voices(s, role)
+            if not voices:
+                continue
+            if len(voices) >= 2:
+                line = line_voice(voices, role)
+                streams = (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x]))
+            else:
+                streams = (("only", next(iter(voices.values()))),)
+            for which, ns in streams:
+                line_ = sorted((n for n in ns if not math.isnan(n[1]) and not math.isnan(n[2])), key=lambda n: n[0])
+                for n, m in zip(line_, line_[1:]):
+                    gap = m[0] - n[0]
+                    if gap > NEAR:
+                        share = round(min(1.0, n[1] / gap) / SOUND_BIN) * SOUND_BIN
+                        out.append(tables.Unit(s.sid, s.game, f"{share:.1f}", {"part": role, "voice": which, "gap": gap_class(gap)}))
+    return out
+
+
 def sound_units(songs) -> list:
     """Each pitched part of each song as a unit: its outcome the share of its
     gap a note sounds (to SOUND_BIN), its value the part. What a song written
@@ -2133,8 +2167,8 @@ def _beside_lines(songs):
     from . import harmony, harness                         # harness imports this module
     for s in songs:
         scale = {((s.tonic or 0) + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
-        for role in UPPER:
-            voices = part_voices(s, role)
+        for role in UPPER + (R.BASS,):                       # the bass too: its second voice plays the line's pitch class at 78 % of
+            voices = part_voices(s, role)                   # their shared onsets in FFVI; written apart it had at 31 % (2026-10-24)
             if len(voices) < 2:
                 continue
             line = line_voice(voices, role)
