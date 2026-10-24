@@ -26,12 +26,12 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # their long tail (a bar one song played) wholly to the cell floor, whose runs the
                                      # manner refuses, so a "new" bar was mostly a common bar again (the whole songs'
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
-FIGURE = ("part", "meter", "habit", "previous")   # the figure tables' shape: the habit before the chain (writer.SHAPE)
+FIGURE = ("part", "meter", "feel", "habit", "previous")   # the figure tables' shape: the song's feel and the habit before the chain (writer.SHAPE)
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
 # mixture, what the table says), in the record's order
 KEPT = {
-    "rhythm": ("rhythm", "units", {}, FIGURE, True, True, "a part's bar as an onset pattern"),
+    "rhythm": ("rhythm", "units", {}, FIGURE, True, True, "a part's bar as an onset pattern (an upper part's own line where it holds two voices or more)"),
     "values": ("rhythm", "value_units", {}, ("part", "value", "habit"), False, False, "a melody note held or detached, by its value"),
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
@@ -52,11 +52,17 @@ KEPT = {
     "loops": ("rhythm", "loop_units", {}, ("part",), False, False, "the chord the loop returns to"),
     "form": ("rhythm", "form_units", {}, ("part", "meter", "index"), False, False, "a part of the form: new, again or back, by its index"),
     "lengths": ("rhythm", "length_units", {}, ("part", "meter", "habit"), False, False, "a part's length in bars, by the song's habit"),
+    "letters": ("rhythm", "letters_units", {}, ("part",), False, False, "a song's form as its parts' letters in order (A B A B C), drawn whole"),
+    "phrase_letters": ("rhythm", "phrase_letter_units", {}, ("part", "phrases", "form"), False, False, "a part's phrases as letters: the theme head again, an earlier head again, or new"),
+    "theme_body": ("rhythm", "theme_body_units", {}, ("part",), False, False, "how much of the theme phrase comes back with its head"),
+    "return_band": ("rhythm", "return_band_units", {}, ("part",), False, False, "which of the chords, the bass and the accompaniment come back with the theme"),
+    "theme_doubling": ("rhythm", "theme_doubling_units", {}, ("part", "place"), False, False, "which other parts double the theme's cell where the tune plays it, and how far from the tune, at its statement or later"),
+    "theme_carrier": ("rhythm", "theme_carrier_units", {}, ("part",), False, False, "the part that carries the theme phrase where the tune's phrase is not the theme: the bass, the counter, the accompaniment, or none"),
     "contours": ("phrases", "contour_units", {}, ("part", "mode"), False, True, "a four-bar phrase's contour"),
     "peaks": ("phrases", "peak_units", {}, ("part", "mode", "contour"), False, False, "where a phrase peaks, by its contour"),
     "endings": ("phrases", "ending_units", {}, ("part", "mode"), False, True, "the note a phrase ends on, against the key"),
     "relations": ("phrases", "relation_units", {}, ("part", "mode", "habit"), False, True, "how a phrase stands to the one before"),
-    "moves": ("phrases", "move_units", {}, ("part", "mode", "habit", "previous"), False, True, "the tune's move note to note, after the move before, under the song's stepwise habit"),
+    "moves": ("phrases", "move_units", {}, ("part", "mode", "habit", "place", "tone", "previous"), False, True, "the tune's move note to note, under the song's stepwise habit, by where the arriving note falls in its beat and the tone the note left stands on against the chord, after the move before"),
     "step_habits": ("phrases", "step_habit_units", {}, ("part",), False, False, "how stepwise a song's tune is (leaping, mixed, stepwise), drawn once a song"),
     "repeat_habits": ("phrases", "repeat_habit_units", {}, ("part",), False, False, "how often a song's tune repeats a note (rare, some, many), drawn once a song"),
     "melody_recall": ("rhythm", "melody_recall_units", {}, ("part", "habit"), False, False, "the tune's urn: a bar the same as the one before, an earlier one again, or new, by the song's echo habit"),
@@ -67,7 +73,15 @@ KEPT = {
     "parts": ("rhythm", "parts_units", {}, ("part", "band"), False, False, "whether a song has each part, by the band's size"),
     "voices": ("rhythm", "voices_units", {}, ("part", "band"), False, False, "how many voices a song uses"),
     "doubles": ("rhythm", "double_units", {}, ("part",), False, False, "what a song's double voices double, and how"),
-    "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a second bass voice does beside the line"),
+    "layers": ("rhythm", "layer_units", {}, ("part", "rank"), False, False, "what each voice of a part beside its line does, by its rank: doubling at an interval, alternating, or apart (how far off, how dense)"),
+    "feels": ("rhythm", "feel_units", {}, ("part",), False, False, "a song's feel, duple or triple (a quarter of its onsets or more on triplet positions), drawn once a song; every figure table is drawn by it"),
+    "layer_sounds": ("rhythm", "layer_sound_units", {}, ("part", "voice"), False, False, "the share of its gap a note sounds for a layered part's line and for its second voice"),
+    "periods": ("rhythm", "period_units", {}, ("part", "length", "tempo"), False, False, "a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo"),
+    "period_holds": ("rhythm", "period_hold_units", {}, ("part", "period"), False, False, "inside a backing part's period, a bar playing the bar a period before again (held) or not (varied)"),
+    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "feel", "tempo", "onsets", "line"), False, False, "a layered part's second line (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
+    "layer_samples": ("rhythm", "layer_sample_units", {}, ("part",), False, False, "the samples a layered part's line and its second voice play, as a pair, drawn once a song"),
+    "sample_lengths": ("rhythm", "sample_length_units", {}, ("part",), False, False, "the shortest note a sample is played at (ms, a class), by the sample: a note's floor on it"),
+    "sample_speeds": ("rhythm", "sample_speed_units", {}, ("part",), False, False, "the fastest bars a sample is played in (notes a second, a class), by the sample: weighed in its choice for a part"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
     "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),
@@ -76,6 +90,7 @@ KEPT = {
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
     "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each pitched part's weight in it, drawn once a song"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
+    "ranges": ("rhythm", "sample_range_units", {}, ("part",), False, False, "the register a sample is played in, by the sample"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
     "part_textures": ("rhythm", "part_texture_units", {}, ("part", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by its place in the form and the part before's"),
     "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
@@ -91,9 +106,11 @@ def fit(name: str, units) -> dict | None:
     """One kept table fitted on its units, as the JSON entry a pack holds;
     None where there are no units."""
     units = list(units)
+    _, _, _, shape, on_floor, mixture, what = KEPT[name]
+    if on_floor:                                            # a figure table: rolls the reader kept as bars are no bars to write
+        units = [u for u in units if not rhythm.is_roll(u.outcome, u.values.get("meter", 4))]
     if not units:
         return None
-    _, _, _, shape, on_floor, mixture, what = KEPT[name]
     floor = rhythm.BarCells(units) if on_floor else None
     covers = len(rhythm.BarCells.COVERS) if on_floor else 0
     if mixture:

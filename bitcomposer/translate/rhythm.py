@@ -68,6 +68,9 @@ import argparse
 import bisect
 import json
 import math
+from fractions import Fraction
+import statistics
+import bisect
 import statistics
 import sys
 from array import array
@@ -136,6 +139,12 @@ class Song:
     loop_bar: int | None = None                   # the bar number the loop returns to
     voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
     bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
+    voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
+    copies: dict = field(default_factory=dict)        # a planned song: role -> [(first bar, bars, the bar copied from)], the band
+                                                      # coming back with the theme (the writers copy their own earlier bars there)
+    periods: dict = field(default_factory=dict)       # a planned song: role -> {bar index: the lag in bars whose bar it plays again}
+                                                      # (the plan's held bars of a backing part's period, period_units)
+    feel: str | None = None                           # the song's feel, duple or triple (song_feel); a planned song's drawn once
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -188,6 +197,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in store.unpack(blob)
                         if s < end and level > 0 and (role == R.DRUMS or not math.isnan(m))]
                 into.setdefault(role, []).extend(mine)
+                if into is song.notes:
+                    song.voice_notes[voice] = (role, mine)
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
@@ -256,9 +267,10 @@ def bars_of(song: Song, role: str):
         yield a, struck
 
 
-def numbered_bars_of(song: Song, role: str):
-    """bars_of with each bar's number in the reading first: (number, start, [(position, [notes])])."""
-    notes = song.notes.get(role, [])
+def numbered_bars_of(song: Song, role: str, notes: list | None = None):
+    """bars_of with each bar's number in the reading first: (number, start, [(position, [notes])]); `notes` in place of
+    the part's (one voice's own)."""
+    notes = song.notes.get(role, []) if notes is None else notes
     numbers = song.numbers or range(len(song.bars))
     for k, (a, b) in zip(numbers, song.bars):
         if round(b - a) != song.meter:
@@ -360,13 +372,13 @@ def bass_units(songs) -> list:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
         weight = part_weights(s).get(R.BASS, "minor")
-        for k, a, struck in numbered_bars_of(s, R.BASS):
+        for k, a, struck in numbered_bars_of(s, R.BASS, line_notes(s, R.BASS)):   # the line where the bass holds two voices
             if last is not None and k != last + 1:
                 previous = START
             c = _chord_at(s.chords, a)
             drawn = figure(struck, a, s)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
-                "part": R.BASS, "meter": s.meter, "tempo": tempo, "weight": weight,
+                "part": R.BASS, "meter": s.meter, "tempo": tempo, "weight": weight, "feel": song_feel(s),
                 "shape": "?" if c is None or c.root is None or c.fit < FIT else (c.shape or "major"),
                 "chord": chord_change(s, a, a + s.meter), "next": chord_change(s, a + s.meter, a + 2 * s.meter),
                 "previous": previous}))
@@ -484,7 +496,7 @@ def drum_units(songs) -> list:
                 previous = START
             drawn = drum_figure(struck, s)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
-                "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous}))
+                "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous, "feel": song_feel(s)}))
             previous, last = drawn, k
         if mine:
             kit = _kit(mine)
@@ -786,12 +798,12 @@ def units(songs) -> list:
             if role not in s.notes:
                 continue
             previous, last, mine = START, None, []
-            for k, a, struck in numbered_bars_of(s, role):
+            for k, a, struck in numbered_bars_of(s, role, line_notes(s, role)):
                 if last is not None and k != last + 1:
                     previous = START                      # a bar of another length between: the chain breaks
                 drawn = pattern(p for p, _ in struck)
                 mine.append(tables.Unit(s.sid, s.game, drawn, {
-                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous, "weight": weights.get(role, "minor"),
+                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous, "weight": weights.get(role, "minor"), "feel": song_feel(s),
                     "place": place_in_part(s, k), "chord": chord_change(s, a, a + s.meter)}))
                 previous, last = drawn, k
             if mine:
@@ -875,16 +887,31 @@ REGISTER_BIN = 4                     # semitones: a part's register (its notes' 
 TEMPO_BIN = 5                        # beats a minute: a song's tempo is kept to this grain
 
 
+def register_notes(song: Song, role: str) -> list | None:
+    """A layered pitched part's line voice's notes (line_voice), for its register: a part's register is its line's, not
+    the span of all its voices (FFVI's layered accompaniments span 16 semitones merged, the line 12; five of its songs span
+    more than 30 merged, no line does; the merged span given to every voice had put one voice over four octaves and its
+    sample far above where the game played it, 2026-10-23). None for a part of one voice."""
+    if role == R.DRUMS:
+        return None
+    voices = part_voices(song, role)
+    if len(voices) < 2:
+        return None
+    return voices[line_voice(voices, role)]
+
+
 def register_units(songs) -> list:
     """Each pitched part of each song as a unit: its outcome the register it
     plays in, "low-high" (midi, the part's notes' 10th and 90th percentiles,
-    REGISTER_BIN semitones a step); its values the part. What a song written
-    with no original draws a part's register from."""
+    REGISTER_BIN semitones a step; a layered part's line voice's,
+    register_notes); its values the part. What a song written with no
+    original draws a part's register from."""
     out = []
     for s in songs:
         for role, ns in s.notes.items():
             if role == R.DRUMS:
                 continue
+            ns = register_notes(s, role) or ns
             pitched = sorted(n[2] for n in ns if not math.isnan(n[2]))
             if len(pitched) < 8:
                 continue
@@ -940,6 +967,553 @@ def sound_units(songs) -> list:
             share = sounded_share(ns)
             if share is not None:
                 out.append(tables.Unit(s.sid, s.game, f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role}))
+    return out
+
+
+PHRASE = 4                           # bars a phrase, as the phrase tables were counted (writer.PHRASE)
+THEME = "T"                          # a phrase opening with the song's theme head (the first phrase's opening bar: the hook)
+AGAIN = "r"                          # a phrase opening with a bar an earlier phrase opened with, the theme's aside
+NEW = "n"                            # a phrase opening with a bar no phrase opened with yet
+
+
+def phrase_windows(song: Song, length: int = PHRASE) -> list:
+    """The tune's phrases as windows of bar indices, a part of the form at a
+    time (a short tail joins the window before it): [(part index, [bar
+    indices])]; bars in no part are windows of their own."""
+    index = {num: k for k, num in enumerate(song.numbers or range(len(song.bars)))}
+    out, covered = [], set()
+    for i, (bar, n, *_) in enumerate(song.parts):
+        ks = [index[num] for num in range(bar, bar + n) if num in index]
+        mine = []
+        for j in range(0, len(ks), length):
+            chunk = ks[j:j + length]
+            if len(chunk) < length and mine and mine[-1][-1] + 1 == chunk[0]:
+                mine[-1] = mine[-1] + chunk
+            else:
+                mine.append(chunk)
+        out += [(i, w) for w in mine]
+        covered |= set(ks)
+    out += [(None, [k]) for k in range(len(song.bars)) if k not in covered]
+    return sorted(out, key=lambda x: x[1][0])
+
+
+def phrase_heads(song: Song, role: str = None) -> list:
+    """Each phrase's head, the cell of its first sounding bar: [(part index, window, head or None)]."""
+    cells = melody_cells(song, role)
+    return [(i, w, next((cells[k] for k in w if cells[k]), None)) for i, w in phrase_windows(song)]
+
+
+def phrase_letter_units(songs) -> list:
+    """Each part of each song's form (a repeat left out) as a unit: its
+    outcome the letters of its phrases, each THEME where the phrase opens
+    with the song's theme head (the first sounding phrase's opening bar),
+    AGAIN where it opens with a bar an earlier phrase opened with, NEW
+    otherwise ("T n T n"); its values the part (melody), how many phrases
+    the part has (to 5) and the part's place in the form. FFVI (2026-10-23):
+    a later phrase opens with the theme head in 43 % of songs, and half the
+    tune's echoes point at its first four bars; the written tunes echoed as
+    much but anywhere, and the theme never headed a phrase again."""
+    out = []
+    for s in songs:
+        heads = [(i, h) for i, w, h in phrase_heads(s) if i is not None]
+        if sum(1 for _, h in heads if h) < 2:
+            continue
+        theme = next((h for _, h in heads if h), None)
+        seen, by_part = set(), {}
+        for i, h in heads:
+            if h is None:
+                continue
+            letter = THEME if h == theme else AGAIN if h in seen else NEW
+            seen.add(h)
+            by_part.setdefault(i, []).append(letter)
+        own = {i for i, bar, n in _own_parts(s)}
+        for i, letters in by_part.items():
+            if i in own and len(letters) >= 1:
+                out.append(tables.Unit(s.sid, s.game, " ".join(letters), {"part": R.MELODY, "phrases": str(min(len(letters), 5)), "form": form_place(s, i)}))
+    return out
+
+
+def theme_body_units(songs) -> list:
+    """Each return of the theme (a later phrase opening with the theme head)
+    as a unit: its outcome how many of its next bars (to three) are the
+    theme phrase's bars again, in order ("0": the head alone comes back,
+    "3": the whole phrase); its value the part (melody)."""
+    out = []
+    for s in songs:
+        cells = melody_cells(s)
+        heads = [(w, h) for i, w, h in phrase_heads(s) if i is not None and h]
+        if len(heads) < 2:
+            continue
+        theme_w, theme = heads[0]
+        theme_cells = [cells[k] for k in theme_w if cells[k]]
+        for w, h in heads[1:]:
+            if h != theme:
+                continue
+            mine = [cells[k] for k in w if cells[k]]
+            same = 0
+            for a, b in zip(mine[1:4], theme_cells[1:4]):
+                if a != b:
+                    break
+                same += 1
+            out.append(tables.Unit(s.sid, s.game, str(same), {"part": R.MELODY}))
+    return out
+
+
+RETURN_PARTS = ("chords", R.BASS, R.ACCOMP)   # what may come back with the tune's theme, as the readings showed it does
+RETURN_SAME = 0.5                    # the share of a return's bars that are the theme's, for a part to count as back
+
+
+def return_band_units(songs) -> list:
+    """Each return of the theme in each song as a unit: its outcome which of
+    the band comes back with it, "chords", "bass" and "accompaniment" in
+    any set (the part's bars under the returning phrase the same as under
+    the theme phrase in RETURN_SAME of them or more; "none" where nothing
+    does, and a part the song has not is left out of the question); its
+    value the part (return). FFVI (2026-10-23): all three come back in 17
+    of 46 returns, one of them in 23, none in 4; the written songs' returns
+    brought the tune back over new chords and a new accompaniment every
+    time, and were not heard as returns."""
+    out = []
+    for s in songs:
+        cells = melody_cells(s)
+        heads = [(w, next((cells[k] for k in w if cells[k]), None)) for i, w in phrase_windows(s) if i is not None]
+        heads = [(w, h) for w, h in heads if h]
+        if len(heads) < 2:
+            continue
+        theme_w, theme = heads[0]
+        names = bar_chords(s) if s.tonic is not None else None
+        bass = [figure(struck, a, s) if struck else None for _, a, _, struck in all_bars_of(s, R.BASS)] if R.BASS in s.notes else None
+        acc = [pattern(p for p, _ in struck) if struck else None for _, _, _, struck in all_bars_of(s, R.ACCOMP)] if R.ACCOMP in s.notes else None
+        for w, h in heads[1:]:
+            if h != theme:
+                continue
+            m = min(len(theme_w), len(w))
+            back = []
+            for key, seq in (("chords", names), (R.BASS, bass), (R.ACCOMP, acc)):
+                if seq is None:
+                    continue
+                pairs = [(seq[a], seq[b]) for a, b in zip(theme_w[:m], w[:m]) if seq[a] is not None or seq[b] is not None]
+                if pairs and sum(1 for x, y in pairs if x == y) / len(pairs) >= RETURN_SAME:
+                    back.append(key)
+            out.append(tables.Unit(s.sid, s.game, " ".join(back) or "none", {"part": "return"}))
+    return out
+
+
+def part_voices(song: Song, role: str) -> dict:
+    """An upper part's voices with notes: voice -> its notes (the rolls left out)."""
+    return {v: ns for v, (r, ns) in song.voice_notes.items() if r == role and ns}
+
+
+def line_voice(voices: dict, role: str):
+    """A layered part's line among its voices: the bass's the voice with the longest notes (its sustained voice under a
+    busier one), another part's the voice with the most notes (layer_units' rule)."""
+    if role == R.BASS:
+        lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
+        return max(lengths, key=lambda v: (lengths[v], -v))
+    return max(voices, key=lambda v: (len(voices[v]), -v))
+
+
+def line_notes(song: Song, role: str) -> list | None:
+    """A layered part's own line where it holds two voices or more (an upper
+    part or the bass): the line voice's notes (line_voice); None for every
+    other part, whose bar is the part's. The figure table counts the line,
+    not the voices merged: FFVI's two-voice accompaniments strike 7.3 times
+    a bar together, the line 6.6 and the second voice 4.5, and a line
+    written to the merged count with a second line beside it had struck
+    10.3 (2026-10-23); its two-voice basses are a sustained line under a
+    busy staccato voice in the same register."""
+    if role not in UPPER + (R.BASS,):
+        return None
+    voices = part_voices(song, role)
+    if len(voices) < 2:
+        return None
+    return voices[line_voice(voices, role)]
+
+
+DENSITY_BINS = ((3, "1-3"), (6, "4-6"), (9, "7-9"), (1e9, "10+"))   # a bar's onsets, for the second line's draw under the line's bar
+
+
+def density_bin(onsets: int) -> str:
+    """A bar's onset count as a class (DENSITY_BINS)."""
+    return next(name for top, name in DENSITY_BINS if onsets <= top)
+
+
+def second_figure_units(songs) -> list:
+    """Each bar of each upper part holding two voices or more as a unit: its
+    outcome the bar's pattern of the voices beside the line (the second
+    line; "-" where they rest), its values the part, the line's density
+    class in the bar (DENSITY_BINS) and the line's own pattern. The second
+    line is drawn under the line's bar, bar by bar, the pattern backing off
+    to the density class where the pattern is rare: FFVI's second
+    accompaniment voice strikes 4.5 times a bar beside a line of 6.6, two
+    of five of its onsets with the line's."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.BASS,):
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            others = [n for v, ns in voices.items() if v != line for n in ns]
+            key = (lambda struck, a: figure(struck, a, s)) if role == R.BASS else (lambda struck, a: pattern(p for p, _ in struck))
+            line_bars = {k: key(struck, a) for k, a, struck in numbered_bars_of(s, role, voices[line])}
+            line_struck = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, role, voices[line])}
+            tempo, feel = band(s.bpm), song_feel(s)
+            for k, a, struck in numbered_bars_of(s, role, others):
+                if line_bars.get(k, "-") != "-":
+                    # the bass's second voice as its own figure (its chord-tone marks realize it); an upper part's beside the line's
+                    # onsets: which of them it strikes with, and the onsets of its own (second_mask)
+                    outcome = (key(struck, a) if struck else "-") if role == R.BASS else second_mask(line_struck[k], [p for p, _ in struck])
+                    out.append(tables.Unit(s.sid, s.game, outcome,                   # by the line's onset count: a mask is read onset by onset
+                                           {"part": role, "feel": feel, "tempo": tempo, "onsets": str(len(line_bars[k].split())), "line": line_bars[k]}))
+    return out
+
+
+def second_mask(line_positions: list, other_positions: list) -> str:
+    """An upper part's second voice's bar beside the line's: a flag an onset of the line (1: the voice strikes with it, 0:
+    not), then, after a bar, the voice's own onsets off the line's ("1 0 1 0 | 7/2"); "-" where it rests. FFVI's voices
+    beside an arpeggiated line strike with two thirds of their onsets on the line's, at 0.6 of its density (2026-10-23):
+    a pattern drawn on its own had fallen with the line's a seventh of the time, four unrelated lines in one register."""
+    if not other_positions:
+        return "-"
+    on = set(line_positions)
+    flags = " ".join("1" if p in other_positions else "0" for p in line_positions)
+    own = [p for p in other_positions if p not in on]
+    return flags + (" | " + " ".join(str(p) for p in own) if own else "")
+
+
+def apply_mask(line_pattern: str, outcome: str) -> str:
+    """The second voice's bar (a pattern) from the line's bar and a second_mask outcome: the line's onsets it strikes with (a
+    mask shorter or longer than the line's onsets is read around it) and its own onsets; "-" where it rests."""
+    if outcome == "-" or line_pattern in ("-", ""):
+        return "-"
+    line = [Fraction(t.partition(":")[0]) for t in line_pattern.split()]
+    flags, _, own = outcome.partition("|")
+    bits = flags.split()
+    if not bits or all(b not in ("0", "1") for b in bits):
+        return outcome if ":" not in outcome else "-"          # an old-style absolute pattern: as it stands
+    positions = {line[i] for i in range(len(line)) if bits[i % len(bits)] == "1"}
+    positions |= {Fraction(p) for p in own.split()}
+    return pattern(sorted(positions))
+
+
+def sample_id(key: str) -> str:
+    """A reading's sample key as a pack names the sample (pack.voice_of): "s" and its first ten characters."""
+    return "s" + key[:10]
+
+
+LENGTH_BINS = (40, 60, 80, 120, 160, 240, 400, 1e9)   # ms: the shortest note a sample is played at, to the bin's top ("long" past 400)
+SPEED_BINS = (2, 3, 4, 6, 8, 12, 24, 1e9)              # notes a second: the fastest bars a sample is played in ("faster" past 24)
+
+
+def _bin(value: float, bins: tuple, last: str) -> str:
+    top = next(b for b in bins if value <= b)
+    return str(top) if top < 1e9 else last
+
+
+def _sample_plays(songs):
+    """Per song and tonal sample: its notes' lengths (ms) and its bars' rates (notes a second), over every pitched part."""
+    for s in songs:
+        beat = 60 / s.bpm
+        lengths, rates = defaultdict(list), defaultdict(list)
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            for n in ns:
+                if isinstance(n[3], str) and n[1] == n[1]:
+                    lengths[sample_id(n[3])].append(n[1] * beat * 1000)
+            for _, a, b, struck in all_bars_of(s, role):
+                counts = Counter(sample_id(n[3]) for _, group in struck for n in group if isinstance(n[3], str))
+                for key, c in counts.items():
+                    rates[key].append(c / max(1e-9, (b - a) * beat))
+        for key in lengths:
+            if len(lengths[key]) >= 8:
+                yield s, key, sorted(lengths[key]), sorted(rates.get(key, [0.0]))
+
+
+def sample_length_units(songs) -> list:
+    """Each tonal sample of each song as a unit: its outcome the shortest note
+    the game plays it at there (the tenth percentile of its notes' lengths,
+    in ms to LENGTH_BINS' tops), its value the sample (as the pack names
+    it). A sample's floor: a note shorter than the game ever plays a sample
+    never reaches its body (a one-second pad with a 39 ms attack had been
+    played at 50 ms sixteenths, Song Check 14's Whole 02; FFVI plays it at
+    65 ms at the shortest)."""
+    out = []
+    for s, key, lengths, _ in _sample_plays(songs):
+        out.append(tables.Unit(s.sid, s.game, _bin(lengths[int(0.1 * (len(lengths) - 1))], LENGTH_BINS, "long"), {"part": key}))
+    return out
+
+
+def sample_speed_units(songs) -> list:
+    """Each tonal sample of each song as a unit: its outcome the fastest bars
+    the game plays it in there (the 90th percentile of its bars' notes a
+    second, to SPEED_BINS' tops), its value the sample. What the sample's
+    choice weighs beside the part's register: the part's fastest bar against
+    the speeds the game plays each sample at (FFVI keeps its slow-attack pad
+    under six notes a second; a written part had it at eight)."""
+    out = []
+    for s, key, _, rates in _sample_plays(songs):
+        out.append(tables.Unit(s.sid, s.game, _bin(rates[int(0.9 * (len(rates) - 1))], SPEED_BINS, "faster"), {"part": key}))
+    return out
+
+
+def layer_sample_units(songs) -> list:
+    """Each layered part of each song (two voices or more, the drums left
+    out) as a unit: its outcome the samples its line and its second voice
+    play, as a pair of the pack's sample names ("sa692eac0a6 sb34cb55c14"),
+    each voice's the sample it plays most; its value the part. Drawn once
+    a song: FFVI's two-voice bass is a long sustained sample under a short
+    one, the same long sample in ten of its thirteen songs; on one sample
+    for both, the busy voice had played on the long bass (2026-10-23)."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.BASS,):
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
+            keys = []
+            for v in (line, other):
+                played = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
+                if not played:
+                    break
+                keys.append(sample_id(played.most_common(1)[0][0]))
+            if len(keys) == 2:
+                out.append(tables.Unit(s.sid, s.game, " ".join(keys), {"part": role}))
+    return out
+
+
+def layer_sound_units(songs) -> list:
+    """Each layered part of each song (two voices or more; the drums left
+    out) as two units: the share of its gap a note sounds (sound_units'
+    grain) for the line and for the voices beside it; the values the part
+    and the voice (line, second). FFVI's second bass voice is the staccato
+    one under a sustained line; the part's one share had given both lines
+    the same lengths."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.BASS,):
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            for which, ns in (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x])):
+                share = sounded_share(ns)
+                if share is not None:
+                    out.append(tables.Unit(s.sid, s.game, f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role, "voice": which}))
+    return out
+
+
+THEME_PARTS = (R.COUNTER, R.BASS, R.ACCOMP, R.HARMONY)   # the parts that double or carry the tune's theme
+
+
+def _theme_of(song: Song):
+    """The tune's cells, its phrase windows (the live ones) and its theme: the head cell of its first sounding phrase
+    and that phrase's window; (cells, windows, theme window, theme) or None without two sounding phrases."""
+    cells = melody_cells(song)
+    windows = [(w, next((cells[k] for k in w if cells[k]), None)) for i, w in phrase_windows(song) if i is not None]
+    heads = [(w, h) for w, h in windows if h]
+    if len(heads) < 2:
+        return None
+    return cells, windows, heads[0][0], heads[0][1]
+
+
+def theme_doubling_units(songs) -> list:
+    """Each bar in which a song's tune plays its theme cell (the head of its
+    first sounding phrase: its statement, and its echoes later) as a unit:
+    its outcome which other parts play the same cell in that bar and how
+    far from the tune ("counter:+0 bass:-24"; "none"), its values the part
+    (theme) and the place (statement: inside the theme's own phrase;
+    later). FFVI (2026-10-23): where another part plays the theme's cell,
+    the tune is playing it too in three places of four, the counter in the
+    tune's octave, the bass two below: the hook doubled by a second
+    instrument, a bar at a time, in a quarter of the songs."""
+    out = []
+    for s in songs:
+        found = _theme_of(s)
+        if found is None:
+            continue
+        cells, _, theme_w, theme = found
+        tune = sorted(_line(s.notes.get(R.MELODY, [])))
+        others = {role: (melody_cells(s, role), sorted(_line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
+        for k, c in enumerate(cells):
+            if c != theme:
+                continue
+            a = s.bars[k][0]
+            t0 = next((n for n in tune if n[0] >= a - NEAR), None)
+            tokens = []
+            for role, (oc, line) in others.items():
+                if k < len(oc) and oc[k] == theme:
+                    o0 = next((n for n in line if n[0] >= a - NEAR), None)
+                    if t0 is not None and o0 is not None:
+                        tokens.append(f"{role}:{round(o0[2] - t0[2]):+d}")
+            out.append(tables.Unit(s.sid, s.game, " ".join(sorted(tokens)) or "none",
+                                   {"part": "theme", "place": "statement" if k in theme_w else "later"}))
+    return out
+
+
+def theme_carrier_units(songs) -> list:
+    """Each phrase of a song's tune after its theme phrase whose head is not
+    the theme (the tune resting through it too) as a unit: its outcome the
+    part that carries the theme phrase there instead, its bars the theme
+    phrase's from the phrase's first bar, two or more (the bass, the
+    counter or the accompaniment), "none" where no part does; its value
+    the part (carrier). FFVI (2026-10-23): the bass carries four bars of
+    the theme in nine places, the counter a few; a hand-off a fifth of the
+    songs make once."""
+    out = []
+    for s in songs:
+        found = _theme_of(s)
+        if found is None:
+            continue
+        cells, windows, theme_w, theme = found
+        theme_cells = [cells[k] for k in theme_w]
+        need = min(2, sum(1 for c in theme_cells if c))
+        others = {role: melody_cells(s, role) for role in (R.BASS, R.COUNTER, R.ACCOMP) if s.notes.get(role)}
+        for w, h in windows:
+            if w[0] <= theme_w[0] or h == theme:
+                continue
+            carrier = "none"
+            for role, oc in others.items():
+                run = 0
+                while run < len(theme_cells) and w[0] + run < len(oc) and theme_cells[run] is not None and oc[w[0] + run] == theme_cells[run]:
+                    run += 1
+                if run >= need:
+                    carrier = role
+                    break
+            out.append(tables.Unit(s.sid, s.game, carrier, {"part": "carrier"}))
+    return out
+
+
+FEELS = ("duple", "triple")
+TRIPLE_SHARE = 0.25                   # the share of a song's onsets on triplet positions from which its feel is triple
+
+
+def song_feel(song: Song) -> str:
+    """A song's feel: "triple" where TRIPLE_SHARE of its onsets or more fall
+    on triplet positions (thirds, sixths, twelfths of a beat: 6/8 read on a
+    4/4 grid, a shuffle), "duple" otherwise. Counted once a song; every
+    figure table is conditioned on it, so a written song draws one feel and
+    all its parts' bars in that feel. FFVI (2026-10-23): bass bars on
+    triplet positions, 18 % of its bars, came only from its compound and
+    shuffle songs; drawn unconditioned into a straight song they stumbled
+    against straight drums (Song Check 8's Whole 10)."""
+    if song.feel:
+        return song.feel
+    total, triple = 0, 0
+    for role, ns in song.notes.items():
+        for n in ns:
+            k = bisect.bisect_right([a for a, _ in song.bars], n[0] + NEAR) - 1
+            if k < 0:
+                continue
+            p = position(n[0] - song.bars[k][0], song.division)
+            total += 1
+            triple += Fraction(p).denominator in (3, 6, 12)
+    song.feel = "triple" if total and triple / total >= TRIPLE_SHARE else "duple"
+    return song.feel
+
+
+def feel_units(songs) -> list:
+    """Each song's feel (song_feel) as a unit, one a song; its value the part (song)."""
+    return [tables.Unit(s.sid, s.game, song_feel(s), {"part": "song"}) for s in songs]
+
+
+BACKING = (R.DRUMS, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts under the tune: a riff's parts
+PERIODS = (1, 2, 4, 8)                # bars: the lags a backing part's bars are tried at inside a part of the form
+PERIOD_HELD = 0.6                     # the share of a part's bars that must play the bar a lag before for the lag to be its period
+PART_LENGTHS = ((4, "short"), (8, "medium"), (1e9, "long"))   # a part of the form by its bars, for the period's draw
+
+
+def part_length(n: int) -> str:
+    """A part of the form's length as a class (PART_LENGTHS)."""
+    return next(name for top, name in PART_LENGTHS if n <= top)
+
+
+def block_key(song: Song, role: str, a: float, b: float):
+    """A backing part's bar as the writers draw it: the bass's figure
+    (positions with chord-tone marks), the drums' pieces by position, an
+    upper part's onset pattern; a riff that moves with the chord keeps its
+    key. () where the part rests."""
+    struck = {}
+    for n in song.notes.get(role, []):
+        if a - NEAR <= n[0] < b - NEAR:
+            struck.setdefault(position(n[0] - a, song.division), []).append(n)
+    struck = sorted(struck.items())
+    if not struck:
+        return ()
+    if role == R.BASS:
+        return figure(struck, a, song)
+    if role == R.DRUMS:
+        return tuple(sorted((p, str(n[3])) for p, ns in struck for n in ns))
+    return pattern(p for p, _ in struck)
+
+
+def _blocks(song: Song):
+    """Each new part of a song's form (a repeat left out) with its bars' indices, its length and, per backing part the
+    song has, that part's bar keys (block_key)."""
+    index = {num: k for k, num in enumerate(song.numbers or range(len(song.bars)))}
+    keys = {role: [block_key(song, role, a, b) for a, b in song.bars] for role in BACKING if song.notes.get(role)}
+    for bar, n, of, label in song.parts:
+        if of is not None:
+            continue
+        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        if len(idx) >= 2 and keys:
+            yield idx, n, keys
+
+
+def period_of(keys: list, idx: list):
+    """The lag (PERIODS, the shortest first) at which a part's bars repeat through a part of the form, PERIOD_HELD of
+    them or more; None where none does or the part sounds in fewer than two bars."""
+    if sum(1 for k in idx if keys[k]) < 2:
+        return None
+    for lag in PERIODS:
+        if lag >= len(idx):
+            return None
+        pairs = [(k, k - lag) for k in idx[lag:] if keys[k] or keys[k - lag]]
+        if pairs and sum(1 for k, j in pairs if keys[k] == keys[j]) / len(pairs) >= PERIOD_HELD:
+            return lag
+    return None
+
+
+def period_units(songs) -> list:
+    """Each backing part of each new part of each song's form as a unit:
+    its outcome the part's period there, the lag in bars at which its bars
+    repeat (1, 2, 4, 8) or "none"; its values the part, the part of the
+    form's length (short, medium, long) and the tempo band. The riff under
+    the tune, a bass or a kit playing the same two bars through a part,
+    which the parts' mixtures (a bar the same as the one before, an earlier
+    one, new) do not do at a fixed lag. FFVI (2026-10-23, held 0.75): a
+    third of its bass and accompaniment parts and two fifths of its drum
+    parts have one; the same across 39 games."""
+    out = []
+    for s in songs:
+        tempo = band(s.bpm)
+        for idx, n, keys in _blocks(s):
+            for role, ks in keys.items():
+                if sum(1 for k in idx if ks[k]) < 2:
+                    continue
+                lag = period_of(ks, idx)
+                out.append(tables.Unit(s.sid, s.game, str(lag) if lag else "none", {"part": role, "length": part_length(n), "tempo": tempo}))
+    return out
+
+
+def period_hold_units(songs) -> list:
+    """Each bar inside a backing part's period (period_units) as a unit:
+    its outcome "held" where the bar plays the bar a period before again,
+    "varied" where it does not (a fill, a turnaround); its values the part
+    and the period."""
+    out = []
+    for s in songs:
+        for idx, n, keys in _blocks(s):
+            for role, ks in keys.items():
+                lag = period_of(ks, idx)
+                if lag is None:
+                    continue
+                for k in idx[lag:]:
+                    if ks[k] or ks[k - lag]:
+                        out.append(tables.Unit(s.sid, s.game, "held" if ks[k] == ks[k - lag] else "varied", {"part": role, "period": str(lag)}))
     return out
 
 
@@ -1461,36 +2035,129 @@ def chord_tone_habit_units(songs) -> list:
     return out
 
 
+ROLL = 6                             # strikes a beat, a bar over: a roll or tremolo the reader kept as a figure, not a bar to write
+ROLL_PIECE = 4                       # strikes a beat on one drum piece, a bar over: a roll on that piece
+
+
+def is_roll(figure: str, meter: int) -> bool:
+    """Whether a figure is a roll read as a bar: more than ROLL strikes a
+    beat on a pitched part, or more than ROLL_PIECE a beat on one drum
+    piece (the readings keep 17 such bass bars of FFVI's 715: a tremolo
+    under a "sparse" habit wrote 44 notes in a bar, 2026-10-23)."""
+    tokens = _tokens(figure)
+    if not tokens:
+        return False
+    marks = [t.partition(":")[2] for t in tokens]
+    pieces = set(LETTERS.values())
+    if marks and all(m in pieces for m in marks):
+        return max(Counter(marks).values()) > ROLL_PIECE * max(1, meter)
+    return len(tokens) > ROLL * max(1, meter)
+
+
+def part_register(notes, ambitus: bool = False) -> tuple | None:
+    """A part's register as the registers table keeps it: (low, high) midi to REGISTER_BIN, the notes' 10th and 90th
+    percentiles, or the whole ambitus (`ambitus`: the melody's, a tune uses its extremes); None where the part has
+    under eight pitched notes."""
+    pitched = sorted(n[2] for n in notes if not math.isnan(n[2]))
+    if len(pitched) < 8:
+        return None
+    low, high = (pitched[0], pitched[-1]) if ambitus else (pitched[int(0.1 * (len(pitched) - 1))], pitched[int(0.9 * (len(pitched) - 1))])
+    return int(round(low / REGISTER_BIN)) * REGISTER_BIN, int(round(high / REGISTER_BIN)) * REGISTER_BIN
+
+
 def balance_units(songs) -> list:
-    """Each song as a unit: its outcome its band with each pitched part's
-    weight in it ("accompaniment=main bass=half drums melody=half"); its
-    value the part (arrangement). What a song written with no original
-    draws its band and balance from, as one of the game's songs has them."""
+    """Each song as a unit: its outcome its band with, for each pitched
+    part, its weight, its register and the share of its gap a note sounds
+    ("accompaniment=main:56-68:0.8 bass=half:28-40:0.9 drums
+    melody=half:64-84:0.9"); its value the part (arrangement). What a song
+    written with no original draws its band, balance and layout from, as
+    one of the game's songs has them together: drawn a part at a time, a
+    bass sat above the accompaniment and a counter-line two octaves under
+    its instrument (the Song Check's notes, 2026-10-23)."""
     out = []
     for s in songs:
         if not s.notes:
             continue
         weights = part_weights(s)
-        out.append(tables.Unit(s.sid, s.game, " ".join(f"{role}={weights[role]}" if role in weights else role for role in sorted(s.notes)),
-                               {"part": ARRANGEMENT}))
+        voices = Counter(role for role, _ in s.voice_notes.values())
+        tokens = []
+        for role in sorted(s.notes):
+            if role not in weights:
+                tokens.append(role)
+                continue
+            reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
+            tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
+                          + f":{max(1, voices.get(role, 1))}")
+        out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
 
+def sample_range_units(songs) -> list:
+    """Each sample a song plays pitched, as a unit: its outcome the register
+    the song played it in (part_register's grain), its value the sample's
+    id as a pack names it ("s" and the key's first ten characters). What a
+    planned song picks a part's sample by: one the game played in the
+    part's register, never a flute four octaves under its recording."""
+    out = []
+    for s in songs:
+        by_key = {}
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            for n in ns:
+                by_key.setdefault(n[3], []).append(n)
+        for key, ns in by_key.items():
+            reg = part_register(ns)
+            if reg is not None and isinstance(key, str):
+                out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10]}))
+    return out
+
+
+LAYER_DENSITY = ((0.5, "sparser"), (2.0, "like"), (1e9, "denser"))   # a second voice's strikes against the line's
+LAYER_OFFSET = 24                    # semitones: a second voice's register against the line's is kept within this, to REGISTER_BIN
+
+
 def layer_units(songs) -> list:
-    """Each song whose bass role holds two voices or more as a unit: its
-    outcome what the second voice does beside the line (the voice with the
-    longest notes): doubling, alternating or apart (harness.relation); its
-    value the part (bass)."""
+    """Each part of each song that holds two voices or more (the drums left
+    out) as a unit: its outcome what the second voice does beside the line
+    (the voice with the most notes; the bass's, with the longest notes):
+    "doubling +4" (harness.relation's interval), "alternating", or "apart"
+    with how far its register sits from the line's (to REGISTER_BIN,
+    within LAYER_OFFSET) and how dense it is against it (LAYER_DENSITY);
+    its value the part. FFVI's second accompaniment voice is apart in 65 %
+    of its songs with two, its second counter-line in 79 % (2026-10-23):
+    the orchestration a song written whole was missing."""
     from . import harness                                  # harness imports this module
     out = []
     for s in songs:
-        if len(s.bass_voices) < 2:
-            continue
-        lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in s.bass_voices.items()}
-        line = max(lengths, key=lambda v: (lengths[v], -v))
-        other = max((v for v in s.bass_voices if v != line), key=lambda v: len(s.bass_voices[v]))
-        kind = harness.relation(s.bass_voices[line], s.bass_voices[other])[0]
-        out.append(tables.Unit(s.sid, s.game, kind, {"part": R.BASS}))
+        by_role = {}
+        for v, (role, ns) in s.voice_notes.items():
+            if role != R.DRUMS and ns:
+                by_role.setdefault(role, {})[v] = ns
+        for role, voices in by_role.items():
+            if len(voices) < 2:
+                continue
+            if role == R.BASS:
+                lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
+                line = max(lengths, key=lambda v: (lengths[v], -v))
+            else:
+                line = max(voices, key=lambda v: (len(voices[v]), -v))
+            extras = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+            for rank, other in enumerate(extras, start=2):      # every voice beside the line, the busiest first, its own relation
+                kind = harness.relation(voices[line], voices[other])
+                if kind[0] == "doubling":
+                    outcome = f"doubling {kind[1]:+d}"
+                elif kind[0] == "alternating":
+                    outcome = "alternating"
+                else:
+                    a, b = part_register(voices[line]), part_register(voices[other])
+                    if a is None or b is None:
+                        continue
+                    offset = int(round(((b[0] + b[1]) - (a[0] + a[1])) / 2 / REGISTER_BIN)) * REGISTER_BIN
+                    offset = max(-LAYER_OFFSET, min(LAYER_OFFSET, offset))
+                    density = habit_of(len(voices[other]) / max(1, len(voices[line])), LAYER_DENSITY)
+                    outcome = f"apart {offset:+d} {density}"
+                out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "rank": str(min(rank, 4))}))
     return out
 
 

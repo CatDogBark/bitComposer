@@ -186,7 +186,14 @@ class Table:
             self._dist[context] = level
         return self._dist[context]
 
-    def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True) -> str:
+    @property
+    def chain_floor(self) -> int:
+        """The level a writer's draw never backs off past: the conditionings before "previous" (the song's part, meter
+        and habit stay; only the bar before is let go when thin), or every conditioning where there is no chain."""
+        return self.conditionings.index("previous") if "previous" in self.conditionings else len(self.conditionings)
+
+    def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True,
+             floor_k: int | None = None, min_songs: int = 0) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
         n / (n + t) else the coarser level's; below the root, the floor
@@ -194,7 +201,13 @@ class Table:
         redrawn). `floored` off: the coarsest level seen draws from its
         votes alone, never the floor or the even share (a song planned
         from a game's tables takes the game's own keys, registers and
-        bands, weighted as the game has them, not its vocabulary evenly)."""
+        bands, weighted as the game has them, not its vocabulary evenly).
+        `floor_k`: the level (a count of leading conditionings) that is
+        terminal when seen: it draws from its own votes alone, with no
+        weight given to anything coarser (a bass habit's bars never mix
+        with every habit's; a part's register never with every part's).
+        `min_songs`: a finer level than the floor with fewer songs than
+        this is passed over (the data does not reach it)."""
         coarsest = None
         for k in range(len(context), self.covers - 1, -1):
             level = self._level(context[:k])
@@ -202,7 +215,8 @@ class Table:
                 continue
             outcomes, cum, kept, given = level
             coarsest = level
-            if rng.random() * (kept + given) < kept:
+            terminal = floor_k is not None and k <= floor_k
+            if terminal or (self.songs.get(context[:k], 0) >= min_songs and rng.random() * (kept + given) < kept):
                 return rng.choices(outcomes, cum_weights=cum)[0]
         if not floored and coarsest is not None:
             outcomes, cum, _, _ = coarsest
@@ -376,13 +390,14 @@ class Cache:
         already chosen new (the tune's cells: a new cell takes a new
         rhythm, not a second urn's draw)."""
         ctx = self.table.context(unit)
+        floor_k = self.table.chain_floor                    # the bar before may be let go when thin; the part, meter and habit never
         out = None
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k)
             if out not in cache and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k)
             if keep is None or keep(out):
                 return out
         return out

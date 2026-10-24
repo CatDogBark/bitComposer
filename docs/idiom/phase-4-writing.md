@@ -940,3 +940,688 @@ form with its repeats and loop, a band with its balance, chords a bar, a
 texture a part), the kit as one figure, the counter-line, the tune's
 chord-tone and repeat rates and its phrase shifts and contour sizes from
 the game's songs, and a pack's tables drawn on the data.
+
+### The Song Check, first notes (2026-10-23)
+
+Twenty whole songs on a page (per-part switches, a verdict and a note a
+song; verdicts in its store). Song 4 in, the owner's word: "definitely
+Final Fantasy, and much better than our other generator, in song
+diversity alone and nuance". Ten notes asked bug or writing. Run down in
+the tables, two causes behind most of them:
+
+- *A part's register from another part's.* Whole 04's counter at midi
+  32 to 44, Whole 05's harmony at 28 to 36 (four octaves under its
+  sample: the loop crawls and the baked-in vibrato slows to a warble),
+  Whole 08's arp and Whole 12's counter likewise; Whole 19's bass at 56
+  to 60 above its accompaniment at 28 to 36; Whole 13's bass at 44 to 68.
+  Under Witten-Bell a table keyed by part keeps only 50 to 68 % of a
+  register draw at the part's level and gives the rest to the root, where
+  every part's registers are mixed: a counter drew a bass-depth register
+  in 7.6 % of draws (its own level: never), a bass a floor above middle C
+  in 18.6 % (own level: 1.5 %). The sounded shares and habits went the
+  same way. **A plan's one-shot draw now stops at the part's level**
+  (`Table.draw(floor_k=1)`) and passes over a finer level a single song
+  stands behind (`min_songs` 2). **The balance table now carries each
+  part's register and sounded share**, so a song's layout is one FFVI
+  song's whole (the bass under the accompaniment under the tune), and
+  **a pitched part's sample is one the game played in that register**
+  (`ranges`, by sample id: the readings' sample keys are the pack's ids).
+- *A figure table forgot the habit.* The bass's habit level kept 5 to
+  21 % of draws (seven "sparse roots" songs), the rest the whole game's
+  bass bars of every habit; so Whole 13's "sparse roots" bass wrote 310
+  notes, two of them tremolo bars the reader had kept as figures (44
+  strikes). The free-run numbers had shown it (sparse habits at 4.5
+  strikes a bar against 1.5, dense under theirs) and were misread. **A
+  chain's draw now backs off from the bar before when thin but never
+  past the part, meter and habit** (`Table.chain_floor`), and **rolls are
+  dropped from the figure tables** (`rhythm.is_roll`: over six strikes a
+  beat on a pitched part, over four a beat on one drum piece; 17 of
+  FFVI's 715 bass bars). After: sparse roots 2.1 strikes a bar (real
+  1.5), sparse walking 1.9 (1.7), dense walking 8.4 (8.5), dense roots
+  10.3 (14.2).
+
+Writing, not bugs: Whole 01's one-note accompaniment (a 56-56 register,
+a real FFVI drone accompaniment, on a two-voice "full" part: the pedal
+rule holds both voices to the note); Whole 10's run of notes in its last
+bar (a real fill bar); Whole 16 (thin high accompaniment, a sparse bass
+at 60 BPM, a chord sequence with reader artifacts); Whole 17's 28 seconds
+(a five-bar A and a two-bar B drawn from tables that hold FFVI's jingles;
+the render plays the form once).
+
+**Rounds 8 and 9** (after the fixes; FFVI's own in the earlier table):
+drums 7.1 strikes / 6.5 distinct / 0.29 repeats (6.9 / 6 / 0.32); bass
+4.3 / 6 / 0.26 (4.3 / 8 / 0.30); accompaniment 6.4 / 6 / 0.35 (6.3 / 8 /
+0.32); counter 4.9 / 3 / 0.15 (4.9 / 10.5 / 0.13); tune chord tones 0.64
+(0.56), steps 0.61 (0.67), leaps 0.07 (0.05), repeats 0.17 (0.12), cells
+12.5 (12.5), echoes 0.27 (0.34), range 14.5 (21.5: round 8 had 8, the
+balance having taken the melody's 10th to 90th percentiles; its whole
+ambitus restored). The counter's distinct bars fell from 6 to 3 with the
+habit floor and are not yet run down. For listening rounds `--min-bars`
+draws a form again under a length (12 bars for the second set: the
+first drew three songs of three to four bars, FFVI's jingles).
+
+### Depth: the orchestration FFVI has and the written songs lacked (2026-10-23)
+
+The owner's second-set note: the songs sound like FFVI but not like its
+epic ones; "little pieces, not epic orchestration", though a song like
+Terra is simple and only fills the space. Measured on FFVI's 67 songs
+against the written twenty (`fullness.py`, `coverage.py` on Ragnarok):
+
+- FFVI uses all eight voices in every song; at any instant a median 6.7
+  notes sound (quartiles 5.5 / 8.0; Shadow, Blackjack, Dancing Mad, The
+  Decisive Battle at 8.7 to 9.8). The written songs used 6 voices (5 / 7)
+  and sounded 4.2 (3.0 / 5.0).
+- Not continuity: each part fills as much of the song as FFVI's (bass
+  0.83 against 0.85, accompaniment 0.89 against 0.92, counter 0.77 against
+  0.84, melody 0.68 against 0.78).
+- Depth: FFVI's accompaniment has 2 voices (1 to 3), its counter-line 2
+  (1 to 2), its harmony 2, its arp 2; the written songs gave the counter
+  and the arp one. And a second voice is a line of its own, not a chord
+  tone of the first: apart in 65 % of accompaniments with two voices and
+  79 % of counter-lines (`harness.relation`), doubling at a third, fourth
+  or fifth in a quarter, alternating in 5 %. The layered basses (13 songs)
+  are all apart, mostly in the same register.
+
+So: **the balance table carries each part's voice count** beside its
+weight, register and note length (the song's whole arrangement in one
+draw; `allot` takes the counts and trims to eight); **the layers table,
+generalized to every part**, says what a second voice does ("doubling +4",
+"alternating", or "apart" with its register offset to REGISTER_BIN and its
+density against the line: sparser, like, denser); and **an apart second
+voice is written as a line of its own**: the accompaniment's as a second
+`upper` line with its own figures, register and voicing at the measured
+density (`habit_near`), the counter's as a second tune clear of the melody
+and the first counter, the bass's as a second bass line; a doubling voice
+is the line again at the interval, in the scale (`diatonic`). Melody
+second voices (rare) are doubled only.
+
+**Round 10** (after; FFVI's own in brackets): notes sounding at once 5.4
+(3.6 / 6.4; FFVI 6.7, 5.5 / 8.0), voices a song 8 (6.3 / 8); the
+accompaniment 8.4 strikes a bar, 9 distinct bars, repeats 0.20 (6.3, 8,
+0.32: two lines' onsets merged count denser than FFVI's two do); the
+counter 5.4 / 4.5 / 0.13 (4.9 / 10.5 / 0.13); the bass and drums as
+before; the tune's steps 0.59, range 14.5, echoes 0.27 unchanged. The
+third listening set (Song Check 3) is written from this.
+
+### The theme: the hook as vocabulary (2026-10-23)
+
+The owner's third-set note: the songs never carry a tune; Whole 14 opens
+with a hook it never comes back to; Terra states its tune, goes away,
+and comes back to it. Measured (`hooks.py`, `heads.py` on Ragnarok,
+FFVI's 65 songs with a tune against the written set):
+
+- Exact repeats are not the difference. Keyed by rhythm and intervals,
+  FFVI repeats a four-bar phrase exactly as rarely as the written songs
+  do (a median of none heard before in a pass; the opening phrase back
+  exactly in 11 % of songs). A hook comes back as its head, varied, and
+  through the loop, which the readings cut off and the page never played.
+- Where the echoes point is the difference. Both echo an earlier bar in a
+  third of bars (0.33 against 0.30), but half of FFVI's echoes point at
+  the song's first four tune bars (median 0.50, a quarter of songs above
+  0.80; the written songs 0.38, a quarter at none), and in 43 % of FFVI's
+  songs a later phrase opens with the first phrase's opening bar (the
+  written songs 15 %, none in the median). A part returns after another
+  in 29 % of FFVI's forms (ours 15 %). Whole 14 echoed its opening in 44 %
+  of its echoes and never at a phrase head.
+- The vocabulary had no word for it. A phrase stood only to the phrase
+  before (repeated, moved, answered, new: 73 to 78 % new in FFVI), the
+  cell urn's "earlier" took any bar by its count, and the form was a chain
+  of kinds by index.
+
+Counted and kept, as vocabulary rather than a weight: **the phrase
+letters of a part** (`rhythm.phrase_letter_units`: each phrase THEME
+where it opens with the song's theme head, the first sounding phrase's
+opening bar; AGAIN where it opens with an earlier head; NEW; by the
+part's phrase count and its place in the form: a one-phrase middle part
+opens with the theme in 19 % of FFVI's, a two-phrase middle part is "T n"
+in 43 %), **how much of the theme phrase comes back with its head**
+(`theme_body_units`: the whole phrase 35 %, the head alone 30 %), and
+**the forms whole** (`letters`, one unit a song: "A B" 24 %, "A B C" 11 %,
+"A B C B D" 6 %). The melody writer takes the letters: a THEME phrase
+after the first opens with the theme's head again (re-rooted on the bar's
+chord), keeps as many of its next bars as the table draws, then goes on
+new under a drawn contour and ending; an AGAIN phrase brings back the
+last non-theme phrase; a NEW phrase is new or answers the one before. The
+plan draws the letters a part for the phrases the tune plays in (an
+intro without the tune had taken the theme's place at first) and the
+form from the game's own letters. The listening render plays the loop's
+first bars once more after the form, fading through them (`--tail-bars
+4`), so a return through the loop is heard. The measures gain the theme's
+returns (`theme_heads`, `theme_returns`) and the echoes of the opening.
+
+After, by the plan's own count: 8 of 20 songs return to their theme
+(FFVI 43 %); read back under the reader's own segmentation (which finds
+two parts in the written songs where it finds four in FFVI's) the return
+shows in fewer. Round 11: the melody's distinct rhythms 7 (FFVI 9, from
+4), range 16 (21.5), chord tones 0.57 (0.56); steps 0.54 (0.67) and the
+accompaniment's merged onsets 9.1 (6.3) are the open numbers. The fourth
+listening set (Song Check 4) is written from this.
+
+### What comes back with the theme (2026-10-23)
+
+The owner heard the callback in one of the fourth set's twenty (Whole
+11) where the plan's letters had eight songs return to their theme, and
+asked whether FFVI holds the tune in the melody alone. Measured on FFVI's
+46 theme returns, bar for bar against the theme phrase (`theme_band.py`,
+`theme_band2.py`): the chords under the returning phrase are the theme's
+in 41 % of bars (19 % at any other phrase), the bass's figures in 54 %
+(12 %), the accompaniment's bars in 56 % (15 %), the texture no more than
+elsewhere (49 % against 44 %). Per return, with half the bars or more
+the same: the chords come back in 22 of 46, the bass in 27 of 46, the
+accompaniment in 29 of 43; all three together in 17, one of them in 23,
+none in 4. The tune itself comes back whole in 14 of 46, three bars in
+13, two in 14, one in 5. And the theme travels: another part plays the
+theme's head cell somewhere in 12 of 52 counter-lines, 11 of 62 basses,
+9 of 57 accompaniments. The fourth set's nine returns had brought the
+tune back over new chords in eight (0 of 4 bars the same) and a new
+accompaniment in all: a melody event where FFVI's is a band event half
+the time, and Whole 11 landed because its form brought B back whole.
+
+Counted and kept: **what comes back with the theme** (`return_band`:
+"chords bass accompaniment", "bass", "none"..., one unit a return). The
+plan draws it a return: the theme bars' chords are copied under the
+returning phrase when the chords come back, and the bass and the
+accompaniment copy their own theme bars there when they do
+(`song.copies`, applied at the end of `_free_figures` as a form's repeat
+is). The theme travelling to the counter or the bass (a fifth of songs)
+is left for later. The fifth listening set is drawn from forty seeds,
+keeping the songs whose theme returns, each card naming where.
+
+### Round 13: the two switches, carry a theme and the band comes back (2026-10-23)
+
+Decided in `phase-5-packs.md`; built here as conditions on the plan's
+draws. `plan(themed=True)` draws the tune's phrase letters again, at most
+forty times, until a later phrase opens with the theme; the letters still
+come from the game's own table. A plan whose tune has fewer than two
+phrases (a part without the tune, then a five-bar part: one window) has
+nowhere to come back, and no letter draw can help it, so the plan is drawn
+again whole from the same stream, at most ten times; the first set of
+twenty burnt forty letter draws on such a song before this was seen.
+`plan(band_returns=True)` draws a return again when nothing came back with
+the tune; what comes back stays the table's own mix. Both are recorded in
+the plan under `options` (`themed`, `band_returns`, `plan_draws`) and in
+its log, and `tools/whole.py` takes `--themed --band-returns`.
+
+Song Check 6: the same twenty seeds as every set, both switches on.
+
+- Every song carries its theme back: 20 of 20. Song Check 5, at the table's
+  own rate, had 17 of 40.
+- 25 returns in the twenty songs, none with the tune alone (FFVI: 4 of 46
+  alone; the switch refuses that outcome and nothing else). What came back:
+  the accompaniment in 20 of 25, the chords in 18, the bass figure in 16;
+  FFVI's 29 of 43, 22 of 46 and 27 of 46. The mix is the table's.
+- Eight songs returned on the first letter draw; twelve needed two to nine.
+  One song (14) needed a second plan: its first had a one-phrase tune.
+- The cost, as the phase 5 plan names it: a short or sparse-melody plan is
+  drawn past, so the game's through-composed forms do not appear while the
+  switch is on.
+
+Nothing in the writer changed for this round. The tune travelling to the
+counter or the bass, the steps, the two-line accompaniment's density and
+the reader's parts are as round 12 left them.
+
+### Round 12's open items, investigated (2026-10-23; nothing changed)
+
+Measured on Ragnarok (`phase4/openlib.py`, `ffvi_open.py`,
+`written_open.py`, `steps_stages.py`, `steps_roles.py`, `repeat_check.py`,
+`ffvi_accomp.py`); the written side is the set 6 options.
+
+**The theme travelling.** In FFVI another part plays the theme's head
+cell in 12 of 52 counter-lines (44 places), 11 of 63 basses (46) and 9
+of 59 accompaniments (14). In most of those places the tune plays the
+theme cell at the same time: the counter in 32 of 44 (25 in the tune's
+octave, 5 an octave up), the bass in 29 of 46 (two octaves down in 14,
+one to three down in the rest), the accompaniment in 12 of 14. So the
+travelling is mostly a second instrument doubling the hook for a bar as
+the tune states or echoes it. The hand-off is rare: the counter carries
+it over a resting tune in 6 places and over another cell in 6; the bass
+carries four bars of the theme phrase in 9 of its 46 places. The songs
+whose counter carries it are not the songs whose tune returns (2 of 12).
+Our vocabulary has whole-part doubling (`layers`) and a counter written
+clear of the tune; it has no word for a part doubling the theme's cell
+at its statements, nor for a return carried by the bass. Both would be
+new units (a statement: which parts double it; a return: which part
+carries it).
+
+**The tune's steps (0.55 against 0.67).** By position, FFVI's moving
+moves: within a bar 79 % of them at 0.65 steps, at a bar join inside a
+phrase 16 % at 0.61, at a phrase start 5 % at 0.50 (leaps 0.16). Ours:
+80 % at 0.59, 16 % at 0.55, 4 % at 0.29 (leaps 0.27). The moves table
+itself expects 0.645 steps over the contexts the writer visits, FFVI's
+own level; the register filter raises that to 0.69, the clash, scale and
+contour filters bring it to 0.658 and the chord weighting on strong beats
+to 0.626 (2,313 draws). The drawn within-bar moves came out 0.601 for the
+melody and the finished line 0.589 (echoed cells snapped to the chord).
+The counter loses far more after its draw: 0.606 drawn, 0.493 finished;
+what the writer does to it after the draw is not yet found. At a phrase
+start the shift table's draw (where the phrase sits) is taken as the
+first move; FFVI reaches it over the phrase. So about three points go to
+the chord weighting, one to the other filters, one to the echoes, one to
+the joins and one to the phrase starts; the table is not the cause.
+
+**The accompaniment's density (9.1 against 6.3).** FFVI's
+accompaniments: 16 with one voice (5.8 strikes a bar), 43 with two or
+more (merged 7.3; the line 6.6, the second voice 4.5; 40 % of the merged
+onsets struck by both). Ours: one voice 8.7, two or more merged 10.3 (the
+line 8.6, the second 6.0). FFVI's habits: dense 30 of 58 (7.4 to 9.1
+merged), medium 25 (4.5 to 5.1), sparse 3; our twenty drew dense 10,
+medium 8, sparse 1, the same mix. The cause is in the counting: the
+figure table's unit is the part's bar with all its voices merged
+(`rhythm.units`), so a dense habit's bars hold the 8.5 onsets that in
+FFVI are two voices together; the writer gives the whole pattern to the
+line and then writes a second line apart with its own habit beside it.
+Arpeggiation adds no onsets (`MOTION_STEP` moves a voice along the
+stack). Either the line's own bar and the second voice's bar become the
+units (new vocabulary), or the merged unit is split between the lines.
+
+**The reader's parts (2 against 4).** The reader finds parts where a run
+of two bars or more repeats with 85 % of each voice's notes held, and
+joins parts under four bars; FFVI's median part is 5 bars and only 65 of
+its 304 parts are letter repeats, so its boundaries come from phrases and
+riffs repeated note for note. Our planned repeats (B B) are not note for
+note: in ten songs with repeats the melody and the counter copy every
+bar, the drums most, the bass's figures copy but its notes differ in a
+bar or two of each part (its second line), and the accompaniment copies
+nothing (0 of 4, 0 of 6, 0 of 8 bars; the harmony too): the upper writer
+has no copy of a repeated part (`_free_figures` copies for the bass and
+the drums, the melody writer for the tune). With two to four of eight
+voices playing new material the reader hears no repeat and no boundary.
+A writing fault, not vocabulary.
+
+### Round 14: the four open items built (2026-10-23, on the owner's go)
+
+Each as the investigation above named it: a writing fault fixed as a
+fault, a vocabulary gap given a table.
+
+- **A repeat is a repeat** (`whole.copy_repeats`). A part of the form that
+  repeats an earlier one now replays every part note for note, second
+  lines and voicings included; the writers had copied their own figures
+  only, and the upper writer nothing. The form reader finds the plan's
+  parts on the ten songs of twenty that have a repeat (`A9 B4 C7 B4 D4`
+  read back as `A9 B4 C7 B4 D4`); the ten without still read as one or two
+  parts, and the median stays 2 against FFVI's 4. What remains is FFVI's
+  backing repeating itself inside a part as a block (a riff of two or four
+  bars in every part at once), which our parts' mixtures do not do
+  together: a vocabulary question (the backing's period), put to the
+  owner.
+- **The line and its second** (`rhythm.line_notes`, `second_figure_units`;
+  tables `rhythm` recounted, `second_figures` new). The figure table counts
+  an upper part's own line where it holds two voices or more, and a second
+  line apart is drawn bar by bar under the line's bar, by the line's
+  density class and pattern (the pattern alone backed off to the whole
+  part for rare bars and gave a sparse line a dense second). The line's
+  density by habit sits on FFVI's (medium 5.2 to 5.9 against 4.9 to 5.2,
+  dense 8.4 to 10.1 against 7.6 to 10.5); two-voice accompaniments 10.4
+  onsets a bar merged before, 8.6 now, FFVI 7.3; one voice 8.7 before, 6.8
+  now, FFVI 5.8.
+- **The hook doubled, the theme carried** (`theme_doubling_units`,
+  `theme_carrier_units`; `whole.double_theme`, `whole.carry_theme`). Where
+  the tune plays its theme cell the table draws which parts play it with
+  it and how far from the tune (FFVI: none in 65 %, the bass two octaves
+  down most often); a phrase whose tune is not the theme draws a carrier
+  (FFVI: none in 99 %). Set 7: the hook doubled in 13 of 20 songs (25
+  bars: the accompaniment 11, the bass 9, the counter 3, the harmony 2),
+  the theme carried in none, as one phrase in a hundred predicts.
+- **Steps.** A new phrase is steered to where the shift table puts it over
+  its first third rather than jumped there (phrase-start steps 0.29 to
+  0.34; FFVI 0.50), and an echoed cell is moved whole to the start that
+  lands the most strong beats on the chord instead of having single notes
+  bent (its intervals kept). The counter-line's "loss" after its draw was
+  the investigation's own measure merging its two voices; measured on its
+  first voice it loses nothing (0.59 drawn, 0.58 finished). The tune's
+  steps inside a bar stay 0.58 against 0.65: three points are the chord
+  weighting on strong beats, which holds the chord-tone rate; recovering
+  them means moves counted by whether they land on a chord tone, a
+  vocabulary choice left open.
+- **Elsewhere:** the player's music folder renamed on the owner's machine
+  (`~/Music/bitComposer`; the code already defaulted there, the old folder
+  had won as a fallback); the vocabulary documented, every table with what
+  it counts and what it controls (`VOCABULARY.md`).
+
+Song Check 7 is written from this (set 6's options, the same seeds).
+
+### Round 15: the riff and the landing (2026-10-23, on the owner's go)
+
+Two vocabulary expansions, each checked for generality on all 39 games
+before it was built (`phase4/period_count.py`, `period_roles.py`).
+
+- **The riff** (`rhythm.period_units`, `period_hold_units`; tables
+  `periods`, `period_holds`). A backing part's period inside a part of
+  the form: the lag at which its bars repeat (1, 2, 4, 8) or none, counted
+  on figures (the bass by its figure, the drums by their pieces, an upper
+  part by its pattern), since a riff moves with the chord and keeps its
+  figure; on absolute pitches almost nothing repeated, in any game. Held
+  share 0.6. FFVI: the bass has a period in 36 % of its parts, the drums
+  in 42 %, the accompaniment in 46 % (a 1-bar period in a third of those,
+  2 bars in most of the rest); across the 39 games the shares are the
+  same kind of number, Mega Man X's included. Inside a period a bar is
+  held nine times in ten. The plan draws a period per backing part per
+  new part of the form and the held bars; the free figure writer plays
+  the bar a lag before again there (re-realized on the bar's chord), and
+  an upper part takes its source bar's voicing on the same chord. The
+  reader's parts do not move (a riff under four bars is inside a part by
+  the reader's own rule); the 4-bar exact-repeat shares rose (drums 0.23,
+  bass 0.10, accompaniment 0.04; FFVI 0.15, 0.07, 0.01 by the same loose
+  key). A first joint count (every backing part together, 0.75 held) had
+  found blocks in a quarter of parts only; the per-part word is the one
+  the writers use.
+- **The landing** (`moves` conditioned on `place` and `tone`). The moves
+  table had counted where the arriving note falls in its beat and the tone
+  the note left stands on against the chord since phase 3 without being
+  drawn by them. Drawn by them, the tune approaches chord tones as FFVI
+  does and the within-bar steps went from 0.58 to 0.67 (FFVI 0.65) with
+  no chord weighting at all, but the chord-tone rate fell to 0.48 (0.56):
+  the filters shift the chain's balance. The weighting now acts only
+  while the tune is under its drawn rate (the repeat controller's
+  shape): chord tones 0.57, within-bar steps 0.61. The counted rate is
+  held; four points of steps remain.
+- Two-voice accompaniments 8.2 onsets a bar merged (8.6 before, FFVI
+  7.3). Song Check 8 is written from this.
+
+### Round 16: the feel and the layered bass (2026-10-23, from the owner's notes on set 8)
+
+The owner heard the bass stumble (Whole 10 of set 8) and the crash cymbal
+played fast as a constant noise. Investigated first, then built on his
+go.
+
+- **The stumble** was two faults in the vocabulary's reach. First, no word
+  for the feel: FFVI's bass bars on triplet positions, 18 % of its bars,
+  came only from its compound and shuffle songs (Terra, Dancing Mad, the
+  Opening Theme's third part, Slam Shuffle), and the figure tables carried
+  no mark of that, so a straight song drew a triplet bass bar beside
+  straight drums, each part on its own (Whole 10's bass on triplet
+  positions in five bars, its drums in thirteen others; nine of nineteen
+  songs with a bass had some). Now `feels`: a song's feel, duple or triple
+  (a quarter of its onsets or more on triplet positions), drawn once a song
+  (FFVI: triple in one song of five) and every figure table conditioned on
+  it (`FIGURE` gains `feel`). In twenty written songs, four triple, the
+  sixteen duple have no triplet bass bar at all. Some duple songs still
+  draw swung drum bars, as FFVI's own duple songs have them (Setzer's kit
+  swings in 89 % of its bars over a straight bass): the game's writing.
+  Second, the bass's second voice: Whole 10 drew a second bass line
+  "apart, same register, denser" and wrote it as a sixteenth-note root
+  under a walking line, both busy; FFVI's thirteen two-voice basses are a
+  sustained line (three or four strikes a bar, notes near a beat long)
+  under a staccato voice (five to twelve strikes, 0.15 to 0.4 beats) in
+  the same register. Now the bass figure table counts the sustained line
+  (`line_notes` for the bass: the voice with the longest notes), the
+  second voice is drawn from `second_figures` under the line's figure, and
+  `layer_sounds` gives a layered part's line and second voice their own
+  note lengths (upper parts too). Set 9's layered basses: a line of three
+  to four strikes near a beat long under a second of five to thirteen
+  short ones.
+- **The cymbal** is FFVI's writing drawn too often and played on the wrong
+  sample. Bars with four or more cymbal hits are 37 of FFVI's 1,334 kit
+  bars (Fanatics, Grand Finale), a ride in sixteenths; five of twenty
+  written songs had them against four of 67 in FFVI, because the kit is
+  drawn as one figure under the kit's habit and the plan's cymbal-group
+  habit ("sparse" in every one of those songs) is never looked at: a
+  drawing fault, open. And the pack's crash slot holds the built-in SNES
+  crash: the pack builder (`translate/pack.py`, the thin pack) keeps the
+  six most-struck drum samples and sorts them into pieces by brightness
+  and ring, and FFVI's cymbal (in 22 of its 67 songs, struck 561 times)
+  ranks eighth; its toms seventh; the slot the builder called the snare
+  holds a sample the namer calls a hat, and the true snare (5,690 strikes)
+  is not in the kit. The readings know every drum by name. The kit from
+  the namer's labels is phase 5's listed item; for the FFVI pack it can be
+  built now.
+- Measures after this round: chord tones on strong beats 0.56 (FFVI
+  0.56), steps inside a bar 0.61 (0.65), two-voice accompaniments 7.7
+  onsets a bar merged (7.3), one voice 6.4 (5.8), the reader's parts 3
+  (4). Song Check 9 is written from this. Pack: 64 tables.
+
+### Round 17: the kit from the namer's names, the cymbal habit honored (2026-10-23, on the owner's go)
+
+- **The kit.** The thin pack builder (`translate/pack.py`) now names a
+  game's drum samples with the drum namer, each measured as the game plays
+  it (at its most-played pitch, its loop held as long as the game holds
+  it: measured as a one-shot, FFVI's looped snare rang long enough to be
+  called a cymbal and took the crash slot), and gives each kit slot the
+  most-played sample so named; brightness and ring remain the fallback
+  where the namer finds no kick or snare. FFVI's kit before: a hat in the
+  snare slot, no tom, no cymbal, the true snare absent. After: kick, snare,
+  hat, tom, cymbal, rim and open hat, every one the sample the readings
+  name the same way (the snare in 31 readings, the cymbal in 30). The dev
+  pack is rebuilt from the 82 SPC files with this kit (26 samples, 64
+  tables); the brightness pack is kept beside it.
+- **The cymbal habit.** The plan's drum group habits cap each single-letter
+  group's hits a bar in the kit draw at its density tier's top (sparse 2,
+  medium 6, dense 16; `writer.group_caps`, `free_drum_envelope`); the kit
+  drawn as one figure had drawn under the kit's habit alone, and the
+  one-letter groups' habits had not even reached it (the whole-song writer
+  handed it the kit's habit only). Twenty songs before: four with a bar of
+  four cymbal hits or more, eighteen such bars of 415; after: none.
+- Song Check 10 is written from this: the first set on FFVI's own snare
+  and cymbal.
+
+### Round 18: the second line's tempo and feel, the layered part's samples (2026-10-23, from the owner's note on set 10)
+
+Whole 03's second bass line went "super fast": a 22-strike bar, Dancing
+Mad's tremolo bass, which FFVI plays at 60 BPM (5.5 notes a second, its
+fastest bass voice) drawn into a 115 BPM song at 10.5 a second, on the
+long sustained bass sample. Two words were missing.
+
+- **`second_figures` by feel and tempo.** The second line's table had been
+  conditioned on the line's density and figure only; it is counted on
+  FFVI's thirteen two-voice basses, so Dancing Mad's 48 tremolo bars were
+  a large share of its pool. Now (part, feel, tempo band, density, line).
+  Twenty songs' fastest second bass line: 2.3 notes a second.
+- **`layer_samples`.** FFVI's layered bass plays on two samples, the
+  sustained line on a long one (the same sample in ten of thirteen songs)
+  and the busy voice on a short one; the writer had given a part one
+  sample a song. The pair is counted once a song per layered part (the
+  line's and the second voice's most-played samples, as the pack names
+  them) and drawn at rendering; the second voice's notes go to its own
+  sample in the score and the stems (`samples_for`, `score_of`). Set 11's
+  layered basses: the long sample under the short one, as FFVI pairs them.
+- The pack: 65 tables. Song Check 11 is written from this.
+
+### Round 19: a line and its voices, no stack (2026-10-23, from the owner's note on set 11)
+
+Whole 01's accompaniment overpowered the song, most of all in its fast
+bars. Not the levels: the voices. The part had drawn four voices; the
+writer put three into a block stack, every voice striking at every onset
+(arpeggiation only turning which tone each took, spare voices doubling an
+octave up), and the fourth apart, so a 24-onset arpeggio bar, one voice's
+flourish in FFVI, was three voices hammering 24 times a bar plus a second
+line, at the accompaniment's level each. FFVI's accompaniments have two
+voices as a rule and they rarely strike together: 1.46 voices an onset in
+arpeggiated parts, 1.20 in mixed, 1.19 in block; a busy bar belongs to one
+voice. The `layers` word had covered the second voice only; a third or
+fourth had no word, so the writer stacked them.
+
+Built: `layers` counted for every voice beside the line, by rank (the
+busiest first), and an upper part written as its line (one voice, the
+part's figures and voicing, its own lengths) plus each further voice by
+its drawn relation, a doubling voice diatonically at the interval, an
+alternating or apart voice as a line of its own under the line's bars
+with its own lengths and the pair's second sample; no stack. Twenty songs:
+Whole 01's accompaniment from more than three voices an onset to 1.23,
+14 notes a bar where it had 39; the set's arpeggiated parts 1.81 (FFVI
+1.46), the excess the doubled voices (2.0 by definition, as FFVI counts
+them too). Levels stay hand-set a part; the readings keep no note levels
+(the raw readings do; storing them is import work). Song Check 12 is
+written from this.
+
+### Round 20: the voice beside the line (2026-10-23, from the owner's note on set 12)
+
+Set 12's Whole 01 and 02 came out garbled: round 19 had made each voice
+beside an upper part's line an independent line, its own figure drawn
+under the line's bar, its own voicing, motion, habit and lengths. Whole
+01 had four arpeggios in one register whose onsets fell on the line's 14
+to 32 % of the time, at unrelated intervals; Whole 02 a staccato line (a
+0.4 note-length draw) over two busy lines an octave below it in the bass's
+range. No wrong notes (no semitone, seventh or tritone clashes between the
+voices): four unrelated things at once. FFVI's voices beside an
+arpeggiated line, measured on every upper part with two voices or more:
+0.60 of the line's strikes, the line's note lengths (1.02), two thirds of
+their onsets on the line's onsets, the interval to the line steady in 27
+% of notes only; a doubling voice 1.0, 1.0, 0.99. Bar by bar, a voice
+beside the line plays in 79 % of the line's bars, strikes with half its
+onsets (median; a third of the bars every onset), and adds 1.2 of its own.
+
+Built: `second_figures` for an upper part re-encoded as a mask over the
+line's onsets plus the voice's own (`rhythm.second_mask`, `apply_mask`),
+by the song's feel and tempo band and the line's onset count (a mask read
+onset by onset; one from a shorter line read around a longer one had
+filled it, so the draw never backs off below the count, `MASK_FLOOR`),
+drawn a bar; the voice takes a tone of the line's own voicing (the
+line's voicing shared through `writer.upper(shared=, tone_index=)`, the
+tone drawn a span) and the line's lengths; the bass's second voice keeps
+its own figure. Twenty songs, voices beside an arpeggiated line: strikes
+0.72 of the line's (FFVI 0.60; drawn once a line figure 0.88), lengths
+1.00 (1.02), onsets with the line 0.98 (0.67: the own onsets are rarely
+drawn), interval steady 0.65 (0.27: the voice walks the arpeggio in step
+with the line); voices striking together 2.06 to an onset (FFVI 1.46; set
+11's stack three and more, set 12 1.81). Doubling voices 1.0 throughout,
+as FFVI's. Song Check 13 is written from this.
+
+### Round 21: the sample for a register, the register of a voice (2026-10-23, from the owner's note on set 13)
+
+The owner heard piercing pitches in the accompaniment and the tune on
+several songs (Whole 01 among them) and took it for a level. It was
+pitch. The parts sit where FFVI's sit (accompaniment median 61 against
+62, melody 68 against 69), but the samples were being played far above
+their recording: FFVI plays a sample more than an octave above its
+recorded pitch in 0 % of accompaniment notes and 2 % of melody notes,
+never past +20; the written songs in 10 % and 8 %, up to +27 and +28
+(Whole 07's melody played a sample the game used at midi 36 to 48 up at
+92). Two faults, both in drawing words that exist.
+
+- **The sample for a register** (`whole.best_sample`). `sample_fits` had
+  asked only that the register's centre lie within six semitones of a
+  range the ranges table draws for the sample, and drew at random when
+  nothing fit; worse, it looked the sample up by the pack's prefixed name
+  while the table names the pack's own id, so it had found no range at
+  all and every pool choice had been random. Now the pool sample whose
+  game-played range covers the register best is taken, the part's top
+  weighing most, and when the pool's best still falls more than REACH (7
+  semitones) short of the top, the pack's other tonal samples are tried;
+  the pool's share decides a tie.
+- **The register of a voice** (`rhythm.register_notes`). The `registers`
+  and `balance` tables had counted a layered part's register over all its
+  voices, and the writer handed that span to every voice: Whole 01's
+  accompaniment line and Whole 20's melody ran over 44 to 96. FFVI's
+  layered accompaniments span 16 semitones merged (max 52) but 12 as a
+  line (max 24); five of its songs span more than 30 merged, no line does.
+  Both tables now count the line voice's register; the voices beside it sit
+  at their layer offsets.
+
+The measures after the fix are in the set's lede (Song Check 14).
+
+### Round 22: the voice that doubled a pitch, the sample's playing habits (2026-10-23, from the owner's note on set 14)
+
+The owner heard Whole 02's accompaniment "glitching" from about seven
+seconds, as if its voice played too fast. Bars 3 and 4 there are
+sixteenth bars on all three accompaniment voices (eight notes a second,
+50 ms notes from the line's 0.4 sounds draw) on sample f89f5aedfd, a pad
+with a 39 ms attack that FFVI plays at 65 ms at the shortest and under
+5.6 notes a second in its fastest bars; and at most of those onsets two
+of the voices sat on the identical pitch (midi 46), the voicing there
+having two tones. One fault and one missing word.
+
+- **The fault** (`writer.upper`). A voice beside the line took its tone up
+  the line's voicing (its rank's, or one drawn a span) without regard to
+  what the other voices of the part already held at the onset, so with a
+  thin voicing two copies of one sample played one pitch at once and
+  phased against each other. The part's pitch classes at each onset are
+  now kept in the shared voicing dict (`("taken", (bar, position))`); a
+  voice beside the line takes the first free tone up from its own, and
+  where every tone of the voicing already sounds it sits the onset out.
+  FFVI's voices beside a thin voicing double at the octave or rest.
+- **The sample's playing habits** (two tables, `sample_lengths` and
+  `sample_speeds`, in VOCABULARY.md). Per song and sample: the shortest
+  note the game plays it at (a class of the tenth-percentile length) and
+  the fastest bars it plays it in (a class of the ninetieth-percentile bar
+  rate). The sample for a part now weighs the part's fastest bar as
+  written (`whole.part_speed`, over the line and its doubling voices) in
+  three reaches, a song that plays the sample this fast first (the class
+  drawn a song, as the ranges are: a song plays the pad at eight where
+  most hold it), then any song's fastest bars, then the excess over the
+  game's fastest on it against the range's fit; and at rendering a note
+  on a sample is never shorter than the song's shortest on it
+  (`score_of`, a floor from the drawn class; a floored note is trimmed to
+  the voice's next key-on, which cuts it on the SNES chip anyway, and the
+  grid would otherwise have cut the next note at the first one's old
+  end).
+
+Measured on the twenty seeds before and after (habits22.py; FFVI from the
+readings): two voices of one upper part on the same midi at one onset,
+0.337 of the two-voice onsets to 0.006 (FFVI 0.068; the same pitch class
+0.541 to 0.009 against FFVI's 0.273, whose octaves are the doubling
+layer's, not this fix's); rendered notes shorter than the game's
+shortest typical note on their sample 7.3 % to 2.0 %, 273 of the 277 left
+cut by the voice's next key-on; voices whose fastest bar outruns the
+sample's typical fastest in FFVI 31 to 20 (of about ninety), past the
+game's fastest bar ever on the sample 0 to 2 (Whole 06's counter at 9.4
+against 8.7 a second: no sample covering its register reaches a class
+that fast, so the least excess decided). The first cut of the speed term
+(a weight only) had left the 31 at 20 too and put a bass sample the game
+never plays past 5 a second under a line at 9.9; the reaches came from
+that.
+
+Open from this round: FFVI's voices share a pitch class at an octave in
+a quarter of its two-voice onsets (the doubling layer's intervals) where
+the writing has one in a hundred; the extra voice's interval steadiness
+still stands open from round 20.
+
+### The exit checks, run (2026-10-24; checks only, nothing in the writer changed)
+
+Set 15 passed the owner's ear ("almost every song is good now, the misses
+are acceptable"), so two of the exit criteria were measured on its twenty
+songs (seeds 1-20, both switches). The scripts sit beside the others on
+Ragnarok (`fourbar_check.py`, `nearest_check.py`, `nearest_tables.py`,
+`octave_check.py`); the games' tables they fit are cached under
+`~/diags/bitcomposer/idiom/phase4/nearest/tables/`.
+
+- **No four-bar phrase matches a game's: passed.** Every part's line
+  (melody, counter, bass, accompaniment), windows of four bars at every
+  bar as rhythm in twelfths and intervals, against the tune-copy reference
+  set (every game's four-bar tune phrases) and against FFVI's own parts
+  from the readings: no exact match in 461 melody, 322 counter, 437 bass
+  and 425 accompaniment windows of six notes or more. Forty-two melody
+  windows share a four-bar rhythm with an FFVI tune on other pitches. At
+  two bars the backing matches FFVI exactly fourteen times (bass 7 of
+  307, accompaniment 7 of 409): stock cells, an alternating bass from
+  Returners, arpeggio figures from Cyan and the Ending Theme.
+- **Songs written with FFVI's vocabulary fall nearest FFVI: passed, 20 of
+  20.** Each of the 35 games with twelve readings or more got its own 67
+  tables (the pack's KEPT set, `packtables.build`); each written song was
+  rendered once, read back by the readers as the measures are, its units
+  counted table by table, and every game's tables scored them (bits a
+  unit, summed over the units, summed over the tables). FFVI is nearest
+  for every song. By family: the figure tables (the upper figures, bass,
+  drums, the kit's groups) put FFVI first in 11 songs and second in the
+  other 9 (Super Ghouls'n Ghosts first there, a game of 23 songs whose
+  thin tables score common bars high); the plan tables first in 8, median
+  rank 2; the tune's tables first in only 5, median rank 5.5 (Bahamut
+  Lagoon first in 5). Table by table, the `rhythm` figures put FFVI first
+  in 20 of 20, `drums` 15 of 16, `bass` 14 of 19; `moves`, the tune's
+  bulk (137 units a song), puts it first in 5 of 20 at a mean rank of 9.
+  The remaining tune tables and nearly every plan table hold one to
+  seven units a song, and their rankings are not a measure: the winners
+  are the games with the smallest vocabularies (Jurassic Park Part 2's
+  one-outcome tables win `balance`, `layer_samples` and `theme_doubling`
+  outright), the known bias of a likelihood toward low-entropy tables on
+  common outcomes. A fair per-table distance would score each song
+  against the game's own songs' spread under its table; not built.
+  Reading: the backing and the plan are FFVI's by the tables; the tune is
+  where the songs are least FFVI, which is where the owner's ear put it.
+- **The octave, measured while the writing items were listed.** FFVI's
+  voices beside a line share a pitch class in 0.286 of the two-voice
+  onsets where the voices' rhythms differ (an octave apart in 15 %, the
+  same midi in 8 %) and in 0.122 where they double; the written songs
+  0.000 and 0.009. The layers table has the word for it (`apart +0
+  like`: bass 31 %, counter 21 % of second voices sit in the line's own
+  register), but the voice beside the line takes a tone of the voicing
+  up from its own, never the line's pitch an octave off. The word that
+  would carry both this and the voice's interval steadiness (round 20,
+  0.65 against 0.27): the voice's interval to the line at each onset,
+  drawn in context, in place of the rank's tone.
+
+Not run: the spread over twenty seeds against the game's own (slice 1's
+distinct-figures and ostinato measure, over the whole song); the blind
+pick rate, on hold by the owner's call until a game he does not know by
+heart; the nearest-game test in the other direction, which needs a second
+game's pack (Mega Man X, after phase 5 by his call). The owner holds the
+writer where it is for now and has ideas of his own to put first.
