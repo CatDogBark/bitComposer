@@ -1161,44 +1161,41 @@ def pair_for(models: dict | None, role: str, own: set, rng: random.Random) -> tu
 
 
 def counter_pair_for(models: dict | None, tune: str, own: set, ranges, register: tuple, rng: random.Random) -> tuple | None:
-    """The counter-line's sample beside the tune's where it plays another (counter_pairs): drawn once under the tune's
-    sample (the pack's id) and taken where the pack holds it, it is not the tune's, and it reaches the register the counter
-    was written in (reaches, as pair_for checks a layered part's pair); where that draw came from the tune's own context
-    and does not fit, one draw at the part's level, the counter's sample over all tunes, which is still a count. (the
-    sample, the level it came from: "tune" or "part", what was passed over), the sample and level None where nothing
-    counted fits (the pool rule by register and speed is the last fallback then), all three None without the table or its
-    units. The rule had given Whole 28's counter sdbd05ab4d5 beside a
-    tune on sf89f5aedfd at a 0.28 chance, a sample 4.2 dB louder in its body and nearly twice as bright, which FFVI never
-    plays as a counter against another tune sample; FFVI's partners for that tune sample are sfd6accf98a four times in
-    ten and s256b199ccf three (round 30)."""
+    """The counter-line's sample beside the tune's where it plays another (counter_pairs): drawn once a song under the
+    tune's sample (the pack's id) from the table's distribution as a plan draw sees it (the tune's context mixed with its
+    back-off, the counter's sample over all tunes, the part's level still a count), restricted to the samples that fit:
+    ones the pack holds, not the tune's own, reaching the register the counter was written in (reaches, as pair_for checks
+    a layered part's pair). (the sample, "tune" where the game pairs it with this tune sample or "part" where it plays it
+    as a counter against other tunes only, what was passed over and why), the sample and level None where nothing counted
+    fits (the pool rule by register and speed is the last fallback then), all three None without the table or its units.
+    A draw refused at the first misfit had left the table for the rule in eight songs of ten (a sample the pack lacks, or
+    one drawn range short of the register); the rule had given Whole 28's counter sdbd05ab4d5 beside a tune on sf89f5aedfd
+    at a 0.28 chance, a sample 4.2 dB louder in its body and nearly twice as bright, which FFVI never plays as a counter
+    against another tune sample; FFVI's partners for that tune sample are sfd6accf98a four times in ten and s256b199ccf
+    three (round 30)."""
     t = (models or {}).get("counter_pairs")
     if t is None:
         return None, None, None
     t = t.table if hasattr(t, "table") else t
     if t.songs.get((R.COUNTER,), 0) == 0:
         return None, None, None
-    passed = []
-
-    def fits(sid):
+    weights = t.weights((R.COUNTER, tune), floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS)
+    passed, fitting = {}, {}
+    for sid, w in weights.items():                          # the pack and the tune's own first: no stream spent on them
         if sid not in own:
-            passed.append(f"{sid} not in the pack")
+            passed.setdefault("not in the pack", []).append(sid)
         elif sid == tune:
-            passed.append(f"{sid} the tune's own")
+            passed.setdefault("the tune's own", []).append(sid)
         elif not reaches(ranges, sid, register, rng):
-            passed.append(f"{sid} out of reach of {register[0]}-{register[1]}")
+            passed.setdefault(f"out of reach of {register[0]}-{register[1]}", []).append(sid)
         else:
-            return True
-        return False
-    trace = []
-    drawn = t.draw((R.COUNTER, tune), rng, floored=False, floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS, trace=trace)
-    level = "tune" if trace and trace[0] == 2 else "part"
-    if fits(drawn):
-        return drawn, level, passed
-    if level == "tune":
-        drawn = t.draw((R.COUNTER,), rng, floored=False, floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS)
-        if fits(drawn):
-            return drawn, "part", passed
-    return None, None, passed
+            fitting[sid] = w
+    over = [f"{' '.join(sids)} {why}" for why, sids in passed.items()]
+    if not fitting:
+        return None, None, over
+    sid = rng.choices(list(fitting), weights=list(fitting.values()))[0]
+    fine = t.votes.get((R.COUNTER, tune), {}) if t.songs.get((R.COUNTER, tune), 0) >= PLAN_SONGS else {}
+    return sid, "tune" if sid in fine else "part", over
 
 
 def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random, models: dict | None = None, written: dict | None = None) -> dict:
@@ -1232,17 +1229,17 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
             if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
                 out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
                 continue                                    # chosen for where the counter was written, which is where the tune is
-            names = [n for n in names if n != out[R.MELODY][0]] or names
-            tonal = [n for n in tonal if n != out[R.MELODY][0]]
+            tune = raw(out[R.MELODY][0])                    # by the pack's id: the pool names the sample with the pack's prefix and the pack's
+            names = [n for n in names if raw(n) != tune] or names   # other tonal samples without it, and a name-for-name exclusion had let the
+            tonal = [n for n in tonal if n != tune]         # rule give an "other" counter the tune's own sample under its other name
             if written and role in written:
                 register = rhythm.part_register([n for n in written[role].notes if n[3] == 0]) or register
             if register:                                    # the game's own pair for the tune's sample (counter_pairs, round 30) before the
-                tune = raw(out[R.MELODY][0])                # pool rule: FFVI's counter sample is darker than the tune's in 17 pairs of 23
-                sid, level, passed = counter_pair_for(models, tune, own, ranges, register, rng)
-                over = f" (passed over: {', '.join(passed)})" if passed else ""
+                sid, level, passed = counter_pair_for(models, tune, own, ranges, register, rng)   # pool rule: FFVI's counter sample is
+                over = f" (passed over: {'; '.join(passed)})" if passed else ""                    # darker than the tune's in 17 pairs of 23
                 if sid is not None:
                     out[role] = make(sid)
-                    plan.log.append(f"counter's sample {sid}: " + ("the game's pair under the tune's " + tune if level == "tune"
+                    plan.log.append(f"counter's sample {sid}: " + (f"the game's pair under the tune's {tune}" if level == "tune"
                                                                     else "the counter's sample over all tunes") + f" (counter_pairs){over}")
                 elif passed is not None:
                     plan.log.append(f"counter's sample by the pool rule for {register[0]}-{register[1]}: no counted pair fits{over}")

@@ -192,9 +192,41 @@ class Table:
         and habit stay; only the bar before is let go when thin), or every conditioning where there is no chain."""
         return self.conditionings.index("previous") if "previous" in self.conditionings else len(self.conditionings)
 
+    def weights(self, context: tuple, floor_k: int | None = None, min_songs: int = 0) -> dict:
+        """The distribution draw() samples from under the context with `floored` off: {outcome: probability}, each
+        level's votes at the mass the draw gives it (its own share n / (n + t), a terminal level or the coarsest seen
+        level the rest); {} where no level was seen. For a draw restricted to the outcomes that fit (the counter's
+        sample given the tune's, among the samples the pack holds in reach of the register): the fitting outcomes drawn
+        by these weights are the table's own conditional, where drawing and refusing would leave the table for a rule
+        at the first misfit (round 30)."""
+        out, rest, coarsest = {}, 1.0, None
+        for k in range(len(context), self.covers - 1, -1):
+            level = self._level(context[:k])
+            if level is None:
+                continue
+            outcomes, cum, kept, given = level
+            coarsest = level
+            terminal = floor_k is not None and k <= floor_k
+            if not terminal and self.songs.get(context[:k], 0) < min_songs:
+                continue
+            share = 1.0 if terminal else kept / (kept + given)
+            prev = 0.0
+            for o, c in zip(outcomes, cum):
+                out[o] = out.get(o, 0.0) + rest * share * (c - prev) / cum[-1]
+                prev = c
+            rest *= 1.0 - share
+            if terminal:
+                return out
+        if coarsest is not None and rest > 0:
+            outcomes, cum, _, _ = coarsest
+            prev = 0.0
+            for o, c in zip(outcomes, cum):
+                out[o] = out.get(o, 0.0) + rest * (c - prev) / cum[-1]
+                prev = c
+        return out
+
     def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True,
-             floor_k: int | None = None, min_songs: int = 0, floor_outcomes: int = 0, floor_songs: int = 0,
-             trace: list | None = None) -> str:
+             floor_k: int | None = None, min_songs: int = 0, floor_outcomes: int = 0, floor_songs: int = 0) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
         n / (n + t) else the coarser level's; below the root, the floor
@@ -216,35 +248,26 @@ class Table:
         `floor_songs`: the floor steps down to the deepest level that many
         songs reach (a mask drawn for the bass from a thirteen-song table
         under a floor one song held had doubled the line where the game
-        fills). `trace`: a list the level the outcome came from is appended
-        to, as a count of leading conditionings (None below the table: the
-        floor model or the even share), so a caller can say which count a
-        draw was (the counter's sample under the tune's, or over all tunes)."""
+        fills)."""
         if floor_k is not None and floor_outcomes:
             while floor_k > self.covers and len(self.votes.get(context[:floor_k]) or {}) < floor_outcomes:
                 floor_k -= 1
         if floor_k is not None and floor_songs:
             while floor_k > self.covers and self.songs.get(context[:floor_k], 0) < floor_songs:
                 floor_k -= 1
-        coarsest, coarsest_k = None, None
+        coarsest = None
         for k in range(len(context), self.covers - 1, -1):
             level = self._level(context[:k])
             if level is None:
                 continue
             outcomes, cum, kept, given = level
-            coarsest, coarsest_k = level, k
+            coarsest = level
             terminal = floor_k is not None and k <= floor_k
             if terminal or (self.songs.get(context[:k], 0) >= min_songs and rng.random() * (kept + given) < kept):
-                if trace is not None:
-                    trace.append(k)
                 return rng.choices(outcomes, cum_weights=cum)[0]
         if not floored and coarsest is not None:
             outcomes, cum, _, _ = coarsest
-            if trace is not None:
-                trace.append(coarsest_k)
             return rng.choices(outcomes, cum_weights=cum)[0]
-        if trace is not None:
-            trace.append(None)
         if self.floor is not None:
             return self.floor.draw(values or {}, rng)
         if "" not in self._dist:
