@@ -1625,3 +1625,74 @@ pick rate, on hold by the owner's call until a game he does not know by
 heart; the nearest-game test in the other direction, which needs a second
 game's pack (Mega Man X, after phase 5 by his call). The owner holds the
 writer where it is for now and has ideas of his own to put first.
+
+### Round 23: the voice beside the line as a melody of its own (2026-10-24, on the owner's go)
+
+Set 15 passed the ear, and the owner asked for the writing items and chose
+this one first: the voice beside the line (round 20's mask gave it the
+line's rhythm; its pitch was a hand rule, a tone of the line's voicing up
+from its rank). He asked whether the fix was a rule replacing a rule; it
+is a word replacing a rule, and the open choice in it was settled by
+counting, as the rules of evidence ask.
+
+**Counted first (interval_check.py, move_check.py, product_check.py on
+Ragnarok).** FFVI's voice beside a line, where the two strike together
+(3352 onsets): a third below the line most (12 %), an octave off in 13 %,
+on the line's own pitch in 5 %, its interval kept from one such onset to
+the next 37 % of the time; where it strikes alone (1546 onsets, a third
+of its onsets) it repeats its note 29 % and moves a step 37 %. Held out
+over FFVI's songs: the interval to the line is best predicted by the part,
+the relation and the interval before (the chain, 0.7 bits a unit); the
+layer word, the line note's chord role and the line's own move add
+nothing. But the voice's own move from its last note is surer than its
+interval (3.4 against 3.9 bits a unit with the line; 3.3 against 4.5
+alone), and the product of the two words, normalized over the candidate
+intervals, is surer than either (3.36 bits against 3.87 and 3.71). The
+written voices before: never at the octave, holding their interval 54 %,
+and placed against the line alone (the first cut of this round) they had
+leapt five scale steps or more at 43 % of their onsets against FFVI's
+11 %, a voice jumping between 53 and 84 within a bar.
+
+**Built.** Two tables (VOCABULARY.md): `voice_intervals` (the interval
+to the line in scale steps where the two strike together; part, relation,
+the interval before) and `voice_moves` (the voice's move from its own last
+note at every onset; part, relation, place: with the line or alone).
+`writer.upper(kind=)` draws the voice's note: with the line, each
+candidate interval weighs its probability under voice_intervals times the
+probability under voice_moves of the move it implies (the line's move
+between the two onsets known from the line's notes kept in `shared`);
+alone, the move alone. Never an interval or a move the game never made
+(the words' vocabularies, as a draw would); a pitch another voice of the
+part holds is drawn again (an octave shift had put the collisions at a
+sixth above), the onset skipped after four. The voice sits in the span
+FFVI's voices beside a line sit in (the line's register widened by the
+layer offset's cap, `rhythm.LAYER_OFFSET`) rather than folded into its own
+offset register, which had turned a drawn third below into a sixth above.
+The round-22 guard is on the pitch itself now, not its class, so octaves
+are allowed and unisons are not (the second voice's sample may be the
+line's).
+
+**Measured after, the written voices by the plan's own words (2007
+onsets with the line, 69 alone):** an octave off 0.17 (FFVI 0.13), on the
+line's pitch 0.02 (0.05), the interval kept 0.41 (0.37); the intervals
+themselves a third below 0.11 (0.12), a sixth below 0.09 (0.08), a third
+above 0.08 (0.08), an octave above 0.08 (0.06), an octave below 0.07
+(0.04); the voice's own move with the line within a step 0.66 (0.57),
+five steps or more 0.03 (0.11); alone, a repeat 0.30 (0.29), a step 0.21
+(0.25). Chord tones 0.40 against FFVI's 0.74, a number not to trust across
+the two sides: FFVI's chords are read from its notes, the written songs'
+are planned.
+
+**Open from this round.** The voice's own onsets: FFVI's voice strikes
+alone in a third of its onsets, the written one in 3 %. The lines are not
+the cause (the written line bars with three onsets or fewer 0.43 against
+FFVI's 0.31); the mask draws under the written contexts give own onsets
+in 15 % of bars against the table's 27 %, so it is in the drawing, to be
+found. The doubling voice's chord tones (0.31 against FFVI's 0.82 by the
+same biased measure; `diatonic()` doubles at one scale interval where
+FFVI's doubling voice bends to the chord), the same word's domain, not
+built. The measurement scripts classify a written voice by the plan's
+word, not by `harness.relation` on its notes: the mask's coincidence
+makes nearly every written voice beside a line a "doubling" by the
+reader's rule, and a first after-measure had ranked the voices by note
+count and read a doubling voice's notes as an apart voice's.

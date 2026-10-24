@@ -113,6 +113,36 @@ said otherwise. Counting code: `translate/rhythm.py` and
   a short one, the same long sample in ten of its thirteen two-voice
   songs); on one sample for both, the busy voice had played on the long
   bass.
+- **voice_intervals** — a voice beside the line (apart or alternating), at
+  each onset it strikes WITH the line: its interval from the line's note in
+  scale steps (7 an octave, 2 a third, signed), by the part, the relation
+  and its interval at the previous such onset (the chain). FFVI's voice
+  beside an arpeggiated line sits a third below most, an octave off in
+  13 % of these onsets, on the line's own pitch in 5 %, and keeps its
+  interval 37 % of the time; the writing had taken a tone up the line's
+  voicing, never at the octave, holding its interval 54 % (round 23).
+  Held out, the chain is worth 0.7 bits a unit; the layer word, the line
+  note's chord role and the line's own move add nothing to it.
+- **voice_moves** — the same voice at every onset: its move from its own
+  previous note in scale steps, by the part, the relation and the place
+  (with the line, or alone where the line is silent). FFVI's voice is a
+  melody of its own: with the line it repeats its note 37 % of the time
+  and moves a step 21 %, two 17 %, five or more 11 %; alone it repeats
+  29 % and steps 37 %. Held out, the move is surer than the interval (3.4
+  against 3.9 bits a unit with the line, 3.3 against 4.5 alone), and the
+  two words' product is surer than either (3.4 bits). So `writer.upper`
+  draws the note both words agree on: with the line, each candidate
+  interval weighs its own probability under voice_intervals times the
+  probability, under voice_moves, of the move it implies from the voice's
+  last note (the line's own move between the two onsets known); alone,
+  the move alone. Never an interval or a move the game never made; a
+  pitch another voice of the part holds at that onset is drawn again,
+  and the onset skipped when every try lands on one. The voice sits in
+  the span FFVI's voices beside a line sit in (the line's register widened
+  by the layer offset's cap), not folded into its own offset register,
+  which had turned a drawn third below into a sixth above. A voice placed
+  against the line alone, without its move, had leapt five steps or more
+  at 43 % of its onsets, FFVI 11 %; with the product 3 %.
 - **sample_lengths** — the shortest note a song plays a sample at, as a
   class of its tenth-percentile note length in ms (40, 60, 80, 120, 160,
   240, 400, long), by the sample. Drawn once a song for each sample the

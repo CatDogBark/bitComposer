@@ -883,12 +883,15 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         drawn = _draw(models, "second_figures", (role, plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f), rng_v, floor_k=MASK_FLOOR)
                         return rhythm.apply_mask(f, drawn)
                     given = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in figures]
-                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: reg_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], sounds,
-                                                              key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],
-                                                              pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,
-                                                              tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v))
-                log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}, {density}), the line's voicing {v} tone{'s' if v > 1 else ''} up, "
-                           f"{sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars beside the line's" if given else ""))
+                drawn_pitch = "voice_intervals" in models and "voice_moves" in models
+                span_v = (max(24, low - rhythm.LAYER_OFFSET), min(100, high + rhythm.LAYER_OFFSET)) if drawn_pitch else reg_v   # the voice's pitch is its drawn
+                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], sounds,   # interval from the
+                                                              key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
+                                                              pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,   # voices beside a line sit in
+                                                              tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v), kind=rel[0])   # (the layer offset's cap), not folded into its offset register
+                log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}, {density}), "
+                           + ("its interval to the line and its own moves drawn, " if drawn_pitch else f"the line's voicing {v} tone{'s' if v > 1 else ''} up, ")
+                           + f"{sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars beside the line's" if given else ""))
             song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
             notes = notes + notes_v
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]

@@ -334,6 +334,8 @@ def free_envelope(habit: str):
 
 
 ANY_TONE = -1                         # upper(tone_index=ANY_TONE): a voice beside the line takes any tone of the line's voicing but its own, drawn a span
+VOICE_KINDS = ("apart", "alternating")   # the relations of a voice beside the line whose pitches the voice_intervals/voice_moves tables give
+VOICE_TRIES = 4                       # draws a voice beside the line gets before an onset whose every pitch another voice holds is skipped
 DENSITY_CAPS = {"sparse": 2, "medium": 6, "dense": FREE_HITS[1]}   # a drum group's hits a bar at its density tier's top (rhythm.DENSITIES)
 
 
@@ -432,7 +434,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
-          tone_index: int = 0) -> tuple[list, list, list]:
+          tone_index: int = 0, kind: str | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -444,8 +446,12 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     drawn under the line's own bars from the second_figures table) instead
     of drawn here; `shared`: the part's voicing at each (bar, position),
     filled by the line's call (tone_index 0) and read by a voice beside it
-    (tone_index 1, 2...), which takes the tone that many steps up the same
-    voicing rather than a voicing of its own.
+    (tone_index 1, 2...); `kind`: that voice's relation to the line (apart,
+    alternating): with the voice_intervals and voice_moves tables it takes
+    its interval to the line's note where they strike together and its own
+    move where it strikes alone, drawn (the line's notes are in `shared`
+    under ("line", (bar, position))); without them, the tone that many
+    steps up the line's voicing.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -468,6 +474,28 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     periods = getattr(song, "periods", {}).get(role, {})   # a held bar of the part's period takes its source bar's voicing too, on the same chord
     by_bar = {}
     own_tone = max(1, tone_index)                           # the tone a voice beside the line takes of the line's voicing (a span at a time with ANY_TONE)
+    beside = bool(tone_index) and kind in VOICE_KINDS and "voice_intervals" in models and "voice_moves" in models and shared is not None
+    prev_steps, prev_midi = rhythm.START, None              # a voice beside the line: its last interval with the line, its last note
+
+    def line_before(k, p, strict=False):
+        """The line's note last struck at or before (bar k, position p); `strict`: before it."""
+        best = None
+        for key_, m in shared.items():
+            if isinstance(key_[0], str) and key_[0] == "line" and (key_[1] < (k, p) if strict else key_[1] <= (k, p)) and (best is None or key_[1] > best[0]):
+                best = (key_[1], m)
+        return best[1] if best else None
+
+    def weighted(weights: dict):
+        """One key drawn by its weight; None where nothing weighs."""
+        total = sum(weights.values())
+        if total <= 0:
+            return None
+        x, acc = rng.random() * total, 0.0
+        for key_, w in weights.items():
+            acc += w
+            if x < acc:
+                return key_
+        return next(reversed(weights))
     in_bar = {}                                             # bar -> positions the line's voicing is known at (shared), for a voice beside it
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         if figure == REST:
@@ -540,18 +568,67 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
                     notes.append((start, start + (until - start) * sounds, float(pedals.get(v, low_v)), v))
                     continue
-                taken = shared.setdefault(("taken", (k, p)), set()) if shared is not None else None   # the part's pitch classes at this onset (a 2-tuple key: the voicing look-up unpacks every key)
-                if tone_index and len(voices) == 1:        # a voice beside the line: a tone up the line's voicing (its rank's, or one drawn a span), walking with the motion
+                taken = shared.setdefault(("taken", (k, p)), set()) if shared is not None else None   # the part's notes at this onset (a 2-tuple key: the voicing look-up unpacks every key)
+                if beside and len(voices) == 1:            # a voice beside the line: with the line, its interval to the line's note (voice_intervals);
+                    with_line = (k, p) in shared            # alone, its move from its own last note (voice_moves); both in scale steps, drawn
+                    ref = (shared.get(("line", (k, p))) if with_line else line_before(k, p)) if with_line or prev_midi is None else None
+                    if (with_line or prev_midi is None) and ref is None:
+                        continue
+                    t_iv = models["voice_intervals"].table if hasattr(models["voice_intervals"], "table") else models["voice_intervals"]
+                    t_mv = models["voice_moves"].table if hasattr(models["voice_moves"], "table") else models["voice_moves"]
+                    refused = set()
+                    for _ in range(VOICE_TRIES):            # a pitch another voice of the part holds at this onset is drawn again (two copies of one
+                        if ref is not None:                 # sample on one pitch phase); the onset is skipped when every try lands on one
+                            ref_i = scale_index(int(round(ref)), scale)
+                            ctx_iv = (role, kind, prev_steps)
+                            if with_line and prev_steps != rhythm.START and prev_midi is not None:
+                                # the note both words agree on: its interval to the line's note (voice_intervals, chained on the interval
+                                # before) and its own move from its last note (voice_moves), the line's own move between them known;
+                                # held out on FFVI the product beats either word alone (3.36 bits a unit against 3.87 and 3.71)
+                                line_prev = line_before(k, p, strict=True)
+                                moved = ref_i - scale_index(int(round(line_prev)), scale) if line_prev is not None else 0
+                                before = int(prev_steps)
+                                weights = {c: t_iv.p(str(c), ctx_iv) * t_mv.p(str(c - before + moved), (role, kind, "with"))
+                                           for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
+                                           if c not in refused and str(c) in t_iv.vocabulary and str(c - before + moved) in t_mv.vocabulary}
+                                steps = weighted(weights)
+                            else:
+                                steps = weighted({c: t_iv.p(str(c), ctx_iv) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
+                                                  if c not in refused and str(c) in t_iv.vocabulary})
+                            if steps is None:
+                                break
+                            target = scale_pitch(ref_i + steps, scale)
+                        else:
+                            steps = None
+                            move = weighted({c: t_mv.p(str(c), (role, kind, "alone")) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
+                                             if c not in refused and str(c) in t_mv.vocabulary})   # as a draw: never an interval or move the game never made
+                            if move is None:
+                                break
+                            target = scale_pitch(scale_index(prev_midi, scale) + move, scale)
+                        midi = in_register(target, registers[v])
+                        if taken is None or midi not in taken:
+                            break
+                        refused.add(steps if steps is not None else move)
+                    else:
+                        continue
+                    if taken is not None and midi in taken:
+                        continue
+                    if with_line and steps is not None:
+                        prev_steps = str(steps)
+                    prev_midi = midi
+                elif tone_index and len(voices) == 1:      # no tables for it: a tone up the line's voicing (its rank's, or one drawn a span), walking with the motion
                     order = [(own_tone + int(walked) + d) % len(pitches) for d in range(len(pitches))]
-                    free = [pitches[i] for i in order if taken is None or int(round(pitches[i])) % 12 not in taken]
+                    free = [pitches[i] for i in order if taken is None or in_register(pitches[i], registers[v]) not in taken]
                     if not free:                            # every tone of the voicing already sounds in the part: the voice sits this onset out
-                        continue                            # (FFVI's voices beside a thin voicing double at the octave or rest; two copies of one
-                    midi = in_register(free[0], registers[v])   # sample on one pitch had phased against each other, Song Check 14's Whole 02)
+                        continue
+                    midi = in_register(free[0], registers[v])
                 else:
                     midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
+                    if shared is not None and not tone_index:
+                        shared[("line", (k, p))] = midi     # the line's note here, for the voices beside it
                 midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
                 if taken is not None:
-                    taken.add(int(round(midi)) % 12)
+                    taken.add(int(round(midi)))
                 notes.append((start, start + (until - start) * sounds, float(midi), v))
             walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)

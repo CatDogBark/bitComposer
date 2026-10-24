@@ -80,6 +80,8 @@ KEPT = {
     "period_holds": ("rhythm", "period_hold_units", {}, ("part", "period"), False, False, "inside a backing part's period, a bar playing the bar a period before again (held) or not (varied)"),
     "second_figures": ("rhythm", "second_figure_units", {}, ("part", "feel", "tempo", "onsets", "line"), False, False, "a layered part's second line (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
     "layer_samples": ("rhythm", "layer_sample_units", {}, ("part",), False, False, "the samples a layered part's line and its second voice play, as a pair, drawn once a song"),
+    "voice_intervals": ("rhythm", "voice_interval_units", {}, ("part", "kind", "previous"), False, False, "a voice beside the line's interval to the line's note where they strike together, in scale steps (7 an octave), by the part, the relation and its interval before"),
+    "voice_moves": ("rhythm", "voice_move_units", {}, ("part", "kind", "place"), False, False, "a voice beside the line's move from its own last note, in scale steps, by the part, the relation and whether it strikes with the line or alone"),
     "sample_lengths": ("rhythm", "sample_length_units", {}, ("part",), False, False, "the shortest note a sample is played at (ms, a class), by the sample: a note's floor on it"),
     "sample_speeds": ("rhythm", "sample_speed_units", {}, ("part",), False, False, "the fastest bars a sample is played in (notes a second, a class), by the sample: weighed in its choice for a part"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),

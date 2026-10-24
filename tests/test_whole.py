@@ -460,6 +460,46 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {3: ("accompaniment", line)}
         self.assertIsNone(rhythm.register_notes(s, "accompaniment"))
 
+    def test_the_voice_beside_the_line_takes_its_interval_from_the_table(self):
+        """voice_intervals counts a voice's interval to the line in scale steps where they strike together, voice_moves its
+        own move at every onset by place; the upper writer draws the voice's pitch from the two words' product with the line
+        and from its move alone, never a pitch another voice holds."""
+        from fractions import Fraction
+        from bitcomposer.translate import writer, tables, vocab
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + 0.5 * i, 0.4, [64.0, 67.0, 72.0, 67.0][i % 4], "a") for k in range(4) for i in range(8)]   # eighths on E G C G
+        second = []
+        for k in range(4):
+            second += [(4.0 * k, 0.9, 60.0, "b"), (4.0 * k + 2.0, 0.9, 60.0, "b"), (4.0 * k + 2.25, 0.4, 62.0, "b")]   # with the line a third below, then alone a step up
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={"accompaniment": line + second}, sid="s", game="g", tonic=0, mode="major")
+        s.voice_notes = {3: ("accompaniment", line), 4: ("accompaniment", second)}
+        iv = rhythm.voice_interval_units([s])
+        self.assertEqual({u.outcome for u in iv}, {"-2"})                                      # C under E: a third below, every time
+        self.assertEqual([u.values["previous"] for u in iv][:3], [rhythm.START, "-2", "-2"])
+        self.assertEqual(iv[0].values["kind"], "apart")
+        mv = rhythm.voice_move_units([s])
+        self.assertEqual([u.outcome for u in mv if u.values["place"] == "alone"], ["1"] * 4)   # alone: a step up from its own C
+        self.assertEqual({u.outcome for u in mv if u.values["place"] == "with"}, {"0", "-1"})  # with the line: back to C from C or from D
+        # the writer: tables that say "an octave above the line" and "hold your note" with the line, "a step up" alone
+        iv_t = tables.Table(("part", "kind", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "7", {"part": "accompaniment", "kind": "apart", "previous": p}) for i in range(20) for p in (rhythm.START, "7")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "accompaniment", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("1", "alone"))])
+        song = rhythm.Song("w", 4, 12, bars[:2], [vocab.Span(0.0, 8.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        shared = {}
+        for k in range(2):
+            for pos in range(4):                                                               # a line that repeats middle C on every beat
+                shared[(k, Fraction(pos))] = ((0, ""), "R 3 5", ["R", "3", "5"])
+                shared[("line", (k, Fraction(pos)))] = 60
+                shared.setdefault(("taken", (k, Fraction(pos))), set()).add(60)
+        notes, figures, _ = writer.upper(song, "accompaniment", [1], {1: (60, 96)}, {"voice_intervals": iv_t, "voice_moves": mv_t}, random.Random(1),
+                                         "dense", "triad", 0.5, key=(0, "major"), plays=[True, True], figures=["0 2 5/2", "0 2 5/2"], shared=shared,
+                                         tone_index=writer.ANY_TONE, kind="apart")
+        got = {(round(a, 2), int(m)) for a, b, m, v in notes}
+        self.assertEqual(got, {(0.0, 72), (2.0, 72), (2.5, 74), (4.0, 72), (6.0, 72), (6.5, 74)})   # the octave above, held; a step up alone (the
+        # smoothing leaves the table's other outcome a few percent at every draw: the seed is one where the words' own answers come up)
+        self.assertTrue(all(int(m) != 60 for a, b, m, v in notes))
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""

@@ -2117,6 +2117,82 @@ LAYER_DENSITY = ((0.5, "sparser"), (2.0, "like"), (1e9, "denser"))   # a second 
 LAYER_OFFSET = 24                    # semitones: a second voice's register against the line's is kept within this, to REGISTER_BIN
 
 
+VOICE_STEPS = 14                     # scale steps: a voice beside the line's interval or move is counted within two octaves
+
+
+def _beside_lines(songs):
+    """Every voice beside a line in an upper part with two voices or more (apart or alternating; a doubling voice follows
+    the line): (song, part, kind, the voice's notes, the line's notes, the song's scale), sorted in time."""
+    from . import harmony, harness                         # harness imports this module
+    for s in songs:
+        scale = {((s.tonic or 0) + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
+        for role in UPPER:
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            lns = sorted((n for n in voices[line] if not math.isnan(n[2])), key=lambda n: n[0])
+            for other in sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v)):
+                kind = harness.relation(voices[line], voices[other])[0]
+                if kind == "doubling" or not lns:
+                    continue
+                yield s, role, kind, sorted((n for n in voices[other] if not math.isnan(n[2])), key=lambda n: n[0]), lns, scale
+
+
+def _voice_walk(songs):
+    """Each onset of a voice beside a line: (song, part, kind, with the line?, steps from the line's note struck or last
+    struck, the voice's move in steps from its own previous note or None, the interval at its previous onset with the
+    line or START)."""
+    from . import writer                                   # writer imports this module
+    for s, role, kind, notes, lns, scale in _beside_lines(songs):
+        prev_with, prev_midi, li = START, None, 0
+        for n in notes:
+            t, m = n[0], int(round(n[2]))
+            while li + 1 < len(lns) and lns[li + 1][0] <= t + NEAR:
+                li += 1
+            if lns[li][0] > t + NEAR:
+                prev_midi = m
+                continue
+            lm = int(round(lns[li][2]))
+            steps = writer.scale_index(m, scale) - writer.scale_index(lm, scale)
+            move = writer.scale_index(m, scale) - writer.scale_index(prev_midi, scale) if prev_midi is not None else None
+            with_line = abs(lns[li][0] - t) < NEAR
+            yield s, role, kind, with_line, steps, move, prev_with
+            if with_line:
+                prev_with = str(steps)
+            prev_midi = m
+
+
+def voice_interval_units(songs) -> list:
+    """Each onset a voice beside the line strikes WITH the line as a unit: its outcome the interval from the line's note
+    in scale steps (7 an octave, 2 a third; signed), its values the part, the voice's relation (apart, alternating) and
+    the interval at its previous onset with the line (the chain). FFVI's voice beside an arpeggiated line sits a third
+    below it most (-2, 12 %), an octave off in 13 % of these onsets, on the same pitch in 5 %, and keeps its interval
+    from one onset to the next 37 % of the time; the writing had put it a tone up the line's voicing, never at the
+    octave, holding its interval 54 % (2026-10-24). Held out, the chain conditioning is worth 0.7 bits a unit; the
+    layer word and the line note's chord role add nothing to it."""
+    out = []
+    for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
+        if with_line and abs(steps) <= VOICE_STEPS:
+            out.append(tables.Unit(s.sid, s.game, str(steps), {"part": role, "kind": kind, "previous": prev_with}))
+    return out
+
+
+def voice_move_units(songs) -> list:
+    """Each onset of a voice beside the line as a unit: its outcome the voice's move from its own previous note in scale
+    steps, its values the part, the relation and the place (with the line, or alone where the line is silent). FFVI's
+    voice is a melody of its own: with the line it repeats its note 37 % of the time and moves a step 21 %, two steps
+    17 %, five or more 11 %; alone it repeats 29 % and steps 37 %. Held out, its move is surer than its interval to the
+    line (3.4 against 3.9 bits a unit with the line, 3.3 against 4.5 alone), and the two words' product surer than
+    either (3.4 bits): the writer draws the note both agree on (2026-10-24; a voice placed against the line alone had
+    leapt five steps or more at 43 % of its onsets, FFVI 11 %)."""
+    out = []
+    for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
+        if move is not None and abs(move) <= VOICE_STEPS:
+            out.append(tables.Unit(s.sid, s.game, str(move), {"part": role, "kind": kind, "place": "with" if with_line else "alone"}))
+    return out
+
+
 def layer_units(songs) -> list:
     """Each part of each song that holds two voices or more (the drums left
     out) as a unit: its outcome what the second voice does beside the line
