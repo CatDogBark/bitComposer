@@ -123,7 +123,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
   a counter-line with no pairs of its own had drawn an accompaniment's
   (round 24).
 - **voice_intervals** — a voice beside the line (apart or alternating), in
-  the chord parts and, since round 26, the bass, at each onset it strikes
+  the chord parts and, since round 26, the bass, and since round 29 the
+  counter-line beside the tune (part counter; its "relation" the sample
+  relation `counter_samples` draws, same or other, which splits FFVI's
+  intervals: on the tune's sample a third off in 36 % of shared strikes,
+  on another an octave or a unison in 37 %), at each onset it strikes
   WITH the line: its interval from the line's note in
   scale steps (7 an octave, 2 a third, signed), by the part, the relation
   and its interval at the previous such onset (the chain). FFVI's voice
@@ -133,7 +137,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   voicing, never at the octave, holding its interval 54 % (round 23).
   Held out, the chain is worth 0.7 bits a unit; the layer word, the line
   note's chord role and the line's own move add nothing to it.
-- **voice_moves** — the same voice at every onset: its move from its own
+- **voice_moves** — the same voice at every onset (the counter-line beside
+  the tune too, since round 29): its move from its own
   previous note in scale steps, by the part, the relation and the place
   (with the line, or alone where the line is silent). FFVI's voice is a
   melody of its own: with the line it repeats its note 37 % of the time
@@ -203,6 +208,27 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **layer_levels** — a layered part's second voice's level against its
   line's, in tenths, by the part. Drawn once a song; the voices beside the
   line play at it.
+- **counter_levels** — the counter-line's level as a share of the tune's,
+  in tenths (capped at 1.5, as `layer_levels` is), one unit a song with
+  both parts, by the part. Drawn once a song: the plan sets the counter's
+  level to the tune's times the share (`extras.counter.level`), in place
+  of the counter's own draw from `levels`. FFVI's counter is as loud as
+  its tune (1.00 at the median, 24 of 52 songs at 1.0, the rest from 0.3
+  to 1.5); the two parts' shares drawn apart from `levels` had put the
+  written counter at 0.74 of the tune (round 29).
+- **counter_samples** — whether a song's counter-line plays the tune's
+  sample (`same`: the sample most of its notes are on is the tune's) or
+  another (`other`), one unit a song with both parts, by the part. Drawn
+  once a song (`extras.counter.sample`): the kind the counter's
+  `voice_intervals` and `voice_moves` are drawn under, and at the
+  rendering a `same` counter takes the tune's sample whatever its pool
+  says, an `other` counter the pool's best but the tune's, chosen for the
+  register it was written in (beside the tune, not the register the plan
+  drew for it). FFVI: 18 of 52 by the merged notes (17 of 52 by the line
+  voice the unit counts); the pool's own choice had given the written
+  songs 3 of 14, and 10 of 14 once the counter sat where the tune is
+  (the pool's favourite sample is the tune's), so the word has to be
+  honoured both ways (round 29).
 - **climax** — which of a song's tune phrases holds the tune's highest note,
   by its place among them (opening, early, middle, late, closing). FFVI's
   tune peaks at 0.45 of the song at the median; the written tunes had
@@ -348,7 +374,7 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **values** — a melody note held or detached, by its value and the song's
   articulation habit. Drawn a note; the tune's note lengths.
 
-## The tune (the melody, and the counter-line written the same way after it)
+## The tune (the melody; the counter-line is written beside it, below)
 
 - **moves** — the tune's move note to note (semitones, to an octave), under
   the song's stepwise habit, by where the arriving note falls in its beat
@@ -407,6 +433,51 @@ said otherwise. Counting code: `translate/rhythm.py` and
   almost always none). Drawn a phrase: the carrier plays the theme phrase
   in its register while the tune plays what it drew. Rare in FFVI (one
   phrase in a hundred), and kept at that rate.
+
+## The counter-line, beside the tune
+
+- **counter_figures** — the counter-line's bar as a mask over the tune's
+  bar, counted as `second_figures` counts a voice beside its part's line
+  with the tune's line as the line (the melody's line voice where it holds
+  two): which of the tune's onsets the counter strikes with and any onsets
+  of its own (`1 0 1 0 | 7/2`; `-` resting under the tune), by the part,
+  the song's feel and tempo band, the tune's onset count and its pattern;
+  where the tune rests the pattern is `-` and the count 0, and the outcome
+  is the counter's own onsets alone (`| 0 2`); a bar both rest in is the
+  texture's and not counted. Drawn a bar after the tune is written, in
+  the bars the plan has the counter play, with the floor never below the
+  tune's onset count (`MASK_FLOOR`) and stepping down where its context
+  holds under two songs (`PLAN_SONGS`), as the second bass voice's mask
+  is; `rhythm.apply_mask` makes the counter's positions, its own onsets
+  standing alone at a resting tune. The pitch over those positions comes
+  from `voice_intervals` and `voice_moves` under the `counter_samples`
+  kind (`writer.counter`, with `writer.beside_pitch`: with the tune, the
+  tune's note and the interval both words agree on; alone, its own move;
+  the first note of a song the tune leaves it alone with is the chord's
+  root nearest its register), kept by octaves in the tune's register
+  widened by the layer offset's cap (a drawn third below folded into the
+  counter's own register had turned into a sixth above, round 23); on
+  the tune's sample a drawn unison is drawn again (two copies of one
+  sample on one pitch), the onset skipped after four. The lengths are the
+  `values` word's under the counter's articulation habit, a bar's last
+  note running to the next bar's first onset, the gap the word was counted
+  against (the melody writer still cuts its own at the bar line). FFVI's
+  counter plays WITH the tune, not in its rests: 0.67 of its onsets on the
+  tune's, 0.82 of its sounding time under the tune's notes, 1.42 times
+  its notes, as loud, 64 % of its notes below the tune, 2.5 semitones
+  under at the median, and it fills 0.61 of the tune's resting time;
+  written by running the melody writer a second time with its own random
+  stream, knowing nothing of the tune but the planned register, the
+  counter had 0.43 of its onsets on the tune's (seeds 1 to 20) and Whole
+  28 0.19, on the tune's sample in the tune's register: two tunes
+  interleaved on one timbre, "competing for air time" (round 29). What
+  the old path gave the counter and this word does not: its phrase arc,
+  contours and endings, the echo urn (`melody_recall`; the `echo` habit
+  is still drawn, unused), the chord-tone and repeat-rate controllers,
+  the step habit, the reference-set check, and a second counter voice
+  apart (its layer word is drawn and logged, the voice not written: no
+  word counts a voice beside a counter that follows the tune); the
+  articulation, echo and sounds draws stay in the plan as they were.
 
 ## What a written song records
 

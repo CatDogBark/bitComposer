@@ -2022,3 +2022,90 @@ Open, for his decision: a counted word for the bass on the kit's onsets
 the song, drawn and asked of each bar's figure), which reaches every
 kit and would turn the ten-note run off the kit away; the slap's fills
 against the line's density; the recall share; and round 25's list.
+
+### Round 29: the counter-line beside the tune (2026-10-24, from the owner's note on Song Check 22)
+
+The owner heard the counter-line and the tune "competing for air time
+and blending together". Measured first (counter_vs_melody.py,
+counter_split.py): FFVI's counter plays WITH the tune, not in its rests.
+In its 52 songs with both, 0.67 of the counter's onsets fall on the
+tune's, 0.82 of its sounding time lies under the tune's notes, it plays
+1.42 times the tune's notes, as loud as the tune (level ratio 1.00 at
+the median), 64 % of its notes below the tune and its register 2.5
+semitones under; and it fills 0.61 of the tune's resting time. The
+intervals split by timbre: on the tune's own sample (18 of 52) the
+counter is a harmony line in thirds (-3, -4, +3, +4 = 36 % of shared
+strikes, 0.82 of its onsets on the tune's, register gap -3); on another
+sample (34) it sits at octaves and unisons (37 %), 0.52 of its onsets
+on the tune's, 1.57 times the tune's notes, level 0.83. The written
+songs (seeds 1 to 20, fourteen with both): 0.43 of the counter's onsets
+on the tune's, 0.98 times its notes, level 0.74, register gap -1, the
+tune's sample in 3 of 14; Whole 28 the tune's sample, the tune's
+register (gap 0) and 0.19 of its onsets on the tune's, two tunes
+interleaved on one timbre. The cause: `whole.write()` ran
+`writer.melody` a second time for the counter with its own random
+stream, and nothing in the vocabulary related the two lines.
+
+**Built, on his go ("good with the words, go ahead"); three words
+(VOCABULARY.md).** `counter_figures`: the counter's bar as a mask over
+the tune's bar, counted as `second_figure_units` counts a voice beside
+its line with the tune's line as the line (`rhythm.counter_figure_units`,
+1493 bars of 52 songs; the line pattern `-` and count 0 where the tune
+rests, the outcome then the counter's own onsets alone, 153 bars, which
+`apply_mask` gives at a resting line instead of a rest); drawn a bar
+after the tune is written as the second bass voice's mask is
+(`MASK_FLOOR`, `PLAN_SONGS`). The voice words extended to the counter
+beside the tune (`_beside_lines`; 3681 interval units, 6834 move units),
+the kind its sample relation rather than a layer relation: a new share
+`counter_samples` (same 17, other 35 by the line voice; the scripts'
+merged notes say 18 and 34) drawn once into the plan and honoured at the
+rendering (`samples_for`: a "same" counter takes the tune's sample; an
+"other" counter the pool's best but the tune's, chosen for the register
+it was written in). `writer.counter` writes the counter over the mask's
+positions with `beside_pitch`: the tune's pitch and the drawn interval
+where they strike together, its own move between, in the tune's register
+widened by the layer offset's cap; its lengths from the `values` word
+under its articulation habit, a bar's last note running to the next bar's
+first onset (the gap the word was counted against; round 26's fix,
+applied here). `counter_levels`: the counter's level over the tune's in
+tenths, drawn once; the plan sets the counter's level to the tune's
+times the share. A test for each; the suite passes (336 tests).
+
+**Measured after, the same script (seeds 1 to 20, fourteen songs; FFVI
+in brackets):** onsets on the tune's 0.43 to 0.56 (0.67); notes per
+tune note 0.98 to 1.12 (1.42); level ratio 0.74 to 1.00 (1.00);
+register gap -1.0 to -2.5 (-2.5); the tune's sample 3 of 14 to 5 of 14
+(18 of 52); sound under the tune 0.76 to 0.78 (0.82); the tune's rests
+filled 0.68 to 0.59 (0.61); above the tune 0.37 to 0.30 (0.36). Whole
+28: 0.19 to 0.75 of its onsets on the tune's, on another sample, the
+register gap -6 (its counter_levels draw 1.5, the one such song in
+FFVI's 52; its tune rests 0.44 of the time and the counter fills 0.46
+of that). A first cut had given the "other" counter the pool's best
+sample, which is the tune's favourite: 10 of 14 on the tune's sample
+and the owner's complaint intact, so the word is honoured both ways; and
+the counter's bar-final notes cut at the bar line had filled 0.42 of
+the tune's rests, the run-on 0.59. The before and after runs are
+`phase4/r29_before.log` and `phase4/r29_after2.log`.
+
+**Lost from the old counter path, by design (no second writer kept):**
+the counter's phrase arc, contours, endings and relations, the echo urn
+(the `echo` habit is drawn and unused), the chord-tone and repeat-rate
+controllers, the step habit, the reference-set check (the line follows
+the tune's rhythm and the drawn intervals; a copied phrase would be the
+tune's, which is checked), and a second counter voice apart (one song of
+the twenty; its layer word is logged, the voice not written: no word
+counts a voice beside a counter that follows the tune). The counter
+keeps its articulation, echo and sounds draws in the plan; the melody's
+own `values` draws still cut a bar's last note at the bar line (open
+since round 26).
+
+**Open.** The counter's density against the tune (1.12 against 1.42) and
+its own onsets' share: the mask's floor stands on the tune's onset
+count, and the written tunes' sparser bars (a one-note bar in Whole 28's
+A part) draw from the thinnest contexts; a second counter voice apart;
+the "same"-sample unison guard is a writer's rule carried over from the
+chord parts, not a count; the counter's chord clash against the
+accompaniment is not read (the old path's `draw_move` stayed clear of
+sounding semitones, the voice words count the interval to the tune
+only). Song Check 23 is Whole 28 a sixth time beside the other five, its
+counter the one change.
