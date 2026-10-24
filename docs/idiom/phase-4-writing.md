@@ -1159,3 +1159,71 @@ Song Check 6: the same twenty seeds as every set, both switches on.
 Nothing in the writer changed for this round. The tune travelling to the
 counter or the bass, the steps, the two-line accompaniment's density and
 the reader's parts are as round 12 left them.
+
+### Round 12's open items, investigated (2026-10-23; nothing changed)
+
+Measured on Ragnarok (`phase4/openlib.py`, `ffvi_open.py`,
+`written_open.py`, `steps_stages.py`, `steps_roles.py`, `repeat_check.py`,
+`ffvi_accomp.py`); the written side is the set 6 options.
+
+**The theme travelling.** In FFVI another part plays the theme's head
+cell in 12 of 52 counter-lines (44 places), 11 of 63 basses (46) and 9
+of 59 accompaniments (14). In most of those places the tune plays the
+theme cell at the same time: the counter in 32 of 44 (25 in the tune's
+octave, 5 an octave up), the bass in 29 of 46 (two octaves down in 14,
+one to three down in the rest), the accompaniment in 12 of 14. So the
+travelling is mostly a second instrument doubling the hook for a bar as
+the tune states or echoes it. The hand-off is rare: the counter carries
+it over a resting tune in 6 places and over another cell in 6; the bass
+carries four bars of the theme phrase in 9 of its 46 places. The songs
+whose counter carries it are not the songs whose tune returns (2 of 12).
+Our vocabulary has whole-part doubling (`layers`) and a counter written
+clear of the tune; it has no word for a part doubling the theme's cell
+at its statements, nor for a return carried by the bass. Both would be
+new units (a statement: which parts double it; a return: which part
+carries it).
+
+**The tune's steps (0.55 against 0.67).** By position, FFVI's moving
+moves: within a bar 79 % of them at 0.65 steps, at a bar join inside a
+phrase 16 % at 0.61, at a phrase start 5 % at 0.50 (leaps 0.16). Ours:
+80 % at 0.59, 16 % at 0.55, 4 % at 0.29 (leaps 0.27). The moves table
+itself expects 0.645 steps over the contexts the writer visits, FFVI's
+own level; the register filter raises that to 0.69, the clash, scale and
+contour filters bring it to 0.658 and the chord weighting on strong beats
+to 0.626 (2,313 draws). The drawn within-bar moves came out 0.601 for the
+melody and the finished line 0.589 (echoed cells snapped to the chord).
+The counter loses far more after its draw: 0.606 drawn, 0.493 finished;
+what the writer does to it after the draw is not yet found. At a phrase
+start the shift table's draw (where the phrase sits) is taken as the
+first move; FFVI reaches it over the phrase. So about three points go to
+the chord weighting, one to the other filters, one to the echoes, one to
+the joins and one to the phrase starts; the table is not the cause.
+
+**The accompaniment's density (9.1 against 6.3).** FFVI's
+accompaniments: 16 with one voice (5.8 strikes a bar), 43 with two or
+more (merged 7.3; the line 6.6, the second voice 4.5; 40 % of the merged
+onsets struck by both). Ours: one voice 8.7, two or more merged 10.3 (the
+line 8.6, the second 6.0). FFVI's habits: dense 30 of 58 (7.4 to 9.1
+merged), medium 25 (4.5 to 5.1), sparse 3; our twenty drew dense 10,
+medium 8, sparse 1, the same mix. The cause is in the counting: the
+figure table's unit is the part's bar with all its voices merged
+(`rhythm.units`), so a dense habit's bars hold the 8.5 onsets that in
+FFVI are two voices together; the writer gives the whole pattern to the
+line and then writes a second line apart with its own habit beside it.
+Arpeggiation adds no onsets (`MOTION_STEP` moves a voice along the
+stack). Either the line's own bar and the second voice's bar become the
+units (new vocabulary), or the merged unit is split between the lines.
+
+**The reader's parts (2 against 4).** The reader finds parts where a run
+of two bars or more repeats with 85 % of each voice's notes held, and
+joins parts under four bars; FFVI's median part is 5 bars and only 65 of
+its 304 parts are letter repeats, so its boundaries come from phrases and
+riffs repeated note for note. Our planned repeats (B B) are not note for
+note: in ten songs with repeats the melody and the counter copy every
+bar, the drums most, the bass's figures copy but its notes differ in a
+bar or two of each part (its second line), and the accompaniment copies
+nothing (0 of 4, 0 of 6, 0 of 8 bars; the harmony too): the upper writer
+has no copy of a repeated part (`_free_figures` copies for the bass and
+the drums, the melody writer for the tune). With two to four of eight
+voices playing new material the reader hears no repeat and no boundary.
+A writing fault, not vocabulary.
