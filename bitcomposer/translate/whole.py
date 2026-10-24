@@ -33,6 +33,7 @@ follows the pack's own echo habits as the generator's did (score.of_song).
 """
 import math
 import random
+from fractions import Fraction
 import re
 import statistics
 from collections import Counter
@@ -840,10 +841,12 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             habit2 = habit_near(models, R.BASS, rhythm.band(plan.bpm), plan.weights.get(R.BASS, "half"), random.Random(f"{seed}:bass:second habit"),
                                 plan.habits[R.BASS], density, table="bass_habits")
             given = None
-            if "second_figures" in models:                  # the second voice's figure under the line's, as the game's second basses play
-                memo = {}
-                given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f), rng2, floor_k=MASK_FLOOR))
-                         for f in figures]
+            if "second_figures" in models:                  # the second voice's bar as a mask over the line's onsets (which it strikes with,
+                line_pat = [f if f == writer.REST else rhythm.pattern(Fraction(t.partition(":")[0]) for t in rhythm._tokens(f)) for f in figures]
+                masks = [p if p == writer.REST else _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), str(len(p.split())), p), rng2, floor_k=MASK_FLOOR)
+                         for p in line_pat]                 # plus its own), drawn a bar as the chord parts' are (round 20): one draw a line
+                                                            # pattern had given a whole song the doubling mask where FFVI's slap fills half its bars
+                given = [writer.mask_figure(f, m) for f, m in zip(figures, masks)]
             sounds2 = float(_draw(models, "layer_sounds", (R.BASS, "second"), rng2)) if "layer_sounds" in models else plan.sounds[R.BASS]
             notes2, figures2 = writer.bass(song, models["bass"], rng2, habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
                                            free=True, plays=plan.plays[R.BASS], register=max(24, plan.registers[R.BASS][0] + offset),

@@ -1180,14 +1180,18 @@ def density_bin(onsets: int) -> str:
 
 
 def second_figure_units(songs) -> list:
-    """Each bar of each upper part holding two voices or more as a unit: its
-    outcome the bar's pattern of the voices beside the line (the second
-    line; "-" where they rest), its values the part, the line's density
-    class in the bar (DENSITY_BINS) and the line's own pattern. The second
-    line is drawn under the line's bar, bar by bar, the pattern backing off
-    to the density class where the pattern is rare: FFVI's second
+    """Each bar of each layered part (two voices or more: the chord parts and
+    the bass) as a unit: its outcome the voices beside the line in that bar
+    as a mask over the line's onsets, which of them they strike with and
+    the onsets of their own (second_mask; "-" where they rest), its values
+    the part, the song's feel, the tempo band, the line's onset count and
+    the line's own pattern. Drawn under the line's bar, bar by bar, backing
+    off to the onset count where the pattern is rare. FFVI's second
     accompaniment voice strikes 4.5 times a bar beside a line of 6.6, two
-    of five of its onsets with the line's."""
+    of five of its onsets with the line's; its slap bass strikes with three
+    quarters of the sustained line's notes and twice as often in all (a
+    second bass drawn as a figure of its own, given the line's bar, had
+    struck with 41 % of the line's notes: two basses, 2026-10-24)."""
     out = []
     for s in songs:
         for role in UPPER + (R.BASS,):
@@ -1196,15 +1200,13 @@ def second_figure_units(songs) -> list:
                 continue
             line = line_voice(voices, role)
             others = [n for v, ns in voices.items() if v != line for n in ns]
-            key = (lambda struck, a: figure(struck, a, s)) if role == R.BASS else (lambda struck, a: pattern(p for p, _ in struck))
+            key = lambda struck, a: pattern(p for p, _ in struck)   # noqa: E731  (the line's positions; the bass's marks are the line's own)
             line_bars = {k: key(struck, a) for k, a, struck in numbered_bars_of(s, role, voices[line])}
             line_struck = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, role, voices[line])}
             tempo, feel = band(s.bpm), song_feel(s)
             for k, a, struck in numbered_bars_of(s, role, others):
                 if line_bars.get(k, "-") != "-":
-                    # the bass's second voice as its own figure (its chord-tone marks realize it); an upper part's beside the line's
-                    # onsets: which of them it strikes with, and the onsets of its own (second_mask)
-                    outcome = (key(struck, a) if struck else "-") if role == R.BASS else second_mask(line_struck[k], [p for p, _ in struck])
+                    outcome = second_mask(line_struck[k], [p for p, _ in struck])
                     out.append(tables.Unit(s.sid, s.game, outcome,                   # by the line's onset count: a mask is read onset by onset
                                            {"part": role, "feel": feel, "tempo": tempo, "onsets": str(len(line_bars[k].split())), "line": line_bars[k]}))
     return out

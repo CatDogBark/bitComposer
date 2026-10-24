@@ -414,8 +414,8 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual({u.outcome for u in rhythm.bass_units([s3])}, {"0:R"})                 # the line's bar, one root held
         seconds = rhythm.second_figure_units([s3])
         self.assertEqual(len(seconds), 4)
-        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["onsets"]), ("bass", "0:R", "1"))
-        self.assertEqual(seconds[0].outcome.count("R"), 8)                                      # eight roots a bar under the held one
+        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["onsets"]), ("bass", "0", "1"))
+        self.assertEqual(seconds[0].outcome, "1 | 1/2 1 3/2 2 5/2 3 7/2")                         # with the held root, then seven of its own (the mask, round 27)
         sounds = {(u.values["voice"]): u.outcome for u in rhythm.layer_sound_units([s3])}
         self.assertGreater(float(sounds["line"]), float(sounds["second"]))
         self.assertEqual(sounds["second"], "0.4")
@@ -597,6 +597,23 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual((midi, steps), (43, 0))
         midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), None, "0", 43.0, 0)
         self.assertEqual((midi, steps), (43, None))
+
+    def test_the_second_bass_voice_is_a_mask_over_the_line(self):
+        """The second bass voice's bar is counted as a mask over the sustained line's onsets plus its own (as the chord parts'
+        are), and written from the line's figure: the line's marks where it strikes with the line, the root at its own onsets."""
+        from fractions import Fraction
+        from bitcomposer.translate import writer
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + i, 0.9, [36.0, 36.0, 43.0, 43.0][i], "a") for k in range(4) for i in range(4)]          # the beats
+        slap = [(4.0 * k + t, 0.2, 36.0, "b") for k in range(4) for t in (0.0, 0.5, 1.0, 2.0, 2.5, 3.5)]            # beats 1, 2, 3 and three of its own
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": line + slap}, sid="s", game="g", bpm=120.0)
+        s.voice_notes = {1: ("bass", line), 2: ("bass", slap)}
+        units = [u for u in rhythm.second_figure_units([s]) if u.values["part"] == "bass"]
+        self.assertEqual(len(units), 4)
+        self.assertEqual((units[0].outcome, units[0].values["onsets"], units[0].values["line"]), ("1 1 1 0 | 1/2 5/2 7/2", "4", "0 1 2 3"))
+        self.assertEqual(writer.mask_figure("0:R 1:R 2:5 3:5", "1 1 1 0 | 1/2 5/2 7/2"), "0:R 1/2:R 1:R 2:5 5/2:R 7/2:R")
+        self.assertEqual(writer.mask_figure("0:R 1:R 2:5 3:5", "-"), writer.REST)
+        self.assertEqual(writer.mask_figure(writer.REST, "1 1"), writer.REST)
 
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;

@@ -1889,3 +1889,50 @@ one share the upper parts' voices beside the line still take from the
 line (gap_sounds gives them "second" now; measure), the melody writer's
 own lengths (articulation, not this word), and the rest of round 25's
 list.
+
+### Round 27: two basses, or one in two layers (2026-10-24, from the owner's notes on Song Check 20)
+
+The owner heard the two bass voices as incoherent in every song: one
+voice a hook, the other "random stuff around it". Measured
+(bass_coherence.py): in FFVI's thirteen two-voice basses the sustained
+line plays 3 strikes a bar on 2 pitches and the slap 6 on 3, twice as
+busy, and the slap strikes together with 75 % of the line's notes (from
+39 % to 100 % by song) while a third of its own fall on the line's: the
+line sits inside the slap's rhythm, one bass in two layers. The written
+two-voice basses (five among seeds 1 to 20) had the slap striking with
+41 % of the line's notes, Whole 28 36 %, and the slap no busier than the
+line (0.74 of its strikes): two basses. Neither voice varies by repeating
+bars literally (FFVI 0.00 and 0.08), so the hook feel is the rhythm's
+consistency, not a riff.
+
+**Why.** Round 18 gave the second bass voice a figure of its own, drawn
+from FFVI's second-voice bars given the line's bar; when the written
+line's bar is one FFVI never played, which is most bars, the draw backs
+off to the part's general bars and returns unrelated to the line. The
+chord parts met the same fault in round 20 and got the mask.
+
+**Built, on his go.** `second_figure_units` counts the bass as it counts
+the chord parts: the second voice's bar as a mask over the line's onsets
+(which it strikes with, plus onsets of its own, `second_mask`), by the
+feel, the tempo band, the line's onset count and pattern. `write()` draws
+the mask a bar under the line's pattern and `writer.mask_figure` makes
+the second voice's figure from it: the line's marks where it strikes
+with the line, the root at its own onsets, both re-pitched by round 26's
+voice words (the line's pitch where they meet, its own move between).
+A first cut kept round 18's memo, one draw per line pattern, and Whole
+28's five patterns all drew the doubling mask ('1 1 1'): a second voice
+identical to the line, no fills (the slap on 99 % of the line's onsets,
+0.96 of its strikes). The mask is drawn a bar, as the chord parts' is.
+
+**Measured after, the two-voice basses of seeds 1 to 20 (five songs):**
+the slap strikes with 0.71 of the line's notes (FFVI 0.75; before 0.41),
+its own onsets on the line's 0.65 (FFVI 0.33; before 0.45), its strikes
+1.29 of the line's (FFVI 1.93; before 1.47). Whole 28: 0.81 of the line's
+notes (before 0.36), its strikes 0.89 of the line's. The two voices are
+one rhythm now; the slap's own fills between are still fewer than FFVI's,
+the bass mask table being thirteen songs (278 bars; the chord parts'
+had 1302), and a sparse triple-feel line draws from the thinnest of it.
+Song Check 21 is Whole 28 a fourth time beside set 18's, round 25's and
+round 26's renders. Open: the slap's fills (the thin bass mask contexts);
+the line's lurch between a one-note bar and a run in thin figure
+contexts; and round 25's list.

@@ -292,10 +292,17 @@ said otherwise. Counting code: `translate/rhythm.py` and
   times a bar against FFVI's 7.3.)
 - **second_figures** — a voice beside a layered part's line, bar by bar,
   where the part holds two voices or more, by the song's feel and tempo
-  band, the line's onset count and its pattern. The bass's second voice is
-  its own figure (its chord-tone marks realize it). An upper part's is a
-  mask over the line's onsets, which of them the voice strikes with and
-  any onsets of its own (`1 0 1 0 | 7/2`; `-` resting): FFVI's voices
+  band, the line's onset count and its pattern. The voice is a mask over
+  the line's onsets, which of them it strikes with and any onsets of its
+  own (`1 0 1 0 | 7/2`; `-` resting), for the chord parts and, since round
+  27, the bass (its second voice had been a figure of its own drawn under
+  the line's bar, and where the written line's bar was one FFVI never
+  played, which is most bars, the draw backed off and came back unrelated
+  to the line: FFVI's slap strikes with three quarters of the sustained
+  line's notes and twice as often in all, the written one had struck with
+  two fifths; `writer.mask_figure` keeps the line's marks where the slap
+  strikes with it and gives its own onsets the root, both re-pitched by
+  the voice words): FFVI's voices
   beside an arpeggiated line strike with a sparser subset of the line's
   own rhythm (two thirds of their onsets on the line's, 0.6 of its
   density), on other tones of the same voicing, with the line's note

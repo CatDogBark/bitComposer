@@ -656,6 +656,20 @@ def share_at(sounds, gap: float) -> float:
     return float(sounds)
 
 
+def mask_figure(line_figure: str, mask: str) -> str:
+    """A second bass voice's figure from the line's figure and a second_figures outcome (a mask over the line's onsets plus
+    onsets of its own): the line's onsets it strikes with keep the line's marks (its pitch follows the line there,
+    beside_pitch), its own onsets take the root mark and are re-pitched by its own move; REST where the mask rests."""
+    if line_figure == REST or not line_figure or mask == "-":
+        return REST
+    toks = [(Fraction(t.partition(":")[0]), t.partition(":")[2] or "R") for t in rhythm._tokens(line_figure)]
+    marks = {p: m for p, m in toks}
+    positions = rhythm.apply_mask(rhythm.pattern(p for p, _ in toks), mask)
+    if positions == "-" or not positions:
+        return REST
+    return " ".join(f"{p}:{marks.get(Fraction(p), 'R')}" for p in positions.split())
+
+
 def first_onset(figures: list, bars: list, k: int) -> float | None:
     """When bar k's first note strikes, from its figure; None where it rests or there is no bar k. A bar's last note runs to
     it: the sounded share was counted against the gap to the voice's next onset, and a note ended at the bar line had
