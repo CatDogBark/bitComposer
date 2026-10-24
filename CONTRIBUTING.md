@@ -246,8 +246,11 @@ it from there and the publish workflow refuses a tag that does not match it.
    HOME=$(mktemp -d) sh -c 'python3 -m bitcomposer.player --screenshot docs/images/player.png --screen 800x1440 --scale 2 --music-dir "$HOME/Music/bitComposer"'
    ```
 5. Open a pull request from `dev` into `main`: CI (tests on every Python)
-   and the Windows build run on it. Merge when both are green, and wait for
-   them to go green again on main's merge commit.
+   and the Windows build run on it. Merge when both are green. There is
+   nothing to wait for after the merge: main takes nothing but these pull
+   requests, so the merge commit is the tree the pull request tested (CI
+   runs once more on the push, for the README's badge; the Windows build
+   does not).
 6. Tag and push the tag:
 
    ```bash
