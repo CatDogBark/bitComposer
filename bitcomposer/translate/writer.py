@@ -333,9 +333,26 @@ def free_envelope(habit: str):
     return lambda own, meter=None: (low, high, False, meter)
 
 
-def free_drum_envelope(letters) -> object:
-    """An envelope_of for a free-written drum group: any count a piece, no downbeat demanded."""
-    pieces = {k: FREE_HITS for k in letters}
+DENSITY_CAPS = {"sparse": 2, "medium": 6, "dense": FREE_HITS[1]}   # a drum group's hits a bar at its density tier's top (rhythm.DENSITIES)
+
+
+def group_caps(habit) -> dict:
+    """Per-letter hit caps from a plan's drum group habits ({group letters: "sparse mixed", ...}): a group of one letter
+    (the hat, the cymbals, the rest) caps its letter at its density tier's top. The kit drawn as one figure had drawn
+    its bars under the kit's habit alone, and a plan's "sparse" cymbals came up as a ride in sixteenths in five
+    songs of twenty (FFVI: four of 67)."""
+    caps = {}
+    if isinstance(habit, dict):
+        for letters, h in habit.items():
+            if len(letters) == 1 and isinstance(h, str) and h.split():
+                caps[letters[0]] = DENSITY_CAPS.get(h.split()[0], FREE_HITS[1])
+    return caps
+
+
+def free_drum_envelope(letters, caps: dict | None = None) -> object:
+    """An envelope_of for a free-written drum group: any count a piece (or the cap the group's habit sets), no downbeat
+    demanded."""
+    pieces = {k: (0, (caps or {}).get(k, FREE_HITS[1])) for k in letters}
     return lambda own, meter=None: (pieces, False, meter)
 
 
@@ -1394,7 +1411,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         if free:
             manner = FreeManner(model.table.vocabulary, kit & set(letters), song.division, rests=plays is not None)
             group_habit = (habit.get(letters) if isinstance(habit, dict) else habit) or "medium mixed"
-            envelope_of = free_drum_envelope(kit & set(letters))
+            envelope_of = free_drum_envelope(kit & set(letters), group_caps(habit))
         else:
             manner = DrumManner(None, model.table.vocabulary, figures=[f for f in own if f != REST])
             mine = [u for u in rhythm.drum_group_units([song], letters)]

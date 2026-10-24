@@ -3,7 +3,7 @@ import random
 import tempfile
 import unittest
 
-from bitcomposer.translate import harmony, rhythm, tables, vocab, whole, writer
+from bitcomposer.translate import harmony, pack, rhythm, tables, vocab, whole, writer
 from bitcomposer.translate import roles as R
 
 
@@ -409,6 +409,21 @@ class NewTablesTests(unittest.TestCase):
         sounds = {(u.values["voice"]): u.outcome for u in rhythm.layer_sound_units([s3])}
         self.assertGreater(float(sounds["line"]), float(sounds["second"]))
         self.assertEqual(sounds["second"], "0.4")
+
+    def test_the_kit_from_the_namers_names_and_the_group_caps(self):
+        """The pack's kit takes each piece's most-played sample by the drum namer's name, a second hat as the open hat and the
+        busiest other sound as the rim; a plan's drum group habits cap a free-drawn kit bar's hits a letter."""
+        from collections import Counter
+        uses = Counter({"a": 100, "b": 90, "c": 80, "d": 70, "e": 60, "f": 50, "g": 10, "h": 5})
+        labels = {"a": "kick", "b": "snare", "c": "hat", "d": "hat", "e": "cymbal", "f": "tom", "g": "other", "h": "snare"}
+        self.assertEqual(pack.kit_from_names(uses, labels), {"kick": "a", "snare": "b", "hihat": "c", "open_hihat": "d", "crash": "e", "tom": "f", "rim": "g"})
+        self.assertEqual(pack.kit_from_names(uses, {"a": "kick", "c": "hat"}), {})                 # no snare named: the brightness kit instead
+        self.assertEqual(writer.group_caps({("c",): "sparse mixed", ("h",): "dense varied", ("K", "S", "t"): "medium mixed"}), {"c": 2, "h": 16})
+        self.assertEqual(writer.group_caps("dense mixed"), {})
+        env = writer.free_drum_envelope({"K", "S", "c"}, {"c": 2})(None, 4)
+        self.assertEqual((env[0]["c"], env[0]["K"]), ((0, 2), (0, 16)))
+        self.assertTrue(writer.drum_within("0:K 1:c 2:S 3:c", env))
+        self.assertFalse(writer.drum_within("0:K 1/2:c 1:c 3/2:c 2:S", env))
 
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""

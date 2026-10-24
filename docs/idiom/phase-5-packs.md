@@ -83,10 +83,18 @@ PACKS panel as stage 5 left it (`../TRANSLATOR.md`).
 
 - Import writes the tables beside the voices, from the readings it already
   makes.
-- The kit chosen by the drum namer rather than by brightness and length:
-  today the imported FFVI pack's snare slot holds the game's open hat and
-  its most-played snare is not in the kit. Before it ships, every game's
-  kit before and after, the doubtful listed, and a listening set.
+- The kit chosen by the drum namer rather than by brightness and length.
+  DONE in the thin pack builder (2026-10-23, `pack.kit_by_name`): each
+  slot the game's most-played sample the namer names for it, the sample
+  measured as the game plays it (its pitch, its loop held as long as the
+  game holds it: without the hold a looped snare rang like a cymbal), a
+  second hat the open hat, the busiest "other" the rim; brightness only
+  where the namer names no kick or snare. FFVI before: a hat in the snare
+  slot, no cymbal, no tom, the true snare absent (the brightness kit chose
+  among the six most-struck drums; the cymbal, in 22 of 67 songs, ranks
+  eighth). After: kick, snare, hat, tom, cymbal, rim and open hat all the
+  readings' own. Still to do before it ships: every game's kit before and
+  after, the doubtful listed, and a listening set.
 - The panel says what a pack says, in words: its habits as the tables
   summarise them.
 - The pack loader's voice key. A pack file's voices are registered as

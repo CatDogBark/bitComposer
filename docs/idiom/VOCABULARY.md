@@ -141,7 +141,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
 
 - **drums** — the kit's bar as one figure, every piece. Drawn a bar as a
   mixture under the kit's habit: the kit repeats and varies as a kit does
-  (the groups drawn apart had changed every bar).
+  (the groups drawn apart had changed every bar). The drum group habits
+  the plan draws (the hat's, the cymbals', the rest's) cap each piece's
+  hits a bar at its density tier's top in the draw (`writer.group_caps`):
+  "sparse" cymbals had come up as a ride in sixteenths in five songs of
+  twenty against four of FFVI's 67.
 - **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
   toms' bar; the hat's; the cymbals'; the other sounds'. The group figures,
   drawn by the slice writer (`tools/slice1.py`); the whole-song writer

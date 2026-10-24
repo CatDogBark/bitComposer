@@ -10,10 +10,16 @@ readings give directly, in today's pack format (docs/PACKS.md).
   measured tuning (a drum at the pitch the game plays it most). A held
   voice's release is its part's (a lead's, the strings' under harmony,
   keys' for an arp, the bass's).
-- The kit. Drum samples go to kit pieces by what they sound like: the
-  dullest the kick, the brightest short one the hi-hat, the brightest long
-  one the crash, one between them the snare (a kick and one more drum: a
-  kick and a snare). Pieces left out keep the SNES palette's.
+- The kit. Drum samples go to kit pieces by the drum namer's names
+  (translate/drums.py, on the sample as the game plays it): each piece the
+  game's most-played sample so named (kick, snare, hat, tom, cymbal), a
+  second hat the open hat, the most-played "other" sound the rim. Without
+  names, by what they sound like: the dullest the kick, the brightest
+  short one the hi-hat, the brightest long one the crash, one between them
+  the snare. Pieces left out keep the SNES palette's. (By sound alone,
+  FFVI's kit had held a hat in the snare's slot and no cymbal: its cymbal,
+  in 22 of its 67 songs, is struck too rarely to rank among the six
+  most-played drums the brightness kit chose from; 2026-10-23.)
 - Habits. Tempo (slow, medium, fast, as the generator draws them) from
   each song's beat; the scale family from each song's key; how many songs
   have no drums; echo from what the driver set: how many songs have it, its delay in the generator's
@@ -25,6 +31,7 @@ for categories stage 4's vocabulary is to replace."""
 import json
 import math
 import re
+import statistics
 import tempfile
 import wave
 from collections import Counter, defaultdict
@@ -66,6 +73,8 @@ class Gathered:
     modes: Counter = field(default_factory=Counter)
     echo: list = field(default_factory=list)                              # (on, delay rows, feedback, wet) a song
     drumless: int = 0                                                     # songs with no drum voice
+    names: dict = field(default_factory=dict)                             # drum sample key -> the drum namer's name (kit_by_name)
+    held: dict = field(default_factory=lambda: defaultdict(list))         # drum sample key -> seconds the game holds each hit
 
 
 def gather(readings, snaps) -> Gathered:
@@ -83,6 +92,8 @@ def gather(readings, snaps) -> Gathered:
             k = p.sample.key
             g.uses[role][k] += 1
             heard.add((role, k))
+            if role == R.DRUMS and p.length is not None:
+                g.held[k].append(p.length)
             g.where.setdefault(k, (snap.source, p.sample.addr))
             if p.sample.f0:
                 g.f0.setdefault(k, p.sample.f0)
@@ -130,15 +141,53 @@ def pools(g: Gathered) -> dict:
     return chosen
 
 
+NAMED_SLOTS = (("kick", "kick"), ("snare", "snare"), ("hihat", "hat"), ("tom", "tom"), ("crash", "cymbal"), ("rim", "other"))
+
+
+def kit_from_names(uses: Counter, labels: dict) -> dict:
+    """Kit pieces from the drum namer's names: {slot: sample key}, each slot
+    the most-played sample named for it (NAMED_SLOTS), a second hat the
+    open hat; {} where no kick or snare is named."""
+    by = defaultdict(list)
+    for k in sorted(uses, key=lambda k: (-uses[k], k)):
+        if labels.get(k) and labels[k] != "none":
+            by[labels[k]].append(k)
+    out = {slot: by[label][0] for slot, label in NAMED_SLOTS if by.get(label)}
+    if len(by.get("hat", [])) >= 2:
+        out["open_hihat"] = by["hat"][1]
+    return out if "kick" in out and "snare" in out else {}
+
+
+def kit_by_name(g: Gathered, sounds: dict) -> dict:
+    """The kit from the drum namer's names of the game's drum samples (as
+    the game plays them: `sounds`), kit_from_names; {} where it names too
+    few."""
+    from . import drums
+    labels = {}
+    for k, (pcm, rate, *more) in sounds.items():
+        loop = more[0] if more else None
+        held = more[1] if len(more) > 1 else None
+        try:                                                # the sample as the game plays it: at its pitch, its loop held as long as the game holds it
+            labels[k] = drums.name(drums.measure(pcm, rate, loop, held))
+        except Exception:                                   # a sound the namer cannot measure is left unnamed
+            labels[k] = "none"
+    g.names = labels
+    return kit_from_names(g.uses.get(R.DRUMS, Counter()), labels)
+
+
 def kit(g: Gathered, sounds: dict) -> dict:
-    """Drum samples to kit pieces by brightness (zero crossings a second, at
-    the pitch the game plays them) and length: {piece: sample key}."""
+    """Drum samples to kit pieces: by the drum namer's names (kit_by_name),
+    else by brightness (zero crossings a second, at the pitch the game
+    plays them) and length: {piece: sample key}."""
+    named = kit_by_name(g, sounds)
+    if named:
+        return named
     drums = [k for k, n in g.uses.get(R.DRUMS, Counter()).most_common(VOICES) if k in sounds]
     if not drums:
         return {}
     feat = {}
     for k in drums:
-        pcm, rate = sounds[k]
+        pcm, rate = sounds[k][:2]
         crossings = sum(1 for a, b in zip(pcm, pcm[1:]) if (a < 0) != (b < 0))
         feat[k] = (crossings / (len(pcm) / rate), _length(pcm) / rate)
     by_bright = sorted(drums, key=lambda k: feat[k][0])
@@ -206,7 +255,8 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
     for k in g.uses.get(R.DRUMS, Counter()):
         if k in decoded and g.pitches.get(k):
             pitch = g.pitches[k].most_common(1)[0][0]
-            sounds[k] = (decoded[k][0], max(1000, round(RATE * pitch / 0x1000)))
+            held = statistics.median(g.held[k]) if g.held.get(k) else None
+            sounds[k] = (decoded[k][0], max(1000, round(RATE * pitch / 0x1000)), decoded[k][1], held)
     pieces = kit(g, sounds)
     samples, files = {}, {}
     release_of = {}
@@ -236,7 +286,7 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
         v = voice_of(k)
         if v not in samples:
             samples[v] = {"file": f"{v}.wav", "percussion": True}
-            files[v] = sounds[k]
+            files[v] = sounds[k][:2]
         drums[piece] = v
     voices = dict(chosen)
     if drums:
@@ -342,4 +392,7 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
     say(f"{path}: {len(readings)} songs read, {len(wavs)} samples; " +
         ", ".join(f"{pool} {len(set(ks))}" for pool, ks in v.items() if pool != "drums") +
         (f", kit: {', '.join(v['drums'])}" if "drums" in v else ""))
+    if g.names:
+        uses = g.uses.get(R.DRUMS, Counter())
+        say("  drums named: " + ", ".join(f"{k[:10]} {g.names[k]} ({uses[k]} hits)" for k in sorted(g.names, key=lambda k: -uses[k])))
     return path

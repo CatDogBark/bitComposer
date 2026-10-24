@@ -765,6 +765,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
         if groups:
             group_habits = {g: (plan.habits[R.DRUMS] if len(g) > 3 else plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS]) for g in groups}
+            for g in rhythm.DRUM_GROUPS:                    # the one-letter groups' own habits cap their hits in the kit's draw (writer.group_caps)
+                if len(g) == 1 and plan.extras.get(R.DRUMS, {}).get("".join(g)):
+                    group_habits.setdefault(g, plan.extras[R.DRUMS]["".join(g)])
             hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS])
             by_voice, notes, dropped = {}, [], Counter()
             for t, letter in hits:

@@ -1369,3 +1369,27 @@ go.
   0.56), steps inside a bar 0.61 (0.65), two-voice accompaniments 7.7
   onsets a bar merged (7.3), one voice 6.4 (5.8), the reader's parts 3
   (4). Song Check 9 is written from this. Pack: 64 tables.
+
+### Round 17: the kit from the namer's names, the cymbal habit honored (2026-10-23, on the owner's go)
+
+- **The kit.** The thin pack builder (`translate/pack.py`) now names a
+  game's drum samples with the drum namer, each measured as the game plays
+  it (at its most-played pitch, its loop held as long as the game holds
+  it: measured as a one-shot, FFVI's looped snare rang long enough to be
+  called a cymbal and took the crash slot), and gives each kit slot the
+  most-played sample so named; brightness and ring remain the fallback
+  where the namer finds no kick or snare. FFVI's kit before: a hat in the
+  snare slot, no tom, no cymbal, the true snare absent. After: kick, snare,
+  hat, tom, cymbal, rim and open hat, every one the sample the readings
+  name the same way (the snare in 31 readings, the cymbal in 30). The dev
+  pack is rebuilt from the 82 SPC files with this kit (26 samples, 64
+  tables); the brightness pack is kept beside it.
+- **The cymbal habit.** The plan's drum group habits cap each single-letter
+  group's hits a bar in the kit draw at its density tier's top (sparse 2,
+  medium 6, dense 16; `writer.group_caps`, `free_drum_envelope`); the kit
+  drawn as one figure had drawn under the kit's habit alone, and the
+  one-letter groups' habits had not even reached it (the whole-song writer
+  handed it the kit's habit only). Twenty songs before: four with a bar of
+  four cymbal hits or more, eighteen such bars of 415; after: none.
+- Song Check 10 is written from this: the first set on FFVI's own snare
+  and cymbal.
