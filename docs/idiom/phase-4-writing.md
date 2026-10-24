@@ -1475,3 +1475,36 @@ drawn), interval steady 0.65 (0.27: the voice walks the arpeggio in step
 with the line); voices striking together 2.06 to an onset (FFVI 1.46; set
 11's stack three and more, set 12 1.81). Doubling voices 1.0 throughout,
 as FFVI's. Song Check 13 is written from this.
+
+### Round 21: the sample for a register, the register of a voice (2026-10-23, from the owner's note on set 13)
+
+The owner heard piercing pitches in the accompaniment and the tune on
+several songs (Whole 01 among them) and took it for a level. It was
+pitch. The parts sit where FFVI's sit (accompaniment median 61 against
+62, melody 68 against 69), but the samples were being played far above
+their recording: FFVI plays a sample more than an octave above its
+recorded pitch in 0 % of accompaniment notes and 2 % of melody notes,
+never past +20; the written songs in 10 % and 8 %, up to +27 and +28
+(Whole 07's melody played a sample the game used at midi 36 to 48 up at
+92). Two faults, both in drawing words that exist.
+
+- **The sample for a register** (`whole.best_sample`). `sample_fits` had
+  asked only that the register's centre lie within six semitones of a
+  range the ranges table draws for the sample, and drew at random when
+  nothing fit; worse, it looked the sample up by the pack's prefixed name
+  while the table names the pack's own id, so it had found no range at
+  all and every pool choice had been random. Now the pool sample whose
+  game-played range covers the register best is taken, the part's top
+  weighing most, and when the pool's best still falls more than REACH (7
+  semitones) short of the top, the pack's other tonal samples are tried;
+  the pool's share decides a tie.
+- **The register of a voice** (`rhythm.register_notes`). The `registers`
+  and `balance` tables had counted a layered part's register over all its
+  voices, and the writer handed that span to every voice: Whole 01's
+  accompaniment line and Whole 20's melody ran over 44 to 96. FFVI's
+  layered accompaniments span 16 semitones merged (max 52) but 12 as a
+  line (max 24); five of its songs span more than 30 merged, no line does.
+  Both tables now count the line voice's register; the voices beside it sit
+  at their layer offsets.
+
+The measures after the fix are in the set's lede (Song Check 14).

@@ -438,6 +438,28 @@ class NewTablesTests(unittest.TestCase):
         self.assertTrue(writer.drum_within("0:K 1:c 2:S 3:c", env))
         self.assertFalse(writer.drum_within("0:K 1/2:c 1:c 3/2:c 2:S", env))
 
+    def test_the_sample_for_a_register_and_the_line_voices_register(self):
+        """The sample for a part is the pool's whose game-played range covers the register best, the part's top weighing most; the
+        pack's other samples when the pool reaches nowhere near the top; a layered part's register is its line voice's."""
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "56-68", {"part": "sa"}) for i in range(3)] + [tables.Unit(f"t{i}", "g", "72-88", {"part": "sb"}) for i in range(3)]
+            + [tables.Unit(f"u{i}", "g", "84-96", {"part": "sc"}) for i in range(3)])
+        raw = lambda n: n[len("p_"):] if n.startswith("p_") else n   # noqa: E731
+        rng = random.Random(1)
+        self.assertEqual(whole.best_sample(ranges, ["p_sa", "p_sa", "p_sb"], (60, 70), rng, raw), "p_sa")
+        self.assertEqual(whole.best_sample(ranges, ["p_sa", "p_sa", "p_sb"], (74, 88), rng, raw), "p_sb")
+        self.assertEqual(whole.best_sample(ranges, ["p_sa", "p_sa"], (84, 96), rng, raw, others=["sc", "sb"]), "sc")   # the pool reaches nowhere near 96
+        self.assertEqual(whole.best_sample(ranges, ["p_sa"], (60, 72), rng, raw, others=["sc"]), "p_sa")             # within REACH: the pool's
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + 0.5 * i, 0.4, 60.0 + (i % 4) * 2, "a") for k in range(4) for i in range(8)]
+        high = [(4.0 * k + i, 0.9, 88.0 + (i % 2) * 3, "a") for k in range(4) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"accompaniment": line + high}, sid="s", game="g")
+        s.voice_notes = {3: ("accompaniment", line), 4: ("accompaniment", high)}
+        self.assertEqual(rhythm.register_notes(s, "accompaniment"), line)
+        self.assertEqual([u.outcome for u in rhythm.register_units([s])], ["60-64"])                  # the line's (its 90th percentile 66, to the grain), not 60-92
+        s.voice_notes = {3: ("accompaniment", line)}
+        self.assertIsNone(rhythm.register_notes(s, "accompaniment"))
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

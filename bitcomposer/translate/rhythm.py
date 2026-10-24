@@ -887,16 +887,31 @@ REGISTER_BIN = 4                     # semitones: a part's register (its notes' 
 TEMPO_BIN = 5                        # beats a minute: a song's tempo is kept to this grain
 
 
+def register_notes(song: Song, role: str) -> list | None:
+    """A layered pitched part's line voice's notes (line_voice), for its register: a part's register is its line's, not
+    the span of all its voices (FFVI's layered accompaniments span 16 semitones merged, the line 12; five of its songs span
+    more than 30 merged, no line does; the merged span given to every voice had put one voice over four octaves and its
+    sample far above where the game played it, 2026-10-23). None for a part of one voice."""
+    if role == R.DRUMS:
+        return None
+    voices = part_voices(song, role)
+    if len(voices) < 2:
+        return None
+    return voices[line_voice(voices, role)]
+
+
 def register_units(songs) -> list:
     """Each pitched part of each song as a unit: its outcome the register it
     plays in, "low-high" (midi, the part's notes' 10th and 90th percentiles,
-    REGISTER_BIN semitones a step); its values the part. What a song written
-    with no original draws a part's register from."""
+    REGISTER_BIN semitones a step; a layered part's line voice's,
+    register_notes); its values the part. What a song written with no
+    original draws a part's register from."""
     out = []
     for s in songs:
         for role, ns in s.notes.items():
             if role == R.DRUMS:
                 continue
+            ns = register_notes(s, role) or ns
             pitched = sorted(n[2] for n in ns if not math.isnan(n[2]))
             if len(pitched) < 8:
                 continue
@@ -2014,7 +2029,7 @@ def balance_units(songs) -> list:
             if role not in weights:
                 tokens.append(role)
                 continue
-            reg, share = part_register(s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
+            reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
             tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
                           + f":{max(1, voices.get(role, 1))}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))

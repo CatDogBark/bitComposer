@@ -42,8 +42,13 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
   count when the balance table is missing.
-- **registers** — the register a part plays in (midi low–high). The
-  fallback register for a part; the writers keep their notes inside it.
+- **registers** — the register a part plays in (midi low–high; a layered
+  part's line voice's, not the span of all its voices: FFVI's layered
+  accompaniments span 16 semitones merged and 12 as a line, and the merged
+  span handed to every voice had put one voice over four octaves). The
+  fallback register for a part; the writers keep their notes inside it,
+  and the voices beside a line sit at their layer offsets from it. The
+  `balance` table's registers are counted the same way.
 - **sounds** — the share of its gap a part's note sounds. Drawn once a part;
   the writers' note lengths.
 - **habits** — a part's density and repetition habit (sparse / medium /
@@ -81,8 +86,14 @@ said otherwise. Counting code: `translate/rhythm.py` and
   written (a draw is weighted toward the chord, or the repeated note, only
   while the tune is under its rate).
 - **ranges** — the register a sample is played in, by the sample. Drawn at
-  rendering: a part's sample is one the game played in that part's
-  register.
+  rendering: a part's sample is the one of its pool whose game-played range
+  covers the part's register best, the part's top weighing most, and one
+  of the pack's other tonal samples when the pool reaches nowhere near the
+  top; never a random one (`whole.best_sample`). FFVI plays a sample more
+  than an octave above its recording in 0 to 2 % of notes; the written
+  songs had in 8 to 10 %, the shrillness the owner heard: the old fit had
+  asked only that the register's centre lie near the range, and by the
+  pack's prefixed names it had found no range at all.
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
   onsets or more fall on thirds, sixths or twelfths of a beat: 6/8 read on
   a 4/4 grid, a shuffle). Drawn once a song; every figure table (`rhythm`,

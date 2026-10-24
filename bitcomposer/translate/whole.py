@@ -942,6 +942,41 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
 
 # --- the rendering: the written notes on the pack's samples, through the converter's back end ---
 
+REACH = 7                             # semitones a part's top may sit above the best pool sample's game-played range before the pack's
+                                      # other tonal samples are tried for it
+
+
+def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, others: list = ()) -> str:
+    """The sample for a part's register: of the pool's samples (`names`, repeated by their share), the one whose
+    game-played range (the ranges table, by the pack's own sample id, `raw(name)`) covers the register best, the part's
+    top weighing most; when the pool's best still falls more than REACH short of the top, the pack's other tonal samples
+    (`others`) are tried; the pool's share decides a tie. Never a random one: a sample pushed far above where the game
+    played it turns shrill (8 to 10 % of written notes had sat over an octave above the recording against FFVI's 0 to 2
+    %; the fit had asked only that the register's centre lie near the range, and by the pack's prefixed names it had
+    found no range at all and drawn at random)."""
+    def score(name):
+        rid = raw(name)
+        if ranges is None or ranges.songs.get((rid,), 0) == 0:
+            return None
+        lo, hi = (int(x) for x in ranges.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
+        a, b = register
+        return max(0, min(b, hi) - max(a, lo)) - 2 * max(0, b - hi) - max(0, lo - a), hi
+    known = [(score(n), n) for n in names]
+    known = [(s, n) for s, n in known if s is not None]
+    if not known:
+        return rng.choice(names)
+    best = max(s[0] for s, _ in known)
+    top = [n for s, n in known if s[0] == best]
+    reach = max(s[1] for s, _ in known)
+    if register[1] - reach > REACH and others:
+        wider = [(score(n), n) for n in others if n not in names]
+        wider = [(s, n) for s, n in wider if s is not None and s[0] > best]
+        if wider:
+            best = max(s[0] for s, _ in wider)
+            top = [n for s, n in wider if s[0] == best]
+    return rng.choice(top)
+
+
 def sample_fits(ranges, name: str, register: tuple, rng: random.Random) -> bool | None:
     """Whether a sample was played in the part's register in the game: a range the ranges table draws for it overlaps the
     register's middle octave; None where the table knows nothing of the sample."""
@@ -974,8 +1009,10 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         elif role == R.ACCOMP:
             pool = "arp" if plan.extras.get(R.ACCOMP, {}).get("motion") == "arpeggiated" else "harmony"
         names = list(voices.get(pool) or voices.get("harmony") or voices.get("lead"))
-        fitting = [n for n in names if sample_fits(ranges, n, plan.registers[role], rng)] if role in plan.registers else []
-        out[role] = make(rng.choice(fitting or names))
+        raw = lambda n: n[len(pack_name) + 1:] if n.startswith(pack_name + "_") else n   # noqa: E731  the pack's own id, as the ranges table names it
+        drums = {raw(n) for n in (voices.get("drums") or {}).values()}
+        tonal = sorted(n for n in own if n not in drums)
+        out[role] = make(best_sample(ranges, names, plan.registers[role], rng, raw, tonal) if role in plan.registers else rng.choice(names))
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples), where the
         # pack holds them; the second voice on the line's sample otherwise
         if any(not w.startswith("doubling") for w in layers_of(plan, role)) and "layer_samples" in models_or_empty(models):
