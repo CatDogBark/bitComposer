@@ -89,6 +89,16 @@ PACKS panel as stage 5 left it (`../TRANSLATOR.md`).
   kit before and after, the doubtful listed, and a listening set.
 - The panel says what a pack says, in words: its habits as the tables
   summarise them.
+- The pack loader's voice key. A pack file's voices are registered as
+  `<pack>_<sample>` (`packfile.load_pack_file`), and both names may hold
+  underscores, so two packs can produce the same key (`game` with
+  `strings_soft`, `game_strings` with `soft`): loading the second silently
+  replaces the first's voice, unloading it removes the key, and composing
+  with the first then fails with "Unknown instrument". Reported by an
+  outside scan (2026-10-22), verified in the code (2026-10-23), narrow.
+  Fixed here, when the loader is touched for format 2: refuse a load whose
+  keys collide with a loaded pack's (no migration needed), or a separator
+  a name cannot contain, with the voice names in saved songs migrated.
 - Export and add carry the tables; `PACKS.md` describes the second format.
 - The built-in SNES packs re-made from their games, if chosen: a release of
   its own, since it changes how they sound.
