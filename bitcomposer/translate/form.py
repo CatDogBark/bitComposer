@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
 
 NEAR = 0.015                         # seconds a repeated note may sit off its lag (AKAO places each note up to
                                      # 5 ms off its time, so two copies of it 10 ms apart)
+DRIFT = 0.0007                       # and a part in 1400 of the lag more: a driver's timer runs a hair off the
+                                     # clock, so a 45 s loop's second pass sits 30 ms off the first by its end
+                                     # (Super Ghouls'n Ghosts' Sardius, read as no loop at 15 ms)
 BIN = 0.01                           # seconds the lags are counted in
 EARLY = 0.02                         # seconds early a note may be and be its half bar's
 LAGS = 24                            # the most common lags tried
@@ -133,11 +136,12 @@ def _repeats(notes, by, lag: float, cells_of, shortest: int) -> list[tuple[int, 
     of a mean bar: a song whose tempo drifts (Edgar and Sabin's) moves its
     repeats half a bar off a fixed cell by its ninth bar."""
     cells = {}
+    near = NEAR + DRIFT * lag
     for (t, k), c in zip(notes, cells_of):
         ts = by[k]
-        i = bisect.bisect_left(ts, t - lag - NEAR)
+        i = bisect.bisect_left(ts, t - lag - near)
         v = cells.setdefault(c, {}).setdefault(k[0], [0, 0])
-        v[0] += i < len(ts) and ts[i] <= t - lag + NEAR
+        v[0] += i < len(ts) and ts[i] <= t - lag + near
         v[1] += 1
     out, start, end, odd = [], None, None, 0
     for c in range(max(cells) + 1):
@@ -193,17 +197,23 @@ def read(song, grid) -> Form:
     # the loop: the second time through, repeats in a chain (the next starting within a bar of the last's end, at
     # a lag a few bars off: Kefka's C a bar longer the second time, everything after it a bar later) reaching the
     # end (the last bar may be fading out; four bars short, if it holds most of the loop: Athletic's recording
-    # ends before its last bars come round), lasting half its first lag or more; the longest chain
+    # ends before its last bars come round), lasting half its first lag or more; the longest chain. The chain's
+    # lag is the one its runs cover the most time at, not its first run's: a short run at a lag two bars under
+    # the loop's would chain onto the loop's own run and, on the tie, win as the shorter lag (Snowman's Town,
+    # Lostside Marshes and 42 more read two bars short).
     runs = sorted((a, b, lag) for lag, rs in repeats.items() if lag >= LOOP * bar_len * 0.95
                   for a, b in rs if b - a >= PART * bar_len * 0.95)
     loop = None
     for k, (a0, b0, lag0) in enumerate(runs):
         b_end = b0
+        covered = {lag0: b0 - a0}
         for a, b, lag in runs[k + 1:]:
             if a > b_end + 2 * bar_len:              # the bar or two of the other ending repeats at neither lag
                 break
             if b > b_end and abs(lag - lag0) <= SHIFT * bar_len:
+                covered[lag] = covered.get(lag, 0.0) + (b - max(a, b_end))
                 b_end = b
+        lag0 = max(covered, key=covered.get)
         held = b_end - a0
         reaches = b_end >= end - 1.5 * bar_len or (b_end >= end - SHORT * bar_len
                                                    and held >= max(MOST * lag0, 4 * SHORT * bar_len))

@@ -8,9 +8,12 @@ note is named with it taken out. FFVI's instruments do not share one: in
 Locke, from 12 cents flat to 23 sharp."""
 import hashlib
 import math
+import statistics
+from collections import Counter
 from dataclasses import dataclass, field
 
-from ..spc import brr, emulate, notes as notes_mod, tuning
+from ..spc import RATE, brr, emulate, notes as notes_mod, snes_chip, tuning
+from . import drums as drums_mod
 
 LONGEST = 240.0                      # seconds of a song read: past its loop, for any song a player would loop
 
@@ -24,6 +27,8 @@ class Sample:
     frames: int
     loops: bool
     offset: float = 0.0              # its notes' fraction of a semitone, as played (taken out of their midi)
+    piece: str | None = None         # what the drum namer calls it as the song plays it (drums.name: kick, snare,
+                                     # hat, tom, cymbal, other, none); None where it could not be measured
 
 
 @dataclass
@@ -85,13 +90,55 @@ def play(snap, seconds: float | None = None) -> Song:
             if n.brr is None and not n.noise:
                 n.brr = snap.entry(n.sample)
             found.append(n)
-    samples = {}
+    decoded = lambda addr: brr.decode(snap.ram, *addr) if 0 < addr[0] < 0xFFC0 else None     # noqa: E731
+    return of_notes(found, decoded, lambda addr: _key(snap.ram, addr[0]), seconds, snap.source, snap.tags, run.writes)
+
+
+def of_score(score, source: str = "") -> Song:
+    """The readers' song from a score (spc.convert.Score): a snapshot's, or one
+    the generator wrote. The same naming as play(), without running the
+    driver again."""
+    snap = score.snap
+    def decoded(addr):
+        if addr in score.pcm_of:
+            return score.pcm_of[addr]
+        return brr.decode(snap.ram, *addr) if snap is not None and 0 < addr[0] < 0xFFC0 else None
+    def key(addr):
+        if addr in score.key_of:
+            return score.key_of[addr]
+        return _key(snap.ram, addr[0]) if snap is not None else f"{addr[0]:04x}-{addr[1]:04x}"
+    return of_notes(score.notes, decoded, key, score.seconds, source or (snap.source if snap is not None else score.title),
+                    snap.tags if snap is not None else None)
+
+
+def of_notes(found: list, decoded, key, seconds: float, source: str = "", tags=None, writes: list | None = None) -> Song:
+    """The notes named: each sample's fundamental and the fraction of a
+    semitone its notes sit at (taken out of their midi), each note's level and
+    pan. decoded(addr): the sample as a brr.Sample (None: none); key(addr):
+    its name across songs."""
+    samples, pcms = {}, {}
     for n in found:
         if n.noise or n.brr in samples:
             continue
-        s = brr.decode(snap.ram, *n.brr) if 0 < n.brr[0] < 0xFFC0 else None
+        s = decoded(n.brr)
         f0 = tuning.fundamental(s) if s is not None and len(s.pcm) >= 16 else None
-        samples[n.brr] = Sample(n.brr, _key(snap.ram, n.brr[0]), f0, len(s.pcm) if s else 0, bool(s and s.loops))
+        samples[n.brr] = Sample(n.brr, key(n.brr), f0, len(s.pcm) if s else 0, bool(s and s.loops))
+        if s is not None and len(s.pcm) >= 16:
+            pcms[n.brr] = s
+    # each sample named by its sound, as the song plays it (its commonest pitch, the median hold)
+    for addr, s in pcms.items():
+        theirs = [n for n in found if n.brr == addr and not n.noise]
+        pitch = Counter(n.pitch for n in theirs if n.pitch).most_common(1)
+        held = [n.end - n.start for n in theirs if n.end is not None]
+        loop = (s.loop_start, s.loop_end) if s.loops and s.loop_end and s.loop_end > s.loop_start else None
+        try:
+            pcm = snes_chip.snes_interpolated(s.pcm, loop)
+            if any(pcm):
+                sound = drums_mod.measure(pcm, RATE * (pitch[0][0] / 0x1000 if pitch else 1.0), loop,
+                                          statistics.median(held) if held else None)
+                samples[addr].piece = drums_mod.name(sound)
+        except Exception:
+            pass
     raw = [(n, samples.get(n.brr) if not n.noise else None) for n in found]
     for s in samples.values():
         if s.f0:
@@ -103,7 +150,7 @@ def play(snap, seconds: float | None = None) -> Song:
         played.append(Played(n.voice, n.start, n.end, s, m, (left + right) / 256,
                              right / (left + right) if left + right else 0.5, n))
     played.sort(key=lambda p: (p.start, p.voice))
-    return Song(snap.source, seconds, played, samples, snap.tags, run.writes)
+    return Song(source, seconds, played, samples, tags, writes or [])
 
 
 def _offset(midis: list[float]) -> float:

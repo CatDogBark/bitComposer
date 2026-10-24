@@ -497,14 +497,23 @@ def _gridded(onsets, rate: float) -> Grid | None:
     finer = [pulse // d for d in (2, 3) if pulse % d == 0 and _fill(keep, pulse // d) >= RESTED]
     levels = [k for k in _levels(keep, pulse) + finer if SLOW <= 60 / (k * mean_unit) <= FAST] or [pulse]
     k = min(levels, key=lambda k: _distance(rate, k * mean_unit))
-    beat_times, bar_times = [], []
     for x, sl in keep:
         x.division = k
         first_slot, _ = _best_phase(sl, k)
         x.first = x.phase + first_slot * x.unit
         x.first -= math.floor((x.first - x.start + _tolerance(x.unit)) / x.period) * x.period
         x.meter, x.downbeat = _meter(sl, k, (x.first - x.phase) / x.unit)
+    beat_times, bar_times = [], []
+    for j, (x, sl) in enumerate(keep):
         n = int((x.end - x.first) / x.period + 1e-9) + 1
+        # a rest or a held note between two sections on the same beat left a hole in the beats (two periods
+        # where one belongs, in 948 joints over the games), and the bar count broke there: where the next
+        # section's first beat sits a whole number of periods on, this section's beats run up to it
+        if j + 1 < len(keep):
+            gap = keep[j + 1][0].first - (x.first + (n - 1) * x.period)
+            periods = gap / x.period
+            if periods > 1.5 and abs(periods - round(periods)) <= JOINT:
+                n += round(periods) - 1
         for m in range(n):
             t = x.first + m * x.period
             if beat_times and t <= beat_times[-1] + 0.5 * x.period:
@@ -530,6 +539,8 @@ def _gridded(onsets, rate: float) -> Grid | None:
 
 FRAME = 0.01                         # seconds a frame of the envelope
 FINEST = 0.025                       # a grid's unit under this is doubted (Swanky's Swing fitted one of 19 ms, its swing
+JOINT = 0.1                          # periods: how far off a whole number of periods the next section's first beat
+                                     # may sit for this section's beats to run up to it across a rest
                                      # held at the wrong tempo): the loose beat is tried, and kept if it holds
 TIGHT = 100.0                        # how hard the loose beat holds its length (Ellis's tightness)
 REPEAT = 0.35                        # the envelope's repeat at the beat's length a loose beat needs

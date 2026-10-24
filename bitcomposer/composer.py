@@ -356,6 +356,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             pool = ["sparse_pulse", "sparse_pulse", "quarter_up", arp_figures["verse"]]
             arp_figures["intro"] = intro_rng.choice(pool)
 
+    pattern_plans: dict[int, dict] = {}           # pattern index -> what was planned for it (recorded, never read back)
     for section in song_structure:
         layers = section_layers_map.get(section, section_layers_map.get("verse1"))
         sec_type = struct.section_type(section)
@@ -515,6 +516,9 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
             pattern_cache[cache_key] = len(patterns)
             pattern_index_for[(section, chord_idx)] = len(patterns)
             pattern_sec[len(patterns)] = sec_type
+            pattern_plans[len(patterns)] = {
+                "section": sec_type, "key": section_key % 12, "scale": sec_scale_name,
+                "chords": [(start, end, root % 12, chord_type) for start, end, root, chord_type, _ in segments]}
             patterns.append(pat)
 
     # ── Build orders ──
@@ -528,6 +532,7 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         remap = {old: new for new, old in enumerate(used)}
         patterns = [patterns[i] for i in used]
         pattern_sec = {remap[i]: sec for i, sec in pattern_sec.items() if i in remap}
+        pattern_plans = {remap[i]: pl for i, pl in pattern_plans.items() if i in remap}
         orders = [remap[i] for i in orders]
 
     # ── Echo tails across pattern boundaries ──
@@ -639,6 +644,16 @@ def compose_song(seed: int | None = None, tempo_pref: str = "random",
         "intro_patterns": intro_length,
         "num_patterns": len(patterns),
         "num_orders": len(orders),
+        # The plan as the arrangement drew it, for the readers' known-answer check (docs/idiom/phase-1-readers.md,
+        # step 3): nothing reads it back, and the song's bytes do not depend on it.
+        "plan": {
+            "patterns": [pattern_plans[i] for i in range(len(patterns))],
+            "sections": _section_spans(played_sections, pattern_counts),
+            "melody_channel": CHANNEL_ROLES.index("melody"),
+            "drum_channels": {ch: role for ch, role in enumerate(CHANNEL_ROLES)
+                              if role in ("kick", "snare", "hihat", "openhat", "tom", "crash")},
+            "rows_per_pattern": ROWS_PER_PATTERN, "rows_per_beat": ROWS_PER_BEAT,
+        },
     }
 
     return {
@@ -682,6 +697,16 @@ def unique_path(directory: str, stem: str, suffix: str = "", ext: str = ".it", p
         candidate = os.path.join(directory, f"{prefix}{stem} {n}{suffix}{ext}")
         n += 1
     return candidate
+
+
+def _section_spans(played_sections: list, pattern_counts: dict) -> list[tuple]:
+    """Each section as played: (its name, its first order, its patterns)."""
+    out, at = [], 0
+    for sec in played_sections:
+        n = pattern_counts[sec]
+        out.append((sec, at, n))
+        at += n
+    return out
 
 
 def compose_and_save(filepath: str, seed: int | None = None,

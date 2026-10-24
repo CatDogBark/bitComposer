@@ -5,10 +5,19 @@ accompaniment (chords struck in rhythm), or a doubling of another voice.
 Each guess keeps its evidence (the measures it was made from), and a
 correction overrides it. Drums first: noise, samples with no pitch, or one
 sample struck at one or two pitches (FFVI's percussion plays at G#3, the
-driver's own pitch). Then the pitched voices by register and motion: the
-bass the lowest line, the melody the most varied line on top, held notes
-harmony, fast cycling ones an arp; a voice playing another's notes (the same
-pitches and rhythm, a delay or an octave apart) its doubling."""
+driver's own pitch), or whose samples the drum namer calls drums (drums.py,
+named as a reading names its samples: a tom played at several pitches is a
+drum, a bass pumping one note on an instrument held is not). Then the
+pitched voices by register and motion: the
+bass the lowest line, held notes harmony, fast cycling ones an arp; a
+voice playing another's notes (the same pitches and rhythm, a delay or an
+octave apart) its doubling. The melody is the most varied line among the
+voices that are heard: on the tune check (ten songs, docs/idiom/phase-1-
+readers.md) the most varied line outright was a voice playing six notes in
+a song or a quiet high line under a louder one in two songs of three, so a
+candidate must sound on a quarter of the beats, at a quarter of the loudest
+voice's level, with its median below C6 (Jungle's noises sit above), and
+its variety is weighed by how much it is heard."""
 import bisect
 import math
 import statistics
@@ -17,6 +26,12 @@ from dataclasses import dataclass, field
 
 DRUMS, BASS, MELODY, COUNTER, HARMONY, ARP, ACCOMP, DOUBLE = (
     "drums", "bass", "melody", "counter", "harmony", "arp", "accompaniment", "double")
+DRUM_PIECES = {"kick", "snare", "hat", "tom", "cymbal"}   # the drum namer's pieces that make a voice a drum voice
+BY_SOUND = 0.8                        # the share of a voice's notes on drum samples (or on instruments held) that decides
+FEW_PITCHES = 4                       # pitches a sample a drum voice plays at most: a bass on a low sample plays many
+                                      # (728 bass voices became drums without this, the namer calling their samples toms)
+LOW_PIECES = {"kick", "tom"}          # the pieces a bass sample can pass for; a voice on them is a drum voice only
+SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on
 
 
 @dataclass
@@ -34,14 +49,22 @@ def _features(notes, grid) -> dict:
     per_sample = {}
     for p in pitched:
         per_sample.setdefault(p.sample.key, set()).add(round(p.midi))
+    pieces = Counter(p.sample.piece for p in notes if p.sample is not None)   # the drum namer's name of each note's sample
     lengths = [p.length for p in notes if p.length]
     beat = grid.period_at(notes[0].start) if grid else 0.5
     seq = [round(m) for m in mids]
     moves = [abs(b - a) for a, b in zip(seq, seq[1:])]
     span = (notes[-1].start - notes[0].start) or 1.0
+    if grid and grid.beat_times:
+        presence = len({math.floor(grid.beats(p.start)) for p in notes}) / len(grid.beat_times)
+    else:
+        presence = min(1.0, len(notes) / max(1.0, span / beat))
     return {
         "notes": len(notes),
         "unpitched": sum(1 for p in notes if p.midi is None) / len(notes),
+        "drum_sound": sum(c for k, c in pieces.items() if k in DRUM_PIECES) / len(notes),   # notes on a drum sample
+        "low_sound": sum(c for k, c in pieces.items() if k in LOW_PIECES) / len(notes),     # on a kick or a tom
+        "no_drum_sound": sum(c for k, c in pieces.items() if k == "none") / len(notes),    # notes on an instrument held
         "pitches_per_sample": max((len(v) for v in per_sample.values()), default=0),
         "distinct": len(set(seq)),
         "median": statistics.median(mids) if mids else None,
@@ -49,8 +72,12 @@ def _features(notes, grid) -> dict:
         "length_beats": statistics.median(lengths) / beat if lengths else 0.0,
         "per_beat": len(notes) / (span / beat) if beat else 0.0,
         "steps": sum(1 for m in moves if 0 < m <= 2) / len(moves) if moves else 0.0,
+        "leaps": sum(1 for m in moves if m >= 5) / len(moves) if moves else 0.0,
         "repeats": sum(1 for m in moves if m == 0) / len(moves) if moves else 0.0,
+        "presence": presence,            # the share of the song's beats the voice has a note on
         "entropy": _entropy(Counter(seq)) if seq else 0.0,
+        "pc_entropy": _entropy(Counter(m % 12 for m in seq)) if seq else 0.0,   # of pitch classes: an arpeggio
+                                                                                # over octaves is not a varied line
         "level": statistics.median(p.level for p in notes),
     }
 
@@ -84,20 +111,44 @@ def _doubles(a, b, window: float = 0.5) -> tuple[float, float] | None:
     return best
 
 
+MELODY_PRESENT = 0.25                # the share of the song's beats a melody candidate has a note on
+MELODY_HEARD = 0.25                  # and of the loudest pitched voice's level it has
+MELODY_CEILING = 84                  # the highest median pitch a tune sits at (C6)
 ECHO_DELAY = (0.025, 0.5)            # seconds an echo part may follow the part it copies
 ECHO_HELD = 0.6                      # the share of its notes that must be copies, one delay apart
+ECHO_SPREAD = 0.03                   # seconds the delay may wobble around its commonest value (Gang-Plank Galleon's
+                                     # echo voice follows 150 to 200 ms behind, by the driver's timer)
+ECHO_SHARP = 0.008                   # and within this of it, ECHO_FOCUS of the notes must still fall: a dense voice
+ECHO_FOCUS = 0.3                     # repeating a few pitches matches any delay by chance, spread evenly
+ECHO_SELF = 0.5                      # a voice repeating its own pitches at the delay (a pumping bass, every eighth)
+                                     # is matched by any voice sharing them: no echo
+ECHO_SURE = 0.004                    # seconds: the share within this of the delay is the echo's sureness (the
+                                     # detector's old rule; the beat trusts an echo sure to ECHO_HELD)
+MELODY_DENSE = 2.0                   # notes a beat beyond which a line is figuration more than tune
+HELD_SPARSE = 0.25                   # held notes (HARMONY) on fewer of the beats than this are a pad; a line held
+PAD_VARIETY = 2.3                    # on more and over this pitch-class entropy is a slow tune, not harmony
 
 
 def echoes(song) -> dict:
     """Voices playing another's notes a fixed delay later, all song long:
-    voice -> (the voice it copies, the delay). A driver's echo made of a
+    voice -> (the voice it copies, the delay, the share of its notes within
+    ECHO_SURE of that delay). A driver's echo made of a
     spare voice (Star Fox's Corneria: one part copying another 1.4 steps of
     its grid later, 246 ms, every note off the grid). A copy is a note of
-    the same pitch class; the delay is the one most of them share, to 4 ms."""
-    by = {}
+    the same pitch class; the delay is the one most of them share, within
+    ECHO_SPREAD of its commonest value, ECHO_FOCUS of them within ECHO_SHARP
+    (chance matches in a dense voice spread evenly over the window), and the
+    copied voice not repeating itself at that delay (Gang-Plank Galleon's
+    bass and its doubling pump the same note every eighth, 236 ms, and
+    would each be the other's echo). Of two voices each the other's echo,
+    the quieter is the echo. The beat trusts only an echo whose share within
+    ECHO_SURE reaches ECHO_HELD (the detector's old rule); the looser ones
+    serve the parts (see reading.beat_and_parts)."""
+    by, levels = {}, {}
     for p in song.notes:
         if p.midi is not None and p.level > 0:
             by.setdefault(p.voice, []).append((p.start, round(p.midi) % 12))
+            levels[p.voice] = levels.get(p.voice, 0.0) + p.level
     out = {}
     for v, notes in by.items():
         if len(notes) < 16:
@@ -115,11 +166,27 @@ def echoes(song) -> dict:
             if not flat:
                 continue
             mode = flat.most_common(1)[0][0] / 500
-            share = sum(1 for ds in delays if any(abs(d - mode) <= 0.004 for d in ds)) / len(notes)
-            if share >= ECHO_HELD and (best is None or share > best[0]):
-                best = (share, u, mode)
+            share = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SPREAD for d in ds)) / len(notes)
+            focus = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SHARP for d in ds)) / len(notes)
+            if share < ECHO_HELD or focus < ECHO_FOCUS or (best is not None and share <= best[0]):
+                continue
+            own = 0
+            for t, pc in theirs:
+                lo = bisect.bisect_left(starts, t - mode - ECHO_SHARP)
+                hi = bisect.bisect_right(starts, t - mode + ECHO_SHARP)
+                own += any(q == pc for _, q in theirs[lo:hi])
+            if own / len(theirs) >= ECHO_SELF:
+                continue
+            sure = sum(1 for ds in delays if any(abs(d - mode) <= ECHO_SURE for d in ds)) / len(notes)
+            best = (share, u, mode, sure)
         if best:
-            out[v] = (best[1], best[2])
+            out[v] = (best[1], best[2], best[3])
+    for v in list(out):
+        if v not in out:
+            continue
+        u = out[v][0]
+        if u in out and out[u][0] == v:
+            del out[v if levels.get(v, 0) / len(by[v]) >= levels.get(u, 0) / len(by[u]) else u]
     return out
 
 
@@ -132,9 +199,15 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     roles = {}
     for v, f in feats.items():
-        if f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2):
+        # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
+        # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
+        # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)
+        if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES
+                and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)):
+            roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
+        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2)):
             roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
-    for v, (u, delay) in (echoed or {}).items():
+    for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:
             roles[v] = Role(v, DOUBLE, of=u, evidence={"echo_ms": round(delay * 1000, 1)})
     tonal = [v for v in feats if v not in roles and feats[v]["median"] is not None]
@@ -149,24 +222,33 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     tonal = [v for v in tonal if v not in roles]
     if not tonal:
         return sorted(roles.values(), key=lambda r: r.voice)
+    loudest = max(feats[v]["level"] for v in tonal)
     lowest = min(tonal, key=lambda v: feats[v]["median"])
     for v in tonal:
         f = feats[v]
         if f["median"] <= feats[lowest]["median"] + 3 and f["median"] < 55:
             roles[v] = Role(v, BASS, evidence={"median": round(f["median"], 1)})
     rest = [v for v in tonal if v not in roles]
-    # held chords: notes of two beats and more
+    # held chords: notes of two beats and more, unless the line is present and varied (a slow tune: on the
+    # generator's own songs a melody of half notes read as harmony and its arpeggio as the melody)
     for v in rest:
-        if feats[v]["length_beats"] >= 2.0:
-            roles[v] = Role(v, HARMONY, evidence={"length_beats": round(feats[v]["length_beats"], 2)})
+        f = feats[v]
+        if f["length_beats"] >= 2.0 and (f["presence"] < HELD_SPARSE or f["pc_entropy"] < PAD_VARIETY):
+            roles[v] = Role(v, HARMONY, evidence={"length_beats": round(f["length_beats"], 2)})
     rest = [v for v in rest if v not in roles]
-    # the melody: the most varied line, leaning toward the top
+    # the melody: of the lines heard (present, loud enough, below the ceiling), the most varied, weighed by how
+    # much it is heard and held back where it runs over MELODY_DENSE notes a beat (figuration: Super Mario World's
+    # Overworld had a louder, busier accompaniment outscore its tune); none heard, no melody (a song of drums
+    # and bass, or noises where a tune would be)
     def melodic(v):
         f = feats[v]
-        return f["entropy"] * (1 + f["steps"]) * (1 - f["repeats"]) + (f["median"] - 60) / 24
-    if rest:
-        top = max(rest, key=melodic)
-        roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("entropy", "steps", "median")})
+        return (f["pc_entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
+                * min(1.0, MELODY_DENSE / max(f["per_beat"], 1e-9)))
+    heard = [v for v in rest if feats[v]["presence"] >= MELODY_PRESENT and feats[v]["level"] >= MELODY_HEARD * loudest
+             and feats[v]["median"] <= MELODY_CEILING]
+    if heard:
+        top = max(heard, key=melodic)
+        roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("pc_entropy", "steps", "leaps", "presence", "level", "median")})
     for v in rest:
         if v in roles:
             continue

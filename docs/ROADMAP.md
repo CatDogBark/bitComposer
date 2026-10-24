@@ -395,8 +395,22 @@ and the hit-or-miss part. Two steps, in order.
 
 ## Generation
 
-- **Write the way the soundtracks do (next; `docs/TRANSLATOR.md`, stages
-  3 and 4).** 1.2.0's imported packs carry a game's sound and only the
+- **Write the way the soundtracks do (`docs/IDIOM.md`; phases 1 to 4 done
+  as developer tools in 1.2.0rc2, phase 5 next).** The idiom's plan took
+  this over from the translator's stages 3 and 4 on 2026-10-20: the
+  readers scored on ground truth (phase 1), one score of voices through
+  the SNES back end (phase 2), the vocabulary as tables read from the
+  readings (phase 3), and the writing from them, measured against Final
+  Fantasy VI's own songs round by round and passed by ear (phase 4,
+  2026-10-24: every written song nearest FFVI among 37 games' tables, no
+  four-bar phrase a game's). Phase 5 puts the pack's second format in the
+  product: import writes the tables beside the voices and the PACKS panel
+  writes with them (the generation scopes decided 2026-10-23 in
+  `docs/idiom/phase-5-packs.md`). After phase 5, Mega Man X as the
+  writing's generalization test, its own pack and twenty songs judged by
+  ear and against its songs (the owner's call, 2026-10-24): riffs without
+  pause, where the ride cymbal and the drums changing every other bar
+  wait. 1.2.0's imported packs carry a game's sound and only the
   habits the readings give straight, so a song from one is still
   arranged the generator's way, and measured against the game's own it
   shows (FFVI, 2026-10-19): an arp in every song where FFVI has one in 5

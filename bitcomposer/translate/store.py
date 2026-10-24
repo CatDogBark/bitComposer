@@ -12,8 +12,8 @@ import sqlite3
 from array import array
 from pathlib import Path
 
-SCHEMA = 4                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level
-VERSION = "6"                        # the translator's; a song read by another is read again
+SCHEMA = 5                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level; 5: samples.piece
+VERSION = "8"                        # the translator's; a song read by another is read again
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS songs (
     loop_bar INTEGER, loop_bars INTEGER, loop_seconds REAL);
 CREATE TABLE IF NOT EXISTS samples (
     song TEXT, idx INTEGER, key TEXT, start INTEGER, loop INTEGER, f0 REAL, offset REAL,
-    frames INTEGER, loops INTEGER, PRIMARY KEY (song, idx));
+    frames INTEGER, loops INTEGER, piece TEXT, PRIMARY KEY (song, idx));   -- piece: the drum namer's name
 CREATE TABLE IF NOT EXISTS voices (
     song TEXT, voice INTEGER, role TEXT, of INTEGER, evidence TEXT, notes BLOB, PRIMARY KEY (song, voice));
 CREATE TABLE IF NOT EXISTS beats (song TEXT PRIMARY KEY, beats BLOB, bars BLOB);
@@ -57,6 +57,8 @@ def connect(path=None) -> sqlite3.Connection:
             db.execute(f"ALTER TABLE songs ADD COLUMN {column}")
     if 3 <= old < 4:
         db.execute("ALTER TABLE form ADD COLUMN level TEXT")
+    if old < 5 and "piece" not in {r[1] for r in db.execute("PRAGMA table_info(samples)")}:
+        db.execute("ALTER TABLE samples ADD COLUMN piece TEXT")
     db.execute("INSERT OR REPLACE INTO meta VALUES ('schema', ?)", (str(SCHEMA),))
     db.commit()
     return db
@@ -104,8 +106,8 @@ def keep(db, reading) -> None:
     index = {}
     for i, s in enumerate(r.song.samples.values()):
         index[s.key] = i
-        db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?)",
-                   (sid, i, s.key, s.addr[0], s.addr[1], s.f0, s.offset, s.frames, int(s.loops)))
+        db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?,?)",
+                   (sid, i, s.key, s.addr[0], s.addr[1], s.f0, s.offset, s.frames, int(s.loops), s.piece))
     by_voice = {}
     for p in r.song.notes:
         by_voice.setdefault(p.voice, []).append(p)

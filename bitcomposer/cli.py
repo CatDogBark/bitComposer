@@ -191,6 +191,13 @@ def build_parser():
              "sit still or for A/B tests of other changes",
     )
     parser.add_argument(
+        "--score",
+        action="store_true",
+        help="render the song through the SNES back end: its voices as notes in time, "
+             "the echo as the SNES chip's (phase 2 of docs/IDIOM.md; the chip and Genesis "
+             "sounds are not changed by this)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"bitcomposer {__version__}",
@@ -237,7 +244,12 @@ def compose_from_args(args, index: int = 0):
         timestamp = int(time.time())
         seed_str = f"_s{seed}" if seed is not None else ""
         filepath = os.path.join(args.output_dir, f"{args.prefix}bitcomposer_{timestamp}_{index}{seed_str}{args.suffix}.it")
-    save_song(song, filepath)
+    if getattr(args, "score", False):
+        from . import score as score_mod
+        from .spc import convert
+        convert.render(score_mod.of_song(song), filepath)
+    else:
+        save_song(song, filepath)
     return filepath, song["info"]
 
 

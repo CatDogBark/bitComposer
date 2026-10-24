@@ -8,8 +8,9 @@ Windows. The KDE Plasma widget and its D-Bus daemon that came before it lived
 in a `companion/` folder; the player does everything they did (the media keys
 through MPRIS, start at login in the tray), and they were removed in 1.0.0rc3.
 
-Generated music deliberately stays out of the repo, in `~/Music/Chiptune`
-(override with `$BITCOMPOSER_MUSIC_DIR`). The idea of defaulting CLI output to
+Generated music deliberately stays out of the repo, in `~/Music/bitComposer`
+(override with `$BITCOMPOSER_MUSIC_DIR`; an older `~/Music/Chiptune` folder is
+still used while it exists). The idea of defaulting CLI output to
 `<repo>/output/` was considered and dropped; the CLI writes to the working
 directory unless told otherwise, and the helper scripts pass the music dir
 explicitly.
