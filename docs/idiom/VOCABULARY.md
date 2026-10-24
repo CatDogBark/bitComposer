@@ -228,7 +228,30 @@ said otherwise. Counting code: `translate/rhythm.py` and
   voice the unit counts); the pool's own choice had given the written
   songs 3 of 14, and 10 of 14 once the counter sat where the tune is
   (the pool's favourite sample is the tune's), so the word has to be
-  honoured both ways (round 29).
+  honoured both ways (round 29). Which other sample is `counter_pairs`'.
+- **counter_pairs** — the counter-line's sample where it plays another
+  than the tune's, as the pack's sample id, by the part and the tune's
+  sample id; one unit a song whose `counter_samples` kind is `other`
+  (FFVI: 35 of 52, 23 of them with both samples in the pack). Drawn once
+  a song at the rendering, after the tune's sample is chosen
+  (`whole.counter_pair_for`): the table's distribution under the tune's
+  sample as a plan draw sees it (the tune's context mixed with its
+  back-off, the counter's sample over all tunes, which is still a count),
+  restricted to the samples the pack holds, not the tune's own, in reach
+  of the register the counter was written in (`reaches`, the check
+  `layer_samples` makes through `pair_for`); the old pool rule by register
+  and speed remains only where no counted sample fits, and the plan's log
+  says which of the three the sample came from and what was passed over.
+  FFVI's counter sample is darker than the tune's in 17 of the 23 pairs
+  the pack holds (its body louder in 15); for a tune on sf89f5aedfd its
+  partners are sfd6accf98a four times in ten, s256b199ccf three, then
+  s605f200105, s8320f1bea2 and s4fd4b0992b. The rule had given Whole 28's
+  counter sdbd05ab4d5 beside that tune at a 0.28 chance, a sample 4.2 dB
+  louder in its body and nearly twice as bright, which FFVI never plays as
+  a counter against another tune sample; the pair word gives it
+  sfd6accf98a. A first cut drew once and refused at the first misfit (a
+  sample the pack lacks, a drawn range short of a wide written register)
+  and left eight songs of ten to the rule, Whole 28 among them (round 30).
 - **climax** — which of a song's tune phrases holds the tune's highest note,
   by its place among them (opening, early, middle, late, closing). FFVI's
   tune peaks at 0.45 of the song at the median; the written tunes had

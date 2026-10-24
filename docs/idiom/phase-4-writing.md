@@ -2143,3 +2143,134 @@ changed. Nothing
 restores the round-28 draws short of replaying them. The owner hearing
 Song Check 23 against 22 hears the counter, the echo and the bass's
 floors, not the counter alone.
+
+### Round 30: the counter's sample as a pair word (2026-10-24, from the counter-winning report on Song Check 23)
+
+After round 29 Whole 28's counter still won over the tune, by loudness,
+and the report (`phase4/counter-winning-report.md`) found two causes
+stacked: the `counter_levels` draw (1.5, FFVI's one song in 52, on a
+tune at 0.7 of the loudest; +3.6 dB) and the sample (+2.9 dB at equal
+level). The sample came from a RULE: an "other" counter took the pool's
+best but the tune's by the written register and speed (`best_sample`),
+which gave sdbd05ab4d5 a 0.28 chance beside a tune on sf89f5aedfd, a
+sample 4.2 dB louder in its loop body, speaking in 35 ms against 167,
+8.9 harmonics in its centroid against 5.3, and one FFVI never plays as
+a counter against another tune sample. FFVI's own partners for that
+tune sample are sfd6accf98a four times in ten, s256b199ccf three, then
+s605f200105, s8320f1bea2 and s4fd4b0992b; across its 35 other-sample
+counters the counter's sample is darker than the tune's in 17 of the 23
+pairs the pack holds (its body louder in 15). The owner's decision: a
+counted pair word in place of the rule, the way `layer_samples` gives a
+layered part's second voice its sample through `pair_for`.
+
+**Measured first (the round-29 code and pack).** `counter_vs_melody.py`,
+seeds 1 to 20 (fourteen songs with both parts; FFVI in brackets): the
+tune's sample 5 of 14 (18 of 52), register gap -2.5 (-2.5), onsets on
+the tune's 0.56 (0.67), notes per tune note 1.12 (1.42), level ratio
+1.00 (1.00), sound under the tune 0.78 (0.82), the tune's rests filled
+0.59 (0.61), above the tune 0.30 (0.36). The pairs (`r30_pairs.py`,
+seeds 1 to 20 and 28, fifteen songs with both): ten "other" counters,
+six of them on a pair FFVI plays; over all fifteen (a "same" counter on
+a tune sample FFVI keeps a same-sample counter on counted as FFVI's),
+ten. Whole 28: sf89f5aedfd under sdbd05ab4d5, a pair FFVI has not. Its
+stems (`cw_stems.py`, songcheck23): where both sound (0.47 of the form's
+frames) the counter louder than the tune in 0.78 of 50 ms frames, by
++6.5 dB at the median, the loudest of the five stems in 0.65; the
+counter stem -15.9 dB over the form, -13.9 where both sound; alone in
+the tune's rests -15.3 against the tune alone -19.8.
+
+**Built.** `counter_pairs` (VOCABULARY.md): one unit a FFVI song whose
+counter plays another sample than the tune's (`counter_kind` "other"
+by `tune_line` and `main_sample`), the outcome the counter's sample as
+the pack's id, the context the part and the tune's sample id
+(`rhythm.counter_pair_units`; 35 units of 35 songs, 23 with both
+samples in the pack, 12 contexts, ten songs under sf89f5aedfd); a
+`KEPT` entry in `packtables.py`, the pack now 80 tables (backup
+`pack.json.r29`, the WAVs untouched). `counter_samples` is drawn before
+writing as in round 29; this word serves the "other" case only. The
+draw (`whole.counter_pair_for`, from `samples_for` after the tune's
+sample is chosen, in the same place the rule stood): the table's
+distribution under the tune's sample as a plan draw sees it (the tune's
+context at its Witten-Bell share, the part's level, the counter's sample
+over all tunes, the rest; `tables.Table.weights`, the one addition
+outside the files named, giving the mixture `draw` samples from),
+restricted to the samples the pack holds, not the tune's own, in reach
+of the register the counter was written in (`reaches`, as `pair_for`
+checks), one draw among those by their weights; the pool rule only
+where no counted sample fits. The plan's log says which: "the game's
+pair under the tune's", "the counter's sample over all tunes", or "by
+the pool rule: no counted pair fits", with what was passed over and why.
+A first cut drew once from the table and refused at the first misfit,
+as `pair_for` does, with one more draw at the part's level: it left
+eight songs of ten to the rule, Whole 28 among them (its one draw fell
+to the part's level and landed on sa7f73a254a, which the pack lacks,
+and the rule chose sdbd05ab4d5 again), and FFVI's pairs went from six
+of ten to four; the conditional is the same table drawn with the
+misfits taken out, not a rule steering it (`r30_pairs_after_cut1.log`).
+One fault fixed on the way: the rule had excluded the tune's sample
+from the pool by name, and the pool names the sample with the pack's
+prefix where the pack's other tonal samples carry the bare id, so an
+"other" counter could take the tune's own sample under its other name
+(the first cut's Whole 03 and 14 did); the exclusion is by the pack's
+id now. A test on a made-up song (`test_the_counters_sample_is_the_
+games_pair_with_the_tunes`): the unit, none on the same sample, the
+weights at the tune's context and at an unseen one, the draw taking the
+sample in reach, refusing one the pack lacks or the tune's own, and
+returning nothing where none fits. The suite passes (337 tests, 2
+skipped).
+
+**Measured after (seeds 1 to 20 and 28; `r30_pairs_after.log`,
+`r30_cvm_after.log`, `r30_stems.log`).** No part's notes changed in any
+of the twenty-one songs, so `counter_vs_melody.py`'s lines are the
+round-29 lines to the digit. The pairs: of the ten "other" counters,
+five take a counted sample (three under the tune's own context, Whole
+02, 19 and 28; two at the part's level, Whole 07 and 10) and five the
+rule (Whole 03, 05, 12, 14, 20), every one of those for a written
+register 24 to 32 semitones wide (48-80, 48-72, 72-92, 76-88, 64-88)
+that no one-song range of any counted sample reaches at both ends; FFVI
+plays the pair in seven of ten (six before), eleven of fifteen over all
+(ten). Whole 28's counter is sfd6accf98a, FFVI's commonest partner for
+its tune sample (3.9 harmonics, 87 ms attack, body +4.4 dB over the
+tune's, FFVI's level ratios for the pair 1.0, 1.0, 1.0 and 1.5): its
+stem -17.1 dB over the form (-15.9), -15.1 where both sound (-13.9),
+louder than the tune in 0.64 of those frames (0.78), by +5.6 dB at the
+median (+6.5; the quartiles -7.8 and +8.3 against +2.4 and +8.9), the
+loudest stem in 0.53 (0.65); alone in the tune's rests -17.3 (-15.3).
+The 1.5 level stays, so the counter's note level is 0.892 against the
+tune's 0.595 still; the report's `pair` render at level 1.0 had +2.2 dB
+and the loudest stem in 0.36.
+
+**The render stream (`r30_stream.py`, `r30_diff.py` against
+`r30_notes_r29.json`).** The pair draw takes one number a candidate for
+the reach check (a one-song range drawn from `ranges`) and one for the
+choice: seven in Whole 28 (six candidates in the pack, two in reach),
+where the rule's `best_sample` had taken eleven, so `samples_for` draws
+165 numbers against 169 and the floors and the echo after it fall
+elsewhere: Whole 28's floor on sf89f5aedfd 0.12 to 0.4 s, on sb34cb55c14
+0.12 to 0.16, the echo's feedback 0.759 to 0.740 (its delay and wetness
+the same). Over the twenty-one songs eleven are identical in every part,
+sample, floor and echo (the six without a counter and the five "same"
+counters); of the ten "other" counters, the counter's sample changes in
+six (Whole 07, 12, 14, 19, 20, 28), is the same sample under the pack's
+other name in three (03, 05, 10), and the same in Whole 02; the
+counter's second voice's sample changes in 05 and 20 (the pair draw
+before it); the echo goes in 02 and 10, comes in 05, changes delay in 07
+and 19 and feedback in 03, 12, 14, 20 and 28; the floors shift in all
+ten. Nothing else moved. Song Check 24 is Whole 28 (`songcheck24`, five
+ogg stems) and seeds 1 to 3 (`songcheck24-more`; Whole 01 has no
+counter, four stems).
+
+**Open.** The level: `counter_levels` is drawn as in round 29 and Whole
+28's 1.5 stays (the report's item 1, conditioning the share on the
+tune's `levels` draw, is the owner's to decide); with the sample FFVI
+pairs the counter still sits +5.6 dB over the tune at the median. The
+counter's pitch range: untouched (three notes at 78 to 94 in bar 29,
+over a sample FFVI plays no higher than 72; the report's item 3). The
+reach check against the written register: half the "other" counters
+fall to the rule because the counter written beside the tune at octaves
+and unisons spans two octaves or more between its tenth and ninetieth
+percentiles, and no one-song range of a sample is that wide; whether
+the check should be against the counter's planned register, the written
+register's middle, or the sample's range over all its songs is a choice
+for the owner, not made here. The pairs with a sample outside the pack
+(12 of 35) are passed over, as `layer_samples`' are.
