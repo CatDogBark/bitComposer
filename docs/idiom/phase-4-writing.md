@@ -1126,3 +1126,36 @@ accompaniment copy their own theme bars there when they do
 is). The theme travelling to the counter or the bass (a fifth of songs)
 is left for later. The fifth listening set is drawn from forty seeds,
 keeping the songs whose theme returns, each card naming where.
+
+### Round 13: the two switches, carry a theme and the band comes back (2026-10-23)
+
+Decided in `phase-5-packs.md`; built here as conditions on the plan's
+draws. `plan(themed=True)` draws the tune's phrase letters again, at most
+forty times, until a later phrase opens with the theme; the letters still
+come from the game's own table. A plan whose tune has fewer than two
+phrases (a part without the tune, then a five-bar part: one window) has
+nowhere to come back, and no letter draw can help it, so the plan is drawn
+again whole from the same stream, at most ten times; the first set of
+twenty burnt forty letter draws on such a song before this was seen.
+`plan(band_returns=True)` draws a return again when nothing came back with
+the tune; what comes back stays the table's own mix. Both are recorded in
+the plan under `options` (`themed`, `band_returns`, `plan_draws`) and in
+its log, and `tools/whole.py` takes `--themed --band-returns`.
+
+Song Check 6: the same twenty seeds as every set, both switches on.
+
+- Every song carries its theme back: 20 of 20. Song Check 5, at the table's
+  own rate, had 17 of 40.
+- 25 returns in the twenty songs, none with the tune alone (FFVI: 4 of 46
+  alone; the switch refuses that outcome and nothing else). What came back:
+  the accompaniment in 20 of 25, the chords in 18, the bass figure in 16;
+  FFVI's 29 of 43, 22 of 46 and 27 of 46. The mix is the table's.
+- Eight songs returned on the first letter draw; twelve needed two to nine.
+  One song (14) needed a second plan: its first had a one-phrase tune.
+- The cost, as the phase 5 plan names it: a short or sparse-melody plan is
+  drawn past, so the game's through-composed forms do not appear while the
+  switch is on.
+
+Nothing in the writer changed for this round. The tune travelling to the
+counter or the bass, the steps, the two-line accompaniment's density and
+the reader's parts are as round 12 left them.
