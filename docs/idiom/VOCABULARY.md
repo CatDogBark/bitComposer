@@ -110,7 +110,9 @@ said otherwise. Counting code: `translate/rhythm.py` and
   play, as a pair of the pack's sample names, for every part the plan
   gives layers (the chord parts, the counter-line, the tune, the bass).
   Drawn once a song at rendering, from the part's own pairs alone and
-  taken whole or not at all: the line and the second voice take the game's
+  taken whole or not at all (a pair of one sample, which FFVI plays in
+  half its layered chord parts, gives the second voice the line's sample
+  whatever the pack gave the line): the line and the second voice take the game's
   pair where the pack holds both samples and each reaches its voice's
   register by the ranges table; otherwise the second voice's sample is
   chosen as the line's is, by its own register and speed (FFVI's bass: a
@@ -150,6 +152,30 @@ said otherwise. Counting code: `translate/rhythm.py` and
   which had turned a drawn third below into a sixth above. A voice placed
   against the line alone, without its move, had leapt five steps or more
   at 43 % of its onsets, FFVI 11 %; with the product 3 %.
+- **levels** — a part's level as a share of the song's loudest part's, in
+  tenths ("1.0" the loudest part), by the part; from the readings' own note
+  levels. Drawn once a song for every part; the loudest plays at
+  `whole.TOP_LEVEL` and the rest at their share. FFVI's parts sit close,
+  the bass loudest (0.28 of full), the tune 0.22, the chord parts and the
+  counter-line 0.19, the harmony 0.18; the hand-set mix had the tune at
+  1.4 times the accompaniment and the pads at 0.6 of it, a lead over a
+  backing (round 25).
+- **layer_levels** — a layered part's second voice's level against its
+  line's, in tenths, by the part. Drawn once a song; the voices beside the
+  line play at it.
+- **climax** — which of a song's tune phrases holds the tune's highest note,
+  by its place among them (opening, early, middle, late, closing). FFVI's
+  tune peaks at 0.45 of the song at the median; the written tunes had
+  peaked at 0.24. The melody writer draws it once and gives that phrase the
+  song's peak as its ceiling.
+- **arc** — how far a tune phrase's highest note sits under the song's peak
+  (0, 1-2, 3-5, 6-9, 10+ semitones), by the phrase's place. Drawn a phrase:
+  the phrase's ceiling in the arc.
+- **summit** — how far the tune's highest note sits above the tune
+  register's top (the 90th percentile, the registers table's), in
+  semitones (0, 1-2, 3-5, 6+). Drawn once a song: the climax may rise above
+  the register as FFVI's does (its tunes span 22 semitones; the written
+  ones had spanned 16).
 - **sample_lengths** — the shortest note a song plays a sample at, as a
   class of its tenth-percentile note length in ms (40, 60, 80, 120, 160,
   240, 400, long), by the sample. Drawn once a song for each sample the

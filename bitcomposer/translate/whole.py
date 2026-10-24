@@ -54,7 +54,8 @@ KIT_FOR = {"K": ("kick",), "S": ("snare", "rim"), "h": ("hihat", "open_hihat"), 
            "c": ("crash", "open_hihat", "hihat"), "o": ("rim", "hihat")}   # a figure's letter -> its sample, the first the kit has
 DRUM_LENGTH = 1.0                     # beats a drum hit sounds at most (to the next hit on its voice otherwise)
 WANTS = {R.HARMONY: 3, R.ACCOMP: 2, R.ARP: 1, R.COUNTER: 1}   # voices an upper part takes when the eight allow (one each first)
-LEVELS = {R.MELODY: 0.85, R.COUNTER: 0.6, R.HARMONY: 0.5, R.ACCOMP: 0.6, R.ARP: 0.55, R.BASS: 0.8, R.DRUMS: 0.8}   # of full, by part
+LEVELS = {R.MELODY: 0.85, R.COUNTER: 0.6, R.HARMONY: 0.5, R.ACCOMP: 0.6, R.ARP: 0.55, R.BASS: 0.8, R.DRUMS: 0.8}   # of full, by part: the
+TOP_LEVEL = 0.85                      # fallback without a levels table; with one, the loudest part plays at TOP_LEVEL and the rest at their share
 PANS = {R.MELODY: (0.5,), R.COUNTER: (0.6,), R.HARMONY: (0.35, 0.65, 0.5), R.ACCOMP: (0.6, 0.4), R.ARP: (0.4,), R.BASS: (0.5,),
         R.DRUMS: (0.5, 0.58)}        # the right side's share, a part's voices in turn
 POOLS = {R.MELODY: "lead", R.COUNTER: "counter", R.HARMONY: "harmony", R.ARP: "arp"}   # a part's voice pool in a pack; the
@@ -64,6 +65,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
+            "levels": "0.8", "layer_levels": "0.9",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -103,6 +105,8 @@ class Plan:
     voices: dict                      # a part -> how many voices it gets
     log: list = field(default_factory=list)
     feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
+    levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the levels table)
+    layer_levels: dict = field(default_factory=dict)  # a layered part -> its second voice's level against its line's
 
     @property
     def bars(self) -> int:
@@ -589,8 +593,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             f"plays {sum(plays[role])}/{len(plays[role])} bars") if x))
     if themed or band_returns:
         extras.setdefault("options", {}).update({"themed": themed, "band_returns": band_returns})
+    levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
+    layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, voices, log, feel=feel)
+                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels)
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -1080,6 +1086,8 @@ def pair_for(models: dict | None, role: str, own: set, rng: random.Random) -> tu
     if t.songs.get((role,), 0) == 0:
         return None
     pair = t.draw((role,), rng, floored=False, floor_k=PLAN_FLOOR, min_songs=PLAN_SONGS).split()
+    if len(pair) == 2 and pair[0] == pair[1]:
+        return ("same", "same")                             # one sample for both voices: the second takes the line's, whatever the pack gave it
     return (pair[0], pair[1]) if len(pair) == 2 and pair[0] in own and pair[1] in own else None
 
 
@@ -1117,7 +1125,9 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
             reg2 = second_register(plan, role)
             pair = pair_for(models, role, own, rng)
             second = None
-            if pair is not None and reaches(ranges, pair[0], plan.registers[role], rng) and reaches(ranges, pair[1], reg2, rng):
+            if pair == ("same", "same"):                    # FFVI gives one sample to both voices in half its layered chord parts
+                second = out[role]
+            elif pair is not None and reaches(ranges, pair[0], plan.registers[role], rng) and reaches(ranges, pair[1], reg2, rng):
                 out[role] = make(pair[0])
                 second = make(pair[1])
             if second is None:
@@ -1202,11 +1212,23 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     steps_s, wet, feedback = (echo["seconds"], echo["wet"], echo["feedback"]) if echo else (0.0, 0.0, 0.0)
     notes = []
 
+    from .. import samples as samples_mod
+
+    def level_of(role, j):
+        """A note's level: the part's share of the loudest part's (the levels table; LEVELS without one), a voice beside the
+        line at its own share of the line's (layer_levels)."""
+        base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
+        if j in second_voice.get(role, ()):
+            base *= plan.layer_levels.get(role, 1.0)
+        return max(0.05, min(1.0, base))
+
     def put(voice, role, t0, t1, midi, name, sample, j):
         idx, addr, c5 = instrument(name, sample)
         pan = PANS[role][j % len(PANS[role])]
         send = echo is not None and role in SENDS
-        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(LEVELS[role], pan), (0, 0), score_mod.GAIN_FULL,
+        env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
+        adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
+        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(level_of(role, j), pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
     offsets = [0.0] + [form_beats - loop_start + j * loop_beats for j in range(max(0, loops - 1))]

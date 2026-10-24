@@ -642,6 +642,9 @@ CONTOUR_STEP = 2.0                    # semitones a contour's thirds aim apart (
 DETACHED = 0.5                        # the share of its gap a detached melody note sounds (the readings: under 0.75)
 HELD = 0.95                           # and a held one
 COPY_TRIES = 12                       # tunes drawn again when one copies a game's phrase (the reference set)
+ARC_ABOVE = {"0": 0, "1-2": 2, "3-5": 4, "6+": 7}             # the summit table's classes, as semitones the climax may rise above the register
+ARC_BELOW = {"0": 1, "1-2": 2, "3-5": 4, "6-9": 7, "10+": 11}   # the arc table's classes, as semitones a phrase's ceiling sits under the climax
+ARC_ROOM = 7                          # semitones a phrase keeps above the register's floor whatever the arc says
 MOVED = {"moved up": 2, "moved down": -2}   # semitones a moved phrase shifts (a scale step; the scale then corrects each note)
 DEGREE_PCS = {"1": (0,), "3": (3, 4), "5": (7,)}   # a phrase's ending degree -> intervals from the tonic it may land on
 STRONG_SCALE = True                   # a note arriving on the beat sits in the scale
@@ -914,6 +917,25 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     covered = {k for w in windows for k in w}
     windows += [[k] for k in range(len(bars)) if k not in covered]
     windows.sort()
+    register0 = register                                    # the part's register; `register` is rebound a phrase at a time to its room in the arc
+    tops = {}                                               # a window's first bar -> the phrase's ceiling: the arc (climax, arc, summit tables)
+    if role == R.MELODY and all(k in models for k in ("climax", "arc", "summit")) and windows:
+        from . import phrases as phrases_mod
+        place_at = {w[0]: phrases_mod.place_of(i, len(windows)) for i, w in enumerate(windows)}
+        above = models["summit"].draw((R.MELODY,), rng, floored=False, floor_k=1)
+        peak_top = min(120, register0[1] + ARC_ABOVE.get(above, 0))
+        want = models["climax"].draw((R.MELODY,), rng, floored=False, floor_k=1)
+        climax_w = next((w[0] for w in windows if place_at[w[0]] == want), windows[len(windows) // 2][0])
+        for w in windows:
+            if w[0] == climax_w:
+                tops[w[0]] = peak_top
+            else:
+                below = models["arc"].draw((R.MELODY, place_at[w[0]]), rng, floored=False, floor_k=1)
+                tops[w[0]] = max(register0[0] + ARC_ROOM, peak_top - ARC_BELOW.get(below, 2))
+        arc_line = (f"arc: the climax {want} at bar {climax_w}, top {peak_top} (the register's {register0[1]}); the phrases' tops "
+                    + " ".join(f"{w[0]}:{tops[w[0]]}" for w in windows))
+    else:
+        arc_line = None
     figures = [REST] * len(bars)
     cells = {}                                              # bar index -> Cell
     played, by_key = Counter(), {}                          # the urn: cell key -> times played; key -> a Cell
@@ -923,7 +945,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     last_time = None                                        # when the tune's last note fell: the note a move leaves, for its tone against the chord
     rhythm_played, rhythm_prev = Counter(), None
     draws = {k: (Counter(), None) for k in ("contours", "endings", "relations")}
-    log, prev_phrase, prev_phrase_start = [], None, None
+    log, prev_phrase, prev_phrase_start = ([arc_line] if arc_line else []), None, None
     written_windows = {}                                    # a window's first bar -> (its live bars, their cells), for the form's repeats
     part_of_window = {}                                     # a window's first bar -> (its part's index, its place among the part's windows
     for i, (mine, _, _) in by_part.items():                 # the tune plays in: the letters count sounding phrases, as the counts did)
@@ -1112,6 +1134,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         live = [k for k in w if own[k] != REST]
         if not live:
             continue
+        register = (register0[0], tops.get(w[0], register0[1]))   # this phrase's room: up to its ceiling in the arc (new_cell, again and
+        reg_w = register                                    # draw_move read `register` as the phrase is written)
         src0 = copies.get(w[0])
         if src0 is not None and src0 in written_windows and len(written_windows[src0][0]) == len(live):
             phrase_cells = [realize(k, c.positions, list(c.pitches)) for k, c in zip(live, written_windows[src0][1])]   # the part's tune again
@@ -1147,7 +1171,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if keep < len(live) and ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches:
                 want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
                 last = phrase_cells[-1]
-                options = [m for m in range(register[0], register[1] + 1) if m % 12 in want]
+                options = [m for m in range(reg_w[0], reg_w[1] + 1) if m % 12 in want]
                 if options:
                     last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
             end_phrase(phrase_cells)
@@ -1189,7 +1213,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             # the new phrase sits where the shift table puts it against the last (the table counts mean pitches): the line
             # is steered there over the phrase's first third by draw_move's contour aim, not jumped there in one move
             # (FFVI's phrase-start moves are half steps; the jump had made them a quarter)
-            aim0 = float(min(register[1], max(register[0], last_midi + shift_of(relation)))) if prev_phrase is not None else None
+            aim0 = float(min(reg_w[1], max(reg_w[0], last_midi + shift_of(relation)))) if prev_phrase is not None else None
             for attempt in range(COPY_TRIES):
                 phrase_cells, start_midi = [], aim0
                 snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen))
@@ -1242,7 +1266,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         if ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches:
             want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
             last = phrase_cells[-1]
-            options = [m for m in range(register[0], register[1] + 1) if m % 12 in want]
+            options = [m for m in range(reg_w[0], reg_w[1] + 1) if m % 12 in want]
             if options:
                 last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
                 last_midi = float(last.pitches[-1])

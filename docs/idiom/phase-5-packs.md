@@ -100,6 +100,14 @@ PACKS panel as stage 5 left it (`../TRANSLATOR.md`).
   empty takes the busiest drum left, else the snare, the format wanting
   every slot. Still to do before it ships: every game's kit before and
   after, the doubtful listed, and a listening set.
+- The sample's envelope. DONE in the thin pack builder (2026-10-24,
+  `pack.envelope_of`, pack sample field `envelope`): each sample carries
+  the SNES chip envelope its game plays it with most ({"adsr": [ADSR1,
+  ADSR2]} or {"gain": GAIN}), the format checks it, the registry keeps it
+  by voice (`samples.SAMPLE_ENVELOPES`), and the whole-song render plays
+  every note through it; a note had played flat at full level and been
+  cut dead. Import's packs get it with the builder; `PACKS.md` must say
+  the field exists (the second format's documentation, below).
 - The panel says what a pack says, in words: its habits as the tables
   summarise them.
 - The pack loader's voice key. A pack file's voices are registered as

@@ -542,6 +542,30 @@ class NewTablesTests(unittest.TestCase):
         g.uses["drums"].update({"kick": 50, "mallet": 57}); g.uses["melody"].update({"mallet": 300}); g.uses["counter"].update({"mallet": 347})
         self.assertEqual(pack.drum_uses(g), {"kick": 50})
 
+    def test_levels_arc_and_one_timbre_pairs(self):
+        """The levels words count a part's level against the song's loudest and a second voice's against its line's; the arc
+        words place a tune's climax and the other phrases under it; a pair with one sample for both voices applies as the
+        line's sample; the pack carries each sample's envelope and gives the kit's other slot to the game's own other strikes."""
+        from bitcomposer.translate import phrases, tables, pack
+        s = rhythm.Song("t", 4, 12, [(0.0, 4.0)], [], notes={}, sid="s", game="g")
+        s.levels = {"melody": 0.22, "bass": 0.28, "accompaniment": 0.19}
+        self.assertEqual({u.values["part"]: u.outcome for u in rhythm.level_units([s])}, {"melody": "0.8", "bass": "1.0", "accompaniment": "0.7"})
+        line = [(0.5 * i, 0.4, 60.0, "a") for i in range(8)]; other = [(float(i), 0.9, 52.0, "b") for i in range(4)]
+        s.notes = {"accompaniment": line + other}; s.voice_notes = {3: ("accompaniment", line), 4: ("accompaniment", other)}
+        s.voice_levels = {3: 0.20, 4: 0.12}
+        self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["0.6"])
+        self.assertEqual([phrases.place_of(i, 5) for i in range(5)], ["opening", "early", "middle", "late", "closing"])
+        self.assertEqual(phrases.place_of(0, 1), "opening")
+        self.assertEqual((phrases._class(0, phrases.BELOW), phrases._class(4, phrases.BELOW), phrases._class(12, phrases.BELOW), phrases._class(6, phrases.ABOVE)), ("0", "3-5", "10+", "6+"))
+        pairs = tables.Table(("part",), "layer_samples", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "sx sx", {"part": "accompaniment"}) for i in range(3)])
+        self.assertEqual(whole.pair_for({"layer_samples": pairs}, "accompaniment", set(), random.Random(1)), ("same", "same"))
+        g = pack.Gathered(game="g")
+        g.envelopes["k"].update({("adsr", 0xFF, 0xE0): 5, ("gain", 0x7F): 1}); g.envelopes["j"].update({("gain", 0x60): 2})
+        self.assertEqual((pack.envelope_of(g, "k"), pack.envelope_of(g, "j"), pack.envelope_of(g, "z")), ({"adsr": [255, 224]}, {"gain": 96}, None))
+        g.other.update({"snare": 500, "mallet": 57, "hit": 15})
+        self.assertEqual(pack.other_slot(g, {"snare": 1, "mallet": 1}), "snare")
+        self.assertIsNone(pack.other_slot(g, {}))
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""

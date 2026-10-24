@@ -145,6 +145,8 @@ class Song:
     periods: dict = field(default_factory=dict)       # a planned song: role -> {bar index: the lag in bars whose bar it plays again}
                                                       # (the plan's held bars of a backing part's period, period_units)
     feel: str | None = None                           # the song's feel, duple or triple (song_feel); a planned song's drawn once
+    levels: dict = field(default_factory=dict)        # role -> the median level (0-1 of full) of its notes, as the readings heard them
+    voice_levels: dict = field(default_factory=dict)  # voice -> the median level of its notes
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -187,6 +189,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
+        level_rows = {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
@@ -194,15 +197,19 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 song.voices.append((voice, role, of, {}))
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
-                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in store.unpack(blob)
-                        if s < end and level > 0 and (role == R.DRUMS or not math.isnan(m))]
+                rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
+                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)
+                    if rows:
+                        song.voice_levels[voice] = statistics.median(r[3] for r in rows)
+                        level_rows.setdefault(role, []).extend(r[3] for r in rows)
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
             song.bass_voices = basses
+        song.levels = {role: statistics.median(ls) for role, ls in level_rows.items()}
         songs.append(song)
     return songs, dict(out)
 
@@ -2190,6 +2197,40 @@ def voice_move_units(songs) -> list:
     for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
         if move is not None and abs(move) <= VOICE_STEPS:
             out.append(tables.Unit(s.sid, s.game, str(move), {"part": role, "kind": kind, "place": "with" if with_line else "alone"}))
+    return out
+
+
+def level_units(songs) -> list:
+    """Each part of each song as a unit: its outcome its notes' median level as a share of the song's loudest part's, in
+    tenths ("1.0" the loudest part, "0.7"), its value the part. FFVI's parts sit close, the bass loudest (0.28 of full),
+    the tune 0.22, the chord parts and the counter-line 0.19, the harmony 0.18; the writer's hand-set levels had the
+    tune at 1.4 times the accompaniment and the pads at 0.6 of it, a lead over a backing (2026-10-24)."""
+    out = []
+    for s in songs:
+        if not s.levels:
+            continue
+        top = max(s.levels.values())
+        if top <= 0:
+            continue
+        for role, lv in s.levels.items():
+            out.append(tables.Unit(s.sid, s.game, f"{round(lv / top, 1):.1f}", {"part": role}))
+    return out
+
+
+def layer_level_units(songs) -> list:
+    """Each layered part (two voices or more) of each song as a unit: its second voice's median level against its line's,
+    in tenths (capped at 1.5), its value the part."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.COUNTER, R.MELODY, R.BASS):
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
+            a, b = s.voice_levels.get(line), s.voice_levels.get(other)
+            if a and b:
+                out.append(tables.Unit(s.sid, s.game, f"{min(1.5, round(b / a, 1)):.1f}", {"part": role}))
     return out
 
 

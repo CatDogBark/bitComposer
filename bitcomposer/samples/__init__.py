@@ -390,6 +390,9 @@ def register_presets(presets: dict, releases: dict) -> None:
     PRESET_RELEASE.update(releases)
 
 
+SAMPLE_ENVELOPES: dict = {}          # a pack voice -> the SNES chip envelope its game plays the sample with ({"adsr": [a1, a2]} or {"gain": g})
+
+
 def register_sample_voice(name: str, data: bytes, length: int, meta: dict, volume: int,
                           release: str | None = None, percussion: bool = False) -> dict:
     """A voice from a sample file (a pack file's own voice): 16-bit mono
@@ -398,6 +401,10 @@ def register_sample_voice(name: str, data: bytes, length: int, meta: dict, volum
     and STRUCK_PRESETS, from the same classifier generate_instrument uses.
     Returns its generate_instrument result."""
     meta = dict(meta)
+    if meta.get("envelope"):
+        SAMPLE_ENVELOPES[name] = dict(meta["envelope"])
+    else:
+        SAMPLE_ENVELOPES.pop(name, None)
     INSTRUMENT_PRESETS[name] = (lambda: (data, length, dict(meta)), {}, volume)
     if release:
         PRESET_RELEASE[name] = release
@@ -417,5 +424,6 @@ def register_sample_voice(name: str, data: bytes, length: int, meta: dict, volum
 def unregister_voice(name: str) -> None:
     for table in (INSTRUMENT_PRESETS, PRESET_RELEASE):
         table.pop(name, None)
+    SAMPLE_ENVELOPES.pop(name, None)
     PERCUSSION_PRESETS.discard(name)
     STRUCK_PRESETS.discard(name)

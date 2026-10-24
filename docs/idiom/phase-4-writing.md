@@ -1758,3 +1758,83 @@ without regard to where the line sits, so a counter line at 64 to 76 with
 then takes the least bad sample. The word that would carry it: the layer
 offset conditioned on the line's register, or the voice's register as a
 word of its own. Not built; the owner's call. Open from before stands.
+
+### Round 25: richness, measured and given words (2026-10-24, from the owner's judgment on sets 16 to 18)
+
+The owner heard the writing as a generator's beside FFVI: staccato,
+single notes with no depth, a tune that rarely says anything, and asked
+whether the rounds were going backwards or uncovering something deeper.
+Measured (depth_check.py, envelope_check.py, timbre_check.py on
+Ragnarok), it was the second: every round so far had worked on which
+notes are written, and what he heard lives in how a note is rendered and
+mixed, and in the tune's shape over a song.
+
+**What the counts said.** The written notes are not short: longer and more
+legato than FFVI's (tune 0.95 of its gap against 0.87, 335 ms against
+201; counter 0.95 against 0.86; accompaniment 0.80 against 0.84; bass
+0.90 against 0.89). The render was the staccato: every note flat at full
+level and cut dead (`score.GAIN_FULL`, since the phase 2 bridge). FFVI
+plays every note through ADSR (40 snapshots, 30 s each): attacks instant
+for the tune, the chord parts and the bass, but a third of the
+accompaniment's notes and half the bass's decay while held (sustain rate
+15 or 16 on the main accompaniment sample), its pads swell in over 640 ms
+(72 % of harmony notes), vibrato on 5 % of tune notes, the echo on 94 %
+of them. Notes sounding at once are equal (written 4.8, FFVI 4.5), but
+FFVI plays them on 3.1 distinct samples where the writing (counted on its
+real samples) had used 4.3: FFVI stacks voices on one timbre (one sample
+for both voices in 20 of its 43 layered accompaniments, 13 of 28
+counter-lines, 7 of 8 harmonies). The readings do keep each note's level
+(the voices table's blobs; an earlier note here had said they did not):
+FFVI's parts sit close, the bass loudest (0.28 of full), the tune 0.22,
+the chord parts and counter 0.19, the harmony 0.18; the writer's hand-set
+mix had the tune at 1.4 times the accompaniment and the pads at 0.6 of it.
+The tune: FFVI's peaks at 0.45 of the song with a 22-semitone range and
+repeats its cells more; the written tunes peaked at 0.24 and spanned 16,
+with no song-level word to say where a tune should climb.
+
+**Built, on his go ("the 4 word fixes for the richness"), with the kit's
+other slot (Song Check 18's Whole 29).**
+
+- **The envelope a sample plays with.** `pack.envelope_of`: the thin pack
+  builder keeps each sample's modal key-on envelope from the SPCs and
+  writes it as the pack sample field `envelope` ({"adsr": [ADSR1, ADSR2]}
+  or {"gain": GAIN}); the pack file checks it, the registry keeps it by
+  voice (`samples.SAMPLE_ENVELOPES`), and `score_of` plays every note
+  through it (the converter already renders ADSR from snapshots). 25 of
+  25 FFVI samples carry one; 86 % of rendered notes play through an ADSR.
+- **Levels.** `rhythm.load` keeps the readings' note levels
+  (`Song.levels`, `Song.voice_levels`); two tables, `levels` (a part's
+  share of the song's loudest, in tenths) and `layer_levels` (the second
+  voice against its line); the plan draws them; `score_of` plays the
+  loudest part at `TOP_LEVEL` and the rest at their share. Written
+  medians after: bass 0.85, counter 0.64, accompaniment 0.59, harmony
+  0.59, melody 0.55, drums 0.47, each part drawn on its own share.
+- **One timbre.** `pair_for` returns a pair of one sample as "same" and
+  the second voice takes the line's sample whatever the pack gave the
+  line. Second voices on the line's sample 13 of 29 (from 7); distinct
+  samples sounding at once 3.22 (FFVI 3.07; 4.26 before, counted on the
+  written songs' real samples).
+- **The arc.** Three tables in phrases.py: `climax` (which tune phrase,
+  by its place among the song's, holds the tune's highest note), `arc`
+  (how far each other phrase's top sits under the song's peak, by place),
+  `summit` (how far the peak sits above the tune register's top). The
+  melody writer draws the climax phrase and the ceilings and rebinds its
+  register a phrase at a time, so every note of a phrase, not only its
+  ending, stays under its ceiling (a first cut bounded the endings and
+  the entry alone and left the peak at 0.17). After: the peak at 0.42 of
+  the song (FFVI 0.45), the range 18 semitones (FFVI 22, from 16).
+- **The kit's other slot.** `pack.other_slot`: the sample carrying most
+  of the game's drum strikes the namer called other in their song (FFVI:
+  the snare sample itself, 512 strikes), in place of the busiest sample
+  named other (a melody instrument, round 17) or the busiest drum-majority
+  one (a one-song orchestral hit, round 24, Whole 29's strange sound).
+
+Song Check 19 is one seed twice, Whole 28 as set 18 published it and on
+this round, by the owner's design: a song chosen for its potential, not
+for being liked, and a before and after on the same seed. Open from this
+round: vibrato (5 % of FFVI's tune notes), the tune's motif economy
+(echoes 0.27 against 0.34, a drawing question), the second voice's
+register (the layer offset drawn without regard to the line's height),
+the melody sitting a shade under the accompaniment in the drawn levels
+(FFVI's tune is 1.16 times its accompaniment; the shares are drawn a part
+at a time), and `PACKS.md` naming the envelope field.
