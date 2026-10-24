@@ -347,6 +347,15 @@ def habit_near(models: dict, role: str, tempo: str, weight: str, rng: random.Ran
     return habit
 
 
+def layers_of(plan: "Plan", role: str) -> list:
+    """What each voice of a part beside its line does, as the plan drew them (a list of layer words, the busiest voice first);
+    [] for a part of one voice."""
+    x = plan.extras.get(role) or {}
+    if plan.voices.get(role, 1) < 2:
+        return []
+    return list(x.get("layers") or ([x["layer"]] if x.get("layer") else []))
+
+
 def layer_of(extras: dict) -> tuple:
     """A part's second voice as the plan drew it: ("apart", offset, density), ("doubling", interval) or ("alternating",)."""
     words = (extras or {}).get("layer", "").split()
@@ -459,9 +468,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                             "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
                             "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng)}
     voices = allot(band, counts)
-    for role in band:                                       # a part with two voices or more: what its second voice does (the layers table)
+    for role in band:                                       # a part with two voices or more: what each voice beside its line does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
-            extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
+            layers = [_draw(models, "layers", (role, str(min(rank, 4))), rng, log) if "layers" in models else "apart +0 like"
+                      for rank in range(2, voices[role] + 1)]
+            extras.setdefault(role, {})["layers"] = layers
+            extras[role]["layer"] = layers[0]
     feel = _draw(models, "feels", ("song",), rng, log) if "feels" in models else "duple"
     if "periods" in models:                                 # the riff under the tune: a backing part's period inside a part of the form, and the bars it holds
         tempo_band = rhythm.band(bpm)
@@ -825,44 +837,53 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
             continue
         n = plan.voices[role]
-        layer = layer_of(plan.extras.get(role))
-        apart = layer[0] == "apart" and n >= 2                # the second voice its own line: the first takes the rest as a stack
-        voices = list(range(n - 1 if apart else n))
+        layers = layers_of(plan, role)
         low, high = plan.registers[role]
-        registers = {v: (low, high) for v in voices}
-        pedals = {v: (low + high) // 2 for v in voices}
         sounds = harness.UPPER_SOUNDS.get(role) or plan.sounds[role]
+        if layers and "layer_sounds" in models:               # a layered part's line takes its own note lengths
+            sounds = float(_draw(models, "layer_sounds", (role, "line"), random.Random(f"{seed}:{role}:line sounds")))
         lock = locks_of(song, {role}, plan)
-        notes, figures, voicings = writer.upper(song, role, voices, registers, models, random.Random(f"{seed}:{role}"), plan.habits[role],
+        # the line, one voice, on the part's own figures and voicing; each voice beside it by its own relation (the layers
+        # table: doubling at an interval, alternating, apart). An upper part is about one note loud an onset in FFVI (1.2 to
+        # 1.5 of its voices strike together); a stack of voices all striking at every onset had been the writer's own
+        # construction, three to four notes loud where the tune has one (Song Check 11's Whole 01).
+        notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
-                                                pedals=pedals, plays=plan.plays[role])
+                                                pedals={0: (low + high) // 2}, plays=plan.plays[role])
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
-        log = [f"voices {len(voices)}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
+        log = [f"voices {n}, register {plan.registers[role]}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
                f"motion {plan.extras[role]['motion']}, sounded {sounds:.2f}; {sum(1 for f in figures if f != writer.REST)} bars written, "
                f"{len(notes)} notes; locked to the band in {len(lock)} bars"]
         all_figures = [f"{f} / {vc}" for f, vc in zip(figures, voicings)]
-        if apart:
-            _, offset, density = layer
-            reg2 = (max(24, low + offset), min(100, high + offset))
-            habit2 = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:second habit"), plan.habits[role], density)
-            rng2 = random.Random(f"{seed}:{role}:second")
-            richness2 = _draw(models, "voicing_habits", (role,), rng2) if "voicing_habits" in models else plan.extras[role]["richness"]
-            motion2 = _draw(models, "motions", (role,), rng2) if "motions" in models else plan.extras[role]["motion"]
-            v2 = n - 1
-            sounds2 = float(_draw(models, "layer_sounds", (role, "second"), rng2)) if "layer_sounds" in models else sounds
-            given = None
-            if "second_figures" in models:                  # the second line's bars under the line's own, as the game's second voices play
-                memo = {}
-                given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (role, plan.feel, rhythm.band(plan.bpm), rhythm.density_bin(len(f.split())), f), rng2))
-                         for f in figures]
-            notes2, figures2, voicings2 = writer.upper(song, role, [v2], {v2: reg2}, models, rng2, habit2, richness2, sounds2, key=key,
-                                                       lock=locks_of(song, {role}, plan), motion=motion2, pedals={v2: (reg2[0] + reg2[1]) // 2}, plays=plan.plays[role],
-                                                       figures=given)
-            song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes2]
-            notes = notes + notes2
-            all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures2, voicings2)]
-            log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}), voicing {richness2}, motion {motion2}; "
-                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes" + ("; its bars drawn under the line's" if given else ""))
+        line_notes = list(notes)
+        scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+        for v, word in enumerate(layers, start=1):
+            rel = layer_of({"layer": word})
+            if rel[0] == "doubling":
+                notes_v = diatonic(line_notes, rel[1], scale, v)
+                figures_v, voicings_v = figures, [f"doubling {rel[1]:+d}"] * len(figures)
+                log.append(f"voice {v + 1} doubles the line at {rel[1]:+d}: {len(notes_v)} notes")
+            else:                                           # alternating, or apart: its own line under the line's bars
+                offset, density = (rel[1], rel[2]) if rel[0] == "apart" else (0, "like")
+                reg_v = (max(24, low + offset), min(100, high + offset))
+                rng_v = random.Random(f"{seed}:{role}:voice {v}")
+                habit_v = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:voice {v} habit"), plan.habits[role], density)
+                richness_v = _draw(models, "voicing_habits", (role,), rng_v) if "voicing_habits" in models else plan.extras[role]["richness"]
+                motion_v = _draw(models, "motions", (role,), rng_v) if "motions" in models else plan.extras[role]["motion"]
+                sounds_v = float(_draw(models, "layer_sounds", (role, "second"), rng_v)) if "layer_sounds" in models else sounds
+                given = None
+                if "second_figures" in models:              # its bars under the line's own, as the game's second voices play
+                    memo = {}
+                    given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (role, plan.feel, rhythm.band(plan.bpm), rhythm.density_bin(len(f.split())), f), rng_v))
+                             for f in figures]
+                notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: reg_v}, models, rng_v, habit_v, richness_v, sounds_v, key=key,
+                                                              lock=locks_of(song, {role}, plan), motion=motion_v, pedals={v: (reg_v[0] + reg_v[1]) // 2},
+                                                              plays=plan.plays[role], figures=given)
+                log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}), habit {habit_v} ({density}), voicing {richness_v}, motion {motion_v}, "
+                           f"sounds {sounds_v:.1f}; {sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars drawn under the line's" if given else ""))
+            song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
+            notes = notes + notes_v
+            all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]
         written[role] = Part(role, notes, all_figures, log)
     tempo = rhythm.band(plan.bpm)
     for role in (R.MELODY, R.COUNTER):                    # the counter-line written as the melody is, after it and clear of it
@@ -949,7 +970,7 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         out[role] = make(rng.choice(fitting or names))
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples), where the
         # pack holds them; the second voice on the line's sample otherwise
-        if plan.voices.get(role, 1) >= 2 and layer_of(plan.extras.get(role))[0] == "apart" and "layer_samples" in models_or_empty(models):
+        if any(not w.startswith("doubling") for w in layers_of(plan, role)) and "layer_samples" in models_or_empty(models):
             pair = _draw(models, "layer_samples", (role,), rng).split()   # the pack's own sample ids (`own`), registered as pack_name_id
             if len(pair) == 2 and pair[0] in own:
                 out[role] = make(pair[0])
@@ -1000,8 +1021,8 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     fading through them, so a listener hears the song come back round to
     its hook; the echo as given (echo_of). Returns the score and {role:
     first voice}."""
-    second_voice = {role: plan.voices[role] - 1 for role in plan.band                  # a layered part's second line, on its own sample
-                    if plan.voices.get(role, 1) >= 2 and layer_of(plan.extras.get(role))[0] == "apart"}
+    second_voice = {role: {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}   # a layered part's own
+                    for role in plan.band if role != R.DRUMS}                                                            # lines, on their sample
     from .. import score as score_mod
     from ..drums import KIT_NOTE
     from ..spc import convert, it_song, notes as notes_mod
@@ -1055,7 +1076,7 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
                     name, sample = samples[R.DRUMS][kit_name]
                     put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v)
                 else:
-                    name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] == second_voice.get(role) else samples[role]
+                    name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] in second_voice.get(role, ()) else samples[role]
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3])
     notes.sort(key=lambda x: (x.start, x.voice))
     tempo, row_hz = it_song.tempo_for(convert.FINE_GRID)

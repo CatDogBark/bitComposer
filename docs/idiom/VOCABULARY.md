@@ -58,10 +58,16 @@ said otherwise. Counting code: `translate/rhythm.py` and
   rich) and how it moves through its tones (block, mixed, arpeggiated).
   Drawn once a part; condition `voicings`, and the motion walks the voices
   along the stack a step a strike.
-- **layers** — what a part's second voice does beside its line: doubling at
-  an interval, alternating, or apart (how far off, how dense). Drawn once a
-  part with two voices or more: a doubling voice is written diatonically at
-  the interval; an apart voice becomes a second line in its own register.
+- **layers** — what each voice of a part beside its line does, by its rank
+  (the busiest first): doubling at an interval, alternating, or apart (how
+  far off, how dense). Drawn once a voice for a part with two voices or
+  more: a doubling voice is written diatonically at the interval; an
+  alternating or apart voice becomes a line of its own under the line's
+  bars (`second_figures`), in its register, with its own lengths and
+  sample. An upper part is the line plus its voices so drawn, never a
+  stack: FFVI's accompaniment voices strike together 1.2 to 1.5 to an
+  onset, and a stack of voices all striking at every onset had been three
+  to four notes loud where the tune has one (Song Check 11's Whole 01).
 - **doubles** — what a song's double voices double and how. Counted; the
   plan's second voices are drawn from `layers` instead.
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,

@@ -73,7 +73,7 @@ KEPT = {
     "parts": ("rhythm", "parts_units", {}, ("part", "band"), False, False, "whether a song has each part, by the band's size"),
     "voices": ("rhythm", "voices_units", {}, ("part", "band"), False, False, "how many voices a song uses"),
     "doubles": ("rhythm", "double_units", {}, ("part",), False, False, "what a song's double voices double, and how"),
-    "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a part's second voice does beside its line: doubling at an interval, alternating, or apart (how far off, how dense)"),
+    "layers": ("rhythm", "layer_units", {}, ("part", "rank"), False, False, "what each voice of a part beside its line does, by its rank: doubling at an interval, alternating, or apart (how far off, how dense)"),
     "feels": ("rhythm", "feel_units", {}, ("part",), False, False, "a song's feel, duple or triple (a quarter of its onsets or more on triplet positions), drawn once a song; every figure table is drawn by it"),
     "layer_sounds": ("rhythm", "layer_sound_units", {}, ("part", "voice"), False, False, "the share of its gap a note sounds for a layered part's line and for its second voice"),
     "periods": ("rhythm", "period_units", {}, ("part", "length", "tempo"), False, False, "a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo"),

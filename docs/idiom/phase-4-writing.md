@@ -1415,3 +1415,30 @@ long sustained bass sample. Two words were missing.
   sample in the score and the stems (`samples_for`, `score_of`). Set 11's
   layered basses: the long sample under the short one, as FFVI pairs them.
 - The pack: 65 tables. Song Check 11 is written from this.
+
+### Round 19: a line and its voices, no stack (2026-10-23, from the owner's note on set 11)
+
+Whole 01's accompaniment overpowered the song, most of all in its fast
+bars. Not the levels: the voices. The part had drawn four voices; the
+writer put three into a block stack, every voice striking at every onset
+(arpeggiation only turning which tone each took, spare voices doubling an
+octave up), and the fourth apart, so a 24-onset arpeggio bar, one voice's
+flourish in FFVI, was three voices hammering 24 times a bar plus a second
+line, at the accompaniment's level each. FFVI's accompaniments have two
+voices as a rule and they rarely strike together: 1.46 voices an onset in
+arpeggiated parts, 1.20 in mixed, 1.19 in block; a busy bar belongs to one
+voice. The `layers` word had covered the second voice only; a third or
+fourth had no word, so the writer stacked them.
+
+Built: `layers` counted for every voice beside the line, by rank (the
+busiest first), and an upper part written as its line (one voice, the
+part's figures and voicing, its own lengths) plus each further voice by
+its drawn relation, a doubling voice diatonically at the interval, an
+alternating or apart voice as a line of its own under the line's bars
+with its own lengths and the pair's second sample; no stack. Twenty songs:
+Whole 01's accompaniment from more than three voices an onset to 1.23,
+14 notes a bar where it had 39; the set's arpeggiated parts 1.81 (FFVI
+1.46), the excess the doubled voices (2.0 by definition, as FFVI counts
+them too). Levels stay hand-set a part; the readings keep no note levels
+(the raw readings do; storing them is import work). Song Check 12 is
+written from this.

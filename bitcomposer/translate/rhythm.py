@@ -2039,21 +2039,22 @@ def layer_units(songs) -> list:
                 line = max(lengths, key=lambda v: (lengths[v], -v))
             else:
                 line = max(voices, key=lambda v: (len(voices[v]), -v))
-            other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
-            kind = harness.relation(voices[line], voices[other])
-            if kind[0] == "doubling":
-                outcome = f"doubling {kind[1]:+d}"
-            elif kind[0] == "alternating":
-                outcome = "alternating"
-            else:
-                a, b = part_register(voices[line]), part_register(voices[other])
-                if a is None or b is None:
-                    continue
-                offset = int(round(((b[0] + b[1]) - (a[0] + a[1])) / 2 / REGISTER_BIN)) * REGISTER_BIN
-                offset = max(-LAYER_OFFSET, min(LAYER_OFFSET, offset))
-                density = habit_of(len(voices[other]) / max(1, len(voices[line])), LAYER_DENSITY)
-                outcome = f"apart {offset:+d} {density}"
-            out.append(tables.Unit(s.sid, s.game, outcome, {"part": role}))
+            extras = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+            for rank, other in enumerate(extras, start=2):      # every voice beside the line, the busiest first, its own relation
+                kind = harness.relation(voices[line], voices[other])
+                if kind[0] == "doubling":
+                    outcome = f"doubling {kind[1]:+d}"
+                elif kind[0] == "alternating":
+                    outcome = "alternating"
+                else:
+                    a, b = part_register(voices[line]), part_register(voices[other])
+                    if a is None or b is None:
+                        continue
+                    offset = int(round(((b[0] + b[1]) - (a[0] + a[1])) / 2 / REGISTER_BIN)) * REGISTER_BIN
+                    offset = max(-LAYER_OFFSET, min(LAYER_OFFSET, offset))
+                    density = habit_of(len(voices[other]) / max(1, len(voices[line])), LAYER_DENSITY)
+                    outcome = f"apart {offset:+d} {density}"
+                out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "rank": str(min(rank, 4))}))
     return out
 
 

@@ -187,8 +187,12 @@ class NewTablesTests(unittest.TestCase):
                          2: ("melody", [(t + d, 0.2, m - 12.0, "m") for t, _, m, _ in s.notes["melody"] if t % 2 == 0 for d in (0.5, 0.75)])}   # a second voice an octave under, its own rhythm, as dense
         units = rhythm.layer_units([s])
         self.assertEqual(len(units), 1)
-        self.assertEqual(units[0].values["part"], "melody")
+        self.assertEqual((units[0].values["part"], units[0].values["rank"]), ("melody", "2"))
         self.assertEqual(units[0].outcome, "apart -12 like")
+        s.voice_notes[3] = ("melody", [(t, 0.2, m + 12.0, "m") for t, _, m, _ in s.notes["melody"]])   # a third voice doubling the line an octave up
+        units = rhythm.layer_units([s])
+        self.assertEqual([(u.values["rank"], u.outcome) for u in units], [("2", "apart -12 like"), ("3", "doubling +12")])
+        del s.voice_notes[3]
         self.assertIn("melody=main:68-72:0.9:2", rhythm.balance_units([s])[0].outcome)   # the tune's ambitus to the grain, two voices
         self.assertEqual(whole.allot(["bass", "drums", "melody", "counter"], {"bass": 1, "melody": 1, "counter": 2}), {"drums": 2, "bass": 1, "melody": 1, "counter": 2})
         self.assertEqual(sum(whole.allot(["bass", "accompaniment", "counter", "harmony", "melody", "drums"], {"accompaniment": 3, "counter": 3, "harmony": 3}).values()), 8)
