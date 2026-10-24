@@ -1585,7 +1585,7 @@ Ragnarok (`fourbar_check.py`, `nearest_check.py`, `nearest_tables.py`,
   307, accompaniment 7 of 409): stock cells, an alternating bass from
   Returners, arpeggio figures from Cyan and the Ending Theme.
 - **Songs written with FFVI's vocabulary fall nearest FFVI: passed, 20 of
-  20.** Each of the 35 games with twelve readings or more got its own 67
+  20.** Each of the 37 games with twelve readings or more got its own 67
   tables (the pack's KEPT set, `packtables.build`); each written song was
   rendered once, read back by the readers as the measures are, its units
   counted table by table, and every game's tables scored them (bits a
