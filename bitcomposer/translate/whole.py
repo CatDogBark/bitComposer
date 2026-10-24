@@ -946,34 +946,80 @@ REACH = 7                             # semitones a part's top may sit above the
                                       # other tonal samples are tried for it
 
 
-def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, others: list = ()) -> str:
-    """The sample for a part's register: of the pool's samples (`names`, repeated by their share), the one whose
-    game-played range (the ranges table, by the pack's own sample id, `raw(name)`) covers the register best, the part's
-    top weighing most; when the pool's best still falls more than REACH short of the top, the pack's other tonal samples
-    (`others`) are tried; the pool's share decides a tie. Never a random one: a sample pushed far above where the game
-    played it turns shrill (8 to 10 % of written notes had sat over an octave above the recording against FFVI's 0 to 2
-    %; the fit had asked only that the register's centre lie near the range, and by the pack's prefixed names it had
-    found no range at all and drawn at random)."""
+SPEED_WEIGHT = 3                      # a sample's score loses this a note a second the part's fastest bar runs past the sample's fastest in the game
+
+
+def sample_speed(models, rid: str, rng: random.Random) -> tuple[float, float] | None:
+    """How fast the game plays a sample, notes a second (the sample_speeds table's class tops): a song's fastest bars on
+    it, drawn (a song plays a pad at eight notes a second where most hold it), and the fastest bars of any song; None
+    unknown."""
+    t = (models or {}).get("sample_speeds")
+    if t is None or t.songs.get((rid,), 0) == 0:
+        return None
+    top = lambda c: float(c) if c != "faster" else 48.0   # noqa: E731
+    drawn = t.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR)
+    return top(drawn), max(top(c) for c in (t.votes.get((rid,)) or {drawn: 1}))
+
+
+def sample_floor(models, rid: str, rng: random.Random) -> float:
+    """The shortest note the game plays a sample at, in seconds (the sample_lengths table's class top); 0 unknown."""
+    t = (models or {}).get("sample_lengths")
+    if t is None or t.songs.get((rid,), 0) == 0:
+        return 0.0
+    drawn = t.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR)
+    return (float(drawn) if drawn != "long" else 400.0) / 1000.0
+
+
+def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, others: list = (), speed: float = 0.0, models: dict | None = None) -> str:
+    """The sample for a part's register and speed: of the pool's samples (`names`, repeated by their share), one the game
+    plays as fast as the part's fastest bar (the sample_speeds table) whose game-played range (the ranges table, by the
+    pack's own sample id, `raw(name)`) covers the register best, the part's top weighing most; when none of the pool
+    reaches the register's top within REACH or none plays this fast, the pack's other tonal samples (`others`) are
+    tried; then one some song plays this fast in its fastest bars; where none does, the speed's excess over the
+    game's fastest ever on the sample weighs against the range's fit (SPEED_WEIGHT a note a second); the pool's share
+    decides a tie. Never a random one: a sample pushed far above where the game played it
+    turns shrill (8 to 10 % of written notes had sat over an octave above the recording against FFVI's 0 to 2 %; the
+    fit had asked only that the register's centre lie near the range, and by the pack's prefixed names it had found no
+    range at all and drawn at random), and a slow-attack pad played at sixteenths never reaches its body (Song Check
+    14's Whole 02: FFVI plays that pad under six notes a second; the part ran at eight)."""
     def score(name):
         rid = raw(name)
         if ranges is None or ranges.songs.get((rid,), 0) == 0:
             return None
         lo, hi = (int(x) for x in ranges.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
         a, b = register
-        return max(0, min(b, hi) - max(a, lo)) - 2 * max(0, b - hi) - max(0, lo - a), hi
-    known = [(score(n), n) for n in names]
-    known = [(s, n) for s, n in known if s is not None]
+        fastest = sample_speed(models, rid, rng)             # the part's fastest bar against the sample's fastest in the game
+        slow = max(0.0, speed - fastest[0]) if fastest is not None else 0.0     # past a song's fastest on it
+        ever = max(0.0, speed - fastest[1]) if fastest is not None else 0.0     # past any song's
+        return max(0, min(b, hi) - max(a, lo)) - 2 * max(0, b - hi) - max(0, lo - a), hi, slow, ever
+
+    def scored(pool):
+        return [(s, n) for s, n in ((score(n), n) for n in pool) if s is not None]
+
+    def choose(cands):
+        """The best of the candidates, in three reaches: among those overlapping the register that a song of the game
+        plays this fast, by the fit; else among those some song plays this fast in its fastest bars; else by the fit
+        less the speed's excess over the game's fastest ever on the sample. (reach 2, 1 or 0, value, names at it)."""
+        for reach, held in ((2, lambda s: s[0] > 0 and s[2] == 0), (1, lambda s: s[0] > 0 and s[3] == 0)):
+            fitting = [(s, n) for s, n in cands if held(s)]
+            if fitting:
+                best = max(s[0] for s, _ in fitting)
+                return reach, best, [n for s, n in fitting if s[0] == best]
+        value = lambda s: s[0] - SPEED_WEIGHT * s[3]   # noqa: E731
+        best = max(value(s) for s, _ in cands)
+        return 0, best, [n for s, n in cands if value(s) == best]
+
+    known = scored(names)
     if not known:
         return rng.choice(names)
-    best = max(s[0] for s, _ in known)
-    top = [n for s, n in known if s[0] == best]
+    got, best, top = choose(known)
     reach = max(s[1] for s, _ in known)
-    if register[1] - reach > REACH and others:
-        wider = [(score(n), n) for n in others if n not in names]
-        wider = [(s, n) for s, n in wider if s is not None and s[0] > best]
+    if others and (register[1] - reach > REACH or got < 2):
+        wider = scored([n for n in others if n not in names])
         if wider:
-            best = max(s[0] for s, _ in wider)
-            top = [n for s, n in wider if s[0] == best]
+            got2, best2, top2 = choose(wider)
+            if (got2, best2) > (got, best):
+                top = top2
     return rng.choice(top)
 
 
@@ -987,7 +1033,17 @@ def sample_fits(ranges, name: str, register: tuple, rng: random.Random) -> bool 
     return lo - 6 <= centre <= hi + 6
 
 
-def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random, models: dict | None = None) -> dict:
+def part_speed(plan: Plan, written: dict | None, role: str) -> float:
+    """A part's fastest bar as written, notes a second on its line and the voices doubling it (a layered part's own second
+    voice plays the pair's other sample)."""
+    if not written or role not in written:
+        return 0.0
+    second = {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}
+    counts = Counter((n[3], int(n[0] // METER)) for n in written[role].notes if n[3] not in second)
+    return max(counts.values(), default=0) * plan.bpm / (60.0 * METER)
+
+
+def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random, models: dict | None = None, written: dict | None = None) -> dict:
     """Each part's sample from the pack's pools: {role: (voice name, ITSample)}; the drums' kit {piece: (name, ITSample)}.
     `own`: the pack file's own sample names (registered as pack_name_voice), the rest built-in voices. With the pack's
     ranges table, a pitched part takes a sample of its pool the game played in the part's register (the pool's own
@@ -1012,7 +1068,8 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         raw = lambda n: n[len(pack_name) + 1:] if n.startswith(pack_name + "_") else n   # noqa: E731  the pack's own id, as the ranges table names it
         drums = {raw(n) for n in (voices.get("drums") or {}).values()}
         tonal = sorted(n for n in own if n not in drums)
-        out[role] = make(best_sample(ranges, names, plan.registers[role], rng, raw, tonal) if role in plan.registers else rng.choice(names))
+        out[role] = make(best_sample(ranges, names, plan.registers[role], rng, raw, tonal, speed=part_speed(plan, written, role), models=models)
+                         if role in plan.registers else rng.choice(names))
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples), where the
         # pack holds them; the second voice on the line's sample otherwise
         if any(not w.startswith("doubling") for w in layers_of(plan, role)) and "layer_samples" in models_or_empty(models):
@@ -1020,6 +1077,11 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
             if len(pair) == 2 and pair[0] in own:
                 out[role] = make(pair[0])
             out[f"{role}:second"] = make(pair[1]) if len(pair) == 2 and pair[1] in own else out[role]
+    floors = {}                                             # each chosen sample's shortest note in the game (sample_lengths): a note's floor on it
+    for key, chosen in list(out.items()):
+        if isinstance(chosen, tuple):
+            floors[chosen[0]] = sample_floor(models, raw(chosen[0]), rng)
+    out["floors"] = floors
     return out
 
 
@@ -1066,6 +1128,7 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     fading through them, so a listener hears the song come back round to
     its hook; the echo as given (echo_of). Returns the score and {role:
     first voice}."""
+    floors = samples.get("floors") or {}
     second_voice = {role: {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}   # a layered part's own
                     for role in plan.band if role != R.DRUMS}                                                            # lines, on their sample
     from .. import score as score_mod
@@ -1122,8 +1185,15 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
                     put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v)
                 else:
                     name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] in second_voice.get(role, ()) else samples[role]
+                    t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3])
     notes.sort(key=lambda x: (x.start, x.voice))
+    last = {}                                                # a floored note never runs into the voice's next: the key-on cuts it
+    for n in notes:
+        prev = last.get(n.voice)
+        if prev is not None and prev.end is not None and prev.end > n.start:
+            prev.end = n.start
+        last[n.voice] = n
     tempo, row_hz = it_song.tempo_for(convert.FINE_GRID)
     message = [f"{plan.title} - {harmony.NAMES[plan.tonic]} {plan.mode} - {round(plan.bpm)} BPM - form {plan.letters}",
                "Written by bitComposer from the pack's tables (docs/IDIOM.md, phase 4: the",
@@ -1249,7 +1319,7 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     song = song_of(p, kit)
     written = write(p, song, models, seed, reference)
     rng = random.Random(f"whole:{seed}:render")
-    samples = samples_for(p, pack, own, pack_name, rng, models)
+    samples = samples_for(p, pack, own, pack_name, rng, models, written)
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
     score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}

@@ -460,6 +460,29 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {3: ("accompaniment", line)}
         self.assertIsNone(rhythm.register_notes(s, "accompaniment"))
 
+    def test_the_samples_playing_habits(self):
+        """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
+        a drawn floor holds a note's length."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        fast = [(4.0 * k + 0.25 * i, 0.1, 60.0, "quick12345678") for k in range(4) for i in range(16)]    # sixteenths, 50 ms at 120 BPM
+        slow = [(4.0 * k + i, 0.9, 48.0, "pad1234567890") for k in range(4) for i in range(4)]              # quarters, 450 ms
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"accompaniment": fast, "bass": slow}, sid="s", game="g", bpm=120.0)
+        lengths = {u.values["part"]: u.outcome for u in rhythm.sample_length_units([s])}
+        speeds = {u.values["part"]: u.outcome for u in rhythm.sample_speed_units([s])}
+        self.assertEqual((lengths["squick12345"], lengths["spad1234567"]), ("60", "long"))
+        self.assertEqual((speeds["squick12345"], speeds["spad1234567"]), ("8", "2"))
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "56-68", {"part": n}) for i in range(3) for n in ("sa", "sb")])
+        sp = tables.Table(("part",), "speeds", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", o, {"part": n}) for i in range(3) for n, o in (("sa", "3"), ("sb", "12"))])
+        raw = lambda n: n   # noqa: E731
+        rng = random.Random(2)
+        self.assertEqual(whole.best_sample(ranges, ["sa", "sb"], (58, 66), rng, raw, speed=8.0, models={"sample_speeds": sp}), "sb")   # the part runs at 8 a second: the pad loses
+        self.assertIn(whole.best_sample(ranges, ["sa", "sb"], (58, 66), rng, raw, speed=1.0, models={"sample_speeds": sp}), ("sa", "sb"))
+        self.assertEqual(whole.best_sample(ranges, ["sa", "sb"], (58, 66), rng, raw, speed=20.0, models={"sample_speeds": sp}), "sb")   # none this fast: the least excess over the game's fastest ever
+        self.assertEqual(whole.sample_speed({"sample_speeds": sp}, "sb", rng), (12.0, 12.0))
+        fl = tables.Table(("part",), "lengths", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "80", {"part": "sa"}) for i in range(3)])
+        self.assertEqual(whole.sample_floor({"sample_lengths": fl}, "sa", rng), 0.08)
+        self.assertEqual(whole.sample_floor({"sample_lengths": fl}, "sz", rng), 0.0)
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

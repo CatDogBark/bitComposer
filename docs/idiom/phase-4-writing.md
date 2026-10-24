@@ -1508,3 +1508,59 @@ never past +20; the written songs in 10 % and 8 %, up to +27 and +28
   at their layer offsets.
 
 The measures after the fix are in the set's lede (Song Check 14).
+
+### Round 22: the voice that doubled a pitch, the sample's playing habits (2026-10-23, from the owner's note on set 14)
+
+The owner heard Whole 02's accompaniment "glitching" from about seven
+seconds, as if its voice played too fast. Bars 3 and 4 there are
+sixteenth bars on all three accompaniment voices (eight notes a second,
+50 ms notes from the line's 0.4 sounds draw) on sample f89f5aedfd, a pad
+with a 39 ms attack that FFVI plays at 65 ms at the shortest and under
+5.6 notes a second in its fastest bars; and at most of those onsets two
+of the voices sat on the identical pitch (midi 46), the voicing there
+having two tones. One fault and one missing word.
+
+- **The fault** (`writer.upper`). A voice beside the line took its tone up
+  the line's voicing (its rank's, or one drawn a span) without regard to
+  what the other voices of the part already held at the onset, so with a
+  thin voicing two copies of one sample played one pitch at once and
+  phased against each other. The part's pitch classes at each onset are
+  now kept in the shared voicing dict (`("taken", (bar, position))`); a
+  voice beside the line takes the first free tone up from its own, and
+  where every tone of the voicing already sounds it sits the onset out.
+  FFVI's voices beside a thin voicing double at the octave or rest.
+- **The sample's playing habits** (two tables, `sample_lengths` and
+  `sample_speeds`, in VOCABULARY.md). Per song and sample: the shortest
+  note the game plays it at (a class of the tenth-percentile length) and
+  the fastest bars it plays it in (a class of the ninetieth-percentile bar
+  rate). The sample for a part now weighs the part's fastest bar as
+  written (`whole.part_speed`, over the line and its doubling voices) in
+  three reaches, a song that plays the sample this fast first (the class
+  drawn a song, as the ranges are: a song plays the pad at eight where
+  most hold it), then any song's fastest bars, then the excess over the
+  game's fastest on it against the range's fit; and at rendering a note
+  on a sample is never shorter than the song's shortest on it
+  (`score_of`, a floor from the drawn class; a floored note is trimmed to
+  the voice's next key-on, which cuts it on the SNES chip anyway, and the
+  grid would otherwise have cut the next note at the first one's old
+  end).
+
+Measured on the twenty seeds before and after (habits22.py; FFVI from the
+readings): two voices of one upper part on the same midi at one onset,
+0.337 of the two-voice onsets to 0.006 (FFVI 0.068; the same pitch class
+0.541 to 0.009 against FFVI's 0.273, whose octaves are the doubling
+layer's, not this fix's); rendered notes shorter than the game's
+shortest typical note on their sample 7.3 % to 2.0 %, 273 of the 277 left
+cut by the voice's next key-on; voices whose fastest bar outruns the
+sample's typical fastest in FFVI 31 to 20 (of about ninety), past the
+game's fastest bar ever on the sample 0 to 2 (Whole 06's counter at 9.4
+against 8.7 a second: no sample covering its register reaches a class
+that fast, so the least excess decided). The first cut of the speed term
+(a weight only) had left the 31 at 20 too and put a bass sample the game
+never plays past 5 a second under a line at 9.9; the reaches came from
+that.
+
+Open from this round: FFVI's voices share a pitch class at an octave in
+a quarter of its two-voice onsets (the doubling layer's intervals) where
+the writing has one in a hundred; the extra voice's interval steadiness
+still stands open from round 20.

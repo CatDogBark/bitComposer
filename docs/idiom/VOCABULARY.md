@@ -113,6 +113,23 @@ said otherwise. Counting code: `translate/rhythm.py` and
   a short one, the same long sample in ten of its thirteen two-voice
   songs); on one sample for both, the busy voice had played on the long
   bass.
+- **sample_lengths** — the shortest note a song plays a sample at, as a
+  class of its tenth-percentile note length in ms (40, 60, 80, 120, 160,
+  240, 400, long), by the sample. Drawn once a song for each sample the
+  rendering uses: a note on the sample is never shorter than that (its
+  voice's next key-on still cuts it). A note shorter than the game ever
+  plays a sample never reaches the sample's body (a pad with a 39 ms
+  attack had been played at 50 ms sixteenths; FFVI plays it at 65 ms at
+  the shortest).
+- **sample_speeds** — the fastest bars a song plays a sample in, as a class
+  of the ninetieth-percentile bar rate in notes a second (2, 3, 4, 6, 8,
+  12, 24, faster), by the sample. Read in the sample choice for a part
+  (`whole.best_sample`) beside the ranges: of the samples covering the
+  part's register, one a song of the game plays as fast as the part's
+  fastest bar comes first, then one some song plays that fast in its
+  fastest bars, and where none does the excess over the game's fastest on
+  the sample weighs against the range's fit. FFVI keeps its slow-attack
+  pad under six notes a second; a written part had it at eight.
 
 ## The form
 

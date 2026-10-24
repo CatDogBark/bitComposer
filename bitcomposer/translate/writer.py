@@ -540,11 +540,18 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
                     notes.append((start, start + (until - start) * sounds, float(pedals.get(v, low_v)), v))
                     continue
+                taken = shared.setdefault(("taken", (k, p)), set()) if shared is not None else None   # the part's pitch classes at this onset (a 2-tuple key: the voicing look-up unpacks every key)
                 if tone_index and len(voices) == 1:        # a voice beside the line: a tone up the line's voicing (its rank's, or one drawn a span), walking with the motion
-                    midi = in_register(pitches[(own_tone + int(walked)) % len(pitches)], registers[v])
+                    order = [(own_tone + int(walked) + d) % len(pitches) for d in range(len(pitches))]
+                    free = [pitches[i] for i in order if taken is None or int(round(pitches[i])) % 12 not in taken]
+                    if not free:                            # every tone of the voicing already sounds in the part: the voice sits this onset out
+                        continue                            # (FFVI's voices beside a thin voicing double at the octave or rest; two copies of one
+                    midi = in_register(free[0], registers[v])   # sample on one pitch had phased against each other, Song Check 14's Whole 02)
                 else:
                     midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
                 midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
+                if taken is not None:
+                    taken.add(int(round(midi)) % 12)
                 notes.append((start, start + (until - start) * sounds, float(midi), v))
             walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)

@@ -80,6 +80,8 @@ KEPT = {
     "period_holds": ("rhythm", "period_hold_units", {}, ("part", "period"), False, False, "inside a backing part's period, a bar playing the bar a period before again (held) or not (varied)"),
     "second_figures": ("rhythm", "second_figure_units", {}, ("part", "feel", "tempo", "onsets", "line"), False, False, "a layered part's second line (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
     "layer_samples": ("rhythm", "layer_sample_units", {}, ("part",), False, False, "the samples a layered part's line and its second voice play, as a pair, drawn once a song"),
+    "sample_lengths": ("rhythm", "sample_length_units", {}, ("part",), False, False, "the shortest note a sample is played at (ms, a class), by the sample: a note's floor on it"),
+    "sample_speeds": ("rhythm", "sample_speed_units", {}, ("part",), False, False, "the fastest bars a sample is played in (notes a second, a class), by the sample: weighed in its choice for a part"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
     "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),

@@ -113,7 +113,7 @@ def main(argv=None) -> int:
         if a.stems:
             whole.stems_of(p, out["written"], out["samples"], a.stems, loops=a.loops, fade=a.fade, echo=out["echo"], tail_bars=a.tail_bars)
         record = {"plan": p.to_json(), "echo": out["echo"], "voices": out["first"],
-                  "samples": {r: (s[0] if isinstance(s, tuple) else {k: v[0] for k, v in s.items()}) for r, s in out["samples"].items()},
+                  "samples": {r: (s[0] if isinstance(s, tuple) else {k: (v[0] if isinstance(v, tuple) else v) for k, v in s.items()}) for r, s in out["samples"].items()},
                   "parts": {r: {"log": w.log, "figures": w.figures} for r, w in out["written"].items()},
                   "measures": out["measures"], "seconds": out["score"].seconds}
         with open(os.path.join(a.out, f"{title}.json"), "w", encoding="utf-8") as f:

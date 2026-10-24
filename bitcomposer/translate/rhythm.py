@@ -1202,6 +1202,62 @@ def sample_id(key: str) -> str:
     return "s" + key[:10]
 
 
+LENGTH_BINS = (40, 60, 80, 120, 160, 240, 400, 1e9)   # ms: the shortest note a sample is played at, to the bin's top ("long" past 400)
+SPEED_BINS = (2, 3, 4, 6, 8, 12, 24, 1e9)              # notes a second: the fastest bars a sample is played in ("faster" past 24)
+
+
+def _bin(value: float, bins: tuple, last: str) -> str:
+    top = next(b for b in bins if value <= b)
+    return str(top) if top < 1e9 else last
+
+
+def _sample_plays(songs):
+    """Per song and tonal sample: its notes' lengths (ms) and its bars' rates (notes a second), over every pitched part."""
+    for s in songs:
+        beat = 60 / s.bpm
+        lengths, rates = defaultdict(list), defaultdict(list)
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            for n in ns:
+                if isinstance(n[3], str) and n[1] == n[1]:
+                    lengths[sample_id(n[3])].append(n[1] * beat * 1000)
+            for _, a, b, struck in all_bars_of(s, role):
+                counts = Counter(sample_id(n[3]) for _, group in struck for n in group if isinstance(n[3], str))
+                for key, c in counts.items():
+                    rates[key].append(c / max(1e-9, (b - a) * beat))
+        for key in lengths:
+            if len(lengths[key]) >= 8:
+                yield s, key, sorted(lengths[key]), sorted(rates.get(key, [0.0]))
+
+
+def sample_length_units(songs) -> list:
+    """Each tonal sample of each song as a unit: its outcome the shortest note
+    the game plays it at there (the tenth percentile of its notes' lengths,
+    in ms to LENGTH_BINS' tops), its value the sample (as the pack names
+    it). A sample's floor: a note shorter than the game ever plays a sample
+    never reaches its body (a one-second pad with a 39 ms attack had been
+    played at 50 ms sixteenths, Song Check 14's Whole 02; FFVI plays it at
+    65 ms at the shortest)."""
+    out = []
+    for s, key, lengths, _ in _sample_plays(songs):
+        out.append(tables.Unit(s.sid, s.game, _bin(lengths[int(0.1 * (len(lengths) - 1))], LENGTH_BINS, "long"), {"part": key}))
+    return out
+
+
+def sample_speed_units(songs) -> list:
+    """Each tonal sample of each song as a unit: its outcome the fastest bars
+    the game plays it in there (the 90th percentile of its bars' notes a
+    second, to SPEED_BINS' tops), its value the sample. What the sample's
+    choice weighs beside the part's register: the part's fastest bar against
+    the speeds the game plays each sample at (FFVI keeps its slow-attack pad
+    under six notes a second; a written part had it at eight)."""
+    out = []
+    for s, key, _, rates in _sample_plays(songs):
+        out.append(tables.Unit(s.sid, s.game, _bin(rates[int(0.9 * (len(rates) - 1))], SPEED_BINS, "faster"), {"part": key}))
+    return out
+
+
 def layer_sample_units(songs) -> list:
     """Each layered part of each song (two voices or more, the drums left
     out) as a unit: its outcome the samples its line and its second voice
