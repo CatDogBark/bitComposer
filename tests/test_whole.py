@@ -259,9 +259,29 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(themed, 12)                            # every themed plan returns to its theme
         p = whole.plan(models, 3, "test", themed=True, band_returns=True)
         self.assertTrue(all(r["with"] for r in p.extras["melody"]["returns"]))   # and never with the tune alone
-        self.assertEqual(p.extras["options"], {"themed": True, "band_returns": True})
+        self.assertEqual((p.extras["options"]["themed"], p.extras["options"]["band_returns"], p.extras["options"]["plan_draws"]), (True, True, 1))
         plain = sum(1 for seed in range(1, 13) if whole.plan(models, seed, "test").extras.get("melody", {}).get("returns"))
         self.assertLess(plain, 12)                              # without the switch, the table's own rate
+
+    def test_a_themed_plan_is_drawn_again_when_its_tune_has_one_phrase(self):
+        """A one-part four-bar form gives the tune one phrase, so no letter draw can bring a theme back: the plan is drawn again
+        until the form has room (two four-bar parts), and a game whose forms never have room ends unthemed and says so."""
+        letters = tables.Table(("part", "phrases", "form"), "phrase letters", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "melody", "phrases": "2", "form": f}) for i, (o, f) in enumerate((("T n", "first"), ("n T", "last")))])
+        lengths = tables.Table(("part", "meter", "habit"), "lengths", votes=tables.SHARES).fit(
+            [tables.Unit(sid, "g", "4", {"part": "form", "meter": 4, "habit": "short"}) for sid in ("s", "t")])
+        habits = tables.Table(("part",), "length habits", votes=tables.SHARES).fit([tables.Unit(sid, "g", "short", {"part": "form"}) for sid in ("s", "t")])
+        mixed = tables.Table(("part",), "sizes", votes=tables.SHARES).fit([tables.Unit("s", "g", "1", {"part": "form"}), tables.Unit("t", "g", "2", {"part": "form"})])
+        models = {"phrase_letters": letters, "sizes": mixed, "lengths": lengths, "length_habits": habits}
+        plans = [whole.plan(models, seed, "test", themed=True) for seed in range(1, 13)]
+        self.assertTrue(all(p.extras["melody"]["returns"] for p in plans))                 # every song came back to its theme
+        self.assertTrue(any(p.extras["options"]["plan_draws"] > 1 for p in plans))         # some needed a second form
+        self.assertTrue(all(len(p.parts) >= 2 for p in plans))                             # the one-part forms were drawn past
+        narrow = tables.Table(("part",), "sizes", votes=tables.SHARES).fit([tables.Unit("s", "g", "1", {"part": "form"}), tables.Unit("t", "g", "1", {"part": "form"})])
+        p = whole.plan({**models, "sizes": narrow}, 1, "test", themed=True)
+        self.assertFalse(p.extras["melody"].get("returns"))
+        self.assertEqual(p.extras["options"]["plan_draws"], whole.PLAN_TRIES)
+        self.assertTrue(any("unthemed" in line for line in p.log))
 
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""

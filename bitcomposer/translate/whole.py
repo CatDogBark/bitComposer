@@ -364,7 +364,8 @@ def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
     return [(a, b, float(scale_pitch(scale_index(int(round(m)), scale) + steps, scale)), voice) for a, b, m, *_ in notes]
 
 
-THEME_TRIES = 40                      # letter draws before a themed song is given up as unthemed (none in forty: a game without returns)
+THEME_TRIES = 40                      # letter draws before a themed song's letters are given up (none in forty: a table without returns)
+PLAN_TRIES = 10                       # whole plans drawn for a themed song whose tune has nowhere to come back (fewer than two phrases)
 
 
 def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None, min_bars: int | None = None,
@@ -372,10 +373,27 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     """The skeleton of song `seed` from the tables; forms longer than `max_bars` or shorter than `min_bars` are drawn
     again (a listening round has no use for a four-bar jingle, which the game's tables hold). `themed`: the tune's
     phrase letters are drawn again until the theme comes back later in the song (the game's songs that carry a tune,
-    43 % of FFVI's; the tables are the same, the draw is conditioned on what they count). `band_returns`: a return
-    never comes with the tune alone; one of the chords, the bass and the accompaniment comes back with it, in the
-    game's own mix of which."""
+    43 % of FFVI's; the tables are the same, the draw is conditioned on what they count), and a plan whose tune has
+    fewer than two phrases, so nothing could come back, is drawn again whole. `band_returns`: a return never comes
+    with the tune alone; one of the chords, the bass and the accompaniment comes back with it, in the game's own mix
+    of which."""
     rng = random.Random(f"whole:{seed}")
+    for attempt in range(PLAN_TRIES if themed else 1):
+        p = _plan_once(models, seed, rng, game, title, max_bars, min_bars, themed, band_returns)
+        if not themed or p.extras.get(R.MELODY, {}).get("returns"):
+            break
+    if themed:
+        p.extras["options"]["plan_draws"] = attempt + 1
+        if attempt:
+            p.log.append(f"themed: the plan drawn {attempt + 1} times until the tune had a phrase to come back in")
+        if not p.extras.get(R.MELODY, {}).get("returns"):
+            p.log.append(f"themed: no return in {PLAN_TRIES} plans; the song is unthemed")
+    return p
+
+
+def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: str | None, max_bars: int | None, min_bars: int | None,
+               themed: bool, band_returns: bool) -> Plan:
+    """One plan from the stream `rng`; `plan` draws it again for a themed song whose tune cannot come back."""
     log = []
     tonic_s, mode = _draw(models, "keys", ("song",), rng, log).split()
     tonic = int(tonic_s)
@@ -459,7 +477,8 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             count = sum(1 for w in windows if any(plays[R.MELODY][k] for k in w))
             if count:
                 counts_by_part[i] = count
-        for attempt in range(THEME_TRIES if themed else 1):
+        windows_total = sum(counts_by_part.values())
+        for attempt in range(THEME_TRIES if themed and windows_total > 1 else 1):
             letters, first_set = {}, False
             for i, count in counts_by_part.items():
                 form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
@@ -471,8 +490,14 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
                 letters[i] = " ".join(drawn)
             if not themed or sum(v.split().count(rhythm.THEME) for v in letters.values()) > 1:
                 break
-        if themed and attempt:
-            log.append(f"themed: the phrase letters drawn {attempt + 1} times until the theme came back")
+        if themed:
+            if windows_total < 2:
+                log.append("themed: the tune has fewer than two phrases, nowhere to come back; the plan is drawn again")
+            elif sum(v.split().count(rhythm.THEME) for v in letters.values()) > 1:
+                if attempt:
+                    log.append(f"themed: the phrase letters drawn {attempt + 1} times until the theme came back")
+            else:
+                log.append(f"themed: {THEME_TRIES} letter draws gave no return; the plan is drawn again")
         extras.setdefault(R.MELODY, {})["letters"] = letters
         log.append("phrases " + " | ".join(f"{parts[i][3]}: {v}" for i, v in letters.items()))
         # the theme's bars and its returns, and what comes back with each (the return-band table: the chords, the bass,
