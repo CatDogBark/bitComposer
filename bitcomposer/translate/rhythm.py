@@ -1324,6 +1324,25 @@ def counter_level_units(songs) -> list:
     return out
 
 
+def counter_pair_units(songs) -> list:
+    """Each song with a tune and a counter-line on another sample (counter_kind "other") as a unit: its outcome the
+    counter's sample as the pack names it (sample_id of the line's main sample), its values the part and the tune's
+    sample. Drawn once a song at the rendering, under the tune's sample, where the pack holds the drawn sample and it
+    reaches the register the counter was written in; the part's level, the counter's sample over all tunes, is the
+    back-off and still a count; the pool rule by register and speed only where nothing counted fits (whole.counter_pair_for).
+    FFVI's counter sample is darker than the tune's in 17 of the 23 pairs the pack holds; the pool rule had given Whole
+    28's counter sdbd05ab4d5 beside a tune on sf89f5aedfd, a sample 4.2 dB louder in its body and nearly twice as bright,
+    which FFVI never plays as a counter against another tune sample (2026-10-24)."""
+    out = []
+    for s in songs:
+        if counter_kind(s) != "other":
+            continue
+        tm, tc = main_sample(tune_line(s, R.MELODY)), main_sample(tune_line(s, R.COUNTER))
+        if tm and tc:
+            out.append(tables.Unit(s.sid, s.game, sample_id(tc), {"part": R.COUNTER, "tune": sample_id(tm)}))
+    return out
+
+
 def sample_id(key: str) -> str:
     """A reading's sample key as a pack names the sample (pack.voice_of): "s" and its first ten characters."""
     return "s" + key[:10]

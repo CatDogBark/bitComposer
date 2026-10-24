@@ -722,6 +722,37 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual((p.extras["counter"]["sample"], p.extras["counter"]["level"]), ("same", 1.2))
         self.assertIn("counter beside the tune: same sample, level 1.2 of the tune's", p.log)
 
+    def test_the_counters_sample_is_the_games_pair_with_the_tunes(self):
+        """counter_pairs counts the counter's sample under the tune's where the counter plays another (the pack's ids); at the
+        rendering the draw under the tune's sample is taken where the pack holds it and it reaches the written register, the
+        part's level (over all tunes) is still a count, and only where nothing counted fits does the pool rule remain."""
+        s, _ = self._tune_and_counter()
+        units = rhythm.counter_pair_units([s])
+        self.assertEqual([(u.outcome, u.values) for u in units], [("sctr", {"part": "counter", "tune": "slead"})])
+        s.notes["counter"] = [n[:3] + ("lead",) for n in s.notes["counter"]]; s.voice_notes[2] = ("counter", s.notes["counter"])
+        self.assertEqual(rhythm.counter_pair_units([s]), [])                                        # on the tune's sample: counter_samples' "same", no pair
+        pairs = tables.Table(("part", "tune"), "counter_pairs", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "sb", {"part": "counter", "tune": "sa"}) for i in range(3)]
+            + [tables.Unit(f"t{i}", "g", "sd", {"part": "counter", "tune": "sc"}) for i in range(3)])
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "60-72", {"part": "sb"}) for i in range(3)] + [tables.Unit(f"t{i}", "g", "36-48", {"part": "sd"}) for i in range(3)])
+        models, rng = {"counter_pairs": pairs}, random.Random(1)
+        self.assertEqual(whole.counter_pair_for(models, "sa", {"sa", "sb", "sd"}, ranges, (60, 72), rng), ("sb", "tune", []))
+        got = whole.counter_pair_for(models, "sa", {"sa", "sd"}, ranges, (60, 72), rng)              # the pack lacks sb; sd is a bass sample
+        self.assertEqual((got[0], got[1], got[2][0]), (None, None, "sb not in the pack"))             # under a voice two octaves up: the pool rule
+        got = whole.counter_pair_for(models, "sx", {"sa", "sb", "sd"}, ranges, (60, 72), rng)       # a tune sample the game never had: the part's
+        self.assertIn(got[:2], (("sb", "part"), (None, None)))                                         # level, a count (sb reaches, sd does not)
+        self.assertEqual(whole.counter_pair_for(models, "sa", {"sa", "sb", "sd"}, ranges, (88, 100), rng)[:2], (None, None))   # out of reach
+        one = tables.Table(("part", "tune"), "counter_pairs", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "sb", {"part": "counter", "tune": "sa"}) for i in range(3)])
+        self.assertEqual(whole.counter_pair_for({"counter_pairs": one}, "sb", {"sa", "sb"}, ranges, (60, 72), rng)[:2], (None, None))   # the tune's own: not "other"
+        self.assertEqual(whole.counter_pair_for({}, "sa", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, None))                    # no table: the rule, unlogged
+        trace = []
+        pairs.draw(("counter", "sc"), rng, floored=False, floor_k=whole.PLAN_FLOOR, min_songs=whole.PLAN_SONGS, trace=trace)
+        self.assertIn(trace, ([2], [1]))
+        trace = []
+        pairs.draw(("counter", "sx"), rng, floored=False, floor_k=whole.PLAN_FLOOR, min_songs=whole.PLAN_SONGS, trace=trace)
+        self.assertEqual(trace, [1])
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""
