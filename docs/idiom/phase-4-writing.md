@@ -2107,5 +2107,39 @@ the "same"-sample unison guard is a writer's rule carried over from the
 chord parts, not a count; the counter's chord clash against the
 accompaniment is not read (the old path's `draw_move` stayed clear of
 sounding semitones, the voice words count the interval to the tune
-only). Song Check 23 is Whole 28 a sixth time beside the other five, its
-counter the one change.
+only). Song Check 23 is Whole 28 a sixth time beside the other five; its
+counter is the change asked for, but not the only one (below).
+
+**Reviewed (the same day; seeds 1 to 20 and 28 composed under the
+round-28 code and pack and under this round's, every part's notes
+compared).** One fault fixed: `counter_samples` and `counter_levels` had
+been drawn at the end of `_plan_once`, on the plan's shared stream, and a
+themed plan is drawn again on that stream when its tune cannot come
+back, so the two draws inside the first attempt shifted every draw of
+the next; Whole 14's key, form and band had changed (its drums and
+harmony gone). The draws now come once in `plan()` after the retry
+loop, after every existing draw, and every plan of the twenty-one is
+the round-28 plan again. Two changes to parts other than the counter
+remain, neither a fault in the words and neither fixable without a
+choice the owner makes: (1) the counter's units sit in the shared
+`voice_intervals` and `voice_moves` tables, whose coarse levels every
+part's probability mixes in, so the chord parts' and the bass's second
+voices draw a little differently (the probabilities move by 0.3 to 7 %
+of their mass, enough to flip draws, and a flipped draw changes the
+chain after it): in Whole 28 the second bass voice differs in 13 of 298
+notes; across the twenty-one, ten songs' accompaniment voices and five
+songs' second bass voices, and through the tune's clash check seven
+songs' tunes. The choice is between the counter's own interval and move
+tables (the other parts untouched, two more tables) and the shared ones
+as the brief asked; it is for the owner. (2) The rendering's shared
+stream: the counter's sample is now chosen after the tune's and from a
+pool without the tune's sample, so the draws after it fall elsewhere:
+Whole 28's echo is "normal" where it was "light" (wet 0.4 against 0.24)
+and the floors on its bass samples are shorter (0.12 and 0.08 s against
+0.4 and 0.12); of the fifteen songs with both parts, four have another
+sample for the tune itself (three more the same sample under the pack's
+other name for it), four an echo come or gone and three its wetness
+changed. Nothing
+restores the round-28 draws short of replaying them. The owner hearing
+Song Check 23 against 22 hears the counter, the echo and the bass's
+floors, not the counter alone.
