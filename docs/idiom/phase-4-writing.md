@@ -1279,3 +1279,41 @@ fault, a vocabulary gap given a table.
   it counts and what it controls (`VOCABULARY.md`).
 
 Song Check 7 is written from this (set 6's options, the same seeds).
+
+### Round 15: the riff and the landing (2026-10-23, on the owner's go)
+
+Two vocabulary expansions, each checked for generality on all 39 games
+before it was built (`phase4/period_count.py`, `period_roles.py`).
+
+- **The riff** (`rhythm.period_units`, `period_hold_units`; tables
+  `periods`, `period_holds`). A backing part's period inside a part of
+  the form: the lag at which its bars repeat (1, 2, 4, 8) or none, counted
+  on figures (the bass by its figure, the drums by their pieces, an upper
+  part by its pattern), since a riff moves with the chord and keeps its
+  figure; on absolute pitches almost nothing repeated, in any game. Held
+  share 0.6. FFVI: the bass has a period in 36 % of its parts, the drums
+  in 42 %, the accompaniment in 46 % (a 1-bar period in a third of those,
+  2 bars in most of the rest); across the 39 games the shares are the
+  same kind of number, Mega Man X's included. Inside a period a bar is
+  held nine times in ten. The plan draws a period per backing part per
+  new part of the form and the held bars; the free figure writer plays
+  the bar a lag before again there (re-realized on the bar's chord), and
+  an upper part takes its source bar's voicing on the same chord. The
+  reader's parts do not move (a riff under four bars is inside a part by
+  the reader's own rule); the 4-bar exact-repeat shares rose (drums 0.23,
+  bass 0.10, accompaniment 0.04; FFVI 0.15, 0.07, 0.01 by the same loose
+  key). A first joint count (every backing part together, 0.75 held) had
+  found blocks in a quarter of parts only; the per-part word is the one
+  the writers use.
+- **The landing** (`moves` conditioned on `place` and `tone`). The moves
+  table had counted where the arriving note falls in its beat and the tone
+  the note left stands on against the chord since phase 3 without being
+  drawn by them. Drawn by them, the tune approaches chord tones as FFVI
+  does and the within-bar steps went from 0.58 to 0.67 (FFVI 0.65) with
+  no chord weighting at all, but the chord-tone rate fell to 0.48 (0.56):
+  the filters shift the chain's balance. The weighting now acts only
+  while the tune is under its drawn rate (the repeat controller's
+  shape): chord tones 0.57, within-bar steps 0.61. The counted rate is
+  held; four points of steps remain.
+- Two-voice accompaniments 8.2 onsets a bar merged (8.6 before, FFVI
+  7.3). Song Check 8 is written from this.

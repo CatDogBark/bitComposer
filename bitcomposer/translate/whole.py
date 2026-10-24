@@ -461,6 +461,27 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     for role in band:                                       # a part with two voices or more: what its second voice does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
+    if "periods" in models:                                 # the riff under the tune: a backing part's period inside a part of the form, and the bars it holds
+        tempo_band = rhythm.band(bpm)
+        for role in band:
+            if role not in rhythm.BACKING:
+                continue
+            held, of_part = {}, {}
+            for i, (bar, n, of, label) in enumerate(parts):
+                if of is not None:
+                    continue
+                drawn = _draw(models, "periods", (role, rhythm.part_length(n), tempo_band), rng, log)
+                if drawn == "none":
+                    continue
+                lag = int(drawn)
+                of_part[i] = lag
+                for k in range(bar + lag, bar + n):
+                    if "period_holds" not in models or _draw(models, "period_holds", (role, drawn), rng) == "held":
+                        held[k] = lag
+            if of_part:
+                extras.setdefault(role, {})["periods"] = held
+                log.append(f"{role} period: " + ", ".join(f"{parts[i][3]} every {lag} bar{'s' if lag > 1 else ''}" for i, lag in of_part.items())
+                           + f"; {len(held)} bars held")
     if R.MELODY in band and "phrase_letters" in models:   # the tune's phrases a part: the theme again, an earlier head again, or new
         n_parts = len(parts)
         counts_by_part = {}
@@ -564,6 +585,10 @@ def song_of(plan: Plan, kit=()) -> rhythm.Song:
             for role in r["with"]:
                 if role != "chords":
                     song.copies.setdefault(role, []).append((r["bars"][0], len(r["bars"]), x["theme_bars"][0]))
+    for role in rhythm.BACKING:                             # the riff: a backing part's held bars play the bar a period before again
+        held = (plan.extras.get(role) or {}).get("periods")
+        if held:
+            song.periods[role] = {int(k): int(v) for k, v in held.items()}
     return song
 
 

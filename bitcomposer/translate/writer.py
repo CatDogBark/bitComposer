@@ -111,7 +111,7 @@ import statistics
 from collections import Counter
 from fractions import Fraction
 
-from . import harmony, rhythm, roles as R, tables
+from . import harmony, phrases, rhythm, roles as R, tables
 from .vocab import FIT
 
 SHAPE = ("part", "meter", "habit", "previous")   # the bass table's shape, the habit before the chain (the module)
@@ -443,6 +443,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     notes, voicings = [], []
     played_v, prev_v = Counter(), None
     last_chord, marks, previous_low = None, ["R", "3", "5"], None
+    periods = getattr(song, "periods", {}).get(role, {})   # a held bar of the part's period takes its source bar's voicing too, on the same chord
+    by_bar = {}
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         if figure == REST:
             voicings.append(REST)
@@ -456,7 +458,12 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             chord = (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else last_chord
             if chord is None:
                 continue
-            if chord != last_chord or not bar_voicing:
+            src = by_bar.get(k - periods[k], {}).get(i) if k in periods else None
+            if src is not None and src[0] == chord and src[1] is not None and (chord != last_chord or not bar_voicing):
+                prev_v, marks = src[1], src[2]                  # the period's bar again: its voicing with it
+                last_chord = chord
+                bar_voicing.append(prev_v)
+            elif chord != last_chord or not bar_voicing:
                 shape = chord[1] or "major"
                 v_unit = tables.Unit(song.sid, song.game, "", {"part": role, "shape": shape, "habit": richness, "previous": prev_v or rhythm.START})
                 need = min(RICH_TONES.get(richness, 2), max(1, len(voices)))   # a lone voice needs one tone, a trio up to three
@@ -471,6 +478,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 prev_v = drawn
                 last_chord = chord
                 bar_voicing.append(drawn)
+            by_bar.setdefault(k, {})[i] = (chord, prev_v, list(marks))
             pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]][0], previous_low)
             previous_low = float(pitches[0]) if pitches else previous_low
             tune = sounding_pcs(tune_line, start)
@@ -638,7 +646,7 @@ def _weighted(rng: random.Random, options: list, weights: list):
 def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Random, register: tuple, scale: set,
               strong: bool, chord, tune: set, aim: float | None, habit: str | None = None, repeats: str = "some",
               chord_rate: float = CHORD_ON_BEAT, repeat_rate: float | None = None, over_repeats: bool = False,
-              over_chord: bool = False) -> int:
+              over_chord: bool = False, tone: str = "no chord", under_chord: bool = False) -> int:
     """One move of the tune from the moves table, drawn among the moves that
     fit (the register; off the chords' semitones; steered toward the
     contour when the line strays CONTOUR_RANGE from it), the fitting moves
@@ -649,7 +657,8 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
     the habit's tier) and none while the tune is over it (`over_repeats`).
     Returns the move in semitones."""
     low, high = register
-    values = {"part": R.MELODY, "mode": mode, "previous": previous or rhythm.START, "habit": habit or "mixed"}
+    values = {"part": R.MELODY, "mode": mode, "previous": previous or rhythm.START, "habit": habit or "mixed",
+              "place": "strong" if strong else "weak", "tone": tone}          # the landing: the beat arrived on, the tone left
     ctx = tuple(values.get(c, "?") for c in moves_table.conditionings)
     chord_pcs = set()
     if chord is not None:
@@ -688,7 +697,12 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
             r = min(0.95, max(0.0, r))
             rest = sum(w for st, w in zip(options, weights) if st != 0)
             weights = [w if st != 0 else r * rest / (1 - r) for st, w in zip(options, weights)]
-    if strong and chord_pcs and not over_chord and any(on_chord) and not all(on_chord):
+    knows_landing = "tone" in moves_table.conditionings
+    if strong and chord_pcs and any(on_chord) and not all(on_chord) and (under_chord if knows_landing else not over_chord):
+        # the chord weighting holds the song's chord-tone rate (a counted habit): for a moves table that knows nothing of
+        # the landing, whenever the tune is not over its rate; for a table drawn by the beat and the tone left, which
+        # carries the game's own approach to the chord (by step, in FFVI), only while the tune is under its rate (the
+        # filters shift the chain's balance a little: 0.48 against FFVI's 0.56 with no weighting at all)
         mc = sum(w for w, c in zip(weights, on_chord) if c)
         mo = sum(w for w, c in zip(weights, on_chord) if not c)
         if mc > 0 and mo > 0:                                # a side with no mass (the repeated note at a rate of none) is left as it is
@@ -779,6 +793,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     source = {}                                             # bar index -> the earlier bar it echoed (a passage recalled goes on)
     choices = {}                                            # bar index -> how the bar came (same, earlier, new, answered, copy)
     prev_cell, last_midi, last_move = None, float((register[0] + register[1]) // 2), rhythm.START
+    last_time = None                                        # when the tune's last note fell: the note a move leaves, for its tone against the chord
     rhythm_played, rhythm_prev = Counter(), None
     draws = {k: (Counter(), None) for k in ("contours", "endings", "relations")}
     log, prev_phrase, prev_phrase_start = [], None, None
@@ -880,7 +895,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         return [float(Fraction(t.partition(":")[0])) for t in rhythm._tokens(figure)]
 
     def realize(k: int, positions: list, pitches: list) -> Cell:
+        nonlocal last_time
         a, b, _ = bars[k]
+        if positions:
+            last_time = a + positions[-1]
         chord = _chord_in_bar(song, a)
         cell = Cell(positions, pitches, chord[0] if chord else tonic, scale)
         figures[k] = " ".join(str(Fraction(p)) for p in positions)
@@ -899,20 +917,23 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
 
     def new_cell(k: int, positions: list, shape: str, phrase_start_midi: float | None, a0: float, b0: float) -> Cell:
         """A new cell for bar k: the notes from the moves table under the phrase's contour."""
-        nonlocal last_midi, last_move
+        nonlocal last_midi, last_move, last_time
         a, b, _ = bars[k]
         targets = contour_targets(shape, phrase_size)
-        pitches, midi, move = [], last_midi, last_move
+        pitches, midi, move, t_from = [], last_midi, last_move, last_time
         for p in positions:
             t = a + p
             third = min(2, int(3 * (t - a0) / max(1e-9, b0 - a0)))
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
+            tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
             step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim,
-                             step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord())
+                             step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
+                             under_chord=wants_chord())
             midi = midi + step
             move = f"{step:+d}" if step else "0"
             pitches.append(midi)
+            t_from = t
         last_midi, last_move = midi, move
         return realize(k, positions, pitches)
 
@@ -1215,6 +1236,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     within_of = within_of or within
     meters = [max(1, round(b - a)) for a, b, _ in bars]
     figures, played, previous = [REST] * len(bars), Counter(), None
+    periods = getattr(song, "periods", {}).get(role, {})   # the part's period inside a part of the form: a held bar plays the bar a lag before
     for start, length, _, copy_of in form_spans(song, own):
         for i in range(length):
             k = start + i
@@ -1223,6 +1245,8 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 continue
             if copy_of is not None and figures[copy_of + i] != REST:
                 figures[k] = figures[copy_of + i]
+            elif k in periods and 0 <= k - periods[k] < k and figures[k - periods[k]] != REST:
+                figures[k] = figures[k - periods[k]]
             elif k in hold:
                 figures[k] = own[k]
             else:

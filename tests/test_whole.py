@@ -3,7 +3,7 @@ import random
 import tempfile
 import unittest
 
-from bitcomposer.translate import harmony, rhythm, tables, vocab, whole
+from bitcomposer.translate import harmony, rhythm, tables, vocab, whole, writer
 from bitcomposer.translate import roles as R
 
 
@@ -357,6 +357,33 @@ class NewTablesTests(unittest.TestCase):
             again = [(round(t - 16.0, 6), round(u - 16.0, 6), m) for t, u, m, _ in written[role].notes if t >= 16.0]
             self.assertEqual(first, again, role)
             self.assertEqual(written[role].figures[4:], written[role].figures[:4])
+
+    def test_the_backing_period_and_its_holds(self):
+        """A bass playing the same two bars through a part has a period of 2 there; the bars inside it are held but the one varied."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        riff = lambda a: [(a, 0.9, 36.0, "b"), (a + 1.5, 0.4, 43.0, "b"), (a + 2.0, 0.9, 36.0, "b"), (a + 4.0, 0.9, 36.0, "b"), (a + 6.0, 1.9, 38.0, "b")]   # noqa: E731
+        bass = [n for j in range(4) for n in riff(8.0 * j)]
+        bass[-1] = (bass[-1][0], bass[-1][1], 48.0, "b")                                      # the last bar varied: an octave where a passing tone was
+        chords = [vocab.Span(0.0, 32.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"bass": bass}, sid="s", game="g", parts=[(0, 8, None, "A")], tonic=0)
+        self.assertEqual([(u.outcome, u.values) for u in rhythm.period_units([s])], [("2", {"part": "bass", "length": "medium", "tempo": rhythm.band(120.0)})])
+        holds = [u.outcome for u in rhythm.period_hold_units([s])]
+        self.assertEqual((len(holds), holds.count("varied")), (6, 1))
+        self.assertEqual([rhythm.part_length(n) for n in (4, 5, 8, 9)], ["short", "medium", "medium", "long"])
+        s.notes["bass"] = [n for j in range(8) for n in riff(4.0 * j)[:3]]                     # one bar, every bar: a period of 1
+        self.assertEqual([u.outcome for u in rhythm.period_units([s])], ["1"])
+
+    def test_the_moves_know_their_landing(self):
+        """A moves table drawn by the beat and the tone left follows them, and the chord weighting stays out of its way."""
+        t = tables.Table(("part", "mode", "place", "tone", "previous"), "moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "+4", {"part": "melody", "mode": "major", "place": "strong", "tone": "root", "previous": "start"}) for i in range(6)]
+            + [tables.Unit(f"t{i}", "g", "+2", {"part": "melody", "mode": "major", "place": "strong", "tone": "another tone", "previous": "start"}) for i in range(6)])
+        rng = random.Random(3)
+        every = set(range(12))
+        from_root = [writer.draw_move(t, "start", "major", 60.0, rng, (48, 84), every, True, (0, ""), set(), None, tone="root") for _ in range(30)]
+        from_other = [writer.draw_move(t, "start", "major", 60.0, rng, (48, 84), every, True, (0, ""), set(), None, tone="another tone") for _ in range(30)]
+        self.assertGreaterEqual(from_root.count(4), 22)
+        self.assertGreaterEqual(from_other.count(2), 22)
 
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""

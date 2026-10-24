@@ -12,8 +12,7 @@ far are drawn again (the same as the bar before, an earlier bar, or new)
 at the game's rates, so a written part repeats and varies as the game's
 parts do.
 
-This file lists every table a pack keeps (`packtables.KEPT`, the order
-below), what its unit is, what conditions it, when it is drawn, and what
+This file lists every table a pack keeps (`packtables.KEPT`), what its unit is, what conditions it, when it is drawn, and what
 the writers do with what it says. The rule of evidence (`../IDIOM.md`): a
 writer is never patched past what its vocabulary says; a missing thing is
 a new table here, and a table that exists but misleads is fixed as a
@@ -106,6 +105,26 @@ said otherwise. Counting code: `translate/rhythm.py` and
   part's progression ends. Counted, not yet drawn (the written chords
   change on the bar line).
 
+## The riff: a backing part's period
+
+- **periods** — a backing part's (drums, bass, accompaniment, harmony,
+  arp) period inside a part of the form: the lag in bars at which its bars
+  repeat (1, 2, 4, 8; the bass by its figure, the drums by their pieces,
+  an upper part by its pattern, so a riff that moves with the chord keeps
+  its key) or none, by the part of the form's length and the tempo band.
+  Drawn once a backing part for each new part of the form; a repeated part
+  of the form replays anyway. The riff under the tune, which the parts'
+  mixtures (a bar the same as the one before, an earlier one, new) never
+  held at a fixed lag: a third of FFVI's bass and accompaniment parts and
+  two fifths of its drum parts have one, and the share is much the same
+  across the 39 games read.
+- **period_holds** — inside a period, whether a bar plays the bar a period
+  before again (held) or varies (a fill, a turnaround), by the part and
+  the period. Drawn a bar inside a period; the writers play the bar a lag
+  before again where it is held (the figure, re-realized on the bar's
+  chord; an upper part takes its source bar's voicing too on the same
+  chord) and draw the bar fresh where it varies.
+
 ## The drums
 
 - **drums** — the kit's bar as one figure, every piece. Drawn a bar as a
@@ -147,13 +166,19 @@ said otherwise. Counting code: `translate/rhythm.py` and
 
 ## The tune (the melody, and the counter-line written the same way after it)
 
-- **moves** — the tune's move note to note (semitones, to an octave), after
-  the move before, under the song's stepwise habit. Drawn a note for a new
-  cell: the move is chosen among the moves that fit (the register, no clash
-  with what sounds, the scale on a strong beat, the phrase's contour) with
-  the table's weights, chord tones given the song's share on strong beats.
-  The table's own step share is FFVI's (0.645 over the contexts visited);
-  the filters cost about three points.
+- **moves** — the tune's move note to note (semitones, to an octave), under
+  the song's stepwise habit, by where the arriving note falls in its beat
+  (strong or weak), the tone the note left stands on against the chord
+  (root, third, fifth, another tone, no chord) and the move before. Drawn
+  a note for a new cell: the move is chosen among the moves that fit (the
+  register, no clash with what sounds, the scale on a strong beat, the
+  phrase's contour) with the table's weights. The landing was counted from
+  the start but not drawn by; drawn by it, the table carries the game's
+  own approach to the chord (FFVI's: by step). The chord weighting on
+  strong beats, which holds the song's drawn chord-tone rate, acts on such
+  a table only while the tune is under its rate (with no weighting at all
+  the written tunes landed on the chord 0.48 against FFVI's 0.56; steps
+  inside a bar 0.67 against 0.65; with the gate 0.57 and 0.61).
 - **contours**, **contour_sizes**, **peaks** — a four-bar phrase's contour
   (rising, arch, falling…); how far it goes in semitones by its shape;
   where it peaks. The contour and its size steer a new phrase's line

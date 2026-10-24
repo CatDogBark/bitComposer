@@ -139,6 +139,8 @@ class Song:
     voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
     copies: dict = field(default_factory=dict)        # a planned song: role -> [(first bar, bars, the bar copied from)], the band
                                                       # coming back with the theme (the writers copy their own earlier bars there)
+    periods: dict = field(default_factory=dict)       # a planned song: role -> {bar index: the lag in bars whose bar it plays again}
+                                                      # (the plan's held bars of a backing part's period, period_units)
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -1210,6 +1212,103 @@ def theme_carrier_units(songs) -> list:
                     carrier = role
                     break
             out.append(tables.Unit(s.sid, s.game, carrier, {"part": "carrier"}))
+    return out
+
+
+BACKING = (R.DRUMS, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts under the tune: a riff's parts
+PERIODS = (1, 2, 4, 8)                # bars: the lags a backing part's bars are tried at inside a part of the form
+PERIOD_HELD = 0.6                     # the share of a part's bars that must play the bar a lag before for the lag to be its period
+PART_LENGTHS = ((4, "short"), (8, "medium"), (1e9, "long"))   # a part of the form by its bars, for the period's draw
+
+
+def part_length(n: int) -> str:
+    """A part of the form's length as a class (PART_LENGTHS)."""
+    return next(name for top, name in PART_LENGTHS if n <= top)
+
+
+def block_key(song: Song, role: str, a: float, b: float):
+    """A backing part's bar as the writers draw it: the bass's figure
+    (positions with chord-tone marks), the drums' pieces by position, an
+    upper part's onset pattern; a riff that moves with the chord keeps its
+    key. () where the part rests."""
+    struck = {}
+    for n in song.notes.get(role, []):
+        if a - NEAR <= n[0] < b - NEAR:
+            struck.setdefault(position(n[0] - a, song.division), []).append(n)
+    struck = sorted(struck.items())
+    if not struck:
+        return ()
+    if role == R.BASS:
+        return figure(struck, a, song)
+    if role == R.DRUMS:
+        return tuple(sorted((p, str(n[3])) for p, ns in struck for n in ns))
+    return pattern(p for p, _ in struck)
+
+
+def _blocks(song: Song):
+    """Each new part of a song's form (a repeat left out) with its bars' indices, its length and, per backing part the
+    song has, that part's bar keys (block_key)."""
+    index = {num: k for k, num in enumerate(song.numbers or range(len(song.bars)))}
+    keys = {role: [block_key(song, role, a, b) for a, b in song.bars] for role in BACKING if song.notes.get(role)}
+    for bar, n, of, label in song.parts:
+        if of is not None:
+            continue
+        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        if len(idx) >= 2 and keys:
+            yield idx, n, keys
+
+
+def period_of(keys: list, idx: list):
+    """The lag (PERIODS, the shortest first) at which a part's bars repeat through a part of the form, PERIOD_HELD of
+    them or more; None where none does or the part sounds in fewer than two bars."""
+    if sum(1 for k in idx if keys[k]) < 2:
+        return None
+    for lag in PERIODS:
+        if lag >= len(idx):
+            return None
+        pairs = [(k, k - lag) for k in idx[lag:] if keys[k] or keys[k - lag]]
+        if pairs and sum(1 for k, j in pairs if keys[k] == keys[j]) / len(pairs) >= PERIOD_HELD:
+            return lag
+    return None
+
+
+def period_units(songs) -> list:
+    """Each backing part of each new part of each song's form as a unit:
+    its outcome the part's period there, the lag in bars at which its bars
+    repeat (1, 2, 4, 8) or "none"; its values the part, the part of the
+    form's length (short, medium, long) and the tempo band. The riff under
+    the tune, a bass or a kit playing the same two bars through a part,
+    which the parts' mixtures (a bar the same as the one before, an earlier
+    one, new) do not do at a fixed lag. FFVI (2026-10-23, held 0.75): a
+    third of its bass and accompaniment parts and two fifths of its drum
+    parts have one; the same across 39 games."""
+    out = []
+    for s in songs:
+        tempo = band(s.bpm)
+        for idx, n, keys in _blocks(s):
+            for role, ks in keys.items():
+                if sum(1 for k in idx if ks[k]) < 2:
+                    continue
+                lag = period_of(ks, idx)
+                out.append(tables.Unit(s.sid, s.game, str(lag) if lag else "none", {"part": role, "length": part_length(n), "tempo": tempo}))
+    return out
+
+
+def period_hold_units(songs) -> list:
+    """Each bar inside a backing part's period (period_units) as a unit:
+    its outcome "held" where the bar plays the bar a period before again,
+    "varied" where it does not (a fill, a turnaround); its values the part
+    and the period."""
+    out = []
+    for s in songs:
+        for idx, n, keys in _blocks(s):
+            for role, ks in keys.items():
+                lag = period_of(ks, idx)
+                if lag is None:
+                    continue
+                for k in idx[lag:]:
+                    if ks[k] or ks[k - lag]:
+                        out.append(tables.Unit(s.sid, s.game, "held" if ks[k] == ks[k - lag] else "varied", {"part": role, "period": str(lag)}))
     return out
 
 
