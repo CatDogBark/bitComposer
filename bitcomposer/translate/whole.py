@@ -66,7 +66,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
-            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9",
+            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_levels": "1.0",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -603,6 +603,15 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log))} if R.BASS in band and R.DRUMS in band else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
+    if R.COUNTER in band and R.MELODY in band:            # the counter-line beside the tune (round 29): on the tune's sample or another
+        have = models_or_empty(models)                      # (counter_samples: the kind its voice words are drawn under, and its sample at
+        if "counter_samples" in have:                       # the rendering), and its level as a share of the tune's (counter_levels: FFVI's
+            extras[R.COUNTER]["sample"] = _draw(models, "counter_samples", (R.COUNTER,), rng, log)   # counter as loud as its tune; the two
+        if "counter_levels" in have:                        # parts' levels drawn apart had put the written counter at 0.74 of the tune)
+            share = float(_draw(models, "counter_levels", (R.COUNTER,), rng, log))
+            extras[R.COUNTER]["level"] = share
+            levels[R.COUNTER] = levels[R.MELODY] * share
+        log.append(f"counter beside the tune: {extras[R.COUNTER].get('sample', 'any')} sample" + (f", level {extras[R.COUNTER]['level']:.1f} of the tune's" if "level" in extras[R.COUNTER] else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks)
 
@@ -924,20 +933,39 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]
         written[role] = Part(role, notes, all_figures, log)
     tempo = rhythm.band(plan.bpm)
-    for role in (R.MELODY, R.COUNTER):                    # the counter-line written as the melody is, after it and clear of it
+    for role in (R.MELODY, R.COUNTER):                    # the tune, then the counter-line beside it
         if role not in plan.band or not all(k in models for k in ("rhythm", "moves", "contours", "endings", "relations", "values")):
             continue
         x = plan.extras[role]
-        notes, figures, plog = writer.melody(song, [], plan.registers[role], models, random.Random(f"{seed}:{role}"), plan.habits[role],
-                                             key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
-                                             recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                             role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"),
-                                             letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"))
+        beside = role == R.COUNTER and R.MELODY in written and all(k in models for k in ("counter_figures", "voice_intervals", "voice_moves"))
+        if beside:
+            # the counter-line as a mask over the tune's bar (counter_figures, drawn a bar as the second bass voice's is: which of
+            # the tune's onsets it strikes with and its own; its own alone where the tune rests) and its pitch beside the tune by
+            # the voice words under the drawn sample relation (writer.counter). FFVI's counter plays WITH the tune: 0.67 of its
+            # onsets on the tune's, 1.42 times its notes, 2.5 semitones under; run through the melody writer a second time with its
+            # own stream it had known nothing of the tune but the planned register (0.43 of its onsets on the tune's; Whole 28
+            # 0.19, on the tune's sample in the tune's register: two tunes interleaved on one timbre)
+            rng_c = random.Random(f"{seed}:{role}")
+            tune_figs = [f if f == writer.REST else rhythm.pattern(rhythm.position(float(Fraction(t)), song.division) for t in f.split()) for f in written[R.MELODY].figures]
+            masks = [writer.REST if not plan.plays[role][k] else
+                     _draw(models, "counter_figures", (R.COUNTER, plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat),
+                           rng_c, floor_k=MASK_FLOOR, floor_songs=PLAN_SONGS)
+                     for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
+            low, high = plan.registers[R.MELODY]
+            span = (max(24, low - rhythm.LAYER_OFFSET), min(100, high + rhythm.LAYER_OFFSET))
+            notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
+                                                  key=key, articulation=x["articulation"], register=plan.registers[role])
+        else:
+            notes, figures, plog = writer.melody(song, [], plan.registers[role], models, random.Random(f"{seed}:{role}"), plan.habits[role],
+                                                 key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
+                                                 recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
+                                                 role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"),
+                                                 letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"))
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         log = [f"register {plan.registers[role]}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items() if k not in ("layer", "letters"))
                + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
-               + ("checked" if reference is not None else "not on this machine")] + plog
+               + ("checked" if reference is not None and not beside else "not on this machine" if reference is None else "not asked: the line follows the tune")] + plog
         n, layer = plan.voices[role], layer_of(x)
         if n >= 2 and layer[0] == "doubling" and notes:     # the line again at the interval, in the scale
             scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
@@ -945,6 +973,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in second]
             line = line + second
             log.append(f"doubled {layer[1]:+d} semitones, in the scale, on a second voice")
+        elif n >= 2 and layer[0] == "apart" and beside:     # no word yet for a second counter voice beside a counter that follows the tune
+            log.append(f"a second line apart ({layer[1]:+d}, {layer[2]}) not written: the counter follows the tune, and no word counts a voice beside it")
         elif n >= 2 and layer[0] == "apart" and role == R.COUNTER:   # a second counter-line of its own, clear of the first
             _, offset, density = layer
             low, high = plan.registers[role]
@@ -1131,7 +1161,8 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
     voices = pack["voices"]
     ranges = (models or {}).get("ranges")
     out = {}
-    for role in plan.band:
+    kind = plan.extras.get(R.COUNTER, {}).get("sample")   # the counter-line's sample relation to the tune's (counter_samples), where drawn
+    for role in sorted(plan.band, key=lambda r: r == R.COUNTER):   # the counter last: its sample is the tune's, or another
         if role == R.DRUMS:
             out[role] = {piece: make(name) for piece, name in (voices.get("drums") or {}).items()}
             continue
@@ -1144,8 +1175,17 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         raw = lambda n: n[len(pack_name) + 1:] if n.startswith(pack_name + "_") else n   # noqa: E731  the pack's own id, as the ranges table names it
         drums = {raw(n) for n in (voices.get("drums") or {}).values()}
         tonal = sorted(n for n in own if n not in drums)
-        out[role] = make(best_sample(ranges, names, plan.registers[role], rng, raw, tonal, speed=part_speed(plan, written, role), models=models)
-                         if role in plan.registers else rng.choice(names))
+        register = plan.registers.get(role)
+        if role == R.COUNTER and kind and R.MELODY in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
+            if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
+                out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
+                continue                                    # chosen for where the counter was written, which is where the tune is
+            names = [n for n in names if n != out[R.MELODY][0]] or names
+            tonal = [n for n in tonal if n != out[R.MELODY][0]]
+            if written and role in written:
+                register = rhythm.part_register([n for n in written[role].notes if n[3] == 0]) or register
+        out[role] = make(best_sample(ranges, names, register, rng, raw, tonal, speed=part_speed(plan, written, role), models=models)
+                         if register else rng.choice(names))
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples) where the
         # pack holds both and each reaches its voice's register; else the second voice's sample by its own register and
         # speed, as the line's is chosen
@@ -1243,8 +1283,9 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     from .. import samples as samples_mod
 
     def level_of(role, j):
-        """A note's level: the part's share of the loudest part's (the levels table; LEVELS without one), a voice beside the
-        line at its own share of the line's (layer_levels)."""
+        """A note's level: the part's share of the loudest part's (the levels table; LEVELS without one; the counter-line's
+        the tune's times the counter_levels share, set so in the plan), a voice beside the line at its own share of the
+        line's (layer_levels)."""
         base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
         if j in second_voice.get(role, ()):
             base *= plan.layer_levels.get(role, 1.0)

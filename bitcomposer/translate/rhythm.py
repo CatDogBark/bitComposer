@@ -1221,23 +1221,107 @@ def second_mask(line_positions: list, other_positions: list) -> str:
         return "-"
     on = set(line_positions)
     flags = " ".join("1" if p in other_positions else "0" for p in line_positions)
-    own = [p for p in other_positions if p not in on]
-    return flags + (" | " + " ".join(str(p) for p in own) if own else "")
+    own = " ".join(str(p) for p in other_positions if p not in on)
+    if not flags:                                           # the line rests through the bar: the voice's own onsets alone (the
+        return "| " + own                                   # counter-line fills 0.61 of the tune's resting time in FFVI)
+    return flags + (" | " + own if own else "")
 
 
 def apply_mask(line_pattern: str, outcome: str) -> str:
     """The second voice's bar (a pattern) from the line's bar and a second_mask outcome: the line's onsets it strikes with (a
-    mask shorter or longer than the line's onsets is read around it) and its own onsets; "-" where it rests."""
-    if outcome == "-" or line_pattern in ("-", ""):
+    mask shorter or longer than the line's onsets is read around it) and its own onsets; "-" where it rests. Where the
+    line rests ("-") the voice's own onsets stand alone (the counter-line under a resting tune; the chord parts' voices
+    never meet this: their mask is drawn under a playing line only)."""
+    if outcome == "-" or not outcome:
         return "-"
-    line = [Fraction(t.partition(":")[0]) for t in line_pattern.split()]
-    flags, _, own = outcome.partition("|")
+    flags, bar, own = outcome.partition("|")
     bits = flags.split()
-    if not bits or all(b not in ("0", "1") for b in bits):
+    if bits and not bar and all(b not in ("0", "1") for b in bits):
         return outcome if ":" not in outcome else "-"          # an old-style absolute pattern: as it stands
-    positions = {line[i] for i in range(len(line)) if bits[i % len(bits)] == "1"}
+    line = [] if line_pattern in ("-", "") else [Fraction(t.partition(":")[0]) for t in line_pattern.split()]
+    positions = {line[i] for i in range(len(line)) if bits and bits[i % len(bits)] == "1"}
     positions |= {Fraction(p) for p in own.split()}
     return pattern(sorted(positions))
+
+
+COUNTER_KINDS = ("same", "other")    # the counter-line beside the tune: on the tune's own sample, or on another
+
+
+def tune_line(song: Song, role: str) -> list:
+    """The tune's line for the melody or the counter-line: the voice with the most notes where the part holds two or more
+    (line_voice), else the part's notes; [] where the song has no such part."""
+    voices = part_voices(song, role)
+    if len(voices) >= 2:
+        return voices[line_voice(voices, role)]
+    return song.notes.get(role, [])
+
+
+def main_sample(notes) -> str | None:
+    """The sample most of a line's notes play on; None where none is known."""
+    c = Counter(n[3] for n in notes if n[3])
+    return c.most_common(1)[0][0] if c else None
+
+
+def counter_kind(song: Song) -> str | None:
+    """How a song's counter-line stands to its tune in timbre (COUNTER_KINDS): "same" where it plays the tune's sample,
+    "other" where not; None where the song lacks either part. FFVI's counter plays the tune's sample in 18 songs of 52,
+    and there it is a harmony line in thirds (36 % of their shared strikes a third off); on another sample it sits at
+    octaves and unisons (37 %) and plays 1.57 times the tune's notes (2026-10-24)."""
+    mel, ctr = tune_line(song, R.MELODY), tune_line(song, R.COUNTER)
+    if not mel or not ctr:
+        return None
+    return "same" if main_sample(mel) == main_sample(ctr) else "other"
+
+
+def counter_figure_units(songs) -> list:
+    """Each bar of a song's counter-line beside its tune as a unit (second_figure_units' shape, the tune's line as the
+    line): its outcome the counter's bar as a mask over the tune's onsets, which of them it strikes with and the onsets of
+    its own (second_mask; "-" where it rests under the tune, its own onsets alone where the tune rests), its values the
+    part, the song's feel, the tempo band, the tune's onset count and its pattern ("-" and 0 where the tune rests). A bar
+    both rest in is the texture's, not counted. FFVI's counter plays WITH the tune, not in its rests: 0.67 of its onsets
+    on the tune's, 0.82 of its sounding time under the tune's notes, 1.42 times the tune's notes, and it fills 0.61 of
+    the tune's resting time; the written counter, a second tune from the melody writer's own stream, had 0.43 of its
+    onsets on the tune's and Whole 28 0.19, two tunes interleaved on one timbre (2026-10-24)."""
+    out = []
+    for s in songs:
+        mel, ctr = tune_line(s, R.MELODY), tune_line(s, R.COUNTER)
+        if not mel or not ctr:
+            continue
+        tempo, feel = band(s.bpm), song_feel(s)
+        tune_bars = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, R.MELODY, mel)}
+        for k, a, struck in numbered_bars_of(s, R.COUNTER, ctr):
+            line, mine = tune_bars.get(k, []), [p for p, _ in struck]
+            if not line and not mine:
+                continue
+            out.append(tables.Unit(s.sid, s.game, second_mask(line, mine),
+                                   {"part": R.COUNTER, "feel": feel, "tempo": tempo, "onsets": str(len(line)), "line": pattern(line)}))
+    return out
+
+
+def counter_sample_units(songs) -> list:
+    """Each song with a tune and a counter-line as a unit: its outcome whether the counter plays the tune's sample
+    (counter_kind: same, other), its value the part. Drawn once a song: the kind the counter's interval and move words
+    are drawn under, and whether the rendering gives it the tune's sample (18 of FFVI's 52; the written songs had 3 of
+    14 by the pool's choice, and Whole 28 the tune's sample and register with 0.19 of its onsets on the tune's)."""
+    out = []
+    for s in songs:
+        kind = counter_kind(s)
+        if kind is not None:
+            out.append(tables.Unit(s.sid, s.game, kind, {"part": R.COUNTER}))
+    return out
+
+
+def counter_level_units(songs) -> list:
+    """Each song with a tune and a counter-line, both with a level, as a unit: the counter's median level over the tune's,
+    in tenths (capped at 1.5, as layer_level_units caps), its value the part. FFVI's counter is as loud as its tune (1.00
+    at the median); the two parts' shares drawn apart from the levels table had put the written counter at 0.74 of the
+    tune (2026-10-24)."""
+    out = []
+    for s in songs:
+        a, b = s.levels.get(R.MELODY), s.levels.get(R.COUNTER)
+        if a and b and counter_kind(s) is not None:
+            out.append(tables.Unit(s.sid, s.game, f"{min(1.5, round(b / a, 1)):.1f}", {"part": R.COUNTER}))
+    return out
 
 
 def sample_id(key: str) -> str:
@@ -2165,8 +2249,11 @@ VOICE_STEPS = 14                     # scale steps: a voice beside the line's in
 
 def _beside_lines(songs):
     """Every voice beside a line in an upper part with two voices or more (apart or alternating; a doubling voice follows
-    the line): (song, part, kind, the voice's notes, the line's notes, the song's scale), sorted in time."""
+    the line), and the counter-line beside the tune (part counter; its kind the sample relation, counter_kind, which
+    splits FFVI's intervals: thirds on the tune's sample, octaves and unisons on another): (song, part, kind, the
+    voice's notes, the line's notes, the song's scale), sorted in time."""
     from . import harmony, harness                         # harness imports this module
+    pitched = lambda ns: sorted((n for n in ns if not math.isnan(n[2])), key=lambda n: n[0])   # noqa: E731
     for s in songs:
         scale = {((s.tonic or 0) + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
         for role in UPPER + (R.BASS,):                       # the bass too: its second voice plays the line's pitch class at 78 % of
@@ -2174,12 +2261,17 @@ def _beside_lines(songs):
             if len(voices) < 2:
                 continue
             line = line_voice(voices, role)
-            lns = sorted((n for n in voices[line] if not math.isnan(n[2])), key=lambda n: n[0])
+            lns = pitched(voices[line])
             for other in sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v)):
                 kind = harness.relation(voices[line], voices[other])[0]
                 if kind == "doubling" or not lns:
                     continue
-                yield s, role, kind, sorted((n for n in voices[other] if not math.isnan(n[2])), key=lambda n: n[0]), lns, scale
+                yield s, role, kind, pitched(voices[other]), lns, scale
+        kind = counter_kind(s)                              # the counter-line beside the tune's line (round 29)
+        if kind is not None:
+            lns, cns = pitched(tune_line(s, R.MELODY)), pitched(tune_line(s, R.COUNTER))
+            if lns and cns:
+                yield s, R.COUNTER, kind, cns, lns, scale
 
 
 def _voice_walk(songs):
@@ -2213,7 +2305,8 @@ def voice_interval_units(songs) -> list:
     below it most (-2, 12 %), an octave off in 13 % of these onsets, on the same pitch in 5 %, and keeps its interval
     from one onset to the next 37 % of the time; the writing had put it a tone up the line's voicing, never at the
     octave, holding its interval 54 % (2026-10-24). Held out, the chain conditioning is worth 0.7 bits a unit; the
-    layer word and the line note's chord role add nothing to it."""
+    layer word and the line note's chord role add nothing to it. The counter-line is counted beside the tune the same
+    way (part counter, the kind its sample relation: thirds on the tune's sample, octaves and unisons on another)."""
     out = []
     for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
         if with_line and abs(steps) <= VOICE_STEPS:
@@ -2228,7 +2321,8 @@ def voice_move_units(songs) -> list:
     17 %, five or more 11 %; alone it repeats 29 % and steps 37 %. Held out, its move is surer than its interval to the
     line (3.4 against 3.9 bits a unit with the line, 3.3 against 4.5 alone), and the two words' product surer than
     either (3.4 bits): the writer draws the note both agree on (2026-10-24; a voice placed against the line alone had
-    leapt five steps or more at 43 % of its onsets, FFVI 11 %)."""
+    leapt five steps or more at 43 % of its onsets, FFVI 11 %). The counter-line beside the tune is counted too (part
+    counter, kind same or other), its place with the tune or alone in the tune's rests."""
     out = []
     for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
         if move is not None and abs(move) <= VOICE_STEPS:
