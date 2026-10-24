@@ -99,6 +99,7 @@ class Plan:
     extras: dict                      # an upper part -> {richness, motion}; the melody -> {articulation, echo, steps, repeats}
     voices: dict                      # a part -> how many voices it gets
     log: list = field(default_factory=list)
+    feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
 
     @property
     def bars(self) -> int:
@@ -117,7 +118,7 @@ class Plan:
                 "form": self.letters, "parts": [list(p) for p in self.parts], "loop_bar": self.loop_bar, "chords": self.names,
                 "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays,
                 "registers": {k: list(v) for k, v in self.registers.items()},
-                "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log,
+                "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log, "feel": self.feel,
                 "theme": {"bars": self.extras.get(R.MELODY, {}).get("theme_bars"), "returns": self.extras.get(R.MELODY, {}).get("returns")}}
 
 
@@ -461,6 +462,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     for role in band:                                       # a part with two voices or more: what its second voice does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             extras.setdefault(role, {})["layer"] = _draw(models, "layers", (role,), rng, log) if "layers" in models else "apart +0 like"
+    feel = _draw(models, "feels", ("song",), rng, log) if "feels" in models else "duple"
     if "periods" in models:                                 # the riff under the tune: a backing part's period inside a part of the form, and the bars it holds
         tempo_band = rhythm.band(bpm)
         for role in band:
@@ -568,7 +570,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     if themed or band_returns:
         extras.setdefault("options", {}).update({"themed": themed, "band_returns": band_returns})
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, voices, log)
+                registers, sounds, habits, extras, voices, log, feel=feel)
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -579,6 +581,7 @@ def song_of(plan: Plan, kit=()) -> rhythm.Song:
     song = rhythm.Song(plan.title, METER, DIVISION, bars, chords, bpm=plan.bpm, sid=plan.sid, game=plan.game,
                        numbers=list(range(plan.bars)), parts=list(plan.parts), tonic=plan.tonic, mode=plan.mode, loop_bar=plan.loop_bar)
     song.pieces = {name: KIT_PIECES[name] for name in kit if name in KIT_PIECES}
+    song.feel = plan.feel
     x = plan.extras.get(R.MELODY, {})
     if x.get("theme_bars") and x.get("returns"):            # the band back with the theme: each part copies its theme bars there
         for r in x["returns"]:
@@ -786,8 +789,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                               + (f"; dropped (no sample) {dict(dropped)}" if dropped else "")])
     if R.BASS in plan.band and "bass" in models:
         lock = locks_of(song, {R.BASS}, plan)
+        layered = plan.voices.get(R.BASS, 1) >= 2 and layer_of(plan.extras.get(R.BASS))[0] == "apart"
+        sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
-                                     free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0], sounds=plan.sounds[R.BASS])
+                                     free=True, plays=plan.plays[R.BASS], register=plan.registers[R.BASS][0], sounds=sounds_line)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         log = [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
@@ -795,15 +800,22 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         layer = layer_of(plan.extras.get(R.BASS))
         if plan.voices.get(R.BASS, 1) >= 2 and layer[0] == "apart":   # a second bass line of its own (FFVI's layered basses are all apart)
             _, offset, density = layer
+            rng2 = random.Random(f"{seed}:bass:second")
             habit2 = habit_near(models, R.BASS, rhythm.band(plan.bpm), plan.weights.get(R.BASS, "half"), random.Random(f"{seed}:bass:second habit"),
                                 plan.habits[R.BASS], density, table="bass_habits")
-            notes2, figures2 = writer.bass(song, models["bass"], random.Random(f"{seed}:bass:second"), habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
-                                           free=True, plays=plan.plays[R.BASS], register=max(24, plan.registers[R.BASS][0] + offset), sounds=plan.sounds[R.BASS])
+            given = None
+            if "second_figures" in models:                  # the second voice's figure under the line's, as the game's second basses play
+                memo = {}
+                given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (R.BASS, rhythm.density_bin(len(f.split())), f), rng2))
+                         for f in figures]
+            sounds2 = float(_draw(models, "layer_sounds", (R.BASS, "second"), rng2)) if "layer_sounds" in models else plan.sounds[R.BASS]
+            notes2, figures2 = writer.bass(song, models["bass"], rng2, habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
+                                           free=True, plays=plan.plays[R.BASS], register=max(24, plan.registers[R.BASS][0] + offset), sounds=sounds2, figures=given)
             song.notes[R.BASS] += [(a, b - a, m, "bass") for a, b, m in notes2]
             line += [(a, b, m, 1) for a, b, m in notes2]
             figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
-            log.append(f"a second line apart: floor {max(24, plan.registers[R.BASS][0] + offset)} ({offset:+d}), habit {habit2} ({density}); "
-                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
+            log.append(f"a second line apart: floor {max(24, plan.registers[R.BASS][0] + offset)} ({offset:+d}), habit {habit2} ({density}), sounds {sounds2:.1f}; "
+                       f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes" + ("; its figures drawn under the line's" if given else ""))
         written[R.BASS] = Part(R.BASS, line, figures, log)
     tempo = rhythm.band(plan.bpm)
     for role in rhythm.UPPER:
@@ -834,12 +846,13 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             richness2 = _draw(models, "voicing_habits", (role,), rng2) if "voicing_habits" in models else plan.extras[role]["richness"]
             motion2 = _draw(models, "motions", (role,), rng2) if "motions" in models else plan.extras[role]["motion"]
             v2 = n - 1
+            sounds2 = float(_draw(models, "layer_sounds", (role, "second"), rng2)) if "layer_sounds" in models else sounds
             given = None
             if "second_figures" in models:                  # the second line's bars under the line's own, as the game's second voices play
                 memo = {}
                 given = [f if f == writer.REST else memo.setdefault(f, _draw(models, "second_figures", (role, rhythm.density_bin(len(f.split())), f), rng2))
                          for f in figures]
-            notes2, figures2, voicings2 = writer.upper(song, role, [v2], {v2: reg2}, models, rng2, habit2, richness2, sounds, key=key,
+            notes2, figures2, voicings2 = writer.upper(song, role, [v2], {v2: reg2}, models, rng2, habit2, richness2, sounds2, key=key,
                                                        lock=locks_of(song, {role}, plan), motion=motion2, pedals={v2: (reg2[0] + reg2[1]) // 2}, plays=plan.plays[role],
                                                        figures=given)
             song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes2]

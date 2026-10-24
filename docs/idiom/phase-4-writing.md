@@ -1317,3 +1317,55 @@ before it was built (`phase4/period_count.py`, `period_roles.py`).
   held; four points of steps remain.
 - Two-voice accompaniments 8.2 onsets a bar merged (8.6 before, FFVI
   7.3). Song Check 8 is written from this.
+
+### Round 16: the feel and the layered bass (2026-10-23, from the owner's notes on set 8)
+
+The owner heard the bass stumble (Whole 10 of set 8) and the crash cymbal
+played fast as a constant noise. Investigated first, then built on his
+go.
+
+- **The stumble** was two faults in the vocabulary's reach. First, no word
+  for the feel: FFVI's bass bars on triplet positions, 18 % of its bars,
+  came only from its compound and shuffle songs (Terra, Dancing Mad, the
+  Opening Theme's third part, Slam Shuffle), and the figure tables carried
+  no mark of that, so a straight song drew a triplet bass bar beside
+  straight drums, each part on its own (Whole 10's bass on triplet
+  positions in five bars, its drums in thirteen others; nine of nineteen
+  songs with a bass had some). Now `feels`: a song's feel, duple or triple
+  (a quarter of its onsets or more on triplet positions), drawn once a song
+  (FFVI: triple in one song of five) and every figure table conditioned on
+  it (`FIGURE` gains `feel`). In twenty written songs, four triple, the
+  sixteen duple have no triplet bass bar at all. Some duple songs still
+  draw swung drum bars, as FFVI's own duple songs have them (Setzer's kit
+  swings in 89 % of its bars over a straight bass): the game's writing.
+  Second, the bass's second voice: Whole 10 drew a second bass line
+  "apart, same register, denser" and wrote it as a sixteenth-note root
+  under a walking line, both busy; FFVI's thirteen two-voice basses are a
+  sustained line (three or four strikes a bar, notes near a beat long)
+  under a staccato voice (five to twelve strikes, 0.15 to 0.4 beats) in
+  the same register. Now the bass figure table counts the sustained line
+  (`line_notes` for the bass: the voice with the longest notes), the
+  second voice is drawn from `second_figures` under the line's figure, and
+  `layer_sounds` gives a layered part's line and second voice their own
+  note lengths (upper parts too). Set 9's layered basses: a line of three
+  to four strikes near a beat long under a second of five to thirteen
+  short ones.
+- **The cymbal** is FFVI's writing drawn too often and played on the wrong
+  sample. Bars with four or more cymbal hits are 37 of FFVI's 1,334 kit
+  bars (Fanatics, Grand Finale), a ride in sixteenths; five of twenty
+  written songs had them against four of 67 in FFVI, because the kit is
+  drawn as one figure under the kit's habit and the plan's cymbal-group
+  habit ("sparse" in every one of those songs) is never looked at: a
+  drawing fault, open. And the pack's crash slot holds the built-in SNES
+  crash: the pack builder (`translate/pack.py`, the thin pack) keeps the
+  six most-struck drum samples and sorts them into pieces by brightness
+  and ring, and FFVI's cymbal (in 22 of its 67 songs, struck 561 times)
+  ranks eighth; its toms seventh; the slot the builder called the snare
+  holds a sample the namer calls a hat, and the true snare (5,690 strikes)
+  is not in the kit. The readings know every drum by name. The kit from
+  the namer's labels is phase 5's listed item; for the FFVI pack it can be
+  built now.
+- Measures after this round: chord tones on strong beats 0.56 (FFVI
+  0.56), steps inside a bar 0.61 (0.65), two-voice accompaniments 7.7
+  onsets a bar merged (7.3), one voice 6.4 (5.8), the reader's parts 3
+  (4). Song Check 9 is written from this. Pack: 64 tables.

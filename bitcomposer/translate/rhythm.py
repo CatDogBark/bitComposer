@@ -68,6 +68,9 @@ import argparse
 import bisect
 import json
 import math
+from fractions import Fraction
+import statistics
+import bisect
 import statistics
 import sys
 from array import array
@@ -141,6 +144,7 @@ class Song:
                                                       # coming back with the theme (the writers copy their own earlier bars there)
     periods: dict = field(default_factory=dict)       # a planned song: role -> {bar index: the lag in bars whose bar it plays again}
                                                       # (the plan's held bars of a backing part's period, period_units)
+    feel: str | None = None                           # the song's feel, duple or triple (song_feel); a planned song's drawn once
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -368,13 +372,13 @@ def bass_units(songs) -> list:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
         weight = part_weights(s).get(R.BASS, "minor")
-        for k, a, struck in numbered_bars_of(s, R.BASS):
+        for k, a, struck in numbered_bars_of(s, R.BASS, line_notes(s, R.BASS)):   # the line where the bass holds two voices
             if last is not None and k != last + 1:
                 previous = START
             c = _chord_at(s.chords, a)
             drawn = figure(struck, a, s)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
-                "part": R.BASS, "meter": s.meter, "tempo": tempo, "weight": weight,
+                "part": R.BASS, "meter": s.meter, "tempo": tempo, "weight": weight, "feel": song_feel(s),
                 "shape": "?" if c is None or c.root is None or c.fit < FIT else (c.shape or "major"),
                 "chord": chord_change(s, a, a + s.meter), "next": chord_change(s, a + s.meter, a + 2 * s.meter),
                 "previous": previous}))
@@ -492,7 +496,7 @@ def drum_units(songs) -> list:
                 previous = START
             drawn = drum_figure(struck, s)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
-                "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous}))
+                "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous, "feel": song_feel(s)}))
             previous, last = drawn, k
         if mine:
             kit = _kit(mine)
@@ -799,7 +803,7 @@ def units(songs) -> list:
                     previous = START                      # a bar of another length between: the chain breaks
                 drawn = pattern(p for p, _ in struck)
                 mine.append(tables.Unit(s.sid, s.game, drawn, {
-                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous, "weight": weights.get(role, "minor"),
+                    "part": role, "meter": s.meter, "tempo": tempo, "previous": previous, "weight": weights.get(role, "minor"), "feel": song_feel(s),
                     "place": place_in_part(s, k), "chord": chord_change(s, a, a + s.meter)}))
                 previous, last = drawn, k
             if mine:
@@ -1085,20 +1089,30 @@ def part_voices(song: Song, role: str) -> dict:
     return {v: ns for v, (r, ns) in song.voice_notes.items() if r == role and ns}
 
 
+def line_voice(voices: dict, role: str):
+    """A layered part's line among its voices: the bass's the voice with the longest notes (its sustained voice under a
+    busier one), another part's the voice with the most notes (layer_units' rule)."""
+    if role == R.BASS:
+        lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
+        return max(lengths, key=lambda v: (lengths[v], -v))
+    return max(voices, key=lambda v: (len(voices[v]), -v))
+
+
 def line_notes(song: Song, role: str) -> list | None:
-    """An upper part's own line where it holds two voices or more: the notes
-    of the voice with the most (layer_units' line); None for every other
-    part, whose bar is the part's. The figure table counts the line, not the
-    voices merged: FFVI's two-voice accompaniments strike 7.3 times a bar
-    together, the line 6.6 and the second voice 4.5, and a line written to
-    the merged count with a second line beside it had struck 10.3
-    (2026-10-23)."""
-    if role not in UPPER:
+    """A layered part's own line where it holds two voices or more (an upper
+    part or the bass): the line voice's notes (line_voice); None for every
+    other part, whose bar is the part's. The figure table counts the line,
+    not the voices merged: FFVI's two-voice accompaniments strike 7.3 times
+    a bar together, the line 6.6 and the second voice 4.5, and a line
+    written to the merged count with a second line beside it had struck
+    10.3 (2026-10-23); its two-voice basses are a sustained line under a
+    busy staccato voice in the same register."""
+    if role not in UPPER + (R.BASS,):
         return None
     voices = part_voices(song, role)
     if len(voices) < 2:
         return None
-    return voices[max(voices, key=lambda v: (len(voices[v]), -v))]
+    return voices[line_voice(voices, role)]
 
 
 DENSITY_BINS = ((3, "1-3"), (6, "4-6"), (9, "7-9"), (1e9, "10+"))   # a bar's onsets, for the second line's draw under the line's bar
@@ -1120,17 +1134,39 @@ def second_figure_units(songs) -> list:
     of five of its onsets with the line's."""
     out = []
     for s in songs:
-        for role in UPPER:
+        for role in UPPER + (R.BASS,):
             voices = part_voices(s, role)
             if len(voices) < 2:
                 continue
-            line = max(voices, key=lambda v: (len(voices[v]), -v))
+            line = line_voice(voices, role)
             others = [n for v, ns in voices.items() if v != line for n in ns]
-            line_bars = {k: pattern(p for p, _ in struck) for k, _, struck in numbered_bars_of(s, role, voices[line])}
-            for k, _, struck in numbered_bars_of(s, role, others):
+            key = (lambda struck, a: figure(struck, a, s)) if role == R.BASS else (lambda struck, a: pattern(p for p, _ in struck))
+            line_bars = {k: key(struck, a) for k, a, struck in numbered_bars_of(s, role, voices[line])}
+            for k, a, struck in numbered_bars_of(s, role, others):
                 if line_bars.get(k, "-") != "-":
-                    out.append(tables.Unit(s.sid, s.game, pattern(p for p, _ in struck),
+                    out.append(tables.Unit(s.sid, s.game, key(struck, a) if struck else "-",
                                            {"part": role, "density": density_bin(len(line_bars[k].split())), "line": line_bars[k]}))
+    return out
+
+
+def layer_sound_units(songs) -> list:
+    """Each layered part of each song (two voices or more; the drums left
+    out) as two units: the share of its gap a note sounds (sound_units'
+    grain) for the line and for the voices beside it; the values the part
+    and the voice (line, second). FFVI's second bass voice is the staccato
+    one under a sustained line; the part's one share had given both lines
+    the same lengths."""
+    out = []
+    for s in songs:
+        for role in UPPER + (R.BASS,):
+            voices = part_voices(s, role)
+            if len(voices) < 2:
+                continue
+            line = line_voice(voices, role)
+            for which, ns in (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x])):
+                share = sounded_share(ns)
+                if share is not None:
+                    out.append(tables.Unit(s.sid, s.game, f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role, "voice": which}))
     return out
 
 
@@ -1213,6 +1249,39 @@ def theme_carrier_units(songs) -> list:
                     break
             out.append(tables.Unit(s.sid, s.game, carrier, {"part": "carrier"}))
     return out
+
+
+FEELS = ("duple", "triple")
+TRIPLE_SHARE = 0.25                   # the share of a song's onsets on triplet positions from which its feel is triple
+
+
+def song_feel(song: Song) -> str:
+    """A song's feel: "triple" where TRIPLE_SHARE of its onsets or more fall
+    on triplet positions (thirds, sixths, twelfths of a beat: 6/8 read on a
+    4/4 grid, a shuffle), "duple" otherwise. Counted once a song; every
+    figure table is conditioned on it, so a written song draws one feel and
+    all its parts' bars in that feel. FFVI (2026-10-23): bass bars on
+    triplet positions, 18 % of its bars, came only from its compound and
+    shuffle songs; drawn unconditioned into a straight song they stumbled
+    against straight drums (Song Check 8's Whole 10)."""
+    if song.feel:
+        return song.feel
+    total, triple = 0, 0
+    for role, ns in song.notes.items():
+        for n in ns:
+            k = bisect.bisect_right([a for a, _ in song.bars], n[0] + NEAR) - 1
+            if k < 0:
+                continue
+            p = position(n[0] - song.bars[k][0], song.division)
+            total += 1
+            triple += Fraction(p).denominator in (3, 6, 12)
+    song.feel = "triple" if total and triple / total >= TRIPLE_SHARE else "duple"
+    return song.feel
+
+
+def feel_units(songs) -> list:
+    """Each song's feel (song_feel) as a unit, one a song; its value the part (song)."""
+    return [tables.Unit(s.sid, s.game, song_feel(s), {"part": "song"}) for s in songs]
 
 
 BACKING = (R.DRUMS, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts under the tune: a riff's parts

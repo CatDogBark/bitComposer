@@ -385,6 +385,31 @@ class NewTablesTests(unittest.TestCase):
         self.assertGreaterEqual(from_root.count(4), 22)
         self.assertGreaterEqual(from_other.count(2), 22)
 
+    def test_the_feel_and_the_layered_bass(self):
+        """A song's feel is triple from a quarter of its onsets on triplet positions; a two-voice bass's figure table counts its
+        sustained line, the busy voice is the second line's unit, and the two voices' note lengths are counted apart."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        straight = [(4.0 * k + 0.5 * i, 0.4, 60.0, "m") for k in range(4) for i in range(8)]
+        shuffle = [(4.0 * k + i + d, 0.3, 60.0, "m") for k in range(4) for i in range(4) for d in (0.0, 2 / 3)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": straight}, sid="s", game="g")
+        self.assertEqual(rhythm.song_feel(s), "duple")
+        s2 = rhythm.Song("t", 4, 12, bars, [], notes={"melody": shuffle}, sid="s", game="g")
+        self.assertEqual((rhythm.song_feel(s2), rhythm.feel_units([s2])[0].outcome), ("triple", "triple"))
+        chords = [vocab.Span(0.0, 16.0, 0, "", 1.0)]
+        long = [(4.0 * k, 3.9, 36.0, "b") for k in range(4)]                                   # the sustained line
+        busy = [(4.0 * k + 0.5 * i, 0.2, 36.0, "b") for k in range(4) for i in range(8)]        # the staccato voice under it
+        s3 = rhythm.Song("t", 4, 12, bars, chords, notes={"bass": long + busy}, sid="s", game="g", tonic=0, parts=[(0, 4, None, "A")])
+        s3.voice_notes = {2: ("bass", long), 5: ("bass", busy)}
+        self.assertEqual(rhythm.line_notes(s3, "bass"), long)
+        self.assertEqual({u.outcome for u in rhythm.bass_units([s3])}, {"0:R"})                 # the line's bar, one root held
+        seconds = rhythm.second_figure_units([s3])
+        self.assertEqual(len(seconds), 4)
+        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["density"]), ("bass", "0:R", "1-3"))
+        self.assertEqual(seconds[0].outcome.count("R"), 8)                                      # eight roots a bar under the held one
+        sounds = {(u.values["voice"]): u.outcome for u in rhythm.layer_sound_units([s3])}
+        self.assertGreater(float(sounds["line"]), float(sounds["second"]))
+        self.assertEqual(sounds["second"], "0.4")
+
     def test_a_plan_draw_stays_at_the_part(self):
         """A register drawn for a counter never comes from the bass's: the draw stops at the part's level."""
         units = [tables.Unit(f"s{i}", "g", "28-40", {"part": "bass"}) for i in range(10)] + [tables.Unit(f"s{i}", "g", f"{60 + 4 * (i % 3)}-80", {"part": "counter"}) for i in range(3)]

@@ -26,7 +26,7 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # their long tail (a bar one song played) wholly to the cell floor, whose runs the
                                      # manner refuses, so a "new" bar was mostly a common bar again (the whole songs'
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
-FIGURE = ("part", "meter", "habit", "previous")   # the figure tables' shape: the habit before the chain (writer.SHAPE)
+FIGURE = ("part", "meter", "feel", "habit", "previous")   # the figure tables' shape: the song's feel and the habit before the chain (writer.SHAPE)
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
 # mixture, what the table says), in the record's order
@@ -74,9 +74,11 @@ KEPT = {
     "voices": ("rhythm", "voices_units", {}, ("part", "band"), False, False, "how many voices a song uses"),
     "doubles": ("rhythm", "double_units", {}, ("part",), False, False, "what a song's double voices double, and how"),
     "layers": ("rhythm", "layer_units", {}, ("part",), False, False, "what a part's second voice does beside its line: doubling at an interval, alternating, or apart (how far off, how dense)"),
+    "feels": ("rhythm", "feel_units", {}, ("part",), False, False, "a song's feel, duple or triple (a quarter of its onsets or more on triplet positions), drawn once a song; every figure table is drawn by it"),
+    "layer_sounds": ("rhythm", "layer_sound_units", {}, ("part", "voice"), False, False, "the share of its gap a note sounds for a layered part's line and for its second voice"),
     "periods": ("rhythm", "period_units", {}, ("part", "length", "tempo"), False, False, "a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo"),
     "period_holds": ("rhythm", "period_hold_units", {}, ("part", "period"), False, False, "inside a backing part's period, a bar playing the bar a period before again (held) or not (varied)"),
-    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "density", "line"), False, False, "an upper part's second line: its bar's pattern under the line's own bar, where the part holds two voices or more"),
+    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "density", "line"), False, False, "a layered part's second line (an upper part's pattern, the bass's figure) under the line's own bar, where the part holds two voices or more"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
     "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),

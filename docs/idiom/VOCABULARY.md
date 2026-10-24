@@ -76,6 +76,18 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **ranges** — the register a sample is played in, by the sample. Drawn at
   rendering: a part's sample is one the game played in that part's
   register.
+- **feels** — a song's feel, duple or triple (triple where a quarter of its
+  onsets or more fall on thirds, sixths or twelfths of a beat: 6/8 read on
+  a 4/4 grid, a shuffle). Drawn once a song; every figure table (`rhythm`,
+  `bass`, `drums`, the drum groups) is conditioned on it, so all of a song's
+  parts draw bars of one feel. FFVI's bass bars on triplet positions, 18 %
+  of them, came only from its compound and shuffle songs; drawn into
+  straight songs unconditioned they stumbled against straight drums.
+- **layer_sounds** — for a layered part (two voices or more), the share of
+  its gap a note sounds, for the line and for the second voice apart. Drawn
+  once a part; the line and the second line take their own lengths (FFVI's
+  two-voice bass is a sustained line under a staccato voice; the part's one
+  share had given both the same).
 
 ## The form
 
@@ -150,12 +162,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the line's figures. (Counted merged, a dense bar held two voices'
   onsets, and a line written to it with a second line beside struck 10.3
   times a bar against FFVI's 7.3.)
-- **second_figures** — an upper part's second line: its bar's pattern under
-  the line's own bar, where the part holds two voices or more (`-` where it
-  rests). Drawn a bar for a second line apart, given the line's bar; the
-  same line bar gets the same second bar within a song. FFVI's second
-  accompaniment voice strikes 4.5 times a bar beside a line of 6.6, two of
-  five of its onsets with the line's.
+- **second_figures** — a layered part's second line: its bar under the
+  line's own bar, where the part holds two voices or more (an upper part's
+  pattern, the bass's figure; `-` where it rests), by the line's density
+  class and pattern. Drawn a bar for a second line apart, given the line's
+  bar; the same line bar gets the same second bar within a song. FFVI's
+  second accompaniment voice strikes 4.5 times a bar beside a line of 6.6,
+  two of five of its onsets with the line's; its second bass voice is the
+  busy staccato one under a sustained line in the same register (the bass
+  figure table counts that line).
 - **voicings** — which chord tones an upper part holds in a span, by the
   chord's shape and the part's richness. Drawn a span as a mixture; the
   tones are stacked on the voices, lowest first.

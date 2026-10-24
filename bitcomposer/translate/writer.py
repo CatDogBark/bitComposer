@@ -871,7 +871,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         always new gave 16.5 distinct cells against 12.5)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
-        values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit}
+        values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song)}
         unit = tables.Unit(song.sid, song.game, "", values)
         fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
         kind = models["cell_rhythms"].draw((R.MELODY,), rng, floored=False) if "cell_rhythms" in models else "new"
@@ -1255,7 +1255,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 if thin:
                     env = thinned(env, energy[k])
                 bar_lock = None if thin else lock.get(k)        # in a breakdown the band's hits are not the band: no lock
-                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit}
+                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song)}
                 unit = tables.Unit(song.sid, song.game, "", values)
                 # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
                 # without the lock (the band asks more strikes than the habit: the part keeps its density and locks
@@ -1309,7 +1309,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         meter = env[-1] if env[-1] else song.meter
         fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at), lock_share)   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
-        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit}
+        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song)}
         unit = tables.Unit(song.sid, song.game, "", values)
         figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=full)
         nearly = None
@@ -1420,7 +1420,8 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             if not (k < len(plays) and plays[k]) or merged[k]:
                 continue
             before = by_group[main][k - 1] if k else REST
-            values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit}
+            values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit,
+                      "feel": rhythm.song_feel(song)}
             unit = tables.Unit(song.sid, song.game, "", values)
             env = free_drum_envelope(kit & set(main))(None, values["meter"])
             for _ in range(TRIES):
@@ -1446,7 +1447,8 @@ def plays_as_own(plays, bars: list) -> list:
 
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
-         plays: list | None = None, register: int | None = None, sounds: float | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         plays: list | None = None, register: int | None = None, sounds: float | None = None,
+         figures: list | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -1475,7 +1477,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
 
     words = habit.split()
-    if free:
+    if figures is not None:                                 # a second line's figures given (the second_figures table, under the line's own)
+        figures = [f if o != REST else REST for f, o in zip(figures, own)]
+    elif free:
         figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit), energy=energy)
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
