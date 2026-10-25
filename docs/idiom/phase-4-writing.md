@@ -2427,3 +2427,90 @@ the tune or the bass, FFVI's rate 5 of 52.
 The rules the writer still decides by hand, ranked, with rounds 30 and
 31 marked done: [rules-to-words.md](rules-to-words.md) (the audit of
 2026-10-24 at 6a89f99).
+
+### Round 32a: the voice beside a line kept where the game plays its sample (2026-10-24, from the owner's note on Song Check 25)
+
+The owner heard "a weird noise written in the counter of Whole 28 at
+1:01". It is three notes in bar 29 (61.3 to 62.1 s), the counter's own
+onsets in the tune's rest at beats 1.5, 1.67 and 2: 78, 90 and 94 on
+sfd6accf98a, the sample round 30 gave it, which FFVI records at 69.2 and
+plays between 48 and 72 by the `ranges` word (27 voices in 19 songs;
+its highest note anywhere in the readings 89, as a counter 81). The 94
+is 25 semitones over the recording, past the SNES chip's pitch ceiling
+(four times the recording's rate; `score._pitch` caps the register at
+0x3FFF), so the render plays it at 93.2, a semitone flat, and the stem
+shows it: a 42 ms blip at 78, 170 ms at 90, then a tone at 93.2 whose
+loop body at that rate is thin and gone to -40 dB within 0.3 s, where
+the bars either side hold 54 to 58 (`cn_stem_counter.log`). How they got
+there (`cn_trace28.py`): three "alone" moves drawn in a row from
+`voice_moves` under (counter, other, alone), +12 scale steps at p 0.0013,
++7 at 0.0039, +2 at 0.079, each a legitimate draw of the word (FFVI's
+counter does leap so, inside a song whose register bounds it), with
+nothing to stop the climb but the span `writer.counter` folds into: the
+tune's register widened by `LAYER_OFFSET` each way, (24, 96) here, round
+23's rule reused (the audit's item 7). The chord parts' voices apart or
+alternating and the bass's second voice share the rule (`whole.py`
+`span_v`, `writer.bass` with `BESIDE_SPAN`). A drawing fault by IDIOM.md:
+the `ranges` word says where the sample is played and the writer let the
+voice land where it never is.
+
+**Measured first (seeds 1 to 20 and 28, the round-31 archive;
+`cn_outside_before.log`, `cn_ffvi_outside.log`).** Of 4708 notes of
+voices beside a line, 615 (13 %) sit outside the widest band the
+`ranges` word gives their sample (its votes' lowest floor and highest
+ceiling): the counter 127 of 1755 (7 %; above by up to 22, three by 12
+or more; below by up to 15), the accompaniment's second voices 422 of
+2047 (21 %; above by up to 17, below by up to 18), the second bass 66 of
+906 (7 %, all above, by up to 8). Outside anything FFVI plays on the
+sample (the readings' extremes): 103 (2 %), 30 of them the counter's.
+FFVI's own voices beside a line, by the same measure: 9.6 % outside the
+band (the counter 8.5 %, above by at most 9 and never 12 or more; the
+accompaniment 12.8 %; the bass 7.4 %), since a band is a voice's 10th to
+90th percentiles and the top and bottom tenths of every voice lie past
+its own.
+
+**Built.** `Part.beside`: the voices `write()` wrote beside a line under
+the span rule (the counter's where `writer.counter` wrote it, a chord
+part's voices with their pitch drawn, the bass's second voice with the
+voice words). `whole.sample_range`: the word's widest band for a sample.
+`whole.fold_to_samples`, called in `compose()` right after `samples_for`
+(the sample is known only then: the counter's by the pair word against
+the register it was written in): every such voice's note outside the
+band of the sample it is rendered on is moved into it by octaves
+(`writer.in_register`, the span's own fold), the part's log saying how
+many and which ("voice 1 kept within 48-72, where the game plays
+sfd6accf98a: 9 notes folded by octaves (...)"). Nothing is drawn, so the
+render stream, the floors and the echo stand. A test on made-up parts
+(`test_a_voice_beside_a_line_stays_where_the_game_plays_its_sample`):
+the widest band, the counter's four notes folded to the nearest octave
+inside, a chord part's voice apart folded and its doubling voice and
+line untouched, the second bass on its own sample, a sample the word
+lacks and no word at all leaving everything be. The suite passes (338
+tests, 2 skipped).
+
+**Measured after (`cn_outside_after.log`, `cn_diff.log`).** No note of
+any voice beside a line is outside its sample's band; 615 notes moved,
+every one by whole octaves at its own time and voice, in 17 of the 21
+songs; no sample, floor, echo or register changed, and no other voice's
+note. Whole 28: the counter's 78, 90 and 94 are 66, 66 and 70 (the bar
+now 66 66 70 52 against the tune's 61), so bar 29 sits where the rest of
+the line does. The cost, to be heard: the band is a hard edge where
+FFVI's is not, so notes one semitone past it fold a whole octave: in
+Whole 28 six counter notes at 47 (the C part's bars 22, 26 and 34) go to
+59 and eighteen second-bass notes at 49 on sb34cb55c14 (band 24-48) go
+to 37; across the seeds Whole 16's low accompaniment voice moves 113 of
+192 notes, 112 of them up an octave (its sample's band 56-68, the voice
+written under it), Whole 03's 68 of 194 all but one down and Whole 01's
+40 of 214 down. FFVI
+keeps 8 to 13 % of such notes past the band, by up to 9 for the counter;
+the written songs now keep none. Song Check 26 will carry this in every
+seed with a counter or a second voice, not Whole 28's bar 29 alone.
+
+**Open.** Whether the edge should be the word's band or the game's
+extremes on the sample (a word to count: the lowest and highest note a
+song plays a sample at, under which Whole 28 would move the 90 and 94
+alone), or the band with FFVI's own share past it; a redraw at writing
+in place of the fold, which needs the sample before the writing (the
+pair word is drawn against the written register, round 30). The span
+rule itself stands (item 7). Report: `phase4/counter-noise-report.md`;
+scripts `cn_*.py` beside it.

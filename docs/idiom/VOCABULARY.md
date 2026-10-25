@@ -93,7 +93,14 @@ said otherwise. Counting code: `translate/rhythm.py` and
   than an octave above its recording in 0 to 2 % of notes; the written
   songs had in 8 to 10 %, the shrillness the owner heard: the old fit had
   asked only that the register's centre lie near the range, and by the
-  pack's prefixed names it had found no range at all.
+  pack's prefixed names it had found no range at all. A voice written
+  beside a line (the counter-line, a chord part's voice apart or
+  alternating, the bass's second voice) is kept, once its sample is
+  chosen, within the sample's widest band over the word's songs, a note
+  outside moved in by octaves (`whole.fold_to_samples`, round 32a): the
+  span those voices are written in is the line's register widened by two
+  octaves, and it had let Whole 28's counter climb to 94 on a sample the
+  game plays between 48 and 72, past the SNES chip's pitch ceiling.
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
   onsets or more fall on thirds, sixths or twelfths of a beat: 6/8 read on
   a 4/4 grid, a shuffle). Drawn once a song; every figure table (`rhythm`,
