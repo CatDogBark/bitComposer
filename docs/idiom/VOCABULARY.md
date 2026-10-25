@@ -239,7 +239,9 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **levels** — a part's level as a share of the song's loudest part's, in
   tenths ("1.0" the loudest part), by the part; from the readings' own note
   levels. Drawn once a song for every part; the loudest plays at
-  `whole.TOP_LEVEL` and the rest at their share (`whole.note_level`).
+  `whole.TOP_LEVEL` and the rest at their share (`whole.note_level`; the
+  band's loudest sits under it where the token's loudest part was left
+  out of the band by the textures, 2 plans of 200 seeds).
   Since round 32 the draw is overwritten by the `balance` token's level
   for every part the token's song has, so with a pack built since then it
   covers only a part the token lacks (a token without the field); the

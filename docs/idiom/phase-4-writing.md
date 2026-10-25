@@ -2709,7 +2709,14 @@ sit on lines at 0.59 of the tune, and a word joining the second voice's
 level to the band (the token's field by voice, or `layer_levels` under
 the line's share) is the next thing to count. `TOP_LEVEL` 0.85 is still
 a constant (the rules audit's item C; FFVI's loudest part sits at 0.28
-of full). A song's balance is now one of 66 layouts whole, so twenty
+of full). The band's loudest part plays at `TOP_LEVEL` where the token's
+loudest part is in the band, which is every seed of 1-20 and 28; where
+the textures play that part in no bar and it is left out of the band,
+the band's loudest keeps its share of a part that is not playing and
+plays under `TOP_LEVEL` (2 plans of seeds 1-200, at 0.7 and 0.8 of it:
+the round-32 review), as a plan's loudest could under the independent
+draws (the round-31 review's open item), far less often now. A song's
+balance is now one of 66 layouts whole, so twenty
 seeds vary in level as FFVI's songs do and no more: The Prelude's
 all-equal band and Fanatics' loud chords come with it. The `levels`
 table stays in the pack for a token without the field. Song Check 26 is
