@@ -108,8 +108,10 @@ class Plan:
     feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
     gap_sounds: dict = field(default_factory=dict)    # a chord part or the bass -> {only/line/second: {gap class: the share a note sounds}}
     locks: dict = field(default_factory=dict)         # the bass -> the share of the kit's accents it strikes with (bass_locks)
-    levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the levels table)
+    levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the balance token's field where
+                                      # its song has the part; the levels table where not; the counter's from counter_shares)
     layer_levels: dict = field(default_factory=dict)  # a layered part -> its second voice's level against its line's
+    level_from: dict = field(default_factory=dict)    # a part -> where its level came from: "balance", "levels" or "counter_shares"
 
     @property
     def bars(self) -> int:
@@ -438,20 +440,23 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights, layout, shares, counts = [], {}, {}, {}, {}
+    band, weights, layout, shares, counts, token_levels = [], {}, {}, {}, {}, {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
         band.append(role)
         if rest:
             fields = rest.split(":")
-            weights[role] = fields[0]
-            if len(fields) > 1 and "-" in fields[1]:        # the song's layout, note lengths and voices a part come with its balance
+            if fields[0]:
+                weights[role] = fields[0]
+            if len(fields) > 1 and "-" in fields[1]:        # the song's layout, note lengths, voices and levels a part come with its balance
                 lo, hi = fields[1].split("-")
                 layout[role] = (int(lo), int(hi))
             if len(fields) > 2 and fields[2]:
                 shares[role] = float(fields[2])
             if len(fields) > 3 and fields[3]:
                 counts[role] = int(fields[3])
+            if len(fields) > 4 and fields[4]:
+                token_levels[role] = float(fields[4])
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
@@ -607,8 +612,19 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log))} if R.BASS in band and R.DRUMS in band else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
+    # the band's levels as one unit (round 32): a part's level is the balance token's where its song has the part, the
+    # `levels` draw above where not. The draws stay in place and are overwritten: removing them would shift every draw
+    # after them on this stream (the layer levels, a themed plan drawn again, the counter's words) and so the songs known.
+    level_from = {role: "balance" if role in token_levels else "levels" for role in band}
+    levels.update({role: token_levels[role] for role in band if role in token_levels})
+    if token_levels:
+        top = max(levels.values())
+        log.append("levels from the balance: " + " ".join(f"{r}={levels[r]:.1f}" for r in band if level_from[r] == "balance")
+                   + ("; drawn from levels: " + " ".join(f"{r}={levels[r]:.1f}" for r in band if level_from[r] == "levels") if "levels" in level_from.values() else "")
+                   + "; the loudest " + "/".join(r for r in band if levels[r] >= top - 1e-9))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks)
+                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
+                level_from=level_from)
 
 
 def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
@@ -617,9 +633,11 @@ def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
     as a share of the song's loudest part's under the band the tune's own `levels` draw falls in (counter_shares, round
     31: FFVI's counter is never above the loudest part, and its counters louder than the tune sit on quiet tunes; the
     counter's level over the tune's drawn apart from the tune's share and multiplied into it had put Whole 28's counter
-    at 1.05 of the loudest). The share replaces the counter's own `levels` draw. Drawn here, after `plan`'s retries, not
-    inside `_plan_once`: a themed plan is drawn again on the same stream when its tune cannot come back, and two draws
-    inside the attempt had shifted every draw of the next one (Whole 14's band, key and form changed)."""
+    at 1.05 of the loudest). The share replaces the counter's own `levels` draw where the balance token's song has no
+    counter level (round 32: the band's levels are the token's as one unit; the token's counter level stands, and the
+    `counter_shares` draw is still made so the stream is as it was). Drawn here, after `plan`'s retries, not inside
+    `_plan_once`: a themed plan is drawn again on the same stream when its tune cannot come back, and two draws inside
+    the attempt had shifted every draw of the next one (Whole 14's band, key and form changed)."""
     if R.COUNTER not in p.band or R.MELODY not in p.band:
         return
     have = models_or_empty(models)
@@ -628,10 +646,15 @@ def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
         x["sample"] = _draw(models, "counter_samples", (R.COUNTER,), rng, p.log)
     if "counter_shares" in have:
         tune = p.levels.get(R.MELODY, float(DEFAULTS["levels"]))
-        x["level"] = float(_draw(models, "counter_shares", (R.COUNTER, rhythm.tune_share_band(tune)), rng, p.log))
-        p.levels[R.COUNTER] = x["level"]
+        drawn = float(_draw(models, "counter_shares", (R.COUNTER, rhythm.tune_share_band(tune)), rng, p.log))
+        if p.level_from.get(R.COUNTER) == "balance":
+            x["level"] = p.levels[R.COUNTER]
+        else:
+            x["level"] = p.levels[R.COUNTER] = drawn
+            p.level_from[R.COUNTER] = "counter_shares"
     p.log.append(f"counter beside the tune: {x.get('sample', 'any')} sample"
-                 + (f", level {x['level']:.1f} of the loudest under the tune's {p.levels[R.MELODY]:.1f}" if "level" in x else ""))
+                 + (f", level {x['level']:.1f} of the loudest " + ("with the band's, the balance's" if p.level_from.get(R.COUNTER) == "balance"
+                                                                   else f"under the tune's {p.levels[R.MELODY]:.1f}") if "level" in x else ""))
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -1371,6 +1394,21 @@ def voice_map(plan: Plan, written: dict) -> dict:
     return out
 
 
+def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = None) -> float:
+    """A note's level of full: the part's share of the song's loudest part's (plan.levels: the balance token's where its
+    song has the part, so the band's levels are one FFVI song's as one unit and the loudest part plays at TOP_LEVEL and
+    the rest at their share; the `levels` table's for a part the token lacks; the counter-line's from counter_shares
+    under the tune's share band; LEVELS without a levels word), a voice beside the line at its own share of the line's
+    (layer_levels; `second_voice` those voices by part, layers_of's apart and alternating voices). Never under 0.05 nor
+    over 1.0 of full: a share is at most 1.0, so only a second voice over 1.0 of its line can reach the cap."""
+    base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
+    if second_voice is None:
+        second_voice = {role: {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}}
+    if voice in second_voice.get(role, ()):
+        base *= plan.layer_levels.get(role, 1.0)
+    return max(0.05, min(1.0, base))
+
+
 def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0):
     """The written parts as a score (spc.convert.Score) on the pack's
     samples: the form once, then the loop (from the loop's bar to the
@@ -1410,13 +1448,7 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     from .. import samples as samples_mod
 
     def level_of(role, j):
-        """A note's level: the part's share of the loudest part's (the levels table; LEVELS without one; the counter-line's
-        from counter_shares under the tune's share band, set so in the plan, never above the loudest), a voice beside the
-        line at its own share of the line's (layer_levels)."""
-        base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
-        if j in second_voice.get(role, ()):
-            base *= plan.layer_levels.get(role, 1.0)
-        return max(0.05, min(1.0, base))
+        return note_level(plan, role, j, second_voice)
 
     def put(voice, role, t0, t1, midi, name, sample, j):
         idx, addr, c5 = instrument(name, sample)

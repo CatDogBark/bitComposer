@@ -95,7 +95,7 @@ KEPT = {
     "weights": ("rhythm", "weight_units", {}, ("part",), False, False, "a part's weight in the band (minor, half, main)"),
     "sizes": ("rhythm", "form_size_units", {}, ("part",), False, False, "how many parts a song's form has"),
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
-    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each pitched part's weight in it, drawn once a song"),
+    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices and level (a share of the loudest part's, in tenths) in it, drawn once a song as one unit"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
     "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "gap"), False, False, "the share of its gap a note sounds, by the voice and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "bass_locks": ("rhythm", "bass_lock_units", {}, ("part",), False, False, "the share of the kit's accents (two pieces together) the bass strikes with, in tenths"),

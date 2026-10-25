@@ -2227,27 +2227,40 @@ def part_register(notes, ambitus: bool = False) -> tuple | None:
 
 def balance_units(songs) -> list:
     """Each song as a unit: its outcome its band with, for each pitched
-    part, its weight, its register and the share of its gap a note sounds
-    ("accompaniment=main:56-68:0.8 bass=half:28-40:0.9 drums
-    melody=half:64-84:0.9"); its value the part (arrangement). What a song
-    written with no original draws its band, balance and layout from, as
-    one of the game's songs has them together: drawn a part at a time, a
-    bass sat above the accompaniment and a counter-line two octaves under
-    its instrument (the Song Check's notes, 2026-10-23)."""
+    part, its weight, its register, the share of its gap a note sounds,
+    its voices and its level as a share of the song's loudest part's in
+    tenths (level_units' unit; the loudest part "1.0")
+    ("accompaniment=main:56-68:0.8:2:0.7 bass=half:28-40:0.9:1:1.0
+    drums=::::0.8 melody=half:64-84:0.9:1:0.8"; the drums, which carry no
+    weight, register or sounded share, keep their level in the same fifth
+    field); its value the part (arrangement). What a song written with no
+    original draws its band, balance and layout from, as one of the
+    game's songs has them together: drawn a part at a time, a bass sat
+    above the accompaniment and a counter-line two octaves under its
+    instrument (the Song Check's notes, 2026-10-23). The levels joined the
+    token in round 32 (2026-10-24): drawn a part at a time from `levels`,
+    the accompaniment had landed strictly above the tune in 0.30 of plans
+    against FFVI's 0.17 (its band-themed songs 0.06) and at 1.2 times the
+    tune or more in 0.24 against 0.12 (0.00), and the same product awaited
+    the harmony and the bass; as a field of the token, a song's level
+    layout is one of the game's songs' whole, as its registers, sounds and
+    voice counts already were, and the game's joint holds by construction."""
     out = []
     for s in songs:
         if not s.notes:
             continue
         weights = part_weights(s)
         voices = Counter(role for role, _ in s.voice_notes.values())
+        top = max(s.levels.values()) if s.levels else 0.0
+        levels = {role: f"{round(lv / top, 1):.1f}" for role, lv in s.levels.items()} if top > 0 else {}
         tokens = []
         for role in sorted(s.notes):
             if role not in weights:
-                tokens.append(role)
+                tokens.append(role + (f"=::::{levels[role]}" if role in levels else ""))
                 continue
             reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
             tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
-                          + f":{max(1, voices.get(role, 1))}")
+                          + f":{max(1, voices.get(role, 1))}" + (f":{levels[role]}" if role in levels else ""))
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

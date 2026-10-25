@@ -743,6 +743,71 @@ class NewTablesTests(unittest.TestCase):
         self.assertNotIn("level", p.extras["counter"])
         self.assertIn(p.levels["counter"], (0.4,))
 
+    def test_the_bands_levels_are_the_balance_tokens_as_one_unit(self):
+        """The balance token carries each part's level as a share of the song's loudest part's (the fifth field, level_units'
+        unit; the drums' in the same field of a weightless token); the plan takes every part's level from the token where its
+        song has the part, so a song's level layout is one of the game's songs' whole, and falls back to the `levels` draw
+        (the counter to counter_shares under the tune's band) for a part the token lacks; the draws stay on the stream, so
+        the plan's key, form, band and every other draw are what they were (round 32: drawn apart, the accompaniment had
+        landed strictly above the tune in 0.30 of plans against FFVI's 0.17). The loudest part plays at TOP_LEVEL."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14}
+        tokens = rhythm.balance_units([s])[0].outcome.split()
+        self.assertEqual([t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])                 # bass, drums, melody: shares of the loudest
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 4, tokens)        # weight:register:sounded share:voices:level
+        self.assertEqual(tokens[1], "drums=::::0.5")                                                # the drums keep a level and nothing else
+        s.levels = {}
+        self.assertEqual(rhythm.balance_units([s])[0].outcome.split()[1], "drums")                  # no levels read: the token as before
+        units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
+        token = "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1:1.0 counter=minor:60-72:0.8:1 drums=::::0.6 melody=main:64-84:0.9:1:0.7"
+        models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, rhythm.ARRANGEMENT)),
+                  "levels": tables.Table(("part",), "levels", votes=tables.SHARES).fit(
+                      units("levels", "0.3", "accompaniment") + units("levels", "0.9", "bass") + units("levels", "0.4", "counter") + units("levels", "0.2", "drums") + units("levels", "0.5", "melody")),
+                  "counter_shares": tables.Table(("part", "tune"), "counter_shares", votes=tables.SHARES).fit(units("counter_shares", "0.8", "counter", tune="0.7-0.8")),
+                  "counter_samples": tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit(units("counter_samples", "other", "counter"))}
+        for seed in range(1, 6):
+            p = whole.plan(models, seed, "g")
+            self.assertEqual(p.band, ["accompaniment", "bass", "counter", "drums", "melody"])
+            self.assertEqual({r: p.levels[r] for r in ("bass", "drums", "melody")}, {"bass": 1.0, "drums": 0.6, "melody": 0.7})   # the token's
+            self.assertEqual(p.levels["accompaniment"], 0.3)                                        # the token lacks it: the levels draw
+            self.assertEqual(p.levels["counter"], 0.8)                                              # and counter_shares under the tune's 0.7
+            self.assertEqual(p.level_from, {"accompaniment": "levels", "bass": "balance", "counter": "counter_shares", "drums": "balance", "melody": "balance"})
+            self.assertEqual(p.extras["counter"]["level"], 0.8)
+            self.assertIn("levels from the balance: bass=1.0 drums=0.6 melody=0.7; drawn from levels: accompaniment=0.3 counter=0.4; the loudest bass", p.log)
+            self.assertIn("counter beside the tune: other sample, level 0.8 of the loudest under the tune's 0.7", p.log)
+            self.assertEqual(p.weights, {"accompaniment": "half", "bass": "half", "counter": "minor", "melody": "main"})   # the drums' empty weight is no weight
+            self.assertEqual(p.registers["bass"], (36, 44))
+        # the token's own counter level stands, and the counter_shares draw is made all the same (the stream as it was)
+        full = token.replace("counter=minor:60-72:0.8:1 ", "counter=minor:60-72:0.8:1:0.5 ")
+        models["balance"] = tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", full, rhythm.ARRANGEMENT))
+        p = whole.plan(models, 1, "g")
+        self.assertEqual((p.levels["counter"], p.level_from["counter"], p.extras["counter"]["level"]), (0.5, "balance", 0.5))
+        self.assertIn("counter beside the tune: other sample, level 0.5 of the loudest with the band's, the balance's", p.log)
+        self.assertEqual(p.levels["accompaniment"], 0.3)
+        without = whole.plan({k: v for k, v in models.items() if k != "counter_shares"}, 1, "g")
+        self.assertEqual(without.levels, p.levels)                                                  # the draw changed no level
+        # the same seed with the token's levels and without: every other draw identical (the levels draws stay in place)
+        bare = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(
+            units("balance", "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1 counter=minor:60-72:0.8:1 drums melody=main:64-84:0.9:1", rhythm.ARRANGEMENT))}, 1, "g")
+        self.assertEqual((bare.tonic, bare.mode, bare.parts, bare.band, bare.registers, bare.habits, bare.layer_levels, bare.extras["counter"]["sample"]),
+                         (p.tonic, p.mode, p.parts, p.band, p.registers, p.habits, p.layer_levels, p.extras["counter"]["sample"]))
+        self.assertEqual(bare.levels, {"accompaniment": 0.3, "bass": 0.9, "counter": 0.8, "drums": 0.2, "melody": 0.5})
+        self.assertEqual(set(bare.level_from.values()), {"levels", "counter_shares"})
+        self.assertNotIn("levels from the balance", " ".join(bare.log))
+        # the note level: the loudest part at TOP_LEVEL, the rest at their share, a second voice at its layer share, capped at full
+        p.voices["accompaniment"] = 2; p.extras["accompaniment"]["layers"] = ["apart -12 like"]; p.extras["accompaniment"]["layer"] = "apart -12 like"
+        p.layer_levels["accompaniment"] = 1.5; p.layer_levels["melody"] = 1.5
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0), whole.TOP_LEVEL)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 0), whole.TOP_LEVEL * 0.7)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), whole.TOP_LEVEL * 0.3)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), whole.TOP_LEVEL * 0.3 * 1.5)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 1), whole.TOP_LEVEL * 0.7)             # one voice: no second
+        self.assertEqual(whole.note_level(p, "accompaniment", 1, {"accompaniment": {1}}), whole.TOP_LEVEL * 0.3 * 1.5)
+        p.levels["accompaniment"] = 1.0
+        self.assertEqual(whole.note_level(p, "accompaniment", 1), 1.0)                              # a second voice over its line at the top: the cap
+
     def test_the_counters_sample_is_the_games_pair_with_the_tunes(self):
         """counter_pairs counts the counter's sample under the tune's where the counter plays another (the pack's ids); at the
         rendering the draw under the tune's sample is taken where the pack holds it and it reaches the written register, the
