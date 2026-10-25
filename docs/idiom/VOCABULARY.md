@@ -32,8 +32,10 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **length_habits** — a song's part-length habit (short, medium, long).
   Drawn once; conditions `lengths`.
 - **balance** — the song's band with each pitched part's weight, register,
-  sounded share, voices and level, and the drums' level
-  (`bass=half:28-40:0.3:1:1.0 drums=::::0.8 melody=main:64-84:0.9:1:0.7`).
+  sounded share, voices, level and, where it holds two voices or more,
+  its second voices' levels, and the drums' level
+  (`accompaniment=half:56-68:0.8:2:0.6:1.2 bass=half:28-40:0.3:1:1.0
+  drums=::::0.8 melody=main:64-84:0.9:1:0.7`).
   Drawn once, whole: which parts the song has, their weights, their
   registers, how long their notes sound, how many voices each part gets
   (`allot` trims the total to the SNES chip's eight), and since round 32
@@ -47,7 +49,41 @@ said otherwise. Counting code: `translate/rhythm.py` and
   has (`Plan.level_from`; the log line "levels from the balance: ...; the
   loudest bass"); a part the token lacks (a token without the field: a
   pack built before round 32, the default balance) keeps its draw, the
-  counter its `counter_shares` draw. Why: drawn a part at a time, the
+  counter its `counter_shares` draw. Since round 33 (2026-10-25) a part
+  with two voices or more carries a sixth field too: each voice beyond
+  the line's level over the line voice's in tenths (the `layer_levels`
+  unit, capped at 1.5; `rhythm.voice_level_shares`), the busiest voice
+  first, joined by "/" (`accompaniment=main:56-64:1.0:4:0.5:1.0/1.3/1.3`),
+  so the line and the voices beside it are one song's together; the
+  plan keeps its `layer_levels` draws on the stream and overwrites each
+  covered part's with the token's first share (`Plan.voice_levels` by
+  rank, `Plan.layer_from`; the log line "second voices from the balance:
+  accompaniment=1.2/0.7 bass=0.7"), and `whole.note_level` plays voice
+  j beside the line at the token's entry j (a doubling voice at the
+  line's level, as before); a part the token's song has as one voice,
+  or a token without the field, keeps the `layer_levels` draw. One share
+  a voice beyond the line rather than the second's alone: the token's
+  voice count is the song's, and a third or later voice's share differs
+  from the second's in 23 of FFVI's 52 (Gau 1.5 then 3.2 before the cap).
+  Why the sixth field: a second voice at its own `layer_levels` draw on
+  a line whose level was the token's had stacked to 1.8 times the tune
+  (Whole 03) and the cap of full (Whole 15 and 20), where FFVI's loud
+  second voices (1.5 or more, 12 of 43 layered accompaniments) sit on
+  lines at 0.59 of the tune and reach 1.21 times it at the median; over
+  seeds 1-20 and 28 (15 accompaniments with a second voice) the second
+  voice strictly above the tune fell from 5 to 2 (FFVI 10 of 43), the
+  stack's maximum over the tune from 1.50 to 1.30 (FFVI's band-themed
+  1.21), the notes at the cap of full from 379 to 0; 20000 tokens drawn
+  the plan's way put the accompaniment's second voice strictly above the
+  tune in 0.21 against 0.29 with an independent draw (FFVI as the token
+  plays it 0.21), the bass's second voice at 1.2 times the tune or more
+  in 0.31 against 0.44 (0.31). The cost, by design: the token's share is
+  capped at 1.5 as `layer_levels` is (22 of FFVI's 148 voices beyond a
+  line run past it, Relm's accompaniment to 3.4), and the line plays at
+  the part's level (the fifth field, the median over all the part's
+  voices), which in 8 of FFVI's 43 layered accompaniments is over 1.2
+  times the line voice's own (Epitaph 2.8), so the stack is the song's
+  own to within those two. Why: drawn a part at a time, the
   accompaniment's share and the tune's were independent, and 20000 plans
   drawn that way put the accompaniment strictly above the tune in 0.30
   against FFVI's 0.17 (0.12 in tenths; its band-themed songs 0.06, 0.00)
@@ -132,7 +168,10 @@ said otherwise. Counting code: `translate/rhythm.py` and
   outside moved in by octaves (`whole.fold_to_samples`, round 32a): the
   span those voices are written in is the line's register widened by two
   octaves, and it had let Whole 28's counter climb to 94 on a sample the
-  game plays between 48 and 72, past the SNES chip's pitch ceiling.
+  game plays between 48 and 72, past the SNES chip's pitch ceiling. The
+  band is a hard edge (a note one semitone past it folds a whole octave)
+  where FFVI keeps 8 to 13 % of such notes a little past it; the owner
+  decided (2026-10-25) to keep it as built.
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
   onsets or more fall on thirds, sixths or twelfths of a beat: 6/8 read on
   a 4/4 grid, a shuffle). Drawn once a song; every figure table (`rhythm`,
@@ -252,9 +291,21 @@ said otherwise. Counting code: `translate/rhythm.py` and
   1.4 times the accompaniment and the pads at 0.6 of it, a lead over a
   backing (round 25). Drawn a part at a time the shares were independent
   across the band, which FFVI's are not (the `balance` entry).
-- **layer_levels** — a layered part's second voice's level against its
-  line's, in tenths, by the part. Drawn once a song; the voices beside the
-  line play at it.
+- **layer_levels** — a layered part's second voice's (the busiest beside
+  the line) level against its line voice's, in tenths, capped at 1.5
+  (`rhythm.LAYER_LEVEL_CAP`), by the part. Drawn once a song for every
+  pitched part; since round 33 the draw is overwritten by the `balance`
+  token's sixth field (the same unit, one share a voice beyond the line)
+  for every part the token's song holds two voices or more in, so with a
+  pack built since then it covers only a part the token's song has as one
+  voice or a token without the field (a pack built before round 33); the
+  draw stays on the plan's stream so every draw after it is what it was.
+  Over seeds 1-20 and 28 every layered part (31 of 31) takes the token's
+  shares and this draw fires 0 times. FFVI's second voice sits at 1.0 of
+  its line in 43 of 96 layered parts, under in 22, over in 31 (13 past the
+  cap, Relm's accompaniment at 3.4); drawn apart from the line's level it
+  had stacked past the tune where FFVI's loud second voices sit on quiet
+  lines (the `balance` entry).
 - **counter_shares** — the counter-line's level as a share of the song's
   loudest part's, in tenths (the `levels` unit), by the part and the band
   the tune's own share falls in (`rhythm.TUNE_SHARES`: under 0.7, 0.7 to
