@@ -2274,3 +2274,149 @@ the check should be against the counter's planned register, the written
 register's middle, or the sample's range over all its songs is a choice
 for the owner, not made here. The pairs with a sample outside the pack
 (12 of 35) are passed over, as `layer_samples`' are.
+
+### Round 31: the counter's level under the tune's share (2026-10-24, from the counter-winning report on Song Check 24)
+
+After round 30 Whole 28's counter still won over the tune by level: the
+report's item 1. `counter_levels` (round 29: the counter's level over
+the tune's in tenths, once a song) was a right word with a right table
+(FFVI: 1.0 in 24 songs of 52, under in 24, over in 4, the top 1.5), but
+it was drawn apart from the tune's own `levels` draw and multiplied into
+it, and FFVI's joint does not allow what the product allows. FFVI's
+counter is never above the loudest part (strictly the loudest in 2 of
+52, tied at the top in 5; its share of the loudest 0.60 at the median,
+0.9 or more in 6 of 52 = 0.115), and its four counters louder than the
+tune sit on tunes at 0.59 of the loudest; the independent product gives
+P(counter at 0.9 or more of the loudest) 0.238 and P(above the loudest)
+0.035 (`cw_joint.py`). Whole 28 drew 1.5 on a tune at 0.7: the counter
+at 1.05 of the loudest, the loudest voice in the song, +3.5 dB over the
+tune by level alone. The owner's decision: the counter's level is drawn
+under the tune's share.
+
+**Measured first (the round-30 code and pack; `counter-winning-report.md`
+part 1 item 1, `r31_cvm_before.log`, `r31_levels_before.log`).** Seeds 1
+to 20 (fourteen songs with both parts; FFVI in brackets): the counter
+above the loudest in 0 (0), at 0.9 or more of the loudest in 3 of 14 =
+0.214 (0.115; Whole 08 at 1.0, 09 and 12 at 0.9), its share of the
+loudest 0.61 at the median (0.60), over the tune 1.00 (1.00), the
+loudest part or tied with it in 2 (Whole 08 and 09). `counter_vs_melody.py`'s
+lines are round 30's: level ratio 1.00, the rest as before. Whole 28:
+`counter_levels` 1.5 on a tune at 0.7, the counter 1.05 of the loudest,
+its note level 0.850 (capped at full) against the tune's 0.595; its
+stems (songcheck24, `r30_stems.log`): the counter -17.1 dB over the
+form, -15.1 where both sound, louder than the tune in 0.64 of those
+frames, by +5.6 dB at the median (quartiles -7.8 and +8.3), by 6 dB or
+more in 0.47, the loudest of the five stems in 0.53 (the tune 0.18);
+alone in the tune's rests -17.3 against the tune alone -19.8.
+
+**The shape, chosen by simulation (`r31_shape.py`, `r31_shape.log`).**
+Two shapes were weighed, both conditioned on the band the tune's share
+falls in: A, `counter_levels` as it is (the ratio to the tune) under the
+band; B, the counter's level as its share of the song's loudest part
+(the `levels` word's unit, in tenths) under the band. The bands are the
+word's own definition, chosen on FFVI's 52 songs: the tune's share in
+tenths runs 0.4 x1, 0.5 x9, 0.6 x10, 0.7 x9, 0.8 x6, 0.9 x4, 1.0 x13,
+and its terciles fall at 0.6 and 0.83, which on tenths are the breaks
+0.6|0.7 and 0.8|0.9: three bands, under 0.7 (20 songs: the counter's
+share 0.50 at the median, the ratio 1.00, over 1.0 in 3), 0.7 to 0.8
+(15: 0.70, 1.00, over in 1) and 0.9 or more (17: 0.70, 0.80, over in
+0). A leave-one-song-out likelihood of the counter's outcome (bits a
+song, higher is better) under no band, two, three and four: the ratio
+-3.23, -3.17, -3.23, -3.36; the share -3.06, -2.97, -2.93, -2.90. The
+terciles are within 0.03 bits of the best split (four bands of ten) and
+keep fifteen songs or more behind every context. Each shape was fitted
+as the pack fits a table (share votes, Witten-Bell) and drawn 20000
+plans' worth as the plan draws (the tune's share from `levels` for the
+melody, then the counter under the band, `PLAN_FLOOR` and `PLAN_SONGS`),
+against FFVI's joint on four figures:
+
+| shape | P(counter above the loudest) | P(counter at 0.9 or more) | counter's share, median | counter over the tune, median | exactly at the tune's level |
+|---|---|---|---|---|---|
+| FFVI (52 songs) | 0.000 | 0.115 | 0.60 | 1.00 | 0.46 (24 of 52) |
+| independent product (rounds 29 and 30) | 0.037 | 0.240 | 0.60 | 1.00 | 0.46 |
+| A: the ratio to the tune, under the band | 0.017 | 0.171 | 0.60 | 1.00 | 0.46 |
+| B: the share of the loudest, under the band | 0.000 | 0.115 | 0.60 | 0.87 | 0.23 |
+
+B is nearer on the first two figures, tied on the third, A nearer on
+the fourth, so neither is nearer on all four; B is taken, on the brief's
+default and on three grounds. The two figures B wins are the ones the
+round is about, and B's first is 0 by construction where A's is not: the
+ratio's own votes under a band still multiply past the loudest (in the
+0.7 to 0.8 band Dark World's 1.3 on a tune FFVI itself has at 0.8 gives
+1.04, so A reaches above the loudest even from FFVI's own songs, 0.028
+in that band and 0.026 under a tune at 0.9 or 1.0, where 1.2 on 0.9
+does it). The held-out likelihood, the plan's referee, prefers the
+share by 0.3 bits a song under every split. And B's unit is `levels`'
+own, so `level_of`'s cap at full is never reached. What A keeps and B
+loses is written down: FFVI's counter sits exactly at the tune's level
+in 24 songs of 52, A draws that in 0.46 of plans and B in 0.23, and B's
+ratio median is 0.87 against FFVI's 1.00; a finer context (the tune's
+tenth) would hold it but with one to thirteen songs a context. With the
+tune at 0.7 as Whole 28 drew it, A puts the counter above the loudest
+in 0.006 of plans and at 0.9 or more in 0.056; B in 0 and 0.082 (its
+outcomes there 0.7 in 0.44, 0.6 in 0.22, 0.8 in 0.13, 1.0 in 0.08).
+
+**Built.** `counter_shares` (VOCABULARY.md): one unit a FFVI song with a
+tune and a counter, both with a level, the outcome the counter's median
+level as a share of the song's loudest part's in tenths, the context the
+part and the tune's share band (`rhythm.counter_share_units`,
+`rhythm.TUNE_SHARES`, `rhythm.tune_share_band`; 52 units of 52 songs);
+its `KEPT` entry takes `counter_levels`' place, so the pack is 80 tables
+still (backup `pack.json.r30`, the WAVs untouched). `counter_levels` is
+retired from `KEPT`, from the plan's defaults and from the vocabulary
+(its entry says what replaced it and why); its builder is gone from
+`rhythm.py`. The draw: in `_plan_counter`, after the `counter_samples`
+draw, where the `counter_levels` draw stood (after `plan`'s retries, the
+place the round-29 review fixed; one draw for one, nothing before an
+existing draw): the band of the tune's `levels` draw, one draw from the
+word under (counter, band), the plan's counter level set to it, the
+log "counter beside the tune: other sample, level 0.5 of the loudest
+under the tune's 0.7". `level_of` reads the plan's level as it did; its
+docstring says where the counter's comes from. A test on a made-up song
+(`test_the_counters_level_is_drawn_under_the_tunes_share`): the unit's
+outcome and band for a counter under, at and over the tune, the band
+function at every tenth, the plan drawing under the band of the tune's
+draw and never above 1.0, the band's weight 3/(3+1) at three songs, a
+quiet tune's band where the counter may be the loudest, and the
+counter's own `levels` draw standing without the table. The suite
+passes (337 tests, 2 skipped).
+
+**Measured after (`r31_levels_after.log`, `r31_cvm_after.log`,
+`r31_diff.log`, `r31_stems.log`).** No part's notes moved in any of the
+twenty-one songs, no sample, floor or echo changed (`r30_notes.py` under
+the round-30 archive and pack against the new, `r30_diff.py`: only the
+counter's level differs, in twelve songs; Whole 02's module is byte for
+byte the round-30 one, and Whole 28's melody and bass stems are). Seeds
+1 to 20 (fourteen; FFVI in brackets): the counter above the loudest in
+0 (0), at 0.9 or more of the loudest in 3 of 14 = 0.214 (0.115; now
+Whole 07, 17 and 20 at 1.0, the simulation's expectation 0.115 on a
+fourteen-song sample), its share of the loudest 0.60 at the median
+(0.60), over the tune 0.94 (1.00), the loudest part or tied with it in
+3 (Whole 07, 17, 20); the tunes fall four in each of the lower bands and
+six in the top. `counter_vs_melody.py`: the level ratio 1.00 to 0.94,
+every other figure to the digit as round 30. Whole 28: the counter 0.5
+of the loudest under the tune's 0.7 (0.71 of the tune), rank 5 of 5 by
+level, its note level 0.425 against the tune's 0.595, -2.9 dB by level
+alone (was +3.5). Its stems (songcheck25): the counter -23.4 dB over the
+form (-17.1), -21.4 where both sound (-15.1) against the tune's -19.7,
+louder than the tune in 0.44 of those frames (0.64), -0.7 dB at the
+median (+5.6; quartiles -14.2 and +1.9 against -7.8 and +8.3), by 3 dB
+or more in 0.15, by 6 dB or more in 0.02 (0.47); the loudest stem where
+both sound the bass 0.30, the tune 0.27, the counter 0.20 (0.53), the
+drums 0.19; alone in the tune's rests -23.6 against the tune alone
+-19.8 (-17.3), so the lead no longer passes to it there. Song Check 25
+is Whole 28 (`songcheck25`, five ogg stems) and seeds 2 and 3
+(`songcheck25-more`, five each); Whole 28's plan record differs from
+Song Check 24's in the counter's level and its two log lines only.
+
+**Open.** The counter's pitch range: untouched (three notes at 78 to 94
+in bar 29, over a sample FFVI plays no higher than 72; the report's item
+3). The reach check against a wide written register (round 30's item
+3): untouched. The tune's rest share (0.44 in Whole 28 against FFVI's
+0.28; the melody writer's bar-final notes cut at the bar line, open
+since round 26): untouched, and the counter fills 0.46 of those rests
+still, now at 3.8 dB under the tune rather than 2.5 over. The share
+word's cost, above: the counter exactly at the tune's level in 0.23 of
+plans against FFVI's 0.46, a finer context the data does not reach.
+Three of the fourteen seeds have the counter at the top level tied with
+the tune or the bass, FFVI's rate 5 of 52.

@@ -208,14 +208,38 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **layer_levels** — a layered part's second voice's level against its
   line's, in tenths, by the part. Drawn once a song; the voices beside the
   line play at it.
-- **counter_levels** — the counter-line's level as a share of the tune's,
-  in tenths (capped at 1.5, as `layer_levels` is), one unit a song with
-  both parts, by the part. Drawn once a song: the plan sets the counter's
-  level to the tune's times the share (`extras.counter.level`), in place
-  of the counter's own draw from `levels`. FFVI's counter is as loud as
-  its tune (1.00 at the median, 24 of 52 songs at 1.0, the rest from 0.3
-  to 1.5); the two parts' shares drawn apart from `levels` had put the
-  written counter at 0.74 of the tune (round 29).
+- **counter_shares** — the counter-line's level as a share of the song's
+  loudest part's, in tenths (the `levels` unit), by the part and the band
+  the tune's own share falls in (`rhythm.TUNE_SHARES`: under 0.7, 0.7 to
+  0.8, 0.9 and up; FFVI's terciles over its 52 songs with both parts, 20,
+  15 and 17 songs); one unit a song with both parts and a level for each.
+  Drawn once a song in `_plan_counter`, after the tune's `levels` draw and
+  under that draw's band, in place of the counter's own `levels` draw
+  (`extras.counter.level`; `level_of` plays it as any part's share). A
+  share of the loudest never passes 1.0, so the counter can never be
+  louder than the loudest part, as FFVI's is not: its counter is strictly
+  the loudest in 2 songs of 52 and tied at the top in 5, at 0.60 of the
+  loudest at the median, 0.9 or more in 6 of 52; under a tune under 0.7
+  its share is 0.50 at the median (the one 1.0 there is The Serpent
+  Trench), under a tune at 0.7 to 0.8 0.70, under a tune at 0.9 or 1.0
+  0.70 with four at 0.8 and three at 1.0. This word replaces
+  `counter_levels` (round 29: the counter's level over the tune's in
+  tenths, by the part alone), which was a right word with a right table
+  but was drawn apart from the tune's `levels` draw and multiplied into
+  it, and FFVI's joint does not allow what the product allows: 20000
+  plans drawn that way put the counter above the loudest part in 0.037
+  and at 0.9 or more in 0.240 (FFVI 0 and 0.115), and Whole 28 drew 1.5
+  (FFVI's one song in 52) on a tune at 0.7, the counter at 1.05 of the
+  loudest, the loudest voice in the song, +3.5 dB over the tune by level
+  alone. The ratio under the tune's band (shape A) was weighed against
+  this shape by the same simulation: A 0.017 above the loudest and 0.171
+  at 0.9 or more, since the ratio's own votes under a band still multiply
+  past 1.0 (Dark World's 1.3 on a tune at 0.8 gives 1.04 even from FFVI's
+  own song), and a leave-one-song-out likelihood prefers the share by 0.3
+  bits a song; what A keeps and this shape loses is the counter exactly
+  at the tune's level (FFVI 24 of 52, A 0.46 of plans, this word 0.23),
+  and the counter over the tune at the median is 0.87 against FFVI's 1.00
+  (round 31).
 - **counter_samples** — whether a song's counter-line plays the tune's
   sample (`same`: the sample most of its notes are on is the tune's) or
   another (`other`), one unit a song with both parts, by the part. Drawn
