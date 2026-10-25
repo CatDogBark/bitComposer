@@ -32,10 +32,42 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **length_habits** — a song's part-length habit (short, medium, long).
   Drawn once; conditions `lengths`.
 - **balance** — the song's band with each pitched part's weight, register,
-  sounded share and voices (`bass=half:28-40:0.3:1 drums melody=main:...`).
+  sounded share, voices and level, and the drums' level
+  (`bass=half:28-40:0.3:1:1.0 drums=::::0.8 melody=main:64-84:0.9:1:0.7`).
   Drawn once, whole: which parts the song has, their weights, their
   registers, how long their notes sound, how many voices each part gets
-  (`allot` trims the total to the SNES chip's eight).
+  (`allot` trims the total to the SNES chip's eight), and since round 32
+  each part's level as a share of the song's loudest part's in tenths
+  (the `levels` unit, the readings' median note level by part; the fifth
+  field, the drums' in the same field of a token with no weight), so a
+  song's level layout is one FFVI song's whole, as its registers, sounds
+  and voice counts already were, and FFVI's joint of the parts' levels
+  holds by construction. The plan keeps its `levels` draws on the stream
+  and overwrites them with the token's for the parts the token's song
+  has (`Plan.level_from`; the log line "levels from the balance: ...; the
+  loudest bass"); a part the token lacks (a token without the field: a
+  pack built before round 32, the default balance) keeps its draw, the
+  counter its `counter_shares` draw. Why: drawn a part at a time, the
+  accompaniment's share and the tune's were independent, and 20000 plans
+  drawn that way put the accompaniment strictly above the tune in 0.30
+  against FFVI's 0.17 (0.12 in tenths; its band-themed songs 0.06, 0.00)
+  and at 1.2 times the tune or more in 0.24 against 0.12 (0.09; themed
+  0.00), the harmony above the tune in 0.38 against 0.07, and the loudest
+  part was the accompaniment in 0.21 of plans against 0.14; Whole 02's
+  accompaniment was the loudest voice in the song at 1.67 times the tune
+  (+4.7 dB in the stems where both sound), and round 31 had fixed the
+  counter alone. Conditioning the accompaniment's share on the tune's
+  band gained nothing held out (the accompaniment's share is not told by
+  the tune's in FFVI), so the shape that reproduces the joint is the
+  song's layout as one unit. The cost, by design: a song's balance is one
+  of 66 FFVI layouts (Whole 20 draws The Prelude's, every part at 1.0;
+  Whole 28 Dancing Mad's, the drums the loudest alone with the tune at
+  0.6). After, over seeds 1-20 and 28 (20 with both parts): the
+  accompaniment strictly above the tune in 0.10, at 1.2 or more in 0.05
+  (Whole 13, Fanatics' layout, as FFVI has it), the loudest part in 0.10
+  tied and never alone, its share 0.60 at the median against FFVI's 0.60;
+  the loudest part the bass in 0.57, the tune 0.29, the drums 0.24 (FFVI
+  0.61, 0.26, 0.21).
 - **weights** — a part's weight in the band (minor, half, main). The
   fallback for a part the balance did not name; a weight conditions the
   rhythm, bass and echo habits.
@@ -207,11 +239,17 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **levels** — a part's level as a share of the song's loudest part's, in
   tenths ("1.0" the loudest part), by the part; from the readings' own note
   levels. Drawn once a song for every part; the loudest plays at
-  `whole.TOP_LEVEL` and the rest at their share. FFVI's parts sit close,
+  `whole.TOP_LEVEL` and the rest at their share (`whole.note_level`).
+  Since round 32 the draw is overwritten by the `balance` token's level
+  for every part the token's song has, so with a pack built since then it
+  covers only a part the token lacks (a token without the field); the
+  draw stays on the plan's stream so every draw after it is what it was.
+  The unit is the token's and `counter_shares`'. FFVI's parts sit close,
   the bass loudest (0.28 of full), the tune 0.22, the chord parts and the
   counter-line 0.19, the harmony 0.18; the hand-set mix had the tune at
   1.4 times the accompaniment and the pads at 0.6 of it, a lead over a
-  backing (round 25).
+  backing (round 25). Drawn a part at a time the shares were independent
+  across the band, which FFVI's are not (the `balance` entry).
 - **layer_levels** — a layered part's second voice's level against its
   line's, in tenths, by the part. Drawn once a song; the voices beside the
   line play at it.
@@ -222,7 +260,12 @@ said otherwise. Counting code: `translate/rhythm.py` and
   15 and 17 songs); one unit a song with both parts and a level for each.
   Drawn once a song in `_plan_counter`, after the tune's `levels` draw and
   under that draw's band, in place of the counter's own `levels` draw
-  (`extras.counter.level`; `level_of` plays it as any part's share). A
+  (`extras.counter.level`; `note_level` plays it as any part's share)
+  where the `balance` token's song has no counter level (round 32: the
+  token's counter level stands, as the rest of the band's do, and the
+  draw is made all the same so the stream is as it was; with a pack
+  built since round 32 this word fires only for a token without the
+  field). A
   share of the loudest never passes 1.0, so the counter can never be
   louder than the loudest part, as FFVI's is not: its counter is strictly
   the loudest in 2 songs of 52 and tied at the top in 5, at 0.60 of the
