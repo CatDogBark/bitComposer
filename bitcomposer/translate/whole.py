@@ -66,7 +66,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
-            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_levels": "1.0",
+            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -611,20 +611,24 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
 def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
     """The counter-line beside the tune (round 29), drawn once a song after every other plan draw: on the tune's sample or
     another (counter_samples: the kind its voice words are drawn under, and its sample at the rendering), and its level
-    as a share of the tune's (counter_levels: FFVI's counter as loud as its tune; the two parts' levels drawn apart had
-    put the written counter at 0.74 of the tune). Drawn here, after `plan`'s retries, not inside `_plan_once`: a themed
-    plan is drawn again on the same stream when its tune cannot come back, and two draws inside the attempt had shifted
-    every draw of the next one (Whole 14's band, key and form changed)."""
+    as a share of the song's loudest part's under the band the tune's own `levels` draw falls in (counter_shares, round
+    31: FFVI's counter is never above the loudest part, and its counters louder than the tune sit on quiet tunes; the
+    counter's level over the tune's drawn apart from the tune's share and multiplied into it had put Whole 28's counter
+    at 1.05 of the loudest). The share replaces the counter's own `levels` draw. Drawn here, after `plan`'s retries, not
+    inside `_plan_once`: a themed plan is drawn again on the same stream when its tune cannot come back, and two draws
+    inside the attempt had shifted every draw of the next one (Whole 14's band, key and form changed)."""
     if R.COUNTER not in p.band or R.MELODY not in p.band:
         return
     have = models_or_empty(models)
     x = p.extras[R.COUNTER]
     if "counter_samples" in have:
         x["sample"] = _draw(models, "counter_samples", (R.COUNTER,), rng, p.log)
-    if "counter_levels" in have:
-        x["level"] = float(_draw(models, "counter_levels", (R.COUNTER,), rng, p.log))
-        p.levels[R.COUNTER] = p.levels[R.MELODY] * x["level"]
-    p.log.append(f"counter beside the tune: {x.get('sample', 'any')} sample" + (f", level {x['level']:.1f} of the tune's" if "level" in x else ""))
+    if "counter_shares" in have:
+        tune = p.levels.get(R.MELODY, float(DEFAULTS["levels"]))
+        x["level"] = float(_draw(models, "counter_shares", (R.COUNTER, rhythm.tune_share_band(tune)), rng, p.log))
+        p.levels[R.COUNTER] = x["level"]
+    p.log.append(f"counter beside the tune: {x.get('sample', 'any')} sample"
+                 + (f", level {x['level']:.1f} of the loudest under the tune's {p.levels[R.MELODY]:.1f}" if "level" in x else ""))
 
 
 def song_of(plan: Plan, kit=()) -> rhythm.Song:
@@ -1344,8 +1348,8 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
 
     def level_of(role, j):
         """A note's level: the part's share of the loudest part's (the levels table; LEVELS without one; the counter-line's
-        the tune's times the counter_levels share, set so in the plan), a voice beside the line at its own share of the
-        line's (layer_levels)."""
+        from counter_shares under the tune's share band, set so in the plan, never above the loudest), a voice beside the
+        line at its own share of the line's (layer_levels)."""
         base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
         if j in second_voice.get(role, ()):
             base *= plan.layer_levels.get(role, 1.0)

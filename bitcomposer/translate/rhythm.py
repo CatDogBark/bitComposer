@@ -1311,16 +1311,30 @@ def counter_sample_units(songs) -> list:
     return out
 
 
-def counter_level_units(songs) -> list:
-    """Each song with a tune and a counter-line, both with a level, as a unit: the counter's median level over the tune's,
-    in tenths (capped at 1.5, as layer_level_units caps), its value the part. FFVI's counter is as loud as its tune (1.00
-    at the median); the two parts' shares drawn apart from the levels table had put the written counter at 0.74 of the
-    tune (2026-10-24)."""
+TUNE_SHARES = ((0.65, "<0.7"), (0.85, "0.7-0.8"), (1e9, "0.9+"))   # the tune's share of the loudest part, in tenths: FFVI's terciles over
+                                                                      # its 52 songs with a counter (20, 15 and 17 songs; 2026-10-24)
+
+
+def tune_share_band(share: float) -> str:
+    """The band the tune's share of the loudest part falls in (TUNE_SHARES): the context the counter's level is drawn under."""
+    return next(name for top, name in TUNE_SHARES if share < top)
+
+
+def counter_share_units(songs) -> list:
+    """Each song with a tune and a counter-line, both with a level, as a unit: the counter's median level as a share of the
+    song's loudest part's, in tenths (level_units' unit), its values the part and the band the tune's own share falls in
+    (tune_share_band). Drawn once a song after the tune's `levels` draw, under that draw's band: FFVI's counter is never
+    above the loudest part (its share 0.60 at the median, 0.9 or more in 6 of 52), and its four counters louder than the
+    tune sit on tunes at 0.59 of the loudest. The word before (counter_levels: the counter over the tune in tenths, drawn
+    apart from the tune's share and multiplied into it) let the product pass the loudest part in 0.037 of plans and reach
+    0.9 in 0.240; Whole 28 drew 1.5 on a tune at 0.7, the counter at 1.05 of the loudest, +3.5 dB over the tune by level
+    alone. A share of the loudest never passes 1.0 (2026-10-24, round 31)."""
     out = []
     for s in songs:
         a, b = s.levels.get(R.MELODY), s.levels.get(R.COUNTER)
         if a and b and counter_kind(s) is not None:
-            out.append(tables.Unit(s.sid, s.game, f"{min(1.5, round(b / a, 1)):.1f}", {"part": R.COUNTER}))
+            top = max(s.levels.values())
+            out.append(tables.Unit(s.sid, s.game, f"{round(b / top, 1):.1f}", {"part": R.COUNTER, "tune": tune_share_band(round(a / top, 1))}))
     return out
 
 

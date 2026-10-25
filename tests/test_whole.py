@@ -701,26 +701,47 @@ class NewTablesTests(unittest.TestCase):
         kinds = tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "same", {"part": "counter"}) for i in range(3)])
         self.assertEqual(whole._draw({"counter_samples": kinds}, "counter_samples", ("counter",), random.Random(1)), "same")
 
-    def test_the_counters_level_is_a_share_of_the_tunes(self):
-        """counter_levels counts the counter's level over the tune's in tenths; the plan sets the counter's level to the tune's
-        times the drawn share instead of a draw of its own."""
+    def test_the_counters_level_is_drawn_under_the_tunes_share(self):
+        """counter_shares counts the counter's level as a share of the song's loudest part's, in tenths, by the band the
+        tune's own share falls in; the plan draws it after the tune's levels draw, under that draw's band, in place of the
+        counter's own levels draw, so the counter can never be louder than the loudest part (round 31; counter_levels,
+        the ratio to the tune drawn apart from the tune's share, had put Whole 28's counter at 1.05 of the loudest)."""
         from bitcomposer.translate import tables
         s, _ = self._tune_and_counter()
-        s.levels = {"melody": 0.20, "counter": 0.16}
-        self.assertEqual([u.outcome for u in rhythm.counter_level_units([s])], ["0.8"])
-        s.levels = {"melody": 0.10, "counter": 0.30}
-        self.assertEqual([u.outcome for u in rhythm.counter_level_units([s])], ["1.5"])            # capped, as layer_levels is
+        s.levels = {"melody": 0.20, "counter": 0.16, "bass": 0.25}
+        self.assertEqual([(u.outcome, u.values) for u in rhythm.counter_share_units([s])], [("0.6", {"part": "counter", "tune": "0.7-0.8"})])
+        s.levels = {"melody": 0.10, "counter": 0.30}                                                 # the counter the loudest: 1.0, never more
+        self.assertEqual([(u.outcome, u.values["tune"]) for u in rhythm.counter_share_units([s])], [("1.0", "<0.7")])
+        s.levels = {"melody": 0.30, "counter": 0.12}
+        self.assertEqual([(u.outcome, u.values["tune"]) for u in rhythm.counter_share_units([s])], [("0.4", "0.9+")])
+        self.assertEqual([rhythm.tune_share_band(x) for x in (0.4, 0.6, 0.7, 0.8, 0.9, 1.0)], ["<0.7", "<0.7", "0.7-0.8", "0.7-0.8", "0.9+", "0.9+"])
         del s.notes["counter"]
-        self.assertEqual(rhythm.counter_level_units([s]), [])
-        units = lambda name, outcome, part: [tables.Unit(f"s{i}", "g", outcome, {"part": part}) for i in range(3)]   # noqa: E731
+        self.assertEqual(rhythm.counter_share_units([s]), [])
+        units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
+        shares = tables.Table(("part", "tune"), "counter_shares", votes=tables.SHARES).fit(
+            units("counter_shares", "0.5", "counter", tune="<0.7") + units("counter_shares", "0.7", "counter", tune="0.7-0.8") + units("counter_shares", "1.0", "counter", tune="0.9+"))
         models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "bass=half counter=half melody=main", {"part": rhythm.ARRANGEMENT}) for i in range(3)]),
                   "levels": tables.Table(("part",), "levels", votes=tables.SHARES).fit(units("levels", "0.8", "melody") + units("levels", "0.4", "counter") + units("levels", "1.0", "bass")),
-                  "counter_levels": tables.Table(("part",), "counter_levels", votes=tables.SHARES).fit(units("counter_levels", "1.2", "counter")),
+                  "counter_shares": shares,
                   "counter_samples": tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit(units("counter_samples", "same", "counter"))}
-        p = whole.plan(models, 1, "g")
-        self.assertEqual((p.levels["melody"], round(p.levels["counter"], 2), p.levels["bass"]), (0.8, 0.96, 1.0))
-        self.assertEqual((p.extras["counter"]["sample"], p.extras["counter"]["level"]), ("same", 1.2))
-        self.assertIn("counter beside the tune: same sample, level 1.2 of the tune's", p.log)
+        for seed in range(1, 6):                                                                     # the tune at 0.8: the counter from its band's own votes
+            p = whole.plan(models, seed, "g")                                                        # (three songs, terminal at the part, 3/(3+1) at the band)
+            self.assertEqual((p.levels["melody"], p.levels["bass"]), (0.8, 1.0))
+            self.assertIn(p.levels["counter"], (0.5, 0.7, 1.0))
+            self.assertEqual((p.extras["counter"]["sample"], p.extras["counter"]["level"]), ("same", p.levels["counter"]))
+            self.assertLessEqual(p.levels["counter"], 1.0)
+            self.assertIn(f"counter beside the tune: same sample, level {p.levels['counter']:.1f} of the loudest under the tune's 0.8", p.log)
+        drawn = {whole.plan(models, seed, "g").levels["counter"] for seed in range(1, 40)}
+        self.assertIn(0.7, drawn)                                                                    # the band's own outcome comes up
+        self.assertEqual({k: round(v, 3) for k, v in shares.weights(("counter", "0.7-0.8"), floor_k=whole.PLAN_FLOOR, min_songs=whole.PLAN_SONGS).items()},
+                         {"0.7": 0.833, "0.5": 0.083, "1.0": 0.083})                                 # 3/(3+1) the band's, the part's level the rest
+        models["levels"] = tables.Table(("part",), "levels", votes=tables.SHARES).fit(units("levels", "0.5", "melody") + units("levels", "0.4", "counter") + units("levels", "1.0", "bass"))
+        p = whole.plan(models, 1, "g")                                                               # a quiet tune: the band under 0.7, where the
+        self.assertIn(p.levels["counter"], (0.5, 0.7, 1.0))                                          # counter may be the loudest, as FFVI's is
+        self.assertIn("of the loudest under the tune's 0.5", p.log[-1])
+        p = whole.plan({k: v for k, v in models.items() if k != "counter_shares"}, 1, "g")         # no table: the counter's own levels draw stands
+        self.assertNotIn("level", p.extras["counter"])
+        self.assertIn(p.levels["counter"], (0.4,))
 
     def test_the_counters_sample_is_the_games_pair_with_the_tunes(self):
         """counter_pairs counts the counter's sample under the tune's where the counter plays another (the pack's ids); at the
