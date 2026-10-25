@@ -2423,3 +2423,7 @@ word's cost, above: the counter exactly at the tune's level in 0.23 of
 plans against FFVI's 0.46, a finer context the data does not reach.
 Three of the fourteen seeds have the counter at the top level tied with
 the tune or the bass, FFVI's rate 5 of 52.
+
+The rules the writer still decides by hand, ranked, with rounds 30 and
+31 marked done: [rules-to-words.md](rules-to-words.md) (the audit of
+2026-10-24 at 6a89f99).
