@@ -2346,7 +2346,10 @@ ratio's own votes under a band still multiply past the loudest (in the
 1.04, so A reaches above the loudest even from FFVI's own songs, 0.028
 in that band and 0.026 under a tune at 0.9 or 1.0, where 1.2 on 0.9
 does it). The held-out likelihood, the plan's referee, prefers the
-share by 0.3 bits a song under every split. And B's unit is `levels`'
+share under every split, by 0.3 bits a song under the three bands
+chosen (0.11 to 0.46 across the six splits tried; the two shapes
+predict different outcomes, the ratio's eleven values against the
+share's eight, so part of that gap is the smaller alphabet). And B's unit is `levels`'
 own, so `level_of`'s cap at full is never reached. What A keeps and B
 loses is written down: FFVI's counter sits exactly at the tune's level
 in 24 songs of 52, A draws that in 0.46 of plans and B in 0.23, and B's

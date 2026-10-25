@@ -236,7 +236,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   at 0.9 or more, since the ratio's own votes under a band still multiply
   past 1.0 (Dark World's 1.3 on a tune at 0.8 gives 1.04 even from FFVI's
   own song), and a leave-one-song-out likelihood prefers the share by 0.3
-  bits a song; what A keeps and this shape loses is the counter exactly
+  bits a song under these bands (by 0.11 to 0.46 under the other splits
+  tried); what A keeps and this shape loses is the counter exactly
   at the tune's level (FFVI 24 of 52, A 0.46 of plans, this word 0.23),
   and the counter over the tune at the median is 0.87 against FFVI's 1.00
   (round 31).
