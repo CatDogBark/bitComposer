@@ -110,8 +110,12 @@ class Plan:
     locks: dict = field(default_factory=dict)         # the bass -> the share of the kit's accents it strikes with (bass_locks)
     levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the balance token's field where
                                       # its song has the part; the levels table where not; the counter's from counter_shares)
-    layer_levels: dict = field(default_factory=dict)  # a layered part -> its second voice's level against its line's
+    layer_levels: dict = field(default_factory=dict)  # a layered part -> its second voice's level against its line's (the balance token's
+                                      # sixth field's first share where its song has the part layered; the layer_levels draw where not)
     level_from: dict = field(default_factory=dict)    # a part -> where its level came from: "balance", "levels" or "counter_shares"
+    voice_levels: dict = field(default_factory=dict)  # a layered part -> the token's song's shares for every voice beyond the line, the
+                                      # busiest first (the sixth field): voice j beside the line plays at entry j - 1
+    layer_from: dict = field(default_factory=dict)    # a pitched part -> where its second voices' levels came from: "balance" or "layer_levels"
 
     @property
     def bars(self) -> int:
@@ -440,7 +444,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights, layout, shares, counts, token_levels = [], {}, {}, {}, {}, {}
+    band, weights, layout, shares, counts, token_levels, token_layers = [], {}, {}, {}, {}, {}, {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
         band.append(role)
@@ -457,6 +461,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 counts[role] = int(fields[3])
             if len(fields) > 4 and fields[4]:
                 token_levels[role] = float(fields[4])
+            if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level
+                token_layers[role] = [float(x) for x in fields[5].split("/")]
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
@@ -622,9 +628,22 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append("levels from the balance: " + " ".join(f"{r}={levels[r]:.1f}" for r in band if level_from[r] == "balance")
                    + ("; drawn from levels: " + " ".join(f"{r}={levels[r]:.1f}" for r in band if level_from[r] == "levels") if "levels" in level_from.values() else "")
                    + "; the loudest " + "/".join(r for r in band if levels[r] >= top - 1e-9))
+    # the second voices' levels with the band's (round 33): a voice beside the line plays at the token's song's share of the
+    # line's for that voice (the sixth field, one share a voice beyond the line, the busiest first) where the token's song
+    # has the part with two voices or more; the `layer_levels` draw above where not (a token without the field, or a part
+    # the token's song has as one voice). The draws stay in place as the `levels` draws do, and the first share overwrites
+    # the draw's result, so the stack of a line and its second voice is one song's.
+    layer_from = {role: "balance" if role in token_layers else "layer_levels" for role in layer_levels}
+    voice_levels = {role: list(token_layers[role]) for role in layer_levels if role in token_layers}
+    layer_levels.update({role: token_layers[role][0] for role in voice_levels})
+    if token_layers:
+        layered = [r for r in band if voices.get(r, 1) >= 2 and r in layer_levels]
+        log.append("second voices from the balance: " + " ".join(f"{r}={'/'.join(f'{x:.1f}' for x in voice_levels[r])}" for r in band if r in voice_levels)
+                   + ("; drawn from layer_levels: " + " ".join(f"{r}={layer_levels[r]:.1f}" for r in layered if layer_from[r] == "layer_levels")
+                      if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from)
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from)
 
 
 def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1399,13 +1418,17 @@ def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = No
     song has the part, so the band's levels are one FFVI song's as one unit and the loudest part plays at TOP_LEVEL and
     the rest at their share; the `levels` table's for a part the token lacks; the counter-line's from counter_shares
     under the tune's share band; LEVELS without a levels word), a voice beside the line at its own share of the line's
-    (layer_levels; `second_voice` those voices by part, layers_of's apart and alternating voices). Never under 0.05 nor
-    over 1.0 of full: a share is at most 1.0, so only a second voice over 1.0 of its line can reach the cap."""
+    (the balance token's share for that voice where its song has the part layered, plan.voice_levels by rank, so the
+    line and the voices beside it are one FFVI song's together; the layer_levels draw for a voice the token has no share
+    for; `second_voice` those voices by part, layers_of's apart and alternating voices; a doubling voice plays the line's
+    level). Never under 0.05 nor over 1.0 of full: a share is at most 1.0, so only a second voice over 1.0 of its line
+    can reach the cap."""
     base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
     if second_voice is None:
         second_voice = {role: {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}}
     if voice in second_voice.get(role, ()):
-        base *= plan.layer_levels.get(role, 1.0)
+        shares = plan.voice_levels.get(role) or []
+        base *= shares[voice - 1] if 0 < voice <= len(shares) else plan.layer_levels.get(role, 1.0)
     return max(0.05, min(1.0, base))
 
 

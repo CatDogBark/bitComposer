@@ -2225,12 +2225,36 @@ def part_register(notes, ambitus: bool = False) -> tuple | None:
     return int(round(low / REGISTER_BIN)) * REGISTER_BIN, int(round(high / REGISTER_BIN)) * REGISTER_BIN
 
 
+LAYER_LEVEL_CAP = 1.5                # a voice beside the line's level over the line's is counted up to this (layer_level_units' cap)
+
+
+def voice_level_shares(song: Song, role: str) -> list | None:
+    """A layered part's voices beyond the line (two voices or more with notes), in layer_units' rank order (the busiest
+    first; the bass's line the voice with the longest notes, line_voice), each one's median level over the line voice's
+    in tenths, capped at LAYER_LEVEL_CAP (the layer_levels unit: "1.0", "1.3"); None for a part of one voice or whose
+    line has no level. The first entry is layer_level_units' outcome; the whole list is the balance token's sixth field."""
+    voices = part_voices(song, role)
+    if len(voices) < 2:
+        return None
+    line = line_voice(voices, role)
+    a = song.voice_levels.get(line)
+    if not a:
+        return None
+    others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+    if any(not song.voice_levels.get(v) for v in others):
+        return None
+    return [f"{min(LAYER_LEVEL_CAP, round(song.voice_levels[v] / a, 1)):.1f}" for v in others]
+
+
 def balance_units(songs) -> list:
     """Each song as a unit: its outcome its band with, for each pitched
     part, its weight, its register, the share of its gap a note sounds,
-    its voices and its level as a share of the song's loudest part's in
-    tenths (level_units' unit; the loudest part "1.0")
-    ("accompaniment=main:56-68:0.8:2:0.7 bass=half:28-40:0.9:1:1.0
+    its voices, its level as a share of the song's loudest part's in
+    tenths (level_units' unit; the loudest part "1.0") and, where it holds
+    two voices or more, each voice beyond the line's level over the line
+    voice's in tenths (voice_level_shares, the layer_levels unit, the
+    busiest voice first, joined by "/")
+    ("accompaniment=main:56-68:0.8:2:0.7:1.3 bass=half:28-40:0.9:1:1.0
     drums=::::0.8 melody=half:64-84:0.9:1:0.8"; the drums, which carry no
     weight, register or sounded share, keep their level in the same fifth
     field); its value the part (arrangement). What a song written with no
@@ -2244,7 +2268,19 @@ def balance_units(songs) -> list:
     tune or more in 0.24 against 0.12 (0.00), and the same product awaited
     the harmony and the bass; as a field of the token, a song's level
     layout is one of the game's songs' whole, as its registers, sounds and
-    voice counts already were, and the game's joint holds by construction."""
+    voice counts already were, and the game's joint holds by construction.
+    The second voices' levels joined it in round 33 (2026-10-25): a part's
+    second voice at a `layer_levels` draw of its own on a line whose level
+    was the token's had stacked 1.5 on lines at the tune's level or more
+    (Whole 03's accompaniment 1.8 times the tune, Whole 15's 1.96 at the
+    cap of full), where FFVI's loud second voices (1.5 or more, 12 of 43
+    layered accompaniments) sit on lines at 0.59 of the tune and reach 1.21
+    times it at the median; with the field, the line and the voices beside
+    it are one song's together. One share a voice beyond the line, since
+    the token's voice count is the song's and a third or later voice's
+    share differs from the second's in 23 of FFVI's 52 (in 19 of its 40
+    parts with three voices or more: Gau 1.5 then 3.2 before the cap,
+    Dancing Mad's bass 1.1 then 2.0)."""
     out = []
     for s in songs:
         if not s.notes:
@@ -2259,8 +2295,9 @@ def balance_units(songs) -> list:
                 tokens.append(role + (f"=::::{levels[role]}" if role in levels else ""))
                 continue
             reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
+            beside = voice_level_shares(s, role) if role in levels else None
             tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
-                          + f":{max(1, voices.get(role, 1))}" + (f":{levels[role]}" if role in levels else ""))
+                          + f":{max(1, voices.get(role, 1))}" + (f":{levels[role]}" if role in levels else "") + (":" + "/".join(beside) if beside else ""))
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
@@ -2430,19 +2467,16 @@ def level_units(songs) -> list:
 
 
 def layer_level_units(songs) -> list:
-    """Each layered part (two voices or more) of each song as a unit: its second voice's median level against its line's,
-    in tenths (capped at 1.5), its value the part."""
+    """Each layered part (two voices or more) of each song as a unit: its second voice's (the busiest beside the line)
+    median level against its line voice's, in tenths (capped at LAYER_LEVEL_CAP; voice_level_shares' first entry), its
+    value the part. Since round 33 the balance token carries the same shares for every voice beyond the line, and the
+    plan draws this word only for a part the token lacks or has as one voice."""
     out = []
     for s in songs:
         for role in UPPER + (R.COUNTER, R.MELODY, R.BASS):
-            voices = part_voices(s, role)
-            if len(voices) < 2:
-                continue
-            line = line_voice(voices, role)
-            other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
-            a, b = s.voice_levels.get(line), s.voice_levels.get(other)
-            if a and b:
-                out.append(tables.Unit(s.sid, s.game, f"{min(1.5, round(b / a, 1)):.1f}", {"part": role}))
+            shares = voice_level_shares(s, role)
+            if shares:
+                out.append(tables.Unit(s.sid, s.game, shares[0], {"part": role}))
     return out
 
 
