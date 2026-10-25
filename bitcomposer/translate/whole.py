@@ -139,6 +139,9 @@ class Part:
     notes: list                       # pitched: (start, end in beats, midi, the part's voice); drums: (start, end, letter, voice, kit sample)
     figures: list
     log: list = field(default_factory=list)
+    beside: set = field(default_factory=set)   # the part's voices written beside a line under the span rule (their pitch the voice words'
+                                      # draw, folded into the line's register widened by the layer offset): kept within the register
+                                      # the game plays their sample in once that sample is chosen (fold_to_samples)
 
 
 MASK_FLOOR = 4                        # second_figures' draw never backs off below the line's onset count (part, feel, tempo, onsets): a mask is
@@ -865,6 +868,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         log = [f"habit {plan.habits[R.BASS]}, floor {plan.registers[R.BASS][0]}, {sum(1 for f in figures if f != writer.REST)} bars written, "
                f"{len(notes)} notes; " + (f"on the kit's accents in {len(lock)} bars at {lock_share:.1f}" if R.BASS in plan.locks else f"locked to the band in {len(lock)} bars")]
         layer = layer_of(plan.extras.get(R.BASS))
+        beside_bass = set()
         if plan.voices.get(R.BASS, 1) >= 2 and layer[0] == "apart":   # a second bass line of its own (FFVI's layered basses are all apart)
             _, offset, density = layer
             rng2 = random.Random(f"{seed}:bass:second")
@@ -887,7 +891,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
             log.append(f"a second line apart: floor {max(24, plan.registers[R.BASS][0] + offset)} ({offset:+d}), habit {habit2} ({density}), sounds {sounds2:.1f}; "
                        f"{sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes" + ("; its figures drawn under the line's" if given else ""))
-        written[R.BASS] = Part(R.BASS, line, figures, log)
+            if layer[0] in writer.VOICE_KINDS and "voice_intervals" in models and "voice_moves" in models:
+                beside_bass = {1}                           # its pitch drawn beside the line, within BESIDE_SPAN of its floor (writer.bass)
+        written[R.BASS] = Part(R.BASS, line, figures, log, beside=beside_bass)
     tempo = rhythm.band(plan.bpm)
     for role in rhythm.UPPER:
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
@@ -917,6 +923,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         all_figures = [f"{f} / {vc}" for f, vc in zip(figures, voicings)]
         line_notes = list(notes)
         scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+        beside_v = set()                                    # the voices whose pitch is drawn beside the line under the span rule
         for v, word in enumerate(layers, start=1):
             rel = layer_of({"layer": word})
             if rel[0] == "doubling":
@@ -935,6 +942,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         return rhythm.apply_mask(f, drawn)
                     given = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in figures]
                 drawn_pitch = "voice_intervals" in models and "voice_moves" in models
+                if drawn_pitch:
+                    beside_v.add(v)
                 span_v = (max(24, low - rhythm.LAYER_OFFSET), min(100, high + rhythm.LAYER_OFFSET)) if drawn_pitch else reg_v   # the voice's pitch is its drawn
                 notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], gs["second"] if gs else sounds,   # interval from the
                                                               key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
@@ -946,7 +955,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
             notes = notes + notes_v
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]
-        written[role] = Part(role, notes, all_figures, log)
+        written[role] = Part(role, notes, all_figures, log, beside=beside_v)
     tempo = rhythm.band(plan.bpm)
     for role in (R.MELODY, R.COUNTER):                    # the tune, then the counter-line beside it
         if role not in plan.band or not all(k in models for k in ("rhythm", "moves", "contours", "endings", "relations", "values")):
@@ -1004,7 +1013,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
             log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}); {sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
             log += [f"second: {l}" for l in plog2[-2:]]
-        written[role] = Part(role, line, figures, log)
+        written[role] = Part(role, line, figures, log, beside={0} if beside else set())
     if R.MELODY in written:                                 # the theme in the band: doubled where the tune plays it, carried where it does not
         rng_theme = random.Random(f"{seed}:theme band")
         for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):
@@ -1273,6 +1282,60 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
     return out
 
 
+def sample_range(ranges, rid: str) -> tuple | None:
+    """The register the game plays a sample in, over every song that plays it: the ranges word's widest band for the
+    sample (the lowest floor and the highest ceiling among its votes, each vote one song's 10th to 90th percentiles to
+    REGISTER_BIN); None where the word knows nothing of the sample."""
+    t = ranges.table if hasattr(ranges, "table") else ranges
+    votes = t.votes.get((rid,)) if t is not None else None
+    if not votes:
+        return None
+    return min(int(o.split("-")[0]) for o in votes), max(int(o.split("-")[1]) for o in votes)
+
+
+def fold_to_samples(plan: Plan, song: rhythm.Song | None, written: dict, samples: dict, models: dict | None, pack_name: str) -> None:
+    """Every voice written beside a line under the span rule (Part.beside: the counter-line beside the tune, a chord
+    part's voice apart or alternating, the bass's second voice), once its sample is chosen (samples_for, after the
+    writing: the counter's by the pair word against the register it was written in): a note outside the register the
+    game plays that sample in (sample_range, the ranges word) is moved into it by octaves (writer.in_register, the
+    fold the span itself applies), the part's log saying how many and which. The span those voices are folded into
+    while written is the line's register widened by the layer offset's cap (24, 96 for Whole 28's counter), a rule and
+    not a word, and it let three "alone" moves drawn in a row (+12, +7 and +2 scale steps) carry the counter to 78, 90
+    and 94 on a sample the game plays between 48 and 72 and records at 69: 94 is past the SNES chip's pitch ceiling
+    (four times the recording), so the render played it at 93.2, a thin squeak a semitone flat (Song Check 25's Whole
+    28 at 1:01, round 32a). Nothing is drawn here, so the render stream, the floors and the echo stand as before.
+    `song`: the rhythm.Song the parts were written into, its notes kept in step (None to leave it)."""
+    ranges = (models or {}).get("ranges")
+    if ranges is None:
+        return
+    raw = lambda n: n[len(pack_name) + 1:] if n.startswith(pack_name + "_") else n   # noqa: E731
+    second_voice = {role: {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}
+                    for role in plan.band if role != R.DRUMS}
+    for role, part in written.items():
+        if not part.beside or role == R.DRUMS:
+            continue
+        for v in sorted(part.beside):
+            key = f"{role}:second" if f"{role}:second" in samples and v in second_voice.get(role, ()) else role
+            if key not in samples or not isinstance(samples[key], tuple):
+                continue
+            sid = raw(samples[key][0])
+            band = sample_range(ranges, sid)
+            if band is None:
+                continue
+            moved, notes = [], []
+            for n in part.notes:
+                if n[3] == v and not (band[0] <= n[2] <= band[1]):
+                    m = writer.in_register(int(round(n[2])), band)
+                    moved.append((n[0], n[2], m))
+                    n = (n[0], n[1], type(n[2])(m), n[3]) + tuple(n[4:])
+                notes.append(n)
+            part.notes = notes
+            if song is not None and moved:
+                song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
+            part.log.append(f"voice {v + 1} kept within {band[0]}-{band[1]}, where the game plays {sid}: {len(moved)} notes folded by octaves"
+                            + ("" if not moved else " (" + ", ".join(f"{m0:.0f} to {m1} at {a:.2f}" for a, m0, m1 in moved[:8]) + (", ..." if len(moved) > 8 else "") + ")"))
+
+
 def models_or_empty(models) -> dict:
     return models or {}
 
@@ -1521,6 +1584,7 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     written = write(p, song, models, seed, reference)
     rng = random.Random(f"whole:{seed}:render")
     samples = samples_for(p, pack, own, pack_name, rng, models, written)
+    fold_to_samples(p, song, written, samples, models, pack_name)   # the voices beside a line kept where the game plays their samples
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
     score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}

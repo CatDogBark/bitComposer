@@ -773,6 +773,49 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.counter_pair_for({"counter_pairs": one}, "sb", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, ["sb the tune's own"]))   # not "other"
         self.assertEqual(whole.counter_pair_for({}, "sa", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, None))                    # no table: the rule, unlogged
 
+    def test_a_voice_beside_a_line_stays_where_the_game_plays_its_sample(self):
+        """A voice written beside a line under the span rule (the counter beside the tune, a chord part's voice apart, the
+        bass's second voice) is kept, once its sample is chosen, within the register the game plays that sample in: the
+        ranges word's widest band for it, a note outside moved in by octaves; the line, a doubling voice and a voice on a
+        sample the word lacks are untouched, and nothing is drawn (round 32a: Whole 28's counter at 78, 90 and 94 on a
+        sample played between 48 and 72, the last past the SNES chip's pitch ceiling)."""
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "sa"}) for i, o in enumerate(("56-68", "52-64", "56-72"))]
+            + [tables.Unit(f"s{i}", "g", "36-48", {"part": "sb"}) for i in range(2)])
+        self.assertEqual((whole.sample_range(ranges, "sa"), whole.sample_range(ranges, "sb"), whole.sample_range(ranges, "sz")), ((52, 72), (36, 48), None))
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(2)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g", parts=[(0, 2, None, "A")])
+        tune = [(0.0, 0.9, 64.0, 0), (1.0, 1.9, 70.0, 0)]
+        counter = [(0.0, 0.9, 58.0, 0), (1.5, 1.6, 78.0, 0), (1.7, 1.9, 90.0, 0), (2.0, 2.9, 94.0, 0), (3.0, 3.9, 47.0, 0)]
+        accomp = [(0.0, 0.9, 60.0, 0), (0.0, 0.9, 80.0, 1), (0.0, 0.9, 30.0, 2), (1.0, 1.9, 64.0, 0), (1.0, 1.9, 64.0, 1), (1.0, 1.9, 40.0, 2)]
+        bass = [(0.0, 3.9, 36.0, 0), (0.0, 1.9, 52.0, 1), (2.0, 3.9, 46.0, 1)]
+        s.notes = {"melody": [(a, b - a, m, "melody") for a, b, m, _ in tune], "counter": [(a, b - a, m, "counter") for a, b, m, _ in counter],
+                   "accompaniment": [(a, b - a, m, "accompaniment") for a, b, m, _ in accomp], "bass": [(a, b - a, m, "bass") for a, b, m, _ in bass]}
+        written = {"melody": whole.Part("melody", list(tune), ["0 1"] * 2), "counter": whole.Part("counter", list(counter), ["0 3/2 5/3 2 3"] * 2, beside={0}),
+                   "accompaniment": whole.Part("accompaniment", list(accomp), ["0 1"] * 2, beside={1}),   # voice 2 beside the line, voice 3 a doubling
+                   "bass": whole.Part("bass", list(bass), ["0"] * 2, beside={1})}
+        plays = [True] * 2
+        plan = whole.Plan(1, "g", "t", 0, "major", 120.0, s.parts, 0, ["I"] * 2, [None] * 2, ["accompaniment", "bass", "counter", "melody"], {}, [],
+                          {r: plays for r in ("melody", "counter", "accompaniment", "bass")}, {"melody": (48, 72), "counter": (48, 88), "accompaniment": (56, 68), "bass": (28, 44)},
+                          {}, {}, {"accompaniment": {"layers": ["apart +16 sparser", "doubling 12"], "layer": "apart +16 sparser"}, "bass": {"layer": "apart +12 like"}}, {"accompaniment": 3, "bass": 2, "counter": 1, "melody": 1}, [])
+        samples = {"melody": ("p_sa", None), "counter": ("sa", None), "accompaniment": ("sb", None), "accompaniment:second": ("p_sa", None), "bass": ("sz", None), "bass:second": ("sb", None)}
+        whole.fold_to_samples(plan, s, written, samples, {"ranges": ranges}, "p")
+        self.assertEqual([n[2] for n in written["counter"].notes], [58.0, 66.0, 66.0, 70.0, 59.0])        # into 52-72 by octaves: the nearest inside
+        self.assertEqual([n[2] for n in s.notes["counter"]], [58.0, 66.0, 66.0, 70.0, 59.0])
+        self.assertEqual([n[2] for n in written["accompaniment"].notes], [60.0, 68.0, 30.0, 64.0, 64.0, 40.0])   # voice 2 on sa: 80 to 68; the line and the doubling stand
+        self.assertEqual([n[2] for n in written["bass"].notes], [36.0, 40.0, 46.0])                       # the second bass on sb: 52 to 40, 46 in the band
+        self.assertEqual(written["melody"].notes, tune)                                                  # the line is no voice beside a line
+        self.assertIn("voice 1 kept within 52-72, where the game plays sa: 4 notes folded by octaves (78 to 66 at 1.50, 90 to 66 at 1.70, 94 to 70 at 2.00, 47 to 59 at 3.00)", written["counter"].log)
+        self.assertIn("voice 2 kept within 52-72, where the game plays sa: 1 notes folded by octaves (80 to 68 at 0.00)", written["accompaniment"].log)
+        self.assertEqual(len(written["accompaniment"].log), 1)
+        self.assertEqual(written["melody"].log, [])
+        written["bass"].notes = list(bass); written["bass"].log = []
+        whole.fold_to_samples(plan, s, written, {**samples, "bass:second": ("sz", None)}, {"ranges": ranges}, "p")   # a sample the word lacks: untouched, unlogged
+        self.assertEqual((written["bass"].notes, written["bass"].log), (bass, []))
+        whole.fold_to_samples(plan, s, written, samples, {}, "p")                                        # no ranges word: nothing happens
+        self.assertEqual(written["bass"].notes, bass)
+        self.assertEqual(whole.Part("x", [], []).beside, set())
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""
