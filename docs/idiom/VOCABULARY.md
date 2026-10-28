@@ -418,7 +418,13 @@ said otherwise. Counting code: `translate/rhythm.py` and
   voice's next key-on still cuts it). A note shorter than the game ever
   plays a sample never reaches the sample's body (a pad with a 39 ms
   attack had been played at 50 ms sixteenths; FFVI plays it at 65 ms at
-  the shortest).
+  the shortest). Since round 36 the word is counted under the sample's speed class in
+  the song as well (slow, medium, fast by its fastest bar, `speed_tier`),
+  and a chosen sample's floor is drawn under the speed class of the
+  fastest part it serves. A floor drawn by the sample alone had taken a
+  slow song's 120 ms for Whole 02's string pad at sixteenths and raised
+  the notes round 35 had shortened to 50 ms back past where they were;
+  FFVI's fast uses of that pad have 40 to 70 ms notes.
 - **sample_speeds** — the fastest bars a song plays a sample in, as a class
   of the ninetieth-percentile bar rate in notes a second (2, 3, 4, 6, 8,
   12, 24, faster), by the sample. Read in the sample choice for a part

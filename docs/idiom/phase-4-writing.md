@@ -3062,3 +3062,40 @@ Check 29 is Whole 28, 02 and 03 as round 34 beside round 35.
 
 **Open:** the counter's register against the tune's under the sample-first
 order; the pair words still pass over samples the pack lacks.
+
+### Round 36: the note's floor under the speed it is played at (2026-10-27, from the owner's note that round 35 made no audible difference)
+
+**His question.** Whole 02's accompaniment sounded the same after round
+35; was that the intended change?
+
+**Measured first.** The share had changed (0.7 to 0.4 of the gap under a
+beat) and the sound had not: the accompaniment was sound for 89 % of the
+time before and 87 % after. A second word had cancelled the first. Every
+sample carries a note floor (`sample_lengths`, the shortest note the game
+plays it at, drawn once a song from the sample's per-song habits); round
+34's render had drawn 60 ms for the pad, round 35's, with the stream
+shifted, 120 ms from one of the slow songs that hold it, and the render
+raises every note to the floor, so the notes went from 87 to 100 ms up to
+120. The floor word knew the sample but not the speed, the gap round 35
+had just closed for the share. Three voices on overlapping sixteenths
+make a continuous texture either way, and the pad's 167 ms attack
+retriggered every 125 ms is the stutter heard in both.
+
+**Built, on his go.** `sample_lengths` is counted under the sample's
+speed class in each song (slow, medium, fast by its fastest bar), and a
+chosen sample's floor is drawn after the writing under the speed class of
+the fastest written voice playing it, on a stream of its own
+(`floors_for`, `written_speed`): the plan's drawn speed fits the sample,
+the figures decide what the part then plays, and a part drawn at 6 a
+second that writes sixteenths at 120 BPM plays 8.
+
+**Measured after.** The pad's floors by class: slow songs 160 ms to
+long; medium 60 to 240; fast 60 once, 80 four times, 120 five times, 240
+once. Whole 02 drew 120 ms on 125 ms sixteenths: FFVI's held fast pad
+(The Decisive Battle, 112 ms notes at 7.4 a second), not its tremolo
+(Battle Theme, 69 ms at 9.7). So the song may still sound close to
+before; the word now draws between the two fast kinds where it had drawn
+from the slow songs. Song Check 30 is Whole 28, 02 and 03 as round 35
+beside round 36.
+
+**Open:** as round 35's.
