@@ -882,6 +882,29 @@ def to_steps(pitches: list, scale: set) -> list:
     return [y - x for x, y in zip(idx, idx[1:])]
 
 
+def from_intervals(first: int, intervals: list) -> list:
+    """A line from its first pitch and its intervals in semitones (a cell moved whole)."""
+    out = [first]
+    for iv in intervals:
+        out.append(out[-1] + iv)
+    return out
+
+
+def fold_cell(pitches: list, register: tuple) -> list:
+    """A cell moved whole by octaves into the register (low, high) where an octave fits it; its notes clamped to the
+    register only where none does (a cell wider than the register), so a cell that comes back keeps its intervals."""
+    if not pitches:
+        return pitches
+    low, high = register
+    lo_, hi_ = min(pitches), max(pitches)
+    shift = 0
+    while hi_ + shift > high and lo_ + shift - 12 >= low:
+        shift -= 12
+    while lo_ + shift < low and hi_ + shift + 12 <= high:
+        shift += 12
+    return [min(high, max(low, m + shift)) for m in pitches]
+
+
 def from_steps(first: int, steps: list, scale: set) -> list:
     """A line from its first pitch and its scale steps (a diatonic sequence)."""
     out, i = [first], scale_index(first, scale)
@@ -1311,7 +1334,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     def new_cell_halves(k: int, positions: list, shape: str, phrase_start_midi: float | None, a0: float, b0: float) -> Cell:
         """A new bar a half at a time (round 38): each half same (the half before's cell again), earlier (one the tune
         played before, by how often) or new, at the half_recall word's shares for the song's echo habit. A recalled half
-        comes back re-rooted on the bar's chord in the register, its moves as scale steps (as again() brings a bar back);
+        comes back re-rooted on the bar's chord in the register, its intervals exact (as again() brings a bar back, round 41);
         a new half takes the drawn rhythm's onsets with new moves. FFVI's tune reuses half-bar cells (0.50 heard earlier,
         themed 0.63) where a bar-grain urn drew a whole new bar (0.39)."""
         nonlocal last_midi, last_move, last_time
@@ -1335,7 +1358,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     continue
                 ps, ms = [c.positions[i] - h * hj for i in idx], [c.pitches[i] for i in idx]
                 key_ = half_key(ps, ms)
-                pool.setdefault(key_, (ps, (ms[0] - rj) % 12, to_steps(ms, scale)))
+                pool.setdefault(key_, (ps, (ms[0] - rj) % 12, [y - x for x, y in zip(ms, ms[1:])]))   # its intervals, exact (round 41)
                 plays[key_] += 1
         prev_key = None
         if k - 1 in cells:                                  # the half before: the bar before's second half
@@ -1370,7 +1393,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 low, high = register
                 anchor_ = midi if midi is not None else (low + high) / 2
                 first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor_), m), default=int(round(anchor_)))
-                ms = [in_register(m, register) for m in from_steps(first, steps, scale)]
+                ms = fold_cell(from_intervals(first, steps), register)   # the half's intervals exact (round 41), the whole half folded in
                 pos_h = [lo + p for p in ps]
             else:
                 pos_h, ms = [p for p in positions if (p < half) == (h == 0)], []
@@ -1401,9 +1424,16 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         return realize(k, all_pos, all_pitches)
 
     def again(k: int, cell: Cell) -> Cell:
-        """An earlier cell in bar k: re-rooted on the bar's chord, its moves as
-        scale steps, and its strong-beat notes on the bar's chord tones (a
-        sequence lands its beats on the new chord, as a player's does)."""
+        """An earlier cell in bar k: re-rooted on the bar's chord with its
+        intervals exact, the whole cell moved to land its strong beats on the
+        bar's chord tones (as a player's sequence does), and the whole cell
+        folded by octaves into the register. Its intervals are kept exact
+        rather than as scale steps (round 41, 2026-10-28): rebuilt by steps,
+        with each note clamped to the register, 0.46 of the written recalls
+        (theme returns, pairs and bars alike) had come back as a cell the
+        tune never played, which the ear hears as a rhythm with new notes;
+        FFVI's cells that come back moved keep their intervals (moved 0.20 of
+        bars, a rhythm with other intervals 0.06)."""
         nonlocal last_midi, last_move
         a, b, _ = bars[k]
         chord = _chord_in_bar(song, a)
@@ -1413,11 +1443,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
 
         def build(start: int) -> list:
-            """The cell from its first note by its own scale steps: its intervals kept whole."""
-            out, idx = [start], scale_index(start, scale)
-            for st in cell.steps:
-                idx += st
-                out.append(scale_pitch(idx, scale))
+            """The cell from its first note with its intervals exact."""
+            out = [start]
+            for iv in cell.intervals:
+                out.append(out[-1] + iv)
             return out
 
         def on_chord(pitches: list) -> int:
@@ -1438,7 +1467,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             best = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
                        key=lambda x: (on_chord(build(x)), -abs(x - first), -x), default=first)
             pitches = build(best)
-        pitches = [min(high, max(low, m)) for m in pitches]
+        pitches = fold_cell(pitches, (low, high))
         last_midi = float(pitches[-1]) if pitches else last_midi
         last_move = f"{pitches[-1] - pitches[-2]:+d}" if len(pitches) >= 2 and pitches[-1] != pitches[-2] else ("0" if len(pitches) >= 2 else last_move)
         return realize(k, cell.positions, pitches)

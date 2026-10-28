@@ -642,7 +642,14 @@ said otherwise. Counting code: `translate/rhythm.py` and
   earlier one again, or new, by the song's echo habit. Drawn a bar: an
   echoed cell is re-rooted on the bar's chord, its intervals kept whole,
   the whole cell moved to the start that lands the most strong beats on the
-  chord (bending single notes had cost the melody its steps).
+  chord (bending single notes had cost the melody its steps). Since round
+  41 (2026-10-28) "kept whole" means exact: a cell that comes back is
+  rebuilt from its intervals in semitones and folded into the register by
+  whole octaves (`writer.fold_cell`), not from its scale steps with each
+  note clamped, which had sent 0.46 of the written recalls back as a cell
+  the tune never played (0.17 after; FFVI's moved cells keep their
+  intervals, a rhythm with other intervals 0.06 of its bars). The half-bar
+  urn's recalled halves are rebuilt the same way.
 - **cell_rhythms** — a new cell's rhythm: new to the tune, the bar before's,
   or an earlier one's. Drawn for a new cell; the rhythm itself then comes
   from the part's `rhythm` table.

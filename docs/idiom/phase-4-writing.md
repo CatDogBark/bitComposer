@@ -3280,3 +3280,42 @@ unthemed ones varied 25 of 40; the written themed songs measure mixed
 14, varied 6, repeating 3 of 23, close enough that no word is needed
 now. The CONTINUE constant (0.8: a recalled passage goes on with its
 next bar) is a rule the pair word half covers.
+
+### Round 41: a recalled cell keeps its intervals (2026-10-28, the fault found in round 40, fixed as a fault on his go)
+
+**The fault.** `writer.again` (a bar coming back) and the half-bar urn's
+recalled halves rebuilt the cell from its scale steps and clamped each
+note to the register, so a cell that came back on another chord, or near
+the register's edge, came back with other intervals: 0.46 of the written
+recalls over seeds 1-35 (133 of 292 bars) were a cell the tune had never
+played, theme returns among them (38 of 113). FFVI's cells that come back
+moved keep their intervals (moved 0.20 of bars, a rhythm with other
+intervals 0.06).
+
+**The fix.** A recalled cell is rebuilt from its intervals in semitones
+(`writer.from_intervals`) and moved whole by octaves into the register
+(`writer.fold_cell`; a note is clamped only where no octave fits the
+cell); the whole-cell move that lands its strong beats on the chord
+stays, since it moves the cell whole. The same for a recalled half in
+`new_cell_halves`. No table changed.
+
+**Measured after, seeds 1-35 (themed medians; FFVI themed beside):**
+
+| measure | FFVI | round 40 | round 41 |
+|---|---|---|---|
+| recalled bars that come back as a cell never played | — | 0.46 | 0.17 |
+| echoes with the same pitches (exact) | 0.31 | 0.25 | 0.30 |
+| echoes moved with their intervals | 0.20 | 0.06 | 0.15 |
+| echoes that are a rhythm with new pitches | 0.06 | 0.22 | 0.15 |
+| two-bar pairs heard earlier as a pair | 0.40 | 0.28 | 0.35 |
+| pairs heard earlier, the form's own parts only | 0.18 | 0.09 | 0.19 |
+| whole four-bar phrases heard earlier | 0.29 | 0.25 | 0.25 |
+| the hook's share of the tune | 0.22 | 0.18 | 0.20 |
+| distinct phrase heads over phrases | 0.62 | 0.56 | 0.53 |
+| a later section's cells already in an earlier, different section | 0.00 | 0.10 | 0.16 |
+
+The remaining 0.17 of bent recalls are cells wider than their register
+or altered after the recall (`realize`); the sections' sharing rose with
+the fix because the theme's returns in a later section now match their
+source exactly, which FFVI's 0.00 does not show at its grain: open. Song
+Check 35 is five fresh band-themed seeds (36-40) on round 41.
