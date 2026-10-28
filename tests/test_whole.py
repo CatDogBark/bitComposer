@@ -654,7 +654,7 @@ class NewTablesTests(unittest.TestCase):
         s, _ = self._tune_and_counter()
         units = rhythm.counter_figure_units([s])
         self.assertEqual([u.outcome for u in units], ["1 0 1 0 | 7/2"] * 3 + ["| 0 2"])
-        self.assertEqual(units[0].values, {"part": "counter", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "4", "line": "0 1 2 3"})
+        self.assertEqual(units[0].values, {"part": "counter", "weight": "half", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "4", "line": "0 1 2 3"})   # the counter's weight since round 47
         self.assertEqual((units[3].values["onsets"], units[3].values["line"]), ("0", "-"))
         self.assertEqual(rhythm.apply_mask("0 1 2 3", "1 0 1 0 | 7/2"), "0 2 7/2")
         self.assertEqual(rhythm.apply_mask("-", "| 0 2"), "0 2")                                   # the tune rests: the counter's own onsets

@@ -3402,3 +3402,37 @@ word for the chord parts); the rhythm-only echoes (0.16 against 0.06) and
 bent recalls (0.17) left after round 41; the small rules (CONTINUE,
 TOP_LEVEL, the 1.5 cap, the token's loudest part absent); the pack build
 importing every instrument FFVI's parts use.
+
+### Round 47: the counter's mask by its weight, and the held half left alone (2026-10-28, from the weight labels item)
+
+**Measured first.** The written parts' density by their balance-token
+weight against FFVI's, seeds 1-45: the accompaniment, bass and harmony
+follow their labels (accompaniment minor/half/main 5.0, 8.4, 13.8 notes
+a played bar against FFVI's 5.0, 8.9, 12.5); the counter does not (6.2,
+6.4, 5.6 against 3.5, 8.6, 16.0: its mask over the tune, counter_figures,
+knew nothing of its weight), and the melody sits a note a bar denser at
+every habit tier (sparse 2.7, medium 5.1, dense 8.2 against 2.0, 4.1,
+7.0), its medium tune having 0.11 of its bars at one or two notes
+against FFVI's 0.27: the half-bar urn (round 38) ran on every half of a
+new bar, and a recalled half always has two notes or more (the word
+counts no smaller cell), so the tune's held halves became two-note ones.
+
+**Built, on his go.** The counter's weight as a conditioning of
+counter_figures, in front of the feel and tempo (the draw's floor moved
+to keep the tune's onset count, `COUNTER_MASK_FLOOR`); the table refitted
+into the pack (`pack.json.r46` the backup on both machines; 90 tables).
+In `writer.new_cell_halves`, a half the drawn rhythm gives fewer than
+HALF_CELL_NOTES notes takes no urn draw and stays as drawn (a fault of
+grain, fixed as one).
+
+**Measured after, seeds 1-45.** The melody by tier 2.0, 4.9, 6.9 (FFVI
+2.0, 4.1, 7.0); its medium tune's one-and-two-note bars 0.17 (0.27). The
+counter by weight 4.7, 7.1, 6.2 (FFVI 3.5, 8.6, 16.0): the minor and half
+counters now sit either side of their labels; the main counter stays far
+under FFVI's, whose main counters are arpeggiated figures at sixteen
+notes a bar that the mask over the tune's onsets cannot reach (open).
+Song Check 38 is five fresh band-themed seeds (51-55).
+
+**Open:** the main counter's density; the medium tune's remaining 0.8 of
+a note a bar; dynamics by section; the residual echo kinds; the small
+rules; the pack build.

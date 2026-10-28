@@ -1488,13 +1488,14 @@ def counter_figure_units(songs) -> list:
         if not mel or not ctr:
             continue
         tempo, feel = band(s.bpm), song_feel(s)
-        tune_bars = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, R.MELODY, mel)}
-        for k, a, struck in numbered_bars_of(s, R.COUNTER, ctr):
-            line, mine = tune_bars.get(k, []), [p for p, _ in struck]
-            if not line and not mine:
+        weight = part_weights(s).get(R.COUNTER, "minor")   # the counter's weight in the band (round 47): FFVI's minor counter plays 0.74
+        tune_bars = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, R.MELODY, mel)}   # of the tune's notes a bar, its
+        for k, a, struck in numbered_bars_of(s, R.COUNTER, ctr):                                       # half one 0.91, its main one 1.45;
+            line, mine = tune_bars.get(k, []), [p for p, _ in struck]                                   # the mask drawn without it had every
+            if not line and not mine:                                                                   # written counter at six notes a bar
                 continue
             out.append(tables.Unit(s.sid, s.game, second_mask(line, mine),
-                                   {"part": R.COUNTER, "feel": feel, "tempo": tempo, "onsets": str(len(line)), "line": pattern(line)}))
+                                   {"part": R.COUNTER, "weight": weight, "feel": feel, "tempo": tempo, "onsets": str(len(line)), "line": pattern(line)}))
     return out
 
 

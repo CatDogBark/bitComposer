@@ -158,6 +158,8 @@ class Part:
                                       # the game plays their sample in (the sample chosen before the writing, round 34; its drawn range is the voice's register)
 
 
+COUNTER_MASK_FLOOR = 5                # counter_figures' draw never backs off below the tune's onset count with the counter's weight in front
+                                      # (part, weight, feel, tempo, onsets; round 47)
 MASK_FLOOR = 4                        # second_figures' draw never backs off below the line's onset count (part, feel, tempo, onsets): a mask is
                                       # read onset by onset, and one from a shorter line read around a longer one had filled it
 
@@ -1162,8 +1164,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             rng_c = random.Random(f"{seed}:{role}")
             tune_figs = [f if f == writer.REST else rhythm.pattern(rhythm.position(float(Fraction(t)), song.division) for t in f.split()) for f in written[R.MELODY].figures]
             masks = [writer.REST if not plan.plays[role][k] else
-                     _draw(models, "counter_figures", (R.COUNTER, plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat),
-                           rng_c, floor_k=MASK_FLOOR, floor_songs=PLAN_SONGS)
+                     _draw(models, "counter_figures", (R.COUNTER, plan.weights.get(R.COUNTER, "minor"), plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat),
+                           rng_c, floor_k=COUNTER_MASK_FLOOR, floor_songs=PLAN_SONGS)
                      for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
