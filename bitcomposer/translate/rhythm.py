@@ -883,8 +883,8 @@ def cell_handoff_units(songs) -> list:
         cells = half_cells(tune, s.bars)
         if sum(1 for c in cells if c) < 4:
             continue
-        keys = [c[2] for c in cells if c]
-        habit = habit_of(sum(1 for i, c in enumerate(keys) if c in keys[:i]) / len(keys), ECHOES)
+        bar_keys = [c for c in melody_cells(s) if c]           # the song's echo habit, at the bar as the echo_habits word has it
+        habit = habit_of(sum(1 for i, c in enumerate(bar_keys) if c in bar_keys[:i]) / max(1, len(bar_keys)), ECHOES)
         found = _theme_of(s)
         theme_bars = set(found[2]) if found else set()
         others = {}

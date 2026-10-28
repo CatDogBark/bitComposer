@@ -1067,6 +1067,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     on_beat = [0, 0]                                        # the tune's strong-beat notes on the chord, and all of them, so far
     moves_table = models["moves"].table if hasattr(models["moves"], "table") else models["moves"]
     urn = Urn(recall, echo_habit)
+    half_kinds = {}                       # bar -> its halves' urn kinds (new_cell_halves), for the log
     index = {num: k for k, num in enumerate(song.numbers)}
     windows, by_part = [], {}                               # the phrase windows, a part of the form at a time (a phrase ends with its part)
     for i, (bar, n, *rest) in enumerate(song.parts):
@@ -1258,6 +1259,98 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         last_midi, last_move = midi, move
         return realize(k, positions, pitches)
 
+    def new_cell_halves(k: int, positions: list, shape: str, phrase_start_midi: float | None, a0: float, b0: float) -> Cell:
+        """A new bar a half at a time (round 38): each half same (the half before's cell again), earlier (one the tune
+        played before, by how often) or new, at the half_recall word's shares for the song's echo habit. A recalled half
+        comes back re-rooted on the bar's chord in the register, its moves as scale steps (as again() brings a bar back);
+        a new half takes the drawn rhythm's onsets with new moves. FFVI's tune reuses half-bar cells (0.50 heard earlier,
+        themed 0.63) where a bar-grain urn drew a whole new bar (0.39)."""
+        nonlocal last_midi, last_move, last_time
+        a, b, _ = bars[k]
+        half = meters[k] / 2.0
+        chord = _chord_in_bar(song, a)
+        root = chord[0] if chord else tonic
+
+        def half_key(ps: list, ms: list) -> str:
+            return " ".join(str(round(p * 12)) for p in ps) + " | " + " ".join(f"{y - x:+d}" for x, y in zip(ms, ms[1:]))
+
+        pool, plays = {}, Counter()                         # the tune's half-bar cells so far: key -> (positions, entry, steps)
+        for j, c in sorted(cells.items()):
+            if j >= k:
+                continue
+            cj = _chord_in_bar(song, bars[j][0])
+            rj, hj = (cj[0] if cj else tonic), meters[j] / 2.0
+            for h in (0, 1):
+                idx = [i for i, p in enumerate(c.positions) if (p < hj) == (h == 0)]
+                if len(idx) < rhythm.HALF_CELL_NOTES:
+                    continue
+                ps, ms = [c.positions[i] - h * hj for i in idx], [c.pitches[i] for i in idx]
+                key_ = half_key(ps, ms)
+                pool.setdefault(key_, (ps, (ms[0] - rj) % 12, to_steps(ms, scale)))
+                plays[key_] += 1
+        prev_key = None
+        if k - 1 in cells:                                  # the half before: the bar before's second half
+            c, hj = cells[k - 1], meters[k - 1] / 2.0
+            idx = [i for i, p in enumerate(c.positions) if p >= hj]
+            if len(idx) >= rhythm.HALF_CELL_NOTES:
+                prev_key = half_key([c.positions[i] - hj for i in idx], [c.pitches[i] for i in idx])
+        ctx = tuple({"part": R.MELODY, "habit": echo_habit}.get(c_, "?") for c_ in models["half_recall"].conditionings)
+        raw = {kd: models["half_recall"].p(kd, ctx) for kd in tables.RECALL}
+        all_pos, all_pitches, kinds = [], [], []
+        midi, move, t_from = last_midi, last_move, last_time
+        targets = contour_targets(shape, phrase_size)
+        for h in (0, 1):
+            lo = h * half
+            shares = dict(raw)
+            if prev_key not in pool:
+                shares["new"], shares["same"] = shares["new"] + shares["same"], 0.0
+            earlier = {kk: n for kk, n in plays.items() if kk != prev_key}
+            if not earlier:
+                shares["new"], shares["earlier"] = shares["new"] + shares["earlier"], 0.0
+            total = sum(shares.values()) or 1.0
+            x, kind = rng.random() * total, "new"
+            for kd in tables.RECALL:
+                x -= shares[kd]
+                if x < 0:
+                    kind = kd
+                    break
+            key_ = prev_key if kind == "same" else (_weighted(rng, list(earlier), list(earlier.values())) if kind == "earlier" else None)
+            if key_ is not None:
+                ps, entry, steps = pool[key_]
+                pc = (root + entry) % 12
+                low, high = register
+                anchor_ = midi if midi is not None else (low + high) / 2
+                first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor_), m), default=int(round(anchor_)))
+                ms = [in_register(m, register) for m in from_steps(first, steps, scale)]
+                pos_h = [lo + p for p in ps]
+            else:
+                pos_h, ms = [p for p in positions if (p < half) == (h == 0)], []
+                for p in pos_h:
+                    t = a + p
+                    third = min(2, int(3 * (t - a0) / max(1e-9, b0 - a0)))
+                    aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
+                    strong = abs(p - round(p)) < rhythm.NEAR
+                    tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
+                    step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim,
+                                     step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
+                                     under_chord=wants_chord())
+                    midi = midi + step
+                    move = f"{step:+d}" if step else "0"
+                    ms.append(midi)
+                    t_from = t
+            if ms:
+                if key_ is not None:
+                    step_ = int(round(ms[-1] - midi))
+                    move = f"{step_:+d}" if step_ else "0"
+                    midi, t_from = float(ms[-1]), a + pos_h[-1]
+                prev_key = half_key([p - lo for p in pos_h], [int(round(m)) for m in ms]) if len(ms) >= rhythm.HALF_CELL_NOTES else None
+            kinds.append(kind if ms else "rest")
+            all_pos += pos_h
+            all_pitches += ms
+        last_midi, last_move = midi, move
+        half_kinds[k] = kinds
+        return realize(k, all_pos, all_pitches)
+
     def again(k: int, cell: Cell) -> Cell:
         """An earlier cell in bar k: re-rooted on the bar's chord, its moves as
         scale steps, and its strong-beat notes on the bar's chord tones (a
@@ -1332,7 +1425,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     cell = again(k, theme[i])
                     choices[k] = "theme"
                 else:
-                    cell = new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                    cell = (new_cell_halves if "half_recall" in models else new_cell)(k, new_rhythm(k), shape, start_midi, a0, b0)
                     choices[k] = "new"
                 if start_midi is None and cell.pitches:
                     start_midi = float(cell.pitches[0])
@@ -1411,10 +1504,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                                     cell = again(k, c)
                                     source[k] = j
                                 else:
-                                    cell = new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                                    cell = (new_cell_halves if "half_recall" in models else new_cell)(k, new_rhythm(k), shape, start_midi, a0, b0)
                                     choice = "new"
                         else:
-                            cell = new_cell(k, new_rhythm(k), shape, start_midi, a0, b0)
+                            cell = (new_cell_halves if "half_recall" in models else new_cell)(k, new_rhythm(k), shape, start_midi, a0, b0)
                         choices[k] = choice
                     if start_midi is None and cell.pitches:
                         start_midi = float(cell.pitches[0])
@@ -1468,6 +1561,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             value = str(rhythm.position(gap, song.division))
             held = models["values"].draw((role, value, articulation), rng) if "values" in models else "held"
             notes.append((t, t + gap * (HELD if held == "held" else DETACHED), float(m)))
+    if half_kinds:
+        c = Counter(kd for ks in half_kinds.values() for kd in ks)
+        log.append("halves (half_recall): " + ", ".join(f"{kd} {c[kd]}" for kd in ("same", "earlier", "new", "rest") if c[kd]) + f" over {len(half_kinds)} new bars")
     return notes, figures, log
 
 
