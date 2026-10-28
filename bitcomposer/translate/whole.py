@@ -359,7 +359,10 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
 def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng: random.Random, log: list) -> dict:
     """Each part's level a bar as a multiplier of its song level (section_levels, round 48): drawn a part an own section
     it plays in, by the part and the section's place in the form; a repeated section copies its source's; the drums
-    keep one level (the word counts the pitched parts). Returns {part: [multiplier a bar]}; logs the sections off 1.0."""
+    keep one level (the word counts the pitched parts). Drawn on an own stream (`whole:{seed}:levels`): drawn on the
+    plan's, the new draws had shifted every habit, register and sample drawn after them, and a before-and-after of one
+    seed compared two different songs (Song Check 40's first cut). Returns {part: [multiplier a bar]}; logs the
+    sections off 1.0."""
     total = parts[-1][0] + parts[-1][1]
     out = {role: [1.0] * total for role in band if role != R.DRUMS}
     n_parts = len(parts)
@@ -536,7 +539,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append(f"never in a texture, left out of the band: {silent}")
         band = [r for r in band if r not in silent]
         plays = {r: plays[r] for r in band}
-    section_levels = plan_section_levels(models, parts, band, plays, rng, log) if "section_levels" in models_or_empty(models) else {}
+    section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
+                      if "section_levels" in models_or_empty(models) else {})                                  # plan's, every later draw had shifted
     registers, sounds, habits, extras = {}, {}, {}, {}
     for role in band:
         if role == R.DRUMS:

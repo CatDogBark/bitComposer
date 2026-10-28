@@ -3466,6 +3466,15 @@ place, the plan draws a multiplier a part an own section it plays in
 tables (`pack.json.r47` the backup on both machines). Test
 `test_a_parts_level_moves_by_section_as_the_games_does`.
 
+**A fault on the way.** The first cut drew the section levels on the
+plan's own stream, after the textures, so every habit, register and
+sample drawn after them shifted: a before-and-after of Song Check 38's
+seeds (Song Check 40's first cut) compared two different songs a pair,
+and the owner heard "different instruments sometimes" and no swell. The
+draws moved to an own stream (`whole:{seed}:levels`), as the floors and
+hand-offs are, so a seed's song is what it was with its levels alone
+changed; the pairs rendered again.
+
 **Measured after, seeds 1-45.** 40 plans move a part in some section;
 sections at the part's level: accompaniment 0.77, bass 0.86, counter 0.84,
 melody 0.83 (FFVI 0.69 to 0.91 by place). Song Check 39 is five fresh
