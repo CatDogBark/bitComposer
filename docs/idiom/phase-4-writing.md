@@ -3023,3 +3023,42 @@ relative to the tune's, or the counter's sample fitted to the tune's
 bound, would bring the gap back toward FFVI's); the pair words still pass
 over samples the pack lacks; `TOP_LEVEL`; rules-to-words.md's remaining
 items.
+
+### Round 35: the note's length under the part's speed (2026-10-27, from the owner's note on Whole 02's accompaniment)
+
+**His question.** Whole 02's accompaniment went staccato again, as if
+outside its sample's habits; should the sample's speed be handled the
+way round 34 handled its range, one level up?
+
+**Measured first.** The accompaniment is three voices on the string pad
+sf89f5aedfd, arpeggiated, dense, written at 8 notes a second, every note
+87 to 100 ms at 0.7 of its gap, two thirds shorter than the pad's 167 ms
+attack. FFVI plays that pad fast as an accompaniment too (Battle Theme
+9.7 notes a second on two voices, Save Them! 6.3, The Fierce Battle 6.1,
+Grand Finale 5.6), but with notes of 40 to 70 ms at a fifth to a third of
+the gap, a tremolo, or slow with held notes at 0.8 to 0.99; the written
+song sat between, a staccato pad. The gap_sounds word knew the gap's
+class but not the part's speed. Also found: the part_speeds draw had
+given this dense accompaniment 2 notes a second, a value FFVI's dense
+accompaniments never have, from the coarser level's mass.
+
+**Built, on his go.** `gap_sounds` is counted under the part's speed
+class (its fastest bar: slow to 3 a second, medium to 6, fast beyond;
+`rhythm.speed_tier`, `part_fastest`) between the voice and the gap, and
+the plan draws it again under the part's drawn speed once that is known
+(`_plan_sounds`, after every other draw; the first draw stays in the
+stream). The part_speeds draw is floored at the part and its tier.
+
+**Not built.** The voices at speed: FFVI's fast accompaniments play three
+voices in 4 of 12 songs and four in one; three fast voices is FFVI's own,
+so there is no word to add.
+
+**Measured after.** Whole 02's accompaniment line draws 0.4 of its gap
+under a beat (FFVI's fast pad 0.24 to 0.40); its rendered notes 120 ms at
+the median, none under 100 ms (87 to 100 ms before). Whole 03's at speed
+12 draws 0.8 to 1.0, as FFVI's held fast accompaniments do; Whole 28's
+unchanged in kind. Pack 81 tables (the gap_sounds table reshaped). Song
+Check 29 is Whole 28, 02 and 03 as round 34 beside round 35.
+
+**Open:** the counter's register against the tune's under the sample-first
+order; the pair words still pass over samples the pack lacks.

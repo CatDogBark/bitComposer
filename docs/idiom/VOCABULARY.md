@@ -263,7 +263,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   of two: 0.50, 0.45, 0.97); the one share a voice had (`sounds`,
   `layer_sounds`, which stay for the parts without this word) left the
   slap bass a hole where the game holds, and a note ended at the bar line
-  had dropped into a hole when the next bar began late (round 26).
+  had dropped into a hole when the next bar began late (round 26). Since round 35 the word is counted under the part's speed class as
+  well (its fastest bar: slow to 3 notes a second, medium to 6, fast
+  beyond; `rhythm.speed_tier`), between the voice and the gap, and the
+  plan draws it again under the part's drawn speed (`part_speeds`) once
+  that is known. FFVI's string pad played fast sounds a fifth to a third
+  of its gap (Battle Theme 0.24, Save Them! 0.40), the battle tremolo,
+  and played slow nearly all of it; one share by the gap alone had put
+  Whole 02's fast arpeggio on that pad between the two, 90 ms notes at
+  0.7 of the gap, a staccato pad neither held nor tremolo.
 - **bass_locks** — the share of the kit's accents (positions where two
   drum pieces strike together, `rhythm.kit_accents`) that carry a bass
   note, in tenths, by the part. Drawn once a song; the bass writer's lock
@@ -432,7 +440,9 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the sample it plays.
 
 ## The form
-
+ The draw is floored at the part and its tier: a dense
+  accompaniment had drawn 2 notes a second from the coarser level's
+  mass, a value FFVI's dense accompaniments never have (round 35).
 - **letters** — a song's form as its parts' letters in order (`A B A B C`),
   drawn whole. The form's shape: which parts repeat which.
 - **form** — a part of the form as new, again or back, by its index. The
