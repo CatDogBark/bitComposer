@@ -921,8 +921,8 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual([u.outcome for u in rhythm.half_recall_units([s])], ["new", "new", "earlier", "earlier", "earlier", "earlier", "earlier", "earlier"])   # two shapes (+4, -2) the whole tune through
         self.assertEqual(rhythm.handoff_class(9), "far")
         scale = {0, 2, 4, 5, 7, 9, 11}
-        self.assertEqual(writer.cell_pitches([60, 64, 67], 7, scale, (48, 60), 50.0), [55, 59, 50])   # on G in 48-60: G B D, the D folded in
-        self.assertEqual(writer.cell_pitches([60, 64], 0, scale, (60, 72), None), [60, 64])
+        self.assertEqual(writer.cell_pitches([60, 64, 67], 0, 7, scale, (48, 60), 50.0), [55, 59, 50])   # a C cell on G in 48-60: G B D, the D folded in
+        self.assertEqual(writer.cell_pitches([60, 64], 0, 0, scale, (60, 72), None), [60, 64])
 
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's

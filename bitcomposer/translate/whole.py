@@ -901,10 +901,12 @@ def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, r
         lo, hi = (a_t, (a_t + b_t) / 2) if i % 2 == 0 else ((a_t + b_t) / 2, b_t)
         chord = rhythm._chord_at(song.chords, lo)
         root = chord.root if chord is not None and chord.root is not None else plan.tonic
+        source = rhythm._chord_at(song.chords, c[0])
+        source_root = source.root if source is not None and source.root is not None else plan.tonic
         bound = plan.bounds.get(role, plan.registers.get(role, (24, 100)))
         before = [n for n in written[role].notes if n[3] == 0 and n[0] < lo - rhythm.NEAR]
         previous = before[-1][2] if before else None
-        pitches = writer.cell_pitches(c[4], root, scale, bound, previous)
+        pitches = writer.cell_pitches(c[4], source_root, root, scale, bound, previous)
         starts = [lo + pos for pos in c[3]]
         ends = [min(hi, s_ + (t_ - c[0]) - 0.0) for s_, t_ in zip(starts, [n[0] + n[1] for n in tune if c[0] - rhythm.NEAR <= n[0] < c[1] - rhythm.NEAR])]
         copied = [(s_, max(s_ + 0.05, e_), float(m), 0) for s_, e_, m in zip(starts, ends, pitches)]

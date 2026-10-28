@@ -890,11 +890,12 @@ def from_steps(first: int, steps: list, scale: set) -> list:
     return out
 
 
-def cell_pitches(pitches: list, root: int, scale: set, bound: tuple, previous: float | None) -> list:
-    """A tune cell's pitches as another part plays them: its first note at the cell's offset from the chord root, on the
-    new bar's root, in the part's register nearest the part's last note, and its moves as scale steps from there (a
-    sequence lands as a player's does, again() for the tune's own echoes); every note folded into the register."""
-    cell = Cell([0.0] * len(pitches), pitches, root, scale)
+def cell_pitches(pitches: list, source_root: int, root: int, scale: set, bound: tuple, previous: float | None) -> list:
+    """A tune cell's pitches as another part plays them: its first note at the cell's offset from its own bar's chord root
+    (`source_root`), on the new bar's root, in the part's register nearest the part's last note, and its moves as scale
+    steps from there (a sequence lands as a player's does, again() for the tune's own echoes); every note folded into
+    the register."""
+    cell = Cell([0.0] * len(pitches), pitches, source_root, scale)
     pc = (root + cell.entry) % 12
     low, high = bound
     anchor = previous if previous is not None else (low + high) / 2
