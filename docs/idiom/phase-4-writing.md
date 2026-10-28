@@ -2955,3 +2955,71 @@ JSON carries no levels field still (the round-32 review's item).
 (`songcheck27`) and seeds 1-3 (`songcheck27-more`). Report:
 `phase4/round33-report.md`; scripts `r33_voices.py`, `r33_levels.py`,
 `r33_pack_check.py`, `r33_diff.py` and their logs beside it.
+
+### Round 34: the sample before the notes (2026-10-27, from the owner's question on Whole 02's counter blips)
+
+**His question.** Whole 02's counter had two high blips; round 32a's fold
+had been meant to stop that. Should "a sample is played where the game
+plays it" not be one general thing for every voice, instead of a patch
+here and a fold there?
+
+**Measured first.** The blips were one note, midi 84 in bar 7, played
+again by the song's tail: the counter's sample is played between 60 and
+80 in eleven FFVI songs and to 88 in one, the fold used the widest band,
+and at 84 the sample's body runs through in a tenth of a second. Across
+seeds 1 to 20 the fold covered the voices beside a line only: the bass
+line wrote 24 % of its notes past its sample's widest band, the melody
+2 %, the accompaniment line 4 %, its second voice 6 %, the second
+counter voice of the old path 22 %. The order was backwards from a
+composer's: the plan drew a register, the writers wrote in it (or in a
+span two octaves wider), then a sample was found that reached the
+written notes, with the part's speed read off them, and what still
+stuck out was folded.
+
+**Built, on his go.** The sample comes first. `part_speeds` (a part's
+fastest bar, by the part and its habit's density tier, drawn once a song
+after every other plan draw) gives the fit a speed before any note
+exists; `samples_for` runs before `write`, and the range the `ranges`
+word drew for the chosen sample is the register the voice is written in
+(`plan.bounds`, `bound_of`: the overlap with the planned register, a
+sliver widened to two of the register word's bins, the sample's range
+alone where they miss, the planned register where the word knows nothing
+of the sample; a sample reaches a planned register when its range
+overlaps it by that grain, so the counter's three-octave plan keeps its
+pair word). The melody, the chord parts and their voices beside the line,
+the counter, the bass (`writer.bass(ceiling=)`) and its second voice take
+the bound; a run of passing tones turns at its edge (a bass of bars all
+"+" had walked from 42 to 79 on a 32-40 sample); the octave mark takes
+the plain placing where the octave has no room; the theme band places
+its cells inside the carrier's bound. Retired: the span rule
+(`LAYER_OFFSET` around the line's register), the second bass voice's
+`BESIDE_SPAN`, the bass line's floor plus `REACH` as its ceiling, round
+32a's `fold_to_samples`, and the speed read off the written notes. Pack
+81 tables.
+
+**Measured after, seeds 1 to 20 and 28, notes past the sample's widest
+FFVI band:** bass line 24 % to 3 % (FFVI's basses 7 %), melody 2 % to 1 %,
+accompaniment line 4 % to 0, its second voice 6 % to 0.2 %, the bass's
+second voice 0 to 6 % (below the band, by three semitones at most), the
+harmony line 0 to 6 % (below, by two), the counter and the harmony's
+second voice 0; the worst excess anywhere three semitones, where the
+counter had reached 22 and the bass 35. About a third of every voice's
+notes sit past its sample's most-voted band, as FFVI's do (the bands are
+tenth-to-ninetieth percentiles; a 4-semitone bass band leaves a walking
+line its chord tones a few semitones over). The counter against the
+tune (fourteen songs): on the tune's onsets 0.51, 1.18 times its notes,
+level 0.95, same sample 5 of 14, register gap -5.0 (FFVI -2.5) and above
+the tune 0.09 (FFVI 0.36): the counter now writes where its own sample
+is played, which is lower than the tune more often than before. Every
+song's samples were redrawn once (the sample draws moved before the
+writing and read the drawn speed): Whole 28's tune is now on
+sdbd05ab4d5 at 48-68 with its pair sample s72f0a1e88e above it, Whole 02
+and 03 keep theirs. Song Check 28 is Whole 28, 02 and 03 as round 33
+beside round 34.
+
+**Open:** the counter's register against the tune's under the new order
+(its sample's range decides it; a word for the counter's register
+relative to the tune's, or the counter's sample fitted to the tune's
+bound, would bring the gap back toward FFVI's); the pair words still pass
+over samples the pack lacks; `TOP_LEVEL`; rules-to-words.md's remaining
+items.
