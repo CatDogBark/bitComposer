@@ -841,6 +841,97 @@ def melody_cells(song: Song, role: str = None) -> list:
     return out
 
 
+HALF_CELL_NOTES = 2                  # notes a half bar needs to be a cell the band can take up
+HANDOFF_PARTS = (R.COUNTER, R.ACCOMP, R.HARMONY, R.ARP, R.BASS)   # the parts a tune cell can pass to (their line voices)
+HANDOFF_FAR = 8                      # bars: a hand-off further on is "far"
+
+
+def half_cells(line: list, bars: list) -> list:
+    """A line cut into half-bar cells: for each half of each bar (start, end, key, positions in beats from the half's start,
+    pitches), the key the half's onsets in twelfths and its intervals as melody_cells keys a bar; None under HALF_CELL_NOTES
+    notes. `line`: notes struck together as one (_line)."""
+    out = []
+    for a, b in bars:
+        m = (a + b) / 2
+        for lo, hi in ((a, m), (m, b)):
+            mine = [n for n in line if lo - NEAR <= n[0] < hi - NEAR and not math.isnan(n[2])]
+            if len(mine) < HALF_CELL_NOTES:
+                out.append(None)
+                continue
+            ps = [round(n[2]) for n in mine]
+            key = " ".join(str(round((n[0] - lo) * 12)) for n in mine) + " | " + " ".join(f"{y - x:+d}" for x, y in zip(ps, ps[1:]))
+            out.append((lo, hi, key, [n[0] - lo for n in mine], ps))
+    return out
+
+
+def handoff_class(bars_on: int) -> str:
+    return str(bars_on) if bars_on < HANDOFF_FAR else "far"
+
+
+def cell_handoff_units(songs) -> list:
+    """Each half-bar cell of a song's tune as a unit: its outcome the first other part to play the same cell in a later bar
+    and how many bars on ("counter 2", "bass 1", "far" past HANDOFF_FAR bars; "none"), its values the part (melody), the
+    song's echo habit (ECHOES) and the cell's place (theme: inside the tune's theme phrase, _theme_of; other). FFVI's band
+    takes up the tune's cells: half its tune's half-bar cells in a themed song come back in the counter, the accompaniment
+    or the bass in another bar (0.51; all songs 0.34), where the written songs had 0.05, each part faithful to its own
+    word and none to the theme (round 37)."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        tune = sorted(_line(s.notes[R.MELODY]))
+        cells = half_cells(tune, s.bars)
+        if sum(1 for c in cells if c) < 4:
+            continue
+        keys = [c[2] for c in cells if c]
+        habit = habit_of(sum(1 for i, c in enumerate(keys) if c in keys[:i]) / len(keys), ECHOES)
+        found = _theme_of(s)
+        theme_bars = set(found[2]) if found else set()
+        others = {}
+        for role in HANDOFF_PARTS:
+            notes = line_notes(s, role) or s.notes.get(role)
+            if notes:
+                others[role] = half_cells(sorted(_line(notes)), s.bars)
+        for i, c in enumerate(cells):
+            if not c:
+                continue
+            bar = i // 2
+            hit = None
+            for j in range(i + 2 - (i % 2), len(cells)):      # the halves of later bars, nearest first
+                for role, oc in others.items():
+                    if j < len(oc) and oc[j] and oc[j][2] == c[2]:
+                        hit = f"{role} {handoff_class(j // 2 - bar)}"
+                        break
+                if hit:
+                    break
+            out.append(tables.Unit(s.sid, s.game, hit or "none", {"part": R.MELODY, "habit": habit, "place": "theme" if bar in theme_bars else "other"}))
+    return out
+
+
+def half_recall_units(songs) -> list:
+    """What each half-bar cell of a song's tune is to the tune so far (same: the half before's cell again; earlier: one
+    played before; new), by part and echo habit: the tune writer's urn at the half bar (round 38). FFVI's tune reuses
+    half-bar cells more than bar cells (0.50 of halves heard earlier, themed 0.63; bars 0.32 and 0.52): its cells are
+    moved and re-intervalled inside the bar where a writer whose cell is the bar draws a whole new bar."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        cells = [c for c in half_cells(sorted(_line(s.notes[R.MELODY])), s.bars) if c]
+        if len(cells) < 4:
+            continue
+        keys = [c[2] for c in cells]
+        bar_keys = [c for c in melody_cells(s) if c]
+        habit = habit_of(sum(1 for i, c in enumerate(bar_keys) if c in bar_keys[:i]) / max(1, len(bar_keys)), ECHOES)
+        seen, previous = set(), None
+        for k in keys:
+            kind = "same" if k == previous else "earlier" if k in seen else "new"
+            out.append(tables.Unit(s.sid, s.game, kind, {"part": R.MELODY, "habit": habit}))
+            seen.add(k)
+            previous = k
+    return out
+
+
 def melody_cell_units(songs) -> list:
     """Each bar of each song's tune as a unit: its outcome the bar's cell
     (melody_cells), its values the part, the tempo band, the part's weight

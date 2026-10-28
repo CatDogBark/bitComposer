@@ -89,6 +89,8 @@ KEPT = {
     "counter_pairs": ("rhythm", "counter_pair_units", {}, ("part", "tune"), False, False, "the counter-line's sample where it plays another than the tune's, by the tune's sample (the pack's ids), drawn once a song at the rendering"),
     "sample_lengths": ("rhythm", "sample_length_units", {}, ("part", "speed"), False, False, "the shortest note a sample is played at (ms, a class), by the sample and its speed class in the song (slow, medium, fast): a note's floor on it"),
     "sample_speeds": ("rhythm", "sample_speed_units", {}, ("part",), False, False, "the fastest bars a sample is played in (notes a second, a class), by the sample: weighed in its choice for a part"),
+    "cell_handoffs": ("rhythm", "cell_handoff_units", {}, ("part", "habit", "place"), False, False, "a tune's half-bar cell taken up by another part in a later bar: which part and how many bars on, by the song's echo habit and the cell's place (theme or other)"),
+    "half_recall": ("rhythm", "half_recall_units", {}, ("part", "habit"), False, False, "what a tune's half-bar cell is to the tune so far (same, earlier, new), by the song's echo habit: the tune writer's urn at the half bar"),
     "part_speeds": ("rhythm", "part_speed_units", {}, ("part", "habit"), False, False, "a part's fastest bars (notes a second, a class), by the part and its habit's density: what its sample is fitted to for speed before the part is written"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),

@@ -904,6 +904,26 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.counter_pair_for({"counter_pairs": one}, "sb", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, ["sb the tune's own"]))   # not "other"
         self.assertEqual(whole.counter_pair_for({}, "sa", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, None))                    # no table: the rule, unlogged
 
+    def test_the_tunes_cells_handed_to_the_band(self):
+        """Round 37: a tune's half-bar cell taken up by another part in a later bar is counted (which part, how many bars on;
+        none), by the song's echo habit and the cell's place; the half-bar urn's kinds are counted (round 38); a cell re-rooted
+        for another part keeps its intervals as scale steps inside the part's register."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        tune = [(0.0, 0.9, 60.0, "a"), (1.0, 0.9, 64.0, "a"), (2.0, 0.9, 67.0, "a"), (3.0, 0.9, 65.0, "a"),
+                (4.0, 0.9, 60.0, "a"), (5.0, 0.9, 64.0, "a"), (6.0, 0.9, 62.0, "a"), (7.0, 0.9, 60.0, "a"),
+                (8.0, 0.9, 62.0, "a"), (9.0, 0.9, 66.0, "a"), (10.0, 0.9, 64.0, "a"), (11.0, 0.9, 62.0, "a"),
+                (12.0, 0.9, 60.0, "a"), (13.0, 0.9, 64.0, "a"), (14.0, 0.9, 67.0, "a"), (15.0, 0.9, 65.0, "a")]
+        counter = [(8.0, 0.9, 55.0, "b"), (9.0, 0.9, 59.0, "b"), (10.0, 0.9, 50.0, "b"), (11.0, 0.9, 50.0, "b")]   # bar 2's first half = the tune's bar 0 cell
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune, "counter": counter}, sid="s", game="g")
+        units = rhythm.cell_handoff_units([s])
+        self.assertEqual([u.outcome for u in units], ["counter 2", "none", "counter 1", "none", "none", "none", "none", "none"])   # bar 1 opens with the same shape as bar 0
+        self.assertEqual({u.values["habit"] for u in units}, {"mixed"})   # 1 of 4 bar cells echoed (bar 3 = bar 0): over a third
+        self.assertEqual([u.outcome for u in rhythm.half_recall_units([s])], ["new", "new", "new", "new", "new", "new", "earlier", "earlier"])
+        self.assertEqual(rhythm.handoff_class(9), "far")
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual(writer.cell_pitches([60, 64, 67], 7, scale, (48, 60), 50.0), [55, 59, 50])   # on G in 48-60: G B D, the D folded in
+        self.assertEqual(writer.cell_pitches([60, 64], 0, scale, (60, 72), None), [60, 64])
+
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's
         drawn range and the planned register: the overlap, a sliver widened to the register grain, the sample's range

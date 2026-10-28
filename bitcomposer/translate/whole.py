@@ -66,7 +66,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "balance": "bass=half drums melody=main", "drum_habits": "medium mixed", "drum_group_habits": "medium mixed",
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
-            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6",
+            "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -860,6 +860,70 @@ def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng:
     return log
 
 
+def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
+    """The tune's half-bar cells taken up by the band (cell_handoffs, round 37): for each cell of the written tune, the
+    word draws which other part plays it how many bars on (or none), under the song's echo habit and the cell's place
+    (theme or other); where that part does not already play the cell later, its line's half bar there is replaced by
+    the cell, re-rooted on that bar's chord in the part's own register (writer.cell_pitches), the tune's note lengths
+    kept to the half. FFVI's themed songs hand half their tune's half-bar cells to another part later (all songs 0.34);
+    the written songs had 0.05, each part faithful to its own word and none to the theme. Returns a log line a hand-off."""
+    if R.MELODY not in written or "cell_handoffs" not in models_or_empty(models):
+        return []
+    tune = sorted(rhythm._line([(a, b - a, m, 0) for a, b, m, v in written[R.MELODY].notes if v == 0]))
+    cells = rhythm.half_cells(tune, song.bars)
+    if not any(cells):
+        return []
+    x = plan.extras.get(R.MELODY, {})
+    theme_bars = set(x.get("theme_bars") or []) | {k for r in (x.get("returns") or []) for k in r.get("bars", [])}
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    log, taken = [], set()
+    lines = {}
+    for role in rhythm.HANDOFF_PARTS:
+        if role in written and role in plan.band:
+            lines[role] = lambda role=role: sorted(rhythm._line([(a, b - a, m, 0) for a, b, m, v in written[role].notes if v == 0]))
+    for i, c in enumerate(cells):
+        if not c:
+            continue
+        bar = i // 2
+        drawn = _draw(models, "cell_handoffs", (R.MELODY, x.get("echo", "mixed"), "theme" if bar in theme_bars else "other"), rng)
+        if drawn == "none" or " " not in drawn:
+            continue
+        role, _, far = drawn.partition(" ")
+        if role not in lines or far == "far":
+            continue
+        target = bar + int(far)
+        if target >= len(song.bars) or not (target < len(plan.plays[role]) and plan.plays[role][target]) or (role, target, i % 2) in taken:
+            continue
+        others = rhythm.half_cells(lines[role](), song.bars)
+        if any(oc and oc[2] == c[2] for oc in others[2 * (bar + 1):]):   # the part plays the cell later already
+            continue
+        a_t, b_t = song.bars[target]
+        lo, hi = (a_t, (a_t + b_t) / 2) if i % 2 == 0 else ((a_t + b_t) / 2, b_t)
+        chord = rhythm._chord_at(song.chords, lo)
+        root = chord.root if chord is not None and chord.root is not None else plan.tonic
+        bound = plan.bounds.get(role, plan.registers.get(role, (24, 100)))
+        before = [n for n in written[role].notes if n[3] == 0 and n[0] < lo - rhythm.NEAR]
+        previous = before[-1][2] if before else None
+        pitches = writer.cell_pitches(c[4], root, scale, bound, previous)
+        starts = [lo + pos for pos in c[3]]
+        ends = [min(hi, s_ + (t_ - c[0]) - 0.0) for s_, t_ in zip(starts, [n[0] + n[1] for n in tune if c[0] - rhythm.NEAR <= n[0] < c[1] - rhythm.NEAR])]
+        copied = [(s_, max(s_ + 0.05, e_), float(m), 0) for s_, e_, m in zip(starts, ends, pitches)]
+        _replace_span(written[role], song, role, lo, hi, copied)
+        taken.add((role, target, i % 2))
+        log.append(f"bar {target}: the {role} takes up the tune's cell from bar {bar} ({far} on)")
+    return log
+
+
+def _replace_span(part, song: rhythm.Song, role: str, a: float, b: float, copied: list) -> None:
+    """The part's LINE voice's notes in [a, b) replaced by `copied` [(start, end, midi, 0)], the other voices kept, in the
+    written part and the song."""
+    inside = lambda n: a - rhythm.NEAR <= n[0] < b - rhythm.NEAR and n[3] == 0   # noqa: E731
+    gone = {(round(n[0], 3), int(round(n[2]))) for n in part.notes if inside(n)}
+    part.notes[:] = sorted([n for n in part.notes if not inside(n)] + copied, key=lambda n: n[0])
+    song.notes[role] = sorted([n for n in song.notes.get(role, []) if (round(n[0], 3), int(round(n[2]))) not in gone]
+                              + [(t, u - t, m, role) for t, u, m, _ in copied], key=lambda n: n[0])
+
+
 def copy_repeats(plan: Plan, song: rhythm.Song, written: dict) -> list:
     """A part of the form that repeats an earlier one plays it note for note in every part written, as a driver replays
     a part (the writers copy their own figures for it already; the notes under them, the second lines and the voicings
@@ -1099,6 +1163,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         rng_theme = random.Random(f"{seed}:theme band")
         for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):
             written[R.MELODY].log.append(line)
+    for line in hand_off_cells(plan, song, written, models, random.Random(f"{seed}:handoff")):
+        written[R.MELODY].log.append(line)
     for line in copy_repeats(plan, song, written):
         for part in written.values():
             part.log.append(line)
