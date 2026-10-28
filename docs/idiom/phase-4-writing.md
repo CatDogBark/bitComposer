@@ -3214,3 +3214,108 @@ section) are drawn apart from the token's song too, which is why Whole
 same split at the section grain. The counter's density is still the
 habit draw's (FFVI's loud other-sample counters run 2 to 16 notes a bar,
 Whole 33's 6).
+
+### Round 40: the tune's memory at the pair, and where its echoes point (2026-10-28, from the owner's note that the melody is chaotic, with no hook and no verse)
+
+**His words.** "The melody is chaotic. There isn't a hook and verse; it
+meanders and does whatever it wants. FFVI has distinct hooks and verses,
+which makes their themes musical."
+
+**Measured first** (`tunestruct.py`, the same on FFVI's tunes and the
+written songs; medians over the band-themed subsets, FFVI 23 songs,
+written seeds 1-35):
+
+| measure | FFVI themed | written before | written after |
+|---|---|---|---|
+| bars whose cell was heard earlier, any kind | 0.64 | 0.71 | 0.70 |
+| of the tune's bars: same onsets with new pitches (rhythm only) | 0.06 | 0.25 | 0.22 |
+| same intervals moved to other pitches | 0.20 | 0.06 | 0.06 |
+| two-bar pairs heard earlier as a pair (phrase-aligned) | 0.40 | 0.19 | 0.28 |
+| pairs heard earlier, the form's own parts only | 0.18 | 0.07 | 0.09 |
+| whole four-bar phrases heard earlier | 0.29 | 0.18 | 0.25 |
+| a later section's cells already in an earlier, different section | 0.00 | 0.21 | 0.10 |
+| the top cell's share of the tune (the hook) | 0.22 | 0.18 | 0.18 |
+| distinct phrase heads over phrases | 0.62 | 0.67 | 0.56 |
+
+The written tune echoed as much as FFVI, by the wrong kind (a rhythm
+with new pitches), at the wrong grain (one bar or half bar at a time,
+each drawn alone) and from anywhere in the song (B a reshuffle of A).
+
+**Built, on his go (words 1 and 2 of the three discussed; word 3, the
+rhythm bringing its intervals, held back to measure first).** Three
+counted words, `pair_recall`, `pair_bar_recall` and `recall_sources`
+(docs/idiom/VOCABULARY.md), and the melody writer's urn around them: in
+a phrase written from the urn, each pair of bars draws the pair urn
+first (the pair before's cells again, an earlier pair, or new), only a
+new pair runs the bar urn (its shares counted over the bars of new
+pairs) and the half-bar urn inside it, and an "earlier" draw at either
+grain takes its pool from a source drawn by `recall_sources` (the bars
+of the phrase's own section, the theme phrase's, another section's).
+The three tables fitted on the readings and spliced into the FFVI pack
+(86 tables; `pack.json.r39` the backup on both machines). Test
+`test_the_tunes_memory_at_the_pair_and_where_its_echoes_point` on a
+made-up tune; the whole-song test asserts the log line.
+
+**Measured after** (the table's last column): pairs 0.19 to 0.28, whole
+phrases 0.18 to 0.25, sections sharing 0.21 to 0.10, distinct heads 0.67
+to 0.56; the hook's share and the echo kinds unmoved. Song Check 34 is
+seeds 31-35 again on round 40 (Song Check 32 the before).
+
+**Found on the way, the cause of the rest.** Of 292 recalled bars over
+seeds 1-35 (theme returns, earlier phrases, pairs and bars alike), 133
+(0.46) come out with a cell the tune never played: `writer.again`
+re-roots the cell and lands its strong beats on the bar's chord tones,
+which bends the intervals. A theme return bends 38 of 113 bars, a "pair
+same" 17 of 38. That is why a third of the written echoes are a rhythm
+with new pitches where FFVI has a tenth (FFVI's moved cells keep their
+intervals: moved 0.20, rhythm-only 0.06), why pairs inside the own parts
+reach 0.09 against 0.18 with the word in place, and part of why the
+hook's share does not move. A drawing fault, to be fixed as one on his
+go: `again` keeping the intervals (the chord-tone landing retired, or
+counted as FFVI's moved cells do it).
+
+**Also open:** the echo habit for a song that carries its theme back:
+FFVI's themed tunes are mixed 14, varied 4, repeating 5 of 23, its
+unthemed ones varied 25 of 40; the written themed songs measure mixed
+14, varied 6, repeating 3 of 23, close enough that no word is needed
+now. The CONTINUE constant (0.8: a recalled passage goes on with its
+next bar) is a rule the pair word half covers.
+
+### Round 41: a recalled cell keeps its intervals (2026-10-28, the fault found in round 40, fixed as a fault on his go)
+
+**The fault.** `writer.again` (a bar coming back) and the half-bar urn's
+recalled halves rebuilt the cell from its scale steps and clamped each
+note to the register, so a cell that came back on another chord, or near
+the register's edge, came back with other intervals: 0.46 of the written
+recalls over seeds 1-35 (133 of 292 bars) were a cell the tune had never
+played, theme returns among them (38 of 113). FFVI's cells that come back
+moved keep their intervals (moved 0.20 of bars, a rhythm with other
+intervals 0.06).
+
+**The fix.** A recalled cell is rebuilt from its intervals in semitones
+(`writer.from_intervals`) and moved whole by octaves into the register
+(`writer.fold_cell`; a note is clamped only where no octave fits the
+cell); the whole-cell move that lands its strong beats on the chord
+stays, since it moves the cell whole. The same for a recalled half in
+`new_cell_halves`. No table changed.
+
+**Measured after, seeds 1-35 (themed medians; FFVI themed beside):**
+
+| measure | FFVI | round 40 | round 41 |
+|---|---|---|---|
+| recalled bars that come back as a cell never played | — | 0.46 | 0.17 |
+| echoes with the same pitches (exact) | 0.31 | 0.25 | 0.30 |
+| echoes moved with their intervals | 0.20 | 0.06 | 0.15 |
+| echoes that are a rhythm with new pitches | 0.06 | 0.22 | 0.15 |
+| two-bar pairs heard earlier as a pair | 0.40 | 0.28 | 0.35 |
+| pairs heard earlier, the form's own parts only | 0.18 | 0.09 | 0.19 |
+| whole four-bar phrases heard earlier | 0.29 | 0.25 | 0.25 |
+| the hook's share of the tune | 0.22 | 0.18 | 0.20 |
+| distinct phrase heads over phrases | 0.62 | 0.56 | 0.53 |
+| a later section's cells already in an earlier, different section | 0.00 | 0.10 | 0.16 |
+
+The remaining 0.17 of bent recalls are cells wider than their register
+or altered after the recall (`realize`); the sections' sharing rose with
+the fix because the theme's returns in a later section now match their
+source exactly, which FFVI's 0.00 does not show at its grain: open. Song
+Check 35 is five fresh band-themed seeds (36-40) on round 41.

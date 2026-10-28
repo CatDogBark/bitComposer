@@ -951,6 +951,113 @@ def melody_cell_units(songs) -> list:
     return out
 
 
+PAIR = 2                             # bars: the group the tune's memory works at above the bar (pair_recall, round 40)
+RECALL_SOURCES = ("section", "theme", "elsewhere")   # where an echo points: the section it is in, the theme phrase, another section
+
+
+def _tune_groups(song: Song):
+    """The tune's bars in the form's own parts as (part index, [bar indices]) phrase windows, with each window's bar pairs
+    (PAIR bars each, a trailing odd bar on its own) and the theme window (the first phrase with a cell)."""
+    windows = [(i, w) for i, w in phrase_windows(song) if i is not None]
+    own = {i for i, _, _ in _own_parts(song)}
+    return windows, own
+
+
+def _echo_habit(cells: list) -> str:
+    keys = [c for c in cells if c]
+    return habit_of(sum(1 for i, c in enumerate(keys) if c in keys[:i]) / max(1, len(keys)), ECHOES)
+
+
+def pair_recall_units(songs) -> list:
+    """What each two-bar group of a song's tune is to the tune so far (same: the group before's pair of cells again; earlier:
+    a pair played before; new), by part and echo habit: the tune writer's urn at the pair (round 40, 2026-10-27). The groups
+    are a phrase's halves (bars 1-2 and 3-4 of each phrase window); a pair needs both its bars' cells; only the form's own
+    parts are counted, since the writer draws there and plays a repeated part again. FFVI's themed tunes bring two-bar
+    pairs back 0.42 of the time and whole phrases 0.29 where the written tunes, drawing each bar alone, had 0.17 and 0.18."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        cells = melody_cells(s)
+        habit = _echo_habit(cells)
+        windows, own = _tune_groups(s)
+        seen, previous = set(), None
+        for i, w in windows:
+            for j in range(0, len(w) - 1, PAIR):
+                a, b = w[j], w[j + 1]
+                if not (cells[a] and cells[b]):
+                    previous = None
+                    continue
+                key = (cells[a], cells[b])
+                if i in own:
+                    kind = "same" if key == previous else "earlier" if key in seen else "new"
+                    out.append(tables.Unit(s.sid, s.game, kind, {"part": R.MELODY, "habit": habit}))
+                seen.add(key)
+                previous = key
+    return out
+
+
+def pair_bar_recall_units(songs) -> list:
+    """What each bar inside a NEW pair is to the tune so far (same, earlier, new), by part and echo habit: the bar urn the
+    writer runs inside a pair the pair urn drew new (round 40). Counted over the bars of new pairs in the form's own parts
+    only: the bar urn's shares over every bar (melody_recall) include the bars that come back as pairs, and running both
+    would echo twice."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        cells = melody_cells(s)
+        habit = _echo_habit(cells)
+        windows, own = _tune_groups(s)
+        seen_pairs, seen = set(), set()
+        previous = None
+        for i, w in windows:
+            for j in range(0, len(w), PAIR):
+                group = w[j:j + PAIR]
+                key = tuple(cells[k] for k in group) if len(group) == PAIR and all(cells[k] for k in group) else None
+                new_pair = key is None or key not in seen_pairs
+                for k in group:
+                    c = cells[k]
+                    if c and i in own and new_pair:
+                        out.append(tables.Unit(s.sid, s.game, "same" if c == previous else "earlier" if c in seen else "new", {"part": R.MELODY, "habit": habit}))
+                    if c:
+                        seen.add(c)
+                    previous = c
+                if key is not None:
+                    seen_pairs.add(key)
+    return out
+
+
+def recall_source_units(songs) -> list:
+    """Where each echo of a song's tune points (RECALL_SOURCES): a bar in the form's own parts whose cell was played before
+    (not the bar before) is "section" where the cell was played earlier in the same part of the form, "theme" where it was
+    played in the tune's first phrase, "elsewhere" otherwise; by part and echo habit (round 40). FFVI's sections share no
+    tune cells at the median (a later section's cells found in an earlier, different section: 0.00; the written songs 0.21
+    in themed ones), so a writer whose urn recalls from anywhere makes its B a reshuffle of its A."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        cells = melody_cells(s)
+        habit = _echo_habit(cells)
+        windows, own = _tune_groups(s)
+        theme_w = next((w for i, w in windows if any(cells[k] for k in w)), [])
+        where = {}                                           # cell -> the part indices it was played in so far
+        previous = None
+        for i, w in windows:
+            for k in w:
+                c = cells[k]
+                if not c:
+                    previous = None
+                    continue
+                if i in own and c != previous and c in where:
+                    source = "section" if i in where[c] else "theme" if c in {cells[t] for t in theme_w} else "elsewhere"
+                    out.append(tables.Unit(s.sid, s.game, source, {"part": R.MELODY, "habit": habit}))
+                where.setdefault(c, set()).add(i)
+                previous = c
+    return out
+
+
 CELL_RHYTHMS = ("new", "previous", "earlier")   # a new cell's rhythm: new to the tune, the bar before's, or an earlier one's
 
 
