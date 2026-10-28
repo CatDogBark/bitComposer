@@ -116,6 +116,7 @@ KEPT = {
     "part_samples": ("rhythm", "part_sample_units", {}, ("part", "speed"), False, False, "the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
     "part_textures": ("rhythm", "part_texture_units", {}, ("part", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by its place in the form and the part before's"),
+    "part_entries": ("rhythm", "part_entry_units", {}, ("part", "form", "length"), False, False, "where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, the section's place in the form and its length class"),
     "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
     "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of the tune's notes on a beat that are chord tones, drawn once a song"),
     "contour_sizes": ("phrases", "contour_size_units", {}, ("part", "mode", "contour"), False, False, "how far a phrase's contour goes, in semitones, by its shape"),

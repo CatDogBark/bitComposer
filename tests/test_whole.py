@@ -994,6 +994,43 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual([u.outcome for u in units], ["none", "bass:-24 counter:+0", "bass:-24 counter:+0", "bass:-24"])   # bars 4-7, not the theme's 0-3
         self.assertEqual({(u.values["part"], u.values["place"]) for u in units}, {("tune", "other")})
 
+    def test_a_part_enters_and_leaves_inside_the_section_where_the_game_does(self):
+        """Round 46: each part present in an own section is counted by where inside it it enters and leaves (part_entries:
+        whole, enters:k, leaves:k, by the part, the section's place and its length class); the plan turns the part's bars
+        off before its entrance and after its exit, a repeated section copying them; a draw no section this short can
+        hold gives way to the part playing it whole. Round 45: the sample word draws among the samples the pack holds."""
+        from bitcomposer.translate import tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": [(4.0 * i + x, 0.9, 60.0, "a") for i in range(2, 8) for x in (0.0, 2.0)],
+                                                      "bass": [(4.0 * i + x, 0.9, 36.0, "b") for i in range(0, 7) for x in (0.0, 2.0)]},
+                        sid="s", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")])
+        units = rhythm.part_entry_units([s])
+        self.assertEqual([(u.values["part"], u.values["form"], u.values["length"], u.outcome) for u in units],
+                         [("melody", "first", "short", "enters:2"), ("bass", "first", "short", "whole"), ("melody", "last", "short", "whole"), ("bass", "last", "short", "leaves:1")])
+        self.assertEqual((rhythm.entry_of("enters:3 leaves:1"), rhythm.entry_of("whole"), rhythm.section_length(4), rhythm.section_length(9)), ((3, 1), (0, 0), "short", "long"))
+        units = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        entries = tables.Table(("part", "form", "length"), "part_entries", votes=tables.SHARES).fit(
+            units("enters:6", part="counter", form="first", length="medium") + units("whole", part="melody", form="first", length="medium")
+            + units("leaves:1", part="bass", form="last", length="medium") + units("enters:6", part="counter", form="last", length="short"))
+        textures = tables.Table(("part", "form", "previous"), "part_textures", votes=tables.SHARES).fit(units("all", part=rhythm.ARRANGEMENT, form="first", previous=rhythm.START))
+        log = []
+        parts = [(0, 8, None, "A"), (8, 4, None, "B"), (12, 8, 0, "A")]
+        tex, plays = whole.plan_texture({"part_textures": textures, "part_entries": entries}, parts, ["bass", "counter", "melody"], random.Random(1), log)
+        self.assertEqual(plays["counter"][:8], [False] * 6 + [True] * 2)                           # enters six bars into A
+        self.assertEqual(plays["melody"][:8], [True] * 8)
+        self.assertEqual(plays["bass"][8:12], [True, True, True, False])                            # leaves a bar before B's end
+        self.assertEqual(plays["counter"][8:12], [True] * 4)                                        # "enters:6" cannot fit four bars: whole
+        self.assertEqual(plays["counter"][12:20], plays["counter"][:8])                             # the repeat copies the entrance
+        self.assertEqual(plays["bass"][:8], [True] * 7 + [False])                                  # the bass's word backs off to "leaves:1" in A too
+        line = next(line for line in log if line.startswith("entrances (part_entries): "))
+        self.assertIn("counter enters 6 in A", line); self.assertIn("bass leaves 1 before the end of B", line)
+        # the sample word over the pack's samples: a sample the pack lacks gives its share to the others
+        samples = tables.Table(("part", "speed"), "part_samples", votes=tables.SHARES).fit(
+            units("sx", part="melody", speed="slow") * 3 + units("sy", part="melody", speed="slow") + units("sz", part="melody", speed="slow"))
+        drawn = {whole.part_sample_for({"part_samples": samples}, "melody", 2.0, {"sy", "sz"}, random.Random(k), []) for k in range(40)}
+        self.assertEqual(drawn, {"sy", "sz"})
+        self.assertIsNone(whole.part_sample_for({"part_samples": samples}, "melody", 2.0, {"sq"}, random.Random(1), log))
+
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's
         drawn range and the planned register: the overlap, a sliver widened to the register grain, the sample's range

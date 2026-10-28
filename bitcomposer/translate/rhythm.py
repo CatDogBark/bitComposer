@@ -2420,6 +2420,60 @@ def parts_units(songs) -> list:
 ALL = "all"                           # a part's texture: every part of the band sounds
 
 
+ENTRY_CAP = 8                        # bars: an entrance or exit further inside a section is counted as this
+SECTION_LENGTHS = ((4, "short"), (8, "medium"), (1e9, "long"))   # a section's bars, the class an entrance is counted under
+
+
+def section_length(bars: int) -> str:
+    return next(name for top, name in SECTION_LENGTHS if bars <= top)
+
+
+def form_place_of(i: int, n: int) -> str:
+    """A part's place in a form of n parts: the only, first, middle or last part (form_place, from the index alone)."""
+    return "only" if n == 1 else "first" if i == 0 else "last" if i == n - 1 else "middle"
+
+
+def entry_of(outcome: str) -> tuple:
+    """A part_entries outcome as (bars after the section's start it enters, bars before its end it leaves)."""
+    enters = leaves = 0
+    for token in outcome.split():
+        name, _, k = token.partition(":")
+        if name == "enters" and k.isdigit():
+            enters = int(k)
+        elif name == "leaves" and k.isdigit():
+            leaves = int(k)
+    return enters, leaves
+
+
+def part_entry_units(songs) -> list:
+    """Each part present in each own section of a song's form as a unit: its outcome where inside the section it enters
+    and leaves ("whole": from the section's first bar to its last; "enters:3": its first sounding bar three bars after
+    the section's start; "leaves:1": its last one bar before the end; both; to ENTRY_CAP), its values the part, the
+    section's place in the form and the section's length class (SECTION_LENGTHS). Round 46 (2026-10-28): FFVI's parts
+    join inside a section more often than at its edge (61 late entrances inside, 45 at a boundary), where a texture a
+    section lets them join at its lines alone; the build of a song is where its parts come in."""
+    out = []
+    for s in songs:
+        if not s.notes or not s.parts:
+            continue
+        plays = {role: sounding_bars(s, role) for role in s.notes}
+        index = {num: k for k, num in enumerate(s.numbers)}
+        n_parts = len(s.parts)
+        for i, bar, n in _own_parts(s):
+            ks = [index[num] for num in range(bar, bar + n) if num in index]
+            if not ks:
+                continue
+            place, length = form_place_of(i, n_parts), section_length(len(ks))
+            for role, bars in plays.items():
+                mine = [k for k in ks if k in bars]
+                if not mine:
+                    continue
+                enters, leaves = ks.index(mine[0]), len(ks) - 1 - ks.index(mine[-1])
+                tokens = [x for x in (f"enters:{min(enters, ENTRY_CAP)}" if enters else "", f"leaves:{min(leaves, ENTRY_CAP)}" if leaves else "") if x]
+                out.append(tables.Unit(s.sid, s.game, " ".join(tokens) or "whole", {"part": role, "form": place, "length": length}))
+    return out
+
+
 def part_texture_units(songs) -> list:
     """Each part of each song's form (a repeat left out) as a unit: its
     outcome the texture most of its bars have, against the song's band:
