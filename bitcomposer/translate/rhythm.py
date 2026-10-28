@@ -147,6 +147,7 @@ class Song:
     feel: str | None = None                           # the song's feel, duple or triple (song_feel); a planned song's drawn once
     levels: dict = field(default_factory=dict)        # role -> the median level (0-1 of full) of its notes, as the readings heard them
     voice_levels: dict = field(default_factory=dict)  # voice -> the median level of its notes
+    note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -205,6 +206,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                     if rows:
                         song.voice_levels[voice] = statistics.median(r[3] for r in rows)
                         level_rows.setdefault(role, []).extend(r[3] for r in rows)
+                        song.note_levels.setdefault(role, []).extend((r[0], r[3]) for r in rows)
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
@@ -2444,6 +2446,42 @@ def entry_of(outcome: str) -> tuple:
         elif name == "leaves" and k.isdigit():
             leaves = int(k)
     return enters, leaves
+
+
+LEVEL_RATIO_CAP = (0.3, 2.0)         # a section's level over the part's song median is counted within this, in tenths
+
+
+def section_level_units(songs) -> list:
+    """Each part of each own section of a song's form as a unit: its outcome the part's median note level in the section
+    over its median level in the whole song, in tenths within LEVEL_RATIO_CAP ("1.0": the part at its usual level; "0.5":
+    half of it, an intro's bass; "1.5": a swell), its values the part and the section's place in the form. Dynamics by
+    section (round 48, 2026-10-28): FFVI's parts hold one level at the median (the bar-level 90th/10th ratio 1.02) but a
+    quarter move by 1.5 times or more across the song, the accompaniment and arp most, and 0.7 to 0.9 of a part's
+    sections sit at 1.0, first sections under it (the bass's at 0.3 to 0.8 in a quarter); the written parts had played
+    one level all song."""
+    out = []
+    for s in songs:
+        if not s.notes or not s.parts or not s.note_levels:
+            continue
+        index = {num: k for k, num in enumerate(s.numbers)}
+        n_parts = len(s.parts)
+        for role, pairs in s.note_levels.items():
+            if role == R.DRUMS or len(pairs) < 16:
+                continue
+            med = statistics.median(lv for _, lv in pairs)
+            if med <= 0:
+                continue
+            for i, bar, n in _own_parts(s):
+                ks = [index[num] for num in range(bar, bar + n) if num in index]
+                if not ks:
+                    continue
+                a, b = s.bars[ks[0]][0], s.bars[ks[-1]][1]
+                mine = [lv for st, lv in pairs if a - NEAR <= st < b - NEAR]
+                if len(mine) < 4:
+                    continue
+                ratio = min(LEVEL_RATIO_CAP[1], max(LEVEL_RATIO_CAP[0], statistics.median(mine) / med))
+                out.append(tables.Unit(s.sid, s.game, f"{round(ratio, 1):.1f}", {"part": role, "form": form_place_of(i, n_parts)}))
+    return out
 
 
 def part_entry_units(songs) -> list:

@@ -430,6 +430,24 @@ said otherwise. Counting code: `translate/rhythm.py` and
   sfd6accf98a. A first cut drew once and refused at the first misfit (a
   sample the pack lacks, a drawn range short of a wide written register)
   and left eight songs of ten to the rule, Whole 28 among them (round 30).
+- **section_levels** — a part's median note level in a section over its
+  median level in the whole song, in tenths between 0.3 and 2.0 (`1.0`:
+  its usual level; `0.5`: half of it, an intro's bass; `1.5`: a swell),
+  by the part and the section's place in the form (round 48, 2026-10-28;
+  counted from the readings' note levels, `Song.note_levels`, which
+  `rhythm.load` now keeps). Drawn a part an own section it plays in
+  (`whole.plan_section_levels`, `Plan.section_levels`: a multiplier a
+  bar), a repeated section copying its source's, the drums at one level;
+  `whole.note_level` takes the note's bar and multiplies the part's level
+  by it, within the cap of full. The log line: "levels by section
+  (section_levels): accompaniment 0.5 in A; bass 0.8 in A". Why: FFVI's
+  parts hold one level at the median but a quarter move by 1.5 times or
+  more across the song; 0.7 to 0.9 of a part's sections sit at 1.0, and
+  first sections sit under it (the bass's 0.3 to 0.8 in 0.22 of songs,
+  the melody's under in 0.23), last and middle ones over it now and then
+  (the accompaniment over in 0.15 of middle sections); the written parts
+  had played one level all song. After, over seeds 1-45, 40 plans move a
+  part in some section, with the parts' sections at 1.0 in 0.77 to 0.86.
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
   sounding bar k bars after the section's start), `leaves:k` (its last k

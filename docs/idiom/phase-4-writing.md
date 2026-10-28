@@ -3436,3 +3436,42 @@ Song Check 38 is five fresh band-themed seeds (51-55).
 **Open:** the main counter's density; the medium tune's remaining 0.8 of
 a note a bar; dynamics by section; the residual echo kinds; the small
 rules; the pack build.
+
+### Round 48: dynamics by section (2026-10-28, from the open items; the main counter looked at and left)
+
+**Measured first.** The readings hold a level per note (`store.unpack`:
+start, length, midi, level, pan, sample), so dynamics inside a part can
+be counted. FFVI's parts hold one level at the median (the bar-level
+90th/10th ratio 1.02), a quarter of them move by 1.5 times or more
+across the song (the accompaniment and arp most, the melody and bass
+least), bars step 20 % from the bar before almost never (median 0.00),
+and the loudest bar sits in the first or second section. So the grain is
+the section: a part's median level in each own section over its song
+median sits at 1.0 in 0.7 to 0.9 of sections, under it in first sections
+(the bass 0.22, the melody 0.23), over it now and then later. The written
+parts had played one level all song.
+
+The main counter (FFVI 16 notes a bar against the written 6) was looked
+at: of FFVI's 7, four are counters of two or three voices (14 to 19 notes
+a bar over all voices, 2 to 7 on the line), three are arpeggiated lines
+with 9 to 13 own onsets a bar; the mask with the counter's weight can
+draw those, and the written main counters (5 of 33) sit where a mix of
+the seven lands them. Left as it is.
+
+**Built, on his go.** `section_levels` (docs/idiom/VOCABULARY.md):
+`rhythm.load` keeps each note's level (`Song.note_levels`), the unit
+counts a part's section level over its song level in tenths by part and
+place, the plan draws a multiplier a part an own section it plays in
+(repeats copy), and `note_level` applies the bar's multiplier. Pack 91
+tables (`pack.json.r47` the backup on both machines). Test
+`test_a_parts_level_moves_by_section_as_the_games_does`.
+
+**Measured after, seeds 1-45.** 40 plans move a part in some section;
+sections at the part's level: accompaniment 0.77, bass 0.86, counter 0.84,
+melody 0.83 (FFVI 0.69 to 0.91 by place). Song Check 39 is five fresh
+band-themed seeds (56-60).
+
+**Open:** the medium tune's remaining 0.8 of a note a bar; the residual
+echo kinds; the small rules; the pack build; the within-section swell
+(a crescendo over bars), which FFVI has rarely and the readings would
+show at the bar grain.

@@ -1031,6 +1031,34 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(drawn, {"sy", "sz"})
         self.assertIsNone(whole.part_sample_for({"part_samples": samples}, "melody", 2.0, {"sq"}, random.Random(1), log))
 
+    def test_a_parts_level_moves_by_section_as_the_games_does(self):
+        """Round 48: a part's median note level in each own section over its level in the whole song is counted in tenths
+        (section_levels, by the part and the section's place); the plan draws a multiplier a part an own section it plays
+        in, a repeated section copying it, and a note's level carries its bar's multiplier."""
+        from bitcomposer.translate import tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": [(4.0 * i + x, 0.9, 36.0, "b") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]},
+                        sid="s", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")])
+        s.note_levels = {"bass": [(4.0 * i + x, 0.1 if i < 4 else 0.2) for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]}
+        units = rhythm.section_level_units([s])
+        self.assertEqual([(u.values["part"], u.values["form"], u.outcome) for u in units], [("bass", "first", "0.7"), ("bass", "last", "1.3")])   # medians over 0.15
+        units_ = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        t = tables.Table(("part", "form"), "section_levels", votes=tables.SHARES).fit(
+            units_("0.5", part="bass", form="first") + units_("1.0", part="bass", form="last") + units_("1.5", part="melody", form="last") + units_("1.0", part="melody", form="first"))
+        parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 0, "A")]
+        plays = {"bass": [True] * 12, "melody": [False] * 4 + [True] * 8}
+        log = []
+        levels = whole.plan_section_levels({"section_levels": t}, parts, ["bass", "melody", "drums"], plays, random.Random(1), log)
+        self.assertEqual(levels["bass"], [0.5] * 4 + [1.0] * 4 + [0.5] * 4)                         # the repeat of A copies A's
+        self.assertEqual(levels["melody"], [1.0] * 4 + [1.5] * 4 + [1.0] * 4)                       # no draw for a section it rests in
+        self.assertNotIn("drums", levels)
+        self.assertIn("levels by section (section_levels): bass 0.5 in A; melody 1.5 in B", log)
+        p = whole.plan({}, 1, "g")
+        p.levels = {"bass": 0.8}; p.section_levels = {"bass": [0.5] * 4 + [1.0] * 4}
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 0), whole.TOP_LEVEL * 0.8 * 0.5)
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 5), whole.TOP_LEVEL * 0.8)
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), whole.TOP_LEVEL * 0.8)            # no bar: the part's level
+
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's
         drawn range and the planned register: the overlap, a sliver widened to the register grain, the sample's range
