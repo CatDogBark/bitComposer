@@ -841,6 +841,97 @@ def melody_cells(song: Song, role: str = None) -> list:
     return out
 
 
+HALF_CELL_NOTES = 2                  # notes a half bar needs to be a cell the band can take up
+HANDOFF_PARTS = (R.COUNTER, R.ACCOMP, R.HARMONY, R.ARP, R.BASS)   # the parts a tune cell can pass to (their line voices)
+HANDOFF_FAR = 8                      # bars: a hand-off further on is "far"
+
+
+def half_cells(line: list, bars: list) -> list:
+    """A line cut into half-bar cells: for each half of each bar (start, end, key, positions in beats from the half's start,
+    pitches), the key the half's onsets in twelfths and its intervals as melody_cells keys a bar; None under HALF_CELL_NOTES
+    notes. `line`: notes struck together as one (_line)."""
+    out = []
+    for a, b in bars:
+        m = (a + b) / 2
+        for lo, hi in ((a, m), (m, b)):
+            mine = [n for n in line if lo - NEAR <= n[0] < hi - NEAR and not math.isnan(n[2])]
+            if len(mine) < HALF_CELL_NOTES:
+                out.append(None)
+                continue
+            ps = [round(n[2]) for n in mine]
+            key = " ".join(str(round((n[0] - lo) * 12)) for n in mine) + " | " + " ".join(f"{y - x:+d}" for x, y in zip(ps, ps[1:]))
+            out.append((lo, hi, key, [n[0] - lo for n in mine], ps))
+    return out
+
+
+def handoff_class(bars_on: int) -> str:
+    return str(bars_on) if bars_on < HANDOFF_FAR else "far"
+
+
+def cell_handoff_units(songs) -> list:
+    """Each half-bar cell of a song's tune as a unit: its outcome the first other part to play the same cell in a later bar
+    and how many bars on ("counter 2", "bass 1", "far" past HANDOFF_FAR bars; "none"), its values the part (melody), the
+    song's echo habit (ECHOES) and the cell's place (theme: inside the tune's theme phrase, _theme_of; other). FFVI's band
+    takes up the tune's cells: half its tune's half-bar cells in a themed song come back in the counter, the accompaniment
+    or the bass in another bar (0.51; all songs 0.34), where the written songs had 0.05, each part faithful to its own
+    word and none to the theme (round 37)."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        tune = sorted(_line(s.notes[R.MELODY]))
+        cells = half_cells(tune, s.bars)
+        if sum(1 for c in cells if c) < 4:
+            continue
+        bar_keys = [c for c in melody_cells(s) if c]           # the song's echo habit, at the bar as the echo_habits word has it
+        habit = habit_of(sum(1 for i, c in enumerate(bar_keys) if c in bar_keys[:i]) / max(1, len(bar_keys)), ECHOES)
+        found = _theme_of(s)
+        theme_bars = set(found[2]) if found else set()
+        others = {}
+        for role in HANDOFF_PARTS:
+            notes = line_notes(s, role) or s.notes.get(role)
+            if notes:
+                others[role] = half_cells(sorted(_line(notes)), s.bars)
+        for i, c in enumerate(cells):
+            if not c:
+                continue
+            bar = i // 2
+            hit = None
+            for j in range(i + 2 - (i % 2), len(cells)):      # the halves of later bars, nearest first
+                for role, oc in others.items():
+                    if j < len(oc) and oc[j] and oc[j][2] == c[2]:
+                        hit = f"{role} {handoff_class(j // 2 - bar)}"
+                        break
+                if hit:
+                    break
+            out.append(tables.Unit(s.sid, s.game, hit or "none", {"part": R.MELODY, "habit": habit, "place": "theme" if bar in theme_bars else "other"}))
+    return out
+
+
+def half_recall_units(songs) -> list:
+    """What each half-bar cell of a song's tune is to the tune so far (same: the half before's cell again; earlier: one
+    played before; new), by part and echo habit: the tune writer's urn at the half bar (round 38). FFVI's tune reuses
+    half-bar cells more than bar cells (0.50 of halves heard earlier, themed 0.63; bars 0.32 and 0.52): its cells are
+    moved and re-intervalled inside the bar where a writer whose cell is the bar draws a whole new bar."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        cells = [c for c in half_cells(sorted(_line(s.notes[R.MELODY])), s.bars) if c]
+        if len(cells) < 4:
+            continue
+        keys = [c[2] for c in cells]
+        bar_keys = [c for c in melody_cells(s) if c]
+        habit = habit_of(sum(1 for i, c in enumerate(bar_keys) if c in bar_keys[:i]) / max(1, len(bar_keys)), ECHOES)
+        seen, previous = set(), None
+        for k in keys:
+            kind = "same" if k == previous else "earlier" if k in seen else "new"
+            out.append(tables.Unit(s.sid, s.game, kind, {"part": R.MELODY, "habit": habit}))
+            seen.add(k)
+            previous = k
+    return out
+
+
 def melody_cell_units(songs) -> list:
     """Each bar of each song's tune as a unit: its outcome the bar's cell
     (melody_cells), its values the part, the tempo band, the part's weight
@@ -981,6 +1072,8 @@ def gap_sound_units(songs) -> list:
             voices = part_voices(s, role)
             if not voices:
                 continue
+            fastest = part_fastest(s, role)             # the part's speed class (round 35): FFVI's string pad played fast sounds a
+            speed = speed_tier(fastest if fastest is not None else 0.0)   # fifth to a third of its gap, played slow nearly all of it
             if len(voices) >= 2:
                 line = line_voice(voices, role)
                 streams = (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x]))
@@ -992,7 +1085,7 @@ def gap_sound_units(songs) -> list:
                     gap = m[0] - n[0]
                     if gap > NEAR:
                         share = round(min(1.0, n[1] / gap) / SOUND_BIN) * SOUND_BIN
-                        out.append(tables.Unit(s.sid, s.game, f"{share:.1f}", {"part": role, "voice": which, "gap": gap_class(gap)}))
+                        out.append(tables.Unit(s.sid, s.game, f"{share:.1f}", {"part": role, "voice": which, "speed": speed, "gap": gap_class(gap)}))
     return out
 
 
@@ -1400,8 +1493,9 @@ def sample_length_units(songs) -> list:
     played at 50 ms sixteenths, Song Check 14's Whole 02; FFVI plays it at
     65 ms at the shortest)."""
     out = []
-    for s, key, lengths, _ in _sample_plays(songs):
-        out.append(tables.Unit(s.sid, s.game, _bin(lengths[int(0.1 * (len(lengths) - 1))], LENGTH_BINS, "long"), {"part": key}))
+    for s, key, lengths, rates in _sample_plays(songs):
+        speed = speed_tier(rates[int(0.9 * (len(rates) - 1))])   # the sample's speed class in the song (round 36): a floor drawn from a
+        out.append(tables.Unit(s.sid, s.game, _bin(lengths[int(0.1 * (len(lengths) - 1))], LENGTH_BINS, "long"), {"part": key, "speed": speed}))   # slow song had raised a fast part's notes
     return out
 
 
@@ -1415,6 +1509,59 @@ def sample_speed_units(songs) -> list:
     out = []
     for s, key, _, rates in _sample_plays(songs):
         out.append(tables.Unit(s.sid, s.game, _bin(rates[int(0.9 * (len(rates) - 1))], SPEED_BINS, "faster"), {"part": key}))
+    return out
+
+
+SPEED_TIERS = ((3.0, "slow"), (6.0, "medium"), (1e9, "fast"))   # a part's fastest bar, notes a second: the class its note lengths are counted under
+
+
+def speed_tier(rate: float) -> str:
+    """The class of a part's fastest bar (SPEED_TIERS), as gap_sounds is conditioned on it (round 35)."""
+    return next(name for top, name in SPEED_TIERS if rate <= top)
+
+
+def _part_rates(s: Song, role: str) -> tuple:
+    """A part's line bar by bar: (onset counts, notes a second), every bar of the song."""
+    beat = 60.0 / s.bpm
+    ns = s.notes.get(role) or []
+    mine = {(n[0], n[2]) for n in (line_notes(s, role) or ns)}
+    counts, rates = [], []
+    for _, a, b, struck in all_bars_of(s, role):
+        c = sum(1 for _, group in struck for n in group if (n[0], n[2]) in mine)
+        counts.append(c)
+        rates.append(c / max(1e-9, (b - a) * beat))
+    return counts, rates
+
+
+def part_fastest(s: Song, role: str) -> float | None:
+    """A part's fastest bar: the 90th percentile of its line's bars' notes a second, over the bars it plays; None under four bars."""
+    counts, rates = _part_rates(s, role)
+    played = sorted(r for r, c in zip(rates, counts) if c)
+    if len(counts) < 4 or not played:
+        return None
+    return played[int(0.9 * (len(played) - 1))]
+
+
+def part_speed_units(songs) -> list:
+    """Each pitched part of each song as a unit: its outcome the part's
+    fastest bars (the 90th percentile of its line's bars' notes a second, to
+    SPEED_BINS' tops), its values the part and its habit's density tier
+    (habit_of over the line's onsets a bar, as _rhythm_habit and _bass_habit
+    bin it). What a planned part's sample is fitted to for speed before the
+    part is written (round 34): the fit had read the speed off the written
+    notes, so the sample came after the writing and a voice's register could
+    not come from the sample it plays."""
+    out = []
+    for s in songs:
+        for role, ns in s.notes.items():
+            if role == R.DRUMS or not ns:
+                continue
+            counts, _ = _part_rates(s, role)
+            fastest = part_fastest(s, role)
+            if fastest is None:
+                continue
+            tier = habit_of(sum(counts) / len(counts), DENSITIES)
+            out.append(tables.Unit(s.sid, s.game, _bin(fastest, SPEED_BINS, "faster"), {"part": role, "habit": tier}))
     return out
 
 
@@ -2254,6 +2401,8 @@ def balance_units(songs) -> list:
     two voices or more, each voice beyond the line's level over the line
     voice's in tenths (voice_level_shares, the layer_levels unit, the
     busiest voice first, joined by "/")
+    and, for the counter, whether it plays the tune's sample (counter_kind,
+    a seventh field: "counter=minor:56-72:0.9:1:1.0::other")
     ("accompaniment=main:56-68:0.8:2:0.7:1.3 bass=half:28-40:0.9:1:1.0
     drums=::::0.8 melody=half:64-84:0.9:1:0.8"; the drums, which carry no
     weight, register or sounded share, keep their level in the same fifth
@@ -2280,7 +2429,18 @@ def balance_units(songs) -> list:
     the token's voice count is the song's and a third or later voice's
     share differs from the second's in 23 of FFVI's 52 (in 19 of its 40
     parts with three voices or more: Gau 1.5 then 3.2 before the cap,
-    Dancing Mad's bass 1.1 then 2.0)."""
+    Dancing Mad's bass 1.1 then 2.0). The counter's kind joined it in round
+    39 (2026-10-27): a seventh field on the counter's token, whether it
+    plays the tune's sample (counter_kind: same, other). The level had been
+    the token's and the kind a draw of its own (counter_samples), so Whole
+    33 took The Serpent Trench's level, the one FFVI counter at 1.78 times
+    its tune (28 held notes on another sample in 14 of the tune's 33 bars),
+    and played it as a doubling on the tune's sample at the tune's onsets
+    (+4.4 dB over the tune, the stems' median); FFVI's counters on the
+    tune's sample at its onsets sit at 1.0 times the tune in 13 of 16 and
+    never above 1.21, and its 7 counters louder than the tune are, bar one,
+    on another sample. With the field, what the counter is and how loud it
+    is are one song's together."""
     out = []
     for s in songs:
         if not s.notes:
@@ -2296,8 +2456,12 @@ def balance_units(songs) -> list:
                 continue
             reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
             beside = voice_level_shares(s, role) if role in levels else None
-            tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
-                          + f":{max(1, voices.get(role, 1))}" + (f":{levels[role]}" if role in levels else "") + (":" + "/".join(beside) if beside else ""))
+            kind = counter_kind(s) if role == R.COUNTER and role in levels else None
+            fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else "",
+                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or ""]
+            while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
+                fields.pop()
+            tokens.append(f"{role}=" + ":".join(fields))
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
