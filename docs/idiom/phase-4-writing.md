@@ -3484,3 +3484,47 @@ band-themed seeds (56-60).
 echo kinds; the small rules; the pack build; the within-section swell
 (a crescendo over bars), which FFVI has rarely and the readings would
 show at the bar grain.
+
+### Rounds 49 and 50: the residual bent recalls, and the continuation as a word (2026-10-28, the open items after round 48)
+
+**Measured first.** Of 76 recalled bars that still came back as a cell
+the tune never played (0.24 of recalls after rounds 47-48's reshuffle),
+33 differed from their source in the last interval alone and 39 sat at a
+phrase's last bar: the `endings` word moving the phrase's last note onto
+its degree after the recall. Most of the rest differed in two or more
+intervals: a recalled cell folded into the phrase's room under the arc,
+clamped where the room was narrower than the cell. `realize` alters no
+pitch. The medium tune's remaining 0.8 of a note a bar is in the new
+cells (5.1 against FFVI's new cells at 4.5) and the recalled ones (5.3
+against 3.9): the rhythm table under the habit and the recall weighted by
+plays, left open.
+
+**Built, on his go.** Round 49, two faults: the ending degree is put on a
+phrase's last note only where the last bar is a new cell; a recalled cell
+is folded into the part's whole room (`room_high`, the arc's peak), not
+the phrase's. Round 50, `recall_continues`: whether a recalled passage
+goes on with the bar after its source, by echo habit (FFVI mixed 0.64,
+repeating 0.91, varied 0.30), in place of the CONTINUE constant (0.8),
+which stays as the fallback. Pack 92 tables (`pack.json.r48` the backup
+on both machines). Test `test_a_recalled_passage_goes_on_as_the_games_do`.
+
+**Measured after, seeds 1-45.** Bent recalls 0.24 to 0.10. The themed
+medians: exact echoes 0.29 (FFVI 0.31), moved 0.14 (0.20), rhythm with
+new pitches 0.17 (0.06; the measure counts new bars that happen to share
+onsets, not recalls alone), whole phrases heard earlier 0.25 (0.29), the
+hook 0.20 (0.22), two-bar pairs heard earlier 0.24 (0.40; 0.33 before
+this round: the constant had carried passages on at 0.8 where FFVI's
+share is 0.3 to 0.6, and the pairs lose what the rule gave them). Song
+Check 41 is five fresh band-themed seeds (61-65).
+
+**Left as rules, with the reason.** TOP_LEVEL 0.85: FFVI's loudest part
+reads at 0.2 to 0.4 of full in the readings, and whether that scale is
+the emulated loudness is unverified; a `top_levels` word waits on that
+check. The second voices' 1.5 cap: lifting it rewrites the balance
+token's sixth field for 22 voices and reorders the balance vocabulary,
+which shifts every song; it goes with the pack rebuild. The token's
+loudest part absent from the band (2 plans in 200): accepted.
+
+**Open:** the pairs (0.24 against 0.40) now that continuation is
+counted; the medium tune's density; the pack build (the missing FFVI
+instruments, the 1.5 cap, TOP_LEVEL).
