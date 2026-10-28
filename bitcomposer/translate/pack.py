@@ -75,6 +75,8 @@ class Gathered:
     drumless: int = 0                                                     # songs with no drum voice
     names: dict = field(default_factory=dict)                             # drum sample key -> the drum namer's name (kit_by_name)
     held: dict = field(default_factory=lambda: defaultdict(list))         # drum sample key -> seconds the game holds each hit
+    envelopes: dict = field(default_factory=lambda: defaultdict(Counter))  # sample key -> the envelope at key-on, ("adsr", ADSR1, ADSR2) or ("gain", GAIN) -> notes
+    other: Counter = field(default_factory=Counter)                       # sample key -> drum-role notes the namer called "other" in their song
 
 
 def gather(readings, snaps) -> Gathered:
@@ -92,6 +94,10 @@ def gather(readings, snaps) -> Gathered:
             k = p.sample.key
             g.uses[role][k] += 1
             heard.add((role, k))
+            if p.note is not None:
+                g.envelopes[k][("adsr", p.note.adsr[0], p.note.adsr[1]) if p.note.adsr[0] & 0x80 else ("gain", p.note.gain)] += 1
+            if role == R.DRUMS and p.sample.piece == "other":
+                g.other[k] += 1
             if role == R.DRUMS and p.length is not None:
                 g.held[k].append(p.length)
             g.where.setdefault(k, (snap.source, p.sample.addr))
@@ -158,10 +164,48 @@ def kit_from_names(uses: Counter, labels: dict) -> dict:
     return out if "kick" in out and "snare" in out else {}
 
 
+def drum_uses(g: Gathered) -> Counter:
+    """The samples the game plays as drums more than not: {sample key: drum-role notes} for those whose drum-role notes
+    are at least half their notes over every role. A sample the namer could not place ("other") is a drum only if the
+    game treats it as one: FFVI's mallet sample, a melody instrument in sixteen songs with a few drum-role notes, had
+    taken the kit's rim slot as the busiest "other"."""
+    drum = g.uses.get(R.DRUMS, Counter())
+    total = Counter()
+    for counts in g.uses.values():
+        total.update(counts)
+    return Counter({k: n for k, n in drum.items() if 2 * n >= total[k]})
+
+
+def envelope_of(g: Gathered, k: str) -> dict | None:
+    """The envelope the game plays a sample with most, as the pack file
+    carries it: {"adsr": [ADSR1, ADSR2]} or {"gain": GAIN}; None where none
+    was seen. The whole-song render had played every note flat at full
+    level and cut it dead; FFVI plays every note through ADSR, a third of
+    its accompaniment notes and half its bass notes decaying while held,
+    its pads swelling in over 640 ms (2026-10-24)."""
+    c = g.envelopes.get(k)
+    if not c:
+        return None
+    kind, *vals = c.most_common(1)[0][0]
+    return {"adsr": [vals[0], vals[1]]} if kind == "adsr" else {"gain": vals[0]}
+
+
+def other_slot(g: Gathered, sounds: dict) -> str | None:
+    """The sample for the kit's "other" slot (the figure letter o): the one
+    carrying most of the game's drum strikes the namer called other in their
+    song, among the sounds the pack holds. In FFVI that is the snare sample
+    itself, heard differently in some songs; the busiest sample NAMED other
+    had been a melody instrument (round 17) and then a one-song orchestral
+    hit (round 24, Song Check 18's Whole 29)."""
+    ks = [k for k in g.other if k in sounds]
+    return max(ks, key=lambda k: (g.other[k], k)) if ks else None
+
+
 def kit_by_name(g: Gathered, sounds: dict) -> dict:
     """The kit from the drum namer's names of the game's drum samples (as
-    the game plays them: `sounds`), kit_from_names; {} where it names too
-    few."""
+    the game plays them: `sounds`), kit_from_names over the samples the
+    game plays as drums (drum_uses); a slot the names leave empty the pack
+    format fills from its palette; {} where it names too few."""
     from . import drums
     labels = {}
     for k, (pcm, rate, *more) in sounds.items():
@@ -172,7 +216,14 @@ def kit_by_name(g: Gathered, sounds: dict) -> dict:
         except Exception:                                   # a sound the namer cannot measure is left unnamed
             labels[k] = "none"
     g.names = labels
-    return kit_from_names(g.uses.get(R.DRUMS, Counter()), labels)
+    out = kit_from_names(drum_uses(g), labels)
+    if out:
+        rim = other_slot(g, sounds)
+        if rim is not None:
+            out["rim"] = rim
+        else:
+            out.pop("rim", None)
+    return out
 
 
 def kit(g: Gathered, sounds: dict) -> dict:
@@ -275,6 +326,8 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
                 if loop:
                     spec["loop"] = [loop[0], loop[1]]
                     spec["release"] = release_of[k]
+                if envelope_of(g, k):
+                    spec["envelope"] = envelope_of(g, k)
                 samples[v], files[v] = spec, (pcm, RATE)
             kept.append(v)
         if kept:
@@ -286,6 +339,8 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
         v = voice_of(k)
         if v not in samples:
             samples[v] = {"file": f"{v}.wav", "percussion": True}
+            if envelope_of(g, k):
+                samples[v]["envelope"] = envelope_of(g, k)
             files[v] = sounds[k][:2]
         drums[piece] = v
     voices = dict(chosen)

@@ -1625,3 +1625,1333 @@ pick rate, on hold by the owner's call until a game he does not know by
 heart; the nearest-game test in the other direction, which needs a second
 game's pack (Mega Man X, after phase 5 by his call). The owner holds the
 writer where it is for now and has ideas of his own to put first.
+
+### Round 23: the voice beside the line as a melody of its own (2026-10-24, on the owner's go)
+
+Set 15 passed the ear, and the owner asked for the writing items and chose
+this one first: the voice beside the line (round 20's mask gave it the
+line's rhythm; its pitch was a hand rule, a tone of the line's voicing up
+from its rank). He asked whether the fix was a rule replacing a rule; it
+is a word replacing a rule, and the open choice in it was settled by
+counting, as the rules of evidence ask.
+
+**Counted first (interval_check.py, move_check.py, product_check.py on
+Ragnarok).** FFVI's voice beside a line, where the two strike together
+(3352 onsets): a third below the line most (12 %), an octave off in 13 %,
+on the line's own pitch in 5 %, its interval kept from one such onset to
+the next 37 % of the time; where it strikes alone (1546 onsets, a third
+of its onsets) it repeats its note 29 % and moves a step 37 %. Held out
+over FFVI's songs: the interval to the line is best predicted by the part,
+the relation and the interval before (the chain, 0.7 bits a unit); the
+layer word, the line note's chord role and the line's own move add
+nothing. But the voice's own move from its last note is surer than its
+interval (3.4 against 3.9 bits a unit with the line; 3.3 against 4.5
+alone), and the product of the two words, normalized over the candidate
+intervals, is surer than either (3.36 bits against 3.87 and 3.71). The
+written voices before: never at the octave, holding their interval 54 %,
+and placed against the line alone (the first cut of this round) they had
+leapt five scale steps or more at 43 % of their onsets against FFVI's
+11 %, a voice jumping between 53 and 84 within a bar.
+
+**Built.** Two tables (VOCABULARY.md): `voice_intervals` (the interval
+to the line in scale steps where the two strike together; part, relation,
+the interval before) and `voice_moves` (the voice's move from its own last
+note at every onset; part, relation, place: with the line or alone).
+`writer.upper(kind=)` draws the voice's note: with the line, each
+candidate interval weighs its probability under voice_intervals times the
+probability under voice_moves of the move it implies (the line's move
+between the two onsets known from the line's notes kept in `shared`);
+alone, the move alone. Never an interval or a move the game never made
+(the words' vocabularies, as a draw would); a pitch another voice of the
+part holds is drawn again (an octave shift had put the collisions at a
+sixth above), the onset skipped after four. The voice sits in the span
+FFVI's voices beside a line sit in (the line's register widened by the
+layer offset's cap, `rhythm.LAYER_OFFSET`) rather than folded into its own
+offset register, which had turned a drawn third below into a sixth above.
+The round-22 guard is on the pitch itself now, not its class, so octaves
+are allowed and unisons are not (the second voice's sample may be the
+line's).
+
+**Measured after, the written voices by the plan's own words (2007
+onsets with the line, 69 alone):** an octave off 0.17 (FFVI 0.13), on the
+line's pitch 0.02 (0.05), the interval kept 0.41 (0.37); the intervals
+themselves a third below 0.11 (0.12), a sixth below 0.09 (0.08), a third
+above 0.08 (0.08), an octave above 0.08 (0.06), an octave below 0.07
+(0.04); the voice's own move with the line within a step 0.66 (0.57),
+five steps or more 0.03 (0.11); alone, a repeat 0.30 (0.29), a step 0.21
+(0.25). Chord tones 0.40 against FFVI's 0.74, a number not to trust across
+the two sides: FFVI's chords are read from its notes, the written songs'
+are planned.
+
+**Open from this round.** The voice's own onsets: FFVI's voice strikes
+alone in a third of its onsets, the written one in 3 %. The lines are not
+the cause (the written line bars with three onsets or fewer 0.43 against
+FFVI's 0.31); the mask draws under the written contexts give own onsets
+in 15 % of bars against the table's 27 %, so it is in the drawing, to be
+found. The doubling voice's chord tones (0.31 against FFVI's 0.82 by the
+same biased measure; `diatonic()` doubles at one scale interval where
+FFVI's doubling voice bends to the chord), the same word's domain, not
+built. The measurement scripts classify a written voice by the plan's
+word, not by `harness.relation` on its notes: the mask's coincidence
+makes nearly every written voice beside a line a "doubling" by the
+reader's rule, and a first after-measure had ranked the voices by note
+count and read a doubling voice's notes as an apart voice's.
+
+### Round 24: a sample given a job the game never gave it (2026-10-24, from the owner's notes on set 17)
+
+Five new seeds (21 to 25, Song Check 17) on round 23's writing. The owner
+heard a staccato pluck in Whole 22's bass and a chirp in Whole 24's
+counter, and Whole 23 had no drums though its plan played them in 32 of 46
+bars. Three drawing faults and a kit rule of mine, all one family: a
+sample, or a bar, given a job the game never gave it.
+
+- **The pair of samples by halves, from another part, out of reach.**
+  Whole 22's second bass voice played sample 48bab384c7 at midi 54 to 68;
+  FFVI plays it at 36 to 48 (Dancing Mad's low second bass). The pair
+  table had drawn Dancing Mad's pair, the pack lacked its first sample,
+  and the second was applied anyway under the line's own choice, at the
+  layer word's +8 from a different song. Whole 24's second counter voice
+  played 5d5fe2fd48 at 80 to 92; FFVI plays it at 64 to 76 (a mallet it
+  gives Kefka's, Strago's and Gogo's tunes). The pair table counted no
+  counter-lines (`layer_sample_units` looked at the chord parts and the
+  bass), so the draw fell through to the root and took Under Martial Law's
+  accompaniment pair. Fixed as faults: `pair_for` draws from the part's
+  own pairs alone and only where the pack holds both samples; the pair
+  applies only where each sample reaches its voice's register by the
+  ranges table (`reaches`, REACH at both ends), else the second voice's
+  sample is chosen as the line's is, by its register and speed
+  (`second_register`, `part_speed(second=True)`); the pair table counts
+  the counter-line and the tune. After: Whole 22's second bass on
+  cab1413363, Whole 24's second counter on 72f0a1e88e, both FFVI samples
+  of those registers.
+- **A chain floored on a context with one outcome.** Whole 23's kit habit,
+  "sparse repeating", has one FFVI song in triple feel, and that song's
+  counted kit bars are all rests; the drum chain, floored on the habit,
+  drew rest 46 times. Fixed as a fault in `tables.Table.draw`
+  (`floor_outcomes`, FLOOR_OUTCOMES 2): a chain's floor steps down to the
+  deepest level that holds a choice. A first cut stepped down from any
+  one-song context (FLOOR_SONGS) and re-densified every part whose habit
+  one song had (Whole 24's counter from 46 notes to 117); a one-song
+  context with bars of its own is the game's vocabulary and stays. With
+  it the figure tables' shape puts the habit before the feel
+  (`packtables.FIGURE`), so a step-down lets the feel go and keeps the
+  habit. Whole 23's kit now plays 11 hits in 7 bars: FFVI's sparse
+  repeating kit, which is what the habit word says, under a plan whose
+  presence word has the drums in 32 bars (two words drawn apart, noted).
+- **The kit's rim was a melody instrument.** Round 17 filled the rim slot
+  with the busiest sample the drum namer calls "other"; in FFVI that is
+  the mallet above, a tune in sixteen songs with a few drum-role notes.
+  No FFVI figure strikes the rim letter, so it never sounded in a Song
+  Check; it reached the ear only through the pair fallback. Fixed:
+  `pack.drum_uses`, a kit slot takes only a sample whose drum-role notes
+  are half its notes or more; the rim is now 63d84c8c76, a drum. The thin
+  pack was rebuilt from the SPCs (69 tables; the pair table 96 units of 64
+  songs, 28 of them counter-lines).
+
+**Measured after, seeds 1 to 30.** Of 29 second voices, 7 share the line's
+sample (no pair, the fit's own choice) and, by the most-voted range of
+their sample, 13 still sit more than REACH outside it at one end. Those
+are not the samples' fault: the voices' registers are. A second voice's
+register is the line's at the layer word's offset, and the offset is drawn
+without regard to where the line sits, so a counter line at 64 to 76 with
+"apart +16" puts its voice at 80 to 92, where FFVI plays nothing; the fit
+then takes the least bad sample. The word that would carry it: the layer
+offset conditioned on the line's register, or the voice's register as a
+word of its own. Not built; the owner's call. Open from before stands.
+
+### Round 25: richness, measured and given words (2026-10-24, from the owner's judgment on sets 16 to 18)
+
+The owner heard the writing as a generator's beside FFVI: staccato,
+single notes with no depth, a tune that rarely says anything, and asked
+whether the rounds were going backwards or uncovering something deeper.
+Measured (depth_check.py, envelope_check.py, timbre_check.py on
+Ragnarok), it was the second: every round so far had worked on which
+notes are written, and what he heard lives in how a note is rendered and
+mixed, and in the tune's shape over a song.
+
+**What the counts said.** The written notes are not short: longer and more
+legato than FFVI's (tune 0.95 of its gap against 0.87, 335 ms against
+201; counter 0.95 against 0.86; accompaniment 0.80 against 0.84; bass
+0.90 against 0.89). The render was the staccato: every note flat at full
+level and cut dead (`score.GAIN_FULL`, since the phase 2 bridge). FFVI
+plays every note through ADSR (40 snapshots, 30 s each): attacks instant
+for the tune, the chord parts and the bass, but a third of the
+accompaniment's notes and half the bass's decay while held (sustain rate
+15 or 16 on the main accompaniment sample), its pads swell in over 640 ms
+(72 % of harmony notes), vibrato on 5 % of tune notes, the echo on 94 %
+of them. Notes sounding at once are equal (written 4.8, FFVI 4.5), but
+FFVI plays them on 3.1 distinct samples where the writing (counted on its
+real samples) had used 4.3: FFVI stacks voices on one timbre (one sample
+for both voices in 20 of its 43 layered accompaniments, 13 of 28
+counter-lines, 7 of 8 harmonies). The readings do keep each note's level
+(the voices table's blobs; an earlier note here had said they did not):
+FFVI's parts sit close, the bass loudest (0.28 of full), the tune 0.22,
+the chord parts and counter 0.19, the harmony 0.18; the writer's hand-set
+mix had the tune at 1.4 times the accompaniment and the pads at 0.6 of it.
+The tune: FFVI's peaks at 0.45 of the song with a 22-semitone range and
+repeats its cells more; the written tunes peaked at 0.24 and spanned 16,
+with no song-level word to say where a tune should climb.
+
+**Built, on his go ("the 4 word fixes for the richness"), with the kit's
+other slot (Song Check 18's Whole 29).**
+
+- **The envelope a sample plays with.** `pack.envelope_of`: the thin pack
+  builder keeps each sample's modal key-on envelope from the SPCs and
+  writes it as the pack sample field `envelope` ({"adsr": [ADSR1, ADSR2]}
+  or {"gain": GAIN}); the pack file checks it, the registry keeps it by
+  voice (`samples.SAMPLE_ENVELOPES`), and `score_of` plays every note
+  through it (the converter already renders ADSR from snapshots). 25 of
+  25 FFVI samples carry one; 86 % of rendered notes play through an ADSR.
+- **Levels.** `rhythm.load` keeps the readings' note levels
+  (`Song.levels`, `Song.voice_levels`); two tables, `levels` (a part's
+  share of the song's loudest, in tenths) and `layer_levels` (the second
+  voice against its line); the plan draws them; `score_of` plays the
+  loudest part at `TOP_LEVEL` and the rest at their share. Written
+  medians after: bass 0.85, counter 0.64, accompaniment 0.59, harmony
+  0.59, melody 0.55, drums 0.47, each part drawn on its own share.
+- **One timbre.** `pair_for` returns a pair of one sample as "same" and
+  the second voice takes the line's sample whatever the pack gave the
+  line. Second voices on the line's sample 13 of 29 (from 7); distinct
+  samples sounding at once 3.22 (FFVI 3.07; 4.26 before, counted on the
+  written songs' real samples).
+- **The arc.** Three tables in phrases.py: `climax` (which tune phrase,
+  by its place among the song's, holds the tune's highest note), `arc`
+  (how far each other phrase's top sits under the song's peak, by place),
+  `summit` (how far the peak sits above the tune register's top). The
+  melody writer draws the climax phrase and the ceilings and rebinds its
+  register a phrase at a time, so every note of a phrase, not only its
+  ending, stays under its ceiling (a first cut bounded the endings and
+  the entry alone and left the peak at 0.17). After: the peak at 0.42 of
+  the song (FFVI 0.45), the range 18 semitones (FFVI 22, from 16).
+- **The kit's other slot.** `pack.other_slot`: the sample carrying most
+  of the game's drum strikes the namer called other in their song (FFVI:
+  the snare sample itself, 512 strikes), in place of the busiest sample
+  named other (a melody instrument, round 17) or the busiest drum-majority
+  one (a one-song orchestral hit, round 24, Whole 29's strange sound).
+
+Song Check 19 is one seed twice, Whole 28 as set 18 published it and on
+this round, by the owner's design: a song chosen for its potential, not
+for being liked, and a before and after on the same seed. Open from this
+round: vibrato (5 % of FFVI's tune notes), the tune's motif economy
+(echoes 0.27 against 0.34, a drawing question), the second voice's
+register (the layer offset drawn without regard to the line's height),
+the melody sitting a shade under the accompaniment in the drawn levels
+(FFVI's tune is 1.16 times its accompaniment; the shares are drawn a part
+at a time), and `PACKS.md` naming the envelope field.
+
+### Round 26: the bass that would not finish (2026-10-24, from the owner's notes on Song Check 19)
+
+The owner took round 25's account of Whole 28 (the bass's notes identical,
+its samples and levels changed) and heard, in both renders, a bass that
+"isn't quite finishing what it's doing": notes ending abruptly, and the
+second voice playing notes of its own instead of carrying the line. He
+asked for a bug check. Measured (bass28_check.py, bass28_check2.py), one
+bug and two missing words; the triplet runs are the writing (the song is
+in triple feel, and FFVI's "medium walking" bass runs so in its shuffle
+songs, in two-voice songs too, 4 of 13).
+
+- **The bug: a bar's last note cut at the bar line.** The sounded-share
+  word (`sounds`, `layer_sounds`) was counted against the gap to the
+  voice's next onset wherever it falls; the bass and upper writers applied
+  it against the bar's end. Every bar-final note of the written bass line
+  ended on the bar line; FFVI's do 2 % of the time, running on into the
+  next bar's first note. Where the next bar began late (Whole 28's bar 2
+  at beat 0.5) the line held four beats, dropped into a half-beat hole and
+  came back. Fixed in both writers (`writer.first_onset`, `realize(...,
+  runs_to=)`): the last note runs to the next bar's first onset; at a rest
+  bar or the song's end the bar line stays. After: 0.60 of the line's
+  bar-final notes end on the bar line, those whose next bar begins on the
+  beat (the note then ends where the next begins) or rests.
+- **The share by the gap** (`gap_sounds`, VOCABULARY.md). FFVI's bass
+  plays half its gap under two beats and nearly all of it from two beats
+  on (one voice 0.83 / 0.46 / 0.97 / 0.99 by gap class; the second voice
+  0.50 / 0.45 / 0.97 / 0.99); one share a voice had put the slap bass at
+  0.50 of a three-beat gap and left a hole where the game holds. Counted a
+  note on the chord parts and the bass, by part, voice (only, line,
+  second) and gap class; the plan draws a share per class; the writers
+  take it by each note's gap (`writer.share_at`); `sounds` and
+  `layer_sounds` stay for the parts without the word. After, Whole 28's
+  second voice: 0.40 under a beat, 0.20 at one to two, 0.90 at two to four
+  (the 0.20 a draw within FFVI's spread for that class).
+- **The second bass voice on the line's pitch.** FFVI's slap plays the
+  sustained line's pitch class at 78 % of their shared onsets; the written
+  second bass, drawing its own chord roles over the second_figures
+  rhythm, at 31 %: that was the "random notes". The voice_intervals and
+  voice_moves words are now counted on the bass too (`_beside_lines`),
+  and `writer.bass(shared=, kind=, models=)` re-pitches the second voice's
+  notes with them (`writer.beside_pitch`, the same product draw as the
+  upper parts', factored out), the line recording its notes in `shared`.
+  After: the same pitch class at 88 % of shared onsets.
+
+Song Check 20 is Whole 28 three times: set 18's render, round 25's and
+this round's, the bass figures the same notes in all three. Open: the
+one share the upper parts' voices beside the line still take from the
+line (gap_sounds gives them "second" now; measure), the melody writer's
+own lengths (articulation, not this word), and the rest of round 25's
+list.
+
+### Round 27: two basses, or one in two layers (2026-10-24, from the owner's notes on Song Check 20)
+
+The owner heard the two bass voices as incoherent in every song: one
+voice a hook, the other "random stuff around it". Measured
+(bass_coherence.py): in FFVI's thirteen two-voice basses the sustained
+line plays 3 strikes a bar on 2 pitches and the slap 6 on 3, twice as
+busy, and the slap strikes together with 75 % of the line's notes (from
+39 % to 100 % by song) while a third of its own fall on the line's: the
+line sits inside the slap's rhythm, one bass in two layers. The written
+two-voice basses (five among seeds 1 to 20) had the slap striking with
+41 % of the line's notes, Whole 28 36 %, and the slap no busier than the
+line (0.74 of its strikes): two basses. Neither voice varies by repeating
+bars literally (FFVI 0.00 and 0.08), so the hook feel is the rhythm's
+consistency, not a riff.
+
+**Why.** Round 18 gave the second bass voice a figure of its own, drawn
+from FFVI's second-voice bars given the line's bar; when the written
+line's bar is one FFVI never played, which is most bars, the draw backs
+off to the part's general bars and returns unrelated to the line. The
+chord parts met the same fault in round 20 and got the mask.
+
+**Built, on his go.** `second_figure_units` counts the bass as it counts
+the chord parts: the second voice's bar as a mask over the line's onsets
+(which it strikes with, plus onsets of its own, `second_mask`), by the
+feel, the tempo band, the line's onset count and pattern. `write()` draws
+the mask a bar under the line's pattern and `writer.mask_figure` makes
+the second voice's figure from it: the line's marks where it strikes
+with the line, the root at its own onsets, both re-pitched by round 26's
+voice words (the line's pitch where they meet, its own move between).
+A first cut kept round 18's memo, one draw per line pattern, and Whole
+28's five patterns all drew the doubling mask ('1 1 1'): a second voice
+identical to the line, no fills (the slap on 99 % of the line's onsets,
+0.96 of its strikes). The mask is drawn a bar, as the chord parts' is.
+
+**Measured after, the two-voice basses of seeds 1 to 20 (five songs):**
+the slap strikes with 0.71 of the line's notes (FFVI 0.75; before 0.41),
+its own onsets on the line's 0.65 (FFVI 0.33; before 0.45), its strikes
+1.29 of the line's (FFVI 1.93; before 1.47). Whole 28: 0.81 of the line's
+notes (before 0.36), its strikes 0.89 of the line's. The two voices are
+one rhythm now; the slap's own fills between are still fewer than FFVI's,
+the bass mask table being thirteen songs (278 bars; the chord parts'
+had 1302), and a sparse triple-feel line draws from the thinnest of it.
+Song Check 21 is Whole 28 a fourth time beside set 18's, round 25's and
+round 26's renders. Open: the slap's fills (the thin bass mask contexts);
+the line's lurch between a one-note bar and a run in thin figure
+contexts; and round 25's list.
+
+### Round 28: the bass on the kit (2026-10-24, from the owner's question on Song Check 21)
+
+**His question.** The sustained bass line starts and stops and leaves
+odd empty space; a bass holds the rhythm, that is its job; does FFVI's?
+And then: check FFVI's themed songs with a bass in particular.
+
+**Measured first (discussion only).** By pattern FFVI's bass holds the
+rhythm less than ours: a recent pattern held in 0.29 of its bars (themed
+0.35) against the written 0.59, the downbeat rested on in 0.38 (themed
+0.36) against 0.07. What it does is sit on the drums: three quarters of
+its notes strike with some drum (0.75 themed, 0.77 all), and where two
+drum pieces strike together, a bass note is there in 0.94 of the cases.
+The written bass had 0.44 and 0.67: `locks_of` had locked the bass to
+the whole planned band, a threshold the bass, written second with two
+drum voices to hand, met in no bar, so it had been locked to nothing.
+The slap's own fills were at half FFVI's rate (0.35 of its onsets off
+the line's; FFVI 0.67), the bass mask table's floor standing on
+one-song contexts.
+
+**Built, on his go.** `bass_locks` (`rhythm.kit_accents`,
+`rhythm.bass_lock_units`): the share of the kit's accents (positions
+where two pieces strike together, on the figure grid) carrying a bass
+note, in tenths, drawn once a song and given to the bass writer as the
+lock's share (`writer.bass(lock_share=)`, `locked`); the lock's
+positions are the written kit's accents. `tables.Table.draw` gained
+`floor_songs`: the floor steps down to the deepest level that many
+songs reach; the bass mask draw passes `PLAN_SONGS` (2) so the slap's
+fills come from more than one song's bars. A test for each.
+
+**Measured after, seeds 1 to 20 (15 songs with a bass and drums):**
+the bass's strikes with any drum 0.44 to 0.52 (FFVI 0.75), the kit's
+accents carrying a bass note 0.67 to 0.78 (FFVI 0.94); the slap's own
+onsets 0.35 to 0.38 of its strikes (FFVI 0.67), its strikes 1.29 to
+1.36 of the line's (FFVI 1.93). Whole 28: the lock applied in no bar,
+and the slap's own onsets 0.10 to 0.18.
+
+**Found: the lock has nothing to hold in this kit, and FFVI's themed
+kits are the same kind.** By exact onset time FFVI's kit strikes two
+pieces at once 0.04 times a bar; on the figure grid (`position`, as the
+figures and `kit_accents` count) 2.63 times a bar in the 28 kits that
+stack at all, and the other 17 kits with a bass never stack and have no
+kick or snare voice (a hat, a cymbal or an unnamed piece under once a
+bar). FFVI's themed kits: the low voice (kick, snare, toms) 8.95 times a
+bar, the high (hat, cymbals, the rest) 0.65, stacks 0.37 a bar at the
+median, four of twelve never. The written kits: 0.36 stacks a bar, five
+of fifteen never; Whole 28's kit is the kick 64 times, the snare 260,
+the hat 32, in 36 bars, no two together. The kit is not the fault; the
+word is silent for a kick-and-snare kit. What FFVI's bass does there,
+label-free: it follows one piece of the kit at 0.81 of that piece's hits
+(themed 0.91; the piece once or twice a bar; the readings label it a
+cymbal in 13 songs of 44, a snare in 10, a kick in 7, so the label is
+no handle, and the pack's kick sample is struck in 14 songs only), and
+its strikes fall on some kit onset at 0.77 of its notes (kits of two
+pieces or more 0.82; by bar, all of its strikes on the kit in 0.58 of
+bars, most in 0.19, fewer than half in 0.06, none in 0.16).
+
+**Found: the line's lurch is the figure chain's depth, and a coarser
+memory does not mend it.** Whole 28's line strikes 1, 10, 2, 1 a bar
+through its A part; FFVI's bass under the same habit (medium walking)
+keeps within one strike of the bar before in 0.59 of bar pairs and
+jumps four or more in 0.18 (held-out songs overall: 0.74 and 0.09).
+The bass table conditions a bar on the exact figure before it, and
+under this habit 174 of 182 previous-figure contexts hold one song, so
+a bar after a figure FFVI never played (the ten-note run, the two-note
+bar) is drawn from the habit's whole spread (0.14 empty bars, 0.17 of
+seven strikes or more) with no memory of the bar before. The candidate
+was a coarser memory, the previous bar's strike count or onset pattern,
+before or instead of its figure. Scored as phase 3 scored shapes
+(held-out bits a unit, FFVI's 1874 bass bars split by song, the cache
+mixture over each): the shape as it stands is best (-10.08 bits; the
+pattern -10.10, the count -10.15), and what each writes keeps within one
+strike in 0.64 to 0.68 of bar pairs (FFVI 0.74) and jumps four or more
+in 0.15 to 0.17 (FFVI 0.09): the chain is not where the steadiness
+lives. The unchained shape writes 0.64 too; the Cache's recall carries
+it (its ostinato share drawn 0.34 against FFVI's 0.40). No shape change.
+`~/diags/bitcomposer/idiom/phase4/prev_shape.py` scores any candidate
+in a minute.
+
+Song Check 22 is Whole 28 a fifth time beside the other four; the fifth
+differs from the fourth in the slap's fills only, and the page says so.
+Open, for his decision: a counted word for the bass on the kit's onsets
+(`bass_on_kit`: the share of the line's strikes on some kit onset, by
+the song, drawn and asked of each bar's figure), which reaches every
+kit and would turn the ten-note run off the kit away; the slap's fills
+against the line's density; the recall share; and round 25's list.
+
+### Round 29: the counter-line beside the tune (2026-10-24, from the owner's note on Song Check 22)
+
+The owner heard the counter-line and the tune "competing for air time
+and blending together". Measured first (counter_vs_melody.py,
+counter_split.py): FFVI's counter plays WITH the tune, not in its rests.
+In its 52 songs with both, 0.67 of the counter's onsets fall on the
+tune's, 0.82 of its sounding time lies under the tune's notes, it plays
+1.42 times the tune's notes, as loud as the tune (level ratio 1.00 at
+the median), 64 % of its notes below the tune and its register 2.5
+semitones under; and it fills 0.61 of the tune's resting time. The
+intervals split by timbre: on the tune's own sample (18 of 52) the
+counter is a harmony line in thirds (-3, -4, +3, +4 = 36 % of shared
+strikes, 0.82 of its onsets on the tune's, register gap -3); on another
+sample (34) it sits at octaves and unisons (37 %), 0.52 of its onsets
+on the tune's, 1.57 times the tune's notes, level 0.83. The written
+songs (seeds 1 to 20, fourteen with both): 0.43 of the counter's onsets
+on the tune's, 0.98 times its notes, level 0.74, register gap -1, the
+tune's sample in 3 of 14; Whole 28 the tune's sample, the tune's
+register (gap 0) and 0.19 of its onsets on the tune's, two tunes
+interleaved on one timbre. The cause: `whole.write()` ran
+`writer.melody` a second time for the counter with its own random
+stream, and nothing in the vocabulary related the two lines.
+
+**Built, on his go ("good with the words, go ahead"); three words
+(VOCABULARY.md).** `counter_figures`: the counter's bar as a mask over
+the tune's bar, counted as `second_figure_units` counts a voice beside
+its line with the tune's line as the line (`rhythm.counter_figure_units`,
+1493 bars of 52 songs; the line pattern `-` and count 0 where the tune
+rests, the outcome then the counter's own onsets alone, 153 bars, which
+`apply_mask` gives at a resting line instead of a rest); drawn a bar
+after the tune is written as the second bass voice's mask is
+(`MASK_FLOOR`, `PLAN_SONGS`). The voice words extended to the counter
+beside the tune (`_beside_lines`; 3681 interval units, 6834 move units),
+the kind its sample relation rather than a layer relation: a new share
+`counter_samples` (same 17, other 35 by the line voice; the scripts'
+merged notes say 18 and 34) drawn once into the plan and honoured at the
+rendering (`samples_for`: a "same" counter takes the tune's sample; an
+"other" counter the pool's best but the tune's, chosen for the register
+it was written in). `writer.counter` writes the counter over the mask's
+positions with `beside_pitch`: the tune's pitch and the drawn interval
+where they strike together, its own move between, in the tune's register
+widened by the layer offset's cap; its lengths from the `values` word
+under its articulation habit, a bar's last note running to the next bar's
+first onset (the gap the word was counted against; round 26's fix,
+applied here). `counter_levels`: the counter's level over the tune's in
+tenths, drawn once; the plan sets the counter's level to the tune's
+times the share. A test for each; the suite passes (336 tests).
+
+**Measured after, the same script (seeds 1 to 20, fourteen songs; FFVI
+in brackets):** onsets on the tune's 0.43 to 0.56 (0.67); notes per
+tune note 0.98 to 1.12 (1.42); level ratio 0.74 to 1.00 (1.00);
+register gap -1.0 to -2.5 (-2.5); the tune's sample 3 of 14 to 5 of 14
+(18 of 52); sound under the tune 0.76 to 0.78 (0.82); the tune's rests
+filled 0.68 to 0.59 (0.61); above the tune 0.37 to 0.30 (0.36). Whole
+28: 0.19 to 0.75 of its onsets on the tune's, on another sample, the
+register gap -6 (its counter_levels draw 1.5, the one such song in
+FFVI's 52; its tune rests 0.44 of the time and the counter fills 0.46
+of that). A first cut had given the "other" counter the pool's best
+sample, which is the tune's favourite: 10 of 14 on the tune's sample
+and the owner's complaint intact, so the word is honoured both ways; and
+the counter's bar-final notes cut at the bar line had filled 0.42 of
+the tune's rests, the run-on 0.59. The before and after runs are
+`phase4/r29_before.log` and `phase4/r29_after2.log`.
+
+**Lost from the old counter path, by design (no second writer kept):**
+the counter's phrase arc, contours, endings and relations, the echo urn
+(the `echo` habit is drawn and unused), the chord-tone and repeat-rate
+controllers, the step habit, the reference-set check (the line follows
+the tune's rhythm and the drawn intervals; a copied phrase would be the
+tune's, which is checked), and a second counter voice apart (one song of
+the twenty; its layer word is logged, the voice not written: no word
+counts a voice beside a counter that follows the tune). The counter
+keeps its articulation, echo and sounds draws in the plan; the melody's
+own `values` draws still cut a bar's last note at the bar line (open
+since round 26).
+
+**Open.** The counter's density against the tune (1.12 against 1.42) and
+its own onsets' share: the mask's floor stands on the tune's onset
+count, and the written tunes' sparser bars (a one-note bar in Whole 28's
+A part) draw from the thinnest contexts; a second counter voice apart;
+the "same"-sample unison guard is a writer's rule carried over from the
+chord parts, not a count; the counter's chord clash against the
+accompaniment is not read (the old path's `draw_move` stayed clear of
+sounding semitones, the voice words count the interval to the tune
+only). Song Check 23 is Whole 28 a sixth time beside the other five; its
+counter is the change asked for, but not the only one (below).
+
+**Reviewed (the same day; seeds 1 to 20 and 28 composed under the
+round-28 code and pack and under this round's, every part's notes
+compared).** One fault fixed: `counter_samples` and `counter_levels` had
+been drawn at the end of `_plan_once`, on the plan's shared stream, and a
+themed plan is drawn again on that stream when its tune cannot come
+back, so the two draws inside the first attempt shifted every draw of
+the next; Whole 14's key, form and band had changed (its drums and
+harmony gone). The draws now come once in `plan()` after the retry
+loop, after every existing draw, and every plan of the twenty-one is
+the round-28 plan again. Two changes to parts other than the counter
+remain, neither a fault in the words and neither fixable without a
+choice the owner makes: (1) the counter's units sit in the shared
+`voice_intervals` and `voice_moves` tables, whose coarse levels every
+part's probability mixes in, so the chord parts' and the bass's second
+voices draw a little differently (the probabilities move by 0.3 to 7 %
+of their mass, enough to flip draws, and a flipped draw changes the
+chain after it): in Whole 28 the second bass voice differs in 13 of 298
+notes; across the twenty-one, ten songs' accompaniment voices and five
+songs' second bass voices, and through the tune's clash check seven
+songs' tunes. The choice is between the counter's own interval and move
+tables (the other parts untouched, two more tables) and the shared ones
+as the brief asked; it is for the owner. (2) The rendering's shared
+stream: the counter's sample is now chosen after the tune's and from a
+pool without the tune's sample, so the draws after it fall elsewhere:
+Whole 28's echo is "normal" where it was "light" (wet 0.4 against 0.24)
+and the floors on its bass samples are shorter (0.12 and 0.08 s against
+0.4 and 0.12); of the fifteen songs with both parts, four have another
+sample for the tune itself (three more the same sample under the pack's
+other name for it), four an echo come or gone and three its wetness
+changed. Nothing
+restores the round-28 draws short of replaying them. The owner hearing
+Song Check 23 against 22 hears the counter, the echo and the bass's
+floors, not the counter alone.
+
+### Round 30: the counter's sample as a pair word (2026-10-24, from the counter-winning report on Song Check 23)
+
+After round 29 Whole 28's counter still won over the tune, by loudness,
+and the report (`phase4/counter-winning-report.md`) found two causes
+stacked: the `counter_levels` draw (1.5, FFVI's one song in 52, on a
+tune at 0.7 of the loudest; +3.6 dB) and the sample (+2.9 dB at equal
+level). The sample came from a RULE: an "other" counter took the pool's
+best but the tune's by the written register and speed (`best_sample`),
+which gave sdbd05ab4d5 a 0.28 chance beside a tune on sf89f5aedfd, a
+sample 4.2 dB louder in its loop body, speaking in 35 ms against 167,
+8.9 harmonics in its centroid against 5.3, and one FFVI never plays as
+a counter against another tune sample. FFVI's own partners for that
+tune sample are sfd6accf98a four times in ten, s256b199ccf three, then
+s605f200105, s8320f1bea2 and s4fd4b0992b; across its 35 other-sample
+counters the counter's sample is darker than the tune's in 17 of the 23
+pairs the pack holds (its body louder in 15). The owner's decision: a
+counted pair word in place of the rule, the way `layer_samples` gives a
+layered part's second voice its sample through `pair_for`.
+
+**Measured first (the round-29 code and pack).** `counter_vs_melody.py`,
+seeds 1 to 20 (fourteen songs with both parts; FFVI in brackets): the
+tune's sample 5 of 14 (18 of 52), register gap -2.5 (-2.5), onsets on
+the tune's 0.56 (0.67), notes per tune note 1.12 (1.42), level ratio
+1.00 (1.00), sound under the tune 0.78 (0.82), the tune's rests filled
+0.59 (0.61), above the tune 0.30 (0.36). The pairs (`r30_pairs.py`,
+seeds 1 to 20 and 28, fifteen songs with both): ten "other" counters,
+six of them on a pair FFVI plays; over all fifteen (a "same" counter on
+a tune sample FFVI keeps a same-sample counter on counted as FFVI's),
+ten. Whole 28: sf89f5aedfd under sdbd05ab4d5, a pair FFVI has not. Its
+stems (`cw_stems.py`, songcheck23): where both sound (0.47 of the form's
+frames) the counter louder than the tune in 0.78 of 50 ms frames, by
++6.5 dB at the median, the loudest of the five stems in 0.65; the
+counter stem -15.9 dB over the form, -13.9 where both sound; alone in
+the tune's rests -15.3 against the tune alone -19.8.
+
+**Built.** `counter_pairs` (VOCABULARY.md): one unit a FFVI song whose
+counter plays another sample than the tune's (`counter_kind` "other"
+by `tune_line` and `main_sample`), the outcome the counter's sample as
+the pack's id, the context the part and the tune's sample id
+(`rhythm.counter_pair_units`; 35 units of 35 songs, 23 with both
+samples in the pack, 12 contexts, ten songs under sf89f5aedfd); a
+`KEPT` entry in `packtables.py`, the pack now 80 tables (backup
+`pack.json.r29`, the WAVs untouched). `counter_samples` is drawn before
+writing as in round 29; this word serves the "other" case only. The
+draw (`whole.counter_pair_for`, from `samples_for` after the tune's
+sample is chosen, in the same place the rule stood): the table's
+distribution under the tune's sample as a plan draw sees it (the tune's
+context at its Witten-Bell share, the part's level, the counter's sample
+over all tunes, the rest; `tables.Table.weights`, the one addition
+outside the files named, giving the mixture `draw` samples from),
+restricted to the samples the pack holds, not the tune's own, in reach
+of the register the counter was written in (`reaches`, as `pair_for`
+checks), one draw among those by their weights; the pool rule only
+where no counted sample fits. The plan's log says which: "the game's
+pair under the tune's", "the counter's sample over all tunes", or "by
+the pool rule: no counted pair fits", with what was passed over and why.
+A first cut drew once from the table and refused at the first misfit,
+as `pair_for` does, with one more draw at the part's level: it left
+eight songs of ten to the rule, Whole 28 among them (its one draw fell
+to the part's level and landed on sa7f73a254a, which the pack lacks,
+and the rule chose sdbd05ab4d5 again), and FFVI's pairs went from six
+of ten to four; the conditional is the same table drawn with the
+misfits taken out, not a rule steering it (`r30_pairs_after_cut1.log`).
+One fault fixed on the way: the rule had excluded the tune's sample
+from the pool by name, and the pool names the sample with the pack's
+prefix where the pack's other tonal samples carry the bare id, so an
+"other" counter could take the tune's own sample under its other name
+(the first cut's Whole 03 and 14 did); the exclusion is by the pack's
+id now. A test on a made-up song (`test_the_counters_sample_is_the_
+games_pair_with_the_tunes`): the unit, none on the same sample, the
+weights at the tune's context and at an unseen one, the draw taking the
+sample in reach, refusing one the pack lacks or the tune's own, and
+returning nothing where none fits. The suite passes (337 tests, 2
+skipped).
+
+**Measured after (seeds 1 to 20 and 28; `r30_pairs_after.log`,
+`r30_cvm_after.log`, `r30_stems.log`).** No part's notes changed in any
+of the twenty-one songs, so `counter_vs_melody.py`'s lines are the
+round-29 lines to the digit. The pairs: of the ten "other" counters,
+five take a counted sample (three under the tune's own context, Whole
+02, 19 and 28; two at the part's level, Whole 07 and 10) and five the
+rule (Whole 03, 05, 12, 14, 20), every one of those for a written
+register 24 to 32 semitones wide (48-80, 48-72, 72-92, 76-88, 64-88)
+that no one-song range of any counted sample reaches at both ends; FFVI
+plays the pair in seven of ten (six before), eleven of fifteen over all
+(ten). Whole 28's counter is sfd6accf98a, FFVI's commonest partner for
+its tune sample (3.9 harmonics, 87 ms attack, body +4.4 dB over the
+tune's, FFVI's level ratios for the pair 1.0, 1.0, 1.0 and 1.5): its
+stem -17.1 dB over the form (-15.9), -15.1 where both sound (-13.9),
+louder than the tune in 0.64 of those frames (0.78), by +5.6 dB at the
+median (+6.5; the quartiles -7.8 and +8.3 against +2.4 and +8.9), the
+loudest stem in 0.53 (0.65); alone in the tune's rests -17.3 (-15.3).
+The 1.5 level stays, so the counter's note level is 0.892 against the
+tune's 0.595 still; the report's `pair` render at level 1.0 had +2.2 dB
+and the loudest stem in 0.36.
+
+**The render stream (`r30_stream.py`, `r30_diff.py` against
+`r30_notes_r29.json`).** The pair draw takes one number a candidate for
+the reach check (a one-song range drawn from `ranges`) and one for the
+choice: seven in Whole 28 (six candidates in the pack, two in reach),
+where the rule's `best_sample` had taken eleven, so `samples_for` draws
+165 numbers against 169 and the floors and the echo after it fall
+elsewhere: Whole 28's floor on sf89f5aedfd 0.12 to 0.4 s, on sb34cb55c14
+0.12 to 0.16, the echo's feedback 0.759 to 0.740 (its delay and wetness
+the same). Over the twenty-one songs eleven are identical in every part,
+sample, floor and echo (the six without a counter and the five "same"
+counters); of the ten "other" counters, the counter's sample changes in
+six (Whole 07, 12, 14, 19, 20, 28), is the same sample under the pack's
+other name in three (03, 05, 10), and the same in Whole 02; the
+counter's second voice's sample changes in 05 and 20 (the pair draw
+before it); the echo goes in 02 and 10, comes in 05, changes delay in 07
+and 19 and feedback in 03, 12, 14, 20 and 28; the floors shift in all
+ten. Nothing else moved. Song Check 24 is Whole 28 (`songcheck24`, five
+ogg stems) and seeds 1 to 3 (`songcheck24-more`; Whole 01 has no
+counter, four stems).
+
+**Open.** The level: `counter_levels` is drawn as in round 29 and Whole
+28's 1.5 stays (the report's item 1, conditioning the share on the
+tune's `levels` draw, is the owner's to decide); with the sample FFVI
+pairs the counter still sits +5.6 dB over the tune at the median. The
+counter's pitch range: untouched (three notes at 78 to 94 in bar 29,
+over a sample FFVI plays no higher than 72; the report's item 3). The
+reach check against the written register: half the "other" counters
+fall to the rule because the counter written beside the tune at octaves
+and unisons spans two octaves or more between its tenth and ninetieth
+percentiles, and no one-song range of a sample is that wide; whether
+the check should be against the counter's planned register, the written
+register's middle, or the sample's range over all its songs is a choice
+for the owner, not made here. The pairs with a sample outside the pack
+(12 of 35) are passed over, as `layer_samples`' are.
+
+### Round 31: the counter's level under the tune's share (2026-10-24, from the counter-winning report on Song Check 24)
+
+After round 30 Whole 28's counter still won over the tune by level: the
+report's item 1. `counter_levels` (round 29: the counter's level over
+the tune's in tenths, once a song) was a right word with a right table
+(FFVI: 1.0 in 24 songs of 52, under in 24, over in 4, the top 1.5), but
+it was drawn apart from the tune's own `levels` draw and multiplied into
+it, and FFVI's joint does not allow what the product allows. FFVI's
+counter is never above the loudest part (strictly the loudest in 2 of
+52, tied at the top in 5; its share of the loudest 0.60 at the median,
+0.9 or more in 6 of 52 = 0.115), and its four counters louder than the
+tune sit on tunes at 0.59 of the loudest; the independent product gives
+P(counter at 0.9 or more of the loudest) 0.238 and P(above the loudest)
+0.035 (`cw_joint.py`). Whole 28 drew 1.5 on a tune at 0.7: the counter
+at 1.05 of the loudest, the loudest voice in the song, +3.5 dB over the
+tune by level alone. The owner's decision: the counter's level is drawn
+under the tune's share.
+
+**Measured first (the round-30 code and pack; `counter-winning-report.md`
+part 1 item 1, `r31_cvm_before.log`, `r31_levels_before.log`).** Seeds 1
+to 20 (fourteen songs with both parts; FFVI in brackets): the counter
+above the loudest in 0 (0), at 0.9 or more of the loudest in 3 of 14 =
+0.214 (0.115; Whole 08 at 1.0, 09 and 12 at 0.9), its share of the
+loudest 0.61 at the median (0.60), over the tune 1.00 (1.00), the
+loudest part or tied with it in 2 (Whole 08 and 09). `counter_vs_melody.py`'s
+lines are round 30's: level ratio 1.00, the rest as before. Whole 28:
+`counter_levels` 1.5 on a tune at 0.7, the counter 1.05 of the loudest,
+its note level 0.850 (capped at full) against the tune's 0.595; its
+stems (songcheck24, `r30_stems.log`): the counter -17.1 dB over the
+form, -15.1 where both sound, louder than the tune in 0.64 of those
+frames, by +5.6 dB at the median (quartiles -7.8 and +8.3), by 6 dB or
+more in 0.47, the loudest of the five stems in 0.53 (the tune 0.18);
+alone in the tune's rests -17.3 against the tune alone -19.8.
+
+**The shape, chosen by simulation (`r31_shape.py`, `r31_shape.log`).**
+Two shapes were weighed, both conditioned on the band the tune's share
+falls in: A, `counter_levels` as it is (the ratio to the tune) under the
+band; B, the counter's level as its share of the song's loudest part
+(the `levels` word's unit, in tenths) under the band. The bands are the
+word's own definition, chosen on FFVI's 52 songs: the tune's share in
+tenths runs 0.4 x1, 0.5 x9, 0.6 x10, 0.7 x9, 0.8 x6, 0.9 x4, 1.0 x13,
+and its terciles fall at 0.6 and 0.83, which on tenths are the breaks
+0.6|0.7 and 0.8|0.9: three bands, under 0.7 (20 songs: the counter's
+share 0.50 at the median, the ratio 1.00, over 1.0 in 3), 0.7 to 0.8
+(15: 0.70, 1.00, over in 1) and 0.9 or more (17: 0.70, 0.80, over in
+0). A leave-one-song-out likelihood of the counter's outcome (bits a
+song, higher is better) under no band, two, three and four: the ratio
+-3.23, -3.17, -3.23, -3.36; the share -3.06, -2.97, -2.93, -2.90. The
+terciles are within 0.03 bits of the best split (four bands of ten) and
+keep fifteen songs or more behind every context. Each shape was fitted
+as the pack fits a table (share votes, Witten-Bell) and drawn 20000
+plans' worth as the plan draws (the tune's share from `levels` for the
+melody, then the counter under the band, `PLAN_FLOOR` and `PLAN_SONGS`),
+against FFVI's joint on four figures:
+
+| shape | P(counter above the loudest) | P(counter at 0.9 or more) | counter's share, median | counter over the tune, median | exactly at the tune's level |
+|---|---|---|---|---|---|
+| FFVI (52 songs) | 0.000 | 0.115 | 0.60 | 1.00 | 0.46 (24 of 52) |
+| independent product (rounds 29 and 30) | 0.037 | 0.240 | 0.60 | 1.00 | 0.46 |
+| A: the ratio to the tune, under the band | 0.017 | 0.171 | 0.60 | 1.00 | 0.46 |
+| B: the share of the loudest, under the band | 0.000 | 0.115 | 0.60 | 0.87 | 0.23 |
+
+B is nearer on the first two figures, tied on the third, A nearer on
+the fourth, so neither is nearer on all four; B is taken, on the brief's
+default and on three grounds. The two figures B wins are the ones the
+round is about, and B's first is 0 by construction where A's is not: the
+ratio's own votes under a band still multiply past the loudest (in the
+0.7 to 0.8 band Dark World's 1.3 on a tune FFVI itself has at 0.8 gives
+1.04, so A reaches above the loudest even from FFVI's own songs, 0.028
+in that band and 0.026 under a tune at 0.9 or 1.0, where 1.2 on 0.9
+does it). The held-out likelihood, the plan's referee, prefers the
+share under every split, by 0.3 bits a song under the three bands
+chosen (0.11 to 0.46 across the six splits tried; the two shapes
+predict different outcomes, the ratio's eleven values against the
+share's eight, so part of that gap is the smaller alphabet). And B's unit is `levels`'
+own, so `level_of`'s cap at full is never reached. What A keeps and B
+loses is written down: FFVI's counter sits exactly at the tune's level
+in 24 songs of 52, A draws that in 0.46 of plans and B in 0.23, and B's
+ratio median is 0.87 against FFVI's 1.00; a finer context (the tune's
+tenth) would hold it but with one to thirteen songs a context. With the
+tune at 0.7 as Whole 28 drew it, A puts the counter above the loudest
+in 0.006 of plans and at 0.9 or more in 0.056; B in 0 and 0.082 (its
+outcomes there 0.7 in 0.44, 0.6 in 0.22, 0.8 in 0.13, 1.0 in 0.08).
+
+**Built.** `counter_shares` (VOCABULARY.md): one unit a FFVI song with a
+tune and a counter, both with a level, the outcome the counter's median
+level as a share of the song's loudest part's in tenths, the context the
+part and the tune's share band (`rhythm.counter_share_units`,
+`rhythm.TUNE_SHARES`, `rhythm.tune_share_band`; 52 units of 52 songs);
+its `KEPT` entry takes `counter_levels`' place, so the pack is 80 tables
+still (backup `pack.json.r30`, the WAVs untouched). `counter_levels` is
+retired from `KEPT`, from the plan's defaults and from the vocabulary
+(its entry says what replaced it and why); its builder is gone from
+`rhythm.py`. The draw: in `_plan_counter`, after the `counter_samples`
+draw, where the `counter_levels` draw stood (after `plan`'s retries, the
+place the round-29 review fixed; one draw for one, nothing before an
+existing draw): the band of the tune's `levels` draw, one draw from the
+word under (counter, band), the plan's counter level set to it, the
+log "counter beside the tune: other sample, level 0.5 of the loudest
+under the tune's 0.7". `level_of` reads the plan's level as it did; its
+docstring says where the counter's comes from. A test on a made-up song
+(`test_the_counters_level_is_drawn_under_the_tunes_share`): the unit's
+outcome and band for a counter under, at and over the tune, the band
+function at every tenth, the plan drawing under the band of the tune's
+draw and never above 1.0, the band's weight 3/(3+1) at three songs, a
+quiet tune's band where the counter may be the loudest, and the
+counter's own `levels` draw standing without the table. The suite
+passes (337 tests, 2 skipped).
+
+**Measured after (`r31_levels_after.log`, `r31_cvm_after.log`,
+`r31_diff.log`, `r31_stems.log`).** No part's notes moved in any of the
+twenty-one songs, no sample, floor or echo changed (`r30_notes.py` under
+the round-30 archive and pack against the new, `r30_diff.py`: only the
+counter's level differs, in twelve songs; Whole 02's module is byte for
+byte the round-30 one, and Whole 28's melody and bass stems are). Seeds
+1 to 20 (fourteen; FFVI in brackets): the counter above the loudest in
+0 (0), at 0.9 or more of the loudest in 3 of 14 = 0.214 (0.115; now
+Whole 07, 17 and 20 at 1.0, the simulation's expectation 0.115 on a
+fourteen-song sample), its share of the loudest 0.60 at the median
+(0.60), over the tune 0.94 (1.00), the loudest part or tied with it in
+3 (Whole 07, 17, 20); the tunes fall four in each of the lower bands and
+six in the top. `counter_vs_melody.py`: the level ratio 1.00 to 0.94,
+every other figure to the digit as round 30. Whole 28: the counter 0.5
+of the loudest under the tune's 0.7 (0.71 of the tune), rank 5 of 5 by
+level, its note level 0.425 against the tune's 0.595, -2.9 dB by level
+alone (was +3.5). Its stems (songcheck25): the counter -23.4 dB over the
+form (-17.1), -21.4 where both sound (-15.1) against the tune's -19.7,
+louder than the tune in 0.44 of those frames (0.64), -0.7 dB at the
+median (+5.6; quartiles -14.2 and +1.9 against -7.8 and +8.3), by 3 dB
+or more in 0.15, by 6 dB or more in 0.02 (0.47); the loudest stem where
+both sound the bass 0.30, the tune 0.27, the counter 0.20 (0.53), the
+drums 0.19; alone in the tune's rests -23.6 against the tune alone
+-19.8 (-17.3), so the lead no longer passes to it there. Song Check 25
+is Whole 28 (`songcheck25`, five ogg stems) and seeds 2 and 3
+(`songcheck25-more`, five each); Whole 28's plan record differs from
+Song Check 24's in the counter's level and its two log lines only.
+
+**Open.** The counter's pitch range: untouched (three notes at 78 to 94
+in bar 29, over a sample FFVI plays no higher than 72; the report's item
+3). The reach check against a wide written register (round 30's item
+3): untouched. The tune's rest share (0.44 in Whole 28 against FFVI's
+0.28; the melody writer's bar-final notes cut at the bar line, open
+since round 26): untouched, and the counter fills 0.46 of those rests
+still, now at 3.8 dB under the tune rather than 2.5 over. The share
+word's cost, above: the counter exactly at the tune's level in 0.23 of
+plans against FFVI's 0.46, a finer context the data does not reach.
+Three of the fourteen seeds have the counter at the top level tied with
+the tune or the bass, FFVI's rate 5 of 52.
+
+The rules the writer still decides by hand, ranked, with rounds 30 and
+31 marked done: [rules-to-words.md](rules-to-words.md) (the audit of
+2026-10-24 at 6a89f99).
+
+### Round 32a: the voice beside a line kept where the game plays its sample (2026-10-24, from the owner's note on Song Check 25)
+
+The owner heard "a weird noise written in the counter of Whole 28 at
+1:01". It is three notes in bar 29 (61.3 to 62.1 s), the counter's own
+onsets in the tune's rest at beats 1.5, 1.67 and 2: 78, 90 and 94 on
+sfd6accf98a, the sample round 30 gave it, which FFVI records at 69.2 and
+plays between 48 and 72 by the `ranges` word (27 voices in 19 songs;
+its highest note anywhere in the readings 89, as a counter 81). The 94
+is 25 semitones over the recording, past the SNES chip's pitch ceiling
+(four times the recording's rate; `score._pitch` caps the register at
+0x3FFF), so the render plays it at 93.2, a semitone flat, and the stem
+shows it: a 42 ms blip at 78, 170 ms at 90, then a tone at 93.2 whose
+loop body at that rate is thin and gone to -40 dB within 0.3 s, where
+the bars either side hold 54 to 58 (`cn_stem_counter.log`). How they got
+there (`cn_trace28.py`): three "alone" moves drawn in a row from
+`voice_moves` under (counter, other, alone), +12 scale steps at p 0.0013,
++7 at 0.0039, +2 at 0.079, each a legitimate draw of the word (FFVI's
+counter does leap so, inside a song whose register bounds it), with
+nothing to stop the climb but the span `writer.counter` folds into: the
+tune's register widened by `LAYER_OFFSET` each way, (24, 96) here, round
+23's rule reused (the audit's item 7). The chord parts' voices apart or
+alternating and the bass's second voice share the rule (`whole.py`
+`span_v`, `writer.bass` with `BESIDE_SPAN`). A drawing fault by IDIOM.md:
+the `ranges` word says where the sample is played and the writer let the
+voice land where it never is.
+
+**Measured first (seeds 1 to 20 and 28, the round-31 archive;
+`cn_outside_before.log`, `cn_ffvi_outside.log`).** Of 4708 notes of
+voices beside a line, 615 (13 %) sit outside the widest band the
+`ranges` word gives their sample (its votes' lowest floor and highest
+ceiling): the counter 127 of 1755 (7 %; above by up to 22, three by 12
+or more; below by up to 15), the accompaniment's second voices 422 of
+2047 (21 %; above by up to 17, below by up to 18), the second bass 66 of
+906 (7 %, all above, by up to 8). Outside anything FFVI plays on the
+sample (the readings' extremes): 103 (2 %), 30 of them the counter's.
+FFVI's own voices beside a line, by the same measure: 9.6 % outside the
+band (the counter 8.5 %, above by at most 9 and never 12 or more; the
+accompaniment 12.8 %; the bass 7.4 %), since a band is a voice's 10th to
+90th percentiles and the top and bottom tenths of every voice lie past
+its own.
+
+**Built.** `Part.beside`: the voices `write()` wrote beside a line under
+the span rule (the counter's where `writer.counter` wrote it, a chord
+part's voices with their pitch drawn, the bass's second voice with the
+voice words). `whole.sample_range`: the word's widest band for a sample.
+`whole.fold_to_samples`, called in `compose()` right after `samples_for`
+(the sample is known only then: the counter's by the pair word against
+the register it was written in): every such voice's note outside the
+band of the sample it is rendered on is moved into it by octaves
+(`writer.in_register`, the span's own fold), the part's log saying how
+many and which ("voice 1 kept within 48-72, where the game plays
+sfd6accf98a: 9 notes folded by octaves (...)"). Nothing is drawn, so the
+render stream, the floors and the echo stand. A test on made-up parts
+(`test_a_voice_beside_a_line_stays_where_the_game_plays_its_sample`):
+the widest band, the counter's four notes folded to the nearest octave
+inside, a chord part's voice apart folded and its doubling voice and
+line untouched, the second bass on its own sample, a sample the word
+lacks and no word at all leaving everything be. The suite passes (338
+tests, 2 skipped).
+
+**Measured after (`cn_outside_after.log`, `cn_diff.log`).** No note of
+any voice beside a line is outside its sample's band; 615 notes moved,
+every one by whole octaves at its own time and voice, in 17 of the 21
+songs; no sample, floor, echo or register changed, and no other voice's
+note. Whole 28: the counter's 78, 90 and 94 are 66, 66 and 70 (the bar
+now 66 66 70 52 against the tune's 61), so bar 29 sits where the rest of
+the line does. The cost, to be heard: the band is a hard edge where
+FFVI's is not, so notes one semitone past it fold a whole octave: in
+Whole 28 six counter notes at 47 (the C part's bars 22, 26 and 34) go to
+59 and eighteen second-bass notes at 49 on sb34cb55c14 (band 24-48) go
+to 37; across the seeds Whole 16's low accompaniment voice moves 113 of
+192 notes, 112 of them up an octave (its sample's band 56-68, the voice
+written under it), Whole 03's 68 of 194 all but one down and Whole 01's
+40 of 214 down. FFVI
+keeps 8 to 13 % of such notes past the band, by up to 9 for the counter;
+the written songs now keep none. Song Check 26 will carry this in every
+seed with a counter or a second voice, not Whole 28's bar 29 alone.
+
+**Open, then decided.** Whether the edge should be the word's band or the game's
+extremes on the sample (a word to count: the lowest and highest note a
+song plays a sample at, under which Whole 28 would move the 90 and 94
+alone), or the band with FFVI's own share past it; a redraw at writing
+in place of the fold, which needs the sample before the writing (the
+pair word is drawn against the written register, round 30). The span
+rule itself stands (item 7). Report: `phase4/counter-noise-report.md`;
+scripts `cn_*.py` beside it. The owner heard Song Check 26 and decided
+(2026-10-25) to keep the fold as built, its hard edge included:
+engineered music cannot do every nuance a composer does, and the
+squeaks are gone; to be looked at again only if something is found
+missing.
+
+### Round 32: the band's levels as one unit on the balance token (2026-10-24, from the accompaniment report on Song Check 25)
+
+The owner heard the accompaniment steal the show from the tune in Whole
+02 and 03; the accompaniment report (`phase4/accomp-check-report.md`)
+found the whole of the advantage in the level: the plan drew each part's
+`levels` share (a part's share of the song's loudest, in tenths) apart
+from the others, and the product of independent draws put the
+accompaniment strictly above the tune in 0.30 of plans against FFVI's
+0.17 (its band-themed songs 0.06), at 1.2 times the tune or more in 0.24
+against 0.12 (0.00). Whole 02's accompaniment was the loudest voice in
+the song at 1.67 times the tune (+4.7 dB in the stems where both sound,
+the loudest of five stems in 0.73 of those frames), Whole 03's at 1.20
+with a second voice at 1.5 on top. Round 31 had fixed the counter alone
+(`counter_shares` under the tune's band); the accompaniment's share is
+not told by the tune's band (a leave-one-song-out likelihood gains
+nothing from it), and the same product awaited the harmony and the bass.
+The owner heard the `level` renders (the accompaniment forced to FFVI's
+themed ratio 0.84 to the tune), found the themed songs much better, and
+chose the report's shape (b): the band's levels drawn as one unit, a
+field of the `balance` token, so a song's level layout is one FFVI
+song's whole, as its registers, sounds and voice counts already are, and
+FFVI's joint is reproduced by construction.
+
+**Measured first (the code before this round, 979577a after round 32a, and `pack.json.r31`;
+`r32_ac_levels_before.log` and `r32_ac_themed_before.log` reproduce
+`ac_levels.log` and `ac_themed.log` byte for byte; `r32_stems_before.log`
+the report's stem figures).** Seeds 1-20 and 28, 20 songs with both
+parts (FFVI's 58 in brackets, its band-themed 16 after): the
+accompaniment over the tune 0.74 at the median (0.85; 0.84), at or above
+the tune 7 of 20 (0.38; 0.25), strictly above 4 (0.17; 0.06), at 1.2 or
+more 4 (0.12; 0.00), the loudest part tied or alone 2 (0.10; 0.06),
+strictly 1, Whole 02 (0.02; 0.00); the accompaniment's share 0.70 at the
+median (0.64; 0.57), the tune's 0.80 (0.75; 0.72). The four at 1.2 or
+more: Whole 02 and 15 at 1.67, 14 at 1.40, 03 at 1.20. The plan's
+independent draws, 20000 plans on FFVI's bands (`r32_levels_after.log`,
+the "before" lines; FFVI in tenths, the unit the draws are in, in
+brackets): the accompaniment strictly above the tune 0.30 (0.12), at 1.2
+or more 0.24 (0.09), the loudest part tied 0.21 (0.16); the harmony
+strictly above the tune 0.38 (0.07), at 1.2 or more 0.29 (0.07); the
+counter 0.20 (0.10) and 0.14 (0.06); the bass 0.61 (0.65) and 0.51
+(0.56); the drums 0.33 (0.37) and 0.26 (0.30); the loudest part the bass
+in 0.69 (0.61), the tune 0.33 (0.26), the drums 0.23 (0.21), the
+accompaniment 0.21 (0.14), the counter 0.10 (0.08). The stems
+(songcheck25, songcheck25-more; where the tune's line and the part both
+sound): Whole 28's accompaniment louder than the tune in 0.51 of frames,
++0.0 dB at the median, the loudest stem in 0.14; Whole 02's 0.91, +4.7,
+0.73; Whole 03's 0.85, +4.0, 0.29; the counters 0.44 / -0.7 / 0.20,
+0.51 / +0.4 / 0.24, 0.56 / +2.1 / 0.16. The `level` variants (the
+accompaniment's share alone set to 0.84 times the tune's): 0.37 / -1.3 /
+0.06, 0.39 / -1.2 / 0.18, 0.56 / +0.8 / 0.12.
+
+**Built (a896231).** `rhythm.balance_units`: each part's level as a share
+of the song's loudest part's in tenths (`level_units`' unit, the
+readings' median note level by part) as the token's fifth field,
+`accompaniment=half:56-56:0.7:2:0.4`; the drums, which carry no weight,
+register or sounded share, keep theirs in the same field of a token with
+no weight, `drums=::::1.0`; a song whose readings carry no levels writes
+the token as before. The pack rebuilt (`pack.json.r31` beside it, the
+WAVs untouched): of its 80 tables the balance alone differs, 66 outcomes
+of 67 songs in the same order with the same votes (the two Dancing Mad
+songs share one token still, their levels being the same to the tenth),
+so every balance draw lands where it did. `whole._plan_once`: the token's
+levels are read with its other fields and overwrite the `levels` draws
+for the parts the token's song has; `Plan.level_from` says which path
+gave each part (balance, levels, counter_shares); a log line says the
+token's levels and the loudest part. `_plan_counter`: the counter's
+level is the token's where the token's song has a counter level, and
+`counter_shares` under the tune's band where not; the draw is made
+either way. `whole.note_level` (score_of's `level_of` moved to the module,
+so it can be tested): the loudest part at `TOP_LEVEL`, the rest at their
+share, a voice beside the line at its `layer_levels` share of the line's,
+capped at 1.0 of full. `packtables`' description of the balance. A test
+on a made-up song (`test_the_bands_levels_are_the_balance_tokens_as_one_unit`):
+the unit's field and the drums' form, the plan's levels from the token,
+the fallbacks for a part the token lacks (the accompaniment to `levels`,
+the counter to `counter_shares` under the tune's band), the token's own
+counter level standing with the draw made, every other draw identical
+with and without the field, and the note level with its cap. The suite
+passes (339 tests, 2 skipped).
+
+**The stream.** The `levels` draws are the last draws of `_plan_once` but
+the `layer_levels` draws, and `_plan_once` is drawn again on the same
+stream for a themed plan whose tune cannot come back; `_plan_counter`'s
+`counter_samples` and `counter_shares` draws follow in `plan()`. Removing
+the `levels` draws for the token-covered parts (every part, with this
+pack) would have moved every `layer_levels` draw (the second voices'
+levels in every song), every draw of a retried plan (the key, form and
+band of the seeds the round-29 review found retried), and the counter's
+sample kind (its interval and move words, so its notes, and its sample).
+So the draws stay in place and their result is overwritten from the
+token; no draw was added before an existing one, and the `counter_shares`
+draw is made even where the token's counter level stands. Checked
+(`r32_notes_r31.json` against `r32_notes_r32.json`, `r30_notes.py` and
+`r30_diff.py` under the round-31 code and pack and under this round's,
+`r32_diff.log`): in all 21 songs the key, form, band, every part's notes,
+every sample, floor and echo, the layer levels and the counter's kind
+are identical; only the levels differ, in 21 of 21. The recomposed plans
+of Whole 28, 02 and 03 are identical to the Song Check 26 JSONs. **The
+paths:** over seeds 1-20 and 28, 100 of 100 parts take their level from
+the token; the `levels` fallback and the `counter_shares` fallback fire
+0 times (the band is the token's song's less the parts no texture plays,
+and every FFVI part with notes has a level; of 20000 tokens drawn, 0 lack
+the field). They fire for a token without the field only: a pack built
+before this round, or the default balance of a pack with no table (the
+test's case).
+
+**Measured after (`r32_levels_after.log`, `r32_stems_after.log`).** Seeds
+1-20 and 28, 20 songs with both parts (FFVI in tenths, the token's unit,
+58 songs in brackets; its band-themed 16 after): the accompaniment over
+the tune 0.86 at the median (0.87; 0.86), at or above the tune 8 of 20 =
+0.40 (0.48; 0.44), strictly above 2 = 0.10 (0.12; 0.00), at 1.2 or more
+1 = 0.05 (0.09; 0.00), the loudest part tied 2 = 0.10 (0.16; 0.12),
+strictly 0 (0.02; 0.00); the accompaniment's share 0.60 (0.60; 0.55),
+the tune's 0.70 (0.75; 0.70). The two above the tune are Whole 13 at
+2.00 (Fanatics' layout: the accompaniment and the harmony at 1.0, the
+tune at 0.5, FFVI's own song) and Whole 17 at 1.17 (Umaro's). The
+harmony (7 songs; FFVI 15, themed 4): over the tune 0.86 (0.87; 0.83),
+strictly above 1 = 0.14 (0.07; 0.00), at 1.2 or more 1 (0.07; 0.00),
+the loudest tied 1 (0.07; 0.00). The counter (15; 52, 17): 0.90 (1.00;
+1.00), at or above 0.47 (0.52; 0.53), strictly above 2 = 0.13 (0.10;
+0.12), at 1.2 or more 1 = 0.07 (0.06; 0.12), the loudest tied 1 = 0.07
+(0.10; 0.18), strictly 0 (0.04; 0.12); its share 0.60 (0.60; 0.60). The
+bass (20; 63, 18): 1.37 (1.25; 1.38), strictly above the tune 0.60
+(0.65; 0.72), the loudest tied 0.60 (0.63; 0.72), strictly 0.45 (0.51;
+0.56). The drums (17; 46, 12): 0.62 (0.80; 0.89), strictly above 0.41
+(0.37; 0.33), the loudest tied 0.29 (0.30; 0.17). The loudest part over
+the 21 songs (a tie counted for each): the bass 0.57 (0.61; 0.72), the
+tune 0.29 (0.26; 0.22), the drums 0.24 (0.21; 0.11), the accompaniment
+0.10 (0.14; 0.11), the harmony 0.05 (0.02; 0.00), the counter 0.05
+(0.08; 0.17). The plan's way now, 20000 tokens drawn as the plan draws
+them: the accompaniment strictly above the tune 0.12, at 1.2 or more
+0.09, the loudest tied 0.16, strictly 0.02; the harmony 0.07, 0.07,
+0.07, 0.00; the counter 0.09, 0.06, 0.10, 0.04; the bass the loudest in
+0.63; the loudest part the bass 0.60, the tune 0.25, the drums 0.22, the
+accompaniment 0.15, the counter 0.07: FFVI's own figures in tenths, as
+the construction promises. The four at 1.2 or more before now sit at
+1.00 (02, Mog's layout), 0.80 (15, Fanfare's), 0.60 (14, Terra's) and
+0.86 (03, Setzer's).
+
+The stems, where the tune's line and the part both sound (Song Check 26:
+`songcheck26` Whole 28, `songcheck26-more` seeds 1-3, five ogg stems a
+song, four for Whole 01 which has no counter):
+
+| song | part | before: louder than the tune / median dB / the loudest stem | the `level` variant | after |
+|---|---|---|---|---|
+| Whole 28 | accompaniment | 0.51 / +0.0 / 0.14 | 0.37 / -1.3 / 0.06 | 0.22 / -3.5 / 0.03 |
+| Whole 28 | counter | 0.44 / -0.7 / 0.20 | 0.44 / -0.7 / 0.21 | 0.15 / -4.2 / 0.06 |
+| Whole 02 | accompaniment | 0.91 / +4.7 / 0.73 | 0.39 / -1.2 / 0.18 | 0.55 / +0.5 / 0.28 |
+| Whole 02 | counter | 0.51 / +0.4 / 0.24 | 0.51 / +0.4 / 0.49 | 0.53 / +2.2 / 0.51 |
+| Whole 03 | accompaniment | 0.85 / +4.0 / 0.29 | 0.56 / +0.8 / 0.12 | 0.65 / +2.5 / 0.23 |
+| Whole 03 | counter | 0.56 / +2.1 / 0.16 | 0.56 / +2.1 / 0.22 | 0.47 / -0.7 / 0.10 |
+| Whole 01 | accompaniment | (not rendered before) | | 0.27 / -4.8 / 0.18 |
+
+Whole 28 is Dancing Mad's layout: the accompaniment 0.4, the bass 0.6,
+the counter 0.3, the tune 0.6, the drums 1.0 and alone the loudest, so
+the whole mix moved, not the accompaniment: the tune's stem -23.1 dB over
+the form (was -21.9), the bass -23.2 (-18.9), the accompaniment -27.6
+(-22.8), the counter -27.9 (-23.4), the drums -21.3 as before, the
+loudest stem over the form the bass 0.30, the drums 0.30, the tune 0.26;
+the accompaniment alone where the tune rests -24.7 dB against the tune
+alone -20.9 (was -19.9 against -19.6), so the tune leads there now. Whole
+02 is Mog's: the accompaniment and the tune both at 0.5, even in the
+stems (+0.5 dB, the loudest stem 0.28 each), the counter at 0.6 the
+loudest voice where both sound (0.51; 1.2 times the tune by level, Mog's
+own ratio, +2.2 dB at the median), the drums at 1.0 and
+all but silent (-39.9 dB RMS: a sparse kit). Whole 03 is Setzer's: the
+accompaniment at 0.6 under a tune at 0.7, yet +2.5 dB over it in the
+stems and louder in 0.65 of frames, because its second voice plays at
+`layer_levels` 1.5 times the line (0.765 of full against the tune's
+0.595) on the tune's own sample: the report's item 2, the word kept as
+asked, now the whole of what is left of the advantage (the `level`
+variant with the share at 0.42 had +0.8).
+
+**What moved besides levels.** Nothing in the notes, samples, floors or
+echo (above). The plan log gains the line "levels from the balance: ...;
+the loudest ...", and the counter's line reads "level 0.3 of the loudest
+with the band's, the balance's" in place of "under the tune's 0.7"; the
+`counter_shares` draw is made and unused in every seed. The tune's own
+level moves with the band's (Whole 28's 0.7 to 0.6, Whole 02's 0.6 to
+0.5), so a Song Check hears the band re-balanced whole. The cap at 1.0
+of full is reached by no line (a share is at most 1.0 and `TOP_LEVEL`
+0.85), but a second voice at `layer_levels` 1.5 on a line at 0.7 of the
+loudest or more still reaches it: 379 notes in two songs, Whole 15's
+second accompaniment voice (91 notes, 1.5 on a line at 0.8) and Whole
+20's (288, on The Prelude's layout with every part at 1.0); Whole 15 was
+at the cap before as well.
+
+**Open.** The second voice's level stacked on its line (`layer_levels`
+as it is, by the brief): Whole 03's accompaniment still 2.5 dB over the
+tune through it, Whole 15 and 20 at the cap; FFVI's loud second voices
+sit on lines at 0.59 of the tune, and a word joining the second voice's
+level to the band (the token's field by voice, or `layer_levels` under
+the line's share) is the next thing to count. `TOP_LEVEL` 0.85 is still
+a constant (the rules audit's item C; FFVI's loudest part sits at 0.28
+of full). The band's loudest part plays at `TOP_LEVEL` where the token's
+loudest part is in the band, which is every seed of 1-20 and 28; where
+the textures play that part in no bar and it is left out of the band,
+the band's loudest keeps its share of a part that is not playing and
+plays under `TOP_LEVEL` (2 plans of seeds 1-200, at 0.7 and 0.8 of it:
+the round-32 review), as a plan's loudest could under the independent
+draws (the round-31 review's open item), far less often now. A song's
+balance is now one of 66 layouts whole, so twenty
+seeds vary in level as FFVI's songs do and no more: The Prelude's
+all-equal band and Fanatics' loud chords come with it. The `levels`
+table stays in the pack for a token without the field. Song Check 26 is
+Whole 28 (`songcheck26`) and seeds 1-3 (`songcheck26-more`). Report:
+`phase4/round32-report.md`; scripts `r32_levels.py`, `r32_stems.py` and
+their logs beside it.
+
+### Round 33: the second voices' levels with the band's on the balance token (2026-10-25, from round 32's open item on Song Check 26)
+
+Round 32 left one item open: the line's level is one FFVI song's since
+the balance token carries it, but a second voice's level was still a
+draw of its own (`layer_levels`, a voice beside the line at its share of
+the line's), so the stack was the product of a token value and an
+independent draw. Whole 03's accompaniment sat 2.5 dB over the tune in
+the stems through a second voice at 1.5 times a line at 0.86 of the
+tune (1.29 times the tune by level); Whole 15's and 20's second voices
+reached the cap of 1.0 of full. The accompaniment report (part 1 item 1,
+"Each cause" item 2, `ac_second.py`) had measured FFVI: its loud second
+accompaniment voices (1.5 times the line or more, 12 of 43 layered
+songs) sit on lines at 0.59 of the tune at the median and reach 1.21
+times the tune, 2.05 at most. The owner chose: the balance token carries
+each layered part's second voices' levels too, from the same FFVI song,
+so the stack is one song's by construction; `layer_levels` stays as the
+fallback for a part whose token song has one voice, or a token without
+the field.
+
+**Measured first (the round-32 code, 882180f, and `pack.json.r32`, under
+an archive from a neutral directory; `r33_ac_second_before.log`
+reproduces `ac_second.log`'s FFVI lines byte for byte;
+`r33_levels_before.log`; `r33_stems_before.log` reproduces
+`r32_stems_after.log` to the byte but for the order).** FFVI's layered
+parts with voice levels: 96 in 64 songs (56 with two voices, 30 with
+three, 8 with four, 2 with five; the accompaniment 43, the counter 28,
+the bass 13, the harmony 8, the arp 4; `r33_voices.log`). The second
+voice (the busiest beside the line) over the line voice's level: 1.0 in
+43 of 96, under in 22 (0.4 to 0.9), over in 31, of which 13 past the
+`layer_levels` cap of 1.5 (Relm's accompaniment 3.35, Dancing Mad's
+3.15, Gau's third voice 3.16); of the 52 voices beyond the second, 23
+differ from the second's share in tenths (in 19 of the 40 parts with
+three voices or more: Gau 1.5 then 3.2, Dancing Mad's bass 1.1 then
+2.0, The Mines of Narshe 1.0 then 1.3 and 1.3). Seeds 1 to 20 and 28,
+the layered parts with a second voice that writes notes (the
+accompaniment 15, the harmony 4, the bass 5, the counter 2; the levels
+as `whole.note_level` plays them, a doubling voice at the line's level;
+FFVI's 43 accompaniments in brackets, its band-themed 9 after): the
+accompaniment's second voice over the tune 0.86 at the median (0.98;
+0.84), at or above the tune 7 of 15 (0.49; 0.44), strictly above 5 =
+0.33 (0.23; 0.22), at 1.2 or more 2 = 0.13 (0.16; 0.11); the loudest
+accompaniment voice over the tune 1.00 at the median (1.00; 1.00), at
+most 1.50 (2.05; 1.21), strictly above the tune in 0.33 (0.33; 0.33);
+`layer_levels` drew 1.5 in six of the fifteen (Whole 01, 03, 11, 15, 16,
+20; 11's second voice a doubling one and so at the line's level, 15's
+and 20's cut by the cap of full); the notes at the cap 379 (Whole 15's
+second voice 91, Whole 20's two 288). The bass (5): the second voice
+over the tune 1.17 (1.35), the loudest bass voice over the tune 1.57
+(1.75), at most 1.83 (2.49). The harmony (4): 0.90 (0.84), at most 2.00
+(2.54, Whole 13 on Fanatics' layout). The counter (2): 1.00 (1.00).
+The plan's way simulated, 20000 balance tokens drawn as the plan draws
+them with an independent `layer_levels` draw for each layered part (the
+same figures from FFVI's own songs, as the token plays them, in
+brackets): the accompaniment's second voice strictly above the tune
+0.29 (0.21), at 1.2 or more 0.15 (0.14); the harmony's 0.16 (0.12), 0.13
+(0.12); the bass's 0.63 (0.69), 0.44 (0.31); the counter's 0.27 (0.25),
+0.18 (0.21). The stems (Song Check 26, where the tune's line and the
+part both sound): Whole 03's accompaniment louder than the tune in 0.65
+of frames, +2.5 dB at the median, the loudest of five stems in 0.23;
+Whole 02's 0.55 / +0.5 / 0.28; Whole 01's 0.27 / -4.8 / 0.18; Whole 28's
+0.22 / -3.5 / 0.03 (its second voice writes no notes).
+
+**Built (839fdf7).** `rhythm.voice_level_shares`: a layered part's voices
+beyond the line in `layer_units`' rank order (the busiest first; the
+bass's line the voice with the longest notes, `line_voice`), each one's
+median level over the line voice's in tenths, capped at
+`rhythm.LAYER_LEVEL_CAP` 1.5 (the `layer_levels` unit; `layer_level_units`
+now reads the helper's first entry, its table byte-identical).
+`rhythm.balance_units` writes the list as the token's sixth field, joined
+by "/": `accompaniment=main:56-64:1.0:4:0.5:1.0/1.3/1.3`; a part of one
+voice, the drums and a token built before this round have no sixth
+field. One share a voice beyond the line rather than the second's alone:
+the token's voice count is the song's, so the written voice at rank k
+sounds at the token's song's voice k, and the third voice's share
+differs from the second's in 23 of FFVI's 52 (above). The pack rebuilt
+(`pack.json.r32` beside it, the WAVs untouched; `r33_pack_check.log`):
+of its 80 tables the balance and `layer_levels` alone differ, the
+latter in its description only (its model byte-identical); the balance's
+66 outcomes of 67 songs are identical in order, votes and contexts once
+the sixth field is stripped, so every balance draw lands where it did;
+94 tokens carry the field (the accompaniment 42, the counter 28, the
+bass 12, the harmony 8, the arp 4; 55 with one share, 29 with two, 8
+with three, 2 with four; the two Dancing Mad songs still share one
+token), no layered token lacks it, and the shares' values run 0.1 x2 to
+1.5 x25. `whole._plan_once` reads the field with the token's others
+(`token_layers`), makes the `layer_levels` draws as before, and
+overwrites each covered part's draw with the token's first share;
+`Plan.voice_levels` keeps the whole list by rank and `Plan.layer_from`
+says which path gave each pitched part ("balance" or "layer_levels");
+a log line "second voices from the balance: accompaniment=1.2/0.7
+bass=0.7", with "; drawn from layer_levels: harmony=1.5" where a layered
+part fell back. `whole.note_level`: a voice j beside the line (apart or
+alternating, as before) plays at the token's entry j where the token
+has one, at the `layer_levels` draw where not; a doubling voice plays
+the line's level, as before. `packtables`' descriptions of the balance
+and of `layer_levels`. A test on a made-up song
+(`test_the_second_voices_levels_are_the_balance_tokens_too`): the
+shares in rank order with the cap, none for a one-voice part or a voice
+without a level, the word's unit as the first share, the token's sixth
+field and the five-field tokens beside it; the plan's `voice_levels`,
+`layer_levels` and `layer_from` from a token with a three-voice
+accompaniment and a two-voice bass, the counter and the harmony (one
+voice in the token) keeping their draws, the note levels of the line,
+the second voice, a doubling voice, a third voice apart and a voice
+beyond the token's list; a layered part whose token lacks the field
+drawing and saying so; and every other draw identical with the field
+and without it. The suite passes (340 tests, 2 skipped).
+
+**The stream and the paths.** The `layer_levels` draws are the last
+draws of `_plan_once`, after the `levels` draws, and `_plan_once` is
+drawn again on the same stream for a themed plan whose tune cannot come
+back, with `_plan_counter`'s draws after it in `plan()`; removing them
+for the covered parts would have moved every retried plan's key, form
+and band and the counter's sample kind, as round 32 found for the
+`levels` draws. So the draws stay in place and their result is
+overwritten; no draw is added before an existing one. Checked
+(`r33_notes_r32.json` under the round-32 archive and pack copy,
+byte-identical to round 32's `r32_notes_r32.json`, against
+`r33_notes_r33.json` under this round's code and pack, `r33_diff.log`):
+in all 21 songs the key, form, band, every part's notes and figures,
+every sample, floor and echo, the levels and the counter's words are
+identical; the layer levels alone differ, in 17 of 21 (4 identical:
+Whole 04, 09, 10, 14 drew what their tokens hold). The recomposed plans
+of Whole 28, 02 and 03 differ from the Song Check 26 JSONs in the one
+log line, the samples identical. **The paths:** over seeds 1-20 and 28,
+31 of 31 layered parts (the accompaniment 16, the counter 6, the bass 5,
+the harmony 4) take their second voices' levels from the token; the
+`layer_levels` fallback fires 0 times, and of 20000 tokens drawn, 0
+layered parts lack the field (every FFVI voice with notes has a level).
+It fires for a token without the field only: a pack built before this
+round, or the default balance of a pack with no table (the test's case).
+
+**Measured after (`r33_levels_after.log`, `r33_ac_second_after.log`,
+`r33_stems_after.log`).** The same fifteen accompaniments (FFVI's 43 as
+the token plays them in brackets, its band-themed 9 after): the second
+voice over the tune 0.86 at the median (0.96; 0.80), at or above the
+tune 7 of 15 (0.49; 0.33), strictly above 2 = 0.13 (0.21; 0.22), at 1.2
+or more 1 = 0.07 (0.14; 0.11); the loudest accompaniment voice over the
+tune 0.86 at the median (1.00; 0.86), at most 1.30 (2.35; 1.20),
+strictly above the tune in 0.27 (0.26; 0.22), at 1.2 or more in 0.20
+(0.19; 0.11); 1.5 in two of the fifteen (Whole 05 on a line at 0.40 of
+the tune, Whole 06 at 0.71), as FFVI stacks it; the notes at the cap of
+full 0. The bass (5): the second voice over the tune 1.14 (1.14), the
+loudest bass voice 1.43 (1.50), at most 1.67 (2.00), at 1.2 times the
+tune or more 0 of 5 (0.31). The harmony (4): 0.90 (0.88), at most 2.00
+(Whole 13, Fanatics' own). The counter (2): 1.00 (1.00). The plan's way
+now, 20000 tokens with their own voices (FFVI as the token plays it in
+brackets): the accompaniment's second voice strictly above the tune
+0.21 (0.21), at 1.2 or more 0.14 (0.14); the harmony's 0.13 (0.12),
+0.13 (0.12); the bass's 0.70 (0.69), 0.31 (0.31); the counter's 0.24
+(0.25), 0.21 (0.21): FFVI's own figures, as the construction promises.
+Song by song: Whole 03's accompaniment second voice 1.5 to 1.0 (Setzer's
+layout; its bass's 1.1 to 0.8), Whole 15's 1.5 to 0.9 (Fanfare's), Whole
+20's 1.5 to 1.0 (The Prelude's), Whole 16's three 1.5 to 1.0, 1.3 and
+1.3 (its doubling voice at the line's), Whole 01's three 1.5 to 1.4, 1.0
+and 0.7; the other way, Whole 02's 0.7 to 1.2 and 0.7 (Mog's, whose
+second voice plays 1.2 times its line and so 1.2 times the tune), Whole
+05's 1.0 to 1.5 and 1.5, Whole 06's 1.0 to 1.5, Whole 28's bass 0.7 to
+1.1 (Dancing Mad's, with a third voice at 1.5 it has no voice for).
+
+The stems, where the tune's line and the part both sound (Song Check 27:
+`songcheck27` Whole 28, `songcheck27-more` seeds 1-3, five ogg stems a
+song, four for Whole 01 which has no counter; the ogg stems the same
+lengths as Song Check 26's, 83.58 / 137.24 / 36.10 / 71.06 s):
+
+| song | part | before (Song Check 26): louder than the tune / median dB / the loudest stem | after (Song Check 27) |
+|---|---|---|---|
+| Whole 28 | accompaniment | 0.22 / -3.5 / 0.03 | 0.22 / -3.5 / 0.03 |
+| Whole 28 | counter | 0.15 / -4.2 / 0.06 | 0.15 / -4.2 / 0.06 |
+| Whole 02 | accompaniment | 0.55 / +0.5 / 0.28 | 0.74 / +2.1 / 0.39 |
+| Whole 02 | counter | 0.53 / +2.2 / 0.51 | 0.53 / +2.2 / 0.47 |
+| Whole 03 | accompaniment | 0.65 / +2.5 / 0.23 | 0.59 / +0.9 / 0.16 |
+| Whole 03 | counter | 0.47 / -0.7 / 0.10 | 0.47 / -0.7 / 0.18 |
+| Whole 01 | accompaniment | 0.27 / -4.8 / 0.18 | 0.23 / -5.2 / 0.16 |
+
+Whole 03 is the item the round was about: its accompaniment's second
+voice at the line's level (Setzer's 1.0) takes the median from +2.5 to
++0.9 dB and the loudest-stem share from 0.23 to 0.16; its accompaniment
+stem is -19.8 dB RMS over the form (was -17.8), alone where the tune
+rests -19.8 against the tune alone -17.9 (was -17.7), and its bass
+stem -15.1 (was -14.4) with the second bass voice at 0.8. Whole 02 goes
+the other way, as Mog's layout has it: the second voice at 1.2 times a
+line already at the tune's level, so the accompaniment is louder than
+the tune in 0.74 of frames (+2.1 dB) and the loudest stem in 0.39, the
+counter 0.40; FFVI's own balance for that song. Whole 28's accompaniment
+and counter stems are byte-identical to Song Check 26's (the second
+accompaniment voice writes nothing); its bass's second voice at 1.1
+(was 0.7) lifts the bass stem from -23.2 to -20.6 dB RMS over the form,
+the loudest stem over the form now the bass 0.34, the drums 0.28, the
+tune 0.24. Whole 01's three accompaniment voices at 1.4, 1.0 and 0.7
+instead of 1.5 each sit 0.4 dB further under the tune.
+
+**What moved besides the second voices' levels.** Nothing in the notes,
+figures, samples, floors, echo or the parts' levels (above); the melody,
+counter and drums stem modules of all four songs are byte-identical to
+Song Check 26's, and the accompaniment and bass stems differ where a
+second voice's level did (Whole 28's accompaniment stem too is
+identical). The plan log gains the line "second voices from the
+balance: ..."; the Song Check JSON differs in that line alone. A
+doubling voice still plays the line's level, so the token's share for a
+voice the `layers` draw made a doubling one is read but not played
+(Whole 04's, 07's, 11's and 18's accompaniment doublings, 07's, 12's,
+13's and 19's harmony doublings, 10's and 20's counter doublings, Whole
+16's third voice). The cap of 1.0 of full is reached by no note now (379
+before).
+
+**Open.** The token's share is counted under the `layer_levels` cap of
+1.5 (22 of FFVI's 148 voices beyond a line run past it, 13 second
+voices and 9 later ones, to 3.4), so a stack past 1.5 times the line
+is FFVI's and not written: without the cap FFVI's accompaniment second
+voice strictly above the tune would read 0.30 of 43 instead of 0.21, the
+counter's stack 2.40 at most instead of 1.50 (`r33_levels_after.log`,
+"without the 1.5 cap"); the brief kept the unit, and the cap is the
+rules audit's item D. The line plays at the part's level (the fifth
+field, the median over all the part's voices), which is over 1.2 times
+the line voice's own in 8 of FFVI's 43 layered accompaniments (Epitaph
+2.8, Under Martial Law 1.8), so the written stack can pass the song's
+own there (Under Martial Law's token: the second voice 2.35 times the
+tune as played, 1.66 in the readings); the fifth field as the line
+voice's level would close it, a change to round 32's unit for the
+owner. The second counter voice apart is still not written (round 29),
+so the counter's shares (28 tokens) are read and unused. The Song Check
+JSON carries no levels field still (the round-32 review's item).
+`TOP_LEVEL` 0.85 is still a constant. Song Check 27 is Whole 28
+(`songcheck27`) and seeds 1-3 (`songcheck27-more`). Report:
+`phase4/round33-report.md`; scripts `r33_voices.py`, `r33_levels.py`,
+`r33_pack_check.py`, `r33_diff.py` and their logs beside it.
