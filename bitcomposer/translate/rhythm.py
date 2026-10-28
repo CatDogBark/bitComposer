@@ -981,6 +981,8 @@ def gap_sound_units(songs) -> list:
             voices = part_voices(s, role)
             if not voices:
                 continue
+            fastest = part_fastest(s, role)             # the part's speed class (round 35): FFVI's string pad played fast sounds a
+            speed = speed_tier(fastest if fastest is not None else 0.0)   # fifth to a third of its gap, played slow nearly all of it
             if len(voices) >= 2:
                 line = line_voice(voices, role)
                 streams = (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x]))
@@ -992,7 +994,7 @@ def gap_sound_units(songs) -> list:
                     gap = m[0] - n[0]
                     if gap > NEAR:
                         share = round(min(1.0, n[1] / gap) / SOUND_BIN) * SOUND_BIN
-                        out.append(tables.Unit(s.sid, s.game, f"{share:.1f}", {"part": role, "voice": which, "gap": gap_class(gap)}))
+                        out.append(tables.Unit(s.sid, s.game, f"{share:.1f}", {"part": role, "voice": which, "speed": speed, "gap": gap_class(gap)}))
     return out
 
 
@@ -1418,6 +1420,36 @@ def sample_speed_units(songs) -> list:
     return out
 
 
+SPEED_TIERS = ((3.0, "slow"), (6.0, "medium"), (1e9, "fast"))   # a part's fastest bar, notes a second: the class its note lengths are counted under
+
+
+def speed_tier(rate: float) -> str:
+    """The class of a part's fastest bar (SPEED_TIERS), as gap_sounds is conditioned on it (round 35)."""
+    return next(name for top, name in SPEED_TIERS if rate <= top)
+
+
+def _part_rates(s: Song, role: str) -> tuple:
+    """A part's line bar by bar: (onset counts, notes a second), every bar of the song."""
+    beat = 60.0 / s.bpm
+    ns = s.notes.get(role) or []
+    mine = {(n[0], n[2]) for n in (line_notes(s, role) or ns)}
+    counts, rates = [], []
+    for _, a, b, struck in all_bars_of(s, role):
+        c = sum(1 for _, group in struck for n in group if (n[0], n[2]) in mine)
+        counts.append(c)
+        rates.append(c / max(1e-9, (b - a) * beat))
+    return counts, rates
+
+
+def part_fastest(s: Song, role: str) -> float | None:
+    """A part's fastest bar: the 90th percentile of its line's bars' notes a second, over the bars it plays; None under four bars."""
+    counts, rates = _part_rates(s, role)
+    played = sorted(r for r, c in zip(rates, counts) if c)
+    if len(counts) < 4 or not played:
+        return None
+    return played[int(0.9 * (len(played) - 1))]
+
+
 def part_speed_units(songs) -> list:
     """Each pitched part of each song as a unit: its outcome the part's
     fastest bars (the 90th percentile of its line's bars' notes a second, to
@@ -1429,21 +1461,15 @@ def part_speed_units(songs) -> list:
     not come from the sample it plays."""
     out = []
     for s in songs:
-        beat = 60.0 / s.bpm
         for role, ns in s.notes.items():
             if role == R.DRUMS or not ns:
                 continue
-            mine = {(n[0], n[2]) for n in (line_notes(s, role) or ns)}
-            rates, counts = [], []
-            for _, a, b, struck in all_bars_of(s, role):
-                c = sum(1 for _, group in struck for n in group if (n[0], n[2]) in mine)
-                counts.append(c)
-                rates.append(c / max(1e-9, (b - a) * beat))
-            played = sorted(r for r, c in zip(rates, counts) if c)
-            if len(counts) < 4 or not played:
+            counts, _ = _part_rates(s, role)
+            fastest = part_fastest(s, role)
+            if fastest is None:
                 continue
             tier = habit_of(sum(counts) / len(counts), DENSITIES)
-            out.append(tables.Unit(s.sid, s.game, _bin(played[int(0.9 * (len(played) - 1))], SPEED_BINS, "faster"), {"part": role, "habit": tier}))
+            out.append(tables.Unit(s.sid, s.game, _bin(fastest, SPEED_BINS, "faster"), {"part": role, "habit": tier}))
     return out
 
 

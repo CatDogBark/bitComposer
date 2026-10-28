@@ -430,6 +430,7 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
             p.log.append(f"themed: no return in {PLAN_TRIES} plans; the song is unthemed")
     _plan_counter(models, p, rng)
     _plan_speeds(models, p, rng)
+    _plan_sounds(models, p, rng)
     return p
 
 
@@ -662,8 +663,24 @@ def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
         if role == R.DRUMS or role not in p.habits:
             continue
         tier = str(p.habits[role]).split()[0]
-        drawn = _draw(models, "part_speeds", (role, tier), rng, p.log) if "part_speeds" in models_or_empty(models) else DEFAULTS["part_speeds"]
-        p.speeds[role] = SPEED_FASTER if drawn == "faster" else float(drawn)
+        drawn = _draw(models, "part_speeds", (role, tier), rng, p.log, floor_k=2) if "part_speeds" in models_or_empty(models) else DEFAULTS["part_speeds"]
+        p.speeds[role] = SPEED_FASTER if drawn == "faster" else float(drawn)   # floored at the part and tier: a dense accompaniment had drawn 2 a second
+                                                                           # from the coarser level's mass, a value FFVI's dense accompaniments never have
+
+
+def _plan_sounds(models: dict, p: Plan, rng: random.Random) -> None:
+    """The share of its gap a note sounds, drawn again under the part's speed class (gap_sounds: part, voice, speed, gap; round
+    35) once the part's speed is drawn, after every other plan draw. FFVI's string pad played fast sounds a fifth to a third
+    of its gap (the battle tremolo), played slow nearly all of it; one share by the gap alone had put Whole 02's fast
+    arpeggio between the two, a staccato pad neither held nor tremolo. The draw in _plan_once stays in the stream."""
+    if "gap_sounds" not in models_or_empty(models) or not p.speeds:
+        return
+    for role in list(p.gap_sounds):
+        if role not in p.speeds:
+            continue
+        tier = rhythm.speed_tier(p.speeds[role])
+        p.gap_sounds[role] = {voice: {g: float(_draw(models, "gap_sounds", (role, voice, tier, g), rng, p.log)) for _, g in rhythm.GAP_CLASSES}
+                              for voice in ("only", "line", "second")}
 
 
 def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
