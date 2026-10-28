@@ -918,7 +918,7 @@ class NewTablesTests(unittest.TestCase):
         units = rhythm.cell_handoff_units([s])
         self.assertEqual([u.outcome for u in units], ["counter 2", "none", "counter 1", "none", "none", "none", "none", "none"])   # bar 1 opens with the same shape as bar 0
         self.assertEqual({u.values["habit"] for u in units}, {"mixed"})   # 1 of 4 bar cells echoed (bar 3 = bar 0): over a third
-        self.assertEqual([u.outcome for u in rhythm.half_recall_units([s])], ["new", "new", "new", "new", "new", "new", "earlier", "earlier"])
+        self.assertEqual([u.outcome for u in rhythm.half_recall_units([s])], ["new", "new", "earlier", "earlier", "earlier", "earlier", "earlier", "earlier"])   # two shapes (+4, -2) the whole tune through
         self.assertEqual(rhythm.handoff_class(9), "far")
         scale = {0, 2, 4, 5, 7, 9, 11}
         self.assertEqual(writer.cell_pitches([60, 64, 67], 7, scale, (48, 60), 50.0), [55, 59, 50])   # on G in 48-60: G B D, the D folded in
