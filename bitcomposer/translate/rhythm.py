@@ -1734,6 +1734,36 @@ def _theme_of(song: Song):
     return cells, windows, heads[0][0], heads[0][1]
 
 
+def tune_doubling_units(songs) -> list:
+    """Each bar in which a song's tune plays a cell that is NOT its theme cell as a unit: its outcome which other parts
+    (THEME_PARTS) play the same cell in that bar and how far from the tune (theme_doubling_units' token: "bass:-24
+    counter:+0"; "none"), its values the part (tune) and the place (other). The theme's bars are theme_doubling's. Round
+    44 (2026-10-28): FFVI doubles the tune's onsets at the same pitch class 0.40 of the time, its half-bar cells at once
+    0.24, by the accompaniment, the bass and the counter an octave or two under and in the tune's octave; the written
+    songs 0.22 and 0.03, the theme cell being the only one a word doubled."""
+    out = []
+    for s in songs:
+        found = _theme_of(s)
+        if found is None:
+            continue
+        cells, _, theme_w, theme = found
+        tune = sorted(_line(s.notes.get(R.MELODY, [])))
+        others = {role: (melody_cells(s, role), sorted(_line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
+        for k, c in enumerate(cells):
+            if not c or c == theme:
+                continue
+            a = s.bars[k][0]
+            t0 = next((n for n in tune if n[0] >= a - NEAR), None)
+            tokens = []
+            for role, (oc, line) in others.items():
+                if k < len(oc) and oc[k] == c:
+                    o0 = next((n for n in line if n[0] >= a - NEAR), None)
+                    if t0 is not None and o0 is not None:
+                        tokens.append(f"{role}:{round(o0[2] - t0[2]):+d}")
+            out.append(tables.Unit(s.sid, s.game, " ".join(sorted(tokens)) or "none", {"part": "tune", "place": "other"}))
+    return out
+
+
 def theme_doubling_units(songs) -> list:
     """Each bar in which a song's tune plays its theme cell (the head of its
     first sounding phrase: its statement, and its echoes later) as a unit:
@@ -2570,6 +2600,54 @@ def balance_units(songs) -> list:
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
+    return out
+
+
+SAMPLE_PARTS = (R.MELODY, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts whose sample the part_samples word gives (the counter's is
+                                                                # counter_samples/counter_pairs', a second voice's layer_samples')
+
+
+def part_sample_units(songs) -> list:
+    """Each pitched part of each song (SAMPLE_PARTS) as a unit: its outcome the sample its line plays most, as a pack
+    names it ("s" and the key's first ten characters); its values the part and the speed class of the part's fastest
+    bar (speed_tier). Which instrument a part plays (round 42, 2026-10-28): chosen by a pool rule (the best range fit),
+    0.73 of the written tunes had played one string pad, which FFVI gives 0.31 of its tunes, spreading the rest over
+    eight instruments and more; the pack's range and speed words then bound the writing to where the game plays it."""
+    out = []
+    for s in songs:
+        for role in SAMPLE_PARTS:
+            if not s.notes.get(role):
+                continue
+            key = main_sample(tune_line(s, role) or s.notes[role])
+            if not key or not isinstance(key, str):
+                continue
+            fastest = part_fastest(s, role)
+            values = {"part": role}
+            if fastest is not None:
+                values["speed"] = speed_tier(fastest)
+            out.append(tables.Unit(s.sid, s.game, "s" + key[:10], values))
+    return out
+
+
+def sample_ambitus_units(songs) -> list:
+    """Each sample a song plays pitched, as a unit: its outcome the whole range the song played it in, lowest note to
+    highest (part_register's grain, ambitus=True), its value the sample's id as a pack names it. The tune's bound
+    (round 43, 2026-10-28): the ranges word is the sample's home band (the notes' 10th to 90th percentiles, 16
+    semitones for FFVI's string pad), and bounding the tune by it had held the written tunes to 15 semitones where
+    FFVI's span 21.5 (22 on that pad): a tune leaves its home band for its climax, and its bound is where the game
+    took the sample at all."""
+    out = []
+    for s in songs:
+        by_key = {}
+        for role, ns in s.notes.items():
+            if role == R.DRUMS:
+                continue
+            for n in ns:
+                by_key.setdefault(n[3], []).append(n)
+        for key, ns in by_key.items():
+            reg = part_register(ns, ambitus=True)
+            if reg is not None and isinstance(key, str):
+                out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10]}))
     return out
 
 

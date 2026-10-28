@@ -799,7 +799,9 @@ def _replace_bars(part, song: rhythm.Song, role: str, a: float, b: float, copied
 def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
     """Where the tune plays its theme cell (its statement and its echoes), the parts the theme_doubling table draws
     play the cell with it, at the drawn interval, in the tune's rhythm: FFVI's hook doubled by a second instrument a
-    bar at a time. Returns a log line a bar doubled."""
+    bar at a time; in every other bar of the tune, the parts the tune_doubling table draws (round 44: FFVI doubles the
+    tune's half-bar cells at once 0.24, the written songs 0.03 with the theme cell alone doubled). Returns a log line a
+    bar doubled."""
     x = plan.extras.get(R.MELODY, {})
     if R.MELODY not in written or "theme_doubling" not in models or not x.get("theme_bars"):
         return []
@@ -811,9 +813,14 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
     tune = [n for n in written[R.MELODY].notes if n[3] == 0]
     log = []
     for k, c in enumerate(cells):
-        if c != theme:
+        if not c:
             continue
-        drawn = _draw(models, "theme_doubling", ("theme", "statement" if k in theme_bars else "later"), rng)
+        if c == theme:
+            drawn = _draw(models, "theme_doubling", ("theme", "statement" if k in theme_bars else "later"), rng)
+        elif "tune_doubling" in models:                     # any other bar of the tune, doubled as FFVI doubles it (round 44)
+            drawn = _draw(models, "tune_doubling", ("tune", "other"), rng)
+        else:
+            continue
         a, b = song.bars[k]
         bar_notes = [n for n in tune if a - rhythm.NEAR <= n[0] < b - rhythm.NEAR]
         for token in drawn.split():
@@ -830,7 +837,7 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
                     p -= 12
                 copied.append((t, u, float(p), 0))
             _replace_bars(written[role], song, role, a, b, copied)
-            log.append(f"bar {k}: the {role} doubles the theme's cell ({int(off):+d})")
+            log.append(f"bar {k}: the {role} doubles the {'theme' if c == theme else 'tune'}'s cell ({int(off):+d})")
     return log
 
 
@@ -1418,6 +1425,35 @@ def counter_pair_for(models: dict | None, tune: str, own: set, ranges, register:
     return sid, "tune" if sid in fine else "part", over
 
 
+def part_sample_for(models: dict, role: str, speed: float | None, own: set, rng: random.Random, log: list) -> str | None:
+    """The sample the part_samples word gives a part (round 42): drawn under the part and the speed class of its fastest
+    bar (the table backs off to the part alone), where the pack holds the sample; None where the word knows no sample
+    the pack holds (the draw is made once; the pool rule then chooses), logged."""
+    t = models["part_samples"]
+    ctx = (role, rhythm.speed_tier(speed)) if speed else (role,)
+    sid = t.draw(ctx, rng, floored=False, floor_k=PLAN_FLOOR)
+    if sid in own:
+        return sid
+    log.append(f"{role}'s sample {sid} (part_samples) is not in the pack: the pool rule chooses")
+    return None
+
+
+def ambitus_of(models: dict | None, rid: str, rng: random.Random = None) -> tuple | None:
+    """The whole range the game ever played a sample over (sample_ambitus, round 43): the lowest low and the highest high
+    of the word's outcomes for it, not one song's draw. A tune's register is its balance token's (one song's ambitus,
+    20 semitones at FFVI's median), and a bound drawn from another song's ambitus and cut against it had left the
+    tune the overlap of two songs' ranges (Whole 38: 76-84 of a planned 76-92); the sample's wall is where the game
+    took it at all. None without the word, or for a sample it has no song for."""
+    t = (models or {}).get("sample_ambitus")
+    t = t.table if hasattr(t, "table") else t
+    if t is None or not t.songs.get((rid,), 0):
+        return None
+    spans = [tuple(int(x) for x in o.split("-")) for o in t.votes.get((rid,), {})]
+    if not spans:
+        return None
+    return min(lo for lo, _ in spans), max(hi for _, hi in spans)
+
+
 def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Random, models: dict | None = None) -> dict:
     """Each part's sample from the pack's pools: {role: (voice name, ITSample)}; the drums' kit {piece: (name, ITSample)}.
     `own`: the pack file's own sample names (registered as pack_name_voice), the rest built-in voices. With the pack's
@@ -1464,11 +1500,20 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
                                                                     else "the counter's sample over all tunes") + f" (counter_pairs){over}")
                 elif passed is not None:
                     plan.log.append(f"counter's sample by the pool rule for {register[0]}-{register[1]}: no counted pair fits{over}")
+        if role not in out and role in rhythm.SAMPLE_PARTS and (models or {}).get("part_samples") is not None:
+            sid = part_sample_for(models, role, plan.speeds.get(role), own, rng, plan.log)   # the instrument the game gives the part (round 42)
+            if sid is not None:
+                out[role] = make(sid)
+                if ranges is not None and ranges.songs.get((sid,), 0):
+                    drawn[sid] = tuple(int(x) for x in ranges.draw((sid,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
         if role not in out:
             out[role] = make(best_sample(ranges, names, register, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn)
                              if register else rng.choice(names))
         if register:
-            plan.bounds[role] = bound_of(drawn.get(raw(out[role][0])), register)
+            played = drawn.get(raw(out[role][0]))
+            if role in (R.MELODY, R.COUNTER):               # a tune's bound is the whole range the game took the sample over (round 43)
+                played = ambitus_of(models, raw(out[role][0])) or played
+            plan.bounds[role] = bound_of(played, register)
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples) where the
         # pack holds both and each reaches its voice's register; else the second voice's sample by its own register and
         # speed, as the line's is chosen

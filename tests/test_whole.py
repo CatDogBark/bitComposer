@@ -962,6 +962,38 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual({u.values["habit"] for u in rhythm.pair_recall_units([s])}, {"repeating"})
         self.assertEqual(rhythm.RECALL_SOURCES, ("section", "theme", "elsewhere"))
 
+    def test_the_instrument_a_part_plays_the_range_it_was_ever_played_over_and_the_tune_doubled(self):
+        """Rounds 42-44: a part's sample is counted by the part and its speed class (part_samples) and drawn before the pool
+        rule; a sample's whole played range is counted (sample_ambitus) and a tune's bound is the widest the game ever took
+        it, cut against the tune's own register; the tune's non-theme bars doubled by another part are counted
+        (tune_doubling) as the theme's are."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "abcdefghijklmnop") for i in range(4, 8) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0))]
+        s.notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if i < 4 else m - 24, "k") for i in range(8) for x, m in ((0.0, 67.0), (2.0, 71.0))]
+        units = rhythm.part_sample_units([s])
+        self.assertEqual({(u.values["part"], u.outcome) for u in units}, {("melody", "sabcdefghij"), ("bass", "sk")})
+        self.assertTrue(all(u.values.get("speed") in ("slow", "medium", "fast") for u in units))
+        amb = {u.values["part"]: u.outcome for u in rhythm.sample_ambitus_units([s])}
+        self.assertEqual(amb["sabcdefghij"], "68-72")                                                 # the tune's 67-72 to REGISTER_BIN
+        self.assertEqual(amb["sk"], "36-48")                                                          # the bass's 36 and 43-48
+        # the widest the game ever took a sample: the union of the word's outcomes, not one song's draw
+        t = tables.Table(("part",), "sample_ambitus", votes=tables.SHARES).fit(
+            [tables.Unit("a", "g", "56-76", {"part": "sx"}), tables.Unit("b", "g", "60-88", {"part": "sx"}), tables.Unit("c", "g", "48-72", {"part": "sx"})])
+        self.assertEqual(whole.ambitus_of({"sample_ambitus": t}, "sx"), (48, 88))
+        self.assertIsNone(whole.ambitus_of({"sample_ambitus": t}, "sy"))
+        self.assertEqual(whole.bound_of((48, 88), (60, 80)), (60, 80))                              # the tune's own register where the sample reaches it
+        # the tune doubled: the bass plays the tune's cell two octaves down in bars 4-7, none of them the theme bar... the
+        # theme cell is bar 4's (every tune bar is the same cell here), so tune_doubling has no unit and theme_doubling has four
+        self.assertEqual([u.outcome for u in rhythm.tune_doubling_units([s])], [])
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "a") for i in range(0, 4) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0))] + \
+                            [(4.0 * i + x, 0.9, m, "a") for i in range(4, 8) for x, m in ((0.0, 72.0), (1.0, 71.0), (2.0, 69.0), (3.0, 67.0))]
+        s.notes["bass"] = [(4.0 * i + x, 0.9, m - 24, "k") for i in range(5, 8) for x, m in ((0.0, 72.0), (1.0, 71.0), (2.0, 69.0), (3.0, 67.0))]
+        s.notes["counter"] = [(4.0 * i + x, 0.9, m, "c") for i in range(5, 7) for x, m in ((0.0, 72.0), (1.0, 71.0), (2.0, 69.0), (3.0, 67.0))]
+        units = rhythm.tune_doubling_units([s])
+        self.assertEqual([u.outcome for u in units], ["none", "bass:-24 counter:+0", "bass:-24 counter:+0", "bass:-24"])   # bars 4-7, not the theme's 0-3
+        self.assertEqual({(u.values["part"], u.values["place"]) for u in units}, {("tune", "other")})
+
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's
         drawn range and the planned register: the overlap, a sliver widened to the register grain, the sample's range

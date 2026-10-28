@@ -3319,3 +3319,50 @@ or altered after the recall (`realize`); the sections' sharing rose with
 the fix because the theme's returns in a later section now match their
 source exactly, which FFVI's 0.00 does not show at its grain: open. Song
 Check 35 is five fresh band-themed seeds (36-40) on round 41.
+
+### Rounds 42 to 44: the instrument a part plays, the tune's full range, the tune doubled (2026-10-28, from the owner's note that the songs sound sparse where FFVI's sound epic)
+
+**His words.** "Most of our songs seem sparse and FFVI had epic qualities
+to their music. We probably need some even higher level language above
+theme to dictate the epicness of a theme."
+
+**Measured first** (`epic.py`, the same on FFVI's 67 songs and seeds
+1-40; medians, band-themed subsets). Not different: tempo, length,
+parts, voices in use, pitched notes a second (8.7 against 7.9), melody
+notes a bar, held notes, chord motion, drums present and their hits, the
+band's build at the four-bar grain, breathing at phrase ends. Different:
+the tune's instrument (one string pad for 0.73 of the written tunes,
+FFVI 0.31 with eight instruments and more), the tune's range (15
+semitones against 21.5), the tune's onsets doubled by another part at the
+pitch class (0.22 against 0.40; its half-bar cells doubled at once 0.03
+against 0.24), and dynamics inside a part, which the readings do not yet
+hold (a median level a part). "Epic" is not one word: it is those.
+
+**Built, on his go.** Round 42, `part_samples`: which sample a part's
+line plays, by part and speed class, drawn before the pool rule. Round
+43, `sample_ambitus`: a sample's whole played range by song; a tune's
+bound is the widest the game ever took its sample (the union of the
+word's outcomes), cut against the tune's own token register. Round 44,
+`tune_doubling`: the theme-doubling word for every other bar of the tune.
+Pack 89 tables (`pack.json.r41` the backup on both machines). Test
+`test_the_instrument_a_part_plays_the_range_it_was_ever_played_over_and_the_tune_doubled`.
+
+**Measured after** (themed medians):
+
+| measure | FFVI | before | after |
+|---|---|---|---|
+| tunes on the string pad | 0.31 | 0.73 | 0.40 (six instruments in forty) |
+| the tune's range, semitones | 17 (all 21.5) | 15 | 19 |
+| tune onsets doubled at the pitch class | 0.38 | 0.24 | 0.31 |
+| pitched notes a second | 8.7 | 7.9 | 8.4 |
+| the hook's share of the tune | 0.22 | 0.20 | 0.23 |
+| two-bar pairs heard earlier | 0.40 | 0.35 | 0.33 |
+| whole phrases heard earlier | 0.29 | 0.25 | 0.25 |
+
+Song Check 36 is five fresh band-themed seeds (41-45) on round 44.
+
+**Open:** dynamics inside a part (a reading first); parts entering
+mid-section (the sections finding, the build); the section-sharing
+measure (0.25 now, FFVI 0.00: theme returns and the new draws count in
+it, the measure's grain to be settled); the token's narrow tune registers
+(Whole 33's 56-60 is its song's) which the sample's wall cannot widen.
