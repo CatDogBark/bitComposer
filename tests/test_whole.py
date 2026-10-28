@@ -1059,6 +1059,18 @@ class NewTablesTests(unittest.TestCase):
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 5), whole.TOP_LEVEL * 0.8)
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), whole.TOP_LEVEL * 0.8)            # no bar: the part's level
 
+    def test_a_recalled_passage_goes_on_as_the_games_do(self):
+        """Round 50: each echo of the tune with a bar after it is counted by whether the next bar goes on with the bar after
+        the echo's source (recall_continues: yes, no), by part and echo habit; the CONTINUE constant is the fallback alone."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        def bar(k, ps): return [(4.0 * k + i, 0.9, float(p), "a") for i, p in enumerate(ps)]
+        A, B, C = [60, 64, 67, 65], [60, 64, 62, 60], [62, 65, 69, 67]
+        tune = bar(0, A) + bar(1, B) + bar(2, C) + bar(3, A) + bar(4, B) + bar(5, C) + bar(6, A) + bar(7, C)
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune}, sid="s", game="g", numbers=list(range(8)), parts=[(0, 8, None, "A")])
+        units = rhythm.recall_continue_units([s])
+        self.assertEqual([u.outcome for u in units], ["yes", "yes", "yes", "no"])   # bars 3-5 go on as bars 0-2 did; bar 6's A is followed by C, never B
+        self.assertEqual({(u.values["part"], u.values["habit"]) for u in units}, {("melody", "mixed")})   # 5 of 8 bars echo: under two thirds
+
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's
         drawn range and the planned register: the overlap, a sliver widened to the register grain, the sample's range

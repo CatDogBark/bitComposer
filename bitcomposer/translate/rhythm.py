@@ -1964,6 +1964,28 @@ def period_hold_units(songs) -> list:
     return out
 
 
+def recall_continue_units(songs) -> list:
+    """Each echo of a song's tune that has a bar after it as a unit: whether the next bar goes on with the bar after the
+    echo's source ("yes": the passage recalled continues; "no"), by part and echo habit. Round 50 (2026-10-28): the writer
+    had carried a recalled passage on with a constant share (CONTINUE 0.8); this is FFVI's. An echo is a bar whose cell
+    was played earlier and is not the bar before's; its sources are every earlier bar with that cell."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        cells = melody_cells(s)
+        habit = _echo_habit(cells)
+        for k in range(len(cells) - 1):
+            c, nxt = cells[k], cells[k + 1]
+            if not c or not nxt or (k and cells[k - 1] == c) or c not in cells[:k]:
+                continue
+            sources = [j for j in range(k) if cells[j] == c and j + 1 < k and cells[j + 1]]
+            if not sources:
+                continue
+            out.append(tables.Unit(s.sid, s.game, "yes" if any(cells[j + 1] == nxt for j in sources) else "no", {"part": R.MELODY, "habit": habit}))
+    return out
+
+
 def melody_recall_units(songs) -> list:
     """What each tune bar is to its song so far (same, earlier, new): the urn's shares, by part and echo habit."""
     return tables.recall_units(melody_cell_units(songs))

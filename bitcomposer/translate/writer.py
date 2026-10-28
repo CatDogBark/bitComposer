@@ -842,6 +842,7 @@ LEAP = 12                             # semitones: the moves table folds a move 
 MOVES = [f"{m:+d}" if m else "0" for m in range(-LEAP - 1, LEAP + 2)]   # every move the moves table names
 ECHO_SHARES = {"same": 0.3, "earlier": 0.3, "new": 0.4}   # the urn's shares where no recall table is given
 CONTINUE = 0.8                        # when the bar before echoed an earlier bar, the share of "earlier" draws that go on with the bar after it
+                                      # (the fallback without a recall_continues table, round 50)
 
 
 class Cell:
@@ -1134,6 +1135,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     + " ".join(f"{w[0]}:{tops[w[0]]}" for w in windows))
     else:
         arc_line = None
+    room_high = max(tops.values()) if tops else register0[1]    # the part's ceiling over the song: where a recalled cell may reach (round 49)
     figures = [REST] * len(bars)
     cells = {}                                              # bar index -> Cell
     played, by_key = Counter(), {}                          # the urn: cell key -> times played; key -> a Cell
@@ -1191,6 +1193,15 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         src = next(src for src in rhythm.RECALL_SOURCES if src in live_)
         source_kinds[src] += 1
         return groups[src]
+
+    def continues() -> bool:
+        """Whether a passage recalled goes on with the bar after its source (recall_continues, round 50: FFVI's share by the
+        song's echo habit; the CONTINUE constant before it)."""
+        t = models.get("recall_continues")
+        if t is None:
+            return rng.random() < CONTINUE
+        ctx = tuple({"part": R.MELODY, "habit": echo_habit}.get(c_, "?") for c_ in t.conditionings)
+        return t.draw(ctx, rng, floored=False) == "yes"
 
     def note_pair(live_: list, cells_: list, i: int) -> None:
         """Bars i-1 and i of a phrase just written as a pair the tune has played: the pair urn's memory."""
@@ -1473,8 +1484,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             best = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
                        key=lambda x: (on_chord(build(x)), -abs(x - first), -x), default=first)
             pitches = build(best)
-        pitches = fold_cell(pitches, (low, high))
-        last_midi = float(pitches[-1]) if pitches else last_midi
+        pitches = fold_cell(pitches, (low, max(high, room_high)))   # the part's whole room (round 49): folded into the phrase's room under the
+        last_midi = float(pitches[-1]) if pitches else last_midi    # arc, a wider recalled cell had been clamped and bent
         last_move = f"{pitches[-1] - pitches[-2]:+d}" if len(pitches) >= 2 and pitches[-1] != pitches[-2] else ("0" if len(pitches) >= 2 else last_move)
         return realize(k, cell.positions, pitches)
 
@@ -1601,7 +1612,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                             source[k] = source.get(before, before) if before is not None else None
                         elif choice == "earlier":
                             follow = source.get(before)
-                            if follow is not None and follow + 1 in cells and follow + 1 < k and rng.random() < CONTINUE:
+                            if follow is not None and follow + 1 in cells and follow + 1 < k and continues():
                                 cell = again(k, cells[follow + 1])      # the passage recalled goes on with its next bar
                                 source[k] = follow + 1
                             else:
@@ -1637,8 +1648,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 pair_kinds, source_kinds = Counter(snapshot[16]), Counter(snapshot[17])
             else:
                 log.append(f"phrase at bar {w[0]}: a game's phrase drawn {COPY_TRIES} times running; the last kept")
-        # the ending: the phrase's last note onto the drawn degree
-        if ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches:
+        # the ending: the phrase's last note onto the drawn degree, where the last bar is a new cell (round 49: a recalled last
+        # bar keeps its cell, as FFVI's recalled bars are identical by the word's count; the ending moved onto a recall had
+        # made 33 of 76 bent recalls, differing from their source in the last interval alone)
+        if ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches and choices.get(live[-1]) in ("new", "answered"):
             want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
             last = phrase_cells[-1]
             options = [m for m in range(reg_w[0], reg_w[1] + 1) if m % 12 in want]
