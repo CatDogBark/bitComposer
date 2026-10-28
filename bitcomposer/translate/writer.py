@@ -1336,7 +1336,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         played before, by how often) or new, at the half_recall word's shares for the song's echo habit. A recalled half
         comes back re-rooted on the bar's chord in the register, its intervals exact (as again() brings a bar back, round 41);
         a new half takes the drawn rhythm's onsets with new moves. FFVI's tune reuses half-bar cells (0.50 heard earlier,
-        themed 0.63) where a bar-grain urn drew a whole new bar (0.39)."""
+        themed 0.63) where a bar-grain urn drew a whole new bar (0.39). A half the drawn rhythm gives fewer than
+        HALF_CELL_NOTES notes is no cell and stays as drawn (round 47, 2026-10-28): the word counts halves of two notes
+        and more, and the urn run on every half had replaced the tune's held halves with recalled two-note ones, so the
+        written medium tune had 0.11 of its bars at one or two notes where FFVI's has 0.27, and sat a note a bar denser
+        at every habit tier (sparse 2.7 against 2.0, medium 5.1 against 4.1, dense 8.2 against 7.0)."""
         nonlocal last_midi, last_move, last_time
         a, b, _ = bars[k]
         half = meters[k] / 2.0
@@ -1374,8 +1378,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         for h in (0, 1):
             lo = h * half
             shares = dict(raw)
-            if prev_key not in pool:
-                shares["new"], shares["same"] = shares["new"] + shares["same"], 0.0
+            if sum(1 for p in positions if (p < half) == (h == 0)) < rhythm.HALF_CELL_NOTES:
+                shares = {"new": 1.0, "same": 0.0, "earlier": 0.0}   # a half the drawn rhythm gives fewer notes than a cell is no cell: it stays as
+            if prev_key not in pool:                                  # drawn (round 47: the word counts halves of HALF_CELL_NOTES and more, and the urn
+                shares["new"], shares["same"] = shares["new"] + shares["same"], 0.0   # run on every half had turned the tune's one-note
             earlier = {kk: n for kk, n in plays.items() if kk != prev_key}
             if not earlier:
                 shares["new"], shares["earlier"] = shares["new"] + shares["earlier"], 0.0

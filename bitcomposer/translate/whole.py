@@ -67,7 +67,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
-            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0",
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -119,6 +119,8 @@ class Plan:
     voice_levels: dict = field(default_factory=dict)  # a layered part -> the token's song's shares for every voice beyond the line, the
                                       # busiest first (the sixth field): voice j beside the line plays at entry j - 1
     layer_from: dict = field(default_factory=dict)    # a pitched part -> where its second voices' levels came from: "balance" or "layer_levels"
+    section_levels: dict = field(default_factory=dict)   # a part -> [its level's multiplier a bar] (section_levels, round 48: a section's level
+                                      # over the part's song level, drawn a part an own section, a repeated section copying it)
     kinds: dict = field(default_factory=dict)         # the counter -> the balance token's song's kind for it, same or other (the seventh field,
                                       # round 39): the counter_samples draw is made and overwritten where the token has it
     speeds: dict = field(default_factory=dict)        # a pitched part -> its fastest bar, notes a second (part_speeds): what its sample is fitted to
@@ -158,6 +160,8 @@ class Part:
                                       # the game plays their sample in (the sample chosen before the writing, round 34; its drawn range is the voice's register)
 
 
+COUNTER_MASK_FLOOR = 5                # counter_figures' draw never backs off below the tune's onset count with the counter's weight in front
+                                      # (part, weight, feel, tempo, onsets; round 47)
 MASK_FLOOR = 4                        # second_figures' draw never backs off below the line's onset count (part, feel, tempo, onsets): a mask is
                                       # read onset by onset, and one from a shorter line read around a longer one had filled it
 
@@ -352,6 +356,34 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
     return textures, plays
 
 
+def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng: random.Random, log: list) -> dict:
+    """Each part's level a bar as a multiplier of its song level (section_levels, round 48): drawn a part an own section
+    it plays in, by the part and the section's place in the form; a repeated section copies its source's; the drums
+    keep one level (the word counts the pitched parts). Drawn on an own stream (`whole:{seed}:levels`): drawn on the
+    plan's, the new draws had shifted every habit, register and sample drawn after them, and a before-and-after of one
+    seed compared two different songs (Song Check 40's first cut). Returns {part: [multiplier a bar]}; logs the
+    sections off 1.0."""
+    total = parts[-1][0] + parts[-1][1]
+    out = {role: [1.0] * total for role in band if role != R.DRUMS}
+    n_parts = len(parts)
+    said = []
+    for i, (bar, n, of, letter) in enumerate(parts):
+        for role in out:
+            if of is not None:
+                src = parts[of][0]
+                out[role][bar:bar + n] = out[role][src:src + n]
+                continue
+            if not any(plays[role][bar:bar + n]):
+                continue
+            ratio = float(_draw(models, "section_levels", (role, rhythm.form_place_of(i, n_parts)), rng, log))
+            if abs(ratio - 1.0) > 1e-9:
+                out[role][bar:bar + n] = [ratio] * n
+                said.append(f"{role} {ratio:.1f} in {letter}")
+    if said:
+        log.append("levels by section (section_levels): " + "; ".join(said))
+    return out
+
+
 def allot(band: list, counts: dict | None = None) -> dict:
     """How the eight voices are shared out. With the balance's counts (a
     song's voices a part, FFVI: the accompaniment and the counter-line two
@@ -507,6 +539,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append(f"never in a texture, left out of the band: {silent}")
         band = [r for r in band if r not in silent]
         plays = {r: plays[r] for r in band}
+    section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
+                      if "section_levels" in models_or_empty(models) else {})                                  # plan's, every later draw had shifted
     registers, sounds, habits, extras = {}, {}, {}, {}
     for role in band:
         if role == R.DRUMS:
@@ -678,7 +712,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds)
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, section_levels=section_levels)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1162,8 +1196,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             rng_c = random.Random(f"{seed}:{role}")
             tune_figs = [f if f == writer.REST else rhythm.pattern(rhythm.position(float(Fraction(t)), song.division) for t in f.split()) for f in written[R.MELODY].figures]
             masks = [writer.REST if not plan.plays[role][k] else
-                     _draw(models, "counter_figures", (R.COUNTER, plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat),
-                           rng_c, floor_k=MASK_FLOOR, floor_songs=PLAN_SONGS)
+                     _draw(models, "counter_figures", (R.COUNTER, plan.weights.get(R.COUNTER, "minor"), plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat),
+                           rng_c, floor_k=COUNTER_MASK_FLOOR, floor_songs=PLAN_SONGS)
                      for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
@@ -1626,7 +1660,7 @@ def voice_map(plan: Plan, written: dict) -> dict:
     return out
 
 
-def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = None) -> float:
+def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = None, bar: int | None = None) -> float:
     """A note's level of full: the part's share of the song's loudest part's (plan.levels: the balance token's where its
     song has the part, so the band's levels are one FFVI song's as one unit and the loudest part plays at TOP_LEVEL and
     the rest at their share; the `levels` table's for a part the token lacks; the counter-line's from counter_shares
@@ -1637,6 +1671,8 @@ def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = No
     level). Never under 0.05 nor over 1.0 of full: a share is at most 1.0, so only a second voice over 1.0 of its line
     can reach the cap."""
     base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
+    if bar is not None and role in plan.section_levels and 0 <= bar < len(plan.section_levels[role]):
+        base *= plan.section_levels[role][bar]              # the section's level over the part's (section_levels, round 48)
     if second_voice is None:
         second_voice = {role: {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}}
     if voice in second_voice.get(role, ()):
@@ -1683,16 +1719,16 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
 
     from .. import samples as samples_mod
 
-    def level_of(role, j):
-        return note_level(plan, role, j, second_voice)
+    def level_of(role, j, bar=None):
+        return note_level(plan, role, j, second_voice, bar)
 
-    def put(voice, role, t0, t1, midi, name, sample, j):
+    def put(voice, role, t0, t1, midi, name, sample, j, bar=None):
         idx, addr, c5 = instrument(name, sample)
         pan = PANS[role][j % len(PANS[role])]
         send = echo is not None and role in SENDS
         env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
-        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(level_of(role, j), pan), adsr, gain,
+        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(level_of(role, j, bar), pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
     offsets = [0.0] + [form_beats - loop_start + j * loop_beats for j in range(max(0, loops - 1))]
@@ -1718,7 +1754,7 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
                 else:
                     name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] in second_voice.get(role, ()) else samples[role]
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
-                    put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3])
+                    put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // METER))   # the bar's section level (round 48)
     notes.sort(key=lambda x: (x.start, x.voice))
     last = {}                                                # a floored note never runs into the voice's next: the key-on cuts it
     for n in notes:

@@ -3402,3 +3402,85 @@ word for the chord parts); the rhythm-only echoes (0.16 against 0.06) and
 bent recalls (0.17) left after round 41; the small rules (CONTINUE,
 TOP_LEVEL, the 1.5 cap, the token's loudest part absent); the pack build
 importing every instrument FFVI's parts use.
+
+### Round 47: the counter's mask by its weight, and the held half left alone (2026-10-28, from the weight labels item)
+
+**Measured first.** The written parts' density by their balance-token
+weight against FFVI's, seeds 1-45: the accompaniment, bass and harmony
+follow their labels (accompaniment minor/half/main 5.0, 8.4, 13.8 notes
+a played bar against FFVI's 5.0, 8.9, 12.5); the counter does not (6.2,
+6.4, 5.6 against 3.5, 8.6, 16.0: its mask over the tune, counter_figures,
+knew nothing of its weight), and the melody sits a note a bar denser at
+every habit tier (sparse 2.7, medium 5.1, dense 8.2 against 2.0, 4.1,
+7.0), its medium tune having 0.11 of its bars at one or two notes
+against FFVI's 0.27: the half-bar urn (round 38) ran on every half of a
+new bar, and a recalled half always has two notes or more (the word
+counts no smaller cell), so the tune's held halves became two-note ones.
+
+**Built, on his go.** The counter's weight as a conditioning of
+counter_figures, in front of the feel and tempo (the draw's floor moved
+to keep the tune's onset count, `COUNTER_MASK_FLOOR`); the table refitted
+into the pack (`pack.json.r46` the backup on both machines; 90 tables).
+In `writer.new_cell_halves`, a half the drawn rhythm gives fewer than
+HALF_CELL_NOTES notes takes no urn draw and stays as drawn (a fault of
+grain, fixed as one).
+
+**Measured after, seeds 1-45.** The melody by tier 2.0, 4.9, 6.9 (FFVI
+2.0, 4.1, 7.0); its medium tune's one-and-two-note bars 0.17 (0.27). The
+counter by weight 4.7, 7.1, 6.2 (FFVI 3.5, 8.6, 16.0): the minor and half
+counters now sit either side of their labels; the main counter stays far
+under FFVI's, whose main counters are arpeggiated figures at sixteen
+notes a bar that the mask over the tune's onsets cannot reach (open).
+Song Check 38 is five fresh band-themed seeds (51-55).
+
+**Open:** the main counter's density; the medium tune's remaining 0.8 of
+a note a bar; dynamics by section; the residual echo kinds; the small
+rules; the pack build.
+
+### Round 48: dynamics by section (2026-10-28, from the open items; the main counter looked at and left)
+
+**Measured first.** The readings hold a level per note (`store.unpack`:
+start, length, midi, level, pan, sample), so dynamics inside a part can
+be counted. FFVI's parts hold one level at the median (the bar-level
+90th/10th ratio 1.02), a quarter of them move by 1.5 times or more
+across the song (the accompaniment and arp most, the melody and bass
+least), bars step 20 % from the bar before almost never (median 0.00),
+and the loudest bar sits in the first or second section. So the grain is
+the section: a part's median level in each own section over its song
+median sits at 1.0 in 0.7 to 0.9 of sections, under it in first sections
+(the bass 0.22, the melody 0.23), over it now and then later. The written
+parts had played one level all song.
+
+The main counter (FFVI 16 notes a bar against the written 6) was looked
+at: of FFVI's 7, four are counters of two or three voices (14 to 19 notes
+a bar over all voices, 2 to 7 on the line), three are arpeggiated lines
+with 9 to 13 own onsets a bar; the mask with the counter's weight can
+draw those, and the written main counters (5 of 33) sit where a mix of
+the seven lands them. Left as it is.
+
+**Built, on his go.** `section_levels` (docs/idiom/VOCABULARY.md):
+`rhythm.load` keeps each note's level (`Song.note_levels`), the unit
+counts a part's section level over its song level in tenths by part and
+place, the plan draws a multiplier a part an own section it plays in
+(repeats copy), and `note_level` applies the bar's multiplier. Pack 91
+tables (`pack.json.r47` the backup on both machines). Test
+`test_a_parts_level_moves_by_section_as_the_games_does`.
+
+**A fault on the way.** The first cut drew the section levels on the
+plan's own stream, after the textures, so every habit, register and
+sample drawn after them shifted: a before-and-after of Song Check 38's
+seeds (Song Check 40's first cut) compared two different songs a pair,
+and the owner heard "different instruments sometimes" and no swell. The
+draws moved to an own stream (`whole:{seed}:levels`), as the floors and
+hand-offs are, so a seed's song is what it was with its levels alone
+changed; the pairs rendered again.
+
+**Measured after, seeds 1-45.** 40 plans move a part in some section;
+sections at the part's level: accompaniment 0.77, bass 0.86, counter 0.84,
+melody 0.83 (FFVI 0.69 to 0.91 by place). Song Check 39 is five fresh
+band-themed seeds (56-60).
+
+**Open:** the medium tune's remaining 0.8 of a note a bar; the residual
+echo kinds; the small rules; the pack build; the within-section swell
+(a crescendo over bars), which FFVI has rarely and the readings would
+show at the bar grain.

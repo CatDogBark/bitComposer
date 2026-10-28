@@ -398,6 +398,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   token's seventh field where the token's song has a counter (every FFVI
   token with one): the kind is one song's with the level
   (`extras.counter.sample_from`: `balance` or `counter_samples`).
+- **counter_figures (the counter's weight)** — since round 47 (2026-10-28)
+  the mask is counted and drawn under the counter's weight in the band
+  (the balance token's) before the song's feel and tempo band, and its
+  draw never backs off below the tune's onset count with the weight in
+  front (`COUNTER_MASK_FLOOR`). Why: FFVI's minor counter plays 0.74 of
+  the tune's notes a bar, its half one 0.91, its main one 1.45 (3.5, 8.6
+  and 16 notes a played bar), and the mask drawn without the weight had
+  every written counter at about six notes a bar whatever its label
+  (minor 6.2, half 6.4, main 5.6); after, 4.7, 7.1 and 6.2.
 - **counter_pairs** — the counter-line's sample where it plays another
   than the tune's, as the pack's sample id, by the part and the tune's
   sample id; one unit a song whose `counter_samples` kind is `other`
@@ -421,6 +430,24 @@ said otherwise. Counting code: `translate/rhythm.py` and
   sfd6accf98a. A first cut drew once and refused at the first misfit (a
   sample the pack lacks, a drawn range short of a wide written register)
   and left eight songs of ten to the rule, Whole 28 among them (round 30).
+- **section_levels** — a part's median note level in a section over its
+  median level in the whole song, in tenths between 0.3 and 2.0 (`1.0`:
+  its usual level; `0.5`: half of it, an intro's bass; `1.5`: a swell),
+  by the part and the section's place in the form (round 48, 2026-10-28;
+  counted from the readings' note levels, `Song.note_levels`, which
+  `rhythm.load` now keeps). Drawn a part an own section it plays in
+  (`whole.plan_section_levels`, `Plan.section_levels`: a multiplier a
+  bar), a repeated section copying its source's, the drums at one level;
+  `whole.note_level` takes the note's bar and multiplies the part's level
+  by it, within the cap of full. The log line: "levels by section
+  (section_levels): accompaniment 0.5 in A; bass 0.8 in A". Why: FFVI's
+  parts hold one level at the median but a quarter move by 1.5 times or
+  more across the song; 0.7 to 0.9 of a part's sections sit at 1.0, and
+  first sections sit under it (the bass's 0.3 to 0.8 in 0.22 of songs,
+  the melody's under in 0.23), last and middle ones over it now and then
+  (the accompaniment over in 0.15 of middle sections); the written parts
+  had played one level all song. After, over seeds 1-45, 40 plans move a
+  part in some section, with the parts' sections at 1.0 in 0.77 to 0.86.
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
   sounding bar k bars after the section's start), `leaves:k` (its last k
@@ -501,6 +528,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   tune's half-bar cells to the counter, the accompaniment or the bass in
   another bar (0.51; all songs 0.34); the written songs had 0.05, each
   part faithful to its own word and none to the theme.
+- **half_recall (held halves)** — since round 47 (2026-10-28) the urn runs
+  only on a half the drawn rhythm gives HALF_CELL_NOTES notes or more,
+  as the word counts them; a half with fewer stays as drawn. Why: run on
+  every half, it had replaced the tune's held halves with recalled two-note
+  ones, and the written medium tune had 0.11 of its bars at one or two
+  notes against FFVI's 0.27, a note a bar denser at every habit tier
+  (sparse 2.7 against 2.0, medium 5.1 against 4.1, dense 8.2 against
+  7.0); after, 2.0, 4.9 and 6.9, the medium tune's one-and-two-note bars
+  0.17.
 - **half_recall** — what a tune's half-bar cell is to the tune so far
   (same: the half before's cell again; earlier: one played before; new),
   by the part and the song's echo habit: the tune writer's urn at the
