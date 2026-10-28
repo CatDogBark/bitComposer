@@ -1836,7 +1836,7 @@ def place(pc: int, low: int, previous: float | None, octave_up: bool = False, hi
     34); the floor plus REACH without one."""
     bottom = low + (pc - low) % 12
     if octave_up:
-        return bottom + 12
+        return bottom + 12 if high is None or bottom + 12 <= high else bottom   # no room for the octave: the plain placing
     if previous is None:
         return bottom
     options = [m for m in range(bottom, (high if high is not None else low + REACH) + 1, 12)] or [bottom]
@@ -1887,6 +1887,9 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
             if toward is None and previous is not None:
                 toward = round(previous) + direction * 2
             midi = passing(previous, toward, scale, low, root)
+            if high is not None and not low <= midi <= high:        # a run of passing tones turns at the register's edge instead of
+                direction = -direction                              # climbing out of where the game plays the sample (round 34: a bass
+                midi = in_register(midi, (low, high))               # of bars all "+" had walked from 42 to 79 on a 32-40 sample)
         else:
             midi = place(tone(root, shape, mark, scale), low, previous, mark == "r", high=high)
         if previous is not None and midi != previous:

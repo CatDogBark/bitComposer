@@ -114,9 +114,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
   part's line voice's, not the span of all its voices: FFVI's layered
   accompaniments span 16 semitones merged and 12 as a line, and the merged
   span handed to every voice had put one voice over four octaves). The
-  fallback register for a part; the writers keep their notes inside it,
-  and the voices beside a line sit at their layer offsets from it. The
-  `balance` table's registers are counted the same way.
+  fallback register for a part where the `balance` token has none; since
+  round 34 it is the register a part's sample is fitted to, and the voice
+  is written in the range the `ranges` word drew for that sample
+  (`whole.bound_of`). The `balance` table's registers are counted the
+  same way.
 - **sounds** — the share of its gap a part's note sounds. Drawn once a part;
   the writers' note lengths.
 - **habits** — a part's density and repetition habit (sparse / medium /
@@ -161,17 +163,25 @@ said otherwise. Counting code: `translate/rhythm.py` and
   than an octave above its recording in 0 to 2 % of notes; the written
   songs had in 8 to 10 %, the shrillness the owner heard: the old fit had
   asked only that the register's centre lie near the range, and by the
-  pack's prefixed names it had found no range at all. A voice written
-  beside a line (the counter-line, a chord part's voice apart or
-  alternating, the bass's second voice) is kept, once its sample is
-  chosen, within the sample's widest band over the word's songs, a note
-  outside moved in by octaves (`whole.fold_to_samples`, round 32a): the
-  span those voices are written in is the line's register widened by two
-  octaves, and it had let Whole 28's counter climb to 94 on a sample the
-  game plays between 48 and 72, past the SNES chip's pitch ceiling. The
-  band is a hard edge (a note one semitone past it folds a whole octave)
-  where FFVI keeps 8 to 13 % of such notes a little past it; the owner
-  decided (2026-10-25) to keep it as built.
+  pack's prefixed names it had found no range at all. Since round 34 the sample comes before the
+  notes: `whole.samples_for` runs before the writing, fitted for speed to
+  the part's drawn fastest bar (`part_speeds`), and the range the word
+  draws for the chosen sample is the register the voice is written in
+  (`plan.bounds`, `whole.bound_of`: the overlap with the planned register,
+  a sliver widened to two of the register word's bins, the sample's range
+  alone where the two miss, the planned register where the word knows
+  nothing of the sample). The melody, the chord parts and their voices
+  beside the line, the counter, the bass and its second voice all take
+  that bound, so every voice plays where the game plays its sample by
+  construction. Retired with it: the span a voice beside a line wrote in
+  (the line's register widened by two octaves), the second bass voice's
+  span, the bass line's floor plus REACH as its ceiling, and round 32a's
+  fold to the sample's widest band (which had covered the beside-line
+  voices only: the bass line still wrote 24 % of its notes past its
+  sample's widest band, the melody 2 %; Whole 02's counter at 84 on a
+  sample one song plays to 88 and eleven to 80 or under was its blip).
+  The edge the owner kept in round 32a stays in kind: a draw past the
+  bound folds by octaves into it (`writer.in_register`).
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
   onsets or more fall on thirds, sixths or twelfths of a beat: 6/8 read on
   a 4/4 grid, a shuffle). Drawn once a song; every figure table (`rhythm`,
@@ -410,6 +420,16 @@ said otherwise. Counting code: `translate/rhythm.py` and
   fastest bars, and where none does the excess over the game's fastest on
   the sample weighs against the range's fit. FFVI keeps its slow-attack
   pad under six notes a second; a written part had it at eight.
+
+- **part_speeds** — a part's fastest bars, as a class of the
+  ninetieth-percentile bar rate of its line in notes a second (the
+  `sample_speeds` classes), by the part and its habit's density tier
+  (sparse / medium / dense, as the habit words bin it). Drawn once a part
+  after every other plan draw (`whole._plan_speeds`): what the part's
+  sample is fitted to for speed before the part is written (round 34).
+  The fit had read the speed off the written notes, so the sample was
+  chosen after the writing and a voice's register could not come from
+  the sample it plays.
 
 ## The form
 

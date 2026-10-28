@@ -792,7 +792,7 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
             role, _, off = token.partition(":")
             if role not in plan.band or role not in written or role == R.MELODY or not off or not bar_notes:
                 continue
-            low, high = plan.registers.get(role, (24, 100))
+            low, high = plan.bounds.get(role, plan.registers.get(role, (24, 100)))   # where the game plays the part's sample (round 34)
             copied = []
             for t, u, m, _ in bar_notes:
                 p = m + int(off)
@@ -835,7 +835,7 @@ def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng:
         n = min(len(theme_bars), len(w))
         shift = song.bars[w[0]][0] - a0
         a, b = song.bars[w[0]][0], song.bars[w[0] + n - 1][1]
-        low, high = plan.registers.get(carrier, (24, 100))
+        low, high = plan.bounds.get(carrier, plan.registers.get(carrier, (24, 100)))   # where the game plays the carrier's sample (round 34)
         octaves = round(((low + high) / 2 - statistics.median(m for _, _, m, _ in theme_notes)) / 12)
         copied = [(t + shift, u + shift, float(min(high, max(low, m + 12 * octaves))), 0) for t, u, m, _ in theme_notes if t + shift < b - rhythm.NEAR]
         _replace_bars(written[carrier], song, carrier, a, b, copied)
@@ -1212,6 +1212,8 @@ def reaches(ranges, rid: str, register: tuple, rng: random.Random, drawn: dict |
     lo, hi = (int(x) for x in ranges.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
     if drawn is not None:
         drawn[rid] = (lo, hi)
+    if min(hi, register[1]) - max(lo, register[0]) >= MIN_SPAN:   # the voice is then written in the overlap (bound_of): a planned
+        return True                                             # register wider than any one song's range (the counter's 48-88) fits
     return register[1] - hi <= REACH and lo - register[0] <= REACH
 
 
