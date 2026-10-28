@@ -1402,8 +1402,9 @@ def sample_length_units(songs) -> list:
     played at 50 ms sixteenths, Song Check 14's Whole 02; FFVI plays it at
     65 ms at the shortest)."""
     out = []
-    for s, key, lengths, _ in _sample_plays(songs):
-        out.append(tables.Unit(s.sid, s.game, _bin(lengths[int(0.1 * (len(lengths) - 1))], LENGTH_BINS, "long"), {"part": key}))
+    for s, key, lengths, rates in _sample_plays(songs):
+        speed = speed_tier(rates[int(0.9 * (len(rates) - 1))])   # the sample's speed class in the song (round 36): a floor drawn from a
+        out.append(tables.Unit(s.sid, s.game, _bin(lengths[int(0.1 * (len(lengths) - 1))], LENGTH_BINS, "long"), {"part": key, "speed": speed}))   # slow song had raised a fast part's notes
     return out
 
 

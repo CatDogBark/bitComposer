@@ -87,7 +87,7 @@ KEPT = {
     "counter_samples": ("rhythm", "counter_sample_units", {}, ("part",), False, False, "whether a song's counter-line plays the tune's sample (same) or another (other), drawn once a song: the kind its interval and move words are drawn under, and its sample at the rendering"),
     "counter_shares": ("rhythm", "counter_share_units", {}, ("part", "tune"), False, False, "the counter-line's level as a share of the song's loudest part's, in tenths, by the band the tune's own share falls in, drawn once a song after the tune's"),
     "counter_pairs": ("rhythm", "counter_pair_units", {}, ("part", "tune"), False, False, "the counter-line's sample where it plays another than the tune's, by the tune's sample (the pack's ids), drawn once a song at the rendering"),
-    "sample_lengths": ("rhythm", "sample_length_units", {}, ("part",), False, False, "the shortest note a sample is played at (ms, a class), by the sample: a note's floor on it"),
+    "sample_lengths": ("rhythm", "sample_length_units", {}, ("part", "speed"), False, False, "the shortest note a sample is played at (ms, a class), by the sample and its speed class in the song (slow, medium, fast): a note's floor on it"),
     "sample_speeds": ("rhythm", "sample_speed_units", {}, ("part",), False, False, "the fastest bars a sample is played in (notes a second, a class), by the sample: weighed in its choice for a part"),
     "part_speeds": ("rhythm", "part_speed_units", {}, ("part", "habit"), False, False, "a part's fastest bars (notes a second, a class), by the part and its habit's density: what its sample is fitted to for speed before the part is written"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),

@@ -1126,12 +1126,16 @@ def sample_speed(models, rid: str, rng: random.Random) -> tuple[float, float] | 
     return top(drawn), max(top(c) for c in (t.votes.get((rid,)) or {drawn: 1}))
 
 
-def sample_floor(models, rid: str, rng: random.Random) -> float:
-    """The shortest note the game plays a sample at, in seconds (the sample_lengths table's class top); 0 unknown."""
+def sample_floor(models, rid: str, rng: random.Random, speed: float | None = None) -> float:
+    """The shortest note the game plays a sample at, in seconds (the sample_lengths table's class top); 0 unknown. `speed`:
+    the fastest bar of the part playing it, notes a second: the floor is drawn under the sample's speed class (round 36),
+    a fast part taking a fast song's floor. A floor drawn by the sample alone had taken a slow song's 120 ms for Whole 02's
+    string pad at sixteenths, raising the notes round 35 had shortened to 50 ms back past where they were."""
     t = (models or {}).get("sample_lengths")
     if t is None or t.songs.get((rid,), 0) == 0:
         return 0.0
-    drawn = t.draw((rid,), rng, floored=False, floor_k=PLAN_FLOOR)
+    context = (rid, rhythm.speed_tier(speed)) if speed is not None else (rid,)
+    drawn = t.draw(context, rng, floored=False, floor_k=PLAN_FLOOR)
     return (float(drawn) if drawn != "long" else 400.0) / 1000.0
 
 
@@ -1377,10 +1381,12 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
                 second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn))
             out[f"{role}:second"] = second
             plan.bounds[f"{role}:second"] = bound_of(drawn.get(raw(second[0])), reg2)
-    floors = {}                                             # each chosen sample's shortest note in the game (sample_lengths): a note's floor on it
-    for key, chosen in list(out.items()):
+    floors, fastest = {}, {}                                # each chosen sample's shortest note in the game (sample_lengths): a note's floor on
+    for key, chosen in list(out.items()):                   # it, under the speed class of the fastest part it serves (round 36)
         if isinstance(chosen, tuple):
-            floors[chosen[0]] = sample_floor(models, raw(chosen[0]), rng)
+            fastest[chosen[0]] = max(fastest.get(chosen[0], 0.0), plan.speeds.get(key.split(":")[0], 0.0))
+    for name_, speed in fastest.items():
+        floors[name_] = sample_floor(models, raw(name_), rng, speed if plan.speeds else None)
     out["floors"] = floors
     if plan.bounds:
         plan.log.append("written where the game plays each sample: " + ", ".join(f"{k} {lo}-{hi}" for k, (lo, hi) in plan.bounds.items()))
