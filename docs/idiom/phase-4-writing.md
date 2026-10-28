@@ -3366,3 +3366,39 @@ mid-section (the sections finding, the build); the section-sharing
 measure (0.25 now, FFVI 0.00: theme returns and the new draws count in
 it, the measure's grain to be settled); the token's narrow tune registers
 (Whole 33's 56-60 is its song's) which the sample's wall cannot widen.
+
+### Rounds 45 and 46: the sample word over the pack's samples, and a part's entrance inside the section (2026-10-28, from the open items re-measured after round 44)
+
+**Measured first.** The open items after rounds 40-44, seeds 1-45
+against FFVI. Closed by the earlier rounds: sections sharing material
+beyond the theme (FFVI mean 0.17, written 0.16), the theme returns'
+placement (a measure artifact), the hook's economy (half-bar echoes 0.64
+against 0.63), Whole 33's narrow tune (its song's own six semitones).
+Open: the instrument word unserved (25 of 45 plans had a drawn sample the
+pack lacks, the melody ten times; the pack holds 25 samples, 0.86 of the
+word's mass a part), parts entering mid-section (FFVI 61 inside to 45 at
+a boundary; written never inside), the weight labels (58 of 175 written
+parts in another bin than their token's), dynamics inside a part (FFVI's
+parts hold one level at the median, a quarter move 1.5 times or more,
+the accompaniment and arp mostly, the melody flat).
+
+**Built, on his go.** Round 45: `part_sample_for` draws over the samples
+the pack holds, the word's shares renormalised; the pool rule chooses
+only where the pack holds none (fallbacks 25 to 0). Round 46,
+`part_entries`: where inside a section a present part enters and leaves,
+by part, place and length class, applied in `plan_texture` after the
+section's texture (bars before the entrance and after the exit turned
+off, a repeated section copying them). Pack 90 tables (`pack.json.r44`
+the backup on both machines). Tests
+`test_a_part_enters_and_leaves_inside_the_section_where_the_game_does`.
+
+**Measured after, seeds 1-45.** Late entrances inside a section 37, at a
+boundary 40 (FFVI 61 and 45 over 66 songs; before, 0 inside); early exits
+12 and 6 (14 and 12); 39 of 45 plans have an entrance or exit inside a
+section. Song Check 37 is five fresh band-themed seeds (46-50).
+
+**Open:** the weight labels; dynamics inside a part (a level-by-section
+word for the chord parts); the rhythm-only echoes (0.16 against 0.06) and
+bent recalls (0.17) left after round 41; the small rules (CONTINUE,
+TOP_LEVEL, the 1.5 cap, the token's loudest part absent); the pack build
+importing every instrument FFVI's parts use.

@@ -69,6 +69,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
             "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None,
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
+ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
 SPEED_FASTER = 30.0                   # notes a second a part_speeds draw of "faster" (past SPEED_BINS' top) is fitted at
 MIN_SPAN = 2 * rhythm.REGISTER_BIN    # semitones: the narrowest register a voice is written in (two of the register word's bins)
@@ -298,10 +299,16 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
     from the part-textures table against the band (ALL, or the band's
     parts that rest: "no drums melody"; given the part's place in the form
     and the part before's outcome), a repeated part keeping its texture;
-    a bar's texture is its part's. Returns the textures a bar and each
-    part's bars."""
+    a bar's texture is its part's. Then, with the part_entries word (round
+    46), each part the section has enters and leaves where the word says
+    inside it (so many bars after its start, so many before its end): FFVI's
+    parts join inside a section more often than at its edge (61 to 45),
+    and a texture a section had let them join only at its lines. A
+    repeated part copies the bars, entrances and all. Returns the textures
+    a bar and each part's bars."""
     total = parts[-1][0] + parts[-1][1]
     textures = [None] * total
+    entries = []
     table = models.get("part_textures")
     previous = rhythm.START
     n_parts = len(parts)
@@ -323,8 +330,25 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
                 t = " ".join(band)
         textures[bar:bar + n] = [t] * n
         previous = outcome
+        if "part_entries" in models:                        # where inside the section each present part enters and leaves (round 46)
+            place = rhythm.form_place_of(i, n_parts)
+            length = rhythm.section_length(n)
+            for role in t.split():
+                for _ in range(ENTRY_TRIES):
+                    drawn = models["part_entries"].draw((role, place, length), rng, floored=False, floor_k=PLAN_FLOOR)
+                    enters, leaves = rhythm.entry_of(drawn)
+                    if enters + leaves < n:
+                        break
+                else:
+                    continue                                # no draw fits a section this short: the part plays it whole
+                if enters or leaves:
+                    for k in list(range(bar, bar + enters)) + list(range(bar + n - leaves, bar + n)):
+                        textures[k] = " ".join(r for r in textures[k].split() if r != role)
+                    entries.append(f"{role} " + " ".join(x for x in (f"enters {enters} in" if enters else "", f"leaves {leaves} before the end of" if leaves else "") if x) + f" {parts[i][3]}")
     plays = {role: [role in (textures[k] or "").split() for k in range(total)] for role in band}
     log.append("textures " + " | ".join(f"{p[3]}: {textures[p[0]]}" for p in parts))
+    if entries:
+        log.append("entrances (part_entries): " + "; ".join(entries))
     return textures, plays
 
 
@@ -1425,17 +1449,30 @@ def counter_pair_for(models: dict | None, tune: str, own: set, ranges, register:
     return sid, "tune" if sid in fine else "part", over
 
 
+def _weighted(rng: random.Random, options: list, weights: list):
+    """One of the options by their weights."""
+    x = rng.random() * sum(weights)
+    for o, w in zip(options, weights):
+        x -= w
+        if x < 0:
+            return o
+    return options[-1]
+
+
 def part_sample_for(models: dict, role: str, speed: float | None, own: set, rng: random.Random, log: list) -> str | None:
     """The sample the part_samples word gives a part (round 42): drawn under the part and the speed class of its fastest
-    bar (the table backs off to the part alone), where the pack holds the sample; None where the word knows no sample
-    the pack holds (the draw is made once; the pool rule then chooses), logged."""
+    bar (the table backs off to the part alone) from the word's shares over the samples the pack holds (round 45: a
+    sample the pack lacks gives its share to the others, as an echo's empty source does); None, logged, where the pack
+    holds none of the word's samples, and the pool rule then chooses."""
     t = models["part_samples"]
+    t = t.table if hasattr(t, "table") else t
     ctx = (role, rhythm.speed_tier(speed)) if speed else (role,)
-    sid = t.draw(ctx, rng, floored=False, floor_k=PLAN_FLOOR)
-    if sid in own:
-        return sid
-    log.append(f"{role}'s sample {sid} (part_samples) is not in the pack: the pool rule chooses")
-    return None
+    held = sorted(o for o in t.vocabulary if o in own)   # round 45: the word's shares over the samples the pack holds (a draw the pack
+    if not held:                                         # could not serve had fallen to the pool rule in 25 of 45 plans, the pack holding
+        log.append(f"{role}'s samples (part_samples): none in the pack; the pool rule chooses")   # 0.86 of the word's mass a part)
+        return None
+    weights = [t.p(o, ctx) for o in held]
+    return _weighted(rng, held, weights) if sum(weights) > 0 else rng.choice(held)
 
 
 def ambitus_of(models: dict | None, rid: str, rng: random.Random = None) -> tuple | None:

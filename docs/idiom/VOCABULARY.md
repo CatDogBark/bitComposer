@@ -421,6 +421,24 @@ said otherwise. Counting code: `translate/rhythm.py` and
   sfd6accf98a. A first cut drew once and refused at the first misfit (a
   sample the pack lacks, a drawn range short of a wide written register)
   and left eight songs of ten to the rule, Whole 28 among them (round 30).
+- **part_entries** — where inside a section a part present in it enters
+  and leaves: `whole` (its first bar to its last), `enters:k` (its first
+  sounding bar k bars after the section's start), `leaves:k` (its last k
+  bars before the end), or both, k to ENTRY_CAP (8); by the part, the
+  section's place in the form and the section's length class (short to 4
+  bars, medium to 8, long) (round 46, 2026-10-28). Drawn in
+  `whole.plan_texture` for each part the section's texture has, after the
+  texture; the part's bars before its entrance and after its exit are
+  turned off; a draw no section this short can hold is drawn again, then
+  the part plays it whole; a repeated section copies the bars, entrances
+  and all. The log line: "entrances (part_entries): counter enters 2 in
+  B; bass leaves 1 before the end of C". Why: FFVI's parts join inside a
+  section more often than at its edge (61 late entrances inside, 45 at a
+  boundary; early exits 14 and 12), where one texture a section had let
+  them join at its lines alone; after, seeds 1-45 have 37 inside and 40
+  at a boundary (exits 12 and 6). FFVI by part: the melody plays its
+  section whole 0.81 of the time, the counter 0.86, the bass 0.89, the
+  accompaniment 0.90; the rest enter a bar or two in, or leave a bar early.
 - **climax** — which of a song's tune phrases holds the tune's highest note,
   by its place among them (opening, early, middle, late, closing). FFVI's
   tune peaks at 0.45 of the song at the median; the written tunes had
@@ -716,6 +734,14 @@ said otherwise. Counting code: `translate/rhythm.py` and
   string pad, whose wide played range wins every fit, where FFVI gives it
   0.31 of its tunes and spreads the rest over eight instruments and more;
   after, 0.40, with six instruments in the written forty.
+  Since round 45 (2026-10-28) the draw is made over the samples the pack
+  holds, the word's shares renormalised (`whole.part_sample_for`): a
+  sample the pack lacks had sent the draw to the pool rule in 25 of 45
+  plans (the pack holds 25 samples, 0.86 of the word's mass a part); the
+  pool rule now chooses only where the pack holds none of the word's
+  samples for the part. The better fix is in the pack build: importing
+  the instruments FFVI's parts use (s9e298a0e24, s5d5fe2fd48, sb498c05828
+  among the missing).
 - **sample_ambitus** — the whole range a song played a sample over, lowest
   note to highest, by the sample (round 43, 2026-10-28). A tune's bound
   (the melody's and the counter's, `plan.bounds`) is the widest the game
