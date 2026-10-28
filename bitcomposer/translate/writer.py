@@ -1760,7 +1760,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
-         models: dict | None = None, lock_share: float = 1.0) -> tuple[list[tuple[float, float, float]], list[str]]:
+         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -1778,6 +1778,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     manner = FreeManner(model.table.vocabulary, division=song.division) if free else Manner(song, R.BASS, model.table.vocabulary)
     pitched = sorted(n[2] for n in own if not math.isnan(n[2]))
     low = register if register is not None else round(pitched[int(LOW * (len(pitched) - 1))]) if pitched else 36
+    high = ceiling if ceiling is not None else low + REACH      # the register's ceiling: where the game plays the sample (round 34)
     sounds = sounds if sounds is not None else sounded(own)
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
@@ -1801,7 +1802,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     beside = kind in VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
     prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
-        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous, runs_to=first_onset(figures, bars, k + 1))
+        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous, runs_to=first_onset(figures, bars, k + 1), high=high)
         if shared is not None and not beside:               # the line: its notes for the voice beside it
             for start, _, midi in new:
                 shared[("line", (k, rhythm.position(start - a, song.division)))] = midi
@@ -1818,7 +1819,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 else:
                     target, _ = beside_pitch(models, R.BASS, kind, scale, rng, None, prev_steps, prev_midi, 0)
                 if target is not None:
-                    midi = float(in_register(target, (low, low + BESIDE_SPAN)))
+                    midi = float(in_register(target, (low, high)))
                 prev_midi = midi
                 repitched.append((start, end, midi))
             new = repitched
@@ -1827,16 +1828,18 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     return notes, figures
 
 
-def place(pc: int, low: int, previous: float | None, octave_up: bool = False) -> int:
+def place(pc: int, low: int, previous: float | None, octave_up: bool = False, high: int | None = None) -> int:
     """The midi note of a pitch class in the register: the octave nearest the
     note before (the lower when as near), the lowest with no note before;
-    an octave up (r) is the lowest placing raised an octave."""
+    an octave up (r) is the lowest placing raised an octave. `high`: the
+    register's ceiling (the range the game plays the bass's sample in, round
+    34); the floor plus REACH without one."""
     bottom = low + (pc - low) % 12
     if octave_up:
         return bottom + 12
     if previous is None:
         return bottom
-    options = [m for m in range(bottom, low + REACH + 1, 12)] or [bottom]
+    options = [m for m in range(bottom, (high if high is not None else low + REACH) + 1, 12)] or [bottom]
     return min(options, key=lambda m: (abs(m - previous), m))
 
 
@@ -1856,7 +1859,7 @@ def passing(previous: float | None, toward: int | None, scale: set, low: int, ro
 
 
 def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds, scale: set,
-            last_root: int, previous: float | None = None, runs_to: float | None = None) -> tuple[list, int, float | None]:
+            last_root: int, previous: float | None = None, runs_to: float | None = None, high: int | None = None) -> tuple[list, int, float | None]:
     """A figure's tokens as notes in the bar [a, b) (see the module); returns
     them, the last chord root used and the last note's midi."""
     tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
@@ -1879,13 +1882,13 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
             toward = None
             for j in range(i + 1, len(tokens)):                 # the next note of the bar that is not itself passing
                 if tokens[j][1] != "+":
-                    toward = place(tone(chords[j][0], chords[j][1], tokens[j][1], scale), low, previous, tokens[j][1] == "r")
+                    toward = place(tone(chords[j][0], chords[j][1], tokens[j][1], scale), low, previous, tokens[j][1] == "r", high=high)
                     break
             if toward is None and previous is not None:
                 toward = round(previous) + direction * 2
             midi = passing(previous, toward, scale, low, root)
         else:
-            midi = place(tone(root, shape, mark, scale), low, previous, mark == "r")
+            midi = place(tone(root, shape, mark, scale), low, previous, mark == "r", high=high)
         if previous is not None and midi != previous:
             direction = 1 if midi > previous else -1
         out.append((start, start + (until - start) * share_at(sounds, until - start), float(midi)))

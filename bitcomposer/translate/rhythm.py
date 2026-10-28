@@ -1418,6 +1418,35 @@ def sample_speed_units(songs) -> list:
     return out
 
 
+def part_speed_units(songs) -> list:
+    """Each pitched part of each song as a unit: its outcome the part's
+    fastest bars (the 90th percentile of its line's bars' notes a second, to
+    SPEED_BINS' tops), its values the part and its habit's density tier
+    (habit_of over the line's onsets a bar, as _rhythm_habit and _bass_habit
+    bin it). What a planned part's sample is fitted to for speed before the
+    part is written (round 34): the fit had read the speed off the written
+    notes, so the sample came after the writing and a voice's register could
+    not come from the sample it plays."""
+    out = []
+    for s in songs:
+        beat = 60.0 / s.bpm
+        for role, ns in s.notes.items():
+            if role == R.DRUMS or not ns:
+                continue
+            mine = {(n[0], n[2]) for n in (line_notes(s, role) or ns)}
+            rates, counts = [], []
+            for _, a, b, struck in all_bars_of(s, role):
+                c = sum(1 for _, group in struck for n in group if (n[0], n[2]) in mine)
+                counts.append(c)
+                rates.append(c / max(1e-9, (b - a) * beat))
+            played = sorted(r for r, c in zip(rates, counts) if c)
+            if len(counts) < 4 or not played:
+                continue
+            tier = habit_of(sum(counts) / len(counts), DENSITIES)
+            out.append(tables.Unit(s.sid, s.game, _bin(played[int(0.9 * (len(played) - 1))], SPEED_BINS, "faster"), {"part": role, "habit": tier}))
+    return out
+
+
 def layer_sample_units(songs) -> list:
     """Each layered part of each song (two voices or more, the drums left
     out) as a unit: its outcome the samples its line and its second voice
