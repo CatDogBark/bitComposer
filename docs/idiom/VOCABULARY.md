@@ -705,6 +705,37 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the return and the bass and accompaniment play their theme bars again
   (`song.copies`). With the *band comes back* switch a return with nothing
   behind it is drawn again.
+- **part_samples** — the sample a part's line plays (the melody, bass,
+  accompaniment, harmony, arp; the counter's is `counter_samples` and
+  `counter_pairs`', a second voice's `layer_samples`'), as the pack's id,
+  by the part and the speed class of its fastest bar (round 42,
+  2026-10-28). Drawn once a song before the writing
+  (`whole.part_sample_for`), where the pack holds the sample; the pool
+  rule (`best_sample`, the best range fit) chooses where it does not,
+  logged. Why: the pool rule had put 0.73 of the written tunes on one
+  string pad, whose wide played range wins every fit, where FFVI gives it
+  0.31 of its tunes and spreads the rest over eight instruments and more;
+  after, 0.40, with six instruments in the written forty.
+- **sample_ambitus** — the whole range a song played a sample over, lowest
+  note to highest, by the sample (round 43, 2026-10-28). A tune's bound
+  (the melody's and the counter's, `plan.bounds`) is the widest the game
+  ever took its sample, the lowest low and highest high of the word's
+  outcomes (`whole.ambitus_of`, not one song's draw: cut against the
+  tune's own register, one song's draw had left Whole 38 the overlap of
+  two songs' ranges), cut against the balance token's register for the
+  part, which for the melody is its song's tune ambitus. The `ranges` word
+  (the 10th to 90th percentile band) stays the bound of every other part.
+  Why: bounded by the pad's home band (16 semitones), the written tunes
+  spanned 15 where FFVI's span 21.5 (22 on that pad); after, 19.
+- **tune_doubling** — in a bar of the tune that is not the theme's cell,
+  which other parts play the same cell with it and how far from the tune
+  (`theme_doubling`'s token: `bass:-24 counter:+0`; `none`), by the part
+  (tune) and place (other) (round 44, 2026-10-28). Drawn a tune bar after
+  the parts are written, in `whole.double_theme` beside the theme word:
+  the drawn parts play the tune's bar at the interval in their register.
+  FFVI doubles a non-theme bar in 0.23 of them; the written songs had the
+  theme cell alone doubled (tune onsets doubled at the pitch class 0.22
+  against FFVI's 0.40; after, 0.31).
 - **theme_doubling** — where the tune plays its theme cell (its statement,
   or an echo later), which other parts play the same cell with it and how
   far from the tune (`counter:+12`, `bass:-24`, `none`), by place. Drawn a
