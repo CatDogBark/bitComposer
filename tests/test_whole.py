@@ -91,6 +91,8 @@ class WholeSongTests(unittest.TestCase):
         out = whole.compose(models, PACKS["ffvi"], set(), "ffvi", seed=1, game="test", max_bars=32)
         p, written = out["plan"], out["written"]
         self.assertTrue(p.band)
+        if "pair_recall" in models and "melody" in written:                # round 40: the tune's urn at the pair logs its draws
+            self.assertTrue(any(line.startswith("pairs (pair_recall)") for line in written["melody"].log), written["melody"].log)
         self.assertLessEqual(p.bars, 32)
         for role in p.band:
             self.assertIn(role, written, role)
@@ -942,6 +944,23 @@ class NewTablesTests(unittest.TestCase):
         scale = {0, 2, 4, 5, 7, 9, 11}
         self.assertEqual(writer.cell_pitches([60, 64, 67], 0, 7, scale, (48, 60), 50.0), [55, 59, 50])   # a C cell on G in 48-60: G B D, the D folded in
         self.assertEqual(writer.cell_pitches([60, 64], 0, 0, scale, (60, 72), None), [60, 64])
+
+    def test_the_tunes_memory_at_the_pair_and_where_its_echoes_point(self):
+        """Round 40: a tune's two-bar groups are counted as what they are to the tune so far (pair_recall: same, earlier, new),
+        the bars inside a new pair likewise (pair_bar_recall), and each echo by where it points (recall_sources: the section
+        it is in, the theme phrase, another section); only the form's own parts are counted. The melody writer with the three
+        tables draws a pair at a time and logs it; a pair drawn again brings both bars' cells back."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        def bar(k, ps): return [(4.0 * k + i, 0.9, float(p), "a") for i, p in enumerate(ps)]
+        A, B, C = [60, 64, 67, 65], [60, 64, 62, 60], [62, 65, 69, 67]
+        tune = bar(0, A) + bar(1, B) + bar(2, A) + bar(3, B) + bar(4, C) + bar(5, A) + bar(6, C) + bar(7, A) + bar(8, A) + bar(9, B) + bar(10, A) + bar(11, B)
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune}, sid="s", game="g", numbers=list(range(12)),
+                        parts=[(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 0, "A")])
+        self.assertEqual([u.outcome for u in rhythm.pair_recall_units([s])], ["new", "same", "new", "same"])          # the repeat of A is not counted
+        self.assertEqual([u.outcome for u in rhythm.pair_bar_recall_units([s])], ["new", "new", "new", "earlier"])   # the bars of the two new pairs
+        self.assertEqual([u.outcome for u in rhythm.recall_source_units([s])], ["section", "section", "theme", "section", "section"])
+        self.assertEqual({u.values["habit"] for u in rhythm.pair_recall_units([s])}, {"repeating"})
+        self.assertEqual(rhythm.RECALL_SOURCES, ("section", "theme", "elsewhere"))
 
     def test_every_voice_writes_where_the_game_plays_its_sample(self):
         """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's

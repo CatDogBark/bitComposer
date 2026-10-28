@@ -646,6 +646,46 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **cell_rhythms** — a new cell's rhythm: new to the tune, the bar before's,
   or an earlier one's. Drawn for a new cell; the rhythm itself then comes
   from the part's `rhythm` table.
+- **pair_recall**, **pair_bar_recall**, **recall_sources** — the tune's
+  memory at the two-bar pair, and where its echoes point (round 40,
+  2026-10-28). `pair_recall`: what each two-bar group of the tune (a
+  phrase's halves) is to the tune so far, the pair before's two cells
+  again (`same`), a pair played earlier (`earlier`) or `new`, by the part
+  and the song's echo habit, counted over the form's own parts (the
+  writer draws there and plays a repeated part again); FFVI's mixed-habit
+  tunes bring a pair back 0.19 of the time in their own parts, repeating
+  ones 0.56. `pair_bar_recall`: the bar urn's shares (`melody_recall`'s
+  kinds) counted over the bars inside NEW pairs only, since the bar urn
+  over every bar includes the bars that come back as pairs and running
+  both would echo twice. `recall_sources`: each echo (a bar whose cell
+  was played before, not the bar before) by where it points: `section`
+  (the same part of the form), `theme` (the tune's first phrase),
+  `elsewhere` (another section); FFVI mixed 0.60 / 0.27 / 0.13, varied
+  0.91 / 0.04 / 0.05. The melody writer (`writer.melody`): in a phrase
+  that is neither the form's repeat, the theme's return nor an earlier
+  phrase again, each pair of bars draws the pair urn first (`Urn` on
+  `pair_recall`; the pair before's cells again, or an earlier pair from
+  the pool the source word names, each bar re-rooted by `again`), and
+  only a new pair runs the bar urn (`pair_bar_recall` where present,
+  else `melody_recall`) and the half-bar urn inside it; an "earlier"
+  draw at the bar or the pair takes its pool from a source drawn by
+  `recall_sources` (a source with nothing in it gives its share to the
+  others). The log: `pairs (pair_recall): same 1, earlier 1, new 10 over
+  12 pairs drawn; echoes point (recall_sources): section 2, elsewhere 1`,
+  and the phrase line's bars read `pair same` / `pair earlier`. Why: the
+  owner heard no hook and no verse. Measured the same way on FFVI's 23
+  themed tunes and the written themed songs (seeds 1-35), the written
+  tune echoed as much as FFVI (0.71 of bars against 0.64) but by the bar:
+  two-bar pairs heard earlier 0.19 against 0.40, whole phrases 0.18
+  against 0.29, and a later section's bars found in an earlier,
+  different section 0.21 against FFVI's 0.00 (B a reshuffle of A). After:
+  pairs 0.28, whole phrases 0.25, sections sharing 0.10, distinct phrase
+  heads 0.56 against FFVI's 0.62 (0.67 before). Open: 0.46 of the
+  written recalls (theme returns, pairs, bars alike) come out with a cell
+  the tune never played, `again` bending the strong beats to the chord,
+  which is why a third of the written echoes are a rhythm with new
+  pitches where FFVI has a tenth; and pairs inside the own parts 0.09
+  against 0.18.
 - **phrase_letters** — a part's phrases as letters: the theme head again
   (`T`), an earlier head again (`r`), or new (`n`), by how many phrases the
   part has and its place in the form. Drawn a part of the form; the first

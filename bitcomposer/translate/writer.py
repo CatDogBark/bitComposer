@@ -107,6 +107,7 @@ Johnny C. Bad's bass vanished for four bars the beat reader had put in
 """
 import math
 import random
+from types import SimpleNamespace
 import statistics
 from collections import Counter
 from fractions import Fraction
@@ -1129,7 +1130,54 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 part_of_window[w[0]] = (i, j)
                 j += 1
     theme = None                                            # the theme phrase's cells (the first phrase's), once written
+    theme_bars = set()                                      # the theme phrase's bars: where an echo may point (recall_sources)
     others = []                                             # the phrases written whose head is not the theme's, latest last
+    part_of = {k: i for i, (mine, _, _) in by_part.items() for w_ in mine for k in w_}   # a bar -> its part of the form (its section)
+    pair_urn = Urn(models["pair_recall"], echo_habit) if "pair_recall" in models else None   # the urn at the pair (round 40)
+    bar_urn = Urn(models["pair_bar_recall"], echo_habit) if pair_urn is not None and "pair_bar_recall" in models else urn   # the bar urn inside a new pair
+    pairs_played, pair_cells = Counter(), {}                # the pairs: (key, key) -> times played; a pair's first bar -> (cell, cell)
+    prev_pair, prev_pair_key, prev_pair_at = None, None, None   # the pair before (its cells, its key, its first bar)
+    pair_kinds, source_kinds = Counter(), Counter()         # for the log: the pair urn's draws, where the echoes pointed
+    sources_table = models.get("recall_sources")
+
+    def source_shares() -> dict | None:
+        """Where an echo points (recall_sources: the section, the theme, elsewhere), the word's shares for the song's echo habit."""
+        if sources_table is None:
+            return None
+        ctx = tuple({"part": R.MELODY, "habit": echo_habit}.get(c_, "?") for c_ in sources_table.conditionings)
+        return {src: sources_table.p(src, ctx) for src in rhythm.RECALL_SOURCES}
+
+    def by_source(k: int, pool: list) -> list:
+        """A pool of earlier bars (j, thing) cut to where the drawn source says an echo of bar k points: the bars of bar k's own
+        section, the theme phrase's, or another section's; a source with nothing in it gives its share to the others."""
+        shares_ = source_shares()
+        if not pool or shares_ is None:
+            return pool
+        groups = {src: [] for src in rhythm.RECALL_SOURCES}
+        for j, thing in pool:
+            groups["section" if part_of.get(j) == part_of.get(k) else "theme" if j in theme_bars else "elsewhere"].append((j, thing))
+        live_ = {src: p for src, p in shares_.items() if groups[src]}
+        total = sum(live_.values()) or 1.0
+        x = rng.random() * total
+        for src in rhythm.RECALL_SOURCES:
+            if src in live_:
+                x -= live_[src]
+                if x < 0:
+                    source_kinds[src] += 1
+                    return groups[src]
+        src = next(src for src in rhythm.RECALL_SOURCES if src in live_)
+        source_kinds[src] += 1
+        return groups[src]
+
+    def note_pair(live_: list, cells_: list, i: int) -> None:
+        """Bars i-1 and i of a phrase just written as a pair the tune has played: the pair urn's memory."""
+        nonlocal prev_pair, prev_pair_key, prev_pair_at
+        if i % rhythm.PAIR != rhythm.PAIR - 1 or i >= len(cells_):
+            return
+        pr = (cells_[i - 1], cells_[i])
+        prev_pair, prev_pair_key, prev_pair_at = pr, (pr[0].key, pr[1].key), live_[i - 1]
+        pairs_played[prev_pair_key] += 1
+        pair_cells[prev_pair_at] = pr
 
     def letter_of(w0: int) -> str | None:
         if not letters or w0 not in part_of_window:
@@ -1405,10 +1453,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         src0 = copies.get(w[0])
         if src0 is not None and src0 in written_windows and len(written_windows[src0][0]) == len(live):
             phrase_cells = [realize(k, c.positions, list(c.pitches)) for k, c in zip(live, written_windows[src0][1])]   # the part's tune again
-            for k, c in zip(live, phrase_cells):
+            for i, (k, c) in enumerate(zip(live, phrase_cells)):
                 choices[k] = "form"
                 played[c.key] += 1
                 by_key.setdefault(c.key, c)
+                note_pair(live, phrase_cells, i)
             end_phrase(phrase_cells)
             prev_phrase, prev_phrase_start = phrase_cells, a0
             written_windows[w[0]] = (live, phrase_cells)
@@ -1434,6 +1483,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 by_key.setdefault(cell.key, cell)
                 prev_cell = cell
                 phrase_cells.append(cell)
+                note_pair(live, phrase_cells, i)
             if keep < len(live) and ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches:
                 want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
                 last = phrase_cells[-1]
@@ -1448,10 +1498,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         if letter == rhythm.AGAIN and others:               # an earlier phrase again, the last whose head was not the theme's
             src_phrase = others[-1]
             phrase_cells = [again(k, src_phrase[i % len(src_phrase)]) for i, k in enumerate(live)]
-            for k, c in zip(live, phrase_cells):
+            for i, (k, c) in enumerate(zip(live, phrase_cells)):
                 choices[k] = "again"
                 played[c.key] += 1
                 by_key.setdefault(c.key, c)
+                note_pair(live, phrase_cells, i)
             end_phrase(phrase_cells)
             prev_phrase, prev_phrase_start = phrase_cells, a0
             written_windows[w[0]] = (live, phrase_cells)
@@ -1475,6 +1526,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     src.entry = (src.entry + shift) % 12
                 phrase_cells.append(again(k, src))
                 choices[k] = "copy"
+                note_pair(live, phrase_cells, i)
         else:
             # the new phrase sits where the shift table puts it against the last (the table counts mean pitches): the line
             # is steered there over the phrase's first third by draw_move's contour aim, not jumped there in one move
@@ -1482,13 +1534,32 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             aim0 = float(min(reg_w[1], max(reg_w[0], last_midi + shift_of(relation)))) if prev_phrase is not None else None
             for attempt in range(COPY_TRIES):
                 phrase_cells, start_midi = [], aim0
-                snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen))
+                snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen),
+                            Counter(pairs_played), dict(pair_cells), prev_pair, prev_pair_key, prev_pair_at, Counter(pair_kinds), Counter(source_kinds))
+                group_plan = None
                 for i, k in enumerate(live):
-                    if relation == "answered" and prev_phrase and i < len(prev_phrase):
+                    if i % rhythm.PAIR == 0:                # a new pair: the pair urn (round 40) says the pair before's again, an earlier pair, or new
+                        group_plan = None
+                        if pair_urn is not None and i + rhythm.PAIR <= len(live):
+                            kind_ = pair_urn.choose(rng, SimpleNamespace(key=prev_pair_key) if prev_pair_key else None, pairs_played)
+                            if kind_ == "same" and prev_pair is not None:
+                                group_plan = ("pair same", prev_pair, prev_pair_at)
+                            elif kind_ == "earlier":
+                                pool_ = by_source(k, [(j, pr) for j, pr in pair_cells.items() if j < k and (pr[0].key, pr[1].key) != prev_pair_key])
+                                if pool_:
+                                    j_, pr = _weighted(rng, pool_, [pairs_played.get((pr[0].key, pr[1].key), 1) for _, pr in pool_])
+                                    group_plan = ("pair earlier", pr, j_)
+                            pair_kinds[group_plan[0][5:] if group_plan else "new"] += 1
+                    if group_plan is not None:
+                        kind_, pr, j_ = group_plan
+                        cell = again(k, pr[i % rhythm.PAIR])
+                        choices[k] = kind_
+                        source[k] = j_ + i % rhythm.PAIR if j_ + i % rhythm.PAIR in cells else None
+                    elif relation == "answered" and prev_phrase and i < len(prev_phrase):
                         cell = new_cell(k, prev_phrase[i].positions, shape, start_midi, a0, b0)
                         choices[k] = "answered"
                     else:
-                        choice = urn.choose(rng, prev_cell, played)
+                        choice = bar_urn.choose(rng, prev_cell, played)
                         before = k - 1 if k - 1 in cells else None
                         if choice == "same" and prev_cell is not None:
                             cell = again(k, prev_cell)
@@ -1499,7 +1570,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                                 cell = again(k, cells[follow + 1])      # the passage recalled goes on with its next bar
                                 source[k] = follow + 1
                             else:
-                                pool = [(j, c) for j, c in cells.items() if j < k and (prev_cell is None or c.key != prev_cell.key)]
+                                pool = by_source(k, [(j, c) for j, c in cells.items() if j < k and (prev_cell is None or c.key != prev_cell.key)])
                                 if pool:
                                     j, c = _weighted(rng, pool, [played.get(c.key, 1) for _, c in pool])
                                     cell = again(k, c)
@@ -1516,6 +1587,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     by_key.setdefault(cell.key, cell)
                     prev_cell = cell
                     phrase_cells.append(cell)
+                    note_pair(live, phrase_cells, i)
                 if reference is None:
                     break
                 notes_ = [(bars[k][0] + p, 0, m) for k, c in zip(live, phrase_cells) for p, m in zip(c.positions, c.pitches)]
@@ -1526,6 +1598,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 source, choices = dict(snapshot[7]), dict(snapshot[8])
                 on_beat[:] = snapshot[9]
                 moves_seen[:] = snapshot[10]
+                pairs_played, pair_cells, prev_pair, prev_pair_key, prev_pair_at = Counter(snapshot[11]), dict(snapshot[12]), snapshot[13], snapshot[14], snapshot[15]
+                pair_kinds, source_kinds = Counter(snapshot[16]), Counter(snapshot[17])
             else:
                 log.append(f"phrase at bar {w[0]}: a game's phrase drawn {COPY_TRIES} times running; the last kept")
         # the ending: the phrase's last note onto the drawn degree
@@ -1541,6 +1615,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         if letters is not None and phrase_cells:
             if theme is None and letter_of(w[0]) == rhythm.THEME:
                 theme = list(phrase_cells)                  # the song's theme: the first phrase the letters name so
+                theme_bars = set(live)
             elif letter_of(w[0]) == rhythm.NEW:
                 others.append(list(phrase_cells))
         log.append(f"bar {w[0]}: {relation}, {shape}" + (f" {phrase_size:.0f}" if phrase_size is not None else "") + f", ends {ending}, bars {[choices.get(k, '-') for k in live]}")
@@ -1565,6 +1640,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     if half_kinds:
         c = Counter(kd for ks in half_kinds.values() for kd in ks)
         log.append("halves (half_recall): " + ", ".join(f"{kd} {c[kd]}" for kd in ("same", "earlier", "new", "rest") if c[kd]) + f" over {len(half_kinds)} new bars")
+    if pair_kinds:
+        log.append("pairs (pair_recall): " + ", ".join(f"{kd} {pair_kinds[kd]}" for kd in tables.RECALL if pair_kinds[kd]) + f" over {sum(pair_kinds.values())} pairs drawn"
+                   + ("; echoes point (recall_sources): " + ", ".join(f"{src} {source_kinds[src]}" for src in rhythm.RECALL_SOURCES if source_kinds[src]) if source_kinds else ""))
     return notes, figures, log
 
 
