@@ -1126,6 +1126,32 @@ def sample_speed(models, rid: str, rng: random.Random) -> tuple[float, float] | 
     return top(drawn), max(top(c) for c in (t.votes.get((rid,)) or {drawn: 1}))
 
 
+def written_speed(plan: Plan, written: dict, role: str, voices: set | None = None) -> float:
+    """A written part's fastest bar, notes a second, over its voices (`voices`: a set of voice indices, all without)."""
+    if role not in written:
+        return 0.0
+    counts = Counter((n[3], int(n[0] // METER)) for n in written[role].notes if voices is None or n[3] in voices)
+    return max(counts.values(), default=0) * plan.bpm / (60.0 * METER)
+
+
+def floors_for(plan: Plan, written: dict, samples: dict, models: dict | None, pack_name: str, rng: random.Random) -> dict:
+    """Each chosen sample's note floor (sample_floor) under the speed class of the fastest written voice playing it, drawn
+    on a stream of its own once the parts are written (round 36). The plan's drawn speed (part_speeds) fits the sample;
+    the figures decide what the part then plays, and a part drawn at 6 a second that writes sixteenths at 120 BPM plays
+    8: its floor must follow the notes it has, not the class it was fitted under, or a medium-class floor of 240 ms sits
+    on 125 ms sixteenths."""
+    raw = lambda n: n[len(pack_name) + 1:] if n.startswith(pack_name + "_") else n   # noqa: E731
+    fastest = {}
+    for key, chosen in samples.items():
+        if not isinstance(chosen, tuple):
+            continue
+        role, _, which = key.partition(":")
+        beside = {v for v, w in enumerate(layers_of(plan, role), start=1) if not w.startswith("doubling")}
+        voices = beside if which == "second" else ({0} | ({v for v in range(1, plan.voices.get(role, 1))} - beside))
+        fastest[chosen[0]] = max(fastest.get(chosen[0], 0.0), written_speed(plan, written, role, voices))
+    return {name_: sample_floor(models, raw(name_), rng, speed if written else None) for name_, speed in fastest.items()}
+
+
 def sample_floor(models, rid: str, rng: random.Random, speed: float | None = None) -> float:
     """The shortest note the game plays a sample at, in seconds (the sample_lengths table's class top); 0 unknown. `speed`:
     the fastest bar of the part playing it, notes a second: the floor is drawn under the sample's speed class (round 36),
@@ -1666,6 +1692,7 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     samples = samples_for(p, pack, own, pack_name, rng, models)   # before the writing: every voice writes where the game plays its sample
     written = write(p, song, models, seed, reference)
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
+    samples["floors"] = floors_for(p, written, samples, models, pack_name, random.Random(f"whole:{seed}:floors"))   # by the written speed
     score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}
     if read:
