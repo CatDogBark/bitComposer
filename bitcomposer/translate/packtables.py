@@ -98,7 +98,7 @@ KEPT = {
     "weights": ("rhythm", "weight_units", {}, ("part",), False, False, "a part's weight in the band (minor, half, main)"),
     "sizes": ("rhythm", "form_size_units", {}, ("part",), False, False, "how many parts a song's form has"),
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
-    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) in it, drawn once a song as one unit"),
+    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, drawn once a song as one unit"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
     "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "speed", "gap"), False, False, "the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "bass_locks": ("rhythm", "bass_lock_units", {}, ("part",), False, False, "the share of the kit's accents (two pieces together) the bass strikes with, in tenths"),

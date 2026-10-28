@@ -2401,6 +2401,8 @@ def balance_units(songs) -> list:
     two voices or more, each voice beyond the line's level over the line
     voice's in tenths (voice_level_shares, the layer_levels unit, the
     busiest voice first, joined by "/")
+    and, for the counter, whether it plays the tune's sample (counter_kind,
+    a seventh field: "counter=minor:56-72:0.9:1:1.0::other")
     ("accompaniment=main:56-68:0.8:2:0.7:1.3 bass=half:28-40:0.9:1:1.0
     drums=::::0.8 melody=half:64-84:0.9:1:0.8"; the drums, which carry no
     weight, register or sounded share, keep their level in the same fifth
@@ -2427,7 +2429,18 @@ def balance_units(songs) -> list:
     the token's voice count is the song's and a third or later voice's
     share differs from the second's in 23 of FFVI's 52 (in 19 of its 40
     parts with three voices or more: Gau 1.5 then 3.2 before the cap,
-    Dancing Mad's bass 1.1 then 2.0)."""
+    Dancing Mad's bass 1.1 then 2.0). The counter's kind joined it in round
+    39 (2026-10-27): a seventh field on the counter's token, whether it
+    plays the tune's sample (counter_kind: same, other). The level had been
+    the token's and the kind a draw of its own (counter_samples), so Whole
+    33 took The Serpent Trench's level, the one FFVI counter at 1.78 times
+    its tune (28 held notes on another sample in 14 of the tune's 33 bars),
+    and played it as a doubling on the tune's sample at the tune's onsets
+    (+4.4 dB over the tune, the stems' median); FFVI's counters on the
+    tune's sample at its onsets sit at 1.0 times the tune in 13 of 16 and
+    never above 1.21, and its 7 counters louder than the tune are, bar one,
+    on another sample. With the field, what the counter is and how loud it
+    is are one song's together."""
     out = []
     for s in songs:
         if not s.notes:
@@ -2443,8 +2456,12 @@ def balance_units(songs) -> list:
                 continue
             reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
             beside = voice_level_shares(s, role) if role in levels else None
-            tokens.append(f"{role}={weights[role]}" + (f":{reg[0]}-{reg[1]}" if reg else ":") + (f":{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else ":")
-                          + f":{max(1, voices.get(role, 1))}" + (f":{levels[role]}" if role in levels else "") + (":" + "/".join(beside) if beside else ""))
+            kind = counter_kind(s) if role == R.COUNTER and role in levels else None
+            fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else "",
+                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or ""]
+            while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
+                fields.pop()
+            tokens.append(f"{role}=" + ":".join(fields))
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

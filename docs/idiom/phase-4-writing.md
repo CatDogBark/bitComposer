@@ -3152,3 +3152,65 @@ part would close it); the themed subset's higher economy (0.63 and 0.52)
 against the written 0.47 and 0.24, the echo habit being drawn for all
 songs alike; the counter's register against the tune's; the pair words
 passing over samples the pack lacks.
+
+### Round 39: the counter's kind with the band's on the balance token (2026-10-27, from the owner's note that Whole 33's counter got so loud)
+
+**His question.** "The counter got so loud in 33. I thought we fixed the
+volume with higher level vocabulary, but maybe we have only been
+patching it at lower level vocabulary."
+
+**Found.** The higher-level word did what it was built to do. Whole 33's
+counter stem sits +4.4 dB over the melody stem at the median where both
+sound (louder in 0.79 of 50 ms frames), and 20·log10(1.0/0.6) is 4.4 dB:
+the gap is the plan's level ratio and nothing else (both parts on
+sdbd05ab4d5). The plan's levels line: "levels from the balance:
+accompaniment=0.5 arp=0.5 bass=0.8 counter=1.0 melody=0.6; the loudest
+counter". The token is The Serpent Trench's band whole, the one FFVI song
+whose counter is 1.78 times its tune: 28 held notes, two a bar, on another
+sample, in 14 of the tune's 33 bars, eight semitones over a string-pad
+tune at 0.12 of full. Whole 33 took that level and nothing else of the
+counter: `counter_samples` drew "same" (the tune's sample), the habit and
+texture draws gave it 214 notes in 36 bars (6 a bar), 201 on the tune's
+onsets, in 39 of 39 bars. A thirds doubling at a descant's level. FFVI
+never pairs those: of its 16 counters on the tune's sample moving with
+its onsets, 13 sit at 1.0 times the tune and none above 1.21; the 7
+counters louder than the tune are, bar one, on another sample.
+`counter_shares` (round 31) is a fallback only since round 32 let the
+token's counter level stand. The level and the kind were separate draws
+where FFVI ties them.
+
+**Built, on his go (option 1 of two; the other, `counter_shares` by the
+kind, a second level word fighting the token for the same part).** The
+counter's kind as the balance token's seventh field
+(`rhythm.balance_units`: `counter=minor:56-72:0.9:1:1.0::other`;
+`counter_kind`); `whole._plan_once` reads it into `Plan.kinds`;
+`_plan_counter` makes the `counter_samples` draw as before and overwrites
+it (`extras.counter.sample_from` "balance" or "counter_samples"; the log
+line "counter beside the tune: other sample with the band's, level 1.0 of
+the loudest with the band's, the balance's"). The balance table rebuilt
+alone (`packtables.fit` on the units, spliced; `pack.json.r38` the
+backup on both machines): 66 outcomes in the same order with the same
+votes once the field is stripped, so every balance draw lands where it
+did; 17 same, 34 other. Test extended
+(`test_the_bands_levels_are_the_balance_tokens_as_one_unit`: the unit's
+field same/other/none, the plan's kind from the token with every other
+draw identical, the log line). Pack still 83 tables.
+
+**Measured after, Whole 33 alone (his ask: a before and after of the one
+song).** The same key, form, notes and onsets; the counter now "other",
+on s256b199ccf through the pair word, written 64-72 where the game plays
+it (56-72 before), still at the token's 1.0. The stems: the counter's
+median level -22.4 dB against the melody's -21.7 (before -17.2 against
+-21.6); where both sound the counter is louder in 0.53 of frames at +0.5
+dB median (before 0.79 at +4.4). Over seeds 1-35 (26 plans with a
+counter) the kinds under the token are 12 same, 14 other; the counter
+above the tune in 4 (Whole 02 and 32 at 0.6 over 0.5 on another sample,
+Whole 17 at 0.7 over 0.6 on the same, Whole 33). Song Check 33 is the
+pair (artifact ChZRhgs4tx9H5AXEuWPb6j).
+
+**Open, noticed on the way:** the textures (which parts play in which
+section) are drawn apart from the token's song too, which is why Whole
+33's counter plays all 39 bars where The Serpent Trench's plays 14; the
+same split at the section grain. The counter's density is still the
+habit draw's (FFVI's loud other-sample counters run 2 to 16 notes a bar,
+Whole 33's 6).

@@ -104,6 +104,25 @@ said otherwise. Counting code: `translate/rhythm.py` and
   tied and never alone, its share 0.60 at the median against FFVI's 0.60;
   the loudest part the bass in 0.57, the tune 0.29, the drums 0.24 (FFVI
   0.61, 0.26, 0.21).
+  Since round 39 (2026-10-27) the counter's token carries a seventh
+  field too: whether it plays the tune's sample (`counter_kind`, same or
+  other: `counter=minor:56-72:0.9:1:1.0::other`), so what the counter is
+  and how loud it is are one song's together; the plan makes its
+  `counter_samples` draw and overwrites it with the token's
+  (`Plan.kinds`, `extras.counter.sample_from`; the log line "counter
+  beside the tune: other sample with the band's, ..."). Why: Whole 33's
+  band was The Serpent Trench's whole, the one FFVI song whose counter
+  is the loudest part (1.0 to the tune's 0.6), where that counter is 28
+  held notes on another sample in 14 of the tune's 33 bars; its level
+  came from the token and its kind from its own draw ("same"), so the
+  descant's level sat on a thirds doubling of the tune on the tune's
+  sample, +4.4 dB over it in the stems (20·log10(1.0/0.6) exactly).
+  FFVI's counters on the tune's sample at its onsets (16) sit at 1.0
+  times the tune in 13 and never above 1.21; its 7 counters louder than
+  the tune are, bar one, on another sample. The table's 66 outcomes keep
+  their order and votes with the field stripped, so every balance draw
+  lands where it did; 17 tokens say same, 34 other (the Dancing Mad pair
+  share one).
 - **weights** — a part's weight in the band (minor, half, main). The
   fallback for a part the balance did not name; a weight conditions the
   rhythm, bass and echo habits.
@@ -374,7 +393,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
   voice the unit counts); the pool's own choice had given the written
   songs 3 of 14, and 10 of 14 once the counter sat where the tune is
   (the pool's favourite sample is the tune's), so the word has to be
-  honoured both ways (round 29). Which other sample is `counter_pairs`'.
+  honoured both ways (round 29). Which other sample is `counter_pairs`'. Since
+  round 39 (2026-10-27) the draw is made and overwritten by the balance
+  token's seventh field where the token's song has a counter (every FFVI
+  token with one): the kind is one song's with the level
+  (`extras.counter.sample_from`: `balance` or `counter_samples`).
 - **counter_pairs** — the counter-line's sample where it plays another
   than the tune's, as the pack's sample id, by the part and the tune's
   sample id; one unit a song whose `counter_samples` kind is `other`

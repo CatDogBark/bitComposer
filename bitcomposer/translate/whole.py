@@ -118,6 +118,8 @@ class Plan:
     voice_levels: dict = field(default_factory=dict)  # a layered part -> the token's song's shares for every voice beyond the line, the
                                       # busiest first (the sixth field): voice j beside the line plays at entry j - 1
     layer_from: dict = field(default_factory=dict)    # a pitched part -> where its second voices' levels came from: "balance" or "layer_levels"
+    kinds: dict = field(default_factory=dict)         # the counter -> the balance token's song's kind for it, same or other (the seventh field,
+                                      # round 39): the counter_samples draw is made and overwritten where the token has it
     speeds: dict = field(default_factory=dict)        # a pitched part -> its fastest bar, notes a second (part_speeds): what its sample is fitted to
     bounds: dict = field(default_factory=dict)        # a part or "part:second" -> the register it is written in: where the game plays the sample
                                       # chosen for it (the ranges word's drawn range, bound_of), set by samples_for before the writing (round 34)
@@ -451,7 +453,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights, layout, shares, counts, token_levels, token_layers = [], {}, {}, {}, {}, {}, {}
+    band, weights, layout, shares, counts, token_levels, token_layers, token_kinds = [], {}, {}, {}, {}, {}, {}, {}
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
         band.append(role)
@@ -470,6 +472,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_levels[role] = float(fields[4])
             if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level
                 token_layers[role] = [float(x) for x in fields[5].split("/")]
+            if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
+                token_kinds[role] = fields[6]
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
@@ -650,7 +654,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from)
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -691,7 +695,10 @@ def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
     counter's level over the tune's drawn apart from the tune's share and multiplied into it had put Whole 28's counter
     at 1.05 of the loudest). The share replaces the counter's own `levels` draw where the balance token's song has no
     counter level (round 32: the band's levels are the token's as one unit; the token's counter level stands, and the
-    `counter_shares` draw is still made so the stream is as it was). Drawn here, after `plan`'s retries, not inside
+    `counter_shares` draw is still made so the stream is as it was). Its kind, the tune's sample or another, is the
+    token's too where the token has it (round 39: the level one song's and the kind another's had put The Serpent
+    Trench's descant level on a same-sample doubling in Whole 33), the `counter_samples` draw made and overwritten
+    the same way. Drawn here, after `plan`'s retries, not inside
     `_plan_once`: a themed plan is drawn again on the same stream when its tune cannot come back, and two draws inside
     the attempt had shifted every draw of the next one (Whole 14's band, key and form changed)."""
     if R.COUNTER not in p.band or R.MELODY not in p.band:
@@ -700,6 +707,10 @@ def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
     x = p.extras[R.COUNTER]
     if "counter_samples" in have:
         x["sample"] = _draw(models, "counter_samples", (R.COUNTER,), rng, p.log)
+        x["sample_from"] = "counter_samples"
+    if R.COUNTER in p.kinds:                                # the token's song's kind stands with its level (round 39): the draw is made all the same
+        x["sample"] = p.kinds[R.COUNTER]
+        x["sample_from"] = "balance"
     if "counter_shares" in have:
         tune = p.levels.get(R.MELODY, float(DEFAULTS["levels"]))
         drawn = float(_draw(models, "counter_shares", (R.COUNTER, rhythm.tune_share_band(tune)), rng, p.log))
@@ -708,7 +719,7 @@ def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
         else:
             x["level"] = p.levels[R.COUNTER] = drawn
             p.level_from[R.COUNTER] = "counter_shares"
-    p.log.append(f"counter beside the tune: {x.get('sample', 'any')} sample"
+    p.log.append(f"counter beside the tune: {x.get('sample', 'any')} sample" + (" with the band's" if x.get("sample_from") == "balance" else "")
                  + (f", level {x['level']:.1f} of the loudest " + ("with the band's, the balance's" if p.level_from.get(R.COUNTER) == "balance"
                                                                    else f"under the tune's {p.levels[R.MELODY]:.1f}") if "level" in x else ""))
 

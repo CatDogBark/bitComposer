@@ -788,6 +788,25 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(p.levels["accompaniment"], 0.3)
         without = whole.plan({k: v for k, v in models.items() if k != "counter_shares"}, 1, "g")
         self.assertEqual(without.levels, p.levels)                                                  # the draw changed no level
+        self.assertEqual((p.extras["counter"]["sample"], p.extras["counter"]["sample_from"], p.kinds), ("other", "counter_samples", {}))
+        # the counter's kind with its level (round 39): the token's seventh field stands over the counter_samples draw, the draw made
+        kinded = full.replace("counter=minor:60-72:0.8:1:0.5 ", "counter=minor:60-72:0.8:1:0.5::same ")
+        pk = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", kinded, rhythm.ARRANGEMENT))}, 1, "g")
+        self.assertEqual((pk.extras["counter"]["sample"], pk.extras["counter"]["sample_from"], pk.kinds), ("same", "balance", {"counter": "same"}))
+        self.assertIn("counter beside the tune: same sample with the band's, level 0.5 of the loudest with the band's, the balance's", pk.log)
+        self.assertEqual((pk.tonic, pk.mode, pk.parts, pk.band, pk.registers, pk.habits, pk.levels, pk.layer_levels),
+                         (p.tonic, p.mode, p.parts, p.band, p.registers, p.habits, p.levels, p.layer_levels))
+        # the unit writes the field for a song with a counter: same where it plays the tune's sample, other where not
+        s = self._song()
+        s.notes["counter"] = [(4.0 * i + x, 0.9, m - 4, "m") for i in range(4, 8) for x, m in ((0.0, 67.0), (2.0, 71.0))]
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]), 3: ("counter", s.notes["counter"])}
+        s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "counter": 0.22}
+        ctr = [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0]
+        self.assertTrue(ctr.endswith(":0.8::same") and ctr.count(":") == 6, ctr)
+        s.notes["counter"] = [(a, b, c, "x") for a, b, c, _ in s.notes["counter"]]; s.voice_notes[3] = ("counter", s.notes["counter"])
+        self.assertTrue([t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0].endswith("::other"))
+        s.levels = {}
+        self.assertEqual([t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0].count(":"), 3)   # no level: no kind either
         # the same seed with the token's levels and without: every other draw identical (the levels draws stay in place)
         bare = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(
             units("balance", "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1 counter=minor:60-72:0.8:1 drums melody=main:64-84:0.9:1", rhythm.ARRANGEMENT))}, 1, "g")
