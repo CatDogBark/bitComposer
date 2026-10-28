@@ -445,6 +445,32 @@ said otherwise. Counting code: `translate/rhythm.py` and
   chosen after the writing and a voice's register could not come from
   the sample it plays.
 
+- **cell_handoffs** — a tune's half-bar cell taken up by another part in a
+  later bar: the first such part and how many bars on ("counter 2",
+  "bass 1", "far" past eight bars; "none"), by the part (melody), the
+  song's echo habit and the cell's place (theme: inside the tune's theme
+  phrase; other). A half-bar cell is the half's onsets in twelfths and its
+  intervals, two notes at least (`rhythm.half_cells`). Drawn once a cell
+  of the written tune after the parts are written (`whole.hand_off_cells`,
+  round 37): where the drawn part does not already play the cell later,
+  its line's half bar there is replaced by the cell re-rooted on that
+  bar's chord in the part's own register (`writer.cell_pitches`: the
+  cell's offset from its own bar's root, then its moves as scale steps),
+  the tune's note lengths kept. FFVI's themed songs hand half their
+  tune's half-bar cells to the counter, the accompaniment or the bass in
+  another bar (0.51; all songs 0.34); the written songs had 0.05, each
+  part faithful to its own word and none to the theme.
+- **half_recall** — what a tune's half-bar cell is to the tune so far
+  (same: the half before's cell again; earlier: one played before; new),
+  by the part and the song's echo habit: the tune writer's urn at the
+  half bar (`writer.new_cell_halves`, round 38). A new bar is drawn a half
+  at a time: a recalled half comes back re-rooted on the bar's chord in
+  the register with its moves as scale steps, a new half takes the drawn
+  rhythm's onsets with new moves. FFVI's tune reuses half-bar cells more
+  than bar cells (0.50 of halves heard earlier, themed 0.63; bars 0.32 and
+  0.52): its cells are moved and re-intervalled inside the bar where a
+  writer whose cell was the bar drew a whole new bar (0.39).
+
 ## The form
  The draw is floored at the part and its tier: a dense
   accompaniment had drawn 2 notes a second from the coarser level's

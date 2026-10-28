@@ -3099,3 +3099,56 @@ from the slow songs. Song Check 30 is Whole 28, 02 and 03 as round 35
 beside round 36.
 
 **Open:** as round 35's.
+
+### Rounds 37 and 38: the tune's cells handed to the band, and the tune's memory at the half bar (2026-10-27, from the owner's note that the parts of a themed song each do their own thing)
+
+**His question.** In Whole 28, and seemingly every song, the melody, the
+accompaniment and the counter wander and compete when the song is meant
+to have a theme: "trying to be a theme but not really". Is it in the data?
+
+**Measured first.** Against FFVI's band-themed songs it is, twice over.
+The written tune echoed its bar cells 0.29 (all FFVI 0.32, themed 0.52)
+and its half-bar cells 0.39 (0.50, themed 0.63): the writer's cell was
+the bar, where FFVI moves and re-intervals half-bar cells inside the bar.
+And the written parts never shared the tune's material: half-bar cells of
+the tune played by another part in another bar 0.05 against FFVI's 0.34
+(themed 0.51); doubled at once 0.02 against 0.24. The only word that
+handed the tune to the band was theme doubling of the theme cell in the
+same bar. Each part was faithful to its own word and none to the theme.
+
+**Built, on his go.** Round 37, `cell_handoffs`: a tune's half-bar cell
+taken up by another part in a later bar (which part and how many bars on,
+or none), counted by the song's echo habit and the cell's place (theme or
+other), drawn once a cell of the written tune after the parts are
+written; where the drawn part does not already play the cell later, its
+line's half bar there is replaced by the cell re-rooted on that bar's
+chord in the part's own register (`writer.cell_pitches`: the cell's
+offset from its own bar's root, then its moves as scale steps), the
+tune's note lengths kept. Round 38, `half_recall`: the melody writer's
+urn at the half bar for a new bar (`writer.new_cell_halves`): each half
+same, earlier or new at the word's shares for the song's echo habit, a
+recalled half re-rooted on the bar's chord with its moves as scale steps,
+a new half from the drawn rhythm with new moves. Pack 83 tables.
+
+**Measured after, seeds 1 to 20 (medians):**
+
+| measure | FFVI all | FFVI themed | before | after |
+|---|---|---|---|---|
+| tune half-bar cells heard earlier | 0.50 | 0.63 | 0.39 | 0.47 |
+| tune bar cells heard earlier | 0.32 | 0.52 | 0.29 | 0.24 |
+| tune cells played by another part in another bar | 0.34 | 0.51 | 0.05 | 0.32 |
+| tune cells doubled by another part at once | 0.24 | 0.28 | 0.02 | 0.03 |
+
+Three hand-offs a song at the median (Whole 11 and 12 twelve, Whole 15
+none); Whole 28 echoes its half-bar cells 0.62 and its bar cells 0.75,
+with 0.41 of its cells taken up by another part. The bar-grain echo fell
+a little as the half-grain urn makes bars that differ as wholes while
+sharing their halves. Song Check 31 is Whole 28, 02 and 03 as round 36
+beside round 38.
+
+**Open:** the same-bar doubling (0.03 against 0.24: theme doubling covers
+the theme cell alone; a word for any tune cell doubled at once by another
+part would close it); the themed subset's higher economy (0.63 and 0.52)
+against the written 0.47 and 0.24, the echo habit being drawn for all
+songs alike; the counter's register against the tune's; the pair words
+passing over samples the pack lacks.
