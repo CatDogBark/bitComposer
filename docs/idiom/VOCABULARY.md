@@ -57,6 +57,40 @@ said otherwise. Counting code: `translate/rhythm.py` and
   FFVI's converted songs, the written songs sat 5 dB hotter (-19.6
   against -24.5 dBFS over the first minute) because the loudest part
   always played at 0.85 of full where FFVI's sits at 0.2 to 0.4.
+- **loudness** (the balance token's `loud=-24`) and **mix_level** — a
+  song's rendered loudness: its RMS in dBFS over its first minute through
+  the player (the readings' feature render/loudness_dbfs, measured from
+  the converted songs; FFVI's 81: median -25.6, the middle sixty between
+  -26.3 and -22.0, none above -20.5), to 1 dB, carried on the balance
+  token so a song's levels, its top and its loudness are one song's (round
+  59, 2026-10-29). The written song's master volume holds its own to it
+  (`whole.master_of`): the song's notes as scored give a mix estimate
+  (`rhythm.mix_level`: each note's perceived level squared, summed over
+  the quarter-beat frames it sounds in, at most two beats of it, the mean
+  over the frames anything sounds in, in dB), a written song renders at
+  that estimate plus RENDER_BRIDGE (-21.7 dB, measured over 20 written
+  songs, quartiles -23.0 and -19.8), and the SNES chip's master volume
+  (the IT global volume, a song's from its first bar: FFVI's sit at 32 to
+  61 of 128) is set so the two meet; a song under its target with the
+  master already full brings its notes up instead. Why: the written songs'
+  rendered loudness spread 2.7 times FFVI's (IQR 6.7 dB against 2.5 over
+  14 songs) and four of fourteen rendered louder than any FFVI song (up to
+  -15.6 dBFS), because the level draws multiply independent things FFVI's
+  composer held together: the top level, how many parts share it, the
+  sections' levels, the sample's loudness and how thick the texture is.
+  The rendered loudness is what FFVI holds steady, so it is the unit; the
+  estimate alone would not do (it meets FFVI's renders with a correlation
+  of 0.47, so a written song held to its token song's estimate took on the
+  estimate's spread, 6 dB). The TOP_SCALE bridge of round 52 (1.7) is
+  retired to 1.0, its work being the master's. With it the writer's
+  loudness factor reads the module sample's own loudness
+  (`whole.sample_rms`), not the pack table's: the instrument builder
+  scales every sustaining voice's loop to one loudness
+  (`samples.LOUDNESS_TARGET`), so the table's numbers (the game's samples
+  as the game plays them, right for counting the readings) are not what
+  the module plays, and round 56 had boosted "quiet" samples the module
+  had brought up already, to full; with the module's own numbers no note
+  is capped in 20 songs.
 - **ranges (by the part)** — since round 55 (2026-10-29) a sample's home
   band is counted by the sample alone and by the sample with the part
   playing it (`sample_range_units`, shape part + role; the draw backs off
@@ -73,7 +107,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
   it (a drum sample as a rhythmic chord part, 0.08 of FFVI's
   accompaniments).
 - **tempos (under the token's class)** — since round 54 (2026-10-29) the
-  balance token ends with its song's tempo class (`tempo=slow`, `medium`,
+  balance token carries, since round 59, its song's loudest part's level
+  of full (`top=0.30`, see top_levels) and its mix level (`mix=-5`, see
+  mix_level), the two before the tempo class, so a song's levels, its
+  top and its loudness are one song's; and it ends with its song's tempo
+  class (`tempo=slow`, `medium`,
   `fast`: under 85, under 130, over) and the `tempos` word is counted by
   the class; where a plan's tempo draw falls outside its token's class the
   tempo is drawn again under the class on an own stream (the log line
@@ -508,14 +546,19 @@ said otherwise. Counting code: `translate/rhythm.py` and
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
   sounding bar k bars after the section's start), `leaves:k` (its last k
-  bars before the end), or both, k to ENTRY_CAP (8); by the part, the
-  section's place in the form and the section's length class (short to 4
-  bars, medium to 8, long) (round 46, 2026-10-28). Drawn in
+  bars before the end), or both, k to ENTRY_CAP (8); by the part, for the
+  drums the kit's density tier (round 59; NO_TIER, `-`, for every other
+  part), the section's place in the form and the section's length class
+  (short to 4 bars, medium to 8, long) (round 46, 2026-10-28). Drawn in
   `whole.plan_texture` for each part the section's texture has, after the
-  texture; the part's bars before its entrance and after its exit are
-  turned off; a draw no section this short can hold is drawn again, then
-  the part plays it whole; a repeated section copies the bars, entrances
-  and all. The log line: "entrances (part_entries): counter enters 2 in
+  texture; the drums' apart (`whole.drum_entrances`), once the kit's habit
+  is drawn, on an own stream and from the tier's own entrances alone
+  (DRUM_ENTRY_FLOOR): FFVI's dense kits play 101 sections of 106 whole,
+  its sparse kits 20 of 27, and the word by part, place and length alone
+  had a dense kit leave eight bars before a section's end; the part's
+  bars before its entrance and after its exit are turned off; a draw no
+  section this short can hold is drawn again, then the part plays it
+  whole; a repeated section copies the bars, entrances and all. The log line: "entrances (part_entries): counter enters 2 in
   B; bass leaves 1 before the end of C". Why: FFVI's parts join inside a
   section more often than at its edge (61 late entrances inside, 45 at a
   boundary; early exits 14 and 12), where one texture a section had let
@@ -619,9 +662,16 @@ said otherwise. Counting code: `translate/rhythm.py` and
   intro); the render plays the loop's first bars again at the end of a
   listening page's song.
 - **part_textures** — the texture a part of the form keeps (which parts
-  sound: `all`, `no drums melody`), by its place in the form and the part
-  before's. Drawn a part: a part keeps one texture (FFVI's parts do), an
-  intro leaves parts out, a repeated part keeps its texture.
+  sound: `all`, `no drums melody`), by the kit's density tier (round 59;
+  NO_TIER where the song has no drums), its place in the form and the
+  part before's. Drawn a part: a part keeps one texture (FFVI's parts
+  do), an intro leaves parts out, a repeated part keeps its texture. The
+  kit's habit is drawn before the textures, on an own stream, so the tier
+  can condition them: FFVI's dense kits sit out a whole section in one bar
+  of a hundred, its sparse kits in fifteen, and the written dense kits had
+  sat out one in ten. After round 59 the written kits sound in 0.94 of
+  the bars (dense; FFVI 0.97), 0.75 (medium; 0.83) and 0.64 (sparse;
+  0.69).
 - **texture**, **presence** — which parts sound in a bar after the bar
   before's; a part playing or resting in a bar. Counted; the whole-song
   writer uses `part_textures` (a part keeps its texture) instead.

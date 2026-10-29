@@ -3710,3 +3710,77 @@ run 6-12 a bar, its kick-snare-hat kits 9-28, and the written songs drew
 the first two in 13 of 26. Left open: the share of bars the drums sound
 in (written dense 0.85 against FFVI's 1.0, sparse 0.82 against 0.56) is
 the plays word's, by its own presence habit, not the kit's tier.
+
+### Round 59: the kit's presence by its tier, the top on the token, the song's loudness as a word (2026-10-29, the two items left after round 58)
+
+**Found (the drums' share of bars).** FFVI's dense kits sound in 0.97
+of the bars and sit out a whole section in one bar of a hundred; its
+sparse kits 0.69 and fifteen. The written dense kits sounded in 0.86:
+the entrances word, by part, place and length alone, had a dense kit
+leave eight bars before a section's end (FFVI's dense kits play 101
+sections of 106 whole, its sparse kits 20 of 27), and the texture word
+left the drums out of whole sections without regard to the tier. The
+plays word (PRESENCE) turned out unused by the whole-song writer.
+
+**Built.** Both words take the kit's density tier as a value (NO_TIER,
+`-`, for the other parts and for songs without drums): `part_entries`
+(part, habit, form, length) and `part_textures` (part, habit, form,
+previous). The kit's habit is drawn before the textures on an own stream
+(`whole:{seed}:drum-habit`); the drums' entrances are drawn after it on
+their own (`whole.drum_entrances`, `whole:{seed}:entries`, the tier's
+own entrances alone), the other parts' in `plan_texture` as before.
+Over seeds 1-80 the written kits now sound in 0.94 of the bars (dense;
+FFVI 0.97), 0.75 (medium; 0.83) and 0.64 (sparse; 0.69), sections sat
+out whole 0.04 / 0.12 / 0.24 against FFVI's 0.01 / 0.06 / 0.15.
+
+**Found (the loudness spread).** Over all 82 converted FFVI songs the
+middle sixty render between -26.3 and -22.0 dBFS (IQR 2.5) and none
+above -20.5; the written 71-84 spanned -29.1 to -15.6 (IQR 6.7), four of
+fourteen above FFVI's loudest. Not the IT header's global volume (FFVI
+32-61, written 37-127: the converter's `_lift` trades it against the
+channel volumes loudness-neutrally). The hot songs had three or four
+parts at the token's top level and the top drawn apart from the token
+(FFVI's top: 0.30 with one part there, 0.22 with three, 0.10 with four),
+and hundreds of notes capped at full by the loudness factor. A mix
+estimate from the readings (perceived note levels squared over
+quarter-beat frames) meets FFVI's renders with a correlation of 0.47
+(residual IQR 2.6 dB); the same estimate over the written songs met their
+renders at 0.77, and at one estimated level the written module rendered
+3.9 dB hotter than FFVI's converted songs. On the way: the instrument
+builder scales every sustaining voice's loop to one loudness, so the
+writer's loudness factor from the pack table (the game's samples as the
+game plays them) had been boosting samples the module had brought up
+already; with the module sample's own loudness no note is capped.
+
+**Built.** The balance token carries its song's top (`top=0.30`) and its
+rendered loudness (`loud=-24`, the readings' new feature
+render/loudness_dbfs, measured from the converted songs); the written
+song's master volume (`whole.master_of`) brings its mix estimate plus
+RENDER_BRIDGE (-20.5 dB, what a written song renders at less its
+estimate, measured over 20 songs) to the token's loudness; TOP_SCALE
+retired to 1.0; the writer's loudness factor reads the module sample.
+A first cut held the written song to its token song's *estimate*: the
+master then tracked the target within 3 dB but the renders spread 6 dB,
+the estimate's own spread on FFVI's side, which is why the unit is the
+rendered loudness and not the estimate. Two faults found on the way and
+fixed: the writer's sample loudness read the ordinary loop flag alone,
+and a pack voice holds a *sustain* loop, so a sample with a 32-frame
+loop inside a longer body was measured over the whole, its quiet tail
+in, and its notes boosted (Whole 79 rendered 6 dB over its target); and
+a stem rendered alone had taken a master of its own, so the Song Check
+stems would not have summed to the whole (they take the whole's now).
+
+**Measured** (seeds 76-95 rendered on the same player as FFVI's songs,
+RMS dBFS over the first minute). Each written song against its token
+song's rendered loudness: median -1.2 dB, quartiles -2.5 and +0.7 (the
+bridge then set from the same renders at -21.7, the median of render
+less estimate at a full master; a first recentring had moved it the
+wrong way and put five songs 1 to 5 dB under). The renders: median -25.8,
+quartiles -28.3 and -22.2, the loudest -18.5 (one song above FFVI's
+loudest; before the round four of fourteen were, up to -15.6). What
+remains of the spread is the targets' own sample (twenty token songs,
+quartiles 4 dB apart against the game's 2.5 over all its songs) and the
+estimate's tracking (3.2 dB between quartiles): the estimate is a
+formula over the notes, not a render; a render of the written song
+through the player would close the tracking, and is the next step if the
+ear still hears the spread.
