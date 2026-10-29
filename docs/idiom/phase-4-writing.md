@@ -4038,3 +4038,22 @@ on a voice note off the scale, put alterations against scale notes they
 never follow (the written "other" against scale notes rose from 0.12 to
 0.22) and was dropped. Pack4 refit
 (95 tables).
+
+**Measured** (twenty seeds composed on the refit pack, 131-140 and
+151-160, then the renders). The tune: medium tunes at 2.8-6.6 onsets a
+bar, median 4.7 (FFVI's medium songs 3.4-5.1 by quartile, median 4.2),
+their median gap half a beat in nine of ten (FFVI half a beat); the
+off-beat share lands inside the drawn class in every tune but one (an
+eighths tune at 0.68); 152 went from 0.14 off the beat to 0.40, 153 from
+0.15 to 0.35. Seeds 161-170: medium tunes 4.3-5.8 a bar, all at a
+half-beat gap but one. The counter, with the tune's onset: "other"
+intervals 0.11 of its notes (FFVI 0.12; before 0.19); against a tune
+note off the scale 0.15 (FFVI 0.15; before 0.54); alone, 0.31 (FFVI
+0.29). The balance (tools/salience.py, K-weighted): seeds 131-140 a
+median 3.7 dB under the loudest other pitched line, three on top (round
+65: 4.6 under, two; round 63: 3.1, four); 161-170 a median 4.2 under, two
+on top (Song Check 52's 151-160: 6.9, one). Song Check 53 (seeds 161-170)
+asks the ear whether the melody now moves like the game's and whether the
+cadences' sour counter is gone; the token draw's reach (Dancing Mad's
+organ among the themed songs) is put to the owner as a question, not
+built.
