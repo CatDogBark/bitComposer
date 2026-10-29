@@ -31,6 +31,23 @@ said otherwise. Counting code: `translate/rhythm.py` and
   when no `letters` table can give the form whole.
 - **length_habits** — a song's part-length habit (short, medium, long).
   Drawn once; conditions `lengths`.
+- **levels as loudness** — since round 56 (2026-10-29) every level the
+  readings give (`levels`, the balance token's level and second-voice
+  fields, `layer_levels`, `top_levels`, `counter_shares`) is counted as
+  what the ear hears: the voice's level times its sample's own loudness
+  (its loop body's RMS) over a reference (`rhythm.LOUDNESS_REF`, -12
+  dBFS, the pack's median; `rhythm.loudness_factor`, the table set from
+  the pack's WAVs by `rhythm.load_loudness` when the tables are counted
+  into a pack), and a written note plays at its level over its own
+  sample's loudness (`whole.sample_rms`), capped at full, the capped notes
+  logged ("loudness: notes capped at full, their sample too quiet for
+  their level: ..."). Why: a reading's level is a voice volume a composer
+  set to balance that song's samples; a written song takes its levels
+  from one song's token and its samples from the instrument word, the
+  pack gives every sample the same volume, and the pack's tonal samples
+  span 19.8 dB in their own loudness, so Whole 68's bass sat 5 dB over
+  its tune and Whole 70's brass lead 7 dB under its bass (Song Check 43).
+  The drums keep their level as read: the kit's pieces are many samples.
 - **top_levels** — a song's loudest part's median note level of full
   (the readings' scale, the SNES chip's voice volume over 128), to 0.05,
   one unit a song (round 52, 2026-10-28). Drawn once a song on its own

@@ -182,6 +182,9 @@ def main(argv=None) -> int:
     from . import store
     from ..packs import packfile
     db = store.connect(args.db)
+    if args.into:                                           # the pack's samples' own loudness: a level is counted as loudness (round 56)
+        rhythm.set_loudness(rhythm.load_loudness(Path(args.into).parent))
+        print(f"{args.into}: {len(rhythm.SAMPLE_LOUDNESS)} samples' loudness read", file=sys.stderr)
     print(f"{args.game}: counting the kept tables", file=sys.stderr)
     data = build(db, args.game, say=lambda line: print(line, file=sys.stderr))
     text = json.dumps(data, separators=(",", ":")) + "\n"

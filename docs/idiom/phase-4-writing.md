@@ -3618,3 +3618,29 @@ after these rounds.
 **Open:** the drum writer (the hat drawn dense writes 1.3 hits a bar;
 the kit at half FFVI's density); the 1.7 level bridge; the pairs; the
 medium tune's density.
+
+### Round 56: levels as loudness (2026-10-29, from the owner's notes on Song Check 43: a bass and an accompaniment overpowering, a tune of "tiny squeaks")
+
+**Found.** Whole 68's plan had the bass at 1.0, the melody at 0.7, the
+accompaniment at 0.6; the stems had the melody 6 dB under the bass, not
+3. Whole 70's melody at 0.7 sat 13 dB under its bass. The pack gives
+every sample the same volume (58) while the tonal samples' own loudness
+(the loop body's RMS) spans 19.8 dB, -24.8 to -5.0 dBFS: 68's bass sample
+is 5.4 dB hotter than its melody pad, 70's melody sample 6.9 dB quieter
+than its bass sample. The levels come from one song's token, the samples
+from the instrument word, and the game's composer's balancing of that
+song's samples is lost between them. Whole 70's "squeaks" are FFVI's
+brass lead (Battle Theme, Fanfare, Edgar and Sabin, Blackjack: seven
+tunes at 0.74 to 1.00 of the loudest part in that register); the choice
+was right, the loudness was not.
+
+**Built, on his go.** Every level the readings give is counted as
+loudness (the level times its sample's own loudness over -12 dBFS,
+`loudness_factor` in `rhythm.load`), and a written note plays at its
+level over its own sample's loudness, capped at full and logged. The five
+level words refitted into pack3 (`pack.json.r55` the backup on both
+machines; the top levels now 0.10 to 0.50, median 0.35). The instrument
+draw moved to its own stream a part (`whole:{seed}:sample:{role}`): on
+the render stream it had moved with every draw before it, and Song
+Check 43's pairs had changed instruments for that. Test
+`test_a_level_is_counted_and_played_as_loudness`.

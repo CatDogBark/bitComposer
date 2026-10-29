@@ -1100,6 +1100,25 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.ambitus_of({"sample_ambitus": amb}, "sk"), (36, 88))
         self.assertLess(36 - 36, whole.MIN_SPAN)                                                    # the bass's one-pitch band: narrower than a voice's room
 
+    def test_a_level_is_counted_and_played_as_loudness(self):
+        """Round 56: a reading's level is multiplied by its sample's own loudness over the reference (loudness_factor, the
+        pack's loop-body RMS), and a written note plays at its level over its sample's loudness (sample_rms), so the level
+        words mean what the ear hears whichever sample a part draws."""
+        import array
+        from types import SimpleNamespace
+        rhythm.set_loudness({"sloudxxxxxx": rhythm.LOUDNESS_REF * 2, "squietxxxxx": rhythm.LOUDNESS_REF / 2})   # "s" + the key's first ten
+        try:
+            self.assertAlmostEqual(rhythm.loudness_factor("loud" + "x" * 12), 2.0)
+            self.assertAlmostEqual(rhythm.loudness_factor("quiet" + "x" * 11), 0.5)
+            self.assertEqual(rhythm.loudness_factor("unknown" + "x" * 9), 1.0)
+            self.assertEqual(rhythm.loudness_factor(None), 1.0)
+        finally:
+            rhythm.set_loudness({})
+        flat = array.array("h", [8192] * 100 + [0] * 100)                                          # a quarter of full for half its length
+        smp = SimpleNamespace(data=flat, loop=True, loop_start=0, loop_end=100)
+        self.assertAlmostEqual(whole.sample_rms(smp), 0.25, places=3)                             # the loop body alone
+        self.assertAlmostEqual(whole.sample_rms(SimpleNamespace(data=flat.tobytes(), loop=False, loop_start=0, loop_end=0)), 0.25 / 2 ** 0.5, places=3)
+
     def test_a_recalled_passage_goes_on_as_the_games_do(self):
         """Round 50: each echo of the tune with a bar after it is counted by whether the next bar goes on with the bar after
         the echo's source (recall_continues: yes, no), by part and echo habit; the CONTINUE constant is the fallback alone."""

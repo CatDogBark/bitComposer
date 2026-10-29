@@ -1611,7 +1611,8 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
                 elif passed is not None:
                     plan.log.append(f"counter's sample by the pool rule for {register[0]}-{register[1]}: no counted pair fits{over}")
         if role not in out and role in rhythm.SAMPLE_PARTS and (models or {}).get("part_samples") is not None:
-            sid = part_sample_for(models, role, plan.speeds.get(role), own, rng, plan.log)   # the instrument the game gives the part (round 42)
+            sid = part_sample_for(models, role, plan.speeds.get(role), own, random.Random(f"whole:{plan.seed}:sample:{role}"), plan.log)   # the instrument
+            # the game gives the part (round 42), on its own stream (round 56: on the render stream it moved with every draw before it)
             if sid is not None:
                 out[role] = make(sid)
                 if ranges is not None and ranges.songs.get((sid,), 0):
@@ -1722,6 +1723,18 @@ def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = No
     return max(0.05, min(1.0, base))
 
 
+def sample_rms(sample) -> float:
+    """A module sample's own loudness: the RMS of its loop body (the whole sample without a loop), 0-1 (round 56)."""
+    import array
+    data = sample.data
+    x = data if isinstance(data, array.array) else array.array("h", bytes(data)[: (len(data) // 2) * 2])
+    if not len(x):
+        return 0.0
+    a, b = (sample.loop_start, sample.loop_end) if getattr(sample, "loop", False) and sample.loop_end > sample.loop_start else (0, len(x))
+    body = x[a:b] if b <= len(x) and b > a else x
+    return math.sqrt(sum(v * v for v in body) / len(body)) / 32768
+
+
 def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0):
     """The written parts as a score (spc.convert.Score) on the pack's
     samples: the form once, then the loop (from the loop's bar to the
@@ -1760,8 +1773,19 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
 
     from .. import samples as samples_mod
 
-    def level_of(role, j, bar=None):
-        return note_level(plan, role, j, second_voice, bar)
+    loud_of, capped = {}, Counter()                       # a sample's own loudness (round 56): a note plays at its level over it
+
+    def level_of(role, j, bar=None, name=None, sample=None):
+        level = note_level(plan, role, j, second_voice, bar)
+        if role == R.DRUMS or sample is None:
+            return level
+        if name not in loud_of:
+            rms = sample_rms(sample)
+            loud_of[name] = rhythm.LOUDNESS_REF / rms if rms > 0 else 1.0
+        wanted = level * loud_of[name]
+        if wanted > 1.0:
+            capped[name] += 1
+        return min(1.0, wanted)
 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None):
         idx, addr, c5 = instrument(name, sample)
@@ -1769,7 +1793,7 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
         send = echo is not None and role in SENDS
         env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
-        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(level_of(role, j, bar), pan), adsr, gain,
+        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(level_of(role, j, bar, name, sample), pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
     offsets = [0.0] + [form_beats - loop_start + j * loop_beats for j in range(max(0, loops - 1))]
@@ -1796,6 +1820,8 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
                     name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] in second_voice.get(role, ()) else samples[role]
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // METER))   # the bar's section level (round 48)
+    if capped:
+        plan.log.append("loudness: notes capped at full, their sample too quiet for their level: " + ", ".join(f"{k} {v}" for k, v in capped.most_common()))
     notes.sort(key=lambda x: (x.start, x.voice))
     last = {}                                                # a floored note never runs into the voice's next: the key-on cuts it
     for n in notes:

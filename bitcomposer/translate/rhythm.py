@@ -150,6 +150,49 @@ class Song:
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
 
 
+LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
+SAMPLE_LOUDNESS: dict = {}           # a pack's sample id ("s" + the key's first ten) -> its loop body's RMS, 0-1 (set_loudness)
+
+
+def loudness_factor(key) -> float:
+    """What a note's level is multiplied by to be its loudness (round 56, 2026-10-29): its sample's own loudness over the
+    reference, 1.0 for a sample the table does not know. The readings' level is a voice volume, set by the game's composer to
+    balance that song's samples; a written song takes its levels from one song's token and its samples from the instrument
+    word, and the pack's tonal samples span 19.8 dB in their own loudness, so a level without its sample had put a hot bass
+    5 dB over its tune and a brass lead 7 dB under its bass (Song Check 43's Whole 68 and 70)."""
+    if not SAMPLE_LOUDNESS or not isinstance(key, str):
+        return 1.0
+    rms = SAMPLE_LOUDNESS.get("s" + key[:10])
+    return rms / LOUDNESS_REF if rms else 1.0
+
+
+def set_loudness(table: dict) -> None:
+    SAMPLE_LOUDNESS.clear()
+    SAMPLE_LOUDNESS.update(table)
+
+
+def load_loudness(pack_dir) -> dict:
+    """Each tonal sample's loop-body RMS (0-1) from a pack folder's WAVs: {pack id: rms}."""
+    import json, wave, array
+    from pathlib import Path
+    pack_dir = Path(pack_dir)
+    data = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8"))
+    out = {}
+    for sid, spec in data.get("samples", {}).items():
+        if spec.get("percussion") or not spec.get("file"):
+            continue
+        try:
+            w = wave.open(str(pack_dir / spec["file"]))
+            x = array.array("h", w.readframes(w.getnframes()))
+        except Exception:
+            continue
+        lp = spec.get("loop")
+        body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
+        if len(body):
+            out[sid] = math.sqrt(sum(v * v for v in body) / len(body)) / 32768
+    return out
+
+
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
     """The songs to count (game: only that game's), and why the others were
     left out: {"free time": n, "mostly silent": n}; the harmony counts' songs."""
@@ -199,6 +242,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
+                if role != R.DRUMS and SAMPLE_LOUDNESS:     # a level as loudness: the voice volume times its sample's own (round 56)
+                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise")), pan, i) for s, length, m, level, pan, i in rows]
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
