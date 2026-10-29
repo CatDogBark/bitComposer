@@ -3969,3 +3969,18 @@ hears of its sample, its strike for STRIKE_SECONDS then its body
 note's level by it for the note's own length (`loudness_factor(key,
 seconds)`, the strikes beside the loudness table), and the writer divides
 the drawn level by the module sample's. Pack4's 94 tables refit.
+
+**Measured** (tools/salience.py, K-weighted, the tune's margin over the
+loudest other pitched line). Three states of the same ten seeds, 131-140:
+Song Check 50 (round 63) median -3.1 dB, four tunes on top; the writer's
+half of round 65 alone, before the tables were recounted (a crashed
+refit left the old tables under the new code), median -2.6, four on top,
+the best so far; the full round, tables recounted, median -4.6, two on
+top. Seeds 151-160 (Song Check 52) on the full round: median -6.9, one on
+top, Whole 156's tune 16 dB under its accompaniment. The chain is now
+consistent end to end, and a consistent chain reproduces the game's own
+balance, where the labelled tune sits a median 3.5 dB under; the half
+state had leaned the tune forward of the game by counting the backing's
+attacks on one side only. Whether the written tune should sit where the
+game keeps it, or forward of it, is a question for the owner's ear, not
+for the counts; Song Check 52 asks it.
