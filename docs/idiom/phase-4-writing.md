@@ -3573,3 +3573,48 @@ with this round.
 
 **Open:** the readings' level against the module's (the 1.7); the pairs
 (0.24 against 0.40); the medium tune's density; the Dependabot alerts.
+
+### Rounds 53 to 55: the narrow home band, the band's own tempo, a sample's register by the part (2026-10-29, from the owner's notes on Song Check 42 and the drums-and-bass review)
+
+**His notes.** Whole 66 "a lot going on, competing"; Whole 67 "no idea
+what instrument the accompaniment is"; Whole 70's bass "staccato
+nothingness". He asked whether these need new vocabulary or fixes.
+
+**Found.** None needs a new word. Whole 70's band is Slam Shuffle's (114
+BPM, a staccato bass at the loudest level, four notes a bar) drawn at 70
+BPM with a sparse habit: that bass at half tempo and half density. Whole
+66's is Relm's (a 70 BPM ballad, fourteen accompaniment notes a bar)
+drawn at 160. Only 14 of 45 plans sat in their token song's tempo class,
+and at the token song's own tempo the written extremes fall to FFVI's
+(the fastest tune 8.2 notes a second to 5.6, FFVI 4.7; the fastest
+accompaniment 28.5 to 14.9, FFVI 23.2). The bass itself matches FFVI at
+the medians (sounded share by tier 0.95/0.90/0.70 against 0.97/0.89/0.89).
+Whole 67's accompaniment sample is Slam Shuffle's chord instrument, but
+one song (Searching for Friends) strikes it at a single pitch as
+accompaniment, the home-band draw took that song's range, and the bound
+could not widen inside a zero-span band. Under it, a sample shared by
+parts sits 9 semitones apart by part at the median (a bass sample 54),
+so the ranges word wanted the part as a conditioning.
+
+**Built, on his go.** Round 53 (a fault): a chord part's home band under
+MIN_SPAN gives way to the sample's whole played range (`wide_enough`, at
+every bound site; a sample the game plays at one pitch only keeps it).
+Round 54: the balance token ends with its song's tempo class, the
+`tempos` word is counted by class, and a plan whose tempo falls outside
+its token's class draws it again under the class on an own stream (31 of
+45 plans). Round 55: `ranges` by sample and part (786 units). The three
+tables refitted into pack3 (`pack.json.r52` the backup on both machines;
+the balance vocabulary's order kept once the tempo token is stripped).
+Tests `test_a_samples_register_is_counted_by_the_part_playing_it_and_a_narrow_band_falls_back`
+and the tempo-class assertions in the balance test.
+
+**Measured after, seeds 1-45.** Plans in their token song's tempo class
+0.82 (0.31 before); the fastest written tune 4.8 notes a second (8.2
+before, FFVI 4.7), the fastest accompaniment 12.4 (28.5; 23.2). Chord
+parts bound by the sample's whole range where the home band was narrow:
+21 of 45 plans. Song Check 43 is Song Check 42's five seeds before and
+after these rounds.
+
+**Open:** the drum writer (the hat drawn dense writes 1.3 hits a bar;
+the kit at half FFVI's density); the 1.7 level bridge; the pairs; the
+medium tune's density.

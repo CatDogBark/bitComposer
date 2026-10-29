@@ -2696,7 +2696,12 @@ def balance_units(songs) -> list:
     tune's sample at its onsets sit at 1.0 times the tune in 13 of 16 and
     never above 1.21, and its 7 counters louder than the tune are, bar one,
     on another sample. With the field, what the counter is and how loud it
-    is are one song's together."""
+    is are one song's together. The song's tempo class joined it in round
+    54 (2026-10-29), a last token `tempo=slow` (band): the tempo drawn
+    apart had put Relm's band (70) at 160 beats a minute and Slam
+    Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
+    song's class; the `tempos` word is drawn again under the class where
+    the plan's draw falls outside it."""
     out = []
     for s in songs:
         if not s.notes:
@@ -2718,6 +2723,8 @@ def balance_units(songs) -> list:
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
+        if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
+            tokens.append(f"tempo={band(s.bpm)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
@@ -2788,6 +2795,13 @@ def sample_range_units(songs) -> list:
             reg = part_register(ns)
             if reg is not None and isinstance(key, str):
                 out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10]}))
+        for role, ns in s.notes.items():                     # and by the part that plays it (round 55): a sample shared by parts sits 9
+            if role == R.DRUMS:                              # semitones apart by part at the median, a bass sample 54 (bass 32, accompaniment 86)
+                continue
+            for key in {n[3] for n in ns if isinstance(n[3], str)}:
+                reg = part_register([n for n in ns if n[3] == key])
+                if reg is not None:
+                    out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10], "role": role}))
     return out
 
 

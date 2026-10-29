@@ -40,6 +40,32 @@ said otherwise. Counting code: `translate/rhythm.py` and
   FFVI's converted songs, the written songs sat 5 dB hotter (-19.6
   against -24.5 dBFS over the first minute) because the loudest part
   always played at 0.85 of full where FFVI's sits at 0.2 to 0.4.
+- **ranges (by the part)** — since round 55 (2026-10-29) a sample's home
+  band is counted by the sample alone and by the sample with the part
+  playing it (`sample_range_units`, shape part + role; the draw backs off
+  to the sample alone where the pair has under two songs), and every
+  draw names the part (`whole.range_context`). Why: a sample shared by
+  parts sits 9 semitones apart by part at FFVI's median, a bass sample 54
+  (as a bass at 32, as an accompaniment at 86), and a part drawing a
+  shared sample could take another part's register. And since round 53 a
+  chord part's home band narrower than MIN_SPAN gives way to the sample's
+  whole played range (`whole.wide_enough`, the `sample_ambitus` word):
+  Searching for Friends strikes one sample at one pitch as accompaniment,
+  and that band had bound Whole 67's three-voice accompaniment to a single
+  pitch for 45 bars; a sample the game only ever plays at one pitch keeps
+  it (a drum sample as a rhythmic chord part, 0.08 of FFVI's
+  accompaniments).
+- **tempos (under the token's class)** — since round 54 (2026-10-29) the
+  balance token ends with its song's tempo class (`tempo=slow`, `medium`,
+  `fast`: under 85, under 130, over) and the `tempos` word is counted by
+  the class; where a plan's tempo draw falls outside its token's class the
+  tempo is drawn again under the class on an own stream (the log line
+  "tempo 160 BPM is outside the band's class (slow): 75 BPM drawn under
+  it"). Why: the tempo drawn apart had put Relm's band (70) at 160 and
+  Slam Shuffle's (114) at 70, only 14 of 45 plans sat in their token
+  song's class, and the fastest written tune ran 8.2 notes a second
+  against FFVI's 4.7 (after, the plans sit in class 0.82 of
+  the time, the fastest tune 4.8, the fastest accompaniment 12.4).
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level
