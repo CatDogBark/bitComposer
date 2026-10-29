@@ -3913,3 +3913,26 @@ voices heard, he took the louder upper one; Gau: a loud low riff) and
 relabels 9 FFVI songs of 66. `tools/salience.py` measures the margin on
 any folder of whole songs with stems. Pack4's 94 tables refit on the
 relabelled readings.
+
+**Measured.** The pass relabelled 9 of 67 FFVI songs (Shadow, The
+Phantom Forest, Gau, The Serpent Trench, Under Martial Law, Aria di
+Mezzo Carattere, Epitaph, The Magic House, Umaro); FFVI's own labelled
+tune's margin over the loudest other voice went from a median -3.2 to
+-1.2 dB. The written songs did not follow: seeds 131-140 re-rendered on
+the recounted pack sit a median 4.1 dB under (3.1 before), seeds 141-150
+(Song Check 51) a median 7.2 under, two of ten on top. The reason, found
+in Whole 149 (its token Kids Run Through the City, whose own tune sits
+5.4 dB on top): the counted energy puts the tune on top, the render puts
+the accompaniment there, and the accompaniment's second voice is the
+cause. The token says the second voice plays at 3.2 times the line's
+level; in the game that voice is another sample (a sustained one) with
+a third of the line's notes, while the writer gives it the line's own
+struck sample and most of the line's onsets. Over FFVI, a part's extra
+voice is on another sample in 45 of 73 accompaniments, 27 of 42
+counters and 15 of 15 basses, and plays 0.5-0.7 of the line's notes; the
+written extra voices play 0.84-1.15 of the line's and take its sample in
+the accompaniment half the time. The attack-to-body ratio of the two
+samples (+3.4 dB on the accompaniment's, -3.1 on the tune's) adds the
+rest. Next: the extra voices ride the token (each one's sample and its
+note share over the line), and a note's loudness as it hears its sample
+(strike, then body) in the level words.
