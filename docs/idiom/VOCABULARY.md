@@ -315,6 +315,20 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the two rates are held by running-share controllers while the tune is
   written (a draw is weighted toward the chord, or the repeated note, only
   while the tune is under its rate).
+- **tune_grain** — the tune's grain, since round 66: the share of its
+  onsets off the beat as a class (`rhythm.GRAINS`: on-beat under 0.25,
+  eighths to 0.5, fine over), by the part (melody, counter) and its habit's
+  density tier, drawn once a song on its own stream and held by the melody
+  writer over its new rhythms from the first (the running share within the
+  class, GRAIN_SLACK either side; the density tier is held the same way
+  after TIER_AFTER draws, `writer.tier_bounds`). FFVI's medium tunes sit at
+  0.33-0.51 off the beat (quartiles), a median gap of half a beat; four of
+  Song Check 52's seven medium tunes sat at 0.15-0.21, where five of
+  FFVI's 39 are, with 3.3-3.6 onsets a bar against FFVI's 3.4-5.1: the bar
+  chain, conditioned on the bar before, locks a tune into the grain of its
+  first draws, and the theme's echoes multiply them. The tier alone
+  conditions the draw: under the whole habit it backed off to the part and
+  gave a dense tune "on-beat", which no dense tune of FFVI is.
 - **ranges** — the register a sample is played in, by the sample. Drawn at
   rendering: a part's sample is the one of its pool whose game-played range
   covers the part's register best, the part's top weighing most, and one
@@ -384,7 +398,23 @@ said otherwise. Counting code: `translate/rhythm.py` and
   interval 37 % of the time; the writing had taken a tone up the line's
   voicing, never at the octave, holding its interval 54 % (round 23).
   Held out, the chain is worth 0.7 bits a unit; the layer word, the line
-  note's chord role and the line's own move add nothing to it.
+  note's chord role and the line's own move add nothing to it. The
+  interval is counted between the two notes' scale tones (a note off the
+  key's scale: the tone below it) where the line's note is on the scale,
+  and since round 66 in semitones from the note itself (`s-4`) where it
+  is off it (the value `line`: scale or altered), which the writer puts
+  back exactly (`writer.interval_pitch`): the counted steps alone had gone
+  back on the scale, so a unison with the tune's leading tone came out a
+  semitone under it. FFVI's tune is off its key's scale at 0.23 of the
+  counter's onsets with it; the written counter's intervals against such
+  a note were "other" (a second, a tritone, a seventh) in 0.54 where
+  FFVI's are in 0.15, and 0.12 against a scale note, FFVI's 0.12. A voice
+  note off the scale against a scale note is kept as its scale tone: a
+  mark for it had put alterations against notes they never follow (the
+  written "other" against scale notes rose to 0.22). The product with
+  `voice_moves` now weighs the move the entry's note would make from the
+  voice's own last note, as the word counts it (it had taken the move from
+  the voice's last note with the line).
 - **voice_moves** — the same voice at every onset (the counter-line beside
   the tune too, since round 29): its move from its own
   previous note in scale steps, by the part, the relation and the place

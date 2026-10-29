@@ -581,25 +581,16 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                     refused = set()
                     for _ in range(VOICE_TRIES):            # a pitch another voice of the part holds at this onset is drawn again (two copies of one
                         if ref is not None:                 # sample on one pitch phase); the onset is skipped when every try lands on one
-                            ref_i = scale_index(int(round(ref)), scale)
-                            ctx_iv = (role, kind, prev_steps)
-                            if with_line and prev_steps != rhythm.START and prev_midi is not None:
-                                # the note both words agree on: its interval to the line's note (voice_intervals, chained on the interval
-                                # before) and its own move from its last note (voice_moves), the line's own move between them known;
-                                # held out on FFVI the product beats either word alone (3.36 bits a unit against 3.87 and 3.71)
-                                line_prev = line_before(k, p, strict=True)
-                                moved = ref_i - scale_index(int(round(line_prev)), scale) if line_prev is not None else 0
-                                before = int(prev_steps)
-                                weights = {c: t_iv.p(str(c), ctx_iv) * t_mv.p(str(c - before + moved), (role, kind, "with"))
-                                           for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
-                                           if c not in refused and str(c) in t_iv.vocabulary and str(c - before + moved) in t_mv.vocabulary}
-                                steps = weighted(weights)
-                            else:
-                                steps = weighted({c: t_iv.p(str(c), ctx_iv) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
-                                                  if c not in refused and str(c) in t_iv.vocabulary})
-                            if steps is None:
+                            ctx_iv = (role, kind, line_state(ref, scale), prev_steps)
+                            chained = with_line and prev_steps != rhythm.START and prev_midi is not None
+                            # the note both words agree on: its interval to the line's note (voice_intervals, chained on the interval
+                            # before) and its own move from its last note (voice_moves); held out on FFVI the product beats either
+                            # word alone (3.36 bits a unit against 3.87 and 3.71)
+                            entry = weighted(interval_weights(t_iv, ctx_iv, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None))
+                            if entry is None:
                                 break
-                            target = scale_pitch(ref_i + steps, scale)
+                            steps = entry                   # the chain's next context
+                            target = interval_pitch(entry, ref, scale)   # in semitones against a line note off the scale (round 66)
                         else:
                             steps = None
                             move = weighted({c: t_mv.p(str(c), (role, kind, "alone")) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
@@ -650,6 +641,40 @@ ARC_ROOM = 7                          # semitones a phrase keeps above the regis
 BESIDE_SPAN = 24                      # semitones above its floor a second bass voice may sit when its pitch follows the line
 
 
+TIER_SLACK = 0.5                      # onsets a bar a tune's running density may sit outside its tier's bounds (tier_bounds)
+TIER_AFTER = 3                        # new rhythms drawn before the running density and grain are held to their words
+GRAIN_SLACK = 0.1                     # how far a tune's running share of onsets off the beat may sit outside its grain's bounds
+
+
+def grain_bounds(grain: str | None) -> tuple[float, float]:
+    """The share of onsets off the beat a tune of this grain keeps its new rhythms to (rhythm.GRAINS: on-beat under 0.25,
+    eighths to 0.5, fine over), GRAIN_SLACK either side; wide open without a grain."""
+    if grain:
+        low = 0.0
+        for top, name in rhythm.GRAINS:
+            if name == grain:
+                return max(0.0, low - GRAIN_SLACK), min(1.0, top + GRAIN_SLACK)
+            low = top
+    return 0.0, 1.0
+
+
+def offbeats(tokens: list) -> int:
+    """How many of a figure's tokens sit off the beat."""
+    return sum(1 for t in tokens if Fraction(t.partition(":")[0]).denominator != 1)
+
+
+def tier_bounds(habit: str) -> tuple[float, float]:
+    """The onsets a bar a part's tune keeps its running mean within, from its habit's density tier (rhythm.DENSITIES:
+    sparse to 2, medium to 6, dense over), TIER_SLACK either side; wide open for a habit without a tier."""
+    tier = (habit or "").split()[0] if habit else ""
+    lo = 0.0
+    for top, name in rhythm.DENSITIES:
+        if name == tier:
+            return max(0.0, lo - TIER_SLACK), (top + TIER_SLACK if top < 1e8 else 64.0)
+        lo = top
+    return 0.0, 64.0
+
+
 def share_at(sounds, gap: float) -> float:
     """The share of a gap a note sounds: one share (a float), or the gap_sounds word's by the gap's class (a dict)."""
     if isinstance(sounds, dict):
@@ -681,15 +706,54 @@ def first_onset(figures: list, bars: list, k: int) -> float | None:
     return bars[k][0] + float(Fraction(toks[0].partition(":")[0])) if toks else None
 
 
+def line_state(ref: float, scale: set) -> str:
+    """The line note's state for the voice_intervals word: on the song's scale, or altered (off it)."""
+    return "scale" if int(round(ref)) % 12 in scale else "altered"
+
+
+def interval_entry(entry: str) -> tuple[str, int]:
+    """A voice_intervals entry: ("steps", the scale steps) or ("semis", the semitones against an altered line note, "s-4")."""
+    return ("semis", int(entry[1:])) if entry.startswith("s") else ("steps", int(entry))
+
+
+def interval_pitch(entry: str, ref: float, scale: set) -> int:
+    """The voice's note for an interval entry against the line's note: the scale steps from the line note's scale tone, or
+    the semitones from the note itself (round 66: the counted steps had been put back on the scale, so a unison with the
+    tune's leading tone came out a semitone under it)."""
+    form, v = interval_entry(entry)
+    return int(round(ref)) + v if form == "semis" else scale_pitch(scale_index(int(round(ref)), scale) + v, scale)
+
+
+def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=None, move_ctx: tuple | None = None, prev_midi: float | None = None) -> dict:
+    """{entry: weight} over the voice_intervals word's entries under `ctx` (its third value the line note's state, which
+    picks the entries' form), within two octaves and off `refused`; with `t_mv` and the voice's last note, each weighed
+    by the voice_moves word for the move the entry's note would make from it: the note both words agree on."""
+    form = "semis" if ctx[2] == "altered" else "steps"
+    out = {}
+    for entry in t_iv.vocabulary:
+        f, v = interval_entry(entry)
+        if f != form or entry in refused or abs(v) > (rhythm.VOICE_SEMITONES if f == "semis" else rhythm.VOICE_STEPS):
+            continue
+        w = t_iv.p(entry, ctx)
+        if t_mv is not None and prev_midi is not None:
+            mv = str(scale_index(interval_pitch(entry, ref, scale), scale) - scale_index(int(round(prev_midi)), scale))
+            if mv not in t_mv.vocabulary:
+                continue
+            w *= t_mv.p(mv, move_ctx)
+        if w > 0:
+            out[entry] = w
+    return out
+
+
 def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Random, ref: float | None, prev_steps: str,
-                 prev_midi: float | None, moved: int, refused=()) -> tuple[int | None, int | None]:
+                 prev_midi: float | None, moved: int = 0, refused=()) -> tuple[int | None, str | None]:
     """The note of a voice beside the line, as the voice_intervals and voice_moves words give it: with the line (`ref`, the
-    line's note; `moved`, the line's move in scale steps since the voice's last onset with it), the interval both words
-    agree on, drawn from their product; alone, the voice's own move. (midi, the interval drawn or None); (None, None)
-    where nothing can be drawn."""
+    line's note), the interval both words agree on, drawn from their product (the move the interval's note would make
+    from the voice's last note; `moved`, the line's own move, is no longer needed and kept for the callers); alone, the
+    voice's own move. (midi, the interval entry drawn, the chain's next `prev_steps`) or None; (None, None) where
+    nothing can be drawn."""
     t_iv = models["voice_intervals"].table if hasattr(models["voice_intervals"], "table") else models["voice_intervals"]
     t_mv = models["voice_moves"].table if hasattr(models["voice_moves"], "table") else models["voice_moves"]
-    total = 0.0
 
     def weighted(weights: dict):
         tot = sum(weights.values())
@@ -702,17 +766,11 @@ def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Ran
                 return key_
         return next(reversed(weights))
     if ref is not None:
-        ref_i = scale_index(int(round(ref)), scale)
-        ctx = (role, kind, prev_steps)
-        if prev_steps != rhythm.START and prev_midi is not None:
-            before = int(prev_steps)
-            weights = {c: t_iv.p(str(c), ctx) * t_mv.p(str(c - before + moved), (role, kind, "with"))
-                       for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
-                       if c not in refused and str(c) in t_iv.vocabulary and str(c - before + moved) in t_mv.vocabulary}
-        else:
-            weights = {c: t_iv.p(str(c), ctx) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1) if c not in refused and str(c) in t_iv.vocabulary}
-        steps = weighted(weights)
-        return (scale_pitch(ref_i + steps, scale), steps) if steps is not None else (None, None)
+        ctx = (role, kind, line_state(ref, scale), prev_steps)
+        chained = prev_steps != rhythm.START and prev_midi is not None
+        weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None)
+        entry = weighted(weights)
+        return (interval_pitch(entry, ref, scale), entry) if entry is not None else (None, None)
     if prev_midi is None:
         return (None, None)
     move = weighted({c: t_mv.p(str(c), (role, kind, "alone")) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
@@ -1047,7 +1105,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
-           letters: dict | None = None, theme_body=None) -> tuple[list, list, list]:
+           letters: dict | None = None, theme_body=None, grain: str | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -1144,6 +1202,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     prev_cell, last_midi, last_move = None, float((register[0] + register[1]) // 2), rhythm.START
     last_time = None                                        # when the tune's last note fell: the note a move leaves, for its tone against the chord
     rhythm_played, rhythm_prev = Counter(), None
+    new_strikes = []                                        # onsets of each new rhythm drawn: the tune's running density (tier_bounds)
+    new_offs = []                                           # of them, the onsets off the beat: the tune's running grain (grain_bounds)
     draws = {k: (Counter(), None) for k in ("contours", "endings", "relations")}
     log, prev_phrase, prev_phrase_start = ([arc_line] if arc_line else []), None, None
     written_windows = {}                                    # a window's first bar -> (its live bars, their cells), for the form's repeats
@@ -1278,7 +1338,18 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         env = envelope_of(own[k], meters[k])
         values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
         unit = tables.Unit(song.sid, song.game, "", values)
-        fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
+        lo, hi = tier_bounds(habit)                         # the tune keeps to its tier's density and its drawn grain over the song (round 66):
+        g_lo, g_hi = grain_bounds(grain)                    # the bar chain, conditioned on the bar before, had locked a "medium" tune into one
+        def tier_ok(f):                                     # game song's grain, 2.9 onsets a bar in one song and 12.2 in another (FFVI's medium
+                                                            # tunes: 3.4 to 5.1 a bar), and 4 of 7 medium tunes on the beat (0.15-0.21 of their
+                                                            # onsets off it; FFVI's medium tunes 0.33-0.51, the tune_grain word's draw)
+            toks = rhythm._tokens(f)
+            n = sum(new_strikes) + len(toks)
+            off = (sum(new_offs) + offbeats(toks)) / max(1, n)
+            if not g_lo <= off <= g_hi:                     # the grain from the first draw: a tune of few new rhythms is its first ones echoed
+                return False
+            return len(new_strikes) < TIER_AFTER or lo <= n / (len(new_strikes) + 1) <= hi
+        fit = lambda f: manner.fits(f) and within(f, env) and tier_ok(f)   # noqa: E731
         kind = models["cell_rhythms"].draw((R.MELODY,), rng, floored=False) if "cell_rhythms" in models else "new"
         figure = None
         if kind == "previous" and rhythm_prev is not None and fit(rhythm_prev):
@@ -1297,6 +1368,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             figure = next((f for f in rhythm_played if fit(f)), figure if manner.fits(figure) else "0")
         rhythm_played[figure] += 1
         rhythm_prev = figure
+        new_strikes.append(len(rhythm._tokens(figure)))
+        new_offs.append(offbeats(rhythm._tokens(figure)))
         return [float(Fraction(t.partition(":")[0])) for t in rhythm._tokens(figure)]
 
     def realize(k: int, positions: list, pitches: list) -> Cell:

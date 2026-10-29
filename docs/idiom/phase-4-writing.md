@@ -3984,3 +3984,57 @@ state had leaned the tune forward of the game by counting the backing's
 attacks on one side only. Whether the written tune should sit where the
 game keeps it, or forward of it, is a question for the owner's ear, not
 for the counts; Song Check 52 asks it.
+
+### Round 66: the tune's grain, the voice's own alteration, and three songs' tokens (2026-10-29, from Song Check 52's notes: "the melody is still weak")
+
+**Found.** The tune's structure is at parity with FFVI's (exact echoes
+0.23 against 0.30, echoed bars 0.61 against 0.64, a hook 0.28 against
+0.20); its grain is not. FFVI's medium tune has a median gap of half a
+beat between onsets, 0.33-0.51 of them off the beat (quartiles over 39
+songs) and 3.4-5.1 onsets a bar; four of Song Check 52's seven medium
+tunes (152, 153, 156, 159) had a median gap of a whole beat, 0.15-0.21
+off the beat, where five of FFVI's 39 sit, and 3.3-3.6 onsets a bar. The
+bar table is conditioned on the bar before, so a tune's first draws fix
+its grain, and the theme's echoes multiply them; a running-density hold
+alone (the first half of this round) narrowed the density (medium 2.9-6.6
+a bar, median 3.8) and left the grain where it was. The counter's
+intervals drift where the tune's note is off the key's scale: FFVI's tune
+is off it at 0.23 of the counter's onsets with it (its leading tones in
+minor), and `scale_index` had put the counted steps back on the scale,
+so a drawn unison with the tune's B# came out a B. Against a scale note
+the written counter's intervals were "other" (seconds, tritones,
+sevenths) in 0.12, FFVI's 0.12; against an off-scale note in 0.54,
+FFVI's 0.15. The register fold changes no interval class (130 of 448
+draws folded, all to the inversion). The three songs: Whole 151's token
+is Dancing Mad (part 2), bass, counter and melody all at level 1.0 on
+one organ sample over a snare-and-crash kit, and the plan followed it
+to the letter; Whole 157's is Dancing Mad (part 1), its bass "main" in
+three voices with the second at 1.9 times the line's level and 9.0 times
+its notes (the line a sparse pedal); Whole 160's is New Continent, whose
+kit is one crash at 0.5. A first reading of pack4's balance table as
+stale was wrong: the tables count a note's level through the samples'
+loudness (`rhythm.set_loudness` before the count), and with it set all
+67 tokens match the readings. The token is drawn from all 67 songs; a
+themed song may draw Dancing Mad's organ texture.
+
+**Built.** A new counted word, `tune_grain` (`rhythm.tune_grain_units`,
+`rhythm.GRAINS`): the share of a tune part's onsets off the beat as a
+class (on-beat under 0.25, eighths to 0.5, fine over), one unit a song and
+part (melody, counter), by the part and its habit's density tier (the
+tier alone: under the whole habit the draw backed off to the part and
+gave a dense tune "on-beat", which no dense tune of FFVI is). The plan
+draws it on its own stream (`whole:{seed}:grain:{role}`) and the melody
+writer holds its new rhythms' running share inside the class from the
+first draw (`writer.grain_bounds`, GRAIN_SLACK 0.1), the density tier
+after TIER_AFTER draws (`writer.tier_bounds`, TIER_SLACK 0.5). The
+`voice_intervals` word is counted under the line note's state (`line`:
+scale or altered) and, against a note off the scale, in semitones from the
+note itself (`s-4`); `writer.interval_pitch` puts either back exactly and
+`interval_weights` draws over the state's entries, weighing each by the
+move its note would make from the voice's own last note (as `voice_moves`
+counts it; the product had taken the move from the last note with the
+line), in `beside_pitch` and the upper voices alike. A first form, a "+"
+on a voice note off the scale, put alterations against scale notes they
+never follow (the written "other" against scale notes rose from 0.12 to
+0.22) and was dropped. Pack4 refit
+(95 tables).

@@ -554,6 +554,36 @@ def rhythm_habit_units(songs) -> list:
     return habits(units(songs))
 
 
+GRAINS = ((0.25, "on-beat"), (0.5, "eighths"), (1.01, "fine"))   # a tune's grain: its share of onsets off the beat (tune_grain_units)
+GRAIN_NOTES = 8                      # onsets a line needs to count a grain
+
+
+def tune_grain_units(songs) -> list:
+    """Each song's tune and counter-line as a unit: its outcome the line's
+    grain (GRAINS: the share of its onsets off the beat, on-beat under
+    0.25, eighths to 0.5, fine over), its values the part and its habit's
+    density tier (the tier alone: under the whole habit the draw backed
+    off to the part and gave a dense tune "on-beat", which no dense tune
+    of FFVI is); drawn once a song and held by the melody writer from its
+    first new rhythm on, as the density tier is after TIER_AFTER (round 66). FFVI's medium tunes sit at
+    0.33-0.51 off the beat (quartiles; a median gap of half a beat) and
+    4 of the 7 medium tunes of Song Check 52 at 0.15-0.21, where 5 of
+    FFVI's 39 are: the bar chain, conditioned on the bar before, had
+    locked a tune into the on-beat grain of its first draws."""
+    out = []
+    tiers = {(u.song, u.values["part"]): u.outcome for u in habits(units(songs))}
+    for s in songs:
+        for role in (R.MELODY, R.COUNTER):
+            if (s.sid, role) not in tiers:
+                continue
+            on = [p for _, struck in bars_of(s, role) if struck for p, _ in struck]
+            if len(on) < GRAIN_NOTES:
+                continue
+            share = sum(1 for p in on if Fraction(p).denominator != 1) / len(on)
+            out.append(tables.Unit(s.sid, s.game, habit_of(share, GRAINS), {"part": role, "habit": tiers[(s.sid, role)].split()[0]}))
+    return out
+
+
 def drum_figure(struck, song: Song) -> str:
     """A drum bar's figure as a table's outcome: each hit's position and
     its piece's letter (LETTERS; a sample the reading named no drum, o),
@@ -3008,6 +3038,7 @@ LAYER_OFFSET = 24                    # semitones: a second voice's register agai
 
 
 VOICE_STEPS = 14                     # scale steps: a voice beside the line's interval or move is counted within two octaves
+VOICE_SEMITONES = 24                 # semitones: a voice's interval against a line note off the scale, within two octaves (round 66)
 
 
 def _beside_lines(songs):
@@ -3040,7 +3071,8 @@ def _beside_lines(songs):
 def _voice_walk(songs):
     """Each onset of a voice beside a line: (song, part, kind, with the line?, steps from the line's note struck or last
     struck, the voice's move in steps from its own previous note or None, the interval at its previous onset with the
-    line or START)."""
+    line or START, the line note's state (scale or altered: off the song's scale) and the interval as the word's outcome
+    (the steps, or "s" and the semitones against an altered line note)."""
     from . import writer                                   # writer imports this module
     for s, role, kind, notes, lns, scale in _beside_lines(songs):
         prev_with, prev_midi, li = START, None, 0
@@ -3055,9 +3087,11 @@ def _voice_walk(songs):
             steps = writer.scale_index(m, scale) - writer.scale_index(lm, scale)
             move = writer.scale_index(m, scale) - writer.scale_index(prev_midi, scale) if prev_midi is not None else None
             with_line = abs(lns[li][0] - t) < NEAR
-            yield s, role, kind, with_line, steps, move, prev_with
+            altered = lm % 12 not in scale                     # the line's note off the song's scale (a leading tone in minor): the voice's
+            outcome = f"s{m - lm}" if altered else str(steps)  # interval is then counted in semitones from the note itself (round 66)
+            yield s, role, kind, with_line, steps, move, prev_with, "altered" if altered else "scale", outcome
             if with_line:
-                prev_with = str(steps)
+                prev_with = outcome
             prev_midi = m
 
 
@@ -3069,11 +3103,19 @@ def voice_interval_units(songs) -> list:
     from one onset to the next 37 % of the time; the writing had put it a tone up the line's voicing, never at the
     octave, holding its interval 54 % (2026-10-24). Held out, the chain conditioning is worth 0.7 bits a unit; the
     layer word and the line note's chord role add nothing to it. The counter-line is counted beside the tune the same
-    way (part counter, the kind its sample relation: thirds on the tune's sample, octaves and unisons on another)."""
+    way (part counter, the kind its sample relation: thirds on the tune's sample, octaves and unisons on another). The
+    interval is counted in scale steps between the two notes' scale tones (a note off the scale: the tone below it)
+    where the line's note is on the song's scale, and in semitones from the note itself ("s-4") where it is off it
+    (the value "line": scale or altered; round 66): the writer had put the counted steps back on the scale, so a
+    unison with the tune's leading tone came out a semitone under it. FFVI's tune is off its key's scale at 0.23 of
+    the counter's onsets with it; the actual intervals there are "other" (seconds, tritones, sevenths) in 0.15, as the
+    writer realized the counted steps in 0.41 (Song Check 52's seeds: 0.54 against an off-scale tune note, 0.12 in
+    scale, FFVI 0.12). A voice note off the scale against a scale note is kept as its scale tone: marking it had put
+    alterations against notes they never follow (the written "other" rose to 0.22 against scale notes)."""
     out = []
-    for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
-        if with_line and abs(steps) <= VOICE_STEPS:
-            out.append(tables.Unit(s.sid, s.game, str(steps), {"part": role, "kind": kind, "previous": prev_with}))
+    for s, role, kind, with_line, steps, move, prev_with, line, outcome in _voice_walk(songs):
+        if with_line and (abs(steps) <= VOICE_STEPS if line == "scale" else abs(int(outcome[1:])) <= VOICE_SEMITONES):
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "kind": kind, "line": line, "previous": prev_with}))
     return out
 
 
@@ -3087,7 +3129,7 @@ def voice_move_units(songs) -> list:
     leapt five steps or more at 43 % of its onsets, FFVI 11 %). The counter-line beside the tune is counted too (part
     counter, kind same or other), its place with the tune or alone in the tune's rests."""
     out = []
-    for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
+    for s, role, kind, with_line, steps, move, prev_with, _, _ in _voice_walk(songs):
         if move is not None and abs(move) <= VOICE_STEPS:
             out.append(tables.Unit(s.sid, s.game, str(move), {"part": role, "kind": kind, "place": "with" if with_line else "alone"}))
     return out

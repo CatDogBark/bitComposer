@@ -484,10 +484,10 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual([u.outcome for u in mv if u.values["place"] == "alone"], ["1"] * 4)   # alone: a step up from its own C
         self.assertEqual({u.outcome for u in mv if u.values["place"] == "with"}, {"0", "-1"})  # with the line: back to C from C or from D
         # the writer: tables that say "an octave above the line" and "hold your note" with the line, "a step up" alone
-        iv_t = tables.Table(("part", "kind", "previous"), "voice_intervals", votes=tables.SHARES).fit(
-            [tables.Unit(f"s{i}", "g", "7", {"part": "accompaniment", "kind": "apart", "previous": p}) for i in range(20) for p in (rhythm.START, "7")])
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "7", {"part": "accompaniment", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "7")])
         mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
-            [tables.Unit(f"s{i}", "g", o, {"part": "accompaniment", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("1", "alone"))])
+            [tables.Unit(f"s{i}", "g", o, {"part": "accompaniment", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])   # with the line: hold, or back from the step (the move is from the voice's own last note, round 66)
         song = rhythm.Song("w", 4, 12, bars[:2], [vocab.Span(0.0, 8.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
         shared = {}
         for k in range(2):
@@ -591,13 +591,13 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual((by[("line", "4+")], by[("second", "<1")], by[("second", "2-4")]), ("1.0", "0.5", "1.0"))
         self.assertEqual(rhythm.gap_class(0.5), "<1"); self.assertEqual(rhythm.gap_class(4.0), "4+")
         # the second bass voice on the line's pitch: a table that says "the same note" with the line and "hold" alone
-        iv = tables.Table(("part", "kind", "previous"), "voice_intervals", votes=tables.SHARES).fit(
-            [tables.Unit(f"s{i}", "g", "0", {"part": "bass", "kind": "apart", "previous": p}) for i in range(20) for p in (rhythm.START, "0")])
+        iv = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "0", {"part": "bass", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "0")])
         mv = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
             [tables.Unit(f"s{i}", "g", o, {"part": "bass", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("2", "with"), ("0", "alone"))])   # with the line it moves as the line does
         shared = {("line", (0, __import__("fractions").Fraction(0))): 40.0, ("line", (0, __import__("fractions").Fraction(2))): 43.0}
         midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), 43.0, "0", 40.0, 2)
-        self.assertEqual((midi, steps), (43, 0))
+        self.assertEqual((midi, steps), (43, "0"))
         midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), None, "0", 43.0, 0)
         self.assertEqual((midi, steps), (43, None))
 
@@ -682,10 +682,10 @@ class NewTablesTests(unittest.TestCase):
         mv = [u for u in rhythm.voice_move_units([s]) if u.values["part"] == "counter"]
         self.assertEqual(sorted({(u.outcome, u.values["place"]) for u in mv}), [("-1", "alone"), ("-1", "with"), ("1", "alone"), ("2", "with")])
         # the writer: a table that says "a third below the tune" and "hold the note" with the tune, "a step up" alone
-        iv_t = tables.Table(("part", "kind", "previous"), "voice_intervals", votes=tables.SHARES).fit(
-            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "previous": p}) for i in range(20) for p in (rhythm.START, "-2")])
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "-2")])
         mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
-            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("1", "alone"))])
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])   # back from the step too (round 66)
         vals = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
         song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
         tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 72.0, 0) for k in range(3) for i in range(4)]           # the tune repeats C on every beat
@@ -1312,3 +1312,57 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(writer.contour_targets("rising", 8.0), (0, 4.0, 8.0))
         self.assertEqual(writer.contour_targets("valley", 3.0), (0, -3.0, 0))
         self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))   # without a size, as before
+
+
+class TuneGrainTests(unittest.TestCase):
+    def test_tune_grain_counted_by_part_and_habit(self):
+        """A line's grain is its share of onsets off the beat (rhythm.GRAINS), one unit a song and tune part, under the part's habit."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g", parts=[(0, 8, None, "A")])
+        s.notes["melody"] = [(a + p, 0.4, 60.0 + i, "melody") for a, _ in bars for i, p in enumerate((0.0, 0.5, 1.0, 1.5, 2.0, 3.0))]   # 2 of 6 off the beat
+        s.notes["counter"] = [(a + 0.5 * i, 0.4, 72.0, "counter") for a, _ in bars for i in range(8)]                              # 4 of 8
+        units = rhythm.tune_grain_units([s])
+        self.assertEqual({u.values["part"]: u.outcome for u in units}, {"melody": "eighths", "counter": "fine"})
+        self.assertTrue(all(u.values["habit"].split()[0] in ("sparse", "medium", "dense") for u in units))
+        s.notes["counter"] = s.notes["counter"][:4]                                                                                 # under GRAIN_NOTES: no unit
+        self.assertEqual([u.values["part"] for u in rhythm.tune_grain_units([s])], ["melody"])
+
+    def test_grain_and_tier_bounds(self):
+        self.assertEqual(writer.grain_bounds("on-beat"), (0.0, 0.25 + writer.GRAIN_SLACK))
+        self.assertEqual(writer.grain_bounds("eighths"), (0.25 - writer.GRAIN_SLACK, 0.5 + writer.GRAIN_SLACK))
+        self.assertEqual(writer.grain_bounds("fine"), (0.5 - writer.GRAIN_SLACK, 1.0))
+        self.assertEqual(writer.grain_bounds(None), (0.0, 1.0))
+        self.assertEqual(writer.tier_bounds("medium varied"), (2 - writer.TIER_SLACK, 6 + writer.TIER_SLACK))
+        self.assertEqual(writer.tier_bounds("sparse mixed")[0], 0.0)
+        self.assertEqual(writer.offbeats(["0", "1/2", "1", "3/2:x", "3"]), 2)
+
+
+class AlteredVoiceTests(unittest.TestCase):
+    def test_a_voice_against_a_line_note_off_the_scale_is_counted_in_semitones(self):
+        """voice_intervals counts the interval in scale steps against a line note on the scale and in semitones ("s-4")
+        against one off it (the value "line"); the writer's interval_pitch inverts both, so a unison with the tune's
+        leading tone is the leading tone (round 66)."""
+        from bitcomposer.translate import vocab, tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        tune = [(4.0 * k + i, 0.9, [72.0, 73.0, 74.0, 73.0][i], "lead") for k in range(4) for i in range(4)]    # C, C#, D, C# in C major
+        counter = [(4.0 * k + i, 0.9, [72.0, 73.0, 71.0, 69.0][i], "ctr") for k in range(4) for i in range(4)]  # unison, unison on C#, B under D, A under C#
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={"melody": tune, "counter": counter}, sid="s", game="g", bpm=120.0, tonic=0, mode="major")
+        s.voice_notes = {1: ("melody", tune), 2: ("counter", counter)}
+        iv = [u for u in rhythm.voice_interval_units([s]) if u.values["part"] == "counter"]
+        self.assertEqual([u.outcome for u in iv][:4], ["0", "s0", "-2", "s-4"])
+        self.assertEqual([u.values["line"] for u in iv][:4], ["scale", "altered", "scale", "altered"])
+        self.assertEqual([u.values["previous"] for u in iv][:5], [rhythm.START, "0", "s0", "-2", "s-4"])
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual(writer.line_state(73.0, scale), "altered"); self.assertEqual(writer.line_state(72.0, scale), "scale")
+        self.assertEqual(writer.interval_pitch("s0", 73.0, scale), 73)
+        self.assertEqual(writer.interval_pitch("s-4", 73.0, scale), 69)
+        self.assertEqual(writer.interval_pitch("-2", 74.0, scale), 71)
+        self.assertEqual(writer.interval_entry("s-4"), ("semis", -4)); self.assertEqual(writer.interval_entry("7"), ("steps", 7))
+        t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "line": ln, "previous": rhythm.START}) for i in range(8) for o, ln in (("s0", "altered"), ("-2", "scale"))])
+        self.assertEqual(list(writer.interval_weights(t, ("counter", "other", "altered", rhythm.START), (), 73.0, scale)), ["s0"])   # the entries of the line's state alone
+        self.assertEqual(list(writer.interval_weights(t, ("counter", "other", "scale", rhythm.START), (), 72.0, scale)), ["-2"])
+        midi, entry = writer.beside_pitch({"voice_intervals": t, "voice_moves": t}, "counter", "other", scale, random.Random(1), 73.0, rhythm.START, None, 0)
+        self.assertEqual((midi, entry), (73, "s0"))
+        midi, entry = writer.beside_pitch({"voice_intervals": t, "voice_moves": t}, "counter", "other", scale, random.Random(1), 74.0, rhythm.START, None, 0)
+        self.assertEqual((midi, entry), (71, "-2"))

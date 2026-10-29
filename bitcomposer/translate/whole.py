@@ -97,6 +97,8 @@ PLAN_FLOOR = 1                        # a plan's one-shot draw never backs off p
                                       # table keyed by part mixes every part, and under Witten-Bell a register draw reached it in a
                                       # third of draws (a counter at bass depth 8 % of the time, a bass above middle C 19 %)
 PLAN_SONGS = 2                        # a finer level is used only with this many songs behind it
+GRAIN_FLOOR = 2                       # the tune_grain draw never backs off past the part's density tier: the part level had given a dense tune
+                                      # "on-beat" (under 0.25 of its onsets off the beat), which no dense tune of FFVI is (round 66)
 NUMERAL = re.compile(r"^([b#]?)([ivIV]+)(.*)$")
 TOGETHER = harness.TOGETHER           # the share of the playing voices striking a position together for it to be a shared hit
 NEAR = rhythm.NEAR
@@ -669,7 +671,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                             "steps": _draw(models, "step_habits", (R.MELODY,), rng, log),
                             "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
                             "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
-                            "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng)}
+                            "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng),
+                            "grain": (_draw(models, "tune_grain", (role, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:grain:{role}"), log, floor_k=GRAIN_FLOOR)
+                                      if "tune_grain" in models_or_empty(models) else None)}   # an own stream, floored at the tier (round 66)
     if R.DRUMS in band and "part_entries" in models_or_empty(models):   # the drums' entrances under the kit's tier (round 59), on an own stream
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
@@ -1322,7 +1326,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                  recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                                 role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"),
+                                                 role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"),
                                                  letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"))
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -1346,7 +1350,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             notes2, figures2, plog2 = writer.melody(song, [], reg2, models, random.Random(f"{seed}:{role}:second"), habit2,
                                                     key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"))
+                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"))
             song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
             line = line + [(a, b, m, 1) for a, b, m in notes2]
             figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
