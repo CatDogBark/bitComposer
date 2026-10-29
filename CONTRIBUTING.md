@@ -17,6 +17,19 @@ also be started by hand on any branch (`gh workflow run ci.yml --ref
 <branch>`, or `windows.yml`) when a change could break Windows or an older
 Python.
 
+## Issues and pull requests
+
+Anyone can open an issue: a problem (the form asks for the version and what
+happened) or an idea. A security problem goes privately instead, as
+[SECURITY.md](SECURITY.md) says.
+
+Pull requests come from collaborators. To work on something, open an issue
+about it first; the maintainer invites contributors as collaborators.
+Collaborators push branches of their own and open pull requests into `dev`;
+only the maintainer merges into `dev` and `main` and makes release tags
+(`v*`), and only `main` and those tags can reach the signing and PyPI
+environments.
+
 ## Before you open a pull request
 
 1. Run the tests:
