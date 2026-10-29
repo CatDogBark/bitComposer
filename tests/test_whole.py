@@ -1067,10 +1067,10 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual([u.outcome for u in rhythm.top_level_units([s])], ["0.30"])
         t = tables.Table(("part",), "top_levels", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "0.30", {"part": rhythm.ARRANGEMENT}) for i in range(3)])
         p = whole.plan({"top_levels": t}, 1, "g")
-        self.assertAlmostEqual(p.top_level, 0.30)
+        self.assertAlmostEqual(p.top_level, min(1.0, 0.30 * whole.TOP_SCALE))                    # the readings' scale bridged to the module's
         p.levels = {"bass": 1.0, "melody": 0.6}
-        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), 0.30)
-        self.assertAlmostEqual(whole.note_level(p, "melody", 0, {}), 0.18)
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), p.top_level)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 0, {}), p.top_level * 0.6)
         self.assertAlmostEqual(whole.plan({}, 1, "g").top_level, whole.TOP_LEVEL)
 
     def test_a_recalled_passage_goes_on_as_the_games_do(self):

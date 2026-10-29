@@ -58,6 +58,11 @@ WANTS = {R.HARMONY: 3, R.ACCOMP: 2, R.ARP: 1, R.COUNTER: 1}   # voices an upper 
 LEVELS = {R.MELODY: 0.85, R.COUNTER: 0.6, R.HARMONY: 0.5, R.ACCOMP: 0.6, R.ARP: 0.55, R.BASS: 0.8, R.DRUMS: 0.8}   # of full, by part: the
 TOP_LEVEL = 0.85                      # the loudest part's level of full without a top_levels table (round 52: with one, the song's own draw;
                                       # FFVI's loudest parts sit at 0.2 to 0.4, and 0.85 had rendered 5 dB hotter than the game's songs)
+TOP_SCALE = 1.7                       # the readings' level (a voice's two sides' mean over 128) to the module's note level, measured: by the
+                                      # converter's own sums the two scales agree (a voice at 38 a side is IT volume 38 of 64 under FFVI's
+                                      # master of 63, 0.29 of full either way), but the written songs rendered 4.5 dB under FFVI's converted
+                                      # songs at the readings' top level as drawn (-29.0 against -24.5 dBFS, the same player), and 5 dB over
+                                      # at 0.85; 1.7 (4.6 dB) is the measured bridge, to be read again when the readings' level is understood
 PANS = {R.MELODY: (0.5,), R.COUNTER: (0.6,), R.HARMONY: (0.35, 0.65, 0.5), R.ACCOMP: (0.6, 0.4), R.ARP: (0.4,), R.BASS: (0.5,),
         R.DRUMS: (0.5, 0.58)}        # the right side's share, a part's voices in turn
 POOLS = {R.MELODY: "lead", R.COUNTER: "counter", R.HARMONY: "harmony", R.ARP: "arp"}   # a part's voice pool in a pack; the
@@ -543,7 +548,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         plays = {r: plays[r] for r in band}
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in models_or_empty(models) else {})                                  # plan's, every later draw had shifted
-    top_level = float(_draw(models, "top_levels", (rhythm.ARRANGEMENT,), random.Random(f"whole:{seed}:top"), log)) if "top_levels" in models_or_empty(models) else TOP_LEVEL
+    top_level = (min(1.0, TOP_SCALE * float(_draw(models, "top_levels", (rhythm.ARRANGEMENT,), random.Random(f"whole:{seed}:top"), log)))
+                 if "top_levels" in models_or_empty(models) else TOP_LEVEL)
     registers, sounds, habits, extras = {}, {}, {}, {}
     for role in band:
         if role == R.DRUMS:

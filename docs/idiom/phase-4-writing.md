@@ -3550,5 +3550,26 @@ rebuilt from its 82 files into `pack3/ffvi` with the tables carried over,
 and `LAYER_LEVEL_CAP` 4.0 (the balance and layer_levels tables refitted;
 the balance vocabulary reorders, so every seed's band draw moves). Round
 52, `top_levels`: the loudest part's level of full by song, drawn on an
-own stream, the band's shares shares of it. Test
-`test_the_songs_loudest_part_plays_at_the_games_level`.
+own stream, the band's shares shares of it, through a measured bridge
+(`TOP_SCALE` 1.7): by the converter's own sums the readings' level and
+the module's note level should agree (a voice at 38 a side is IT volume
+38 of 64 under FFVI's constant master of 63, 0.29 of full either way),
+but the written songs at the readings' top level as drawn rendered 4.5
+dB under FFVI's converted songs (-29.0 against -24.5 dBFS), so the
+factor is read off the renders until the readings' level is understood.
+Test `test_the_songs_loudest_part_plays_at_the_games_level`.
+
+**Measured after, seeds 1-45 (plans) and 66-70 (renders).** The tune's
+instruments: 16 distinct over 45 songs, the pad 0.20 of them (FFVI 0.31;
+0.40 before this round, 0.73 before round 42); 31 of the pack's 58
+samples in use across the band. Second-voice shares past the old cap: 9
+of 95. The top level drawn: median 0.51 after the bridge (quartiles 0.34
+to 0.59). Loudness over the first minute, the same player as FFVI's
+converted songs: -17.4, -24.6, -24.6, -31.2, -22.8 dBFS, median -24.6
+against FFVI's -24.5 (the spread is FFVI's own: its loudest parts range
+0.10 to 0.45 of full). Song Check 42 is five fresh band-themed seeds
+(66-70), a new baseline: every song's band, instruments and level moved
+with this round.
+
+**Open:** the readings' level against the module's (the 1.7); the pairs
+(0.24 against 0.40); the medium tune's density; the Dependabot alerts.
