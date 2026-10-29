@@ -703,10 +703,24 @@ said otherwise. Counting code: `translate/rhythm.py` and
   note clamped, which had sent 0.46 of the written recalls back as a cell
   the tune never played (0.17 after; FFVI's moved cells keep their
   intervals, a rhythm with other intervals 0.06 of its bars). The half-bar
-  urn's recalled halves are rebuilt the same way.
+  urn's recalled halves are rebuilt the same way. Since round 49
+  (2026-10-28) a recalled cell is folded into the part's whole room (its
+  register up to the arc's peak), not the phrase's room under the arc,
+  which had clamped a wider recall; and the `endings` degree is put on a
+  phrase's last note only where that last bar is a new cell, a recalled
+  last bar keeping its cell as FFVI's identical recalls do (the ending
+  moved onto a recall had made 33 of 76 bent recalls). Recalls that come
+  back as a cell the tune never played: 0.24 to 0.10 of recalls.
 - **cell_rhythms** — a new cell's rhythm: new to the tune, the bar before's,
   or an earlier one's. Drawn for a new cell; the rhythm itself then comes
   from the part's `rhythm` table.
+- **recall_continues** — whether a passage the tune recalls goes on with
+  the bar after its source (`yes`, `no`), by the part and the song's echo
+  habit (round 50, 2026-10-28): FFVI mixed 0.64, repeating 0.91, varied
+  0.30. The melody writer draws it where the bar before was an "earlier"
+  recall and its source has a bar after it (`continues()`); the CONTINUE
+  constant (0.8) is the fallback without the table. Why: the constant was a
+  rule standing where a count belonged (docs/idiom/rules-to-words.md).
 - **pair_recall**, **pair_bar_recall**, **recall_sources** — the tune's
   memory at the two-bar pair, and where its echoes point (round 40,
   2026-10-28). `pair_recall`: what each two-bar group of the tune (a
