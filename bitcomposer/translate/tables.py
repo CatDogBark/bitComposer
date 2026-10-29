@@ -334,6 +334,9 @@ FLOOR = ("floor",)                   # the shape that is the floor model alone, 
 CACHE = "cache"                      # the mark on a shape's name for its Cache mixture
 RECALL = ("same", "earlier", "new")  # what a unit is to its song so far (Cache)
 NEW_TRIES = 20                       # draws a Cache makes for an outcome new to the song before taking one it played
+FLOOR_SONGS = 2                      # songs a chain's floor level needs (round 57, 2026-10-29): a floor one song held had written a band's
+                                      # main arp as nothing, that song's arp resting in 0.94 of its bars (Whole 75); the masks already step
+                                      # down so (whole.PLAN_SONGS), and a plan's one-shot draws pass a finer level under it (min_songs)
 FLOOR_OUTCOMES = 2                   # outcomes a floor level needs: a context with one outcome is no vocabulary to draw from, and a chain
                                      # floored on it wrote that outcome alone (a kit habit one triple-feel song had, all rests: no drums for a song)
 RECALL_SHAPE = ("part", "habit")     # what the recall shares are conditioned on (the values a unit has of these)
@@ -442,11 +445,11 @@ class Cache:
         floor_k = self.table.chain_floor                    # the bar before may be let go when thin; the part, meter and habit never
         out = None
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES, floor_songs=FLOOR_SONGS)
             if out not in cache and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES, floor_songs=FLOOR_SONGS)
             if keep is None or keep(out):
                 return out
         return out

@@ -3644,3 +3644,20 @@ draw moved to its own stream a part (`whole:{seed}:sample:{role}`): on
 the render stream it had moved with every draw before it, and Song
 Check 43's pairs had changed instruments for that. Test
 `test_a_level_is_counted_and_played_as_loudness`.
+
+### Round 57: a figure chain's floor needs two songs (2026-10-29, found rendering round 56's songs)
+
+**Found.** Whole 75's band token has the arp as its main part, the
+textures and entrances have it playing 36 of 38 bars, and it wrote
+nothing: 736 notes after, none before. The arp's rhythm chain floors on
+the level with its part, meter, habit and feel, and under "dense mixed,
+duple" one FFVI song stands, whose arp rests in 0.94 of its bars; the
+floor steps down only where a level holds one outcome, and this one held
+two (the rest and one figure), so every bar drew the rest. The plan's
+one-shot draws already pass a finer level under two songs, and the masks'
+floor steps down to two songs; the figure chains did not.
+
+**Built (a fault).** `tables.FLOOR_SONGS` 2: the chain draws
+(`Cache.draw_new`) step their floor down to the deepest level two songs
+reach, as the masks do. Over seeds 1-45 no part the plan had playing
+wrote nothing before or after; Whole 75's arp writes 36 bars.
