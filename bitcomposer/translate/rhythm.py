@@ -150,6 +150,49 @@ class Song:
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
 
 
+LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
+SAMPLE_LOUDNESS: dict = {}           # a pack's sample id ("s" + the key's first ten) -> its loop body's RMS, 0-1 (set_loudness)
+
+
+def loudness_factor(key) -> float:
+    """What a note's level is multiplied by to be its loudness (round 56, 2026-10-29): its sample's own loudness over the
+    reference, 1.0 for a sample the table does not know. The readings' level is a voice volume, set by the game's composer to
+    balance that song's samples; a written song takes its levels from one song's token and its samples from the instrument
+    word, and the pack's tonal samples span 19.8 dB in their own loudness, so a level without its sample had put a hot bass
+    5 dB over its tune and a brass lead 7 dB under its bass (Song Check 43's Whole 68 and 70)."""
+    if not SAMPLE_LOUDNESS or not isinstance(key, str):
+        return 1.0
+    rms = SAMPLE_LOUDNESS.get("s" + key[:10])
+    return rms / LOUDNESS_REF if rms else 1.0
+
+
+def set_loudness(table: dict) -> None:
+    SAMPLE_LOUDNESS.clear()
+    SAMPLE_LOUDNESS.update(table)
+
+
+def load_loudness(pack_dir) -> dict:
+    """Each tonal sample's loop-body RMS (0-1) from a pack folder's WAVs: {pack id: rms}."""
+    import json, wave, array
+    from pathlib import Path
+    pack_dir = Path(pack_dir)
+    data = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8"))
+    out = {}
+    for sid, spec in data.get("samples", {}).items():
+        if spec.get("percussion") or not spec.get("file"):
+            continue
+        try:
+            w = wave.open(str(pack_dir / spec["file"]))
+            x = array.array("h", w.readframes(w.getnframes()))
+        except Exception:
+            continue
+        lp = spec.get("loop")
+        body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
+        if len(body):
+            out[sid] = math.sqrt(sum(v * v for v in body) / len(body)) / 32768
+    return out
+
+
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
     """The songs to count (game: only that game's), and why the others were
     left out: {"free time": n, "mostly silent": n}; the harmony counts' songs."""
@@ -199,6 +242,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
+                if role != R.DRUMS and SAMPLE_LOUDNESS:     # a level as loudness: the voice volume times its sample's own (round 56)
+                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise")), pan, i) for s, length, m, level, pan, i in rows]
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
@@ -2624,7 +2669,11 @@ def part_register(notes, ambitus: bool = False) -> tuple | None:
     return int(round(low / REGISTER_BIN)) * REGISTER_BIN, int(round(high / REGISTER_BIN)) * REGISTER_BIN
 
 
-LAYER_LEVEL_CAP = 1.5                # a voice beside the line's level over the line's is counted up to this (layer_level_units' cap)
+LAYER_LEVEL_CAP = 4.0                # a voice beside the line's level over the line's is counted up to this (layer_level_units' cap).
+                                      # 1.5 until round 51 (2026-10-28): 27 of FFVI's 148 voices beside a line run past it (to 3.35),
+                                      # and in every one the line is a quiet inner voice (0.42 of the song's loudest part) and the
+                                      # voice beside it the part's melody-level voice (0.99); capped, it had played 4 dB under the
+                                      # game. The note level's cap of full stands; this cap only keeps the unit's grain in tenths.
 
 
 def voice_level_shares(song: Song, role: str) -> list | None:
@@ -2692,7 +2741,12 @@ def balance_units(songs) -> list:
     tune's sample at its onsets sit at 1.0 times the tune in 13 of 16 and
     never above 1.21, and its 7 counters louder than the tune are, bar one,
     on another sample. With the field, what the counter is and how loud it
-    is are one song's together."""
+    is are one song's together. The song's tempo class joined it in round
+    54 (2026-10-29), a last token `tempo=slow` (band): the tempo drawn
+    apart had put Relm's band (70) at 160 beats a minute and Slam
+    Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
+    song's class; the `tempos` word is drawn again under the class where
+    the plan's draw falls outside it."""
     out = []
     for s in songs:
         if not s.notes:
@@ -2714,6 +2768,8 @@ def balance_units(songs) -> list:
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
+        if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
+            tokens.append(f"tempo={band(s.bpm)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
@@ -2784,6 +2840,13 @@ def sample_range_units(songs) -> list:
             reg = part_register(ns)
             if reg is not None and isinstance(key, str):
                 out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10]}))
+        for role, ns in s.notes.items():                     # and by the part that plays it (round 55): a sample shared by parts sits 9
+            if role == R.DRUMS:                              # semitones apart by part at the median, a bass sample 54 (bass 32, accompaniment 86)
+                continue
+            for key in {n[3] for n in ns if isinstance(n[3], str)}:
+                reg = part_register([n for n in ns if n[3] == key])
+                if reg is not None:
+                    out.append(tables.Unit(s.sid, s.game, f"{reg[0]}-{reg[1]}", {"part": "s" + key[:10], "role": role}))
     return out
 
 
@@ -2910,6 +2973,24 @@ def bass_lock_units(songs) -> list:
             continue
         hit = sum(1 for k, ps in accents.items() for p in ps if any(abs(t - (s.bars[k][0] + float(p))) < NEAR for t in bs))
         out.append(tables.Unit(s.sid, s.game, f"{round(hit / total, 1):.1f}", {"part": R.BASS}))
+    return out
+
+
+TOP_LEVEL_BIN = 0.05                 # the grain the loudest part's level of full is counted to (top_level_units)
+
+
+def top_level_units(songs) -> list:
+    """Each song as a unit: its loudest part's median note level, of full (the readings' scale: the SNES chip's voice volume
+    over 128, the sum of the two sides over 128 at the converter), to TOP_LEVEL_BIN; its value the part (arrangement).
+    Round 52 (2026-10-28): the written songs had played their loudest part at a constant 0.85 of full, and rendered through
+    the same player as FFVI's converted songs they sat 5 dB hotter (-19.6 against -24.5 dBFS over the first minute); FFVI's
+    loudest part sits at 0.2 to 0.4 of full."""
+    out = []
+    for s in songs:
+        if not s.levels:
+            continue
+        top = max(s.levels.values())
+        out.append(tables.Unit(s.sid, s.game, f"{round(top / TOP_LEVEL_BIN) * TOP_LEVEL_BIN:.2f}", {"part": ARRANGEMENT}))
     return out
 
 

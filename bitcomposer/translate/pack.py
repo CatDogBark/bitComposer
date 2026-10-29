@@ -41,8 +41,11 @@ from pathlib import Path
 from . import archives, roles as R
 
 RATE = 32000                         # a sample plays at its own rate at pitch 0x1000
-VOICES = 6                           # the most samples a part draws from
-SHARE = 0.03                         # a sample playing less of a part's notes than this is left out
+VOICES = 64                          # the most samples a part draws from: every tonal sample the part's songs play (round 51,
+                                      # 2026-10-28; six had left FFVI's parts 17 of their line instruments, 0.12 to 0.14 of the
+                                      # songs a part, which the part_samples word then could not draw)
+SHARE = 0.0                          # a sample playing less of a part's notes than this is left out (none: a part's rarest
+                                      # instrument is still the one a song of the game gave it)
 REPEATS = 4                          # a pool repeats its most used sample this many times, the rest by their share
 LONG = 0.5                           # seconds: a drum ringing this long is a cymbal
 WHY = "translator.json"              # beside pack.json: the songs read, and why each sample is where it is

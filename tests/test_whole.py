@@ -757,6 +757,8 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14}
         tokens = rhythm.balance_units([s])[0].outcome.split()
+        self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
+        tokens = [t for t in tokens if not t.startswith("tempo=")]
         self.assertEqual([t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])                 # bass, drums, melody: shares of the loudest
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 4, tokens)        # weight:register:sounded share:voices:level
         self.assertEqual(tokens[1], "drums=::::0.5")                                                # the drums keep a level and nothing else
@@ -817,6 +819,14 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(bare.levels, {"accompaniment": 0.3, "bass": 0.9, "counter": 0.8, "drums": 0.2, "melody": 0.5})
         self.assertEqual(set(bare.level_from.values()), {"levels", "counter_shares"})
         self.assertNotIn("levels from the balance", " ".join(bare.log))
+        # the token's tempo class: a plan whose tempo draw falls outside it draws the tempo again under the class (round 54)
+        slow = tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token + " tempo=slow", rhythm.ARRANGEMENT))
+        tempos = tables.Table(("part", "tempo"), "tempos", votes=tables.SHARES).fit(
+            units("tempos", "70", "song", tempo="slow") + units("tempos", "150", "song", tempo="fast"))
+        ps = whole.plan({"balance": slow, "tempos": tempos}, 1, "g")
+        self.assertEqual((ps.bpm, rhythm.band(ps.bpm)), (70.0, "slow"))
+        self.assertEqual(ps.band, ["accompaniment", "bass", "counter", "drums", "melody"])          # the tempo token is no part
+        self.assertTrue(any("outside the band's class (slow)" in line for line in ps.log) or rhythm.band(70.0) == "slow")
         # the note level: the loudest part at TOP_LEVEL, the rest at their share, a second voice at its layer share, capped at full
         p.voices["accompaniment"] = 2; p.extras["accompaniment"]["layers"] = ["apart -12 like"]; p.extras["accompaniment"]["layer"] = "apart -12 like"
         p.layer_levels["accompaniment"] = 1.5; p.layer_levels["melody"] = 1.5
@@ -846,11 +856,11 @@ class NewTablesTests(unittest.TestCase):
                          3: ("accompaniment", line), 4: ("accompaniment", second), 5: ("accompaniment", third)}
         s.voice_levels = {0: 0.28, 1: 0.22, 2: 0.14, 3: 0.20, 4: 0.26, 5: 0.50}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "accompaniment": 0.22}
-        self.assertEqual(rhythm.voice_level_shares(s, "accompaniment"), ["1.3", "1.5"])           # the busiest first; 2.5 capped at 1.5
+        self.assertEqual(rhythm.voice_level_shares(s, "accompaniment"), ["1.3", "2.5"])           # the busiest first; uncapped since round 51 (the cap 4.0)
         self.assertIsNone(rhythm.voice_level_shares(s, "bass"))                                      # one voice
         self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["1.3"])               # the word's own unit is the first share
-        tokens = rhythm.balance_units([s])[0].outcome.split()
-        self.assertTrue(tokens[0].startswith("accompaniment=") and tokens[0].endswith(":3:0.8:1.3/1.5"), tokens)
+        tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith("tempo=")]
+        self.assertTrue(tokens[0].startswith("accompaniment=") and tokens[0].endswith(":3:0.8:1.3/2.5"), tokens)
         self.assertTrue(tokens[1].startswith("bass=") and tokens[1].count(":") == 4, tokens)        # one voice: five fields
         self.assertEqual(tokens[2], "drums=::::0.5")
         s.voice_levels.pop(5)
@@ -1058,6 +1068,56 @@ class NewTablesTests(unittest.TestCase):
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 0), whole.TOP_LEVEL * 0.8 * 0.5)
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 5), whole.TOP_LEVEL * 0.8)
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), whole.TOP_LEVEL * 0.8)            # no bar: the part's level
+
+    def test_the_songs_loudest_part_plays_at_the_games_level(self):
+        """Round 52: a song's loudest part's level of full is counted (top_levels, to 0.05) and drawn once a song on its own
+        stream; the band's shares are shares of it (note_level), TOP_LEVEL standing without the word."""
+        from bitcomposer.translate import tables
+        s = self._song(); s.levels = {"melody": 0.22, "bass": 0.31, "drums": 0.14}
+        self.assertEqual([u.outcome for u in rhythm.top_level_units([s])], ["0.30"])
+        t = tables.Table(("part",), "top_levels", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "0.30", {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"top_levels": t}, 1, "g")
+        self.assertAlmostEqual(p.top_level, min(1.0, 0.30 * whole.TOP_SCALE))                    # the readings' scale bridged to the module's
+        p.levels = {"bass": 1.0, "melody": 0.6}
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), p.top_level)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 0, {}), p.top_level * 0.6)
+        self.assertAlmostEqual(whole.plan({}, 1, "g").top_level, whole.TOP_LEVEL)
+
+    def test_a_samples_register_is_counted_by_the_part_playing_it_and_a_narrow_band_falls_back(self):
+        """Round 55: the ranges word is counted by the sample and by the sample with the part playing it; round 53: a chord
+        part whose drawn home band is narrower than MIN_SPAN is bound by the sample's whole played range instead."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.notes["accompaniment"] = [(4.0 * i + x, 0.9, 84.0 + (x * 2), "k") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]   # the bass's sample, two octaves up
+        units = rhythm.sample_range_units([s])
+        by = {(u.values["part"], u.values.get("role")): u.outcome for u in units}
+        self.assertIn(("sk", None), by); self.assertEqual(by[("sk", "bass")], "36-36"); self.assertEqual(by[("sk", "accompaniment")], "84-88")
+        self.assertEqual(whole.range_context("sk", "bass"), ("sk", "bass")); self.assertEqual(whole.range_context("sk", None), ("sk",))
+        t = tables.Table(("part", "role"), "ranges", votes=tables.SHARES).fit(units * 3)
+        self.assertEqual(t.draw(("sk", "accompaniment"), random.Random(1), floored=False, floor_k=1), "84-88")
+        self.assertEqual(t.draw(("sk", "bass"), random.Random(1), floored=False, floor_k=1), "36-36")
+        amb = tables.Table(("part",), "sample_ambitus", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "36-88", {"part": "sk"}) for i in range(3)])
+        self.assertEqual(whole.ambitus_of({"sample_ambitus": amb}, "sk"), (36, 88))
+        self.assertLess(36 - 36, whole.MIN_SPAN)                                                    # the bass's one-pitch band: narrower than a voice's room
+
+    def test_a_level_is_counted_and_played_as_loudness(self):
+        """Round 56: a reading's level is multiplied by its sample's own loudness over the reference (loudness_factor, the
+        pack's loop-body RMS), and a written note plays at its level over its sample's loudness (sample_rms), so the level
+        words mean what the ear hears whichever sample a part draws."""
+        import array
+        from types import SimpleNamespace
+        rhythm.set_loudness({"sloudxxxxxx": rhythm.LOUDNESS_REF * 2, "squietxxxxx": rhythm.LOUDNESS_REF / 2})   # "s" + the key's first ten
+        try:
+            self.assertAlmostEqual(rhythm.loudness_factor("loud" + "x" * 12), 2.0)
+            self.assertAlmostEqual(rhythm.loudness_factor("quiet" + "x" * 11), 0.5)
+            self.assertEqual(rhythm.loudness_factor("unknown" + "x" * 9), 1.0)
+            self.assertEqual(rhythm.loudness_factor(None), 1.0)
+        finally:
+            rhythm.set_loudness({})
+        flat = array.array("h", [8192] * 100 + [0] * 100)                                          # a quarter of full for half its length
+        smp = SimpleNamespace(data=flat, loop=True, loop_start=0, loop_end=100)
+        self.assertAlmostEqual(whole.sample_rms(smp), 0.25, places=3)                             # the loop body alone
+        self.assertAlmostEqual(whole.sample_rms(SimpleNamespace(data=flat.tobytes(), loop=False, loop_start=0, loop_end=0)), 0.25 / 2 ** 0.5, places=3)
 
     def test_a_recalled_passage_goes_on_as_the_games_do(self):
         """Round 50: each echo of the tune with a bar after it is counted by whether the next bar goes on with the bar after

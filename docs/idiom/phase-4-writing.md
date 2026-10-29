@@ -3528,3 +3528,148 @@ loudest part absent from the band (2 plans in 200): accepted.
 **Open:** the pairs (0.24 against 0.40) now that continuation is
 counted; the medium tune's density; the pack build (the missing FFVI
 instruments, the 1.5 cap, TOP_LEVEL).
+
+### Rounds 51 and 52: the pack rebuilt with every instrument, the second voices uncapped, the song's top level (2026-10-28, the pack items)
+
+**Measured first.** The FFVI pack held 25 samples because the pack
+builder kept each pool's six most played samples with 3 % of its notes
+or more; FFVI's parts play their line on 17 more, and the pack covered
+0.86 to 0.88 of songs a part (the instrument word redistributing the
+rest since round 45). The second voices' cap: 27 of FFVI's 148 voices
+beside a line run past 1.5 times the line's level (to 3.35), and in each
+the line is a quiet inner voice (0.42 of the song's loudest) with the
+voice beside it at 0.99, the part's melody-level voice, which the cap
+had played 4 dB under the game. The top level: FFVI's converted songs
+and the written songs rendered through the same player sat at -24.5 and
+-19.6 dBFS (medians over the first minute), the written loudest part at
+a constant 0.85 of full against FFVI's 0.2 to 0.4.
+
+**Built, on his go.** Round 51: the pack builder keeps every tonal
+sample a part's songs play (`pack.VOICES` 64, `SHARE` 0), the FFVI pack
+rebuilt from its 82 files into `pack3/ffvi` with the tables carried over,
+and `LAYER_LEVEL_CAP` 4.0 (the balance and layer_levels tables refitted;
+the balance vocabulary reorders, so every seed's band draw moves). Round
+52, `top_levels`: the loudest part's level of full by song, drawn on an
+own stream, the band's shares shares of it, through a measured bridge
+(`TOP_SCALE` 1.7): by the converter's own sums the readings' level and
+the module's note level should agree (a voice at 38 a side is IT volume
+38 of 64 under FFVI's constant master of 63, 0.29 of full either way),
+but the written songs at the readings' top level as drawn rendered 4.5
+dB under FFVI's converted songs (-29.0 against -24.5 dBFS), so the
+factor is read off the renders until the readings' level is understood.
+Test `test_the_songs_loudest_part_plays_at_the_games_level`.
+
+**Measured after, seeds 1-45 (plans) and 66-70 (renders).** The tune's
+instruments: 16 distinct over 45 songs, the pad 0.20 of them (FFVI 0.31;
+0.40 before this round, 0.73 before round 42); 31 of the pack's 58
+samples in use across the band. Second-voice shares past the old cap: 9
+of 95. The top level drawn: median 0.51 after the bridge (quartiles 0.34
+to 0.59). Loudness over the first minute, the same player as FFVI's
+converted songs: -17.4, -24.6, -24.6, -31.2, -22.8 dBFS, median -24.6
+against FFVI's -24.5 (the spread is FFVI's own: its loudest parts range
+0.10 to 0.45 of full). Song Check 42 is five fresh band-themed seeds
+(66-70), a new baseline: every song's band, instruments and level moved
+with this round.
+
+**Open:** the readings' level against the module's (the 1.7); the pairs
+(0.24 against 0.40); the medium tune's density; the Dependabot alerts.
+
+### Rounds 53 to 55: the narrow home band, the band's own tempo, a sample's register by the part (2026-10-29, from the owner's notes on Song Check 42 and the drums-and-bass review)
+
+**His notes.** Whole 66 "a lot going on, competing"; Whole 67 "no idea
+what instrument the accompaniment is"; Whole 70's bass "staccato
+nothingness". He asked whether these need new vocabulary or fixes.
+
+**Found.** None needs a new word. Whole 70's band is Slam Shuffle's (114
+BPM, a staccato bass at the loudest level, four notes a bar) drawn at 70
+BPM with a sparse habit: that bass at half tempo and half density. Whole
+66's is Relm's (a 70 BPM ballad, fourteen accompaniment notes a bar)
+drawn at 160. Only 14 of 45 plans sat in their token song's tempo class,
+and at the token song's own tempo the written extremes fall to FFVI's
+(the fastest tune 8.2 notes a second to 5.6, FFVI 4.7; the fastest
+accompaniment 28.5 to 14.9, FFVI 23.2). The bass itself matches FFVI at
+the medians (sounded share by tier 0.95/0.90/0.70 against 0.97/0.89/0.89).
+Whole 67's accompaniment sample is Slam Shuffle's chord instrument, but
+one song (Searching for Friends) strikes it at a single pitch as
+accompaniment, the home-band draw took that song's range, and the bound
+could not widen inside a zero-span band. Under it, a sample shared by
+parts sits 9 semitones apart by part at the median (a bass sample 54),
+so the ranges word wanted the part as a conditioning.
+
+**Built, on his go.** Round 53 (a fault): a chord part's home band under
+MIN_SPAN gives way to the sample's whole played range (`wide_enough`, at
+every bound site; a sample the game plays at one pitch only keeps it).
+Round 54: the balance token ends with its song's tempo class, the
+`tempos` word is counted by class, and a plan whose tempo falls outside
+its token's class draws it again under the class on an own stream (31 of
+45 plans). Round 55: `ranges` by sample and part (786 units). The three
+tables refitted into pack3 (`pack.json.r52` the backup on both machines;
+the balance vocabulary's order kept once the tempo token is stripped).
+Tests `test_a_samples_register_is_counted_by_the_part_playing_it_and_a_narrow_band_falls_back`
+and the tempo-class assertions in the balance test.
+
+**Measured after, seeds 1-45.** Plans in their token song's tempo class
+0.82 (0.31 before); the fastest written tune 4.8 notes a second (8.2
+before, FFVI 4.7), the fastest accompaniment 12.4 (28.5; 23.2). Chord
+parts bound by the sample's whole range where the home band was narrow:
+21 of 45 plans. Song Check 43 is Song Check 42's five seeds before and
+after these rounds.
+
+**Open:** the drum writer (the hat drawn dense writes 1.3 hits a bar;
+the kit at half FFVI's density); the 1.7 level bridge; the pairs; the
+medium tune's density.
+
+### Round 56: levels as loudness (2026-10-29, from the owner's notes on Song Check 43: a bass and an accompaniment overpowering, a tune of "tiny squeaks")
+
+**Found.** Whole 68's plan had the bass at 1.0, the melody at 0.7, the
+accompaniment at 0.6; the stems had the melody 6 dB under the bass, not
+3. Whole 70's melody at 0.7 sat 13 dB under its bass. The pack gives
+every sample the same volume (58) while the tonal samples' own loudness
+(the loop body's RMS) spans 19.8 dB, -24.8 to -5.0 dBFS: 68's bass sample
+is 5.4 dB hotter than its melody pad, 70's melody sample 6.9 dB quieter
+than its bass sample. The levels come from one song's token, the samples
+from the instrument word, and the game's composer's balancing of that
+song's samples is lost between them. Whole 70's "squeaks" are FFVI's
+brass lead (Battle Theme, Fanfare, Edgar and Sabin, Blackjack: seven
+tunes at 0.74 to 1.00 of the loudest part in that register); the choice
+was right, the loudness was not.
+
+**Built, on his go.** Every level the readings give is counted as
+loudness (the level times its sample's own loudness over -12 dBFS,
+`loudness_factor` in `rhythm.load`), and a written note plays at its
+level over its own sample's loudness, capped at full and logged. The five
+level words refitted into pack3 (`pack.json.r55` the backup on both
+machines; the top levels now 0.10 to 0.50, median 0.35). The instrument
+draw moved to its own stream a part (`whole:{seed}:sample:{role}`): on
+the render stream it had moved with every draw before it, and Song
+Check 43's pairs had changed instruments for that. Test
+`test_a_level_is_counted_and_played_as_loudness`.
+
+**Measured after, seeds 71-75 (renders).** Loudness over the first
+minute through FFVI's player: -25.6, -25.2, -18.6, -15.6, -24.7 dBFS,
+median -25.2 against FFVI's -24.5 (the 1.7 bridge kept; it still fits at
+the median). The parts' stems now follow their shares where the samples
+allow: Whole 72 (bass 1.0, accompaniment 0.6, melody 0.3) renders the bass
+at -25.4, the accompaniment -29.2, the melody -40.9. Where a sample is
+quieter than its level asks even at full the note is capped and logged:
+Whole 73's lead (a -20.8 dBFS sample at the loudest part) sits 6 dB under
+its four-voice accompaniment at full, Whole 75's accompaniment likewise.
+That cap is the honest edge of the fix: a level is a loudness the
+instrument may not have. Song Check 44 is the five.
+
+### Round 57: a figure chain's floor needs two songs (2026-10-29, found rendering round 56's songs)
+
+**Found.** Whole 75's band token has the arp as its main part, the
+textures and entrances have it playing 36 of 38 bars, and it wrote
+nothing: 736 notes after, none before. The arp's rhythm chain floors on
+the level with its part, meter, habit and feel, and under "dense mixed,
+duple" one FFVI song stands, whose arp rests in 0.94 of its bars; the
+floor steps down only where a level holds one outcome, and this one held
+two (the rest and one figure), so every bar drew the rest. The plan's
+one-shot draws already pass a finer level under two songs, and the masks'
+floor steps down to two songs; the figure chains did not.
+
+**Built (a fault).** `tables.FLOOR_SONGS` 2: the chain draws
+(`Cache.draw_new`) step their floor down to the deepest level two songs
+reach, as the masks do. Over seeds 1-45 no part the plan had playing
+wrote nothing before or after; Whole 75's arp writes 36 bars.

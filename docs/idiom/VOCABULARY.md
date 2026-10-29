@@ -31,6 +31,58 @@ said otherwise. Counting code: `translate/rhythm.py` and
   when no `letters` table can give the form whole.
 - **length_habits** — a song's part-length habit (short, medium, long).
   Drawn once; conditions `lengths`.
+- **levels as loudness** — since round 56 (2026-10-29) every level the
+  readings give (`levels`, the balance token's level and second-voice
+  fields, `layer_levels`, `top_levels`, `counter_shares`) is counted as
+  what the ear hears: the voice's level times its sample's own loudness
+  (its loop body's RMS) over a reference (`rhythm.LOUDNESS_REF`, -12
+  dBFS, the pack's median; `rhythm.loudness_factor`, the table set from
+  the pack's WAVs by `rhythm.load_loudness` when the tables are counted
+  into a pack), and a written note plays at its level over its own
+  sample's loudness (`whole.sample_rms`), capped at full, the capped notes
+  logged ("loudness: notes capped at full, their sample too quiet for
+  their level: ..."). Why: a reading's level is a voice volume a composer
+  set to balance that song's samples; a written song takes its levels
+  from one song's token and its samples from the instrument word, the
+  pack gives every sample the same volume, and the pack's tonal samples
+  span 19.8 dB in their own loudness, so Whole 68's bass sat 5 dB over
+  its tune and Whole 70's brass lead 7 dB under its bass (Song Check 43).
+  The drums keep their level as read: the kit's pieces are many samples.
+- **top_levels** — a song's loudest part's median note level of full
+  (the readings' scale, the SNES chip's voice volume over 128), to 0.05,
+  one unit a song (round 52, 2026-10-28). Drawn once a song on its own
+  stream (`Plan.top_level`); every part's share from the balance token is
+  a share of it (`whole.note_level`), the TOP_LEVEL constant (0.85)
+  standing without the word. Why: rendered through the same player as
+  FFVI's converted songs, the written songs sat 5 dB hotter (-19.6
+  against -24.5 dBFS over the first minute) because the loudest part
+  always played at 0.85 of full where FFVI's sits at 0.2 to 0.4.
+- **ranges (by the part)** — since round 55 (2026-10-29) a sample's home
+  band is counted by the sample alone and by the sample with the part
+  playing it (`sample_range_units`, shape part + role; the draw backs off
+  to the sample alone where the pair has under two songs), and every
+  draw names the part (`whole.range_context`). Why: a sample shared by
+  parts sits 9 semitones apart by part at FFVI's median, a bass sample 54
+  (as a bass at 32, as an accompaniment at 86), and a part drawing a
+  shared sample could take another part's register. And since round 53 a
+  chord part's home band narrower than MIN_SPAN gives way to the sample's
+  whole played range (`whole.wide_enough`, the `sample_ambitus` word):
+  Searching for Friends strikes one sample at one pitch as accompaniment,
+  and that band had bound Whole 67's three-voice accompaniment to a single
+  pitch for 45 bars; a sample the game only ever plays at one pitch keeps
+  it (a drum sample as a rhythmic chord part, 0.08 of FFVI's
+  accompaniments).
+- **tempos (under the token's class)** — since round 54 (2026-10-29) the
+  balance token ends with its song's tempo class (`tempo=slow`, `medium`,
+  `fast`: under 85, under 130, over) and the `tempos` word is counted by
+  the class; where a plan's tempo draw falls outside its token's class the
+  tempo is drawn again under the class on an own stream (the log line
+  "tempo 160 BPM is outside the band's class (slow): 75 BPM drawn under
+  it"). Why: the tempo drawn apart had put Relm's band (70) at 160 and
+  Slam Shuffle's (114) at 70, only 14 of 45 plans sat in their token
+  song's class, and the fastest written tune ran 8.2 notes a second
+  against FFVI's 4.7 (after, the plans sit in class 0.82 of
+  the time, the fastest tune 4.8, the fastest accompaniment 12.4).
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level
@@ -54,7 +106,12 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the line's level over the line voice's in tenths (the `layer_levels`
   unit, capped at 1.5; `rhythm.voice_level_shares`), the busiest voice
   first, joined by "/" (`accompaniment=main:56-64:1.0:4:0.5:1.0/1.3/1.3`),
-  so the line and the voices beside it are one song's together; the
+  so the line and the voices beside it are one song's together (the cap
+  1.5 until round 51, 2026-10-28, then 4.0, past the readings' 3.35: 27
+  of FFVI's 148 voices beside a line ran past 1.5, and in every one the
+  line was a quiet inner voice at 0.42 of the song's loudest with the
+  voice beside it at 0.99, the part's melody-level voice, which the cap
+  had played 4 dB under; the note level's cap of full stands); the
   plan keeps its `layer_levels` draws on the stream and overwrites each
   covered part's with the token's first share (`Plan.voice_levels` by
   rank, `Plan.layer_from`; the log line "second voices from the balance:

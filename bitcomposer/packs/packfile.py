@@ -142,6 +142,11 @@ def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
     known = {KEY, "name", "label", "palette", "voices", "habits", "trims", "samples"}
     if data[KEY] == TABLED:
         known.add(TABLES)
+        try:                                                # the pack's samples' own loudness, for the level words (round 56)
+            from ..translate import rhythm as _rhythm
+            _rhythm.SAMPLE_LOUDNESS.update(_rhythm.load_loudness(base))
+        except Exception:
+            pass
     for k in data:
         if k not in known:
             fail(k, f"not a pack field (fields: {', '.join(sorted(known))})")

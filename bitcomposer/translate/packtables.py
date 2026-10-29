@@ -99,7 +99,7 @@ KEPT = {
     "part_speeds": ("rhythm", "part_speed_units", {}, ("part", "habit"), False, False, "a part's fastest bars (notes a second, a class), by the part and its habit's density: what its sample is fitted to for speed before the part is written"),
     "registers": ("rhythm", "register_units", {}, ("part",), False, False, "the register a part plays in (midi low-high)"),
     "keys": ("rhythm", "key_units", {}, ("part",), False, False, "a song's key, tonic and mode"),
-    "tempos": ("rhythm", "tempo_units", {}, ("part",), False, False, "a song's tempo, to five beats a minute"),
+    "tempos": ("rhythm", "tempo_units", {}, ("part", "tempo"), False, False, "a song's tempo, to five beats a minute, by its class (the balance token's since round 54)"),
     "weights": ("rhythm", "weight_units", {}, ("part",), False, False, "a part's weight in the band (minor, half, main)"),
     "sizes": ("rhythm", "form_size_units", {}, ("part",), False, False, "how many parts a song's form has"),
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
@@ -108,11 +108,12 @@ KEPT = {
     "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "speed", "gap"), False, False, "the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "bass_locks": ("rhythm", "bass_lock_units", {}, ("part",), False, False, "the share of the kit's accents (two pieces together) the bass strikes with, in tenths"),
     "levels": ("rhythm", "level_units", {}, ("part",), False, False, "a part's level as a share of the song's loudest part's, in tenths"),
+    "top_levels": ("rhythm", "top_level_units", {}, ("part",), False, False, "a song's loudest part's level of full, drawn once a song: what the band's shares are shares of"),
     "layer_levels": ("rhythm", "layer_level_units", {}, ("part",), False, False, "a layered part's second voice's level against its line's, in tenths (the fallback for a part the balance token has no second-voice shares for)"),
     "climax": ("phrases", "climax_units", {}, ("part",), False, False, "the place among a song's tune phrases of the one holding the tune's highest note"),
     "arc": ("phrases", "arc_units", {}, ("part", "place"), False, False, "how far a tune phrase's top sits under the song's, by the phrase's place"),
     "summit": ("phrases", "summit_units", {}, ("part",), False, False, "how far the tune's highest note sits above its register's top"),
-    "ranges": ("rhythm", "sample_range_units", {}, ("part",), False, False, "the register a sample is played in, by the sample"),
+    "ranges": ("rhythm", "sample_range_units", {}, ("part", "role"), False, False, "the register a sample is played in, by the sample and the part playing it"),
     "sample_ambitus": ("rhythm", "sample_ambitus_units", {}, ("part",), False, False, "the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound"),
     "part_samples": ("rhythm", "part_sample_units", {}, ("part", "speed"), False, False, "the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
@@ -181,6 +182,9 @@ def main(argv=None) -> int:
     from . import store
     from ..packs import packfile
     db = store.connect(args.db)
+    if args.into:                                           # the pack's samples' own loudness: a level is counted as loudness (round 56)
+        rhythm.set_loudness(rhythm.load_loudness(Path(args.into).parent))
+        print(f"{args.into}: {len(rhythm.SAMPLE_LOUDNESS)} samples' loudness read", file=sys.stderr)
     print(f"{args.game}: counting the kept tables", file=sys.stderr)
     data = build(db, args.game, say=lambda line: print(line, file=sys.stderr))
     text = json.dumps(data, separators=(",", ":")) + "\n"
