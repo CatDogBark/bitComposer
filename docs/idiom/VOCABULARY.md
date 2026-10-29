@@ -104,7 +104,13 @@ said otherwise. Counting code: `translate/rhythm.py` and
   as the game plays them, right for counting the readings) are not what
   the module plays, and round 56 had boosted "quiet" samples the module
   had brought up already, to full; with the module's own numbers no note
-  is capped in 20 songs.
+  is capped in 20 songs. Since round 65 a note's loudness is what it hears
+  of its sample, its strike for STRIKE_SECONDS then its body
+  (`rhythm.heard_rms`), on both sides: the readings scale a note's level
+  by it for the note's own length and the writer divides by the module
+  sample's (a struck accompaniment sample's attack 3.4 dB over its body
+  and a slow lead's 3.1 under had put a backing over the tune the counts
+  said was on top).
 - **ranges (by the part)** — since round 55 (2026-10-29) a sample's home
   band is counted by the sample alone and by the sample with the part
   playing it (`sample_range_units`, shape part + role; the draw backs off
@@ -172,7 +178,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   loudest bass"); a part the token lacks (a token without the field: a
   pack built before round 32, the default balance) keeps its draw, the
   counter its `counter_shares` draw. Since round 33 (2026-10-25) a part
-  with two voices or more carries a sixth field too: each voice beyond
+  with two voices or more carries a sixth field too (since round 65 each
+  entry is `level@sample@note share`, `1.3@s5a1fa4d5d3@0.33`: the voice's
+  level over the line's, the pack id of the sample it plays most, its
+  notes over the line's, so the second voice is the game's own sample at
+  the game's density; FFVI's extra voices are on another sample in two
+  accompaniments of three and every bass and play half to two thirds of
+  the line's notes, where the written ones had taken the line's struck
+  sample and played as much as the line, Whole 149's pad a riff over the
+  tune): each voice beyond
   the line's level over the line voice's in tenths (the `layer_levels`
   unit, capped at 1.5; `rhythm.voice_level_shares`), the busiest voice
   first, joined by "/" (`accompaniment=main:56-64:1.0:4:0.5:1.0/1.3/1.3`),
@@ -788,8 +802,10 @@ said otherwise. Counting code: `translate/rhythm.py` and
   onsets, and a line written to it with a second line beside struck 10.3
   times a bar against FFVI's 7.3.)
 - **second_figures** — a voice beside a layered part's line, bar by bar,
-  where the part holds two voices or more, by the song's feel and tempo
-  band, the line's onset count and its pattern. The voice is a mask over
+  where the part holds two voices or more, by the voices' note share over
+  the line (sparse, half, full; round 65, the token's share class for a
+  written song), the song's feel and tempo band, the line's onset count
+  and its pattern. The voice is a mask over
   the line's onsets, which of them it strikes with and any onsets of its
   own (`1 0 1 0 | 7/2`; `-` resting), for the chord parts and, since round
   27, the bass (its second voice had been a figure of its own drawn under

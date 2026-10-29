@@ -303,7 +303,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(patterns, {"0 1/2 1 3/2 2 5/2 3 7/2"})                                 # the line's bar, not the voices merged
         units = rhythm.second_figure_units([s])
         self.assertEqual(len(units), 4)
-        self.assertEqual((units[0].outcome, units[0].values), ("1 0 1 0 1 0 1 0", {"part": "accompaniment", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "8", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        self.assertEqual((units[0].outcome, units[0].values), ("1 0 1 0 1 0 1 0", {"part": "accompaniment", "layer": "half", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "8", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))   # the extra voices' notes over the line's: half (round 65)
         F = __import__("fractions").Fraction
         self.assertEqual(rhythm.second_mask([F(0), F(1), F(2), F(3)], [F(0), F(2), F(7, 2)]), "1 0 1 0 | 7/2")
         self.assertEqual(rhythm.apply_mask("0 1/2 1 3/2 2 5/2 3 7/2", "1 0 1 0 1 0 1 0"), "0 1 2 3")
@@ -862,7 +862,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertIsNone(rhythm.voice_level_shares(s, "bass"))                                      # one voice
         self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["1.3"])               # the word's own unit is the first share
         tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith(("tempo=", "top=", "loud="))]
-        self.assertTrue(tokens[0].startswith("accompaniment=") and ":3:0.8:1.3/2.5:" in tokens[0], tokens)
+        self.assertTrue(tokens[0].startswith("accompaniment=") and ":3:0.8:1.3@" in tokens[0] and "/2.5@" in tokens[0], tokens)   # each voice beyond the line: level@sample@note share (round 65)
         self.assertTrue(tokens[1].startswith("bass=") and tokens[1].split(":")[5] == "", tokens)     # one voice: no layer field
         self.assertTrue(tokens[2].startswith("drums=::::0.5:::"), tokens)
         s.voice_levels.pop(5)

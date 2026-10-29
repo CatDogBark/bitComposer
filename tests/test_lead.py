@@ -37,3 +37,9 @@ class LeadTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LayerShareTests(unittest.TestCase):
+    def test_every_share_has_a_class(self):
+        from bitcomposer.translate import rhythm
+        self.assertEqual([rhythm.layer_share_class(x) for x in (0.0, 0.39, 0.4, 0.79, 0.8, 9.0, 40.0)], ["sparse", "sparse", "half", "half", "full", "full", "full"])

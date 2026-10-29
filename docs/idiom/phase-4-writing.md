@@ -3936,3 +3936,36 @@ samples (+3.4 dB on the accompaniment's, -3.1 on the tune's) adds the
 rest. Next: the extra voices ride the token (each one's sample and its
 note share over the line), and a note's loudness as it hears its sample
 (strike, then body) in the level words.
+
+### Round 65: the voices beside the line ride the token, and a note's loudness as it hears its sample (2026-10-29, from Whole 149)
+
+**Found.** Round 64's relabel left the written tune where it was (seeds
+131-140 a median 4.1 dB under the band, 3.1 before). Whole 149 showed
+why: its token, Kids Run Through the City, has its tune 5.4 dB on top in
+the game and the counted energy agrees, but the render puts the
+accompaniment 3 dB over the tune. The token said the accompaniment's
+second voice plays at 3.2 times the line's level; in the game that voice
+is another sample, sustained, with a third of the line's notes (33 to
+283), and the writer had given it the line's own struck sample and most
+of the line's onsets. Over FFVI an extra voice is on another sample in
+45 of 73 accompaniments, 27 of 42 counters and 15 of 15 basses, and
+plays 0.5-0.7 of the line's notes; the written extra voices played
+0.84-1.15 of the line's and took its sample in half the accompaniments.
+The two samples' attack-to-body ratios (+3.4 dB on the accompaniment's,
+-3.1 on the tune's) made the rest, and the level words counted and
+played loudness by the loop body alone (round 56) while the estimate
+already heard the strike (round 59).
+
+**Built.** The balance token's sixth field names each voice beyond the
+line as `level@sample@note share` (`rhythm.layer_tokens`); the plan keeps
+the samples and shares (`layer_samples`, `layer_shares`); `samples_for`
+gives the second voice the token song's own sample where the pack holds
+it (the layer_samples pair else); the mask word `second_figures` is
+counted and drawn under the voices' note share class (sparse under 0.4
+of the line's notes, half under 0.8, full; `rhythm.LAYER_SHARES`,
+`whole.layer_class`), its floor one deeper. A note's loudness is what it
+hears of its sample, its strike for STRIKE_SECONDS then its body
+(`rhythm.heard_rms`, shared), on both sides: the readings multiply a
+note's level by it for the note's own length (`loudness_factor(key,
+seconds)`, the strikes beside the loudness table), and the writer divides
+the drawn level by the module sample's. Pack4's 94 tables refit.

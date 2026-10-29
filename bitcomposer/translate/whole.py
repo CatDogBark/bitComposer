@@ -143,6 +143,9 @@ class Plan:
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
     token_samples: dict = field(default_factory=dict)   # a part -> the balance token's song's sample for it, the pack's id (the eighth field,
                                       # round 60): samples_for takes it where the pack holds the sample, the part_samples draw else
+    layer_samples: dict = field(default_factory=dict)   # a layered part -> the token song's sample for each voice beyond the line (round 65)
+    layer_shares: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's notes over the line's (round 65): the
+                                      # mask word is drawn under its class (sparse, half, full)
     token_habits: dict = field(default_factory=dict)    # a part -> the balance token's song's habit for it (the ninth field, round 62): the song's
                                       # density tiers come together; the habits draws stand where the token lacks one
     kinds: dict = field(default_factory=dict)         # the counter -> the balance token's song's kind for it, same or other (the seventh field,
@@ -166,7 +169,7 @@ class Plan:
     def to_json(self) -> dict:
         return {"seed": self.seed, "game": self.game, "title": self.title, "key": f"{harmony.NAMES[self.tonic]} {self.mode}", "bpm": self.bpm,
                 "form": self.letters, "parts": [list(p) for p in self.parts], "loop_bar": self.loop_bar, "chords": self.names,
-                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays, "top_level": self.top_level, "loudness": self.loudness, "token_samples": self.token_samples, "token_habits": self.token_habits,
+                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays, "top_level": self.top_level, "loudness": self.loudness, "token_samples": self.token_samples, "token_habits": self.token_habits, "layer_samples": self.layer_samples, "layer_shares": self.layer_shares,
                 "registers": {k: list(v) for k, v in self.registers.items()},
                 "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log, "feel": self.feel,
                 "theme": {"bars": self.extras.get(R.MELODY, {}).get("theme_bars"), "returns": self.extras.get(R.MELODY, {}).get("returns")}}
@@ -186,7 +189,7 @@ class Part:
 
 COUNTER_MASK_FLOOR = 5                # counter_figures' draw never backs off below the tune's onset count with the counter's weight in front
                                       # (part, weight, feel, tempo, onsets; round 47)
-MASK_FLOOR = 4                        # second_figures' draw never backs off below the line's onset count (part, feel, tempo, onsets): a mask is
+MASK_FLOOR = 5                        # second_figures' draw never backs off below the line's onset count (part, feel, tempo, onsets): a mask is
                                       # read onset by onset, and one from a shorter line read around a longer one had filled it
 
 
@@ -566,7 +569,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
-    token_kit = {}
+    token_kit, token_layer_samples, token_layer_shares = {}, {}, {}
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -593,8 +596,13 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 counts[role] = int(fields[3])
             if len(fields) > 4 and fields[4]:
                 token_levels[role] = float(fields[4])
-            if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level
-                token_layers[role] = [float(x) for x in fields[5].split("/")]
+            if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level; since
+                parts_ = [x.split("@") for x in fields[5].split("/")]   # round 65 with each one's sample and its notes over the line's
+                token_layers[role] = [float(x[0]) for x in parts_]
+                if any(len(x) > 1 and x[1] for x in parts_):
+                    token_layer_samples[role] = [x[1] if len(x) > 1 else "" for x in parts_]
+                if any(len(x) > 2 for x in parts_):
+                    token_layer_shares[role] = [float(x[2]) if len(x) > 2 and x[2] else 1.0 for x in parts_]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
             if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma
@@ -811,7 +819,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, section_levels=section_levels,
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels,
                 top_level=top_level, loudness=token_loud)
 
 
@@ -1207,7 +1215,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             given = None
             if "second_figures" in models:                  # the second voice's bar as a mask over the line's onsets (which it strikes with,
                 line_pat = [f if f == writer.REST else rhythm.pattern(Fraction(t.partition(":")[0]) for t in rhythm._tokens(f)) for f in figures]
-                masks = [p if p == writer.REST else _draw(models, "second_figures", (R.BASS, plan.feel, rhythm.band(plan.bpm), str(len(p.split())), p), rng2, floor_k=MASK_FLOOR, floor_songs=PLAN_SONGS)
+                masks = [p if p == writer.REST else _draw(models, "second_figures", (R.BASS, layer_class(plan, R.BASS), plan.feel, rhythm.band(plan.bpm), str(len(p.split())), p), rng2, floor_k=MASK_FLOOR, floor_songs=PLAN_SONGS)
                          for p in line_pat]                 # plus its own), drawn a bar as the chord parts' are (round 20): one draw a line
                                                             # pattern had given a whole song the doubling mask where FFVI's slap fills half its bars
                 given = [writer.mask_figure(f, m) for f, m in zip(figures, masks)]
@@ -1270,7 +1278,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 if "second_figures" in models:              # which of the line's onsets it strikes with, and its own (second_mask), bar by bar
                     memo = {}
                     def masked(f):
-                        drawn = _draw(models, "second_figures", (role, plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f), rng_v, floor_k=MASK_FLOOR)
+                        drawn = _draw(models, "second_figures", (role, layer_class(plan, role), plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f), rng_v, floor_k=MASK_FLOOR)
                         return rhythm.apply_mask(f, drawn)
                     given = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in figures]
                 drawn_pitch = "voice_intervals" in models and "voice_moves" in models
@@ -1740,7 +1748,11 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
             reg2 = second_register(plan, role)
             pair = pair_for(models, role, own, rng)
             second = None
-            if pair == ("same", "same"):                    # FFVI gives one sample to both voices in half its layered chord parts
+            given2 = (plan.layer_samples.get(role) or [""])[0]   # the token song's own sample for its voice beside the line (round 65)
+            if given2 and given2 in own:
+                second = make(given2)
+                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own")
+            elif pair == ("same", "same"):                  # FFVI gives one sample to both voices in half its layered chord parts
                 second = out[role]
             elif pair is not None and reaches(ranges, pair[0], plan.registers[role], rng, drawn, role) and reaches(ranges, pair[1], reg2, rng, drawn, role):
                 out[role] = make(pair[0])
@@ -1854,16 +1866,14 @@ def sample_strike_and_body(sample) -> tuple[float, float]:
             break                                           # release tail had halved the loudness and the writer boosted the note, round 59)
     body = x[a:b] if b <= len(x) and b > a else x
     rate = getattr(sample, "c5_speed", 0) or 32000
-    strike = x[:max(1, min(len(x), int(rate * STRIKE_WINDOW)))]
+    strike = x[:max(1, min(len(x), int(rate * rhythm.STRIKE_SECONDS)))]
     rms = lambda seg: math.sqrt(sum(v * v for v in seg) / len(seg)) / 32768   # noqa: E731
     return rms(strike), rms(body)
 
 
 def heard_rms(strike: float, body: float, seconds: float) -> float:
-    """The loudness a note of `seconds` hears from its sample: the strike's for STRIKE_WINDOW, the body's after, in power."""
-    if seconds <= STRIKE_WINDOW:
-        return strike
-    return math.sqrt((strike * strike * STRIKE_WINDOW + body * body * (seconds - STRIKE_WINDOW)) / seconds)
+    """rhythm.heard_rms: the loudness a note of `seconds` hears from its sample, its strike then its body (round 65 shares it with the readings)."""
+    return rhythm.heard_rms(strike, body, seconds)
 
 
 def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",
@@ -1927,12 +1937,14 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
                 rms = rhythm.SAMPLE_LOUDNESS.get(rid, 0.0)  # the module plays; round 56 had read the table first and boosted "quiet" samples
             loud_of[name] = rhythm.LOUDNESS_REF / rms if rms > 0 else 1.0   # the module had already brought up
             strike_of[name] = (strike, rms)
-        wanted = level * loud_of[name]
+        strike, body = strike_of[name]                      # what this note hears of the sample: its strike, then its body (round 65: the level
+        heard = heard_rms(strike, body, seconds) if body > 0 else 0.0   # too, as the readings count it, not the body alone)
+        factor = rhythm.LOUDNESS_REF / heard if heard > 0 else loud_of[name]
+        wanted = level * factor
         if wanted > 1.0:
             capped[name] += 1
         played = min(1.0, wanted)
-        strike, body = strike_of[name]                      # what this note hears of the sample: its strike, then its body (the estimate's)
-        return played, played * heard_rms(strike, body, seconds) / rhythm.LOUDNESS_REF if body > 0 else played / loud_of[name]
+        return played, played / factor
 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None):
         idx, addr, c5 = instrument(name, sample)
@@ -2001,6 +2013,13 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
     score = convert.Score(notes, seconds, n_voices, [(0.0, master, master)], fade, plan.title[:25], plan.game, "bitComposer", row_hz, tempo,
                           0.0, 0.0, False, None, pcm_of, key_of, message=message)
     return score, first
+
+
+def layer_class(plan: Plan, role: str) -> str:
+    """The class the mask word is drawn under for a part's voices beside the line (round 65): the token song's extra
+    voices' notes over the line's (sparse, half, full; rhythm.LAYER_SHARES), "half" where the token has no share."""
+    shares = plan.layer_shares.get(role)
+    return rhythm.layer_share_class(max(shares)) if shares else "half"
 
 
 def master_of(target: float, estimate: float) -> tuple[int, float]:
