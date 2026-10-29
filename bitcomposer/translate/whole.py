@@ -73,7 +73,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
-            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "top_levels": str(TOP_LEVEL),
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "top_levels": str(TOP_LEVEL), "kit_pieces": "KShtco",
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -564,6 +564,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if role == R.DRUMS:
             habits[role] = _draw(models, "drum_habits", (R.DRUMS,), rng, log)
             extras[role] = {"".join(g): _draw(models, "drum_group_habits", ("drums-" + "".join(g), habits[role]), rng, log) for g in rhythm.DRUM_GROUPS}
+            if "kit_pieces" in models_or_empty(models):      # the pieces the song's kit strikes (round 58), on an own stream
+                extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,
+                                               floor_k=2)   # the tier's own kits alone (seven medium songs, seven kits: the smoothing had handed a
+                                                            # medium song a dense kit, and the kit-first drums table then wrote the dense kit's bars)
+                log.append(f"kit pieces (kit_pieces): {extras[role]['pieces']}")
             continue
         if role in layout:                                  # the song's own layout; the tables a part at a time where the pack has none
             registers[role] = layout[role]
@@ -1059,6 +1064,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     {role: Part}."""
     written, key = {}, (plan.tonic, plan.mode)
     kit_letters = {rhythm.LETTERS[p] for p in song.pieces.values() if p in rhythm.LETTERS}
+    pieces = plan.extras.get(R.DRUMS, {}).get("pieces")     # the pieces the song's kit strikes (kit_pieces, round 58); every piece without the word
+    if pieces:
+        kit_letters &= set(pieces)
     if R.DRUMS in plan.band and kit_letters:
         if "drums" in models:                               # the kit as one figure: its bars repeat and vary together, as a kit's do
             groups = {tuple(rhythm.LETTERS.values()): models["drums"]}
@@ -1066,12 +1074,16 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
         if groups:
             group_habits = {g: (plan.habits[R.DRUMS] if len(g) > 3 else plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS]) for g in groups}
-            for g in rhythm.DRUM_GROUPS:                    # the one-letter groups' own habits cap their hits in the kit's draw (writer.group_caps)
-                if len(g) == 1 and plan.extras.get(R.DRUMS, {}).get("".join(g)):
-                    group_habits.setdefault(g, plan.extras[R.DRUMS]["".join(g)])
-            hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS])
+            # until round 58 the one-letter groups' own habits capped their hits in the kit's draw (writer.group_caps): a kit drawn as one
+            # figure is one song's bar, hat and all, and another song's "sparse hat" cutting it had left a dense kit at 8 hits a bar
+            # against the game's 12.8; the song's pieces (kit_pieces) now say which sounds the kit has at all
+            kit_value = "".join(x for x in rhythm.LETTERS.values() if x in kit_letters)   # the kit's pieces: the kit figure is drawn from songs with this kit
+            hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS], kit_value=kit_value)
             by_voice, notes, dropped = {}, [], Counter()
             for t, letter in hits:
+                if letter not in kit_letters:               # a piece the song's kit does not strike (kit_pieces)
+                    dropped[letter] += 1
+                    continue
                 sample = next((name for name in KIT_FOR.get(letter, ()) if name in song.pieces), None)
                 if sample is None:
                     dropped[letter] += 1
@@ -1090,7 +1102,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             song.notes[R.DRUMS] = [(t, end - t, float("nan"), sample) for t, end, _, _, sample in notes]
             written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"kit habit {plan.habits[R.DRUMS]}; groups " + ", ".join(f"{'+'.join(g)} {h}" for g, h in group_habits.items())
                                                               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
-                                                              + (f"; dropped (no sample) {dict(dropped)}" if dropped else "")])
+                                                              + (f"; pieces {''.join(sorted(kit_letters, key=list(rhythm.LETTERS.values()).index))}")
+                                                              + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")])
     if R.BASS in plan.band and "bass" in models:
         # the bass sits on the kit's accents (two pieces together) at the game's share (bass_locks): FFVI's on 0.94 of them;
         # locked to the whole planned band it had met the threshold in no bar, written second with two drum voices to hand

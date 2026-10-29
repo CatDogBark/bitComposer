@@ -724,6 +724,26 @@ def bass_habit_units(songs) -> list:
     return habits(bass_units(songs))
 
 
+def kit_piece_units(songs) -> list:
+    """Each song with drums as a unit: its outcome the kit pieces its drums strike, as letters in LETTERS' order ("KSh": kick,
+    snare, hat), its values the part (drums) and the kit's habit tier. Round 58 (2026-10-29): FFVI plays a hat in 17 of its
+    47 drum songs, cymbals in 23, toms in 7, where every written song had all seven pieces of the pack's kit; and a kit drawn
+    as one figure (one song's bar, hat and all) had its hat, cymbals and other sounds capped by group habits drawn from
+    other songs, which left a dense kit at 8 hits a bar against the game's 12.8."""
+    tier = {u.song: u.outcome.split()[0] for u in drum_habit_units(songs)}
+    order = "".join(LETTERS.values())
+    out = []
+    for s in songs:
+        ns = s.notes.get(R.DRUMS)
+        if not ns:
+            continue
+        letters = {LETTERS.get(s.pieces.get(n[3], n[3]), "o") for n in ns if isinstance(n[3], str)}
+        outcome = "".join(x for x in order if x in letters)
+        if outcome:
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": R.DRUMS, "habit": tier.get(s.sid, "medium")}))
+    return out
+
+
 def drum_group_habit_units(songs) -> list:
     """Each drum group of each song as a unit: its outcome the group's own
     habit (the density and repetition of its bars, rests counted), its

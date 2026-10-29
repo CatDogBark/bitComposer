@@ -657,13 +657,29 @@ said otherwise. Counting code: `translate/rhythm.py` and
 
 ## The drums
 
+- **kit_pieces** — which pieces a song's kit strikes at all, as letters
+  (`KSh`, `Sc`, `c`), by the kit's density tier (round 58). FFVI's kits are
+  their tiers': a sparse kit is a cymbal, a kick or one other sound; a
+  dense kit the kick, snare and hat, or snare and cymbal. Drawn once a
+  song on its own stream, from the tier's own kits alone (seven medium
+  songs hold seven kits, and the table's smoothing had handed a medium
+  song a dense kit); the writer's kit is these pieces, a hit on any other
+  dropped.
 - **drums** — the kit's bar as one figure, every piece. Drawn a bar as a
-  mixture under the kit's habit: the kit repeats and varies as a kit does
-  (the groups drawn apart had changed every bar). The drum group habits
-  the plan draws (the hat's, the cymbals', the rest's) cap each piece's
-  hits a bar at its density tier's top in the draw (`writer.group_caps`):
-  "sparse" cymbals had come up as a ride in sixteenths in five songs of
-  twenty against four of FFVI's 67.
+  mixture under the kit's pieces (kit_pieces) and then its habit and feel:
+  the kit repeats and varies as a kit does (the groups drawn apart had
+  changed every bar), and a draw that backs off backs off to the same
+  kit's bars (round 58: with the habit and feel before the kit, a kit the
+  tier had not been seen with backed off to every kit's bars, none on its
+  pieces, and the played bar was silent). Where no drawn bar fits the kit,
+  the bar is any the table knows on its pieces (`writer.last_resort`): a
+  bar the plan has the kit in is never silent. Until round 58 the drum
+  group habits the plan draws (the hat's, the cymbals', the rest's) had
+  capped each piece's hits a bar at its tier's top (`writer.group_caps`,
+  against "sparse" cymbals riding in sixteenths); the caps chopped the
+  kit's own bars (a dense kit at 7 hits a bar against FFVI's 13.7) and are
+  retired: the kit's pieces say which sounds it has, the kit's bars say
+  how they play.
 - **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
   toms' bar; the hat's; the cymbals'; the other sounds'. The group figures,
   drawn by the slice writer (`tools/slice1.py`); the whole-song writer

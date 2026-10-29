@@ -3673,3 +3673,40 @@ floor steps down to two songs; the figure chains did not.
 (`Cache.draw_new`) step their floor down to the deepest level two songs
 reach, as the masks do. Over seeds 1-45 no part the plan had playing
 wrote nothing before or after; Whole 75's arp writes 36 bars.
+
+### Round 58: the kit's pieces, the drums by kit, the caps retired (2026-10-29, the drums review after round 57)
+
+**Found.** The written dense kits struck 7.3 times a song bar against
+FFVI's 12.8 (13.7 a bar the drums sound in). Three things cut them: the
+drum group habits' per-piece caps chopped the kit figure (a kit drawn as
+one bar is one song's bar, hat and all; another song's "sparse hat" cut
+it); the writer's kit was every piece the pack has, so a cymbal-only song
+and a full kit drew from the same bars; and, once the kit was a word, the
+drums table conditioned on it after the habit and feel backed off past
+the kit to every kit's bars, none of which the kit filter let through, so
+five medium songs of nine wrote silence in every played bar. The owner's
+question of a dense-tier bias in the kit's habit draw was sampling: 0.47
+of 200 and 0.55 of 400 plans against the table's 0.60.
+
+**Built.** A word, `kit_pieces` (the letters a song's kit strikes, by the
+kit's tier; `rhythm.kit_piece_units`), drawn once a song on
+`whole:{seed}:kit` from the tier's own kits alone (`floor_k` at the
+habit); the `drums` table's shape now (part, meter, kit, habit, feel,
+previous), so a back-off keeps the kit; `writer.drums` takes `kit_value`,
+conditions its draw on it and narrows the kit to it; `writer.last_resort`
+gives a played bar no draw fit any bar the table knows on the kit's
+pieces; the per-group caps are gone from the whole-song writer. A fault
+fixed on the way: `Table.draw`'s floor steps down past a level whose only
+outcomes beyond the rest are under two (round 57's two-song floor had
+forced one-kit songs' levels down to every kit's; `FLOOR_SONGS` is one
+again, the arp of round 57 still writing its 36 bars).
+
+**Measured** over seeds 1-80 (61 plans with drums), hits a bar the drums
+sound in: sparse 1.9 (FFVI 1.7), medium 5.7 (4.2), dense 10.4 (13.7); no
+played bar silent; the kits drawn are the tiers' (sparse: c, o, K;
+medium: ht, KShto, So, S, Sc; dense: Sc, S, KSh, Sco). Dense sits under
+FFVI by the kits' own mix: FFVI's snare-and-cymbal and snare-alone kits
+run 6-12 a bar, its kick-snare-hat kits 9-28, and the written songs drew
+the first two in 13 of 26. Left open: the share of bars the drums sound
+in (written dense 0.85 against FFVI's 1.0, sparse 0.82 against 0.56) is
+the plays word's, by its own presence habit, not the kit's tier.

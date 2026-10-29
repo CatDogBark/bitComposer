@@ -1119,6 +1119,39 @@ class NewTablesTests(unittest.TestCase):
         self.assertAlmostEqual(whole.sample_rms(smp), 0.25, places=3)                             # the loop body alone
         self.assertAlmostEqual(whole.sample_rms(SimpleNamespace(data=flat.tobytes(), loop=False, loop_start=0, loop_end=0)), 0.25 / 2 ** 0.5, places=3)
 
+    def test_the_kits_pieces_are_the_games(self):
+        """Round 58: the pieces a song's drums strike are counted as letters by the kit's habit tier (kit_pieces); the plan
+        draws them once a song on its own stream, and the kit figure's hits on other pieces are dropped (no per-group caps)."""
+        from bitcomposer.translate import tables
+        s = self._song()                                    # kick and crash in the kit
+        units = rhythm.kit_piece_units([s])
+        self.assertEqual([(u.outcome, u.values["part"]) for u in units], [("Kc", "drums")])
+        self.assertIn(units[0].values["habit"], ("sparse", "medium", "dense"))
+        t = tables.Table(("part", "habit"), "kit_pieces", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "KSh", {"part": "drums", "habit": h}) for i in range(3) for h in ("sparse", "medium", "dense")])
+        p = whole.plan({"kit_pieces": t}, 1, "g")
+        if "drums" in p.band:
+            self.assertEqual(p.extras["drums"].get("pieces"), "KSh")
+            self.assertTrue(any(line.startswith("kit pieces (kit_pieces): KSh") for line in p.log))
+
+    def test_a_kit_writes_on_its_own_pieces_and_never_silent(self):
+        """Round 58: the kit's pieces (kit_value) narrow the writer's kit, so a figure drawn from another kit's songs is one
+        this kit can play; where no draw fits, the kit's last resort is any bar the table knows on its pieces, never a
+        silent played bar (the drums table conditions on the kit before the habit and feel for the same reason)."""
+        from bitcomposer.translate import packtables, writer
+        a, b = self._song(), self._song()
+        a.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "kick") for i in range(8) for x in (0.0, 2.0)]; a.pieces = {"kick": "kick"}; a.sid = "a"
+        b.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "snare") for i in range(8) for x in (1.0, 3.0)]; b.pieces = {"snare": "snare"}; b.sid = "b"
+        self.assertEqual(packtables.KEPT["drums"][3][:3], ("part", "meter", "kit"))
+        entry = packtables.fit("drums", rhythm.drum_units([a, b]))
+        model = packtables.read({"tables": {"drums": entry}})["drums"]
+        s = self._song(); s.pieces = {"kick": "kick", "snare": "snare"}
+        for kit_value, letter in (("K", "K"), ("S", "S")):
+            hits, figures = writer.drums(s, {tuple(rhythm.LETTERS.values()): model}, random.Random(1), habit="medium repeating", free=True, plays=[True] * 8, kit_value=kit_value)
+            self.assertEqual({x for _, x in hits}, {letter}, (kit_value, figures))
+            self.assertTrue(all(f != "-" for f in figures), figures)   # every played bar sounds
+        manner = writer.FreeManner({"0:K 2:K", "1:S 3:S", "-"}, {"S"}, 12, rests=True)
+        self.assertEqual(writer.last_resort(manner, model, None, {}, random.Random(2)), "1:S 3:S")
+
     def test_a_recalled_passage_goes_on_as_the_games_do(self):
         """Round 50: each echo of the tune with a bar after it is counted by whether the next bar goes on with the bar after
         the echo's source (recall_continues: yes, no), by part and echo habit; the CONTINUE constant is the fallback alone."""
