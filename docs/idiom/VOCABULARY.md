@@ -21,6 +21,20 @@ said otherwise. Counting code: `translate/rhythm.py` and
 `translate/phrases.py`; the plan: `translate/whole.py`; the parts:
 `translate/writer.py`.
 
+## The lead (the readings' melody)
+
+- **lead** — which voice carries the tune, decided by salience (round 64,
+  `translate/lead.py`): the voice the reader labelled melody keeps the
+  lead where it is heard, within 9 dB of the loudest tonal voice as each
+  renders alone; else the most varied heard voice becomes the melody and
+  the old one a counter-line (an accompaniment where a counter exists).
+  Why: the reader picks the melody by variety with a quarter of the
+  loudest raw volume as its only loudness test, and in one FFVI song of
+  seven that voice sits 9 dB or more under the whole; put to the owner's
+  ear voice by voice, every such song had its tune elsewhere, and every
+  heard label was right. Every word counted on the melody (the tune's
+  cells, pairs, hooks, levels, sample, habit) counts on the lead.
+
 ## The song, drawn once
 
 - **keys** — a song's key (tonic and mode). Drawn once; the plan's key,

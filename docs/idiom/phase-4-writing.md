@@ -3882,3 +3882,34 @@ seeds 131-160 every kit slot the token asked was filled from the pack;
 no note capped. Song Check 50 (seeds 131-140 on pack4) is the salience
 sample: the first songs where the band, weights, levels, top, loudness,
 tempo class, instruments, habits and kit are one FFVI song's.
+
+### Round 64: the lead by salience (2026-10-29, from Song Check 50's verdicts and the FFVI Lead Check)
+
+**Found.** The owner's verdicts on Song Check 50 follow one number: the
+tune's K-weighted margin over the loudest other pitched line, each part
+rendered alone. On top or within half a decibel, four songs of four
+belonged (135 and 140 the gold); three decibels or more under, five of
+six did not. The written balance reproduces its token song's, so the
+flat ones were inherited: in FFVI the voice the readings label melody is
+the loudest voice in 18 songs of 66, and sits 9 dB or more under the
+whole in one song of seven. Each FFVI voice rendered alone and put to
+the owner's ear (the Lead Check, 14 songs), he agreed with the label in
+9 and named another voice in 5, every one of those a song whose labelled
+melody sat 9 dB or more under; every song he agreed on had it within 8.
+The reader's only loudness test is a quarter of the loudest raw voice
+volume (12 dB, on volume, not on what renders), under a square root in
+the melodic score, so a buried voice with a wide line wins.
+
+**Built.** `bitcomposer.translate.lead`: a readings pass that renders each
+tonal voice alone from its SPC, keeps every voice's loudness as a feature
+(render/voice_lufs_<voice>), and relabels: the labelled melody keeps the
+lead where it is heard (within LEAD_WINDOW, 9 dB, of the loudest tonal
+voice), else the most varied heard voice (pitch-class entropy, then
+loudness; not the bass, below the tune's ceiling) becomes the melody and
+the old melody a counter-line, or an accompaniment where a counter
+exists; the change is kept (lead/was_melody, now_melody) and the pass is
+repeatable. The rule matched 12 of the owner's 14 picks (Locke: both
+voices heard, he took the louder upper one; Gau: a loud low riff) and
+relabels 9 FFVI songs of 66. `tools/salience.py` measures the margin on
+any folder of whole songs with stems. Pack4's 94 tables refit on the
+relabelled readings.
