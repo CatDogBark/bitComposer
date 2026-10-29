@@ -1735,7 +1735,7 @@ def sample_rms(sample) -> float:
     return math.sqrt(sum(v * v for v in body) / len(body)) / 32768
 
 
-def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0):
+def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = ""):
     """The written parts as a score (spc.convert.Score) on the pack's
     samples: the form once, then the loop (from the loop's bar to the
     form's end) `loops` - 1 times more, fading at the end; with
@@ -1779,8 +1779,9 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
         level = note_level(plan, role, j, second_voice, bar)
         if role == R.DRUMS or sample is None:
             return level
-        if name not in loud_of:
-            rms = sample_rms(sample)
+        if name not in loud_of:                             # the pack's table first (the same numbers the levels were counted with); the
+            rid = name[len(pack_name) + 1:] if name.startswith(pack_name + "_") else name   # module sample's own body where the table lacks it
+            rms = rhythm.SAMPLE_LOUDNESS.get(rid) or sample_rms(sample)
             loud_of[name] = rhythm.LOUDNESS_REF / rms if rms > 0 else 1.0
         wanted = level * loud_of[name]
         if wanted > 1.0:
@@ -1839,7 +1840,7 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
 
 
 def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int = 1, fade: float = 3.0, echo: dict | None = None,
-             tail_bars: int = 0) -> list[str]:
+             tail_bars: int = 0, pack_name: str = "") -> list[str]:
     """Each written part alone as a module of its own (`<title> <part>.it`),
     for a page that plays the parts in sync and switches each: the same
     length, echo and samples as the whole, so their sum is the whole.
@@ -1851,7 +1852,7 @@ def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int 
     for role, part in written.items():
         if not part.notes:
             continue
-        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
+        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars, pack_name=pack_name)
         score.title = f"{plan.title} {role}"[:25]
         score.message = [f"{plan.title}: the {role} alone (a stem for the Song Check)"] + list(score.message or [])[1:]
         path = os.path.join(out_dir, f"{plan.title} {role}.it")
@@ -1957,15 +1958,15 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     written = write(p, song, models, seed, reference)
     echo = echo_of(pack.get("habits") or {}, p.bpm, rng)
     samples["floors"] = floors_for(p, written, samples, models, pack_name, random.Random(f"whole:{seed}:floors"))   # by the written speed
-    score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars)
+    score, first = score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars, pack_name=pack_name)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}
     if read:
-        once, _ = score_of(p, written, samples, loops=1, fade=0.0, echo=echo)
+        once, _ = score_of(p, written, samples, loops=1, fade=0.0, echo=echo, pack_name=pack_name)
         back = read_back(once, p, first, samples)
         out["read"] = back
         out["measures"] = measures(back) if back is not None else None
         if out["measures"] is not None:                      # the reader's form, heard as a player hears it: with the loop
-            twice, _ = score_of(p, written, samples, loops=2, fade=0.0, echo=echo)
+            twice, _ = score_of(p, written, samples, loops=2, fade=0.0, echo=echo, pack_name=pack_name)
             looped = read_back(twice, p, first, samples)
             out["measures"]["parts"] = len(looped.parts) if looped is not None else 0
             out["measures"]["loop_heard"] = int(looped is not None and looped.loop_bar is not None)
