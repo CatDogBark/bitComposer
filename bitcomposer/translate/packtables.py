@@ -26,7 +26,7 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # their long tail (a bar one song played) wholly to the cell floor, whose runs the
                                      # manner refuses, so a "new" bar was mostly a common bar again (the whole songs'
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
-FIGURE = ("part", "meter", "habit", "feel", "previous")   # the figure tables' shape: the habit, then the song's feel, before the chain (writer.SHAPE);
+FIGURE = ("part", "meter", "tempo", "habit", "feel", "previous")   # the figure tables' shape: the tempo class (round 61), the habit, then the song's feel, before the chain (writer.SHAPE);
                                                            # a floor stepping down from a one-song context lets the feel go first and keeps the habit
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
@@ -37,12 +37,13 @@ KEPT = {
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
     "bass_habits": ("rhythm", "bass_habit_units", {}, ("part", "tempo", "weight"), False, False, "the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight"),
-    "drums": ("rhythm", "drum_units", {}, FIGURE, True, True, "the kit's bar as one figure, every piece: what a song written whole repeats and varies as a kit does"),
+    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "tempo", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece, under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does"),
     "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, FIGURE, True, True, "the kick, snare and toms' bar"),
     "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, FIGURE, True, True, "the hat's bar"),
     "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, FIGURE, True, True, "the cymbals' bar"),
     "drums-o": ("rhythm", "drum_group_units", {"letters": ("o",)}, FIGURE, True, True, "the other drum sounds' bar"),
     "drum_habits": ("rhythm", "drum_habit_units", {}, ("part",), False, False, "the drums' density habit, drawn once a song"),
+    "kit_pieces": ("rhythm", "kit_piece_units", {}, ("part", "habit"), False, False, "the kit pieces a song's drums strike (letters: kick, snare, hat, tom, cymbal, other), by the kit's habit tier, drawn once a song"),
     "voicings": ("rhythm", "voicing_units", {}, ("part", "shape", "habit"), False, True, "which chord tones an upper part holds in a span"),
     "widths": ("rhythm", "width_units", {}, ("part", "shape", "previous"), False, True, "how wide the upper voicing sits"),
     "voicing_habits": ("rhythm", "voicing_habit_units", {}, ("part",), False, False, "an upper part's richness habit, drawn once a song"),
@@ -117,9 +118,9 @@ KEPT = {
     "sample_ambitus": ("rhythm", "sample_ambitus_units", {}, ("part",), False, False, "the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound"),
     "part_samples": ("rhythm", "part_sample_units", {}, ("part", "speed"), False, False, "the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
-    "part_textures": ("rhythm", "part_texture_units", {}, ("part", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by its place in the form and the part before's"),
+    "part_textures": ("rhythm", "part_texture_units", {}, ("part", "habit", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's"),
     "section_levels": ("rhythm", "section_level_units", {}, ("part", "form"), False, False, "a part's level in a section over its level in the whole song, in tenths, by the part and the section's place in the form: dynamics by section"),
-    "part_entries": ("rhythm", "part_entry_units", {}, ("part", "form", "length"), False, False, "where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, the section's place in the form and its length class"),
+    "part_entries": ("rhythm", "part_entry_units", {}, ("part", "habit", "form", "length"), False, False, "where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class"),
     "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
     "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of the tune's notes on a beat that are chord tones, drawn once a song"),
     "contour_sizes": ("phrases", "contour_size_units", {}, ("part", "mode", "contour"), False, False, "how far a phrase's contour goes, in semitones, by its shape"),

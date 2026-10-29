@@ -249,9 +249,9 @@ class Table:
         songs reach (a mask drawn for the bass from a thirteen-song table
         under a floor one song held had doubled the line where the game
         fills)."""
-        if floor_k is not None and floor_outcomes:
-            while floor_k > self.covers and len(self.votes.get(context[:floor_k]) or {}) < floor_outcomes:
-                floor_k -= 1
+        if floor_k is not None and floor_outcomes:          # outcomes that are not the rest: a level of one figure and its rests is no
+            while floor_k > self.covers and sum(1 for o in (self.votes.get(context[:floor_k]) or {}) if o != REST) < floor_outcomes:
+                floor_k -= 1                                # vocabulary (round 58; a song's own kit, of many bars, is)
         if floor_k is not None and floor_songs:
             while floor_k > self.covers and self.songs.get(context[:floor_k], 0) < floor_songs:
                 floor_k -= 1
@@ -334,9 +334,11 @@ FLOOR = ("floor",)                   # the shape that is the floor model alone, 
 CACHE = "cache"                      # the mark on a shape's name for its Cache mixture
 RECALL = ("same", "earlier", "new")  # what a unit is to its song so far (Cache)
 NEW_TRIES = 20                       # draws a Cache makes for an outcome new to the song before taking one it played
-FLOOR_SONGS = 2                      # songs a chain's floor level needs (round 57, 2026-10-29): a floor one song held had written a band's
-                                      # main arp as nothing, that song's arp resting in 0.94 of its bars (Whole 75); the masks already step
-                                      # down so (whole.PLAN_SONGS), and a plan's one-shot draws pass a finer level under it (min_songs)
+REST = "-"                           # the rest bar in the figure tables
+FLOOR_SONGS = 1                      # songs a chain's floor level needs: one. Round 57 had asked two (a floor one song held had written a
+                                      # band's main arp as nothing, that song's arp resting in 0.94 of its bars); round 58 counts the floor's
+                                      # outcomes without the rest instead (FLOOR_OUTCOMES), which steps that arp down and keeps a song's own
+                                      # kit, whose bars are its pieces' (two songs had sent a one-kit level to any kit's bars, then cut them)
 FLOOR_OUTCOMES = 2                   # outcomes a floor level needs: a context with one outcome is no vocabulary to draw from, and a chain
                                      # floored on it wrote that outcome alone (a kit habit one triple-feel song had, all rests: no drums for a song)
 RECALL_SHAPE = ("part", "habit")     # what the recall shares are conditioned on (the values a unit has of these)

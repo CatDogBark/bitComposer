@@ -58,11 +58,20 @@ WANTS = {R.HARMONY: 3, R.ACCOMP: 2, R.ARP: 1, R.COUNTER: 1}   # voices an upper 
 LEVELS = {R.MELODY: 0.85, R.COUNTER: 0.6, R.HARMONY: 0.5, R.ACCOMP: 0.6, R.ARP: 0.55, R.BASS: 0.8, R.DRUMS: 0.8}   # of full, by part: the
 TOP_LEVEL = 0.85                      # the loudest part's level of full without a top_levels table (round 52: with one, the song's own draw;
                                       # FFVI's loudest parts sit at 0.2 to 0.4, and 0.85 had rendered 5 dB hotter than the game's songs)
-TOP_SCALE = 1.7                       # the readings' level (a voice's two sides' mean over 128) to the module's note level, measured: by the
+TOP_SCALE = 1.0                       # the readings' level (a voice's two sides' mean over 128) to the module's note level: one since round 59,
+                                      # the song's master volume carrying the mix's loudness (mix level, RENDER_BRIDGE). It had been 1.7:
+                                      # THE OLD NOTE: the readings' level to the module's note level, measured: by the
                                       # converter's own sums the two scales agree (a voice at 38 a side is IT volume 38 of 64 under FFVI's
                                       # master of 63, 0.29 of full either way), but the written songs rendered 4.5 dB under FFVI's converted
                                       # songs at the readings' top level as drawn (-29.0 against -24.5 dBFS, the same player), and 5 dB over
                                       # at 0.85; 1.7 (4.6 dB) is the measured bridge, to be read again when the readings' level is understood
+RENDER_BRIDGE = -21.7                 # dB: what a written song renders at (RMS dBFS over its first minute, the Song Check method) less its mix
+                                      # estimate (rhythm.mix_level over the notes as scored), at a full master: measured over 20 written songs
+                                      # 2026-10-29 (median -21.7 once the sample loudness read the sustain loop, quartiles -23.0 and -19.8;
+                                      # -20.5 before it); the master brings estimate + bridge to the token's song's rendered loudness. Read
+                                      # again if the estimate or the renderer changes.
+MASTER_FLOOR = 8                      # the master volume's least value (of 127): under it a song is not a song
+STRIKE_WINDOW = 0.1                   # seconds of a sample a note hears as its strike (sample_strike_and_body, heard_rms)
 PANS = {R.MELODY: (0.5,), R.COUNTER: (0.6,), R.HARMONY: (0.35, 0.65, 0.5), R.ACCOMP: (0.6, 0.4), R.ARP: (0.4,), R.BASS: (0.5,),
         R.DRUMS: (0.5, 0.58)}        # the right side's share, a part's voices in turn
 POOLS = {R.MELODY: "lead", R.COUNTER: "counter", R.HARMONY: "harmony", R.ARP: "arp"}   # a part's voice pool in a pack; the
@@ -73,9 +82,10 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
-            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "top_levels": str(TOP_LEVEL),
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "top_levels": str(TOP_LEVEL), "kit_pieces": "KShtco",
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
+DRUM_ENTRY_FLOOR = 2                  # the drums' entrance draw never backs off past the kit's tier (part, habit): the tier's own entrances
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
 SPEED_FASTER = 30.0                   # notes a second a part_speeds draw of "faster" (past SPEED_BINS' top) is fitted at
 MIN_SPAN = 2 * rhythm.REGISTER_BIN    # semitones: the narrowest register a voice is written in (two of the register word's bins)
@@ -126,8 +136,12 @@ class Plan:
                                       # busiest first (the sixth field): voice j beside the line plays at entry j - 1
     layer_from: dict = field(default_factory=dict)    # a pitched part -> where its second voices' levels came from: "balance" or "layer_levels"
     top_level: float = 0.85                               # the loudest part's level of full (top_levels, round 52; TOP_LEVEL without the word)
+    loudness: float | None = None                         # the balance token's song's rendered loudness, RMS dBFS (round 59): the master holds the song's own to it
+    master: tuple | None = None                           # (the master volume of 127, the gain the notes took) score_of decided for the whole song: the stems take it
     section_levels: dict = field(default_factory=dict)   # a part -> [its level's multiplier a bar] (section_levels, round 48: a section's level
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
+    token_samples: dict = field(default_factory=dict)   # a part -> the balance token's song's sample for it, the pack's id (the eighth field,
+                                      # round 60): samples_for takes it where the pack holds the sample, the part_samples draw else
     kinds: dict = field(default_factory=dict)         # the counter -> the balance token's song's kind for it, same or other (the seventh field,
                                       # round 39): the counter_samples draw is made and overwritten where the token has it
     speeds: dict = field(default_factory=dict)        # a pitched part -> its fastest bar, notes a second (part_speeds): what its sample is fitted to
@@ -149,7 +163,7 @@ class Plan:
     def to_json(self) -> dict:
         return {"seed": self.seed, "game": self.game, "title": self.title, "key": f"{harmony.NAMES[self.tonic]} {self.mode}", "bpm": self.bpm,
                 "form": self.letters, "parts": [list(p) for p in self.parts], "loop_bar": self.loop_bar, "chords": self.names,
-                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays,
+                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays, "top_level": self.top_level, "loudness": self.loudness, "token_samples": self.token_samples,
                 "registers": {k: list(v) for k, v in self.registers.items()},
                 "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log, "feel": self.feel,
                 "theme": {"bars": self.extras.get(R.MELODY, {}).get("theme_bars"), "returns": self.extras.get(R.MELODY, {}).get("returns")}}
@@ -305,7 +319,7 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     return names, [chord_of(x, tonic, mode) for x in names]
 
 
-def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log: list) -> tuple[list, dict]:
+def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log: list, defer=(), tier: str = rhythm.NO_TIER) -> tuple[list, dict]:
     """Which parts sound in each bar: a texture a part of the form, drawn
     from the part-textures table against the band (ALL, or the band's
     parts that rest: "no drums melody"; given the part's place in the form
@@ -315,8 +329,11 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
     inside it (so many bars after its start, so many before its end): FFVI's
     parts join inside a section more often than at its edge (61 to 45),
     and a texture a section had let them join only at its lines. A
-    repeated part copies the bars, entrances and all. Returns the textures
-    a bar and each part's bars."""
+    repeated part copies the bars, entrances and all. The parts in `defer`
+    draw no entrance here (the drums': drawn under the kit's tier once the
+    kit's habit is known, drum_entrances); `tier` is the kit's density tier
+    the textures are drawn under (round 59; NO_TIER without drums). Returns
+    the textures a bar and each part's bars."""
     total = parts[-1][0] + parts[-1][1]
     textures = [None] * total
     entries = []
@@ -332,7 +349,7 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
         if table is not None:
             form = "only" if n_parts == 1 else "first" if i == 0 else "last" if i == n_parts - 1 else "middle"
             for _ in range(20):
-                outcome = table.draw((rhythm.ARRANGEMENT, form, previous), rng, floored=False)
+                outcome = table.draw((rhythm.ARRANGEMENT, tier, form, previous), rng, floored=False)
                 resting = set(outcome[3:].split()) if outcome.startswith("no ") else set()
                 t = " ".join(r for r in band if r not in resting)
                 if t:
@@ -342,25 +359,54 @@ def plan_texture(models: dict, parts: list, band: list, rng: random.Random, log:
         textures[bar:bar + n] = [t] * n
         previous = outcome
         if "part_entries" in models:                        # where inside the section each present part enters and leaves (round 46)
-            place = rhythm.form_place_of(i, n_parts)
-            length = rhythm.section_length(n)
-            for role in t.split():
-                for _ in range(ENTRY_TRIES):
-                    drawn = models["part_entries"].draw((role, place, length), rng, floored=False, floor_k=PLAN_FLOOR)
-                    enters, leaves = rhythm.entry_of(drawn)
-                    if enters + leaves < n:
-                        break
-                else:
-                    continue                                # no draw fits a section this short: the part plays it whole
-                if enters or leaves:
-                    for k in list(range(bar, bar + enters)) + list(range(bar + n - leaves, bar + n)):
-                        textures[k] = " ".join(r for r in textures[k].split() if r != role)
-                    entries.append(f"{role} " + " ".join(x for x in (f"enters {enters} in" if enters else "", f"leaves {leaves} before the end of" if leaves else "") if x) + f" {parts[i][3]}")
+            entrances(models, parts, i, textures, [r for r in t.split() if r not in defer], rhythm.NO_TIER, rng, entries, PLAN_FLOOR)
     plays = {role: [role in (textures[k] or "").split() for k in range(total)] for role in band}
     log.append("textures " + " | ".join(f"{p[3]}: {textures[p[0]]}" for p in parts))
     if entries:
         log.append("entrances (part_entries): " + "; ".join(entries))
     return textures, plays
+
+
+def entrances(models: dict, parts: list, i: int, textures: list, roles: list, tier: str, rng: random.Random, entries: list, floor_k: int) -> None:
+    """The entrance and exit of each of `roles` inside section i, drawn from
+    the part_entries word under the part, `tier` (the kit's for the drums,
+    NO_TIER else), the section's place and length, and cut from `textures`
+    in place (ENTRY_TRIES draws for one the section can hold, else whole);
+    each cut described in `entries`."""
+    bar, n = parts[i][0], parts[i][1]
+    place, length = rhythm.form_place_of(i, len(parts)), rhythm.section_length(n)
+    for role in roles:
+        for _ in range(ENTRY_TRIES):
+            drawn = models["part_entries"].draw((role, tier, place, length), rng, floored=False, floor_k=floor_k)
+            enters, leaves = rhythm.entry_of(drawn)
+            if enters + leaves < n:
+                break
+        else:
+            continue                                        # no draw fits a section this short: the part plays it whole
+        if enters or leaves:
+            for k in list(range(bar, bar + enters)) + list(range(bar + n - leaves, bar + n)):
+                textures[k] = " ".join(r for r in textures[k].split() if r != role)
+            entries.append(f"{role} " + " ".join(x for x in (f"enters {enters} in" if enters else "", f"leaves {leaves} before the end of" if leaves else "") if x) + f" {parts[i][3]}")
+
+
+def drum_entrances(models: dict, parts: list, textures: list, band: list, tier: str, rng: random.Random, log: list) -> tuple[list, dict]:
+    """The drums' entrances and exits, section by section, under the kit's
+    density tier (round 59: the word by part, place and length alone had a
+    dense kit leave eight bars before a section's end, where FFVI's dense
+    kits play 101 sections of 106 whole and its sparse kits 20 of 27; the
+    tier's own entrances alone, DRUM_ENTRY_FLOOR), a repeated section
+    copying its source. Returns the textures and every part's bars."""
+    entries = []
+    for i, (bar, n, of, _) in enumerate(parts):
+        if of is not None:
+            src = parts[of][0]
+            textures[bar:bar + n] = textures[src:src + n]
+        elif R.DRUMS in (textures[bar] or "").split():
+            entrances(models, parts, i, textures, [R.DRUMS], tier, rng, entries, DRUM_ENTRY_FLOOR)
+    if entries:
+        log.append("entrances (part_entries, the drums by the kit's tier): " + "; ".join(entries))
+    total = parts[-1][0] + parts[-1][1]
+    return textures, {role: [role in (textures[k] or "").split() for k in range(total)] for role in band}
 
 
 def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng: random.Random, log: list) -> dict:
@@ -516,12 +562,18 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights, layout, shares, counts, token_levels, token_layers, token_kinds = [], {}, {}, {}, {}, {}, {}, {}
-    token_class = None
+    band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples = [], {}, {}, {}, {}, {}, {}, {}, {}
+    token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
         if role == "tempo":                                 # the token's song's tempo class (round 54), not a part
             token_class = rest
+            continue
+        if role == "top":                                   # the token's song's loudest part, of full (round 59), not a part
+            token_top = float(rest)
+            continue
+        if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
+            token_loud = float(rest)
             continue
         band.append(role)
         if rest:
@@ -541,6 +593,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_layers[role] = [float(x) for x in fields[5].split("/")]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
+            if len(fields) > 7 and fields[7]:               # the part's own sample (round 60): the song's instruments with its levels
+                token_samples[role] = fields[7]
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
@@ -549,21 +603,30 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         tempo = rhythm.band(bpm)
         log.append(f"tempo {was:.0f} BPM is outside the band's class ({token_class}): {bpm:.0f} BPM drawn under it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
-    textures, plays = plan_texture(models, parts, band, rng, log)
+    drum_habit = (_draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log) if R.DRUMS in band else None)   # before the
+    tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)
+    textures, plays = plan_texture(models, parts, band, rng, log, defer=(R.DRUMS,), tier=tier)
     silent = [r for r in band if not any(plays[r])]
     if silent:
         log.append(f"never in a texture, left out of the band: {silent}")
         band = [r for r in band if r not in silent]
         plays = {r: plays[r] for r in band}
-    section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
-                      if "section_levels" in models_or_empty(models) else {})                                  # plan's, every later draw had shifted
-    top_level = (min(1.0, TOP_SCALE * float(_draw(models, "top_levels", (rhythm.ARRANGEMENT,), random.Random(f"whole:{seed}:top"), log)))
-                 if "top_levels" in models_or_empty(models) else TOP_LEVEL)
+    if token_top is not None:                               # the song's own top with its own levels (round 59)
+        top_level = min(1.0, TOP_SCALE * token_top)
+        log.append(f"top level from the balance: {token_top:.2f} of full, {top_level:.2f} in the module")
+    else:
+        top_level = (min(1.0, TOP_SCALE * float(_draw(models, "top_levels", (rhythm.ARRANGEMENT,), random.Random(f"whole:{seed}:top"), log)))
+                     if "top_levels" in models_or_empty(models) else TOP_LEVEL)
     registers, sounds, habits, extras = {}, {}, {}, {}
     for role in band:
         if role == R.DRUMS:
-            habits[role] = _draw(models, "drum_habits", (R.DRUMS,), rng, log)
+            habits[role] = drum_habit
             extras[role] = {"".join(g): _draw(models, "drum_group_habits", ("drums-" + "".join(g), habits[role]), rng, log) for g in rhythm.DRUM_GROUPS}
+            if "kit_pieces" in models_or_empty(models):      # the pieces the song's kit strikes (round 58), on an own stream
+                extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,
+                                               floor_k=2)   # the tier's own kits alone (seven medium songs, seven kits: the smoothing had handed a
+                                                            # medium song a dense kit, and the kit-first drums table then wrote the dense kit's bars)
+                log.append(f"kit pieces (kit_pieces): {extras[role]['pieces']}")
             continue
         if role in layout:                                  # the song's own layout; the tables a part at a time where the pack has none
             registers[role] = layout[role]
@@ -585,6 +648,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                             "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
                             "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
                             "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng)}
+    if R.DRUMS in band and "part_entries" in models_or_empty(models):   # the drums' entrances under the kit's tier (round 59), on an own stream
+        textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
+    section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
+                      if "section_levels" in models_or_empty(models) else {})                                  # plan's, every later draw had shifted
     voices = allot(band, counts)
     for role in band:                                       # a part with two voices or more: what each voice beside its line does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
@@ -730,8 +797,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, section_levels=section_levels,
-                top_level=top_level)
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, section_levels=section_levels,
+                top_level=top_level, loudness=token_loud)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1059,6 +1126,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     {role: Part}."""
     written, key = {}, (plan.tonic, plan.mode)
     kit_letters = {rhythm.LETTERS[p] for p in song.pieces.values() if p in rhythm.LETTERS}
+    pieces = plan.extras.get(R.DRUMS, {}).get("pieces")     # the pieces the song's kit strikes (kit_pieces, round 58); every piece without the word
+    if pieces:
+        kit_letters &= set(pieces)
     if R.DRUMS in plan.band and kit_letters:
         if "drums" in models:                               # the kit as one figure: its bars repeat and vary together, as a kit's do
             groups = {tuple(rhythm.LETTERS.values()): models["drums"]}
@@ -1066,12 +1136,16 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
         if groups:
             group_habits = {g: (plan.habits[R.DRUMS] if len(g) > 3 else plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS]) for g in groups}
-            for g in rhythm.DRUM_GROUPS:                    # the one-letter groups' own habits cap their hits in the kit's draw (writer.group_caps)
-                if len(g) == 1 and plan.extras.get(R.DRUMS, {}).get("".join(g)):
-                    group_habits.setdefault(g, plan.extras[R.DRUMS]["".join(g)])
-            hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS])
+            # until round 58 the one-letter groups' own habits capped their hits in the kit's draw (writer.group_caps): a kit drawn as one
+            # figure is one song's bar, hat and all, and another song's "sparse hat" cutting it had left a dense kit at 8 hits a bar
+            # against the game's 12.8; the song's pieces (kit_pieces) now say which sounds the kit has at all
+            kit_value = "".join(x for x in rhythm.LETTERS.values() if x in kit_letters)   # the kit's pieces: the kit figure is drawn from songs with this kit
+            hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS], kit_value=kit_value)
             by_voice, notes, dropped = {}, [], Counter()
             for t, letter in hits:
+                if letter not in kit_letters:               # a piece the song's kit does not strike (kit_pieces)
+                    dropped[letter] += 1
+                    continue
                 sample = next((name for name in KIT_FOR.get(letter, ()) if name in song.pieces), None)
                 if sample is None:
                     dropped[letter] += 1
@@ -1090,7 +1164,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             song.notes[R.DRUMS] = [(t, end - t, float("nan"), sample) for t, end, _, _, sample in notes]
             written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"kit habit {plan.habits[R.DRUMS]}; groups " + ", ".join(f"{'+'.join(g)} {h}" for g, h in group_habits.items())
                                                               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
-                                                              + (f"; dropped (no sample) {dict(dropped)}" if dropped else "")])
+                                                              + (f"; pieces {''.join(sorted(kit_letters, key=list(rhythm.LETTERS.values()).index))}")
+                                                              + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")])
     if R.BASS in plan.band and "bass" in models:
         # the bass sits on the kit's accents (two pieces together) at the game's share (bass_locks): FFVI's on 0.94 of them;
         # locked to the whole planned band it had met the threshold in no bar, written second with two drum voices to hand
@@ -1594,7 +1669,13 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         drums = {raw(n) for n in (voices.get("drums") or {}).values()}
         tonal = sorted(n for n in own if n not in drums)
         register = plan.registers.get(role)
-        if role == R.COUNTER and kind and R.MELODY in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
+        given = plan.token_samples.get(role)                # the token song's own instrument for the part (round 60), where the pack holds it
+        if given and given in own:
+            out[role] = make(given)
+            if ranges is not None and ranges.songs.get((given,), 0):
+                drawn[given] = tuple(int(x) for x in ranges.draw(range_context(given, role), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
+            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)")
+        if role == R.COUNTER and kind and R.MELODY in out and role not in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
             if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
                 out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
                 continue                                    # chosen for where the counter was written, which is where the tune is
@@ -1725,17 +1806,43 @@ def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = No
 
 def sample_rms(sample) -> float:
     """A module sample's own loudness: the RMS of its loop body (the whole sample without a loop), 0-1 (round 56)."""
+    return sample_strike_and_body(sample)[1]
+
+
+def sample_strike_and_body(sample) -> tuple[float, float]:
+    """A module sample's loudness in two numbers, 0-1: the RMS of its strike
+    (its first STRIKE_WINDOW seconds at its own rate) and of its loop body
+    (the whole sample without a loop). A note hears the strike first and
+    the body after (`heard_rms`): a short chord on a struck sample is as
+    loud as its attack, not as its tail (round 59: Whole 79's accompaniment
+    rendered 8 dB over its estimate by the body alone)."""
     import array
     data = sample.data
     x = data if isinstance(data, array.array) else array.array("h", bytes(data)[: (len(data) // 2) * 2])
     if not len(x):
-        return 0.0
-    a, b = (sample.loop_start, sample.loop_end) if getattr(sample, "loop", False) and sample.loop_end > sample.loop_start else (0, len(x))
+        return 0.0, 0.0
+    a, b = 0, len(x)
+    for flag, start, end in (("loop", "loop_start", "loop_end"), ("sus_loop", "sus_loop_start", "sus_loop_end")):
+        lo, hi = getattr(sample, start, 0), getattr(sample, end, 0)
+        if getattr(sample, flag, False) and hi > lo:         # the loop a held note sits in: the ordinary loop, else the sustain loop (a pack
+            a, b = lo, hi                                   # voice with a release holds its sustain loop; read as the whole sample, its quiet
+            break                                           # release tail had halved the loudness and the writer boosted the note, round 59)
     body = x[a:b] if b <= len(x) and b > a else x
-    return math.sqrt(sum(v * v for v in body) / len(body)) / 32768
+    rate = getattr(sample, "c5_speed", 0) or 32000
+    strike = x[:max(1, min(len(x), int(rate * STRIKE_WINDOW)))]
+    rms = lambda seg: math.sqrt(sum(v * v for v in seg) / len(seg)) / 32768   # noqa: E731
+    return rms(strike), rms(body)
 
 
-def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = ""):
+def heard_rms(strike: float, body: float, seconds: float) -> float:
+    """The loudness a note of `seconds` hears from its sample: the strike's for STRIKE_WINDOW, the body's after, in power."""
+    if seconds <= STRIKE_WINDOW:
+        return strike
+    return math.sqrt((strike * strike * STRIKE_WINDOW + body * body * (seconds - STRIKE_WINDOW)) / seconds)
+
+
+def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",
+             master: tuple | None = None):
     """The written parts as a score (spc.convert.Score) on the pack's
     samples: the form once, then the loop (from the loop's bar to the
     form's end) `loops` - 1 times more, fading at the end; with
@@ -1773,20 +1880,26 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
 
     from .. import samples as samples_mod
 
-    loud_of, capped = {}, Counter()                       # a sample's own loudness (round 56): a note plays at its level over it
+    loud_of, strike_of, capped = {}, {}, Counter()        # a sample's own loudness (round 56): a note plays at its level over it
+    heard = []                                            # (start in beats, length in beats, perceived level): the mix level (round 59)
 
-    def level_of(role, j, bar=None, name=None, sample=None):
+    def level_of(role, j, bar=None, name=None, sample=None, seconds=0.0):
         level = note_level(plan, role, j, second_voice, bar)
         if role == R.DRUMS or sample is None:
-            return level
-        if name not in loud_of:                             # the pack's table first (the same numbers the levels were counted with); the
-            rid = name[len(pack_name) + 1:] if name.startswith(pack_name + "_") else name   # module sample's own body where the table lacks it
-            rms = rhythm.SAMPLE_LOUDNESS.get(rid) or sample_rms(sample)
-            loud_of[name] = rhythm.LOUDNESS_REF / rms if rms > 0 else 1.0
+            return level, level
+        if name not in loud_of:                             # the module sample's own loudness (round 59): the instrument builder scales a
+            strike, rms = sample_strike_and_body(sample)    # sustaining voice's loop to one loudness (samples.LOUDNESS_TARGET), so the pack
+            if rms <= 0:                                    # table's numbers (the game's samples as the game plays them, which the readings'
+                rid = name[len(pack_name) + 1:] if name.startswith(pack_name + "_") else name   # levels are counted with) are not what
+                rms = rhythm.SAMPLE_LOUDNESS.get(rid, 0.0)  # the module plays; round 56 had read the table first and boosted "quiet" samples
+            loud_of[name] = rhythm.LOUDNESS_REF / rms if rms > 0 else 1.0   # the module had already brought up
+            strike_of[name] = (strike, rms)
         wanted = level * loud_of[name]
         if wanted > 1.0:
             capped[name] += 1
-        return min(1.0, wanted)
+        played = min(1.0, wanted)
+        strike, body = strike_of[name]                      # what this note hears of the sample: its strike, then its body (the estimate's)
+        return played, played * heard_rms(strike, body, seconds) / rhythm.LOUDNESS_REF if body > 0 else played / loud_of[name]
 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None):
         idx, addr, c5 = instrument(name, sample)
@@ -1794,7 +1907,9 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
         send = echo is not None and role in SENDS
         env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
-        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(level_of(role, j, bar, name, sample), pan), adsr, gain,
+        played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0)
+        heard.append((t0 / beat_s, (min(t1, seconds) - t0) / beat_s, perceived))
+        notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(played, pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
     offsets = [0.0] + [form_beats - loop_start + j * loop_beats for j in range(max(0, loops - 1))]
@@ -1831,12 +1946,43 @@ def score_of(plan: Plan, written: dict, samples: dict, loops: int = 2, fade: flo
             prev.end = n.start
         last[n.voice] = n
     tempo, row_hz = it_song.tempo_for(convert.FINE_GRID)
+    given = master
+    master, gain_up = 127, 1.0
+    estimate = rhythm.mix_level(heard)
+    if given is not None:                                   # a stem: the whole song's master and gain, so the stems sum to the whole
+        master, gain_up = given
+        if gain_up > 1.0:
+            for n in notes:
+                n.volume = tuple(int(max(-127, min(127, round(v * gain_up)))) for v in n.volume)
+    elif plan.loudness is not None and estimate is not None:   # the song's master volume holds its loudness to the token's song's (round 59)
+        master, gain_up = master_of(plan.loudness, estimate)
+        plan.master = (master, gain_up)
+        if gain_up > 1.0:                                   # a song under its target with the master already full: the notes come up
+            for n in notes:
+                n.volume = tuple(int(max(-127, min(127, round(v * gain_up)))) for v in n.volume)
+        plan.log.append(f"master: the mix estimated at {estimate:.1f} dB renders near {estimate + RENDER_BRIDGE:.1f} dBFS against the song's "
+                        f"{plan.loudness:.0f}: master {master} of 127" + (f", notes raised {20 * math.log10(gain_up):.1f} dB" if gain_up > 1.0 else ""))
     message = [f"{plan.title} - {harmony.NAMES[plan.tonic]} {plan.mode} - {round(plan.bpm)} BPM - form {plan.letters}",
                "Written by bitComposer from the pack's tables (docs/IDIOM.md, phase 4: the",
                "integration): every part free on a skeleton the tables gave, rendered as a game's song is."]
-    score = convert.Score(notes, seconds, n_voices, [(0.0, 127, 127)], fade, plan.title[:25], plan.game, "bitComposer", row_hz, tempo,
+    score = convert.Score(notes, seconds, n_voices, [(0.0, master, master)], fade, plan.title[:25], plan.game, "bitComposer", row_hz, tempo,
                           0.0, 0.0, False, None, pcm_of, key_of, message=message)
     return score, first
+
+
+def master_of(target: float, estimate: float) -> tuple[int, float]:
+    """The master volume (of 127) that brings a written song to its target
+    loudness (the token's song's rendered loudness, dBFS) from its mix
+    estimate (what it renders at is the estimate plus RENDER_BRIDGE):
+    (master, the gain the notes take where the master is full already and
+    the song still under). The master is the SNES chip's own lever, a
+    song's from its first bar (FFVI's sit at 32 to 61 of 128 at a song's
+    start); the converter trades it against the channels' volumes
+    loudness-neutrally."""
+    factor = 10 ** ((target - (estimate + RENDER_BRIDGE)) / 20)
+    if factor <= 1.0:
+        return max(MASTER_FLOOR, round(127 * factor)), 1.0
+    return 127, factor
 
 
 def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int = 1, fade: float = 3.0, echo: dict | None = None,
@@ -1849,10 +1995,13 @@ def stems_of(plan: Plan, written: dict, samples: dict, out_dir: str, loops: int 
     from ..spc import convert
     os.makedirs(out_dir, exist_ok=True)
     paths = []
+    if plan.master is None and plan.loudness is not None:   # the whole song's master first: every stem takes it (round 59), so the stems
+        score_of(plan, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars, pack_name=pack_name)   # still sum to the whole
     for role, part in written.items():
         if not part.notes:
             continue
-        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars, pack_name=pack_name)
+        score, _ = score_of(plan, {role: part}, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars, pack_name=pack_name,
+                            master=plan.master or (127, 1.0))
         score.title = f"{plan.title} {role}"[:25]
         score.message = [f"{plan.title}: the {role} alone (a stem for the Song Check)"] + list(score.message or [])[1:]
         path = os.path.join(out_dir, f"{plan.title} {role}.it")

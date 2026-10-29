@@ -1276,7 +1276,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         always new gave 16.5 distinct cells against 12.5)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
-        values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song)}
+        values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
         unit = tables.Unit(song.sid, song.game, "", values)
         fit = lambda f: manner.fits(f) and within(f, env)   # noqa: E731
         kind = models["cell_rhythms"].draw((R.MELODY,), rng, floored=False) if "cell_rhythms" in models else "new"
@@ -1767,7 +1767,7 @@ def thinned(env: tuple, ratio: float) -> tuple:
 
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
-                  energy: list | None = None) -> list[str]:
+                  energy: list | None = None, extra_values: dict | None = None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -1801,7 +1801,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 if thin:
                     env = thinned(env, energy[k])
                 bar_lock = None if thin else lock.get(k)        # in a breakdown the band's hits are not the band: no lock
-                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song)}
+                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm), **(extra_values or {})}
                 unit = tables.Unit(song.sid, song.game, "", values)
                 # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
                 # without the lock (the band asks more strikes than the habit: the part keeps its density and locks
@@ -1821,7 +1821,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                         candidate = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
                     if figure is not None:
                         break
-                figures[k] = figure if figure is not None else model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
+                figures[k] = figure if figure is not None else last_resort(manner, model, unit, values, rng)
             played[figures[k]] += 1
             previous = figures[k]
     for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
@@ -1830,6 +1830,19 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
             if k < len(figures) and src < len(figures) and own[k] != REST and figures[src] != REST:
                 figures[k] = figures[src]
     return figures
+
+
+def last_resort(manner, model: tables.Cache, unit: tables.Unit, values: dict, rng: random.Random) -> str:
+    """The figure for a bar no draw fits: on a kit (FreeManner with pieces),
+    any bar the table knows that the kit can play, evenly (the vocabulary's
+    even share, kept to the kit: a bar the plan has the kit in is never
+    silent for want of a draw, round 58); else the table's own draw."""
+    kit = getattr(manner, "kit", None)
+    if kit is not None:
+        fits = [f for f in sorted(manner.known) if f != REST and manner.fits(f)]
+        if fits:
+            return rng.choice(fits)
+    return model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
 
 
 def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
@@ -1855,7 +1868,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         meter = env[-1] if env[-1] else song.meter
         fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at), lock_share)   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
-        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song)}
+        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
         unit = tables.Unit(song.sid, song.game, "", values)
         figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=full)
         nearly = None
@@ -1916,7 +1929,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
 
 
 def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None, habit: str | None = None,
-          free: bool = False, plays: list | None = None) -> tuple[list[tuple[float, str]], list[str]]:
+          free: bool = False, plays: list | None = None, kit_value: str | None = None) -> tuple[list[tuple[float, str]], list[str]]:
     """The drums written for the song, a group of pieces at a time (the
     module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
     to its Cache (a group of every letter: the whole kit, its table's part
@@ -1924,12 +1937,16 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
     original to follow (FreeManner, free_drum_envelope), the `habit` given
     (drawn from a pack's table: the kit's, or {group: its own}) and the kit
     the song's pieces; with `plays` (a planned song's bars) a group may
-    also draw a rested bar, at its table's rate. Returns the hits (start in
-    beats, piece letter) and the merged figures."""
+    also draw a rested bar, at its table's rate; `kit_value` (the letters
+    of the pieces the song's kit strikes, kit_pieces) conditions the draw
+    and narrows the kit to them. Returns the hits (start in beats, piece
+    letter) and the merged figures."""
     locks = locks or {}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
     whole = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
     kit = {rhythm.LETTERS.get(piece, "o") for piece in song.pieces.values() if piece and piece != "none"}
+    if kit_value:                                           # the pieces the song's kit strikes (kit_pieces, round 58): the manner keeps a figure
+        kit &= set(kit_value)                               # on them alone, so a bar drawn from another kit's songs is one this kit can play
     merged = [[] for _ in bars]
     by_group = {}
     part_of = lambda letters: R.DRUMS if set(letters) >= set(rhythm.LETTERS.values()) else "drums-" + "".join(letters)   # noqa: E731
@@ -1948,7 +1965,8 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             envelope_of = drum_envelope
         if free:
             figures = _free_figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold,
-                                    locks.get(letters), envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
+                                    locks.get(letters), envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS,
+                                    extra_values={"kit": kit_value} if kit_value else None)   # the kit's pieces (round 58)
         else:
             figures = _figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
                                envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
@@ -1966,16 +1984,21 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             if not (k < len(plays) and plays[k]) or merged[k]:
                 continue
             before = by_group[main][k - 1] if k else REST
-            values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit,
-                      "feel": rhythm.song_feel(song)}
+            values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit, **({"kit": kit_value} if kit_value else {}),
+                      "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
             unit = tables.Unit(song.sid, song.game, "", values)
             env = free_drum_envelope(kit & set(main))(None, values["meter"])
+            f = None
             for _ in range(TRIES):
                 f = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
                 if manner.fits(f) and drum_within(f, env):
-                    by_group[main][k] = f
-                    merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
                     break
+                f = None
+            if f is None:                                   # nothing drawn fits the kit: any bar the kit can play (round 58)
+                f = last_resort(manner, model, unit, values, rng)
+            if f != REST:
+                by_group[main][k] = f
+                merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
     figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]
     hits = []
     for (a, b, _), figure in zip(bars, figures):

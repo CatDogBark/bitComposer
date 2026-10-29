@@ -148,6 +148,8 @@ class Song:
     levels: dict = field(default_factory=dict)        # role -> the median level (0-1 of full) of its notes, as the readings heard them
     voice_levels: dict = field(default_factory=dict)  # voice -> the median level of its notes
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
+    loudness: float | None = None                     # the song's rendered loudness, RMS dBFS over its first minute through the player (the
+                                      # readings' feature render/loudness_dbfs, round 59); None where it was not measured
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
@@ -257,6 +259,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         if len(basses) >= 2:
             song.bass_voices = basses
         song.levels = {role: statistics.median(ls) for role, ls in level_rows.items()}
+        row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
+        song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         songs.append(song)
     return songs, dict(out)
 
@@ -722,6 +726,26 @@ def drum_group_units(songs, letters) -> list:
 
 def bass_habit_units(songs) -> list:
     return habits(bass_units(songs))
+
+
+def kit_piece_units(songs) -> list:
+    """Each song with drums as a unit: its outcome the kit pieces its drums strike, as letters in LETTERS' order ("KSh": kick,
+    snare, hat), its values the part (drums) and the kit's habit tier. Round 58 (2026-10-29): FFVI plays a hat in 17 of its
+    47 drum songs, cymbals in 23, toms in 7, where every written song had all seven pieces of the pack's kit; and a kit drawn
+    as one figure (one song's bar, hat and all) had its hat, cymbals and other sounds capped by group habits drawn from
+    other songs, which left a dense kit at 8 hits a bar against the game's 12.8."""
+    tier = {u.song: u.outcome.split()[0] for u in drum_habit_units(songs)}
+    order = "".join(LETTERS.values())
+    out = []
+    for s in songs:
+        ns = s.notes.get(R.DRUMS)
+        if not ns:
+            continue
+        letters = {LETTERS.get(s.pieces.get(n[3], n[3]), "o") for n in ns if isinstance(n[3], str)}
+        outcome = "".join(x for x in order if x in letters)
+        if outcome:
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": R.DRUMS, "habit": tier.get(s.sid, "medium")}))
+    return out
 
 
 def drum_group_habit_units(songs) -> list:
@@ -2551,15 +2575,20 @@ def section_level_units(songs) -> list:
     return out
 
 
+NO_TIER = "-"                         # the entrance word's habit value for a part whose density tier it does not read (every part but the drums)
+
+
 def part_entry_units(songs) -> list:
     """Each part present in each own section of a song's form as a unit: its outcome where inside the section it enters
     and leaves ("whole": from the section's first bar to its last; "enters:3": its first sounding bar three bars after
     the section's start; "leaves:1": its last one bar before the end; both; to ENTRY_CAP), its values the part, the
-    section's place in the form and the section's length class (SECTION_LENGTHS). Round 46 (2026-10-28): FFVI's parts
+    section's place in the form and the section's length class (SECTION_LENGTHS), and for the drums the kit's density
+    tier (round 59; NO_TIER for the other parts). Round 46 (2026-10-28): FFVI's parts
     join inside a section more often than at its edge (61 late entrances inside, 45 at a boundary), where a texture a
     section lets them join at its lines alone; the build of a song is where its parts come in."""
     out = []
-    for s in songs:
+    tier = {u.song: u.outcome.split()[0] for u in drum_habit_units(songs)}   # the kit's density tier (round 59: FFVI's dense kits play a
+    for s in songs:                                                         # section whole in 101 of 106, its sparse kits in 20 of 27)
         if not s.notes or not s.parts:
             continue
         plays = {role: sounding_bars(s, role) for role in s.notes}
@@ -2576,7 +2605,8 @@ def part_entry_units(songs) -> list:
                     continue
                 enters, leaves = ks.index(mine[0]), len(ks) - 1 - ks.index(mine[-1])
                 tokens = [x for x in (f"enters:{min(enters, ENTRY_CAP)}" if enters else "", f"leaves:{min(leaves, ENTRY_CAP)}" if leaves else "") if x]
-                out.append(tables.Unit(s.sid, s.game, " ".join(tokens) or "whole", {"part": role, "form": place, "length": length}))
+                out.append(tables.Unit(s.sid, s.game, " ".join(tokens) or "whole",
+                                       {"part": role, "habit": tier.get(s.sid, NO_TIER) if role == R.DRUMS else NO_TIER, "form": place, "length": length}))
     return out
 
 
@@ -2592,8 +2622,11 @@ def part_texture_units(songs) -> list:
     song written with no original draws a texture a part, not a bar; and
     it draws it against its own band, so a band's parts are heard (the
     plain textures drawn a part had left a band's drums out of every
-    part in a song of four)."""
+    part in a song of four). Round 59: the kit's density tier is a value too
+    (NO_TIER where the song has no drums): FFVI's dense kits sit out a whole
+    section in one bar of a hundred, its sparse kits in fifteen."""
     out = []
+    tier = {u.song: u.outcome.split()[0] for u in drum_habit_units(songs)}
     for s in songs:
         if not s.notes or not s.parts:
             continue
@@ -2608,7 +2641,8 @@ def part_texture_units(songs) -> list:
             modal = textures.most_common(1)[0][0]
             resting = sorted(set(s.notes) - modal)
             outcome = ALL if not resting else "no " + " ".join(resting)
-            out.append(tables.Unit(s.sid, s.game, outcome, {"part": ARRANGEMENT, "form": form_place(s, i), "index": min(i + 1, 5), "previous": previous}))
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": ARRANGEMENT, "habit": tier.get(s.sid, NO_TIER) if R.DRUMS in s.notes else NO_TIER,
+                                                            "form": form_place(s, i), "index": min(i + 1, 5), "previous": previous}))
             previous = outcome
     return out
 
@@ -2694,6 +2728,19 @@ def voice_level_shares(song: Song, role: str) -> list | None:
     return [f"{min(LAYER_LEVEL_CAP, round(song.voice_levels[v] / a, 1)):.1f}" for v in others]
 
 
+def part_sample_id(s, role: str) -> str:
+    """The pack's id of the sample a part plays most (its notes' sample key, `s` and the key's first ten characters as
+    the pack names it); "" without notes. Round 60 (2026-10-29): FFVI puts 224 of its 1326 possible sample pairs
+    together, a lead sample has a median one bass partner, and a song's pairs are seen in another of its songs 0.80 of
+    the time; the written songs' pairs, each part's sample drawn apart, 0.55, under chance (0.67): the balance token's
+    song lends its instruments with its levels, which were counted on those very samples."""
+    c = Counter(n[3] for n in s.notes.get(role, []) if isinstance(n[3], str) and n[3])
+    if not c:
+        return ""
+    key = c.most_common(1)[0][0]
+    return "s" + key[:10] if len(key) >= 10 else key
+
+
 def balance_units(songs) -> list:
     """Each song as a unit: its outcome its band with, for each pitched
     part, its weight, its register, the share of its gap a note sounds,
@@ -2742,7 +2789,13 @@ def balance_units(songs) -> list:
     never above 1.21, and its 7 counters louder than the tune are, bar one,
     on another sample. With the field, what the counter is and how loud it
     is are one song's together. The song's tempo class joined it in round
-    54 (2026-10-29), a last token `tempo=slow` (band): the tempo drawn
+    54 (2026-10-29), a last token `tempo=slow` (band), and the loudest
+    part's level of full in round 59 (`top=0.30`, TOP_LEVEL_BIN; the
+    top_levels word stays as the fallback for a token without it) with the
+    song's rendered loudness (`loud=-24`, Song.loudness, RMS dBFS; the
+    written song's master volume holds its own to it), and in round 60 each
+    part's own sample as an eighth field (part_sample_id: the song's
+    instruments come with its levels): the tempo drawn
     apart had put Relm's band (70) at 160 beats a minute and Slam
     Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
     song's class; the `tempos` word is drawn again under the class where
@@ -2764,11 +2817,17 @@ def balance_units(songs) -> list:
             beside = voice_level_shares(s, role) if role in levels else None
             kind = counter_kind(s) if role == R.COUNTER and role in levels else None
             fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else "",
-                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or ""]
+                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
+                      part_sample_id(s, role)]                # the part's own sample (round 60): a song's instruments are one song's
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
+            if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
+                top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with
+                tokens.append(f"top={round(top / TOP_LEVEL_BIN) * TOP_LEVEL_BIN:.2f}")   # three, 0.10 with four); drawn apart, four at the top played at 0.68
+            if s.loudness is not None:                      # and the song's rendered loudness (round 59): what the written song's master holds
+                tokens.append(f"loud={round(s.loudness / MIX_BIN) * MIX_BIN:.0f}")   # its own to
             tokens.append(f"tempo={band(s.bpm)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
@@ -2977,6 +3036,48 @@ def bass_lock_units(songs) -> list:
 
 
 TOP_LEVEL_BIN = 0.05                 # the grain the loudest part's level of full is counted to (top_level_units)
+MIX_BIN = 1.0                        # dB: the grain a song's mix level is counted to (mix_level)
+MIX_FRAME = 0.25                     # beats: the frame mix_level sums the sounding notes' perceived levels over
+MIX_NOTE_BEATS = 2.0                 # beats a note counts for at most in the mix level (a pad held eight bars is heard at its first beats)
+
+
+def mix_level(notes) -> float | None:
+    """A song's mix level in dB (round 59): each note's perceived level
+    squared (the level the ear hears, a voice's level over its sample's
+    loudness, as the readings count it since round 56), summed over every
+    quarter-beat frame it sounds in (MIX_FRAME; at most MIX_NOTE_BEATS of
+    it), the mean over the frames anything sounds in, in dB; None with no
+    note. `notes`: (start in beats, length in beats, perceived level). Over
+    FFVI's 66 converted songs this estimate meets the rendered loudness
+    with a correlation of 0.47 and a residual spread (quartiles) of 2.6 dB;
+    over 20 written songs 0.77 and 3.8 dB: it tells a thick held mix from a
+    thin one, which is what the written songs had got wrong (four of
+    fourteen rendered louder than any FFVI song)."""
+    frames = {}
+    for start, length, level in notes:
+        if not (start == start and length == length):      # a note with no start or length
+            continue
+        a, b = start, start + min(max(length, 0.0), MIX_NOTE_BEATS)
+        for f in range(int(a / MIX_FRAME), int(b / MIX_FRAME) + 1):
+            frames[f] = frames.get(f, 0.0) + level * level
+    live = [v for v in frames.values() if v > 0]
+    return 10 * math.log10(statistics.mean(live)) if live else None
+
+
+def song_mix_level(s) -> float | None:
+    """mix_level over a read song's notes at their perceived levels (note_levels by the note's time, else the part's level)."""
+    out = []
+    nl = s.note_levels if isinstance(s.note_levels, dict) else {}
+    for role, ns in s.notes.items():
+        lv = sorted(nl.get(role) or [])
+        ts = [t for t, _ in lv]
+        for n in ns:
+            if lv:
+                level = lv[max(0, bisect.bisect_right(ts, n[0] + 1e-6) - 1)][1]
+            else:
+                level = (s.levels or {}).get(role, 0.0)
+            out.append((n[0], n[1], level))
+    return mix_level(out)
 
 
 def top_level_units(songs) -> list:
