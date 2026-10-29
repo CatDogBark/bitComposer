@@ -757,7 +757,10 @@ said otherwise. Counting code: `translate/rhythm.py` and
 
 - **rhythm** — a part's bar as an onset pattern; for an upper part holding
   two voices or more, its own line's bar (the voice with the most notes),
-  not the voices merged. Drawn a bar as a mixture under the part's habit:
+  not the voices merged. Drawn a bar as a mixture under the part's tempo
+  class (round 61: a dense bar at 170 BPM had come from slow songs'
+  sixteenths, 7 tune notes a second against the game's 2.9 in its fast
+  songs; the bass and drums tables take the class the same way) and habit:
   the line's figures. (Counted merged, a dense bar held two voices'
   onsets, and a line written to it with a second line beside struck 10.3
   times a bar against FFVI's 7.3.)

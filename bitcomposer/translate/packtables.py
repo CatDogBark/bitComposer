@@ -26,7 +26,7 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # their long tail (a bar one song played) wholly to the cell floor, whose runs the
                                      # manner refuses, so a "new" bar was mostly a common bar again (the whole songs'
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
-FIGURE = ("part", "meter", "habit", "feel", "previous")   # the figure tables' shape: the habit, then the song's feel, before the chain (writer.SHAPE);
+FIGURE = ("part", "meter", "tempo", "habit", "feel", "previous")   # the figure tables' shape: the tempo class (round 61), the habit, then the song's feel, before the chain (writer.SHAPE);
                                                            # a floor stepping down from a one-song context lets the feel go first and keeps the habit
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
@@ -37,7 +37,7 @@ KEPT = {
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
     "bass_habits": ("rhythm", "bass_habit_units", {}, ("part", "tempo", "weight"), False, False, "the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight"),
-    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece, under the pieces the song's kit strikes before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does"),
+    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "tempo", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece, under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does"),
     "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, FIGURE, True, True, "the kick, snare and toms' bar"),
     "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, FIGURE, True, True, "the hat's bar"),
     "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, FIGURE, True, True, "the cymbals' bar"),

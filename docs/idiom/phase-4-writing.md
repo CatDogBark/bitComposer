@@ -3811,3 +3811,31 @@ sample (78 of 78); pairs FFVI ever put together 0.88 of a song's
 rest add a second voice's or a counter pair's sample the token did not
 carry); no note capped. The kit is untouched: one pack kit for every
 song, where FFVI's kits are each song's own samples (next).
+
+### Round 61: the tempo class on the figure tables (2026-10-29, from Whole 112 on Song Check 48, "incoherently fast")
+
+**Found.** Whole 112 drew 90 BPM, was redrawn to 170 under its token
+song's fast class (round 54), and then drew "dense varied" for its tune
+and accompaniment: thirteen sixteenths a bar at 170 BPM, 7 tune notes a
+second and 11 an accompaniment voice, where FFVI's fast songs run 2.9
+and 4.5. The figure tables (rhythm, bass, drums) were conditioned on the
+habit, meter and feel, never the tempo class, so a dense bar at any tempo
+came from every dense bar in the game, most of them slow songs' (33 of
+67 FFVI songs are slow, 11 fast). In aggregate the fast written songs
+were near the game (melody 3.5 notes a second against 2.9), so the fault
+showed only where a dense habit met a fast class. Also in Whole 112: a
+one-bar A section making a one-bar theme (left for the form word).
+
+**Built.** The tempo class joins the figure tables as a value: `rhythm`
+and `bass` (part, meter, tempo, habit, feel, previous), `drums` (part,
+meter, kit, tempo, habit, feel, previous); the writer's draws carry
+`rhythm.band(song.bpm)` with the habit and feel. Pack3's three tables
+refit (.r61a). The chain's floor steps down the same way, so a dense fast
+tune with no dense fast bars in the game draws from the game's fast bars
+before it draws from its slow ones.
+
+**Measured.** Whole 112 at 170 BPM now writes 3.3 tune notes a second
+(7.1 before) and 4.6 an accompaniment voice (7.8); over the fast written
+songs of seeds 101-130 the tune runs 3.0 a second (FFVI's fast songs
+2.9), the bass 3.8 (3.9), the kit 5.5 (5.0). Song Check 49 carries seeds
+121-130.
