@@ -2624,7 +2624,11 @@ def part_register(notes, ambitus: bool = False) -> tuple | None:
     return int(round(low / REGISTER_BIN)) * REGISTER_BIN, int(round(high / REGISTER_BIN)) * REGISTER_BIN
 
 
-LAYER_LEVEL_CAP = 1.5                # a voice beside the line's level over the line's is counted up to this (layer_level_units' cap)
+LAYER_LEVEL_CAP = 4.0                # a voice beside the line's level over the line's is counted up to this (layer_level_units' cap).
+                                      # 1.5 until round 51 (2026-10-28): 27 of FFVI's 148 voices beside a line run past it (to 3.35),
+                                      # and in every one the line is a quiet inner voice (0.42 of the song's loudest part) and the
+                                      # voice beside it the part's melody-level voice (0.99); capped, it had played 4 dB under the
+                                      # game. The note level's cap of full stands; this cap only keeps the unit's grain in tenths.
 
 
 def voice_level_shares(song: Song, role: str) -> list | None:
@@ -2910,6 +2914,24 @@ def bass_lock_units(songs) -> list:
             continue
         hit = sum(1 for k, ps in accents.items() for p in ps if any(abs(t - (s.bars[k][0] + float(p))) < NEAR for t in bs))
         out.append(tables.Unit(s.sid, s.game, f"{round(hit / total, 1):.1f}", {"part": R.BASS}))
+    return out
+
+
+TOP_LEVEL_BIN = 0.05                 # the grain the loudest part's level of full is counted to (top_level_units)
+
+
+def top_level_units(songs) -> list:
+    """Each song as a unit: its loudest part's median note level, of full (the readings' scale: the SNES chip's voice volume
+    over 128, the sum of the two sides over 128 at the converter), to TOP_LEVEL_BIN; its value the part (arrangement).
+    Round 52 (2026-10-28): the written songs had played their loudest part at a constant 0.85 of full, and rendered through
+    the same player as FFVI's converted songs they sat 5 dB hotter (-19.6 against -24.5 dBFS over the first minute); FFVI's
+    loudest part sits at 0.2 to 0.4 of full."""
+    out = []
+    for s in songs:
+        if not s.levels:
+            continue
+        top = max(s.levels.values())
+        out.append(tables.Unit(s.sid, s.game, f"{round(top / TOP_LEVEL_BIN) * TOP_LEVEL_BIN:.2f}", {"part": ARRANGEMENT}))
     return out
 
 

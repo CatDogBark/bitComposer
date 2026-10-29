@@ -846,11 +846,11 @@ class NewTablesTests(unittest.TestCase):
                          3: ("accompaniment", line), 4: ("accompaniment", second), 5: ("accompaniment", third)}
         s.voice_levels = {0: 0.28, 1: 0.22, 2: 0.14, 3: 0.20, 4: 0.26, 5: 0.50}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "accompaniment": 0.22}
-        self.assertEqual(rhythm.voice_level_shares(s, "accompaniment"), ["1.3", "1.5"])           # the busiest first; 2.5 capped at 1.5
+        self.assertEqual(rhythm.voice_level_shares(s, "accompaniment"), ["1.3", "2.5"])           # the busiest first; uncapped since round 51 (the cap 4.0)
         self.assertIsNone(rhythm.voice_level_shares(s, "bass"))                                      # one voice
         self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["1.3"])               # the word's own unit is the first share
         tokens = rhythm.balance_units([s])[0].outcome.split()
-        self.assertTrue(tokens[0].startswith("accompaniment=") and tokens[0].endswith(":3:0.8:1.3/1.5"), tokens)
+        self.assertTrue(tokens[0].startswith("accompaniment=") and tokens[0].endswith(":3:0.8:1.3/2.5"), tokens)
         self.assertTrue(tokens[1].startswith("bass=") and tokens[1].count(":") == 4, tokens)        # one voice: five fields
         self.assertEqual(tokens[2], "drums=::::0.5")
         s.voice_levels.pop(5)
@@ -1058,6 +1058,20 @@ class NewTablesTests(unittest.TestCase):
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 0), whole.TOP_LEVEL * 0.8 * 0.5)
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 5), whole.TOP_LEVEL * 0.8)
         self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), whole.TOP_LEVEL * 0.8)            # no bar: the part's level
+
+    def test_the_songs_loudest_part_plays_at_the_games_level(self):
+        """Round 52: a song's loudest part's level of full is counted (top_levels, to 0.05) and drawn once a song on its own
+        stream; the band's shares are shares of it (note_level), TOP_LEVEL standing without the word."""
+        from bitcomposer.translate import tables
+        s = self._song(); s.levels = {"melody": 0.22, "bass": 0.31, "drums": 0.14}
+        self.assertEqual([u.outcome for u in rhythm.top_level_units([s])], ["0.30"])
+        t = tables.Table(("part",), "top_levels", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "0.30", {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"top_levels": t}, 1, "g")
+        self.assertAlmostEqual(p.top_level, 0.30)
+        p.levels = {"bass": 1.0, "melody": 0.6}
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), 0.30)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 0, {}), 0.18)
+        self.assertAlmostEqual(whole.plan({}, 1, "g").top_level, whole.TOP_LEVEL)
 
     def test_a_recalled_passage_goes_on_as_the_games_do(self):
         """Round 50: each echo of the tune with a bar after it is counted by whether the next bar goes on with the bar after

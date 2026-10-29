@@ -3528,3 +3528,27 @@ loudest part absent from the band (2 plans in 200): accepted.
 **Open:** the pairs (0.24 against 0.40) now that continuation is
 counted; the medium tune's density; the pack build (the missing FFVI
 instruments, the 1.5 cap, TOP_LEVEL).
+
+### Rounds 51 and 52: the pack rebuilt with every instrument, the second voices uncapped, the song's top level (2026-10-28, the pack items)
+
+**Measured first.** The FFVI pack held 25 samples because the pack
+builder kept each pool's six most played samples with 3 % of its notes
+or more; FFVI's parts play their line on 17 more, and the pack covered
+0.86 to 0.88 of songs a part (the instrument word redistributing the
+rest since round 45). The second voices' cap: 27 of FFVI's 148 voices
+beside a line run past 1.5 times the line's level (to 3.35), and in each
+the line is a quiet inner voice (0.42 of the song's loudest) with the
+voice beside it at 0.99, the part's melody-level voice, which the cap
+had played 4 dB under the game. The top level: FFVI's converted songs
+and the written songs rendered through the same player sat at -24.5 and
+-19.6 dBFS (medians over the first minute), the written loudest part at
+a constant 0.85 of full against FFVI's 0.2 to 0.4.
+
+**Built, on his go.** Round 51: the pack builder keeps every tonal
+sample a part's songs play (`pack.VOICES` 64, `SHARE` 0), the FFVI pack
+rebuilt from its 82 files into `pack3/ffvi` with the tables carried over,
+and `LAYER_LEVEL_CAP` 4.0 (the balance and layer_levels tables refitted;
+the balance vocabulary reorders, so every seed's band draw moves). Round
+52, `top_levels`: the loudest part's level of full by song, drawn on an
+own stream, the band's shares shares of it. Test
+`test_the_songs_loudest_part_plays_at_the_games_level`.

@@ -56,7 +56,8 @@ KIT_FOR = {"K": ("kick",), "S": ("snare", "rim"), "h": ("hihat", "open_hihat"), 
 DRUM_LENGTH = 1.0                     # beats a drum hit sounds at most (to the next hit on its voice otherwise)
 WANTS = {R.HARMONY: 3, R.ACCOMP: 2, R.ARP: 1, R.COUNTER: 1}   # voices an upper part takes when the eight allow (one each first)
 LEVELS = {R.MELODY: 0.85, R.COUNTER: 0.6, R.HARMONY: 0.5, R.ACCOMP: 0.6, R.ARP: 0.55, R.BASS: 0.8, R.DRUMS: 0.8}   # of full, by part: the
-TOP_LEVEL = 0.85                      # fallback without a levels table; with one, the loudest part plays at TOP_LEVEL and the rest at their share
+TOP_LEVEL = 0.85                      # the loudest part's level of full without a top_levels table (round 52: with one, the song's own draw;
+                                      # FFVI's loudest parts sit at 0.2 to 0.4, and 0.85 had rendered 5 dB hotter than the game's songs)
 PANS = {R.MELODY: (0.5,), R.COUNTER: (0.6,), R.HARMONY: (0.35, 0.65, 0.5), R.ACCOMP: (0.6, 0.4), R.ARP: (0.4,), R.BASS: (0.5,),
         R.DRUMS: (0.5, 0.58)}        # the right side's share, a part's voices in turn
 POOLS = {R.MELODY: "lead", R.COUNTER: "counter", R.HARMONY: "harmony", R.ARP: "arp"}   # a part's voice pool in a pack; the
@@ -67,7 +68,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
-            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0",
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "top_levels": str(TOP_LEVEL),
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
 FORM_TRIES = 20                       # forms drawn before one longer than asked is cut
@@ -119,6 +120,7 @@ class Plan:
     voice_levels: dict = field(default_factory=dict)  # a layered part -> the token's song's shares for every voice beyond the line, the
                                       # busiest first (the sixth field): voice j beside the line plays at entry j - 1
     layer_from: dict = field(default_factory=dict)    # a pitched part -> where its second voices' levels came from: "balance" or "layer_levels"
+    top_level: float = 0.85                               # the loudest part's level of full (top_levels, round 52; TOP_LEVEL without the word)
     section_levels: dict = field(default_factory=dict)   # a part -> [its level's multiplier a bar] (section_levels, round 48: a section's level
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
     kinds: dict = field(default_factory=dict)         # the counter -> the balance token's song's kind for it, same or other (the seventh field,
@@ -541,6 +543,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         plays = {r: plays[r] for r in band}
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in models_or_empty(models) else {})                                  # plan's, every later draw had shifted
+    top_level = float(_draw(models, "top_levels", (rhythm.ARRANGEMENT,), random.Random(f"whole:{seed}:top"), log)) if "top_levels" in models_or_empty(models) else TOP_LEVEL
     registers, sounds, habits, extras = {}, {}, {}, {}
     for role in band:
         if role == R.DRUMS:
@@ -712,7 +715,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, section_levels=section_levels)
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, section_levels=section_levels,
+                top_level=top_level)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1670,7 +1674,7 @@ def note_level(plan: Plan, role: str, voice: int, second_voice: dict | None = No
     for; `second_voice` those voices by part, layers_of's apart and alternating voices; a doubling voice plays the line's
     level). Never under 0.05 nor over 1.0 of full: a share is at most 1.0, so only a second voice over 1.0 of its line
     can reach the cap."""
-    base = TOP_LEVEL * plan.levels[role] if role in plan.levels else LEVELS[role]
+    base = plan.top_level * plan.levels[role] if role in plan.levels else LEVELS[role]   # the loudest part at the song's top level (round 52)
     if bar is not None and role in plan.section_levels and 0 <= bar < len(plan.section_levels[role]):
         base *= plan.section_levels[role][bar]              # the section's level over the part's (section_levels, round 48)
     if second_voice is None:

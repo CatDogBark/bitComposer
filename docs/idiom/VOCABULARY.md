@@ -31,6 +31,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   when no `letters` table can give the form whole.
 - **length_habits** — a song's part-length habit (short, medium, long).
   Drawn once; conditions `lengths`.
+- **top_levels** — a song's loudest part's median note level of full
+  (the readings' scale, the SNES chip's voice volume over 128), to 0.05,
+  one unit a song (round 52, 2026-10-28). Drawn once a song on its own
+  stream (`Plan.top_level`); every part's share from the balance token is
+  a share of it (`whole.note_level`), the TOP_LEVEL constant (0.85)
+  standing without the word. Why: rendered through the same player as
+  FFVI's converted songs, the written songs sat 5 dB hotter (-19.6
+  against -24.5 dBFS over the first minute) because the loudest part
+  always played at 0.85 of full where FFVI's sits at 0.2 to 0.4.
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level
@@ -54,7 +63,12 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the line's level over the line voice's in tenths (the `layer_levels`
   unit, capped at 1.5; `rhythm.voice_level_shares`), the busiest voice
   first, joined by "/" (`accompaniment=main:56-64:1.0:4:0.5:1.0/1.3/1.3`),
-  so the line and the voices beside it are one song's together; the
+  so the line and the voices beside it are one song's together (the cap
+  1.5 until round 51, 2026-10-28, then 4.0, past the readings' 3.35: 27
+  of FFVI's 148 voices beside a line ran past 1.5, and in every one the
+  line was a quiet inner voice at 0.42 of the song's loudest with the
+  voice beside it at 0.99, the part's melody-level voice, which the cap
+  had played 4 dB under; the note level's cap of full stands); the
   plan keeps its `layer_levels` draws on the stream and overwrites each
   covered part's with the token's first share (`Plan.voice_levels` by
   rank, `Plan.layer_from`; the log line "second voices from the balance:

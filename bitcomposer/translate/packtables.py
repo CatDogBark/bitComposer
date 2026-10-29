@@ -108,6 +108,7 @@ KEPT = {
     "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "speed", "gap"), False, False, "the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "bass_locks": ("rhythm", "bass_lock_units", {}, ("part",), False, False, "the share of the kit's accents (two pieces together) the bass strikes with, in tenths"),
     "levels": ("rhythm", "level_units", {}, ("part",), False, False, "a part's level as a share of the song's loudest part's, in tenths"),
+    "top_levels": ("rhythm", "top_level_units", {}, ("part",), False, False, "a song's loudest part's level of full, drawn once a song: what the band's shares are shares of"),
     "layer_levels": ("rhythm", "layer_level_units", {}, ("part",), False, False, "a layered part's second voice's level against its line's, in tenths (the fallback for a part the balance token has no second-voice shares for)"),
     "climax": ("phrases", "climax_units", {}, ("part",), False, False, "the place among a song's tune phrases of the one holding the tune's highest note"),
     "arc": ("phrases", "arc_units", {}, ("part", "place"), False, False, "how far a tune phrase's top sits under the song's, by the phrase's place"),
