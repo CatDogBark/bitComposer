@@ -153,7 +153,8 @@ class Song:
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
-SAMPLE_LOUDNESS: dict = {}           # a pack's sample id ("s" + the key's first ten) -> its loop body's RMS, 0-1 (set_loudness)
+SAMPLE_LOUDNESS: dict = {}           # a pack's sample id ("s" + the key's first ten) -> its loop body's RMS, 0-1 (set_loudness); a drum's strike's
+STRIKE_SECONDS = 0.15                # seconds of a percussion sample its loudness is read over (its strike)
 
 
 def loudness_factor(key) -> float:
@@ -174,22 +175,28 @@ def set_loudness(table: dict) -> None:
 
 
 def load_loudness(pack_dir) -> dict:
-    """Each tonal sample's loop-body RMS (0-1) from a pack folder's WAVs: {pack id: rms}."""
+    """Each sample's loudness (0-1) from a pack folder's WAVs: a tonal sample's loop-body RMS, a percussion sample's
+    strike RMS (its first STRIKE_SECONDS; round 63: a kit had played at the raw voice level as if its samples sat at
+    the reference, and the pack's kit rendered 7 dB under what was counted); {pack id: rms}."""
     import json, wave, array
     from pathlib import Path
     pack_dir = Path(pack_dir)
     data = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8"))
     out = {}
     for sid, spec in data.get("samples", {}).items():
-        if spec.get("percussion") or not spec.get("file"):
+        if not spec.get("file"):
             continue
         try:
             w = wave.open(str(pack_dir / spec["file"]))
+            rate = w.getframerate() or 32000
             x = array.array("h", w.readframes(w.getnframes()))
         except Exception:
             continue
-        lp = spec.get("loop")
-        body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
+        if spec.get("percussion"):
+            body = x[:max(1, int(rate * STRIKE_SECONDS))]
+        else:
+            lp = spec.get("loop")
+            body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
         if len(body):
             out[sid] = math.sqrt(sum(v * v for v in body) / len(body)) / 32768
     return out
@@ -244,7 +251,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
-                if role != R.DRUMS and SAMPLE_LOUDNESS:     # a level as loudness: the voice volume times its sample's own (round 56)
+                if SAMPLE_LOUDNESS:                         # a level as loudness: the voice volume times its sample's own (round 56; the drums' too, round 63)
                     rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise")), pan, i) for s, length, m, level, pan, i in rows]
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
                 into.setdefault(role, []).extend(mine)
@@ -2728,6 +2735,22 @@ def voice_level_shares(song: Song, role: str) -> list | None:
     return [f"{min(LAYER_LEVEL_CAP, round(song.voice_levels[v] / a, 1)):.1f}" for v in others]
 
 
+def kit_token(s) -> str:
+    """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
+    with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
+    a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots)."""
+    counts = Counter()
+    for n in s.notes.get(R.DRUMS, []):
+        key = n[3] if isinstance(n[3], str) else None
+        piece = (s.pieces or {}).get(key)
+        if key and piece in LETTERS:
+            counts[(LETTERS[piece], "s" + key[:10] if len(key) >= 10 else key)] += 1
+    best = {}
+    for (letter, sid), n in counts.most_common():
+        best.setdefault(letter, sid)
+    return ",".join(f"{letter}={best[letter]}" for letter in LETTERS.values() if letter in best)
+
+
 def part_sample_id(s, role: str) -> str:
     """The pack's id of the sample a part plays most (its notes' sample key, `s` and the key's first ten characters as
     the pack names it); "" without notes. Round 60 (2026-10-29): FFVI puts 224 of its 1326 possible sample pairs
@@ -2795,11 +2818,20 @@ def balance_units(songs) -> list:
     song's rendered loudness (`loud=-24`, Song.loudness, RMS dBFS; the
     written song's master volume holds its own to it), and in round 60 each
     part's own sample as an eighth field (part_sample_id: the song's
-    instruments come with its levels): the tempo drawn
+    instruments come with its levels), and in round 62 each part's habit
+    as a ninth (`dense+varied`, the kit's too), so the song's density tiers
+    come together (drawn apart, 54 % of written songs had exactly one dense
+    part against FFVI's 38 %, a busy accompaniment under a medium tune):
+    the tempo drawn
     apart had put Relm's band (70) at 160 beats a minute and Slam
     Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
     song's class; the `tempos` word is drawn again under the class where
     the plan's draw falls outside it."""
+    habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
+    for u in habits(units(songs)) + habits(bass_units(songs)):
+        habit_of_part[(u.song, u.values["part"])] = u.outcome
+    for u in drum_habit_units(songs):
+        habit_of_part[(u.song, R.DRUMS)] = u.outcome
     out = []
     for s in songs:
         if not s.notes:
@@ -2811,14 +2843,19 @@ def balance_units(songs) -> list:
         tokens = []
         for role in sorted(s.notes):
             if role not in weights:
-                tokens.append(role + (f"=::::{levels[role]}" if role in levels else ""))
+                dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
+                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s), dh]   # and its kit as the eighth (round 63)
+                while fields and not fields[-1]:
+                    fields.pop()
+                tokens.append(role + ("=" + ":".join(fields) if fields else ""))
                 continue
             reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
             beside = voice_level_shares(s, role) if role in levels else None
             kind = counter_kind(s) if role == R.COUNTER and role in levels else None
             fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else "",
                       str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
-                      part_sample_id(s, role)]                # the part's own sample (round 60): a song's instruments are one song's
+                      part_sample_id(s, role),                # the part's own sample (round 60): a song's instruments are one song's
+                      habit_of_part.get((s.sid, role), "").replace(" ", "+")]   # and its habit (round 62): the song's density tiers together
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

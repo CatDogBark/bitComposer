@@ -48,6 +48,7 @@ SHARE = 0.0                          # a sample playing less of a part's notes t
                                       # instrument is still the one a song of the game gave it)
 REPEATS = 4                          # a pool repeats its most used sample this many times, the rest by their share
 LONG = 0.5                           # seconds: a drum ringing this long is a cymbal
+KIT_HITS = 30                        # drum-role hits a named drum sample needs to go into the pack beyond the kit's slots (round 63)
 WHY = "translator.json"              # beside pack.json: the songs read, and why each sample is where it is
 
 # the generator's pools each part fills
@@ -346,6 +347,20 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
                 samples[v]["envelope"] = envelope_of(g, k)
             files[v] = sounds[k][:2]
         drums[piece] = v
+    uses = g.uses.get(R.DRUMS, Counter())                   # every drum the game plays as one and the namer could name (round 63): a song's
+    for k, n in uses.most_common():                         # own kit rides its balance token, so the pack holds the game's kits, not one
+        name_ = g.names.get(k, "none")
+        if n < KIT_HITS or name_ in ("none", "other") or k not in sounds or 2 * n < sum(c.get(k, 0) for c in g.uses.values()):
+            continue
+        v = voice_of(k)
+        if v in samples and not samples[v].get("percussion"):
+            continue                                        # a tonal voice the game also strikes: it stays a voice
+        if v not in samples:
+            samples[v] = {"file": f"{v}.wav", "percussion": True}
+            if envelope_of(g, k):
+                samples[v]["envelope"] = envelope_of(g, k)
+            files[v] = sounds[k][:2]
+        samples[v]["piece"] = name_
     voices = dict(chosen)
     if drums:
         voices["drums"] = drums

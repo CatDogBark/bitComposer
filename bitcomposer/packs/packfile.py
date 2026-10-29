@@ -309,7 +309,7 @@ def _habit(h, v, where, voice_name, fail):
 def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
     if not isinstance(spec, dict):
         fail(where, "an object: file, note (or hz), and optionally loop, release, percussion, volume, envelope")
-    allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume", "envelope"}
+    allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume", "envelope", "piece"}
     for k in spec:
         if k not in allowed:
             fail(f"{where}.{k}", f"not a sample field ({', '.join(sorted(allowed))})")

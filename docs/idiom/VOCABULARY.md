@@ -121,8 +121,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   (0.67); with the field 0.88, every part on its token song's sample
   (`samples_for` takes it where the pack holds it, the part_samples draw
   else; a layered part's second voices and a counter the token lacks still
-  draw their own). And it ends with its song's tempo class (`tempo=slow`,
-  `medium`,
+  draw their own); since round 62 each part's habit as a ninth field
+  (`dense+varied`, the kit's too), so a song's density tiers come
+  together (drawn apart, 54 % of written songs had exactly one dense part
+  against FFVI's 38 %); and since round 63 the drums token's eighth field
+  is the song's kit (`K=sbfe716b9b6,S=s1279e119a1`: a piece letter and
+  the sample it strikes it with most), its pieces the kit_pieces word
+  had drawn and its samples filled into the pack kit's slots where the
+  pack holds them (pack4 holds the game's fifteen named drums). And it
+  ends with its song's tempo class (`tempo=slow`, `medium`,
   `fast`: under 85, under 130, over) and the `tempos` word is counted by
   the class; where a plan's tempo draw falls outside its token's class the
   tempo is drawn again under the class on an own stream (the log line
@@ -718,7 +725,9 @@ said otherwise. Counting code: `translate/rhythm.py` and
 
 ## The drums
 
-- **kit_pieces** — which pieces a song's kit strikes at all, as letters
+- **kit_pieces** — (since round 63 the balance token's kit field gives
+  the pieces where it has one; the word stands as the fallback) which
+  pieces a song's kit strikes at all, as letters
   (`KSh`, `Sc`, `c`), by the kit's density tier (round 58). FFVI's kits are
   their tiers': a sparse kit is a cymbal, a kick or one other sound; a
   dense kit the kick, snare and hat, or snare and cymbal. Drawn once a
