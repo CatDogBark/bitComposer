@@ -3839,3 +3839,46 @@ before it draws from its slow ones.
 songs of seeds 101-130 the tune runs 3.0 a second (FFVI's fast songs
 2.9), the bass 3.8 (3.9), the kit 5.5 (5.0). Song Check 49 carries seeds
 121-130.
+
+### Round 62: the song's density habits ride the token, and no theme in a one-bar section (2026-10-29, from the owner's questions on sparseness and weights)
+
+**Found.** Each part's density tier was drawn apart, given its part,
+tempo class and weight (weight: the part's share of the band's pitched
+notes, from the token). Weight nearly decides tier in FFVI (a main
+accompaniment is dense in 12 of 18 songs, a minor bass never), but the
+band-level shape was lost: FFVI songs have no dense pitched part in 32 %
+of songs (48 % of the themed ones), the written songs in 20 %, and a
+medium tune over a dense accompaniment was 40 % of written songs against
+FFVI's 28 %. And Whole 112's one-bar A section had made a one-bar theme.
+
+**Built.** Each part's habit as a ninth token field (`dense+varied`; the
+kit's too), `Plan.token_habits`, the habits draws standing where the
+token lacks one; a section shorter than a phrase carries no phrase
+letter and so no theme. Measured over seeds 101-180: pitched parts dense
+per song none 0.41 / one 0.36 / two 0.21 (FFVI all 0.32 / 0.38 / 0.22,
+themed 0.48 / 0.30 / 0.22); medium tune over dense accompaniment 0.30
+(FFVI 0.28); one-bar themes 0.
+
+### Round 63: the song's kit rides the token, the game's drums in the pack, the drums' loudness (2026-10-29, the percussion item)
+
+**Found.** FFVI uses a median two drum samples a song, 31 over the game;
+the pack held one kit of seven slots, and 17 of FFVI's 47 kits fit in it.
+The drums had no loudness factor on either side (percussion skipped in
+the table): a kit played at the raw voice level as if its samples sat at
+the reference, and the written kit rendered 7 dB under what was counted.
+
+**Built.** The pack builder keeps every drum sample the namer could name
+with KIT_HITS (30) hits or more as a percussion sample with its piece
+(`pack4/ffvi`: 67 samples, 15 percussion; the kit's slots as before);
+`rhythm.kit_token`: the song's kit as the drums token's eighth field (a
+piece letter and the pack id of the sample it strikes it with most);
+the plan's kit pieces are the token's, `samples_for` fills the kit's
+slots with the token song's samples where the pack holds them
+(KIT_SLOT; the open hat follows the hat); `load_loudness` reads a
+percussion sample's strike (STRIKE_SECONDS) and the readings count the
+drums' levels over it, the writer plays a drum at its level over its
+strike (an own table: a song may strike a tonal voice as a drum). Over
+seeds 131-160 every kit slot the token asked was filled from the pack;
+no note capped. Song Check 50 (seeds 131-140 on pack4) is the salience
+sample: the first songs where the band, weights, levels, top, loudness,
+tempo class, instruments, habits and kit are one FFVI song's.
