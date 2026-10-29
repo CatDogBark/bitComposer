@@ -38,8 +38,11 @@ jobs:
     runs-on: windows-latest
     # The "signing" environment holds the Azure IDs and the signing account's
     # names; Azure trusts this repository's runs in that environment (a
-    # federated credential), and nothing else.
-    environment: signing
+    # federated credential), and nothing else. The environment only lets main
+    # and v* tags in, so a branch's workflow can't reach the certificate; pull
+    # requests and runs started by hand on a branch build without it, unsigned,
+    # as they would anyway (only a release build is signed).
+    environment: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'signing' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
