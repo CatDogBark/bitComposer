@@ -3645,6 +3645,18 @@ the render stream it had moved with every draw before it, and Song
 Check 43's pairs had changed instruments for that. Test
 `test_a_level_is_counted_and_played_as_loudness`.
 
+**Measured after, seeds 71-75 (renders).** Loudness over the first
+minute through FFVI's player: -25.6, -25.2, -18.6, -15.6, -24.7 dBFS,
+median -25.2 against FFVI's -24.5 (the 1.7 bridge kept; it still fits at
+the median). The parts' stems now follow their shares where the samples
+allow: Whole 72 (bass 1.0, accompaniment 0.6, melody 0.3) renders the bass
+at -25.4, the accompaniment -29.2, the melody -40.9. Where a sample is
+quieter than its level asks even at full the note is capped and logged:
+Whole 73's lead (a -20.8 dBFS sample at the loudest part) sits 6 dB under
+its four-voice accompaniment at full, Whole 75's accompaniment likewise.
+That cap is the honest edge of the fix: a level is a loudness the
+instrument may not have. Song Check 44 is the five.
+
 ### Round 57: a figure chain's floor needs two songs (2026-10-29, found rendering round 56's songs)
 
 **Found.** Whole 75's band token has the arp as its main part, the
