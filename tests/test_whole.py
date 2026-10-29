@@ -179,7 +179,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
         self.assertEqual(tokens[1], "drums")
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 3, tokens)   # weight:register:sounded share:voices
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 7 and tokens[0].endswith(":k"), tokens)   # weight:register:sounded share:voices ... sample (round 60)
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
         self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
@@ -761,8 +761,8 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud="))]
-        self.assertEqual([t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])                 # bass, drums, melody: shares of the loudest
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 4, tokens)        # weight:register:sounded share:voices:level
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 7 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample
         self.assertEqual(tokens[1], "drums=::::0.5")                                                # the drums keep a level and nothing else
         s.levels = {}
         self.assertEqual(rhythm.balance_units([s])[0].outcome.split()[1], "drums")                  # no levels read: the token as before
@@ -808,11 +808,11 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]), 3: ("counter", s.notes["counter"])}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "counter": 0.22}
         ctr = [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0]
-        self.assertTrue(ctr.endswith(":0.8::same") and ctr.count(":") == 6, ctr)
+        self.assertTrue(":0.8::same:" in ctr and ctr.count(":") == 7, ctr)
         s.notes["counter"] = [(a, b, c, "x") for a, b, c, _ in s.notes["counter"]]; s.voice_notes[3] = ("counter", s.notes["counter"])
-        self.assertTrue([t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0].endswith("::other"))
+        self.assertIn("::other:", [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0])
         s.levels = {}
-        self.assertEqual([t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0].count(":"), 3)   # no level: no kind either
+        self.assertEqual([t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0].split(":")[4:7], ["", "", ""])   # no level: no kind either
         # the same seed with the token's levels and without: every other draw identical (the levels draws stay in place)
         bare = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(
             units("balance", "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1 counter=minor:60-72:0.8:1 drums melody=main:64-84:0.9:1", rhythm.ARRANGEMENT))}, 1, "g")
@@ -862,12 +862,12 @@ class NewTablesTests(unittest.TestCase):
         self.assertIsNone(rhythm.voice_level_shares(s, "bass"))                                      # one voice
         self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["1.3"])               # the word's own unit is the first share
         tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith(("tempo=", "top=", "loud="))]
-        self.assertTrue(tokens[0].startswith("accompaniment=") and tokens[0].endswith(":3:0.8:1.3/2.5"), tokens)
-        self.assertTrue(tokens[1].startswith("bass=") and tokens[1].count(":") == 4, tokens)        # one voice: five fields
+        self.assertTrue(tokens[0].startswith("accompaniment=") and ":3:0.8:1.3/2.5:" in tokens[0], tokens)
+        self.assertTrue(tokens[1].startswith("bass=") and tokens[1].split(":")[5] == "", tokens)     # one voice: no layer field
         self.assertEqual(tokens[2], "drums=::::0.5")
         s.voice_levels.pop(5)
         self.assertIsNone(rhythm.voice_level_shares(s, "accompaniment"))                             # a voice without a level: no field
-        self.assertTrue(rhythm.balance_units([s])[0].outcome.split()[0].endswith(":3:0.8"))
+        self.assertIn(":3:0.8:", rhythm.balance_units([s])[0].outcome.split()[0])
         units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
         layer = tables.Table(("part",), "layer_levels", votes=tables.SHARES).fit(
             units("layer_levels", "0.5", "accompaniment") + units("layer_levels", "0.5", "bass") + units("layer_levels", "1.5", "counter") + units("layer_levels", "1.5", "harmony"))
@@ -1158,6 +1158,19 @@ class NewTablesTests(unittest.TestCase):
         if "drums" in p.band:
             self.assertEqual(p.extras["drums"].get("pieces"), "KSh")
             self.assertTrue(any(line.startswith("kit pieces (kit_pieces): KSh") for line in p.log))
+
+    def test_the_token_songs_instruments_come_with_its_levels(self):
+        """Round 60: each part's own sample rides the balance token (eighth field, the pack's id); the plan keeps them
+        (token_samples) for samples_for to take where the pack holds the sample."""
+        from bitcomposer.translate import tables
+        s = self._song(); s.levels = {r: 0.3 for r in s.notes}
+        toks = rhythm.balance_units([s])[0].outcome.split()
+        self.assertEqual(rhythm.part_sample_id(s, "bass"), "k"); self.assertEqual(rhythm.part_sample_id(s, "nothing"), "")
+        self.assertEqual(rhythm.part_sample_id(rhythm.Song("t", 4, 12, [(0.0, 4.0)], [], notes={"melody": [(0.0, 1.0, 60.0, "0123456789abcdef")]}), "melody"), "s0123456789")
+        token = "bass=half:36-44:0.9:1:1.0:::sbass123456 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.token_samples, {"bass": "sbass123456", "melody": "slead123456"})
 
     def test_the_mix_level_and_the_master_that_holds_it(self):
         """Round 59: a song's mix level is its perceived note levels squared over quarter-beat frames, in dB; the balance token

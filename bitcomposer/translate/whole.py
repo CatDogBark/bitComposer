@@ -140,6 +140,8 @@ class Plan:
     master: tuple | None = None                           # (the master volume of 127, the gain the notes took) score_of decided for the whole song: the stems take it
     section_levels: dict = field(default_factory=dict)   # a part -> [its level's multiplier a bar] (section_levels, round 48: a section's level
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
+    token_samples: dict = field(default_factory=dict)   # a part -> the balance token's song's sample for it, the pack's id (the eighth field,
+                                      # round 60): samples_for takes it where the pack holds the sample, the part_samples draw else
     kinds: dict = field(default_factory=dict)         # the counter -> the balance token's song's kind for it, same or other (the seventh field,
                                       # round 39): the counter_samples draw is made and overwritten where the token has it
     speeds: dict = field(default_factory=dict)        # a pitched part -> its fastest bar, notes a second (part_speeds): what its sample is fitted to
@@ -161,7 +163,7 @@ class Plan:
     def to_json(self) -> dict:
         return {"seed": self.seed, "game": self.game, "title": self.title, "key": f"{harmony.NAMES[self.tonic]} {self.mode}", "bpm": self.bpm,
                 "form": self.letters, "parts": [list(p) for p in self.parts], "loop_bar": self.loop_bar, "chords": self.names,
-                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays, "top_level": self.top_level, "loudness": self.loudness,
+                "band": self.band, "weights": self.weights, "textures": self.textures, "plays": self.plays, "top_level": self.top_level, "loudness": self.loudness, "token_samples": self.token_samples,
                 "registers": {k: list(v) for k, v in self.registers.items()},
                 "sounds": self.sounds, "habits": self.habits, "extras": self.extras, "voices": self.voices, "log": self.log, "feel": self.feel,
                 "theme": {"bars": self.extras.get(R.MELODY, {}).get("theme_bars"), "returns": self.extras.get(R.MELODY, {}).get("returns")}}
@@ -560,7 +562,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
-    band, weights, layout, shares, counts, token_levels, token_layers, token_kinds = [], {}, {}, {}, {}, {}, {}, {}
+    band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples = [], {}, {}, {}, {}, {}, {}, {}, {}
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -591,6 +593,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_layers[role] = [float(x) for x in fields[5].split("/")]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
+            if len(fields) > 7 and fields[7]:               # the part's own sample (round 60): the song's instruments with its levels
+                token_samples[role] = fields[7]
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
@@ -793,7 +797,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, section_levels=section_levels,
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, section_levels=section_levels,
                 top_level=top_level, loudness=token_loud)
 
 
@@ -1665,7 +1669,13 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
         drums = {raw(n) for n in (voices.get("drums") or {}).values()}
         tonal = sorted(n for n in own if n not in drums)
         register = plan.registers.get(role)
-        if role == R.COUNTER and kind and R.MELODY in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
+        given = plan.token_samples.get(role)                # the token song's own instrument for the part (round 60), where the pack holds it
+        if given and given in own:
+            out[role] = make(given)
+            if ranges is not None and ranges.songs.get((given,), 0):
+                drawn[given] = tuple(int(x) for x in ranges.draw(range_context(given, role), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
+            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)")
+        if role == R.COUNTER and kind and R.MELODY in out and role not in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
             if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
                 out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
                 continue                                    # chosen for where the counter was written, which is where the tune is

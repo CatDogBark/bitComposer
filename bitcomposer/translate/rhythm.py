@@ -2728,6 +2728,19 @@ def voice_level_shares(song: Song, role: str) -> list | None:
     return [f"{min(LAYER_LEVEL_CAP, round(song.voice_levels[v] / a, 1)):.1f}" for v in others]
 
 
+def part_sample_id(s, role: str) -> str:
+    """The pack's id of the sample a part plays most (its notes' sample key, `s` and the key's first ten characters as
+    the pack names it); "" without notes. Round 60 (2026-10-29): FFVI puts 224 of its 1326 possible sample pairs
+    together, a lead sample has a median one bass partner, and a song's pairs are seen in another of its songs 0.80 of
+    the time; the written songs' pairs, each part's sample drawn apart, 0.55, under chance (0.67): the balance token's
+    song lends its instruments with its levels, which were counted on those very samples."""
+    c = Counter(n[3] for n in s.notes.get(role, []) if isinstance(n[3], str) and n[3])
+    if not c:
+        return ""
+    key = c.most_common(1)[0][0]
+    return "s" + key[:10] if len(key) >= 10 else key
+
+
 def balance_units(songs) -> list:
     """Each song as a unit: its outcome its band with, for each pitched
     part, its weight, its register, the share of its gap a note sounds,
@@ -2780,7 +2793,9 @@ def balance_units(songs) -> list:
     part's level of full in round 59 (`top=0.30`, TOP_LEVEL_BIN; the
     top_levels word stays as the fallback for a token without it) with the
     song's rendered loudness (`loud=-24`, Song.loudness, RMS dBFS; the
-    written song's master volume holds its own to it): the tempo drawn
+    written song's master volume holds its own to it), and in round 60 each
+    part's own sample as an eighth field (part_sample_id: the song's
+    instruments come with its levels): the tempo drawn
     apart had put Relm's band (70) at 160 beats a minute and Slam
     Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
     song's class; the `tempos` word is drawn again under the class where
@@ -2802,7 +2817,8 @@ def balance_units(songs) -> list:
             beside = voice_level_shares(s, role) if role in levels else None
             kind = counter_kind(s) if role == R.COUNTER and role in levels else None
             fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else "",
-                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or ""]
+                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
+                      part_sample_id(s, role)]                # the part's own sample (round 60): a song's instruments are one song's
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

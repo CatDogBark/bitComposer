@@ -3784,3 +3784,30 @@ estimate's tracking (3.2 dB between quartiles): the estimate is a
 formula over the notes, not a render; a render of the written song
 through the player would close the tracking, and is the next step if the
 ear still hears the spread.
+
+### Round 60: the song's instruments ride the balance token (2026-10-29, from the owner's question whether the samples go together)
+
+**Found.** FFVI uses a median four pitched samples a song and puts 224 of
+its 1,326 possible sample pairs together; a lead sample has a median one
+bass partner; a song's sample pairs are seen in another FFVI song 0.80 of
+the time. The written songs (Song Checks 45-47, 24 songs): 0.55, under
+chance (0.67, each part drawn by FFVI's part frequencies), and two of 24
+sample sets exist whole in an FFVI song: the part_samples draw takes each
+part apart, by part and speed, and the range gate pushes it toward rarer
+partners. The balance token is one song's levels, counted on that song's
+samples; other samples under them are where the loudness factor's work,
+and its faults, came from.
+
+**Built.** `rhythm.part_sample_id`: the pack's id of the sample a part
+plays most, an eighth field on each pitched part's token; `Plan.
+token_samples`; `samples_for` takes the token's sample where the pack
+holds it (its range drawn by the ranges word as before), the part_samples
+draw and the counter's pair rules standing where it does not. Pack3's
+balance table refit (.r60a).
+
+**Measured** over seeds 111-130: every pitched part took its token's
+sample (78 of 78); pairs FFVI ever put together 0.88 of a song's
+(FFVI's own 0.80); a song's whole set inside one FFVI song 8 of 20 (the
+rest add a second voice's or a counter pair's sample the token did not
+carry); no note capped. The kit is untouched: one pack kit for every
+song, where FFVI's kits are each song's own samples (next).

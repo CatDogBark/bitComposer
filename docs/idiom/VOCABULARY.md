@@ -108,10 +108,21 @@ said otherwise. Counting code: `translate/rhythm.py` and
   accompaniments).
 - **tempos (under the token's class)** — since round 54 (2026-10-29) the
   balance token carries, since round 59, its song's loudest part's level
-  of full (`top=0.30`, see top_levels) and its mix level (`mix=-5`, see
-  mix_level), the two before the tempo class, so a song's levels, its
-  top and its loudness are one song's; and it ends with its song's tempo
-  class (`tempo=slow`, `medium`,
+  of full (`top=0.30`, see top_levels) and its rendered loudness
+  (`loud=-24`, see loudness), the two before the tempo class, so a song's
+  levels, its top and its loudness are one song's; since round 60 each
+  pitched part's own sample as an eighth field (`melody=minor:64-84:0.9:
+  1:0.7:::sf89f5aedfd`, the pack's id of the sample the part plays most),
+  so the song's instruments come with the levels that were counted on
+  them: FFVI puts 224 of its 1,326 possible sample pairs together, a lead
+  has a median one bass partner, and a song's pairs are seen in another of
+  its songs 0.80 of the time, where the written songs, each part's sample
+  drawn apart (part_samples, gated by range), had 0.55, under chance
+  (0.67); with the field 0.88, every part on its token song's sample
+  (`samples_for` takes it where the pack holds it, the part_samples draw
+  else; a layered part's second voices and a counter the token lacks still
+  draw their own). And it ends with its song's tempo class (`tempo=slow`,
+  `medium`,
   `fast`: under 85, under 130, over) and the `tempos` word is counted by
   the class; where a plan's tempo draw falls outside its token's class the
   tempo is drawn again under the class on an own stream (the log line
