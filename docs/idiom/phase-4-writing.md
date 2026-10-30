@@ -4112,3 +4112,67 @@ asks the ear whether the melody now moves like the game's and whether the
 cadences' sour counter is gone; the token draw's reach (Dancing Mad's
 organ among the themed songs) is put to the owner as a question, not
 built.
+
+### Round 67: the sustain loop reaches the render, the bridge read again (2026-10-30, from the owner's listening on Ragnarok: "the melody is just a little blip behind the music")
+
+**Found.** Every written render since the score bridge (5284664,
+2026-10-21) had gone out with no looped sample. A preset voice carries its
+loop as the module's sustain loop, held while the key is down and released
+into the tail after it, and `score._Pcm` read the plain loop flag alone, so
+the SNES back end took every sustaining voice as a one-shot. On the built-in
+sets that is a 48 ms square under the tune and pads that pluck; on an
+imported pack's registered samples (FFVI's run 125 ms to a second) the
+parts decayed like plucks, which read as weak levels rather than as a blip,
+and Song Checks 40 to 53 were all heard that way, while the FFVI reference
+renders (`brr.decode` keeps the BRR loop flag) loop every sample. The
+writer's level math (`sample_strike_and_body`) reads both loops, so it set
+levels for sounds that never sustained. Measured on the owner's three songs
+on bitComposer's own sounds (stems by muting channels, through libopenmpt,
+the player's engine): the tune 9.7 to 21.6 LU under the loudest other
+pitched line; with the loop carried 2.1 to 6.6 under, and 5.1 over in one,
+the tune up 11 to 18 dB. Beside it: a drum voice's levels the import could
+not read are NaN, the readings' median over them was NaN, three of the 67
+balance tokens carried "nan" for the drums, and a written song that drew
+one played its kit at full (`min(1.0, nan)` is 1.0: Hidden Frontier's and
+Causeway of Lanterns' crash at 64).
+
+**Fixed.** `_Pcm(sample, sustain=True)` from the writer's instrument table
+takes the sustain loop as the chip's loop (Classic's songs keep their
+one-shots, the owner's call); the readings skip the unread drum levels, the
+balance token never carries a non-finite level (the plan's `levels` draw
+stands in), and the plan ignores a "nan" a shipped table still holds; a
+test for each. The render bridge: with the loops carried, Song Check 53's
+and 50c's twenty seeds rendered a median 4.3 and 4.1 dB over their targets
+(quartiles +3.7..+4.7 and +3.6..+4.3), so `RENDER_BRIDGE` is -17.4 from
+-21.7; re-rendered, the residual is +0.3 (quartiles -0.4..+2.0) and -0.1
+(-0.4..+0.7).
+
+**Measured, the same seeds as Song Check 53 (161-170) and 50c (131-140),
+LUFS.** Tune margin over the loudest other pitched line: 161-170 median
+-6.9 (quartiles -7.7..-2.2; one of ten on top; Song Check 53 as heard:
+-4.2, two on top), 131-140 median -1.7 (four of ten on top). Each part under
+the whole, median, against FFVI's own renders (ffvi-stems, 63 songs): bass
+-4.0 (FFVI -7.0), accompaniment -4.0 (-6.3), counter -6.4 (-4.1), melody
+-7.8 (-7.2), drums -21.3 (-9.5); 131-140: bass -3.8, melody -5.6, counter
+-8.6, accompaniment -10.9, drums -18.6. So the tune sits where FFVI's does;
+the bass runs 3 dB forward of FFVI's place, the counter 2 dB behind it, and
+the drums 11 dB behind. The one-shot renders had hidden the bass's and the
+accompaniment's sustain (the tune's samples are struck ones more often),
+which is why the measured tune margin fell as the loops came back. Whole 170
+shows the voice count outweighing the level: the token's loudest part is
+the tune at 1.0, and it renders 7 dB under a three-voice accompaniment and a
+three-voice counter at 0.9.
+
+**Open, for the rounds after the owner's ear on Song Check 54.** The kit's
+level: the token's drums level (0.1 to 0.3 of the top in most tokens)
+renders the kit 11 dB under FFVI's place, so the counting of the kit's level
+against the pitched parts is off by about that much, where round 63's strike
+rule had closed 7 dB on one-shot renders. The bass 3 dB forward and the
+counter 2 dB behind, both from the token's counted levels: a counting
+question (the sides' mean, the loudness factor at the played register)
+before any writer rule. Voices beside the line add up: a part's level is one
+voice's and its second and third voices add to it, and FFVI's token songs
+had the same voices without coming out that way, so the layer shares want a
+look. Every measurement of rounds 56 to 66 that set written renders against
+FFVI's (the loudness tracking, round 59's stems report, the salience of
+rounds 64 to 66) was made on one-shot renders and stands to be read again.

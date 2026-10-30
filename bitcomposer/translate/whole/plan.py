@@ -70,11 +70,14 @@ TOP_SCALE = 1.0                       # the readings' level (a voice's two sides
                                       # master of 63, 0.29 of full either way), but the written songs rendered 4.5 dB under FFVI's converted
                                       # songs at the readings' top level as drawn (-29.0 against -24.5 dBFS, the same player), and 5 dB over
                                       # at 0.85; 1.7 (4.6 dB) is the measured bridge, to be read again when the readings' level is understood
-RENDER_BRIDGE = -21.7                 # dB: what a written song renders at (RMS dBFS over its first minute, the Song Check method) less its mix
+RENDER_BRIDGE = -17.4                 # dB: what a written song renders at (RMS dBFS over its first minute, the Song Check method) less its mix
                                       # estimate (rhythm.mix_level over the notes as scored), at a full master: measured over 20 written songs
                                       # 2026-10-29 (median -21.7 once the sample loudness read the sustain loop, quartiles -23.0 and -19.8;
                                       # -20.5 before it); the master brings estimate + bridge to the token's song's rendered loudness. Read
-                                      # again if the estimate or the renderer changes.
+                                      # again if the estimate or the renderer changes. 2026-10-30: -17.4. Those 20 songs had rendered with
+                                      # every sustaining voice as a one-shot (score._Pcm read the plain loop flag alone); with the sustain
+                                      # loops carried, Song Check 53's ten seeds rendered a median 4.3 dB over their targets (quartiles
+                                      # +3.7 and +4.7), so the bridge moves by that much.
 MASTER_FLOOR = 8                      # the master volume's least value (of 127): under it a song is not a song
 STRIKE_WINDOW = 0.1                   # seconds of a sample a note hears as its strike (sample_strike_and_body, heard_rms)
 PANS = {R.MELODY: (0.5,), R.COUNTER: (0.6,), R.HARMONY: (0.35, 0.65, 0.5), R.ACCOMP: (0.6, 0.4), R.ARP: (0.4,), R.BASS: (0.5,),
