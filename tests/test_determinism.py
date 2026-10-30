@@ -8,7 +8,7 @@ PROGRAM = """
 import hashlib, os, tempfile
 from bitcomposer.spc import convert
 from bitcomposer.written import compose_written
-out = compose_written("ffvi", "ffvi", 7)
+out = compose_written("default", "ffvi", 7)
 with tempfile.TemporaryDirectory() as d:
     path = os.path.join(d, "song.it"); convert.render(out["score"], path)
     print(out["title"], hashlib.md5(open(path, "rb").read()).hexdigest())

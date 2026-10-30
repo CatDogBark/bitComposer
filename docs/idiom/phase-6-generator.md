@@ -160,6 +160,19 @@ the warning on a library vocabulary).
   panel saying "N songs read, the vocabulary needs 40", SOUND limited to
   SNES sets while a vocabulary is picked.
 
+- **2.0rc1, piece 7 (2026-10-30, the owner's call).** The writer is
+  GENERATE, with no game's name in front of the listener. The shipped
+  vocabulary is `default` (its `source` records that it was fitted on
+  Final Fantasy VI's 67 songs; the README says so plainly), the window
+  calls it bitComposer's own, a song's message reads "Written by
+  bitComposer on the Evermore sounds (seed 7)", and the command line
+  writes without a flag (`--classic` is the 1.x generator; `--vocabulary`
+  names your library or one of your games). SET's rows are WRITER
+  (bitcomposer, classic), FROM (shown once a library or game vocabulary
+  is ready), THEME and RETURNS. The listener's own imports keep their
+  games' names; the Song Checks, the docs and the tools keep saying FFVI,
+  where the comparison is the point.
+
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
 - **Import time per song.** The readers: 0.6 s a song (five FFVI songs,

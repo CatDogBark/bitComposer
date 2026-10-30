@@ -2,7 +2,7 @@
 phrase is drawn again): every four-bar window of each tune, from every bar, against the games' four-bar phrases
 (translate/reference.py, the reference set kept outside the repository: ~/diags/bitcomposer/idiom/phase3/reference/).
 
-    python tools/copycheck.py --vocabulary ffvi --seeds 1-100 [--reference PATH] [--pack ffvi]
+    python tools/copycheck.py --seeds 1-100 [--reference PATH] [--pack ffvi]
 
 A release check, run on a machine that holds the reference set, before a vocabulary ships: a phrase whose rhythm and
 intervals both equal a game phrase's is a copy; rhythm-only and intervals-only matches are reported beside it."""
@@ -38,7 +38,7 @@ def windows(notes: list, bars: int, length: int = 4):
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--vocabulary", default="ffvi")
+    ap.add_argument("--vocabulary", default="default")
     ap.add_argument("--pack", default=None, help="the sound set (default: the seed's draw)")
     ap.add_argument("--seeds", default="1-50")
     ap.add_argument("--reference", default=harness.REFERENCE)

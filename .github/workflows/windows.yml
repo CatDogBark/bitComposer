@@ -67,7 +67,7 @@ jobs:
       - name: Smoke test
         run: |
           python -m bitcomposer.cli --version
-          python -m bitcomposer.cli -s 11 --style snes --pack megamanx -d out
+          python -m bitcomposer.cli --classic -s 11 --style snes --pack megamanx -d out
           dir out
       - name: Fetch libopenmpt for Windows
         shell: pwsh

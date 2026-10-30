@@ -313,11 +313,13 @@ ApplicationWindow {
     property string settEnergy: "random"
     property string settScale: "random"
     property string settSound: "random"
-    property string settStyle: "classic"            // the generator: Classic, or a shipped vocabulary the writer draws from (phase 6)
+    property string settGenerator: "bitcomposer"    // GENERATE writes from a vocabulary (phase 6); "classic" is the 1.x generator
+    property string settVocabulary: "default"       // what it writes from: the shipped vocabulary, your library, or one of your games
     property bool settCarryTheme: false
     property bool settBandReturns: false
     readonly property var vocabularies: JSON.parse(backend.vocabularies())
-    readonly property var styleOptions: ["classic"].concat(vocabularies.filter(function(v) { return v.ready }).map(function(v) { return v.name }))
+    readonly property var vocabularyOptions: vocabularies.filter(function(v) { return v.ready }).map(function(v) { return v.name })
+    onVocabularyOptionsChanged: if (!root._loading && vocabularyOptions.indexOf(root.settVocabulary) < 0) root.settVocabulary = "default"
     property string settDrumDensity: "random"
     property bool settDrumFills: true
     property string settDrumSwing: "random"
@@ -337,7 +339,8 @@ ApplicationWindow {
         backend.setAutoFlags(_buildSettingsFlags().trim())
         root._save()
     }
-    onSettStyleChanged: _onSettingChanged()
+    onSettGeneratorChanged: _onSettingChanged()
+    onSettVocabularyChanged: _onSettingChanged()
     onSettCarryThemeChanged: _onSettingChanged()
     onSettBandReturnsChanged: _onSettingChanged()
     onSettTempoChanged: _onSettingChanged()
@@ -356,7 +359,7 @@ ApplicationWindow {
     onSettEchoWetChanged: _onSettingChanged()
     onActivePresetChanged: root._save()
 
-    readonly property var _savedKeys: ["settStyle", "settCarryTheme", "settBandReturns", "settTempo", "settEnergy", "settScale", "settSound", "settDrumDensity", "settDrumFills",
+    readonly property var _savedKeys: ["settGenerator", "settVocabulary", "settCarryTheme", "settBandReturns", "settTempo", "settEnergy", "settScale", "settSound", "settDrumDensity", "settDrumFills",
         "settDrumSwing", "settMelody", "settHarmonyVoicing", "settHarmonyMode", "settBassWeight", "settForm",
         "settEcho", "settEchoWet", "activePreset", "settingsTab", "ui", "savedW", "savedH"]
     function _save() {
@@ -410,14 +413,15 @@ ApplicationWindow {
 
     function _buildSettingsFlags() {
         var flags = ""
-        if (settStyle !== "classic") {                       // the writer on a vocabulary: the sound set and the two switches; Classic's options do not apply
-            flags += " --vocabulary " + settStyle
+        if (settGenerator !== "classic") {                   // the writer: what it writes from, the sounds and the two switches; Classic's options do not apply
+            if (settVocabulary !== "default") flags += " --vocabulary " + settVocabulary
             if (["ffvi", "mana", "evermore", "megamanx"].indexOf(settSound) >= 0) flags += " --pack " + settSound
             else if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)
             if (settCarryTheme) flags += " --carry-theme"
             if (settBandReturns) flags += " --band-returns"
             return flags
         }
+        flags += " --classic"
         if (settTempo !== "random") flags += " --tempo " + settTempo
         if (settEnergy !== "random") flags += " --energy " + settEnergy
         if (settScale !== "random") flags += " --scale " + settScale
@@ -444,15 +448,18 @@ ApplicationWindow {
             prefix = (playbackStatus === "Playing" ? "AUTO: next track generates when this one ends" : "AUTO: generates when playback stops") + "   |   "
         if (activePreset && activePreset !== "ANY") return prefix + activePreset
         var parts = []
-        if (settStyle !== "classic") {
-            var vl = settStyle
-            for (var vi = 0; vi < vocabularies.length; vi++) if (vocabularies[vi].name === settStyle) vl = vocabularies[vi].label
-            parts.push("written from " + vl)
-            if (["ffvi", "mana", "evermore", "megamanx"].indexOf(settSound) >= 0) parts.push(settSound + " sounds")
+        if (settGenerator !== "classic") {
+            if (settVocabulary !== "default") {
+                var vl = settVocabulary
+                for (var vi = 0; vi < vocabularies.length; vi++) if (vocabularies[vi].name === settVocabulary) vl = vocabularies[vi].label
+                parts.push("written from " + vl)
+            }
+            if (["ffvi", "mana", "evermore", "megamanx"].indexOf(settSound) >= 0 || isLibraryPack(settSound)) parts.push(settSound + " sounds")
             if (settCarryTheme) parts.push("carries a theme")
             if (settBandReturns) parts.push("the band returns")
-            return prefix + parts.join("  /  ")
+            return prefix + (parts.length ? parts.join("  /  ") : "")
         }
+        parts.push("Classic")
         if (settTempo !== "random") parts.push(settTempo)
         if (settEnergy !== "random") parts.push(settEnergy)
         if (settScale !== "random") parts.push(settScale)
@@ -1226,9 +1233,10 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             spacing: 6
                             visible: root.settingsTab === 0
-                            OptionRow { label: "STYLE"; options: root.styleOptions; value: root.settStyle; onPicked: function(c) { root.settStyle = c } }
-                            OptionRow { visible: root.settStyle !== "classic"; label: "THEME"; options: ["off", "on"]; value: root.settCarryTheme ? "on" : "off"; onPicked: function(c) { root.settCarryTheme = (c === "on") } }
-                            OptionRow { visible: root.settStyle !== "classic"; label: "RETURNS"; options: ["off", "on"]; value: root.settBandReturns ? "on" : "off"; onPicked: function(c) { root.settBandReturns = (c === "on") } }
+                            OptionRow { label: "WRITER"; options: ["bitcomposer", "classic"]; value: root.settGenerator; onPicked: function(c) { root.settGenerator = c } }
+                            OptionRow { visible: root.settGenerator !== "classic" && root.vocabularyOptions.length > 1; label: "FROM"; options: root.vocabularyOptions; value: root.settVocabulary; onPicked: function(c) { root.settVocabulary = c } }
+                            OptionRow { visible: root.settGenerator !== "classic"; label: "THEME"; options: ["off", "on"]; value: root.settCarryTheme ? "on" : "off"; onPicked: function(c) { root.settCarryTheme = (c === "on") } }
+                            OptionRow { visible: root.settGenerator !== "classic"; label: "RETURNS"; options: ["off", "on"]; value: root.settBandReturns ? "on" : "off"; onPicked: function(c) { root.settBandReturns = (c === "on") } }
                             OptionRow { label: "TEMPO"; options: ["random", "slow", "medium", "fast"]; value: root.settTempo; onPicked: function(c) { root.settTempo = c } }
                             OptionRow { label: "ENERGY"; options: ["random", "chill", "normal", "intense"]; value: root.settEnergy; onPicked: function(c) { root.settEnergy = c } }
                             OptionRow { label: "SCALE"; options: ["random", "minor", "major", "pentatonic"]; value: root.settScale; onPicked: function(c) { root.settScale = c } }

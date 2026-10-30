@@ -4,7 +4,10 @@ is put together and none of its samples.
 
 Three kinds, one namespace (`names()`):
 - shipped: one gzipped JSON file beside this module, the `tables` of a format
-  2 pack file (`packs/packfile.py`); Final Fantasy VI's is the default;
+  2 pack file (`packs/packfile.py`); `default` is what GENERATE writes from
+  (its `source` says what it was fitted on: Final Fantasy VI's 67 songs, as
+  far as the writing has gone; the window and a song's message call it
+  bitComposer's own, the README says where it was learned);
 - `library`: fitted over every song the listener has imported, all games
   together, kept as `vocabularies/library.json` in the data folder and
   counted again after each import;
@@ -22,6 +25,7 @@ import os
 from pathlib import Path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT = "default"                   # the shipped vocabulary GENERATE writes from without a choice
 LIBRARY = "library"                   # the vocabulary over everything imported
 PACK_PREFIX = "pack:"                 # an imported pack's own tables
 MIN_SONGS = 40                        # songs a library or pack vocabulary needs before the window offers it
@@ -113,7 +117,7 @@ def songs(name: str) -> int:
 def label(name: str) -> str:
     """What the vocabulary is called in a song's message and the window."""
     if name == LIBRARY:
-        return "My library"
+        return "your library"
     pn = pack_name(name)
     if pn:
         data = _tabled_packs().get(pn) or {}

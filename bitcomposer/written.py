@@ -35,7 +35,7 @@ def pack_sounds(pack_file) -> tuple[str, set]:
     return name, set(data.get("samples") or {})
 
 
-def compose_written(vocabulary: str, pack: str | None = None, seed: int | None = None, carry_theme: bool = False,
+def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = None, seed: int | None = None, carry_theme: bool = False,
                     band_returns: bool = False, pack_file=None) -> dict:
     """One song from a vocabulary (shipped, the library's, or an imported pack's): {"score", "title", "seed", "sounds",
     "vocabulary", "info", "plan"}; the score renders through the SNES back end (`spc.convert.render`). The sounds: the
@@ -65,10 +65,16 @@ def compose_written(vocabulary: str, pack: str | None = None, seed: int | None =
     for role, start in out["first"].items():
         for v in range(p.voices[role]):
             layout[start + v] = role if v == 0 else f"{role} {v + 1}"
+    if vocabulary == vocabularies.DEFAULT:
+        source = "Written by bitComposer"
+    elif vocabulary == vocabularies.LIBRARY:
+        source = f"Written by bitComposer from your library ({vocabularies.songs(vocabulary)} songs)"
+    else:
+        source = f"Written by bitComposer from {label}'s songs"
     score.message = [f"{title} - {key} - {p.bpm:.0f} BPM - form {p.letters}",
                      "layout: " + ", ".join(x or "" for x in layout),
-                     f"Written by bitComposer from {label}'s vocabulary on the {sounds} sounds (seed {seed}; docs/IDIOM.md, phase 6):",
-                     "the band, the figures, the tune and its balance as the game's own songs have them, none of their notes."] + list(score.message or [])[3:]
+                     f"{source} on the {sounds} sounds (seed {seed}; docs/IDIOM.md): the band, the figures, the tune and its",
+                     "balance drawn from a vocabulary of counted habits, none of any song's notes."] + list(score.message or [])[3:]
     info = {"title": title, "key": key, "tempo": int(round(p.bpm)), "form": p.letters, "bars": p.bars, "band": list(p.band),
             "seconds": int(round(score.seconds)), "vocabulary": label, "sounds": sounds, "seed": seed,
             "carry_theme": carry_theme, "band_returns": band_returns}

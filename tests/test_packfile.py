@@ -125,12 +125,16 @@ class PackFiles(unittest.TestCase):
     def test_the_cli_composes_with_a_pack_file(self):
         path = self.save()
         self.addCleanup(pf.unload, "testpack")
-        args = cli.build_parser().parse_args(["--pack-file", path, "--sound", "chip", "-s", "5",
+        args = cli.build_parser().parse_args(["--classic", "--pack-file", path, "--sound", "chip", "-s", "5",
                                               "-o", os.path.join(self.dir.name, "song.it")])
         out, info = cli.compose_from_args(args)
         self.assertTrue(os.path.exists(out))
         self.assertEqual(info["pack"], "testpack")                   # the pack file wins over --sound
         self.assertEqual(info["style"], "snes")
+        args = cli.build_parser().parse_args(["--pack-file", path, "-s", "5", "-o", os.path.join(self.dir.name, "written.it")])
+        out, info = cli.compose_from_args(args)                      # the writer, on the pack file's samples (2.0)
+        self.assertTrue(os.path.exists(out))
+        self.assertEqual(info["sounds"], "testpack")
 
     def test_mistakes_are_named_with_where_they_are(self):
         def broken(change, expect):

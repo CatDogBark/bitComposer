@@ -198,12 +198,17 @@ def build_parser():
              "sounds are not changed by this)",
     )
     parser.add_argument(
+        "--classic",
+        action="store_true",
+        help="compose with Classic, the 1.x generator, instead of writing from a vocabulary; the options above are its",
+    )
+    parser.add_argument(
         "--vocabulary",
-        choices=["none"] + _vocabulary_names(),
-        default="none",
-        help="write the song from a vocabulary (docs/IDIOM.md, phase 6): a shipped game's, 'library' (everything imported) "
-             "or 'pack:NAME' (an imported pack's own), on the sound set --pack names (ffvi, mana, evermore or megamanx), "
-             "the pack --pack-file names, or a pack vocabulary's own samples; the options above are Classic's and do not apply",
+        choices=_vocabulary_names() or ["default"],
+        default="default",
+        help="what the song is written from (docs/IDIOM.md, phase 6): 'default' (shipped; the README says where it was "
+             "learned), 'library' (everything you have imported) or 'pack:NAME' (an imported game's own); on the sound set "
+             "--pack names (ffvi, mana, evermore or megamanx), the pack --pack-file names, or a pack vocabulary's own samples",
     )
     parser.add_argument(
         "--carry-theme",
@@ -240,8 +245,8 @@ def compose_from_args(args, index: int = 0):
     seed = args.seed
     if seed is not None and args.count > 1:
         seed = seed + index
-    if getattr(args, "vocabulary", "none") not in (None, "none"):
-        return compose_written_from_args(args, seed)
+    if not getattr(args, "classic", False):
+        return compose_written_from_args(args, seed, index)
     pack, sound = args.pack, args.sound
     if args.pack_file:
         from .packs.packfile import load_pack_file
@@ -281,7 +286,7 @@ def compose_from_args(args, index: int = 0):
     return filepath, song["info"]
 
 
-def compose_written_from_args(args, seed):
+def compose_written_from_args(args, seed, index: int = 0):
     """A song from a vocabulary (phase 6), saved as compose_from_args saves Classic's."""
     from .spc import convert
     from .written import compose_written
@@ -293,7 +298,7 @@ def compose_written_from_args(args, seed):
     elif args.name == "title":
         filepath = unique_path(args.output_dir, out["title"], args.suffix, prefix=args.prefix)
     else:
-        filepath = os.path.join(args.output_dir, f"{args.prefix}bitcomposer_{int(time.time())}_{0}_s{out['seed']}{args.suffix}.it")
+        filepath = os.path.join(args.output_dir, f"{args.prefix}bitcomposer_{int(time.time())}_{index}_s{out['seed']}{args.suffix}.it")
     convert.render(out["score"], filepath)
     return filepath, out["info"]
 
@@ -315,7 +320,7 @@ def main():
 
         if args.verbose and "vocabulary" in info:
             print(f"  Title:       {info['title']}")
-            print(f"  Written from {info['vocabulary']}'s vocabulary on the {info['sounds']} sounds, seed {info['seed']}")
+            print(f"  Written on the {info['sounds']} sounds, seed {info['seed']}" + ("" if info['vocabulary'] == "bitComposer" else f", from {info['vocabulary']}"))
             print(f"  Key:         {info['key']}")
             print(f"  Tempo:       {info['tempo']} BPM")
             print(f"  Form:        {info['form']} ({info['bars']} bars, {info['seconds']} s)")

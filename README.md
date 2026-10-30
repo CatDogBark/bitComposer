@@ -191,29 +191,39 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
-## Written from a game's vocabulary
+## What GENERATE writes
 
 ```bash
-bitcomposer --vocabulary ffvi -s 7 -v
+bitcomposer -s 7 -v
 ```
 
-writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): the
-band, the figures, the tune and its balance drawn from Final Fantasy VI's
-vocabulary, the tables fitted on its 67 songs' readings and shipped with the
-player (`bitcomposer/vocabularies/ffvi.json.gz`, 365 KB of statistics and
-none of the game's samples), played on one of the built-in SNES sound sets
-(`--pack ffvi`, `mana`, `evermore` or `megamanx`; left random, the seed
-picks one). `--carry-theme` draws the tune's phrases again until its theme
-comes back; `--band-returns` brings the chords, the bass or the
-accompaniment back with it. A seed names one song on every machine. The
-rest of the options are Classic's, the generator without a vocabulary, and
-do not apply. In the player, SET's STYLE row picks Classic or a vocabulary
-(with THEME and RETURNS for the two switches) and GENERATE writes from it.
-Importing a game (below) also fits the game's own vocabulary beside its
-samples (`--vocabulary pack:NAME`, on the game's sounds) and recounts one
-over everything you have imported (`--vocabulary library`); the window
-offers each once 40 songs stand behind it. The rest of the 2.0 window is
-coming (`docs/idiom/phase-6-generator.md`).
+writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): a
+plan for the band, each part's figures bar by bar, a tune with a theme that
+may come back, and the parts' balance, all drawn from a vocabulary of
+counted habits, played on one of the built-in SNES sound sets (`--pack
+ffvi`, `mana`, `evermore` or `megamanx`; left to itself, the seed picks
+one) and rendered through the SNES back end. A seed names one song on
+every machine. `--carry-theme` draws the tune's phrases again until its
+theme comes back; `--band-returns` brings the chords, the bass or the
+accompaniment back with it. In the player this is GENERATE, with THEME
+and RETURNS beside it; Classic, the 1.x generator with its own knobs and
+the chip and Genesis sounds, is WRITER: classic in SET (`--classic` on the
+command line; the options above the flag are its).
+
+Where the vocabulary comes from, plainly: the shipped one
+(`bitcomposer/vocabularies/default.json.gz`, 365 KB) was fitted on the
+readings of Final Fantasy VI's 67 songs, the game the writing was
+measured against round by round until it held up by ear
+(`docs/idiom/phase-4-writing.md`). It is the statistics of how that
+music is put together, the counts of figures, moves, chord changes and
+balances, and none of the game's samples or notes; a release check
+(`tools/copycheck.py`) probes every four-bar window of hundreds of
+written tunes against the games' phrases and ships nothing that copies
+one. It is as far as the writing has gone; vocabularies fitted on more
+games follow. Importing a game (below) fits that game's own vocabulary
+beside its samples and recounts one over everything you have imported;
+SET's FROM row offers each once 40 songs stand behind it
+(`--vocabulary pack:NAME`, `--vocabulary library`).
 
 ## Packs from your games
 
