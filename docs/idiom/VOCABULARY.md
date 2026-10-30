@@ -23,47 +23,43 @@ said otherwise. Counting code: `translate/rhythm.py` and
 `translate/phrases.py`; the plan: `translate/whole.py`; the parts:
 `translate/writer.py`.
 
-## The lead (the readings' melody)
+The words are grouped by where the writing draws them, in the order the song is written: the plan's one-draw-a-song words, the figure tables the parts' writers share, then the drums, the bass, the upper parts, the tune, the counter-line and the render; last, the words counted for the measures and never drawn. Under each word a line from the code gives its shape, the function that draws it and the tables it conditions (`tools/vocab_map.py`; the map page draws the same as a graph).
 
-- **lead** — which voice carries the tune, decided by salience (round 64,
-  `translate/lead.py`): the voice the reader labelled melody keeps the
-  lead where it is heard, within 9 dB of the loudest tonal voice as each
-  renders alone; else the most varied heard voice becomes the melody and
-  the old one a counter-line (an accompaniment where a counter exists).
-  Why: the reader picks the melody by variety with a quarter of the
-  loudest raw volume as its only loudness test, and in one FFVI song of
-  seven that voice sits 9 dB or more under the whole; put to the owner's
-  ear voice by voice, every such song had its tune elsewhere, and every
-  heard label was right. Every word counted on the melody (the tune's
-  cells, pairs, hooks, levels, sample, habit) counts on the lead.
+## Terms
 
-## The song, drawn once
+- **unit** — one counted thing: a song, a bar, a phrase, a note, an onset. A table is a count of one kind of unit.
+- **outcome** — what the unit was: a figure, a class, a token. The table's vocabulary is the set of outcomes it has seen.
+- **values, conditionings, shape** — what a unit may be conditioned on (the part, the tempo band, the habit, the bar before's outcome); a table's shape is the ordered list of them, finest last.
+- **context, backoff, floor** — a draw names the values it has; the table answers from the most specific context with enough songs behind it and backs off toward the part (Witten-Bell), never below its floor level (`floor_k`).
+- **habit** — a song's way with a part, drawn once a song: a density tier (sparse, medium, dense) and a manner (varied, mixed, repeating; the bass's tones and octaves). Most figure tables are conditioned on it.
+- **tier** — the density third of a habit; some words (the drums' entrances, the tune's grain) are conditioned on the tier alone.
+- **token** — the balance word's outcome: one game song's whole band in one string, each part's weight, register, sounded share, voices, level, the voices beside its line, kind, sample and habit, then the top level, the loudness and the tempo class. A written song rides one token.
+- **chain, previous** — a figure table conditioned on the bar before's outcome; the writer's bars form a chain through the game's.
+- **mixture, urn** — a figure table drawn once a bar with the song's own bars so far: the same as the bar before, an earlier bar, or new, at the game's rates.
+- **mask** — a second voice's or the counter's bar as which of the line's onsets it strikes with and which are its own (`second_figures`, `counter_figures`).
+- **layer** — a voice beyond a part's line: its relation (lockstep, apart, alternating), its offset, its density and, since round 65, its sample and its notes over the line's.
+- **lead** — the voice that carries the tune in a game song, decided by what is heard (round 64); every tune word counts on it.
+- **own stream** — a draw on its own random stream (`whole:{seed}:name`), so a new word shifts no draw after it on the plan's stream.
+
+
+## The song, drawn once: the plan's words
 
 - **keys** — a song's key (tonic and mode). Drawn once; the plan's key,
   which the chords are spelled in and the tune's scale comes from.
+  *`keys`: shape (part); drawn in _plan_once; conditions cadences, chords, contour_sizes, contours, endings, moves, peaks, phrase_shifts, relations.*
+
 - **tempos** — a song's tempo to five beats a minute. Drawn once; sets the
   tempo band that conditions the habits and the length tables.
+  *`tempos`: shape (part, tempo); drawn in _plan_once; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, periods, rhythm, second_figures.*
+
 - **sizes** — how many parts a song's form has. Drawn once; the fallback
   when no `letters` table can give the form whole.
+  *`sizes`: shape (part); drawn in plan_form.*
+
 - **length_habits** — a song's part-length habit (short, medium, long).
   Drawn once; conditions `lengths`.
-- **levels as loudness** — since round 56 (2026-10-29) every level the
-  readings give (`levels`, the balance token's level and second-voice
-  fields, `layer_levels`, `top_levels`, `counter_shares`) is counted as
-  what the ear hears: the voice's level times its sample's own loudness
-  (its loop body's RMS) over a reference (`rhythm.LOUDNESS_REF`, -12
-  dBFS, the pack's median; `rhythm.loudness_factor`, the table set from
-  the pack's WAVs by `rhythm.load_loudness` when the tables are counted
-  into a pack), and a written note plays at its level over its own
-  sample's loudness (`whole.sample_rms`), capped at full, the capped notes
-  logged ("loudness: notes capped at full, their sample too quiet for
-  their level: ..."). Why: a reading's level is a voice volume a composer
-  set to balance that song's samples; a written song takes its levels
-  from one song's token and its samples from the instrument word, the
-  pack gives every sample the same volume, and the pack's tonal samples
-  span 19.8 dB in their own loudness, so Whole 68's bass sat 5 dB over
-  its tune and Whole 70's brass lead 7 dB under its bass (Song Check 43).
-  The drums keep their level as read: the kit's pieces are many samples.
+  *`length_habits`: shape (part); drawn in plan_form; conditions cadences, part_entries, periods.*
+
 - **top_levels** — a song's loudest part's median note level of full
   (the readings' scale, the SNES chip's voice volume over 128), to 0.05,
   one unit a song (round 52, 2026-10-28). Drawn once a song on its own
@@ -73,94 +69,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   FFVI's converted songs, the written songs sat 5 dB hotter (-19.6
   against -24.5 dBFS over the first minute) because the loudest part
   always played at 0.85 of full where FFVI's sits at 0.2 to 0.4.
-- **loudness** (the balance token's `loud=-24`) and **mix_level** — a
-  song's rendered loudness: its RMS in dBFS over its first minute through
-  the player (the readings' feature render/loudness_dbfs, measured from
-  the converted songs; FFVI's 81: median -25.6, the middle sixty between
-  -26.3 and -22.0, none above -20.5), to 1 dB, carried on the balance
-  token so a song's levels, its top and its loudness are one song's (round
-  59, 2026-10-29). The written song's master volume holds its own to it
-  (`whole.master_of`): the song's notes as scored give a mix estimate
-  (`rhythm.mix_level`: each note's perceived level squared, summed over
-  the quarter-beat frames it sounds in, at most two beats of it, the mean
-  over the frames anything sounds in, in dB), a written song renders at
-  that estimate plus RENDER_BRIDGE (-21.7 dB, measured over 20 written
-  songs, quartiles -23.0 and -19.8), and the SNES chip's master volume
-  (the IT global volume, a song's from its first bar: FFVI's sit at 32 to
-  61 of 128) is set so the two meet; a song under its target with the
-  master already full brings its notes up instead. Why: the written songs'
-  rendered loudness spread 2.7 times FFVI's (IQR 6.7 dB against 2.5 over
-  14 songs) and four of fourteen rendered louder than any FFVI song (up to
-  -15.6 dBFS), because the level draws multiply independent things FFVI's
-  composer held together: the top level, how many parts share it, the
-  sections' levels, the sample's loudness and how thick the texture is.
-  The rendered loudness is what FFVI holds steady, so it is the unit; the
-  estimate alone would not do (it meets FFVI's renders with a correlation
-  of 0.47, so a written song held to its token song's estimate took on the
-  estimate's spread, 6 dB). The TOP_SCALE bridge of round 52 (1.7) is
-  retired to 1.0, its work being the master's. With it the writer's
-  loudness factor reads the module sample's own loudness
-  (`whole.sample_rms`), not the pack table's: the instrument builder
-  scales every sustaining voice's loop to one loudness
-  (`samples.LOUDNESS_TARGET`), so the table's numbers (the game's samples
-  as the game plays them, right for counting the readings) are not what
-  the module plays, and round 56 had boosted "quiet" samples the module
-  had brought up already, to full; with the module's own numbers no note
-  is capped in 20 songs. Since round 65 a note's loudness is what it hears
-  of its sample, its strike for STRIKE_SECONDS then its body
-  (`rhythm.heard_rms`), on both sides: the readings scale a note's level
-  by it for the note's own length and the writer divides by the module
-  sample's (a struck accompaniment sample's attack 3.4 dB over its body
-  and a slow lead's 3.1 under had put a backing over the tune the counts
-  said was on top).
-- **ranges (by the part)** — since round 55 (2026-10-29) a sample's home
-  band is counted by the sample alone and by the sample with the part
-  playing it (`sample_range_units`, shape part + role; the draw backs off
-  to the sample alone where the pair has under two songs), and every
-  draw names the part (`whole.range_context`). Why: a sample shared by
-  parts sits 9 semitones apart by part at FFVI's median, a bass sample 54
-  (as a bass at 32, as an accompaniment at 86), and a part drawing a
-  shared sample could take another part's register. And since round 53 a
-  chord part's home band narrower than MIN_SPAN gives way to the sample's
-  whole played range (`whole.wide_enough`, the `sample_ambitus` word):
-  Searching for Friends strikes one sample at one pitch as accompaniment,
-  and that band had bound Whole 67's three-voice accompaniment to a single
-  pitch for 45 bars; a sample the game only ever plays at one pitch keeps
-  it (a drum sample as a rhythmic chord part, 0.08 of FFVI's
-  accompaniments).
-- **tempos (under the token's class)** — since round 54 (2026-10-29) the
-  balance token carries, since round 59, its song's loudest part's level
-  of full (`top=0.30`, see top_levels) and its rendered loudness
-  (`loud=-24`, see loudness), the two before the tempo class, so a song's
-  levels, its top and its loudness are one song's; since round 60 each
-  pitched part's own sample as an eighth field (`melody=minor:64-84:0.9:
-  1:0.7:::sf89f5aedfd`, the pack's id of the sample the part plays most),
-  so the song's instruments come with the levels that were counted on
-  them: FFVI puts 224 of its 1,326 possible sample pairs together, a lead
-  has a median one bass partner, and a song's pairs are seen in another of
-  its songs 0.80 of the time, where the written songs, each part's sample
-  drawn apart (part_samples, gated by range), had 0.55, under chance
-  (0.67); with the field 0.88, every part on its token song's sample
-  (`samples_for` takes it where the pack holds it, the part_samples draw
-  else; a layered part's second voices and a counter the token lacks still
-  draw their own); since round 62 each part's habit as a ninth field
-  (`dense+varied`, the kit's too), so a song's density tiers come
-  together (drawn apart, 54 % of written songs had exactly one dense part
-  against FFVI's 38 %); and since round 63 the drums token's eighth field
-  is the song's kit (`K=sbfe716b9b6,S=s1279e119a1`: a piece letter and
-  the sample it strikes it with most), its pieces the kit_pieces word
-  had drawn and its samples filled into the pack kit's slots where the
-  pack holds them (pack4 holds the game's fifteen named drums). And it
-  ends with its song's tempo class (`tempo=slow`, `medium`,
-  `fast`: under 85, under 130, over) and the `tempos` word is counted by
-  the class; where a plan's tempo draw falls outside its token's class the
-  tempo is drawn again under the class on an own stream (the log line
-  "tempo 160 BPM is outside the band's class (slow): 75 BPM drawn under
-  it"). Why: the tempo drawn apart had put Relm's band (70) at 160 and
-  Slam Shuffle's (114) at 70, only 14 of 45 plans sat in their token
-  song's class, and the fastest written tune ran 8.2 notes a second
-  against FFVI's 4.7 (after, the plans sit in class 0.82 of
-  the time, the fastest tune 4.8, the fastest accompaniment 12.4).
+  *`top_levels`: shape (part); drawn in _plan_once.*
+
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level
@@ -266,12 +176,13 @@ said otherwise. Counting code: `translate/rhythm.py` and
   their order and votes with the field stripped, so every balance draw
   lands where it did; 17 tokens say same, 34 other (the Dancing Mad pair
   share one).
-- **weights** — a part's weight in the band (minor, half, main). The
-  fallback for a part the balance did not name; a weight conditions the
-  rhythm, bass and echo habits.
+  *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
+
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
   count when the balance table is missing.
+  *`parts`: shape (part, band); drawn in compose; conditions voices · `voices`: shape (part, band); drawn in compose.*
+
 - **registers** — the register a part plays in (midi low–high; a layered
   part's line voice's, not the span of all its voices: FFVI's layered
   accompaniments span 16 semitones merged and 12 as a line, and the merged
@@ -281,20 +192,30 @@ said otherwise. Counting code: `translate/rhythm.py` and
   is written in the range the `ranges` word drew for that sample
   (`whole.bound_of`). The `balance` table's registers are counted the
   same way.
+  *`registers`: shape (part); drawn in _plan_once.*
+
 - **sounds** — the share of its gap a part's note sounds. Drawn once a part;
   the writers' note lengths.
+  *`sounds`: shape (part); drawn in _plan_once.*
+
 - **habits** — a part's density and repetition habit (sparse / medium /
   dense × repeating / mixed / varied), by the tempo band and the part's
   weight. Drawn once a part; conditions the figure tables (`rhythm`,
   `drums`) so a dense part draws dense bars.
+  *`habits`: shape (part, tempo, weight); drawn in _plan_once, compose, game_habits, habit_near, melody_models, write_melody, write_upper; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
+
 - **bass_habits**, **drum_habits**, **drum_group_habits** — the bass's
   habit (density, tones, octaves); the kit's density habit; each drum
   group's own habit given the kit's. Drawn once; condition `bass`, `drums`
   and the group figures.
+  *`bass_habits`: shape (part, tempo, weight); drawn in _plan_once, write, write_bass; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_habits`: shape (part); drawn in _plan_once; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_group_habits`: shape (part, habit); drawn in _plan_once; conditions bass, cell_handoffs, changes, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
+
 - **voicing_habits**, **motions** — an upper part's richness (thin, full,
   rich) and how it moves through its tones (block, mixed, arpeggiated).
   Drawn once a part; condition `voicings`, and the motion walks the voices
   along the stack a step a strike.
+  *`voicing_habits`: shape (part); drawn in _plan_once, write_upper; conditions voicings, widths · `motions`: shape (part); drawn in _plan_once, write_upper.*
+
 - **layers** — what each voice of a part beside its line does, by its rank
   (the busiest first): doubling at an interval, alternating, or apart (how
   far off, how dense). Drawn once a voice for a part with two voices or
@@ -306,8 +227,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   stack: FFVI's accompaniment voices strike together 1.2 to 1.5 to an
   onset, and a stack of voices all striking at every onset had been three
   to four notes loud where the tune has one (Song Check 11's Whole 01).
-- **doubles** — what a song's double voices double and how. Counted; the
-  plan's second voices are drawn from `layers` instead.
+  *`layers`: shape (part, rank); drawn in _plan_once, layers_of; conditions second_figures, voice_intervals, voice_moves.*
+
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,
   **chord_tones**, **repeat_rates** — the tune's habits: held or detached,
   how stepwise, how often a note repeats, how much a bar echoes earlier
@@ -317,6 +238,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the two rates are held by running-share controllers while the tune is
   written (a draw is weighted toward the chord, or the repeated note, only
   while the tune is under its rate).
+  *`articulation`: shape (part); drawn in _plan_once, melody_models, write_melody · `step_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `repeat_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `echo_habits`: shape (part, tempo, weight); drawn in _plan_once, melody_models, write_melody · `chord_tones`: shape (part); drawn in _plan_once, write · `repeat_rates`: shape (part); drawn in _plan_once.*
+
 - **tune_grain** — the tune's grain, since round 66: the share of its
   onsets off the beat as a class (`rhythm.GRAINS`: on-beat under 0.25,
   eighths to 0.5, fine over), by the part (melody, counter) and its habit's
@@ -331,33 +254,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   first draws, and the theme's echoes multiply them. The tier alone
   conditions the draw: under the whole habit it backed off to the part and
   gave a dense tune "on-beat", which no dense tune of FFVI is.
-- **ranges** — the register a sample is played in, by the sample. Drawn at
-  rendering: a part's sample is the one of its pool whose game-played range
-  covers the part's register best, the part's top weighing most, and one
-  of the pack's other tonal samples when the pool reaches nowhere near the
-  top; never a random one (`whole.best_sample`). FFVI plays a sample more
-  than an octave above its recording in 0 to 2 % of notes; the written
-  songs had in 8 to 10 %, the shrillness the owner heard: the old fit had
-  asked only that the register's centre lie near the range, and by the
-  pack's prefixed names it had found no range at all. Since round 34 the sample comes before the
-  notes: `whole.samples_for` runs before the writing, fitted for speed to
-  the part's drawn fastest bar (`part_speeds`), and the range the word
-  draws for the chosen sample is the register the voice is written in
-  (`plan.bounds`, `whole.bound_of`: the overlap with the planned register,
-  a sliver widened to two of the register word's bins, the sample's range
-  alone where the two miss, the planned register where the word knows
-  nothing of the sample). The melody, the chord parts and their voices
-  beside the line, the counter, the bass and its second voice all take
-  that bound, so every voice plays where the game plays its sample by
-  construction. Retired with it: the span a voice beside a line wrote in
-  (the line's register widened by two octaves), the second bass voice's
-  span, the bass line's floor plus REACH as its ceiling, and round 32a's
-  fold to the sample's widest band (which had covered the beside-line
-  voices only: the bass line still wrote 24 % of its notes past its
-  sample's widest band, the melody 2 %; Whole 02's counter at 84 on a
-  sample one song plays to 88 and eleven to 80 or under was its blip).
-  The edge the owner kept in round 32a stays in kind: a draw past the
-  bound folds by octaves into it (`writer.in_register`).
+  *`tune_grain`: shape (part, habit); drawn in _plan_once.*
+
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
   onsets or more fall on thirds, sixths or twelfths of a beat: 6/8 read on
   a 4/4 grid, a shuffle). Drawn once a song; every figure table (`rhythm`,
@@ -365,11 +263,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   parts draw bars of one feel. FFVI's bass bars on triplet positions, 18 %
   of them, came only from its compound and shuffle songs; drawn into
   straight songs unconditioned they stumbled against straight drums.
-- **layer_sounds** — for a layered part (two voices or more), the share of
-  its gap a note sounds, for the line and for the second voice apart. Drawn
-  once a part; the line and the second line take their own lengths (FFVI's
-  two-voice bass is a sustained line under a staccato voice; the part's one
-  share had given both the same).
+  *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, rhythm, second_figures.*
+
 - **layer_samples** — the samples a layered part's line and second voice
   play, as a pair of the pack's sample names, for every part the plan
   gives layers (the chord parts, the counter-line, the tune, the bass).
@@ -386,62 +281,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   Mad's low second-bass sample an octave and a half above its range, and
   a counter-line with no pairs of its own had drawn an accompaniment's
   (round 24).
-- **voice_intervals** — a voice beside the line (apart or alternating), in
-  the chord parts and, since round 26, the bass, and since round 29 the
-  counter-line beside the tune (part counter; its "relation" the sample
-  relation `counter_samples` draws, same or other, which splits FFVI's
-  intervals: on the tune's sample a third off in 36 % of shared strikes,
-  on another an octave or a unison in 37 %), at each onset it strikes
-  WITH the line: its interval from the line's note in
-  scale steps (7 an octave, 2 a third, signed), by the part, the relation
-  and its interval at the previous such onset (the chain). FFVI's voice
-  beside an arpeggiated line sits a third below most, an octave off in
-  13 % of these onsets, on the line's own pitch in 5 %, and keeps its
-  interval 37 % of the time; the writing had taken a tone up the line's
-  voicing, never at the octave, holding its interval 54 % (round 23).
-  Held out, the chain is worth 0.7 bits a unit; the layer word, the line
-  note's chord role and the line's own move add nothing to it. The
-  interval is counted between the two notes' scale tones (a note off the
-  key's scale: the tone below it) where the line's note is on the scale,
-  and since round 66 in semitones from the note itself (`s-4`) where it
-  is off it (the value `line`: scale or altered), which the writer puts
-  back exactly (`writer.interval_pitch`): the counted steps alone had gone
-  back on the scale, so a unison with the tune's leading tone came out a
-  semitone under it. FFVI's tune is off its key's scale at 0.23 of the
-  counter's onsets with it; the written counter's intervals against such
-  a note were "other" (a second, a tritone, a seventh) in 0.54 where
-  FFVI's are in 0.15, and 0.12 against a scale note, FFVI's 0.12. A voice
-  note off the scale against a scale note is kept as its scale tone: a
-  mark for it had put alterations against notes they never follow (the
-  written "other" against scale notes rose to 0.22). The product with
-  `voice_moves` now weighs the move the entry's note would make from the
-  voice's own last note, as the word counts it (it had taken the move from
-  the voice's last note with the line).
-- **voice_moves** — the same voice at every onset (the counter-line beside
-  the tune too, since round 29): its move from its own
-  previous note in scale steps, by the part, the relation and the place
-  (with the line, or alone where the line is silent). FFVI's voice is a
-  melody of its own: with the line it repeats its note 37 % of the time
-  and moves a step 21 %, two 17 %, five or more 11 %; alone it repeats
-  29 % and steps 37 %. Held out, the move is surer than the interval (3.4
-  against 3.9 bits a unit with the line, 3.3 against 4.5 alone), and the
-  two words' product is surer than either (3.4 bits). So `writer.upper`
-  draws the note both words agree on: with the line, each candidate
-  interval weighs its own probability under voice_intervals times the
-  probability, under voice_moves, of the move it implies from the voice's
-  last note (the line's own move between the two onsets known); alone,
-  the move alone. The second bass voice takes the same two words
-  (`writer.beside_pitch`, over the figure the second_figures word gave
-  it): FFVI's slap plays the sustained line's pitch class at 78 % of their
-  shared onsets, a second bass drawn on its own chord roles had at 31 %
-  (round 26). Never an interval or a move the game never made; a
-  pitch another voice of the part holds at that onset is drawn again,
-  and the onset skipped when every try lands on one. The voice sits in
-  the span FFVI's voices beside a line sit in (the line's register widened
-  by the layer offset's cap), not folded into its own offset register,
-  which had turned a drawn third below into a sixth above. A voice placed
-  against the line alone, without its move, had leapt five steps or more
-  at 43 % of its onsets, FFVI 11 %; with the product 3 %.
+  *`layer_samples`: shape (part); drawn in pair_for.*
+
 - **gap_sounds** — the share of its gap a note sounds, by the part, the
   voice (only; line or second where the part has two) and the gap's
   length to the voice's next onset (under a beat, one to two, two to four,
@@ -464,6 +305,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   and played slow nearly all of it; one share by the gap alone had put
   Whole 02's fast arpeggio on that pad between the two, 90 ms notes at
   0.7 of the gap, a staccato pad neither held nor tremolo.
+  *`gap_sounds`: shape (part, voice, speed, gap); drawn in _plan_once, _plan_sounds.*
+
 - **bass_locks** — the share of the kit's accents (positions where two
   drum pieces strike together, `rhythm.kit_accents`) that carry a bass
   note, in tenths, by the part. Drawn once a song; the bass writer's lock
@@ -485,6 +328,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   0.58 of bars, none in 0.16), and the bass keeps its density from bar to
   bar (0.59 of FFVI's bar pairs within one strike under the walking habit,
   0.18 jumping four or more); neither is counted yet.
+  *`bass_locks`: shape (part); drawn in _plan_once.*
+
 - **levels** — a part's level as a share of the song's loudest part's, in
   tenths ("1.0" the loudest part), by the part; from the readings' own note
   levels. Drawn once a song for every part; the loudest plays at
@@ -501,6 +346,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   1.4 times the accompaniment and the pads at 0.6 of it, a lead over a
   backing (round 25). Drawn a part at a time the shares were independent
   across the band, which FFVI's are not (the `balance` entry).
+  *`levels`: shape (part); drawn in _plan_once; conditions counter_pairs, counter_shares.*
+
 - **layer_levels** — a layered part's second voice's (the busiest beside
   the line) level against its line voice's, in tenths, capped at 1.5
   (`rhythm.LAYER_LEVEL_CAP`), by the part. Drawn once a song for every
@@ -516,6 +363,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   cap, Relm's accompaniment at 3.4); drawn apart from the line's level it
   had stacked past the tune where FFVI's loud second voices sit on quiet
   lines (the `balance` entry).
+  *`layer_levels`: shape (part); drawn in _plan_once.*
+
 - **counter_shares** — the counter-line's level as a share of the song's
   loudest part's, in tenths (the `levels` unit), by the part and the band
   the tune's own share falls in (`rhythm.TUNE_SHARES`: under 0.7, 0.7 to
@@ -554,6 +403,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   at the tune's level (FFVI 24 of 52, A 0.46 of plans, this word 0.23),
   and the counter over the tune at the median is 0.87 against FFVI's 1.00
   (round 31).
+  *`counter_shares`: shape (part, tune); drawn in _plan_counter.*
+
 - **counter_samples** — whether a song's counter-line plays the tune's
   sample (`same`: the sample most of its notes are on is the tune's) or
   another (`other`), one unit a song with both parts, by the part. Drawn
@@ -571,15 +422,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   token's seventh field where the token's song has a counter (every FFVI
   token with one): the kind is one song's with the level
   (`extras.counter.sample_from`: `balance` or `counter_samples`).
-- **counter_figures (the counter's weight)** — since round 47 (2026-10-28)
-  the mask is counted and drawn under the counter's weight in the band
-  (the balance token's) before the song's feel and tempo band, and its
-  draw never backs off below the tune's onset count with the weight in
-  front (`COUNTER_MASK_FLOOR`). Why: FFVI's minor counter plays 0.74 of
-  the tune's notes a bar, its half one 0.91, its main one 1.45 (3.5, 8.6
-  and 16 notes a played bar), and the mask drawn without the weight had
-  every written counter at about six notes a bar whatever its label
-  (minor 6.2, half 6.4, main 5.6); after, 4.7, 7.1 and 6.2.
+  *`counter_samples`: shape (part); drawn in _plan_counter; conditions voice_intervals, voice_moves.*
+
 - **counter_pairs** — the counter-line's sample where it plays another
   than the tune's, as the pack's sample id, by the part and the tune's
   sample id; one unit a song whose `counter_samples` kind is `other`
@@ -603,6 +447,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   sfd6accf98a. A first cut drew once and refused at the first misfit (a
   sample the pack lacks, a drawn range short of a wide written register)
   and left eight songs of ten to the rule, Whole 28 among them (round 30).
+  *`counter_pairs`: shape (part, tune); drawn in counter_pair_for.*
+
 - **section_levels** — a part's median note level in a section over its
   median level in the whole song, in tenths between 0.3 and 2.0 (`1.0`:
   its usual level; `0.5`: half of it, an intro's bass; `1.5`: a swell),
@@ -621,6 +467,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   (the accompaniment over in 0.15 of middle sections); the written parts
   had played one level all song. After, over seeds 1-45, 40 plans move a
   part in some section, with the parts' sections at 1.0 in 0.77 to 0.86.
+  *`section_levels`: shape (part, form); drawn in _plan_once, plan_section_levels.*
+
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
   sounding bar k bars after the section's start), `leaves:k` (its last k
@@ -644,19 +492,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   at a boundary (exits 12 and 6). FFVI by part: the melody plays its
   section whole 0.81 of the time, the counter 0.86, the bass 0.89, the
   accompaniment 0.90; the rest enter a bar or two in, or leave a bar early.
-- **climax** — which of a song's tune phrases holds the tune's highest note,
-  by its place among them (opening, early, middle, late, closing). FFVI's
-  tune peaks at 0.45 of the song at the median; the written tunes had
-  peaked at 0.24. The melody writer draws it once and gives that phrase the
-  song's peak as its ceiling.
-- **arc** — how far a tune phrase's highest note sits under the song's peak
-  (0, 1-2, 3-5, 6-9, 10+ semitones), by the phrase's place. Drawn a phrase:
-  the phrase's ceiling in the arc.
-- **summit** — how far the tune's highest note sits above the tune
-  register's top (the 90th percentile, the registers table's), in
-  semitones (0, 1-2, 3-5, 6+). Drawn once a song: the climax may rise above
-  the register as FFVI's does (its tunes span 22 semitones; the written
-  ones had spanned 16).
+  *`part_entries`: shape (part, habit, form, length); drawn in _plan_once, plan_texture.*
+
 - **sample_lengths** — the shortest note a song plays a sample at, as a
   class of its tenth-percentile note length in ms (40, 60, 80, 120, 160,
   240, 400, long), by the sample. Drawn once a song for each sample the
@@ -671,6 +508,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   slow song's 120 ms for Whole 02's string pad at sixteenths and raised
   the notes round 35 had shortened to 50 ms back past where they were;
   FFVI's fast uses of that pad have 40 to 70 ms notes.
+  *`sample_lengths`: shape (part, speed); drawn in sample_floor.*
+
 - **sample_speeds** — the fastest bars a song plays a sample in, as a class
   of the ninetieth-percentile bar rate in notes a second (2, 3, 4, 6, 8,
   12, 24, faster), by the sample. Read in the sample choice for a part
@@ -680,6 +519,7 @@ said otherwise. Counting code: `translate/rhythm.py` and
   fastest bars, and where none does the excess over the game's fastest on
   the sample weighs against the range's fit. FFVI keeps its slow-attack
   pad under six notes a second; a written part had it at eight.
+  *`sample_speeds`: shape (part); drawn in sample_speed.*
 
 - **part_speeds** — a part's fastest bars, as a class of the
   ninetieth-percentile bar rate of its line in notes a second (the
@@ -690,6 +530,7 @@ said otherwise. Counting code: `translate/rhythm.py` and
   The fit had read the speed off the written notes, so the sample was
   chosen after the writing and a voice's register could not come from
   the sample it plays.
+  *`part_speeds`: shape (part, habit); drawn in _plan_speeds; conditions gap_sounds, part_samples, sample_lengths.*
 
 - **cell_handoffs** — a tune's half-bar cell taken up by another part in a
   later bar: the first such part and how many bars on ("counter 2",
@@ -706,39 +547,25 @@ said otherwise. Counting code: `translate/rhythm.py` and
   tune's half-bar cells to the counter, the accompaniment or the bass in
   another bar (0.51; all songs 0.34); the written songs had 0.05, each
   part faithful to its own word and none to the theme.
-- **half_recall (held halves)** — since round 47 (2026-10-28) the urn runs
-  only on a half the drawn rhythm gives HALF_CELL_NOTES notes or more,
-  as the word counts them; a half with fewer stays as drawn. Why: run on
-  every half, it had replaced the tune's held halves with recalled two-note
-  ones, and the written medium tune had 0.11 of its bars at one or two
-  notes against FFVI's 0.27, a note a bar denser at every habit tier
-  (sparse 2.7 against 2.0, medium 5.1 against 4.1, dense 8.2 against
-  7.0); after, 2.0, 4.9 and 6.9, the medium tune's one-and-two-note bars
-  0.17.
-- **half_recall** — what a tune's half-bar cell is to the tune so far
-  (same: the half before's cell again; earlier: one played before; new),
-  by the part and the song's echo habit: the tune writer's urn at the
-  half bar (`writer.new_cell_halves`, round 38). A new bar is drawn a half
-  at a time: a recalled half comes back re-rooted on the bar's chord in
-  the register with its moves as scale steps, a new half takes the drawn
-  rhythm's onsets with new moves. FFVI's tune reuses half-bar cells more
-  than bar cells (0.50 of halves heard earlier, themed 0.63; bars 0.32 and
-  0.52): its cells are moved and re-intervalled inside the bar where a
-  writer whose cell was the bar drew a whole new bar (0.39).
+  *`cell_handoffs`: shape (part, habit, place); drawn in hand_off_cells.*
 
-## The form
- The draw is floored at the part and its tier: a dense
-  accompaniment had drawn 2 notes a second from the coarser level's
-  mass, a value FFVI's dense accompaniments never have (round 35).
 - **letters** — a song's form as its parts' letters in order (`A B A B C`),
   drawn whole. The form's shape: which parts repeat which.
+  *`letters`: shape (part); drawn in _plan_once, carry_theme, plan_form, write; conditions part_entries, part_textures, phrase_letters, section_levels.*
+
 - **form** — a part of the form as new, again or back, by its index. The
   fallback chain when no `letters` table exists.
+  *`form`: shape (part, meter, index); drawn in plan_form; conditions part_entries, part_textures, phrase_letters, section_levels.*
+
 - **lengths** — a part's length in bars, by the meter and the song's length
   habit. Drawn a part; a repeated part is as long as the part it repeats.
+  *`lengths`: shape (part, meter, habit); drawn in plan_form; conditions cadences, part_entries, periods.*
+
 - **loops** — the chord the loop returns to. Where the loop starts (after an
   intro); the render plays the loop's first bars again at the end of a
   listening page's song.
+  *`loops`: shape (part); drawn in plan_chords.*
+
 - **part_textures** — the texture a part of the form keeps (which parts
   sound: `all`, `no drums melody`), by the kit's density tier (round 59;
   NO_TIER where the song has no drums), its place in the form and the
@@ -750,40 +577,20 @@ said otherwise. Counting code: `translate/rhythm.py` and
   sat out one in ten. After round 59 the written kits sound in 0.94 of
   the bars (dense; FFVI 0.97), 0.75 (medium; 0.83) and 0.64 (sparse;
   0.69).
-- **texture**, **presence** — which parts sound in a bar after the bar
-  before's; a part playing or resting in a bar. Counted; the whole-song
-  writer uses `part_textures` (a part keeps its texture) instead.
-
-## The harmony
+  *`part_textures`: shape (part, habit, form, previous); drawn in plan_texture.*
 
 - **chords** — a bar's chord as a numeral in the key, after the bar
   before's. Drawn a bar as a chain; a repeated part keeps its chords; a
   theme return brings the theme's chords back when `return_band` says so.
-- **changes**, **cadences** — where in the bar the chord changes; how a
-  part's progression ends. Counted, not yet drawn (the written chords
-  change on the bar line).
+  *`chords`: shape (part, mode, previous); drawn in plan_chords.*
 
-## The riff: a backing part's period
-
-- **periods** — a backing part's (drums, bass, accompaniment, harmony,
-  arp) period inside a part of the form: the lag in bars at which its bars
-  repeat (1, 2, 4, 8; the bass by its figure, the drums by their pieces,
-  an upper part by its pattern, so a riff that moves with the chord keeps
-  its key) or none, by the part of the form's length and the tempo band.
-  Drawn once a backing part for each new part of the form; a repeated part
-  of the form replays anyway. The riff under the tune, which the parts'
-  mixtures (a bar the same as the one before, an earlier one, new) never
-  held at a fixed lag: a third of FFVI's bass and accompaniment parts and
-  two fifths of its drum parts have one, and the share is much the same
-  across the 39 games read.
 - **period_holds** — inside a period, whether a bar plays the bar a period
   before again (held) or varies (a fill, a turnaround), by the part and
   the period. Drawn a bar inside a period; the writers play the bar a lag
   before again where it is held (the figure, re-realized on the bar's
   chord; an upper part takes its source bar's voicing too on the same
   chord) and draw the bar fresh where it varies.
-
-## The drums
+  *`period_holds`: shape (part, period); drawn in _plan_once.*
 
 - **kit_pieces** — (since round 63 the balance token's kit field gives
   the pieces where it has one; the word stands as the fallback) which
@@ -795,34 +602,75 @@ said otherwise. Counting code: `translate/rhythm.py` and
   songs hold seven kits, and the table's smoothing had handed a medium
   song a dense kit); the writer's kit is these pieces, a hit on any other
   dropped.
-- **drums** — the kit's bar as one figure, every piece. Drawn a bar as a
-  mixture under the kit's pieces (kit_pieces) and then its habit and feel:
-  the kit repeats and varies as a kit does (the groups drawn apart had
-  changed every bar), and a draw that backs off backs off to the same
-  kit's bars (round 58: with the habit and feel before the kit, a kit the
-  tier had not been seen with backed off to every kit's bars, none on its
-  pieces, and the played bar was silent). Where no drawn bar fits the kit,
-  the bar is any the table knows on its pieces (`writer.last_resort`): a
-  bar the plan has the kit in is never silent. Until round 58 the drum
-  group habits the plan draws (the hat's, the cymbals', the rest's) had
-  capped each piece's hits a bar at its tier's top (`writer.group_caps`,
-  against "sparse" cymbals riding in sixteenths); the caps chopped the
-  kit's own bars (a dense kit at 7 hits a bar against FFVI's 13.7) and are
-  retired: the kit's pieces say which sounds it has, the kit's bars say
-  how they play.
-- **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
-  toms' bar; the hat's; the cymbals'; the other sounds'. The group figures,
-  drawn by the slice writer (`tools/slice1.py`); the whole-song writer
-  draws the kit as one.
+  *`kit_pieces`: shape (part, habit); drawn in _plan_once; conditions drums.*
 
-## The bass
+- **phrase_letters** — a part's phrases as letters: the theme head again
+  (`T`), an earlier head again (`r`), or new (`n`), by how many phrases the
+  part has and its place in the form. Drawn a part of the form; the first
+  phrase the tune plays is the song's theme. With the *carry a theme*
+  switch the letters are drawn again until the theme comes back.
+  *`phrase_letters`: shape (part, phrases, form); drawn in _plan_once.*
+
+- **return_band** — which of the chords, the bass and the accompaniment come
+  back with the theme. Drawn a return: the theme's chords are copied under
+  the return and the bass and accompaniment play their theme bars again
+  (`song.copies`). With the *band comes back* switch a return with nothing
+  behind it is drawn again.
+  *`return_band`: shape (part); drawn in _plan_once.*
+
+- **sample_ambitus** — the whole range a song played a sample over, lowest
+  note to highest, by the sample (round 43, 2026-10-28). A tune's bound
+  (the melody's and the counter's, `plan.bounds`) is the widest the game
+  ever took its sample, the lowest low and highest high of the word's
+  outcomes (`whole.ambitus_of`, not one song's draw: cut against the
+  tune's own register, one song's draw had left Whole 38 the overlap of
+  two songs' ranges), cut against the balance token's register for the
+  part, which for the melody is its song's tune ambitus. The `ranges` word
+  (the 10th to 90th percentile band) stays the bound of every other part.
+  Why: bounded by the pad's home band (16 semitones), the written tunes
+  spanned 15 where FFVI's span 21.5 (22 on that pad); after, 19.
+  *`sample_ambitus`: shape (part); drawn in ambitus_of.*
+
+- **tune_doubling** — in a bar of the tune that is not the theme's cell,
+  which other parts play the same cell with it and how far from the tune
+  (`theme_doubling`'s token: `bass:-24 counter:+0`; `none`), by the part
+  (tune) and place (other) (round 44, 2026-10-28). Drawn a tune bar after
+  the parts are written, in `whole.double_theme` beside the theme word:
+  the drawn parts play the tune's bar at the interval in their register.
+  FFVI doubles a non-theme bar in 0.23 of them; the written songs had the
+  theme cell alone doubled (tune onsets doubled at the pitch class 0.22
+  against FFVI's 0.40; after, 0.31).
+  *`tune_doubling`: shape (part, place); drawn in double_theme.*
+
+- **theme_doubling** — where the tune plays its theme cell (its statement,
+  or an echo later), which other parts play the same cell with it and how
+  far from the tune (`counter:+12`, `bass:-24`, `none`), by place. Drawn a
+  theme-cell bar after the parts are written: the drawn parts play the
+  tune's bar at the interval, in their register. FFVI doubles the hook in
+  a third of its theme-cell bars, the bass two octaves down most often.
+  *`theme_doubling`: shape (part, place); drawn in double_theme.*
+
+- **theme_carrier** — the part that carries the theme phrase under a phrase
+  whose tune is not the theme (the bass, the counter, the accompaniment;
+  almost always none). Drawn a phrase: the carrier plays the theme phrase
+  in its register while the tune plays what it drew. Rare in FFVI (one
+  phrase in a hundred), and kept at that rate.
+  *`theme_carrier`: shape (part); drawn in carry_theme.*
+
+## The parts' bars: the figure tables the writers draw from
+
+- **layer_sounds** — for a layered part (two voices or more), the share of
+  its gap a note sounds, for the line and for the second voice apart. Drawn
+  once a part; the line and the second line take their own lengths (FFVI's
+  two-voice bass is a sustained line under a staccato voice; the part's one
+  share had given both the same).
+  *`layer_sounds`: shape (part, voice); drawn in write.*
 
 - **bass** — the bass's bar as a figure: positions with chord-tone marks
   (root, fifth, octave, passing). Drawn a bar as a mixture under the bass
   habit, realized on the bar's chord in the bass's register; a second bass
   line apart (from `layers`) is written the same way in its own register.
-
-## The upper parts (accompaniment, harmony, arp)
+  *`bass`: shape (part, meter, tempo, habit, feel, previous); drawn in fit, write, write_bass.*
 
 - **rhythm** — a part's bar as an onset pattern; for an upper part holding
   two voices or more, its own line's bar (the voice with the most notes),
@@ -833,6 +681,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the line's figures. (Counted merged, a dense bar held two voices'
   onsets, and a line written to it with a second line beside struck 10.3
   times a bar against FFVI's 7.3.)
+  *`rhythm`: shape (part, meter, tempo, habit, feel, previous); drawn in melody_models, write, write_upper.*
+
 - **second_figures** — a voice beside a layered part's line, bar by bar,
   where the part holds two voices or more, by the voices' note share over
   the line (sparse, half, full; round 65, the token's share class for a
@@ -864,15 +714,12 @@ said otherwise. Counting code: `translate/rhythm.py` and
   two of five of its onsets with the line's; its second bass voice is the
   busy staccato one under a sustained line in the same register (the bass
   figure table counts that line).
+  *`second_figures`: shape (part, layer, feel, tempo, onsets, line); drawn in write.*
+
 - **voicings** — which chord tones an upper part holds in a span, by the
   chord's shape and the part's richness. Drawn a span as a mixture; the
   tones are stacked on the voices, lowest first.
-- **widths** — how wide the upper voicing sits. Counted; the stack's spread
-  is set by the register for now.
-- **values** — a melody note held or detached, by its value and the song's
-  articulation habit. Drawn a note; the tune's note lengths.
-
-## The tune (the melody; the counter-line is written beside it, below)
+  *`voicings`: shape (part, shape, habit); drawn in write, write_upper.*
 
 - **moves** — the tune's move note to note (semitones, to an octave), under
   the song's stepwise habit, by where the arriving note falls in its beat
@@ -887,19 +734,8 @@ said otherwise. Counting code: `translate/rhythm.py` and
   a table only while the tune is under its rate (with no weighting at all
   the written tunes landed on the chord 0.48 against FFVI's 0.56; steps
   inside a bar 0.67 against 0.65; with the gate 0.57 and 0.61).
-- **contours**, **contour_sizes**, **peaks** — a four-bar phrase's contour
-  (rising, arch, falling…); how far it goes in semitones by its shape;
-  where it peaks. The contour and its size steer a new phrase's line
-  (`contour_targets`); the peaks are counted, not yet drawn.
-- **relations**, **phrase_shifts** — how a phrase stands to the one before
-  (new, repeated, moved up or down, answered); how far it sits above or
-  below the one before, by that relation. Drawn a phrase: a repeated or
-  moved phrase is the last phrase again, moved; a new phrase sits where the
-  shift says and the line is steered there over its first third (taken as
-  a jump, the phrase-start moves had been a quarter steps against FFVI's
-  half).
-- **endings** — the note a phrase ends on, against the key. Drawn a phrase;
-  the last note is placed on the degree.
+  *`moves`: shape (part, mode, habit, place, tone, previous); drawn in melody_models, write.*
+
 - **melody_recall** — the tune's urn: a bar the same as the one before, an
   earlier one again, or new, by the song's echo habit. Drawn a bar: an
   echoed cell is re-rooted on the bar's chord, its intervals kept whole,
@@ -919,120 +755,11 @@ said otherwise. Counting code: `translate/rhythm.py` and
   last bar keeping its cell as FFVI's identical recalls do (the ending
   moved onto a recall had made 33 of 76 bent recalls). Recalls that come
   back as a cell the tune never played: 0.24 to 0.10 of recalls.
-- **cell_rhythms** — a new cell's rhythm: new to the tune, the bar before's,
-  or an earlier one's. Drawn for a new cell; the rhythm itself then comes
-  from the part's `rhythm` table.
-- **recall_continues** — whether a passage the tune recalls goes on with
-  the bar after its source (`yes`, `no`), by the part and the song's echo
-  habit (round 50, 2026-10-28): FFVI mixed 0.64, repeating 0.91, varied
-  0.30. The melody writer draws it where the bar before was an "earlier"
-  recall and its source has a bar after it (`continues()`); the CONTINUE
-  constant (0.8) is the fallback without the table. Why: the constant was a
-  rule standing where a count belonged (docs/idiom/rules-to-words.md).
-- **pair_recall**, **pair_bar_recall**, **recall_sources** — the tune's
-  memory at the two-bar pair, and where its echoes point (round 40,
-  2026-10-28). `pair_recall`: what each two-bar group of the tune (a
-  phrase's halves) is to the tune so far, the pair before's two cells
-  again (`same`), a pair played earlier (`earlier`) or `new`, by the part
-  and the song's echo habit, counted over the form's own parts (the
-  writer draws there and plays a repeated part again); FFVI's mixed-habit
-  tunes bring a pair back 0.19 of the time in their own parts, repeating
-  ones 0.56. `pair_bar_recall`: the bar urn's shares (`melody_recall`'s
-  kinds) counted over the bars inside NEW pairs only, since the bar urn
-  over every bar includes the bars that come back as pairs and running
-  both would echo twice. `recall_sources`: each echo (a bar whose cell
-  was played before, not the bar before) by where it points: `section`
-  (the same part of the form), `theme` (the tune's first phrase),
-  `elsewhere` (another section); FFVI mixed 0.60 / 0.27 / 0.13, varied
-  0.91 / 0.04 / 0.05. The melody writer (`writer.melody`): in a phrase
-  that is neither the form's repeat, the theme's return nor an earlier
-  phrase again, each pair of bars draws the pair urn first (`Urn` on
-  `pair_recall`; the pair before's cells again, or an earlier pair from
-  the pool the source word names, each bar re-rooted by `again`), and
-  only a new pair runs the bar urn (`pair_bar_recall` where present,
-  else `melody_recall`) and the half-bar urn inside it; an "earlier"
-  draw at the bar or the pair takes its pool from a source drawn by
-  `recall_sources` (a source with nothing in it gives its share to the
-  others). The log: `pairs (pair_recall): same 1, earlier 1, new 10 over
-  12 pairs drawn; echoes point (recall_sources): section 2, elsewhere 1`,
-  and the phrase line's bars read `pair same` / `pair earlier`. Why: the
-  owner heard no hook and no verse. Measured the same way on FFVI's 23
-  themed tunes and the written themed songs (seeds 1-35), the written
-  tune echoed as much as FFVI (0.71 of bars against 0.64) but by the bar:
-  two-bar pairs heard earlier 0.19 against 0.40, whole phrases 0.18
-  against 0.29, and a later section's bars found in an earlier,
-  different section 0.21 against FFVI's 0.00 (B a reshuffle of A). After:
-  pairs 0.28, whole phrases 0.25, sections sharing 0.10, distinct phrase
-  heads 0.56 against FFVI's 0.62 (0.67 before). Open: 0.46 of the
-  written recalls (theme returns, pairs, bars alike) come out with a cell
-  the tune never played, `again` bending the strong beats to the chord,
-  which is why a third of the written echoes are a rhythm with new
-  pitches where FFVI has a tenth; and pairs inside the own parts 0.09
-  against 0.18.
-- **phrase_letters** — a part's phrases as letters: the theme head again
-  (`T`), an earlier head again (`r`), or new (`n`), by how many phrases the
-  part has and its place in the form. Drawn a part of the form; the first
-  phrase the tune plays is the song's theme. With the *carry a theme*
-  switch the letters are drawn again until the theme comes back.
+  *`melody_recall`: shape (part, habit); drawn in melody_models, write, write_melody.*
+
 - **theme_body** — how much of the theme phrase comes back with its head.
   Drawn a return: the theme's head, then that many of its bars, then new.
-- **return_band** — which of the chords, the bass and the accompaniment come
-  back with the theme. Drawn a return: the theme's chords are copied under
-  the return and the bass and accompaniment play their theme bars again
-  (`song.copies`). With the *band comes back* switch a return with nothing
-  behind it is drawn again.
-- **part_samples** — the sample a part's line plays (the melody, bass,
-  accompaniment, harmony, arp; the counter's is `counter_samples` and
-  `counter_pairs`', a second voice's `layer_samples`'), as the pack's id,
-  by the part and the speed class of its fastest bar (round 42,
-  2026-10-28). Drawn once a song before the writing
-  (`whole.part_sample_for`), where the pack holds the sample; the pool
-  rule (`best_sample`, the best range fit) chooses where it does not,
-  logged. Why: the pool rule had put 0.73 of the written tunes on one
-  string pad, whose wide played range wins every fit, where FFVI gives it
-  0.31 of its tunes and spreads the rest over eight instruments and more;
-  after, 0.40, with six instruments in the written forty.
-  Since round 45 (2026-10-28) the draw is made over the samples the pack
-  holds, the word's shares renormalised (`whole.part_sample_for`): a
-  sample the pack lacks had sent the draw to the pool rule in 25 of 45
-  plans (the pack holds 25 samples, 0.86 of the word's mass a part); the
-  pool rule now chooses only where the pack holds none of the word's
-  samples for the part. The better fix is in the pack build: importing
-  the instruments FFVI's parts use (s9e298a0e24, s5d5fe2fd48, sb498c05828
-  among the missing).
-- **sample_ambitus** — the whole range a song played a sample over, lowest
-  note to highest, by the sample (round 43, 2026-10-28). A tune's bound
-  (the melody's and the counter's, `plan.bounds`) is the widest the game
-  ever took its sample, the lowest low and highest high of the word's
-  outcomes (`whole.ambitus_of`, not one song's draw: cut against the
-  tune's own register, one song's draw had left Whole 38 the overlap of
-  two songs' ranges), cut against the balance token's register for the
-  part, which for the melody is its song's tune ambitus. The `ranges` word
-  (the 10th to 90th percentile band) stays the bound of every other part.
-  Why: bounded by the pad's home band (16 semitones), the written tunes
-  spanned 15 where FFVI's span 21.5 (22 on that pad); after, 19.
-- **tune_doubling** — in a bar of the tune that is not the theme's cell,
-  which other parts play the same cell with it and how far from the tune
-  (`theme_doubling`'s token: `bass:-24 counter:+0`; `none`), by the part
-  (tune) and place (other) (round 44, 2026-10-28). Drawn a tune bar after
-  the parts are written, in `whole.double_theme` beside the theme word:
-  the drawn parts play the tune's bar at the interval in their register.
-  FFVI doubles a non-theme bar in 0.23 of them; the written songs had the
-  theme cell alone doubled (tune onsets doubled at the pitch class 0.22
-  against FFVI's 0.40; after, 0.31).
-- **theme_doubling** — where the tune plays its theme cell (its statement,
-  or an echo later), which other parts play the same cell with it and how
-  far from the tune (`counter:+12`, `bass:-24`, `none`), by place. Drawn a
-  theme-cell bar after the parts are written: the drawn parts play the
-  tune's bar at the interval, in their register. FFVI doubles the hook in
-  a third of its theme-cell bars, the bass two octaves down most often.
-- **theme_carrier** — the part that carries the theme phrase under a phrase
-  whose tune is not the theme (the bass, the counter, the accompaniment;
-  almost always none). Drawn a phrase: the carrier plays the theme phrase
-  in its register while the tune plays what it drew. Rare in FFVI (one
-  phrase in a hundred), and kept at that rate.
-
-## The counter-line, beside the tune
+  *`theme_body`: shape (part); drawn in write.*
 
 - **counter_figures** — the counter-line's bar as a mask over the tune's
   bar, counted as `second_figures` counts a voice beside its part's line
@@ -1076,12 +803,350 @@ said otherwise. Counting code: `translate/rhythm.py` and
   apart (its layer word is drawn and logged, the voice not written: no
   word counts a voice beside a counter that follows the tune); the
   articulation, echo and sounds draws stay in the plan as they were.
+  *`counter_figures`: shape (part, weight, feel, tempo, onsets, line); drawn in write.*
 
-## What a written song records
+## The drums
 
-A song's plan (`Plan.to_json`) keeps every once-a-song draw, the form, the
-chords, the textures, the theme and its returns, the switches under
-`options`, and a log line a draw; each written part keeps its figures and
-a log of what it drew and copied (a second line, a doubled theme bar, a
-part played again note for note). The Song Check pages show the plan's
-draws on each card so a strange choice can be told from a bug.
+- **drums** — the kit's bar as one figure, every piece. Drawn a bar as a
+  mixture under the kit's pieces (kit_pieces) and then its habit and feel:
+  the kit repeats and varies as a kit does (the groups drawn apart had
+  changed every bar), and a draw that backs off backs off to the same
+  kit's bars (round 58: with the habit and feel before the kit, a kit the
+  tier had not been seen with backed off to every kit's bars, none on its
+  pieces, and the played bar was silent). Where no drawn bar fits the kit,
+  the bar is any the table knows on its pieces (`writer.last_resort`): a
+  bar the plan has the kit in is never silent. Until round 58 the drum
+  group habits the plan draws (the hat's, the cymbals', the rest's) had
+  capped each piece's hits a bar at its tier's top (`writer.group_caps`,
+  against "sparse" cymbals riding in sixteenths); the caps chopped the
+  kit's own bars (a dense kit at 7 hits a bar against FFVI's 13.7) and are
+  retired: the kit's pieces say which sounds it has, the kit's bars say
+  how they play.
+  *`drums`: shape (part, meter, kit, tempo, habit, feel, previous); drawn in compose, drums, samples_for, write.*
+
+- **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
+  toms' bar; the hat's; the cymbals'; the other sounds'. The group figures,
+  drawn by the slice writer (`tools/slice1.py`); the whole-song writer
+  draws the kit as one.
+  *`drums-KSt`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-h`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-c`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-o`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums.*
+
+## The bass
+
+- **voice_intervals** — a voice beside the line (apart or alternating), in
+  the chord parts and, since round 26, the bass, and since round 29 the
+  counter-line beside the tune (part counter; its "relation" the sample
+  relation `counter_samples` draws, same or other, which splits FFVI's
+  intervals: on the tune's sample a third off in 36 % of shared strikes,
+  on another an octave or a unison in 37 %), at each onset it strikes
+  WITH the line: its interval from the line's note in
+  scale steps (7 an octave, 2 a third, signed), by the part, the relation
+  and its interval at the previous such onset (the chain). FFVI's voice
+  beside an arpeggiated line sits a third below most, an octave off in
+  13 % of these onsets, on the line's own pitch in 5 %, and keeps its
+  interval 37 % of the time; the writing had taken a tone up the line's
+  voicing, never at the octave, holding its interval 54 % (round 23).
+  Held out, the chain is worth 0.7 bits a unit; the layer word, the line
+  note's chord role and the line's own move add nothing to it. The
+  interval is counted between the two notes' scale tones (a note off the
+  key's scale: the tone below it) where the line's note is on the scale,
+  and since round 66 in semitones from the note itself (`s-4`) where it
+  is off it (the value `line`: scale or altered), which the writer puts
+  back exactly (`writer.interval_pitch`): the counted steps alone had gone
+  back on the scale, so a unison with the tune's leading tone came out a
+  semitone under it. FFVI's tune is off its key's scale at 0.23 of the
+  counter's onsets with it; the written counter's intervals against such
+  a note were "other" (a second, a tritone, a seventh) in 0.54 where
+  FFVI's are in 0.15, and 0.12 against a scale note, FFVI's 0.12. A voice
+  note off the scale against a scale note is kept as its scale tone: a
+  mark for it had put alterations against notes they never follow (the
+  written "other" against scale notes rose to 0.22). The product with
+  `voice_moves` now weighs the move the entry's note would make from the
+  voice's own last note, as the word counts it (it had taken the move from
+  the voice's last note with the line).
+  *`voice_intervals`: shape (part, kind, line, previous); drawn in bass, upper, write.*
+
+- **voice_moves** — the same voice at every onset (the counter-line beside
+  the tune too, since round 29): its move from its own
+  previous note in scale steps, by the part, the relation and the place
+  (with the line, or alone where the line is silent). FFVI's voice is a
+  melody of its own: with the line it repeats its note 37 % of the time
+  and moves a step 21 %, two 17 %, five or more 11 %; alone it repeats
+  29 % and steps 37 %. Held out, the move is surer than the interval (3.4
+  against 3.9 bits a unit with the line, 3.3 against 4.5 alone), and the
+  two words' product is surer than either (3.4 bits). So `writer.upper`
+  draws the note both words agree on: with the line, each candidate
+  interval weighs its own probability under voice_intervals times the
+  probability, under voice_moves, of the move it implies from the voice's
+  last note (the line's own move between the two onsets known); alone,
+  the move alone. The second bass voice takes the same two words
+  (`writer.beside_pitch`, over the figure the second_figures word gave
+  it): FFVI's slap plays the sustained line's pitch class at 78 % of their
+  shared onsets, a second bass drawn on its own chord roles had at 31 %
+  (round 26). Never an interval or a move the game never made; a
+  pitch another voice of the part holds at that onset is drawn again,
+  and the onset skipped when every try lands on one. The voice sits in
+  the span FFVI's voices beside a line sit in (the line's register widened
+  by the layer offset's cap), not folded into its own offset register,
+  which had turned a drawn third below into a sixth above. A voice placed
+  against the line alone, without its move, had leapt five steps or more
+  at 43 % of its onsets, FFVI 11 %; with the product 3 %.
+  *`voice_moves`: shape (part, kind, place); drawn in bass, upper, write.*
+
+## The upper parts (accompaniment, harmony, arp)
+
+- **periods** — a backing part's (drums, bass, accompaniment, harmony,
+  arp) period inside a part of the form: the lag in bars at which its bars
+  repeat (1, 2, 4, 8; the bass by its figure, the drums by their pieces,
+  an upper part by its pattern, so a riff that moves with the chord keeps
+  its key) or none, by the part of the form's length and the tempo band.
+  Drawn once a backing part for each new part of the form; a repeated part
+  of the form replays anyway. The riff under the tune, which the parts'
+  mixtures (a bar the same as the one before, an earlier one, new) never
+  held at a fixed lag: a third of FFVI's bass and accompaniment parts and
+  two fifths of its drum parts have one, and the share is much the same
+  across the 39 games read.
+  *`periods`: shape (part, length, tempo); drawn in _free_figures, _plan_once, song_of, upper; conditions period_holds.*
+
+## The tune
+
+- **climax** — which of a song's tune phrases holds the tune's highest note,
+  by its place among them (opening, early, middle, late, closing). FFVI's
+  tune peaks at 0.45 of the song at the median; the written tunes had
+  peaked at 0.24. The melody writer draws it once and gives that phrase the
+  song's peak as its ceiling.
+  *`climax`: shape (part); drawn in melody.*
+
+- **arc** — how far a tune phrase's highest note sits under the song's peak
+  (0, 1-2, 3-5, 6-9, 10+ semitones), by the phrase's place. Drawn a phrase:
+  the phrase's ceiling in the arc.
+  *`arc`: shape (part, place); drawn in melody.*
+
+- **summit** — how far the tune's highest note sits above the tune
+  register's top (the 90th percentile, the registers table's), in
+  semitones (0, 1-2, 3-5, 6+). Drawn once a song: the climax may rise above
+  the register as FFVI's does (its tunes span 22 semitones; the written
+  ones had spanned 16).
+  *`summit`: shape (part); drawn in melody.*
+
+- **half_recall** — what a tune's half-bar cell is to the tune so far
+  (same: the half before's cell again; earlier: one played before; new),
+  by the part and the song's echo habit: the tune writer's urn at the
+  half bar (`writer.new_cell_halves`, round 38). A new bar is drawn a half
+  at a time: a recalled half comes back re-rooted on the bar's chord in
+  the register with its moves as scale steps, a new half takes the drawn
+  rhythm's onsets with new moves. FFVI's tune reuses half-bar cells more
+  than bar cells (0.50 of halves heard earlier, themed 0.63; bars 0.32 and
+  0.52): its cells are moved and re-intervalled inside the bar where a
+  writer whose cell was the bar drew a whole new bar (0.39).
+  *`half_recall`: shape (part, habit); drawn in melody.*
+
+- **values** — a melody note held or detached, by its value and the song's
+  articulation habit. Drawn a note; the tune's note lengths.
+  *`values`: shape (part, value, habit); drawn in counter, melody, melody_models, write.*
+
+- **contours**, **contour_sizes**, **peaks** — a four-bar phrase's contour
+  (rising, arch, falling…); how far it goes in semitones by its shape;
+  where it peaks. The contour and its size steer a new phrase's line
+  (`contour_targets`); the peaks are counted, not yet drawn.
+  *`contours`: shape (part, mode); drawn in melody, melody_models, write; conditions contour_sizes, peaks · `contour_sizes`: shape (part, mode, contour); drawn in melody · `peaks`: shape (part, mode, contour); drawn in no writer (counted for the measures).*
+
+- **relations**, **phrase_shifts** — how a phrase stands to the one before
+  (new, repeated, moved up or down, answered); how far it sits above or
+  below the one before, by that relation. Drawn a phrase: a repeated or
+  moved phrase is the last phrase again, moved; a new phrase sits where the
+  shift says and the line is steered there over its first third (taken as
+  a jump, the phrase-start moves had been a quarter steps against FFVI's
+  half).
+  *`relations`: shape (part, mode, habit); drawn in melody, melody_models, write; conditions phrase_shifts · `phrase_shifts`: shape (part, mode, relation); drawn in melody.*
+
+- **endings** — the note a phrase ends on, against the key. Drawn a phrase;
+  the last note is placed on the degree.
+  *`endings`: shape (part, mode); drawn in melody, melody_models, write.*
+
+- **cell_rhythms** — a new cell's rhythm: new to the tune, the bar before's,
+  or an earlier one's. Drawn for a new cell; the rhythm itself then comes
+  from the part's `rhythm` table.
+  *`cell_rhythms`: shape (part); drawn in melody.*
+
+- **recall_continues** — whether a passage the tune recalls goes on with
+  the bar after its source (`yes`, `no`), by the part and the song's echo
+  habit (round 50, 2026-10-28): FFVI mixed 0.64, repeating 0.91, varied
+  0.30. The melody writer draws it where the bar before was an "earlier"
+  recall and its source has a bar after it (`continues()`); the CONTINUE
+  constant (0.8) is the fallback without the table. Why: the constant was a
+  rule standing where a count belonged (docs/idiom/rules-to-words.md).
+  *`recall_continues`: shape (part, habit); drawn in melody.*
+
+- **pair_recall**, **pair_bar_recall**, **recall_sources** — the tune's
+  memory at the two-bar pair, and where its echoes point (round 40,
+  2026-10-28). `pair_recall`: what each two-bar group of the tune (a
+  phrase's halves) is to the tune so far, the pair before's two cells
+  again (`same`), a pair played earlier (`earlier`) or `new`, by the part
+  and the song's echo habit, counted over the form's own parts (the
+  writer draws there and plays a repeated part again); FFVI's mixed-habit
+  tunes bring a pair back 0.19 of the time in their own parts, repeating
+  ones 0.56. `pair_bar_recall`: the bar urn's shares (`melody_recall`'s
+  kinds) counted over the bars inside NEW pairs only, since the bar urn
+  over every bar includes the bars that come back as pairs and running
+  both would echo twice. `recall_sources`: each echo (a bar whose cell
+  was played before, not the bar before) by where it points: `section`
+  (the same part of the form), `theme` (the tune's first phrase),
+  `elsewhere` (another section); FFVI mixed 0.60 / 0.27 / 0.13, varied
+  0.91 / 0.04 / 0.05. The melody writer (`writer.melody`): in a phrase
+  that is neither the form's repeat, the theme's return nor an earlier
+  phrase again, each pair of bars draws the pair urn first (`Urn` on
+  `pair_recall`; the pair before's cells again, or an earlier pair from
+  the pool the source word names, each bar re-rooted by `again`), and
+  only a new pair runs the bar urn (`pair_bar_recall` where present,
+  else `melody_recall`) and the half-bar urn inside it; an "earlier"
+  draw at the bar or the pair takes its pool from a source drawn by
+  `recall_sources` (a source with nothing in it gives its share to the
+  others). The log: `pairs (pair_recall): same 1, earlier 1, new 10 over
+  12 pairs drawn; echoes point (recall_sources): section 2, elsewhere 1`,
+  and the phrase line's bars read `pair same` / `pair earlier`. Why: the
+  owner heard no hook and no verse. Measured the same way on FFVI's 23
+  themed tunes and the written themed songs (seeds 1-35), the written
+  tune echoed as much as FFVI (0.71 of bars against 0.64) but by the bar:
+  two-bar pairs heard earlier 0.19 against 0.40, whole phrases 0.18
+  against 0.29, and a later section's bars found in an earlier,
+  different section 0.21 against FFVI's 0.00 (B a reshuffle of A). After:
+  pairs 0.28, whole phrases 0.25, sections sharing 0.10, distinct phrase
+  heads 0.56 against FFVI's 0.62 (0.67 before). Open: 0.46 of the
+  written recalls (theme returns, pairs, bars alike) come out with a cell
+  the tune never played, `again` bending the strong beats to the chord,
+  which is why a third of the written echoes are a rhythm with new
+  pitches where FFVI has a tenth; and pairs inside the own parts 0.09
+  against 0.18.
+  *`pair_recall`: shape (part, habit); drawn in melody · `pair_bar_recall`: shape (part, habit); drawn in melody · `recall_sources`: shape (part, habit); drawn in melody.*
+
+## The render
+
+- **ranges** — the register a sample is played in, by the sample. Drawn at
+  rendering: a part's sample is the one of its pool whose game-played range
+  covers the part's register best, the part's top weighing most, and one
+  of the pack's other tonal samples when the pool reaches nowhere near the
+  top; never a random one (`whole.best_sample`). FFVI plays a sample more
+  than an octave above its recording in 0 to 2 % of notes; the written
+  songs had in 8 to 10 %, the shrillness the owner heard: the old fit had
+  asked only that the register's centre lie near the range, and by the
+  pack's prefixed names it had found no range at all. Since round 34 the sample comes before the
+  notes: `whole.samples_for` runs before the writing, fitted for speed to
+  the part's drawn fastest bar (`part_speeds`), and the range the word
+  draws for the chosen sample is the register the voice is written in
+  (`plan.bounds`, `whole.bound_of`: the overlap with the planned register,
+  a sliver widened to two of the register word's bins, the sample's range
+  alone where the two miss, the planned register where the word knows
+  nothing of the sample). The melody, the chord parts and their voices
+  beside the line, the counter, the bass and its second voice all take
+  that bound, so every voice plays where the game plays its sample by
+  construction. Retired with it: the span a voice beside a line wrote in
+  (the line's register widened by two octaves), the second bass voice's
+  span, the bass line's floor plus REACH as its ceiling, and round 32a's
+  fold to the sample's widest band (which had covered the beside-line
+  voices only: the bass line still wrote 24 % of its notes past its
+  sample's widest band, the melody 2 %; Whole 02's counter at 84 on a
+  sample one song plays to 88 and eleven to 80 or under was its blip).
+  The edge the owner kept in round 32a stays in kind: a draw past the
+  bound folds by octaves into it (`writer.in_register`).
+  *`ranges`: shape (part, role); drawn in samples_for.*
+
+- **part_samples** — the sample a part's line plays (the melody, bass,
+  accompaniment, harmony, arp; the counter's is `counter_samples` and
+  `counter_pairs`', a second voice's `layer_samples`'), as the pack's id,
+  by the part and the speed class of its fastest bar (round 42,
+  2026-10-28). Drawn once a song before the writing
+  (`whole.part_sample_for`), where the pack holds the sample; the pool
+  rule (`best_sample`, the best range fit) chooses where it does not,
+  logged. Why: the pool rule had put 0.73 of the written tunes on one
+  string pad, whose wide played range wins every fit, where FFVI gives it
+  0.31 of its tunes and spreads the rest over eight instruments and more;
+  after, 0.40, with six instruments in the written forty.
+  Since round 45 (2026-10-28) the draw is made over the samples the pack
+  holds, the word's shares renormalised (`whole.part_sample_for`): a
+  sample the pack lacks had sent the draw to the pool rule in 25 of 45
+  plans (the pack holds 25 samples, 0.86 of the word's mass a part); the
+  pool rule now chooses only where the pack holds none of the word's
+  samples for the part. The better fix is in the pack build: importing
+  the instruments FFVI's parts use (s9e298a0e24, s5d5fe2fd48, sb498c05828
+  among the missing).
+  *`part_samples`: shape (part, speed); drawn in samples_for.*
+
+## Counted, drawn nowhere: the measures' words
+
+- **weights** — a part's weight in the band (minor, half, main). The
+  fallback for a part the balance did not name; a weight conditions the
+  rhythm, bass and echo habits.
+  *`weights`: shape (part); drawn in no writer (counted for the measures); conditions bass_habits, counter_figures, echo_habits, habits.*
+
+- **doubles** — what a song's double voices double and how. Counted; the
+  plan's second voices are drawn from `layers` instead.
+  *`doubles`: shape (part); drawn in no writer (counted for the measures).*
+
+- **texture**, **presence** — which parts sound in a bar after the bar
+  before's; a part playing or resting in a bar. Counted; the whole-song
+  writer uses `part_textures` (a part keeps its texture) instead.
+  *`texture`: shape (part, meter, previous); drawn in no writer (counted for the measures) · `presence`: shape (part, meter, previous); drawn in no writer (counted for the measures).*
+
+- **changes**, **cadences** — where in the bar the chord changes; how a
+  part's progression ends. Counted, not yet drawn (the written chords
+  change on the bar line).
+  *`changes`: shape (part, meter, habit); drawn in no writer (counted for the measures) · `cadences`: shape (part, mode, length); drawn in no writer (counted for the measures).*
+
+- **widths** — how wide the upper voicing sits. Counted; the stack's spread
+  is set by the register for now.
+  *`widths`: shape (part, shape, previous); drawn in no writer (counted for the measures).*
+
+## Measures and passes, not tables
+
+- **lead** — which voice carries the tune, decided by salience (round 64,
+  `translate/lead.py`): the voice the reader labelled melody keeps the
+  lead where it is heard, within 9 dB of the loudest tonal voice as each
+  renders alone; else the most varied heard voice becomes the melody and
+  the old one a counter-line (an accompaniment where a counter exists).
+  Why: the reader picks the melody by variety with a quarter of the
+  loudest raw volume as its only loudness test, and in one FFVI song of
+  seven that voice sits 9 dB or more under the whole; put to the owner's
+  ear voice by voice, every such song had its tune elsewhere, and every
+  heard label was right. Every word counted on the melody (the tune's
+  cells, pairs, hooks, levels, sample, habit) counts on the lead.
+
+- **loudness** (the balance token's `loud=-24`) and **mix_level** — a
+  song's rendered loudness: its RMS in dBFS over its first minute through
+  the player (the readings' feature render/loudness_dbfs, measured from
+  the converted songs; FFVI's 81: median -25.6, the middle sixty between
+  -26.3 and -22.0, none above -20.5), to 1 dB, carried on the balance
+  token so a song's levels, its top and its loudness are one song's (round
+  59, 2026-10-29). The written song's master volume holds its own to it
+  (`whole.master_of`): the song's notes as scored give a mix estimate
+  (`rhythm.mix_level`: each note's perceived level squared, summed over
+  the quarter-beat frames it sounds in, at most two beats of it, the mean
+  over the frames anything sounds in, in dB), a written song renders at
+  that estimate plus RENDER_BRIDGE (-21.7 dB, measured over 20 written
+  songs, quartiles -23.0 and -19.8), and the SNES chip's master volume
+  (the IT global volume, a song's from its first bar: FFVI's sit at 32 to
+  61 of 128) is set so the two meet; a song under its target with the
+  master already full brings its notes up instead. Why: the written songs'
+  rendered loudness spread 2.7 times FFVI's (IQR 6.7 dB against 2.5 over
+  14 songs) and four of fourteen rendered louder than any FFVI song (up to
+  -15.6 dBFS), because the level draws multiply independent things FFVI's
+  composer held together: the top level, how many parts share it, the
+  sections' levels, the sample's loudness and how thick the texture is.
+  The rendered loudness is what FFVI holds steady, so it is the unit; the
+  estimate alone would not do (it meets FFVI's renders with a correlation
+  of 0.47, so a written song held to its token song's estimate took on the
+  estimate's spread, 6 dB). The TOP_SCALE bridge of round 52 (1.7) is
+  retired to 1.0, its work being the master's. With it the writer's
+  loudness factor reads the module sample's own loudness
+  (`whole.sample_rms`), not the pack table's: the instrument builder
+  scales every sustaining voice's loop to one loudness
+  (`samples.LOUDNESS_TARGET`), so the table's numbers (the game's samples
+  as the game plays them, right for counting the readings) are not what
+  the module plays, and round 56 had boosted "quiet" samples the module
+  had brought up already, to full; with the module's own numbers no note
+  is capped in 20 songs. Since round 65 a note's loudness is what it hears
+  of its sample, its strike for STRIKE_SECONDS then its body
+  (`rhythm.heard_rms`), on both sides: the readings scale a note's level
+  by it for the note's own length and the writer divides by the module
+  sample's (a struck accompaniment sample's attack 3.4 dB over its body
+  and a slow lead's 3.1 under had put a backing over the tune the counts
+  said was on top).

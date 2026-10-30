@@ -96,8 +96,17 @@ def main(argv=None) -> int:
         rows.append({"name": name, "module": module, "builder": builder, "shape": list(shape), "what": what,
                      "stage": stage_of(sites.get(name, set())), "drawn_by": sorted({fn for _, fn in sites.get(name, ())}), "feeds": feeds})
     if a.check:
-        text = open(a.check, encoding="utf-8").read()
-        named = set(re.findall(r"\*\*([a-z_]+(?:-[A-Za-z]+)?)\*\*", text))
+        named, section, lead = set(), "", None
+        for line in open(a.check, encoding="utf-8"):     # the entries' own names: the bold words opening a bullet (up to its dash), outside the Terms
+            if line.startswith("## "):
+                section, lead = line[3:].strip(), None
+            elif line.startswith("- **") and section != "Terms":
+                lead = ""
+            if lead is not None:
+                lead += " " + line.strip()
+                if " — " in lead or not line.strip():
+                    named |= set(re.findall(r"\*\*([a-z_]+(?:-[A-Za-z]+)?)\*\*", lead.split(" — ")[0]))
+                    lead = None
         kept = set(packtables.KEPT)
         missing, extra = sorted(kept - named), sorted(named - kept - CONCEPTS)
         if missing:
