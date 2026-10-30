@@ -1130,7 +1130,6 @@ def feel_units(songs) -> list:
 BACKING = (R.DRUMS, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts under the tune: a riff's parts
 PERIODS = (1, 2, 4, 8)                # bars: the lags a backing part's bars are tried at inside a part of the form
 PERIOD_HELD = 0.6                     # the share of a part's bars that must play the bar a lag before for the lag to be its period
-PART_LENGTHS = ((4, "short"), (8, "medium"), (1e9, "long"))   # a part of the form by its bars, for the period's draw
 
 
 def part_length(n: int) -> str:
