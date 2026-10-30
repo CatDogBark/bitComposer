@@ -102,6 +102,22 @@ the warning on a library vocabulary).
   import is a progress bar or an overnight job, and what runs in the
   background.
 
+## Built
+
+- **2.0rc1, piece 1 (2026-10-30).** The shipped vocabulary:
+  `bitcomposer/vocabularies/ffvi.json.gz` (pack4's 95 tables, 365 KB
+  gzipped; `bitcomposer.vocabularies` lists, labels and loads them) and the
+  command line's writer mode: `bitcomposer --vocabulary ffvi [--pack SET]
+  [--carry-theme] [--band-returns] -s SEED` (`bitcomposer/written.py`:
+  the whole-song writer on a built-in SNES sound set, the seed picking the
+  set and the title when not named, the module's message naming the
+  vocabulary, the sounds and the seed). A song writes in under a second on
+  the laptop. Tests: `tests/test_written.py`; the determinism test now
+  writes from the shipped vocabulary. Not yet: the window's GENERATE (the
+  flags exist; a Style choice in the window is the next piece), the
+  library vocabulary, the import pipeline's lead pass, the loader rewrite,
+  the copy check in CI.
+
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
 - **Import time per song.** The readers: 0.6 s a song (five FFVI songs,

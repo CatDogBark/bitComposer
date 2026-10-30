@@ -62,6 +62,7 @@ include = ["bitcomposer*"]
 # The player's window, font and icon are files beside its code.
 [tool.setuptools.package-data]
 "bitcomposer.player" = ["qml/*.qml", "fonts/*.ttf", "fonts/LICENSE.txt", "icons/*.svg"]
+"bitcomposer.vocabularies" = ["*.json.gz"]
 
 [tool.setuptools.dynamic]
 version = { attr = "bitcomposer.__version__" }
