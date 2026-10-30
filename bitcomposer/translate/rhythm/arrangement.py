@@ -583,8 +583,9 @@ def balance_units(songs) -> list:
             continue
         weights = readings_mod.part_weights(s)
         voices = Counter(role for role, _ in s.voice_notes.values())
-        top = max(s.levels.values()) if s.levels else 0.0
-        levels = {role: f"{round(lv / top, 1):.1f}" for role, lv in s.levels.items()} if top > 0 else {}
+        finite = {role: lv for role, lv in s.levels.items() if math.isfinite(lv)}   # never a "nan" field: the plan's draw stands in
+        top = max(finite.values()) if finite else 0.0
+        levels = {role: f"{round(lv / top, 1):.1f}" for role, lv in finite.items()} if top > 0 else {}
         tokens = []
         for role in sorted(s.notes):
             if role not in weights:

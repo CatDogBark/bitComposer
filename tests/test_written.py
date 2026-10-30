@@ -1,6 +1,7 @@
 import hashlib
 import random
 import os
+import struct
 import tempfile
 import unittest
 
@@ -204,3 +205,29 @@ class ImportCountsAVocabularyTests(unittest.TestCase):
                     os.environ.pop("BITCOMPOSER_DATA_DIR", None)
                 else:
                     os.environ["BITCOMPOSER_DATA_DIR"] = old
+
+
+class SustainedVoicesTests(unittest.TestCase):
+    def test_a_written_song_s_sustaining_voices_loop_in_the_module(self):
+        """The render carries each voice's loop into the module: a sustaining voice's sample loops (the preset's sustain
+        loop, the chip's one loop), a one-shot's does not, and the file on disk says the same. Every written render had
+        gone out with no looped sample, the imports' too (2026-10-30)."""
+        out = written.compose_written(seed=68554, pack="bit")
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "song.it")
+            song = convert.render(out["score"], path)
+            by_name = {smp.name: smp for smp in song["samples"]}
+            loops = {}
+            for addr, held in out["score"].pcm_of.items():
+                smp = by_name[f"SNES sample at {addr[0]:04X}"]
+                self.assertEqual(smp.loop, held.loops, smp.name)
+                if held.loops:
+                    self.assertEqual((smp.loop_start, smp.loop_end), (held.loop_start, held.loop_end), smp.name)
+                loops[smp.name] = smp.loop
+            self.assertIn(True, loops.values())      # the tune's voice, the accompaniment's
+            self.assertIn(False, loops.values())     # the kit
+            data = open(path, "rb").read()
+            n_orders, n_ins, n_smp = struct.unpack_from("<HHH", data, 0x20)
+            offsets = struct.unpack_from(f"<{n_smp}I", data, 0xC0 + n_orders + 4 * n_ins)
+            flags = {data[o + 0x14:o + 0x2E].split(b"\0")[0].decode(): bool(data[o + 0x12] & 16) for o in offsets}
+            self.assertEqual(flags, loops)

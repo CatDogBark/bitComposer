@@ -621,3 +621,23 @@ class ReferenceSetTests(unittest.TestCase):
             data = {"phrases": rows}
             json.dump(data, open(out, "w"))
             self.assertEqual(len(reference.Index(reference.load(out)).rows), 2)
+
+
+class BalanceLevelTests(unittest.TestCase):
+    def test_a_kit_s_unread_level_never_reaches_the_token(self):
+        """A drum voice's levels the import could not read are NaN. A median over them was NaN, three FFVI tokens carried
+        a "nan" drums level, and a written song played its kit at full (2026-10-30). The token leaves the field empty,
+        so the plan's levels draw stands in, and the loudest part is the loudest of the levels read."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1],
+                        parts=[(0, 2)], pieces={"k": "kick", "s": "snare", "h": "hat", "x": "none"})
+        s.notes["melody"] = [(0.0, 1.0, 72, "sa"), (1.0, 1.0, 74, "sa"), (2.0, 1.0, 76, "sa"), (3.0, 1.0, 77, "sa"),
+                             (4.0, 2.0, 79, "sa"), (6.0, 2.0, 76, "sa")]
+        s.notes["drums"] = [(0.0, 0.1, float("nan"), "k"), (1.0, 0.1, float("nan"), "s"), (2.0, 0.1, float("nan"), "k"),
+                            (3.0, 0.1, float("nan"), "s"), (4.0, 0.1, float("nan"), "k"), (5.0, 0.1, float("nan"), "s")]
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.voice_levels = {1: 0.5, 2: float("nan")}
+        s.levels = {"melody": 0.5, "drums": float("nan")}
+        token = rhythm.balance_units([s])[0].outcome
+        self.assertNotIn("nan", token)
+        self.assertIn("melody=main::1.0:1:1.0", token)

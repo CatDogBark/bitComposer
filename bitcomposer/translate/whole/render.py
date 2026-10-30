@@ -591,7 +591,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         if name not in instruments:
             idx = len(instruments) + 1
             addr = (0x100 * idx, 0)
-            pcm_of[addr], key_of[addr] = score_mod._Pcm(sample), name
+            pcm_of[addr], key_of[addr] = score_mod._Pcm(sample, sustain=True), name   # a sustaining voice loops (its sustain loop is the chip's)
             instruments[name] = (idx, addr, sample.c5_speed)
         return instruments[name]
     steps_s, wet, feedback = (echo["seconds"], echo["wet"], echo["feedback"]) if echo else (0.0, 0.0, 0.0)

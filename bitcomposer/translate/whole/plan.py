@@ -600,8 +600,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 shares[role] = float(fields[2])
             if len(fields) > 3 and fields[3]:
                 counts[role] = int(fields[3])
-            if len(fields) > 4 and fields[4]:
-                token_levels[role] = float(fields[4])
+            if len(fields) > 4 and fields[4] and math.isfinite(float(fields[4])):   # a "nan" level (tables counted before the
+                token_levels[role] = float(fields[4])                             # readings skipped a kit's unread levels) falls to the levels draw
             if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level; since
                 parts_ = [x.split("@") for x in fields[5].split("/")]   # round 65 with each one's sample and its notes over the line's
                 token_layers[role] = [float(x[0]) for x in parts_]

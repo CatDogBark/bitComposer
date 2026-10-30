@@ -44,11 +44,19 @@ PORTA_STEP = 1 / 16                  # semitones a tick a unit of Gxx slides
 class _Pcm:
     """A preset's PCM as the converter takes a decoded sample (spc.brr.Sample's shape)."""
 
-    def __init__(self, s: itf.ITSample):
+    def __init__(self, s: itf.ITSample, sustain: bool = False):
         self.pcm = array("h")
         self.pcm.frombytes(s.data[:len(s.data) - len(s.data) % 2])
-        self.loop_start = s.loop_start if s.loop else None
-        self.loop_end = s.loop_end if s.loop else None
+        # A preset voice carries its loop as the module's SUSTAIN loop (held while the key is down; a note-off releases
+        # into the tail after it). The SNES chip has one loop and a key-off ends the note, so with `sustain` that loop
+        # is the chip's: the written path asks for it. Read through the plain loop flag alone, every sustaining voice
+        # had gone out as a one-shot, a 48 ms square under the tune, pads that plucked, in every written render since
+        # this bridge, the imports' too (2026-10-30). Classic's songs keep their one-shots as they are (the owner's call).
+        loop = (s.loop_start, s.loop_end) if s.loop else (s.sus_loop_start, s.sus_loop_end) if sustain and getattr(s, "sus_loop", False) else None
+        if loop and (loop[1] or 0) > (loop[0] or 0):
+            self.loop_start, self.loop_end = int(loop[0] or 0), int(loop[1])
+        else:
+            self.loop_start = self.loop_end = None
         self.seamless = True
         self.start, self.loop_addr, self.blocks = 0, 0, 0
 

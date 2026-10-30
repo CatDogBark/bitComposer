@@ -289,9 +289,10 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)
-                    if rows:
-                        song.voice_levels[voice] = statistics.median(r[3] for r in rows)
-                        level_rows.setdefault(role, []).extend(r[3] for r in rows)
+                    finite = [r[3] for r in rows if not math.isnan(r[3])]   # a kit's unread levels (NaN) are notes, not levels: a
+                    if finite:                                                   # median over them was NaN, and three FFVI balance tokens
+                        song.voice_levels[voice] = statistics.median(finite)   # carried "nan" for the drums, which a written song
+                        level_rows.setdefault(role, []).extend(finite)         # played at full (2026-10-30)
                         song.note_levels.setdefault(role, []).extend((r[0], r[3]) for r in rows)
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
