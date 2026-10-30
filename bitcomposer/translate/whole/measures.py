@@ -106,16 +106,23 @@ def measures(song: rhythm.Song) -> dict:
 
 def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game: str = "", title: str | None = None,
             max_bars: int | None = None, loops: int = 2, reference=None, read: bool = True, fade: float = 2.0,
-            min_bars: int | None = None, tail_bars: int = 0, themed: bool = False, band_returns: bool = False) -> dict:
+            min_bars: int | None = None, tail_bars: int = 0, themed: bool = False, band_returns: bool = False,
+            echo="habit") -> dict:
     """One whole song: the plan, the parts written, the score (and {role: first voice}), the song read back and its
-    measures; {"plan", "song", "written", "score", "first", "samples", "echo", "read", "measures"}."""
+    measures; {"plan", "song", "written", "score", "first", "samples", "echo", "read", "measures"}. `echo`: "habit"
+    draws it from the pack's habits (the tools' way, and the default); a dict is used as given; None is a dry song.
+    The caller may hand in a function of the plan too, called once the plan is drawn (the product's policy lives
+    outside this package: bitcomposer.performance)."""
     p = plan_mod.plan(models, seed, game, title, max_bars, min_bars, themed=themed, band_returns=band_returns)
     kit = (pack.get("voices") or {}).get("drums") or {}
     song = plan_mod.song_of(p, kit)
     rng = random.Random(f"whole:{seed}:render")
     samples = render_mod.samples_for(p, pack, own, pack_name, rng, models)   # before the writing: every voice writes where the game plays its sample
     written = plan_mod.write(p, song, models, seed, reference)
-    echo = render_mod.echo_of(pack.get("habits") or {}, p.bpm, rng)
+    if isinstance(echo, str) and echo == "habit":
+        echo = render_mod.echo_of(pack.get("habits") or {}, p.bpm, rng)
+    elif callable(echo):
+        echo = echo(p)
     samples["floors"] = render_mod.floors_for(p, written, samples, models, pack_name, random.Random(f"whole:{seed}:floors"))   # by the written speed
     score, first = render_mod.score_of(p, written, samples, loops=loops, fade=fade, echo=echo, tail_bars=tail_bars, pack_name=pack_name)
     out = {"plan": p, "song": song, "written": written, "score": score, "first": first, "samples": samples, "echo": echo, "read": None, "measures": None}

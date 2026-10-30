@@ -1,19 +1,24 @@
 """A song written from a vocabulary (docs/IDIOM.md, phase 6): the whole-song
 writer of the idiom on a shipped vocabulary's tables and one of the built-in
-sound sets, the way `tools/whole.py` writes for the Song Checks. Classic
-(`composer.py`) stays the generator without a vocabulary."""
+sound sets, the way `tools/whole.py` writes for the Song Checks, under the
+product's performance (`performance.py`: what the player asks for and adds,
+kept out of the writer). Classic (`composer.py`) stays the generator without
+a vocabulary."""
 from __future__ import annotations
 
 import random
 
-from . import names, vocabularies
+from . import names, performance as performance_mod, vocabularies
 from .packs import PACKS
+from .performance import Performance
 
 SOUND_SETS = ("bit", "ffvi", "mana", "evermore", "megamanx")   # the built-in sound sets a written song may play on
 DEFAULT_SOUNDS = "bit"                                  # bitComposer's own (packs/bit.py): what it plays on unless a set or a game is named
-MAX_BARS = 48                                            # as the Song Checks: forms longer are drawn again
-MIN_BARS = 12                                            # and shorter (a game's jingles stay in its tables)
-TAIL_BARS = 4                                            # the loop's first bars once more after the form, fading
+# The form's bounds, the tail and the fade are the performance's now (performance.Performance); these names stay for
+# the bare performance's record: the writer's own constants, as the Song Checks had them.
+MAX_BARS = 48
+MIN_BARS = 12
+TAIL_BARS = 4
 FADE = 3.0
 
 
@@ -37,13 +42,16 @@ def pack_sounds(pack_file) -> tuple[str, set]:
     return name, set(data.get("samples") or {})
 
 
-def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = None, seed: int | None = None, carry_theme: bool = False,
-                    band_returns: bool = False, pack_file=None) -> dict:
+def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = None, seed: int | None = None, carry_theme: bool | None = None,
+                    band_returns: bool | None = None, pack_file=None, performance: Performance | None = None) -> dict:
     """One song from a vocabulary (shipped, the library's, or an imported pack's): {"score", "title", "seed", "sounds",
     "vocabulary", "info", "plan"}; the score renders through the SNES back end (`spc.convert.render`). The sounds: the
     built-in set `pack` names, the imported pack `pack_file` names, else an imported pack's own samples for its own
-    vocabulary, else one of the SNES sets the seed draws. A seed names one song; without one, a seed is drawn."""
+    vocabulary, else one of the SNES sets the seed draws. A seed names one song; without one, a seed is drawn. The
+    `performance` is the player's unless given (Performance.none() is the writer bare); `carry_theme` and
+    `band_returns` override its two switches where not None."""
     seed = random.randrange(1, 1_000_000) if seed is None else int(seed)
+    perf = (performance or Performance.player()).asking(carry_theme, band_returns)
     rng = random.Random(f"written:{seed}")
     own = set()
     if pack_file is None and pack not in SOUND_SETS and vocabularies.pack_name(vocabulary):
@@ -56,10 +64,12 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
     models = vocabularies.load(vocabulary)
     label = vocabularies.label(vocabulary)
     from .translate import harmony, whole
-    out = whole.compose(models, PACKS[sounds], own, sounds, seed, game=label, title=f"{label} {seed}", max_bars=MAX_BARS,
-                        min_bars=MIN_BARS, tail_bars=TAIL_BARS, themed=carry_theme, band_returns=band_returns, read=False, fade=FADE,
-                        loops=1)
+    echo = (lambda plan: performance_mod.echo_for(plan, seed)) if perf.echo == "song" else None if perf.echo == "off" else perf.echo
+    out = whole.compose(models, PACKS[sounds], own, sounds, seed, game=label, title=f"{label} {seed}", max_bars=perf.max_bars,
+                        min_bars=perf.min_bars, tail_bars=perf.tail_bars, themed=perf.themed, band_returns=perf.band_returns, read=False,
+                        fade=perf.fade, loops=perf.loops, echo=echo)
     p, score = out["plan"], out["score"]
+    done = performance_mod.perform(out, perf)
     key = f"{harmony.NAMES[p.tonic]} {p.mode}"
     title = names.song_title(key, rng=rng, sound=sounds, tempo=_tempo_word(p.bpm))[:names.MAX_TITLE]
     score.title = title
@@ -76,10 +86,12 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
     score.message = [f"{title} - {key} - {p.bpm:.0f} BPM - form {p.letters}",
                      "layout: " + ", ".join(x or "" for x in layout),
                      f"{source} on {'its own sounds' if sounds == DEFAULT_SOUNDS else 'the ' + sounds + ' sounds'} (seed {seed}; docs/IDIOM.md): the band, the figures, the tune and its",
-                     "balance drawn from a vocabulary of counted habits, none of any song's notes."] + list(score.message or [])[3:]
+                     "balance drawn from a vocabulary of counted habits, none of any song's notes.",
+                     performance_mod.describe(perf, out["echo"], done)] + list(score.message or [])[3:]
     info = {"title": title, "key": key, "tempo": int(round(p.bpm)), "form": p.letters, "bars": p.bars, "band": list(p.band),
             "seconds": int(round(score.seconds)), "vocabulary": label, "sounds": sounds, "seed": seed,
-            "carry_theme": carry_theme, "band_returns": band_returns}
+            "carry_theme": perf.themed, "band_returns": perf.band_returns, "performance": perf.name,
+            "echo": out["echo"]["delay"] if out["echo"] else None, "vibrato": done["vibrato"]}
     return {"score": score, "title": title, "seed": seed, "sounds": sounds, "vocabulary": vocabulary, "info": info, "plan": p,
             "written": out["written"]}
 
