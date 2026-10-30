@@ -1183,7 +1183,33 @@ class NewTablesTests(unittest.TestCase):
         if "drums" in p.band:
             self.assertEqual(p.extras["drums"].get("pieces"), "KS")
             self.assertEqual(p.extras["drums"].get("kit"), {"K": "sbfe716b9b6", "S": "s1279e119a1"})
+            self.assertNotIn("kit_levels", p.extras["drums"])                                     # the old field: no piece levels
             self.assertEqual(p.habits["drums"], "dense varied")
+
+    def test_each_kit_piece_plays_at_its_own_level(self):
+        """Round 68: the kit field carries each piece's level beside its sample (`K=sbfe716b9b6@1.7`, a share of the
+        loudest part's); the plan keeps them (extras.drums.kit_levels) and note_level plays a drum note on a kit slot at
+        its piece's share (the open hat at the hat's), a piece without one at the part's level, a share over the top
+        at the cap of full. Blackjack's token had said drums at 0.2 (the hat's median) where its kick plays at 1.7."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.2:::K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2,c=sa64e6372fc:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(p.extras["drums"]["kit"], {"K": "sbfe716b9b6", "S": "s1279e119a1", "h": "sd1c4c7ce33", "c": "sa64e6372fc"})
+        self.assertEqual(p.extras["drums"]["kit_levels"], {"K": 1.7, "S": 0.7, "h": 0.2})
+        self.assertTrue(any(line.startswith("kit from the balance: KShc (K sbfe716b9b6 at 1.7, S s1279e119a1 at 0.7, h sd1c4c7ce33 at 0.2, c sa64e6372fc)") for line in p.log), p.log)
+        self.assertAlmostEqual(p.top_level, 0.30)
+        self.assertAlmostEqual(whole.note_level(p, "drums", 0, piece="kick"), 0.30 * 1.7)          # the kick at its own share
+        self.assertAlmostEqual(whole.note_level(p, "drums", 1, piece="hihat"), 0.30 * 0.2)         # the hat at its own
+        self.assertAlmostEqual(whole.note_level(p, "drums", 1, piece="open_hihat"), 0.30 * 0.2)    # the open hat on the hat's sample, at its level
+        self.assertAlmostEqual(whole.note_level(p, "drums", 0, piece="crash"), 0.30 * 0.2)         # no level for the crash: the part's (the token's 0.2)
+        self.assertAlmostEqual(whole.note_level(p, "drums", 0), 0.30 * 0.2)                        # no slot named: the part's
+        self.assertEqual(whole.kit_piece_level(p, "kick"), 1.7); self.assertIsNone(whole.kit_piece_level(p, "rim"))
+        p.top_level = 0.8
+        self.assertEqual(whole.note_level(p, "drums", 0, piece="kick"), 1.0)                       # 0.8 x 1.7 reaches the cap of full
 
     def test_the_mix_level_and_the_master_that_holds_it(self):
         """Round 59: a song's mix level is its perceived note levels squared over quarter-beat frames, in dB; the balance token

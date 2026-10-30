@@ -641,3 +641,28 @@ class BalanceLevelTests(unittest.TestCase):
         token = rhythm.balance_units([s])[0].outcome
         self.assertNotIn("nan", token)
         self.assertIn("melody=main::1.0:1:1.0", token)
+
+    def test_the_kits_pieces_carry_their_own_levels(self):
+        """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck
+        on that sample as a share of the loudest part's in tenths (`K=k@1.6,S=s@0.6,h=h@0.2`). The part's one level is the
+        median over every drum note, the most frequent piece's (the hat's), and Blackjack's kick had played as quiet as
+        its hat. A piece whose level the readings never heard (NaN) keeps the old form; the part's level stays beside."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1],
+                        parts=[(0, 2)], pieces={"k": "kick", "s": "snare", "h": "hat"})
+        s.notes["melody"] = [(0.0, 1.0, 72, "sa"), (1.0, 1.0, 74, "sa"), (2.0, 1.0, 76, "sa"), (3.0, 1.0, 77, "sa"),
+                             (4.0, 2.0, 79, "sa"), (6.0, 2.0, 76, "sa")]
+        s.notes["drums"] = [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)] + [(x, 0.1, float("nan"), "s") for x in (1.0, 3.0, 5.0, 7.0)] + \
+                           [(x / 2, 0.1, float("nan"), "h") for x in range(16)]
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.voice_levels = {1: 0.5, 2: 0.1}
+        s.levels = {"melody": 0.5, "drums": 0.1}            # the part's median: the hat's, 0.2 of the tune
+        s.kit_levels = {"k": 0.8, "s": 0.3, "h": 0.1}       # the kick louder than the tune, the snare at 0.6 of it
+        self.assertEqual(rhythm.kit_token(s), "K=k,S=s,h=h")               # the old form without a top
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.6,S=s@0.6,h=h@0.2")
+        token = rhythm.balance_units([s])[0].outcome
+        self.assertIn("drums=::::0.2:::K=k@1.6,S=s@0.6,h=h@0.2", token)
+        s.kit_levels["s"] = float("nan")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.6,S=s,h=h@0.2")   # an unread level never reaches the token
+        s.kit_levels = {}
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k,S=s,h=h")

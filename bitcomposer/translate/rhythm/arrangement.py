@@ -480,20 +480,38 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     return out
 
 
-def kit_token(s) -> str:
+def kit_token(s, top: float = 0.0) -> str:
     """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
     with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
-    a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots)."""
+    a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots).
+    Since round 68 each piece carries its own level too, where the readings heard one: the median level of the notes
+    struck on that sample (Song.kit_levels, the loudness factor applied as the part's level has it) as a share of the
+    song's loudest part's level `top` in tenths (`K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2`). The part's
+    one level is the median over every note of every drum voice, which is the most frequent piece's: FFVI's hat is the
+    most frequent and its strike the quietest, so Blackjack's token said drums at 0.2 of the top where its kick plays
+    at 1.7 and its snare at 0.7, and the written kit was brought to one heard loudness a piece, the kick as quiet as
+    a hat (Song Check 54's Whole 169: the kit 16 dB under Blackjack's). A piece without a level keeps the old form."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
         piece = (s.pieces or {}).get(key)
         if key and piece in readings_mod.LETTERS:
-            counts[(readings_mod.LETTERS[piece], "s" + key[:10] if len(key) >= 10 else key)] += 1
+            counts[(readings_mod.LETTERS[piece], key)] += 1
     best = {}
-    for (letter, sid), n in counts.most_common():
-        best.setdefault(letter, sid)
-    return ",".join(f"{letter}={best[letter]}" for letter in readings_mod.LETTERS.values() if letter in best)
+    for (letter, key), n in counts.most_common():
+        best.setdefault(letter, key)
+    levels = getattr(s, "kit_levels", None) or {}
+    out = []
+    for letter in readings_mod.LETTERS.values():
+        if letter not in best:
+            continue
+        key = best[letter]
+        field = f"{letter}=" + ("s" + key[:10] if len(key) >= 10 else key)
+        level = levels.get(key)
+        if top > 0 and level is not None and math.isfinite(level):   # never a "nan" share: the part's level stands in
+            field += f"@{round(level / top, 1):.1f}"
+        out.append(field)
+    return ",".join(out)
 
 
 def part_sample_id(s, role: str) -> str:
@@ -590,7 +608,8 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s), dh]   # and its kit as the eighth (round 63)
+                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top), dh]   # and its kit as the eighth (round 63; each
+                                                                                             # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
                     fields.pop()
                 tokens.append(role + ("=" + ":".join(fields) if fields else ""))

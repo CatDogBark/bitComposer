@@ -504,7 +504,7 @@ def voice_map(plan: plan_mod.Plan, written: dict) -> dict:
     return out
 
 
-def note_level(plan: plan_mod.Plan, role: str, voice: int, second_voice: dict | None = None, bar: int | None = None) -> float:
+def note_level(plan: plan_mod.Plan, role: str, voice: int, second_voice: dict | None = None, bar: int | None = None, piece: str | None = None) -> float:
     """A note's level of full: the part's share of the song's loudest part's (plan.levels: the balance token's where its
     song has the part, so the band's levels are one FFVI song's as one unit and the loudest part plays at TOP_LEVEL and
     the rest at their share; the `levels` table's for a part the token lacks; the counter-line's from counter_shares
@@ -512,9 +512,15 @@ def note_level(plan: plan_mod.Plan, role: str, voice: int, second_voice: dict | 
     (the balance token's share for that voice where its song has the part layered, plan.voice_levels by rank, so the
     line and the voices beside it are one FFVI song's together; the layer_levels draw for a voice the token has no share
     for; `second_voice` those voices by part, layers_of's apart and alternating voices; a doubling voice plays the line's
-    level). Never under 0.05 nor over 1.0 of full: a share is at most 1.0, so only a second voice over 1.0 of its line
-    can reach the cap."""
-    base = plan.top_level * plan.levels[role] if role in plan.levels else plan_mod.LEVELS[role]   # the loudest part at the song's top level (round 52)
+    level). A drum note on kit slot `piece` plays at that piece's own share where the token carries one (round 68,
+    plan_mod.kit_piece_level: the part's one median was the most frequent piece's, the hat's, and the kick played as
+    quiet as a hat), the part's share where not. Never under 0.05 nor over 1.0 of full: a part's share is at most 1.0,
+    so only a second voice over 1.0 of its line, or a kit piece louder than the loudest pitched part, can reach the cap."""
+    share = plan_mod.kit_piece_level(plan, piece) if role == R.DRUMS and piece else None
+    if share is not None:
+        base = plan.top_level * share
+    else:
+        base = plan.top_level * plan.levels[role] if role in plan.levels else plan_mod.LEVELS[role]   # the loudest part at the song's top level (round 52)
     if bar is not None and role in plan.section_levels and 0 <= bar < len(plan.section_levels[role]):
         base *= plan.section_levels[role][bar]              # the section's level over the part's (section_levels, round 48)
     if second_voice is None:
@@ -602,12 +608,13 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     loud_of, strike_of, drum_loud_of, capped = {}, {}, {}, Counter()   # a sample's own loudness (round 56): a note plays at its level over it
     heard = []                                            # (start in beats, length in beats, perceived level): the mix level (round 59)
 
-    def level_of(role, j, bar=None, name=None, sample=None, seconds=0.0):
-        level = note_level(plan, role, j, second_voice, bar)
+    def level_of(role, j, bar=None, name=None, sample=None, seconds=0.0, piece=None):
+        level = note_level(plan, role, j, second_voice, bar, piece)
         if sample is None:
             return level, level
         if role == R.DRUMS:                                 # a drum at its level over its strike's loudness (round 63): the readings count
-            if name not in drum_loud_of:                    # the kit's levels the same way (its own table: a song may strike a tonal voice)
+            if name not in drum_loud_of:                    # the kit's levels the same way (its own table: a song may strike a tonal voice);
+                                                            # the level the piece's own where the token has it (round 68)
                 strike, _ = sample_strike_and_body(sample)
                 drum_loud_of[name] = rhythm.LOUDNESS_REF / strike if strike > 0 else 1.0
             played = min(1.0, level * drum_loud_of[name])
@@ -630,13 +637,13 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         played = min(1.0, wanted)
         return played, played / factor
 
-    def put(voice, role, t0, t1, midi, name, sample, j, bar=None):
+    def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None):
         idx, addr, c5 = instrument(name, sample)
         pan = plan_mod.PANS[role][j % len(plan_mod.PANS[role])]
         send = echo is not None and role in plan_mod.SENDS
         env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
-        played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0)
+        played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0, piece)
         heard.append((t0 / beat_s, (min(t1, seconds) - t0) / beat_s, perceived))
         notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(played, pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
@@ -660,7 +667,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                 if role == R.DRUMS:
                     _, _, _, v, kit_name = n
                     name, sample = samples[R.DRUMS][kit_name]
-                    put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v)
+                    put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v, piece=kit_name)   # the piece's own level (round 68)
                 else:
                     name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] in second_voice.get(role, ()) else samples[role]
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)

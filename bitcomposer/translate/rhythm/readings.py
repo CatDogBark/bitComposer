@@ -152,7 +152,9 @@ class Song:
     levels: dict = field(default_factory=dict)        # role -> the median level (0-1 of full) of its notes, as the readings heard them
     voice_levels: dict = field(default_factory=dict)  # voice -> the median level of its notes
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
-    loudness: float | None = None                     # the song's rendered loudness, RMS dBFS over its first minute through the player (the
+    kit_levels: dict = field(default_factory=dict)    # a drum sample's key -> the median level of the notes struck on it (round 68: the kit's
+                                      # level a piece, the part's one median being the hat's where the hat is the most frequent piece)
+    loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
                                       # readings' feature render/loudness_dbfs, round 59); None where it was not measured
 
 
@@ -273,7 +275,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
-        level_rows = {}
+        level_rows, kit_rows = {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
@@ -294,11 +296,16 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                         song.voice_levels[voice] = statistics.median(finite)   # carried "nan" for the drums, which a written song
                         level_rows.setdefault(role, []).extend(finite)         # played at full (2026-10-30)
                         song.note_levels.setdefault(role, []).extend((r[0], r[3]) for r in rows)
+                    if role == R.DRUMS:                     # the kit's level a sample (round 68): the part's one median is the most
+                        for r in rows:                      # frequent piece's, the hat's in a kick-snare-hat kit, and the kick plays near full
+                            if not math.isnan(r[3]):
+                                kit_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[3])
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
             song.bass_voices = basses
         song.levels = {role: statistics.median(ls) for role, ls in level_rows.items()}
+        song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         songs.append(song)

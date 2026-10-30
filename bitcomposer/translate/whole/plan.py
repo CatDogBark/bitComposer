@@ -56,6 +56,16 @@ MAX_PARTS = 12
 DRUM_VOICES = (("K", "S", "t"), ("h", "c", "o"))   # the kit on two voices: the kick, snare and toms; the hat, cymbals and the rest
 KIT_PIECES = {"kick": "kick", "snare": "snare", "hihat": "hat", "open_hihat": "hat", "tom": "tom", "crash": "cymbal", "rim": "other"}   # a pack's kit -> the readings' pieces
 KIT_SLOT = {"K": "kick", "S": "snare", "h": "hihat", "t": "tom", "c": "crash", "o": "rim"}   # a piece letter -> the pack kit slot its song's sample fills (round 63)
+SLOT_LETTER = {slot: letter for letter, slot in KIT_SLOT.items()} | {"open_hihat": "h"}   # a kit slot -> the piece letter whose level it plays at (round 68:
+                                                                                          # the open hat takes the hat's sample and its level with it)
+
+
+def kit_piece_level(plan, slot: str) -> float | None:
+    """The balance token's own level for the kit slot's piece, as a share of the song's loudest part's (round 68:
+    `K=sbfe716b9b6@1.7` on the drums' kit field); None for a slot the token gave no level, which plays at the part's."""
+    levels = plan.extras.get(R.DRUMS, {}).get("kit_levels") or {}
+    letter = SLOT_LETTER.get(slot)
+    return levels.get(letter) if letter else None
 KIT_FOR = {"K": ("kick",), "S": ("snare", "rim"), "h": ("hihat", "open_hihat"), "t": ("tom", "kick"),
            "c": ("crash", "open_hihat", "hihat"), "o": ("rim", "hihat")}   # a figure's letter -> its sample, the first the kit has
 DRUM_LENGTH = 1.0                     # beats a drum hit sounds at most (to the next hit on its voice otherwise)
@@ -578,7 +588,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
-    token_kit, token_layer_samples, token_layer_shares = {}, {}, {}
+    token_kit, token_kit_levels, token_layer_samples, token_layer_shares = {}, {}, {}, {}
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -614,8 +624,15 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_shares[role] = [float(x[2]) if len(x) > 2 and x[2] else 1.0 for x in parts_]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
-            if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma
-                token_kit = dict(x.split("=") for x in fields[7].split(",") if "=" in x)
+            if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
+                for x in fields[7].split(","):                       # since round 68 each piece's own level after an "@", where its song read one
+                    if "=" not in x:
+                        continue
+                    letter, _, value = x.partition("=")
+                    sid, _, level = value.partition("@")
+                    token_kit[letter] = sid
+                    if level and math.isfinite(float(level)):
+                        token_kit_levels[letter] = float(level)
             elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels
                 token_samples[role] = fields[7]
             if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
@@ -650,7 +667,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if token_kit:                                   # the token song's own kit (round 63): its pieces are these, its samples theirs
                 extras[role]["pieces"] = "".join(x for x in rhythm.LETTERS.values() if x in token_kit)
                 extras[role]["kit"] = token_kit
-                log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" for k, v in token_kit.items()) + ")")
+                if token_kit_levels:                        # each piece at its own level of the loudest part's (round 68); a piece without
+                    extras[role]["kit_levels"] = token_kit_levels   # one plays at the part's level (the fifth field)
+                log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.1f}" if k in token_kit_levels else "")
+                                                                                            for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
                 extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,
                                                floor_k=2)   # the tier's own kits alone (seven medium songs, seven kits: the smoothing had handed a
