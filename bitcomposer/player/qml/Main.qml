@@ -223,12 +223,11 @@ ApplicationWindow {
     readonly property string mono: "JetBrains Mono"
     readonly property string pixel: "Silkscreen"
     // the family's lockup keeps its own colours
-    readonly property color brandMint: "#00ff88"
-    readonly property color brandBracket: "#2f8f5f"
-    readonly property color brandName: "#b0ddcc"
-    readonly property color brandTile: "#0e1612"
-    readonly property color brandTileBorder: "#1a2e26"
-    readonly property color brandUnlit: "#13221b"
+    // The brand (2026-10-30) is cut from the window's own material: the tile is a bevelled button face holding the
+    // grid in slate, and the name is chrome brackets round a pixel BIT in the pink, then Composer in the mono.
+    readonly property color brandFace: panel          // the tile's face, as a button's
+    readonly property color brandUnlit: raised        // an unlit cell, a step above the face
+    readonly property color brandLit: textColor       // a lit cell
 
     function dbusPlayPause() { backend.playPause() }
     function dbusStop() { backend.stop() }
@@ -636,17 +635,21 @@ ApplicationWindow {
         cursor:  ["#.........", "##........", "###.......", "####......", "#####.....", "#####P....", "####......", "##.##.....", "...##.....", "....##...."]
     })
 
-    // The family's lockup: the Lit bit tile (bitComposer's level bars, the pink bit top-right) and the bracket wordmark.
+    // The family's lockup: the bit tile drawn like one of the window's buttons (a bevelled frame on the panel face,
+    // the 5x5 grid in slate, bitComposer's level bars, the pink bit top-right) and the name as chrome brackets
+    // round a pixel BIT in the pink, then Composer in the mono. The brackets are bevelLight and edge, flat: a label
+    // has no drop shadow here. The pixel face is crisp at multiples of 8px, so BIT snaps to one.
     component Lockup: RowLayout {
         spacing: Math.round(10 * root.ui)
         Rectangle {
+            id: tile
             readonly property int cell: Math.max(3, Math.round(5 * root.ui))
             Layout.preferredWidth: cell * 5 + 4 + Math.round(12 * root.ui)
             Layout.preferredHeight: Layout.preferredWidth
-            radius: Math.round(Layout.preferredWidth * 0.22)
-            color: root.brandTile
-            border.width: 1
-            border.color: root.brandTileBorder
+            radius: Math.max(1, Math.round(1 * root.ui))
+            color: root.bevelLight                                   // the bevel: light top and left
+            Rectangle { x: 1; y: 1; width: parent.width - 1; height: parent.height - 1; radius: tile.radius; color: root.bevelDark }   // dark bottom and right
+            Rectangle { x: 1; y: 1; width: parent.width - 2; height: parent.height - 2; radius: tile.radius; color: root.brandFace }
             Grid {
                 anchors.centerIn: parent
                 columns: 5
@@ -655,17 +658,19 @@ ApplicationWindow {
                     model: ["....P", "..#.#", ".##.#", "#####", "#####"].join("")
                     Rectangle {
                         required property string modelData
-                        width: parent.parent.cell; height: parent.parent.cell
-                        color: modelData === "#" ? root.brandMint : modelData === "P" ? root.accentPink : root.brandUnlit
+                        width: tile.cell; height: tile.cell
+                        color: modelData === "#" ? root.brandLit : modelData === "P" ? root.accentPink : root.brandUnlit
                     }
                 }
             }
         }
-        Text {
-            textFormat: Text.StyledText
-            text: "<font color='" + root.brandBracket + "'>[</font><b><font color='" + root.brandMint + "'>bit</font></b><font color='" + root.brandBracket + "'>]</font><font color='" + root.brandName + "'>Composer</font>"
-            font.family: root.mono
-            font.pixelSize: Math.round(16 * root.ui)
+        Row {
+            spacing: 0
+            Text { id: lockupBracket; text: "["; color: root.bevelLight; font.family: root.mono; font.weight: Font.Bold; font.pixelSize: Math.round(16 * root.ui) }
+            Text { text: "BIT"; color: root.accentPink; font.family: root.pixel; font.weight: Font.Bold; anchors.baseline: lockupBracket.baseline
+                   font.pixelSize: Math.max(8, Math.round(16 * root.ui / 8) * 8) }
+            Text { text: "]"; color: root.edge; font.family: root.mono; font.weight: Font.Bold; font.pixelSize: lockupBracket.font.pixelSize; anchors.baseline: lockupBracket.baseline }
+            Text { text: "Composer"; color: root.textColor; font.family: root.mono; font.weight: Font.DemiBold; font.pixelSize: lockupBracket.font.pixelSize; anchors.baseline: lockupBracket.baseline }
         }
     }
 
