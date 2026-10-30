@@ -3882,3 +3882,178 @@ seeds 131-160 every kit slot the token asked was filled from the pack;
 no note capped. Song Check 50 (seeds 131-140 on pack4) is the salience
 sample: the first songs where the band, weights, levels, top, loudness,
 tempo class, instruments, habits and kit are one FFVI song's.
+
+### Round 64: the lead by salience (2026-10-29, from Song Check 50's verdicts and the FFVI Lead Check)
+
+**Found.** The owner's verdicts on Song Check 50 follow one number: the
+tune's K-weighted margin over the loudest other pitched line, each part
+rendered alone. On top or within half a decibel, four songs of four
+belonged (135 and 140 the gold); three decibels or more under, five of
+six did not. The written balance reproduces its token song's, so the
+flat ones were inherited: in FFVI the voice the readings label melody is
+the loudest voice in 18 songs of 66, and sits 9 dB or more under the
+whole in one song of seven. Each FFVI voice rendered alone and put to
+the owner's ear (the Lead Check, 14 songs), he agreed with the label in
+9 and named another voice in 5, every one of those a song whose labelled
+melody sat 9 dB or more under; every song he agreed on had it within 8.
+The reader's only loudness test is a quarter of the loudest raw voice
+volume (12 dB, on volume, not on what renders), under a square root in
+the melodic score, so a buried voice with a wide line wins.
+
+**Built.** `bitcomposer.translate.lead`: a readings pass that renders each
+tonal voice alone from its SPC, keeps every voice's loudness as a feature
+(render/voice_lufs_<voice>), and relabels: the labelled melody keeps the
+lead where it is heard (within LEAD_WINDOW, 9 dB, of the loudest tonal
+voice), else the most varied heard voice (pitch-class entropy, then
+loudness; not the bass, below the tune's ceiling) becomes the melody and
+the old melody a counter-line, or an accompaniment where a counter
+exists; the change is kept (lead/was_melody, now_melody) and the pass is
+repeatable. The rule matched 12 of the owner's 14 picks (Locke: both
+voices heard, he took the louder upper one; Gau: a loud low riff) and
+relabels 9 FFVI songs of 66. `tools/salience.py` measures the margin on
+any folder of whole songs with stems. Pack4's 94 tables refit on the
+relabelled readings.
+
+**Measured.** The pass relabelled 9 of 67 FFVI songs (Shadow, The
+Phantom Forest, Gau, The Serpent Trench, Under Martial Law, Aria di
+Mezzo Carattere, Epitaph, The Magic House, Umaro); FFVI's own labelled
+tune's margin over the loudest other voice went from a median -3.2 to
+-1.2 dB. The written songs did not follow: seeds 131-140 re-rendered on
+the recounted pack sit a median 4.1 dB under (3.1 before), seeds 141-150
+(Song Check 51) a median 7.2 under, two of ten on top. The reason, found
+in Whole 149 (its token Kids Run Through the City, whose own tune sits
+5.4 dB on top): the counted energy puts the tune on top, the render puts
+the accompaniment there, and the accompaniment's second voice is the
+cause. The token says the second voice plays at 3.2 times the line's
+level; in the game that voice is another sample (a sustained one) with
+a third of the line's notes, while the writer gives it the line's own
+struck sample and most of the line's onsets. Over FFVI, a part's extra
+voice is on another sample in 45 of 73 accompaniments, 27 of 42
+counters and 15 of 15 basses, and plays 0.5-0.7 of the line's notes; the
+written extra voices play 0.84-1.15 of the line's and take its sample in
+the accompaniment half the time. The attack-to-body ratio of the two
+samples (+3.4 dB on the accompaniment's, -3.1 on the tune's) adds the
+rest. Next: the extra voices ride the token (each one's sample and its
+note share over the line), and a note's loudness as it hears its sample
+(strike, then body) in the level words.
+
+### Round 65: the voices beside the line ride the token, and a note's loudness as it hears its sample (2026-10-29, from Whole 149)
+
+**Found.** Round 64's relabel left the written tune where it was (seeds
+131-140 a median 4.1 dB under the band, 3.1 before). Whole 149 showed
+why: its token, Kids Run Through the City, has its tune 5.4 dB on top in
+the game and the counted energy agrees, but the render puts the
+accompaniment 3 dB over the tune. The token said the accompaniment's
+second voice plays at 3.2 times the line's level; in the game that voice
+is another sample, sustained, with a third of the line's notes (33 to
+283), and the writer had given it the line's own struck sample and most
+of the line's onsets. Over FFVI an extra voice is on another sample in
+45 of 73 accompaniments, 27 of 42 counters and 15 of 15 basses, and
+plays 0.5-0.7 of the line's notes; the written extra voices played
+0.84-1.15 of the line's and took its sample in half the accompaniments.
+The two samples' attack-to-body ratios (+3.4 dB on the accompaniment's,
+-3.1 on the tune's) made the rest, and the level words counted and
+played loudness by the loop body alone (round 56) while the estimate
+already heard the strike (round 59).
+
+**Built.** The balance token's sixth field names each voice beyond the
+line as `level@sample@note share` (`rhythm.layer_tokens`); the plan keeps
+the samples and shares (`layer_samples`, `layer_shares`); `samples_for`
+gives the second voice the token song's own sample where the pack holds
+it (the layer_samples pair else); the mask word `second_figures` is
+counted and drawn under the voices' note share class (sparse under 0.4
+of the line's notes, half under 0.8, full; `rhythm.LAYER_SHARES`,
+`whole.layer_class`), its floor one deeper. A note's loudness is what it
+hears of its sample, its strike for STRIKE_SECONDS then its body
+(`rhythm.heard_rms`, shared), on both sides: the readings multiply a
+note's level by it for the note's own length (`loudness_factor(key,
+seconds)`, the strikes beside the loudness table), and the writer divides
+the drawn level by the module sample's. Pack4's 94 tables refit.
+
+**Measured** (tools/salience.py, K-weighted, the tune's margin over the
+loudest other pitched line). Three states of the same ten seeds, 131-140:
+Song Check 50 (round 63) median -3.1 dB, four tunes on top; the writer's
+half of round 65 alone, before the tables were recounted (a crashed
+refit left the old tables under the new code), median -2.6, four on top,
+the best so far; the full round, tables recounted, median -4.6, two on
+top. Seeds 151-160 (Song Check 52) on the full round: median -6.9, one on
+top, Whole 156's tune 16 dB under its accompaniment. The chain is now
+consistent end to end, and a consistent chain reproduces the game's own
+balance, where the labelled tune sits a median 3.5 dB under; the half
+state had leaned the tune forward of the game by counting the backing's
+attacks on one side only. Whether the written tune should sit where the
+game keeps it, or forward of it, is a question for the owner's ear, not
+for the counts; Song Check 52 asks it.
+
+### Round 66: the tune's grain, the voice's own alteration, and three songs' tokens (2026-10-29, from Song Check 52's notes: "the melody is still weak")
+
+**Found.** The tune's structure is at parity with FFVI's (exact echoes
+0.23 against 0.30, echoed bars 0.61 against 0.64, a hook 0.28 against
+0.20); its grain is not. FFVI's medium tune has a median gap of half a
+beat between onsets, 0.33-0.51 of them off the beat (quartiles over 39
+songs) and 3.4-5.1 onsets a bar; four of Song Check 52's seven medium
+tunes (152, 153, 156, 159) had a median gap of a whole beat, 0.15-0.21
+off the beat, where five of FFVI's 39 sit, and 3.3-3.6 onsets a bar. The
+bar table is conditioned on the bar before, so a tune's first draws fix
+its grain, and the theme's echoes multiply them; a running-density hold
+alone (the first half of this round) narrowed the density (medium 2.9-6.6
+a bar, median 3.8) and left the grain where it was. The counter's
+intervals drift where the tune's note is off the key's scale: FFVI's tune
+is off it at 0.23 of the counter's onsets with it (its leading tones in
+minor), and `scale_index` had put the counted steps back on the scale,
+so a drawn unison with the tune's B# came out a B. Against a scale note
+the written counter's intervals were "other" (seconds, tritones,
+sevenths) in 0.12, FFVI's 0.12; against an off-scale note in 0.54,
+FFVI's 0.15. The register fold changes no interval class (130 of 448
+draws folded, all to the inversion). The three songs: Whole 151's token
+is Dancing Mad (part 2), bass, counter and melody all at level 1.0 on
+one organ sample over a snare-and-crash kit, and the plan followed it
+to the letter; Whole 157's is Dancing Mad (part 1), its bass "main" in
+three voices with the second at 1.9 times the line's level and 9.0 times
+its notes (the line a sparse pedal); Whole 160's is New Continent, whose
+kit is one crash at 0.5. A first reading of pack4's balance table as
+stale was wrong: the tables count a note's level through the samples'
+loudness (`rhythm.set_loudness` before the count), and with it set all
+67 tokens match the readings. The token is drawn from all 67 songs; a
+themed song may draw Dancing Mad's organ texture.
+
+**Built.** A new counted word, `tune_grain` (`rhythm.tune_grain_units`,
+`rhythm.GRAINS`): the share of a tune part's onsets off the beat as a
+class (on-beat under 0.25, eighths to 0.5, fine over), one unit a song and
+part (melody, counter), by the part and its habit's density tier (the
+tier alone: under the whole habit the draw backed off to the part and
+gave a dense tune "on-beat", which no dense tune of FFVI is). The plan
+draws it on its own stream (`whole:{seed}:grain:{role}`) and the melody
+writer holds its new rhythms' running share inside the class from the
+first draw (`writer.grain_bounds`, GRAIN_SLACK 0.1), the density tier
+after TIER_AFTER draws (`writer.tier_bounds`, TIER_SLACK 0.5). The
+`voice_intervals` word is counted under the line note's state (`line`:
+scale or altered) and, against a note off the scale, in semitones from the
+note itself (`s-4`); `writer.interval_pitch` puts either back exactly and
+`interval_weights` draws over the state's entries, weighing each by the
+move its note would make from the voice's own last note (as `voice_moves`
+counts it; the product had taken the move from the last note with the
+line), in `beside_pitch` and the upper voices alike. A first form, a "+"
+on a voice note off the scale, put alterations against scale notes they
+never follow (the written "other" against scale notes rose from 0.12 to
+0.22) and was dropped. Pack4 refit
+(95 tables).
+
+**Measured** (twenty seeds composed on the refit pack, 131-140 and
+151-160, then the renders). The tune: medium tunes at 2.8-6.6 onsets a
+bar, median 4.7 (FFVI's medium songs 3.4-5.1 by quartile, median 4.2),
+their median gap half a beat in nine of ten (FFVI half a beat); the
+off-beat share lands inside the drawn class in every tune but one (an
+eighths tune at 0.68); 152 went from 0.14 off the beat to 0.40, 153 from
+0.15 to 0.35. Seeds 161-170: medium tunes 4.3-5.8 a bar, all at a
+half-beat gap but one. The counter, with the tune's onset: "other"
+intervals 0.11 of its notes (FFVI 0.12; before 0.19); against a tune
+note off the scale 0.15 (FFVI 0.15; before 0.54); alone, 0.31 (FFVI
+0.29). The balance (tools/salience.py, K-weighted): seeds 131-140 a
+median 3.7 dB under the loudest other pitched line, three on top (round
+65: 4.6 under, two; round 63: 3.1, four); 161-170 a median 4.2 under, two
+on top (Song Check 52's 151-160: 6.9, one). Song Check 53 (seeds 161-170)
+asks the ear whether the melody now moves like the game's and whether the
+cadences' sour counter is gone; the token draw's reach (Dancing Mad's
+organ among the themed songs) is put to the owner as a question, not
+built.

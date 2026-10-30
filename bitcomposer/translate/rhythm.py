@@ -157,7 +157,18 @@ SAMPLE_LOUDNESS: dict = {}           # a pack's sample id ("s" + the key's first
 STRIKE_SECONDS = 0.15                # seconds of a percussion sample its loudness is read over (its strike)
 
 
-def loudness_factor(key) -> float:
+SAMPLE_STRIKE: dict = {}             # a pack's sample id -> the RMS of its first STRIKE_SECONDS, 0-1 (set_loudness; round 65)
+
+
+def heard_rms(strike: float, body: float, seconds: float) -> float:
+    """The loudness a note of `seconds` hears from its sample: the strike's for STRIKE_SECONDS, the body's after, in power
+    (round 65: a short chord on a struck sample is as loud as its attack, a long note on a slow one as its body)."""
+    if seconds <= STRIKE_SECONDS or body <= 0:
+        return strike if strike > 0 else body
+    return math.sqrt((strike * strike * STRIKE_SECONDS + body * body * (seconds - STRIKE_SECONDS)) / seconds)
+
+
+def loudness_factor(key, seconds: float | None = None) -> float:
     """What a note's level is multiplied by to be its loudness (round 56, 2026-10-29): its sample's own loudness over the
     reference, 1.0 for a sample the table does not know. The readings' level is a voice volume, set by the game's composer to
     balance that song's samples; a written song takes its levels from one song's token and its samples from the instrument
@@ -165,13 +176,20 @@ def loudness_factor(key) -> float:
     5 dB over its tune and a brass lead 7 dB under its bass (Song Check 43's Whole 68 and 70)."""
     if not SAMPLE_LOUDNESS or not isinstance(key, str):
         return 1.0
-    rms = SAMPLE_LOUDNESS.get("s" + key[:10])
-    return rms / LOUDNESS_REF if rms else 1.0
+    sid = "s" + key[:10]
+    rms = SAMPLE_LOUDNESS.get(sid)
+    if not rms:
+        return 1.0
+    if seconds is not None and SAMPLE_STRIKE.get(sid):     # the note's own length: its strike, then the body (round 65)
+        return heard_rms(SAMPLE_STRIKE[sid], rms, seconds) / LOUDNESS_REF
+    return rms / LOUDNESS_REF
 
 
-def set_loudness(table: dict) -> None:
+def set_loudness(table: dict, strikes: dict | None = None) -> None:
     SAMPLE_LOUDNESS.clear()
     SAMPLE_LOUDNESS.update(table)
+    SAMPLE_STRIKE.clear()
+    SAMPLE_STRIKE.update(strikes or getattr(table, "strikes", {}))
 
 
 def load_loudness(pack_dir) -> dict:
@@ -182,7 +200,7 @@ def load_loudness(pack_dir) -> dict:
     from pathlib import Path
     pack_dir = Path(pack_dir)
     data = json.loads((pack_dir / "pack.json").read_text(encoding="utf-8"))
-    out = {}
+    out, strikes = {}, {}
     for sid, spec in data.get("samples", {}).items():
         if not spec.get("file"):
             continue
@@ -192,14 +210,23 @@ def load_loudness(pack_dir) -> dict:
             x = array.array("h", w.readframes(w.getnframes()))
         except Exception:
             continue
+        strike = x[:max(1, int(rate * STRIKE_SECONDS))]
         if spec.get("percussion"):
-            body = x[:max(1, int(rate * STRIKE_SECONDS))]
+            body = strike
         else:
             lp = spec.get("loop")
             body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
         if len(body):
             out[sid] = math.sqrt(sum(v * v for v in body) / len(body)) / 32768
+            strikes[sid] = math.sqrt(sum(v * v for v in strike) / len(strike)) / 32768 if len(strike) else out[sid]
+    out = _Loudness(out)
+    out.strikes = strikes                                   # set_loudness reads them (round 65: a note hears its sample's strike, then its body)
     return out
+
+
+class _Loudness(dict):
+    """A loudness table with its samples' strikes beside it (.strikes)."""
+    strikes: dict = {}
 
 
 def load(db, game: str | None = None) -> tuple[list[Song], dict]:
@@ -252,7 +279,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
                 if SAMPLE_LOUDNESS:                         # a level as loudness: the voice volume times its sample's own (round 56; the drums' too, round 63)
-                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise")), pan, i) for s, length, m, level, pan, i in rows]
+                    secs = 60.0 / (bpm or 120.0)                # the note's length in seconds: its strike, then its body (round 65)
+                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise"), length * secs), pan, i) for s, length, m, level, pan, i in rows]
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
@@ -524,6 +552,36 @@ def habits(units_) -> list:
 
 def rhythm_habit_units(songs) -> list:
     return habits(units(songs))
+
+
+GRAINS = ((0.25, "on-beat"), (0.5, "eighths"), (1.01, "fine"))   # a tune's grain: its share of onsets off the beat (tune_grain_units)
+GRAIN_NOTES = 8                      # onsets a line needs to count a grain
+
+
+def tune_grain_units(songs) -> list:
+    """Each song's tune and counter-line as a unit: its outcome the line's
+    grain (GRAINS: the share of its onsets off the beat, on-beat under
+    0.25, eighths to 0.5, fine over), its values the part and its habit's
+    density tier (the tier alone: under the whole habit the draw backed
+    off to the part and gave a dense tune "on-beat", which no dense tune
+    of FFVI is); drawn once a song and held by the melody writer from its
+    first new rhythm on, as the density tier is after TIER_AFTER (round 66). FFVI's medium tunes sit at
+    0.33-0.51 off the beat (quartiles; a median gap of half a beat) and
+    4 of the 7 medium tunes of Song Check 52 at 0.15-0.21, where 5 of
+    FFVI's 39 are: the bar chain, conditioned on the bar before, had
+    locked a tune into the on-beat grain of its first draws."""
+    out = []
+    tiers = {(u.song, u.values["part"]): u.outcome for u in habits(units(songs))}
+    for s in songs:
+        for role in (R.MELODY, R.COUNTER):
+            if (s.sid, role) not in tiers:
+                continue
+            on = [p for _, struck in bars_of(s, role) if struck for p, _ in struck]
+            if len(on) < GRAIN_NOTES:
+                continue
+            share = sum(1 for p in on if Fraction(p).denominator != 1) / len(on)
+            out.append(tables.Unit(s.sid, s.game, habit_of(share, GRAINS), {"part": role, "habit": tiers[(s.sid, role)].split()[0]}))
+    return out
 
 
 def drum_figure(struck, song: Song) -> str:
@@ -1482,11 +1540,12 @@ def second_figure_units(songs) -> list:
             line_bars = {k: key(struck, a) for k, a, struck in numbered_bars_of(s, role, voices[line])}
             line_struck = {k: [p for p, _ in struck] for k, a, struck in numbered_bars_of(s, role, voices[line])}
             tempo, feel = band(s.bpm), song_feel(s)
+            density = layer_share_class(len(others) / max(1, len(voices[line])))   # the voices beside the line: their notes over the line's (round 65)
             for k, a, struck in numbered_bars_of(s, role, others):
                 if line_bars.get(k, "-") != "-":
                     outcome = second_mask(line_struck[k], [p for p, _ in struck])
                     out.append(tables.Unit(s.sid, s.game, outcome,                   # by the line's onset count: a mask is read onset by onset
-                                           {"part": role, "feel": feel, "tempo": tempo, "onsets": str(len(line_bars[k].split())), "line": line_bars[k]}))
+                                           {"part": role, "layer": density, "feel": feel, "tempo": tempo, "onsets": str(len(line_bars[k].split())), "line": line_bars[k]}))
     return out
 
 
@@ -2735,6 +2794,34 @@ def voice_level_shares(song: Song, role: str) -> list | None:
     return [f"{min(LAYER_LEVEL_CAP, round(song.voice_levels[v] / a, 1)):.1f}" for v in others]
 
 
+LAYER_SHARES = ((0.4, "sparse"), (0.8, "half"), (float("inf"), "full"))   # a voice beyond the line: its notes over the line's (layer_tokens, round 65)
+
+
+def layer_share_class(share: float) -> str:
+    return next(name for top, name in LAYER_SHARES if share < top)
+
+
+def layer_tokens(song: Song, role: str) -> list | None:
+    """The balance token's sixth field (round 65): each voice beyond the line, in voice_level_shares' order, as
+    `level share@sample@note share` ("3.2@s5a1fa4d5d3@0.12": its level over the line's, the pack id of the sample it
+    plays most, its notes over the line's). FFVI's extra voices are on another sample than the line in 45 of 73
+    accompaniments, 27 of 42 counters and 15 of 15 basses, and play 0.5-0.7 of the line's notes; drawn apart, the written
+    ones had taken the line's sample and played 0.84-1.15 of its notes, a sparse pad in the game a busy riff over the tune."""
+    shares = voice_level_shares(song, role)
+    if shares is None:
+        return None
+    voices = part_voices(song, role)
+    line = line_voice(voices, role)
+    others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+    out = []
+    for share, v in zip(shares, others):
+        keys = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
+        key = keys.most_common(1)[0][0] if keys else ""
+        sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
+        out.append(f"{share}@{sid}@{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}")
+    return out
+
+
 def kit_token(s) -> str:
     """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
     with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
@@ -2850,7 +2937,7 @@ def balance_units(songs) -> list:
                 tokens.append(role + ("=" + ":".join(fields) if fields else ""))
                 continue
             reg, share = part_register(register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), sounded_share(s.notes[role])
-            beside = voice_level_shares(s, role) if role in levels else None
+            beside = layer_tokens(s, role) if role in levels else None   # each voice beyond the line: level, sample, note share (round 65)
             kind = counter_kind(s) if role == R.COUNTER and role in levels else None
             fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / SOUND_BIN) * SOUND_BIN:.1f}" if share is not None else "",
                       str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
@@ -2951,6 +3038,7 @@ LAYER_OFFSET = 24                    # semitones: a second voice's register agai
 
 
 VOICE_STEPS = 14                     # scale steps: a voice beside the line's interval or move is counted within two octaves
+VOICE_SEMITONES = 24                 # semitones: a voice's interval against a line note off the scale, within two octaves (round 66)
 
 
 def _beside_lines(songs):
@@ -2983,7 +3071,8 @@ def _beside_lines(songs):
 def _voice_walk(songs):
     """Each onset of a voice beside a line: (song, part, kind, with the line?, steps from the line's note struck or last
     struck, the voice's move in steps from its own previous note or None, the interval at its previous onset with the
-    line or START)."""
+    line or START, the line note's state (scale or altered: off the song's scale) and the interval as the word's outcome
+    (the steps, or "s" and the semitones against an altered line note)."""
     from . import writer                                   # writer imports this module
     for s, role, kind, notes, lns, scale in _beside_lines(songs):
         prev_with, prev_midi, li = START, None, 0
@@ -2998,9 +3087,11 @@ def _voice_walk(songs):
             steps = writer.scale_index(m, scale) - writer.scale_index(lm, scale)
             move = writer.scale_index(m, scale) - writer.scale_index(prev_midi, scale) if prev_midi is not None else None
             with_line = abs(lns[li][0] - t) < NEAR
-            yield s, role, kind, with_line, steps, move, prev_with
+            altered = lm % 12 not in scale                     # the line's note off the song's scale (a leading tone in minor): the voice's
+            outcome = f"s{m - lm}" if altered else str(steps)  # interval is then counted in semitones from the note itself (round 66)
+            yield s, role, kind, with_line, steps, move, prev_with, "altered" if altered else "scale", outcome
             if with_line:
-                prev_with = str(steps)
+                prev_with = outcome
             prev_midi = m
 
 
@@ -3012,11 +3103,19 @@ def voice_interval_units(songs) -> list:
     from one onset to the next 37 % of the time; the writing had put it a tone up the line's voicing, never at the
     octave, holding its interval 54 % (2026-10-24). Held out, the chain conditioning is worth 0.7 bits a unit; the
     layer word and the line note's chord role add nothing to it. The counter-line is counted beside the tune the same
-    way (part counter, the kind its sample relation: thirds on the tune's sample, octaves and unisons on another)."""
+    way (part counter, the kind its sample relation: thirds on the tune's sample, octaves and unisons on another). The
+    interval is counted in scale steps between the two notes' scale tones (a note off the scale: the tone below it)
+    where the line's note is on the song's scale, and in semitones from the note itself ("s-4") where it is off it
+    (the value "line": scale or altered; round 66): the writer had put the counted steps back on the scale, so a
+    unison with the tune's leading tone came out a semitone under it. FFVI's tune is off its key's scale at 0.23 of
+    the counter's onsets with it; the actual intervals there are "other" (seconds, tritones, sevenths) in 0.15, as the
+    writer realized the counted steps in 0.41 (Song Check 52's seeds: 0.54 against an off-scale tune note, 0.12 in
+    scale, FFVI 0.12). A voice note off the scale against a scale note is kept as its scale tone: marking it had put
+    alterations against notes they never follow (the written "other" rose to 0.22 against scale notes)."""
     out = []
-    for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
-        if with_line and abs(steps) <= VOICE_STEPS:
-            out.append(tables.Unit(s.sid, s.game, str(steps), {"part": role, "kind": kind, "previous": prev_with}))
+    for s, role, kind, with_line, steps, move, prev_with, line, outcome in _voice_walk(songs):
+        if with_line and (abs(steps) <= VOICE_STEPS if line == "scale" else abs(int(outcome[1:])) <= VOICE_SEMITONES):
+            out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "kind": kind, "line": line, "previous": prev_with}))
     return out
 
 
@@ -3030,7 +3129,7 @@ def voice_move_units(songs) -> list:
     leapt five steps or more at 43 % of its onsets, FFVI 11 %). The counter-line beside the tune is counted too (part
     counter, kind same or other), its place with the tune or alone in the tune's rests."""
     out = []
-    for s, role, kind, with_line, steps, move, prev_with in _voice_walk(songs):
+    for s, role, kind, with_line, steps, move, prev_with, _, _ in _voice_walk(songs):
         if move is not None and abs(move) <= VOICE_STEPS:
             out.append(tables.Unit(s.sid, s.game, str(move), {"part": role, "kind": kind, "place": "with" if with_line else "alone"}))
     return out

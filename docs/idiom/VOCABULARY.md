@@ -21,6 +21,20 @@ said otherwise. Counting code: `translate/rhythm.py` and
 `translate/phrases.py`; the plan: `translate/whole.py`; the parts:
 `translate/writer.py`.
 
+## The lead (the readings' melody)
+
+- **lead** — which voice carries the tune, decided by salience (round 64,
+  `translate/lead.py`): the voice the reader labelled melody keeps the
+  lead where it is heard, within 9 dB of the loudest tonal voice as each
+  renders alone; else the most varied heard voice becomes the melody and
+  the old one a counter-line (an accompaniment where a counter exists).
+  Why: the reader picks the melody by variety with a quarter of the
+  loudest raw volume as its only loudness test, and in one FFVI song of
+  seven that voice sits 9 dB or more under the whole; put to the owner's
+  ear voice by voice, every such song had its tune elsewhere, and every
+  heard label was right. Every word counted on the melody (the tune's
+  cells, pairs, hooks, levels, sample, habit) counts on the lead.
+
 ## The song, drawn once
 
 - **keys** — a song's key (tonic and mode). Drawn once; the plan's key,
@@ -90,7 +104,13 @@ said otherwise. Counting code: `translate/rhythm.py` and
   as the game plays them, right for counting the readings) are not what
   the module plays, and round 56 had boosted "quiet" samples the module
   had brought up already, to full; with the module's own numbers no note
-  is capped in 20 songs.
+  is capped in 20 songs. Since round 65 a note's loudness is what it hears
+  of its sample, its strike for STRIKE_SECONDS then its body
+  (`rhythm.heard_rms`), on both sides: the readings scale a note's level
+  by it for the note's own length and the writer divides by the module
+  sample's (a struck accompaniment sample's attack 3.4 dB over its body
+  and a slow lead's 3.1 under had put a backing over the tune the counts
+  said was on top).
 - **ranges (by the part)** — since round 55 (2026-10-29) a sample's home
   band is counted by the sample alone and by the sample with the part
   playing it (`sample_range_units`, shape part + role; the draw backs off
@@ -158,7 +178,15 @@ said otherwise. Counting code: `translate/rhythm.py` and
   loudest bass"); a part the token lacks (a token without the field: a
   pack built before round 32, the default balance) keeps its draw, the
   counter its `counter_shares` draw. Since round 33 (2026-10-25) a part
-  with two voices or more carries a sixth field too: each voice beyond
+  with two voices or more carries a sixth field too (since round 65 each
+  entry is `level@sample@note share`, `1.3@s5a1fa4d5d3@0.33`: the voice's
+  level over the line's, the pack id of the sample it plays most, its
+  notes over the line's, so the second voice is the game's own sample at
+  the game's density; FFVI's extra voices are on another sample in two
+  accompaniments of three and every bass and play half to two thirds of
+  the line's notes, where the written ones had taken the line's struck
+  sample and played as much as the line, Whole 149's pad a riff over the
+  tune): each voice beyond
   the line's level over the line voice's in tenths (the `layer_levels`
   unit, capped at 1.5; `rhythm.voice_level_shares`), the busiest voice
   first, joined by "/" (`accompaniment=main:56-64:1.0:4:0.5:1.0/1.3/1.3`),
@@ -287,6 +315,20 @@ said otherwise. Counting code: `translate/rhythm.py` and
   the two rates are held by running-share controllers while the tune is
   written (a draw is weighted toward the chord, or the repeated note, only
   while the tune is under its rate).
+- **tune_grain** — the tune's grain, since round 66: the share of its
+  onsets off the beat as a class (`rhythm.GRAINS`: on-beat under 0.25,
+  eighths to 0.5, fine over), by the part (melody, counter) and its habit's
+  density tier, drawn once a song on its own stream and held by the melody
+  writer over its new rhythms from the first (the running share within the
+  class, GRAIN_SLACK either side; the density tier is held the same way
+  after TIER_AFTER draws, `writer.tier_bounds`). FFVI's medium tunes sit at
+  0.33-0.51 off the beat (quartiles), a median gap of half a beat; four of
+  Song Check 52's seven medium tunes sat at 0.15-0.21, where five of
+  FFVI's 39 are, with 3.3-3.6 onsets a bar against FFVI's 3.4-5.1: the bar
+  chain, conditioned on the bar before, locks a tune into the grain of its
+  first draws, and the theme's echoes multiply them. The tier alone
+  conditions the draw: under the whole habit it backed off to the part and
+  gave a dense tune "on-beat", which no dense tune of FFVI is.
 - **ranges** — the register a sample is played in, by the sample. Drawn at
   rendering: a part's sample is the one of its pool whose game-played range
   covers the part's register best, the part's top weighing most, and one
@@ -356,7 +398,23 @@ said otherwise. Counting code: `translate/rhythm.py` and
   interval 37 % of the time; the writing had taken a tone up the line's
   voicing, never at the octave, holding its interval 54 % (round 23).
   Held out, the chain is worth 0.7 bits a unit; the layer word, the line
-  note's chord role and the line's own move add nothing to it.
+  note's chord role and the line's own move add nothing to it. The
+  interval is counted between the two notes' scale tones (a note off the
+  key's scale: the tone below it) where the line's note is on the scale,
+  and since round 66 in semitones from the note itself (`s-4`) where it
+  is off it (the value `line`: scale or altered), which the writer puts
+  back exactly (`writer.interval_pitch`): the counted steps alone had gone
+  back on the scale, so a unison with the tune's leading tone came out a
+  semitone under it. FFVI's tune is off its key's scale at 0.23 of the
+  counter's onsets with it; the written counter's intervals against such
+  a note were "other" (a second, a tritone, a seventh) in 0.54 where
+  FFVI's are in 0.15, and 0.12 against a scale note, FFVI's 0.12. A voice
+  note off the scale against a scale note is kept as its scale tone: a
+  mark for it had put alterations against notes they never follow (the
+  written "other" against scale notes rose to 0.22). The product with
+  `voice_moves` now weighs the move the entry's note would make from the
+  voice's own last note, as the word counts it (it had taken the move from
+  the voice's last note with the line).
 - **voice_moves** — the same voice at every onset (the counter-line beside
   the tune too, since round 29): its move from its own
   previous note in scale steps, by the part, the relation and the place
@@ -774,8 +832,10 @@ said otherwise. Counting code: `translate/rhythm.py` and
   onsets, and a line written to it with a second line beside struck 10.3
   times a bar against FFVI's 7.3.)
 - **second_figures** — a voice beside a layered part's line, bar by bar,
-  where the part holds two voices or more, by the song's feel and tempo
-  band, the line's onset count and its pattern. The voice is a mask over
+  where the part holds two voices or more, by the voices' note share over
+  the line (sparse, half, full; round 65, the token's share class for a
+  written song), the song's feel and tempo band, the line's onset count
+  and its pattern. The voice is a mask over
   the line's onsets, which of them it strikes with and any onsets of its
   own (`1 0 1 0 | 7/2`; `-` resting), for the chord parts and, since round
   27, the bass (its second voice had been a figure of its own drawn under
