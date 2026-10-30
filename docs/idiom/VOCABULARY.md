@@ -1,5 +1,7 @@
 # The vocabulary: every table, what it counts, what it controls
 
+The index and the wiring of every table, generated from the code, is `vocabulary-map.md` (`python tools/vocab_map.py`): each table's shape, where it is drawn and what it conditions. This page is the words themselves: what each counts and why it exists.
+
 The idiom writes a song from tables. A table is a count of one kind of
 thing (its *unit*) over a game's readings: each unit has an *outcome* (what
 was there) and the *values* it may be conditioned on (the part, the tempo
