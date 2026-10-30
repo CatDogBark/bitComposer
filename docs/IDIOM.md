@@ -184,6 +184,10 @@ its exit criteria are the gate to the next.
    packs from the tables, one part at a time, each judged before the next.
 5. [Packs](idiom/phase-5-packs.md): the second pack format in the product,
    the PACKS panel importing into it, the built-in SNES packs if chosen.
+   Superseded as a picker by phase 6; its surviving pieces are named there.
+6. [The writer as the generator](idiom/phase-6-generator.md): GENERATE
+   writes from a vocabulary and a set of sounds with no import needed,
+   FFVI's vocabulary shipped as the default, Classic kept; 2.0 at its end.
 
 ## Rules of evidence
 
