@@ -43,7 +43,7 @@ mod python {
         bus.dsp.mute = mute;
         bus.dsp.taps = taps;
         let budget = (spc::CLOCK as f64 * seconds.max(0.0)) as u64;
-        let n = py.allow_threads(|| spc::run(&mut cpu, &mut bus, budget));
+        let n = py.detach(|| spc::run(&mut cpu, &mut bus, budget));
         let mut out = Vec::with_capacity(bus.log.len() * 10);
         for w in &bus.log {
             out.extend_from_slice(&w.cycle.to_le_bytes());
@@ -80,7 +80,7 @@ mod python {
         let (mut cpu, mut bus) = spc::load(data).map_err(PyValueError::new_err)?;
         bus.dsp.solos = Some(Box::new(crate::dsp::Solos::new(&bus.ram)));
         let budget = (spc::CLOCK as f64 * seconds.max(0.0)) as u64;
-        py.allow_threads(|| spc::run(&mut cpu, &mut bus, budget));
+        py.detach(|| spc::run(&mut cpu, &mut bus, budget));
         let solos = bus.dsp.solos.take().expect("solos kept");
         let frames = solos.out[0].len() / 2;
         let mut b = Vec::with_capacity(8 * frames * 4);
