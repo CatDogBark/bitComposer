@@ -1507,12 +1507,6 @@ def line_notes(song: Song, role: str) -> list | None:
     return voices[line_voice(voices, role)]
 
 
-DENSITY_BINS = ((3, "1-3"), (6, "4-6"), (9, "7-9"), (1e9, "10+"))   # a bar's onsets, for the second line's draw under the line's bar
-
-
-def density_bin(onsets: int) -> str:
-    """A bar's onset count as a class (DENSITY_BINS)."""
-    return next(name for top, name in DENSITY_BINS if onsets <= top)
 
 
 def second_figure_units(songs) -> list:
