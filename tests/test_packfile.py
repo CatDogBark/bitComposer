@@ -2,6 +2,7 @@
 import json
 import math
 import random
+import shutil
 import struct
 import unittest
 import wave
@@ -91,6 +92,26 @@ class PackFiles(unittest.TestCase):
         self.assertNotIn(name, PACKS)
         self.assertNotIn("testpack_flute", samples.INSTRUMENT_PRESETS)
         self.assertFalse(samples.is_percussion("testpack_thump"))
+
+    def test_two_packs_whose_voice_keys_coincide_do_not_load_together(self):
+        """A voice is registered as name_key and both halves may hold underscores: `game` with `strings_soft` and
+        `game_strings` with `soft` would share `game_strings_soft`, and unloading the second had taken the first's
+        voice away (reported by an outside scan 2026-10-22). The second load is refused, with the pack to rename."""
+        first = dict(self.pack, name="game", voices={"lead": ["strings_soft"]},
+                     samples={"strings_soft": {"file": "flute.wav", "hz": 441, "loop": [11025, 22050], "release": "flute"}})
+        self.load(first)
+        second = dict(self.pack, name="game_strings", voices={"lead": ["soft"]},
+                      samples={"soft": {"file": "flute.wav", "hz": 441, "loop": [11025, 22050], "release": "flute"}})
+        d2 = tempfile.TemporaryDirectory(); self.addCleanup(d2.cleanup)
+        shutil.copy(os.path.join(self.dir.name, "flute.wav"), d2.name)
+        path = os.path.join(d2.name, "pack.json")
+        with open(path, "w") as fh:
+            json.dump(second, fh)
+        with self.assertRaises(pf.PackError) as cm:
+            pf.load_pack_file(path)
+        self.assertIn("game_strings_soft", str(cm.exception))
+        self.assertIn("'game'", str(cm.exception))
+        self.assertNotIn("game_strings", pf._loaded)                           # nothing of it registered
 
     def test_loading_again_is_free_and_a_changed_file_reloads(self):
         name = self.load()

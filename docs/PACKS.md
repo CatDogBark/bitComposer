@@ -25,6 +25,13 @@ user's data folder (`~/.local/share/bitcomposer/packs`, or under
 exported pack (one zip file of its folder, which EXPORT writes), and USE
 puts it in SOUND.
 
+Since 2.0rc1 an import also counts the game's tables into its pack file
+(the second format, `bitcomposer_pack: 2`, with `tables` beside the voices:
+`translate/packtables.py`) and keeps the songs' readings in the data
+folder's `readings.db`, so the pack is a vocabulary the writer draws from
+as well as a set of sounds (`bitcomposer --vocabulary pack:NAME`; the
+README's "Written from a game's vocabulary").
+
 ## An example
 
 ```json

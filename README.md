@@ -191,6 +191,30 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
+## Written from a game's vocabulary
+
+```bash
+bitcomposer --vocabulary ffvi -s 7 -v
+```
+
+writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): the
+band, the figures, the tune and its balance drawn from Final Fantasy VI's
+vocabulary, the tables fitted on its 67 songs' readings and shipped with the
+player (`bitcomposer/vocabularies/ffvi.json.gz`, 365 KB of statistics and
+none of the game's samples), played on one of the built-in SNES sound sets
+(`--pack ffvi`, `mana`, `evermore` or `megamanx`; left random, the seed
+picks one). `--carry-theme` draws the tune's phrases again until its theme
+comes back; `--band-returns` brings the chords, the bass or the
+accompaniment back with it. A seed names one song on every machine. The
+rest of the options are Classic's, the generator without a vocabulary, and
+do not apply. In the player, SET's STYLE row picks Classic or a vocabulary
+(with THEME and RETURNS for the two switches) and GENERATE writes from it.
+Importing a game (below) also fits the game's own vocabulary beside its
+samples (`--vocabulary pack:NAME`, on the game's sounds) and recounts one
+over everything you have imported (`--vocabulary library`); the window
+offers each once 40 songs stand behind it. The rest of the 2.0 window is
+coming (`docs/idiom/phase-6-generator.md`).
+
 ## Packs from your games
 
 New in 1.2, and early. The player's PACKS panel makes a pack from a game's

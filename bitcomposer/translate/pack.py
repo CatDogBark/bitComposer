@@ -382,7 +382,7 @@ def why(g: Gathered, data: dict) -> dict:
     return out
 
 
-def write(data: dict, files: dict, out: Path, reasons: dict | None = None, songs: int | None = None) -> Path:
+def write(data: dict, files: dict, out: Path, reasons: dict | None = None, songs: int | None = None, game: str | None = None) -> Path:
     """The pack file and its WAVs into `out`, with why its samples are where
     they are (WHY: the songs read, and why()'s reasons) when given."""
     out.mkdir(parents=True, exist_ok=True)
@@ -393,7 +393,7 @@ def write(data: dict, files: dict, out: Path, reasons: dict | None = None, songs
             w.setframerate(rate)
             w.writeframes(pcm.tobytes())
     if reasons is not None:
-        (out / WHY).write_text(json.dumps({"songs": songs, "why": reasons}, indent=1) + "\n", encoding="utf-8")
+        (out / WHY).write_text(json.dumps({"songs": songs, "game": game, "why": reasons}, indent=1) + "\n", encoding="utf-8")
     path = out / "pack.json"
     path.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
     return path
@@ -444,6 +444,14 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
                 continue
             readings.append(r)
             snaps.append(snap)
+    if not readings:
+        raise ValueError("no SPC file could be read")
+    from . import store
+    db = store.connect()                                    # the readings kept (phase 6): a vocabulary is fitted over them
+    for r in readings:
+        if not store.known(db, r.id):
+            store.keep(db, r)
+    game = Counter(r.game for r in readings).most_common(1)[0][0]
     g = gather(readings, snaps)
     cache = {}
 
@@ -460,7 +468,7 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
     first = Path(paths[0])
     folder = first.name if first.is_dir() else first.stem if archives.is_archive(first) else first.parent.name
     data, wavs = build(g, decode, name or name_for(folder))
-    path = write(data, wavs, Path(out), why(g, data), len(readings))
+    path = write(data, wavs, Path(out), why(g, data), len(readings), game=game)
     v = data["voices"]
     say(f"{path}: {len(readings)} songs read, {len(wavs)} samples; " +
         ", ".join(f"{pool} {len(set(ks))}" for pool, ks in v.items() if pool != "drums") +
@@ -468,4 +476,19 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
     if g.names:
         uses = g.uses.get(R.DRUMS, Counter())
         say("  drums named: " + ", ".join(f"{k[:10]} {g.names[k]} ({uses[k]} hits)" for k in sorted(g.names, key=lambda k: -uses[k])))
+    if progress:
+        progress(len(files), len(files))
+    try:                                                    # the lead by what is heard (round 64): each voice rendered alone, the melody label moved
+        from . import lead                                  # where another voice carries the tune; before the tables, which count on the lead
+        folder = os.path.commonpath([os.path.dirname(os.path.abspath(str(f))) for f in files])
+        lead.run(db, game, folder, say=say)
+    except Exception as e:                                  # the readings stand as read; the error is said, not raised
+        say(f"  the lead pass did not run: {type(e).__name__}: {e}")
+    try:                                                    # the game's vocabulary beside its samples (format 2), then the library's over everything
+        from . import packtables
+        from .. import vocabularies
+        packtables.into(db, game, path, say=say)
+        vocabularies.refit_library(db, say=say)
+    except Exception as e:                                  # the pack stands without its tables; the error is said, not raised
+        say(f"  the vocabulary was not counted: {type(e).__name__}: {e}")
     return path
