@@ -86,7 +86,7 @@ def main(argv=None) -> int:
     ap.add_argument("--screenshot", metavar="PNG", help="render the window offscreen to PNG and exit (with a few fresh songs, nothing played)")
     ap.add_argument("--screen", type=_size, default=(1920, 1080), metavar="WxH", help="with --screenshot: the screen in physical pixels (default 1920x1080)")
     ap.add_argument("--scale", type=float, default=1.0, help="with --screenshot: the display scaling, 1.5 for 150%% (default 1)")
-    ap.add_argument("--panels", default="", help="with --screenshot: panels to open, comma-separated: settings, mix")
+    ap.add_argument("--panels", default="", help="with --screenshot: what to open, comma-separated: a screen (play, write, library, sounds) and the panels settings, mix")
     ap.add_argument("--version", action="version", version=f"bitcomposer {__version__}")
     args = ap.parse_args(argv)
     if args.check:

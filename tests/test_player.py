@@ -729,7 +729,11 @@ class WindowHeadless(unittest.TestCase):
         self.pump(0.6)
         self.assertEqual((win.width(), win.height()), size)
         self.assertGreater(win.property("contentH"), win.height())
-        self.assertGreater(scroll.property("contentY"), 0)  # MIX scrolled into view
+        mix = win.findChild(QObject, "masterPanel")          # MIX is in view (2.0 puts the panels at the top, so no scroll is needed)
+        self.assertTrue(mix.property("visible"))
+        top = mix.property("y") - scroll.property("contentY")
+        self.assertGreaterEqual(top, 0)
+        self.assertLess(top + mix.property("height"), win.height())
         self.assertEqual(warnings, [])
         win.close()
         del eng
