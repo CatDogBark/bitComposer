@@ -73,9 +73,11 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
-  its second voices' levels, and the drums' level
+  its second voices' levels, and the drums' level with its kit, each
+  piece's sample and level
   (`accompaniment=half:56-68:0.8:2:0.6:1.2 bass=half:28-40:0.3:1:1.0
-  drums=::::0.8 melody=main:64-84:0.9:1:0.7`).
+  drums=::::0.2:::K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2
+  melody=main:64-84:0.9:1:0.7`).
   Drawn once, whole: which parts the song has, their weights, their
   registers, how long their notes sound, how many voices each part gets
   (`allot` trims the total to the SNES chip's eight), and since round 32
@@ -176,6 +178,38 @@ The words are grouped by where the writing draws them, in the order the song is 
   their order and votes with the field stripped, so every balance draw
   lands where it did; 17 tokens say same, 34 other (the Dancing Mad pair
   share one).
+  Since round 63 (2026-10-29) the drums' token carries the song's kit as
+  its eighth field (`rhythm.kit_token`: each piece letter with the pack
+  id of the sample the song strikes it with most, `K=sbfe716b9b6,S=s1279e119a1`,
+  in LETTERS' order), so the written kit's pieces and samples are one
+  song's with its levels (`samples_for` takes each sample where the pack
+  holds it; the `kit_pieces` word stands without the field). Since round
+  68 (2026-10-30) each piece carries its own level beside its sample, after
+  an `@`: the median level of the notes struck on that sample, the
+  loudness factor applied as the part's level has it (`Song.kit_levels`),
+  as a share of the song's loudest part's level in tenths
+  (`K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2`; a piece whose
+  level the readings never heard keeps the old form, and the drums' fifth
+  field stays as the fallback). The plan keeps them
+  (`extras.drums.kit_levels`, `plan.kit_piece_level` by kit slot, the
+  open hat at the hat's; the log line "kit from the balance: KSh (K
+  sbfe716b9b6 at 1.7, ...)") and `whole.note_level` plays a drum note on
+  a kit slot at its piece's share over the top level, a slot without one
+  at the part's share. Why: the part's one level is the median over every
+  note of every drum voice, the most frequent piece's, and FFVI's hat is
+  the most frequent and its strike the quietest, so Blackjack's token
+  said drums at 0.2 where its kick plays at 1.7 of the bass and its snare
+  at 0.7, and the render, bringing every piece to that one heard loudness
+  over its own strike, played the kick as quiet as a hat (Whole 169's
+  kick at volume column 6 and hat at 28 against Blackjack's 64 and 24,
+  its drums -25.6 LUFS under the whole against -9.4). Over FFVI's 46 kits
+  with a level the kick sits at a median 1.6 of the loudest pitched part
+  (15 of 17 over 1.0), the snare at 0.3, the hat at 0.2, the crash at 0.6,
+  and in 22 of the 46 the loudest piece is twice the part's one level or
+  more. After: Whole 169's kick at 64 and hat at 27, its drums -10.7
+  under the whole; seeds 161-170's kits a median -15.5 under from -21.3
+  (FFVI -9.5), the rest of it the one-piece kits, which the field cannot
+  move (one piece's median is the part's).
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;

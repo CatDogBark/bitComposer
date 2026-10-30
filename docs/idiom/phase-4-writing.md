@@ -58,6 +58,8 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 64 | 2026-10-29 | the lead by salience | 50, 51 |
 | 65 | 2026-10-29 | the voices beside the line ride the token, and a note's loudness as it hears its sample | 50, 52 |
 | 66 | 2026-10-29 | the tune's grain, the voice's own alteration, and three songs' tokens | 52, 53 |
+| 67 | 2026-10-30 | the sustain loop reaches the render, the bridge read again | 53, 54 |
+| 68 | 2026-10-30 | the kit's level a piece | 54 |
 
 ## Goal
 
@@ -4176,3 +4178,111 @@ had the same voices without coming out that way, so the layer shares want a
 look. Every measurement of rounds 56 to 66 that set written renders against
 FFVI's (the loudness tracking, round 59's stems report, the salience of
 rounds 64 to 66) was made on one-shot renders and stands to be read again.
+
+### Round 68: the kit's level a piece (2026-10-30, from Song Check 54's measurement: the kit 9 to 16 dB under its token's song)
+
+**Found.** Whole 169's balance token is Blackjack's. Blackjack's own render
+(the readings' per-part renders, ffvi-stems) plays its kick and snare voice
+at volume column 64 and its hat voice at 24; Whole 169 played its kick at 6
+and its hat at 28, its drums -25.6 LUFS under the whole against Blackjack's
+-9.4, and over Song Check 53's ten seeds the kit sat a median -21.3 under
+the whole against FFVI's -9.5. The cause was in the count, not the writer.
+A song's level for a part (`rhythm.load`) is one number, the median over
+every note of every voice of the part, each note's level times its sample's
+loudness factor (the strike's RMS for a drum, round 63); for the drums the
+hat is the most frequent piece and its strike the quietest, so the median
+is the hat's, and the token carried `drums=::::0.2` where the kick plays
+near full. On the other side, `render.level_of` played every drum note at
+that one level over its own sample's strike, bringing every piece to the
+same heard loudness: the kick as quiet as a hat, the hat relatively loud,
+the kit's structure inverted against the source. Counted a piece over
+Blackjack's drum voices: the kick's notes at a median level 0.33 raw and
+0.53 heard (its strike 0.40, factor 1.62), the snare's 0.33 raw and 0.22
+heard, the hat's 0.125 raw and 0.056 heard; as shares of the loudest part
+(the bass, 0.31): kick 1.7, snare 0.7, hat 0.2, where the part's one
+median gave 0.2. Over FFVI's 46 kits with a level: the kick sits at a
+median 1.6 of the loudest pitched part (quartiles 1.2-2.2; 15 of 17 over
+1.0), the snare at 0.3 (0.2-0.6), the hat at 0.2 (0.1-0.2), the tom at
+1.0, the crash at 0.6 (0.5-0.8), the rim at 0.9 (0.4-1.2); the loudest
+piece is twice the part's one level or more in 22 of the 46.
+
+**Built.** The kit's level a piece, as a counted unit on the token. The
+readings keep each drum sample's median level (`Song.kit_levels`, the
+same loudness logic as the part's level, the NaN guard of round 67 kept);
+the balance token's kit field carries it beside each piece's sample as a
+share of the song's loudest part's level in tenths, as the part level is
+(`kit_token(s, top)`:
+`K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2`; a piece whose
+level the readings never heard keeps the old form `K=sid`, and a token
+with the old form still loads); the plan parses it into
+`extras.drums.kit_levels` (the log line "kit from the balance: KSh (K
+sbfe716b9b6 at 1.7, ...)"; `plan.kit_piece_level` by kit slot, the open
+hat at the hat's) and `render.note_level` plays a drum note on a kit slot
+at its piece's share over the top level, the part's share (the fifth
+field, kept) for a slot the token gave no level. The piece's share can
+pass 1.0 (FFVI's kicks mostly do); the note level's cap of full stands.
+Pack4 refit (95 tables; balance, levels and layer_levels changed) and the
+shipped vocabulary `bitcomposer/vocabularies/default.json.gz` written
+again from it: the pack's `tables` with the source's `label` and
+`fitted_on` fields kept, gzipped. Of the 47 FFVI tokens with a kit, 46
+carry a level on every piece; one kit's levels were never read.
+
+**Measured, seeds 161-170 again on the refit pack (the same songs: form,
+band and tempo unchanged on every seed), LUFS.** Whole 169: the kick's
+volume column 64 and the hat's 27 (Blackjack 64 and 24; the module's
+global volume 34 against Blackjack's render's 41, so the kit sits within
+2 dB of the source's in absolute terms); its drums -10.7 under the whole
+from -25.6 (Blackjack -9.4). Whole 162 (Blackjack's kit too): -9.9 from
+-21.3. Each part under the whole, median, against FFVI's (63 songs): bass
+-4.1 (sc53b -4.0; FFVI -7.0), accompaniment -4.1 (-4.0; -6.3), counter
+-6.5 (-6.4; -4.1), melody -8.1 (-7.8; -7.2), drums -15.5 (-21.3; -9.5),
+over the seven seeds with a kit. The tune's margin over the loudest other
+pitched line is where it was (-6.9, one on top). Three seeds did not move:
+163 (a snare alone at 0.1, -26.4), 164 (a rim alone at 0.3, -17.5) and
+168 (a snare alone at 0.2, -21.6), by construction, since one piece's
+median is the part's. A column of 64 is the converter's mark for the
+song's loudest voice (`convert._lift` raises every channel's volume and
+lowers the global volume by as much, until the loudest voice reaches 64),
+so the kick at 64 in Whole 169 and 162 says the kick is now the loudest
+note in the song, as it is in Blackjack's own render; nothing is clipped
+(Whole 169's kick wants 0.32 of full before the lift, its hat 0.13).
+Whole 162's master went from 108 to 69 of 127 to hold the song's
+loudness to its token's -24 dBFS with the kit counted louder in the mix
+estimate (-1.3 dB from -5.2).
+
+**Measured, no change (the owner's question from Whole 166's fifth
+accompaniment voice, an "apart" voice holding a three-second note through
+a bar its line rests in).** How often a voice beyond a part's line (as
+`layer_tokens` and `second_figures` see them) sounds in a bar where its
+line is silent, over FFVI's readings
+(`~/diags/bitcomposer/idiom/phase4/r68_layer_rests.py`): counting a voice
+as sounding in a bar by an onset in it or a note held into it, the
+accompaniment's extra voices (44 layered songs, 73 voices) sound in 113 of
+the 187 bars where their line is silent (0.60; by voice a median 0.50 over
+the 30 voices with such bars, 10 never, 19 in half or more; Ending Theme
+27 of 36, Awakening and Terra 12 of 12), against 0.81 of the bars their
+line plays; the counter's (27 songs, 42 voices) in 60 of 170 (0.35; by
+voice 0.36, 7 never, 10 in half or more; The Empire Gestahl 16 of 16, The
+Magic House 15 of 60), against 0.80. By onset alone: the accompaniment's
+0.57 of 237 such bars, the counter's 0.27 of 226. So a layered
+accompaniment voice sounding under a resting line is the game's habit as
+often as not; a counter's, a third of the time. The writer is not changed
+for it.
+
+**Open.** The one-piece kits: FFVI's 15 kits of one piece render their
+drums a median -14.6 under the whole (its 30 kits of two pieces or more
+-8.8), and its snare-alone kits at 0.1 to 0.3 of the top sit at -17 to
+-19 (Troops March on, Terra, Opening Theme part 3), so Whole 168's -21.6
+on Terra's kind of token is 3 to 4 dB under the source and Whole 163's
+-26.4 on a snare at 0.1 about 9 under, Whole 164's -17.5 against Johnny
+C. Bad's rim at -8.9 about 9 under: the count of a lone piece's level
+against the pitched parts still wants a look (its strike window, or the
+frame the readings' level is taken over). The written kit's median -15.5
+against FFVI's -9.5 is those three seeds; the two kick-snare-hat kits are
+within 1.3 dB of their source. The piece's share is read against the
+top level, which the note level caps at 1.0 of full: a kick at 1.6 of a
+top of 0.65 would be held at full; none of pack4's 67 tokens puts a
+piece's share times its top over 1.0 (the tops run 0.15 to 0.65 and the
+loud kicks sit on low tops), so the cap is not met yet but is there.
+Round 67's other open items stand: the bass 3 dB forward and the counter
+2 dB behind FFVI's place, the voices beside the line adding up.
