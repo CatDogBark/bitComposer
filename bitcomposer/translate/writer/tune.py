@@ -221,7 +221,7 @@ def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=Non
     by the voice_moves word for the move the entry's note would make from it: the note both words agree on."""
     form = "semis" if ctx[2] == "altered" else "steps"
     out = {}
-    for entry in t_iv.vocabulary:
+    for entry in sorted(t_iv.vocabulary, key=interval_entry):   # the vocabulary is a set: in a fixed order, or the draw rides the hash seed
         f, v = interval_entry(entry)
         if f != form or entry in refused or abs(v) > (rhythm.VOICE_SEMITONES if f == "semis" else rhythm.VOICE_STEPS):
             continue
