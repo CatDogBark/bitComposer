@@ -317,6 +317,31 @@ RELEASE = {
 }
 
 
+# Where each pitched voice sounds right, MIDI low to high (phase 6): the
+# writer fits a voice to a part's register and speed by this, the way an
+# imported game's ranges table fits the game's own samples. Set by ear and by
+# the instrument each recipe models, not measured from any game.
+RANGES = {
+    "mana_accordion": (48, 84),
+    "mana_bass": (28, 55),
+    "mana_bass_elec": (28, 55),
+    "mana_brass": (50, 84),
+    "mana_choir": (48, 84),
+    "mana_epiano": (40, 91),
+    "mana_flute": (60, 96),
+    "mana_glass_pad": (55, 91),
+    "mana_hollow_wave": (48, 91),
+    "mana_marimba": (48, 96),
+    "mana_reed": (55, 88),
+    "mana_sine_pad": (48, 84),
+    "mana_slap_bass": (28, 55),
+    "mana_strings": (48, 84),
+    "mana_synth_brass": (48, 86),
+    "mana_tubular_bell": (60, 96),
+    "mana_vibraphone": (53, 89),
+    "mana_whistle": (67, 100),
+}
+
 PACK = {
         "palette": "snes",
         "label": "Secret of Mana",

@@ -173,6 +173,44 @@ the warning on a library vocabulary).
   games' names; the Song Checks, the docs and the tools keep saying FFVI,
   where the comparison is the point.
 
+## Built, 2.0rc2: a voice fitted to its part, and bitComposer's own set
+
+The smoke test's listener heard the writing holding up and the voices
+holding it back, and the plan log said why on every seed: "none in the
+pack; the pool rule chooses". On a built-in set the pool rule had nothing
+to score. The vocabulary's sample tables (ranges, sample_speeds,
+sample_lengths, sample_ambitus, part_samples) name samples by the game's
+ids; a built-in voice has a name, not an id; `best_sample` found no range
+for any voice of the pool and fell to `rng.choice`. A tune planned at
+72-92 could land on a cello, a 200 ms swell on sixteenths, and the
+register bound fell back to the plan's.
+
+- **Profiles** (`packs.profile`): every built-in pitched voice carries the
+  range it sounds right in (each pack's `RANGES`, set by ear and by the
+  instrument the recipe models, not measured from any game), a speed from
+  its measured attack (struck: 24 a second; a 10 ms attack 12; 30 ms 8;
+  60 ms 6; 120 ms 4; 200 ms 3; slower 2) and a shortest note (the
+  sample_lengths classes, at 1.5 times the attack). `best_sample`,
+  `sample_speed`, `sample_floor` and `ambitus_of` answer from the profile
+  where the tables know nothing of the id; the pool strips the set's
+  prefix from a voice's name, so the set's name travels with the lookup.
+  The plan log names each pick, its register, its speed and its range.
+- **The set** (`packs/bit.py`): 34 generic instruments and a kit,
+  synthesised from descriptions, modelled on no game's bank, with
+  something slow and something quick in every register the shipped
+  vocabulary reaches (melody 40-92, counter 48-84, accompaniment 40-80 at
+  2 to 12 a second, bass 28-56). It is the writer's default; the four
+  styled sets are Classic's and a written song takes one only by name.
+- **Measured** (seeds 201-220 on the shipped vocabulary, the laptop): the
+  written measures on the FFVI set before and after the fit are the same
+  to the second decimal but for the tune's chord tones (0.53 to 0.57 at
+  the median) and steps (0.65 to 0.60), as they should be: the notes are
+  the same, the voices and the bounds moved. On the FFVI set, of the 75
+  part picks over the twenty seeds, 24 had sat outside the part's
+  register before (11 above the voice's range, 13 below); after, none.
+  The `bit` set's measures sit on the FFVI set's line for line. Four
+  seeds were put in the dev player's folder for the owner's ear.
+
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
 - **Import time per song.** The readers: 0.6 s a song (five FFVI songs,

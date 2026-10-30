@@ -149,7 +149,7 @@ ApplicationWindow {
         var key = r === "melody" ? "melody" : r === "openhat" ? "open_hihat" : r
         var name = v[key]
         if (!name) return ""
-        return String(name).replace(/^(ffvi|mana|evm|mmx|snes|gen|chip)_/, "").replace(/_/g, " ")
+        return String(name).replace(/^(bit|ffvi|mana|evm|mmx|snes|gen|chip)_/, "").replace(/_/g, " ")
     }
     property real volumeGain: backend.state.volume !== undefined ? backend.state.volume : 1.0
     readonly property var levels: backend.levels                   // each channel's level while playing (about 0 to 1), else []
@@ -174,8 +174,8 @@ ApplicationWindow {
     property string packRenaming: ""
     readonly property bool importBusy: !!backend.importState.busy
     readonly property bool gettingEmulator: backend.updatePurpose === "emulator"
-    readonly property var builtinSounds: ["random", "chip", "genesis", "snes", "ffvi", "mana", "evermore", "megamanx"]
-    readonly property var snesSets: ["ffvi", "mana", "evermore", "megamanx"]
+    readonly property var builtinSounds: ["random", "chip", "genesis", "snes", "bit", "ffvi", "mana", "evermore", "megamanx"]   // Classic's
+    readonly property var snesSets: ["bit", "ffvi", "mana", "evermore", "megamanx"]
     readonly property var packNames: backend.packs.map(function(p) { return p.name })
     readonly property var soundOptions: builtinSounds.concat(packNames)
     readonly property var partOrder: ["lead", "alt_lead", "harmony", "counter", "arp", "bass"]
@@ -421,8 +421,7 @@ ApplicationWindow {
         var flags = ""
         if (settGenerator !== "classic") {                   // the writer: what it writes from, the sounds and the two switches; Classic's options do not apply
             if (settVocabulary !== "default") flags += " --vocabulary " + settVocabulary
-            if (snesSets.indexOf(settSound) >= 0) flags += " --pack " + settSound
-            else if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)
+            if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)      // else its own set, the default
             if (settCarryTheme) flags += " --carry-theme"
             if (settBandReturns) flags += " --band-returns"
             if (/^\d{1,9}$/.test(settSeed)) flags += " -s " + settSeed
@@ -451,7 +450,7 @@ ApplicationWindow {
     function soundLabel(name) {
         if (name === "random" || name === "") return "the seed's pick"
         var p = packOf(name); if (p) return p.label
-        return { ffvi: "FFVI", mana: "Mana", evermore: "Evermore", megamanx: "Mega Man X", chip: "chip", genesis: "Genesis", snes: "SNES" }[name] || name
+        return { bit: "bitComposer", ffvi: "FFVI", mana: "Mana", evermore: "Evermore", megamanx: "Mega Man X", chip: "chip", genesis: "Genesis", snes: "SNES" }[name] || name
     }
     function settingsSummary() {
         var prefix = ""
@@ -459,7 +458,7 @@ ApplicationWindow {
             prefix = (playbackStatus === "Playing" ? "AUTO: the next song is written when this one ends" : "AUTO: written when playback stops") + "   |   "
         if (settGenerator !== "classic") {
             var parts = ["Written by bitComposer" + (settVocabulary !== "default" ? " from " + vocabularyLabel(settVocabulary) : "")]
-            parts.push("on " + (snesSets.indexOf(settSound) >= 0 || isLibraryPack(settSound) ? soundLabel(settSound) + " sounds" : "the sounds the seed picks"))
+            parts.push("on " + (isLibraryPack(settSound) ? soundLabel(settSound) + "'s sounds" : "its own sounds"))
             if (settCarryTheme) parts.push("carrying a theme")
             if (settBandReturns) parts.push("the band returning")
             if (/^\d{1,9}$/.test(settSeed)) parts.push("seed " + settSeed)
@@ -1352,10 +1351,10 @@ ApplicationWindow {
                             OptionRow {
                                 visible: root.settGenerator !== "classic"
                                 label: "BUILT IN"
-                                options: ["random"].concat(root.snesSets)
-                                labels: ({ random: "SEED PICKS", ffvi: "FFVI", mana: "MANA", evermore: "EVERMORE", megamanx: "MEGA MAN X" })
-                                value: root.snesSets.indexOf(root.settSound) >= 0 ? root.settSound : (root.isLibraryPack(root.settSound) ? "" : "random")
-                                onPicked: function(c) { root.settSound = c }
+                                options: ["bit"]
+                                labels: ({ bit: "BITCOMPOSER" })
+                                value: root.isLibraryPack(root.settSound) ? "" : "bit"
+                                onPicked: function(c) { root.settSound = "random" }
                             }
                             OptionRow {
                                 visible: root.settGenerator === "classic"
@@ -1375,7 +1374,7 @@ ApplicationWindow {
                             Body {
                                 color: root.dimText; font.pixelSize: Math.round(10 * root.ui)
                                 text: root.settGenerator !== "classic"
-                                    ? "A vocabulary names each part's sample from its own game; on another set the writer takes the nearest by register. The chip and Genesis sounds belong to Classic."
+                                    ? "bitComposer's own set: generic instruments, synthesised, each fitted to its part by register and speed. A game you have read lends its own samples instead. The chip, Genesis and styled SNES sets belong to Classic."
                                     : "Classic's sounds: the chip, the Genesis and the SNES sets, or one of your games' packs."
                             }
                         }

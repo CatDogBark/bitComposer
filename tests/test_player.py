@@ -722,7 +722,7 @@ class WindowHeadless(unittest.TestCase):
         flags = self.b.autoFlags()
         self.assertNotIn("--vocabulary", flags)
         self.assertNotIn("--classic", flags)
-        self.assertIn("--pack mana", flags)
+        self.assertNotIn("--pack", flags)                       # the writer plays on its own set unless a game of yours is chosen
         self.assertIn("--carry-theme", flags)
         self.assertNotIn("--tempo", flags)                      # Classic's options do not apply to the writer
         win.setProperty("settGenerator", "classic")

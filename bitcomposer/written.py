@@ -9,7 +9,8 @@ import random
 from . import names, vocabularies
 from .packs import PACKS
 
-SOUND_SETS = ("ffvi", "mana", "evermore", "megamanx")   # the built-in SNES sound sets a written song may play on
+SOUND_SETS = ("bit", "ffvi", "mana", "evermore", "megamanx")   # the built-in sound sets a written song may play on
+DEFAULT_SOUNDS = "bit"                                  # bitComposer's own (packs/bit.py): what it plays on unless a set or a game is named
 MAX_BARS = 48                                            # as the Song Checks: forms longer are drawn again
 MIN_BARS = 12                                            # and shorter (a game's jingles stay in its tables)
 TAIL_BARS = 4                                            # the loop's first bars once more after the form, fading
@@ -17,9 +18,10 @@ FADE = 3.0
 
 
 def sound_set(pack: str | None, rng: random.Random) -> str:
-    """The sound set a written song plays on: the one named, or one of the SNES sets drawn ("random", "none" and
-    the chip palette have no SNES samples to write on)."""
-    return pack if pack in SOUND_SETS else rng.choice(SOUND_SETS)
+    """The sound set a written song plays on: the one named, else bitComposer's own ("random", "none" and the chip
+    palette have no SNES samples to write on; the four styled sets are Classic's, and a written song takes one only by
+    name). `rng` is kept for the signature's sake: the default is not drawn."""
+    return pack if pack in SOUND_SETS else DEFAULT_SOUNDS
 
 
 def pack_sounds(pack_file) -> tuple[str, set]:
@@ -73,7 +75,7 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
         source = f"Written by bitComposer from {label}'s songs"
     score.message = [f"{title} - {key} - {p.bpm:.0f} BPM - form {p.letters}",
                      "layout: " + ", ".join(x or "" for x in layout),
-                     f"{source} on the {sounds} sounds (seed {seed}; docs/IDIOM.md): the band, the figures, the tune and its",
+                     f"{source} on {'its own sounds' if sounds == DEFAULT_SOUNDS else 'the ' + sounds + ' sounds'} (seed {seed}; docs/IDIOM.md): the band, the figures, the tune and its",
                      "balance drawn from a vocabulary of counted habits, none of any song's notes."] + list(score.message or [])[3:]
     info = {"title": title, "key": key, "tempo": int(round(p.bpm)), "form": p.letters, "bars": p.bars, "band": list(p.band),
             "seconds": int(round(score.seconds)), "vocabulary": label, "sounds": sounds, "seed": seed,

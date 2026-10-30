@@ -307,6 +307,28 @@ RELEASE = {
 }
 
 
+# Where each pitched voice sounds right, MIDI low to high (phase 6): the
+# writer fits a voice to a part's register and speed by this, the way an
+# imported game's ranges table fits the game's own samples. Set by ear and by
+# the instrument each recipe models, not measured from any game.
+RANGES = {
+    "evm_bass": (28, 55),
+    "evm_bell": (60, 96),
+    "evm_breath_flute": (60, 96),
+    "evm_choir_oo": (48, 84),
+    "evm_dark_pad": (40, 76),
+    "evm_drone": (31, 60),
+    "evm_harp": (43, 91),
+    "evm_kalimba": (60, 96),
+    "evm_pad": (48, 84),
+    "evm_piano": (36, 96),
+    "evm_pluck": (48, 91),
+    "evm_reed": (55, 88),
+    "evm_strings": (48, 84),
+    "evm_tinker": (72, 103),
+    "evm_wind": (55, 91),
+}
+
 PACK = {
         "palette": "snes",
         "label": "Secret of Evermore",

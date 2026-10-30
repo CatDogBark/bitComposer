@@ -57,13 +57,24 @@ REACH = 7                             # semitones a part's top may sit above the
 SPEED_WEIGHT = 3                      # a sample's score loses this a note a second the part's fastest bar runs past the sample's fastest in the game
 
 
-def sample_speed(models, rid: str, rng: random.Random) -> tuple[float, float] | None:
+def builtin_profile(rid: str, pack: str | None = None) -> dict | None:
+    """A built-in voice's profile (packs.profile: its range, speed and floor, set for the voice itself), the stand-in for
+    the tables' answers about a game's own sample where the sample is a built-in voice (phase 6). `rid` is the id as the
+    pool gives it, the set's prefix stripped ("harp" of "ffvi_harp"), so the set's name `pack` puts it back. Before it,
+    a written song on a built-in set drew every part's voice at random from its pool: the vocabulary names samples by
+    the game's ids, the pool's voices carried none, and the fit found nothing to score."""
+    from ...packs import profile
+    return (profile(f"{pack}_{rid}") if pack else None) or profile(rid)
+
+
+def sample_speed(models, rid: str, rng: random.Random, pack: str | None = None) -> tuple[float, float] | None:
     """How fast the game plays a sample, notes a second (the sample_speeds table's class tops): a song's fastest bars on
-    it, drawn (a song plays a pad at eight notes a second where most hold it), and the fastest bars of any song; None
-    unknown."""
+    it, drawn (a song plays a pad at eight notes a second where most hold it), and the fastest bars of any song; a
+    built-in voice's own speed for both; None unknown."""
     t = (models or {}).get("sample_speeds")
     if t is None or t.songs.get((rid,), 0) == 0:
-        return None
+        prof = builtin_profile(rid, pack)
+        return (prof["speed"], prof["speed"]) if prof else None
     top = lambda c: float(c) if c != "faster" else 48.0   # noqa: E731
     drawn = t.draw((rid,), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR)
     return top(drawn), max(top(c) for c in (t.votes.get((rid,)) or {drawn: 1}))
@@ -92,24 +103,25 @@ def floors_for(plan: plan_mod.Plan, written: dict, samples: dict, models: dict |
         beside = {v for v, w in enumerate(plan_mod.layers_of(plan, role), start=1) if not w.startswith("doubling")}
         voices = beside if which == "second" else ({0} | ({v for v in range(1, plan.voices.get(role, 1))} - beside))
         fastest[chosen[0]] = max(fastest.get(chosen[0], 0.0), written_speed(plan, written, role, voices))
-    return {name_: sample_floor(models, raw(name_), rng, speed if written else None) for name_, speed in fastest.items()}
+    return {name_: sample_floor(models, raw(name_), rng, speed if written else None, pack=pack_name) for name_, speed in fastest.items()}
 
 
-def sample_floor(models, rid: str, rng: random.Random, speed: float | None = None) -> float:
+def sample_floor(models, rid: str, rng: random.Random, speed: float | None = None, pack: str | None = None) -> float:
     """The shortest note the game plays a sample at, in seconds (the sample_lengths table's class top); 0 unknown. `speed`:
     the fastest bar of the part playing it, notes a second: the floor is drawn under the sample's speed class (round 36),
     a fast part taking a fast song's floor. A floor drawn by the sample alone had taken a slow song's 120 ms for Whole 02's
     string pad at sixteenths, raising the notes round 35 had shortened to 50 ms back past where they were."""
     t = (models or {}).get("sample_lengths")
     if t is None or t.songs.get((rid,), 0) == 0:
-        return 0.0
+        prof = builtin_profile(rid, pack)
+        return prof["floor"] if prof else 0.0
     context = (rid, rhythm.speed_tier(speed)) if speed is not None else (rid,)
     drawn = t.draw(context, rng, floored=False, floor_k=plan_mod.PLAN_FLOOR)
     return (float(drawn) if drawn != "long" else 400.0) / 1000.0
 
 
 def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, others: list = (), speed: float = 0.0, models: dict | None = None,
-                drawn: dict | None = None, role: str | None = None) -> str:
+                drawn: dict | None = None, role: str | None = None, pack: str | None = None) -> str:
     """The sample for a part's register and speed: of the pool's samples (`names`, repeated by their share), one the game
     plays as fast as the part's fastest bar (the sample_speeds table) whose game-played range (the ranges table, by the
     pack's own sample id, `raw(name)`) covers the register best, the part's top weighing most; when none of the pool
@@ -123,13 +135,17 @@ def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, o
     14's Whole 02: FFVI plays that pad under six notes a second; the part ran at eight)."""
     def score(name):
         rid = raw(name)
-        if ranges is None or ranges.songs.get((rid,), 0) == 0:
-            return None
-        lo, hi = (int(x) for x in ranges.draw(range_context(rid, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
+        if ranges is not None and ranges.songs.get((rid,), 0):
+            lo, hi = (int(x) for x in ranges.draw(range_context(rid, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
+        else:
+            prof = builtin_profile(rid, pack)           # a built-in voice: its own range (phase 6)
+            if prof is None:
+                return None
+            lo, hi = prof["range"]
         if drawn is not None:
             drawn[rid] = (lo, hi)
         a, b = register
-        fastest = sample_speed(models, rid, rng)             # the part's fastest bar against the sample's fastest in the game
+        fastest = sample_speed(models, rid, rng, pack)       # the part's fastest bar against the sample's fastest in the game
         slow = max(0.0, speed - fastest[0]) if fastest is not None else 0.0     # past a song's fastest on it
         ever = max(0.0, speed - fastest[1]) if fastest is not None else 0.0     # past any song's
         return max(0, min(b, hi) - max(a, lo)) - 2 * max(0, b - hi) - max(0, lo - a), hi, slow, ever
@@ -288,14 +304,14 @@ def _weighted(rng: random.Random, options: list, weights: list):
     return options[-1]
 
 
-def wide_enough(models: dict | None, rid: str, played: tuple | None, role: str, log: list) -> tuple | None:
+def wide_enough(models: dict | None, rid: str, played: tuple | None, role: str, log: list, pack: str | None = None) -> tuple | None:
     """A chord part's home band (the ranges word's draw) where it is at least MIN_SPAN wide, else the sample's whole played
     range (sample_ambitus) in its place (round 53): a song that strikes a sample at one pitch had bound a three-voice
     accompaniment to that pitch for 45 bars. A sample the game only ever plays at one pitch (a drum sample as a rhythmic
     chord part, FFVI's accompaniment in 0.08 of songs) keeps its one pitch: that is how the game plays it."""
     if played is None or played[1] - played[0] >= plan_mod.MIN_SPAN:
         return played
-    whole_range = ambitus_of(models, rid)
+    whole_range = ambitus_of(models, rid, pack=pack)
     if whole_range is None or whole_range == tuple(played):
         return played
     log.append(f"{role}'s home band on {rid} {played} is under {plan_mod.MIN_SPAN} semitones: bound by the sample's whole range {whole_range}")
@@ -318,7 +334,7 @@ def part_sample_for(models: dict, role: str, speed: float | None, own: set, rng:
     return _weighted(rng, held, weights) if sum(weights) > 0 else rng.choice(held)
 
 
-def ambitus_of(models: dict | None, rid: str, rng: random.Random = None) -> tuple | None:
+def ambitus_of(models: dict | None, rid: str, rng: random.Random = None, pack: str | None = None) -> tuple | None:
     """The whole range the game ever played a sample over (sample_ambitus, round 43): the lowest low and the highest high
     of the word's outcomes for it, not one song's draw. A tune's register is its balance token's (one song's ambitus,
     20 semitones at FFVI's median), and a bound drawn from another song's ambitus and cut against it had left the
@@ -327,7 +343,8 @@ def ambitus_of(models: dict | None, rid: str, rng: random.Random = None) -> tupl
     t = (models or {}).get("sample_ambitus")
     t = t.table if hasattr(t, "table") else t
     if t is None or not t.songs.get((rid,), 0):
-        return None
+        prof = builtin_profile(rid, pack)               # a built-in voice: its whole range is where it sounds right
+        return prof["range"] if prof else None
     spans = [tuple(int(x) for x in o.split("-")) for o in t.votes.get((rid,), {})]
     if not spans:
         return None
@@ -405,14 +422,19 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 if ranges is not None and ranges.songs.get((sid,), 0):
                     drawn[sid] = tuple(int(x) for x in ranges.draw(range_context(sid, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
         if role not in out:
-            out[role] = make(best_sample(ranges, names, register, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role)
+            out[role] = make(best_sample(ranges, names, register, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role,
+                                         pack=pack_name)
                              if register else rng.choice(names))
+            if register:
+                fit = drawn.get(raw(out[role][0]))
+                plan.log.append(f"{role}'s voice {out[role][0]} by the pool rule for {register[0]}-{register[1]} at {plan.speeds.get(role, 0.0):.1f} a second"
+                                + (f": it plays {fit[0]}-{fit[1]}" if fit else ": nothing known of its range, drawn from the pool"))
         if register:
             played = drawn.get(raw(out[role][0]))
             if role in (R.MELODY, R.COUNTER):               # a tune's bound is the whole range the game took the sample over (round 43)
-                played = ambitus_of(models, raw(out[role][0])) or played
+                played = ambitus_of(models, raw(out[role][0]), pack=pack_name) or played
             else:
-                played = wide_enough(models, raw(out[role][0]), played, role, plan.log)
+                played = wide_enough(models, raw(out[role][0]), played, role, plan.log, pack=pack_name)
             plan.bounds[role] = bound_of(played, register)
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples) where the
         # pack holds both and each reaches its voice's register; else the second voice's sample by its own register and
@@ -430,17 +452,17 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             elif pair is not None and reaches(ranges, pair[0], plan.registers[role], rng, drawn, role) and reaches(ranges, pair[1], reg2, rng, drawn, role):
                 out[role] = make(pair[0])
                 second = make(pair[1])
-                plan.bounds[role] = bound_of(wide_enough(models, pair[0], drawn.get(pair[0]), role, plan.log), plan.registers[role])
+                plan.bounds[role] = bound_of(wide_enough(models, pair[0], drawn.get(pair[0]), role, plan.log, pack=pack_name), plan.registers[role])
             if second is None:
-                second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role))
+                second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role, pack=pack_name))
             out[f"{role}:second"] = second
-            plan.bounds[f"{role}:second"] = bound_of(wide_enough(models, raw(second[0]), drawn.get(raw(second[0])), f"{role}:second", plan.log), reg2)
+            plan.bounds[f"{role}:second"] = bound_of(wide_enough(models, raw(second[0]), drawn.get(raw(second[0])), f"{role}:second", plan.log, pack=pack_name), reg2)
     floors, fastest = {}, {}                                # each chosen sample's shortest note in the game (sample_lengths): a note's floor on
     for key, chosen in list(out.items()):                   # it, under the speed class of the fastest part it serves (round 36)
         if isinstance(chosen, tuple):
             fastest[chosen[0]] = max(fastest.get(chosen[0], 0.0), plan.speeds.get(key.split(":")[0], 0.0))
     for name_, speed in fastest.items():
-        floors[name_] = sample_floor(models, raw(name_), rng, speed if plan.speeds else None)
+        floors[name_] = sample_floor(models, raw(name_), rng, speed if plan.speeds else None, pack=pack_name)
     out["floors"] = floors
     if plan.bounds:
         plan.log.append("written where the game plays each sample: " + ", ".join(f"{k} {lo}-{hi}" for k, (lo, hi) in plan.bounds.items()))

@@ -200,9 +200,11 @@ bitcomposer -s 7 -v
 writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): a
 plan for the band, each part's figures bar by bar, a tune with a theme that
 may come back, and the parts' balance, all drawn from a vocabulary of
-counted habits, played on one of the built-in SNES sound sets (`--pack
-ffvi`, `mana`, `evermore` or `megamanx`; left to itself, the seed picks
-one) and rendered through the SNES back end. A seed names one song on
+counted habits, played on bitComposer's own sound set (generic
+instruments, synthesised here from descriptions and modelled on no game's
+bank, each fitted to its part by register and speed; `--pack ffvi`,
+`mana`, `evermore` or `megamanx` borrows one of Classic's styled sets
+instead) and rendered through the SNES back end. A seed names one song on
 every machine. `--carry-theme` draws the tune's phrases again until its
 theme comes back; `--band-returns` brings the chords, the bass or the
 accompaniment back with it. In the player this is GENERATE, with THEME
