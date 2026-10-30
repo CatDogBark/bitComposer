@@ -102,6 +102,43 @@ the warning on a library vocabulary).
   import is a progress bar or an overnight job, and what runs in the
   background.
 
+## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
+
+- **Import time per song.** The readers: 0.6 s a song (five FFVI songs,
+  3 s wall with four workers on 16 cores). The lead pass, every voice
+  rendered alone through the emulator: 3.5 s a song with a melody (three
+  songs, 10.5 s). A whole FFVI import, 82 songs, is about six minutes: a
+  progress bar, not an overnight job. (The readers name the game from the
+  folder, "Final Fantasy 6" from `ffvi-spc`'s files; the lead pass must be
+  given that name.)
+- **The song-count threshold.** FFVI's tables fitted on 10, 20 and 40 of
+  its songs (one seeded draw each) beside the full 67, twenty seeds
+  written from each (201-220, with stems and salience) and then forty
+  more (221-260, measures only). At twenty seeds the tune's variety looked
+  halved under 40 songs; at forty seeds that was seed noise (the full fit
+  itself moved from 12 to 11 distinct tune cells between seed sets). What
+  holds across both passes: the drums starve first and do not recover by
+  40 songs, 2.1, 3.0 and 3.6 strikes a bar at 10, 20 and 40 songs against
+  7.0 on the full fit and 6.9 in the game (the kit words and the drum
+  chains, conditioned on kit, tempo and habit, are the thinnest tables);
+  the counter plays fewer bars (0.77, 0.75, 0.81 against 0.85 and 0.90);
+  the tune's balance sits a dB or two further back (medians -6.5, -6.7,
+  -5.4 dB under the loudest other line against -5.3). Everything else is
+  inside the seed spread. The library vocabulary's warning: under 40
+  songs the drums are not the game's; a whole game's worth is what the
+  full fit had.
+- **The pooled fit.** The tables fitted over the 39-game corpus, 1,562
+  songs with a grid, write clean songs (no failures over sixty), and on
+  FFVI's own yardsticks sit near the FFVI fit on most measures (distinct
+  tune cells 12.5 and 12 against 11-12, drums 7.5 and 8.4 strikes a bar
+  against 6.6-7.0, the tune's echoes 0.43-0.45 against 0.45-0.50). The
+  differences are what 39 games in one draw should give: a less stepwise
+  tune (0.50-0.57 of its moves against FFVI's 0.64), a wider harmony
+  (five to seven distinct voicings against three), and the tune a median
+  7.2 dB under the loudest other line against 5.3 on the same twenty
+  seeds. A pooled SNES style is a second vocabulary for later, not the
+  default; FFVI's stands.
+
 ## Exit criteria
 
 - GENERATE on a fresh install writes a song from the shipped FFVI
