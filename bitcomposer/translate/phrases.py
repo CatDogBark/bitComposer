@@ -1056,3 +1056,78 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# --- the tune's arc: where a song's tune peaks, and how far each phrase sits under it ---
+
+PLACES = ("opening", "early", "middle", "late", "closing")   # a phrase's place among a song's tune phrases
+BELOW = ((0, "0"), (2, "1-2"), (5, "3-5"), (9, "6-9"), (10 ** 9, "10+"))   # semitones a phrase's top sits under the song's
+ABOVE = ((0, "0"), (2, "1-2"), (5, "3-5"), (10 ** 9, "6+"))               # semitones the song's peak sits above the tune's register top
+
+
+def place_of(i: int, n: int) -> str:
+    """A phrase's place among a song's n tune phrases: opening (the first), closing (the last), else early, middle or
+    late by where it falls."""
+    if i == 0:
+        return "opening"
+    if i == n - 1:
+        return "closing"
+    r = i / max(1, n - 1)
+    return "early" if r < 0.4 else ("middle" if r <= 0.6 else "late")
+
+
+def _class(x: int, bins) -> str:
+    return next(name for top, name in bins if x <= top)
+
+
+def _tune_arc(song: Song):
+    """A song's tune phrases (four bars, the melody's): their places and highest notes, the song's peak, and the tune
+    register's top (the 90th percentile of its notes); None under two phrases."""
+    rows = [(ph.start, max(int(round(n[2])) for n in ph.line)) for ph in phrases(song, 4) if ph.line and ph.source == R.MELODY]
+    if len(rows) < 2:
+        return None
+    pitches = sorted(int(round(n[2])) for ph in phrases(song, 4) if ph.line and ph.source == R.MELODY for n in ph.line)
+    return [(place_of(i, len(rows)), top) for i, (_, top) in enumerate(rows)], max(t for _, t in rows), pitches[int(0.9 * (len(pitches) - 1))]
+
+
+def climax_units(songs) -> list:
+    """Each song as a unit: its outcome the place (PLACES) of the first tune phrase holding the tune's highest note, its
+    value the part. FFVI's tune peaks at 0.45 of the song at the median; the written tunes had peaked at 0.24, with
+    nothing in the writing to say where a tune should climb to (2026-10-24)."""
+    out = []
+    for s in songs:
+        arc = _tune_arc(s)
+        if arc is None:
+            continue
+        rows, peak, _ = arc
+        out.append(tables.Unit(s.sid, s.game, next(place for place, top in rows if top == peak), {"part": R.MELODY}))
+    return out
+
+
+def arc_units(songs) -> list:
+    """Each tune phrase but the climax as a unit: its outcome how far its highest note sits under the song's peak, in
+    semitones (BELOW), its values the part and the phrase's place."""
+    out = []
+    for s in songs:
+        arc = _tune_arc(s)
+        if arc is None:
+            continue
+        rows, peak, _ = arc
+        climax = next(i for i, (_, top) in enumerate(rows) if top == peak)
+        for i, (place, top) in enumerate(rows):
+            if i != climax:
+                out.append(tables.Unit(s.sid, s.game, _class(peak - top, BELOW), {"part": R.MELODY, "place": place}))
+    return out
+
+
+def summit_units(songs) -> list:
+    """Each song as a unit: its outcome how far the tune's highest note sits above the tune register's top (the 90th
+    percentile, the registers table's), in semitones (ABOVE), its value the part: the climax may leave the register."""
+    out = []
+    for s in songs:
+        arc = _tune_arc(s)
+        if arc is None:
+            continue
+        _, peak, top90 = arc
+        out.append(tables.Unit(s.sid, s.game, _class(max(0, peak - top90), ABOVE), {"part": R.MELODY}))
+    return out

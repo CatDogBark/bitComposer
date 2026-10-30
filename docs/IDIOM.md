@@ -213,4 +213,6 @@ its exit criteria are the gate to the next.
   the owner first and decided together; it is not made in the code
   (decided 2026-10-23, after the hook: weighting the urn's "earlier"
   draws toward the opening would have moved the number without naming
-  the thing).
+  the thing). The rules still standing are listed in
+  [idiom/rules-to-words.md](idiom/rules-to-words.md), to be replaced in
+  the owner's order.

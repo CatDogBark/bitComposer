@@ -327,7 +327,7 @@ class Pack(unittest.TestCase):
     def gathered():
         from bitcomposer.translate import pack, roles as R
         g = pack.Gathered(game="Test Quest", songs=4)
-        g.uses[R.MELODY].update({"flute": 60, "oboe": 30, "bell": 1})   # the bell plays too little of it
+        g.uses[R.MELODY].update({"flute": 60, "oboe": 30, "bell": 1})   # the bell plays little of it, and stays (round 51: every instrument)
         g.uses[R.ARP].update({"harp": 40, "hat": 5})                    # the hat read as an arp in a song
         g.uses[R.BASS].update({"bass": 80})
         g.uses[R.DRUMS].update({"hat": 200, "kick": 150, "snare": 120})
@@ -344,7 +344,7 @@ class Pack(unittest.TestCase):
     def test_each_pool_takes_the_samples_its_part_is_played_with_most(self):
         from bitcomposer.translate import pack
         p = pack.pools(self.gathered())
-        self.assertEqual(p["lead"], ["flute"] * 4 + ["oboe"] * 2)      # repeated by their share; no bell
+        self.assertEqual(p["lead"], ["flute"] * 4 + ["oboe"] * 2 + ["bell"])   # repeated by their share; the rare bell once (round 51)
         self.assertEqual(p["arp"], ["harp"] * 4)                        # a drum the game plays is no arp
         self.assertEqual(p["bass_heavy"], p["bass_light"])
 
@@ -387,7 +387,7 @@ class Pack(unittest.TestCase):
             pcm = tone(sounds[k], 0.25, noise=0.0 if g.f0.get(k) else 1.0, decay=None if g.f0.get(k) else 0.05)
             return pcm, ((len(pcm) - 3200, len(pcm)) if g.f0.get(k) else None)
         data, files = pack.build(g, decode, "test_quest_spc")
-        self.assertEqual(data["voices"]["lead"], ["sflute"] * 4 + ["soboe"] * 2)
+        self.assertEqual(data["voices"]["lead"], ["sflute"] * 4 + ["soboe"] * 2 + ["sbell"])
         self.assertEqual(data["samples"]["sflute"]["note"], 69.0)
         self.assertEqual(data["samples"]["sbass"]["release"], "bass")
         self.assertTrue(data["samples"]["skick"]["percussion"])

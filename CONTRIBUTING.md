@@ -17,6 +17,19 @@ also be started by hand on any branch (`gh workflow run ci.yml --ref
 <branch>`, or `windows.yml`) when a change could break Windows or an older
 Python.
 
+## Issues and pull requests
+
+Anyone can open an issue: a problem (the form asks for the version and what
+happened) or an idea. A security problem goes privately instead, as
+[SECURITY.md](SECURITY.md) says.
+
+Pull requests come from collaborators. To work on something, open an issue
+about it first; the maintainer invites contributors as collaborators.
+Collaborators push branches of their own and open pull requests into `dev`;
+only the maintainer merges into `dev` and `main` and makes release tags
+(`v*`), and only `main` and those tags can reach the signing and PyPI
+environments.
+
 ## Before you open a pull request
 
 1. Run the tests:
@@ -246,8 +259,11 @@ it from there and the publish workflow refuses a tag that does not match it.
    HOME=$(mktemp -d) sh -c 'python3 -m bitcomposer.player --screenshot docs/images/player.png --screen 800x1440 --scale 2 --music-dir "$HOME/Music/bitComposer"'
    ```
 5. Open a pull request from `dev` into `main`: CI (tests on every Python)
-   and the Windows build run on it. Merge when both are green, and wait for
-   them to go green again on main's merge commit.
+   and the Windows build run on it. Merge when both are green. There is
+   nothing to wait for after the merge: main takes nothing but these pull
+   requests, so the merge commit is the tree the pull request tested (CI
+   runs once more on the push, for the README's badge; the Windows build
+   does not).
 6. Tag and push the tag:
 
    ```bash

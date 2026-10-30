@@ -93,8 +93,21 @@ PACKS panel as stage 5 left it (`../TRANSLATOR.md`).
   slot, no cymbal, no tom, the true snare absent (the brightness kit chose
   among the six most-struck drums; the cymbal, in 22 of 67 songs, ranks
   eighth). After: kick, snare, hat, tom, cymbal, rim and open hat all the
-  readings' own. Still to do before it ships: every game's kit before and
+  readings' own. A slot takes only a sample the game plays as a drum
+  (`pack.drum_uses`: the drums role holds half its notes or more), since
+  the busiest "other" had been FFVI's mallet, a melody instrument in
+  sixteen songs, in the rim slot (2026-10-24); a slot the names leave
+  empty takes the busiest drum left, else the snare, the format wanting
+  every slot. Still to do before it ships: every game's kit before and
   after, the doubtful listed, and a listening set.
+- The sample's envelope. DONE in the thin pack builder (2026-10-24,
+  `pack.envelope_of`, pack sample field `envelope`): each sample carries
+  the SNES chip envelope its game plays it with most ({"adsr": [ADSR1,
+  ADSR2]} or {"gain": GAIN}), the format checks it, the registry keeps it
+  by voice (`samples.SAMPLE_ENVELOPES`), and the whole-song render plays
+  every note through it; a note had played flat at full level and been
+  cut dead. Import's packs get it with the builder; `PACKS.md` must say
+  the field exists (the second format's documentation, below).
 - The panel says what a pack says, in words: its habits as the tables
   summarise them.
 - The pack loader's voice key. A pack file's voices are registered as

@@ -142,6 +142,11 @@ def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
     known = {KEY, "name", "label", "palette", "voices", "habits", "trims", "samples"}
     if data[KEY] == TABLED:
         known.add(TABLES)
+        try:                                                # the pack's samples' own loudness, for the level words (round 56)
+            from ..translate import rhythm as _rhythm
+            _rhythm.SAMPLE_LOUDNESS.update(_rhythm.load_loudness(base))
+        except Exception:
+            pass
     for k in data:
         if k not in known:
             fail(k, f"not a pack field (fields: {', '.join(sorted(known))})")
@@ -303,8 +308,8 @@ def _habit(h, v, where, voice_name, fail):
 
 def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
     if not isinstance(spec, dict):
-        fail(where, "an object: file, note (or hz), and optionally loop, release, percussion, volume")
-    allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume"}
+        fail(where, "an object: file, note (or hz), and optionally loop, release, percussion, volume, envelope")
+    allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume", "envelope", "piece"}
     for k in spec:
         if k not in allowed:
             fail(f"{where}.{k}", f"not a sample field ({', '.join(sorted(allowed))})")
@@ -345,6 +350,16 @@ def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
         if not 0 <= start < end <= frames:
             fail(f"{where}.loop", f"start and end inside the sample's {frames} frames, start first")
         meta.update(loop=True, loop_start=start, loop_end=end)
+    envelope = spec.get("envelope")
+    if envelope is not None:                                # the SNES chip envelope the game plays the sample with (format 2 packs)
+        ok = isinstance(envelope, dict) and (("adsr" in envelope) != ("gain" in envelope)) and set(envelope) <= {"adsr", "gain"}
+        if ok and "adsr" in envelope:
+            ok = isinstance(envelope["adsr"], list) and len(envelope["adsr"]) == 2 and all(_is_int(x) and 0 <= x <= 255 for x in envelope["adsr"])
+        if ok and "gain" in envelope:
+            ok = _is_int(envelope["gain"]) and 0 <= envelope["gain"] <= 255
+        if not ok:
+            fail(f"{where}.envelope", 'the SNES chip envelope the game plays the sample with: {"adsr": [ADSR1, ADSR2]} or {"gain": GAIN}, bytes 0 to 255')
+        meta["envelope"] = envelope
     release = spec.get("release")
     if release is not None:
         if release not in smp.RELEASE:

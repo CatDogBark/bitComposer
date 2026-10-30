@@ -36,6 +36,7 @@ def load_pack(arg: str, tables_path: str | None):
             data = json.load(f)
         own = set(data.get("samples") or {})
         models = packtables.read(data.get(packfile.TABLES) or {})
+        rhythm.set_loudness(rhythm.load_loudness(os.path.dirname(os.path.abspath(arg))))   # the samples' own loudness (round 56)
         if tables_path:
             with open(tables_path, encoding="utf-8") as f:
                 models = packtables.read(json.load(f))
@@ -111,7 +112,7 @@ def main(argv=None) -> int:
         path = os.path.join(a.out, f"{title}.it")
         convert.render(out["score"], path)
         if a.stems:
-            whole.stems_of(p, out["written"], out["samples"], a.stems, loops=a.loops, fade=a.fade, echo=out["echo"], tail_bars=a.tail_bars)
+            whole.stems_of(p, out["written"], out["samples"], a.stems, loops=a.loops, fade=a.fade, echo=out["echo"], tail_bars=a.tail_bars, pack_name=name)
         record = {"plan": p.to_json(), "echo": out["echo"], "voices": out["first"],
                   "samples": {r: (s[0] if isinstance(s, tuple) else {k: (v[0] if isinstance(v, tuple) else v) for k, v in s.items()}) for r, s in out["samples"].items()},
                   "parts": {r: {"log": w.log, "figures": w.figures} for r, w in out["written"].items()},

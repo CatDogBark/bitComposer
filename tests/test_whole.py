@@ -1,4 +1,5 @@
 import os
+import math
 import random
 import tempfile
 import unittest
@@ -63,9 +64,9 @@ class PlanTests(unittest.TestCase):
         names, chords_ = whole.plan_chords({"chords": chords}, parts, 0, 0, "major", random.Random(2), [])
         self.assertEqual(names[:4], names[8:])
         self.assertEqual(chords_[0], (0, ""))
-        tunits = [tables.Unit("s", "g", o, {"part": rhythm.ARRANGEMENT, "form": f, "index": i, "previous": p})
+        tunits = [tables.Unit("s", "g", o, {"part": rhythm.ARRANGEMENT, "habit": "-", "form": f, "index": i, "previous": p})
                   for o, f, i, p in (("no drums melody", "first", 1, rhythm.START), ("all", "middle", 2, "no drums melody"), ("no harmony", "last", 3, "all"))]
-        texture = tables.Table(("part", "form", "previous"), "part textures", votes=tables.SHARES).fit(tunits)
+        texture = tables.Table(("part", "habit", "form", "previous"), "part textures", votes=tables.SHARES).fit(tunits)
         textures, plays = whole.plan_texture({"part_textures": texture}, parts, ["bass", "drums", "melody"], random.Random(2), [])
         self.assertEqual(textures[:4], textures[8:])
         self.assertEqual(len(set(textures[:4])), 1)                   # a texture a part
@@ -91,6 +92,8 @@ class WholeSongTests(unittest.TestCase):
         out = whole.compose(models, PACKS["ffvi"], set(), "ffvi", seed=1, game="test", max_bars=32)
         p, written = out["plan"], out["written"]
         self.assertTrue(p.band)
+        if "pair_recall" in models and "melody" in written:                # round 40: the tune's urn at the pair logs its draws
+            self.assertTrue(any(line.startswith("pairs (pair_recall)") for line in written["melody"].log), written["melody"].log)
         self.assertLessEqual(p.bars, 32)
         for role in p.band:
             self.assertIn(role, written, role)
@@ -175,8 +178,8 @@ class NewTablesTests(unittest.TestCase):
         units = rhythm.balance_units([self._song()])
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
-        self.assertEqual(tokens[1], "drums")
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 3, tokens)   # weight:register:sounded share:voices
+        self.assertTrue(tokens[1].startswith("drums") and tokens[1].endswith("+mixed"), tokens)       # the kit's habit rides too (round 62)
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[7] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62)
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
         self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
@@ -300,7 +303,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(patterns, {"0 1/2 1 3/2 2 5/2 3 7/2"})                                 # the line's bar, not the voices merged
         units = rhythm.second_figure_units([s])
         self.assertEqual(len(units), 4)
-        self.assertEqual((units[0].outcome, units[0].values), ("1 0 1 0 1 0 1 0", {"part": "accompaniment", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "8", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))
+        self.assertEqual((units[0].outcome, units[0].values), ("1 0 1 0 1 0 1 0", {"part": "accompaniment", "layer": "half", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "8", "line": "0 1/2 1 3/2 2 5/2 3 7/2"}))   # the extra voices' notes over the line's: half (round 65)
         F = __import__("fractions").Fraction
         self.assertEqual(rhythm.second_mask([F(0), F(1), F(2), F(3)], [F(0), F(2), F(7, 2)]), "1 0 1 0 | 7/2")
         self.assertEqual(rhythm.apply_mask("0 1/2 1 3/2 2 5/2 3 7/2", "1 0 1 0 1 0 1 0"), "0 1 2 3")
@@ -414,8 +417,8 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual({u.outcome for u in rhythm.bass_units([s3])}, {"0:R"})                 # the line's bar, one root held
         seconds = rhythm.second_figure_units([s3])
         self.assertEqual(len(seconds), 4)
-        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["onsets"]), ("bass", "0:R", "1"))
-        self.assertEqual(seconds[0].outcome.count("R"), 8)                                      # eight roots a bar under the held one
+        self.assertEqual((seconds[0].values["part"], seconds[0].values["line"], seconds[0].values["onsets"]), ("bass", "0", "1"))
+        self.assertEqual(seconds[0].outcome, "1 | 1/2 1 3/2 2 5/2 3 7/2")                         # with the held root, then seven of its own (the mask, round 27)
         sounds = {(u.values["voice"]): u.outcome for u in rhythm.layer_sound_units([s3])}
         self.assertGreater(float(sounds["line"]), float(sounds["second"]))
         self.assertEqual(sounds["second"], "0.4")
@@ -460,6 +463,803 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {3: ("accompaniment", line)}
         self.assertIsNone(rhythm.register_notes(s, "accompaniment"))
 
+    def test_the_voice_beside_the_line_takes_its_interval_from_the_table(self):
+        """voice_intervals counts a voice's interval to the line in scale steps where they strike together, voice_moves its
+        own move at every onset by place; the upper writer draws the voice's pitch from the two words' product with the line
+        and from its move alone, never a pitch another voice holds."""
+        from fractions import Fraction
+        from bitcomposer.translate import writer, tables, vocab
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + 0.5 * i, 0.4, [64.0, 67.0, 72.0, 67.0][i % 4], "a") for k in range(4) for i in range(8)]   # eighths on E G C G
+        second = []
+        for k in range(4):
+            second += [(4.0 * k, 0.9, 60.0, "b"), (4.0 * k + 2.0, 0.9, 60.0, "b"), (4.0 * k + 2.25, 0.4, 62.0, "b")]   # with the line a third below, then alone a step up
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={"accompaniment": line + second}, sid="s", game="g", tonic=0, mode="major")
+        s.voice_notes = {3: ("accompaniment", line), 4: ("accompaniment", second)}
+        iv = rhythm.voice_interval_units([s])
+        self.assertEqual({u.outcome for u in iv}, {"-2"})                                      # C under E: a third below, every time
+        self.assertEqual([u.values["previous"] for u in iv][:3], [rhythm.START, "-2", "-2"])
+        self.assertEqual(iv[0].values["kind"], "apart")
+        mv = rhythm.voice_move_units([s])
+        self.assertEqual([u.outcome for u in mv if u.values["place"] == "alone"], ["1"] * 4)   # alone: a step up from its own C
+        self.assertEqual({u.outcome for u in mv if u.values["place"] == "with"}, {"0", "-1"})  # with the line: back to C from C or from D
+        # the writer: tables that say "an octave above the line" and "hold your note" with the line, "a step up" alone
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "7", {"part": "accompaniment", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "7")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "accompaniment", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])   # with the line: hold, or back from the step (the move is from the voice's own last note, round 66)
+        song = rhythm.Song("w", 4, 12, bars[:2], [vocab.Span(0.0, 8.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        shared = {}
+        for k in range(2):
+            for pos in range(4):                                                               # a line that repeats middle C on every beat
+                shared[(k, Fraction(pos))] = ((0, ""), "R 3 5", ["R", "3", "5"])
+                shared[("line", (k, Fraction(pos)))] = 60
+                shared.setdefault(("taken", (k, Fraction(pos))), set()).add(60)
+        notes, figures, _ = writer.upper(song, "accompaniment", [1], {1: (60, 96)}, {"voice_intervals": iv_t, "voice_moves": mv_t}, random.Random(1),
+                                         "dense", "triad", 0.5, key=(0, "major"), plays=[True, True], figures=["0 2 5/2", "0 2 5/2"], shared=shared,
+                                         tone_index=writer.ANY_TONE, kind="apart")
+        got = {(round(a, 2), int(m)) for a, b, m, v in notes}
+        self.assertEqual(got, {(0.0, 72), (2.0, 72), (2.5, 74), (4.0, 72), (6.0, 72), (6.5, 74)})   # the octave above, held; a step up alone (the
+        # smoothing leaves the table's other outcome a few percent at every draw: the seed is one where the words' own answers come up)
+        self.assertTrue(all(int(m) != 60 for a, b, m, v in notes))
+
+    def test_a_floor_steps_down_from_a_one_outcome_context(self):
+        """A chain floored on a habit context with one outcome draws that outcome alone (all rests: a song without drums);
+        with FLOOR_OUTCOMES the floor steps down to a level that holds a choice. A one-song context with bars of its own stays."""
+        from bitcomposer.translate import tables
+        units = [tables.Unit("s1", "g", "-", {"part": "drums", "habit": "thin", "previous": rhythm.START})] * 6
+        units += [tables.Unit(f"s{i}", "g", "0:K 2:S", {"part": "drums", "habit": "full", "previous": rhythm.START}) for i in range(2, 6)]
+        t = tables.Table(("part", "habit", "previous"), "x").fit(units)
+        rng = random.Random(1)
+        floored = {t.draw(("drums", "thin", rhythm.START), rng, floored=False, floor_k=2) for _ in range(30)}
+        self.assertEqual(floored, {"-"})
+        stepped = {t.draw(("drums", "thin", rhythm.START), rng, floored=False, floor_k=2, floor_outcomes=tables.FLOOR_OUTCOMES) for _ in range(30)}
+        self.assertIn("0:K 2:S", stepped)
+        self.assertEqual(tables.FLOOR_OUTCOMES, 2)
+        units2 = [tables.Unit("s1", "g", o, {"part": "drums", "habit": "own", "previous": rhythm.START}) for o in ("-", "0:K", "0:K 2:S")] * 3
+        t2 = tables.Table(("part", "habit", "previous"), "x").fit(units2 + units[6:])
+        stays = {t2.draw(("drums", "own", rhythm.START), rng, floored=False, floor_k=2, floor_outcomes=tables.FLOOR_OUTCOMES) for _ in range(40)}
+        self.assertTrue(stays <= {"-", "0:K", "0:K 2:S"})                                  # one song, three bars: its own vocabulary, kept
+
+    def test_the_pair_of_samples_applies_whole_and_within_reach(self):
+        """layer_samples counts the counter-line's pairs too; a pair is taken only from the part's own pairs and only where the
+        pack holds both samples; a kit slot takes only a sample the game plays as a drum."""
+        from bitcomposer.translate import tables, pack
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(2)]
+        line = [(4.0 * k + i, 0.9, 72.0, "aaaaaaaaaa1") for k in range(2) for i in range(4)]
+        other = [(4.0 * k + i + 0.5, 0.4, 60.0, "bbbbbbbbbb2") for k in range(2) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"counter": line + other}, sid="s", game="g")
+        s.voice_notes = {3: ("counter", line), 4: ("counter", other)}
+        self.assertEqual([(u.values["part"], u.outcome) for u in rhythm.layer_sample_units([s])], [("counter", "saaaaaaaaaa sbbbbbbbbbb")])
+        pairs = tables.Table(("part",), "layer_samples", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "sline ssecond", {"part": "accompaniment"}) for i in range(3)])
+        rng = random.Random(1)
+        self.assertIsNone(whole.pair_for({"layer_samples": pairs}, "counter", {"sline", "ssecond"}, rng))      # no counter pairs: none, not another part's
+        self.assertIsNone(whole.pair_for({"layer_samples": pairs}, "accompaniment", {"ssecond"}, rng))         # the pack lacks the line's: none, not half
+        self.assertEqual(whole.pair_for({"layer_samples": pairs}, "accompaniment", {"sline", "ssecond"}, rng), ("sline", "ssecond"))
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "36-48", {"part": "slow"}) for i in range(3)])
+        self.assertFalse(whole.reaches(ranges, "slow", (52, 64), rng))                                          # a bass sample under a voice an octave above it
+        self.assertTrue(whole.reaches(ranges, "slow", (40, 52), rng))
+        self.assertTrue(whole.reaches(ranges, "unknown", (80, 92), rng))
+        g = pack.Gathered(game="g")
+        g.uses["drums"].update({"kick": 50, "mallet": 57}); g.uses["melody"].update({"mallet": 300}); g.uses["counter"].update({"mallet": 347})
+        self.assertEqual(pack.drum_uses(g), {"kick": 50})
+
+    def test_levels_arc_and_one_timbre_pairs(self):
+        """The levels words count a part's level against the song's loudest and a second voice's against its line's; the arc
+        words place a tune's climax and the other phrases under it; a pair with one sample for both voices applies as the
+        line's sample; the pack carries each sample's envelope and gives the kit's other slot to the game's own other strikes."""
+        from bitcomposer.translate import phrases, tables, pack
+        s = rhythm.Song("t", 4, 12, [(0.0, 4.0)], [], notes={}, sid="s", game="g")
+        s.levels = {"melody": 0.22, "bass": 0.28, "accompaniment": 0.19}
+        self.assertEqual({u.values["part"]: u.outcome for u in rhythm.level_units([s])}, {"melody": "0.8", "bass": "1.0", "accompaniment": "0.7"})
+        line = [(0.5 * i, 0.4, 60.0, "a") for i in range(8)]; other = [(float(i), 0.9, 52.0, "b") for i in range(4)]
+        s.notes = {"accompaniment": line + other}; s.voice_notes = {3: ("accompaniment", line), 4: ("accompaniment", other)}
+        s.voice_levels = {3: 0.20, 4: 0.12}
+        self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["0.6"])
+        self.assertEqual([phrases.place_of(i, 5) for i in range(5)], ["opening", "early", "middle", "late", "closing"])
+        self.assertEqual(phrases.place_of(0, 1), "opening")
+        self.assertEqual((phrases._class(0, phrases.BELOW), phrases._class(4, phrases.BELOW), phrases._class(12, phrases.BELOW), phrases._class(6, phrases.ABOVE)), ("0", "3-5", "10+", "6+"))
+        pairs = tables.Table(("part",), "layer_samples", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "sx sx", {"part": "accompaniment"}) for i in range(3)])
+        self.assertEqual(whole.pair_for({"layer_samples": pairs}, "accompaniment", set(), random.Random(1)), ("same", "same"))
+        g = pack.Gathered(game="g")
+        g.envelopes["k"].update({("adsr", 0xFF, 0xE0): 5, ("gain", 0x7F): 1}); g.envelopes["j"].update({("gain", 0x60): 2})
+        self.assertEqual((pack.envelope_of(g, "k"), pack.envelope_of(g, "j"), pack.envelope_of(g, "z")), ({"adsr": [255, 224]}, {"gain": 96}, None))
+        g.other.update({"snare": 500, "mallet": 57, "hit": 15})
+        self.assertEqual(pack.other_slot(g, {"snare": 1, "mallet": 1}), "snare")
+        self.assertIsNone(pack.other_slot(g, {}))
+
+    def test_a_notes_gap_runs_into_the_next_bar_and_its_share_follows_the_gap(self):
+        """A bar's last note runs to the next bar's first onset (the gap the share was counted against); the share a note
+        sounds may come by the gap's class (gap_sounds); the second bass voice follows the line's pitch where they strike together."""
+        from bitcomposer.translate import writer, tables, vocab
+        bars = [(0.0, 4.0), (4.0, 8.0)]
+        song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 8.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        figures = ["0:R 3:R", "1/2:R 2:R"]
+        self.assertEqual(writer.first_onset(figures, bars, 1), 4.5)
+        self.assertIsNone(writer.first_onset(figures, bars, 2))
+        notes, _, _ = writer.realize(figures[0], 0.0, 4.0, song, 36, 1.0, {0, 2, 4, 5, 7, 9, 11}, 0, None, runs_to=4.5)
+        self.assertEqual([(a, b) for a, b, m in notes], [(0.0, 3.0), (3.0, 4.5)])                 # the last note runs on to 4.5, not 4.0
+        shares = {"<1": 0.5, "1-2": 0.5, "2-4": 1.0, "4+": 1.0}
+        self.assertEqual((writer.share_at(shares, 0.5), writer.share_at(shares, 3.0), writer.share_at(0.7, 3.0)), (0.5, 1.0, 0.7))
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g")
+        line = [(0.0, 3.9, 36.0, "a"), (4.0, 1.0, 36.0, "a"), (6.0, 1.9, 38.0, "a")]
+        second = [(0.0, 0.25, 36.0, "b"), (0.5, 0.25, 36.0, "b"), (1.0, 2.9, 36.0, "b"), (4.0, 0.25, 36.0, "b"), (4.5, 3.4, 36.0, "b")]
+        s.notes = {"bass": line + second}; s.voice_notes = {1: ("bass", line), 2: ("bass", second)}
+        units = rhythm.gap_sound_units([s])
+        by = {(u.values["voice"], u.values["gap"]): u.outcome for u in units}
+        self.assertEqual((by[("line", "4+")], by[("second", "<1")], by[("second", "2-4")]), ("1.0", "0.5", "1.0"))
+        self.assertEqual(rhythm.gap_class(0.5), "<1"); self.assertEqual(rhythm.gap_class(4.0), "4+")
+        # the second bass voice on the line's pitch: a table that says "the same note" with the line and "hold" alone
+        iv = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "0", {"part": "bass", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "0")])
+        mv = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "bass", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("2", "with"), ("0", "alone"))])   # with the line it moves as the line does
+        shared = {("line", (0, __import__("fractions").Fraction(0))): 40.0, ("line", (0, __import__("fractions").Fraction(2))): 43.0}
+        midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), 43.0, "0", 40.0, 2)
+        self.assertEqual((midi, steps), (43, "0"))
+        midi, steps = writer.beside_pitch({"voice_intervals": iv, "voice_moves": mv}, "bass", "apart", {0, 2, 4, 5, 7, 9, 11}, random.Random(1), None, "0", 43.0, 0)
+        self.assertEqual((midi, steps), (43, None))
+
+    def test_the_second_bass_voice_is_a_mask_over_the_line(self):
+        """The second bass voice's bar is counted as a mask over the sustained line's onsets plus its own (as the chord parts'
+        are), and written from the line's figure: the line's marks where it strikes with the line, the root at its own onsets."""
+        from fractions import Fraction
+        from bitcomposer.translate import writer
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + i, 0.9, [36.0, 36.0, 43.0, 43.0][i], "a") for k in range(4) for i in range(4)]          # the beats
+        slap = [(4.0 * k + t, 0.2, 36.0, "b") for k in range(4) for t in (0.0, 0.5, 1.0, 2.0, 2.5, 3.5)]            # beats 1, 2, 3 and three of its own
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": line + slap}, sid="s", game="g", bpm=120.0)
+        s.voice_notes = {1: ("bass", line), 2: ("bass", slap)}
+        units = [u for u in rhythm.second_figure_units([s]) if u.values["part"] == "bass"]
+        self.assertEqual(len(units), 4)
+        self.assertEqual((units[0].outcome, units[0].values["onsets"], units[0].values["line"]), ("1 1 1 0 | 1/2 5/2 7/2", "4", "0 1 2 3"))
+        self.assertEqual(writer.mask_figure("0:R 1:R 2:5 3:5", "1 1 1 0 | 1/2 5/2 7/2"), "0:R 1/2:R 1:R 2:5 5/2:R 7/2:R")
+        self.assertEqual(writer.mask_figure("0:R 1:R 2:5 3:5", "-"), writer.REST)
+        self.assertEqual(writer.mask_figure(writer.REST, "1 1"), writer.REST)
+
+    def test_the_bass_locks_to_the_kits_accents(self):
+        """The kit's accents are the positions where two pieces strike together; bass_locks counts the share of them the bass
+        strikes with; a table's floor may step down where its context has too few songs."""
+        from bitcomposer.translate import tables
+        bars = [(0.0, 4.0), (4.0, 8.0)]
+        drums = [(t, 0.1, float("nan"), "kick") for t in (0.0, 2.0, 4.0, 6.0)] + [(t, 0.1, float("nan"), "hat") for t in (0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0)]
+        self.assertEqual(rhythm.kit_accents(drums, bars, 12), {0: {0, 2}, 1: {0, 2}})
+        bass = [(0.0, 0.9, 36.0, "b"), (2.0, 0.9, 36.0, "b"), (4.0, 0.9, 36.0, "b"), (5.5, 0.4, 38.0, "b")]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": bass, "drums": drums}, sid="s", game="g")
+        s.voice_notes = {1: ("bass", bass)}
+        self.assertEqual([u.outcome for u in rhythm.bass_lock_units([s])], ["0.8"])                 # three of the four accents carry a bass note
+        units = [tables.Unit("s1", "g", "1 1", {"part": "bass", "onsets": "2"})] * 4 + [tables.Unit(f"s{i}", "g", "1 0 | 1/2", {"part": "bass", "onsets": "3"}) for i in range(2, 6)]
+        t = tables.Table(("part", "onsets"), "m").fit(units)
+        rng = random.Random(1)
+        held = {t.draw(("bass", "2"), rng, floored=False, floor_k=2) for _ in range(20)}
+        self.assertEqual(held, {"1 1"})                                                               # the one-song floor, as it stands
+        stepped = {t.draw(("bass", "2"), rng, floored=False, floor_k=2, floor_songs=2) for _ in range(40)}
+        self.assertIn("1 0 | 1/2", stepped)                                                           # the floor steps down to the part: its other songs' masks reach
+
+    def _tune_and_counter(self):
+        """A four-bar song: the tune on the beats of bars 0 to 2 (resting in bar 3), the counter with it on beats 1 and 3,
+        its own on the and of 4, and alone in bar 3; the counter on another sample, a third below."""
+        from bitcomposer.translate import vocab
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        tune = [(4.0 * k + i, 0.9, [64.0, 65.0, 67.0, 65.0][i], "lead") for k in range(3) for i in range(4)]
+        counter = [(4.0 * k + t, 0.9, m, "ctr") for k in range(3) for t, m in ((0.0, 60.0), (2.0, 64.0), (3.5, 62.0))] + [(12.0, 1.9, 60.0, "ctr"), (14.0, 1.9, 62.0, "ctr")]
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={"melody": tune, "counter": counter}, sid="s", game="g", bpm=120.0, tonic=0, mode="major")
+        s.voice_notes = {1: ("melody", tune), 2: ("counter", counter)}
+        s.levels = {"melody": 0.20, "counter": 0.20}
+        return s, bars
+
+    def test_the_counter_is_a_mask_over_the_tune(self):
+        """counter_figures counts the counter-line's bar as a mask over the tune's onsets plus its own (the tune's line as the
+        line), and its own onsets alone where the tune rests; apply_mask gives those own onsets at a resting line."""
+        s, _ = self._tune_and_counter()
+        units = rhythm.counter_figure_units([s])
+        self.assertEqual([u.outcome for u in units], ["1 0 1 0 | 7/2"] * 3 + ["| 0 2"])
+        self.assertEqual(units[0].values, {"part": "counter", "weight": "half", "feel": "duple", "tempo": rhythm.band(120.0), "onsets": "4", "line": "0 1 2 3"})   # the counter's weight since round 47
+        self.assertEqual((units[3].values["onsets"], units[3].values["line"]), ("0", "-"))
+        self.assertEqual(rhythm.apply_mask("0 1 2 3", "1 0 1 0 | 7/2"), "0 2 7/2")
+        self.assertEqual(rhythm.apply_mask("-", "| 0 2"), "0 2")                                   # the tune rests: the counter's own onsets
+        self.assertEqual(rhythm.apply_mask("-", "-"), "-")
+        self.assertEqual(rhythm.second_mask([], []), "-")
+        s.notes["counter"] = s.notes["counter"][:3]                                                 # the counter in bar 0 only: bars 1 and 2 rest
+        s.voice_notes[2] = ("counter", s.notes["counter"])                                          # under the tune, bar 3 (both rest) is not counted
+        self.assertEqual([u.outcome for u in rhythm.counter_figure_units([s])], ["1 0 1 0 | 7/2", "-", "-"])
+        del s.notes["counter"]
+        self.assertEqual(rhythm.counter_figure_units([s]), [])
+
+    def test_the_counter_takes_its_pitch_beside_the_tune(self):
+        """The voice words count the counter beside the tune with the kind its sample relation (counter_samples: same or
+        other); writer.counter writes it over the mask's positions: the tune's pitch and the drawn interval where they strike
+        together, its own move between, its own onsets alone where the tune rests."""
+        from fractions import Fraction
+        from bitcomposer.translate import writer, tables, vocab
+        s, bars = self._tune_and_counter()
+        self.assertEqual([u.outcome for u in rhythm.counter_sample_units([s])], ["other"])
+        s.notes["counter"] = [n[:3] + ("lead",) for n in s.notes["counter"]]; s.voice_notes[2] = ("counter", s.notes["counter"])
+        self.assertEqual(rhythm.counter_kind(s), "same")
+        iv = [u for u in rhythm.voice_interval_units([s]) if u.values["part"] == "counter"]
+        self.assertEqual(({u.outcome for u in iv}, iv[0].values["kind"], iv[0].values["previous"], iv[1].values["previous"]), ({"-2"}, "same", rhythm.START, "-2"))
+        mv = [u for u in rhythm.voice_move_units([s]) if u.values["part"] == "counter"]
+        self.assertEqual(sorted({(u.outcome, u.values["place"]) for u in mv}), [("-1", "alone"), ("-1", "with"), ("1", "alone"), ("2", "with")])
+        # the writer: a table that says "a third below the tune" and "hold the note" with the tune, "a step up" alone
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "-2")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])   # back from the step too (round 66)
+        vals = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
+        song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 72.0, 0) for k in range(3) for i in range(4)]           # the tune repeats C on every beat
+        tune_figs = ["0 1 2 3"] * 3 + [writer.REST]
+        notes, figures, log = writer.counter(song, tune, tune_figs, ["1 0 1 0 | 7/2", "1 1 1 1", writer.REST, "| 0 2"], (48, 96),
+                                             {"voice_intervals": iv_t, "voice_moves": mv_t, "values": vals}, random.Random(1), "other",
+                                             key=(0, "major"), articulation="held", register=(60, 84))
+        self.assertEqual(figures, ["0 2 7/2", "0 1 2 3", writer.REST, "0 2"])
+        got = {round(a, 2): int(m) for a, b, m in notes}
+        self.assertEqual(got, {0.0: 69, 2.0: 69, 3.5: 71, 4.0: 69, 5.0: 69, 6.0: 69, 7.0: 69, 12.0: 71, 14.0: 72})   # A under C; a step up alone, the
+        self.assertAlmostEqual(notes[1][1] - notes[1][0], 1.5 * writer.HELD, places=3)           # tune's rest in bar 3 filled from where it left off
+        self.assertAlmostEqual(notes[2][1] - notes[2][0], 0.5 * writer.HELD, places=3)           # a bar's last note runs to the next bar's first onset
+        self.assertAlmostEqual(notes[6][1] - notes[6][0], 1.0 * writer.HELD, places=3)           # ...but stops at the bar line before a rest bar
+        self.assertIn("6 with the tune's onsets, 3 its own", log[0])
+        # the plan draws the kind and the level once a song, and the rendering gives a "same" counter the tune's sample
+        kinds = tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "same", {"part": "counter"}) for i in range(3)])
+        self.assertEqual(whole._draw({"counter_samples": kinds}, "counter_samples", ("counter",), random.Random(1)), "same")
+
+    def test_the_counters_level_is_drawn_under_the_tunes_share(self):
+        """counter_shares counts the counter's level as a share of the song's loudest part's, in tenths, by the band the
+        tune's own share falls in; the plan draws it after the tune's levels draw, under that draw's band, in place of the
+        counter's own levels draw, so the counter can never be louder than the loudest part (round 31; counter_levels,
+        the ratio to the tune drawn apart from the tune's share, had put Whole 28's counter at 1.05 of the loudest)."""
+        from bitcomposer.translate import tables
+        s, _ = self._tune_and_counter()
+        s.levels = {"melody": 0.20, "counter": 0.16, "bass": 0.25}
+        self.assertEqual([(u.outcome, u.values) for u in rhythm.counter_share_units([s])], [("0.6", {"part": "counter", "tune": "0.7-0.8"})])
+        s.levels = {"melody": 0.10, "counter": 0.30}                                                 # the counter the loudest: 1.0, never more
+        self.assertEqual([(u.outcome, u.values["tune"]) for u in rhythm.counter_share_units([s])], [("1.0", "<0.7")])
+        s.levels = {"melody": 0.30, "counter": 0.12}
+        self.assertEqual([(u.outcome, u.values["tune"]) for u in rhythm.counter_share_units([s])], [("0.4", "0.9+")])
+        self.assertEqual([rhythm.tune_share_band(x) for x in (0.4, 0.6, 0.7, 0.8, 0.9, 1.0)], ["<0.7", "<0.7", "0.7-0.8", "0.7-0.8", "0.9+", "0.9+"])
+        del s.notes["counter"]
+        self.assertEqual(rhythm.counter_share_units([s]), [])
+        units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
+        shares = tables.Table(("part", "tune"), "counter_shares", votes=tables.SHARES).fit(
+            units("counter_shares", "0.5", "counter", tune="<0.7") + units("counter_shares", "0.7", "counter", tune="0.7-0.8") + units("counter_shares", "1.0", "counter", tune="0.9+"))
+        models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "bass=half counter=half melody=main", {"part": rhythm.ARRANGEMENT}) for i in range(3)]),
+                  "levels": tables.Table(("part",), "levels", votes=tables.SHARES).fit(units("levels", "0.8", "melody") + units("levels", "0.4", "counter") + units("levels", "1.0", "bass")),
+                  "counter_shares": shares,
+                  "counter_samples": tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit(units("counter_samples", "same", "counter"))}
+        for seed in range(1, 6):                                                                     # the tune at 0.8: the counter from its band's own votes
+            p = whole.plan(models, seed, "g")                                                        # (three songs, terminal at the part, 3/(3+1) at the band)
+            self.assertEqual((p.levels["melody"], p.levels["bass"]), (0.8, 1.0))
+            self.assertIn(p.levels["counter"], (0.5, 0.7, 1.0))
+            self.assertEqual((p.extras["counter"]["sample"], p.extras["counter"]["level"]), ("same", p.levels["counter"]))
+            self.assertLessEqual(p.levels["counter"], 1.0)
+            self.assertIn(f"counter beside the tune: same sample, level {p.levels['counter']:.1f} of the loudest under the tune's 0.8", p.log)
+        drawn = {whole.plan(models, seed, "g").levels["counter"] for seed in range(1, 40)}
+        self.assertIn(0.7, drawn)                                                                    # the band's own outcome comes up
+        self.assertEqual({k: round(v, 3) for k, v in shares.weights(("counter", "0.7-0.8"), floor_k=whole.PLAN_FLOOR, min_songs=whole.PLAN_SONGS).items()},
+                         {"0.7": 0.833, "0.5": 0.083, "1.0": 0.083})                                 # 3/(3+1) the band's, the part's level the rest
+        models["levels"] = tables.Table(("part",), "levels", votes=tables.SHARES).fit(units("levels", "0.5", "melody") + units("levels", "0.4", "counter") + units("levels", "1.0", "bass"))
+        p = whole.plan(models, 1, "g")                                                               # a quiet tune: the band under 0.7, where the
+        self.assertIn(p.levels["counter"], (0.5, 0.7, 1.0))                                          # counter may be the loudest, as FFVI's is
+        self.assertIn("of the loudest under the tune's 0.5", p.log[-1])
+        p = whole.plan({k: v for k, v in models.items() if k != "counter_shares"}, 1, "g")         # no table: the counter's own levels draw stands
+        self.assertNotIn("level", p.extras["counter"])
+        self.assertIn(p.levels["counter"], (0.4,))
+
+    def test_the_bands_levels_are_the_balance_tokens_as_one_unit(self):
+        """The balance token carries each part's level as a share of the song's loudest part's (the fifth field, level_units'
+        unit; the drums' in the same field of a weightless token); the plan takes every part's level from the token where its
+        song has the part, so a song's level layout is one of the game's songs' whole, and falls back to the `levels` draw
+        (the counter to counter_shares under the tune's band) for a part the token lacks; the draws stay on the stream, so
+        the plan's key, form, band and every other draw are what they were (round 32: drawn apart, the accompaniment had
+        landed strictly above the tune in 0.30 of plans against FFVI's 0.17). The loudest part plays at TOP_LEVEL."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14}
+        tokens = rhythm.balance_units([s])[0].outcome.split()
+        self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
+        self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
+        tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud="))]
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit
+        self.assertTrue(tokens[1].startswith("drums=::::0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
+        s.levels = {}
+        self.assertTrue(rhythm.balance_units([s])[0].outcome.split()[1].startswith("drums=:::::::K="))   # no levels read: the kit and habit alone
+        units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
+        token = "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1:1.0 counter=minor:60-72:0.8:1 drums=::::0.6 melody=main:64-84:0.9:1:0.7"
+        models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, rhythm.ARRANGEMENT)),
+                  "levels": tables.Table(("part",), "levels", votes=tables.SHARES).fit(
+                      units("levels", "0.3", "accompaniment") + units("levels", "0.9", "bass") + units("levels", "0.4", "counter") + units("levels", "0.2", "drums") + units("levels", "0.5", "melody")),
+                  "counter_shares": tables.Table(("part", "tune"), "counter_shares", votes=tables.SHARES).fit(units("counter_shares", "0.8", "counter", tune="0.7-0.8")),
+                  "counter_samples": tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit(units("counter_samples", "other", "counter"))}
+        for seed in range(1, 6):
+            p = whole.plan(models, seed, "g")
+            self.assertEqual(p.band, ["accompaniment", "bass", "counter", "drums", "melody"])
+            self.assertEqual({r: p.levels[r] for r in ("bass", "drums", "melody")}, {"bass": 1.0, "drums": 0.6, "melody": 0.7})   # the token's
+            self.assertEqual(p.levels["accompaniment"], 0.3)                                        # the token lacks it: the levels draw
+            self.assertEqual(p.levels["counter"], 0.8)                                              # and counter_shares under the tune's 0.7
+            self.assertEqual(p.level_from, {"accompaniment": "levels", "bass": "balance", "counter": "counter_shares", "drums": "balance", "melody": "balance"})
+            self.assertEqual(p.extras["counter"]["level"], 0.8)
+            self.assertIn("levels from the balance: bass=1.0 drums=0.6 melody=0.7; drawn from levels: accompaniment=0.3 counter=0.4; the loudest bass", p.log)
+            self.assertIn("counter beside the tune: other sample, level 0.8 of the loudest under the tune's 0.7", p.log)
+            self.assertEqual(p.weights, {"accompaniment": "half", "bass": "half", "counter": "minor", "melody": "main"})   # the drums' empty weight is no weight
+            self.assertEqual(p.registers["bass"], (36, 44))
+        # the token's own counter level stands, and the counter_shares draw is made all the same (the stream as it was)
+        full = token.replace("counter=minor:60-72:0.8:1 ", "counter=minor:60-72:0.8:1:0.5 ")
+        models["balance"] = tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", full, rhythm.ARRANGEMENT))
+        p = whole.plan(models, 1, "g")
+        self.assertEqual((p.levels["counter"], p.level_from["counter"], p.extras["counter"]["level"]), (0.5, "balance", 0.5))
+        self.assertIn("counter beside the tune: other sample, level 0.5 of the loudest with the band's, the balance's", p.log)
+        self.assertEqual(p.levels["accompaniment"], 0.3)
+        without = whole.plan({k: v for k, v in models.items() if k != "counter_shares"}, 1, "g")
+        self.assertEqual(without.levels, p.levels)                                                  # the draw changed no level
+        self.assertEqual((p.extras["counter"]["sample"], p.extras["counter"]["sample_from"], p.kinds), ("other", "counter_samples", {}))
+        # the counter's kind with its level (round 39): the token's seventh field stands over the counter_samples draw, the draw made
+        kinded = full.replace("counter=minor:60-72:0.8:1:0.5 ", "counter=minor:60-72:0.8:1:0.5::same ")
+        pk = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", kinded, rhythm.ARRANGEMENT))}, 1, "g")
+        self.assertEqual((pk.extras["counter"]["sample"], pk.extras["counter"]["sample_from"], pk.kinds), ("same", "balance", {"counter": "same"}))
+        self.assertIn("counter beside the tune: same sample with the band's, level 0.5 of the loudest with the band's, the balance's", pk.log)
+        self.assertEqual((pk.tonic, pk.mode, pk.parts, pk.band, pk.registers, pk.habits, pk.levels, pk.layer_levels),
+                         (p.tonic, p.mode, p.parts, p.band, p.registers, p.habits, p.levels, p.layer_levels))
+        # the unit writes the field for a song with a counter: same where it plays the tune's sample, other where not
+        s = self._song()
+        s.notes["counter"] = [(4.0 * i + x, 0.9, m - 4, "m") for i in range(4, 8) for x, m in ((0.0, 67.0), (2.0, 71.0))]
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]), 3: ("counter", s.notes["counter"])}
+        s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "counter": 0.22}
+        ctr = [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0]
+        self.assertTrue(":0.8::same:" in ctr and ctr.count(":") == 8, ctr)
+        s.notes["counter"] = [(a, b, c, "x") for a, b, c, _ in s.notes["counter"]]; s.voice_notes[3] = ("counter", s.notes["counter"])
+        self.assertIn("::other:", [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0])
+        s.levels = {}
+        self.assertEqual([t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0].split(":")[4:7], ["", "", ""])   # no level: no kind either
+        # the same seed with the token's levels and without: every other draw identical (the levels draws stay in place)
+        bare = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(
+            units("balance", "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1 counter=minor:60-72:0.8:1 drums melody=main:64-84:0.9:1", rhythm.ARRANGEMENT))}, 1, "g")
+        self.assertEqual((bare.tonic, bare.mode, bare.parts, bare.band, bare.registers, bare.habits, bare.layer_levels, bare.extras["counter"]["sample"]),
+                         (p.tonic, p.mode, p.parts, p.band, p.registers, p.habits, p.layer_levels, p.extras["counter"]["sample"]))
+        self.assertEqual(bare.levels, {"accompaniment": 0.3, "bass": 0.9, "counter": 0.8, "drums": 0.2, "melody": 0.5})
+        self.assertEqual(set(bare.level_from.values()), {"levels", "counter_shares"})
+        self.assertNotIn("levels from the balance", " ".join(bare.log))
+        # the token's tempo class: a plan whose tempo draw falls outside it draws the tempo again under the class (round 54)
+        slow = tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token + " tempo=slow", rhythm.ARRANGEMENT))
+        tempos = tables.Table(("part", "tempo"), "tempos", votes=tables.SHARES).fit(
+            units("tempos", "70", "song", tempo="slow") + units("tempos", "150", "song", tempo="fast"))
+        ps = whole.plan({"balance": slow, "tempos": tempos}, 1, "g")
+        self.assertEqual((ps.bpm, rhythm.band(ps.bpm)), (70.0, "slow"))
+        self.assertEqual(ps.band, ["accompaniment", "bass", "counter", "drums", "melody"])          # the tempo token is no part
+        self.assertTrue(any("outside the band's class (slow)" in line for line in ps.log) or rhythm.band(70.0) == "slow")
+        # the note level: the loudest part at TOP_LEVEL, the rest at their share, a second voice at its layer share, capped at full
+        p.voices["accompaniment"] = 2; p.extras["accompaniment"]["layers"] = ["apart -12 like"]; p.extras["accompaniment"]["layer"] = "apart -12 like"
+        p.layer_levels["accompaniment"] = 1.5; p.layer_levels["melody"] = 1.5
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0), whole.TOP_LEVEL)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 0), whole.TOP_LEVEL * 0.7)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), whole.TOP_LEVEL * 0.3)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), whole.TOP_LEVEL * 0.3 * 1.5)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 1), whole.TOP_LEVEL * 0.7)             # one voice: no second
+        self.assertEqual(whole.note_level(p, "accompaniment", 1, {"accompaniment": {1}}), whole.TOP_LEVEL * 0.3 * 1.5)
+        p.levels["accompaniment"] = 1.0
+        self.assertEqual(whole.note_level(p, "accompaniment", 1), 1.0)                              # a second voice over its line at the top: the cap
+
+    def test_the_second_voices_levels_are_the_balance_tokens_too(self):
+        """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line
+        voice's in tenths (the layer_levels unit, capped at 1.5; the busiest voice first) as a sixth field; the plan plays a
+        voice beside the line at the token's share for that voice where the token's song has the part layered, and at the
+        layer_levels draw where the token lacks the field (a one-voice part, a token built before round 33); the draws stay
+        on the stream, so every other draw is what it was (round 33: a second voice at its own 1.5 draw on a line whose
+        level was the token's had stacked to 1.8 times the tune in Whole 03 and the cap of full in Whole 15 and 20)."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        line = [(4.0 * k + 0.5 * i, 0.4, 60.0, "a") for k in range(8) for i in range(8)]
+        second = [(4.0 * k + i, 0.9, 52.0, "a") for k in range(8) for i in range(4)]
+        third = [(4.0 * k, 0.9, 48.0, "a") for k in range(8)]
+        s.notes["accompaniment"] = line + second + third
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]),
+                         3: ("accompaniment", line), 4: ("accompaniment", second), 5: ("accompaniment", third)}
+        s.voice_levels = {0: 0.28, 1: 0.22, 2: 0.14, 3: 0.20, 4: 0.26, 5: 0.50}
+        s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "accompaniment": 0.22}
+        self.assertEqual(rhythm.voice_level_shares(s, "accompaniment"), ["1.3", "2.5"])           # the busiest first; uncapped since round 51 (the cap 4.0)
+        self.assertIsNone(rhythm.voice_level_shares(s, "bass"))                                      # one voice
+        self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["1.3"])               # the word's own unit is the first share
+        tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith(("tempo=", "top=", "loud="))]
+        self.assertTrue(tokens[0].startswith("accompaniment=") and ":3:0.8:1.3@" in tokens[0] and "/2.5@" in tokens[0], tokens)   # each voice beyond the line: level@sample@note share (round 65)
+        self.assertTrue(tokens[1].startswith("bass=") and tokens[1].split(":")[5] == "", tokens)     # one voice: no layer field
+        self.assertTrue(tokens[2].startswith("drums=::::0.5:::"), tokens)
+        s.voice_levels.pop(5)
+        self.assertIsNone(rhythm.voice_level_shares(s, "accompaniment"))                             # a voice without a level: no field
+        self.assertIn(":3:0.8:", rhythm.balance_units([s])[0].outcome.split()[0])
+        units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
+        layer = tables.Table(("part",), "layer_levels", votes=tables.SHARES).fit(
+            units("layer_levels", "0.5", "accompaniment") + units("layer_levels", "0.5", "bass") + units("layer_levels", "1.5", "counter") + units("layer_levels", "1.5", "harmony"))
+        token = "accompaniment=half:56-68:0.8:3:0.6:1.2/0.7 bass=half:36-44:0.9:2:1.0:0.7 counter=minor:60-72:0.8:1:0.4 harmony=minor:64-76:1.0:1:0.5 melody=main:64-84:0.9:1:0.7"
+        models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, rhythm.ARRANGEMENT)), "layer_levels": layer}
+        for seed in range(1, 6):
+            p = whole.plan(models, seed, "g")
+            self.assertEqual(p.band, ["accompaniment", "bass", "counter", "harmony", "melody"])
+            self.assertEqual(p.voices, {"accompaniment": 3, "bass": 2, "counter": 1, "harmony": 1, "melody": 1})
+            self.assertEqual(p.voice_levels, {"accompaniment": [1.2, 0.7], "bass": [0.7]})          # the token's, by rank
+            self.assertEqual({r: p.layer_levels[r] for r in ("accompaniment", "bass", "counter", "harmony")}, {"accompaniment": 1.2, "bass": 0.7, "counter": 1.5, "harmony": 1.5})
+            self.assertEqual(p.layer_from, {"accompaniment": "balance", "bass": "balance", "counter": "layer_levels", "harmony": "layer_levels", "melody": "layer_levels"})
+            self.assertIn("second voices from the balance: accompaniment=1.2/0.7 bass=0.7", p.log)   # no layered part drew: no "drawn from" clause
+            self.assertEqual(p.levels, {"accompaniment": 0.6, "bass": 1.0, "counter": 0.4, "harmony": 0.5, "melody": 0.7})
+        p.extras["accompaniment"]["layers"] = ["apart -12 like", "doubling +8"]; p.extras["accompaniment"]["layer"] = "apart -12 like"
+        p.extras["bass"]["layer"] = "apart +0 like"
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), whole.TOP_LEVEL * 0.6)      # the line at the token's level
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), whole.TOP_LEVEL * 0.6 * 1.2)   # the second voice at the token's share
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), whole.TOP_LEVEL * 0.6)      # a doubling voice plays the line's level
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2, {"accompaniment": {1, 2}}), whole.TOP_LEVEL * 0.6 * 0.7)   # apart: its own share
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 3, {"accompaniment": {1, 2, 3}}), whole.TOP_LEVEL * 0.6 * 1.2)   # beyond the token's voices: layer_levels
+        self.assertAlmostEqual(whole.note_level(p, "bass", 1), whole.TOP_LEVEL * 0.7)
+        p.voices["counter"] = 2; p.extras["counter"]["layers"] = ["apart +12 like"]; p.extras["counter"]["layer"] = "apart +12 like"
+        self.assertAlmostEqual(whole.note_level(p, "counter", 1), whole.TOP_LEVEL * 0.4 * 1.5)      # the token's song had one voice: the draw
+        # a layered part whose token lacks the field (a pack built before this round): the draw, and said in the log
+        old = token.replace("harmony=minor:64-76:1.0:1:0.5", "harmony=minor:64-76:1.0:2:0.5").replace("accompaniment=half:56-68:0.8:3:0.6:1.2/0.7", "accompaniment=half:56-68:0.8:2:0.6:1.2/0.7")
+        q = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", old, rhythm.ARRANGEMENT))}, 1, "g")
+        self.assertEqual((q.voices["harmony"], q.layer_levels["harmony"], q.layer_from["harmony"], q.voice_levels.get("harmony")), (2, 1.5, "layer_levels", None))
+        self.assertIn("second voices from the balance: accompaniment=1.2/0.7 bass=0.7; drawn from layer_levels: harmony=1.5", q.log)
+        # the same seed with the sixth fields and without: every other draw identical (the layer_levels draws stay in place)
+        bare = whole.plan({**models, "balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(
+            units("balance", token.replace(":0.6:1.2/0.7", ":0.6").replace(":1.0:0.7", ":1.0"), rhythm.ARRANGEMENT))}, 1, "g")
+        p = whole.plan(models, 1, "g")
+        self.assertEqual((bare.tonic, bare.mode, bare.parts, bare.band, bare.registers, bare.habits, bare.levels, bare.voices, bare.extras),
+                         (p.tonic, p.mode, p.parts, p.band, p.registers, p.habits, p.levels, p.voices, p.extras))
+        self.assertEqual({r: bare.layer_levels[r] for r in ("counter", "harmony", "melody")}, {r: p.layer_levels[r] for r in ("counter", "harmony", "melody")})
+        self.assertEqual(({r: bare.layer_levels[r] for r in ("accompaniment", "bass")}, bare.voice_levels, set(bare.layer_from.values())), ({"accompaniment": 0.5, "bass": 0.5}, {}, {"layer_levels"}))
+        self.assertNotIn("second voices from the balance", " ".join(bare.log))
+
+    def test_the_counters_sample_is_the_games_pair_with_the_tunes(self):
+        """counter_pairs counts the counter's sample under the tune's where the counter plays another (the pack's ids); at the
+        rendering the draw under the tune's sample is taken where the pack holds it and it reaches the written register, the
+        part's level (over all tunes) is still a count, and only where nothing counted fits does the pool rule remain."""
+        s, _ = self._tune_and_counter()
+        units = rhythm.counter_pair_units([s])
+        self.assertEqual([(u.outcome, u.values) for u in units], [("sctr", {"part": "counter", "tune": "slead"})])
+        s.notes["counter"] = [n[:3] + ("lead",) for n in s.notes["counter"]]; s.voice_notes[2] = ("counter", s.notes["counter"])
+        self.assertEqual(rhythm.counter_pair_units([s]), [])                                        # on the tune's sample: counter_samples' "same", no pair
+        pairs = tables.Table(("part", "tune"), "counter_pairs", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "sb", {"part": "counter", "tune": "sa"}) for i in range(3)]
+            + [tables.Unit(f"t{i}", "g", "sd", {"part": "counter", "tune": "sc"}) for i in range(3)])
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "60-72", {"part": "sb"}) for i in range(3)] + [tables.Unit(f"t{i}", "g", "36-48", {"part": "sd"}) for i in range(3)])
+        models, rng = {"counter_pairs": pairs}, random.Random(1)
+        w = pairs.weights(("counter", "sa"), floor_k=whole.PLAN_FLOOR, min_songs=whole.PLAN_SONGS)   # the tune's context at 3 / (3 + 1) of the
+        self.assertEqual({k: round(v, 3) for k, v in w.items()}, {"sb": 0.875, "sd": 0.125})           # mass, the part's level (sb and sd even) the rest
+        self.assertEqual(pairs.weights(("counter", "sx"), floor_k=whole.PLAN_FLOOR, min_songs=whole.PLAN_SONGS), {"sb": 0.5, "sd": 0.5})   # unseen: the part's alone
+        self.assertEqual(pairs.weights(("counter", "sx"), floor_k=None, min_songs=0), {"sb": 0.5, "sd": 0.5})
+        self.assertEqual(pairs.weights(("harmony", "sx")), {"sb": 0.5, "sd": 0.5})                    # another part: the root's, as draw() backs off
+        for _ in range(8):                                                                               # sd is out of reach two octaves down: sb
+            self.assertEqual(whole.counter_pair_for(models, "sa", {"sa", "sb", "sd"}, ranges, (60, 72), rng), ("sb", "tune", ["sd out of reach of 60-72"]))
+            self.assertEqual(whole.counter_pair_for(models, "sx", {"sa", "sb", "sd"}, ranges, (60, 72), rng)[:2], ("sb", "part"))   # a tune sample the game never had
+        got = whole.counter_pair_for(models, "sa", {"sa", "sd"}, ranges, (60, 72), rng)              # the pack lacks sb: nothing counted fits,
+        self.assertEqual(got, (None, None, ["sb not in the pack", "sd out of reach of 60-72"]))       # the pool rule stands
+        self.assertEqual(whole.counter_pair_for(models, "sa", {"sa", "sb", "sd"}, ranges, (88, 100), rng)[:2], (None, None))   # out of reach
+        one = tables.Table(("part", "tune"), "counter_pairs", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "sb", {"part": "counter", "tune": "sa"}) for i in range(3)])
+        self.assertEqual(whole.counter_pair_for({"counter_pairs": one}, "sb", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, ["sb the tune's own"]))   # not "other"
+        self.assertEqual(whole.counter_pair_for({}, "sa", {"sa", "sb"}, ranges, (60, 72), rng), (None, None, None))                    # no table: the rule, unlogged
+
+    def test_the_tunes_cells_handed_to_the_band(self):
+        """Round 37: a tune's half-bar cell taken up by another part in a later bar is counted (which part, how many bars on;
+        none), by the song's echo habit and the cell's place; the half-bar urn's kinds are counted (round 38); a cell re-rooted
+        for another part keeps its intervals as scale steps inside the part's register."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        tune = [(0.0, 0.9, 60.0, "a"), (1.0, 0.9, 64.0, "a"), (2.0, 0.9, 67.0, "a"), (3.0, 0.9, 65.0, "a"),
+                (4.0, 0.9, 60.0, "a"), (5.0, 0.9, 64.0, "a"), (6.0, 0.9, 62.0, "a"), (7.0, 0.9, 60.0, "a"),
+                (8.0, 0.9, 62.0, "a"), (9.0, 0.9, 66.0, "a"), (10.0, 0.9, 64.0, "a"), (11.0, 0.9, 62.0, "a"),
+                (12.0, 0.9, 60.0, "a"), (13.0, 0.9, 64.0, "a"), (14.0, 0.9, 67.0, "a"), (15.0, 0.9, 65.0, "a")]
+        counter = [(8.0, 0.9, 55.0, "b"), (9.0, 0.9, 59.0, "b"), (10.0, 0.9, 50.0, "b"), (11.0, 0.9, 50.0, "b")]   # bar 2's first half = the tune's bar 0 cell
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune, "counter": counter}, sid="s", game="g")
+        units = rhythm.cell_handoff_units([s])
+        self.assertEqual([u.outcome for u in units], ["counter 2", "none", "counter 1", "none", "none", "none", "none", "none"])   # bar 1 opens with the same shape as bar 0
+        self.assertEqual({u.values["habit"] for u in units}, {"mixed"})   # 1 of 4 bar cells echoed (bar 3 = bar 0): over a third
+        self.assertEqual([u.outcome for u in rhythm.half_recall_units([s])], ["new", "new", "earlier", "earlier", "earlier", "earlier", "earlier", "earlier"])   # two shapes (+4, -2) the whole tune through
+        self.assertEqual(rhythm.handoff_class(9), "far")
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual(writer.cell_pitches([60, 64, 67], 0, 7, scale, (48, 60), 50.0), [55, 59, 50])   # a C cell on G in 48-60: G B D, the D folded in
+        self.assertEqual(writer.cell_pitches([60, 64], 0, 0, scale, (60, 72), None), [60, 64])
+
+    def test_the_tunes_memory_at_the_pair_and_where_its_echoes_point(self):
+        """Round 40: a tune's two-bar groups are counted as what they are to the tune so far (pair_recall: same, earlier, new),
+        the bars inside a new pair likewise (pair_bar_recall), and each echo by where it points (recall_sources: the section
+        it is in, the theme phrase, another section); only the form's own parts are counted. The melody writer with the three
+        tables draws a pair at a time and logs it; a pair drawn again brings both bars' cells back."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        def bar(k, ps): return [(4.0 * k + i, 0.9, float(p), "a") for i, p in enumerate(ps)]
+        A, B, C = [60, 64, 67, 65], [60, 64, 62, 60], [62, 65, 69, 67]
+        tune = bar(0, A) + bar(1, B) + bar(2, A) + bar(3, B) + bar(4, C) + bar(5, A) + bar(6, C) + bar(7, A) + bar(8, A) + bar(9, B) + bar(10, A) + bar(11, B)
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune}, sid="s", game="g", numbers=list(range(12)),
+                        parts=[(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 0, "A")])
+        self.assertEqual([u.outcome for u in rhythm.pair_recall_units([s])], ["new", "same", "new", "same"])          # the repeat of A is not counted
+        self.assertEqual([u.outcome for u in rhythm.pair_bar_recall_units([s])], ["new", "new", "new", "earlier"])   # the bars of the two new pairs
+        self.assertEqual([u.outcome for u in rhythm.recall_source_units([s])], ["section", "section", "theme", "section", "section"])
+        self.assertEqual({u.values["habit"] for u in rhythm.pair_recall_units([s])}, {"repeating"})
+        self.assertEqual(rhythm.RECALL_SOURCES, ("section", "theme", "elsewhere"))
+
+    def test_the_instrument_a_part_plays_the_range_it_was_ever_played_over_and_the_tune_doubled(self):
+        """Rounds 42-44: a part's sample is counted by the part and its speed class (part_samples) and drawn before the pool
+        rule; a sample's whole played range is counted (sample_ambitus) and a tune's bound is the widest the game ever took
+        it, cut against the tune's own register; the tune's non-theme bars doubled by another part are counted
+        (tune_doubling) as the theme's are."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "abcdefghijklmnop") for i in range(4, 8) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0))]
+        s.notes["bass"] = [(4.0 * i + x, 0.5, 36.0 if i < 4 else m - 24, "k") for i in range(8) for x, m in ((0.0, 67.0), (2.0, 71.0))]
+        units = rhythm.part_sample_units([s])
+        self.assertEqual({(u.values["part"], u.outcome) for u in units}, {("melody", "sabcdefghij"), ("bass", "sk")})
+        self.assertTrue(all(u.values.get("speed") in ("slow", "medium", "fast") for u in units))
+        amb = {u.values["part"]: u.outcome for u in rhythm.sample_ambitus_units([s])}
+        self.assertEqual(amb["sabcdefghij"], "68-72")                                                 # the tune's 67-72 to REGISTER_BIN
+        self.assertEqual(amb["sk"], "36-48")                                                          # the bass's 36 and 43-48
+        # the widest the game ever took a sample: the union of the word's outcomes, not one song's draw
+        t = tables.Table(("part",), "sample_ambitus", votes=tables.SHARES).fit(
+            [tables.Unit("a", "g", "56-76", {"part": "sx"}), tables.Unit("b", "g", "60-88", {"part": "sx"}), tables.Unit("c", "g", "48-72", {"part": "sx"})])
+        self.assertEqual(whole.ambitus_of({"sample_ambitus": t}, "sx"), (48, 88))
+        self.assertIsNone(whole.ambitus_of({"sample_ambitus": t}, "sy"))
+        self.assertEqual(whole.bound_of((48, 88), (60, 80)), (60, 80))                              # the tune's own register where the sample reaches it
+        # the tune doubled: the bass plays the tune's cell two octaves down in bars 4-7, none of them the theme bar... the
+        # theme cell is bar 4's (every tune bar is the same cell here), so tune_doubling has no unit and theme_doubling has four
+        self.assertEqual([u.outcome for u in rhythm.tune_doubling_units([s])], [])
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "a") for i in range(0, 4) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0))] + \
+                            [(4.0 * i + x, 0.9, m, "a") for i in range(4, 8) for x, m in ((0.0, 72.0), (1.0, 71.0), (2.0, 69.0), (3.0, 67.0))]
+        s.notes["bass"] = [(4.0 * i + x, 0.9, m - 24, "k") for i in range(5, 8) for x, m in ((0.0, 72.0), (1.0, 71.0), (2.0, 69.0), (3.0, 67.0))]
+        s.notes["counter"] = [(4.0 * i + x, 0.9, m, "c") for i in range(5, 7) for x, m in ((0.0, 72.0), (1.0, 71.0), (2.0, 69.0), (3.0, 67.0))]
+        units = rhythm.tune_doubling_units([s])
+        self.assertEqual([u.outcome for u in units], ["none", "bass:-24 counter:+0", "bass:-24 counter:+0", "bass:-24"])   # bars 4-7, not the theme's 0-3
+        self.assertEqual({(u.values["part"], u.values["place"]) for u in units}, {("tune", "other")})
+
+    def test_a_part_enters_and_leaves_inside_the_section_where_the_game_does(self):
+        """Round 46: each part present in an own section is counted by where inside it it enters and leaves (part_entries:
+        whole, enters:k, leaves:k, by the part, the section's place and its length class); the plan turns the part's bars
+        off before its entrance and after its exit, a repeated section copying them; a draw no section this short can
+        hold gives way to the part playing it whole. Round 45: the sample word draws among the samples the pack holds."""
+        from bitcomposer.translate import tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": [(4.0 * i + x, 0.9, 60.0, "a") for i in range(2, 8) for x in (0.0, 2.0)],
+                                                      "bass": [(4.0 * i + x, 0.9, 36.0, "b") for i in range(0, 7) for x in (0.0, 2.0)]},
+                        sid="s", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")])
+        units = rhythm.part_entry_units([s])
+        self.assertEqual([(u.values["part"], u.values["form"], u.values["length"], u.outcome) for u in units],
+                         [("melody", "first", "short", "enters:2"), ("bass", "first", "short", "whole"), ("melody", "last", "short", "whole"), ("bass", "last", "short", "leaves:1")])
+        self.assertEqual({u.values["habit"] for u in units}, {rhythm.NO_TIER})                     # no drums: no tier read
+        self.assertEqual((rhythm.entry_of("enters:3 leaves:1"), rhythm.entry_of("whole"), rhythm.section_length(4), rhythm.section_length(9)), ((3, 1), (0, 0), "short", "long"))
+        units = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        entries = tables.Table(("part", "habit", "form", "length"), "part_entries", votes=tables.SHARES).fit(
+            units("enters:6", part="counter", habit="-", form="first", length="medium") + units("whole", part="melody", habit="-", form="first", length="medium")
+            + units("leaves:1", part="bass", habit="-", form="last", length="medium") + units("enters:6", part="counter", habit="-", form="last", length="short"))
+        textures = tables.Table(("part", "habit", "form", "previous"), "part_textures", votes=tables.SHARES).fit(units("all", part=rhythm.ARRANGEMENT, habit="-", form="first", previous=rhythm.START))
+        log = []
+        parts = [(0, 8, None, "A"), (8, 4, None, "B"), (12, 8, 0, "A")]
+        tex, plays = whole.plan_texture({"part_textures": textures, "part_entries": entries}, parts, ["bass", "counter", "melody"], random.Random(1), log)
+        self.assertEqual(plays["counter"][:8], [False] * 6 + [True] * 2)                           # enters six bars into A
+        self.assertEqual(plays["melody"][:8], [True] * 8)
+        self.assertEqual(plays["bass"][8:12], [True, True, True, False])                            # leaves a bar before B's end
+        self.assertEqual(plays["counter"][8:12], [True] * 4)                                        # "enters:6" cannot fit four bars: whole
+        self.assertEqual(plays["counter"][12:20], plays["counter"][:8])                             # the repeat copies the entrance
+        self.assertEqual(plays["bass"][:8], [True] * 7 + [False])                                  # the bass's word backs off to "leaves:1" in A too
+        line = next(line for line in log if line.startswith("entrances (part_entries): "))
+        self.assertIn("counter enters 6 in A", line); self.assertIn("bass leaves 1 before the end of B", line)
+        # round 59: the drums' entrance is drawn under the kit's tier, after the kit's habit, from the tier's own entrances
+        d = rhythm.Song("t", 4, 12, bars, [], notes={"drums": [(4.0 * i, 0.5, float("nan"), "k") for i in range(0, 4)] + [(4.0 * i, 0.5, float("nan"), "k") for i in range(4, 8) for _ in range(6)],
+                                                      "bass": [(4.0 * i, 0.9, 36.0, "b") for i in range(8)]},
+                        sid="d", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], pieces={"k": "kick"})
+        du = [u for u in rhythm.part_entry_units([d]) if u.values["part"] == "drums"]
+        self.assertTrue(du and all(u.values["habit"] in ("sparse", "medium", "dense") for u in du), du)
+        kit = tables.Table(("part", "habit", "form", "length"), "part_entries", votes=tables.SHARES).fit(
+            units("whole", part="drums", habit="dense", form="first", length="long") + units("leaves:4", part="drums", habit="sparse", form="first", length="long"))
+        for tier, tail in (("dense", [True] * 8), ("sparse", [True] * 4 + [False] * 4)):
+            tex = ["bass drums"] * 8 + ["bass drums"] * 4 + ["bass drums"] * 8
+            log2 = []
+            tex, plays2 = whole.drum_entrances({"part_entries": kit}, parts, tex, ["bass", "drums"], tier, random.Random(3), log2)
+            self.assertEqual(plays2["drums"][:8], tail, tier)
+            self.assertEqual(plays2["drums"][12:20], plays2["drums"][:8])                            # the repeat copies the drums' entrance
+            self.assertEqual(plays2["bass"], [True] * 20)
+        # the texture word reads the kit's tier too: a dense kit's sections never leave the drums out, a sparse kit's intro does
+        tt = tables.Table(("part", "habit", "form", "previous"), "part_textures", votes=tables.SHARES).fit(
+            units("all", part=rhythm.ARRANGEMENT, habit="dense", form="first", previous=rhythm.START) + units("no drums", part=rhythm.ARRANGEMENT, habit="sparse", form="first", previous=rhythm.START))
+        tu = rhythm.part_texture_units([d])
+        self.assertTrue(tu and all(u.values["habit"] in ("sparse", "medium", "dense") for u in tu), tu)
+        for tier, first in (("dense", "bass drums"), ("sparse", "bass")):
+            tex, _ = whole.plan_texture({"part_textures": tt}, [(0, 8, None, "A")], ["bass", "drums"], random.Random(1), [], tier=tier)
+            self.assertEqual(tex[0], first, tier)
+        # the sample word over the pack's samples: a sample the pack lacks gives its share to the others
+        samples = tables.Table(("part", "speed"), "part_samples", votes=tables.SHARES).fit(
+            units("sx", part="melody", speed="slow") * 3 + units("sy", part="melody", speed="slow") + units("sz", part="melody", speed="slow"))
+        drawn = {whole.part_sample_for({"part_samples": samples}, "melody", 2.0, {"sy", "sz"}, random.Random(k), []) for k in range(40)}
+        self.assertEqual(drawn, {"sy", "sz"})
+        self.assertIsNone(whole.part_sample_for({"part_samples": samples}, "melody", 2.0, {"sq"}, random.Random(1), log))
+
+    def test_a_parts_level_moves_by_section_as_the_games_does(self):
+        """Round 48: a part's median note level in each own section over its level in the whole song is counted in tenths
+        (section_levels, by the part and the section's place); the plan draws a multiplier a part an own section it plays
+        in, a repeated section copying it, and a note's level carries its bar's multiplier."""
+        from bitcomposer.translate import tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": [(4.0 * i + x, 0.9, 36.0, "b") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]},
+                        sid="s", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")])
+        s.note_levels = {"bass": [(4.0 * i + x, 0.1 if i < 4 else 0.2) for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]}
+        units = rhythm.section_level_units([s])
+        self.assertEqual([(u.values["part"], u.values["form"], u.outcome) for u in units], [("bass", "first", "0.7"), ("bass", "last", "1.3")])   # medians over 0.15
+        units_ = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        t = tables.Table(("part", "form"), "section_levels", votes=tables.SHARES).fit(
+            units_("0.5", part="bass", form="first") + units_("1.0", part="bass", form="last") + units_("1.5", part="melody", form="last") + units_("1.0", part="melody", form="first"))
+        parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 0, "A")]
+        plays = {"bass": [True] * 12, "melody": [False] * 4 + [True] * 8}
+        log = []
+        levels = whole.plan_section_levels({"section_levels": t}, parts, ["bass", "melody", "drums"], plays, random.Random(1), log)
+        self.assertEqual(levels["bass"], [0.5] * 4 + [1.0] * 4 + [0.5] * 4)                         # the repeat of A copies A's
+        self.assertEqual(levels["melody"], [1.0] * 4 + [1.5] * 4 + [1.0] * 4)                       # no draw for a section it rests in
+        self.assertNotIn("drums", levels)
+        self.assertIn("levels by section (section_levels): bass 0.5 in A; melody 1.5 in B", log)
+        p = whole.plan({}, 1, "g")
+        p.levels = {"bass": 0.8}; p.section_levels = {"bass": [0.5] * 4 + [1.0] * 4}
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 0), whole.TOP_LEVEL * 0.8 * 0.5)
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}, 5), whole.TOP_LEVEL * 0.8)
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), whole.TOP_LEVEL * 0.8)            # no bar: the part's level
+
+    def test_the_songs_loudest_part_plays_at_the_games_level(self):
+        """Round 52: a song's loudest part's level of full is counted (top_levels, to 0.05) and drawn once a song on its own
+        stream; the band's shares are shares of it (note_level), TOP_LEVEL standing without the word."""
+        from bitcomposer.translate import tables
+        s = self._song(); s.levels = {"melody": 0.22, "bass": 0.31, "drums": 0.14}
+        self.assertEqual([u.outcome for u in rhythm.top_level_units([s])], ["0.30"])
+        t = tables.Table(("part",), "top_levels", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "0.30", {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"top_levels": t}, 1, "g")
+        self.assertAlmostEqual(p.top_level, min(1.0, 0.30 * whole.TOP_SCALE))                    # the readings' scale bridged to the module's
+        p.levels = {"bass": 1.0, "melody": 0.6}
+        self.assertAlmostEqual(whole.note_level(p, "bass", 0, {}), p.top_level)
+        self.assertAlmostEqual(whole.note_level(p, "melody", 0, {}), p.top_level * 0.6)
+        self.assertAlmostEqual(whole.plan({}, 1, "g").top_level, whole.TOP_LEVEL)
+
+    def test_a_samples_register_is_counted_by_the_part_playing_it_and_a_narrow_band_falls_back(self):
+        """Round 55: the ranges word is counted by the sample and by the sample with the part playing it; round 53: a chord
+        part whose drawn home band is narrower than MIN_SPAN is bound by the sample's whole played range instead."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.notes["accompaniment"] = [(4.0 * i + x, 0.9, 84.0 + (x * 2), "k") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]   # the bass's sample, two octaves up
+        units = rhythm.sample_range_units([s])
+        by = {(u.values["part"], u.values.get("role")): u.outcome for u in units}
+        self.assertIn(("sk", None), by); self.assertEqual(by[("sk", "bass")], "36-36"); self.assertEqual(by[("sk", "accompaniment")], "84-88")
+        self.assertEqual(whole.range_context("sk", "bass"), ("sk", "bass")); self.assertEqual(whole.range_context("sk", None), ("sk",))
+        t = tables.Table(("part", "role"), "ranges", votes=tables.SHARES).fit(units * 3)
+        self.assertEqual(t.draw(("sk", "accompaniment"), random.Random(1), floored=False, floor_k=1), "84-88")
+        self.assertEqual(t.draw(("sk", "bass"), random.Random(1), floored=False, floor_k=1), "36-36")
+        amb = tables.Table(("part",), "sample_ambitus", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "36-88", {"part": "sk"}) for i in range(3)])
+        self.assertEqual(whole.ambitus_of({"sample_ambitus": amb}, "sk"), (36, 88))
+        self.assertLess(36 - 36, whole.MIN_SPAN)                                                    # the bass's one-pitch band: narrower than a voice's room
+
+    def test_a_level_is_counted_and_played_as_loudness(self):
+        """Round 56: a reading's level is multiplied by its sample's own loudness over the reference (loudness_factor, the
+        pack's loop-body RMS), and a written note plays at its level over its sample's loudness (sample_rms), so the level
+        words mean what the ear hears whichever sample a part draws."""
+        import array
+        from types import SimpleNamespace
+        rhythm.set_loudness({"sloudxxxxxx": rhythm.LOUDNESS_REF * 2, "squietxxxxx": rhythm.LOUDNESS_REF / 2})   # "s" + the key's first ten
+        try:
+            self.assertAlmostEqual(rhythm.loudness_factor("loud" + "x" * 12), 2.0)
+            self.assertAlmostEqual(rhythm.loudness_factor("quiet" + "x" * 11), 0.5)
+            self.assertEqual(rhythm.loudness_factor("unknown" + "x" * 9), 1.0)
+            self.assertEqual(rhythm.loudness_factor(None), 1.0)
+        finally:
+            rhythm.set_loudness({})
+        flat = array.array("h", [8192] * 100 + [0] * 100)                                          # a quarter of full for half its length
+        smp = SimpleNamespace(data=flat, loop=True, loop_start=0, loop_end=100)
+        self.assertAlmostEqual(whole.sample_rms(smp), 0.25, places=3)                             # the loop body alone
+        self.assertAlmostEqual(whole.sample_rms(SimpleNamespace(data=flat.tobytes(), loop=False, loop_start=0, loop_end=0)), 0.25 / 2 ** 0.5, places=3)
+
+    def test_the_kits_pieces_are_the_games(self):
+        """Round 58: the pieces a song's drums strike are counted as letters by the kit's habit tier (kit_pieces); the plan
+        draws them once a song on its own stream, and the kit figure's hits on other pieces are dropped (no per-group caps)."""
+        from bitcomposer.translate import tables
+        s = self._song()                                    # kick and crash in the kit
+        units = rhythm.kit_piece_units([s])
+        self.assertEqual([(u.outcome, u.values["part"]) for u in units], [("Kc", "drums")])
+        self.assertIn(units[0].values["habit"], ("sparse", "medium", "dense"))
+        t = tables.Table(("part", "habit"), "kit_pieces", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "KSh", {"part": "drums", "habit": h}) for i in range(3) for h in ("sparse", "medium", "dense")])
+        p = whole.plan({"kit_pieces": t}, 1, "g")
+        if "drums" in p.band:
+            self.assertEqual(p.extras["drums"].get("pieces"), "KSh")
+            self.assertTrue(any(line.startswith("kit pieces (kit_pieces): KSh") for line in p.log))
+
+    def test_the_token_songs_instruments_come_with_its_levels(self):
+        """Round 60: each part's own sample rides the balance token (eighth field, the pack's id); the plan keeps them
+        (token_samples) for samples_for to take where the pack holds the sample."""
+        from bitcomposer.translate import tables
+        s = self._song(); s.levels = {r: 0.3 for r in s.notes}
+        toks = rhythm.balance_units([s])[0].outcome.split()
+        self.assertEqual(rhythm.part_sample_id(s, "bass"), "k"); self.assertEqual(rhythm.part_sample_id(s, "nothing"), "")
+        self.assertEqual(rhythm.part_sample_id(rhythm.Song("t", 4, 12, [(0.0, 4.0)], [], notes={"melody": [(0.0, 1.0, 60.0, "0123456789abcdef")]}), "melody"), "s0123456789")
+        token = "bass=half:36-44:0.9:1:1.0:::sbass123456 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.token_samples, {"bass": "sbass123456", "melody": "slead123456"})
+
+    def test_the_token_songs_kit_rides_the_drums_token(self):
+        """Round 63: the song's kit (a piece letter and the pack id of the sample it strikes it with most) is the drums
+        token's eighth field; the plan takes its pieces and samples from it, the kit_pieces draw standing without one."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        self.assertTrue(rhythm.kit_token(s).startswith("K=") and ",c=" in rhythm.kit_token(s), rhythm.kit_token(s))
+        token = "bass=half:36-44:0.9:1:1.0 drums=::::0.6:::K=sbfe716b9b6,S=s1279e119a1:dense+varied melody=main:64-84:0.9:1:0.7 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" in p.band:
+            self.assertEqual(p.extras["drums"].get("pieces"), "KS")
+            self.assertEqual(p.extras["drums"].get("kit"), {"K": "sbfe716b9b6", "S": "s1279e119a1"})
+            self.assertEqual(p.habits["drums"], "dense varied")
+
+    def test_the_mix_level_and_the_master_that_holds_it(self):
+        """Round 59: a song's mix level is its perceived note levels squared over quarter-beat frames, in dB; the balance token
+        carries it (and the top level) so the written song's master volume brings its own mix to its token song's."""
+        self.assertAlmostEqual(rhythm.mix_level([(0.0, 1.0, 0.5)]), 20 * math.log10(0.5), places=3)
+        self.assertAlmostEqual(rhythm.mix_level([(0.0, 1.0, 0.5), (0.0, 1.0, 0.5)]), 10 * math.log10(0.5), places=3)   # two at once: double the power
+        self.assertAlmostEqual(rhythm.mix_level([(0.0, 8.0, 1.0), (4.0, 1.0, 1.0)]), 0.0, places=3)                 # a held note counts two beats
+        self.assertIsNone(rhythm.mix_level([]))
+        bridge = whole.RENDER_BRIDGE
+        self.assertEqual(whole.master_of(-25.0, -25.0 - bridge), (127, 1.0))                                  # renders on target: full
+        m, g = whole.master_of(-31.0, -25.0 - bridge)
+        self.assertEqual((m, g), (round(127 * 10 ** (-6 / 20)), 1.0))                                         # 6 dB over: the master takes it
+        m, g = whole.master_of(-19.0, -25.0 - bridge)
+        self.assertEqual(m, 127); self.assertAlmostEqual(g, 10 ** (6 / 20), places=6)                         # 6 dB under: the notes come up
+        s = self._song()
+        s.levels = {r: 0.3 for r in s.notes}                 # the parts' levels, as the readings give them
+        self.assertIsNotNone(rhythm.song_mix_level(s))
+        s.loudness = -24.3
+        self.assertIn("loud=-24", rhythm.balance_units([s])[0].outcome.split())                              # the song's rendered loudness rides the token
+        p = whole.plan({}, 1, "g")
+        self.assertIsNone(p.loudness)                                                                         # no token: no target, the master full
+
+    def test_a_kit_writes_on_its_own_pieces_and_never_silent(self):
+        """Round 58: the kit's pieces (kit_value) narrow the writer's kit, so a figure drawn from another kit's songs is one
+        this kit can play; where no draw fits, the kit's last resort is any bar the table knows on its pieces, never a
+        silent played bar (the drums table conditions on the kit before the habit and feel for the same reason)."""
+        from bitcomposer.translate import packtables, writer
+        a, b = self._song(), self._song()
+        a.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "kick") for i in range(8) for x in (0.0, 2.0)]; a.pieces = {"kick": "kick"}; a.sid = "a"
+        b.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "snare") for i in range(8) for x in (1.0, 3.0)]; b.pieces = {"snare": "snare"}; b.sid = "b"
+        self.assertEqual(packtables.KEPT["drums"][3][:3], ("part", "meter", "kit"))
+        entry = packtables.fit("drums", rhythm.drum_units([a, b]))
+        model = packtables.read({"tables": {"drums": entry}})["drums"]
+        s = self._song(); s.pieces = {"kick": "kick", "snare": "snare"}
+        for kit_value, letter in (("K", "K"), ("S", "S")):
+            hits, figures = writer.drums(s, {tuple(rhythm.LETTERS.values()): model}, random.Random(1), habit="medium repeating", free=True, plays=[True] * 8, kit_value=kit_value)
+            self.assertEqual({x for _, x in hits}, {letter}, (kit_value, figures))
+            self.assertTrue(all(f != "-" for f in figures), figures)   # every played bar sounds
+        manner = writer.FreeManner({"0:K 2:K", "1:S 3:S", "-"}, {"S"}, 12, rests=True)
+        self.assertEqual(writer.last_resort(manner, model, None, {}, random.Random(2)), "1:S 3:S")
+
+    def test_a_recalled_passage_goes_on_as_the_games_do(self):
+        """Round 50: each echo of the tune with a bar after it is counted by whether the next bar goes on with the bar after
+        the echo's source (recall_continues: yes, no), by part and echo habit; the CONTINUE constant is the fallback alone."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        def bar(k, ps): return [(4.0 * k + i, 0.9, float(p), "a") for i, p in enumerate(ps)]
+        A, B, C = [60, 64, 67, 65], [60, 64, 62, 60], [62, 65, 69, 67]
+        tune = bar(0, A) + bar(1, B) + bar(2, C) + bar(3, A) + bar(4, B) + bar(5, C) + bar(6, A) + bar(7, C)
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune}, sid="s", game="g", numbers=list(range(8)), parts=[(0, 8, None, "A")])
+        units = rhythm.recall_continue_units([s])
+        self.assertEqual([u.outcome for u in units], ["yes", "yes", "yes", "no"])   # bars 3-5 go on as bars 0-2 did; bar 6's A is followed by C, never B
+        self.assertEqual({(u.values["part"], u.values["habit"]) for u in units}, {("melody", "mixed")})   # 5 of 8 bars echo: under two thirds
+
+    def test_every_voice_writes_where_the_game_plays_its_sample(self):
+        """Round 34: a voice's register is where the game plays the sample chosen for it (bound_of over the ranges word's
+        drawn range and the planned register: the overlap, a sliver widened to the register grain, the sample's range
+        where they miss, the plan's where the word knows nothing), the sample chosen before the writing on the part's
+        drawn speed (part_speeds); the bass keeps under its ceiling; the reach check keeps the range it drew."""
+        self.assertEqual(whole.bound_of(None, (48, 72)), (48, 72))
+        self.assertEqual(whole.bound_of((56, 68), (48, 72)), (56, 68))
+        self.assertEqual(whole.bound_of((40, 88), (48, 72)), (48, 72))
+        self.assertEqual(whole.bound_of((72, 88), (48, 60)), (72, 88))
+        self.assertEqual(whole.bound_of((60, 76), (48, 62)), (60, 68))
+        self.assertEqual(whole.bound_of((48, 64), (62, 80)), (56, 64))
+        self.assertEqual(writer.place(0, 36, 50.0), 48)
+        self.assertEqual(writer.place(0, 36, 50.0, high=44), 36)
+        ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "36-48", {"part": "slow"}) for i in range(3)])
+        drawn = {}
+        self.assertTrue(whole.reaches(ranges, "slow", (40, 52), random.Random(1), drawn))
+        self.assertEqual(drawn, {"slow": (36, 48)})
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        tune = [(4.0 * k + 0.5 * i, 0.4, 60.0 + (i % 4) * 2, "a") for k in range(4) for i in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"melody": tune}, sid="s", game="g")
+        self.assertEqual([(u.values["part"], u.values["habit"], u.outcome) for u in rhythm.part_speed_units([s])], [("melody", "dense", "4")])
+
     def test_the_samples_playing_habits(self):
         """A sample's shortest note and fastest bars in the game are counted per song; the sample choice weighs the part's speed;
         a drawn floor holds a note's length."""
@@ -467,9 +1267,9 @@ class NewTablesTests(unittest.TestCase):
         fast = [(4.0 * k + 0.25 * i, 0.1, 60.0, "quick12345678") for k in range(4) for i in range(16)]    # sixteenths, 50 ms at 120 BPM
         slow = [(4.0 * k + i, 0.9, 48.0, "pad1234567890") for k in range(4) for i in range(4)]              # quarters, 450 ms
         s = rhythm.Song("t", 4, 12, bars, [], notes={"accompaniment": fast, "bass": slow}, sid="s", game="g", bpm=120.0)
-        lengths = {u.values["part"]: u.outcome for u in rhythm.sample_length_units([s])}
+        lengths = {u.values["part"]: (u.outcome, u.values["speed"]) for u in rhythm.sample_length_units([s])}
         speeds = {u.values["part"]: u.outcome for u in rhythm.sample_speed_units([s])}
-        self.assertEqual((lengths["squick12345"], lengths["spad1234567"]), ("60", "long"))
+        self.assertEqual((lengths["squick12345"], lengths["spad1234567"]), (("60", "fast"), ("long", "slow")))   # the floor by the sample's speed class (round 36)
         self.assertEqual((speeds["squick12345"], speeds["spad1234567"]), ("8", "2"))
         ranges = tables.Table(("part",), "ranges", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "56-68", {"part": n}) for i in range(3) for n in ("sa", "sb")])
         sp = tables.Table(("part",), "speeds", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", o, {"part": n}) for i in range(3) for n, o in (("sa", "3"), ("sb", "12"))])
@@ -479,8 +1279,9 @@ class NewTablesTests(unittest.TestCase):
         self.assertIn(whole.best_sample(ranges, ["sa", "sb"], (58, 66), rng, raw, speed=1.0, models={"sample_speeds": sp}), ("sa", "sb"))
         self.assertEqual(whole.best_sample(ranges, ["sa", "sb"], (58, 66), rng, raw, speed=20.0, models={"sample_speeds": sp}), "sb")   # none this fast: the least excess over the game's fastest ever
         self.assertEqual(whole.sample_speed({"sample_speeds": sp}, "sb", rng), (12.0, 12.0))
-        fl = tables.Table(("part",), "lengths", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "80", {"part": "sa"}) for i in range(3)])
-        self.assertEqual(whole.sample_floor({"sample_lengths": fl}, "sa", rng), 0.08)
+        fl = tables.Table(("part", "speed"), "lengths", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", o, {"part": "sa", "speed": sp_}) for i in range(3) for o, sp_ in (("80", "fast"), ("240", "slow"))])
+        self.assertEqual(whole.sample_floor({"sample_lengths": fl}, "sa", rng, speed=8.0), 0.08)    # a fast part takes the fast songs' floor
+        self.assertEqual(whole.sample_floor({"sample_lengths": fl}, "sa", rng, speed=2.0), 0.24)
         self.assertEqual(whole.sample_floor({"sample_lengths": fl}, "sz", rng), 0.0)
 
     def test_a_plan_draw_stays_at_the_part(self):
@@ -511,3 +1312,57 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(writer.contour_targets("rising", 8.0), (0, 4.0, 8.0))
         self.assertEqual(writer.contour_targets("valley", 3.0), (0, -3.0, 0))
         self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))   # without a size, as before
+
+
+class TuneGrainTests(unittest.TestCase):
+    def test_tune_grain_counted_by_part_and_habit(self):
+        """A line's grain is its share of onsets off the beat (rhythm.GRAINS), one unit a song and tune part, under the part's habit."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g", parts=[(0, 8, None, "A")])
+        s.notes["melody"] = [(a + p, 0.4, 60.0 + i, "melody") for a, _ in bars for i, p in enumerate((0.0, 0.5, 1.0, 1.5, 2.0, 3.0))]   # 2 of 6 off the beat
+        s.notes["counter"] = [(a + 0.5 * i, 0.4, 72.0, "counter") for a, _ in bars for i in range(8)]                              # 4 of 8
+        units = rhythm.tune_grain_units([s])
+        self.assertEqual({u.values["part"]: u.outcome for u in units}, {"melody": "eighths", "counter": "fine"})
+        self.assertTrue(all(u.values["habit"].split()[0] in ("sparse", "medium", "dense") for u in units))
+        s.notes["counter"] = s.notes["counter"][:4]                                                                                 # under GRAIN_NOTES: no unit
+        self.assertEqual([u.values["part"] for u in rhythm.tune_grain_units([s])], ["melody"])
+
+    def test_grain_and_tier_bounds(self):
+        self.assertEqual(writer.grain_bounds("on-beat"), (0.0, 0.25 + writer.GRAIN_SLACK))
+        self.assertEqual(writer.grain_bounds("eighths"), (0.25 - writer.GRAIN_SLACK, 0.5 + writer.GRAIN_SLACK))
+        self.assertEqual(writer.grain_bounds("fine"), (0.5 - writer.GRAIN_SLACK, 1.0))
+        self.assertEqual(writer.grain_bounds(None), (0.0, 1.0))
+        self.assertEqual(writer.tier_bounds("medium varied"), (2 - writer.TIER_SLACK, 6 + writer.TIER_SLACK))
+        self.assertEqual(writer.tier_bounds("sparse mixed")[0], 0.0)
+        self.assertEqual(writer.offbeats(["0", "1/2", "1", "3/2:x", "3"]), 2)
+
+
+class AlteredVoiceTests(unittest.TestCase):
+    def test_a_voice_against_a_line_note_off_the_scale_is_counted_in_semitones(self):
+        """voice_intervals counts the interval in scale steps against a line note on the scale and in semitones ("s-4")
+        against one off it (the value "line"); the writer's interval_pitch inverts both, so a unison with the tune's
+        leading tone is the leading tone (round 66)."""
+        from bitcomposer.translate import vocab, tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        tune = [(4.0 * k + i, 0.9, [72.0, 73.0, 74.0, 73.0][i], "lead") for k in range(4) for i in range(4)]    # C, C#, D, C# in C major
+        counter = [(4.0 * k + i, 0.9, [72.0, 73.0, 71.0, 69.0][i], "ctr") for k in range(4) for i in range(4)]  # unison, unison on C#, B under D, A under C#
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={"melody": tune, "counter": counter}, sid="s", game="g", bpm=120.0, tonic=0, mode="major")
+        s.voice_notes = {1: ("melody", tune), 2: ("counter", counter)}
+        iv = [u for u in rhythm.voice_interval_units([s]) if u.values["part"] == "counter"]
+        self.assertEqual([u.outcome for u in iv][:4], ["0", "s0", "-2", "s-4"])
+        self.assertEqual([u.values["line"] for u in iv][:4], ["scale", "altered", "scale", "altered"])
+        self.assertEqual([u.values["previous"] for u in iv][:5], [rhythm.START, "0", "s0", "-2", "s-4"])
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual(writer.line_state(73.0, scale), "altered"); self.assertEqual(writer.line_state(72.0, scale), "scale")
+        self.assertEqual(writer.interval_pitch("s0", 73.0, scale), 73)
+        self.assertEqual(writer.interval_pitch("s-4", 73.0, scale), 69)
+        self.assertEqual(writer.interval_pitch("-2", 74.0, scale), 71)
+        self.assertEqual(writer.interval_entry("s-4"), ("semis", -4)); self.assertEqual(writer.interval_entry("7"), ("steps", 7))
+        t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "line": ln, "previous": rhythm.START}) for i in range(8) for o, ln in (("s0", "altered"), ("-2", "scale"))])
+        self.assertEqual(list(writer.interval_weights(t, ("counter", "other", "altered", rhythm.START), (), 73.0, scale)), ["s0"])   # the entries of the line's state alone
+        self.assertEqual(list(writer.interval_weights(t, ("counter", "other", "scale", rhythm.START), (), 72.0, scale)), ["-2"])
+        midi, entry = writer.beside_pitch({"voice_intervals": t, "voice_moves": t}, "counter", "other", scale, random.Random(1), 73.0, rhythm.START, None, 0)
+        self.assertEqual((midi, entry), (73, "s0"))
+        midi, entry = writer.beside_pitch({"voice_intervals": t, "voice_moves": t}, "counter", "other", scale, random.Random(1), 74.0, rhythm.START, None, 0)
+        self.assertEqual((midi, entry), (71, "-2"))

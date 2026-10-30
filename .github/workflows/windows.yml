@@ -12,12 +12,13 @@ name: Windows build
 # push to main and on pull requests as well, so a broken Windows build shows
 # up when it breaks and not on release day (0.9.0 and 0.9.1 both found out
 # at the tag).
-# main, tags, and pull requests into main (a release); not pull requests
-# into dev (see ci.yml). Start it by hand on a branch whose change could
-# break the Windows build.
+# Tags and pull requests into main (a release); not pull requests into dev
+# (see ci.yml), and not pushes to main: main takes nothing but a release's
+# pull request, so its merge commit is the tree the pull request already
+# built, and the tag builds the release. Start it by hand on a branch whose
+# change could break the Windows build.
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -37,8 +38,11 @@ jobs:
     runs-on: windows-latest
     # The "signing" environment holds the Azure IDs and the signing account's
     # names; Azure trusts this repository's runs in that environment (a
-    # federated credential), and nothing else.
-    environment: signing
+    # federated credential), and nothing else. The environment only lets main
+    # and v* tags in, so a branch's workflow can't reach the certificate; pull
+    # requests and runs started by hand on a branch build without it, unsigned,
+    # as they would anyway (only a release build is signed).
+    environment: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && 'signing' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

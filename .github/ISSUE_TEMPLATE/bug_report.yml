@@ -1,0 +1,43 @@
+name: Something isn't working
+description: A problem with bitComposer, the player or the command line.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting it. A security problem goes privately instead: **Report a vulnerability** on the [Security tab](https://github.com/CatDogBark/bitComposer/security/advisories/new). Please don't attach game files (SPCs, ROMs); name the game and the track instead.
+  - type: input
+    id: version
+    attributes:
+      label: bitComposer version
+      description: "`bitcomposer --version` shows it."
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, and what bitComposer did or showed. The exact words of an error help most.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: The command, or the clicks, and the seed or settings if it's about a song.
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Anything it printed.
+      render: text

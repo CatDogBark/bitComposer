@@ -192,8 +192,41 @@ class Table:
         and habit stay; only the bar before is let go when thin), or every conditioning where there is no chain."""
         return self.conditionings.index("previous") if "previous" in self.conditionings else len(self.conditionings)
 
+    def weights(self, context: tuple, floor_k: int | None = None, min_songs: int = 0) -> dict:
+        """The distribution draw() samples from under the context with `floored` off: {outcome: probability}, each
+        level's votes at the mass the draw gives it (its own share n / (n + t), a terminal level or the coarsest seen
+        level the rest); {} where no level was seen. For a draw restricted to the outcomes that fit (the counter's
+        sample given the tune's, among the samples the pack holds in reach of the register): the fitting outcomes drawn
+        by these weights are the table's own conditional, where drawing and refusing would leave the table for a rule
+        at the first misfit (round 30)."""
+        out, rest, coarsest = {}, 1.0, None
+        for k in range(len(context), self.covers - 1, -1):
+            level = self._level(context[:k])
+            if level is None:
+                continue
+            outcomes, cum, kept, given = level
+            coarsest = level
+            terminal = floor_k is not None and k <= floor_k
+            if not terminal and self.songs.get(context[:k], 0) < min_songs:
+                continue
+            share = 1.0 if terminal else kept / (kept + given)
+            prev = 0.0
+            for o, c in zip(outcomes, cum):
+                out[o] = out.get(o, 0.0) + rest * share * (c - prev) / cum[-1]
+                prev = c
+            rest *= 1.0 - share
+            if terminal:
+                return out
+        if coarsest is not None and rest > 0:
+            outcomes, cum, _, _ = coarsest
+            prev = 0.0
+            for o, c in zip(outcomes, cum):
+                out[o] = out.get(o, 0.0) + rest * (c - prev) / cum[-1]
+                prev = c
+        return out
+
     def draw(self, context: tuple, rng: random.Random, values: dict | None = None, floored: bool = True,
-             floor_k: int | None = None, min_songs: int = 0) -> str:
+             floor_k: int | None = None, min_songs: int = 0, floor_outcomes: int = 0, floor_songs: int = 0) -> str:
         """An outcome drawn from the whole distribution under the context:
         from the finest level down, the level's own votes with the weight
         n / (n + t) else the coarser level's; below the root, the floor
@@ -207,7 +240,21 @@ class Table:
         weight given to anything coarser (a bass habit's bars never mix
         with every habit's; a part's register never with every part's).
         `min_songs`: a finer level than the floor with fewer songs than
-        this is passed over (the data does not reach it)."""
+        this is passed over (the data does not reach it). `floor_outcomes`:
+        the floor itself steps down to the deepest level holding that many
+        outcomes (a figure chain floored on a context with one outcome
+        would write that outcome alone: a kit of rests). A one-song context
+        with bars of its own stays the floor: those bars are the game's.
+        `floor_songs`: the floor steps down to the deepest level that many
+        songs reach (a mask drawn for the bass from a thirteen-song table
+        under a floor one song held had doubled the line where the game
+        fills)."""
+        if floor_k is not None and floor_outcomes:          # outcomes that are not the rest: a level of one figure and its rests is no
+            while floor_k > self.covers and sum(1 for o in (self.votes.get(context[:floor_k]) or {}) if o != REST) < floor_outcomes:
+                floor_k -= 1                                # vocabulary (round 58; a song's own kit, of many bars, is)
+        if floor_k is not None and floor_songs:
+            while floor_k > self.covers and self.songs.get(context[:floor_k], 0) < floor_songs:
+                floor_k -= 1
         coarsest = None
         for k in range(len(context), self.covers - 1, -1):
             level = self._level(context[:k])
@@ -287,6 +334,13 @@ FLOOR = ("floor",)                   # the shape that is the floor model alone, 
 CACHE = "cache"                      # the mark on a shape's name for its Cache mixture
 RECALL = ("same", "earlier", "new")  # what a unit is to its song so far (Cache)
 NEW_TRIES = 20                       # draws a Cache makes for an outcome new to the song before taking one it played
+REST = "-"                           # the rest bar in the figure tables
+FLOOR_SONGS = 1                      # songs a chain's floor level needs: one. Round 57 had asked two (a floor one song held had written a
+                                      # band's main arp as nothing, that song's arp resting in 0.94 of its bars); round 58 counts the floor's
+                                      # outcomes without the rest instead (FLOOR_OUTCOMES), which steps that arp down and keeps a song's own
+                                      # kit, whose bars are its pieces' (two songs had sent a one-kit level to any kit's bars, then cut them)
+FLOOR_OUTCOMES = 2                   # outcomes a floor level needs: a context with one outcome is no vocabulary to draw from, and a chain
+                                     # floored on it wrote that outcome alone (a kit habit one triple-feel song had, all rests: no drums for a song)
 RECALL_SHAPE = ("part", "habit")     # what the recall shares are conditioned on (the values a unit has of these)
 
 
@@ -393,11 +447,11 @@ class Cache:
         floor_k = self.table.chain_floor                    # the bar before may be let go when thin; the part, meter and habit never
         out = None
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES, floor_songs=FLOOR_SONGS)
             if out not in cache and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES, floor_songs=FLOOR_SONGS)
             if keep is None or keep(out):
                 return out
         return out
