@@ -96,7 +96,7 @@ class CliNaming(unittest.TestCase):
             argv = sys.argv
             try:
                 for extra in ([], ["--suffix", " (auto)"], [], ["--prefix", "(auto) "]):
-                    sys.argv = ["bitcomposer", "-s", "3", "-d", tmp, *extra]
+                    sys.argv = ["bitcomposer", "--classic", "-s", "3", "-d", tmp, *extra]   # Classic's title (2.0: the writer is the default)
                     with contextlib.redirect_stdout(io.StringIO()):
                         cli.main()
             finally:

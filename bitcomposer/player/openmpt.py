@@ -104,6 +104,8 @@ def _bind(L):
     L.openmpt_module_set_position_seconds.argtypes = [_VP, ctypes.c_double]
     L.openmpt_module_get_num_channels.restype = ctypes.c_int32
     L.openmpt_module_get_num_channels.argtypes = [_VP]
+    L.openmpt_module_get_current_channel_vu_mono.restype = ctypes.c_float
+    L.openmpt_module_get_current_channel_vu_mono.argtypes = [_VP, ctypes.c_int32]
     L.openmpt_module_get_num_patterns.restype = ctypes.c_int32
     L.openmpt_module_get_num_patterns.argtypes = [_VP]
     L.openmpt_module_set_repeat_count.restype = ctypes.c_int32
@@ -183,6 +185,10 @@ class Module:
 
     def read_stereo(self, frames: int, buf, rate: int = SAMPLE_RATE) -> int:
         return lib().openmpt_module_read_interleaved_stereo(self._mod, rate, frames, buf)
+
+    def channel_vu(self, ch: int) -> float:
+        """The channel's level in the audio last rendered (libopenmpt's mono VU: about 0 to 1, louder past it)."""
+        return float(lib().openmpt_module_get_current_channel_vu_mono(self._mod, ch))
 
     def channel_volume(self, ch: int) -> int:
         """The channel's volume as the file's 0-64 value."""

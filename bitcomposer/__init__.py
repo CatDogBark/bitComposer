@@ -1,6 +1,6 @@
 """bitcomposer — Procedural 16-bit chiptune music generator."""
 
-__version__ = "2.0.0rc1"
+__version__ = "2.0.0rc2"
 
 # The registry first, then the packs that register their voices into it.
 from . import samples, packs  # noqa: E402,F401

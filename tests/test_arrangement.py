@@ -236,7 +236,7 @@ class Sound(unittest.TestCase):
         self.assertEqual(resolve_sound("random", "ffvi", "chip"), ("chip", "none"))
         self.assertEqual(resolve_sound("snes", "random"), ("snes", "random"))
         self.assertEqual(resolve_sound(), ("random", "random"))
-        self.assertEqual(len(SOUNDS), 7)
+        self.assertEqual(len(SOUNDS), 8)                 # chip, snes, genesis, bit, and the four styled sets
         with self.assertRaises(ValueError):
             resolve_sound(sound="nes")
 

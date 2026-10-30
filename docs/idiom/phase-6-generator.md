@@ -160,6 +160,57 @@ the warning on a library vocabulary).
   panel saying "N songs read, the vocabulary needs 40", SOUND limited to
   SNES sets while a vocabulary is picked.
 
+- **2.0rc1, piece 7 (2026-10-30, the owner's call).** The writer is
+  GENERATE, with no game's name in front of the listener. The shipped
+  vocabulary is `default` (its `source` records that it was fitted on
+  Final Fantasy VI's 67 songs; the README says so plainly), the window
+  calls it bitComposer's own, a song's message reads "Written by
+  bitComposer on the Evermore sounds (seed 7)", and the command line
+  writes without a flag (`--classic` is the 1.x generator; `--vocabulary`
+  names your library or one of your games). SET's rows are WRITER
+  (bitcomposer, classic), FROM (shown once a library or game vocabulary
+  is ready), THEME and RETURNS. The listener's own imports keep their
+  games' names; the Song Checks, the docs and the tools keep saying FFVI,
+  where the comparison is the point.
+
+## Built, 2.0rc2: a voice fitted to its part, and bitComposer's own set
+
+The smoke test's listener heard the writing holding up and the voices
+holding it back, and the plan log said why on every seed: "none in the
+pack; the pool rule chooses". On a built-in set the pool rule had nothing
+to score. The vocabulary's sample tables (ranges, sample_speeds,
+sample_lengths, sample_ambitus, part_samples) name samples by the game's
+ids; a built-in voice has a name, not an id; `best_sample` found no range
+for any voice of the pool and fell to `rng.choice`. A tune planned at
+72-92 could land on a cello, a 200 ms swell on sixteenths, and the
+register bound fell back to the plan's.
+
+- **Profiles** (`packs.profile`): every built-in pitched voice carries the
+  range it sounds right in (each pack's `RANGES`, set by ear and by the
+  instrument the recipe models, not measured from any game), a speed from
+  its measured attack (struck: 24 a second; a 10 ms attack 12; 30 ms 8;
+  60 ms 6; 120 ms 4; 200 ms 3; slower 2) and a shortest note (the
+  sample_lengths classes, at 1.5 times the attack). `best_sample`,
+  `sample_speed`, `sample_floor` and `ambitus_of` answer from the profile
+  where the tables know nothing of the id; the pool strips the set's
+  prefix from a voice's name, so the set's name travels with the lookup.
+  The plan log names each pick, its register, its speed and its range.
+- **The set** (`packs/bit.py`): 34 generic instruments and a kit,
+  synthesised from descriptions, modelled on no game's bank, with
+  something slow and something quick in every register the shipped
+  vocabulary reaches (melody 40-92, counter 48-84, accompaniment 40-80 at
+  2 to 12 a second, bass 28-56). It is the writer's default; the four
+  styled sets are Classic's and a written song takes one only by name.
+- **Measured** (seeds 201-220 on the shipped vocabulary, the laptop): the
+  written measures on the FFVI set before and after the fit are the same
+  to the second decimal but for the tune's chord tones (0.53 to 0.57 at
+  the median) and steps (0.65 to 0.60), as they should be: the notes are
+  the same, the voices and the bounds moved. On the FFVI set, of the 75
+  part picks over the twenty seeds, 24 had sat outside the part's
+  register before (11 above the voice's range, 13 below); after, none.
+  The `bit` set's measures sit on the FFVI set's line for line. Four
+  seeds were put in the dev player's folder for the owner's ear.
+
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
 - **Import time per song.** The readers: 0.6 s a song (five FFVI songs,
@@ -197,18 +248,64 @@ the warning on a library vocabulary).
   seeds. A pooled SNES style is a second vocabulary for later, not the
   default; FFVI's stands.
 
+## Smoke test (2026-10-30, the laptop; 2.0rc2)
+
+The second exit criterion, run the way a listener would meet it: a fresh
+data folder (`BITCOMPOSER_DATA_DIR` on an empty directory), the 2.0 window
+loaded headless on the Qt venv, and Final Fantasy VI's 82 SPC files
+imported through the window's own `import_from`, the stages watched on
+`backend.importState`, then a song written through the window's settings.
+
+- **The import.** 82 files read in 61 s (the readers, four workers); the
+  lead pass took 11 min 14 s with the whole test suite running beside it
+  (3.5 s a song measured alone would be under five minutes); the game's
+  vocabulary and the library's counted in under a second. The stage lines
+  arrived in order: reading the songs, hearing which voice leads, counting
+  the game's vocabulary, counting the library's vocabulary.
+- **What it made.** One pack, 67 samples, a format 2 pack file with the
+  95 tables; 67 songs in the vocabulary (the 82 files hold 67 distinct
+  songs, as the shipped fit did); the lead pass heard all 67 and moved the
+  melody label in 9, the count the LIBRARY row now shows. The window
+  offered three vocabularies afterwards: the default, the library (67
+  songs, ready) and the game (ready).
+- **The song.** WRITE set to the game's vocabulary on the game's own
+  sounds, GENERATE through the window: "The Wharf of Rust", seed 851766,
+  1,050 notes, playing within four seconds of the press, the band's live
+  meters reading on nine channels. The copy check over that vocabulary
+  (`tools/copycheck.py --vocabulary pack:final_fantasy_vi_spc --seeds
+  1-50`): 50 songs, 1,055 four-bar windows, none copies a game phrase (20
+  share only a rhythm).
+- **Found and fixed.** The window read the list of vocabularies once at
+  start, so the fresh game showed "no vocabulary yet" under LIBRARY and
+  had no card under WRITE until a restart (2.0rc1's FROM row had the same
+  gap); the list is read again on every packs change, and a window test
+  covers it. The pack's label carried "(from its SPC files)" after the
+  game's name, noise now that the window keeps your games under their own
+  heading; it is the game's name alone.
+
 ## Exit criteria
 
 - GENERATE on a fresh install writes a song from the shipped FFVI
   vocabulary on a built-in sound set, and the song passes phase 4's
   measures and the copy check.
 - A game imported in the player gives a sound set and a game vocabulary,
-  and a song from them passes the same.
+  and a song from them passes the same. (Imported through the window and
+  written from, 2026-10-30: the smoke test above, the copy check clean
+  over that vocabulary; phase 4's measures over it are the release's run.)
 - Classic's seventy songs are byte for byte rc1's.
 - A 1.x pack file still loads as a sound set.
 
 ## Open questions
 
+- **The echo is a vocabulary gap** (noted 2026-10-30, the owner's call: fine
+  as it is for now, documented). A written song's echo is not drawn from
+  the vocabulary: no table counts a game's echo, so the sound set's habit
+  decides it, the way Classic's packs do (`render.echo_of` over
+  `PACK["habits"]`: `bit` always on, slap or eighth, feedback 0.55 to 0.7;
+  the styled sets as their games have it). The readings hold what a table
+  would count, each song's echo on or off, its delay, feedback, filter and
+  wet, and the writing's way is a counted word drawn once a song beside the
+  balance. Not now: a writing change while the FFVI tuning stands.
 - Which built-in sound set is the default under the FFVI vocabulary (the
   `ffvi` set is the obvious one; the vocabulary's sample ids bind to a
   game's samples only when that game is imported).

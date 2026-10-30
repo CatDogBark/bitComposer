@@ -153,8 +153,11 @@ def run(music_dir=None, screenshot=None, screen=None, scale=None, panels="", min
     # "is ready" notification, at every login.
     if minimized and not screenshot:
         _wait_for_tray(app)
+    screens = {"play": 0, "write": 1, "library": 2, "packs": 2, "sounds": 3}
+    start_tab = next((screens[p] for p in open_panels if p in screens), -1)
     engine.setInitialProperties({"startSettings": "settings" in open_panels or "set" in open_panels,
                                  "startMaster": "mix" in open_panels, "still": bool(screenshot),
+                                 "startTab": start_tab,
                                  "startHidden": bool(minimized and not screenshot)})
     engine.load(QUrl.fromLocalFile(str(HERE / "qml" / "Main.qml")))
     if not engine.rootObjects():
@@ -321,7 +324,7 @@ def _compose_demo(music: Path) -> None:
     """A few songs for the screenshot: seeded, so every run shows the same."""
     from ..cli import build_parser, compose_from_args
     music.mkdir(parents=True, exist_ok=True)
-    for i, extra in enumerate((["--sound", "ffvi"], ["--sound", "megamanx"], ["--sound", "mana"], ["--sound", "evermore"])):
+    for i, extra in enumerate((["--pack", "ffvi"], ["--pack", "megamanx"], ["--pack", "mana"], ["--pack", "evermore"])):
         suffix = [] if i % 2 else ["--prefix", "(auto) "]
         args = build_parser().parse_args(extra + ["--seed", str(4100 + i), "-d", str(music)] + suffix)
         compose_from_args(args)

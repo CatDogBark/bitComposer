@@ -1,4 +1,5 @@
 import hashlib
+import random
 import os
 import tempfile
 import unittest
@@ -9,13 +10,16 @@ from bitcomposer.spc import convert
 
 
 class ShippedVocabularyTests(unittest.TestCase):
-    def test_the_player_ships_final_fantasy_vi(self):
-        """The shipped vocabulary is a format 2 pack's tables, fitted on the game's readings: statistics, no samples."""
-        self.assertIn("ffvi", vocabularies.names())
-        self.assertEqual(vocabularies.label("ffvi"), "Final Fantasy VI")
-        src = vocabularies.source("ffvi")
+    def test_the_player_ships_a_default_vocabulary(self):
+        """The shipped vocabulary is a format 2 pack's tables, fitted on a game's readings (its source says which): statistics,
+        no samples, and no game's name in front of the listener."""
+        self.assertIn("default", vocabularies.names())
+        self.assertEqual(vocabularies.DEFAULT, "default")
+        self.assertEqual(vocabularies.label("default"), "bitComposer")
+        src = vocabularies.source("default")
         self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 67))
-        models = vocabularies.load("ffvi")
+        self.assertIn("Final Fantasy VI", src["fitted_on"])
+        models = vocabularies.load("default")
         for name in ("rhythm", "balance", "habits", "moves", "voice_intervals", "tune_grain"):
             self.assertIn(name, models)
         self.assertGreaterEqual(len(models), 90)
@@ -24,11 +28,49 @@ class ShippedVocabularyTests(unittest.TestCase):
 
 
 class WrittenSongTests(unittest.TestCase):
+    def test_every_built_in_voice_has_a_profile_and_the_pool_rule_fits_by_it(self):
+        """Phase 6, 2.0rc2: a built-in voice carries its range, speed and floor (packs.profile), and on a built-in set
+        the pool rule picks a voice whose range covers the part's register (it drew at random before: the vocabulary
+        names samples by the game's ids, which a built-in voice never has). The default set is bitComposer's own."""
+        from bitcomposer.packs import PACKS, profile
+        for pack_name, pack in PACKS.items():
+            if pack_name not in ("bit", "ffvi", "mana", "evermore", "megamanx"):   # a pack file another test loaded
+                continue
+            for pool, voices in pack["voices"].items():
+                if pool == "drums":
+                    continue
+                for v in ([voices] if isinstance(voices, str) else voices):
+                    if v in ("evm_wood_ping", "mmx_orch_hit"):        # percussion in a tonal pool: no range
+                        continue
+                    prof = profile(v)
+                    self.assertIsNotNone(prof, f"{pack_name}: {v} has no profile")
+                    self.assertLess(prof["range"][0], prof["range"][1], v)
+                    self.assertIn(prof["speed"], (2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 24.0), v)
+        self.assertEqual(profile("ffvi_harp")["speed"], 24.0)             # struck: any speed
+        self.assertEqual(profile("ffvi_strings")["speed"], 3.0)           # a 126 ms swell
+        self.assertIsNone(profile("ffvi_hat"))
+        self.assertEqual(written.sound_set(None, random.Random(1)), "bit")
+        self.assertEqual(written.sound_set("random", random.Random(1)), "bit")
+        for seed in (7, 8, 201):
+            out = written.compose_written(seed=seed)
+            self.assertEqual(out["sounds"], "bit")
+            plan = out["plan"]
+            picks = [line for line in plan.log if "'s voice " in line and " by the pool rule for " in line]
+            self.assertTrue(picks, seed)
+            for line in picks:
+                self.assertNotIn("nothing known of its range", line)
+                import re
+                m = re.search(r"voice (\S+) by the pool rule for (\d+)-(\d+) .*: it plays (\d+)-(\d+)", line)
+                self.assertIsNotNone(m, line)
+                lo, hi, plo, phi = (int(x) for x in m.groups()[1:])
+                self.assertLess(max(lo, plo), min(hi, phi), line)            # the voice's range overlaps the register
+            self.assertIn("on its own sounds", out["score"].message[2])
+
     def test_a_seed_names_one_song_on_one_sound_set(self):
         """compose_written draws the sound set and the title from the seed and writes the same bytes twice."""
         digests, titles = [], []
         for _ in range(2):
-            out = written.compose_written("ffvi", "mana", 7)
+            out = written.compose_written("default", "mana", 7)
             with tempfile.TemporaryDirectory() as d:
                 path = os.path.join(d, "s.it")
                 convert.render(out["score"], path)
@@ -38,9 +80,10 @@ class WrittenSongTests(unittest.TestCase):
         self.assertEqual(titles[0], titles[1])
         self.assertLessEqual(len(titles[0]), 25)
         self.assertEqual(out["sounds"], "mana")
-        self.assertEqual(out["info"]["vocabulary"], "Final Fantasy VI")
+        self.assertEqual(out["info"]["vocabulary"], "bitComposer")
         self.assertIn("melody", out["info"]["band"])
-        self.assertTrue(any(l.startswith("Written by bitComposer from Final Fantasy VI's vocabulary on the mana sounds") for l in out["score"].message))
+        self.assertTrue(any(l.startswith("Written by bitComposer on the mana sounds") for l in out["score"].message))
+        self.assertFalse(any("Fantasy" in l for l in out["score"].message))   # no game's name in front of the listener
         self.assertTrue(any(l.startswith("layout: ") and "melody" in l for l in out["score"].message))
 
     def test_random_sounds_are_one_of_the_snes_sets_and_the_seed_picks_them(self):
@@ -50,10 +93,17 @@ class WrittenSongTests(unittest.TestCase):
         self.assertEqual(written.sound_set("evermore", random.Random(1)), "evermore")
         self.assertEqual(written.sound_set(None, random.Random(3)), written.sound_set(None, random.Random(3)))
 
-    def test_the_command_line_writes_from_a_vocabulary(self):
-        """--vocabulary ffvi takes the writer's path: an .it named by the song's title, the info the writer's."""
+    def test_the_command_line_writes_by_default_and_classic_on_its_flag(self):
+        """Without a flag the writer composes: an .it named by the song's title, the info the writer's; --classic is the
+        1.x generator."""
         with tempfile.TemporaryDirectory() as d:
-            args = build_parser().parse_args(["--vocabulary", "ffvi", "--pack", "ffvi", "-s", "11", "-d", d, "--carry-theme", "--band-returns"])
+            args = build_parser().parse_args(["--classic", "-s", "11", "-d", d])
+            path, info = compose_from_args(args)
+            self.assertTrue(os.path.exists(path))
+            self.assertNotIn("vocabulary", info)                               # Classic's info
+        with tempfile.TemporaryDirectory() as d:
+            args = build_parser().parse_args(["--pack", "ffvi", "-s", "11", "-d", d, "--carry-theme", "--band-returns"])
+            self.assertEqual(args.vocabulary, "default")
             path, info = compose_from_args(args)
             self.assertTrue(os.path.exists(path) and path.endswith(".it"))
             self.assertEqual(os.path.basename(path)[:-3], info["title"])
@@ -85,12 +135,12 @@ class LibraryVocabularyTests(unittest.TestCase):
         from test_library import make_pack
         from bitcomposer.packs import library, packfile
         self.assertEqual(vocabularies.names(), vocabularies.shipped())
-        tables = dict(vocabularies.raw("ffvi"))
+        tables = dict(vocabularies.raw("default"))
         vocabularies.library_dir().mkdir(parents=True)
         thin = {"source": dict(tables["source"], game="library", label="My library", songs=10), "tables": tables["tables"]}
         vocabularies.library_path().write_text(json.dumps(thin), encoding="utf-8")
         self.assertIn("library", vocabularies.names())
-        self.assertEqual((vocabularies.label("library"), vocabularies.songs("library"), vocabularies.ready("library")), ("My library", 10, False))
+        self.assertEqual((vocabularies.label("library"), vocabularies.songs("library"), vocabularies.ready("library")), ("your library", 10, False))
         thin["source"]["songs"] = 67
         vocabularies.library_path().write_text(json.dumps(thin), encoding="utf-8")
         self.assertTrue(vocabularies.ready("library"))
@@ -105,7 +155,7 @@ class LibraryVocabularyTests(unittest.TestCase):
         self.assertEqual(vocabularies.pack_name("pack:test_quest"), "test_quest")
         self.assertTrue(vocabularies.ready("pack:test_quest"))
         kinds = {v["name"]: v["kind"] for v in vocabularies.listing()}
-        self.assertEqual((kinds["ffvi"], kinds["library"], kinds["pack:test_quest"]), ("shipped", "library", "pack"))
+        self.assertEqual((kinds["default"], kinds["library"], kinds["pack:test_quest"]), ("shipped", "library", "pack"))
         self.assertIn("pack:test_quest", build_parser().parse_args(["--vocabulary", "pack:test_quest"]).vocabulary)
         # written from the pack's vocabulary: on its own samples, unless a built-in set is named
         out = written.compose_written("pack:test_quest", None, 3)
@@ -113,7 +163,7 @@ class LibraryVocabularyTests(unittest.TestCase):
         self.assertEqual(out["info"]["vocabulary"], data.get("label", "test_quest"))
         out = written.compose_written("pack:test_quest", "mana", 3)
         self.assertEqual(out["sounds"], "mana")
-        out = written.compose_written("ffvi", None, 3, pack_file=folder / "pack.json")
+        out = written.compose_written("default", None, 3, pack_file=folder / "pack.json")
         self.assertEqual(out["sounds"], "test_quest")
 
 
@@ -146,7 +196,7 @@ class ImportCountsAVocabularyTests(unittest.TestCase):
                 path = vocabularies.refit_library(ctx.db)
                 self.assertEqual(path, vocabularies.library_path())
                 self.assertIn("library", vocabularies.names())
-                self.assertEqual((vocabularies.label("library"), vocabularies.songs("library")), ("My library", 1))
+                self.assertEqual((vocabularies.label("library"), vocabularies.songs("library")), ("your library", 1))
                 self.assertEqual(vocabularies.source("library")["games"], ["test"])
                 self.assertNotIn("library", [v["name"] for v in vocabularies.listing() if v["ready"]])
             finally:

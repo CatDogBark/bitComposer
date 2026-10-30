@@ -44,6 +44,7 @@ def _short(path: Path) -> str:
 class Backend(QObject):
     stateChanged = Signal()
     positionChanged = Signal()
+    levelsChanged = Signal()
     playlistChanged = Signal()
     channelVolumesChanged = Signal()
     screenChanged = Signal()
@@ -96,13 +97,14 @@ class Backend(QObject):
         self.mpris = None                 # app.py starts one on Linux
         self._media_keys = ""
         self._tick = QTimer(self)
-        self._tick.setInterval(250)
+        self._tick.setInterval(100)             # the position, and the meters' levels
         self._tick.timeout.connect(self._update_position)
         # PACKS: the packs on this machine, an import while one runs, an ADD
         # waiting for "replace?", and where voice previews are written.
         self._packs = []
         self._import = None
-        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": ""}
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": "", "stage": ""}
+        self._levels = []
         self._pending_add = ""
         self._pending_name = ""
         self._previews = None
@@ -179,6 +181,10 @@ class Backend(QObject):
         if abs(pos - self._position) > 0.01:
             self._position = pos
             self.positionChanged.emit()
+        levels = [round(min(2.0, v), 3) for v in self.player.levels()]
+        if levels != self._levels:
+            self._levels = levels
+            self.levelsChanged.emit()
 
     # ── properties ──
     def _get_state(self): return self._state
@@ -186,6 +192,9 @@ class Backend(QObject):
 
     def _get_position(self): return self._position
     position = Property(float, _get_position, notify=positionChanged)
+
+    def _get_levels(self): return self._levels
+    levels = Property("QVariantList", _get_levels, notify=levelsChanged)    # each channel's level while playing, else []
 
     def _get_playlist(self): return self._playlist
     playlist = Property("QVariantList", _get_playlist, notify=playlistChanged)
@@ -579,14 +588,17 @@ class Backend(QObject):
 
         def finished(name, error):
             self._dispatch.call.emit(lambda: self._import_done(name, error))
+
+        def stage(text):
+            self._dispatch.call.emit(lambda: self._import_stage(text))
         try:
-            job = library.Import(source, on_progress=progress, on_done=finished)
+            job = library.Import(source, on_progress=progress, on_done=finished, on_stage=stage)
             job.start()
         except (PackError, OSError) as e:
             self._set_notice(str(e))
             return
         self._import = job
-        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": ""}
+        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": "", "stage": ""}
         self._set_notice(f"importing {Path(source).name}…")
         self.packsChanged.emit()
 
@@ -594,9 +606,13 @@ class Backend(QObject):
         self._import_state = dict(self._import_state, done=done, total=total)
         self.packsChanged.emit()
 
+    def _import_stage(self, text):
+        self._import_state = dict(self._import_state, stage=text)
+        self.packsChanged.emit()
+
     def _import_done(self, name, error):
         job, self._import = self._import, None
-        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or ""}
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or "", "stage": ""}
         if name:
             self._set_notice(f"imported {name}: {job.done} songs read")
         else:

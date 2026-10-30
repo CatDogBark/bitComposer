@@ -398,8 +398,9 @@ and the hit-or-miss part. Two steps, in order.
 - **Write the way the soundtracks do (`docs/IDIOM.md`; phases 1 to 4 done
   as developer tools in 1.2.0rc2, phase 4's rounds 23 to 66 in 1.2.0rc3,
   the housekeeping and the measurements for phase 6 in 1.2.0rc4; phase 6,
-  the writer as the generator, its engine in 2.0.0rc1, its window next:
-  `docs/idiom/phase-6-generator.md`).** The idiom's plan took
+  the writer as the generator, its engine in 2.0.0rc1, its window, its
+  fitted voices and its own sound set in 2.0.0rc2, the default player's
+  sound next: `docs/idiom/phase-6-generator.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
   readers scored on ground truth (phase 1), one score of voices through
   the SNES back end (phase 2), the vocabulary as tables read from the

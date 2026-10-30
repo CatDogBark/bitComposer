@@ -221,6 +221,8 @@ STRUCK_PRESETS = {
     "snes_synth_bass",
     "square_pluck",
     "tri_pluck",
+    # bitComposer's own set (packs/bit.py): its struck voices, as the classifier reads them
+    "bit_bell", "bit_epiano", "bit_harp", "bit_kalimba", "bit_marimba", "bit_music_box", "bit_nylon", "bit_piano", "bit_picked_bass", "bit_pluck", "bit_slap_bass", "bit_sub_bass", "bit_synth_bass",
 }
 
 

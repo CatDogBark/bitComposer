@@ -340,6 +340,29 @@ RELEASE = {
 }
 
 
+# Where each pitched voice sounds right, MIDI low to high (phase 6): the
+# writer fits a voice to a part's register and speed by this, the way an
+# imported game's ranges table fits the game's own samples. Set by ear and by
+# the instrument each recipe models, not measured from any game.
+RANGES = {
+    "mmx_bell": (60, 96),
+    "mmx_bright_lead": (60, 96),
+    "mmx_clean_guitar": (40, 84),
+    "mmx_guitar_pad": (48, 84),
+    "mmx_hollow": (55, 91),
+    "mmx_lead_guitar": (52, 91),
+    "mmx_organ": (43, 91),
+    "mmx_overdrive_guitar": (45, 84),
+    "mmx_rhythm_guitar": (40, 76),
+    "mmx_saw_pad": (48, 84),
+    "mmx_square": (55, 96),
+    "mmx_strings": (48, 84),
+    "mmx_synth_bass": (28, 55),
+    "mmx_synth_brass": (48, 86),
+    "mmx_synth_lead": (55, 96),
+    "mmx_slap_bass": (28, 55),
+}
+
 PACK = {
         "palette": "snes",
         "label": "Mega Man X",

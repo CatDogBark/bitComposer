@@ -420,6 +420,41 @@ RELEASE = {
 }
 
 
+# Where each pitched voice sounds right, MIDI low to high (phase 6): the
+# writer fits a voice to a part's register and speed by this, the way an
+# imported game's ranges table fits the game's own samples. Set by ear and by
+# the instrument each recipe models, not measured from any game.
+RANGES = {
+    "ffvi_strings": (48, 84),
+    "ffvi_flutes": (60, 91),
+    "ffvi_flute": (60, 96),
+    "ffvi_pan_flute": (60, 91),
+    "ffvi_wood_flute": (55, 88),
+    "ffvi_oboe": (58, 91),
+    "ffvi_trumpet": (54, 86),
+    "ffvi_dist_guitar": (48, 84),
+    "ffvi_trombone": (40, 72),
+    "ffvi_synth_lead": (55, 96),
+    "ffvi_choir": (48, 84),
+    "ffvi_organ": (36, 96),
+    "ffvi_rock_organ": (43, 91),
+    "ffvi_voice": (55, 84),
+    "ffvi_cello": (36, 67),
+    "ffvi_male_voice": (43, 67),
+    "ffvi_strings2": (43, 79),
+    "ffvi_organ_pedal": (24, 50),
+    "ffvi_bottle": (60, 91),
+    "ffvi_bass": (28, 55),
+    "ffvi_piano": (36, 96),
+    "ffvi_harp": (43, 91),
+    "ffvi_picked": (40, 84),
+    "ffvi_guitar": (40, 79),
+    "ffvi_tubular_bell": (60, 96),
+    "ffvi_xylophone": (65, 103),
+    "ffvi_dark_bass": (24, 50),
+    "ffvi_sitar": (48, 84),
+}
+
 PACK = {
         "palette": "snes",
         "label": "FFVI orchestral",

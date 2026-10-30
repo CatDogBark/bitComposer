@@ -27,7 +27,7 @@ long. Seven sounds, picked with `--sound`:
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
 
-And packs of your own: the player's PACKS panel makes one from a game's
+And packs of your own: the player's LIBRARY screen makes one from a game's
 own SPC files, the game's samples as its voices ([Packs from your
 games](#packs-from-your-games)).
 
@@ -59,7 +59,7 @@ with its icon); from then on start it from there like any other program.
 The command line is `bitcomposer`, e.g. `bitcomposer -d out -s 42 -v` for
 a reproducible song with details. To make packs from a game's music
 ([below](#packs-from-your-games)) the player needs the SNES emulator too:
-`pipx install "bitcomposer[import]"` installs both, or the PACKS panel's
+`pipx install "bitcomposer[import]"` installs both, or LIBRARY's
 GET THE EMULATOR adds it later.
 
 The player needs libopenmpt (above) and an audio output: `paplay`
@@ -191,33 +191,45 @@ Tests:
 python3 -m unittest discover -s tests -v
 ```
 
-## Written from a game's vocabulary
+## What GENERATE writes
 
 ```bash
-bitcomposer --vocabulary ffvi -s 7 -v
+bitcomposer -s 7 -v
 ```
 
-writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): the
-band, the figures, the tune and its balance drawn from Final Fantasy VI's
-vocabulary, the tables fitted on its 67 songs' readings and shipped with the
-player (`bitcomposer/vocabularies/ffvi.json.gz`, 365 KB of statistics and
-none of the game's samples), played on one of the built-in SNES sound sets
-(`--pack ffvi`, `mana`, `evermore` or `megamanx`; left random, the seed
-picks one). `--carry-theme` draws the tune's phrases again until its theme
-comes back; `--band-returns` brings the chords, the bass or the
-accompaniment back with it. A seed names one song on every machine. The
-rest of the options are Classic's, the generator without a vocabulary, and
-do not apply. In the player, SET's STYLE row picks Classic or a vocabulary
-(with THEME and RETURNS for the two switches) and GENERATE writes from it.
-Importing a game (below) also fits the game's own vocabulary beside its
-samples (`--vocabulary pack:NAME`, on the game's sounds) and recounts one
-over everything you have imported (`--vocabulary library`); the window
-offers each once 40 songs stand behind it. The rest of the 2.0 window is
-coming (`docs/idiom/phase-6-generator.md`).
+writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): a
+plan for the band, each part's figures bar by bar, a tune with a theme that
+may come back, and the parts' balance, all drawn from a vocabulary of
+counted habits, played on bitComposer's own sound set (generic
+instruments, synthesised here from descriptions and modelled on no game's
+bank, each fitted to its part by register and speed; `--pack ffvi`,
+`mana`, `evermore` or `megamanx` borrows one of Classic's styled sets
+instead) and rendered through the SNES back end. A seed names one song on
+every machine. `--carry-theme` draws the tune's phrases again until its
+theme comes back; `--band-returns` brings the chords, the bass or the
+accompaniment back with it. In the player this is GENERATE, with THEME
+and RETURNS beside it; Classic, the 1.x generator with its own knobs and
+the chip and Genesis sounds, is WRITER: classic in SET (`--classic` on the
+command line; the options above the flag are its).
+
+Where the vocabulary comes from, plainly: the shipped one
+(`bitcomposer/vocabularies/default.json.gz`, 365 KB) was fitted on the
+readings of Final Fantasy VI's 67 songs, the game the writing was
+measured against round by round until it held up by ear
+(`docs/idiom/phase-4-writing.md`). It is the statistics of how that
+music is put together, the counts of figures, moves, chord changes and
+balances, and none of the game's samples or notes; a release check
+(`tools/copycheck.py`) probes every four-bar window of hundreds of
+written tunes against the games' phrases and ships nothing that copies
+one. It is as far as the writing has gone; vocabularies fitted on more
+games follow. Importing a game (below) fits that game's own vocabulary
+beside its samples and recounts one over everything you have imported;
+SET's FROM row offers each once 40 songs stand behind it
+(`--vocabulary pack:NAME`, `--vocabulary library`).
 
 ## Packs from your games
 
-New in 1.2, and early. The player's PACKS panel makes a pack from a game's
+New in 1.2, and early. The player's LIBRARY screen makes a pack from a game's
 own music. IMPORT a game's SPC set (a folder of `.spc` files, a zip, or
 snesmusic.org's `.rsn`, a `.rar` or a `.7z`, which 7-Zip or unar on your
 machine unpacks) and each song is run through an emulator of the SNES sound
@@ -259,33 +271,50 @@ them stay on your machine, in your data folder
 
 ## The player
 
-<img src="docs/images/player.png" alt="The player: now playing, transport, gain, generate, settings, mix and packs, the playlist" width="400">
+<img src="docs/images/player.png" alt="The player: PLAY, with the song, the transport, GENERATE, the band's levels and the songs" width="400">
 
 `bitcomposer-player` (Linux) and `bitComposer.exe` (Windows) are the same
-program: a folder of songs played through libopenmpt, GENERATE AND PLAY,
-auto-generate when a track ends (the "radio"), the settings of what it
-composes (sound, tempo, energy, scale, form, echo, bass, drums, harmony)
-with presets, a live mixer per channel with the KIT and ECHO buses and
-APPLY TO TRACK to write the mix into the file, gain with a soft limiter,
-shuffle, and the playlist with KEEP: every track the player makes is
-provisional (`(auto) <Title>.it`, so a file browser sorts them together)
-and pruned after ten unless kept. It
-opens no taller than the screen it lands on, the
-SET, MIX and PACKS panels open inside it (scrolling on a small or scaled
-screen), and it keeps the size you give it; Ctrl + and
-Ctrl − zoom it, Ctrl 0 resets. Closing the window leaves the music playing
-in the tray (quit from the tray menu), and starting it again brings that
-window back rather than a second player. The media keys drive it: on
-Linux through the desktop's media controls (MPRIS, so the Plasma media
-applet and lock screen, GNOME and `playerctl` see it too), on Windows as
-global keys. SET → PLAYER → LOGIN, or the tray menu, starts it when you
-log in: in the tray, not playing. When a newer
-release exists an UPDATE button appears. It says what the update will do,
+program, an application of four screens under one header:
+
+- **PLAY**: the song playing, its position, the transport, GENERATE, AUTO
+  (the "radio": the next song is written when this one ends), gain with a
+  soft limiter, each channel's level as the band, and the songs in the
+  folder with KEEP. Every song the player writes is provisional
+  (`(auto) <Title>.it`, so a file browser sorts them together) and pruned
+  after ten unless kept.
+- **WRITE**: what the next song is written from (the vocabulary that
+  ships, your library, or a game you have read), the two switches (carry
+  a theme; the band returns with it), a seed that names one song on any
+  machine, and the sounds it plays on. Classic, the 1.x generator, is a
+  switch at the bottom, with its own knobs (sound, tempo, energy, scale,
+  form, echo, bass, drums, harmony) and presets.
+- **LIBRARY**: the games you have read. IMPORT reads a game's SPC set
+  into its sounds and, at 40 songs, its own vocabulary; ADD brings in an
+  exported pack; each game can lend its sounds, be written from,
+  be exported, renamed or deleted.
+- **SOUNDS**: a game's samples by part, each heard with a click and moved
+  when the reading got it wrong.
+
+MIX (a live mixer per channel, with the kit and the echo as buses, and
+APPLY to write the mix into the file) and SET (start at login, update
+checks, release candidates) open as panels over the screen. The look is
+the SNES era's own pixels, as styling only: the controls are ordinary
+controls, the text is text, nothing sits on a fixed grid. The window
+opens no taller than the screen it lands on (scrolling on a small or
+scaled screen) and keeps the size you give it; Ctrl + and Ctrl − zoom
+it, Ctrl 0 resets, Ctrl 1 to 4 pick a screen. Closing the window leaves
+the music playing in the tray (quit from the tray menu), and starting it
+again brings that window back rather than a second player. The media keys
+drive it: on Linux through the desktop's media controls (MPRIS, so the
+Plasma media applet and lock screen, GNOME and `playerctl` see it too),
+on Windows as global keys. SET → LOGIN, or the tray menu, starts it when
+you log in: in the tray, not playing. When a newer release exists an
+UPDATE button appears in the header. It says what the update will do,
 then shows it happening: on Linux it reinstalls through pipx, pipx's
 output scrolling past, and restarts the player; on Windows it downloads
-the release's installer and runs it. A player installed from a release candidate is
-offered the next candidate; a release player only releases, unless
-SET → PLAYER → CANDIDATES asks for candidates too.
+the release's installer and runs it. A player installed from a release
+candidate is offered the next candidate; a release player only releases,
+unless SET → CANDIDATES asks for candidates too.
 
 ## Windows
 

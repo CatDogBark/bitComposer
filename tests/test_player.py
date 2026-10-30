@@ -392,6 +392,7 @@ class WindowHeadless(unittest.TestCase):
         self.assertEqual(st["layout"][0], "melody")
         self.assertIn("BPM", st["message"])
         self.assertEqual(len(b.channelVolumes), 19)
+        self.assertTrue(self.pump(2, lambda: len(b.levels) == 19 and max(b.levels) > 0))   # the meters' levels, live
         b.setChannelVolume(1, 7)
         self.assertTrue(b.applyMix())
         self.assertEqual(b.channelVolumes[1], 7)
@@ -664,9 +665,43 @@ class WindowHeadless(unittest.TestCase):
         win.close()
         del eng
 
-    def test_the_style_row_writes_from_a_vocabulary(self):
-        """STYLE beside Classic offers the shipped vocabularies; picking one hands GENERATE the writer's flags (the
-        vocabulary, the SNES sound set, the two switches) and none of Classic's, and the summary says so (phase 6)."""
+    def test_an_import_adds_its_vocabulary_to_the_window_at_once(self):
+        """The vocabularies the window offers (WRITE's cards, LIBRARY's rows) are read again whenever the packs
+        change: a game imported in this session shows as ready without a restart (found by the 2.0rc2 smoke test)."""
+        import json
+        from pathlib import Path
+        from PySide6.QtCore import QUrl, Slot
+        from PySide6.QtQml import QQmlApplicationEngine
+        import bitcomposer.player as pkg
+        from bitcomposer.player.backend import Backend
+
+        class Reading(Backend):
+            offered = [{"name": "default", "label": "bitComposer", "songs": 67, "ready": True, "kind": "shipped"}]
+
+            @Slot(result=str)
+            def vocabularies(self):
+                return json.dumps(self.offered)
+        b = Reading(music_dir=self.music, quiet=True, output_kind="null")
+        self.addCleanup(b.shutdown)
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        eng.rootContext().setContextProperty("backend", b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        self.assertEqual(win.property("vocabularyOptions").toVariant(), ["default"])
+        b.offered = b.offered + [{"name": "pack:quest", "label": "Test Quest", "songs": 41, "ready": True, "kind": "pack"}]
+        b.packsChanged.emit()                                   # what an import's end does
+        self.pump(0.3)
+        self.assertEqual(win.property("vocabularyOptions").toVariant(), ["default", "pack:quest"])
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
+    def test_generate_writes_by_default_and_classic_is_a_setting(self):
+        """GENERATE writes from the shipped vocabulary with no choice made: the flags carry only the sounds and the two
+        switches, none of Classic's; WRITER set to classic adds --classic and Classic's options come back (phase 6)."""
         from pathlib import Path
         from PySide6.QtCore import QUrl
         from PySide6.QtQml import QQmlApplicationEngine
@@ -678,24 +713,24 @@ class WindowHeadless(unittest.TestCase):
         eng.setInitialProperties({"still": True})
         eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
         win = eng.rootObjects()[0]
-        self.assertIn("ffvi", win.property("styleOptions").toVariant())
-        self.assertEqual(win.property("styleOptions").toVariant()[0], "classic")
+        self.assertEqual(win.property("settGenerator"), "bitcomposer")
+        self.assertEqual(win.property("vocabularyOptions").toVariant(), ["default"])      # nothing imported: no FROM row to show
         win.setProperty("settTempo", "fast")
-        win.setProperty("settStyle", "ffvi")
         win.setProperty("settSound", "mana")
         win.setProperty("settCarryTheme", True)
         self.pump(0.3)
         flags = self.b.autoFlags()
-        self.assertIn("--vocabulary ffvi", flags)
-        self.assertIn("--pack mana", flags)
+        self.assertNotIn("--vocabulary", flags)
+        self.assertNotIn("--classic", flags)
+        self.assertNotIn("--pack", flags)                       # the writer plays on its own set unless a game of yours is chosen
         self.assertIn("--carry-theme", flags)
-        self.assertNotIn("--band-returns", flags)
         self.assertNotIn("--tempo", flags)                      # Classic's options do not apply to the writer
-        win.setProperty("settStyle", "classic")
+        win.setProperty("settGenerator", "classic")
         self.pump(0.3)
         flags = self.b.autoFlags()
-        self.assertNotIn("--vocabulary", flags)
+        self.assertIn("--classic", flags)
         self.assertIn("--tempo fast", flags)
+        self.assertNotIn("--carry-theme", flags)
         self.assertEqual(warnings, [])
         win.close()
 
@@ -729,7 +764,11 @@ class WindowHeadless(unittest.TestCase):
         self.pump(0.6)
         self.assertEqual((win.width(), win.height()), size)
         self.assertGreater(win.property("contentH"), win.height())
-        self.assertGreater(scroll.property("contentY"), 0)  # MIX scrolled into view
+        mix = win.findChild(QObject, "masterPanel")          # MIX is in view (2.0 puts the panels at the top, so no scroll is needed)
+        self.assertTrue(mix.property("visible"))
+        top = mix.property("y") - scroll.property("contentY")
+        self.assertGreaterEqual(top, 0)
+        self.assertLess(top + mix.property("height"), win.height())
         self.assertEqual(warnings, [])
         win.close()
         del eng

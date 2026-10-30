@@ -120,7 +120,7 @@ def listing() -> list[dict]:
         tonal, kit, left = parts(data)
         samples = data.get("samples") or {}
         out.append({"name": folder.name, "label": data.get("label", folder.name), "path": str(folder / PACK),
-                    "songs": why.get("songs"), "samples": len(samples), "parts": tonal, "kit": kit, "out": left,
+                    "songs": why.get("songs"), "moved": why.get("lead_moved"), "samples": len(samples), "parts": tonal, "kit": kit, "out": left,
                     "drums": [v for v, s in samples.items() if is_drum(s)], "why": why.get("why", {})})
     return out
 
@@ -309,9 +309,9 @@ class Import:
     The worker says how far it is, and why it stopped, in a file beside the
     pack being made (its --progress), not on its stdout: the Windows build
     is a windowed program, which may have none. on_progress(done, total)
-    and on_done(name, error) are called from the following thread."""
+    on_stage(words) and on_done(name, error) are called from the following thread."""
 
-    def __init__(self, source, name: str | None = None, on_progress=None, on_done=None):
+    def __init__(self, source, name: str | None = None, on_progress=None, on_done=None, on_stage=None):
         from ..translate.archives import is_archive
         from ..translate.pack import name_for
         self.source = Path(source)
@@ -322,7 +322,9 @@ class Import:
         self.errors = packs_dir() / f"{STAGE}{self.name}.errors"
         self.on_progress = on_progress or (lambda done, total: None)
         self.on_done = on_done or (lambda name, error: None)
+        self.on_stage = on_stage or (lambda words: None)
         self.done = self.total = 0
+        self.doing = ""                                     # the stage the worker says it is at
         self.proc = None
         self._cancelled = False
 
@@ -363,6 +365,9 @@ class Import:
             if len(words) == 3 and words[0] == "progress" and words[1].isdigit() and words[2].isdigit():
                 self.done, self.total = int(words[1]), int(words[2])
                 self.on_progress(self.done, self.total)
+            elif line.startswith("stage "):
+                self.doing = line[6:]
+                self.on_stage(self.doing)
             elif line.startswith("error "):
                 error = line[6:]
         return max(seen, end), error
