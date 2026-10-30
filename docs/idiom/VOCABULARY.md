@@ -1023,9 +1023,10 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 A gap, noted 2026-10-30: the echo. No table counts a game's echo (on or
 off, its delay, feedback, filter and wet, which the readings hold per
-song), so a written song's echo is the sound set's habit, drawn as Classic
-draws it (`whole.echo_of` over the pack's habits: bitComposer's own set
-always on, the styled sets as their games have it). The writing's way is a
+song), so a written song's echo is the player's own habit, drawn per song
+from the song's tempo and density outside the writer
+(`bitcomposer.performance.echo_for`); bare, the sound set's, as Classic
+draws it (`whole.echo_of` over the pack's habits). The writing's way is a
 counted word drawn once a song beside the balance; it waits, by the
 owner's call, until the FFVI tuning is not at stake.
 

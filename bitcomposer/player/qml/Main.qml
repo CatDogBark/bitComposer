@@ -318,8 +318,8 @@ ApplicationWindow {
     property string settSound: "random"
     property string settGenerator: "bitcomposer"    // GENERATE writes from a vocabulary (phase 6); "classic" is the 1.x generator
     property string settVocabulary: "default"       // what it writes from: the shipped vocabulary, your library, or one of your games
-    property bool settCarryTheme: false
-    property bool settBandReturns: false
+    property bool settCarryTheme: true                 // the player's performance (bitcomposer/performance.py): on by default
+    property bool settBandReturns: true
     property string settSeed: ""                    // a seed names one song; blank draws one
     property var vocabularies: JSON.parse(backend.vocabularies())     // read again whenever the packs change: an import adds one
     Connections { target: backend; function onPacksChanged() { root.vocabularies = JSON.parse(backend.vocabularies()) } }
@@ -422,8 +422,8 @@ ApplicationWindow {
         if (settGenerator !== "classic") {                   // the writer: what it writes from, the sounds and the two switches; Classic's options do not apply
             if (settVocabulary !== "default") flags += " --vocabulary " + settVocabulary
             if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)      // else its own set, the default
-            if (settCarryTheme) flags += " --carry-theme"
-            if (settBandReturns) flags += " --band-returns"
+            flags += settCarryTheme ? " --carry-theme" : " --no-carry-theme"       // the saved switch wins over the performance's default
+            flags += settBandReturns ? " --band-returns" : " --no-band-returns"
             if (/^\d{1,9}$/.test(settSeed)) flags += " -s " + settSeed
             return flags
         }
@@ -1309,13 +1309,13 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     spacing: Math.round(12 * root.ui)
                                     PButton { small: true; text: root.settCarryTheme ? "ON" : "OFF"; on: root.settCarryTheme; implicitWidth: Math.round(56 * root.ui); onClicked: root.settCarryTheme = !root.settCarryTheme }
-                                    Body { text: "<b>Carry a theme.</b> The tune's first phrase comes back later in the song (the games do it in two songs of five; this asks for it every time)."; textFormat: Text.StyledText }
+                                    Body { text: "<b>Carry a theme.</b> The tune's first phrase comes back later in the song. On by default: the games do it in two songs of five, and the player asks for it every time; off leaves it to the vocabulary's own rate."; textFormat: Text.StyledText }
                                 }
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: Math.round(12 * root.ui)
                                     PButton { small: true; text: root.settBandReturns ? "ON" : "OFF"; on: root.settBandReturns; implicitWidth: Math.round(56 * root.ui); onClicked: root.settBandReturns = !root.settBandReturns }
-                                    Body { text: "<b>The band returns with it.</b> Never the tune alone: the chords, the bass or the accompaniment come back too, in the song's own mix."; textFormat: Text.StyledText }
+                                    Body { text: "<b>The band returns with it.</b> Never the tune alone: the chords, the bass or the accompaniment come back too, in the song's own mix. On by default."; textFormat: Text.StyledText }
                                 }
                                 RowLayout {
                                     Layout.fillWidth: true
@@ -1374,7 +1374,7 @@ ApplicationWindow {
                             Body {
                                 color: root.dimText; font.pixelSize: Math.round(10 * root.ui)
                                 text: root.settGenerator !== "classic"
-                                    ? "bitComposer's own set: generic instruments, synthesised, each fitted to its part by register and speed. A game you have read lends its own samples instead. The chip, Genesis and styled SNES sets belong to Classic."
+                                    ? "bitComposer's own set: generic instruments, synthesised, each fitted to its part by register and speed. A game you have read lends its own samples instead. The chip, Genesis and styled SNES sets belong to Classic. The player's performance adds the echo by the song's tempo and density, vibrato on held notes, and plays the loop twice."
                                     : "Classic's sounds: the chip, the Genesis and the SNES sets, or one of your games' packs."
                             }
                         }

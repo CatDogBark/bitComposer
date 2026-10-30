@@ -212,13 +212,21 @@ def build_parser():
     )
     parser.add_argument(
         "--carry-theme",
-        action="store_true",
-        help="with --vocabulary: the tune's phrases are drawn again until its theme comes back later in the song",
+        action=argparse.BooleanOptionalAction, default=None,
+        help="the tune's phrases are drawn again until its theme comes back later in the song (the player's default; "
+             "--no-carry-theme leaves it to the vocabulary's own rate)",
     )
     parser.add_argument(
         "--band-returns",
+        action=argparse.BooleanOptionalAction, default=None,
+        help="a theme never comes back with the tune alone: the chords, the bass or the accompaniment come with it "
+             "(the player's default; --no-band-returns leaves it to the vocabulary)",
+    )
+    parser.add_argument(
+        "--bare",
         action="store_true",
-        help="with --vocabulary: a theme never comes back with the tune alone (the chords, the bass or the accompaniment come with it)",
+        help="the writer bare, with none of the player's performance (no theme asked for, the echo as the sound set's "
+             "habit, no vibrato, the loop once): what the Song Checks and tools/whole.py write",
     )
     parser.add_argument(
         "--version",
@@ -290,8 +298,9 @@ def compose_written_from_args(args, seed, index: int = 0):
     """A song from a vocabulary (phase 6), saved as compose_from_args saves Classic's."""
     from .spc import convert
     from .written import compose_written
+    from .performance import Performance
     out = compose_written(args.vocabulary, args.pack, seed, carry_theme=args.carry_theme, band_returns=args.band_returns,
-                          pack_file=args.pack_file)
+                          pack_file=args.pack_file, performance=Performance.none() if args.bare else None)
     os.makedirs(args.output_dir, exist_ok=True)
     if args.output and args.count == 1:
         filepath = args.output

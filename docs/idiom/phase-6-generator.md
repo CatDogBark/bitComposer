@@ -297,12 +297,13 @@ imported through the window's own `import_from`, the stages watched on
 
 ## Open questions
 
-- **The echo is a vocabulary gap** (noted 2026-10-30, the owner's call: fine
-  as it is for now, documented). A written song's echo is not drawn from
-  the vocabulary: no table counts a game's echo, so the sound set's habit
-  decides it, the way Classic's packs do (`render.echo_of` over
-  `PACK["habits"]`: `bit` always on, slap or eighth, feedback 0.55 to 0.7;
-  the styled sets as their games have it). The readings hold what a table
+- **The echo is a vocabulary gap** (noted 2026-10-30, the owner's call:
+  documented, not counted yet). A written song's echo is not drawn from
+  the vocabulary: no table counts a game's echo. In the player the
+  performance decides it per song from the song's tempo and density
+  (`performance.echo_for`, outside `translate/`); bare, the sound set's
+  habit decides, the way Classic's packs do (`render.echo_of` over
+  `PACK["habits"]`). The readings hold what a table
   would count, each song's echo on or off, its delay, feedback, filter and
   wet, and the writing's way is a counted word drawn once a song beside the
   balance. Not now: a writing change while the FFVI tuning stands.
