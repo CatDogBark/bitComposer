@@ -15,7 +15,7 @@ chip and Genesis palettes unchanged.
 The score of voices and the back end (phase 2); the tables and the format
 2 pack (phase 3: `translate/packtables.py`, the FFVI pack in format 2);
 the bass and drum writers and the harness that passed the listener's ear
-in substitution (`translate/writer.py`, `translate/harness.py`); the
+in substitution (`translate/writer/`, `translate/harness.py`); the
 current writing, replaced slice by slice behind the same `compose_song`.
 
 ## What phase 3 changed in the plan
@@ -558,7 +558,7 @@ and will be said beside each song. The melody stems republished.
 
 ### The integration: whole songs from the pack (2026-10-23, begun)
 
-**What was built.** `translate/whole.py` writes a whole song from a
+**What was built.** `translate/whole/` writes a whole song from a
 format-2 pack with no original to follow, and `tools/whole.py` writes
 seeds to a directory, renders them, reads them back and prints the
 measures beside a game's own songs'. The plan comes first, each draw
@@ -2368,7 +2368,7 @@ its `KEPT` entry takes `counter_levels`' place, so the pack is 80 tables
 still (backup `pack.json.r30`, the WAVs untouched). `counter_levels` is
 retired from `KEPT`, from the plan's defaults and from the vocabulary
 (its entry says what replaced it and why); its builder is gone from
-`rhythm.py`. The draw: in `_plan_counter`, after the `counter_samples`
+`rhythm/`. The draw: in `_plan_counter`, after the `counter_samples`
 draw, where the `counter_levels` draw stood (after `plan`'s retries, the
 place the round-29 review fixed; one draw for one, nothing before an
 existing draw): the band of the tune's `levels` draw, one draw from the
@@ -2449,7 +2449,7 @@ counter does leap so, inside a song whose register bounds it), with
 nothing to stop the climb but the span `writer.counter` folds into: the
 tune's register widened by `LAYER_OFFSET` each way, (24, 96) here, round
 23's rule reused (the audit's item 7). The chord parts' voices apart or
-alternating and the bass's second voice share the rule (`whole.py`
+alternating and the bass's second voice share the rule (`whole/`
 `span_v`, `writer.bass` with `BESIDE_SPAN`). A drawing fault by IDIOM.md:
 the `ranges` word says where the sample is played and the writer let the
 voice land where it never is.

@@ -105,6 +105,7 @@ fits, the song's own bar: the first writer left such bars silent, and
 Johnny C. Bad's bass vanished for four bars the beat reader had put in
 3/4 and came back in at the song's stop-time.
 """
+from __future__ import annotations
 import math
 import random
 from types import SimpleNamespace
@@ -112,520 +113,10 @@ import statistics
 from collections import Counter
 from fractions import Fraction
 
-from . import harmony, phrases, rhythm, roles as R, tables
-from .vocab import FIT
+from .. import harmony, phrases, rhythm, roles as R, tables
+from ..vocab import FIT
 
-SHAPE = ("part", "meter", "habit", "previous")   # the bass table's shape, the habit before the chain (the module)
-REST = "-"
-DISCOUNT = 0.75
-LOW = 0.1                             # the register's floor: this quantile of the song's own bass notes
-REACH = 16                            # semitones above the floor a note may go (an octave and a third)
-SLACK = 1                             # strikes: how far outside the middle half of the song's own bars (Manner's window, reported)
-TIGHT = (0.5, 1.5)                    # a written bar strikes between these multiples of the song's own bar (envelope)
-DOWNBEAT = 0.9                        # the song's bass striking the one in this share of its bars: a new figure must too
-ANCHORS = {"R", "r", "5"}             # the marks that anchor a bar: roots and fifths
-ROOTS = {"R", "r"}
-MARGIN = 0.15                         # how far a figure's anchor share may stray outside the song's own bars' range
-PEDAL = 4                             # strikes: a bar on one tone this long is a pedal
-PEDAL_SHARE = 0.25                    # the song's own bars of PEDAL strikes or more that are pedals, for a new one to be
-RARE = 0.02                           # a mark under this share of the song's own notes is not the song's: a new figure leaves it out
-REUSE = {"walking": 0.53, "root-fifth": 0.59, "roots": 0.73}   # the chance a bar on a chord its span had takes that bar's figure
-PERIODS = (1, 2, 4)                   # bars: the periods a span may repeat with
-EARLIER = 0.35                        # a new span's chance of taking a pattern an earlier span had (the readings' basses, by rhythm)
-TRIES = 40                            # draws before the writer gives up on a constraint
-SOUNDS = (0.3, 1.0)                   # the sounded share of a note's gap is kept within these
-
-
-def fit(units, floor_cls=rhythm.BarCells, shape=SHAPE, name: str = "bass") -> tables.Cache:
-    """The model the writer draws from, fitted on these units (the song written for left out by the caller)."""
-    units = list(units)
-    return tables.Cache.fit(units, shape, name=name, votes=tables.SHARES, floor=floor_cls(units), discount=DISCOUNT,
-                            covers=len(floor_cls.COVERS))
-
-
-def on_grid(figure: str, division: int) -> bool:
-    """Whether a figure's positions all sit on a grid of this many steps a beat."""
-    return all(division % Fraction(t.partition(":")[0]).denominator == 0 for t in rhythm._tokens(figure))
-
-
-class Manner:
-    """The song's own manner in a part, read from its bars (the module):
-    the strikes a bar it allows a new figure (low, high), whether the
-    figure must strike the downbeat, the subdivisions of the beat it may
-    use (feel), and its tones: whether it plays octave-up roots, how many
-    different tones a bar (tones), the share of a bar's strikes on roots
-    (roots) and on roots and fifths (anchors), and whether a bar may sit
-    on one tone (pedal)."""
-
-    def __init__(self, song: rhythm.Song, role: str, known: set, figure_of=None):
-        self.known = known
-        figure_of = figure_of or rhythm.figure
-        bars = [(a, struck) for a, struck in rhythm.bars_of(song, role) if struck]
-        counts = [len(struck) for _, struck in bars]
-        q1, _, q3 = statistics.quantiles(counts, n=4) if len(counts) >= 2 else (counts[0], counts[0], counts[0]) if counts else (4, 4, 4)
-        self.low = max(1, math.ceil(q1) - SLACK)
-        self.high = max(self.low, math.floor(q3) + SLACK)
-        self.downbeat = bool(bars) and sum(1 for _, struck in bars if struck[0][0] == 0) / len(bars) >= DOWNBEAT
-        struck_at = Counter(p for _, struck in bars for p, _ in struck)
-        strikes = sum(struck_at.values())
-        self.feel = {p for p, c in struck_at.items() if c / strikes >= RARE} | {Fraction(0)} if strikes else set()
-        marks = [[t.partition(":")[2] for t in rhythm._tokens(figure_of(struck, a, song))] for a, struck in bars]
-        full = [m for m in marks if len(m) >= 2]
-        self.octaves = any("r" in m for m in marks)
-        self.tones = (min(len(set(m)) for m in full), max(len(set(m)) for m in full)) if full else (1, 4)
-        shares = [sum(1 for x in m if x in ANCHORS) / len(m) for m in full]
-        self.anchors = (min(shares), max(shares)) if shares else (0.0, 1.0)
-        shares = [sum(1 for x in m if x in ROOTS) / len(m) for m in full]
-        self.roots = (min(shares), max(shares)) if shares else (0.0, 1.0)
-        long = [m for m in marks if len(m) >= PEDAL]
-        self.pedal = not long or sum(1 for m in long if len(set(m)) == 1) / len(long) >= PEDAL_SHARE
-        counts = Counter(x for m in marks for x in m)
-        total = sum(counts.values())
-        self.marks = ({x for x, c in counts.items() if c / total >= RARE} | {"R"}) if total else {"R", "r", "3", "5", "7", "s", "+", "?"}
-
-    def fits(self, figure: str) -> bool:
-        """Whether a new figure is in the song's manner (the module): a bar some
-        song played, in the song's feel and tones (its density and downbeat
-        are the bar's own: envelope and within)."""
-        if figure == REST or figure not in self.known:
-            return False
-        tokens = [t.partition(":") for t in rhythm._tokens(figure)]
-        positions = [Fraction(t[0]) for t in tokens]
-        marks = [t[2] for t in tokens]
-        if not all(p in self.feel for p in positions):
-            return False
-        if not self.octaves and "r" in marks:
-            return False
-        if any(m not in self.marks for m in marks):
-            return False
-        distinct = len(set(marks))
-        if len(marks) >= 2 and not (self.tones[0] <= distinct <= self.tones[1]):
-            return False
-        for which, span in ((ANCHORS, self.anchors), (ROOTS, self.roots)):
-            share = sum(1 for m in marks if m in which) / len(marks)
-            if len(marks) >= 2 and not (span[0] - MARGIN <= share <= span[1] + MARGIN):
-                return False
-        return self.pedal or len(marks) < PEDAL or distinct > 1
-
-
-def rhythm_of(figure: str) -> str:
-    """A figure's rhythm alone: its positions, the marks dropped."""
-    return " ".join(t.partition(":")[0] for t in rhythm._tokens(figure)) or REST
-
-
-def spans(keys: list) -> list[tuple[int, int, int]]:
-    """Maximal runs where the keys repeat with the smallest period in PERIODS
-    that fits (at least two periods long): [(start, length, period)]; a bar
-    in no run is its own span of length 1."""
-    out, i, n = [], 0, len(keys)
-    while i < n:
-        best = None
-        for p in PERIODS:
-            if i + p > n:
-                break
-            j = i + p
-            while j < n and keys[j] == keys[j - p]:
-                j += 1
-            if j - i >= 2 * p and (best is None or j - i > best[1]):
-                best = (p, j - i)
-        if best is None:
-            out.append((i, 1, 1))
-            i += 1
-        else:
-            out.append((i, best[1], best[0]))
-            i += best[1]
-    return out
-
-
-def envelope(own: str, meter: int | None = None) -> tuple:
-    """What the song's own bar allows a written one: strikes between TIGHT
-    times its own, the downbeat where it strikes it, and (meter given)
-    positions inside the bar's length."""
-    n = len(rhythm._tokens(own))
-    return (max(1, math.ceil(TIGHT[0] * n)), max(1, math.floor(TIGHT[1] * n)), own.startswith("0:") or own == "0", meter)
-
-
-def drum_envelope(own: str, meter: int | None = None) -> tuple:
-    """What the song's own drum bar allows a written one: each piece's strikes
-    between TIGHT times its own (a piece the bar lacks: none), the downbeat
-    where it strikes it, positions inside the bar."""
-    counts = Counter(t.partition(":")[2] for t in rhythm._tokens(own))
-    return ({k: (max(1, math.ceil(TIGHT[0] * c)), max(1, math.floor(TIGHT[1] * c))) for k, c in counts.items()},
-            own.startswith("0:"), meter)
-
-
-def drum_within(figure: str, env: tuple) -> bool:
-    """Whether a drum figure is within the bar's envelope, piece by piece."""
-    pieces, downbeat, meter = env
-    tokens = [t.partition(":") for t in rhythm._tokens(figure)]
-    counts = Counter(t[2] for t in tokens)
-    if any(k not in pieces for k in counts) or any(not (lo <= counts.get(k, 0) <= hi) for k, (lo, hi) in pieces.items()):
-        return False
-    if downbeat and not any(t[0] == "0" for t in tokens):
-        return False
-    return meter is None or all(Fraction(t[0]) < meter for t in tokens)
-
-
-def within(figure: str, env: tuple) -> bool:
-    """Whether a figure is within the bar's envelope."""
-    tokens = rhythm._tokens(figure)
-    low, high, downbeat, meter = (env + (None,))[:4]
-    if not (low <= len(tokens) <= high and (not downbeat or (bool(tokens) and tokens[0].partition(":")[0] == "0"))):
-        return False
-    return meter is None or all(Fraction(t.partition(":")[0]) < meter for t in tokens)
-
-
-class DrumManner:
-    """The song's own manner in its drums (or one group of them): the
-    positions it strikes (feel) and the pieces it has (kit), each in RARE of
-    its hits or more; from the song, or from a list of its own figures."""
-
-    def __init__(self, song: rhythm.Song | None, known: set, figures=None):
-        self.known = known
-        if figures is None:
-            figures = [rhythm.drum_figure(struck, song) for _, struck in rhythm.bars_of(song, R.DRUMS) if struck]
-        tokens = [t.partition(":") for f in figures for t in rhythm._tokens(f)]
-        n = len(tokens)
-        at = Counter(Fraction(t[0]) for t in tokens)
-        pieces = Counter(t[2] for t in tokens)
-        self.feel = ({p for p, c in at.items() if c / n >= RARE} | {Fraction(0)}) if n else set()
-        self.kit = {x for x, c in pieces.items() if c / n >= RARE} if n else set()
-
-    def fits(self, figure: str) -> bool:
-        """Whether a new figure is in the song's manner: a bar some song played, on the song's positions, with its pieces."""
-        if figure == REST or figure not in self.known:
-            return False
-        tokens = [t.partition(":") for t in rhythm._tokens(figure)]
-        return all(Fraction(t[0]) in self.feel and t[2] in self.kit for t in tokens)
-
-
-FREE_STRIKES = (1, 64)                # strikes a bar a free-written part allows: any bar the table gives (the habit conditions the
-                                      # table already; a second envelope by the habit's density, sparse 1-3 / medium 2-6 / dense 5-16,
-                                      # had cut a dense-habit accompaniment to three distinct bars in 32 where the table alone gives
-                                      # five to nine, FFVI's eight: docs/idiom/phase-4-writing.md, the integration)
-FREE_HITS = (0, 16)                   # hits a bar a piece may take in a free-written drum bar
-
-
-class FreeManner:
-    """The manner of a part written with no original to follow (a generated
-    song's, phase 4): any bar the table knows, on the song's grid, on the
-    pieces the song has (drums); the density and the downbeat the habit's
-    and the band's, not a bar's own."""
-
-    def __init__(self, known: set, kit: set | None = None, division: int | None = None, rests: bool = False):
-        self.known = known
-        self.kit = kit
-        self.division = division
-        self.rests = rests                                  # a rested bar may be drawn (a drum group of a planned song rests at its own rate)
-
-    def fits(self, figure: str) -> bool:
-        if figure == REST:
-            return self.rests
-        if figure not in self.known:
-            return False
-        if self.division is not None and not on_grid(figure, self.division):
-            return False
-        return self.kit is None or all(t.partition(":")[2] in self.kit for t in rhythm._tokens(figure))
-
-
-def free_envelope(habit: str):
-    """An envelope_of for a free-written part: any strikes a bar (FREE_STRIKES: the habit conditions the table), no downbeat demanded."""
-    low, high = FREE_STRIKES
-    return lambda own, meter=None: (low, high, False, meter)
-
-
-ANY_TONE = -1                         # upper(tone_index=ANY_TONE): a voice beside the line takes any tone of the line's voicing but its own, drawn a span
-VOICE_KINDS = ("apart", "alternating")   # the relations of a voice beside the line whose pitches the voice_intervals/voice_moves tables give
-VOICE_TRIES = 4                       # draws a voice beside the line gets before an onset whose every pitch another voice holds is skipped
-DENSITY_CAPS = {"sparse": 2, "medium": 6, "dense": FREE_HITS[1]}   # a drum group's hits a bar at its density tier's top (rhythm.DENSITIES)
-
-
-def group_caps(habit) -> dict:
-    """Per-letter hit caps from a plan's drum group habits ({group letters: "sparse mixed", ...}): a group of one letter
-    (the hat, the cymbals, the rest) caps its letter at its density tier's top. The kit drawn as one figure had drawn
-    its bars under the kit's habit alone, and a plan's "sparse" cymbals came up as a ride in sixteenths in five
-    songs of twenty (FFVI: four of 67)."""
-    caps = {}
-    if isinstance(habit, dict):
-        for letters, h in habit.items():
-            if len(letters) == 1 and isinstance(h, str) and h.split():
-                caps[letters[0]] = DENSITY_CAPS.get(h.split()[0], FREE_HITS[1])
-    return caps
-
-
-def free_drum_envelope(letters, caps: dict | None = None) -> object:
-    """An envelope_of for a free-written drum group: any count a piece (or the cap the group's habit sets), no downbeat
-    demanded."""
-    pieces = {k: (0, (caps or {}).get(k, FREE_HITS[1])) for k in letters}
-    return lambda own, meter=None: (pieces, False, meter)
-
-
-# --- the upper parts: harmony, accompaniment and arp under the song's own chords (phase 4) ---
-
-UPPER_LOW = 0.1                       # a voice's register: from this quantile of its own notes
-UPPER_HIGH = 0.9                      # to this one; a written note is moved by octaves to sit inside it
-TONE_MARKS = {"sus": "s"}             # the voicing table's marks as tone() reads them
-
-
-def stack(marks: list, root: int, shape: str, scale: set, low: int, previous: float | None) -> list[int]:
-    """A voicing's tones as midi notes, lowest first: the first mark placed in
-    the register nearest the note before, each next the nearest above (a
-    close stack; the spread between parts is their voices' own registers)."""
-    if not marks:
-        return []
-    pcs = [tone(root, shape, TONE_MARKS.get(m, m), scale) for m in marks]
-    out = [place(pcs[0], low, previous)]
-    for pc in pcs[1:]:
-        out.append(out[-1] + ((pc - out[-1]) % 12 or 12))
-    return out
-
-
-def in_register(midi: int, register: tuple) -> int:
-    """The note moved by octaves into the voice's register (low, high); where the register is under an
-    octave and no octave fits, the one just under its ceiling."""
-    low, high = register
-    while midi > high:
-        midi -= 12
-    while midi < low:
-        midi += 12
-    while midi > high:
-        midi -= 12
-    return midi
-
-
-UPPER_LOCK = {R.HARMONY: 0.0, R.ACCOMP: 2 / 3, R.ARP: 2 / 3}   # the share of the band's shared hits an upper part strikes (a pad holds through)
-
-
-MOTION_STEP = {"block": 0, "mixed": 0.5, "arpeggiated": 1}   # how far along the stack a voice moves a strike
-CHORD_MARKS = {"R", "3", "5", "7", "sus"}   # a written voicing holds one of these at least, and only these are realized: the
-                                      # table's "+" is mostly the chord reader's noise (Terra's own accompaniment plays 4 % other)
-CLASH = (1, 11)                       # semitones (mod 12) a written tone may not sit from a note the tune sounds at the same time
-
-
-RICH_TONES = {"thin": 1, "full": 2, "rich": 3}   # chord tones a written voicing holds at least, by the richness habit
-PEDAL_VOICE = 2                       # semitones: a voice whose own register is this narrow or narrower is a pedal and keeps its note
-
-
-def voiced(outcome: str, tones: int = 1) -> bool:
-    """Whether a voicing from the table may be written: it holds `tones` chord
-    tones at least (the table's "+" counts for nothing: it is mostly the chord
-    reader's noise, and realized it was a ninth in every strum)."""
-    return len(set(outcome.split()) & CHORD_MARKS) >= tones
-
-
-def sounding_pcs(line: list, at: float) -> set:
-    """The pitch classes a line (start, length, midi, ...) sounds at a time."""
-    out = set()
-    for n in line:
-        length = n[1] if not math.isnan(n[1]) else 0.25
-        if n[0] - rhythm.NEAR <= at < n[0] + length - rhythm.NEAR and not math.isnan(n[2]):
-            out.add(round(n[2]) % 12)
-    return out
-
-
-def unclashed(midi: int, options: list, tune: set) -> int:
-    """The note, or where it sits a semitone from the tune, the nearest of the voicing's other tones that does not."""
-    if not tune or not any((midi - pc) % 12 in CLASH for pc in tune):
-        return midi
-    clear = [m for m in options if not any((m - pc) % 12 in CLASH for pc in tune)]
-    return min(clear, key=lambda m: (abs(m - midi), m)) if clear else midi
-
-
-def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: dict, rng: random.Random,
-          habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
-          motion: str = "block", energy: list | None = None, pedals: dict | None = None,
-          plays: list | None = None, figures: list | None = None, shared: dict | None = None,
-          tone_index: int = 0, kind: str | None = None) -> tuple[list, list, list]:
-    """An upper part written for the song under its own chords (the module):
-    the rhythm from the part's bar table (free of the song's own part), the
-    chord tones a span from the voicings mixture, the spread from the widths
-    mixture, laid onto the part's voices (lowest first; a lone arp voice
-    cycles the tones). `voices`: the part's voices low to high; `registers`:
-    voice -> its register (low, high); `pedals`: voice -> the note a pedal
-    voice (a register PEDAL_VOICE semitones or narrower) holds; `models`:
-    rhythm and voicings (Caches); `figures`: the bars given (a second line's,
-    drawn under the line's own bars from the second_figures table) instead
-    of drawn here; `shared`: the part's voicing at each (bar, position),
-    filled by the line's call (tone_index 0) and read by a voice beside it
-    (tone_index 1, 2...); `kind`: that voice's relation to the line (apart,
-    alternating): with the voice_intervals and voice_moves tables it takes
-    its interval to the line's note where they strike together and its own
-    move where it strikes alone, drawn (the line's notes are in `shared`
-    under ("line", (bar, position))); without them, the tone that many
-    steps up the line's voicing.
-    Returns the notes [(start, end in beats, midi, voice)], the figures and
-    the voicings drawn a bar."""
-    lock = lock or {}
-    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
-    own = plays_as_own(plays, bars) if plays is not None else [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
-    if figures is None:
-        figures = _free_figures(song, role, models["rhythm"], FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
-                                habit, rng, hold, lock, envelope_of=free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy)
-    else:
-        figures = [f if o != REST else REST for f, o in zip(figures, own)]
-    step = MOTION_STEP.get(motion, 0)
-    pedals = pedals or {}
-    walked = 0.0                                            # how far along the stack the voices have moved (motion)
-    tune_line = sorted(song.notes.get(R.MELODY, []) + song.notes.get(R.COUNTER, []))   # what the written part must not clash with
-    tonic, mode = key if key else (0, "major")
-    scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
-    notes, voicings = [], []
-    played_v, prev_v = Counter(), None
-    last_chord, marks, previous_low = None, ["R", "3", "5"], None
-    periods = getattr(song, "periods", {}).get(role, {})   # a held bar of the part's period takes its source bar's voicing too, on the same chord
-    by_bar = {}
-    own_tone = max(1, tone_index)                           # the tone a voice beside the line takes of the line's voicing (a span at a time with ANY_TONE)
-    beside = bool(tone_index) and kind in VOICE_KINDS and "voice_intervals" in models and "voice_moves" in models and shared is not None
-    prev_steps, prev_midi = rhythm.START, None              # a voice beside the line: its last interval with the line, its last note
-
-    def line_before(k, p, strict=False):
-        """The line's note last struck at or before (bar k, position p); `strict`: before it."""
-        best = None
-        for key_, m in shared.items():
-            if isinstance(key_[0], str) and key_[0] == "line" and (key_[1] < (k, p) if strict else key_[1] <= (k, p)) and (best is None or key_[1] > best[0]):
-                best = (key_[1], m)
-        return best[1] if best else None
-
-    def weighted(weights: dict):
-        """One key drawn by its weight; None where nothing weighs."""
-        total = sum(weights.values())
-        if total <= 0:
-            return None
-        x, acc = rng.random() * total, 0.0
-        for key_, w in weights.items():
-            acc += w
-            if x < acc:
-                return key_
-        return next(reversed(weights))
-    in_bar = {}                                             # bar -> positions the line's voicing is known at (shared), for a voice beside it
-    for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
-        if figure == REST:
-            voicings.append(REST)
-            continue
-        positions = [Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)]
-        bar_voicing = []
-        runs_to = first_onset(figures, bars, k + 1)        # the bar's last note runs to the next bar's first, as the share was counted
-        for i, p in enumerate(positions):
-            start = a + float(p)
-            until = a + float(positions[i + 1]) if i + 1 < len(positions) else (runs_to if runs_to is not None and runs_to > b - rhythm.NEAR else b)
-            c = rhythm._chord_at(song.chords, start)
-            chord = (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else last_chord
-            if chord is None:
-                continue
-            src = by_bar.get(k - periods[k], {}).get(i) if k in periods else None
-            known = None
-            if shared is not None and tone_index:           # a voice beside the line: the line's voicing at this onset, or the last before it
-                at = shared.get((k, p))
-                if at is None:
-                    before = [q for (kk, q) in shared if kk == k and q <= p]
-                    at = shared.get((k, max(before))) if before else None
-                known = at if at is not None and at[0] == chord else None
-            if known is not None:
-                prev_v, marks = known[1], list(known[2])
-                if chord != last_chord or not bar_voicing:      # a new span: the tone this voice takes of the line's voicing (ANY_TONE: drawn)
-                    own_tone = rng.randrange(1, max(2, len(marks))) if tone_index == ANY_TONE else tone_index
-                last_chord = chord
-                if not bar_voicing or bar_voicing[-1] != prev_v:
-                    bar_voicing.append(prev_v)
-            elif src is not None and src[0] == chord and src[1] is not None and (chord != last_chord or not bar_voicing):
-                prev_v, marks = src[1], src[2]                  # the period's bar again: its voicing with it
-                last_chord = chord
-                bar_voicing.append(prev_v)
-            elif chord != last_chord or not bar_voicing:
-                shape = chord[1] or "major"
-                v_unit = tables.Unit(song.sid, song.game, "", {"part": role, "shape": shape, "habit": richness, "previous": prev_v or rhythm.START})
-                need = min(RICH_TONES.get(richness, 2), max(1, len(voices)))   # a lone voice needs one tone, a trio up to three
-                full = lambda o, _n=need: voiced(o, _n)   # noqa: E731
-                drawn = models["voicings"].draw(v_unit, prev_v, played_v, rng, keep=full)
-                for _ in range(TRIES):
-                    if full(drawn):
-                        break
-                    drawn = models["voicings"].table.draw(models["voicings"].table.context(v_unit), rng, v_unit.values, floored=False, floor_k=models["voicings"].table.chain_floor)
-                marks = [m for m in drawn.split() if m in CHORD_MARKS] if full(drawn) else (["R", "5"] if need > 1 else ["R"])
-                played_v[drawn] += 1
-                prev_v = drawn
-                last_chord = chord
-                bar_voicing.append(drawn)
-            by_bar.setdefault(k, {})[i] = (chord, prev_v, list(marks))
-            if shared is not None and not tone_index:
-                shared[(k, p)] = (chord, prev_v, list(marks))
-            pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]][0], previous_low)
-            previous_low = float(pitches[0]) if pitches else previous_low
-            tune = sounding_pcs(tune_line, start)
-            if role == R.ARP and len(voices) == 1:
-                midi = in_register(pitches[i % len(pitches)], registers[voices[0]])
-                midi = unclashed(midi, [in_register(m, registers[voices[0]]) for m in pitches], tune)
-                notes.append((start, start + (until - start) * share_at(sounds, until - start), float(midi), voices[0]))
-                continue
-            # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
-            # from the middle; with motion, each voice walks along the stack a step a strike (the voices interlocking)
-            stacked = list(pitches)
-            while len(stacked) < len(voices):
-                stacked.append(stacked[len(stacked) - len(pitches)] + 12)
-            if len(stacked) > len(voices):
-                stacked = [stacked[0]] + stacked[-(len(voices) - 1):] if len(voices) > 1 else [stacked[0]]
-            offset = int(walked) if len(pitches) > 1 else 0
-            for j, v in enumerate(voices):
-                low_v, high_v = registers[v]
-                if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
-                    notes.append((start, start + (until - start) * share_at(sounds, until - start), float(pedals.get(v, low_v)), v))
-                    continue
-                taken = shared.setdefault(("taken", (k, p)), set()) if shared is not None else None   # the part's notes at this onset (a 2-tuple key: the voicing look-up unpacks every key)
-                if beside and len(voices) == 1:            # a voice beside the line: with the line, its interval to the line's note (voice_intervals);
-                    with_line = (k, p) in shared            # alone, its move from its own last note (voice_moves); both in scale steps, drawn
-                    ref = (shared.get(("line", (k, p))) if with_line else line_before(k, p)) if with_line or prev_midi is None else None
-                    if (with_line or prev_midi is None) and ref is None:
-                        continue
-                    t_iv = models["voice_intervals"].table if hasattr(models["voice_intervals"], "table") else models["voice_intervals"]
-                    t_mv = models["voice_moves"].table if hasattr(models["voice_moves"], "table") else models["voice_moves"]
-                    refused = set()
-                    for _ in range(VOICE_TRIES):            # a pitch another voice of the part holds at this onset is drawn again (two copies of one
-                        if ref is not None:                 # sample on one pitch phase); the onset is skipped when every try lands on one
-                            ctx_iv = (role, kind, line_state(ref, scale), prev_steps)
-                            chained = with_line and prev_steps != rhythm.START and prev_midi is not None
-                            # the note both words agree on: its interval to the line's note (voice_intervals, chained on the interval
-                            # before) and its own move from its last note (voice_moves); held out on FFVI the product beats either
-                            # word alone (3.36 bits a unit against 3.87 and 3.71)
-                            entry = weighted(interval_weights(t_iv, ctx_iv, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None))
-                            if entry is None:
-                                break
-                            steps = entry                   # the chain's next context
-                            target = interval_pitch(entry, ref, scale)   # in semitones against a line note off the scale (round 66)
-                        else:
-                            steps = None
-                            move = weighted({c: t_mv.p(str(c), (role, kind, "alone")) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
-                                             if c not in refused and str(c) in t_mv.vocabulary})   # as a draw: never an interval or move the game never made
-                            if move is None:
-                                break
-                            target = scale_pitch(scale_index(prev_midi, scale) + move, scale)
-                        midi = in_register(target, registers[v])
-                        if taken is None or midi not in taken:
-                            break
-                        refused.add(steps if steps is not None else move)
-                    else:
-                        continue
-                    if taken is not None and midi in taken:
-                        continue
-                    if with_line and steps is not None:
-                        prev_steps = str(steps)
-                    prev_midi = midi
-                elif tone_index and len(voices) == 1:      # no tables for it: a tone up the line's voicing (its rank's, or one drawn a span), walking with the motion
-                    order = [(own_tone + int(walked) + d) % len(pitches) for d in range(len(pitches))]
-                    free = [pitches[i] for i in order if taken is None or in_register(pitches[i], registers[v]) not in taken]
-                    if not free:                            # every tone of the voicing already sounds in the part: the voice sits this onset out
-                        continue
-                    midi = in_register(free[0], registers[v])
-                else:
-                    midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
-                    if shared is not None and not tone_index:
-                        shared[("line", (k, p))] = midi     # the line's note here, for the voices beside it
-                midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
-                if taken is not None:
-                    taken.add(int(round(midi)))
-                notes.append((start, start + (until - start) * share_at(sounds, until - start), float(midi), v))
-            walked += step
-        voicings.append(" | ".join(bar_voicing) if bar_voicing else REST)
-    return notes, figures, voicings
+from . import figures as figures_mod, upper as upper_mod, parts as parts_mod   # noqa: E402  the package's other sections
 
 
 # --- the melody: phrases written free from the tables (phase 4, the melody slice) ---
@@ -686,13 +177,13 @@ def mask_figure(line_figure: str, mask: str) -> str:
     """A second bass voice's figure from the line's figure and a second_figures outcome (a mask over the line's onsets plus
     onsets of its own): the line's onsets it strikes with keep the line's marks (its pitch follows the line there,
     beside_pitch), its own onsets take the root mark and are re-pitched by its own move; REST where the mask rests."""
-    if line_figure == REST or not line_figure or mask == "-":
-        return REST
+    if line_figure == figures_mod.REST or not line_figure or mask == "-":
+        return figures_mod.REST
     toks = [(Fraction(t.partition(":")[0]), t.partition(":")[2] or "R") for t in rhythm._tokens(line_figure)]
     marks = {p: m for p, m in toks}
     positions = rhythm.apply_mask(rhythm.pattern(p for p, _ in toks), mask)
     if positions == "-" or not positions:
-        return REST
+        return figures_mod.REST
     return " ".join(f"{p}:{marks.get(Fraction(p), 'R')}" for p in positions.split())
 
 
@@ -700,7 +191,7 @@ def first_onset(figures: list, bars: list, k: int) -> float | None:
     """When bar k's first note strikes, from its figure; None where it rests or there is no bar k. A bar's last note runs to
     it: the sounded share was counted against the gap to the voice's next onset, and a note ended at the bar line had
     dropped into a hole when the next bar began late (2026-10-24)."""
-    if k >= len(figures) or k >= len(bars) or figures[k] == REST or not figures[k]:
+    if k >= len(figures) or k >= len(bars) or figures[k] == figures_mod.REST or not figures[k]:
         return None
     toks = rhythm._tokens(figures[k])
     return bars[k][0] + float(Fraction(toks[0].partition(":")[0])) if toks else None
@@ -806,14 +297,14 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
             at.setdefault((k, rhythm.position(a_t - bars[k][0], song.division)), m)
             line_times.append((a_t, m))
     line_times.sort()
-    figures, pitched = [REST] * len(bars), []
+    figures, pitched = [figures_mod.REST] * len(bars), []
     prev_steps, prev_midi, last_with = rhythm.START, None, None
     with_tune = own = skipped = 0
     for k, (a, b) in enumerate(bars):
-        mask = masks[k] if k < len(masks) else REST
-        if mask == REST or not mask:
+        mask = masks[k] if k < len(masks) else figures_mod.REST
+        if mask == figures_mod.REST or not mask:
             continue
-        tune_pat = tune_figures[k] if k < len(tune_figures) and tune_figures[k] != REST else "-"
+        tune_pat = tune_figures[k] if k < len(tune_figures) and tune_figures[k] != figures_mod.REST else "-"
         positions = rhythm.apply_mask(tune_pat, mask)
         if positions == "-":
             continue
@@ -824,11 +315,11 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
             if ref is not None:
                 moved = (scale_index(int(round(ref)), scale) - scale_index(int(round(last_with)), scale)) if last_with is not None else 0
                 refused = set()
-                for _ in range(VOICE_TRIES):
+                for _ in range(figures_mod.VOICE_TRIES):
                     target, steps = beside_pitch(models, role, kind, scale, rng, ref, prev_steps, prev_midi, moved, refused)
                     if target is None:
                         break
-                    midi = in_register(target, span)
+                    midi = upper_mod.in_register(target, span)
                     if kind == "same" and midi == int(round(ref)):
                         refused.add(steps)
                         midi = None
@@ -845,7 +336,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                     c = _chord_in_bar(song, a + float(p))
                     centre = sum(register) // 2 if register else sum(span) // 2
                     target = min((m for m in range(span[0], span[1] + 1) if m % 12 == ((c[0] if c else tonic) % 12)), key=lambda m: abs(m - centre), default=centre)
-                midi = in_register(target, span)
+                midi = upper_mod.in_register(target, span)
                 own += 1
             prev_midi = midi
             pitched.append((k, p, float(midi)))
@@ -861,7 +352,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
         value = str(rhythm.position(gap, song.division))
         held = models["values"].draw((role, value, articulation), rng) if "values" in models else "held"
         notes.append((t, t + gap * (HELD if held == "held" else DETACHED), m))
-    log = [f"beside the tune on the {kind} sample: {sum(1 for f in figures if f != REST)} bars, {len(notes)} notes, {with_tune} with the tune's onsets, "
+    log = [f"beside the tune on the {kind} sample: {sum(1 for f in figures if f != figures_mod.REST)} bars, {len(notes)} notes, {with_tune} with the tune's onsets, "
            f"{own} its own" + (f"; {skipped} onsets skipped (a unison on one sample)" if skipped else "") + f"; span {span}"]
     return notes, figures, log
 MOVED = {"moved up": 2, "moved down": -2}   # semitones a moved phrase shifts (a scale step; the scale then corrects each note)
@@ -983,7 +474,7 @@ def cell_pitches(pitches: list, source_root: int, root: int, scale: set, bound: 
     low, high = bound
     anchor = previous if previous is not None else (low + high) / 2
     first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor), m), default=int(round(anchor)))
-    return [in_register(m, bound) for m in from_steps(first, cell.steps, scale)]
+    return [upper_mod.in_register(m, bound) for m in from_steps(first, cell.steps, scale)]
 
 
 class Urn:
@@ -1057,7 +548,7 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
         if not (low <= m <= high):
             continue
         pc = int(round(m)) % 12
-        if any((pc - t) % 12 in CLASH for t in tune):
+        if any((pc - t) % 12 in upper_mod.CLASH for t in tune):
             continue
         if strong and STRONG_SCALE and pc not in scale:
             continue
@@ -1141,10 +632,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
-    own = plays_as_own(plays, bars) if plays is not None else [rhythm.pattern(p for p, _ in struck) if struck else REST for _, _, struck in bars]
+    own = parts_mod.plays_as_own(plays, bars) if plays is not None else [rhythm.pattern(p for p, _ in struck) if struck else figures_mod.REST for _, _, struck in bars]
     meters = [max(1, round(b - a)) for a, b, _ in bars]
-    manner = FreeManner(models["rhythm"].table.vocabulary, division=song.division)
-    envelope_of = free_envelope(habit)
+    manner = figures_mod.FreeManner(models["rhythm"].table.vocabulary, division=song.division)
+    envelope_of = figures_mod.free_envelope(habit)
     clear_of = rhythm.UPPER + ((R.MELODY, R.COUNTER) if role != R.MELODY else ())   # a second counter-line stays clear of the first too
     tune_line = sorted(n for r in clear_of for n in song.notes.get(r, []))
     rate = chord_rate if chord_rate is not None else CHORD_ON_BEAT
@@ -1177,7 +668,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     register0 = register                                    # the part's register; `register` is rebound a phrase at a time to its room in the arc
     tops = {}                                               # a window's first bar -> the phrase's ceiling: the arc (climax, arc, summit tables)
     if role == R.MELODY and all(k in models for k in ("climax", "arc", "summit")) and windows:
-        from . import phrases as phrases_mod
+        from .. import phrases as phrases_mod
         place_at = {w[0]: phrases_mod.place_of(i, len(windows)) for i, w in enumerate(windows)}
         above = models["summit"].draw((R.MELODY,), rng, floored=False, floor_k=1)
         peak_top = min(120, register0[1] + ARC_ABOVE.get(above, 0))
@@ -1194,7 +685,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     else:
         arc_line = None
     room_high = max(tops.values()) if tops else register0[1]    # the part's ceiling over the song: where a recalled cell may reach (round 49)
-    figures = [REST] * len(bars)
+    figures = [figures_mod.REST] * len(bars)
     cells = {}                                              # bar index -> Cell
     played, by_key = Counter(), {}                          # the urn: cell key -> times played; key -> a Cell
     source = {}                                             # bar index -> the earlier bar it echoed (a passage recalled goes on)
@@ -1211,7 +702,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     for i, (mine, _, _) in by_part.items():                 # the tune plays in: the letters count sounding phrases, as the counts did)
         j = 0
         for w in mine:
-            if w and any(own[k] != REST for k in w):
+            if w and any(own[k] != figures_mod.REST for k in w):
                 part_of_window[w[0]] = (i, j)
                 j += 1
     theme = None                                            # the theme phrase's cells (the first phrase's), once written
@@ -1349,7 +840,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if not g_lo <= off <= g_hi:                     # the grain from the first draw: a tune of few new rhythms is its first ones echoed
                 return False
             return len(new_strikes) < TIER_AFTER or lo <= n / (len(new_strikes) + 1) <= hi
-        fit = lambda f: manner.fits(f) and within(f, env) and tier_ok(f)   # noqa: E731
+        fit = lambda f: manner.fits(f) and figures_mod.within(f, env) and tier_ok(f)   # noqa: E731
         kind = models["cell_rhythms"].draw((R.MELODY,), rng, floored=False) if "cell_rhythms" in models else "new"
         figure = None
         if kind == "previous" and rhythm_prev is not None and fit(rhythm_prev):
@@ -1360,7 +851,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 figure = rng.choices(list(pool), list(pool.values()))[0]
         if figure is None:
             figure = models["rhythm"].draw_new(unit, rhythm_played, rng, keep=fit) if hasattr(models["rhythm"], "draw_new") else models["rhythm"].draw(unit, rhythm_prev, rhythm_played, rng, keep=fit)
-        for _ in range(TRIES):
+        for _ in range(figures_mod.TRIES):
             if fit(figure):
                 break
             figure = models["rhythm"].table.draw(models["rhythm"].table.context(unit), rng, values, floored=False, floor_k=models["rhythm"].table.chain_floor)
@@ -1405,7 +896,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
             tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
-            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim,
+            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
                              step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
                              under_chord=wants_chord())
             midi = midi + step
@@ -1493,7 +984,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
                     strong = abs(p - round(p)) < rhythm.NEAR
                     tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
-                    step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), sounding_pcs(tune_line, t), aim,
+                    step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
                                      step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
                                      under_chord=wants_chord())
                     midi = midi + step
@@ -1564,7 +1055,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
 
     for w in windows:
         a0, b0 = bars[w[0]][0], bars[w[-1]][1]
-        live = [k for k in w if own[k] != REST]
+        live = [k for k in w if own[k] != figures_mod.REST]
         if not live:
             continue
         register = (register0[0], tops.get(w[0], register0[1]))   # this phrase's room: up to its ceiling in the arc (new_cell, again and
@@ -1779,473 +1270,4 @@ def habit_rel(models: dict) -> str:
 
 def fits(figure: str, song: rhythm.Song, known: set, cap: int) -> bool:
     """Whether a new figure may be written into the song: a bar some song played, on the song's grid, no denser than cap (Manner refines it)."""
-    return figure != REST and figure in known and on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap
-
-
-LOCK_DRUMS = 2 / 3                    # the share of a bar's shared hits a drum group must strike (the readings' two in three)
-
-
-def locked(figure: str, lock, share: float = 1.0) -> bool:
-    """Whether a figure strikes `share` of the positions in lock[0] (all, by default) and none in the beats of lock[1]."""
-    if not lock:
-        return True
-    must, rests = lock
-    positions = {Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)}
-    struck = len(must & positions)
-    return struck >= share * len(must) - 1e-9 and not any(math.floor(p) in rests for p in positions)
-
-
-FORM_PERIOD = 4                       # bars: the pattern a free-written part repeats through a part of the form
-
-
-def form_spans(song: rhythm.Song, own: list) -> list[tuple]:
-    """The spans of a part written with no original to follow: the form's
-    parts, each a span with a FORM_PERIOD-bar pattern (shorter parts their
-    length), a part that repeats an earlier one of the same length copying
-    its figures (copy_of: the earlier span's first bar); bars in no part
-    their own spans. [(start, length, period, copy_of)]."""
-    index = {num: k for k, num in enumerate(song.numbers)}
-    out, covered, starts = [], set(), {}
-    for i, (bar, n, *rest) in enumerate(song.parts):
-        ks = [index[num] for num in range(bar, bar + n) if num in index]
-        if not ks:
-            continue
-        start, length = ks[0], len(ks)
-        of = rest[0] if rest else None
-        copy_of = starts.get(of) if of is not None and starts.get(of, (None, None))[1] == length else None
-        starts[i] = (start, length)
-        out.append((start, length, min(FORM_PERIOD, length), copy_of[0] if copy_of else None))
-        covered |= set(ks)
-    for k in range(len(own)):
-        if k not in covered:
-            out.append((k, 1, 1, None))
-    return sorted(out)
-
-
-THIN = 0.05                           # the band's energy (against its median) under which a free-written pitched part sits a bar out
-BREAKDOWN = 0.5                       # under this share of the median the band is thin: the part thins with it and does not lock to it
-
-
-def thinned(env: tuple, ratio: float) -> tuple:
-    """A free envelope scaled to the band's energy in the bar: the strikes allowed shrink with the band, to one
-    where the band is nearly gone (under THIN, the caller rests the bar)."""
-    low, high, downbeat, meter = env
-    r = min(1.0, max(0.0, ratio))
-    return (max(1, round(low * r)), max(1, round(high * r)), downbeat, meter)
-
-
-def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
-                  rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
-                  energy: list | None = None, extra_values: dict | None = None) -> list[str]:
-    """The figures written for a part with no original to follow (the
-    module, phase 4): bar by bar from the song's own mixture, whose recall
-    shares carry the games' rate of repeating and returning, each bar in
-    the manner, the habit's envelope and the band's lock; a part of the
-    form that repeats an earlier one copies its figures; the bars the old
-    part rests in rest (the arrangement is not this slice's); the song's
-    moments and stops (`hold`) keep the old bar; `energy`, the band's
-    energy a bar against its median, thins the part where the band thins
-    (a breakdown) and rests it where the band is nearly gone (THIN)."""
-    lock = lock or {}
-    envelope_of = envelope_of or envelope
-    within_of = within_of or within
-    meters = [max(1, round(b - a)) for a, b, _ in bars]
-    figures, played, previous = [REST] * len(bars), Counter(), None
-    periods = getattr(song, "periods", {}).get(role, {})   # the part's period inside a part of the form: a held bar plays the bar a lag before
-    for start, length, _, copy_of in form_spans(song, own):
-        for i in range(length):
-            k = start + i
-            if own[k] == REST or (energy is not None and k < len(energy) and energy[k] < THIN):
-                figures[k] = REST
-                continue
-            if copy_of is not None and figures[copy_of + i] != REST:
-                figures[k] = figures[copy_of + i]
-            elif k in periods and 0 <= k - periods[k] < k and figures[k - periods[k]] != REST:
-                figures[k] = figures[k - periods[k]]
-            elif k in hold:
-                figures[k] = own[k]
-            else:
-                env = envelope_of(own[k], meters[k])
-                thin = energy is not None and k < len(energy) and energy[k] < BREAKDOWN
-                if thin:
-                    env = thinned(env, energy[k])
-                bar_lock = None if thin else lock.get(k)        # in a breakdown the band's hits are not the band: no lock
-                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm), **(extra_values or {})}
-                unit = tables.Unit(song.sid, song.game, "", values)
-                # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
-                # without the lock (the band asks more strikes than the habit: the part keeps its density and locks
-                # where it can); then without the envelope; then the manner alone. Never the song's own bar: a
-                # free-written part copies nothing of the part it replaces.
-                ladder = [lambda f, _l=bar_lock, _e=env: manner.fits(f) and within_of(f, _e) and locked(f, _l, lock_share),
-                          lambda f, _e=env: manner.fits(f) and within_of(f, _e),
-                          lambda f, _l=bar_lock: manner.fits(f) and locked(f, _l, lock_share),
-                          manner.fits]
-                figure = None
-                for fit in ladder:
-                    candidate = model.draw(unit, previous, played, rng, keep=fit)
-                    for _ in range(TRIES):
-                        if fit(candidate):
-                            figure = candidate
-                            break
-                        candidate = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
-                    if figure is not None:
-                        break
-                figures[k] = figure if figure is not None else last_resort(manner, model, unit, values, rng)
-            played[figures[k]] += 1
-            previous = figures[k]
-    for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
-        for i in range(length):
-            k, src = start + i, copy_of + i
-            if k < len(figures) and src < len(figures) and own[k] != REST and figures[src] != REST:
-                figures[k] = figures[src]
-    return figures
-
-
-def last_resort(manner, model: tables.Cache, unit: tables.Unit, values: dict, rng: random.Random) -> str:
-    """The figure for a bar no draw fits: on a kit (FreeManner with pieces),
-    any bar the table knows that the kit can play, evenly (the vocabulary's
-    even share, kept to the kit: a bar the plan has the kit in is never
-    silent for want of a draw, round 58); else the table's own draw."""
-    kit = getattr(manner, "kit", None)
-    if kit is not None:
-        fits = [f for f in sorted(manner.known) if f != REST and manner.fits(f)]
-        if fits:
-            return rng.choice(fits)
-    return model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
-
-
-def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
-             rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0,
-             envelope_of=None, within_of=None, lock_share: float = 1.0) -> list[str]:
-    """The figures written for a part, one a bar (the module): drawn as the
-    song's own mixture, in its manner, each bar's envelope and lock, a
-    pattern a span, the song's moments its own; `chord_at` and `reuse` let
-    a bar on a chord its span had take that bar's figure again (the bass)."""
-    lock = lock or {}
-    envelope_of = envelope_of or envelope
-    within_of = within_of or within
-    meters = [max(1, round(b - a)) for a, b, _ in bars]
-    state = {"previous": None, "played": Counter()}
-
-    def draw(env, keep=None, fallback: str = "0:R", at: int | None = None) -> str:
-        """One new figure from the song's mixture, in its manner, the bar's
-        envelope and its lock (and passing `keep`), the chain and the urn
-        moved on. Nothing passing in TRIES draws: one in the manner, envelope
-        and lock alone, else the fallback (the song's own bar, where the
-        caller gives it)."""
-        previous = state["previous"]
-        meter = env[-1] if env[-1] else song.meter
-        fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at), lock_share)   # noqa: E731
-        full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
-        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
-        unit = tables.Unit(song.sid, song.game, "", values)
-        figure = model.draw(unit, None if previous == REST else previous, state["played"], rng, keep=full)
-        nearly = None
-        for _ in range(TRIES):                              # the urn or the floor may still hand back what is refused
-            if full(figure):
-                return figure
-            if nearly is None and fit(figure):
-                nearly = figure
-            figure = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
-        return nearly or fallback
-
-    figures, patterns = [REST] * len(bars), []
-    for start, length, period in spans([rhythm_of(f) for f in own]):
-        if length == 1:
-            if own[start] != REST:
-                last = rhythm_of(figures[start - 1]) if start else None    # the song changes here: so does the written bar
-                figures[start] = draw(envelope_of(own[start], meters[start]), keep=lambda f: rhythm_of(f) != last, fallback=own[start], at=start)
-                state["played"][figures[start]] += 1
-            state["previous"] = figures[start]
-            continue
-        exact = all(own[j] == own[j - period] for j in range(start + period, start + length))
-        before = patterns[-1] if patterns else []
-        earlier = [x for x in patterns[:-1] if x != before]
-        if earlier and rng.random() < EARLIER:
-            pattern = rng.choice(earlier)
-        else:
-            pattern = []
-            for k in range(period):
-                avoid = {rhythm_of(f) for f in before + pattern}
-                pattern.append(draw(envelope_of(own[start + k], meters[start + k]), keep=lambda f: rhythm_of(f) not in avoid, fallback=own[start + k], at=start + k))
-                state["previous"] = pattern[-1]
-        patterns.append(pattern)
-        seen = {}                                           # the span's chords -> the figure written on each
-        for i in range(length):
-            base = pattern[i % len(pattern)]
-            chord = chord_at(start + i) if chord_at else None
-            if own[start + i] == REST:
-                figure = REST
-            elif exact and locked(base, lock.get(start + i), lock_share):
-                figure = base
-            elif chord is not None and chord in seen and rhythm_of(seen[chord]) == rhythm_of(base) and locked(seen[chord], lock.get(start + i), lock_share) and rng.random() < reuse:
-                figure = seen[chord]                        # the same chord again: the same figure, as the readings' basses do
-            else:
-                want = rhythm_of(base)
-                figure = draw(envelope_of(own[start + i], meters[start + i]), keep=lambda f: rhythm_of(f) == want, fallback=own[start + i], at=start + i)
-                if rhythm_of(figure) != want and locked(base, lock.get(start + i), lock_share):
-                    figure = base
-            if chord is not None and figure != REST:
-                seen.setdefault(chord, figure)
-            figures[start + i] = figure
-            if figure != REST:
-                state["played"][figure] += 1
-            state["previous"] = figure
-    for k in hold:                                          # the song's moments: its own bar
-        if 0 <= k < len(figures) and own[k] != REST:
-            figures[k] = own[k]
-    return figures
-
-
-def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None, habit: str | None = None,
-          free: bool = False, plays: list | None = None, kit_value: str | None = None) -> tuple[list[tuple[float, str]], list[str]]:
-    """The drums written for the song, a group of pieces at a time (the
-    module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
-    to its Cache (a group of every letter: the whole kit, its table's part
-    "drums"); `locks` a group to its lock; `hold` as bass(). `free`: no
-    original to follow (FreeManner, free_drum_envelope), the `habit` given
-    (drawn from a pack's table: the kit's, or {group: its own}) and the kit
-    the song's pieces; with `plays` (a planned song's bars) a group may
-    also draw a rested bar, at its table's rate; `kit_value` (the letters
-    of the pieces the song's kit strikes, kit_pieces) conditions the draw
-    and narrows the kit to them. Returns the hits (start in beats, piece
-    letter) and the merged figures."""
-    locks = locks or {}
-    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
-    whole = [rhythm.drum_figure(struck, song) if struck else REST for a, _, struck in bars]
-    kit = {rhythm.LETTERS.get(piece, "o") for piece in song.pieces.values() if piece and piece != "none"}
-    if kit_value:                                           # the pieces the song's kit strikes (kit_pieces, round 58): the manner keeps a figure
-        kit &= set(kit_value)                               # on them alone, so a bar drawn from another kit's songs is one this kit can play
-    merged = [[] for _ in bars]
-    by_group = {}
-    part_of = lambda letters: R.DRUMS if set(letters) >= set(rhythm.LETTERS.values()) else "drums-" + "".join(letters)   # noqa: E731
-    for letters, model in models.items():
-        own = plays_as_own(plays, bars) if plays is not None else [rhythm.drum_group(f, letters) for f in whole]
-        if all(f == REST for f in own) and not (free and kit & set(letters)):
-            continue
-        if free:
-            manner = FreeManner(model.table.vocabulary, kit & set(letters), song.division, rests=plays is not None)
-            group_habit = (habit.get(letters) if isinstance(habit, dict) else habit) or "medium mixed"
-            envelope_of = free_drum_envelope(kit & set(letters), group_caps(habit))
-        else:
-            manner = DrumManner(None, model.table.vocabulary, figures=[f for f in own if f != REST])
-            mine = [u for u in rhythm.drum_group_units([song], letters)]
-            group_habit = habit or (mine[0].values["habit"] if mine else "medium mixed")
-            envelope_of = drum_envelope
-        if free:
-            figures = _free_figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold,
-                                    locks.get(letters), envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS,
-                                    extra_values={"kit": kit_value} if kit_value else None)   # the kit's pieces (round 58)
-        else:
-            figures = _figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
-                               envelope_of=envelope_of, within_of=drum_within, lock_share=LOCK_DRUMS)
-        by_group[letters] = figures
-        for k, f in enumerate(figures):
-            merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
-    if free and plays is not None and by_group:
-        # a bar the plan has the drums in never rests whole: where every group drew a rest, the kit's main group (the
-        # one playing the most bars) plays a figure of its own there, drawn without the rest
-        main = max(by_group, key=lambda g: sum(1 for f in by_group[g] if f != REST))
-        model = models[main]
-        manner = FreeManner(model.table.vocabulary, kit & set(main), song.division, rests=False)
-        group_habit = (habit.get(main) if isinstance(habit, dict) else habit) or "medium mixed"
-        for k, (a, b, _) in enumerate(bars):
-            if not (k < len(plays) and plays[k]) or merged[k]:
-                continue
-            before = by_group[main][k - 1] if k else REST
-            values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != REST else rhythm.START, "habit": group_habit, **({"kit": kit_value} if kit_value else {}),
-                      "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
-            unit = tables.Unit(song.sid, song.game, "", values)
-            env = free_drum_envelope(kit & set(main))(None, values["meter"])
-            f = None
-            for _ in range(TRIES):
-                f = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
-                if manner.fits(f) and drum_within(f, env):
-                    break
-                f = None
-            if f is None:                                   # nothing drawn fits the kit: any bar the kit can play (round 58)
-                f = last_resort(manner, model, unit, values, rng)
-            if f != REST:
-                by_group[main][k] = f
-                merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
-    figures = [" ".join(f"{p}:{x}" for p, x in sorted(set(tokens))) or REST for tokens in merged]
-    hits = []
-    for (a, b, _), figure in zip(bars, figures):
-        for t in rhythm._tokens(figure):
-            at, _, letter = t.partition(":")
-            if a + float(Fraction(at)) < b:
-                hits.append((a + float(Fraction(at)), letter))
-    return hits, figures
-
-
-def plays_as_own(plays, bars: list) -> list:
-    """A part's own bars for a planned song: "0" where the plan has it play, REST where it rests."""
-    return ["0" if (k < len(plays) and plays[k]) else REST for k in range(len(bars))]
-
-
-def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
-         key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
-         plays: list | None = None, register: int | None = None, sounds=None,
-         figures: list | None = None, shared: dict | None = None, kind: str | None = None,
-         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
-    """The bass written for the song: its notes (start, end in beats, midi)
-    and the figures drawn, one a bar; the bars in `hold` (indices among the
-    song's bars) keep the song's own figure; `lock` maps a bar's index to
-    (positions a figure must strike, beats it must leave), the song's own
-    locking to the band. `free`: no original to follow (FreeManner,
-    free_envelope by the habit, which the caller then gives). `plays`: a
-    planned song's bars the part plays in (no original: the bars the plan
-    has it play, playing anything), with `register` (the midi floor) and
-    `sounds` (the share of its gap a note sounds) given instead of read."""
-    lock = lock or {}
-    own = song.notes.get(R.BASS, [])
-    if habit is None:
-        mine = rhythm.bass_units([song])
-        habit = mine[0].values["habit"] if mine else "medium roots no-octaves"
-    manner = FreeManner(model.table.vocabulary, division=song.division) if free else Manner(song, R.BASS, model.table.vocabulary)
-    pitched = sorted(n[2] for n in own if not math.isnan(n[2]))
-    low = register if register is not None else round(pitched[int(LOW * (len(pitched) - 1))]) if pitched else 36
-    high = ceiling if ceiling is not None else low + REACH      # the register's ceiling: where the game plays the sample (round 34)
-    sounds = sounds if sounds is not None else sounded(own)
-    tonic, mode = key if key else (0, "major")
-    scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
-    bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.BASS)]
-    own = plays_as_own(plays, bars) if plays is not None else [rhythm.figure(struck, a, song) if struck else REST for a, _, struck in bars]
-
-    def chord_at(k):
-        c = rhythm._chord_at(song.chords, bars[k][0])
-        return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
-
-    words = habit.split()
-    if figures is not None:                                 # a second line's figures given (the second_figures table, under the line's own)
-        figures = [f if o != REST else REST for f, o in zip(figures, own)]
-    elif free:
-        figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=free_envelope(habit), energy=energy,
-                                lock_share=lock_share)
-    else:
-        figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
-                           chord_at=chord_at, reuse=REUSE.get(words[1] if len(words) > 1 else "", 0.5))
-    notes, last_root, previous = [], tonic, None
-    beside = kind in VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
-    prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
-    for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
-        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous, runs_to=first_onset(figures, bars, k + 1), high=high)
-        if shared is not None and not beside:               # the line: its notes for the voice beside it
-            for start, _, midi in new:
-                shared[("line", (k, rhythm.position(start - a, song.division)))] = midi
-        elif beside:                                        # the second voice: with the line, the note both words agree on; alone, its own
-            repitched = []                                  # move (voice_intervals, voice_moves, counted on the bass too: FFVI's second bass
-            for start, end, midi in new:                    # plays the line's pitch class at 78 % of their shared onsets; drawn apart, 31 %)
-                p = rhythm.position(start - a, song.division)
-                ref = shared.get(("line", (k, p)))
-                if ref is not None:
-                    moved = (scale_index(int(round(ref)), scale) - scale_index(int(round(last_with)), scale)) if last_with is not None else 0
-                    target, steps = beside_pitch(models, R.BASS, kind, scale, rng, ref, prev_steps, prev_midi, moved)
-                    if target is not None:
-                        prev_steps, last_with = str(steps), ref
-                else:
-                    target, _ = beside_pitch(models, R.BASS, kind, scale, rng, None, prev_steps, prev_midi, 0)
-                if target is not None:
-                    midi = float(in_register(target, (low, high)))
-                prev_midi = midi
-                repitched.append((start, end, midi))
-            new = repitched
-            previous = new[-1][2] if new else previous
-        notes += new
-    return notes, figures
-
-
-def place(pc: int, low: int, previous: float | None, octave_up: bool = False, high: int | None = None) -> int:
-    """The midi note of a pitch class in the register: the octave nearest the
-    note before (the lower when as near), the lowest with no note before;
-    an octave up (r) is the lowest placing raised an octave. `high`: the
-    register's ceiling (the range the game plays the bass's sample in, round
-    34); the floor plus REACH without one."""
-    bottom = low + (pc - low) % 12
-    if octave_up:
-        return bottom + 12 if high is None or bottom + 12 <= high else bottom   # no room for the octave: the plain placing
-    if previous is None:
-        return bottom
-    options = [m for m in range(bottom, (high if high is not None else low + REACH) + 1, 12)] or [bottom]
-    return min(options, key=lambda m: (abs(m - previous), m))
-
-
-def passing(previous: float | None, toward: int | None, scale: set, low: int, root: int) -> int:
-    """A passing tone: a scale step from the note before, toward the next
-    note where there is one (a semitone where the scale has no step that
-    way), else on in the line's last direction; the step above the root
-    where nothing came before."""
-    if previous is None:
-        return place(tone(root, "", "+", scale), low, None)
-    direction = 1 if toward is None or toward >= previous else -1
-    for d in (1, 2):
-        m = round(previous) + direction * d
-        if m % 12 in scale:
-            return m
-    return round(previous) + direction
-
-
-def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds, scale: set,
-            last_root: int, previous: float | None = None, runs_to: float | None = None, high: int | None = None) -> tuple[list, int, float | None]:
-    """A figure's tokens as notes in the bar [a, b) (see the module); returns
-    them, the last chord root used and the last note's midi."""
-    tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
-    chords = []
-    for p, _ in tokens:
-        c = rhythm._chord_at(song.chords, a + float(p))
-        if c is not None and c.root is not None and c.fit >= FIT:
-            last_root, shape = c.root, c.shape
-        else:
-            shape = ""
-        chords.append((last_root, shape))
-    out, direction = [], 1
-    for i, (p, mark) in enumerate(tokens):
-        start = a + float(p)
-        until = a + float(tokens[i + 1][0]) if i + 1 < len(tokens) else (runs_to if runs_to is not None and runs_to > b - rhythm.NEAR else b)
-        if until <= start:
-            continue
-        root, shape = chords[i]
-        if mark == "+":
-            toward = None
-            for j in range(i + 1, len(tokens)):                 # the next note of the bar that is not itself passing
-                if tokens[j][1] != "+":
-                    toward = place(tone(chords[j][0], chords[j][1], tokens[j][1], scale), low, previous, tokens[j][1] == "r", high=high)
-                    break
-            if toward is None and previous is not None:
-                toward = round(previous) + direction * 2
-            midi = passing(previous, toward, scale, low, root)
-            if high is not None and not low <= midi <= high:        # a run of passing tones turns at the register's edge instead of
-                direction = -direction                              # climbing out of where the game plays the sample (round 34: a bass
-                midi = in_register(midi, (low, high))               # of bars all "+" had walked from 42 to 79 on a 32-40 sample)
-        else:
-            midi = place(tone(root, shape, mark, scale), low, previous, mark == "r", high=high)
-        if previous is not None and midi != previous:
-            direction = 1 if midi > previous else -1
-        out.append((start, start + (until - start) * share_at(sounds, until - start), float(midi)))
-        previous = float(midi)
-    return out, last_root, previous
-
-
-def tone(root: int, shape: str, mark: str, scale: set) -> int:
-    """The pitch class a figure's mark names in a chord (the module)."""
-    ivs = harmony.SHAPES.get(shape, harmony.SHAPES[""])
-    pick = lambda options, default: next((i for i in options if i in ivs), default)   # noqa: E731
-    if mark == "3":
-        i = pick((3, 4), 4)
-    elif mark == "5":
-        i = pick((7, 6, 8), 7)
-    elif mark == "7":
-        i = pick((10, 11), 10)
-    elif mark == "s":
-        i = pick((5, 2), 5)
-    elif mark == "+":
-        i = 2 if (root + 2) % 12 in scale else 10 if (root + 10) % 12 in scale else 2
-    else:                                                   # R, r, ?
-        i = 0
-    return (root + i) % 12
-
-
-def sounded(notes) -> float:
-    """The share of its gap to the next note a part's note sounds, the median over the part (within SOUNDS)."""
-    share = rhythm.sounded_share(notes)
-    return min(SOUNDS[1], max(SOUNDS[0], share)) if share is not None else 0.8
+    return figure != figures_mod.REST and figure in known and figures_mod.on_grid(figure, song.division) and len(rhythm._tokens(figure)) <= cap

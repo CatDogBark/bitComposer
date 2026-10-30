@@ -5,10 +5,11 @@ VOCABULARY.md names every table and nothing else.
     python tools/vocab_map.py --out docs/idiom/vocabulary-map.md
     python tools/vocab_map.py --check docs/idiom/VOCABULARY.md      # exit 1 on drift
 
-The draw sites are read from the writer's source (whole.py, writer.py, harness.py): a table is "drawn by" the function
+The draw sites are read from the writer's source (the whole/ and writer/ packages, harness.py): a table is "drawn by" the function
 its name appears in. Which table gives a conditioning its value is a short hand-kept list below (SOURCES); a
 conditioning not in it is structural (the part, the bar's meter, the chain's previous outcome)."""
 import argparse
+import glob
 import os
 import re
 import sys
@@ -43,7 +44,9 @@ STAGES = [                                # where a table is drawn, by the funct
     ("plan", "the plan, drawn once a song"), ("writing", "the parts' writing (whole.write hands the table to a writer)"), ("drums", "the drums"), ("bass", "the bass"), ("upper", "the upper parts"),
     ("melody", "the tune"), ("counter", "the counter-line"), ("render", "the render"), ("harness", "the harness only"),
     ("unused", "counted, drawn nowhere (the measures' words)")]
-FILES = ("whole.py", "writer.py", "harness.py")
+FILES = tuple(sorted(os.path.relpath(f, os.path.join(os.path.dirname(HERE), "bitcomposer", "translate"))
+                     for pat in ("whole/*.py", "writer/*.py", "harness.py")
+                     for f in glob.glob(os.path.join(os.path.dirname(HERE), "bitcomposer", "translate", pat))))
 
 
 def draw_sites() -> dict:

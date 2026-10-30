@@ -297,7 +297,7 @@ accompaniment and counter-line are read as high as it. Rhythm, melody
 and drum patterns are the next slice.
 
 Where it stands (2026-10-20), the rhythm half: `python -m
-bitcomposer.translate.rhythm --db PATH` (`translate/rhythm.py`) prints
+bitcomposer.translate.rhythm --db PATH` (`translate/rhythm/`) prints
 three tables over the same songs, once through. Each part's rhythms bar by
 bar: its voices' onsets together (a chord struck in three voices is one
 onset) on the song's grid, drawn four characters a beat, counted per meter

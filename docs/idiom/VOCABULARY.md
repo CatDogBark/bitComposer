@@ -19,9 +19,9 @@ the writers do with what it says. The rule of evidence (`../IDIOM.md`): a
 writer is never patched past what its vocabulary says; a missing thing is
 a new table here, and a table that exists but misleads is fixed as a
 drawing fault. The numbers quoted are Final Fantasy VI's (67 songs) unless
-said otherwise. Counting code: `translate/rhythm.py` and
-`translate/phrases.py`; the plan: `translate/whole.py`; the parts:
-`translate/writer.py`.
+said otherwise. Counting code: `translate/rhythm/` and
+`translate/phrases.py`; the plan: `translate/whole/`; the parts:
+`translate/writer/`.
 
 ## The lead (the readings' melody)
 

@@ -1,5 +1,7 @@
 # Rules to words: what the whole-song writer still decides by rule, hand number or fallback
 
+*Line numbers below are the files' as of 2026-10-25, before `rhythm.py`, `writer.py` and `whole.py` became packages of sections in 1.2.0rc4 (`rhythm/`, `writer/`, `whole/`); the names still hold.*
+
 The vocabulary rule ([IDIOM.md](../IDIOM.md), "Rules of evidence"): a writer is
 not patched past what its vocabulary says. When the written songs miss something
 the games do, the answer is a new unit counted from the readings and kept as a
