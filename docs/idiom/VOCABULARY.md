@@ -1021,6 +1021,14 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 ## The render
 
+A gap, noted 2026-10-30: the echo. No table counts a game's echo (on or
+off, its delay, feedback, filter and wet, which the readings hold per
+song), so a written song's echo is the sound set's habit, drawn as Classic
+draws it (`whole.echo_of` over the pack's habits: bitComposer's own set
+always on, the styled sets as their games have it). The writing's way is a
+counted word drawn once a song beside the balance; it waits, by the
+owner's call, until the FFVI tuning is not at stake.
+
 - **ranges** — the register a sample is played in, by the sample. Drawn at
   rendering: a part's sample is the one of its pool whose game-played range
   covers the part's register best, the part's top weighing most, and one

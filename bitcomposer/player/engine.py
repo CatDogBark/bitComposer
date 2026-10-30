@@ -514,6 +514,14 @@ class Player:
                 return []
             return [self.module.channel_volume(ch) for ch in range(self.module.num_channels)]
 
+    def levels(self) -> list[float]:
+        """Each channel's level in the audio just rendered (about 0 to 1), for
+        the window's meters; empty when nothing is playing."""
+        with self._lock:
+            if not self.module or self.status != "Playing":
+                return []
+            return [self.module.channel_vu(ch) for ch in range(self.module.num_channels)]
+
     def apply_mix_to_file(self) -> bool:
         """Write the live mix into the loaded file's header so it survives a reload."""
         with self._lock:

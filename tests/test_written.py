@@ -1,4 +1,5 @@
 import hashlib
+import random
 import os
 import tempfile
 import unittest
@@ -27,6 +28,44 @@ class ShippedVocabularyTests(unittest.TestCase):
 
 
 class WrittenSongTests(unittest.TestCase):
+    def test_every_built_in_voice_has_a_profile_and_the_pool_rule_fits_by_it(self):
+        """Phase 6, 2.0rc2: a built-in voice carries its range, speed and floor (packs.profile), and on a built-in set
+        the pool rule picks a voice whose range covers the part's register (it drew at random before: the vocabulary
+        names samples by the game's ids, which a built-in voice never has). The default set is bitComposer's own."""
+        from bitcomposer.packs import PACKS, profile
+        for pack_name, pack in PACKS.items():
+            if pack_name not in ("bit", "ffvi", "mana", "evermore", "megamanx"):   # a pack file another test loaded
+                continue
+            for pool, voices in pack["voices"].items():
+                if pool == "drums":
+                    continue
+                for v in ([voices] if isinstance(voices, str) else voices):
+                    if v in ("evm_wood_ping", "mmx_orch_hit"):        # percussion in a tonal pool: no range
+                        continue
+                    prof = profile(v)
+                    self.assertIsNotNone(prof, f"{pack_name}: {v} has no profile")
+                    self.assertLess(prof["range"][0], prof["range"][1], v)
+                    self.assertIn(prof["speed"], (2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 24.0), v)
+        self.assertEqual(profile("ffvi_harp")["speed"], 24.0)             # struck: any speed
+        self.assertEqual(profile("ffvi_strings")["speed"], 3.0)           # a 126 ms swell
+        self.assertIsNone(profile("ffvi_hat"))
+        self.assertEqual(written.sound_set(None, random.Random(1)), "bit")
+        self.assertEqual(written.sound_set("random", random.Random(1)), "bit")
+        for seed in (7, 8, 201):
+            out = written.compose_written(seed=seed)
+            self.assertEqual(out["sounds"], "bit")
+            plan = out["plan"]
+            picks = [line for line in plan.log if "'s voice " in line and " by the pool rule for " in line]
+            self.assertTrue(picks, seed)
+            for line in picks:
+                self.assertNotIn("nothing known of its range", line)
+                import re
+                m = re.search(r"voice (\S+) by the pool rule for (\d+)-(\d+) .*: it plays (\d+)-(\d+)", line)
+                self.assertIsNotNone(m, line)
+                lo, hi, plo, phi = (int(x) for x in m.groups()[1:])
+                self.assertLess(max(lo, plo), min(hi, phi), line)            # the voice's range overlaps the register
+            self.assertIn("on its own sounds", out["score"].message[2])
+
     def test_a_seed_names_one_song_on_one_sound_set(self):
         """compose_written draws the sound set and the title from the seed and writes the same bytes twice."""
         digests, titles = [], []

@@ -80,7 +80,7 @@ def build_parser():
     )
     parser.add_argument(
         "--sound",
-        choices=["chip", "snes", "genesis", "ffvi", "mana", "evermore", "megamanx", "random"],
+        choices=["chip", "snes", "genesis", "bit", "ffvi", "mana", "evermore", "megamanx", "random"],
         default="random",
         help="The sound in one word: a palette (chip, snes, genesis) or a style pack "
              "(ffvi, mana, evermore, megamanx). Overrides --style and --pack. "
@@ -166,7 +166,7 @@ def build_parser():
     )
     parser.add_argument(
         "--pack",
-        choices=["ffvi", "mana", "evermore", "megamanx", "none", "random"],
+        choices=["bit", "ffvi", "mana", "evermore", "megamanx", "none", "random"],
         default="random",
         help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
     )
@@ -208,7 +208,7 @@ def build_parser():
         default="default",
         help="what the song is written from (docs/IDIOM.md, phase 6): 'default' (shipped; the README says where it was "
              "learned), 'library' (everything you have imported) or 'pack:NAME' (an imported game's own); on the sound set "
-             "--pack names (ffvi, mana, evermore or megamanx), the pack --pack-file names, or a pack vocabulary's own samples",
+             "--pack names (bit, bitComposer's own and the default; ffvi, mana, evermore or megamanx, Classic's styled sets), the pack --pack-file names, or a pack vocabulary's own samples",
     )
     parser.add_argument(
         "--carry-theme",

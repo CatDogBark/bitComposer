@@ -85,6 +85,8 @@ PLACES = [
     "River", "Shore", "Steppe", "Tower", "Valley", "Wharf",
 ]
 SOUND_PLACES = {
+    "bit": ["Terminal", "Signal", "Lattice", "Relay", "Circuit", "Harbor", "Observatory", "Orchard",
+            "Beacon", "Cinder", "Hollow", "Meadow", "Summit", "Tidepool", "Foundry", "Lantern", "Causeway", "Grove"],
     "megamanx": ["Fortress", "Highway", "Factory", "Power Plant", "Airport", "Mine",
                  "Tower", "Hangar", "Launch Pad", "Sky Dock", "Armory", "Reactor Core",
                  "Gallery", "Scrapyard", "Snowfield", "Stage", "Sector", "Skyline"],
