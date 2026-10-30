@@ -152,6 +152,18 @@ ApplicationWindow {
         return String(name).replace(/^(ffvi|mana|evm|mmx|snes|gen|chip)_/, "").replace(/_/g, " ")
     }
     property real volumeGain: backend.state.volume !== undefined ? backend.state.volume : 1.0
+    readonly property var levels: backend.levels                   // each channel's level while playing (about 0 to 1), else []
+    readonly property bool liveLevels: playbackStatus === "Playing" && levels.length > 0
+    function meterCells(ch, cells) {                               // live while playing, the channel's set volume otherwise
+        if (liveLevels) return Math.round(cells * Math.min(1, levels[ch] || 0))
+        return Math.round(cells * (channelVolumes[ch] || 0) / 64)
+    }
+    function kitCells(cells) {
+        if (!liveLevels) return Math.round(cells * kitBus / 2)
+        var top = 0
+        for (var k = 0; k < kitChannels.length; k++) top = Math.max(top, levels[kitChannels[k]] || 0)
+        return Math.round(cells * Math.min(1, top))
+    }
     readonly property real maxGain: backend.maxGain
     property bool generating: !!backend.state.generating
     property bool autoGenerate: !!backend.state.autoGenerate
@@ -309,7 +321,8 @@ ApplicationWindow {
     property bool settCarryTheme: false
     property bool settBandReturns: false
     property string settSeed: ""                    // a seed names one song; blank draws one
-    readonly property var vocabularies: JSON.parse(backend.vocabularies())
+    property var vocabularies: JSON.parse(backend.vocabularies())     // read again whenever the packs change: an import adds one
+    Connections { target: backend; function onPacksChanged() { root.vocabularies = JSON.parse(backend.vocabularies()) } }
     readonly property var vocabularyOptions: vocabularies.filter(function(v) { return v.ready }).map(function(v) { return v.name })
     onVocabularyOptionsChanged: if (!root._loading && vocabularyOptions.indexOf(root.settVocabulary) < 0) root.settVocabulary = "default"
     property string settDrumDensity: "random"
@@ -1129,7 +1142,7 @@ ApplicationWindow {
                         ColumnLayout {
                             width: parent.width
                             spacing: Math.round(8 * root.ui)
-                            Heading { text: "THE BAND"; aside: "each channel's level; MIX changes them" }
+                            Heading { text: "THE BAND"; aside: root.liveLevels ? "what each channel plays, as it plays" : "each channel's volume; MIX changes them" }
                             Repeater {
                                 model: root.partChannels
                                 RowLayout {
@@ -1138,7 +1151,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     spacing: Math.round(12 * root.ui)
                                     Text { Layout.preferredWidth: Math.round(120 * root.ui); text: root.channelLabel(ch); color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui); elide: Text.ElideRight }
-                                    Meter { cells: 16; on: Math.round(16 * (root.channelVolumes[ch] || 0) / 64); tint: root.channelColor(ch) === 2 ? root.text2 : root.accentPink }
+                                    Meter { cells: 16; on: root.meterCells(ch, 16); tint: root.channelColor(ch) === 2 ? root.text2 : root.accentPink }
                                     Item { Layout.fillWidth: true }
                                     Text { text: root.voiceLabel(ch); color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); elide: Text.ElideRight }
                                 }
@@ -1148,7 +1161,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 spacing: Math.round(12 * root.ui)
                                 Text { Layout.preferredWidth: Math.round(120 * root.ui); text: "the kit"; color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui) }
-                                Meter { cells: 16; on: Math.round(8 * root.kitBus); tint: root.text2 }
+                                Meter { cells: 16; on: root.kitCells(16); tint: root.text2 }
                                 Item { Layout.fillWidth: true }
                                 Text { text: root.kitChannels.length + " pieces"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
                             }
@@ -1459,8 +1472,8 @@ ApplicationWindow {
                     Heading {
                         text: "THE GAMES YOU HAVE READ"
                         aside: {
-                            var lib = root.vocabularyOf("library")
-                            return lib ? lib.songs + " songs read in all" : (backend.packs.length ? backend.packs.length + " packs" : "")
+                            var lib = root.vocabularyOf("library"), n = backend.packs.length
+                            return lib ? lib.songs + (lib.songs === 1 ? " song" : " songs") + " read in all" : (n ? n + (n === 1 ? " game" : " games") : "")
                         }
                     }
 
@@ -1507,7 +1520,7 @@ ApplicationWindow {
                                     PButton { small: true; text: "STOP"; onClicked: backend.cancelImport() }
                                 }
                                 Meter { Layout.fillWidth: true; cells: 40; cellW: Math.max(4, Math.floor((width - 78) / 40)); on: backend.importState.total ? Math.round(40 * backend.importState.done / backend.importState.total) : 0 }
-                                Body { color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: backend.importState.total && backend.importState.done >= backend.importState.total ? "hearing which voice leads, then counting the vocabulary and the library again…" : "the songs read so far stay read if you stop" }
+                                Body { color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.stage ? backend.importState.stage + "…  " : "") + (backend.importState.stage && backend.importState.stage.indexOf("reading") < 0 ? "a few minutes on a whole soundtrack" : "the songs read so far stay read if you stop") }
                             }
                             RowLayout {
                                 visible: !!backend.importState.pendingAdd
@@ -1541,7 +1554,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     spacing: Math.round(12 * root.ui)
                                     Text { text: packItem.p.label; color: root.textColor; font.family: root.mono; font.bold: true; font.pixelSize: Math.round(13 * root.ui) }
-                                    Text { text: (packItem.p.songs ? packItem.p.songs + " songs · " : "") + packItem.p.samples + " samples" + (Object.keys(packItem.p.kit).length ? " · a kit of " + Object.keys(packItem.p.kit).length : ""); color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); elide: Text.ElideRight; Layout.fillWidth: true }
+                                    Text { text: (packItem.p.songs ? packItem.p.songs + " songs · " : "") + (packItem.p.moved !== undefined && packItem.p.moved !== null ? packItem.p.moved + " led by another voice · " : "") + packItem.p.samples + " samples" + (Object.keys(packItem.p.kit).length ? " · a kit of " + Object.keys(packItem.p.kit).length : ""); color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); elide: Text.ElideRight; Layout.fillWidth: true }
                                     PxLabel {
                                         text: packItem.voc ? (packItem.voc.ready ? "■ VOCABULARY READY" : "VOCABULARY NEEDS 40 · " + packItem.voc.songs + " READ") : "NO VOCABULARY YET"
                                         color: packItem.voc && packItem.voc.ready ? root.accentGreen : root.dimText

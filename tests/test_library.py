@@ -132,6 +132,7 @@ class Library(unittest.TestCase):
             def command(self):
                 return [sys.executable, "-c", script, str(self.stage), str(self.progress)]
         job = Fake(self.src, "test_quest", on_progress=lambda d, t: done.append((d, t)),
+                   on_stage=lambda words: done.append(("stage", words)),
                    on_done=lambda name, error: (done.append((name, error)), finished.set()))
         original = library.can_import
         library.can_import = lambda: True
@@ -146,10 +147,10 @@ class Library(unittest.TestCase):
         library.move("test_quest", "oboe", "out")
         done = self.run_import(
             "import shutil, sys, time\n"
-            "for line in ('progress 1 2', 'progress 2 2'):\n"
+            "for line in ('stage reading the songs', 'progress 1 2', 'progress 2 2', 'stage hearing which voice leads'):\n"
             "    open(sys.argv[2], 'a').write(line + '\\n'); time.sleep(0.3)\n"
             f"shutil.copytree({str(self.src)!r}, sys.argv[1])")
-        self.assertEqual(done, [(1, 2), (2, 2), ("test_quest", None)])
+        self.assertEqual(done, [("stage", "reading the songs"), (1, 2), (2, 2), ("stage", "hearing which voice leads"), ("test_quest", None)])
         self.assertEqual(library.listing()[0]["parts"]["lead"], ["flute", "oboe"])   # fresh: the move is gone
         self.assertFalse(any(p.name.startswith(".") for p in library.packs_dir().iterdir()))   # nothing left over
 
@@ -187,7 +188,7 @@ class Library(unittest.TestCase):
         finally:
             sys.argv = argv
         self.assertEqual(stop.exception.code, 1)
-        self.assertEqual(progress.read_text(), "error no SPC files to read\n")
+        self.assertEqual(progress.read_text(), "stage unpacking the set\nerror no SPC files to read\n")
 
 
 if __name__ == "__main__":

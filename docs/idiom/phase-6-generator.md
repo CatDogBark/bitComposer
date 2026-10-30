@@ -210,13 +210,50 @@ the warning on a library vocabulary).
   seeds. A pooled SNES style is a second vocabulary for later, not the
   default; FFVI's stands.
 
+## Smoke test (2026-10-30, the laptop; 2.0rc2)
+
+The second exit criterion, run the way a listener would meet it: a fresh
+data folder (`BITCOMPOSER_DATA_DIR` on an empty directory), the 2.0 window
+loaded headless on the Qt venv, and Final Fantasy VI's 82 SPC files
+imported through the window's own `import_from`, the stages watched on
+`backend.importState`, then a song written through the window's settings.
+
+- **The import.** 82 files read in 61 s (the readers, four workers); the
+  lead pass took 11 min 14 s with the whole test suite running beside it
+  (3.5 s a song measured alone would be under five minutes); the game's
+  vocabulary and the library's counted in under a second. The stage lines
+  arrived in order: reading the songs, hearing which voice leads, counting
+  the game's vocabulary, counting the library's vocabulary.
+- **What it made.** One pack, 67 samples, a format 2 pack file with the
+  95 tables; 67 songs in the vocabulary (the 82 files hold 67 distinct
+  songs, as the shipped fit did); the lead pass heard all 67 and moved the
+  melody label in 9, the count the LIBRARY row now shows. The window
+  offered three vocabularies afterwards: the default, the library (67
+  songs, ready) and the game (ready).
+- **The song.** WRITE set to the game's vocabulary on the game's own
+  sounds, GENERATE through the window: "The Wharf of Rust", seed 851766,
+  1,050 notes, playing within four seconds of the press, the band's live
+  meters reading on nine channels. The copy check over that vocabulary
+  (`tools/copycheck.py --vocabulary pack:final_fantasy_vi_spc --seeds
+  1-50`): 50 songs, 1,055 four-bar windows, none copies a game phrase (20
+  share only a rhythm).
+- **Found and fixed.** The window read the list of vocabularies once at
+  start, so the fresh game showed "no vocabulary yet" under LIBRARY and
+  had no card under WRITE until a restart (2.0rc1's FROM row had the same
+  gap); the list is read again on every packs change, and a window test
+  covers it. The pack's label carried "(from its SPC files)" after the
+  game's name, noise now that the window keeps your games under their own
+  heading; it is the game's name alone.
+
 ## Exit criteria
 
 - GENERATE on a fresh install writes a song from the shipped FFVI
   vocabulary on a built-in sound set, and the song passes phase 4's
   measures and the copy check.
 - A game imported in the player gives a sound set and a game vocabulary,
-  and a song from them passes the same.
+  and a song from them passes the same. (Imported through the window and
+  written from, 2026-10-30: the smoke test above, the copy check clean
+  over that vocabulary; phase 4's measures over it are the release's run.)
 - Classic's seventy songs are byte for byte rc1's.
 - A 1.x pack file still loads as a sound set.
 

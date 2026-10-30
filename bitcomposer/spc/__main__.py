@@ -108,8 +108,8 @@ def main(argv=None) -> int:
                     "(pack.json and its samples; see docs/TRANSLATOR.md, stage 2); play it with bitcomposer --pack-file")
     ap.add_argument("--name", help="with --pack: the pack's name (default: from the folder's)")
     ap.add_argument("--progress", metavar="FILE",
-                    help="with --pack: add a line 'progress DONE TOTAL' to FILE after each song, and "
-                         "'error WHY' if it stops (the player's PACKS panel reads it)")
+                    help="with --pack: add a line 'progress DONE TOTAL' to FILE after each song, 'stage WORDS' "
+                         "as each stage begins, and 'error WHY' if it stops (the player's LIBRARY screen reads it)")
     args = ap.parse_args(argv)
     if args.pack:
         from ..translate import pack
@@ -120,7 +120,8 @@ def main(argv=None) -> int:
                 with open(args.progress, "a", encoding="utf-8") as fh:
                     fh.write(line + "\n")
         try:
-            pack.make(args.files, args.pack, args.name, progress=lambda done, total: note(f"progress {done} {total}"))
+            pack.make(args.files, args.pack, args.name, progress=lambda done, total: note(f"progress {done} {total}"),
+                      stage=lambda words: note(f"stage {words}"))
         except (EmulatorMissing, ValueError, SPCError) as e:
             note(f"error {e}")
             print(f"bitcomposer.spc: {e}", file=sys.stderr)

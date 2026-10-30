@@ -364,7 +364,7 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
     voices = dict(chosen)
     if drums:
         voices["drums"] = drums
-    data = {"bitcomposer_pack": 1, "name": name, "label": label or f"{g.game} (from its SPC files)"[:60],
+    data = {"bitcomposer_pack": 1, "name": name, "label": label or g.game[:60],              # the game as its SPC tags name it; the window shows it under YOUR GAMES
             "palette": "snes", "voices": voices, "habits": habits(g), "samples": samples}
     return data, files
 
@@ -380,6 +380,18 @@ def why(g: Gathered, data: dict) -> dict:
         rows = [[role, g.songs_in[role][k], counts[k]] for role, counts in g.uses.items() if k in counts]
         out[v] = sorted(rows, key=lambda x: -x[2])
     return out
+
+
+def _note_lead(why_path: Path, heard: dict) -> None:
+    """The lead pass's count into the pack's WHY file: the songs it heard, and
+    how many had their melody label moved to the voice that carries the tune."""
+    try:
+        why = json.loads(why_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    why["lead_heard"] = len(heard)
+    why["lead_moved"] = sum(1 for _title, _why, plan in heard.values() if plan)
+    why_path.write_text(json.dumps(why, indent=1) + "\n", encoding="utf-8")
 
 
 def write(data: dict, files: dict, out: Path, reasons: dict | None = None, songs: int | None = None, game: str | None = None) -> Path:
@@ -418,16 +430,19 @@ def _read(path):
         return RuntimeError(f"{path}: {type(e).__name__}: {e}"), None
 
 
-def make(paths, out, name: str | None = None, workers: int | None = None, say=print, progress=None) -> Path:
+def make(paths, out, name: str | None = None, workers: int | None = None, say=print, progress=None, stage=None) -> Path:
     """Read a game's SPC files (folders read whole, archives unpacked:
     archives.py) and write a thin pack of them into `out`: pack.json, its
     samples' WAVs and why each is where it is (WHY). Returns the pack file.
-    progress(done, total) after each song."""
+    progress(done, total) after each song; stage(words) as each stage of the
+    import begins (the player's LIBRARY screen shows it)."""
+    stage = stage or (lambda words: None)
+    stage("unpacking the set")
     with tempfile.TemporaryDirectory(prefix="bitcomposer-spc-") as unpack:
-        return _make(archives.spc_files(paths, Path(unpack)), paths, out, name, workers, say, progress)
+        return _make(archives.spc_files(paths, Path(unpack)), paths, out, name, workers, say, progress, stage)
 
 
-def _make(files, paths, out, name, workers, say, progress) -> Path:
+def _make(files, paths, out, name, workers, say, progress, stage=lambda words: None) -> Path:
     import os
     from multiprocessing import Pool
     from .. import spc
@@ -435,6 +450,7 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
     if not files:
         raise ValueError("no SPC files to read")
     readings, snaps = [], []
+    stage("reading the songs")
     with Pool(workers or max(1, (os.cpu_count() or 2) - 1)) as pool:
         for i, (r, snap) in enumerate(pool.imap(_read, [str(f) for f in files])):
             if progress:
@@ -480,14 +496,18 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
         progress(len(files), len(files))
     try:                                                    # the lead by what is heard (round 64): each voice rendered alone, the melody label moved
         from . import lead                                  # where another voice carries the tune; before the tables, which count on the lead
+        stage("hearing which voice leads")
         folder = os.path.commonpath([os.path.dirname(os.path.abspath(str(f))) for f in files])
-        lead.run(db, game, folder, say=say)
+        heard = lead.run(db, game, folder, say=say)
+        _note_lead(path.parent / WHY, heard)
     except Exception as e:                                  # the readings stand as read; the error is said, not raised
         say(f"  the lead pass did not run: {type(e).__name__}: {e}")
     try:                                                    # the game's vocabulary beside its samples (format 2), then the library's over everything
         from . import packtables
         from .. import vocabularies
+        stage("counting the game's vocabulary")
         packtables.into(db, game, path, say=say)
+        stage("counting the library's vocabulary")
         vocabularies.refit_library(db, say=say)
     except Exception as e:                                  # the pack stands without its tables; the error is said, not raised
         say(f"  the vocabulary was not counted: {type(e).__name__}: {e}")
