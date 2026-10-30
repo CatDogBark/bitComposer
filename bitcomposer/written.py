@@ -72,7 +72,8 @@ def compose_written(vocabulary: str, pack: str | None = None, seed: int | None =
     info = {"title": title, "key": key, "tempo": int(round(p.bpm)), "form": p.letters, "bars": p.bars, "band": list(p.band),
             "seconds": int(round(score.seconds)), "vocabulary": label, "sounds": sounds, "seed": seed,
             "carry_theme": carry_theme, "band_returns": band_returns}
-    return {"score": score, "title": title, "seed": seed, "sounds": sounds, "vocabulary": vocabulary, "info": info, "plan": p}
+    return {"score": score, "title": title, "seed": seed, "sounds": sounds, "vocabulary": vocabulary, "info": info, "plan": p,
+            "written": out["written"]}
 
 
 def _tempo_word(bpm: float) -> str:
