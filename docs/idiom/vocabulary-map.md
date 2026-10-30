@@ -159,7 +159,7 @@ place) are no edges. A word that feeds many stages (`habits`, `tempos`, the `bal
 flowchart LR
   periods(["periods"])
   weights(["weights"])
-  subgraph plan["the plan, drawn once a song"]
+  subgraph stage_plan["the plan, drawn once a song"]
     habits["habits"]
     bass_habits["bass_habits"]
     drum_habits["drum_habits"]
@@ -304,7 +304,7 @@ flowchart LR
   tempos(["tempos"])
   voicing_habits(["voicing_habits"])
   weights(["weights"])
-  subgraph writing["the parts' writing (whole.write hands the table to a writer)"]
+  subgraph stage_writing["the parts' writing (whole.write hands the table to a writer)"]
     rhythm["rhythm"]
     bass["bass"]
     voicings["voicings"]
@@ -372,7 +372,7 @@ flowchart LR
   habits(["habits"])
   kit_pieces(["kit_pieces"])
   tempos(["tempos"])
-  subgraph drums["the drums"]
+  subgraph stage_drums["the drums"]
     drums["drums"]
     drums_KSt["drums-KSt"]
     drums_h["drums-h"]
@@ -430,7 +430,7 @@ flowchart LR
   balance(["balance"])
   counter_samples(["counter_samples"])
   layers(["layers"])
-  subgraph bass["the bass"]
+  subgraph stage_bass["the bass"]
     voice_intervals["voice_intervals"]
     voice_moves["voice_moves"]
   end
@@ -450,7 +450,7 @@ flowchart LR
   length_habits(["length_habits"])
   lengths(["lengths"])
   tempos(["tempos"])
-  subgraph upper["the upper parts"]
+  subgraph stage_upper["the upper parts"]
     periods["periods"]
   end
   balance -- tempo --> periods
@@ -469,7 +469,7 @@ flowchart LR
   drum_habits(["drum_habits"])
   habits(["habits"])
   keys(["keys"])
-  subgraph melody["the tune"]
+  subgraph stage_melody["the tune"]
     values["values"]
     contours["contours"]
     endings["endings"]
@@ -535,7 +535,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   part_speeds(["part_speeds"])
-  subgraph render["the render"]
+  subgraph stage_render["the render"]
     ranges["ranges"]
     part_samples["part_samples"]
   end
@@ -556,7 +556,7 @@ flowchart LR
   length_habits(["length_habits"])
   lengths(["lengths"])
   voicing_habits(["voicing_habits"])
-  subgraph unused["counted, drawn nowhere (the measures' words)"]
+  subgraph stage_unused["counted, drawn nowhere (the measures' words)"]
     widths["widths"]
     changes["changes"]
     cadences["cadences"]

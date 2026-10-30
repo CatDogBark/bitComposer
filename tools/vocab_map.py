@@ -160,7 +160,7 @@ def page(rows: list) -> str:
         mine = {r["name"] for r in rs}
         for src in sorted(srcs - mine):
             out.append(f'  {nid(src)}(["{src}"])')
-        out.append(f'  subgraph {key}["{title}"]')
+        out.append(f'  subgraph stage_{key}["{title}"]')
         out += [f'    {nid(r["name"])}["{r["name"]}"]' for r in rs]
         out.append("  end")
         for src, dst, c in sorted(set(edges)):
