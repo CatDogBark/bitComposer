@@ -146,11 +146,19 @@ the warning on a library vocabulary).
   Sounds-and-Songs loader rewrite waits for the 2.0 window, since the
   format and the panel it serves stay until then). Also found: the module
   splits had not re-exported two annotated module-level names
-  (`rhythm.SAMPLE_LOUDNESS`, `SAMPLE_STRIKE`); fixed. Not yet: the copy
-  check (the reference set is machine-local, so it is a release check run
-  on the owner's machines over songs written from the shipped vocabulary,
-  not a CI job), the panel saying "N songs read, the vocabulary needs 40",
-  SOUND limited to SNES sets while a vocabulary is picked.
+  (`rhythm.SAMPLE_LOUDNESS`, `SAMPLE_STRIKE`); fixed.
+- **2.0rc1, piece 6 (2026-10-30).** The copy check as a release tool:
+  `python tools/copycheck.py --vocabulary ffvi --seeds 1-100` writes the
+  songs as the product does (no reference set at hand, so no phrase is
+  drawn again) and probes every four-bar window of each tune, from every
+  bar, against the games' four-bar phrases (the reference set, kept
+  outside the repository; not a CI job for that reason). Run before a
+  vocabulary ships: on the shipped FFVI vocabulary, seeds 1-100 plain and
+  101-200 with both switches, 4,160 windows of 200 songs, none copies a
+  game phrase (rhythm and intervals together); 111 share a rhythm alone
+  and 9 the intervals alone, as any two tunes in a style do. Not yet: the
+  panel saying "N songs read, the vocabulary needs 40", SOUND limited to
+  SNES sets while a vocabulary is picked.
 
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
