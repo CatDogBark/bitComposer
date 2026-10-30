@@ -1485,16 +1485,6 @@ def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, o
     return rng.choice(top)
 
 
-def sample_fits(ranges, name: str, register: tuple, rng: random.Random) -> bool | None:
-    """Whether a sample was played in the part's register in the game: a range the ranges table draws for it overlaps the
-    register's middle octave; None where the table knows nothing of the sample."""
-    if ranges is None or ranges.songs.get((name,), 0) == 0:
-        return None
-    lo, hi = (int(x) for x in ranges.draw((name,), rng, floored=False, floor_k=PLAN_FLOOR).split("-"))
-    centre = (register[0] + register[1]) / 2
-    return lo - 6 <= centre <= hi + 6
-
-
 def _sounds_text(sounds) -> str:
     """A sounded share for a log: one share, or the gap_sounds word's by gap class."""
     if isinstance(sounds, dict):
@@ -1776,17 +1766,6 @@ def samples_for(plan: Plan, pack: dict, own: set, pack_name: str, rng: random.Ra
     if plan.bounds:
         plan.log.append("written where the game plays each sample: " + ", ".join(f"{k} {lo}-{hi}" for k, (lo, hi) in plan.bounds.items()))
     return out
-
-
-def sample_range(ranges, rid: str) -> tuple | None:
-    """The register the game plays a sample in, over every song that plays it: the ranges word's widest band for the
-    sample (the lowest floor and the highest ceiling among its votes, each vote one song's 10th to 90th percentiles to
-    REGISTER_BIN); None where the word knows nothing of the sample."""
-    t = ranges.table if hasattr(ranges, "table") else ranges
-    votes = t.votes.get((rid,)) if t is not None else None
-    if not votes:
-        return None
-    return min(int(o.split("-")[0]) for o in votes), max(int(o.split("-")[1]) for o in votes)
 
 
 def models_or_empty(models) -> dict:

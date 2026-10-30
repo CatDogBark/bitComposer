@@ -1822,10 +1822,6 @@ def form_spans(song: rhythm.Song, own: list) -> list[tuple]:
     return sorted(out)
 
 
-def form_spans_of(song: rhythm.Song):
-    return lambda own: form_spans(song, own)
-
-
 THIN = 0.05                           # the band's energy (against its median) under which a free-written pitched part sits a bar out
 BREAKDOWN = 0.5                       # under this share of the median the band is thin: the part thins with it and does not lock to it
 
