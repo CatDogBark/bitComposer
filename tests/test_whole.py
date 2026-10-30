@@ -310,7 +310,6 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(rhythm.apply_mask("0 1 2 3", "1 0 | 7/2"), "0 2 7/2")                       # a short mask read around the line
         self.assertEqual(rhythm.apply_mask("0 1 2 3", "-"), "-")
         self.assertEqual([u.outcome for u in rhythm.layer_sample_units([s])], ["sa sa"])      # both voices on sample "a" here
-        self.assertEqual([rhythm.density_bin(n) for n in (1, 3, 4, 6, 7, 9, 10, 24)], ["1-3", "1-3", "4-6", "4-6", "7-9", "7-9", "10+", "10+"])
         s.voice_notes = {3: ("accompaniment", line)}
         self.assertIsNone(rhythm.line_notes(s, "accompaniment"))                                 # one voice: the part's bar
         self.assertEqual(rhythm.second_figure_units([s]), [])

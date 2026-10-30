@@ -10,7 +10,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 jobs:
@@ -35,6 +35,10 @@ jobs:
           python -m pip install --quiet .
       - name: Unit tests
         run: python -m unittest discover -s tests -v
+      - name: The vocabulary names every table, and its map is current
+        run: |
+          python tools/vocab_map.py --check docs/idiom/VOCABULARY.md
+          python tools/vocab_map.py --out /tmp/vocabulary-map.md && diff -q /tmp/vocabulary-map.md docs/idiom/vocabulary-map.md
       - name: Generate and measure a batch
         run: |
           for s in 1 2 3 4 5 6; do python -m bitcomposer.cli -s $s -d out; done
