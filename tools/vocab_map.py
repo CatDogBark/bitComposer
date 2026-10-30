@@ -132,23 +132,31 @@ def page(rows: list) -> str:
             out.append(f"| `{r['name']}` | {', '.join(r['shape'])} | {', '.join(r['drawn_by']) or '-'} | {', '.join(f'`{x}`' for x in r['feeds']) or '-'} | {r['what']} |")
         out.append("")
     out += ["## What conditions what", "",
-            "An edge runs from the table whose outcome gives a conditioning its value to the table conditioned on it; the",
-            "label is the conditioning. Structural conditionings (the part, the meter, the chain's previous outcome, a place)",
-            "are no edges.", "", "```mermaid", "flowchart TD"]
+            "One graph a stage: the stage's tables, and the tables whose outcome gives one of their conditionings its value",
+            "(the label is the conditioning). Structural conditionings (the part, the meter, the chain's previous outcome, a",
+            "place) are no edges. A word that feeds many stages (`habits`, `tempos`, the `balance` token) appears in each.", ""]
+    nid = lambda n: n.replace("-", "_")   # noqa: E731
     for key, title in STAGES:
         rs = by_stage[key]
-        if rs:
-            out.append(f"  subgraph {key}[{title}]")
-            out += [f"    {r['name'].replace('-', '_')}[{r['name']}]" for r in rs]
-            out.append("  end")
-    seen = set()
-    for r in rows:
-        for c in r["shape"]:
-            for src in SOURCES.get(c, []):
-                if src in packtables.KEPT and src != r["name"] and (src, r["name"], c) not in seen:
-                    seen.add((src, r["name"], c))
-                    out.append(f"  {src.replace('-', '_')} -- {c} --> {r['name'].replace('-', '_')}")
-    out += ["```", ""]
+        if not rs:
+            continue
+        edges, srcs = [], set()
+        for r in rs:
+            for c in r["shape"]:
+                for src in SOURCES.get(c, []):
+                    if src in packtables.KEPT and src != r["name"]:
+                        edges.append((src, r["name"], c))
+                        srcs.add(src)
+        out += [f"### {title}", "", "```mermaid", "flowchart LR"]
+        mine = {r["name"] for r in rs}
+        for src in sorted(srcs - mine):
+            out.append(f'  {nid(src)}(["{src}"])')
+        out.append(f'  subgraph {key}["{title}"]')
+        out += [f'    {nid(r["name"])}["{r["name"]}"]' for r in rs]
+        out.append("  end")
+        for src, dst, c in sorted(set(edges)):
+            out.append(f"  {nid(src)} -- {c} --> {nid(dst)}")
+        out += ["```", ""]
     return "\n".join(out)
 
 

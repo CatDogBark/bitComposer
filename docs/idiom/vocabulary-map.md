@@ -149,343 +149,432 @@ flowchart LR
 
 ## What conditions what
 
-An edge runs from the table whose outcome gives a conditioning its value to the table conditioned on it; the
-label is the conditioning. Structural conditionings (the part, the meter, the chain's previous outcome, a place)
-are no edges.
+One graph a stage: the stage's tables, and the tables whose outcome gives one of their conditionings its value
+(the label is the conditioning). Structural conditionings (the part, the meter, the chain's previous outcome, a
+place) are no edges. A word that feeds many stages (`habits`, `tempos`, the `balance` token) appears in each.
+
+### the plan, drawn once a song
 
 ```mermaid
-flowchart TD
-  subgraph plan[the plan, drawn once a song]
-    habits[habits]
-    bass_habits[bass_habits]
-    drum_habits[drum_habits]
-    kit_pieces[kit_pieces]
-    voicing_habits[voicing_habits]
-    motions[motions]
-    chords[chords]
-    loops[loops]
-    form[form]
-    lengths[lengths]
-    letters[letters]
-    phrase_letters[phrase_letters]
-    return_band[return_band]
-    theme_doubling[theme_doubling]
-    tune_doubling[tune_doubling]
-    theme_carrier[theme_carrier]
-    step_habits[step_habits]
-    repeat_habits[repeat_habits]
-    echo_habits[echo_habits]
-    parts[parts]
-    voices[voices]
-    layers[layers]
-    feels[feels]
-    period_holds[period_holds]
-    layer_samples[layer_samples]
-    counter_samples[counter_samples]
-    counter_shares[counter_shares]
-    counter_pairs[counter_pairs]
-    sample_lengths[sample_lengths]
-    sample_speeds[sample_speeds]
-    cell_handoffs[cell_handoffs]
-    part_speeds[part_speeds]
-    registers[registers]
-    keys[keys]
-    tempos[tempos]
-    sizes[sizes]
-    length_habits[length_habits]
-    balance[balance]
-    sounds[sounds]
-    gap_sounds[gap_sounds]
-    bass_locks[bass_locks]
-    levels[levels]
-    top_levels[top_levels]
-    layer_levels[layer_levels]
-    sample_ambitus[sample_ambitus]
-    articulation[articulation]
-    part_textures[part_textures]
-    section_levels[section_levels]
-    part_entries[part_entries]
-    drum_group_habits[drum_group_habits]
-    chord_tones[chord_tones]
-    repeat_rates[repeat_rates]
-    tune_grain[tune_grain]
+flowchart LR
+  periods(["periods"])
+  weights(["weights"])
+  subgraph plan["the plan, drawn once a song"]
+    habits["habits"]
+    bass_habits["bass_habits"]
+    drum_habits["drum_habits"]
+    kit_pieces["kit_pieces"]
+    voicing_habits["voicing_habits"]
+    motions["motions"]
+    chords["chords"]
+    loops["loops"]
+    form["form"]
+    lengths["lengths"]
+    letters["letters"]
+    phrase_letters["phrase_letters"]
+    return_band["return_band"]
+    theme_doubling["theme_doubling"]
+    tune_doubling["tune_doubling"]
+    theme_carrier["theme_carrier"]
+    step_habits["step_habits"]
+    repeat_habits["repeat_habits"]
+    echo_habits["echo_habits"]
+    parts["parts"]
+    voices["voices"]
+    layers["layers"]
+    feels["feels"]
+    period_holds["period_holds"]
+    layer_samples["layer_samples"]
+    counter_samples["counter_samples"]
+    counter_shares["counter_shares"]
+    counter_pairs["counter_pairs"]
+    sample_lengths["sample_lengths"]
+    sample_speeds["sample_speeds"]
+    cell_handoffs["cell_handoffs"]
+    part_speeds["part_speeds"]
+    registers["registers"]
+    keys["keys"]
+    tempos["tempos"]
+    sizes["sizes"]
+    length_habits["length_habits"]
+    balance["balance"]
+    sounds["sounds"]
+    gap_sounds["gap_sounds"]
+    bass_locks["bass_locks"]
+    levels["levels"]
+    top_levels["top_levels"]
+    layer_levels["layer_levels"]
+    sample_ambitus["sample_ambitus"]
+    articulation["articulation"]
+    part_textures["part_textures"]
+    section_levels["section_levels"]
+    part_entries["part_entries"]
+    drum_group_habits["drum_group_habits"]
+    chord_tones["chord_tones"]
+    repeat_rates["repeat_rates"]
+    tune_grain["tune_grain"]
   end
-  subgraph writing[the parts' writing (whole.write hands the table to a writer)]
-    rhythm[rhythm]
-    bass[bass]
-    voicings[voicings]
-    theme_body[theme_body]
-    moves[moves]
-    melody_recall[melody_recall]
-    layer_sounds[layer_sounds]
-    second_figures[second_figures]
-    counter_figures[counter_figures]
-  end
-  subgraph drums[the drums]
-    drums[drums]
-    drums_KSt[drums-KSt]
-    drums_h[drums-h]
-    drums_c[drums-c]
-    drums_o[drums-o]
-  end
-  subgraph bass[the bass]
-    voice_intervals[voice_intervals]
-    voice_moves[voice_moves]
-  end
-  subgraph upper[the upper parts]
-    periods[periods]
-  end
-  subgraph melody[the tune]
-    values[values]
-    contours[contours]
-    endings[endings]
-    relations[relations]
-    cell_rhythms[cell_rhythms]
-    half_recall[half_recall]
-    recall_continues[recall_continues]
-    pair_recall[pair_recall]
-    pair_bar_recall[pair_bar_recall]
-    recall_sources[recall_sources]
-    climax[climax]
-    arc[arc]
-    summit[summit]
-    contour_sizes[contour_sizes]
-    phrase_shifts[phrase_shifts]
-  end
-  subgraph render[the render]
-    ranges[ranges]
-    part_samples[part_samples]
-  end
-  subgraph unused[counted, drawn nowhere (the measures' words)]
-    widths[widths]
-    changes[changes]
-    cadences[cadences]
-    peaks[peaks]
-    texture[texture]
-    presence[presence]
-    doubles[doubles]
-    weights[weights]
-  end
-  tempos -- tempo --> rhythm
-  balance -- tempo --> rhythm
-  habits -- habit --> rhythm
-  bass_habits -- habit --> rhythm
-  drum_habits -- habit --> rhythm
-  drum_group_habits -- habit --> rhythm
-  balance -- habit --> rhythm
-  feels -- feel --> rhythm
-  habits -- habit --> values
-  bass_habits -- habit --> values
-  drum_habits -- habit --> values
-  drum_group_habits -- habit --> values
-  balance -- habit --> values
-  tempos -- tempo --> habits
-  balance -- tempo --> habits
-  weights -- weight --> habits
-  balance -- weight --> habits
-  tempos -- tempo --> bass
-  balance -- tempo --> bass
-  habits -- habit --> bass
-  bass_habits -- habit --> bass
-  drum_habits -- habit --> bass
-  drum_group_habits -- habit --> bass
-  balance -- habit --> bass
-  feels -- feel --> bass
-  tempos -- tempo --> bass_habits
   balance -- tempo --> bass_habits
-  weights -- weight --> bass_habits
   balance -- weight --> bass_habits
-  kit_pieces -- kit --> drums
-  balance -- kit --> drums
-  tempos -- tempo --> drums
-  balance -- tempo --> drums
-  habits -- habit --> drums
-  bass_habits -- habit --> drums
-  drum_habits -- habit --> drums
-  drum_group_habits -- habit --> drums
-  balance -- habit --> drums
-  feels -- feel --> drums
-  tempos -- tempo --> drums_KSt
-  balance -- tempo --> drums_KSt
-  habits -- habit --> drums_KSt
-  bass_habits -- habit --> drums_KSt
-  drum_habits -- habit --> drums_KSt
-  drum_group_habits -- habit --> drums_KSt
-  balance -- habit --> drums_KSt
-  feels -- feel --> drums_KSt
-  tempos -- tempo --> drums_h
-  balance -- tempo --> drums_h
-  habits -- habit --> drums_h
-  bass_habits -- habit --> drums_h
-  drum_habits -- habit --> drums_h
-  drum_group_habits -- habit --> drums_h
-  balance -- habit --> drums_h
-  feels -- feel --> drums_h
-  tempos -- tempo --> drums_c
-  balance -- tempo --> drums_c
-  habits -- habit --> drums_c
-  bass_habits -- habit --> drums_c
-  drum_habits -- habit --> drums_c
-  drum_group_habits -- habit --> drums_c
-  balance -- habit --> drums_c
-  feels -- feel --> drums_c
-  tempos -- tempo --> drums_o
-  balance -- tempo --> drums_o
-  habits -- habit --> drums_o
-  bass_habits -- habit --> drums_o
-  drum_habits -- habit --> drums_o
-  drum_group_habits -- habit --> drums_o
-  balance -- habit --> drums_o
-  feels -- feel --> drums_o
-  habits -- habit --> kit_pieces
-  bass_habits -- habit --> kit_pieces
-  drum_habits -- habit --> kit_pieces
-  drum_group_habits -- habit --> kit_pieces
-  balance -- habit --> kit_pieces
-  voicing_habits -- shape --> voicings
-  habits -- habit --> voicings
-  bass_habits -- habit --> voicings
-  drum_habits -- habit --> voicings
-  drum_group_habits -- habit --> voicings
-  balance -- habit --> voicings
-  voicing_habits -- shape --> widths
-  keys -- mode --> chords
-  habits -- habit --> changes
-  bass_habits -- habit --> changes
-  drum_habits -- habit --> changes
-  drum_group_habits -- habit --> changes
-  balance -- habit --> changes
-  keys -- mode --> cadences
-  lengths -- length --> cadences
-  length_habits -- length --> cadences
-  habits -- habit --> lengths
-  bass_habits -- habit --> lengths
-  drum_habits -- habit --> lengths
-  drum_group_habits -- habit --> lengths
-  balance -- habit --> lengths
-  form -- form --> phrase_letters
-  letters -- form --> phrase_letters
-  keys -- mode --> contours
-  keys -- mode --> peaks
-  contours -- contour --> peaks
-  keys -- mode --> endings
-  keys -- mode --> relations
-  habits -- habit --> relations
-  bass_habits -- habit --> relations
-  drum_habits -- habit --> relations
-  drum_group_habits -- habit --> relations
-  balance -- habit --> relations
-  keys -- mode --> moves
-  habits -- habit --> moves
-  bass_habits -- habit --> moves
-  drum_habits -- habit --> moves
-  drum_group_habits -- habit --> moves
-  balance -- habit --> moves
-  habits -- habit --> melody_recall
-  bass_habits -- habit --> melody_recall
-  drum_habits -- habit --> melody_recall
-  drum_group_habits -- habit --> melody_recall
-  balance -- habit --> melody_recall
-  tempos -- tempo --> echo_habits
-  balance -- tempo --> echo_habits
-  weights -- weight --> echo_habits
-  balance -- weight --> echo_habits
-  balance -- band --> parts
-  parts -- band --> voices
-  balance -- band --> voices
-  lengths -- length --> periods
-  length_habits -- length --> periods
-  tempos -- tempo --> periods
-  balance -- tempo --> periods
-  periods -- period --> period_holds
-  layers -- layer --> second_figures
-  balance -- layer --> second_figures
-  feels -- feel --> second_figures
-  tempos -- tempo --> second_figures
-  balance -- tempo --> second_figures
-  counter_samples -- kind --> voice_intervals
-  layers -- kind --> voice_intervals
-  balance -- kind --> voice_intervals
-  counter_samples -- kind --> voice_moves
-  layers -- kind --> voice_moves
-  balance -- kind --> voice_moves
-  weights -- weight --> counter_figures
-  balance -- weight --> counter_figures
-  feels -- feel --> counter_figures
-  tempos -- tempo --> counter_figures
-  balance -- tempo --> counter_figures
-  levels -- tune --> counter_shares
-  balance -- tune --> counter_shares
-  levels -- tune --> counter_pairs
-  balance -- tune --> counter_pairs
-  part_speeds -- speed --> sample_lengths
-  habits -- habit --> cell_handoffs
-  bass_habits -- habit --> cell_handoffs
-  drum_habits -- habit --> cell_handoffs
-  drum_group_habits -- habit --> cell_handoffs
   balance -- habit --> cell_handoffs
-  habits -- habit --> half_recall
-  bass_habits -- habit --> half_recall
-  drum_habits -- habit --> half_recall
-  drum_group_habits -- habit --> half_recall
-  balance -- habit --> half_recall
-  habits -- habit --> recall_continues
-  bass_habits -- habit --> recall_continues
-  drum_habits -- habit --> recall_continues
-  drum_group_habits -- habit --> recall_continues
-  balance -- habit --> recall_continues
-  habits -- habit --> pair_recall
-  bass_habits -- habit --> pair_recall
-  drum_habits -- habit --> pair_recall
-  drum_group_habits -- habit --> pair_recall
-  balance -- habit --> pair_recall
-  habits -- habit --> pair_bar_recall
-  bass_habits -- habit --> pair_bar_recall
-  drum_habits -- habit --> pair_bar_recall
-  drum_group_habits -- habit --> pair_bar_recall
-  balance -- habit --> pair_bar_recall
-  habits -- habit --> recall_sources
-  bass_habits -- habit --> recall_sources
-  drum_habits -- habit --> recall_sources
-  drum_group_habits -- habit --> recall_sources
-  balance -- habit --> recall_sources
-  habits -- habit --> part_speeds
-  bass_habits -- habit --> part_speeds
-  drum_habits -- habit --> part_speeds
-  drum_group_habits -- habit --> part_speeds
-  balance -- habit --> part_speeds
-  balance -- tempo --> tempos
-  part_speeds -- speed --> gap_sounds
-  part_speeds -- speed --> part_samples
-  habits -- habit --> part_textures
-  bass_habits -- habit --> part_textures
-  drum_habits -- habit --> part_textures
-  drum_group_habits -- habit --> part_textures
-  balance -- habit --> part_textures
-  form -- form --> part_textures
-  letters -- form --> part_textures
-  form -- form --> section_levels
-  letters -- form --> section_levels
-  habits -- habit --> part_entries
-  bass_habits -- habit --> part_entries
-  drum_habits -- habit --> part_entries
-  drum_group_habits -- habit --> part_entries
-  balance -- habit --> part_entries
-  form -- form --> part_entries
-  letters -- form --> part_entries
-  lengths -- length --> part_entries
-  length_habits -- length --> part_entries
-  habits -- habit --> drum_group_habits
-  bass_habits -- habit --> drum_group_habits
-  drum_habits -- habit --> drum_group_habits
+  balance -- tune --> counter_pairs
+  balance -- tune --> counter_shares
   balance -- habit --> drum_group_habits
-  keys -- mode --> contour_sizes
-  contours -- contour --> contour_sizes
-  keys -- mode --> phrase_shifts
-  relations -- relation --> phrase_shifts
-  habits -- habit --> tune_grain
-  bass_habits -- habit --> tune_grain
-  drum_habits -- habit --> tune_grain
-  drum_group_habits -- habit --> tune_grain
+  balance -- tempo --> echo_habits
+  balance -- weight --> echo_habits
+  balance -- tempo --> habits
+  balance -- weight --> habits
+  balance -- habit --> kit_pieces
+  balance -- habit --> lengths
+  balance -- habit --> part_entries
+  balance -- habit --> part_speeds
+  balance -- habit --> part_textures
+  balance -- band --> parts
+  balance -- tempo --> tempos
   balance -- habit --> tune_grain
+  balance -- band --> voices
+  bass_habits -- habit --> cell_handoffs
+  bass_habits -- habit --> drum_group_habits
+  bass_habits -- habit --> kit_pieces
+  bass_habits -- habit --> lengths
+  bass_habits -- habit --> part_entries
+  bass_habits -- habit --> part_speeds
+  bass_habits -- habit --> part_textures
+  bass_habits -- habit --> tune_grain
+  drum_group_habits -- habit --> cell_handoffs
+  drum_group_habits -- habit --> kit_pieces
+  drum_group_habits -- habit --> lengths
+  drum_group_habits -- habit --> part_entries
+  drum_group_habits -- habit --> part_speeds
+  drum_group_habits -- habit --> part_textures
+  drum_group_habits -- habit --> tune_grain
+  drum_habits -- habit --> cell_handoffs
+  drum_habits -- habit --> drum_group_habits
+  drum_habits -- habit --> kit_pieces
+  drum_habits -- habit --> lengths
+  drum_habits -- habit --> part_entries
+  drum_habits -- habit --> part_speeds
+  drum_habits -- habit --> part_textures
+  drum_habits -- habit --> tune_grain
+  form -- form --> part_entries
+  form -- form --> part_textures
+  form -- form --> phrase_letters
+  form -- form --> section_levels
+  habits -- habit --> cell_handoffs
+  habits -- habit --> drum_group_habits
+  habits -- habit --> kit_pieces
+  habits -- habit --> lengths
+  habits -- habit --> part_entries
+  habits -- habit --> part_speeds
+  habits -- habit --> part_textures
+  habits -- habit --> tune_grain
+  keys -- mode --> chords
+  length_habits -- length --> part_entries
+  lengths -- length --> part_entries
+  letters -- form --> part_entries
+  letters -- form --> part_textures
+  letters -- form --> phrase_letters
+  letters -- form --> section_levels
+  levels -- tune --> counter_pairs
+  levels -- tune --> counter_shares
+  part_speeds -- speed --> gap_sounds
+  part_speeds -- speed --> sample_lengths
+  parts -- band --> voices
+  periods -- period --> period_holds
+  tempos -- tempo --> bass_habits
+  tempos -- tempo --> echo_habits
+  tempos -- tempo --> habits
+  weights -- weight --> bass_habits
+  weights -- weight --> echo_habits
+  weights -- weight --> habits
+```
+
+### the parts' writing (whole.write hands the table to a writer)
+
+```mermaid
+flowchart LR
+  balance(["balance"])
+  bass_habits(["bass_habits"])
+  drum_group_habits(["drum_group_habits"])
+  drum_habits(["drum_habits"])
+  feels(["feels"])
+  habits(["habits"])
+  keys(["keys"])
+  layers(["layers"])
+  tempos(["tempos"])
+  voicing_habits(["voicing_habits"])
+  weights(["weights"])
+  subgraph writing["the parts' writing (whole.write hands the table to a writer)"]
+    rhythm["rhythm"]
+    bass["bass"]
+    voicings["voicings"]
+    theme_body["theme_body"]
+    moves["moves"]
+    melody_recall["melody_recall"]
+    layer_sounds["layer_sounds"]
+    second_figures["second_figures"]
+    counter_figures["counter_figures"]
+  end
+  balance -- habit --> bass
+  balance -- tempo --> bass
+  balance -- tempo --> counter_figures
+  balance -- weight --> counter_figures
+  balance -- habit --> melody_recall
+  balance -- habit --> moves
+  balance -- habit --> rhythm
+  balance -- tempo --> rhythm
+  balance -- layer --> second_figures
+  balance -- tempo --> second_figures
+  balance -- habit --> voicings
+  bass_habits -- habit --> bass
+  bass_habits -- habit --> melody_recall
+  bass_habits -- habit --> moves
+  bass_habits -- habit --> rhythm
+  bass_habits -- habit --> voicings
+  drum_group_habits -- habit --> bass
+  drum_group_habits -- habit --> melody_recall
+  drum_group_habits -- habit --> moves
+  drum_group_habits -- habit --> rhythm
+  drum_group_habits -- habit --> voicings
+  drum_habits -- habit --> bass
+  drum_habits -- habit --> melody_recall
+  drum_habits -- habit --> moves
+  drum_habits -- habit --> rhythm
+  drum_habits -- habit --> voicings
+  feels -- feel --> bass
+  feels -- feel --> counter_figures
+  feels -- feel --> rhythm
+  feels -- feel --> second_figures
+  habits -- habit --> bass
+  habits -- habit --> melody_recall
+  habits -- habit --> moves
+  habits -- habit --> rhythm
+  habits -- habit --> voicings
+  keys -- mode --> moves
+  layers -- layer --> second_figures
+  tempos -- tempo --> bass
+  tempos -- tempo --> counter_figures
+  tempos -- tempo --> rhythm
+  tempos -- tempo --> second_figures
+  voicing_habits -- shape --> voicings
+  weights -- weight --> counter_figures
+```
+
+### the drums
+
+```mermaid
+flowchart LR
+  balance(["balance"])
+  bass_habits(["bass_habits"])
+  drum_group_habits(["drum_group_habits"])
+  drum_habits(["drum_habits"])
+  feels(["feels"])
+  habits(["habits"])
+  kit_pieces(["kit_pieces"])
+  tempos(["tempos"])
+  subgraph drums["the drums"]
+    drums["drums"]
+    drums_KSt["drums-KSt"]
+    drums_h["drums-h"]
+    drums_c["drums-c"]
+    drums_o["drums-o"]
+  end
+  balance -- habit --> drums
+  balance -- kit --> drums
+  balance -- tempo --> drums
+  balance -- habit --> drums_KSt
+  balance -- tempo --> drums_KSt
+  balance -- habit --> drums_c
+  balance -- tempo --> drums_c
+  balance -- habit --> drums_h
+  balance -- tempo --> drums_h
+  balance -- habit --> drums_o
+  balance -- tempo --> drums_o
+  bass_habits -- habit --> drums
+  bass_habits -- habit --> drums_KSt
+  bass_habits -- habit --> drums_c
+  bass_habits -- habit --> drums_h
+  bass_habits -- habit --> drums_o
+  drum_group_habits -- habit --> drums
+  drum_group_habits -- habit --> drums_KSt
+  drum_group_habits -- habit --> drums_c
+  drum_group_habits -- habit --> drums_h
+  drum_group_habits -- habit --> drums_o
+  drum_habits -- habit --> drums
+  drum_habits -- habit --> drums_KSt
+  drum_habits -- habit --> drums_c
+  drum_habits -- habit --> drums_h
+  drum_habits -- habit --> drums_o
+  feels -- feel --> drums
+  feels -- feel --> drums_KSt
+  feels -- feel --> drums_c
+  feels -- feel --> drums_h
+  feels -- feel --> drums_o
+  habits -- habit --> drums
+  habits -- habit --> drums_KSt
+  habits -- habit --> drums_c
+  habits -- habit --> drums_h
+  habits -- habit --> drums_o
+  kit_pieces -- kit --> drums
+  tempos -- tempo --> drums
+  tempos -- tempo --> drums_KSt
+  tempos -- tempo --> drums_c
+  tempos -- tempo --> drums_h
+  tempos -- tempo --> drums_o
+```
+
+### the bass
+
+```mermaid
+flowchart LR
+  balance(["balance"])
+  counter_samples(["counter_samples"])
+  layers(["layers"])
+  subgraph bass["the bass"]
+    voice_intervals["voice_intervals"]
+    voice_moves["voice_moves"]
+  end
+  balance -- kind --> voice_intervals
+  balance -- kind --> voice_moves
+  counter_samples -- kind --> voice_intervals
+  counter_samples -- kind --> voice_moves
+  layers -- kind --> voice_intervals
+  layers -- kind --> voice_moves
+```
+
+### the upper parts
+
+```mermaid
+flowchart LR
+  balance(["balance"])
+  length_habits(["length_habits"])
+  lengths(["lengths"])
+  tempos(["tempos"])
+  subgraph upper["the upper parts"]
+    periods["periods"]
+  end
+  balance -- tempo --> periods
+  length_habits -- length --> periods
+  lengths -- length --> periods
+  tempos -- tempo --> periods
+```
+
+### the tune
+
+```mermaid
+flowchart LR
+  balance(["balance"])
+  bass_habits(["bass_habits"])
+  drum_group_habits(["drum_group_habits"])
+  drum_habits(["drum_habits"])
+  habits(["habits"])
+  keys(["keys"])
+  subgraph melody["the tune"]
+    values["values"]
+    contours["contours"]
+    endings["endings"]
+    relations["relations"]
+    cell_rhythms["cell_rhythms"]
+    half_recall["half_recall"]
+    recall_continues["recall_continues"]
+    pair_recall["pair_recall"]
+    pair_bar_recall["pair_bar_recall"]
+    recall_sources["recall_sources"]
+    climax["climax"]
+    arc["arc"]
+    summit["summit"]
+    contour_sizes["contour_sizes"]
+    phrase_shifts["phrase_shifts"]
+  end
+  balance -- habit --> half_recall
+  balance -- habit --> pair_bar_recall
+  balance -- habit --> pair_recall
+  balance -- habit --> recall_continues
+  balance -- habit --> recall_sources
+  balance -- habit --> relations
+  balance -- habit --> values
+  bass_habits -- habit --> half_recall
+  bass_habits -- habit --> pair_bar_recall
+  bass_habits -- habit --> pair_recall
+  bass_habits -- habit --> recall_continues
+  bass_habits -- habit --> recall_sources
+  bass_habits -- habit --> relations
+  bass_habits -- habit --> values
+  contours -- contour --> contour_sizes
+  drum_group_habits -- habit --> half_recall
+  drum_group_habits -- habit --> pair_bar_recall
+  drum_group_habits -- habit --> pair_recall
+  drum_group_habits -- habit --> recall_continues
+  drum_group_habits -- habit --> recall_sources
+  drum_group_habits -- habit --> relations
+  drum_group_habits -- habit --> values
+  drum_habits -- habit --> half_recall
+  drum_habits -- habit --> pair_bar_recall
+  drum_habits -- habit --> pair_recall
+  drum_habits -- habit --> recall_continues
+  drum_habits -- habit --> recall_sources
+  drum_habits -- habit --> relations
+  drum_habits -- habit --> values
+  habits -- habit --> half_recall
+  habits -- habit --> pair_bar_recall
+  habits -- habit --> pair_recall
+  habits -- habit --> recall_continues
+  habits -- habit --> recall_sources
+  habits -- habit --> relations
+  habits -- habit --> values
+  keys -- mode --> contour_sizes
+  keys -- mode --> contours
+  keys -- mode --> endings
+  keys -- mode --> phrase_shifts
+  keys -- mode --> relations
+  relations -- relation --> phrase_shifts
+```
+
+### the render
+
+```mermaid
+flowchart LR
+  part_speeds(["part_speeds"])
+  subgraph render["the render"]
+    ranges["ranges"]
+    part_samples["part_samples"]
+  end
+  part_speeds -- speed --> part_samples
+```
+
+### counted, drawn nowhere (the measures' words)
+
+```mermaid
+flowchart LR
+  balance(["balance"])
+  bass_habits(["bass_habits"])
+  contours(["contours"])
+  drum_group_habits(["drum_group_habits"])
+  drum_habits(["drum_habits"])
+  habits(["habits"])
+  keys(["keys"])
+  length_habits(["length_habits"])
+  lengths(["lengths"])
+  voicing_habits(["voicing_habits"])
+  subgraph unused["counted, drawn nowhere (the measures' words)"]
+    widths["widths"]
+    changes["changes"]
+    cadences["cadences"]
+    peaks["peaks"]
+    texture["texture"]
+    presence["presence"]
+    doubles["doubles"]
+    weights["weights"]
+  end
+  balance -- habit --> changes
+  bass_habits -- habit --> changes
+  contours -- contour --> peaks
+  drum_group_habits -- habit --> changes
+  drum_habits -- habit --> changes
+  habits -- habit --> changes
+  keys -- mode --> cadences
+  keys -- mode --> peaks
+  length_habits -- length --> cadences
+  lengths -- length --> cadences
+  voicing_habits -- shape --> widths
 ```
