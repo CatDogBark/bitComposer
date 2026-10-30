@@ -317,7 +317,7 @@ ApplicationWindow {
     property bool settCarryTheme: false
     property bool settBandReturns: false
     readonly property var vocabularies: JSON.parse(backend.vocabularies())
-    readonly property var styleOptions: ["classic"].concat(vocabularies.map(function(v) { return v.name }))
+    readonly property var styleOptions: ["classic"].concat(vocabularies.filter(function(v) { return v.ready }).map(function(v) { return v.name }))
     property string settDrumDensity: "random"
     property bool settDrumFills: true
     property string settDrumSwing: "random"
@@ -413,6 +413,7 @@ ApplicationWindow {
         if (settStyle !== "classic") {                       // the writer on a vocabulary: the sound set and the two switches; Classic's options do not apply
             flags += " --vocabulary " + settStyle
             if (["ffvi", "mana", "evermore", "megamanx"].indexOf(settSound) >= 0) flags += " --pack " + settSound
+            else if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)
             if (settCarryTheme) flags += " --carry-theme"
             if (settBandReturns) flags += " --band-returns"
             return flags

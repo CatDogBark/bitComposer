@@ -201,8 +201,9 @@ def build_parser():
         "--vocabulary",
         choices=["none"] + _vocabulary_names(),
         default="none",
-        help="write the song from a game's vocabulary (docs/IDIOM.md, phase 6) on the sound set --pack names "
-             "(ffvi, mana, evermore or megamanx; random: one of them); the song's own options above are Classic's and do not apply",
+        help="write the song from a vocabulary (docs/IDIOM.md, phase 6): a shipped game's, 'library' (everything imported) "
+             "or 'pack:NAME' (an imported pack's own), on the sound set --pack names (ffvi, mana, evermore or megamanx), "
+             "the pack --pack-file names, or a pack vocabulary's own samples; the options above are Classic's and do not apply",
     )
     parser.add_argument(
         "--carry-theme",
@@ -284,7 +285,8 @@ def compose_written_from_args(args, seed):
     """A song from a vocabulary (phase 6), saved as compose_from_args saves Classic's."""
     from .spc import convert
     from .written import compose_written
-    out = compose_written(args.vocabulary, args.pack, seed, carry_theme=args.carry_theme, band_returns=args.band_returns)
+    out = compose_written(args.vocabulary, args.pack, seed, carry_theme=args.carry_theme, band_returns=args.band_returns,
+                          pack_file=args.pack_file)
     os.makedirs(args.output_dir, exist_ok=True)
     if args.output and args.count == 1:
         filepath = args.output

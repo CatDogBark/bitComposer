@@ -208,8 +208,12 @@ comes back; `--band-returns` brings the chords, the bass or the
 accompaniment back with it. A seed names one song on every machine. The
 rest of the options are Classic's, the generator without a vocabulary, and
 do not apply. In the player, SET's STYLE row picks Classic or a vocabulary
-(with THEME and RETURNS for the two switches) and GENERATE writes from it;
-the rest of the 2.0 window is coming (`docs/idiom/phase-6-generator.md`).
+(with THEME and RETURNS for the two switches) and GENERATE writes from it.
+Importing a game (below) also fits the game's own vocabulary beside its
+samples (`--vocabulary pack:NAME`, on the game's sounds) and recounts one
+over everything you have imported (`--vocabulary library`); the window
+offers each once 40 songs stand behind it. The rest of the 2.0 window is
+coming (`docs/idiom/phase-6-generator.md`).
 
 ## Packs from your games
 

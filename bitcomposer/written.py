@@ -22,17 +22,39 @@ def sound_set(pack: str | None, rng: random.Random) -> str:
     return pack if pack in SOUND_SETS else rng.choice(SOUND_SETS)
 
 
+def pack_sounds(pack_file) -> tuple[str, set]:
+    """An imported pack's samples as the sound set: its voices registered, its samples' loudness known to the writer;
+    (the pack's name, its own sample ids)."""
+    import json
+    from pathlib import Path
+    from .packs.packfile import load_pack_file
+    from .translate import rhythm
+    name = load_pack_file(str(pack_file))
+    data = json.loads(Path(pack_file).read_text(encoding="utf-8"))
+    rhythm.set_loudness(rhythm.load_loudness(Path(pack_file).parent))
+    return name, set(data.get("samples") or {})
+
+
 def compose_written(vocabulary: str, pack: str | None = None, seed: int | None = None, carry_theme: bool = False,
-                    band_returns: bool = False) -> dict:
-    """One song from a shipped vocabulary: {"score", "title", "seed", "sounds", "vocabulary", "info"}; the score renders
-    through the SNES back end (`spc.convert.render`). A seed names one song; without one, a seed is drawn."""
+                    band_returns: bool = False, pack_file=None) -> dict:
+    """One song from a vocabulary (shipped, the library's, or an imported pack's): {"score", "title", "seed", "sounds",
+    "vocabulary", "info", "plan"}; the score renders through the SNES back end (`spc.convert.render`). The sounds: the
+    built-in set `pack` names, the imported pack `pack_file` names, else an imported pack's own samples for its own
+    vocabulary, else one of the SNES sets the seed draws. A seed names one song; without one, a seed is drawn."""
     seed = random.randrange(1, 1_000_000) if seed is None else int(seed)
     rng = random.Random(f"written:{seed}")
-    sounds = sound_set(pack, rng)
+    own = set()
+    if pack_file is None and pack not in SOUND_SETS and vocabularies.pack_name(vocabulary):
+        from .packs.library import pack_file as library_pack_file
+        pack_file = library_pack_file(vocabularies.pack_name(vocabulary))
+    if pack_file is not None:
+        sounds, own = pack_sounds(pack_file)
+    else:
+        sounds = sound_set(pack, rng)
     models = vocabularies.load(vocabulary)
     label = vocabularies.label(vocabulary)
     from .translate import harmony, whole
-    out = whole.compose(models, PACKS[sounds], set(), sounds, seed, game=label, title=f"{label} {seed}", max_bars=MAX_BARS,
+    out = whole.compose(models, PACKS[sounds], own, sounds, seed, game=label, title=f"{label} {seed}", max_bars=MAX_BARS,
                         min_bars=MIN_BARS, tail_bars=TAIL_BARS, themed=carry_theme, band_returns=band_returns, read=False, fade=FADE,
                         loops=1)
     p, score = out["plan"], out["score"]

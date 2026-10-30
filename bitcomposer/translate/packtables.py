@@ -150,10 +150,11 @@ def fit(name: str, units) -> dict | None:
             "songs": len({u.song for u in units}), "model": model.to_json()}
 
 
-def build(db, game: str, say=lambda *a: None) -> dict:
-    """The tables for one game from its readings: {"source": ..., "tables": {name: entry}}."""
+def build(db, game: str | None, say=lambda *a: None) -> dict:
+    """The tables for one game from its readings (None: every game's songs together, the library's vocabulary):
+    {"source": ..., "tables": {name: entry}}."""
     songs = {"rhythm": rhythm.load(db, game)[0], "phrases": phrases.load(db, game)[0]}
-    out = {"source": {"game": game, "songs": len(songs["rhythm"]), "version": VERSION,
+    out = {"source": {"game": game or "library", "songs": len(songs["rhythm"]), "version": VERSION,
                       "votes": VOTES, "discount": DISCOUNT}, "tables": {}}
     for name, (module, builder, kwargs, *_) in KEPT.items():
         entry = fit(name, getattr(MODULES[module], builder)(songs[module], **kwargs))
@@ -174,6 +175,23 @@ def read(d: dict) -> dict:
     return out
 
 
+def into(db, game: str, pack_path, say=lambda *a: None) -> dict:
+    """A game's tables counted with its pack's samples' loudness and written into the pack file as its second format
+    (what the player's import does after the pack is made, and `--into` from the command line); the tables."""
+    from ..packs import packfile
+    path = Path(pack_path)
+    rhythm.set_loudness(rhythm.load_loudness(path.parent))     # a level is counted as loudness (round 56)
+    say(f"{path}: {len(rhythm.SAMPLE_LOUDNESS)} samples' loudness read")
+    data = build(db, game, say=say)
+    pack = json.loads(path.read_text(encoding="utf-8"))
+    pack[packfile.KEY] = packfile.TABLED
+    pack[packfile.TABLES] = data
+    packfile.parse(pack, path.parent, source=path.name)         # it must still check before it is written
+    path.write_text(json.dumps(pack, indent=1) + "\n", encoding="utf-8")
+    say(f"{path}: format {packfile.TABLED}, {len(data['tables'])} tables")
+    return data
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="write a game's tables for a pack's second format")
     ap.add_argument("--db", help="the readings database (default: the product's)")
@@ -184,23 +202,16 @@ def main(argv=None) -> int:
     from . import store
     from ..packs import packfile
     db = store.connect(args.db)
-    if args.into:                                           # the pack's samples' own loudness: a level is counted as loudness (round 56)
-        rhythm.set_loudness(rhythm.load_loudness(Path(args.into).parent))
-        print(f"{args.into}: {len(rhythm.SAMPLE_LOUDNESS)} samples' loudness read", file=sys.stderr)
+    say = lambda line: print(line, file=sys.stderr)   # noqa: E731
     print(f"{args.game}: counting the kept tables", file=sys.stderr)
-    data = build(db, args.game, say=lambda line: print(line, file=sys.stderr))
+    if args.into:
+        data = into(db, args.game, args.into, say=say)
+    else:
+        data = build(db, args.game, say=say)
     text = json.dumps(data, separators=(",", ":")) + "\n"
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
         print(f"{args.out}: {len(data['tables'])} tables, {len(text) / 1e6:.1f} MB", file=sys.stderr)
-    if args.into:
-        path = Path(args.into)
-        pack = json.loads(path.read_text(encoding="utf-8"))
-        pack[packfile.KEY] = packfile.TABLED
-        pack[packfile.TABLES] = data
-        packfile.parse(pack, path.parent, source=path.name)       # it must still check before it is written
-        path.write_text(json.dumps(pack, indent=1) + "\n", encoding="utf-8")
-        print(f"{path}: format {packfile.TABLED}, {len(data['tables'])} tables", file=sys.stderr)
     if not args.out and not args.into:
         sys.stdout.write(text)
     return 0

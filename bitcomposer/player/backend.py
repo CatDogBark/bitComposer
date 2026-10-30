@@ -671,10 +671,11 @@ class Backend(QObject):
 
     @Slot(result=str)
     def vocabularies(self):
-        """The shipped vocabularies the window's STYLE row offers beside Classic: JSON [{name, label}]."""
-        from ..vocabularies import label, names
+        """The vocabularies on this machine for the window's STYLE row beside Classic: JSON [{name, label, songs, ready,
+        kind}]; the row offers the ready ones (a fitted vocabulary needs vocabularies.MIN_SONGS songs)."""
+        from ..vocabularies import listing
         try:
-            return json.dumps([{"name": n, "label": label(n)} for n in names()])
+            return json.dumps(listing())
         except OSError:
             return "[]"
 

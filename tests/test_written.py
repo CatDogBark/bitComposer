@@ -61,3 +61,57 @@ class WrittenSongTests(unittest.TestCase):
             raw = open(path, "rb").read()
             self.assertEqual(raw[:4], b"IMPM")
             self.assertIn(info["title"].encode("latin-1"), raw[:30])
+
+
+class LibraryVocabularyTests(unittest.TestCase):
+    """The vocabularies fitted on this machine: the library's over everything imported, and an imported pack's own."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.old = os.environ.get("BITCOMPOSER_DATA_DIR")
+        os.environ["BITCOMPOSER_DATA_DIR"] = self.tmp.name
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("BITCOMPOSER_DATA_DIR", None)
+        else:
+            os.environ["BITCOMPOSER_DATA_DIR"] = self.old
+        self.tmp.cleanup()
+
+    def test_the_library_and_a_tabled_pack_are_listed_and_ready_by_their_songs(self):
+        import json
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from test_library import make_pack
+        from bitcomposer.packs import library, packfile
+        self.assertEqual(vocabularies.names(), vocabularies.shipped())
+        tables = dict(vocabularies.raw("ffvi"))
+        vocabularies.library_dir().mkdir(parents=True)
+        thin = {"source": dict(tables["source"], game="library", label="My library", songs=10), "tables": tables["tables"]}
+        vocabularies.library_path().write_text(json.dumps(thin), encoding="utf-8")
+        self.assertIn("library", vocabularies.names())
+        self.assertEqual((vocabularies.label("library"), vocabularies.songs("library"), vocabularies.ready("library")), ("My library", 10, False))
+        thin["source"]["songs"] = 67
+        vocabularies.library_path().write_text(json.dumps(thin), encoding="utf-8")
+        self.assertTrue(vocabularies.ready("library"))
+        folder = library.packs_dir() / "test_quest"
+        folder.mkdir(parents=True)
+        data = make_pack(folder)
+        self.assertNotIn("pack:test_quest", vocabularies.names())            # a format 1 pack has no vocabulary
+        data[packfile.KEY] = packfile.TABLED
+        data[packfile.TABLES] = tables
+        (folder / "pack.json").write_text(json.dumps(data), encoding="utf-8")
+        self.assertIn("pack:test_quest", vocabularies.names())
+        self.assertEqual(vocabularies.pack_name("pack:test_quest"), "test_quest")
+        self.assertTrue(vocabularies.ready("pack:test_quest"))
+        kinds = {v["name"]: v["kind"] for v in vocabularies.listing()}
+        self.assertEqual((kinds["ffvi"], kinds["library"], kinds["pack:test_quest"]), ("shipped", "library", "pack"))
+        self.assertIn("pack:test_quest", build_parser().parse_args(["--vocabulary", "pack:test_quest"]).vocabulary)
+        # written from the pack's vocabulary: on its own samples, unless a built-in set is named
+        out = written.compose_written("pack:test_quest", None, 3)
+        self.assertEqual(out["sounds"], "test_quest")
+        self.assertEqual(out["info"]["vocabulary"], data.get("label", "test_quest"))
+        out = written.compose_written("pack:test_quest", "mana", 3)
+        self.assertEqual(out["sounds"], "mana")
+        out = written.compose_written("ffvi", None, 3, pack_file=folder / "pack.json")
+        self.assertEqual(out["sounds"], "test_quest")

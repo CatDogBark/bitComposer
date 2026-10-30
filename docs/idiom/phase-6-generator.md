@@ -122,10 +122,24 @@ the warning on a library vocabulary).
   Classic's, the settings summary says "written from Final Fantasy VI",
   and the choice is saved with the other settings. A written song's
   message carries a `layout:` line, so the window names its channels by
-  part. Not yet: the library vocabulary, the import pipeline's lead pass,
-  the loader rewrite, the copy check in CI, SOUND limited to the SNES sets
-  while a vocabulary is picked (today a chip or library sound falls back
-  to a drawn SNES set).
+  part.
+- **2.0rc1, piece 3 (2026-10-30).** The library's vocabularies. An import
+  keeps its readings in the data folder's database (`store.keep` from
+  `pack._make`), names the game in the pack's WHY file, counts the game's
+  tables with its samples' loudness into the pack as format 2
+  (`packtables.into`) and counts the library vocabulary again over every
+  song imported, all games together (`vocabularies.refit_library`, to
+  `vocabularies/library.json` in the data folder). `bitcomposer.vocabularies`
+  names them beside the shipped ones (`library`, `pack:<name>`), with the
+  songs behind each and whether it is ready (MIN_SONGS 40, the measured
+  threshold); the window's STYLE row offers the ready ones, the command
+  line takes any. A pack's vocabulary writes on the pack's own samples
+  unless a built-in set is named; `--pack-file` names an imported pack as
+  the sounds for any vocabulary. Not yet: the import pipeline's lead pass
+  (the readings' melody is the reader's label until then), the loader
+  rewrite, the copy check in CI, the panel saying "N songs read, the
+  vocabulary needs 40", SOUND limited to SNES sets while a vocabulary is
+  picked.
 
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
