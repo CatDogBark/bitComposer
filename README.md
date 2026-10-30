@@ -207,8 +207,9 @@ picks one). `--carry-theme` draws the tune's phrases again until its theme
 comes back; `--band-returns` brings the chords, the bass or the
 accompaniment back with it. A seed names one song on every machine. The
 rest of the options are Classic's, the generator without a vocabulary, and
-do not apply. Developer tools so far: the window's GENERATE still writes
-Classic's songs until the 2.0 window lands (`docs/idiom/phase-6-generator.md`).
+do not apply. In the player, SET's STYLE row picks Classic or a vocabulary
+(with THEME and RETURNS for the two switches) and GENERATE writes from it;
+the rest of the 2.0 window is coming (`docs/idiom/phase-6-generator.md`).
 
 ## Packs from your games
 

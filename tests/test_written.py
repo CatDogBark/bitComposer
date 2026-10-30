@@ -40,7 +40,8 @@ class WrittenSongTests(unittest.TestCase):
         self.assertEqual(out["sounds"], "mana")
         self.assertEqual(out["info"]["vocabulary"], "Final Fantasy VI")
         self.assertIn("melody", out["info"]["band"])
-        self.assertTrue(out["score"].message[1].startswith("Written by bitComposer from Final Fantasy VI's vocabulary on the mana sounds"))
+        self.assertTrue(any(l.startswith("Written by bitComposer from Final Fantasy VI's vocabulary on the mana sounds") for l in out["score"].message))
+        self.assertTrue(any(l.startswith("layout: ") and "melody" in l for l in out["score"].message))
 
     def test_random_sounds_are_one_of_the_snes_sets_and_the_seed_picks_them(self):
         import random

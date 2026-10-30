@@ -39,7 +39,12 @@ def compose_written(vocabulary: str, pack: str | None = None, seed: int | None =
     key = f"{harmony.NAMES[p.tonic]} {p.mode}"
     title = names.song_title(key, rng=rng, sound=sounds, tempo=_tempo_word(p.bpm))[:names.MAX_TITLE]
     score.title = title
+    layout = [None] * sum(p.voices[r] for r in out["first"])     # the window's channel names: each voice's part ("layout:" as Classic writes it)
+    for role, start in out["first"].items():
+        for v in range(p.voices[role]):
+            layout[start + v] = role if v == 0 else f"{role} {v + 1}"
     score.message = [f"{title} - {key} - {p.bpm:.0f} BPM - form {p.letters}",
+                     "layout: " + ", ".join(x or "" for x in layout),
                      f"Written by bitComposer from {label}'s vocabulary on the {sounds} sounds (seed {seed}; docs/IDIOM.md, phase 6):",
                      "the band, the figures, the tune and its balance as the game's own songs have them, none of their notes."] + list(score.message or [])[3:]
     info = {"title": title, "key": key, "tempo": int(round(p.bpm)), "form": p.letters, "bars": p.bars, "band": list(p.band),

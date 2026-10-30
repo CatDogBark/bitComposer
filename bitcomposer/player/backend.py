@@ -2,6 +2,7 @@
 properties, its actions as slots. app.py owns the window, tray and dialogs;
 this owns nothing visual.
 """
+import json
 import os
 import shlex
 import shutil
@@ -667,6 +668,15 @@ class Backend(QObject):
     def packFlags(self, name):
         """What SOUND adds to the settings for one of these packs."""
         return " --pack-file " + shlex.quote(str(library.pack_file(name)))
+
+    @Slot(result=str)
+    def vocabularies(self):
+        """The shipped vocabularies the window's STYLE row offers beside Classic: JSON [{name, label}]."""
+        from ..vocabularies import label, names
+        try:
+            return json.dumps([{"name": n, "label": label(n)} for n in names()])
+        except OSError:
+            return "[]"
 
     # The window's own settings (compose choices, preset, tab, zoom), as the
     # QML hands them over: JSON beside the engine's player.json.
