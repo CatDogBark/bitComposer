@@ -394,7 +394,7 @@ runs the urn.
 
 ### The bass written into Terra (2026-10-21)
 
-`translate/writer.py` and `tools/table_bass.py`: the song's bass voice
+`translate/writer/` and `tools/table_bass.py`: the song's bass voice
 replaced by one written from the bass table fitted on every other song
 (the song never votes for its own bars), the habit the song's own, the
 figures drawn as the mixture, each mark a chord tone in the song's own

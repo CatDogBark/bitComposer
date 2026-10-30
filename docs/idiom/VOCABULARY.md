@@ -19,9 +19,9 @@ the writers do with what it says. The rule of evidence (`../IDIOM.md`): a
 writer is never patched past what its vocabulary says; a missing thing is
 a new table here, and a table that exists but misleads is fixed as a
 drawing fault. The numbers quoted are Final Fantasy VI's (67 songs) unless
-said otherwise. Counting code: `translate/rhythm.py` and
-`translate/phrases.py`; the plan: `translate/whole.py`; the parts:
-`translate/writer.py`.
+said otherwise. Counting code: `translate/rhythm/` and
+`translate/phrases.py`; the plan: `translate/whole/`; the parts:
+`translate/writer/`.
 
 The words are grouped by where the writing draws them, in the order the song is written: the plan's one-draw-a-song words, the figure tables the parts' writers share, then the drums, the bass, the upper parts, the tune, the counter-line and the render; last, the words counted for the measures and never drawn. Under each word a line from the code gives its shape, the function that draws it and the tables it conditions (`tools/vocab_map.py`; the map page draws the same as a graph).
 
