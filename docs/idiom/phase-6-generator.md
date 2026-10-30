@@ -113,10 +113,19 @@ the warning on a library vocabulary).
   set and the title when not named, the module's message naming the
   vocabulary, the sounds and the seed). A song writes in under a second on
   the laptop. Tests: `tests/test_written.py`; the determinism test now
-  writes from the shipped vocabulary. Not yet: the window's GENERATE (the
-  flags exist; a Style choice in the window is the next piece), the
-  library vocabulary, the import pipeline's lead pass, the loader rewrite,
-  the copy check in CI.
+  writes from the shipped vocabulary.
+- **2.0rc1, piece 2 (2026-10-30).** GENERATE writes from it: SET's first
+  row is STYLE (Classic, or a shipped vocabulary the backend lists), with
+  THEME and RETURNS rows for the two switches while a vocabulary is
+  picked; the window's flags are then the writer's alone (the vocabulary,
+  the SNES sound set when SOUND names one, the switches) and none of
+  Classic's, the settings summary says "written from Final Fantasy VI",
+  and the choice is saved with the other settings. A written song's
+  message carries a `layout:` line, so the window names its channels by
+  part. Not yet: the library vocabulary, the import pipeline's lead pass,
+  the loader rewrite, the copy check in CI, SOUND limited to the SNES sets
+  while a vocabulary is picked (today a chip or library sound falls back
+  to a drawn SNES set).
 
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
