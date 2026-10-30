@@ -478,6 +478,12 @@ def _make(files, paths, out, name, workers, say, progress) -> Path:
         say("  drums named: " + ", ".join(f"{k[:10]} {g.names[k]} ({uses[k]} hits)" for k in sorted(g.names, key=lambda k: -uses[k])))
     if progress:
         progress(len(files), len(files))
+    try:                                                    # the lead by what is heard (round 64): each voice rendered alone, the melody label moved
+        from . import lead                                  # where another voice carries the tune; before the tables, which count on the lead
+        folder = os.path.commonpath([os.path.dirname(os.path.abspath(str(f))) for f in files])
+        lead.run(db, game, folder, say=say)
+    except Exception as e:                                  # the readings stand as read; the error is said, not raised
+        say(f"  the lead pass did not run: {type(e).__name__}: {e}")
     try:                                                    # the game's vocabulary beside its samples (format 2), then the library's over everything
         from . import packtables
         from .. import vocabularies

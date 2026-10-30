@@ -101,6 +101,11 @@ def load_pack_file(path) -> str:
     pack, voices = parse(data, path.parent, source=str(path))
     name = check_name(pack["name"], source=str(path))
     unload(name)
+    taken = {v: other for other, vs in _loaded.items() for v in vs}   # a voice is registered as name_key, and both halves may hold
+    for key in voices:                                                # underscores: two packs could share a key (reported 2026-10-22)
+        if f"{name}_{key}" in taken:
+            raise PackError(f"{path}: voice {key!r} would be registered as {name}_{key!s}, which the pack "
+                            f"{taken[f'{name}_{key}']!r} already holds; rename the pack")
     registered = []
     for key, v in voices.items():
         voice = f"{name}_{key}"

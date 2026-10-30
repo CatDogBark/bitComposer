@@ -135,11 +135,22 @@ the warning on a library vocabulary).
   threshold); the window's STYLE row offers the ready ones, the command
   line takes any. A pack's vocabulary writes on the pack's own samples
   unless a built-in set is named; `--pack-file` names an imported pack as
-  the sounds for any vocabulary. Not yet: the import pipeline's lead pass
-  (the readings' melody is the reader's label until then), the loader
-  rewrite, the copy check in CI, the panel saying "N songs read, the
-  vocabulary needs 40", SOUND limited to SNES sets while a vocabulary is
-  picked.
+  the sounds for any vocabulary.
+- **2.0rc1, pieces 4 and 5 (2026-10-30).** The import runs the lead pass
+  (`translate/lead.py`: each voice of each song rendered alone, the melody
+  label moved where another voice carries the tune) after the readings
+  are kept and before the tables are counted, so the tokens count on the
+  heard lead as FFVI's shipped ones do. The pack loader refuses a pack
+  whose registered voice names (`name_key`) coincide with a loaded pack's,
+  naming the pack to rename (the bug reported 2026-10-22; the full
+  Sounds-and-Songs loader rewrite waits for the 2.0 window, since the
+  format and the panel it serves stay until then). Also found: the module
+  splits had not re-exported two annotated module-level names
+  (`rhythm.SAMPLE_LOUDNESS`, `SAMPLE_STRIKE`); fixed. Not yet: the copy
+  check (the reference set is machine-local, so it is a release check run
+  on the owner's machines over songs written from the shipped vocabulary,
+  not a CI job), the panel saying "N songs read, the vocabulary needs 40",
+  SOUND limited to SNES sets while a vocabulary is picked.
 
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 

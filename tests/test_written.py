@@ -115,3 +115,42 @@ class LibraryVocabularyTests(unittest.TestCase):
         self.assertEqual(out["sounds"], "mana")
         out = written.compose_written("ffvi", None, 3, pack_file=folder / "pack.json")
         self.assertEqual(out["sounds"], "test_quest")
+
+
+class ImportCountsAVocabularyTests(unittest.TestCase):
+    """What an import does after the pack is written (pack._make): the game's tables into the pack as format 2 and the
+    library vocabulary over every song in the readings; here on a generated song's readings, without the emulator."""
+
+    def test_the_tables_go_into_the_pack_and_the_library_is_counted(self):
+        import json
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from test_library import make_pack
+        from bitcomposer.composer import compose_song
+        from bitcomposer.packs import library, packfile
+        from bitcomposer.translate import harness, packtables
+        with tempfile.TemporaryDirectory() as tmp:
+            old = os.environ.get("BITCOMPOSER_DATA_DIR"); os.environ["BITCOMPOSER_DATA_DIR"] = tmp
+            try:
+                ctx = harness.load_generated(compose_song(seed=5, pack="ffvi"), "seed 5", "test", seconds=40.0)
+                folder = library.packs_dir() / "test_quest"; folder.mkdir(parents=True)
+                make_pack(folder)
+                data = packtables.into(ctx.db, "test", folder / "pack.json")
+                self.assertIn("rhythm", data["tables"])
+                back = json.loads((folder / "pack.json").read_text(encoding="utf-8"))
+                self.assertEqual(back[packfile.KEY], packfile.TABLED)
+                self.assertEqual(back[packfile.TABLES]["source"]["game"], "test")
+                self.assertIn("pack:test_quest", vocabularies.names())
+                self.assertEqual(vocabularies.songs("pack:test_quest"), 1)
+                self.assertFalse(vocabularies.ready("pack:test_quest"))                # one song is far under MIN_SONGS
+                path = vocabularies.refit_library(ctx.db)
+                self.assertEqual(path, vocabularies.library_path())
+                self.assertIn("library", vocabularies.names())
+                self.assertEqual((vocabularies.label("library"), vocabularies.songs("library")), ("My library", 1))
+                self.assertEqual(vocabularies.source("library")["games"], ["test"])
+                self.assertNotIn("library", [v["name"] for v in vocabularies.listing() if v["ready"]])
+            finally:
+                if old is None:
+                    os.environ.pop("BITCOMPOSER_DATA_DIR", None)
+                else:
+                    os.environ["BITCOMPOSER_DATA_DIR"] = old
