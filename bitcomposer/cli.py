@@ -198,12 +198,38 @@ def build_parser():
              "sounds are not changed by this)",
     )
     parser.add_argument(
+        "--vocabulary",
+        choices=["none"] + _vocabulary_names(),
+        default="none",
+        help="write the song from a vocabulary (docs/IDIOM.md, phase 6): a shipped game's, 'library' (everything imported) "
+             "or 'pack:NAME' (an imported pack's own), on the sound set --pack names (ffvi, mana, evermore or megamanx), "
+             "the pack --pack-file names, or a pack vocabulary's own samples; the options above are Classic's and do not apply",
+    )
+    parser.add_argument(
+        "--carry-theme",
+        action="store_true",
+        help="with --vocabulary: the tune's phrases are drawn again until its theme comes back later in the song",
+    )
+    parser.add_argument(
+        "--band-returns",
+        action="store_true",
+        help="with --vocabulary: a theme never comes back with the tune alone (the chords, the bass or the accompaniment come with it)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"bitcomposer {__version__}",
     )
 
     return parser
+
+
+def _vocabulary_names() -> list:
+    try:
+        from .vocabularies import names as vocabulary_names
+        return vocabulary_names()
+    except OSError:
+        return []
 
 
 def compose_from_args(args, index: int = 0):
@@ -214,6 +240,8 @@ def compose_from_args(args, index: int = 0):
     seed = args.seed
     if seed is not None and args.count > 1:
         seed = seed + index
+    if getattr(args, "vocabulary", "none") not in (None, "none"):
+        return compose_written_from_args(args, seed)
     pack, sound = args.pack, args.sound
     if args.pack_file:
         from .packs.packfile import load_pack_file
@@ -253,6 +281,23 @@ def compose_from_args(args, index: int = 0):
     return filepath, song["info"]
 
 
+def compose_written_from_args(args, seed):
+    """A song from a vocabulary (phase 6), saved as compose_from_args saves Classic's."""
+    from .spc import convert
+    from .written import compose_written
+    out = compose_written(args.vocabulary, args.pack, seed, carry_theme=args.carry_theme, band_returns=args.band_returns,
+                          pack_file=args.pack_file)
+    os.makedirs(args.output_dir, exist_ok=True)
+    if args.output and args.count == 1:
+        filepath = args.output
+    elif args.name == "title":
+        filepath = unique_path(args.output_dir, out["title"], args.suffix, prefix=args.prefix)
+    else:
+        filepath = os.path.join(args.output_dir, f"{args.prefix}bitcomposer_{int(time.time())}_{0}_s{out['seed']}{args.suffix}.it")
+    convert.render(out["score"], filepath)
+    return filepath, out["info"]
+
+
 def main():
     args = build_parser().parse_args()
 
@@ -268,7 +313,15 @@ def main():
 
         print(f"Generated: {filepath}")
 
-        if args.verbose:
+        if args.verbose and "vocabulary" in info:
+            print(f"  Title:       {info['title']}")
+            print(f"  Written from {info['vocabulary']}'s vocabulary on the {info['sounds']} sounds, seed {info['seed']}")
+            print(f"  Key:         {info['key']}")
+            print(f"  Tempo:       {info['tempo']} BPM")
+            print(f"  Form:        {info['form']} ({info['bars']} bars, {info['seconds']} s)")
+            print(f"  Band:        {', '.join(info['band'])}")
+            print()
+        elif args.verbose:
             print(f"  Title:       {info['title']}")
             print(f"  Key:         {info['key']} {info['scale']}")
             print(f"  Tempo:       {info['tempo']} BPM "

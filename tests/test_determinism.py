@@ -5,19 +5,13 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROGRAM = """
-import hashlib, sys
-from bitcomposer.composer import compose_song
-from bitcomposer.packs import PACKS
+import hashlib, os, tempfile
 from bitcomposer.spc import convert
-from bitcomposer.translate import harness, packtables, whole
-song = compose_song(seed=5, pack="ffvi")
-ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
-models = packtables.read(packtables.build(ctx.db, "test"))
-out = whole.compose(models, PACKS["ffvi"], set(), "ffvi", seed=1, game="test", max_bars=32, read=False)
-import tempfile, os
+from bitcomposer.written import compose_written
+out = compose_written("ffvi", "ffvi", 7)
 with tempfile.TemporaryDirectory() as d:
     path = os.path.join(d, "song.it"); convert.render(out["score"], path)
-    print(hashlib.md5(open(path, "rb").read()).hexdigest())
+    print(out["title"], hashlib.md5(open(path, "rb").read()).hexdigest())
 """
 
 
@@ -53,6 +47,6 @@ class DeterminismTests(unittest.TestCase):
     def test_a_written_song_is_the_same_under_any_hash_seed(self):
         """A seed names one song on every machine: no draw may ride the order of a set or a dict built from one (round 66
         found interval_weights iterating a table's vocabulary, a set of strings, so the counter's notes changed with
-        PYTHONHASHSEED). The same seed is composed in two processes with different hash seeds and must render the
-        same bytes."""
+        PYTHONHASHSEED). The same seed is written from the shipped vocabulary in two processes with different hash
+        seeds and must give the same title and the same bytes."""
         self.assertEqual(run_under(PROGRAM, "0"), run_under(PROGRAM, "1"), "the same seed wrote different songs under two hash seeds")

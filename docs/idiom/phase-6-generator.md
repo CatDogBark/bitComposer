@@ -102,6 +102,64 @@ the warning on a library vocabulary).
   import is a progress bar or an overnight job, and what runs in the
   background.
 
+## Built
+
+- **2.0rc1, piece 1 (2026-10-30).** The shipped vocabulary:
+  `bitcomposer/vocabularies/ffvi.json.gz` (pack4's 95 tables, 365 KB
+  gzipped; `bitcomposer.vocabularies` lists, labels and loads them) and the
+  command line's writer mode: `bitcomposer --vocabulary ffvi [--pack SET]
+  [--carry-theme] [--band-returns] -s SEED` (`bitcomposer/written.py`:
+  the whole-song writer on a built-in SNES sound set, the seed picking the
+  set and the title when not named, the module's message naming the
+  vocabulary, the sounds and the seed). A song writes in under a second on
+  the laptop. Tests: `tests/test_written.py`; the determinism test now
+  writes from the shipped vocabulary.
+- **2.0rc1, piece 2 (2026-10-30).** GENERATE writes from it: SET's first
+  row is STYLE (Classic, or a shipped vocabulary the backend lists), with
+  THEME and RETURNS rows for the two switches while a vocabulary is
+  picked; the window's flags are then the writer's alone (the vocabulary,
+  the SNES sound set when SOUND names one, the switches) and none of
+  Classic's, the settings summary says "written from Final Fantasy VI",
+  and the choice is saved with the other settings. A written song's
+  message carries a `layout:` line, so the window names its channels by
+  part.
+- **2.0rc1, piece 3 (2026-10-30).** The library's vocabularies. An import
+  keeps its readings in the data folder's database (`store.keep` from
+  `pack._make`), names the game in the pack's WHY file, counts the game's
+  tables with its samples' loudness into the pack as format 2
+  (`packtables.into`) and counts the library vocabulary again over every
+  song imported, all games together (`vocabularies.refit_library`, to
+  `vocabularies/library.json` in the data folder). `bitcomposer.vocabularies`
+  names them beside the shipped ones (`library`, `pack:<name>`), with the
+  songs behind each and whether it is ready (MIN_SONGS 40, the measured
+  threshold); the window's STYLE row offers the ready ones, the command
+  line takes any. A pack's vocabulary writes on the pack's own samples
+  unless a built-in set is named; `--pack-file` names an imported pack as
+  the sounds for any vocabulary.
+- **2.0rc1, pieces 4 and 5 (2026-10-30).** The import runs the lead pass
+  (`translate/lead.py`: each voice of each song rendered alone, the melody
+  label moved where another voice carries the tune) after the readings
+  are kept and before the tables are counted, so the tokens count on the
+  heard lead as FFVI's shipped ones do. The pack loader refuses a pack
+  whose registered voice names (`name_key`) coincide with a loaded pack's,
+  naming the pack to rename (the bug reported 2026-10-22; the full
+  Sounds-and-Songs loader rewrite waits for the 2.0 window, since the
+  format and the panel it serves stay until then). Also found: the module
+  splits had not re-exported two annotated module-level names
+  (`rhythm.SAMPLE_LOUDNESS`, `SAMPLE_STRIKE`); fixed.
+- **2.0rc1, piece 6 (2026-10-30).** The copy check as a release tool:
+  `python tools/copycheck.py --vocabulary ffvi --seeds 1-100` writes the
+  songs as the product does (no reference set at hand, so no phrase is
+  drawn again) and probes every four-bar window of each tune, from every
+  bar, against the games' four-bar phrases (the reference set, kept
+  outside the repository; not a CI job for that reason). Run before a
+  vocabulary ships: on the shipped FFVI vocabulary, seeds 1-100 plain and
+  101-200 with both switches, 4,160 windows of 200 songs, none copies a
+  game phrase (rhythm and intervals together); 111 share a rhythm alone
+  and 9 the intervals alone, as any two tunes in a style do. Not yet: the
+  panel saying "N songs read, the vocabulary needs 40", SOUND limited to
+  SNES sets while a vocabulary is picked.
+
 ## Measured (2026-10-30, Ragnarok; `~/diags/bitcomposer/idiom/phase6`)
 
 - **Import time per song.** The readers: 0.6 s a song (five FFVI songs,
