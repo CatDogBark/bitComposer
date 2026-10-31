@@ -1586,3 +1586,34 @@ class AttackClassTests(unittest.TestCase):
         self.assertIsNone(render.attack_for({}, "melody", random.Random(1), []))
         picks = {render.best_sample(None, names, (60, 72), random.Random(k), lambda n: n, speed=4.0, models={}, pack="bit") for k in range(12)}
         self.assertTrue(len(picks) >= 1)
+
+
+class TonalKitPieceTests(unittest.TestCase):
+    def test_a_kit_piece_on_a_tonal_sample_keeps_the_packs_own_drum(self):
+        """Round 74: the balance's song's kit reaches the writer's slots only where the pack classes the sample as
+        percussion. The Phantom Forest's token had one piece, a synth lead the readings took for a drum (seven accents
+        a song), and the written kit hammered that lead at the kit's one note, 13 hits a bar; the pack's rim stands in."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from bitcomposer import instruments, samples as sm
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.4:::K=sbfe716b9b6@1.2,o=stonal@0.4:sparse+repeating "
+                 "melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(p.extras["drums"]["kit"], {"K": "sbfe716b9b6", "o": "stonal"})
+        fake = lambda name: SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "arp": ["pad"],
+                           "drums": {"kick": "kickvoice", "snare": "snarevoice", "hihat": "hatvoice", "rim": "rimvoice"}}}
+        sm.PERCUSSION_PRESETS.add("g_sbfe716b9b6"); sm.PERCUSSION_PRESETS.discard("g_stonal")
+        try:
+            with mock.patch.object(instruments, "_make_sample", fake):
+                samples = whole.samples_for(p, pack, {"sbfe716b9b6", "stonal"}, "g", random.Random(1), {})
+        finally:
+            sm.PERCUSSION_PRESETS.discard("g_sbfe716b9b6")
+        self.assertEqual(samples["drums"]["kick"][0], "sbfe716b9b6")            # a percussion sample of the token's song takes its slot
+        self.assertEqual(samples["drums"]["rim"][0], "rimvoice")                # a tonal one leaves the pack's own drum in place
+        self.assertIn("kit samples from the balance's song: kick sbfe716b9b6", p.log)
+        self.assertIn("kit pieces the balance's song struck on tonal samples, the pack's own drums standing in: o stonal", p.log)

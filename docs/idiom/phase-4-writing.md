@@ -65,6 +65,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
 | 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | 58 |
 | 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
+| 74 | 2026-10-31 | a kit piece on a tonal sample leaves the pack's own drum in its slot | 62 |
 
 ## Goal
 
@@ -4679,3 +4680,43 @@ place. Beacon of Lanterns' second bass voice runs sixteenths at sixteen a
 second: the bass figure tables against FFVI's second bass voices, a count
 to make. The harmony drew a lead-pool voice through the wider reach in
 Dance of the Harbor: the reach's own class should follow the word too.
+
+### Round 74: a kit piece the balance's song struck on a tonal sample (2026-10-31, from Song Check 61's Crossing of Steel: "a repetitive noise that starts at about 10 seconds and goes on for the whole song")
+
+**Found.** Not the echo or the vibrato: the second drums voice striking the
+counter's own synth lead sample (sf89f5aedfd) at the kit's one note, G#2,
+thirteen times a bar from bar 4 to the end. The song's token is The
+Phantom Forest, whose kit is one piece, `o` on that lead sample at 0.38 of
+the top: in that song a pitched voice plays the lead seven times in 95
+seconds (once every twelve, two distinct pitches, an accent) and the role
+reader labelled it drums, the kit token carried it, and round 63's
+kit-from-the-token put the sample in the rim slot. Of FFVI's 47 kit tokens,
+18 carry at least one sample the pack does not class as percussion: the
+bass sample sa692eac0a6 as a tom in three songs, leads and pads as `o` or
+`c` in the rest; some FFVI really strikes, some misreads like this one. And
+the figure: with the habit "sparse repeating" the drums table gave the lone
+`o` kit 13 hits a bar, because the kit-conditioned context has two songs
+(one a shaker at 13.5 hits a bar) and the draw's back-off drops the habit
+before the kit; FFVI's own lone-`o` kits play 0.1, 1.5 and 13.5 hits a bar.
+
+**Built.** `samples_for` takes a token kit sample into a writer's slot only
+where the pack classes it as percussion (`samples.is_percussion`, the drum
+namer's class at import); a tonal one leaves the pack's own drum in the
+slot and the plan logs "kit pieces the balance's song struck on tonal
+samples, the pack's own drums standing in". A test with a stubbed pack.
+
+**Measured, Crossing of Steel (seed 173 on FFVI's sounds, the player's
+performance), before and after.** The kit's slot plays the pack's rim
+instead of the lead at G#2; hits unchanged at 13 a bar; drums -12.3 under
+the whole (from -14.2), every other part within 0.1 dB. Song Check 62
+holds the two renders side by side.
+
+**Open.** The drums figure's density for a lone piece: the table's back-off
+order (part, meter, kit, tempo, habit, feel, previous) drops the habit
+before the kit, so a kit with few songs behind it inherits another song's
+density; FFVI's lone-piece kits are mostly sparse. A back-off that keeps
+the habit longer is a change to every drums draw and wants its own round
+with the FFVI measures beside it. The drums role reader: a pitched voice
+with a handful of notes a song is an accent, not a kit; a check against
+the phase 1 ground truth before any reader change. The kit token could
+carry the pitch each piece was struck at, as it carries the level.

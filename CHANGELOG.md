@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A kit piece the balance's song struck on a tonal sample no longer reaches the writer's kit (round 74 in `docs/idiom/phase-4-writing.md`): the token song's kit samples take the writer's slots only where the pack classes the sample as percussion, the pack's own drum standing in otherwise. The Phantom Forest's token carried one piece, its synth lead, which the readings had taken for a drum from seven accents in the song, and a written song on it hammered that lead at the kit's one note thirteen times a bar for its whole length (Song Check 61's Crossing of Steel, "a repetitive noise").
+
 ## 2.0.0 — 2026-11-01
 
 2.0: the writer is the generator. GENERATE writes whole songs from a vocabulary of counted habits (the statistics of how a soundtrack is put together, fitted on its songs' readings; the shipped one was learned from Final Fantasy VI's 67 songs, as far as the writing has gone, and is bitComposer's own in the window) on the built-in SNES sound sets or an imported game's own samples, and importing a game now gives you its vocabulary beside its sounds and grows one over everything you have imported. The 1.x generator stays as Classic. The window is an application of four screens for it, in the SNES era's pixels. What follows is the 1.2 line's record, kept whole, since 2.0 is built on it.
