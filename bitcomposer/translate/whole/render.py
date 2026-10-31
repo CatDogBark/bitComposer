@@ -205,6 +205,23 @@ def second_register(plan: plan_mod.Plan, role: str) -> tuple:
     return (low, high)
 
 
+def voice_bounds(plan: plan_mod.Plan, role: str, word: str, played: tuple | None) -> tuple:
+    """The span a voice beside the line is written in (round 70): the line's own span (plan.bounds, where the line is
+    written) at the layer word's offset (apart: its semitones; alternating: none), bounded by the range the game plays
+    the voice's sample over (`played`: the sample's whole ambitus, bound_of's rules), the offset span alone where the
+    word knows nothing of the sample. Round 69 measured Whole 166's four extra accompaniment voices, drawn "doubling
+    -4, apart -8, apart +8, apart +8", at a median -3, 0, 0 and 0 semitones from the line: every apart voice had been
+    folded into one `:second` bound, the first extra voice's sample's home band, which was the line's own."""
+    rel = plan_mod.layer_of({"layer": word})
+    offset = rel[1] if rel[0] == "apart" else 0
+    low, high = plan.bounds[role] if role in plan.bounds else plan.registers[role]
+    wanted = (max(24, low + offset), min(100, high + offset))
+    if played is not None and (wanted[1] < played[0] or wanted[0] > played[1]):   # wholly outside the sample's range: its nearest
+        span = min(wanted[1] - wanted[0], played[1] - played[0])                   # edge, the span's width kept
+        return (played[0], played[0] + span) if wanted[1] < played[0] else (played[1] - span, played[1])
+    return bound_of(played, wanted)
+
+
 def range_context(rid: str, role: str | None) -> tuple:
     """The ranges word's context for a sample as a part plays it (round 55: by the sample and the part, the sample alone where
     no part is named or the table knows no songs of the pair, which the draw's back-off handles)."""
@@ -474,6 +491,20 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 taken_v.append(f"{v + 1} {sid}")
         if taken_v:
             plan.log.append(f"{role}'s voices beside the line on the balance's song's own samples: " + ", ".join(taken_v))
+        # an apart or alternating voice of an upper part written in its own span (round 70): the line's span at the layer
+        # word's offset, within the whole range the game plays the voice's sample over
+        if role in rhythm.UPPER and role in plan.bounds:
+            spans = []
+            for v, word in enumerate(plan_mod.layers_of(plan, role), start=1):
+                if word.startswith("doubling"):
+                    continue
+                chosen = out.get(f"{role}:{v}") or out.get(f"{role}:second") or out[role]
+                played = ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0]))
+                plan.bounds[f"{role}:{v}"] = voice_bounds(plan, role, word, played)
+                spans.append(f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word}, {raw(chosen[0])} {played[0]}-{played[1]})" if played
+                             else f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word})")
+            if spans:
+                plan.log.append(f"{role}'s voices beside the line at their offsets: " + ", ".join(spans))
     floors, fastest = {}, {}                                # each chosen sample's shortest note in the game (sample_lengths): a note's floor on
     for key, chosen in list(out.items()):                   # it, under the speed class of the fastest part it serves (round 36)
         if isinstance(chosen, tuple):

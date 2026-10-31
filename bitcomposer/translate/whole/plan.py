@@ -1315,7 +1315,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 drawn_pitch = "voice_intervals" in models and "voice_moves" in models
                 if drawn_pitch:
                     beside_v.add(v)
-                span_v = plan.bounds.get(f"{role}:second", reg_v) if drawn_pitch else reg_v   # the voice's pitch is its drawn interval from the line, kept where the game plays its sample (round 34)
+                # the voice's pitch is its drawn interval from the line, folded into its own span: the line's span at the layer word's
+                # offset, within the range the game plays its sample over (round 70, plan.bounds["role:v"], render.voice_bounds). The
+                # one `:second` bound had been the first extra voice's sample's home band, so Whole 166's "apart +8" voices were
+                # folded into the line's own band and sat at a median 0 semitones from it (round 69)
+                span_v = plan.bounds.get(f"{role}:{v}") or (plan.bounds.get(f"{role}:second", reg_v) if drawn_pitch else reg_v)
                 notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], gs["second"] if gs else sounds,   # interval from the
                                                               key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
                                                               pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,   # voices beside a line sit in

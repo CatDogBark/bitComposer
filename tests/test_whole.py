@@ -119,6 +119,62 @@ class WholeSongTests(unittest.TestCase):
             self.assertIn("tune", m)
             self.assertLessEqual(m["tune"]["chord_tones"], 1.0)
 
+    def test_an_apart_voice_is_written_at_its_offset_and_a_pedal_line_shares_its_note(self):
+        """Round 70: an apart voice of an upper part is written in its own span, the line's span at the layer word's
+        offset within the range the game plays its sample over (render.voice_bounds, plan.bounds["role:v"]), so it
+        sounds at its offset from the line when both sound (round 69 had measured Whole 166's "apart +8" voices at a
+        median 0 semitones from the line: every apart voice folded into one `:second` bound, the line's own band). And
+        a pedal line (a one-pitch register, as a game plays a drum sample as a rhythmic chord part) shares its note
+        with the voices beside it, so they can take their interval from it (Whole 167's apart voice had written 0 notes)."""
+        import statistics
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        p = whole.plan(models, 3, "g", max_bars=16)
+        p.bounds["accompaniment"] = (56, 64)
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart +8 like", (44, 92)), (64, 72))
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart -8 sparser", (44, 92)), (48, 56))
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "alternating", (44, 92)), (56, 64))
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart +8 like", None), (64, 72))       # nothing known of the sample
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart +8 like", (40, 60)), (52, 60))   # wholly above its range: its top edge
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart -12 like", (60, 80)), (60, 68))  # wholly under: its bottom edge
+        p.bounds.pop("accompaniment")
+        role = "accompaniment"
+        if role not in p.band:
+            p.band.append(role); p.weights[role] = "half"; p.plays[role] = [True] * p.bars
+            for k, t in enumerate(p.textures):
+                p.textures[k] = t + " " + role
+        p.registers[role] = (56, 64); p.bounds[role] = (56, 64); p.sounds[role] = 0.8
+        p.habits[role] = p.habits.get(role) or "medium mixed"
+        p.extras[role] = {**(p.extras.get(role) or {}), "richness": "full", "motion": "block", "layers": ["apart +8 like"], "layer": "apart +8 like"}
+        p.voices[role] = 2
+        p.bounds[f"{role}:1"] = whole.voice_bounds(p, role, "apart +8 like", (44, 92))
+        written = whole.write(p, whole.song_of(p), models, 3)
+        notes = written[role].notes
+        line = [n for n in notes if n[3] == 0]
+        voice = [n for n in notes if n[3] == 1]
+        self.assertTrue(line and voice, written[role].log)
+        offsets = []                                        # the voice's pitch less the line's, a twelfth of a beat at a time where both sound
+        step = 1 / 12
+        for k in range(int(p.bars * 4 / step)):
+            t = k * step
+            a = [n[2] for n in line if n[0] - 1e-6 <= t < n[1] - 1e-6]
+            b = [n[2] for n in voice if n[0] - 1e-6 <= t < n[1] - 1e-6]
+            if a and b:
+                offsets.append(min(b) - min(a))
+        self.assertTrue(offsets)
+        self.assertAlmostEqual(statistics.median(offsets), 8, delta=2, msg=(offsets[:40], written[role].log))
+        self.assertTrue(all(62 <= n[2] <= 74 for n in voice), sorted({n[2] for n in voice}))     # its span, but for the clash rule's step aside
+        # a pedal line shares its note with the voice beside it: the voice writes
+        p.registers[role] = (56, 56); p.bounds[role] = (56, 56)
+        written = whole.write(p, whole.song_of(p), models, 3)
+        line = [n for n in written[role].notes if n[3] == 0]
+        voice = [n for n in written[role].notes if n[3] == 1]
+        self.assertTrue(line and all(n[2] == 56.0 for n in line))
+        self.assertTrue(voice, written[role].log)
+
 
 if __name__ == "__main__":
     unittest.main()
