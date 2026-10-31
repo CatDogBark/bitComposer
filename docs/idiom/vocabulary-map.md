@@ -127,12 +127,13 @@ flowchart LR
 | `contour_sizes` | part, mode, contour | melody | - | how far a phrase's contour goes, in semitones, by its shape |
 | `phrase_shifts` | part, mode, relation | melody | - | how far a phrase sits above or below the one before, in semitones, by its relation to it |
 
-### the render (2)
+### the render (3)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
 | `ranges` | part, role | samples_for | - | the register a sample is played in, by the sample and the part playing it |
 | `part_samples` | part, speed | samples_for | - | the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing |
+| `echo` | part | compose, echo_of, echo_word, hand_off_cells, write_melody | - | the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70) |
 
 ### counted, drawn nowhere (the measures' words) (8)
 
@@ -538,6 +539,7 @@ flowchart LR
   subgraph stage_render["the render"]
     ranges["ranges"]
     part_samples["part_samples"]
+    echo["echo"]
   end
   part_speeds -- speed --> part_samples
 ```

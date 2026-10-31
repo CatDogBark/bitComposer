@@ -74,7 +74,10 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level with its kit, each
-  piece's sample and level
+  piece's sample and level (since round 70 the level and the sample
+  fields are the LINE voice's, `readings.part_levels` and
+  `part_sample_id`, so the line times each second-voice share reproduces
+  every voice, and the kit's piece levels are in hundredths)
   (`accompaniment=half:56-68:0.8:2:0.6:1.2 bass=half:28-40:0.3:1:1.0
   drums=::::0.2:::K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2
   melody=main:64-84:0.9:1:0.7`).
@@ -114,8 +117,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   covered part's with the token's first share (`Plan.voice_levels` by
   rank, `Plan.layer_from`; the log line "second voices from the balance:
   accompaniment=1.2/0.7 bass=0.7"), and `whole.note_level` plays voice
-  j beside the line at the token's entry j (a doubling voice at the
-  line's level, as before); a part the token's song has as one voice,
+  j beside the line at the token's entry j (since round 70 a doubling
+  voice too, on the token's sample for that voice, `samples_for`'s
+  `role:v`; it had played the line's level on the line's sample whatever
+  the token counted, 163's counter second at 1.0 where Troops March on
+  has it at 2.5 on sfd6accf98a); a part the token's song has as one voice,
   or a token without the field, keeps the `layer_levels` draw. One share
   a voice beyond the line rather than the second's alone: the token's
   voice count is the song's, and a third or later voice's share differs
@@ -257,7 +263,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   alternating or apart voice becomes a line of its own under the line's
   bars (`second_figures`), in its register, on a tone of the line's own
   voicing (drawn a span) with the line's lengths and the pair's second
-  sample. An upper part is the line plus its voices so drawn, never a
+  sample. Since round 70 an apart or alternating voice of an upper part
+  is written in its own span (`render.voice_bounds`, `plan.bounds`'s
+  `role:v`): the line's written span at the word's offset, within the
+  whole range the game plays the voice's sample over; every such voice
+  had been folded into one `:second` bound, the first extra voice's
+  sample's home band, so Whole 166's "apart +8" voices sat at a median 0
+  semitones from the line (round 69), and now sit at +8 and +9. A pedal
+  line (a one-pitch register) shares its note with the voices beside it,
+  which had written nothing under it (Whole 167's accompaniment). An
+  upper part is the line plus its voices so drawn, never a
   stack: FFVI's accompaniment voices strike together 1.2 to 1.5 to an
   onset, and a stack of voices all striking at every onset had been three
   to four notes loud where the tune has one (Song Check 11's Whole 01).
@@ -1055,14 +1070,28 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 ## The render
 
-A gap, noted 2026-10-30: the echo. No table counts a game's echo (on or
-off, its delay, feedback, filter and wet, which the readings hold per
-song), so a written song's echo is the player's own habit, drawn per song
-from the song's tempo and density outside the writer
-(`bitcomposer.performance.echo_for`); bare, the sound set's, as Classic
-draws it (`whole.echo_of` over the pack's habits). The writing's way is a
-counted word drawn once a song beside the balance; it waits, by the
-owner's call, until the FFVI tuning is not at stake.
+- **echo** — the song's echo as the chip had it at key-on, since round 70
+  (2026-10-30): its volume of full (EVOL), its delay in ms (EDL), its
+  feedback (EFB), the parts that send to it and the parts that stay dry
+  (`0.20:80:0.78:accompaniment+counter+melody:bass+drums`; a part sends
+  when half its voices or more send on half their notes or more), one
+  unit a song. The readings keep it as features of source `echo`
+  (`reading.echo_of_notes`, written at import by `store.keep`; FFVI's 82
+  were added from the SPCs after the fact). Drawn once a song on its own
+  stream (`whole:SEED:echo`) by the writer bare (`whole.compose`'s
+  "habit" echo, `render.echo_word`) where the vocabulary has the word, the
+  sound set's habits standing where not (`whole.echo_of`, Classic's way);
+  the delay is the chip's nearest 16 ms step, and `score_of` sends a part
+  as the word says, a part the word's song lacked by the old rule (the
+  upper parts). Why: FFVI's echo volume is 0.20 of full in 70 of 82 songs,
+  its delay 80 ms in every one, its feedback 0.78 at the median, and the
+  written songs had sent every upper part at `score.ECHO_WET` 0.4 with a
+  48 to 144 ms "slap": 6 dB wetter than the game ever plays, which the
+  owner heard as vibrato and blur (Song Check 54's Whole 166). The
+  player's own echo (`bitcomposer.performance.echo_for`, drawn from the
+  song's tempo and density outside the writer) is the default player's
+  path still, out of this word's scope.
+  *`echo`: shape (part); drawn in echo_word.*
 
 - **ranges** — the register a sample is played in, by the sample. Drawn at
   rendering: a part's sample is the one of its pool whose game-played range

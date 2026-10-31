@@ -556,14 +556,14 @@ def echo_word(models: dict | None, plan: plan_mod.Plan, rng: random.Random) -> d
     if len(fields) < 5:
         return None
     volume, ms, feedback = float(fields[0]), float(fields[1]), float(fields[2])
-    sends = set(fields[3].split("+")) - {"-", ""}
-    dry = set(fields[4].split("+")) - {"-", ""}
+    sends = sorted(set(fields[3].split("+")) - {"-", ""})   # lists: the echo is written into the song's JSON record
+    dry = sorted(set(fields[4].split("+")) - {"-", ""})
     steps = max(1, min(15, round(ms / 1000 / ECHO_STEP)))
     if volume <= 0 or not sends:
         plan.log.append(f"echo (echo): dry; the game's song sent nothing" + (f" (sends {'+'.join(sorted(sends))} at {volume:.2f})" if sends else ""))
         return None
     plan.log.append(f"echo (echo): volume {volume:.2f} of full, {steps * ECHO_STEP * 1000:.0f} ms, feedback {feedback:.2f}; sends "
-                    + "+".join(sorted(sends)) + (f"; dry {'+'.join(sorted(dry))}" if dry else ""))
+                    + "+".join(sends) + (f"; dry {'+'.join(dry)}" if dry else ""))
     return {"delay": f"{steps * ECHO_STEP * 1000:.0f} ms", "seconds": steps * ECHO_STEP, "wet": volume, "feedback": feedback,
             "sends": sends, "dry": dry, "word": outcome}
 

@@ -1331,7 +1331,7 @@ class NewTablesTests(unittest.TestCase):
         p = whole.plan({}, 1, "g")
         echo = whole.echo_word({"echo": t}, p, random.Random("whole:1:echo"))
         self.assertEqual((echo["wet"], echo["seconds"], echo["feedback"], echo["delay"]), (0.2, 0.08, 0.78, "80 ms"))
-        self.assertEqual((echo["sends"], echo["dry"]), ({"bass", "melody"}, {"accompaniment", "drums"}))
+        self.assertEqual((echo["sends"], echo["dry"]), (["bass", "melody"], ["accompaniment", "drums"]))
         self.assertTrue(any(line.startswith("echo (echo): volume 0.20 of full, 80 ms, feedback 0.78; sends bass+melody; dry accompaniment+drums") for line in p.log), p.log)
         self.assertEqual([whole.sends_to_echo(echo, r) for r in ("melody", "bass", "accompaniment", "drums", "counter", "harmony")],
                          [True, True, False, False, True, True])                                   # the counter and harmony: not the word's song's parts, the old rule

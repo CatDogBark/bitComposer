@@ -60,6 +60,8 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 66 | 2026-10-29 | the tune's grain, the voice's own alteration, and three songs' tokens | 52, 53 |
 | 67 | 2026-10-30 | the sustain loop reaches the render, the bridge read again | 53, 54 |
 | 68 | 2026-10-30 | the kit's level a piece | 54 |
+| 69 | 2026-10-30 | measured before the build: the token's own voices, the kits' strikes, the echo and the apart voices | 54 |
+| 70 | 2026-10-30 | the token's own voices, the echo as counted, the apart voice apart | - |
 
 ## Goal
 
@@ -4286,3 +4288,116 @@ piece's share times its top over 1.0 (the tops run 0.15 to 0.65 and the
 loud kicks sit on low tops), so the cap is not met yet but is there.
 Round 67's other open items stand: the bass 3 dB forward and the counter
 2 dB behind FFVI's place, the voices beside the line adding up.
+
+### Round 69: measured before the build (2026-10-30, seeds 161-170 on the r68 renders against their balance tokens' own songs)
+
+**Measured, nothing changed** (`~/diags/bitcomposer/fable/round69/report.md`,
+its scripts in `tools/` beside it). Every seed's balance token was matched to
+its FFVI song (161 Setzer, 162 Techno de Chocobo, 163 Troops March on, 164
+Johnny C. Bad, 165 The Wedding Waltz-Duel 2, 166 Good Night, 167 Overture 3,
+168 Opening Theme 3, 169 Blackjack, 170 The Prelude), and the written parts
+set voice by voice against the source's. Three countings put the token's own
+voices in the wrong place: the part's level was the median over every voice's
+notes applied to the line (Troops' counter line at 0.27 of the top played at
+0.40, its bass line at 0.62 at 1.0 with the second voice at 1.6 of that); the
+part's sample was the most-played over all voices, the busier second voice's
+for a two-voice bass (Troops' and Overture's bass lines on sa692eac0a6, both
+written voices on s1d296a2572); and a doubling voice played the line's level
+on the line's sample whatever the token counted (163's counter second at 2.5
+on sfd6accf98a in the source, 1.0 on the line's here). The kit: the piece
+level's tenths cost 2.9 dB on 163's snare (0.14 kept as 0.1), and the strike
+window read 150 ms at the module's C5Speed, twice a kit WAV's rate, so 300 ms
+of real time (-0.5 to -2.9 dB on the tom, crash and the longer kit voices);
+the one-piece kits' 3 to 9 dB gap is the hit rate and the doubled snare
+voice, not the level. The echo: FFVI's echo volume is 0.20 of full in every
+song read (82), its delay 80 ms in every one, its feedback 0.78 at the median
+(0.55..0.78), and the written songs sent at `score.ECHO_WET` 0.4 (170 at 0.6)
+with a 48 to 144 ms slap: 6 dB (to 9.5 dB) wetter than the game plays, on
+every sending voice, which is what the owner heard as vibrato and blur in
+166 (its voices carry no vibrato command and its samples none). The apart
+voices: 166's four extra accompaniment voices, drawn "doubling -4, apart
+-8, apart +8, apart +8", sat at a median -3, 0, 0 and 0 semitones from the
+line, within the octave all the time; 167's accompaniment second voice
+wrote 0 notes under a one-pitch line.
+
+### Round 70: the token's own voices, the echo as counted, the apart voice apart (2026-10-30, from round 69)
+
+**Found.** Beyond round 69's countings: the one `:second` sample and bound
+served every voice beside a line, so Good Night's four extra voices all took
+the first's sample (the doubling voice's) and its home band, which was the
+line's own band (56-64), and an "apart +8" voice was folded into it; a pedal
+line (Overture plays its accompaniment on a snare sample at one pitch, which
+is how the game plays it) never shared its note with the voices beside it,
+so 167's apart voice found nothing to take its interval from. And the
+strike window was off for tonal samples too, the other way: the instrument
+builder writes a release tail after a pack voice's loop, and the strike read
+over the module's data ran into it (7 dB under the readings' on a 32-frame
+string loop).
+
+**Built.** (1) The token's fifth field is the LINE voice's median level
+(`readings.part_levels`: the line as the layer words see it; the pooled
+median for a one-voice part, the drums, or a line never read) and the
+eighth the line voice's sample, so line times each sixth-field share
+reproduces every voice; `note_level` plays a voice beside the line at the
+token's share for that voice, doubling or not (the line's level only where
+the token has none), and `samples_for` registers each voice's own token
+sample (`role:v`, `sample_of` reads it first). Troops' token now reads
+`counter=...:0.4:2.5@sfd6accf98a...` with `bass=...:0.9:1.6@s1d296a2572@1.93
+::sa692eac0a6` and the melody the loudest. (2) The kit's piece level in
+hundredths (`K=sbfe716b9b6@1.70`; tenths still read); a pack voice's sample
+carries the recording's own rate and frames, and the strike is read over
+the recording's first 150 ms by them: the kit's 11 samples at 0.00 dB from
+the readings' strike, the tonal samples' strike-to-body ratio within 0.001
+dB of the WAV's. (3) The `echo` word: a reading keeps the chip's echo at
+key-on (`reading.echo_of_notes`, features of source `echo`; FFVI's 82
+added from the SPCs by round 70's `tools/echo_features.py`, since a re-read
+would have lost the lead pass's relabels), counted one unit a song as
+`0.20:80:0.78:accompaniment+counter+melody:bass+drums` (67 units; the tune
+sending in 66 of 66, the counter 51 of 53, the accompaniment 47 of 60, the
+bass 36 of 63, the drums 9 of 47), drawn once on `whole:SEED:echo` by the
+writer bare in place of `ECHO_WET` and the delay names, the sound set's
+habits standing without the word; the player's echo path untouched. (4) An
+apart or alternating voice of an upper part in its own span
+(`render.voice_bounds`: the line's written span at the word's offset,
+within the sample's whole played range); a pedal line shares its note.
+Pack4 refit (96 tables) and the shipped vocabulary written again from it.
+Tests for each; the suite at 389.
+
+**Measured, seeds 161-170 on the refit pack, LUFS** (`~/diags/bitcomposer/
+fable/round70/`: `q1.txt`, `q3_overlap.txt`, `q3_echo.txt`,
+`q2_strikes.txt`; renders in `sustain/r70`). Each part under the whole,
+median, r70 (r68; FFVI's 63): bass -4.2 (-4.1; -7.0), accompaniment -4.3
+(-4.1; -6.3), counter -5.8 (-6.5; -4.1), melody -6.6 (-8.1; -7.2), drums
+-13.5 (-15.5; -9.5). The tune's margin over the loudest other pitched line
+-3.3 (quartiles -6.7..-0.7; r68 -6.9; FFVI -3.5), two of ten on top. 163
+(Troops): the counter line at 0.4 of the top with its second at 2.5 on
+sfd6accf98a, the bass line at 0.9 on sa692eac0a6 under s1d296a2572; its
+parts' gaps to Troops' own render, r70 (r68): melody +1.2 (-2.2), counter
++1.9 (-3.0), accompaniment +1.2 (-3.6), bass +2.5 (+3.1); its drums -21.1
+(-26.4; Troops -17.3). 167 (Overture): the accompaniment's second voice
+writes 59 notes, the part -4.3 under the whole from -19.4 (Overture -5.2);
+its bass +1.3 (+3.5), counter -0.1 (-1.9). 169's bass +3.9 (+4.4), still
+unexplained by the count; 170's accompaniment -2.0 (-0.1), the six voices
+on one sample as The Prelude has them. The echo the ten songs carry:
+volume 0.20 of full at 80 ms in every one, feedback 0.55 (six) or 0.78
+(four), the sends the word's song's (163: accompaniment and melody, the
+bass and drums dry; 167: every part); 161's module has 24 echo channels
+where r68's had 20 to 48. 166's extra voices against their line, median
+(quartiles): doubling -4 at -3 (-4..-3), apart -8 at -7 (-9..-4), apart +8
+at +8 (+6..+12) and +9 (+5..+14), the arp's apart -12 at -12; its tune is
+covered 0.50 of its sounding time (0.00 before: the +8 voices now sit under
+it at 80-88 on its own sample, as Good Night's do).
+
+**Open.** The bass still 2 to 4 dB forward of its source on 163, 169 and
+170, and 169's by a count that matches: the envelope the game plays a note
+with (ADSR or GAIN under a held volume) is what the readings' level does
+not see. The counter's second voice at 2.5 of its line puts 163's counter
+1.9 dB over Troops'; the `q1_parts` script names a doubling voice's sample
+by the old `:second` rule and wants the `role:v` keys. The apart voice's
+offset is held by its span, so its per-note interval words (voice_intervals,
+voice_moves) are folded into the span rather than conditioned on the
+offset; a voice whose sample's whole range cannot hold the offset keeps the
+sample's wall. The bass's and the counter's second voices keep their old
+`:second` bound. The one-piece kits' hit rate (the doubled snare voice,
+Troops' two snares 32 ms apart) has no word yet. Listening on 163, 164,
+166 and 167 is the next Song Check.
