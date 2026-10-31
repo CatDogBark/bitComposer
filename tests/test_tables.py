@@ -621,3 +621,115 @@ class ReferenceSetTests(unittest.TestCase):
             data = {"phrases": rows}
             json.dump(data, open(out, "w"))
             self.assertEqual(len(reference.Index(reference.load(out)).rows), 2)
+
+
+class BalanceLevelTests(unittest.TestCase):
+    def test_a_kit_s_unread_level_never_reaches_the_token(self):
+        """A drum voice's levels the import could not read are NaN. A median over them was NaN, three FFVI tokens carried
+        a "nan" drums level, and a written song played its kit at full (2026-10-30). The token leaves the field empty,
+        so the plan's levels draw stands in, and the loudest part is the loudest of the levels read."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1],
+                        parts=[(0, 2)], pieces={"k": "kick", "s": "snare", "h": "hat", "x": "none"})
+        s.notes["melody"] = [(0.0, 1.0, 72, "sa"), (1.0, 1.0, 74, "sa"), (2.0, 1.0, 76, "sa"), (3.0, 1.0, 77, "sa"),
+                             (4.0, 2.0, 79, "sa"), (6.0, 2.0, 76, "sa")]
+        s.notes["drums"] = [(0.0, 0.1, float("nan"), "k"), (1.0, 0.1, float("nan"), "s"), (2.0, 0.1, float("nan"), "k"),
+                            (3.0, 0.1, float("nan"), "s"), (4.0, 0.1, float("nan"), "k"), (5.0, 0.1, float("nan"), "s")]
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.voice_levels = {1: 0.5, 2: float("nan")}
+        s.levels = {"melody": 0.5, "drums": float("nan")}
+        token = rhythm.balance_units([s])[0].outcome
+        self.assertNotIn("nan", token)
+        self.assertIn("melody=main::1.0:1:1.0", token)
+
+    def test_the_kits_pieces_carry_their_own_levels(self):
+        """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck
+        on that sample as a share of the loudest part's in tenths (`K=k@1.6,S=s@0.6,h=h@0.2`). The part's one level is the
+        median over every drum note, the most frequent piece's (the hat's), and Blackjack's kick had played as quiet as
+        its hat. A piece whose level the readings never heard (NaN) keeps the old form; the part's level stays beside."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1],
+                        parts=[(0, 2)], pieces={"k": "kick", "s": "snare", "h": "hat"})
+        s.notes["melody"] = [(0.0, 1.0, 72, "sa"), (1.0, 1.0, 74, "sa"), (2.0, 1.0, 76, "sa"), (3.0, 1.0, 77, "sa"),
+                             (4.0, 2.0, 79, "sa"), (6.0, 2.0, 76, "sa")]
+        s.notes["drums"] = [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)] + [(x, 0.1, float("nan"), "s") for x in (1.0, 3.0, 5.0, 7.0)] + \
+                           [(x / 2, 0.1, float("nan"), "h") for x in range(16)]
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.voice_levels = {1: 0.5, 2: 0.1}
+        s.levels = {"melody": 0.5, "drums": 0.1}            # the part's median: the hat's, 0.2 of the tune
+        s.kit_levels = {"k": 0.8, "s": 0.3, "h": 0.1}       # the kick louder than the tune, the snare at 0.6 of it
+        self.assertEqual(rhythm.kit_token(s), "K=k,S=s,h=h")               # the old form without a top
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,S=s@0.60,h=h@0.20")   # in hundredths since round 70
+        token = rhythm.balance_units([s])[0].outcome
+        self.assertIn("drums=::::0.2:::K=k@1.60,S=s@0.60,h=h@0.20", token)
+        s.kit_levels["s"] = float("nan")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,S=s,h=h@0.20")   # an unread level never reaches the token
+        s.kit_levels = {}
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k,S=s,h=h")
+
+    def test_the_songs_echo_is_a_counted_word(self):
+        """Round 70: the song's echo as the chip had it at key-on (reading.echo_of_notes: the volume of full, the delay in
+        ms, the feedback, each voice's share of notes that send) is kept with the readings and counted as the `echo`
+        word, one unit a song: the triple with the parts that send and the parts that stay dry. FFVI's echo volume is
+        0.20 of full in 70 of 82 songs and its delay 80 ms in every one; the written songs had sent at 0.4."""
+        from types import SimpleNamespace
+        from bitcomposer.translate import reading
+        note = lambda v, send, vol=0.2, ms=0.08, fb=0.78: SimpleNamespace(voice=v, echo=send, echo_writes=True, echo_delay=ms, echo_volume=(-vol, vol), echo_feedback=fb)   # noqa: E731
+        notes = [note(0, True) for _ in range(8)] + [note(1, False) for _ in range(8)] + [note(2, True), note(2, False), note(2, False), note(2, False)] + [note(3, True, 0.25, 0.08, 0.55)]
+        echo = reading.echo_of_notes(notes)
+        self.assertEqual((echo["volume"], echo["delay_ms"], echo["feedback"]), (0.2, 80.0, 0.78))
+        self.assertEqual({k: v for k, v in echo.items() if k.startswith("voice_")}, {"voice_0": 1.0, "voice_1": 0.0, "voice_2": 0.25, "voice_3": 1.0})
+        self.assertEqual(reading.echo_of_notes([note(0, False)]), {"voice_0": 0.0, "volume": 0.0, "delay_ms": 0.0, "feedback": 0.0})
+        self.assertEqual(reading.echo_of_notes([note(0, True, 0.2, 0.0)])["volume"], 0.0)          # no delay: nothing sends
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)])
+        s.notes["melody"] = [(float(i), 1.0, 72.0, "sa") for i in range(8)]
+        s.notes["bass"] = [(float(i), 1.0, 36.0, "sb") for i in range(8)]
+        s.notes["accompaniment"] = [(float(i), 1.0, 60.0, "sc") for i in range(8)]
+        s.voice_notes = {0: ("melody", s.notes["melody"]), 1: ("bass", s.notes["bass"]), 2: ("accompaniment", s.notes["accompaniment"][:4]),
+                         3: ("accompaniment", s.notes["accompaniment"][4:])}
+        self.assertEqual(rhythm.echo_units([s]), [])                                                 # never read: no unit
+        s.echo, s.echo_sends = (0.2, 80.0, 0.78), {0: 1.0, 1: 0.0, 2: 0.25, 3: 1.0}
+        u = rhythm.echo_units([s])[0]
+        self.assertEqual((u.outcome, u.values), ("0.20:80:0.78:accompaniment+melody:bass", {"part": "echo"}))   # one of two voices sending: the part sends
+        s.echo_sends[3] = 0.4
+        self.assertEqual(rhythm.echo_units([s])[0].outcome, "0.20:80:0.78:melody:accompaniment+bass")
+        s.echo = (0.0, 0.0, 0.0); s.echo_sends = {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0}
+        self.assertEqual(rhythm.echo_units([s])[0].outcome, "0.00:0:0.00:-:accompaniment+bass+melody")
+        from bitcomposer.translate import packtables
+        self.assertIn("echo", packtables.KEPT)
+
+    def test_the_parts_level_and_sample_are_the_line_voices(self):
+        """Round 70: a layered part's level on the token (the fifth field) is its LINE voice's median level, not the median
+        over every voice's notes, and its sample (the eighth field) the line voice's; the sixth field's shares are counted
+        against the line already, so line x share reproduces every voice. Troops March on's counter line sat at 0.27 of
+        the top and played at 0.40 (the pooled median), its bass line on sa692eac0a6 played on the second voice's
+        s1d296a2572. The bass's line is the voice with the longest notes; a part of one voice keeps its median."""
+        chords = [Span(0.0, 32.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4) for k in range(8)], chords, bpm=100.0, sid="id", game="G", numbers=list(range(8)),
+                        parts=[(0, 8)])
+        s.notes["melody"] = [(4.0 * k + i, 1.0, 72.0 + i, "sm") for k in range(8) for i in range(4)]
+        line = [(4.0 * k + 0.5 * i, 0.4, 60.0, "sa") for k in range(8) for i in range(8)]       # the busiest voice: the line
+        second = [(4.0 * k + i, 0.9, 52.0, "sb") for k in range(8) for i in range(4)]
+        s.notes["accompaniment"] = line + second
+        sustained = [(4.0 * k, 3.0, 36.0, "slong") for k in range(8)]                            # the bass's line: the longest notes
+        slap = [(4.0 * k + 0.5 * i, 0.2, 48.0, "sshort") for k in range(8) for i in range(8)]
+        s.notes["bass"] = sustained + slap
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 3: ("accompaniment", line), 4: ("accompaniment", second),
+                         5: ("bass", sustained), 6: ("bass", slap)}
+        s.voice_levels = {1: 0.5, 3: 0.2, 4: 0.5, 5: 0.31, 6: 0.5}
+        pooled = {"melody": 0.5, "accompaniment": 0.3, "bass": 0.45}                             # the medians over every voice's notes
+        self.assertEqual(rhythm.part_levels(s, pooled), {"melody": 0.5, "accompaniment": 0.2, "bass": 0.31})
+        s.voice_levels[3] = float("nan")
+        self.assertEqual(rhythm.part_levels(s, pooled)["accompaniment"], 0.3)                     # the line's level never read: the pooled median
+        s.voice_levels[3] = 0.2
+        s.levels = rhythm.part_levels(s, pooled)
+        self.assertEqual(rhythm.part_sample_id(s, "accompaniment"), "sa")                         # the line voice's sample, not the most played
+        self.assertEqual(rhythm.part_sample_id(s, "bass"), "slong")
+        self.assertEqual(rhythm.part_sample_id(s, "melody"), "sm")
+        tokens = {t.partition("=")[0]: t.partition("=")[2].split(":") for t in rhythm.balance_units([s])[0].outcome.split() if "=" in t}
+        self.assertEqual(tokens["accompaniment"][4], "0.4")                                         # the line at 0.2 of the top 0.5
+        self.assertEqual(tokens["accompaniment"][5].split("@")[0], "2.5")                          # the second voice at 2.5 of the line: 0.5 of full
+        self.assertEqual(tokens["accompaniment"][7], "sa")
+        self.assertEqual((tokens["bass"][4], tokens["bass"][5].split("@")[0], tokens["bass"][7]), ("0.6", "1.6", "slong"))
+        self.assertEqual(tokens["melody"][4], "1.0")

@@ -152,8 +152,13 @@ class Song:
     levels: dict = field(default_factory=dict)        # role -> the median level (0-1 of full) of its notes, as the readings heard them
     voice_levels: dict = field(default_factory=dict)  # voice -> the median level of its notes
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
-    loudness: float | None = None                     # the song's rendered loudness, RMS dBFS over its first minute through the player (the
+    kit_levels: dict = field(default_factory=dict)    # a drum sample's key -> the median level of the notes struck on it (round 68: the kit's
+                                      # level a piece, the part's one median being the hat's where the hat is the most frequent piece)
+    loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
                                       # readings' feature render/loudness_dbfs, round 59); None where it was not measured
+    echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
+                                      # reading.echo_of_notes): (volume of full, delay in ms, feedback); None where never read
+    echo_sends: dict = field(default_factory=dict)   # voice -> the share of its notes that send to the echo
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
@@ -273,7 +278,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
-        level_rows = {}
+        level_rows, kit_rows = {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
@@ -289,19 +294,50 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)
-                    if rows:
-                        song.voice_levels[voice] = statistics.median(r[3] for r in rows)
-                        level_rows.setdefault(role, []).extend(r[3] for r in rows)
+                    finite = [r[3] for r in rows if not math.isnan(r[3])]   # a kit's unread levels (NaN) are notes, not levels: a
+                    if finite:                                                   # median over them was NaN, and three FFVI balance tokens
+                        song.voice_levels[voice] = statistics.median(finite)   # carried "nan" for the drums, which a written song
+                        level_rows.setdefault(role, []).extend(finite)         # played at full (2026-10-30)
                         song.note_levels.setdefault(role, []).extend((r[0], r[3]) for r in rows)
+                    if role == R.DRUMS:                     # the kit's level a sample (round 68): the part's one median is the most
+                        for r in rows:                      # frequent piece's, the hat's in a kick-snare-hat kit, and the kick plays near full
+                            if not math.isnan(r[3]):
+                                kit_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[3])
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
             song.bass_voices = basses
-        song.levels = {role: statistics.median(ls) for role, ls in level_rows.items()}
+        song.levels = part_levels(song, {role: statistics.median(ls) for role, ls in level_rows.items()})
+        song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
+        echo = dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'echo'", (sid,)).fetchall())   # the chip's echo
+        if all(k in echo for k in ("volume", "delay_ms", "feedback")):                                                      # (round 70)
+            song.echo = (float(echo["volume"]), float(echo["delay_ms"]), float(echo["feedback"]))
+            song.echo_sends = {int(k[6:]): float(v) for k, v in echo.items() if k.startswith("voice_")}
         songs.append(song)
     return songs, dict(out)
+
+
+def part_levels(song: Song, pooled: dict) -> dict:
+    """A part's level: its LINE voice's median level where the part holds two voices or more (the line as the layer
+    words see it, cells.line_voice: the busiest voice, the bass's the one with the longest notes), the median over all
+    its notes (`pooled`) for a part of one voice, for the drums (the kit's level is a piece's, round 68) and where the
+    line's level was never read. Round 70 (2026-10-30): the part's one median had pooled every voice's notes, so where
+    the voices differ in level the line landed off: Troops March on's counter line sits at 0.27 of the top and played
+    at 0.40, its bass line at 0.62 and played at 1.0 with the second voice at 1.6 of that. The voices beside the line
+    are counted against the line (voice_level_shares), so line × share now reproduces every voice."""
+    out = dict(pooled)
+    for role in PITCHED:
+        if role not in out:
+            continue
+        voices = cells_mod.part_voices(song, role)
+        if len(voices) < 2:
+            continue
+        level = song.voice_levels.get(cells_mod.line_voice(voices, role))
+        if level is not None and math.isfinite(level):
+            out[role] = level
+    return out
 
 
 def position(offset: float, division: int) -> Fraction:

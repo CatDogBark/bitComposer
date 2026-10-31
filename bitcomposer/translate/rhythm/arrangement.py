@@ -480,20 +480,39 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     return out
 
 
-def kit_token(s) -> str:
+def kit_token(s, top: float = 0.0) -> str:
     """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
     with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
-    a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots)."""
+    a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots).
+    Since round 68 each piece carries its own level too, where the readings heard one: the median level of the notes
+    struck on that sample (Song.kit_levels, the loudness factor applied as the part's level has it) as a share of the
+    song's loudest part's level `top` (`K=sbfe716b9b6@1.70,S=s1279e119a1@0.70,h=sd1c4c7ce33@0.20`; in hundredths since
+    round 70, tenths before and still read: 163's snare at 0.14 kept as 0.1 had cost 2.9 dB on a quiet piece). The part's
+    one level is the median over every note of every drum voice, which is the most frequent piece's: FFVI's hat is the
+    most frequent and its strike the quietest, so Blackjack's token said drums at 0.2 of the top where its kick plays
+    at 1.7 and its snare at 0.7, and the written kit was brought to one heard loudness a piece, the kick as quiet as
+    a hat (Song Check 54's Whole 169: the kit 16 dB under Blackjack's). A piece without a level keeps the old form."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
         piece = (s.pieces or {}).get(key)
         if key and piece in readings_mod.LETTERS:
-            counts[(readings_mod.LETTERS[piece], "s" + key[:10] if len(key) >= 10 else key)] += 1
+            counts[(readings_mod.LETTERS[piece], key)] += 1
     best = {}
-    for (letter, sid), n in counts.most_common():
-        best.setdefault(letter, sid)
-    return ",".join(f"{letter}={best[letter]}" for letter in readings_mod.LETTERS.values() if letter in best)
+    for (letter, key), n in counts.most_common():
+        best.setdefault(letter, key)
+    levels = getattr(s, "kit_levels", None) or {}
+    out = []
+    for letter in readings_mod.LETTERS.values():
+        if letter not in best:
+            continue
+        key = best[letter]
+        field = f"{letter}=" + ("s" + key[:10] if len(key) >= 10 else key)
+        level = levels.get(key)
+        if top > 0 and level is not None and math.isfinite(level):   # never a "nan" share: the part's level stands in
+            field += f"@{round(level / top, 2):.2f}"                 # in hundredths since round 70: tenths cost 2.9 dB on a snare at 0.14 kept as 0.1
+        out.append(field)
+    return ",".join(out)
 
 
 def part_sample_id(s, role: str) -> str:
@@ -501,8 +520,16 @@ def part_sample_id(s, role: str) -> str:
     the pack names it); "" without notes. Round 60 (2026-10-29): FFVI puts 224 of its 1326 possible sample pairs
     together, a lead sample has a median one bass partner, and a song's pairs are seen in another of its songs 0.80 of
     the time; the written songs' pairs, each part's sample drawn apart, 0.55, under chance (0.67): the balance token's
-    song lends its instruments with its levels, which were counted on those very samples."""
-    c = Counter(n[3] for n in s.notes.get(role, []) if isinstance(n[3], str) and n[3])
+    song lends its instruments with its levels, which were counted on those very samples. Since round 70 the LINE
+    voice's sample where the part holds two voices or more (cells.line_voice): the most-played over all voices was the
+    busier second voice's, and Troops March on's and Overture's bass lines on sa692eac0a6 under a second voice on
+    s1d296a2572 had put both written voices on s1d296a2572 (the layer token carries the second's)."""
+    notes = s.notes.get(role, [])
+    if role != R.DRUMS:
+        voices = cells_mod.part_voices(s, role)
+        if len(voices) >= 2:
+            notes = voices[cells_mod.line_voice(voices, role)]
+    c = Counter(n[3] for n in notes if isinstance(n[3], str) and n[3])
     if not c:
         return ""
     key = c.most_common(1)[0][0]
@@ -571,7 +598,13 @@ def balance_units(songs) -> list:
     apart had put Relm's band (70) at 160 beats a minute and Slam
     Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
     song's class; the `tempos` word is drawn again under the class where
-    the plan's draw falls outside it."""
+    the plan's draw falls outside it. Since round 70 (2026-10-30) the
+    fifth field is the LINE voice's median level (readings.part_levels)
+    and the eighth the line voice's sample (part_sample_id), so that the
+    line times each sixth-field share reproduces every voice of the part
+    and the voices beside the line play the samples the token names for
+    them (Troops March on's counter line had played at 0.40 of the top
+    where it sits at 0.27, its bass line on the second voice's sample)."""
     habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
     for u in readings_mod.habits(readings_mod.units(songs)) + readings_mod.habits(readings_mod.bass_units(songs)):
         habit_of_part[(u.song, u.values["part"])] = u.outcome
@@ -583,13 +616,15 @@ def balance_units(songs) -> list:
             continue
         weights = readings_mod.part_weights(s)
         voices = Counter(role for role, _ in s.voice_notes.values())
-        top = max(s.levels.values()) if s.levels else 0.0
-        levels = {role: f"{round(lv / top, 1):.1f}" for role, lv in s.levels.items()} if top > 0 else {}
+        finite = {role: lv for role, lv in s.levels.items() if math.isfinite(lv)}   # never a "nan" field: the plan's draw stands in
+        top = max(finite.values()) if finite else 0.0
+        levels = {role: f"{round(lv / top, 1):.1f}" for role, lv in finite.items()} if top > 0 else {}
         tokens = []
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s), dh]   # and its kit as the eighth (round 63)
+                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top), dh]   # and its kit as the eighth (round 63; each
+                                                                                             # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
                     fields.pop()
                 tokens.append(role + ("=" + ":".join(fields) if fields else ""))
@@ -612,6 +647,37 @@ def balance_units(songs) -> list:
                 tokens.append(f"loud={round(s.loudness / MIX_BIN) * MIX_BIN:.0f}")   # its own to
             tokens.append(f"tempo={readings_mod.band(s.bpm)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
+    return out
+
+
+ECHO_PART = "echo"                   # the echo word's part value (a song-level word, as the balance's ARRANGEMENT is)
+ECHO_SEND = 0.5                      # a voice sends when this share of its notes or more do; a part when half its voices or more send
+
+
+def echo_units(songs) -> list:
+    """Each song whose echo the readings hold (Song.echo, round 70) as a unit: its outcome the echo's volume of full, its
+    delay in ms, its feedback, the parts that send to it and the parts that stay dry
+    ("0.20:80:0.78:accompaniment+counter+melody:bass+drums"; a part sends when half its voices or more send ECHO_SEND
+    of their notes or more; "-" where no part does, or none stays dry); its value the part (echo). Drawn once a song on
+    its own stream, in place of the generator's constant and delay names (score.ECHO_WET 0.4, "slap"): FFVI's echo
+    volume is 0.20 of full in 70 of 82 songs, its delay 80 ms in every one, its feedback 0.78 at the median, and the
+    tune sends in 74 of 75 songs, the counter in 55 of 58, the accompaniment in 56 of 69, the bass in 45 of 72, the
+    drums in 17 of 52 (round 69); the written songs had sent every upper part at 0.4 (6 dB wetter) with a 48-144 ms
+    delay, which the owner heard as vibrato and blur (Song Check 54's Whole 166). The sends ride the word so the song's
+    joint holds; a written part named in neither list (the word's song lacked it) keeps the writer's old rule."""
+    out = []
+    for s in songs:
+        if s.echo is None:
+            continue
+        by_role = {}
+        for v, (role, ns) in s.voice_notes.items():
+            if role in readings_mod.PARTS and ns and v in s.echo_sends:
+                by_role.setdefault(role, []).append(s.echo_sends[v] >= ECHO_SEND)
+        sends = sorted(role for role, flags in by_role.items() if sum(flags) * 2 >= len(flags))
+        dry = sorted(role for role in by_role if role not in sends)
+        volume, ms, feedback = s.echo
+        out.append(tables.Unit(s.sid, s.game, f"{volume:.2f}:{ms:.0f}:{feedback:.2f}:{'+'.join(sends) or '-'}:{'+'.join(dry) or '-'}",
+                               {"part": ECHO_PART}))
     return out
 
 

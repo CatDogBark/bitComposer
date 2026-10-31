@@ -328,6 +328,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 low_v, high_v = registers[v]
                 if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
                     notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(pedals.get(v, low_v)), v))
+                    if shared is not None and not tone_index:   # the line's note here, for the voices beside it (round 70: a pedal line had
+                        shared[("line", (k, p))] = float(pedals.get(v, low_v))   # shared none, and Whole 167's apart voice wrote 0 notes)
                     continue
                 taken = shared.setdefault(("taken", (k, p)), set()) if shared is not None else None   # the part's notes at this onset (a 2-tuple key: the voicing look-up unpacks every key)
                 if beside and len(voices) == 1:            # a voice beside the line: with the line, its interval to the line's note (voice_intervals);

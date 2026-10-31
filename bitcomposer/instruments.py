@@ -161,7 +161,7 @@ def _make_sample(name: str, strike_rule: bool = False) -> ITSample:
 
 
 def _sample_from_inst(name: str, inst: dict) -> ITSample:
-    return ITSample(
+    s = ITSample(
         name=name.replace("_", " ").title(),
         filename=name[:12],
         data=inst["data"],
@@ -175,6 +175,9 @@ def _sample_from_inst(name: str, inst: dict) -> ITSample:
         default_volume=inst["volume"],
         c5_speed=inst["rate"],
     )
+    s.source_rate = inst.get("source_rate") or inst["rate"]   # the recording's own rate and frames (a kit piece's C5Speed is twice its WAV's;
+    s.source_frames = inst.get("source_frames") or inst["length"]   # a release tail follows a pack voice's loop): the writer reads a sample's
+    return s                                                 # strike over the recording's first 150 ms by them, as the readings do
 
 
 def _register_releases(samples: list[ITSample]) -> None:

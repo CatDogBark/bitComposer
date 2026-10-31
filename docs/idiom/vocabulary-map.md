@@ -53,7 +53,7 @@ flowchart LR
 | `tempos` | part, tempo | _plan_once | `bass`, `bass_habits`, `counter_figures`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `periods`, `rhythm`, `second_figures` | a song's tempo, to five beats a minute, by its class (the balance token's since round 54) |
 | `sizes` | part | plan_form | - | how many parts a song's form has |
 | `length_habits` | part | plan_form | `cadences`, `part_entries`, `periods` | a song's part-length habit (short, medium, long), drawn once a song |
-| `balance` | part | ?, _plan_once | `bass`, `bass_habits`, `cell_handoffs`, `changes`, `counter_figures`, `counter_pairs`, `counter_shares`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `parts`, `periods`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `second_figures`, `tempos`, `tune_grain`, `values`, `voice_intervals`, `voice_moves`, `voices`, `voicings` | a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, drawn once a song as one unit |
+| `balance` | part | _plan_once, kit_piece_level | `bass`, `bass_habits`, `cell_handoffs`, `changes`, `counter_figures`, `counter_pairs`, `counter_shares`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `parts`, `periods`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `second_figures`, `tempos`, `tune_grain`, `values`, `voice_intervals`, `voice_moves`, `voices`, `voicings` | a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, drawn once a song as one unit |
 | `sounds` | part | _plan_once | - | the share of its gap a part's note sounds |
 | `gap_sounds` | part, voice, speed, gap | _plan_once, _plan_sounds | - | the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more) |
 | `bass_locks` | part | _plan_once | - | the share of the kit's accents (two pieces together) the bass strikes with, in tenths |
@@ -127,12 +127,13 @@ flowchart LR
 | `contour_sizes` | part, mode, contour | melody | - | how far a phrase's contour goes, in semitones, by its shape |
 | `phrase_shifts` | part, mode, relation | melody | - | how far a phrase sits above or below the one before, in semitones, by its relation to it |
 
-### the render (2)
+### the render (3)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
 | `ranges` | part, role | samples_for | - | the register a sample is played in, by the sample and the part playing it |
 | `part_samples` | part, speed | samples_for | - | the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing |
+| `echo` | part | compose, echo_of, echo_word, hand_off_cells, write_melody | - | the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70) |
 
 ### counted, drawn nowhere (the measures' words) (8)
 
@@ -538,6 +539,7 @@ flowchart LR
   subgraph stage_render["the render"]
     ranges["ranges"]
     part_samples["part_samples"]
+    echo["echo"]
   end
   part_speeds -- speed --> part_samples
 ```

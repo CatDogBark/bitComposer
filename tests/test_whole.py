@@ -119,6 +119,62 @@ class WholeSongTests(unittest.TestCase):
             self.assertIn("tune", m)
             self.assertLessEqual(m["tune"]["chord_tones"], 1.0)
 
+    def test_an_apart_voice_is_written_at_its_offset_and_a_pedal_line_shares_its_note(self):
+        """Round 70: an apart voice of an upper part is written in its own span, the line's span at the layer word's
+        offset within the range the game plays its sample over (render.voice_bounds, plan.bounds["role:v"]), so it
+        sounds at its offset from the line when both sound (round 69 had measured Whole 166's "apart +8" voices at a
+        median 0 semitones from the line: every apart voice folded into one `:second` bound, the line's own band). And
+        a pedal line (a one-pitch register, as a game plays a drum sample as a rhythmic chord part) shares its note
+        with the voices beside it, so they can take their interval from it (Whole 167's apart voice had written 0 notes)."""
+        import statistics
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        p = whole.plan(models, 3, "g", max_bars=16)
+        p.bounds["accompaniment"] = (56, 64)
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart +8 like", (44, 92)), (64, 72))
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart -8 sparser", (44, 92)), (48, 56))
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "alternating", (44, 92)), (56, 64))
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart +8 like", None), (64, 72))       # nothing known of the sample
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart +8 like", (40, 60)), (52, 60))   # wholly above its range: its top edge
+        self.assertEqual(whole.voice_bounds(p, "accompaniment", "apart -12 like", (60, 80)), (60, 68))  # wholly under: its bottom edge
+        p.bounds.pop("accompaniment")
+        role = "accompaniment"
+        if role not in p.band:
+            p.band.append(role); p.weights[role] = "half"; p.plays[role] = [True] * p.bars
+            for k, t in enumerate(p.textures):
+                p.textures[k] = t + " " + role
+        p.registers[role] = (56, 64); p.bounds[role] = (56, 64); p.sounds[role] = 0.8
+        p.habits[role] = p.habits.get(role) or "medium mixed"
+        p.extras[role] = {**(p.extras.get(role) or {}), "richness": "full", "motion": "block", "layers": ["apart +8 like"], "layer": "apart +8 like"}
+        p.voices[role] = 2
+        p.bounds[f"{role}:1"] = whole.voice_bounds(p, role, "apart +8 like", (44, 92))
+        written = whole.write(p, whole.song_of(p), models, 3)
+        notes = written[role].notes
+        line = [n for n in notes if n[3] == 0]
+        voice = [n for n in notes if n[3] == 1]
+        self.assertTrue(line and voice, written[role].log)
+        offsets = []                                        # the voice's pitch less the line's, a twelfth of a beat at a time where both sound
+        step = 1 / 12
+        for k in range(int(p.bars * 4 / step)):
+            t = k * step
+            a = [n[2] for n in line if n[0] - 1e-6 <= t < n[1] - 1e-6]
+            b = [n[2] for n in voice if n[0] - 1e-6 <= t < n[1] - 1e-6]
+            if a and b:
+                offsets.append(min(b) - min(a))
+        self.assertTrue(offsets)
+        self.assertAlmostEqual(statistics.median(offsets), 8, delta=2, msg=(offsets[:40], written[role].log))
+        self.assertTrue(all(62 <= n[2] <= 74 for n in voice), sorted({n[2] for n in voice}))     # its span, but for the clash rule's step aside
+        # a pedal line shares its note with the voice beside it: the voice writes
+        p.registers[role] = (56, 56); p.bounds[role] = (56, 56)
+        written = whole.write(p, whole.song_of(p), models, 3)
+        line = [n for n in written[role].notes if n[3] == 0]
+        voice = [n for n in written[role].notes if n[3] == 1]
+        self.assertTrue(line and all(n[2] == 56.0 for n in line))
+        self.assertTrue(voice, written[role].log)
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -885,7 +941,7 @@ class NewTablesTests(unittest.TestCase):
         p.extras["bass"]["layer"] = "apart +0 like"
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), whole.TOP_LEVEL * 0.6)      # the line at the token's level
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), whole.TOP_LEVEL * 0.6 * 1.2)   # the second voice at the token's share
-        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), whole.TOP_LEVEL * 0.6)      # a doubling voice plays the line's level
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), whole.TOP_LEVEL * 0.6 * 0.7)   # a doubling voice at the token's share too (round 70)
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2, {"accompaniment": {1, 2}}), whole.TOP_LEVEL * 0.6 * 0.7)   # apart: its own share
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 3, {"accompaniment": {1, 2, 3}}), whole.TOP_LEVEL * 0.6 * 1.2)   # beyond the token's voices: layer_levels
         self.assertAlmostEqual(whole.note_level(p, "bass", 1), whole.TOP_LEVEL * 0.7)
@@ -1143,6 +1199,16 @@ class NewTablesTests(unittest.TestCase):
         smp = SimpleNamespace(data=flat, loop=True, loop_start=0, loop_end=100)
         self.assertAlmostEqual(whole.sample_rms(smp), 0.25, places=3)                             # the loop body alone
         self.assertAlmostEqual(whole.sample_rms(SimpleNamespace(data=flat.tobytes(), loop=False, loop_start=0, loop_end=0)), 0.25 / 2 ** 0.5, places=3)
+        # the strike over the recording's first 150 ms (round 70): by the WAV's rate, not the C5Speed a kit piece doubles
+        # (KIT_NOTE 48), and over the WAV's frames, not the release tail the instrument builder writes after a loop
+        hit = array.array("h", [8192] * 4800 + [0] * 4800)                                        # 300 ms at 32 kHz: loud, then silent
+        kit = SimpleNamespace(data=hit, loop=False, loop_start=0, loop_end=0, c5_speed=64000, source_rate=32000)
+        self.assertAlmostEqual(whole.sample_strike_and_body(kit)[0], 0.25, places=3)             # 150 ms of real time: the loud half
+        self.assertAlmostEqual(whole.sample_strike_and_body(SimpleNamespace(data=hit, loop=False, loop_start=0, loop_end=0, c5_speed=64000))[0],
+                               0.25 / 2 ** 0.5, places=3)                                         # without the rate: 150 ms at the C5Speed, 300 ms read
+        tail = array.array("h", [8192] * 32 + [0] * 4000)                                         # a 32-frame loop with a release tail after it
+        pad = SimpleNamespace(data=tail, loop=True, loop_start=0, loop_end=32, c5_speed=16000, source_rate=32000, source_frames=32)
+        self.assertAlmostEqual(whole.sample_strike_and_body(pad)[0], 0.25, places=3)             # the recording's 32 frames, as the readings read them
 
     def test_the_kits_pieces_are_the_games(self):
         """Round 58: the pieces a song's drums strike are counted as letters by the kit's habit tier (kit_pieces); the plan
@@ -1183,7 +1249,112 @@ class NewTablesTests(unittest.TestCase):
         if "drums" in p.band:
             self.assertEqual(p.extras["drums"].get("pieces"), "KS")
             self.assertEqual(p.extras["drums"].get("kit"), {"K": "sbfe716b9b6", "S": "s1279e119a1"})
+            self.assertNotIn("kit_levels", p.extras["drums"])                                     # the old field: no piece levels
             self.assertEqual(p.habits["drums"], "dense varied")
+
+    def test_each_kit_piece_plays_at_its_own_level(self):
+        """Round 68: the kit field carries each piece's level beside its sample (`K=sbfe716b9b6@1.7`, a share of the
+        loudest part's); the plan keeps them (extras.drums.kit_levels) and note_level plays a drum note on a kit slot at
+        its piece's share (the open hat at the hat's), a piece without one at the part's level, a share over the top
+        at the cap of full. Blackjack's token had said drums at 0.2 (the hat's median) where its kick plays at 1.7."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.2:::K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2,c=sa64e6372fc:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(p.extras["drums"]["kit"], {"K": "sbfe716b9b6", "S": "s1279e119a1", "h": "sd1c4c7ce33", "c": "sa64e6372fc"})
+        self.assertEqual(p.extras["drums"]["kit_levels"], {"K": 1.7, "S": 0.7, "h": 0.2})
+        self.assertTrue(any(line.startswith("kit from the balance: KShc (K sbfe716b9b6 at 1.70, S s1279e119a1 at 0.70, h sd1c4c7ce33 at 0.20, c sa64e6372fc)") for line in p.log), p.log)   # a tenths token still reads
+        self.assertAlmostEqual(p.top_level, 0.30)
+        self.assertAlmostEqual(whole.note_level(p, "drums", 0, piece="kick"), 0.30 * 1.7)          # the kick at its own share
+        self.assertAlmostEqual(whole.note_level(p, "drums", 1, piece="hihat"), 0.30 * 0.2)         # the hat at its own
+        self.assertAlmostEqual(whole.note_level(p, "drums", 1, piece="open_hihat"), 0.30 * 0.2)    # the open hat on the hat's sample, at its level
+        self.assertAlmostEqual(whole.note_level(p, "drums", 0, piece="crash"), 0.30 * 0.2)         # no level for the crash: the part's (the token's 0.2)
+        self.assertAlmostEqual(whole.note_level(p, "drums", 0), 0.30 * 0.2)                        # no slot named: the part's
+        self.assertEqual(whole.kit_piece_level(p, "kick"), 1.7); self.assertIsNone(whole.kit_piece_level(p, "rim"))
+        p.top_level = 0.8
+        self.assertEqual(whole.note_level(p, "drums", 0, piece="kick"), 1.0)                       # 0.8 x 1.7 reaches the cap of full
+
+    def test_a_doubling_voice_takes_the_tokens_level_and_sample(self):
+        """Round 70: a voice beside the line plays at the token's share for that voice and on the token's sample for it,
+        doubling or not (the layer word gives a doubling voice its interval only); without a token share a doubling voice
+        keeps the line's level and sample, as before. 163's counter second had played at 1.0 on the line's sf89f5aedfd
+        where Troops March on plays it at 2.5 on sfd6accf98a; Good Night's four extra voices had all taken the first's."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from bitcomposer import instruments
+        from bitcomposer.translate import tables
+        token = ("accompaniment=half:56-68:0.8:3:0.6:2.5@sx@0.5/0.4@sy@0.3::sline bass=half:36-44:0.9:1:1.0:::sbass "
+                 "melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.voices["accompaniment"], 3)
+        p.extras["accompaniment"]["layers"] = ["doubling +4", "apart -8 like"]; p.extras["accompaniment"]["layer"] = "doubling +4"
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), 0.30 * 0.6)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), 0.30 * 0.6 * 2.5)          # the doubling voice at the token's share
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), 0.30 * 0.6 * 0.4)
+        p.voice_levels.pop("accompaniment")                                                       # no token shares: the draw for the apart voice,
+        p.layer_levels["accompaniment"] = 1.3                                                     # the line's level for the doubling one
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), 0.30 * 0.6)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), 0.30 * 0.6 * 1.3)
+        made = []
+        fake = lambda name: made.append(name) or SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "arp": ["pad"]}}
+        with mock.patch.object(instruments, "_make_sample", fake):
+            samples = whole.samples_for(p, pack, {"sx", "sy", "sline", "sbass"}, "g", random.Random(1), {})
+        self.assertEqual(samples["accompaniment"][0], "sline")
+        self.assertEqual((samples["accompaniment:1"][0], samples["accompaniment:2"][0]), ("sx", "sy"))   # each voice's own, by rank
+        self.assertEqual(samples["accompaniment:second"][0], "sx")                                 # the old field, kept for a voice without its own
+        self.assertIn("accompaniment's voices beside the line on the balance's song's own samples: 2 sx, 3 sy", p.log)
+        second = {"accompaniment": {2}}
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 0, second)[0], "sline")
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 1, second)[0], "sx")           # the doubling voice on the token's sample
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 2, second)[0], "sy")
+        del samples["accompaniment:2"]
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 2, second)[0], "sx")           # without its own: the second's
+        del samples["accompaniment:1"]
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 1, second)[0], "sline")        # a doubling voice without its own: the line's
+        self.assertEqual(whole.sample_of(samples, "bass", 0, second)[0], "sbass")
+
+    def test_the_echo_is_the_games_own_drawn_on_its_own_stream(self):
+        """Round 70: with an `echo` word the written song's echo is the counted triple (volume of full, delay as the chip's
+        nearest step, feedback) with the parts that send and the parts that stay dry, drawn once on the song's own echo
+        stream (whole:SEED:echo), in place of score.ECHO_WET 0.4 and the generator's delay names; a part the word's song
+        lacked keeps the writer's old rule (the upper parts send); a word whose song sent nothing leaves the song dry;
+        without the word the sound set's habits stand (echo_of), as before."""
+        from bitcomposer.packs import PACKS
+        from bitcomposer.translate import tables
+        unit = lambda outcome, i: tables.Unit(f"s{i}", "g", outcome, {"part": rhythm.ECHO_PART})   # noqa: E731
+        t = tables.Table(("part",), "echo", votes=tables.SHARES).fit([unit("0.20:80:0.78:bass+melody:accompaniment+drums", i) for i in range(3)])
+        p = whole.plan({}, 1, "g")
+        echo = whole.echo_word({"echo": t}, p, random.Random("whole:1:echo"))
+        self.assertEqual((echo["wet"], echo["seconds"], echo["feedback"], echo["delay"]), (0.2, 0.08, 0.78, "80 ms"))
+        self.assertEqual((echo["sends"], echo["dry"]), (["bass", "melody"], ["accompaniment", "drums"]))
+        self.assertTrue(any(line.startswith("echo (echo): volume 0.20 of full, 80 ms, feedback 0.78; sends bass+melody; dry accompaniment+drums") for line in p.log), p.log)
+        self.assertEqual([whole.sends_to_echo(echo, r) for r in ("melody", "bass", "accompaniment", "drums", "counter", "harmony")],
+                         [True, True, False, False, True, True])                                   # the counter and harmony: not the word's song's parts, the old rule
+        self.assertFalse(whole.sends_to_echo(None, "melody"))
+        self.assertTrue(whole.sends_to_echo({"delay": "slap", "seconds": 0.1, "wet": 0.4, "feedback": 0.5}, "melody"))   # the habits' echo: the old rule
+        self.assertFalse(whole.sends_to_echo({"delay": "slap", "seconds": 0.1, "wet": 0.4, "feedback": 0.5}, "bass"))
+        self.assertEqual(whole.echo_word({"echo": tables.Table(("part",), "echo", votes=tables.SHARES).fit([unit("0.00:0:0.00:-:bass+melody", i) for i in range(3)])},
+                                         whole.plan({}, 1, "g"), random.Random(1)), None)         # the song sent nothing: dry
+        self.assertEqual(whole.echo_word({"echo": tables.Table(("part",), "echo", votes=tables.SHARES).fit([unit("0.20:250:0.78:melody:-", i) for i in range(3)])},
+                                         whole.plan({}, 1, "g"), random.Random(1))["seconds"], 15 * 0.016)   # the chip's longest step
+        self.assertIsNone(whole.echo_word({}, p, random.Random(1)))
+        out = whole.compose({"echo": t}, PACKS["ffvi"], set(), "ffvi", 1, "g", max_bars=16, read=False)
+        self.assertEqual(out["echo"]["word"], "0.20:80:0.78:bass+melody:accompaniment+drums")
+        first, voices = out["first"], out["plan"].voices
+        for role, start in first.items():
+            mine = [n for n in out["score"].notes if start <= n.voice < start + voices[role]]
+            if mine:
+                self.assertEqual({n.echo for n in mine}, {whole.sends_to_echo(out["echo"], role)}, role)
+                self.assertEqual({n.echo_volume for n in mine if n.echo}, {(0.2, 0.2)} if any(n.echo for n in mine) else set(), role)
+        dry = whole.compose({"echo": t}, PACKS["ffvi"], set(), "ffvi", 1, "g", max_bars=16, read=False, echo=None)
+        self.assertIsNone(dry["echo"])
+        habit = whole.compose({}, PACKS["ffvi"], set(), "ffvi", 1, "g", max_bars=16, read=False)   # no word: the sound set's habits
+        self.assertTrue(habit["echo"] is None or "word" not in habit["echo"])
 
     def test_the_mix_level_and_the_master_that_holds_it(self):
         """Round 59: a song's mix level is its perceived note levels squared over quarter-beat frames, in dB; the balance token
