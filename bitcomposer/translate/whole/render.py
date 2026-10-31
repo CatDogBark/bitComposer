@@ -657,6 +657,20 @@ def heard_rms(strike: float, body: float, seconds: float) -> float:
     return rhythm.heard_rms(strike, body, seconds)
 
 
+def sample_envelope(name: str, pack_name: str = "") -> dict | None:
+    """The SNES chip envelope the game plays a written voice's sample with (samples.SAMPLE_ENVELOPES, the pack file's
+    `envelope`), by the voice's registered name: a pack's own sample is registered as pack_name_id and the written
+    song's sample table names it by its bare id (samples_for's make), so the lookup by the bare name alone had found
+    nothing and every written note on a pack sample played flat at full gain since the envelope was added (round 71,
+    2026-10-30: Whole 169's bass instrument carried a two-node envelope where Blackjack's decays over six on the same
+    sample, ADSR FF/EE). None where the pack carries none: flat and full."""
+    from ... import samples as samples_mod
+    env = samples_mod.SAMPLE_ENVELOPES.get(name)
+    if env is None and pack_name and not name.startswith(pack_name + "_"):
+        env = samples_mod.SAMPLE_ENVELOPES.get(f"{pack_name}_{name}")
+    return env
+
+
 def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",
              master: tuple | None = None):
     """The written parts as a score (spc.convert.Score) on the pack's
@@ -732,7 +746,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         idx, addr, c5 = instrument(name, sample)
         pan = plan_mod.PANS[role][j % len(plan_mod.PANS[role])]
         send = sends_to_echo(echo, role)                    # the echo word's parts (round 70), the upper parts without it
-        env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
+        env = sample_envelope(name, pack_name)              # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
         played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0, piece)
         heard.append((t0 / beat_s, (min(t1, seconds) - t0) / beat_s, perceived))

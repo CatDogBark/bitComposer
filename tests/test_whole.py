@@ -1318,6 +1318,38 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.sample_of(samples, "accompaniment", 1, second)[0], "sline")        # a doubling voice without its own: the line's
         self.assertEqual(whole.sample_of(samples, "bass", 0, second)[0], "sbass")
 
+    def test_a_written_note_plays_its_packs_envelope(self):
+        """Round 71: a pack's own sample is registered as pack_name_id and the written song's sample table names it by
+        its bare id, so the render's envelope lookup by the bare name alone had found nothing and every written note on
+        a pack sample played flat at full gain since the envelope was added (Whole 169's bass flat where Blackjack's
+        decays on the same sample). sample_envelope reads the pack's envelope under either name, and score_of's notes
+        carry it (ADSR as the registers, GAIN as the register with ADSR off); a sample without one stays flat and full."""
+        from types import SimpleNamespace
+        from bitcomposer import samples as sm, score
+        sm.SAMPLE_ENVELOPES["g_sx"] = {"adsr": [255, 238]}
+        sm.SAMPLE_ENVELOPES["g_sy"] = {"gain": 0x9F}
+        try:
+            self.assertEqual(whole.sample_envelope("sx", "g"), {"adsr": [255, 238]})
+            self.assertEqual(whole.sample_envelope("g_sx", "g"), {"adsr": [255, 238]})
+            self.assertIsNone(whole.sample_envelope("sx", ""))                                   # no pack: the bare name alone
+            self.assertIsNone(whole.sample_envelope("sz", "g"))
+            p = whole.plan({}, 1, "g")                                                               # bass, drums, melody; 12 bars
+            smp = lambda: SimpleNamespace(c5_speed=32000, data=b"\x00\x10" * 64, loop=False, sus_loop=False, loop_start=0, loop_end=0,   # noqa: E731
+                                          sus_loop_start=0, sus_loop_end=0)
+            written = {"bass": SimpleNamespace(notes=[(0.0, 1.0, 40, 0)]), "melody": SimpleNamespace(notes=[(0.0, 1.0, 64, 0), (1.0, 2.0, 66, 0)])}
+            samples = {"bass": ("sx", smp()), "melody": ("sy", smp())}
+            sc, first = whole.score_of(p, written, samples, loops=1, fade=0.0, pack_name="g")
+            by = {n.voice: n for n in sc.notes}
+            self.assertEqual((by[first["bass"]].adsr, by[first["bass"]].gain), ((255, 238), 0))        # the pack's ADSR
+            self.assertEqual((by[first["melody"]].adsr, by[first["melody"]].gain), ((0, 0), 0x9F))     # the pack's GAIN
+            samples = {"bass": ("sz", smp()), "melody": ("sy", smp())}
+            sc, first = whole.score_of(p, written, samples, loops=1, fade=0.0, pack_name="g")
+            by = {n.voice: n for n in sc.notes}
+            self.assertEqual((by[first["bass"]].adsr, by[first["bass"]].gain), ((0, 0), score.GAIN_FULL))   # none in the pack: flat and full
+        finally:
+            sm.SAMPLE_ENVELOPES.pop("g_sx", None)
+            sm.SAMPLE_ENVELOPES.pop("g_sy", None)
+
     def test_the_echo_is_the_games_own_drawn_on_its_own_stream(self):
         """Round 70: with an `echo` word the written song's echo is the counted triple (volume of full, delay as the chip's
         nearest step, feedback) with the parts that send and the parts that stay dry, drawn once on the song's own echo
