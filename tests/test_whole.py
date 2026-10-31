@@ -1143,6 +1143,16 @@ class NewTablesTests(unittest.TestCase):
         smp = SimpleNamespace(data=flat, loop=True, loop_start=0, loop_end=100)
         self.assertAlmostEqual(whole.sample_rms(smp), 0.25, places=3)                             # the loop body alone
         self.assertAlmostEqual(whole.sample_rms(SimpleNamespace(data=flat.tobytes(), loop=False, loop_start=0, loop_end=0)), 0.25 / 2 ** 0.5, places=3)
+        # the strike over the recording's first 150 ms (round 70): by the WAV's rate, not the C5Speed a kit piece doubles
+        # (KIT_NOTE 48), and over the WAV's frames, not the release tail the instrument builder writes after a loop
+        hit = array.array("h", [8192] * 4800 + [0] * 4800)                                        # 300 ms at 32 kHz: loud, then silent
+        kit = SimpleNamespace(data=hit, loop=False, loop_start=0, loop_end=0, c5_speed=64000, source_rate=32000)
+        self.assertAlmostEqual(whole.sample_strike_and_body(kit)[0], 0.25, places=3)             # 150 ms of real time: the loud half
+        self.assertAlmostEqual(whole.sample_strike_and_body(SimpleNamespace(data=hit, loop=False, loop_start=0, loop_end=0, c5_speed=64000))[0],
+                               0.25 / 2 ** 0.5, places=3)                                         # without the rate: 150 ms at the C5Speed, 300 ms read
+        tail = array.array("h", [8192] * 32 + [0] * 4000)                                         # a 32-frame loop with a release tail after it
+        pad = SimpleNamespace(data=tail, loop=True, loop_start=0, loop_end=32, c5_speed=16000, source_rate=32000, source_frames=32)
+        self.assertAlmostEqual(whole.sample_strike_and_body(pad)[0], 0.25, places=3)             # the recording's 32 frames, as the readings read them
 
     def test_the_kits_pieces_are_the_games(self):
         """Round 58: the pieces a song's drums strike are counted as letters by the kit's habit tier (kit_pieces); the plan
@@ -1200,7 +1210,7 @@ class NewTablesTests(unittest.TestCase):
             self.skipTest("the drums left out of this seed's textures")
         self.assertEqual(p.extras["drums"]["kit"], {"K": "sbfe716b9b6", "S": "s1279e119a1", "h": "sd1c4c7ce33", "c": "sa64e6372fc"})
         self.assertEqual(p.extras["drums"]["kit_levels"], {"K": 1.7, "S": 0.7, "h": 0.2})
-        self.assertTrue(any(line.startswith("kit from the balance: KShc (K sbfe716b9b6 at 1.7, S s1279e119a1 at 0.7, h sd1c4c7ce33 at 0.2, c sa64e6372fc)") for line in p.log), p.log)
+        self.assertTrue(any(line.startswith("kit from the balance: KShc (K sbfe716b9b6 at 1.70, S s1279e119a1 at 0.70, h sd1c4c7ce33 at 0.20, c sa64e6372fc)") for line in p.log), p.log)   # a tenths token still reads
         self.assertAlmostEqual(p.top_level, 0.30)
         self.assertAlmostEqual(whole.note_level(p, "drums", 0, piece="kick"), 0.30 * 1.7)          # the kick at its own share
         self.assertAlmostEqual(whole.note_level(p, "drums", 1, piece="hihat"), 0.30 * 0.2)         # the hat at its own

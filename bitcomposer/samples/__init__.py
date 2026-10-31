@@ -359,6 +359,7 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
             if abs(k - 1.0) > 0.02:
                 data = _pack_samples([max(-32768, min(32767, int(v * k))) for v in ints])
                 gain = k
+    recorded = length                                       # the recording's own frames, before any release tail
     if family and meta.get("loop"):
         data, length, meta = add_release(data, length, meta, RELEASE[family])
     return {
@@ -367,7 +368,9 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
         "loop_start": meta.get("loop_start", 0), "loop_end": meta.get("loop_end", length),
         "sus_loop": meta.get("sus_loop", False), "release": meta.get("release", 0.0),
         "gain": gain, "struck": struck, "onset_ms": onset_ms,
-    }
+        "source_rate": meta.get("source_rate", meta["rate"]),   # the recording's own rate and frames: a pack voice's C5Speed is its rate shifted
+        "source_frames": meta.get("source_frames", recorded),   # by its pitch (a kit piece's twice the WAV's), and the writer reads a strike over
+    }                                                           # the recording's first 150 ms, as the readings do (round 70)
 
 
 def _onset_ms(ints, rate: int, window_s: float = 0.004, span_s: float = 0.5) -> float:

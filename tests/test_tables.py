@@ -659,11 +659,11 @@ class BalanceLevelTests(unittest.TestCase):
         s.levels = {"melody": 0.5, "drums": 0.1}            # the part's median: the hat's, 0.2 of the tune
         s.kit_levels = {"k": 0.8, "s": 0.3, "h": 0.1}       # the kick louder than the tune, the snare at 0.6 of it
         self.assertEqual(rhythm.kit_token(s), "K=k,S=s,h=h")               # the old form without a top
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.6,S=s@0.6,h=h@0.2")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,S=s@0.60,h=h@0.20")   # in hundredths since round 70
         token = rhythm.balance_units([s])[0].outcome
-        self.assertIn("drums=::::0.2:::K=k@1.6,S=s@0.6,h=h@0.2", token)
+        self.assertIn("drums=::::0.2:::K=k@1.60,S=s@0.60,h=h@0.20", token)
         s.kit_levels["s"] = float("nan")
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.6,S=s,h=h@0.2")   # an unread level never reaches the token
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,S=s,h=h@0.20")   # an unread level never reaches the token
         s.kit_levels = {}
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k,S=s,h=h")
 

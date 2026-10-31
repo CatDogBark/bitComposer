@@ -669,7 +669,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 extras[role]["kit"] = token_kit
                 if token_kit_levels:                        # each piece at its own level of the loudest part's (round 68); a piece without
                     extras[role]["kit_levels"] = token_kit_levels   # one plays at the part's level (the fifth field)
-                log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.1f}" if k in token_kit_levels else "")
+                log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
                                                                                             for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
                 extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,

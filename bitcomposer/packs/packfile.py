@@ -347,7 +347,8 @@ def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
     if not 1000 <= c5 <= 9_999_999:
         fail(where, f"that pitch puts the playback rate at {c5} Hz, out of range")
     loop = spec.get("loop")
-    meta = {"rate": c5, "loop": False, "loop_start": 0, "loop_end": frames}
+    meta = {"rate": c5, "loop": False, "loop_start": 0, "loop_end": frames, "source_rate": rate, "source_frames": frames}   # the WAV's own
+                                                                                                                            # rate and length beside the C5Speed
     if loop is not None:
         if not isinstance(loop, list) or len(loop) != 2 or not all(_is_int(x) for x in loop):
             fail(f"{where}.loop", "[start, end] in sample frames")

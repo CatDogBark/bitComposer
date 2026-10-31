@@ -486,7 +486,8 @@ def kit_token(s, top: float = 0.0) -> str:
     a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots).
     Since round 68 each piece carries its own level too, where the readings heard one: the median level of the notes
     struck on that sample (Song.kit_levels, the loudness factor applied as the part's level has it) as a share of the
-    song's loudest part's level `top` in tenths (`K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2`). The part's
+    song's loudest part's level `top` (`K=sbfe716b9b6@1.70,S=s1279e119a1@0.70,h=sd1c4c7ce33@0.20`; in hundredths since
+    round 70, tenths before and still read: 163's snare at 0.14 kept as 0.1 had cost 2.9 dB on a quiet piece). The part's
     one level is the median over every note of every drum voice, which is the most frequent piece's: FFVI's hat is the
     most frequent and its strike the quietest, so Blackjack's token said drums at 0.2 of the top where its kick plays
     at 1.7 and its snare at 0.7, and the written kit was brought to one heard loudness a piece, the kick as quiet as
@@ -509,7 +510,7 @@ def kit_token(s, top: float = 0.0) -> str:
         field = f"{letter}=" + ("s" + key[:10] if len(key) >= 10 else key)
         level = levels.get(key)
         if top > 0 and level is not None and math.isfinite(level):   # never a "nan" share: the part's level stands in
-            field += f"@{round(level / top, 1):.1f}"
+            field += f"@{round(level / top, 2):.2f}"                 # in hundredths since round 70: tenths cost 2.9 dB on a snare at 0.14 kept as 0.1
         out.append(field)
     return ",".join(out)
 

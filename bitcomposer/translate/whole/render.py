@@ -575,8 +575,12 @@ def sample_strike_and_body(sample) -> tuple[float, float]:
             a, b = lo, hi                                   # voice with a release holds its sustain loop; read as the whole sample, its quiet
             break                                           # release tail had halved the loudness and the writer boosted the note, round 59)
     body = x[a:b] if b <= len(x) and b > a else x
-    rate = getattr(sample, "c5_speed", 0) or 32000
-    strike = x[:max(1, min(len(x), int(rate * rhythm.STRIKE_SECONDS)))]
+    rate = getattr(sample, "source_rate", None) or getattr(sample, "c5_speed", 0) or 32000   # the recording's own rate (round 70): a kit
+    n = max(1, int(rate * rhythm.STRIKE_SECONDS))           # piece's C5Speed is twice its WAV's (KIT_NOTE 48 brings it to pitch), so
+    recorded = getattr(sample, "source_frames", None) or len(x)   # 150 ms at the C5Speed read 300 ms of the tom and crash, -0.5 to -2.9 dB
+    strike = x[:max(1, min(len(x), n, recorded))]           # against the readings' strike (load_loudness: the WAV's first 150 ms); and the
+                                                            # recording's frames alone: the instrument builder writes a release tail after a
+                                                            # pack voice's loop, which the readings never see (7 dB under on a 32-frame loop)
     rms = lambda seg: math.sqrt(sum(v * v for v in seg) / len(seg)) / 32768   # noqa: E731
     return rms(strike), rms(body)
 
