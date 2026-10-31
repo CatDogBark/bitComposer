@@ -681,6 +681,60 @@ def echo_units(songs) -> list:
     return out
 
 
+VIBRATO_DEPTH_BIN = 5.0              # cents the word's depth is kept to
+VIBRATO_RATE_BIN = 0.5               # Hz
+VIBRATO_ONSET_BIN = 0.1              # seconds
+VIBRATO_SHARE_BIN = 0.1              # a class's share of held notes, in tenths
+
+
+def vibrato_units(songs) -> list:
+    """Each pitched part of each song whose vibrato the readings hold (Song.vibrato, round 72) as a unit: its outcome
+    the share of the part's held notes that carry vibrato in each length class (VIBRATO_CLASSES: 0.35-0.5 s, 0.5-1,
+    1-2, 2 and over; in tenths, "-" for a class the song held no note in), then the depth in cents either side, the
+    rate in Hz and the onset in seconds from key-on ("0.0/0.1/0.3/0.3:30:5.5:0.5"; "0.0/0.0/-/-:0:0:0" for a part
+    with no vibrato at all); its value the part. One unit a part a song, so the shares and the shape ride together;
+    the shape is the busiest vibrato voice's. Drawn once a song a part by the player's performance (not the writer:
+    vibrato is a performance of the written score) on its own stream, in place of a fixed rule (10 cents at 5.5 Hz
+    on every note over 0.35 s): FFVI's tunes carry it on a fifth of their held notes, deeper and later."""
+    out = []
+    for s in songs:
+        if not s.vibrato:
+            continue
+        for role in readings_mod.PITCHED:
+            voices = [v for v, (r, ns) in s.voice_notes.items() if r == role and v in s.vibrato]
+            if not voices:
+                continue
+            held = [sum(s.vibrato[v]["held"][k] for v in voices) for k in range(4)]
+            vib = [sum(s.vibrato[v]["vib"][k] for v in voices) for k in range(4)]
+            if not sum(held):
+                continue
+            shares = "/".join(f"{round(vib[k] / held[k] / VIBRATO_SHARE_BIN) * VIBRATO_SHARE_BIN:.1f}" if held[k] else "-" for k in range(4))
+            busiest = max(voices, key=lambda v: sum(s.vibrato[v]["vib"]))
+            d = s.vibrato[busiest]
+            if sum(d["vib"]) and "depth" in d:
+                shape = (f"{round(d['depth'] / VIBRATO_DEPTH_BIN) * VIBRATO_DEPTH_BIN:.0f}:{round(d['rate'] / VIBRATO_RATE_BIN) * VIBRATO_RATE_BIN:.1f}"
+                         f":{round(d['onset'] / VIBRATO_ONSET_BIN) * VIBRATO_ONSET_BIN:.1f}")
+            else:
+                shape = "0:0:0"
+            out.append(tables.Unit(s.sid, s.game, f"{shares}:{shape}", {"part": role}))
+    return out
+
+
+def vibrato_word(outcome: str) -> dict | None:
+    """A vibrato unit's outcome read back: {"shares": [a class's share or None], "depth", "rate", "onset"}; None for
+    a malformed one."""
+    fields = outcome.split(":")
+    if len(fields) != 4:
+        return None
+    try:
+        shares = [None if x == "-" else float(x) for x in fields[0].split("/")]
+        if len(shares) != 4:
+            return None
+        return {"shares": shares, "depth": float(fields[1]), "rate": float(fields[2]), "onset": float(fields[3])}
+    except ValueError:
+        return None
+
+
 SAMPLE_PARTS = (R.MELODY, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts whose sample the part_samples word gives (the counter's is
                                                                 # counter_samples/counter_pairs', a second voice's layer_samples')
 

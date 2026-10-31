@@ -70,7 +70,7 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
                         min_bars=perf.min_bars, tail_bars=perf.tail_bars, themed=perf.themed, band_returns=perf.band_returns, read=False,
                         fade=perf.fade, loops=perf.loops, echo=echo)
     p, score = out["plan"], out["score"]
-    done = performance_mod.perform(out, perf)
+    done = performance_mod.perform(out, perf, models, seed)
     key = f"{harmony.NAMES[p.tonic]} {p.mode}"
     title = names.song_title(key, rng=rng, sound=sounds, tempo=_tempo_word(p.bpm))[:names.MAX_TITLE]
     score.title = title

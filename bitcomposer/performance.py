@@ -28,7 +28,8 @@ from dataclasses import dataclass
 
 ECHO_HABIT = "habit"                  # whole.compose's default: the echo as the sound set's habits give it (the tools' way)
 
-VIBRATO_HOLD = 0.35                   # seconds a note must sound to take vibrato
+# The player's old vibrato rule, the fallback where a vocabulary has no `vibrato` word (an import counted before round 72)
+VIBRATO_HOLD = 0.35                   # seconds a note must sound to take vibrato (the word's count uses the same threshold)
 VIBRATO_DELAY = 0.12                  # seconds into the note before it starts
 VIBRATO_RISE = 0.25                   # seconds it takes to reach its depth
 VIBRATO_DEPTH = 10.0                  # cents either side (the module slides in 1/64 of a semitone, 1.6 cents)
@@ -104,40 +105,90 @@ def echo_for(plan, seed: int, models: dict | None = None, habits: dict | None = 
     return echo
 
 
-def vibrato(score, plan, first: dict) -> int:
+def vibrato_stream(seed: int) -> random.Random:
+    """The performance's own stream for the vibrato: the words a part, then each held note's draw."""
+    return random.Random(f"written:{seed}:performance:vibrato")
+
+
+def vibrato_words(models: dict | None, plan, rng: random.Random) -> dict | None:
+    """The `vibrato` word drawn for each of VIBRATO_PARTS in the band (round 72: a part's share of held notes carrying
+    vibrato in each length class, its depth in cents, its rate in Hz, its onset in seconds; one unit a song a part,
+    counted from the game's pitch writes while a note sounds): {role: {"shares", "depth", "rate", "onset"}}, or None
+    where the vocabulary has no such word (the old rule then stands)."""
+    from .translate import rhythm
+    from .translate.whole.plan import _draw
+    if not (models or {}).get("vibrato"):
+        return None
+    out = {}
+    for role in VIBRATO_PARTS:
+        if role not in plan.band:
+            continue
+        outcome = _draw(models, "vibrato", (role,), rng, plan.log)
+        word = rhythm.vibrato_word(outcome)
+        if word is None:
+            continue
+        out[role] = word
+        shares = "/".join("-" if s is None else f"{s:.1f}" for s in word["shares"])
+        plan.log.append(f"performance: the {role}'s vibrato (vibrato): shares {shares} of its held notes by length class, "
+                        f"{word['depth']:.0f} cents at {word['rate']:.1f} Hz from {word['onset']:.1f} s in")
+    return out
+
+
+def vibrato(score, plan, first: dict, words: dict | None = None, rng: random.Random | None = None) -> int:
     """Vibrato on the held notes of the tune and the counter, as bends a row (the module slides the pitch a row at a
-    time; 1/64 of a semitone a step): after VIBRATO_DELAY, a sine of VIBRATO_RATE rising to VIBRATO_DEPTH cents over
-    VIBRATO_RISE. A performance of the written score, never of the writing: no note moves, starts or ends differently.
-    Returns how many notes took it."""
-    voices = set()
+    time; 1/64 of a semitone a step). With `words` (vibrato_words), a held note takes it with the word's share for its
+    length class (drawn on `rng`), at the word's depth and rate from the word's onset, rising over one cycle (FFVI's
+    first swing is 0.41 of its depth at the median, round 72's measure); without, the old rule: every held note, after VIBRATO_DELAY, a sine of
+    VIBRATO_RATE rising to VIBRATO_DEPTH cents over VIBRATO_RISE. A performance of the written score, never of the
+    writing: no note moves, starts or ends differently. Returns how many notes took it."""
+    from .translate.reading import vibrato_class
+    voices = {}
     for role in VIBRATO_PARTS:
         if role in first:
-            voices.update(range(first[role], first[role] + plan.voices.get(role, 1)))
+            for v in range(first[role], first[role] + plan.voices.get(role, 1)):
+                voices[v] = role
     count = 0
     for n in score.notes:
         if n.voice not in voices or n.end is None or n.noise or n.bends or n.end - n.start < VIBRATO_HOLD:
             continue
+        if words is not None:
+            word = words.get(voices[n.voice])
+            if word is None:
+                continue
+            share = word["shares"][vibrato_class(n.end - n.start)]
+            if not share or rng.random() >= share:
+                continue
+            depth, rate, delay = word["depth"], word["rate"], word["onset"]
+            if depth <= 0 or rate <= 0:
+                continue
+            rise_s = 1.0 / rate
+        else:
+            depth, rate, delay, rise_s = VIBRATO_DEPTH, VIBRATO_RATE, VIBRATO_DELAY, VIBRATO_RISE
         bends = []
-        t = VIBRATO_DELAY
+        t = delay
         while n.start + t < n.end - VIBRATO_STEP:
-            rise = min(1.0, (t - VIBRATO_DELAY) / VIBRATO_RISE)
-            cents = VIBRATO_DEPTH * rise * math.sin(2 * math.pi * VIBRATO_RATE * (t - VIBRATO_DELAY))
+            rise = min(1.0, (t - delay) / rise_s) if rise_s > 0 else 1.0
+            cents = depth * rise * math.sin(2 * math.pi * rate * (t - delay))
             bends.append((n.start + t, max(1, round(n.pitch * 2 ** (cents / 1200.0)))))
             t += VIBRATO_STEP
         if bends:
             n.bends = bends
             count += 1
     if count:
-        plan.log.append(f"performance: vibrato on {count} held notes of the tune and the counter")
+        plan.log.append(f"performance: vibrato on {count} held notes of the tune and the counter"
+                        + (" (the vocabulary's word)" if words is not None else " (the player's rule, the vocabulary having no vibrato word)"))
     return count
 
 
-def perform(out: dict, performance: Performance) -> dict:
-    """What the performance adds to a written song after the writing: the vibrato. Returns what it did, for the
-    song's message and its info: {"vibrato": notes}."""
-    done = {"vibrato": 0}
+def perform(out: dict, performance: Performance, models: dict | None = None, seed: int | None = None) -> dict:
+    """What the performance adds to a written song after the writing: the vibrato, by the vocabulary's word where it
+    has one (drawn on the performance's own stream; `models` and `seed` given), the old rule where not. Returns what
+    it did, for the song's message and its info: {"vibrato": notes, "vibrato_from": "word" | "rule" | None}."""
+    done = {"vibrato": 0, "vibrato_from": None}
     if performance.vibrato:
-        done["vibrato"] = vibrato(out["score"], out["plan"], out["first"])
+        words = vibrato_words(models, out["plan"], vibrato_stream(seed)) if seed is not None else None
+        done["vibrato_from"] = "word" if words is not None else "rule"
+        done["vibrato"] = vibrato(out["score"], out["plan"], out["first"], words, vibrato_stream(seed) if seed is not None else None)
     return done
 
 
@@ -154,6 +205,9 @@ def describe(performance: Performance, echo: dict | None, done: dict) -> str:
     else:
         parts.append("no echo")
     if done.get("vibrato"):
-        parts.append(f"vibrato on {done['vibrato']} held notes")
+        parts.append(f"vibrato on {done['vibrato']} held notes"
+                     + (" (the vocabulary's word)" if done.get("vibrato_from") == "word" else " (the player's rule, no vibrato word)" if done.get("vibrato_from") == "rule" else ""))
+    elif performance.vibrato and done.get("vibrato_from") == "word":
+        parts.append("no vibrato (the vocabulary's word)")
     parts.append(f"the loop {'twice' if performance.loops == 2 else str(performance.loops) + ' times'}")
     return "performance: " + ", ".join(parts)

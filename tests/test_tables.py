@@ -699,6 +699,52 @@ class BalanceLevelTests(unittest.TestCase):
         from bitcomposer.translate import packtables
         self.assertIn("echo", packtables.KEPT)
 
+    def test_a_parts_vibrato_is_a_counted_word(self):
+        """Round 72: a note's pitch writes while it sounds (spc.notes.Note.bends) read as vibrato where they swing back
+        and forth (reading.note_vibrato: depth, rate, onset; a slide is not), each voice's held notes counted by length
+        class and kept with the readings (vibrato_of_notes, features of source "vibrato"), and counted as the
+        `vibrato` word, one unit a part a song: the shares by class, then the depth, rate and onset."""
+        import math
+        from types import SimpleNamespace
+        from bitcomposer.translate import packtables, reading
+        p0 = 0x1000
+
+        def wobble(voice, start, length, depth=30.0, rate=5.7, onset=0.5):
+            bends, t = [], onset
+            while t < length:
+                bends.append((start + t, round(p0 * 2 ** (depth * math.sin(2 * math.pi * rate * (t - onset)) / 1200))))
+                t += 0.005
+            return SimpleNamespace(voice=voice, start=start, end=start + length, pitch=p0, bends=bends, noise=False)
+        plain = lambda voice, start, length: SimpleNamespace(voice=voice, start=start, end=start + length, pitch=p0, bends=[], noise=False)   # noqa: E731
+        v = reading.note_vibrato(wobble(0, 0.0, 2.0))
+        self.assertAlmostEqual(v["depth"], 30.0, delta=1.0)
+        self.assertAlmostEqual(v["rate"], 5.7, delta=0.2)
+        self.assertAlmostEqual(v["onset"], 0.5, delta=0.02)
+        self.assertFalse(v["trill"])
+        self.assertIsNone(reading.note_vibrato(SimpleNamespace(voice=0, start=0.0, end=1.0, pitch=p0, bends=[(0.1 * k, p0 + 30 * k) for k in range(1, 9)], noise=False)))   # a slide
+        self.assertIsNone(reading.note_vibrato(plain(0, 0.0, 1.0)))
+        self.assertTrue(reading.note_vibrato(wobble(0, 0.0, 2.0, depth=100.0))["trill"])
+        notes = [wobble(0, 0.0, 2.0), wobble(0, 2.0, 1.5), plain(0, 4.0, 1.5), plain(0, 6.0, 0.4), plain(0, 7.0, 0.2),   # the tune: 2 of 3 long, 0 of 1 short
+                 plain(1, 0.0, 0.6), plain(1, 1.0, 0.6), wobble(1, 2.0, 0.6, depth=15.0, rate=6.0, onset=0.1)]            # the counter: 1 of 3 at 0.5-1 s
+        f = reading.vibrato_of_notes(notes)
+        self.assertEqual((f["voice_0_held"], f["voice_0_vib"], f["voice_0_held_0"], f["voice_0_vib_0"], f["voice_0_held_2"], f["voice_0_vib_2"], f["voice_0_held_3"], f["voice_0_vib_3"]),
+                         (4.0, 2.0, 1.0, 0.0, 2.0, 1.0, 1.0, 1.0))
+        self.assertEqual((f["voice_1_held"], f["voice_1_vib"], f["voice_1_held_1"], f["voice_1_vib_1"]), (3.0, 1.0, 3.0, 1.0))
+        self.assertAlmostEqual(f["voice_1_depth"], 15.0, delta=1.0)
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)])
+        s.notes["melody"] = [(float(i), 1.0, 72.0, "sa") for i in range(8)]
+        s.notes["counter"] = [(float(i), 1.0, 60.0, "sc") for i in range(8)]
+        s.voice_notes = {0: ("melody", s.notes["melody"]), 1: ("counter", s.notes["counter"])}
+        self.assertEqual(rhythm.vibrato_units([s]), [])                                               # never read: no unit
+        s.vibrato = rhythm.readings.vibrato_of_features(f)
+        units = {u.values["part"]: u.outcome for u in rhythm.vibrato_units([s])}
+        self.assertEqual(units["melody"], "0.0/-/0.5/1.0:30:5.5:0.5")
+        self.assertEqual(units["counter"], "-/0.3/-/-:15:6.0:0.1")
+        self.assertEqual(rhythm.vibrato_word(units["melody"]), {"shares": [0.0, None, 0.5, 1.0], "depth": 30.0, "rate": 5.5, "onset": 0.5})
+        self.assertIsNone(rhythm.vibrato_word("nonsense"))
+        self.assertIn("vibrato", packtables.KEPT)
+
     def test_the_parts_level_and_sample_are_the_line_voices(self):
         """Round 70: a layered part's level on the token (the fifth field) is its LINE voice's median level, not the median
         over every voice's notes, and its sample (the eighth field) the line voice's; the sixth field's shares are counted

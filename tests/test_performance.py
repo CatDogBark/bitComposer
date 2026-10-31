@@ -2,6 +2,7 @@
 its wall against the writer: the bare performance is the writer byte for
 byte, the engine never imports the product layer, the player's choices are
 what they say."""
+import math
 import subprocess
 import sys
 import tempfile
@@ -64,7 +65,7 @@ class PerformanceTests(unittest.TestCase):
                 if n.bends:
                     self.assertGreaterEqual(n.end - n.start, performance.VIBRATO_HOLD)
                     for _, p in n.bends:
-                        self.assertLessEqual(abs(1200 * __import__("math").log2(p / n.pitch)), performance.VIBRATO_DEPTH + 1.5)   # the register rounds to about a cent
+                        self.assertLessEqual(abs(1200 * math.log2(p / n.pitch)), 100.0)   # within a semitone (the word's depth, round 72)
                     self.assertGreater(n.bends[0][0], n.start)
                     self.assertLess(n.bends[-1][0], n.end)
             self.assertIn("performance:", score.message[4])
@@ -95,6 +96,46 @@ class PerformanceTests(unittest.TestCase):
             out = written.compose_written(seed=7)
         self.assertIn("(the sound set's habit)" if out["info"]["echo"] else "no echo", out["score"].message[4])
         self.assertTrue(any("the vocabulary having no echo word" in l for l in out["plan"].log))
+
+    def test_the_players_vibrato_is_the_vocabularys_word_on_its_own_stream(self):
+        """Round 72: the vibrato a held note of the tune or the counter takes is the `vibrato` word's (its share by the
+        note's length class, its depth, rate and onset), drawn on the performance's own stream, not the fixed rule;
+        the message says so. Without the word, the old rule stands and the message says that instead."""
+        import random
+        from bitcomposer.translate import reading
+        models = vocabularies.load(vocabularies.DEFAULT)
+        self.assertIn("vibrato", models)
+        seen_word, seen_notes = 0, 0
+        for seed in range(1, 25):
+            out = written.compose_written(seed=seed)
+            plan, score, info = out["plan"], out["score"], out["info"]
+            plan.log = []
+            words = performance.vibrato_words(models, plan, random.Random(f"written:{seed}:performance:vibrato"))
+            self.assertIsNotNone(words)
+            if any(any(w["shares"]) for w in words.values() if w["depth"] > 0):
+                seen_word += 1
+            bent = [n for n in score.notes if n.bends]
+            seen_notes += len(bent)
+            self.assertEqual(len(bent), info["vibrato"])
+            if bent:
+                self.assertIn("(the vocabulary's word)", score.message[4])
+            first = whole.voice_map(plan, out["written"])
+            voices = {v: role for role in performance.VIBRATO_PARTS if role in first
+                      for v in range(first[role], first[role] + plan.voices.get(role, 1))}
+            for n in bent:
+                word = words[voices[n.voice]]
+                self.assertTrue(word["shares"][reading.vibrato_class(n.end - n.start)], seed)
+                self.assertGreaterEqual(n.bends[0][0] - n.start, word["onset"] - 1e-6)
+                for _, p in n.bends:
+                    self.assertLessEqual(abs(1200 * math.log2(p / n.pitch)), word["depth"] + 1.5)   # the register rounds to about a cent
+        self.assertGreater(seen_word, 0)
+        self.assertGreater(seen_notes, 0)
+        bare = {k: v for k, v in models.items() if k != "vibrato"}
+        import unittest.mock as mock
+        with mock.patch.object(vocabularies, "load", lambda name: bare):
+            out = written.compose_written(seed=68554)
+        self.assertEqual(out["info"]["vibrato"], 18)                                 # the old rule: every held note, as before this round
+        self.assertIn("(the player's rule, no vibrato word)", out["score"].message[4])
 
     def test_echo_off_on_the_command_line_holds_for_a_written_song(self):
         with tempfile.TemporaryDirectory() as d:

@@ -1379,7 +1379,7 @@ ApplicationWindow {
                             Body {
                                 color: root.dimText; font.pixelSize: Math.round(10 * root.ui)
                                 text: root.settGenerator !== "classic"
-                                    ? "bitComposer's own set: generic instruments, synthesised, each fitted to its part by register and speed. A game you have read lends its own samples instead. The chip, Genesis and styled SNES sets belong to Classic. The player's performance adds the echo by the song's tempo and density, vibrato on held notes, and plays the loop twice."
+                                    ? "bitComposer's own set: generic instruments, synthesised, each fitted to its part by register and speed. A game you have read lends its own samples instead. The chip, Genesis and styled SNES sets belong to Classic. The player's performance adds the echo and the vibrato as the vocabulary counted them, and plays the loop twice."
                                     : "Classic's sounds: the chip, the Genesis and the SNES sets, or one of your games' packs."
                             }
                         }
