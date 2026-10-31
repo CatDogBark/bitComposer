@@ -62,6 +62,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 68 | 2026-10-30 | the kit's level a piece | 54 |
 | 69 | 2026-10-30 | measured before the build: the token's own voices, the kits' strikes, the echo and the apart voices | 54 |
 | 70 | 2026-10-30 | the token's own voices, the echo as counted, the apart voice apart | - |
+| 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
 
 ## Goal
 
@@ -4401,3 +4402,93 @@ sample's wall. The bass's and the counter's second voices keep their old
 `:second` bound. The one-piece kits' hit rate (the doubled snare voice,
 Troops' two snares 32 ms apart) has no word yet. Listening on 163, 164,
 166 and 167 is the next Song Check.
+
+### Round 71: measured, the note's envelope in the counted level; the pack's envelope reaches the written note (2026-10-30, from round 70's open item on the basses)
+
+**Measured first, nothing built on it**
+(`~/diags/bitcomposer/fable/round71/measure.md`, its scripts in `tools/`
+beside it). The question: the bass 2 to 4 dB forward of its token song's on
+163, 169 and 170 with a count that matches, and the readings' level blind
+to the envelope the game plays a note with. (1) The envelope the game plays
+the token songs' bass and melody voices with (161 Setzer, 163 Troops March
+on, 164 Johnny C. Bad, 167 Overture 3, 169 Blackjack, 170 The Prelude; the
+SPC decoded as the import decodes it, ADSR1/ADSR2 or GAIN at key-on per
+note): every one of the fifteen voices plays all its notes with ONE
+envelope, ADSR with attack 15 and decay 7 to sustain level 7, the sustain
+rate alone differing by sample (0 holds, 12 to 16 decay), no GAIN mode, no
+rewrite while sounding; and in every case it is the envelope the pack
+stores for that sample. Over all of FFVI's notes on pack samples, 51 of the
+67 samples play one envelope 95 % of the time or more, the kit's eleven and
+every bass and lead sample above 98 to 100 %; sixteen pads and sustained
+voices vary their sustain rate by song, none of them a bass. FFVI's
+envelope is a property of the sample, which the pack already carries. (2)
+The envelope's effect on heard loudness, simulated with the chip's envelope
+(`snes_chip.envelope_track`) over the looped pack WAV for the voice's
+median note length, RMS of envelope times sample over the sample's: the
+game's bass notes lose 0.0 dB on sa692eac0a6 (163, 167), 0.3 on s014dbedd79
+(164), 1.2 on s1d296a2572 (169), 8.1 on s8320f1bea2 over The Prelude's
+1.57 s notes (170); the pack's envelope over the written voice's note
+length the same within 0.2 dB except 170's (2.2 over 0.29 s notes). The
+predicted gap (ours minus theirs) against the measured: 163's bass 0.0
+against +2.5 (r70), 169's +0.1 against +3.9, 170's +5.9 against +2.4; over
+the twelve bass and melody parts r = −0.05 with round 69's per-voice
+residual gaps and +0.24 with r70's part gaps. None of the three basses
+within 2 dB, so the per-part envelope on the token was not built. (3) The
+readings' `loudness_factor` and the writer's `heard_rms` make the same
+assumption, neither seeing the envelope, and no FFVI attack is slower than
+2 chip samples; the two sides measure alike.
+
+**Found instead.** Whole 169's bass instrument in the r70 module carries a
+two-node volume envelope, flat at 64, where Blackjack's bass instrument on
+the same sample carries six nodes, the converter's rendering of ADSR FF/EE;
+the notes `score_of` composed for 169 carried ADSR (0, 0) and GAIN 127
+(direct at full: flat) on every part. `samples_for`'s `make` names a
+pack's own sample by its bare id (`s1d296a2572`) while the pack registers
+the voice as `ffvi_spc_s1d296a2572`, and `put` looked the envelope up by
+the bare name alone. Both date from the envelope's own commit (38f98e1,
+2026-10-24; `make` from the whole writer's first, 75ab8dd), so no written
+render on an imported pack had ever played the pack's envelope: every
+note went out flat at full gain, and the decaying samples (the basses on
+s1d296a2572 at SR14 and s014dbedd79 at SR12, The Prelude's s8320f1bea2 at
+SR16, s4fd4b0992b, s72f0a1e88e) sustained where the game lets them fall.
+With ours flat the envelope predicts +1.2 of 169's +3.9, +0.3 of 164's
++0.4, +1.3 of 170's melody's +1.2, and none of 163's (a flat sample on
+both sides). Also ruled out for 169: the voices' pans and sides (centred
+on both sides, nothing inverted), the module's channel, instrument and
+sample volumes (equal in every pair). The Prelude's voices swell (32 of
+its 34 bass notes change volume while sounding; the readings' level is the
+key-on volume), a count 170 does not see.
+
+**Fixed.** `render.sample_envelope` reads the pack's envelope under the
+voice's registered name as well as the bare id; a test that a written note
+on a pack voice carries the pack's ADSR or GAIN and a sample without one
+stays flat and full. The pack and the readings are unchanged (no refit;
+the shipped vocabulary stands). The suite at 390.
+
+**Measured, seeds 161-170 on the fixed writer, LUFS**
+(`sustain/r71`, stems and `salience.txt`; `round71/m4.txt`). The same
+songs as r70 (form, band, tempo, columns and global volumes unchanged);
+Whole 169 now carries a decaying envelope on 10 of its 34 instruments (0
+before), 170 on 8 of 8, 163 on 1 of 15. Each part under the whole, median,
+r71 (r70; FFVI's 63): bass -4.2 (-4.2; -7.0), accompaniment -4.3 (-4.3;
+-6.3), counter -4.8 (-5.8; -4.0), melody -7.0 (-6.6; -7.2), drums -14.4
+(-13.5; -9.4); the tune's margin -4.2 (-3.3; FFVI -3.5), two of ten on
+top. The three basses against their token songs, r71 (r70): 163 +2.5
+(+2.5), 169 +3.1 (+3.9), 170 +1.4 (+2.4); 164's +1.1 (+0.4), 161's +1.2,
+167's +1.3. Unchanged on 161, 162, 165 and 167 (flat samples throughout);
+164's counter -3.5 (s4fd4b0992b at SR16 under short notes), 168's
+accompaniment -2.3, 170's accompaniment +2.9 relative to a whole that
+dropped with its long bass and tune notes.
+
+**Open.** 169's bass still +3.1 over Blackjack's with the sample, level,
+column times global volume, envelope, pan and register all the same, so
+the rest is not in the count of a note's level: the duty runs the other
+way (Blackjack's bass sounds 0.90 of the time, ours 0.60), the salience
+RMS is gated and the LUFS relative to a whole that is itself 1.5 dB
+quieter than Blackjack's on the same target, which alone puts every part
+of ours 1.5 dB more forward. A voice's swells (The Prelude) have no word.
+Every measurement of rounds 60 to 70 that set written renders against
+FFVI's was made with flat envelopes on the written side, as round 67's
+were with one-shots; the decaying samples' parts (164's counter, 168's
+accompaniment, 170's) moved 1 to 3.5 dB here and are the ones to listen
+to again. Round 70's other open items stand.
