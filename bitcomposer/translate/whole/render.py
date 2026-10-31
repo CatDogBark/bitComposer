@@ -415,17 +415,24 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
     for role in sorted(plan.band, key=lambda r: r == R.COUNTER):   # the counter last: its sample is the tune's, or another
         if role == R.DRUMS:
             out[role] = {piece: make(name) for piece, name in (voices.get("drums") or {}).items()}
+            from ... import samples as samples_mod
             given_kit = plan.extras.get(R.DRUMS, {}).get("kit") or {}   # the token song's own kit (round 63), slot by piece letter, where
-            taken = []                                                  # the pack holds the sample; the pack's slot else
+            taken, tonal = [], []                                       # the pack holds the sample AS PERCUSSION (round 74); the pack's slot else
             for letter, sid in given_kit.items():
                 slot = plan_mod.KIT_SLOT.get(letter)
-                if slot and sid in own:
-                    out[role][slot] = make(sid)
-                    taken.append(f"{slot} {sid}")
-                    if slot == "hihat" and "open_hihat" in out[role]:
-                        out[role]["open_hihat"] = make(sid)
+                if not slot or sid not in own:
+                    continue
+                if not samples_mod.is_percussion(f"{pack_name}_{sid}"):   # the balance's song struck a tonal sample (a lead as an accent seven
+                    tonal.append(f"{letter} {sid}")                       # times a song in The Phantom Forest, read as its kit): the pack's
+                    continue                                              # own drum keeps the slot, so the writer never hammers a lead at the kit's note
+                out[role][slot] = make(sid)
+                taken.append(f"{slot} {sid}")
+                if slot == "hihat" and "open_hihat" in out[role]:
+                    out[role]["open_hihat"] = make(sid)
             if taken:
                 plan.log.append("kit samples from the balance's song: " + ", ".join(taken))
+            if tonal:
+                plan.log.append("kit pieces the balance's song struck on tonal samples, the pack's own drums standing in: " + ", ".join(tonal))
             continue
         pool = plan_mod.POOLS.get(role)
         if role == R.BASS:
