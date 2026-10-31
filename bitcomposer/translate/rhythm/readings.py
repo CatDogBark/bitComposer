@@ -156,6 +156,9 @@ class Song:
                                       # level a piece, the part's one median being the hat's where the hat is the most frequent piece)
     loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
                                       # readings' feature render/loudness_dbfs, round 59); None where it was not measured
+    echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
+                                      # reading.echo_of_notes): (volume of full, delay in ms, feedback); None where never read
+    echo_sends: dict = field(default_factory=dict)   # voice -> the share of its notes that send to the echo
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
@@ -308,6 +311,10 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
+        echo = dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'echo'", (sid,)).fetchall())   # the chip's echo
+        if all(k in echo for k in ("volume", "delay_ms", "feedback")):                                                      # (round 70)
+            song.echo = (float(echo["volume"]), float(echo["delay_ms"]), float(echo["feedback"]))
+            song.echo_sends = {int(k[6:]): float(v) for k, v in echo.items() if k.startswith("voice_")}
         songs.append(song)
     return songs, dict(out)
 

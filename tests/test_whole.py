@@ -1262,6 +1262,44 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.sample_of(samples, "accompaniment", 1, second)[0], "sline")        # a doubling voice without its own: the line's
         self.assertEqual(whole.sample_of(samples, "bass", 0, second)[0], "sbass")
 
+    def test_the_echo_is_the_games_own_drawn_on_its_own_stream(self):
+        """Round 70: with an `echo` word the written song's echo is the counted triple (volume of full, delay as the chip's
+        nearest step, feedback) with the parts that send and the parts that stay dry, drawn once on the song's own echo
+        stream (whole:SEED:echo), in place of score.ECHO_WET 0.4 and the generator's delay names; a part the word's song
+        lacked keeps the writer's old rule (the upper parts send); a word whose song sent nothing leaves the song dry;
+        without the word the sound set's habits stand (echo_of), as before."""
+        from bitcomposer.packs import PACKS
+        from bitcomposer.translate import tables
+        unit = lambda outcome, i: tables.Unit(f"s{i}", "g", outcome, {"part": rhythm.ECHO_PART})   # noqa: E731
+        t = tables.Table(("part",), "echo", votes=tables.SHARES).fit([unit("0.20:80:0.78:bass+melody:accompaniment+drums", i) for i in range(3)])
+        p = whole.plan({}, 1, "g")
+        echo = whole.echo_word({"echo": t}, p, random.Random("whole:1:echo"))
+        self.assertEqual((echo["wet"], echo["seconds"], echo["feedback"], echo["delay"]), (0.2, 0.08, 0.78, "80 ms"))
+        self.assertEqual((echo["sends"], echo["dry"]), ({"bass", "melody"}, {"accompaniment", "drums"}))
+        self.assertTrue(any(line.startswith("echo (echo): volume 0.20 of full, 80 ms, feedback 0.78; sends bass+melody; dry accompaniment+drums") for line in p.log), p.log)
+        self.assertEqual([whole.sends_to_echo(echo, r) for r in ("melody", "bass", "accompaniment", "drums", "counter", "harmony")],
+                         [True, True, False, False, True, True])                                   # the counter and harmony: not the word's song's parts, the old rule
+        self.assertFalse(whole.sends_to_echo(None, "melody"))
+        self.assertTrue(whole.sends_to_echo({"delay": "slap", "seconds": 0.1, "wet": 0.4, "feedback": 0.5}, "melody"))   # the habits' echo: the old rule
+        self.assertFalse(whole.sends_to_echo({"delay": "slap", "seconds": 0.1, "wet": 0.4, "feedback": 0.5}, "bass"))
+        self.assertEqual(whole.echo_word({"echo": tables.Table(("part",), "echo", votes=tables.SHARES).fit([unit("0.00:0:0.00:-:bass+melody", i) for i in range(3)])},
+                                         whole.plan({}, 1, "g"), random.Random(1)), None)         # the song sent nothing: dry
+        self.assertEqual(whole.echo_word({"echo": tables.Table(("part",), "echo", votes=tables.SHARES).fit([unit("0.20:250:0.78:melody:-", i) for i in range(3)])},
+                                         whole.plan({}, 1, "g"), random.Random(1))["seconds"], 15 * 0.016)   # the chip's longest step
+        self.assertIsNone(whole.echo_word({}, p, random.Random(1)))
+        out = whole.compose({"echo": t}, PACKS["ffvi"], set(), "ffvi", 1, "g", max_bars=16, read=False)
+        self.assertEqual(out["echo"]["word"], "0.20:80:0.78:bass+melody:accompaniment+drums")
+        first, voices = out["first"], out["plan"].voices
+        for role, start in first.items():
+            mine = [n for n in out["score"].notes if start <= n.voice < start + voices[role]]
+            if mine:
+                self.assertEqual({n.echo for n in mine}, {whole.sends_to_echo(out["echo"], role)}, role)
+                self.assertEqual({n.echo_volume for n in mine if n.echo}, {(0.2, 0.2)} if any(n.echo for n in mine) else set(), role)
+        dry = whole.compose({"echo": t}, PACKS["ffvi"], set(), "ffvi", 1, "g", max_bars=16, read=False, echo=None)
+        self.assertIsNone(dry["echo"])
+        habit = whole.compose({}, PACKS["ffvi"], set(), "ffvi", 1, "g", max_bars=16, read=False)   # no word: the sound set's habits
+        self.assertTrue(habit["echo"] is None or "word" not in habit["echo"])
+
     def test_the_mix_level_and_the_master_that_holds_it(self):
         """Round 59: a song's mix level is its perceived note levels squared over quarter-beat frames, in dB; the balance token
         carries it (and the top level) so the written song's master volume brings its own mix to its token song's."""

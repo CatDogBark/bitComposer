@@ -511,6 +511,42 @@ def echo_of(habits: dict, bpm: float, rng: random.Random) -> dict | None:
     return {"delay": delay, "seconds": steps * ECHO_STEP, "wet": ECHO_WETNESS.get(wet, 1.0) * ECHO_WET, "feedback": feedback}
 
 
+def echo_word(models: dict | None, plan: plan_mod.Plan, rng: random.Random) -> dict | None:
+    """The song's echo as the `echo` word gives it (round 70), drawn once on `rng` (compose: the song's own echo stream):
+    {"delay": "80 ms", "seconds", "wet": the volume of full, "feedback", "sends": the parts that send, "dry": the parts
+    that stay dry, "word": the outcome}, or None for a dry song (no part sends, or the volume is nothing). The delay is
+    the chip's EDL step nearest the counted ms (ECHO_STEP, 1 to 15). None where the pack has no such word (echo_of, the
+    sound set's habits, then stands)."""
+    from ...score import ECHO_STEP
+    if not (models or {}).get("echo"):
+        return None
+    outcome = plan_mod._draw(models, "echo", (rhythm.ECHO_PART,), rng, plan.log)
+    fields = outcome.split(":")
+    if len(fields) < 5:
+        return None
+    volume, ms, feedback = float(fields[0]), float(fields[1]), float(fields[2])
+    sends = set(fields[3].split("+")) - {"-", ""}
+    dry = set(fields[4].split("+")) - {"-", ""}
+    steps = max(1, min(15, round(ms / 1000 / ECHO_STEP)))
+    if volume <= 0 or not sends:
+        plan.log.append(f"echo (echo): dry; the game's song sent nothing" + (f" (sends {'+'.join(sorted(sends))} at {volume:.2f})" if sends else ""))
+        return None
+    plan.log.append(f"echo (echo): volume {volume:.2f} of full, {steps * ECHO_STEP * 1000:.0f} ms, feedback {feedback:.2f}; sends "
+                    + "+".join(sorted(sends)) + (f"; dry {'+'.join(sorted(dry))}" if dry else ""))
+    return {"delay": f"{steps * ECHO_STEP * 1000:.0f} ms", "seconds": steps * ECHO_STEP, "wet": volume, "feedback": feedback,
+            "sends": sends, "dry": dry, "word": outcome}
+
+
+def sends_to_echo(echo: dict | None, role: str) -> bool:
+    """Whether a part sends to the song's echo: the echo word's say where it names the part (sends or dry); the writer's
+    old rule (plan.SENDS: the upper parts) for a part the word's song lacked, or an echo from the sound set's habits."""
+    if echo is None:
+        return False
+    if role in echo.get("sends", ()) or role in echo.get("dry", ()):
+        return role in echo["sends"]
+    return role in plan_mod.SENDS
+
+
 def voice_map(plan: plan_mod.Plan, written: dict) -> dict:
     """The score's voices: {role: first voice}, the parts in the band's order, each its allotted voices."""
     out, n = {}, 0
@@ -664,7 +700,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None):
         idx, addr, c5 = instrument(name, sample)
         pan = plan_mod.PANS[role][j % len(plan_mod.PANS[role])]
-        send = echo is not None and role in plan_mod.SENDS
+        send = sends_to_echo(echo, role)                    # the echo word's parts (round 70), the upper parts without it
         env = samples_mod.SAMPLE_ENVELOPES.get(name)        # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
         played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0, piece)

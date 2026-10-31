@@ -667,6 +667,38 @@ class BalanceLevelTests(unittest.TestCase):
         s.kit_levels = {}
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k,S=s,h=h")
 
+    def test_the_songs_echo_is_a_counted_word(self):
+        """Round 70: the song's echo as the chip had it at key-on (reading.echo_of_notes: the volume of full, the delay in
+        ms, the feedback, each voice's share of notes that send) is kept with the readings and counted as the `echo`
+        word, one unit a song: the triple with the parts that send and the parts that stay dry. FFVI's echo volume is
+        0.20 of full in 70 of 82 songs and its delay 80 ms in every one; the written songs had sent at 0.4."""
+        from types import SimpleNamespace
+        from bitcomposer.translate import reading
+        note = lambda v, send, vol=0.2, ms=0.08, fb=0.78: SimpleNamespace(voice=v, echo=send, echo_writes=True, echo_delay=ms, echo_volume=(-vol, vol), echo_feedback=fb)   # noqa: E731
+        notes = [note(0, True) for _ in range(8)] + [note(1, False) for _ in range(8)] + [note(2, True), note(2, False), note(2, False), note(2, False)] + [note(3, True, 0.25, 0.08, 0.55)]
+        echo = reading.echo_of_notes(notes)
+        self.assertEqual((echo["volume"], echo["delay_ms"], echo["feedback"]), (0.2, 80.0, 0.78))
+        self.assertEqual({k: v for k, v in echo.items() if k.startswith("voice_")}, {"voice_0": 1.0, "voice_1": 0.0, "voice_2": 0.25, "voice_3": 1.0})
+        self.assertEqual(reading.echo_of_notes([note(0, False)]), {"voice_0": 0.0, "volume": 0.0, "delay_ms": 0.0, "feedback": 0.0})
+        self.assertEqual(reading.echo_of_notes([note(0, True, 0.2, 0.0)])["volume"], 0.0)          # no delay: nothing sends
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)])
+        s.notes["melody"] = [(float(i), 1.0, 72.0, "sa") for i in range(8)]
+        s.notes["bass"] = [(float(i), 1.0, 36.0, "sb") for i in range(8)]
+        s.notes["accompaniment"] = [(float(i), 1.0, 60.0, "sc") for i in range(8)]
+        s.voice_notes = {0: ("melody", s.notes["melody"]), 1: ("bass", s.notes["bass"]), 2: ("accompaniment", s.notes["accompaniment"][:4]),
+                         3: ("accompaniment", s.notes["accompaniment"][4:])}
+        self.assertEqual(rhythm.echo_units([s]), [])                                                 # never read: no unit
+        s.echo, s.echo_sends = (0.2, 80.0, 0.78), {0: 1.0, 1: 0.0, 2: 0.25, 3: 1.0}
+        u = rhythm.echo_units([s])[0]
+        self.assertEqual((u.outcome, u.values), ("0.20:80:0.78:accompaniment+melody:bass", {"part": "echo"}))   # one of two voices sending: the part sends
+        s.echo_sends[3] = 0.4
+        self.assertEqual(rhythm.echo_units([s])[0].outcome, "0.20:80:0.78:melody:accompaniment+bass")
+        s.echo = (0.0, 0.0, 0.0); s.echo_sends = {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0}
+        self.assertEqual(rhythm.echo_units([s])[0].outcome, "0.00:0:0.00:-:accompaniment+bass+melody")
+        from bitcomposer.translate import packtables
+        self.assertIn("echo", packtables.KEPT)
+
     def test_the_parts_level_and_sample_are_the_line_voices(self):
         """Round 70: a layered part's level on the token (the fifth field) is its LINE voice's median level, not the median
         over every voice's notes, and its sample (the eighth field) the line voice's; the sixth field's shares are counted

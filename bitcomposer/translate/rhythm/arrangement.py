@@ -650,6 +650,37 @@ def balance_units(songs) -> list:
     return out
 
 
+ECHO_PART = "echo"                   # the echo word's part value (a song-level word, as the balance's ARRANGEMENT is)
+ECHO_SEND = 0.5                      # a voice sends when this share of its notes or more do; a part when half its voices or more send
+
+
+def echo_units(songs) -> list:
+    """Each song whose echo the readings hold (Song.echo, round 70) as a unit: its outcome the echo's volume of full, its
+    delay in ms, its feedback, the parts that send to it and the parts that stay dry
+    ("0.20:80:0.78:accompaniment+counter+melody:bass+drums"; a part sends when half its voices or more send ECHO_SEND
+    of their notes or more; "-" where no part does, or none stays dry); its value the part (echo). Drawn once a song on
+    its own stream, in place of the generator's constant and delay names (score.ECHO_WET 0.4, "slap"): FFVI's echo
+    volume is 0.20 of full in 70 of 82 songs, its delay 80 ms in every one, its feedback 0.78 at the median, and the
+    tune sends in 74 of 75 songs, the counter in 55 of 58, the accompaniment in 56 of 69, the bass in 45 of 72, the
+    drums in 17 of 52 (round 69); the written songs had sent every upper part at 0.4 (6 dB wetter) with a 48-144 ms
+    delay, which the owner heard as vibrato and blur (Song Check 54's Whole 166). The sends ride the word so the song's
+    joint holds; a written part named in neither list (the word's song lacked it) keeps the writer's old rule."""
+    out = []
+    for s in songs:
+        if s.echo is None:
+            continue
+        by_role = {}
+        for v, (role, ns) in s.voice_notes.items():
+            if role in readings_mod.PARTS and ns and v in s.echo_sends:
+                by_role.setdefault(role, []).append(s.echo_sends[v] >= ECHO_SEND)
+        sends = sorted(role for role, flags in by_role.items() if sum(flags) * 2 >= len(flags))
+        dry = sorted(role for role in by_role if role not in sends)
+        volume, ms, feedback = s.echo
+        out.append(tables.Unit(s.sid, s.game, f"{volume:.2f}:{ms:.0f}:{feedback:.2f}:{'+'.join(sends) or '-'}:{'+'.join(dry) or '-'}",
+                               {"part": ECHO_PART}))
+    return out
+
+
 SAMPLE_PARTS = (R.MELODY, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)   # the parts whose sample the part_samples word gives (the counter's is
                                                                 # counter_samples/counter_pairs', a second voice's layer_samples')
 

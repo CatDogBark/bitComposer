@@ -24,6 +24,38 @@ class Reading:
     chords: list = field(default_factory=list)
     form: form_mod.Form | None = None   # its parts and loop
     measures: dict = field(default_factory=dict)   # the yardsticks it shares with the generator's songs
+    echo: dict = field(default_factory=dict)       # the song's echo as the chip had it at key-on (echo_of_notes): volume, delay_ms, feedback,
+                                                   # and each voice's share of notes that send (voice_N); kept as features of source "echo"
+
+
+ECHO_FIELDS = ("volume", "delay_ms", "feedback")
+
+
+def echo_of_notes(notes) -> dict:
+    """The song's echo from its decoded notes (spc.notes.Note: the echo registers as they stood at key-on), round 70:
+    {"volume": the echo volume of full (EVOL, the louder side's magnitude, the median over the notes that send),
+    "delay_ms": the delay (EDL x 16 ms, the most common), "feedback": the feedback's magnitude (EFB, the median), and
+    "voice_N": each voice's share of its notes that send (EON with echo writes on and a delay)}; the three zero where
+    no note sends. FFVI's echo volume is 0.20 of full in 70 of its 82 songs (round 69: quartiles 0.20..0.20), its
+    delay 80 ms in every one, its feedback 0.78 at the median (0.55..0.78); the written songs sent at score.ECHO_WET
+    0.4 with a "slap" delay of 48-144 ms, 6 dB wetter than the game ever plays on every sending voice, which the owner
+    heard as vibrato and blur."""
+    import statistics
+    from collections import Counter
+    by_voice, sending = {}, []
+    for n in notes:
+        send = bool(n.echo and n.echo_writes and n.echo_delay > 0)
+        by_voice.setdefault(n.voice, []).append(send)
+        if send:
+            sending.append(n)
+    out = {f"voice_{v}": sum(sends) / len(sends) for v, sends in sorted(by_voice.items())}
+    if sending:
+        out["volume"] = statistics.median(max(abs(x) for x in n.echo_volume) for n in sending)
+        out["delay_ms"] = float(Counter(round(n.echo_delay * 1000) for n in sending).most_common(1)[0][0])
+        out["feedback"] = statistics.median(abs(n.echo_feedback) for n in sending)
+    else:
+        out.update(volume=0.0, delay_ms=0.0, feedback=0.0)
+    return out
 
 
 def manifest(folder: str) -> dict:
@@ -87,6 +119,7 @@ def _read(song: events.Song, snap, grid: beat.Grid | None = None) -> Reading:
     r = Reading(hashlib.sha1(snap.raw).hexdigest()[:20] if snap is not None else "", os.path.basename(source), folder,
                 m.get("game") or (t.game if t else "") or folder, (t.title if t else "") or "",
                 m.get("composer") or (t.artist if t else "") or "", m.get("driver"), song, grid, roles)
+    r.echo = echo_of_notes([p.note for p in song.notes if p.note is not None])
     if grid:
         r.chords = harmony.chords(song, grid, roles)
         r.scale = harmony.scale(song, grid, roles, r.chords)       # (tonic, the scale's name, fit)

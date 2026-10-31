@@ -127,6 +127,7 @@ KEPT = {
     "phrase_shifts": ("phrases", "phrase_shift_units", {}, ("part", "mode", "relation"), False, False, "how far a phrase sits above or below the one before, in semitones, by its relation to it"),
     "repeat_rates": ("phrases", "repeat_rate_units", {}, ("part",), False, False, "the share of the tune's moves that repeat the note, drawn once a song"),
     "tune_grain": ("rhythm", "tune_grain_units", {}, ("part", "habit"), False, False, "the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms"),
+    "echo": ("rhythm", "echo_units", {}, ("part",), False, False, "the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70)"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
 

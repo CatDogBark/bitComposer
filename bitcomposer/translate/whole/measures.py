@@ -119,8 +119,8 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     rng = random.Random(f"whole:{seed}:render")
     samples = render_mod.samples_for(p, pack, own, pack_name, rng, models)   # before the writing: every voice writes where the game plays its sample
     written = plan_mod.write(p, song, models, seed, reference)
-    if isinstance(echo, str) and echo == "habit":
-        echo = render_mod.echo_of(pack.get("habits") or {}, p.bpm, rng)
+    if isinstance(echo, str) and echo == "habit":          # the game's own echo where the vocabulary counts it (round 70), on its own stream;
+        echo = render_mod.echo_word(models, p, random.Random(f"whole:{seed}:echo")) if (models or {}).get("echo") else render_mod.echo_of(pack.get("habits") or {}, p.bpm, rng)
     elif callable(echo):
         echo = echo(p)
     samples["floors"] = render_mod.floors_for(p, written, samples, models, pack_name, random.Random(f"whole:{seed}:floors"))   # by the written speed
