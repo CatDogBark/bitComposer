@@ -4708,7 +4708,12 @@ samples, the pack's own drums standing in". A test with a stubbed pack.
 **Measured, Crossing of Steel (seed 173 on FFVI's sounds, the player's
 performance), before and after.** The kit's slot plays the pack's rim
 instead of the lead at G#2; hits unchanged at 13 a bar; drums -12.3 under
-the whole (from -14.2), every other part within 0.1 dB. Song Check 62
+the whole (from -14.2), every other part within 0.1 dB. Melody, bass and
+accompaniment decode sample for sample identical. The counter does not:
+same notes, sample and envelope, but before the fix the kit had registered
+the lead sample first and the counter shared its slot at the kit's tuning,
+C5 speed 32834 against the counter's own 32825, half a cent; retuning the
+after stem by that ratio brings the two to 0.98 correlation. Song Check 62
 holds the two renders side by side.
 
 **Open.** The drums figure's density for a lone piece: the table's back-off
@@ -4719,4 +4724,7 @@ the habit longer is a change to every drums draw and wants its own round
 with the FFVI measures beside it. The drums role reader: a pitched voice
 with a handful of notes a song is an accent, not a kit; a check against
 the phase 1 ground truth before any reader change. The kit token could
-carry the pitch each piece was struck at, as it carries the level.
+carry the pitch each piece was struck at, as it carries the level. And
+the half cent: the kit's and the line's registrations of one sample tune
+it nine C5-speed units apart; one tuning path, when a round touches the
+sample table.
