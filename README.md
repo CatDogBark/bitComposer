@@ -204,7 +204,13 @@ counted habits, played on bitComposer's own sound set (generic
 instruments, synthesised here from descriptions and modelled on no game's
 bank, each fitted to its part by register and speed; `--pack ffvi`,
 `mana`, `evermore` or `megamanx` borrows one of Classic's styled sets
-instead) and rendered through the SNES back end. A seed names one song on
+instead) and rendered through the SNES back end, under the player's
+performance (`bitcomposer/performance.py`): the theme comes back with the
+band, the loop plays twice, the echo and the vibrato on held notes of the tune
+are the vocabulary's own words (FFVI's 0.20 echo at 80 ms, its vibrato on a
+fifth of the tune's held notes). `--bare` writes without
+it, the way the Song Checks do; `--no-carry-theme` and `--no-band-returns`
+turn the two switches off. A seed names one song on
 every machine. `--carry-theme` draws the tune's phrases again until its
 theme comes back; `--band-returns` brings the chords, the bass or the
 accompaniment back with it. In the player this is GENERATE, with THEME

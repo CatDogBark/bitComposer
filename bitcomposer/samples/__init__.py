@@ -359,6 +359,7 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
             if abs(k - 1.0) > 0.02:
                 data = _pack_samples([max(-32768, min(32767, int(v * k))) for v in ints])
                 gain = k
+    recorded = length                                       # the recording's own frames, before any release tail
     if family and meta.get("loop"):
         data, length, meta = add_release(data, length, meta, RELEASE[family])
     return {
@@ -367,7 +368,9 @@ def generate_instrument(name: str, strike_rule: bool = False) -> dict:
         "loop_start": meta.get("loop_start", 0), "loop_end": meta.get("loop_end", length),
         "sus_loop": meta.get("sus_loop", False), "release": meta.get("release", 0.0),
         "gain": gain, "struck": struck, "onset_ms": onset_ms,
-    }
+        "source_rate": meta.get("source_rate", meta["rate"]),   # the recording's own rate and frames: a pack voice's C5Speed is its rate shifted
+        "source_frames": meta.get("source_frames", recorded),   # by its pitch (a kit piece's twice the WAV's), and the writer reads a strike over
+    }                                                           # the recording's first 150 ms, as the readings do (round 70)
 
 
 def _onset_ms(ints, rate: int, window_s: float = 0.004, span_s: float = 0.5) -> float:
@@ -386,10 +389,13 @@ def _onset_ms(ints, rate: int, window_s: float = 0.004, span_s: float = 0.5) -> 
     return 0.0
 
 
-def register_presets(presets: dict, releases: dict) -> None:
-    """A style pack adds its voices on import (see bitcomposer.packs)."""
+def register_presets(presets: dict, releases: dict, envelopes: dict | None = None) -> None:
+    """A style pack adds its voices on import (see bitcomposer.packs); `envelopes` the SNES chip envelope each voice
+    is played with (SAMPLE_ENVELOPES, as a pack file's samples carry theirs; round 72: bitComposer's own set)."""
     INSTRUMENT_PRESETS.update(presets)
     PRESET_RELEASE.update(releases)
+    for name, env in (envelopes or {}).items():
+        SAMPLE_ENVELOPES[name] = dict(env)
 
 
 SAMPLE_ENVELOPES: dict = {}          # a pack voice -> the SNES chip envelope its game plays the sample with ({"adsr": [a1, a2]} or {"gain": g})

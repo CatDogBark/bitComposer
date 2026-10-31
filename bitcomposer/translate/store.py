@@ -132,6 +132,29 @@ def keep(db, reading) -> None:
         db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", (sid, i, p.label, p.bar, p.bars, p.start, p.of, level))
     db.executemany("INSERT INTO features VALUES (?,?,?,?)",
                    [(sid, "soundtrack", k, float(v)) for k, v in r.measures.items()])
+    keep_echo(db, sid, getattr(r, "echo", None) or {})
+    keep_vibrato(db, sid, getattr(r, "vibrato", None) or {})
+    db.commit()
+
+
+ECHO = "echo"                        # the features source the song's echo is kept under (reading.echo_of_notes's dict; round 70)
+VIBRATO = "vibrato"                  # and each voice's vibrato on its held notes (reading.vibrato_of_notes's dict; round 72)
+
+
+def keep_echo(db, sid: str, echo: dict) -> None:
+    """A song's echo (reading.echo_of_notes) as features of source ECHO, replacing an older one; nothing for an empty dict."""
+    _keep_features(db, sid, ECHO, echo)
+
+
+def keep_vibrato(db, sid: str, vibrato: dict) -> None:
+    """A song's voices' vibrato (reading.vibrato_of_notes) as features of source VIBRATO, replacing an older one."""
+    _keep_features(db, sid, VIBRATO, vibrato)
+
+
+def _keep_features(db, sid: str, source: str, values: dict) -> None:
+    db.execute("DELETE FROM features WHERE song = ? AND source = ?", (sid, source))
+    if values:
+        db.executemany("INSERT INTO features VALUES (?,?,?,?)", [(sid, source, k, float(v)) for k, v in values.items()])
     db.commit()
 
 

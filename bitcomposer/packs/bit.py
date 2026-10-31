@@ -351,16 +351,39 @@ RELEASE = {
     "bit_slap_bass": "bass", "bit_bowed_bass": "strings",
 }
 
+# The SNES chip envelope each pitched voice is played with (samples.SAMPLE_ENVELOPES, the place a pack's sample keeps
+# its game's; whole/render.py's `put` plays it with no new code path), round 72. Before it every note on this set went
+# out flat at full gain and cut hard, where a game's samples come with the game's ADSR. In FFVI's own terms (round 71:
+# every sample plays attack 15, decay 7, sustain level 7, then a sustain rate of 0 to hold or 12 to 16 to fall;
+# ADSR1 0xFF, ADSR2 0xE0 | rate) every voice here takes attack 15, decay 7 to level 7 and sustain rate 0: the
+# sustaining voices because they hold (a string, a pad, a horn, an organ, a lead, the bowed and fretless basses), the
+# struck and plucked voices because their decay is already in their data (the _struck recipe shapes the whole sample
+# under an exponential and freezes its last two periods at the decayed level: the piano's tail sits at 0.22 of its
+# strike, the e-piano's 0.26, the bell's 0.21, the harp's and nylon's 0.135, the pluck's and slap bass's 0.10, the
+# kalimba's 0.05, the marimba's 0.016, the sub, picked and synth basses' 0.26, 0.17 and 0.20; a decaying rate on top
+# would double the fall), so a held struck note keeps sounding at its tail's level as it did. The kit's one-shots
+# carry none (flat, as every game's drums here).
+_HOLD = {"adsr": [0xFF, 0xE0]}        # attack 15, decay 7, sustain level 7, sustain rate 0
+ENVELOPES = {name: dict(_HOLD) for name in RELEASE}
+
 # Where each pitched voice sounds right, MIDI low to high: the writer fits a
-# voice to a part's register and speed by this (packs.profile).
+# voice to a part's register and speed by this (packs.profile). The tops were
+# placed by the owner's ear on 2026-10-31 (the Bit Voice Range Check: every
+# lead-capable voice at C4, F#4, C5, F#5, C6 and F#6, each note at the same
+# measured loudness the writer gives it): the pitch above which the voice stops
+# sounding right as a line. The bright single-period leads (square, pulse, saw,
+# brass, reed) had ranged to 86-96 and carried the tune at C6 in Song Check 58,
+# where they read as "exploding"; the pulse, saw, brass and reed now stop at
+# C5, the square at F#5, and the high registers go to the flute, ocarina, horn
+# and the keys. A voice he found fine up to F#6 keeps a top already above it.
 RANGES = {
-    "bit_square": (55, 96), "bit_pulse": (55, 96), "bit_saw_lead": (52, 91), "bit_sine_flute": (60, 96),
-    "bit_ocarina": (65, 98), "bit_brass": (50, 86), "bit_horn": (41, 77), "bit_reed": (58, 91),
-    "bit_synth_voice": (50, 84), "bit_violin": (55, 96), "bit_cello": (36, 67),
+    "bit_square": (55, 78), "bit_pulse": (55, 72), "bit_saw_lead": (52, 72), "bit_sine_flute": (60, 84),
+    "bit_ocarina": (65, 98), "bit_brass": (50, 72), "bit_horn": (41, 84), "bit_reed": (58, 72),
+    "bit_synth_voice": (50, 78), "bit_violin": (55, 78), "bit_cello": (36, 78),
     "bit_piano": (36, 96), "bit_epiano": (36, 96), "bit_bell": (72, 108), "bit_music_box": (72, 104),
-    "bit_pluck": (48, 91), "bit_harp": (36, 96), "bit_nylon": (40, 84), "bit_marimba": (48, 96), "bit_kalimba": (60, 96),
-    "bit_strings": (48, 84), "bit_low_strings": (36, 67), "bit_warm_pad": (48, 84), "bit_glass_pad": (60, 96),
-    "bit_choir": (48, 84), "bit_organ": (36, 96), "bit_brass_pad": (48, 79), "bit_wind_choir": (55, 91),
+    "bit_pluck": (48, 91), "bit_harp": (36, 96), "bit_nylon": (40, 90), "bit_marimba": (48, 96), "bit_kalimba": (60, 96),
+    "bit_strings": (48, 84), "bit_low_strings": (36, 90), "bit_warm_pad": (48, 90), "bit_glass_pad": (60, 78),
+    "bit_choir": (48, 78), "bit_organ": (36, 78), "bit_brass_pad": (48, 78), "bit_wind_choir": (55, 78),
     "bit_sub_bass": (24, 48), "bit_picked_bass": (28, 55), "bit_synth_bass": (28, 55), "bit_fretless": (28, 57),
     "bit_slap_bass": (28, 55), "bit_bowed_bass": (28, 52),
 }
@@ -371,7 +394,7 @@ PACK = {
     "label": "bitComposer",
     # The pools the writer draws a part's voice from, then fits by range and speed; a name twice weighs twice.
     "voices": {
-        "lead": ["bit_square", "bit_square", "bit_pulse", "bit_saw_lead", "bit_sine_flute", "bit_ocarina", "bit_brass",
+        "lead": ["bit_square", "bit_pulse", "bit_saw_lead", "bit_sine_flute", "bit_ocarina", "bit_brass",
                  "bit_reed", "bit_synth_voice", "bit_violin", "bit_cello", "bit_horn", "bit_epiano", "bit_piano",
                  "bit_pluck", "bit_nylon", "bit_bell"],
         "alt_lead": ["bit_pulse", "bit_reed", "bit_horn", "bit_sine_flute", "bit_violin", "bit_synth_voice", "bit_brass",

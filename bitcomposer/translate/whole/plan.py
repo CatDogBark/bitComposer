@@ -56,6 +56,16 @@ MAX_PARTS = 12
 DRUM_VOICES = (("K", "S", "t"), ("h", "c", "o"))   # the kit on two voices: the kick, snare and toms; the hat, cymbals and the rest
 KIT_PIECES = {"kick": "kick", "snare": "snare", "hihat": "hat", "open_hihat": "hat", "tom": "tom", "crash": "cymbal", "rim": "other"}   # a pack's kit -> the readings' pieces
 KIT_SLOT = {"K": "kick", "S": "snare", "h": "hihat", "t": "tom", "c": "crash", "o": "rim"}   # a piece letter -> the pack kit slot its song's sample fills (round 63)
+SLOT_LETTER = {slot: letter for letter, slot in KIT_SLOT.items()} | {"open_hihat": "h"}   # a kit slot -> the piece letter whose level it plays at (round 68:
+                                                                                          # the open hat takes the hat's sample and its level with it)
+
+
+def kit_piece_level(plan, slot: str) -> float | None:
+    """The balance token's own level for the kit slot's piece, as a share of the song's loudest part's (round 68:
+    `K=sbfe716b9b6@1.7` on the drums' kit field); None for a slot the token gave no level, which plays at the part's."""
+    levels = plan.extras.get(R.DRUMS, {}).get("kit_levels") or {}
+    letter = SLOT_LETTER.get(slot)
+    return levels.get(letter) if letter else None
 KIT_FOR = {"K": ("kick",), "S": ("snare", "rim"), "h": ("hihat", "open_hihat"), "t": ("tom", "kick"),
            "c": ("crash", "open_hihat", "hihat"), "o": ("rim", "hihat")}   # a figure's letter -> its sample, the first the kit has
 DRUM_LENGTH = 1.0                     # beats a drum hit sounds at most (to the next hit on its voice otherwise)
@@ -70,11 +80,14 @@ TOP_SCALE = 1.0                       # the readings' level (a voice's two sides
                                       # master of 63, 0.29 of full either way), but the written songs rendered 4.5 dB under FFVI's converted
                                       # songs at the readings' top level as drawn (-29.0 against -24.5 dBFS, the same player), and 5 dB over
                                       # at 0.85; 1.7 (4.6 dB) is the measured bridge, to be read again when the readings' level is understood
-RENDER_BRIDGE = -21.7                 # dB: what a written song renders at (RMS dBFS over its first minute, the Song Check method) less its mix
+RENDER_BRIDGE = -17.4                 # dB: what a written song renders at (RMS dBFS over its first minute, the Song Check method) less its mix
                                       # estimate (rhythm.mix_level over the notes as scored), at a full master: measured over 20 written songs
                                       # 2026-10-29 (median -21.7 once the sample loudness read the sustain loop, quartiles -23.0 and -19.8;
                                       # -20.5 before it); the master brings estimate + bridge to the token's song's rendered loudness. Read
-                                      # again if the estimate or the renderer changes.
+                                      # again if the estimate or the renderer changes. 2026-10-30: -17.4. Those 20 songs had rendered with
+                                      # every sustaining voice as a one-shot (score._Pcm read the plain loop flag alone); with the sustain
+                                      # loops carried, Song Check 53's ten seeds rendered a median 4.3 dB over their targets (quartiles
+                                      # +3.7 and +4.7), so the bridge moves by that much.
 MASTER_FLOOR = 8                      # the master volume's least value (of 127): under it a song is not a song
 STRIKE_WINDOW = 0.1                   # seconds of a sample a note hears as its strike (sample_strike_and_body, heard_rms)
 PANS = {R.MELODY: (0.5,), R.COUNTER: (0.6,), R.HARMONY: (0.35, 0.65, 0.5), R.ACCOMP: (0.6, 0.4), R.ARP: (0.4,), R.BASS: (0.5,),
@@ -575,7 +588,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
-    token_kit, token_layer_samples, token_layer_shares = {}, {}, {}
+    token_kit, token_kit_levels, token_layer_samples, token_layer_shares = {}, {}, {}, {}
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -600,8 +613,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 shares[role] = float(fields[2])
             if len(fields) > 3 and fields[3]:
                 counts[role] = int(fields[3])
-            if len(fields) > 4 and fields[4]:
-                token_levels[role] = float(fields[4])
+            if len(fields) > 4 and fields[4] and math.isfinite(float(fields[4])):   # a "nan" level (tables counted before the
+                token_levels[role] = float(fields[4])                             # readings skipped a kit's unread levels) falls to the levels draw
             if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level; since
                 parts_ = [x.split("@") for x in fields[5].split("/")]   # round 65 with each one's sample and its notes over the line's
                 token_layers[role] = [float(x[0]) for x in parts_]
@@ -611,8 +624,15 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_shares[role] = [float(x[2]) if len(x) > 2 and x[2] else 1.0 for x in parts_]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
-            if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma
-                token_kit = dict(x.split("=") for x in fields[7].split(",") if "=" in x)
+            if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
+                for x in fields[7].split(","):                       # since round 68 each piece's own level after an "@", where its song read one
+                    if "=" not in x:
+                        continue
+                    letter, _, value = x.partition("=")
+                    sid, _, level = value.partition("@")
+                    token_kit[letter] = sid
+                    if level and math.isfinite(float(level)):
+                        token_kit_levels[letter] = float(level)
             elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels
                 token_samples[role] = fields[7]
             if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
@@ -647,7 +667,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if token_kit:                                   # the token song's own kit (round 63): its pieces are these, its samples theirs
                 extras[role]["pieces"] = "".join(x for x in rhythm.LETTERS.values() if x in token_kit)
                 extras[role]["kit"] = token_kit
-                log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" for k, v in token_kit.items()) + ")")
+                if token_kit_levels:                        # each piece at its own level of the loudest part's (round 68); a piece without
+                    extras[role]["kit_levels"] = token_kit_levels   # one plays at the part's level (the fifth field)
+                log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
+                                                                                            for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
                 extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,
                                                floor_k=2)   # the tier's own kits alone (seven medium songs, seven kits: the smoothing had handed a
@@ -1292,7 +1315,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 drawn_pitch = "voice_intervals" in models and "voice_moves" in models
                 if drawn_pitch:
                     beside_v.add(v)
-                span_v = plan.bounds.get(f"{role}:second", reg_v) if drawn_pitch else reg_v   # the voice's pitch is its drawn interval from the line, kept where the game plays its sample (round 34)
+                # the voice's pitch is its drawn interval from the line, folded into its own span: the line's span at the layer word's
+                # offset, within the range the game plays its sample over (round 70, plan.bounds["role:v"], render.voice_bounds). The
+                # one `:second` bound had been the first extra voice's sample's home band, so Whole 166's "apart +8" voices were
+                # folded into the line's own band and sat at a median 0 semitones from it (round 69)
+                span_v = plan.bounds.get(f"{role}:{v}") or (plan.bounds.get(f"{role}:second", reg_v) if drawn_pitch else reg_v)
                 notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], gs["second"] if gs else sounds,   # interval from the
                                                               key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
                                                               pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,   # voices beside a line sit in

@@ -67,3 +67,22 @@ class Bridge(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SustainLoopTests(unittest.TestCase):
+    def test_a_preset_voice_s_sustain_loop_is_the_chip_s_loop(self):
+        """A preset voice carries its loop as the module's sustain loop (held while the key is down, released into the
+        tail after it). The SNES chip has one loop and a key-off ends the note, so the holder takes that loop for the
+        written path. Read through the plain loop flag alone, every sustaining voice had gone out as a one-shot: a 48 ms
+        square under the tune, pads that plucked, in every written render since the bridge (2026-10-30). A drum stays a
+        one-shot, and without `sustain` (Classic's songs, as they are) nothing changes."""
+        from bitcomposer import instruments
+        lead = instruments._make_sample("bit_square")
+        self.assertTrue(lead.sus_loop)
+        self.assertFalse(lead.loop)
+        held = score_mod._Pcm(lead, sustain=True)
+        self.assertTrue(held.loops)
+        self.assertEqual((held.loop_start, held.loop_end), (lead.sus_loop_start, lead.sus_loop_end))
+        self.assertLess(held.loop_end - held.loop_start, len(held))
+        self.assertFalse(score_mod._Pcm(lead).loops)
+        self.assertFalse(score_mod._Pcm(instruments._make_sample("bit_kick"), sustain=True).loops)

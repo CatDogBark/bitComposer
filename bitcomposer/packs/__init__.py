@@ -10,7 +10,7 @@ from . import bit, ffvi, mana, evermore, megamanx
 
 _MODULES = [bit, ffvi, mana, evermore, megamanx]
 for _m in _MODULES:
-    _samples.register_presets(_m.PRESETS, _m.RELEASE)
+    _samples.register_presets(_m.PRESETS, _m.RELEASE, getattr(_m, "ENVELOPES", None))
 
 PACKS = {"bit": bit.PACK, "ffvi": ffvi.PACK, "mana": mana.PACK, "evermore": evermore.PACK, "megamanx": megamanx.PACK}
 
