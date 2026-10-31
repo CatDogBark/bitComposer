@@ -389,10 +389,13 @@ def _onset_ms(ints, rate: int, window_s: float = 0.004, span_s: float = 0.5) -> 
     return 0.0
 
 
-def register_presets(presets: dict, releases: dict) -> None:
-    """A style pack adds its voices on import (see bitcomposer.packs)."""
+def register_presets(presets: dict, releases: dict, envelopes: dict | None = None) -> None:
+    """A style pack adds its voices on import (see bitcomposer.packs); `envelopes` the SNES chip envelope each voice
+    is played with (SAMPLE_ENVELOPES, as a pack file's samples carry theirs; round 72: bitComposer's own set)."""
     INSTRUMENT_PRESETS.update(presets)
     PRESET_RELEASE.update(releases)
+    for name, env in (envelopes or {}).items():
+        SAMPLE_ENVELOPES[name] = dict(env)
 
 
 SAMPLE_ENVELOPES: dict = {}          # a pack voice -> the SNES chip envelope its game plays the sample with ({"adsr": [a1, a2]} or {"gain": g})

@@ -63,6 +63,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 69 | 2026-10-30 | measured before the build: the token's own voices, the kits' strikes, the echo and the apart voices | 54 |
 | 70 | 2026-10-30 | the token's own voices, the echo as counted, the apart voice apart | - |
 | 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
+| 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | - |
 
 ## Goal
 
@@ -4492,3 +4493,131 @@ FFVI's was made with flat envelopes on the written side, as round 67's
 were with one-shots; the decaying samples' parts (164's counter, 168's
 accompaniment, 170's) moved 1 to 3.5 dB here and are the ones to listen
 to again. Round 70's other open items stand.
+
+### Round 72: the default player's sound, after the writer (2026-10-30, from the owner's listening on the `bit` set before round 67 and round 71's envelope finding)
+
+The writer (`translate/`) is untouched this round; the bare path is held
+byte for byte. What GENERATE plays on bitComposer's own sounds through
+`performance.py` was three rules and a flat voice, and is now two counted
+words and a shaped one.
+
+**Found.** (1) The default player's echo was its own rule (a delay by tempo
+and density, a wetness name over `score.ECHO_WET` 0.4): 0.24 to 0.6 of full
+where round 69 counted FFVI at 0.20 in every song, and dry in a share of
+songs where FFVI's word is never dry. (2) Vibrato was a fixed rule (10 cents
+at 5.5 Hz after 0.12 s on every note of the tune and the counter over
+0.35 s; Hidden Frontier had 18 such notes), uncounted. The readings keep no
+pitch writes (six fields a note), so FFVI's 82 SPCs were decoded again as
+the import decodes them and each note's pitch register while it sounds read
+as vibrato where it swings back and forth through 1.5 cycles or more of 3
+cents or more (a slide is monotonic and counts as nothing, a swing of 90
+cents or more is a trill, counted apart; `~/diags/bitcomposer/fable/round72/
+measure.md`, `vibrato_summary.txt`). FFVI, 143,679 pitched notes: the tune's
+4,763 held notes carry vibrato in 926 (0.19), the counter's in 0.10, the
+accompaniment's 0.08, the bass's 0.07, the drums' 0.02; 0.69 of the tune's
+held notes carry no bend at all. Depth (cents either side) on the tune 16.4
+/ 29.9 / 45.2 at the quartiles, the counter 12.7 / 18.8 / 43.4; the rate 5.7
+Hz in most songs (the driver's usual) and 15 to 19 Hz in about a third of
+the songs with any (Blackjack 15.5, Celes 14.7, Battle Theme 18.6, Another
+World of Beasts 17.2); the onset a median 0.5 s from key-on (quartiles 0.4
+to 0.8), so a note held 0.35 to 0.5 s carries it in 0.01 of cases, 0.5 to 1
+s in 0.10, 1 to 2 s in 0.29, 2 s and over in 0.30, and 11 of 29,079 notes
+under 0.35 s carry any. The first swing is 0.41 of the note's depth at the
+median (under half in 0.56 of 2,706 notes): the driver ramps the depth in.
+By song, 33 of the 67 tunes in the vocabulary carry none at all and the
+rest run from 0.03 to 0.91 of their held notes (The Empire Gestahl 39 of
+43, Terra 51 of 85): a per-song habit before a per-note one. (3) The `bit`
+voices carried no envelope: every note flat at full gain, then a hard cut,
+where round 71 found FFVI plays every sample with attack 15, decay 7 to
+sustain level 7, then rate 0 (hold) or 12 to 16 (fall). (4) `bit`'s lead
+pool listed the square twice.
+
+**Built.** (1) `performance.echo_for` draws the `echo` word by the writer's
+own draw (`render.echo_word`) on the performance's stream
+(`written:SEED:performance:echo`), so the two paths cannot drift; the
+sound set's habits (`render.echo_of`, as for the writer bare) stand where a
+vocabulary has no echo word, and `describe` says which ("echo 80 ms at
+0.20 of full (the vocabulary's word)"). `--echo off` holds for a written
+song; the other echo flags stay Classic's. (2) The `vibrato` word: a
+note's vibrato read at import (`reading.note_vibrato`), each voice's held
+notes counted by length class (`reading.vibrato_of_notes`, features of
+source `vibrato`, written by `store.keep`; FFVI's 82 backfilled by
+`tools/vibrato_features.py` after `readings.db` was copied to `.r72`), one
+unit a part a song (`rhythm.vibrato_units`: the share of the part's held
+notes carrying it in each of the four classes in tenths, "-" for a class
+the song held no note in, then the depth to 5 cents, the rate to 0.5 Hz,
+the onset to 0.1 s; `0.0/0.0/1.0/0.0:20:12.5:0.6`). The player draws it a
+part for the tune and the counter on `written:SEED:performance:vibrato`
+(`performance.vibrato_words`) and each held note takes it with its class's
+share at the word's depth and rate from its onset, rising over one cycle;
+without the word the old constants stand and the message says so. The
+parts are still the tune's and the counter's; the other parts' words are
+counted and not played. Pack4 refit (`pack.json.r72` the backup; 97
+tables, 250 vibrato units of 67 songs) and the shipped vocabulary written
+again from it (`tools/ship_default.py`). (3) Every pitched `bit` voice is
+registered with an SNES ADSR (`packs/bit.py ENVELOPES` through
+`samples.register_presets` into `SAMPLE_ENVELOPES`, the place a pack's
+sample keeps its game's; `render.put` plays it with no new code path):
+attack 15, decay 7 to level 7, sustain rate 0 (ADSR 0xFF 0xE0) for every
+one. The sustaining voices because they hold: square, pulse, saw lead,
+sine flute, ocarina, brass, horn, reed, synth voice, violin, cello,
+strings, low strings, warm pad, glass pad, choir, organ, brass pad, wind
+choir, fretless, bowed bass. The struck and plucked voices because their
+decay is in their data (the `_struck` recipe shapes the whole sample under
+an exponential and freezes its last two periods at the decayed level; a
+falling rate would double it): piano (its frozen tail at 0.22 of the
+strike), e-piano (0.26), bell (0.21), music box (0.135), pluck (0.10),
+harp (0.135), nylon (0.135), marimba (0.016), kalimba (0.05), sub bass
+(0.26), picked bass (0.17), synth bass (0.20), slap bass (0.10); so a held
+struck note keeps sounding at its tail as it did. The kit's one-shots carry
+none. Timbres untouched. (4) The lead pool lists the square once (the
+set's own list, not a game's count). Tests for each; the suite at 395 (one skipped).
+
+**Measured, seeds 68554, 87326, 305253 and 1-10 through the default
+player's path on `bit`, LUFS, before (items 1 and 2 in, no envelope, the
+old pool) and after** (`round72/bit-before`, `bit-after`, `salience.txt` in
+each). Each part under the whole, median, before -> after: bass -3.5 ->
+-3.6, accompaniment -5.9 -> -5.9, counter -7.3 -> -7.3, melody -7.8 ->
+-7.8, harmony -10.2 -> -10.3, drums -18.2 -> -18.2; the tune's margin over
+the loudest other pitched line -6.5 -> -6.5 (quartiles -8.7..-0.8 ->
+-8.7..+0.5), three of thirteen on top both times. Ten of the thirteen songs
+moved no part by more than 0.1 dB; the three that moved changed their
+tune's voice through the pool's shortened list (Caldera of Glass square ->
+pulse, melody -4.7 -> -4.4; The Cloister of Silk ocarina -> brass, melody
+-5.5 -> -3.5 and counter -3.7 -> -5.4, its margin -1.8 -> +1.9; The Endless
+Arcade sine flute -> brass, melody -14.4 -> -13.5), not through the
+envelope. So the envelope's own effect on the balance is under 0.1 dB
+(a decay to 7/8 and a hold lowers every pitched part alike), where the loop
+fix moved parts 11 to 18 dB. The echo the thirteen carry: 0.20 of full at
+80 ms in every one, feedback 0.55 or 0.78, the sends the word's song's.
+Vibrato under the word on the ten owner seeds: 0, 0, 43, 0, 15, 4, 22, 8,
+14, 5 notes (68554 Hidden Frontier's tune draws a word with none, the
+game's most common case; 305253's 20 cents at 12.5 Hz on the tune and 5.5
+Hz on the counter from 0.6 to 0.8 s in).
+
+**For the owner's ear** (`~/diags/bitcomposer/idiom/phase4/whole/sustain/
+r72-bit/`): seeds 68554, 87326, 305253 and 1-7 as GENERATE writes them, by
+title with a `.plan.json` each (title, seed, key, bpm, form, band, the echo
+as played, the vibrato count and words, the voices each part got), stems
+under `stems/`, `salience.txt`. Against FFVI's own renders (63 songs,
+`ffvi-salience.txt`), each part under the whole, median, r72-bit (FFVI):
+bass -4.8 (-7.0), accompaniment -5.9 (-6.3), counter -6.6 (-4.1), melody
+-8.4 (-7.2), drums -17.7 (-9.5); the tune's margin -6.4 (quartiles
+-8.1..+2.3; FFVI -3.5, -7.0..+0.3), three of ten on top (FFVI 18 of 63).
+On the `bit` set the bass runs 2 dB forward of FFVI's place, the counter 2.5
+behind, the tune 1 behind, and the kit 8 dB behind: the kit's levels are
+the token's (counted on FFVI's strikes) over `bit`'s own drum samples,
+whose loudness no table has counted.
+
+**Open.** The lead pool's single-period loops (the square, pulse, ocarina,
+flute and brass loop one period with no motion) and the "tune on top"
+question are the owner's; not built. The vibrato word's parts beyond the
+tune and the counter (counted, not played); the per-note draw spreads a
+part's share evenly where the game clusters it by passage; the "-" classes
+fragment the word's outcomes (one unit a song). The struck `bit` voices'
+frozen tails hold at 11 to 36 dB under their strike for as long as a note
+is held, where FFVI lets its decaying samples fall at rate 12 to 16: the
+owner's call to hear before a falling rate is given. The `bit` kit 8 dB
+under FFVI's place. The vocabulary map cannot name the performance as a
+draw site (it reads the writer's sources), so `vibrato` shows as drawn by
+no writer, which is true.
