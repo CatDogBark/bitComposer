@@ -135,7 +135,7 @@ flowchart LR
 | `part_samples` | part, speed | samples_for | - | the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing |
 | `echo` | part | compose, echo_of, echo_word, hand_off_cells, write_melody | - | the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70) |
 
-### counted, drawn nowhere (the measures' words) (8)
+### counted, drawn nowhere (the measures' words) (9)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -147,6 +147,7 @@ flowchart LR
 | `presence` | part, meter, previous | - | - | a part playing or resting in a bar |
 | `doubles` | part | - | - | what a song's double voices double, and how |
 | `weights` | part | - | `bass_habits`, `counter_figures`, `echo_habits`, `habits` | a part's weight in the band (minor, half, main) |
+| `vibrato` | part | - | - | a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72) |
 
 ## What conditions what
 
@@ -567,6 +568,7 @@ flowchart LR
     presence["presence"]
     doubles["doubles"]
     weights["weights"]
+    vibrato["vibrato"]
   end
   balance -- habit --> changes
   bass_habits -- habit --> changes

@@ -8,6 +8,7 @@ import unittest
 from bitcomposer import vocabularies, written
 from bitcomposer.cli import build_parser, compose_from_args
 from bitcomposer.spc import convert
+from bitcomposer.translate import whole
 
 
 class ShippedVocabularyTests(unittest.TestCase):
@@ -208,6 +209,27 @@ class ImportCountsAVocabularyTests(unittest.TestCase):
 
 
 class SustainedVoicesTests(unittest.TestCase):
+    def test_the_bit_voices_carry_an_envelope_and_the_lead_pool_lists_each_voice_once(self):
+        """Round 72: every pitched voice of bitComposer's own set is registered with an SNES ADSR (attack 15, decay 7 to
+        level 7, sustain rate 0: FFVI's own shape, round 71), so a written note on it goes out shaped as a game's
+        sample does, where before it went out flat and cut hard; the kit stays flat. The lead pool lists the square
+        once (it had been listed twice: the set's own list, not a game's count)."""
+        from bitcomposer import samples
+        from bitcomposer.packs import bit
+        for name in bit.RELEASE:
+            self.assertEqual(samples.SAMPLE_ENVELOPES.get(name), {"adsr": [0xFF, 0xE0]}, name)
+        for name in bit.PACK["voices"]["drums"].values():
+            self.assertNotIn(name, samples.SAMPLE_ENVELOPES)
+        self.assertEqual(bit.PACK["voices"]["lead"].count("bit_square"), 1)
+        out = written.compose_written(seed=68554, pack="bit")
+        first = whole.voice_map(out["plan"], out["written"])
+        drums = set(range(first["drums"], first["drums"] + out["plan"].voices.get("drums", 1))) if "drums" in first else set()
+        for n in out["score"].notes:
+            if n.voice in drums:
+                self.assertEqual((n.adsr, n.gain), ((0, 0), 0x7F), "a drum stays flat")
+            else:
+                self.assertEqual((n.adsr, n.gain), ((0xFF, 0xE0), 0), "a pitched note carries the set's envelope")
+
     def test_a_written_song_s_sustaining_voices_loop_in_the_module(self):
         """The render carries each voice's loop into the module: a sustaining voice's sample loops (the preset's sustain
         loop, the chip's one loop), a one-shot's does not, and the file on disk says the same. Every written render had
@@ -230,4 +252,4 @@ class SustainedVoicesTests(unittest.TestCase):
             n_orders, n_ins, n_smp = struct.unpack_from("<HHH", data, 0x20)
             offsets = struct.unpack_from(f"<{n_smp}I", data, 0xC0 + n_orders + 4 * n_ins)
             flags = {data[o + 0x14:o + 0x2E].split(b"\0")[0].decode(): bool(data[o + 0x12] & 16) for o in offsets}
-            self.assertEqual(flags, loops)
+            self.assertEqual({k: v for k, v in flags.items() if k.startswith("SNES sample at")}, loops)   # the echo's copies aside (round 72: every song echoes)

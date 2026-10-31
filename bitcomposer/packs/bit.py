@@ -351,6 +351,21 @@ RELEASE = {
     "bit_slap_bass": "bass", "bit_bowed_bass": "strings",
 }
 
+# The SNES chip envelope each pitched voice is played with (samples.SAMPLE_ENVELOPES, the place a pack's sample keeps
+# its game's; whole/render.py's `put` plays it with no new code path), round 72. Before it every note on this set went
+# out flat at full gain and cut hard, where a game's samples come with the game's ADSR. In FFVI's own terms (round 71:
+# every sample plays attack 15, decay 7, sustain level 7, then a sustain rate of 0 to hold or 12 to 16 to fall;
+# ADSR1 0xFF, ADSR2 0xE0 | rate) every voice here takes attack 15, decay 7 to level 7 and sustain rate 0: the
+# sustaining voices because they hold (a string, a pad, a horn, an organ, a lead, the bowed and fretless basses), the
+# struck and plucked voices because their decay is already in their data (the _struck recipe shapes the whole sample
+# under an exponential and freezes its last two periods at the decayed level: the piano's tail sits at 0.22 of its
+# strike, the e-piano's 0.26, the bell's 0.21, the harp's and nylon's 0.135, the pluck's and slap bass's 0.10, the
+# kalimba's 0.05, the marimba's 0.016, the sub, picked and synth basses' 0.26, 0.17 and 0.20; a decaying rate on top
+# would double the fall), so a held struck note keeps sounding at its tail's level as it did. The kit's one-shots
+# carry none (flat, as every game's drums here).
+_HOLD = {"adsr": [0xFF, 0xE0]}        # attack 15, decay 7, sustain level 7, sustain rate 0
+ENVELOPES = {name: dict(_HOLD) for name in RELEASE}
+
 # Where each pitched voice sounds right, MIDI low to high: the writer fits a
 # voice to a part's register and speed by this (packs.profile).
 RANGES = {
@@ -371,7 +386,7 @@ PACK = {
     "label": "bitComposer",
     # The pools the writer draws a part's voice from, then fits by range and speed; a name twice weighs twice.
     "voices": {
-        "lead": ["bit_square", "bit_square", "bit_pulse", "bit_saw_lead", "bit_sine_flute", "bit_ocarina", "bit_brass",
+        "lead": ["bit_square", "bit_pulse", "bit_saw_lead", "bit_sine_flute", "bit_ocarina", "bit_brass",
                  "bit_reed", "bit_synth_voice", "bit_violin", "bit_cello", "bit_horn", "bit_epiano", "bit_piano",
                  "bit_pluck", "bit_nylon", "bit_bell"],
         "alt_lead": ["bit_pulse", "bit_reed", "bit_horn", "bit_sine_flute", "bit_violin", "bit_synth_voice", "bit_brass",

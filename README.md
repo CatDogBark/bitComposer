@@ -206,8 +206,9 @@ bank, each fitted to its part by register and speed; `--pack ffvi`,
 `mana`, `evermore` or `megamanx` borrows one of Classic's styled sets
 instead) and rendered through the SNES back end, under the player's
 performance (`bitcomposer/performance.py`): the theme comes back with the
-band, the loop plays twice, the echo is drawn from the song's tempo and
-density, and held notes of the tune take vibrato. `--bare` writes without
+band, the loop plays twice, the echo and the vibrato on held notes of the tune
+are the vocabulary's own words (FFVI's 0.20 echo at 80 ms, its vibrato on a
+fifth of the tune's held notes). `--bare` writes without
 it, the way the Song Checks do; `--no-carry-theme` and `--no-band-returns`
 turn the two switches off. A seed names one song on
 every machine. `--carry-theme` draws the tune's phrases again until its

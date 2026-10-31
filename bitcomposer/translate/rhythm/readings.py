@@ -159,6 +159,9 @@ class Song:
     echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
                                       # reading.echo_of_notes): (volume of full, delay in ms, feedback); None where never read
     echo_sends: dict = field(default_factory=dict)   # voice -> the share of its notes that send to the echo
+    vibrato: dict = field(default_factory=dict)      # voice -> its vibrato on its held notes (round 72; the readings' features of source
+                                      # "vibrato", reading.vibrato_of_notes): {"held": [by length class], "vib": [by class], "depth",
+                                      # "rate", "onset" (the last three where it carries any)}; empty where never read
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
@@ -315,8 +318,26 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         if all(k in echo for k in ("volume", "delay_ms", "feedback")):                                                      # (round 70)
             song.echo = (float(echo["volume"]), float(echo["delay_ms"]), float(echo["feedback"]))
             song.echo_sends = {int(k[6:]): float(v) for k, v in echo.items() if k.startswith("voice_")}
+        song.vibrato = vibrato_of_features(dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'vibrato'", (sid,)).fetchall()))
         songs.append(song)
     return songs, dict(out)
+
+
+def vibrato_of_features(rows: dict) -> dict:
+    """The readings' vibrato features (reading.vibrato_of_notes's names) as {voice: {"held": [by class], "vib": [by class],
+    "depth", "rate", "onset"}} (round 72)."""
+    out = {}
+    for name, value in rows.items():
+        if not name.startswith("voice_"):
+            continue
+        parts = name.split("_")
+        v = int(parts[1])
+        d = out.setdefault(v, {"held": [0, 0, 0, 0], "vib": [0, 0, 0, 0]})
+        if len(parts) == 4 and parts[2] in ("held", "vib"):
+            d[parts[2]][int(parts[3])] = int(value)
+        elif len(parts) == 3 and parts[2] in ("depth", "rate", "onset"):
+            d[parts[2]] = float(value)
+    return out
 
 
 def part_levels(song: Song, pooled: dict) -> dict:

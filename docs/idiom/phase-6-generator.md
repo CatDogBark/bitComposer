@@ -297,16 +297,22 @@ imported through the window's own `import_from`, the stages watched on
 
 ## Open questions
 
-- **The echo is a vocabulary gap** (noted 2026-10-30, the owner's call:
-  documented, not counted yet). A written song's echo is not drawn from
-  the vocabulary: no table counts a game's echo. In the player the
-  performance decides it per song from the song's tempo and density
-  (`performance.echo_for`, outside `translate/`); bare, the sound set's
-  habit decides, the way Classic's packs do (`render.echo_of` over
-  `PACK["habits"]`). The readings hold what a table
-  would count, each song's echo on or off, its delay, feedback, filter and
-  wet, and the writing's way is a counted word drawn once a song beside the
-  balance. Not now: a writing change while the FFVI tuning stands.
+- **The echo and the vibrato were vocabulary gaps, now words** (noted
+  2026-10-30 as gaps; the echo counted in round 70, the vibrato in round
+  72, `phase-4-writing.md`). The default player's performance
+  (`performance.py`, outside `translate/`) draws both from the vocabulary
+  on its own streams: the `echo` word by the writer's own draw
+  (`render.echo_word`; FFVI's 0.20 of full at 80 ms, the sending parts)
+  in place of its rule by tempo and density over `ECHO_WET`, and the
+  `vibrato` word a part (a tune's share of held notes carrying it by
+  length class, its depth, rate and onset) in place of its fixed 10 cents
+  at 5.5 Hz on every held note. Where a vocabulary has neither word (an
+  import counted before those rounds) the sound set's echo habit and the
+  old vibrato rule stand, and the song's message says which. Bare, the
+  writer draws the echo word itself and adds no vibrato. bitComposer's
+  own sound set plays every pitched voice under an SNES ADSR in FFVI's
+  shape (attack 15, decay 7 to level 7, held), registered with the voice
+  as a pack's sample carries its game's, since round 72.
 - Which built-in sound set is the default under the FFVI vocabulary (the
   `ffvi` set is the obvious one; the vocabulary's sample ids bind to a
   game's samples only when that game is imported).

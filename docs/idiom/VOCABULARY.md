@@ -1087,11 +1087,41 @@ The words are grouped by where the writing draws them, in the order the song is 
   its delay 80 ms in every one, its feedback 0.78 at the median, and the
   written songs had sent every upper part at `score.ECHO_WET` 0.4 with a
   48 to 144 ms "slap": 6 dB wetter than the game ever plays, which the
-  owner heard as vibrato and blur (Song Check 54's Whole 166). The
-  player's own echo (`bitcomposer.performance.echo_for`, drawn from the
-  song's tempo and density outside the writer) is the default player's
-  path still, out of this word's scope.
+  owner heard as vibrato and blur (Song Check 54's Whole 166). Since
+  round 72 the default player draws the same word by the same draw on
+  its own stream (`bitcomposer.performance.echo_for`,
+  `written:SEED:performance:echo`) in place of its rule by tempo and
+  density over `score.ECHO_WET`, which had sent 0.24 to 0.6 of full; the
+  sound set's habits stand where a vocabulary has no echo word, and the
+  song's message says which.
   *`echo`: shape (part); drawn in echo_word.*
+
+- **vibrato** — a part's vibrato on its held notes, since round 72
+  (2026-10-30): the share of its notes held 0.35 s or more that carry a
+  periodic pitch modulation, in each length class (0.35 to 0.5 s, 0.5 to
+  1, 1 to 2, 2 and over; in tenths, `-` for a class the song held no note
+  in), then its depth in cents either side, its rate in Hz and its onset
+  in seconds from key-on (`0.0/0.1/0.3/0.3:30:5.5:0.5`;
+  `0.0/0.0/0.0/0.0:0:0:0` for a part with none), one unit a part a song.
+  Counted from the game's pitch writes while a note sounds
+  (`reading.note_vibrato`: swings back and forth through 1.5 cycles or
+  more of 3 cents or more; a slide counts as nothing, a trill of 90 cents
+  or more is counted apart) and kept as features of source `vibrato`
+  (`reading.vibrato_of_notes`, written at import by `store.keep`; FFVI's
+  82 were added from the SPCs after the fact). Not the writer's: drawn
+  once a song a part by the player's performance on its own stream
+  (`performance.vibrato_words`, `written:SEED:performance:vibrato`) for
+  the tune and the counter, each held note taking it with the class's
+  share at the word's depth and rate from its onset, rising over one
+  cycle; where a vocabulary has no such word the player's old rule stands
+  (every held note, 10 cents at 5.5 Hz after 0.12 s) and the message says
+  so. Why: FFVI's tunes carry vibrato on a fifth of their held notes
+  (none at all in half the songs, nine in ten in a few), at a median 30
+  cents, 5.7 Hz in most songs and 15 to 19 Hz in a third, from half a
+  second in, so a note under half a second almost never has it; the
+  rule had put a third of the depth on every held note a quarter of a
+  second in.
+  *`vibrato`: shape (part); drawn in vibrato_words.*
 
 - **ranges** — the register a sample is played in, by the sample. Drawn at
   rendering: a part's sample is the one of its pool whose game-played range
