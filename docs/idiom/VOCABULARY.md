@@ -1096,6 +1096,23 @@ The words are grouped by where the writing draws them, in the order the song is 
   song's message says which.
   *`echo`: shape (part); drawn in echo_word.*
 
+- **attacks** — whether a part's line plays a struck sample or a
+  sustaining one, since round 73 (2026-10-31): `struck` where the sample's
+  first 150 ms carry more than twice (6 dB) the RMS of its loop body, so
+  the sound decays after the attack, `sustaining` otherwise; one unit a
+  part a song, counted on the sample the line plays most (as
+  `part_samples` names it) with the samples' loudness as the pack's WAVs
+  give it (`rhythm.set_loudness`). FFVI's tunes are sustaining in 63 of 66
+  songs (Awakening, Spinach Rag and Good Night are struck), its basses and
+  accompaniments mostly so too. On an imported pack the token's own sample
+  decides the voice before the pool rule; on a built-in set the pool rule
+  (`render.best_sample`) lets a voice of the other class stand down
+  wherever one of the drawn class fits the register and speed. Why: after
+  the bit set's range tops were placed by ear, its keys (the e-piano,
+  piano, pluck and nylon, 14 to 20 dB struck, ranging 36 to 96 at any
+  speed) took 6 of 10 default tunes, and a tune that fades between its
+  notes reads weak at any measured level (Song Checks 59 and 60).
+  *`attacks`: shape (part); drawn in attack_for.*
 - **vibrato** — a part's vibrato on its held notes, since round 72
   (2026-10-30): the share of its notes held 0.35 s or more that carry a
   periodic pitch modulation, in each length class (0.35 to 0.5 s, 0.5 to

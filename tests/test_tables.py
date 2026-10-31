@@ -779,3 +779,21 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(tokens["accompaniment"][7], "sa")
         self.assertEqual((tokens["bass"][4], tokens["bass"][5].split("@")[0], tokens["bass"][7]), ("0.6", "1.6", "slong"))
         self.assertEqual(tokens["melody"][4], "1.0")
+
+
+class AttackUnitTests(unittest.TestCase):
+    def test_a_part_s_sample_is_struck_or_sustaining_by_its_strike_over_its_body(self):
+        """The attacks word (round 73): a part's line plays a struck sample when the sample's strike is more than twice
+        its loop body, a sustaining one otherwise; nothing is counted for a sample whose loudness is not set."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)])
+        s.notes["melody"] = [(0.0, 1.0, 72, "pianokey01"), (1.0, 1.0, 74, "pianokey01"), (2.0, 2.0, 76, "pianokey01")]
+        s.notes["bass"] = [(0.0, 2.0, 40, "padkey0001"), (2.0, 2.0, 43, "padkey0001")]
+        s.notes["accompaniment"] = [(0.0, 1.0, 60, "unknownkey")]
+        try:
+            rhythm.set_loudness({"spianokey01": 0.1, "spadkey0001": 0.3}, {"spianokey01": 0.5, "spadkey0001": 0.4})
+            units = {u.values["part"]: u.outcome for u in rhythm.attack_units([s])}
+        finally:
+            rhythm.set_loudness({})
+        self.assertEqual(units, {"melody": "struck", "bass": "sustaining"})
+        self.assertEqual(rhythm.attack_units([s]), [])

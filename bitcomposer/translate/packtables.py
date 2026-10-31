@@ -128,6 +128,7 @@ KEPT = {
     "repeat_rates": ("phrases", "repeat_rate_units", {}, ("part",), False, False, "the share of the tune's moves that repeat the note, drawn once a song"),
     "tune_grain": ("rhythm", "tune_grain_units", {}, ("part", "habit"), False, False, "the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms"),
     "echo": ("rhythm", "echo_units", {}, ("part",), False, False, "the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70)"),
+    "attacks": ("rhythm", "attack_units", {}, ("part",), False, False, "whether a part's line plays a struck sample (its strike over 6 dB above its loop body: a sound that decays) or a sustaining one, by the part; a built-in set's pool rule matches the drawn class (FFVI's tunes: sustaining in 63 of 66 songs)"),
     "vibrato": ("rhythm", "vibrato_units", {}, ("part",), False, False, "a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72)"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}

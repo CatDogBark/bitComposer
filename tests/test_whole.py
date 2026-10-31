@@ -1568,3 +1568,21 @@ class AlteredVoiceTests(unittest.TestCase):
         self.assertEqual((midi, entry), (73, "s0"))
         midi, entry = writer.beside_pitch({"voice_intervals": t, "voice_moves": t}, "counter", "other", scale, random.Random(1), 74.0, rhythm.START, None, 0)
         self.assertEqual((midi, entry), (71, "-2"))
+
+
+class AttackClassTests(unittest.TestCase):
+    def test_a_built_in_set_s_pool_rule_matches_the_part_s_attack_class(self):
+        """A built-in set's voices carry whether they decay after the attack (packs.profile "struck"); given the attacks
+        word's class, the pool rule lets the other class stand down where one of the class fits (round 73: FFVI's tunes
+        sustain in 63 of 66 songs, and the keys had taken 6 of 10 default tunes by range and speed alone)."""
+        from bitcomposer.packs import profile
+        from bitcomposer.translate.whole import render
+        self.assertTrue(profile("bit_piano")["struck"])
+        self.assertFalse(profile("bit_square")["struck"])
+        names = ["bit_square", "bit_epiano", "bit_piano"]
+        for cls, expect in (("sustaining", {"bit_square"}), ("struck", {"bit_epiano", "bit_piano"})):
+            picks = {render.best_sample(None, names, (60, 72), random.Random(k), lambda n: n, speed=4.0, models={}, pack="bit", attack=cls) for k in range(12)}
+            self.assertTrue(picks <= expect, (cls, picks))
+        self.assertIsNone(render.attack_for({}, "melody", random.Random(1), []))
+        picks = {render.best_sample(None, names, (60, 72), random.Random(k), lambda n: n, speed=4.0, models={}, pack="bit") for k in range(12)}
+        self.assertTrue(len(picks) >= 1)

@@ -63,7 +63,8 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 69 | 2026-10-30 | measured before the build: the token's own voices, the kits' strikes, the echo and the apart voices | 54 |
 | 70 | 2026-10-30 | the token's own voices, the echo as counted, the apart voice apart | - |
 | 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
-| 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | - |
+| 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | 58 |
+| 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
 
 ## Goal
 
