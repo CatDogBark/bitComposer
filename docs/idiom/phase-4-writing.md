@@ -63,7 +63,9 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 69 | 2026-10-30 | measured before the build: the token's own voices, the kits' strikes, the echo and the apart voices | 54 |
 | 70 | 2026-10-30 | the token's own voices, the echo as counted, the apart voice apart | - |
 | 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
-| 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | - |
+| 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | 58 |
+| 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
+| 74 | 2026-10-31 | a kit piece on a tonal sample leaves the pack's own drum in its slot | 62 |
 
 ## Goal
 
@@ -4621,3 +4623,108 @@ owner's call to hear before a falling rate is given. The `bit` kit 8 dB
 under FFVI's place. The vocabulary map cannot name the performance as a
 draw site (it reads the writer's sources), so `vibrato` shows as drawn by
 no writer, which is true.
+
+### Round 73: the part's attack class counted, and a built-in set's pool rule matches it (2026-10-31, from Song Checks 59 and 60: "the melody is sitting behind again")
+
+**Found.** With the bit set's range tops placed by the owner's ear (the
+bright single-period leads capped at C5 to F#5), the pool rule gave six of
+Song Check 60's ten default tunes to the keys, the e-piano, piano, pluck
+and nylon, which range 36 to 96 and, being struck, take any speed, where
+the sustaining leads stop at 4 to 8 notes a second. A struck voice decays
+14 to 20 dB after its attack, so a tune on one fades between its notes
+and reads weak at any measured level: Northern Tidepool's e-piano measured
+the loudest part of its song and the owner heard it hiding. FFVI's tunes
+ride a struck sample in 3 of 66 songs (Awakening, Spinach Rag, Good
+Night; the median strike over body is -1.7 dB), its basses in 6 of 63, its
+accompaniments in 5 of 60. Over the twenty default-set verdicts of Song
+Checks 59 and 60 the ear otherwise followed the measured margin: forward
+or fine at -7 LU and better, buried at -9.3 and under whatever the voice,
+the horn at -10.3 included, so the dark-voice (ear-weighting) idea of
+round 69's follow-up is not needed.
+
+**Built.** The `attacks` word (`rhythm.attack_units`, KEPT, shape part):
+whether the sample a part's line plays most is struck, its first 150 ms
+more than twice (6 dB) the RMS of its loop body, or sustaining, one unit a
+part a song, with the samples' loudness as `set_loudness` holds it.
+`packs.profile` carries `struck` for a built-in voice; `render.attack_for`
+draws the class on `whole:{seed}:attack:{role}` for a part the pool rule
+chooses a voice for, and `render.best_sample(attack=)` lets a built-in
+voice of the other class stand down wherever one of the class is there
+to choose; a pack's own samples carry no profile and are not sorted by
+it, and an imported pack's parts take the token's sample before the pool
+rule anyway. Pack4 refit (98 tables; `attacks` 208 units of 67 songs:
+melody 63 sustaining and 3 struck, bass 57 and 6, accompaniment 55 and 5,
+harmony 15 and 0, arp 4 and 0) and the shipped vocabulary written again
+from it. Tests: the unit's class from a stub's loudness, nothing without
+it; the pool rule's pick by class on two bit voices.
+
+**Measured, Song Check 61 (five songs on FFVI's sounds, seeds 171-175,
+and five from the default composer, seeds 18-22, all through the
+player's performance).** All five default tunes drew sustaining and got
+the horn, ocarina, cello, sine flute and violin; none a key. Tune margin
+over the loudest other pitched line (LUFS): FFVI sounds +5.5, +3.6, -0.7,
++3.2, -5.4 (median +3.2, three of five on top); default +11.2, +2.1, -5.5,
+-6.6, -8.0 (median -5.5, two on top). The two margins under on the default
+set are the tokens' (the tune at 0.3 and 0.5 of a bass at 1.0); the +11.2
+is a token with the tune at 1.0 over everything else at 0.2 to 0.4.
+Default melodies' centroids 226 to 837 Hz (the horn's 226 at a low
+register, the violin's 816), none above 2 % of energy over 2 kHz except
+the violin's 7 %; the FFVI tunes 761 to 1365 Hz.
+
+**Open.** The default player's deep margins are now the token's balance,
+FFVI's own habit (the tune under another line in 71 % of its songs); a
+"tune on top" choice in the performance layer stays the owner's. The
+bass and pad voices of the bit set hold where FFVI's basses decay (round
+72's envelope choice): the bit bass sits 2 to 4 dB forward of FFVI's
+place. Beacon of Lanterns' second bass voice runs sixteenths at sixteen a
+second: the bass figure tables against FFVI's second bass voices, a count
+to make. The harmony drew a lead-pool voice through the wider reach in
+Dance of the Harbor: the reach's own class should follow the word too.
+
+### Round 74: a kit piece the balance's song struck on a tonal sample (2026-10-31, from Song Check 61's Crossing of Steel: "a repetitive noise that starts at about 10 seconds and goes on for the whole song")
+
+**Found.** Not the echo or the vibrato: the second drums voice striking the
+counter's own synth lead sample (sf89f5aedfd) at the kit's one note, G#2,
+thirteen times a bar from bar 4 to the end. The song's token is The
+Phantom Forest, whose kit is one piece, `o` on that lead sample at 0.38 of
+the top: in that song a pitched voice plays the lead seven times in 95
+seconds (once every twelve, two distinct pitches, an accent) and the role
+reader labelled it drums, the kit token carried it, and round 63's
+kit-from-the-token put the sample in the rim slot. Of FFVI's 47 kit tokens,
+18 carry at least one sample the pack does not class as percussion: the
+bass sample sa692eac0a6 as a tom in three songs, leads and pads as `o` or
+`c` in the rest; some FFVI really strikes, some misreads like this one. And
+the figure: with the habit "sparse repeating" the drums table gave the lone
+`o` kit 13 hits a bar, because the kit-conditioned context has two songs
+(one a shaker at 13.5 hits a bar) and the draw's back-off drops the habit
+before the kit; FFVI's own lone-`o` kits play 0.1, 1.5 and 13.5 hits a bar.
+
+**Built.** `samples_for` takes a token kit sample into a writer's slot only
+where the pack classes it as percussion (`samples.is_percussion`, the drum
+namer's class at import); a tonal one leaves the pack's own drum in the
+slot and the plan logs "kit pieces the balance's song struck on tonal
+samples, the pack's own drums standing in". A test with a stubbed pack.
+
+**Measured, Crossing of Steel (seed 173 on FFVI's sounds, the player's
+performance), before and after.** The kit's slot plays the pack's rim
+instead of the lead at G#2; hits unchanged at 13 a bar; drums -12.3 under
+the whole (from -14.2), every other part within 0.1 dB. Melody, bass and
+accompaniment decode sample for sample identical. The counter does not:
+same notes, sample and envelope, but before the fix the kit had registered
+the lead sample first and the counter shared its slot at the kit's tuning,
+C5 speed 32834 against the counter's own 32825, half a cent; retuning the
+after stem by that ratio brings the two to 0.98 correlation. Song Check 62
+holds the two renders side by side.
+
+**Open.** The drums figure's density for a lone piece: the table's back-off
+order (part, meter, kit, tempo, habit, feel, previous) drops the habit
+before the kit, so a kit with few songs behind it inherits another song's
+density; FFVI's lone-piece kits are mostly sparse. A back-off that keeps
+the habit longer is a change to every drums draw and wants its own round
+with the FFVI measures beside it. The drums role reader: a pitched voice
+with a handful of notes a song is an accent, not a kit; a check against
+the phase 1 ground truth before any reader change. The kit token could
+carry the pitch each piece was struck at, as it carries the level. And
+the half cent: the kit's and the line's registrations of one sample tune
+it nine C5-speed units apart; one tuning path, when a round touches the
+sample table.

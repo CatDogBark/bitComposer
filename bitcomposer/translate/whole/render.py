@@ -126,8 +126,21 @@ def sample_floor(models, rid: str, rng: random.Random, speed: float | None = Non
     return (float(drawn) if drawn != "long" else 400.0) / 1000.0
 
 
+def attack_for(models: dict | None, role: str, rng: random.Random, log: list) -> str | None:
+    """The attack class the attacks word gives a part (round 73): "struck" or "sustaining", drawn under the part on its
+    own stream; None without the word, and the pool rule then weighs range and speed alone. FFVI's tunes sustain in 63
+    of 66 songs; a built-in set's keys had taken 6 of 10 default tunes by range and speed alone."""
+    t = (models or {}).get("attacks")
+    t = t.table if hasattr(t, "table") else t
+    if t is None:
+        return None
+    cls = t.draw((role,), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR)
+    log.append(f"{role}'s attack (attacks): {cls}")
+    return cls
+
+
 def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, others: list = (), speed: float = 0.0, models: dict | None = None,
-                drawn: dict | None = None, role: str | None = None, pack: str | None = None) -> str:
+                drawn: dict | None = None, role: str | None = None, pack: str | None = None, attack: str | None = None) -> str:
     """The sample for a part's register and speed: of the pool's samples (`names`, repeated by their share), one the game
     plays as fast as the part's fastest bar (the sample_speeds table) whose game-played range (the ranges table, by the
     pack's own sample id, `raw(name)`) covers the register best, the part's top weighing most; when none of the pool
@@ -138,7 +151,16 @@ def best_sample(ranges, names: list, register: tuple, rng: random.Random, raw, o
     turns shrill (8 to 10 % of written notes had sat over an octave above the recording against FFVI's 0 to 2 %; the
     fit had asked only that the register's centre lie near the range, and by the pack's prefixed names it had found no
     range at all and drawn at random), and a slow-attack pad played at sixteenths never reaches its body (Song Check
-    14's Whole 02: FFVI plays that pad under six notes a second; the part ran at eight)."""
+    14's Whole 02: FFVI plays that pad under six notes a second; the part ran at eight). With `attack` (the attacks
+    word's class, round 73) a built-in voice of the other class stands down wherever one of the class is there to
+    choose; a pack's own samples carry no profile and are not sorted by it."""
+    if attack:
+        def same(name):
+            prof = builtin_profile(raw(name), pack)
+            return prof is None or bool(prof.get("struck")) is (attack == "struck")
+        names = [n for n in names if same(n)] or list(names)
+        others = [n for n in others if same(n)] or list(others)
+
     def score(name):
         rid = raw(name)
         if ranges is not None and ranges.songs.get((rid,), 0):
@@ -393,17 +415,24 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
     for role in sorted(plan.band, key=lambda r: r == R.COUNTER):   # the counter last: its sample is the tune's, or another
         if role == R.DRUMS:
             out[role] = {piece: make(name) for piece, name in (voices.get("drums") or {}).items()}
+            from ... import samples as samples_mod
             given_kit = plan.extras.get(R.DRUMS, {}).get("kit") or {}   # the token song's own kit (round 63), slot by piece letter, where
-            taken = []                                                  # the pack holds the sample; the pack's slot else
+            taken, tonal = [], []                                       # the pack holds the sample AS PERCUSSION (round 74); the pack's slot else
             for letter, sid in given_kit.items():
                 slot = plan_mod.KIT_SLOT.get(letter)
-                if slot and sid in own:
-                    out[role][slot] = make(sid)
-                    taken.append(f"{slot} {sid}")
-                    if slot == "hihat" and "open_hihat" in out[role]:
-                        out[role]["open_hihat"] = make(sid)
+                if not slot or sid not in own:
+                    continue
+                if not samples_mod.is_percussion(f"{pack_name}_{sid}"):   # the balance's song struck a tonal sample (a lead as an accent seven
+                    tonal.append(f"{letter} {sid}")                       # times a song in The Phantom Forest, read as its kit): the pack's
+                    continue                                              # own drum keeps the slot, so the writer never hammers a lead at the kit's note
+                out[role][slot] = make(sid)
+                taken.append(f"{slot} {sid}")
+                if slot == "hihat" and "open_hihat" in out[role]:
+                    out[role]["open_hihat"] = make(sid)
             if taken:
                 plan.log.append("kit samples from the balance's song: " + ", ".join(taken))
+            if tonal:
+                plan.log.append("kit pieces the balance's song struck on tonal samples, the pack's own drums standing in: " + ", ".join(tonal))
             continue
         pool = plan_mod.POOLS.get(role)
         if role == R.BASS:
@@ -445,8 +474,9 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 if ranges is not None and ranges.songs.get((sid,), 0):
                     drawn[sid] = tuple(int(x) for x in ranges.draw(range_context(sid, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
         if role not in out:
+            attack = attack_for(models, role, random.Random(f"whole:{plan.seed}:attack:{role}"), plan.log)   # the part's attack class (round 73), on its own stream
             out[role] = make(best_sample(ranges, names, register, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role,
-                                         pack=pack_name)
+                                         pack=pack_name, attack=attack)
                              if register else rng.choice(names))
             if register:
                 fit = drawn.get(raw(out[role][0]))
