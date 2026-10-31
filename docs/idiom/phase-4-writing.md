@@ -4622,3 +4622,60 @@ owner's call to hear before a falling rate is given. The `bit` kit 8 dB
 under FFVI's place. The vocabulary map cannot name the performance as a
 draw site (it reads the writer's sources), so `vibrato` shows as drawn by
 no writer, which is true.
+
+### Round 73: the part's attack class counted, and a built-in set's pool rule matches it (2026-10-31, from Song Checks 59 and 60: "the melody is sitting behind again")
+
+**Found.** With the bit set's range tops placed by the owner's ear (the
+bright single-period leads capped at C5 to F#5), the pool rule gave six of
+Song Check 60's ten default tunes to the keys, the e-piano, piano, pluck
+and nylon, which range 36 to 96 and, being struck, take any speed, where
+the sustaining leads stop at 4 to 8 notes a second. A struck voice decays
+14 to 20 dB after its attack, so a tune on one fades between its notes
+and reads weak at any measured level: Northern Tidepool's e-piano measured
+the loudest part of its song and the owner heard it hiding. FFVI's tunes
+ride a struck sample in 3 of 66 songs (Awakening, Spinach Rag, Good
+Night; the median strike over body is -1.7 dB), its basses in 6 of 63, its
+accompaniments in 5 of 60. Over the twenty default-set verdicts of Song
+Checks 59 and 60 the ear otherwise followed the measured margin: forward
+or fine at -7 LU and better, buried at -9.3 and under whatever the voice,
+the horn at -10.3 included, so the dark-voice (ear-weighting) idea of
+round 69's follow-up is not needed.
+
+**Built.** The `attacks` word (`rhythm.attack_units`, KEPT, shape part):
+whether the sample a part's line plays most is struck, its first 150 ms
+more than twice (6 dB) the RMS of its loop body, or sustaining, one unit a
+part a song, with the samples' loudness as `set_loudness` holds it.
+`packs.profile` carries `struck` for a built-in voice; `render.attack_for`
+draws the class on `whole:{seed}:attack:{role}` for a part the pool rule
+chooses a voice for, and `render.best_sample(attack=)` lets a built-in
+voice of the other class stand down wherever one of the class is there
+to choose; a pack's own samples carry no profile and are not sorted by
+it, and an imported pack's parts take the token's sample before the pool
+rule anyway. Pack4 refit (98 tables; `attacks` 208 units of 67 songs:
+melody 63 sustaining and 3 struck, bass 57 and 6, accompaniment 55 and 5,
+harmony 15 and 0, arp 4 and 0) and the shipped vocabulary written again
+from it. Tests: the unit's class from a stub's loudness, nothing without
+it; the pool rule's pick by class on two bit voices.
+
+**Measured, Song Check 61 (five songs on FFVI's sounds, seeds 171-175,
+and five from the default composer, seeds 18-22, all through the
+player's performance).** All five default tunes drew sustaining and got
+the horn, ocarina, cello, sine flute and violin; none a key. Tune margin
+over the loudest other pitched line (LUFS): FFVI sounds +5.5, +3.6, -0.7,
++3.2, -5.4 (median +3.2, three of five on top); default +11.2, +2.1, -5.5,
+-6.6, -8.0 (median -5.5, two on top). The two margins under on the default
+set are the tokens' (the tune at 0.3 and 0.5 of a bass at 1.0); the +11.2
+is a token with the tune at 1.0 over everything else at 0.2 to 0.4.
+Default melodies' centroids 226 to 837 Hz (the horn's 226 at a low
+register, the violin's 816), none above 2 % of energy over 2 kHz except
+the violin's 7 %; the FFVI tunes 761 to 1365 Hz.
+
+**Open.** The default player's deep margins are now the token's balance,
+FFVI's own habit (the tune under another line in 71 % of its songs); a
+"tune on top" choice in the performance layer stays the owner's. The
+bass and pad voices of the bit set hold where FFVI's basses decay (round
+72's envelope choice): the bit bass sits 2 to 4 dB forward of FFVI's
+place. Beacon of Lanterns' second bass voice runs sixteenths at sixteen a
+second: the bass figure tables against FFVI's second bass voices, a count
+to make. The harmony drew a lead-pool voice through the wider reach in
+Dance of the Harbor: the reach's own class should follow the word too.
