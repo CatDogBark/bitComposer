@@ -7,9 +7,11 @@ move it. A `Performance` is the one place the default player's choices live:
 
 - what it asks for: a theme that comes back and the band with it, a least
   form length, how many times the loop plays, the tail and the fade;
-- the echo: the player's own habit, drawn per song from the song's tempo and
-  density, where the vocabulary has no word for it (an echo word counted
-  from the readings is a vocabulary gap, `docs/idiom/phase-6-generator.md`);
+- the echo: the vocabulary's `echo` word (round 70: the game's volume, delay,
+  feedback and the parts that send), drawn on the performance's own stream
+  by the writer's own draw (`whole.render.echo_word`, so the two paths cannot
+  drift), the sound set's habits where a vocabulary has no such word (an
+  import counted before round 70);
 - vibrato on held notes of the tune and the counter, as a performance of the
   score after it is written: a bend a row, the figures and the tune untouched.
 
@@ -70,51 +72,36 @@ class Performance:
                            self.loops, self.tail_bars, self.fade, self.echo, self.vibrato)
 
 
-def tempo_class(bpm: float) -> str:
-    return "slow" if bpm < 95 else "fast" if bpm >= 140 else "medium"
+def echo_stream(seed: int) -> random.Random:
+    """The performance's own stream for the echo: apart from the writer's (`whole:SEED:echo`), so the player's draw
+    moves nothing of the writing."""
+    return random.Random(f"written:{seed}:performance:echo")
 
 
-def density_of(plan) -> float:
-    """How busy the song's parts are, 0 to 1: the share of the balance token's habit words that say dense."""
-    words = [str(h).split()[0] for h in (getattr(plan, "habits", None) or {}).values() if h]
-    if not words:
-        return 0.5
-    return sum(1 for w in words if w == "dense") / len(words)
-
-
-def echo_for(plan, seed: int) -> dict | None:
-    """The player's echo for a written song, drawn on its own stream from the song's character, in the shape
-    `whole.score_of` takes: {"delay", "seconds", "wet", "feedback"}, or None for a dry song. Slower and sparser songs
-    are wetter and longer; fast and busy ones lighter and shorter, and more often dry. The same mechanism Classic's
-    packs use (`whole.echo_of`), chosen by the song instead of the set, and nothing learned from any game."""
-    from .echo import ECHO_DELAYS, ECHO_WETNESS
-    from .score import ECHO_STEP, ECHO_WET
-    rng = random.Random(f"written:{seed}:performance:echo")
-    tempo, dense, band = tempo_class(plan.bpm), density_of(plan), len(plan.band)
-    chance = {"slow": 0.85, "medium": 0.65, "fast": 0.45}[tempo]
-    if dense >= 0.5:
-        chance -= 0.15
-    if band <= 3:
-        chance += 0.10
-    if rng.random() >= chance:
-        plan.log.append(f"performance: no echo ({tempo}, {'dense' if dense >= 0.5 else 'open'}, {band} parts, chance {chance:.2f})")
-        return None
-    delays = {"slow": {"dotted": 4, "eighth": 3, "slap": 1}, "medium": {"eighth": 4, "slap": 3, "dotted": 2},
-              "fast": {"slap": 5, "eighth": 2}}[tempo]
-    if dense >= 0.5:
-        wets = {"light": 3, "normal": 2}
-    elif band <= 3:
-        wets = {"wet": 2, "normal": 2, "light": 1}
+def echo_for(plan, seed: int, models: dict | None = None, habits: dict | None = None) -> dict | None:
+    """The player's echo for a written song, in the shape `whole.score_of` takes ({"delay", "seconds", "wet",
+    "feedback", and the word's "sends" and "dry"}), or None for a dry song: the vocabulary's `echo` word, drawn on the
+    performance's own stream by the writer's own draw (`render.echo_word`: the game's echo volume of full, its delay
+    in ms, its feedback and the parts that send, one unit a song; round 70), so the player plays the echo the game
+    played. Until round 72 the player had drawn its own rule here (a delay by tempo and density, a wetness name over
+    `score.ECHO_WET` 0.4): 0.24 to 0.6 of full against FFVI's 0.20 in every song. Where a vocabulary has no `echo`
+    word (an import counted before round 70), the sound set's habits stand, as they do for the writer bare
+    (`render.echo_of`, Classic's way), on the same stream; `describe` says which."""
+    from .translate.whole import render as render_mod
+    rng = echo_stream(seed)
+    if (models or {}).get("echo"):
+        echo = render_mod.echo_word(models, plan, rng)
+        if echo is not None:
+            echo["from"] = "word"
+        return echo
+    echo = render_mod.echo_of(habits or {}, plan.bpm, rng)
+    if echo is not None:
+        echo["from"] = "habit"
+        plan.log.append(f"performance: echo {echo['delay']} ({echo['seconds'] * 1000:.0f} ms) at {echo['wet']:.2f} of full, "
+                        f"feedback {echo['feedback']:.2f}: the sound set's habit, the vocabulary having no echo word")
     else:
-        wets = {"normal": 3, "light": 1, "wet": 1}
-    delay = rng.choices(list(delays), list(delays.values()))[0]
-    wet = rng.choices(list(wets), list(wets.values()))[0]
-    feedback = rng.uniform(0.35, 0.5) if dense >= 0.5 else rng.uniform(0.45, 0.65)
-    row_s = 60.0 / (plan.bpm * 4)
-    steps = max(1, min(15, round(ECHO_DELAYS.get(delay, 2) * row_s / ECHO_STEP)))
-    plan.log.append(f"performance: echo {delay} ({steps * ECHO_STEP * 1000:.0f} ms), {wet}, feedback {feedback:.2f} "
-                    f"({tempo}, {'dense' if dense >= 0.5 else 'open'}, {band} parts)")
-    return {"delay": delay, "seconds": steps * ECHO_STEP, "wet": ECHO_WETNESS.get(wet, 1.0) * ECHO_WET, "feedback": feedback}
+        plan.log.append("performance: no echo (the sound set's habit, the vocabulary having no echo word)")
+    return echo
 
 
 def vibrato(score, plan, first: dict) -> int:
@@ -161,7 +148,11 @@ def describe(performance: Performance, echo: dict | None, done: dict) -> str:
     parts = []
     if performance.themed:
         parts.append("the theme returns" + (" with the band" if performance.band_returns else ""))
-    parts.append("echo " + echo["delay"] if echo else "no echo")
+    if echo:
+        parts.append(f"echo {echo['delay']} at {echo['wet']:.2f} of full"
+                     + (" (the vocabulary's word)" if echo.get("from") == "word" else " (the sound set's habit)" if echo.get("from") == "habit" else ""))
+    else:
+        parts.append("no echo")
     if done.get("vibrato"):
         parts.append(f"vibrato on {done['vibrato']} held notes")
     parts.append(f"the loop {'twice' if performance.loops == 2 else str(performance.loops) + ' times'}")

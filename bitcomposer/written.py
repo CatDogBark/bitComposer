@@ -64,7 +64,8 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
     models = vocabularies.load(vocabulary)
     label = vocabularies.label(vocabulary)
     from .translate import harmony, whole
-    echo = (lambda plan: performance_mod.echo_for(plan, seed)) if perf.echo == "song" else None if perf.echo == "off" else perf.echo
+    habits = PACKS[sounds].get("habits") or {}
+    echo = (lambda plan: performance_mod.echo_for(plan, seed, models, habits)) if perf.echo == "song" else None if perf.echo == "off" else perf.echo
     out = whole.compose(models, PACKS[sounds], own, sounds, seed, game=label, title=f"{label} {seed}", max_bars=perf.max_bars,
                         min_bars=perf.min_bars, tail_bars=perf.tail_bars, themed=perf.themed, band_returns=perf.band_returns, read=False,
                         fade=perf.fade, loops=perf.loops, echo=echo)

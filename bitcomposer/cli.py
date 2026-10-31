@@ -3,6 +3,7 @@ Command-line interface for bitcomposer.
 """
 
 import argparse
+import dataclasses
 import os
 import sys
 import time
@@ -299,8 +300,11 @@ def compose_written_from_args(args, seed, index: int = 0):
     from .spc import convert
     from .written import compose_written
     from .performance import Performance
+    perf = Performance.none() if args.bare else Performance.player()
+    if getattr(args, "echo", "random") == "off":           # --echo off holds for a written song too; on and random are the word's
+        perf = dataclasses.replace(perf, echo="off")
     out = compose_written(args.vocabulary, args.pack, seed, carry_theme=args.carry_theme, band_returns=args.band_returns,
-                          pack_file=args.pack_file, performance=Performance.none() if args.bare else None)
+                          pack_file=args.pack_file, performance=perf)
     os.makedirs(args.output_dir, exist_ok=True)
     if args.output and args.count == 1:
         filepath = args.output

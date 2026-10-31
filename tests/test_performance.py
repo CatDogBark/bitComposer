@@ -43,20 +43,18 @@ class PerformanceTests(unittest.TestCase):
         self.assertEqual(out.stdout.strip(), "False")
 
     def test_the_players_performance_asks_and_adds_what_it_says(self):
-        """The default: the theme returns with the band, at least sixteen bars, the loop twice, the echo by the song
-        (some songs dry, the delays the SNES chip's), vibrato on held notes of the tune and the counter only, as
-        bends within the depth, no note moved."""
-        echoes, dry, vib = [], 0, 0
+        """The default: the theme returns with the band, at least sixteen bars, the loop twice, the echo the
+        vocabulary's word (round 72: the delay in ms as the word carries it), vibrato on held notes of the tune and the
+        counter only, as bends within the depth, no note moved."""
+        echoes, vib = [], 0
         for seed in range(1, 13):
             out = written.compose_written(seed=seed)
             info, plan, score = out["info"], out["plan"], out["score"]
             self.assertEqual((info["performance"], info["carry_theme"], info["band_returns"]), ("player", True, True))
             self.assertGreaterEqual(plan.bars, 16, seed)
-            if info["echo"] is None:
-                dry += 1
-            else:
+            if info["echo"] is not None:
                 echoes.append(info["echo"])
-                self.assertIn(info["echo"], ("slap", "eighth", "dotted"))
+                self.assertRegex(info["echo"], r"^\d+ ms$")
             vib += info["vibrato"]
             voices = set()
             for role in performance.VIBRATO_PARTS:
@@ -70,9 +68,42 @@ class PerformanceTests(unittest.TestCase):
                     self.assertGreater(n.bends[0][0], n.start)
                     self.assertLess(n.bends[-1][0], n.end)
             self.assertIn("performance:", score.message[4])
-        self.assertGreater(dry, 0, "no dry song in twelve: the echo is not by the song")
         self.assertGreater(len(echoes), 0)
         self.assertGreater(vib, 0)
+
+    def test_the_players_echo_is_the_vocabularys_word_on_its_own_stream(self):
+        """Round 72: the default player's echo is the `echo` word's outcome (volume, delay, feedback, the sending parts),
+        drawn by the writer's own draw on the performance's stream, not a rule by tempo and density over ECHO_WET; the
+        message says so. Without the word, the sound set's habits stand, and the message says that instead."""
+        import random
+        models = vocabularies.load(vocabularies.DEFAULT)
+        for seed in (68554, 87326, 5):
+            out = written.compose_written(seed=seed)
+            self.assertIsNotNone(out["info"]["echo"], seed)
+            plan = out["plan"]
+            plan.log = []
+            word = whole.render.echo_word(models, plan, random.Random(f"written:{seed}:performance:echo"))
+            self.assertEqual(word["delay"], out["info"]["echo"])
+            self.assertTrue({n.voice for n in out["score"].notes if n.echo})
+            self.assertIn(f"echo {word['delay']} at {word['wet']:.2f} of full (the vocabulary's word)", out["score"].message[4])
+            self.assertLessEqual(word["wet"], 0.3)                        # FFVI's 0.20, never the old 0.4 slap
+            self.assertEqual(set(n.echo_delay for n in out["score"].notes), {word["seconds"]})
+        # a vocabulary without the word: the sound set's habits, said so
+        bare = {k: v for k, v in models.items() if k != "echo"}
+        import unittest.mock as mock
+        with mock.patch.object(vocabularies, "load", lambda name: bare):
+            out = written.compose_written(seed=7)
+        self.assertIn("(the sound set's habit)" if out["info"]["echo"] else "no echo", out["score"].message[4])
+        self.assertTrue(any("the vocabulary having no echo word" in l for l in out["plan"].log))
+
+    def test_echo_off_on_the_command_line_holds_for_a_written_song(self):
+        with tempfile.TemporaryDirectory() as d:
+            args = build_parser().parse_args(["-s", "7", "-d", d, "--echo", "off"])
+            _path, info = compose_from_args(args)
+            self.assertIsNone(info["echo"])
+            args = build_parser().parse_args(["-s", "7", "-d", d, "--prefix", "b "])
+            _path, info = compose_from_args(args)
+            self.assertIsNotNone(info["echo"])
 
     def test_the_bare_song_and_the_performed_song_share_their_notes(self):
         """The performance adds to a song and asks the writer for things; where it asks for nothing (the switches off,
