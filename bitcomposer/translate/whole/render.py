@@ -101,7 +101,13 @@ def floors_for(plan: plan_mod.Plan, written: dict, samples: dict, models: dict |
             continue
         role, _, which = key.partition(":")
         beside = {v for v, w in enumerate(plan_mod.layers_of(plan, role), start=1) if not w.startswith("doubling")}
-        voices = beside if which == "second" else ({0} | ({v for v in range(1, plan.voices.get(role, 1))} - beside))
+        owned = {v for v in range(1, plan.voices.get(role, 1)) if f"{role}:{v}" in samples}   # on their own token sample (round 70)
+        if which.isdigit():
+            voices = {int(which)}
+        elif which == "second":
+            voices = beside - owned
+        else:
+            voices = {0} | ({v for v in range(1, plan.voices.get(role, 1))} - beside - owned)
         fastest[chosen[0]] = max(fastest.get(chosen[0], 0.0), written_speed(plan, written, role, voices))
     return {name_: sample_floor(models, raw(name_), rng, speed if written else None, pack=pack_name) for name_, speed in fastest.items()}
 
@@ -457,6 +463,17 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role, pack=pack_name))
             out[f"{role}:second"] = second
             plan.bounds[f"{role}:second"] = bound_of(wide_enough(models, raw(second[0]), drawn.get(raw(second[0])), f"{role}:second", plan.log, pack=pack_name), reg2)
+        # each voice beyond the line on the token song's own sample for THAT voice (round 70), doubling or not, where the
+        # pack holds it (`role:v`, score_of reads it first): the one `:second` sample had been the first extra voice's for
+        # every voice beside the line, and a doubling voice had taken the line's whatever the token counted (163's
+        # counter second at 2.5 on sfd6accf98a played at 1.0 on the line's sf89f5aedfd)
+        taken_v = []
+        for v, sid in enumerate(plan.layer_samples.get(role) or [], start=1):
+            if sid and sid in own and v < plan.voices.get(role, 1):
+                out[f"{role}:{v}"] = make(sid)
+                taken_v.append(f"{v + 1} {sid}")
+        if taken_v:
+            plan.log.append(f"{role}'s voices beside the line on the balance's song's own samples: " + ", ".join(taken_v))
     floors, fastest = {}, {}                                # each chosen sample's shortest note in the game (sample_lengths): a note's floor on
     for key, chosen in list(out.items()):                   # it, under the speed class of the fastest part it serves (round 36)
         if isinstance(chosen, tuple):
@@ -511,8 +528,9 @@ def note_level(plan: plan_mod.Plan, role: str, voice: int, second_voice: dict | 
     under the tune's share band; LEVELS without a levels word), a voice beside the line at its own share of the line's
     (the balance token's share for that voice where its song has the part layered, plan.voice_levels by rank, so the
     line and the voices beside it are one FFVI song's together; the layer_levels draw for a voice the token has no share
-    for; `second_voice` those voices by part, layers_of's apart and alternating voices; a doubling voice plays the line's
-    level). A drum note on kit slot `piece` plays at that piece's own share where the token carries one (round 68,
+    for; `second_voice` those voices by part, layers_of's apart and alternating voices; a doubling voice plays the token's
+    share for its voice too, since round 70, and the line's level only where the token has none for it). A drum note on
+    kit slot `piece` plays at that piece's own share where the token carries one (round 68,
     plan_mod.kit_piece_level: the part's one median was the most frequent piece's, the hat's, and the kick played as
     quiet as a hat), the part's share where not. Never under 0.05 nor over 1.0 of full: a part's share is at most 1.0,
     so only a second voice over 1.0 of its line, or a kit piece louder than the loudest pitched part, can reach the cap."""
@@ -525,9 +543,11 @@ def note_level(plan: plan_mod.Plan, role: str, voice: int, second_voice: dict | 
         base *= plan.section_levels[role][bar]              # the section's level over the part's (section_levels, round 48)
     if second_voice is None:
         second_voice = {role: {v for v, w in enumerate(plan_mod.layers_of(plan, role), start=1) if not w.startswith("doubling")}}
-    if voice in second_voice.get(role, ()):
-        shares = plan.voice_levels.get(role) or []
-        base *= shares[voice - 1] if 0 < voice <= len(shares) else plan.layer_levels.get(role, 1.0)
+    shares = plan.voice_levels.get(role) or []
+    if 0 < voice <= len(shares):                            # the token's voice, doubling or not (round 70: a doubling voice had played the
+        base *= shares[voice - 1]                           # line's level whatever the token counted for it; 163's counter second at 2.5)
+    elif voice in second_voice.get(role, ()):
+        base *= plan.layer_levels.get(role, 1.0)
     return max(0.05, min(1.0, base))
 
 
@@ -669,7 +689,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                     name, sample = samples[R.DRUMS][kit_name]
                     put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v, piece=kit_name)   # the piece's own level (round 68)
                 else:
-                    name, sample = samples[f"{role}:second"] if f"{role}:second" in samples and n[3] in second_voice.get(role, ()) else samples[role]
+                    name, sample = sample_of(samples, role, n[3], second_voice)
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // plan_mod.METER))   # the bar's section level (round 48)
     if capped:
@@ -704,6 +724,17 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     score = convert.Score(notes, seconds, n_voices, [(0.0, master, master)], fade, plan.title[:25], plan.game, "bitComposer", row_hz, tempo,
                           0.0, 0.0, False, None, pcm_of, key_of, message=message)
     return score, first
+
+
+def sample_of(samples: dict, role: str, voice: int, second_voice: dict) -> tuple:
+    """The (name, ITSample) a part's voice plays: the token song's own for that voice (`role:v`, round 70) where the pack
+    holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's."""
+    own = samples.get(f"{role}:{voice}") if voice else None
+    if own is not None:
+        return own
+    if f"{role}:second" in samples and voice in second_voice.get(role, ()):
+        return samples[f"{role}:second"]
+    return samples[role]
 
 
 def layer_class(plan: plan_mod.Plan, role: str) -> str:

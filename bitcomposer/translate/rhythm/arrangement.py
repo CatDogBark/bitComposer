@@ -519,8 +519,16 @@ def part_sample_id(s, role: str) -> str:
     the pack names it); "" without notes. Round 60 (2026-10-29): FFVI puts 224 of its 1326 possible sample pairs
     together, a lead sample has a median one bass partner, and a song's pairs are seen in another of its songs 0.80 of
     the time; the written songs' pairs, each part's sample drawn apart, 0.55, under chance (0.67): the balance token's
-    song lends its instruments with its levels, which were counted on those very samples."""
-    c = Counter(n[3] for n in s.notes.get(role, []) if isinstance(n[3], str) and n[3])
+    song lends its instruments with its levels, which were counted on those very samples. Since round 70 the LINE
+    voice's sample where the part holds two voices or more (cells.line_voice): the most-played over all voices was the
+    busier second voice's, and Troops March on's and Overture's bass lines on sa692eac0a6 under a second voice on
+    s1d296a2572 had put both written voices on s1d296a2572 (the layer token carries the second's)."""
+    notes = s.notes.get(role, [])
+    if role != R.DRUMS:
+        voices = cells_mod.part_voices(s, role)
+        if len(voices) >= 2:
+            notes = voices[cells_mod.line_voice(voices, role)]
+    c = Counter(n[3] for n in notes if isinstance(n[3], str) and n[3])
     if not c:
         return ""
     key = c.most_common(1)[0][0]
@@ -589,7 +597,13 @@ def balance_units(songs) -> list:
     apart had put Relm's band (70) at 160 beats a minute and Slam
     Shuffle's (114) at 70, and only 14 of 45 plans sat in their token
     song's class; the `tempos` word is drawn again under the class where
-    the plan's draw falls outside it."""
+    the plan's draw falls outside it. Since round 70 (2026-10-30) the
+    fifth field is the LINE voice's median level (readings.part_levels)
+    and the eighth the line voice's sample (part_sample_id), so that the
+    line times each sixth-field share reproduces every voice of the part
+    and the voices beside the line play the samples the token names for
+    them (Troops March on's counter line had played at 0.40 of the top
+    where it sits at 0.27, its bass line on the second voice's sample)."""
     habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
     for u in readings_mod.habits(readings_mod.units(songs)) + readings_mod.habits(readings_mod.bass_units(songs)):
         habit_of_part[(u.song, u.values["part"])] = u.outcome

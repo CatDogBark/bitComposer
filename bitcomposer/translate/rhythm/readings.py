@@ -304,12 +304,33 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                     basses[voice] = mine
         if len(basses) >= 2:
             song.bass_voices = basses
-        song.levels = {role: statistics.median(ls) for role, ls in level_rows.items()}
+        song.levels = part_levels(song, {role: statistics.median(ls) for role, ls in level_rows.items()})
         song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         songs.append(song)
     return songs, dict(out)
+
+
+def part_levels(song: Song, pooled: dict) -> dict:
+    """A part's level: its LINE voice's median level where the part holds two voices or more (the line as the layer
+    words see it, cells.line_voice: the busiest voice, the bass's the one with the longest notes), the median over all
+    its notes (`pooled`) for a part of one voice, for the drums (the kit's level is a piece's, round 68) and where the
+    line's level was never read. Round 70 (2026-10-30): the part's one median had pooled every voice's notes, so where
+    the voices differ in level the line landed off: Troops March on's counter line sits at 0.27 of the top and played
+    at 0.40, its bass line at 0.62 and played at 1.0 with the second voice at 1.6 of that. The voices beside the line
+    are counted against the line (voice_level_shares), so line × share now reproduces every voice."""
+    out = dict(pooled)
+    for role in PITCHED:
+        if role not in out:
+            continue
+        voices = cells_mod.part_voices(song, role)
+        if len(voices) < 2:
+            continue
+        level = song.voice_levels.get(cells_mod.line_voice(voices, role))
+        if level is not None and math.isfinite(level):
+            out[role] = level
+    return out
 
 
 def position(offset: float, division: int) -> Fraction:

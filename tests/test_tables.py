@@ -666,3 +666,38 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.6,S=s,h=h@0.2")   # an unread level never reaches the token
         s.kit_levels = {}
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k,S=s,h=h")
+
+    def test_the_parts_level_and_sample_are_the_line_voices(self):
+        """Round 70: a layered part's level on the token (the fifth field) is its LINE voice's median level, not the median
+        over every voice's notes, and its sample (the eighth field) the line voice's; the sixth field's shares are counted
+        against the line already, so line x share reproduces every voice. Troops March on's counter line sat at 0.27 of
+        the top and played at 0.40 (the pooled median), its bass line on sa692eac0a6 played on the second voice's
+        s1d296a2572. The bass's line is the voice with the longest notes; a part of one voice keeps its median."""
+        chords = [Span(0.0, 32.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4) for k in range(8)], chords, bpm=100.0, sid="id", game="G", numbers=list(range(8)),
+                        parts=[(0, 8)])
+        s.notes["melody"] = [(4.0 * k + i, 1.0, 72.0 + i, "sm") for k in range(8) for i in range(4)]
+        line = [(4.0 * k + 0.5 * i, 0.4, 60.0, "sa") for k in range(8) for i in range(8)]       # the busiest voice: the line
+        second = [(4.0 * k + i, 0.9, 52.0, "sb") for k in range(8) for i in range(4)]
+        s.notes["accompaniment"] = line + second
+        sustained = [(4.0 * k, 3.0, 36.0, "slong") for k in range(8)]                            # the bass's line: the longest notes
+        slap = [(4.0 * k + 0.5 * i, 0.2, 48.0, "sshort") for k in range(8) for i in range(8)]
+        s.notes["bass"] = sustained + slap
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 3: ("accompaniment", line), 4: ("accompaniment", second),
+                         5: ("bass", sustained), 6: ("bass", slap)}
+        s.voice_levels = {1: 0.5, 3: 0.2, 4: 0.5, 5: 0.31, 6: 0.5}
+        pooled = {"melody": 0.5, "accompaniment": 0.3, "bass": 0.45}                             # the medians over every voice's notes
+        self.assertEqual(rhythm.part_levels(s, pooled), {"melody": 0.5, "accompaniment": 0.2, "bass": 0.31})
+        s.voice_levels[3] = float("nan")
+        self.assertEqual(rhythm.part_levels(s, pooled)["accompaniment"], 0.3)                     # the line's level never read: the pooled median
+        s.voice_levels[3] = 0.2
+        s.levels = rhythm.part_levels(s, pooled)
+        self.assertEqual(rhythm.part_sample_id(s, "accompaniment"), "sa")                         # the line voice's sample, not the most played
+        self.assertEqual(rhythm.part_sample_id(s, "bass"), "slong")
+        self.assertEqual(rhythm.part_sample_id(s, "melody"), "sm")
+        tokens = {t.partition("=")[0]: t.partition("=")[2].split(":") for t in rhythm.balance_units([s])[0].outcome.split() if "=" in t}
+        self.assertEqual(tokens["accompaniment"][4], "0.4")                                         # the line at 0.2 of the top 0.5
+        self.assertEqual(tokens["accompaniment"][5].split("@")[0], "2.5")                          # the second voice at 2.5 of the line: 0.5 of full
+        self.assertEqual(tokens["accompaniment"][7], "sa")
+        self.assertEqual((tokens["bass"][4], tokens["bass"][5].split("@")[0], tokens["bass"][7]), ("0.6", "1.6", "slong"))
+        self.assertEqual(tokens["melody"][4], "1.0")

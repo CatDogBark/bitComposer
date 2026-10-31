@@ -885,7 +885,7 @@ class NewTablesTests(unittest.TestCase):
         p.extras["bass"]["layer"] = "apart +0 like"
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), whole.TOP_LEVEL * 0.6)      # the line at the token's level
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), whole.TOP_LEVEL * 0.6 * 1.2)   # the second voice at the token's share
-        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), whole.TOP_LEVEL * 0.6)      # a doubling voice plays the line's level
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), whole.TOP_LEVEL * 0.6 * 0.7)   # a doubling voice at the token's share too (round 70)
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2, {"accompaniment": {1, 2}}), whole.TOP_LEVEL * 0.6 * 0.7)   # apart: its own share
         self.assertAlmostEqual(whole.note_level(p, "accompaniment", 3, {"accompaniment": {1, 2, 3}}), whole.TOP_LEVEL * 0.6 * 1.2)   # beyond the token's voices: layer_levels
         self.assertAlmostEqual(whole.note_level(p, "bass", 1), whole.TOP_LEVEL * 0.7)
@@ -1210,6 +1210,47 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.kit_piece_level(p, "kick"), 1.7); self.assertIsNone(whole.kit_piece_level(p, "rim"))
         p.top_level = 0.8
         self.assertEqual(whole.note_level(p, "drums", 0, piece="kick"), 1.0)                       # 0.8 x 1.7 reaches the cap of full
+
+    def test_a_doubling_voice_takes_the_tokens_level_and_sample(self):
+        """Round 70: a voice beside the line plays at the token's share for that voice and on the token's sample for it,
+        doubling or not (the layer word gives a doubling voice its interval only); without a token share a doubling voice
+        keeps the line's level and sample, as before. 163's counter second had played at 1.0 on the line's sf89f5aedfd
+        where Troops March on plays it at 2.5 on sfd6accf98a; Good Night's four extra voices had all taken the first's."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from bitcomposer import instruments
+        from bitcomposer.translate import tables
+        token = ("accompaniment=half:56-68:0.8:3:0.6:2.5@sx@0.5/0.4@sy@0.3::sline bass=half:36-44:0.9:1:1.0:::sbass "
+                 "melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.voices["accompaniment"], 3)
+        p.extras["accompaniment"]["layers"] = ["doubling +4", "apart -8 like"]; p.extras["accompaniment"]["layer"] = "doubling +4"
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 0), 0.30 * 0.6)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), 0.30 * 0.6 * 2.5)          # the doubling voice at the token's share
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), 0.30 * 0.6 * 0.4)
+        p.voice_levels.pop("accompaniment")                                                       # no token shares: the draw for the apart voice,
+        p.layer_levels["accompaniment"] = 1.3                                                     # the line's level for the doubling one
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 1), 0.30 * 0.6)
+        self.assertAlmostEqual(whole.note_level(p, "accompaniment", 2), 0.30 * 0.6 * 1.3)
+        made = []
+        fake = lambda name: made.append(name) or SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "arp": ["pad"]}}
+        with mock.patch.object(instruments, "_make_sample", fake):
+            samples = whole.samples_for(p, pack, {"sx", "sy", "sline", "sbass"}, "g", random.Random(1), {})
+        self.assertEqual(samples["accompaniment"][0], "sline")
+        self.assertEqual((samples["accompaniment:1"][0], samples["accompaniment:2"][0]), ("sx", "sy"))   # each voice's own, by rank
+        self.assertEqual(samples["accompaniment:second"][0], "sx")                                 # the old field, kept for a voice without its own
+        self.assertIn("accompaniment's voices beside the line on the balance's song's own samples: 2 sx, 3 sy", p.log)
+        second = {"accompaniment": {2}}
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 0, second)[0], "sline")
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 1, second)[0], "sx")           # the doubling voice on the token's sample
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 2, second)[0], "sy")
+        del samples["accompaniment:2"]
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 2, second)[0], "sx")           # without its own: the second's
+        del samples["accompaniment:1"]
+        self.assertEqual(whole.sample_of(samples, "accompaniment", 1, second)[0], "sline")        # a doubling voice without its own: the line's
+        self.assertEqual(whole.sample_of(samples, "bass", 0, second)[0], "sbass")
 
     def test_the_mix_level_and_the_master_that_holds_it(self):
         """Round 59: a song's mix level is its perceived note levels squared over quarter-beat frames, in dB; the balance token
