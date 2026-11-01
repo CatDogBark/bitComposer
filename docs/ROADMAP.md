@@ -400,8 +400,9 @@ and the hit-or-miss part. Two steps, in order.
   the housekeeping and the measurements for phase 6 in 1.2.0rc4; phase 6,
   the writer as the generator, its engine in 2.0.0rc1, its window, its
   fitted voices and its own sound set in 2.0.0rc2, the writer's sustain
-  and the default player's sound in 2.0.0rc3, the bit set's voices by
-  attack class next: `docs/idiom/phase-6-generator.md`).** The idiom's plan took
+  and the default player's sound in 2.0.0rc3, the parts' attack class in
+  2.0.0, released 2026-11-01; the kit's pieces next, on branch
+  `kit-pieces`: `docs/idiom/phase-6-generator.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
   readers scored on ground truth (phase 1), one score of voices through
   the SNES back end (phase 2), the vocabulary as tables read from the

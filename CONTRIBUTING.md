@@ -244,19 +244,32 @@ it from there and the publish workflow refuses a tag that does not match it.
    first (Releasing the emulator, above) and raise the `import` extra's
    floor in `pyproject.toml` to it; a test fails until the two agree, and
    UPDATE then brings the new emulator with the release.
-4. If the sound changed, regenerate the listening page's tracks so the
-   page people hear is the release. Each entry in `docs/tracks/tracks.json`
-   names its seed and its sound (the pack in brackets in `arrangement`, or
-   else `palette`); write it again with the CLI, e.g.
-   `python3 -m bitcomposer.cli --sound megamanx -s 24 -o "docs/tracks/Grotto Charge.it" -v`,
-   and bring the entry up to date from the `-v` output (key and tempo,
-   voices) and its version. A changed title renames the file.
+   If the shipped vocabulary changed since the last release, run the copy
+   check on a machine that holds the games' reference phrases
+   (`tools/copycheck.py`; the reference set is kept outside the
+   repository): `python3 tools/copycheck.py --seeds 1-200 --carry-theme --band-returns`
+   must find no copy.
+4. The listening page (`docs/index.html`, which GitHub Pages serves from
+   main's `docs`) plays the songs in `docs/tracks/`, listed in
+   `tracks.json` in two sections: the writer's (`"generator": "writer"`,
+   seeds 1 to 5 on the bit set) and Classic's (`"generator": "classic"`,
+   one per sound). When a generator's sound changed, write its section
+   again after step 2 (a Classic song's message names the version that
+   wrote it; a written song's does not): each entry's `command` writes
+   it, with `-o` and `-v` added, e.g.
+   `python3 -m bitcomposer.cli -s 1 -o "docs/tracks/The Starlit Arcade.it" -v`
+   or `python3 -m bitcomposer.cli --classic --sound megamanx -s 24 -o "docs/tracks/Grotto Charge.it" -v`
+   (without `--classic` a command writes a written song). Bring the entry
+   up to date from the `-v` output (key, tempo, form, length) and set its
+   version. `-v` names a written song's parts, not their voices; the voices
+   are the plan's (`written.compose_written(seed=1)["plan"].log`, each
+   part's "voice" line). A changed title renames the file.
    If the window changed, retake the README's picture of it after step 2,
    so it shows the new version; a home folder of its own keeps the four
    demo songs out of your Music folder and still shows `~/Music/bitComposer`:
 
    ```bash
-   HOME=$(mktemp -d) sh -c 'python3 -m bitcomposer.player --screenshot docs/images/player.png --screen 800x1440 --scale 2 --music-dir "$HOME/Music/bitComposer"'
+   HOME=$(mktemp -d) sh -c 'python3 -m bitcomposer.player --screenshot docs/images/player.png --music-dir "$HOME/Music/bitComposer"'
    ```
 5. Open a pull request from `dev` into `main`: CI (tests on every Python)
    and the Windows build run on it. Merge when both are green. There is

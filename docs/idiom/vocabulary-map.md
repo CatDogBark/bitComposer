@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (53)
+### the plan, drawn once a song (54)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -69,6 +69,7 @@ flowchart LR
 | `chord_tones` | part | _plan_once, write | - | the share of the tune's notes on a beat that are chord tones, drawn once a song |
 | `repeat_rates` | part | _plan_once | - | the share of the tune's moves that repeat the note, drawn once a song |
 | `tune_grain` | part, habit | _plan_once | - | the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms |
+| `attacks` | part | attack_for | - | whether a part's line plays a struck sample (its strike over 6 dB above its loop body: a sound that decays) or a sustaining one, by the part; a built-in set's pool rule matches the drawn class (FFVI's tunes: sustaining in 63 of 66 songs) |
 
 ### the parts' writing (whole.write hands the table to a writer) (9)
 
@@ -215,6 +216,7 @@ flowchart LR
     chord_tones["chord_tones"]
     repeat_rates["repeat_rates"]
     tune_grain["tune_grain"]
+    attacks["attacks"]
   end
   balance -- tempo --> bass_habits
   balance -- weight --> bass_habits
