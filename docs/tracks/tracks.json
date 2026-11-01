@@ -11,7 +11,7 @@
   "seconds": 216,
   "voices": "bit_sine_flute / bit_organ / bit_fretless",
   "seed": 1,
-  "version": "2.0.0rc3",
+  "version": "2.0.0",
   "command": "bitcomposer -s 1",
   "picked": false
  },
@@ -27,7 +27,7 @@
   "seconds": 88,
   "voices": "bit_square / bit_pulse / bit_nylon / bit_fretless",
   "seed": 2,
-  "version": "2.0.0rc3",
+  "version": "2.0.0",
   "command": "bitcomposer -s 2",
   "picked": false
  },
@@ -43,7 +43,7 @@
   "seconds": 269,
   "voices": "bit_horn / bit_nylon / bit_fretless",
   "seed": 3,
-  "version": "2.0.0rc3",
+  "version": "2.0.0",
   "command": "bitcomposer -s 3",
   "picked": false
  },
@@ -59,7 +59,7 @@
   "seconds": 158,
   "voices": "bit_synth_voice / bit_warm_pad / bit_fretless",
   "seed": 4,
-  "version": "2.0.0rc3",
+  "version": "2.0.0",
   "command": "bitcomposer -s 4",
   "picked": false
  },
@@ -75,7 +75,7 @@
   "seconds": 187,
   "voices": "bit_horn / bit_cello / bit_wind_choir / bit_fretless",
   "seed": 5,
-  "version": "2.0.0rc3",
+  "version": "2.0.0",
   "command": "bitcomposer -s 5",
   "picked": false
  },

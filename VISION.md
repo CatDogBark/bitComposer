@@ -47,14 +47,16 @@ relationships working together.
 
 ## Where it stands
 
-- **Now:** the generator, with seven sounds (four of them style packs
-  measured from game soundtracks) and packs as data files; the player, with
-  KEEP; the SNES emulator, with its sound CPU passing all 254,000
-  SingleStepTests cases and its sound chip checked against a reference
-  player, by measurement and by ear; SPC to IT.
-- **Next:** packs measured from a soundtrack by the importer, and the
-  player's PACKS panel (`docs/SPC-IMPORT.md`); the Sega Genesis, through VGM
-  register logs.
+- **Now:** the writer, which writes every song from a vocabulary counted
+  from a soundtrack's readings (the one that ships, from Final Fantasy VI's
+  67 songs), on bitComposer's own sound set or a game's own samples; the
+  importer, which reads a game's SPC set into a pack of its samples and,
+  at 40 songs, a vocabulary of its own; Classic, the 1.x generator, with
+  its seven sounds; the player, with KEEP; the SNES emulator, with its
+  sound CPU passing all 254,000 SingleStepTests cases and its sound chip
+  checked against a reference player, by measurement and by ear; SPC to IT.
+- **Next:** vocabularies fitted on more games; the Sega Genesis, through
+  VGM register logs.
 - **Later:** the keep-and-refine loop.
 
 *Endless music. Keep what moves you.*

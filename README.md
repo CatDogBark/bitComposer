@@ -35,7 +35,7 @@ seven sounds, the chip and Genesis palettes among them.
 
 **[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: five songs from the writer, seeds 1 to 5, and one each from six of Classic's sounds.
 
-**Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws, and the song message records the version that wrote the file.
+**Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws; a Classic song's message records the version that wrote it.
 
 ## Install
 
