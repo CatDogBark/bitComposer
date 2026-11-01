@@ -154,6 +154,8 @@ class Song:
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
     kit_levels: dict = field(default_factory=dict)    # a drum sample's key -> the median level of the notes struck on it (round 68: the kit's
                                       # level a piece, the part's one median being the hat's where the hat is the most frequent piece)
+    kit_pitches: dict = field(default_factory=dict)   # a drum sample's key -> the note the song strikes it at most (round 75: a kit piece on a
+                                      # tonal sample plays at the game's pitch, not the kit's one note)
     loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
                                       # readings' feature render/loudness_dbfs, round 59); None where it was not measured
     echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
@@ -281,7 +283,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
-        level_rows, kit_rows = {}, {}
+        level_rows, kit_rows, kit_pitch_rows = {}, {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
@@ -306,12 +308,15 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                         for r in rows:                      # frequent piece's, the hat's in a kick-snare-hat kit, and the kick plays near full
                             if not math.isnan(r[3]):
                                 kit_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[3])
+                            if not math.isnan(r[2]):        # the note the piece is struck at (round 75), where the reading heard one
+                                kit_pitch_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(int(round(r[2])))
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
             song.bass_voices = basses
         song.levels = part_levels(song, {role: statistics.median(ls) for role, ls in level_rows.items()})
         song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
+        song.kit_pitches = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_pitch_rows.items()}   # the most struck note, the lower on a tie
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         echo = dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'echo'", (sid,)).fetchall())   # the chip's echo
@@ -394,6 +399,20 @@ def draw(positions, beats: int, marks: dict | None = None) -> str:
 def band(bpm: float) -> str:
     """The tempo band a tempo is in (BANDS)."""
     return next(name for top, name in BANDS if bpm < top)
+
+
+def within_band(bpm: float, name: str) -> float:
+    """The tempo inside the class `name`, moved to the class's edge where it sits outside (round 75): the tempos word
+    rounds a song's tempo to five beats a minute, so a slow song at 83 BPM is counted as 85, which band() calls medium,
+    and a written song drawn under the token's class had then played in the next class; 85 under slow plays at 84,
+    130 under medium at 129."""
+    tops = [top for top, _ in BANDS]
+    k = next((i for i, (_, n) in enumerate(BANDS) if n == name), None)
+    if k is None:
+        return bpm
+    low = tops[k - 1] if k else 0.0
+    high = tops[k]
+    return float(min(max(bpm, low), high - 1.0 if high < 1e8 else bpm))
 
 
 def pattern(positions) -> str:

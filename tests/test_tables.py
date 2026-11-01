@@ -642,6 +642,27 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertNotIn("nan", token)
         self.assertIn("melody=main::1.0:1:1.0", token)
 
+    def test_the_kits_pieces_carry_the_note_they_are_struck_at(self):
+        """Round 75: a piece's most struck note follows its level in the kit field (`o=o@0.40@62`; `o=o@@62` without a
+        level, the old form where the reading heard no note). FFVI's "other" pieces are tonal samples in ten tokens of
+        eleven, and the written kit had hammered them at the kit's one note."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1],
+                        parts=[(0, 2)], pieces={"k": "kick", "o": "other"})
+        s.notes["melody"] = [(0.0, 1.0, 72, "sa"), (1.0, 1.0, 74, "sa"), (2.0, 1.0, 76, "sa"), (3.0, 1.0, 77, "sa"),
+                             (4.0, 2.0, 79, "sa"), (6.0, 2.0, 76, "sa")]
+        s.notes["drums"] = [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)] + [(x, 0.1, 62.0, "o") for x in (0.0, 4.0)]
+        s.voice_notes = {1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        s.voice_levels = {1: 0.5, 2: 0.1}
+        s.levels = {"melody": 0.5, "drums": 0.1}
+        s.kit_levels = {"k": 0.8, "o": 0.2}
+        s.kit_pitches = {"k": 36, "o": 62}
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@36,o=o@0.40@62")
+        self.assertEqual(rhythm.kit_token(s), "K=k@@36,o=o@@62")                  # no top, no level: the note still
+        del s.kit_pitches["k"]
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,o=o@0.40@62")       # a piece without a note keeps the old form
+        self.assertIn("drums=::::0.2:::K=k@1.60,o=o@0.40@62", rhythm.balance_units([s])[0].outcome)
+
     def test_the_kits_pieces_carry_their_own_levels(self):
         """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck
         on that sample as a share of the loudest part's in tenths (`K=k@1.6,S=s@0.6,h=h@0.2`). The part's one level is the
