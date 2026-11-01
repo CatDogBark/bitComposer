@@ -66,6 +66,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | 58 |
 | 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
 | 74 | 2026-10-31 | a kit piece on a tonal sample leaves the pack's own drum in its slot | 62 |
+| 75 | 2026-10-31 | the kit token's struck note; the kit at its habit's density (the limbs' tables); the tempo redraw inside its class | 63 |
 
 ## Goal
 
@@ -4728,3 +4729,98 @@ carry the pitch each piece was struck at, as it carries the level. And
 the half cent: the kit's and the line's registrations of one sample tune
 it nine C5-speed units apart; one tuning path, when a round touches the
 sample table.
+
+### Round 75: the kit piece's struck note, the kit at its habit's density, the tempo inside its class (2026-10-31, from Song Check 62: "a snare is super out of place on this song")
+
+**Why round 74 came out.** Round 74's rule, a tonal kit piece leaves the
+pack's own drum in its slot, was a writer rule standing where a count
+should be: FFVI's pack has no "other"-class percussion (15 drum samples:
+6 snares, 5 hats, 2 cymbals, a kick, a tom), the import fills the rim slot
+with the snare, so every tonal "o" piece became a snare, and of FFVI's 47
+kit tokens 11 carry an "o" piece and 10 of those are tonal samples (a lead
+struck as an accent, bells, pads). Five tokens have nothing but tonal
+pieces. The owner's question, whether the kit knows the song it is
+chosen for: it does, through one door, the balance token, which is the
+song's own kit; what did not know the song was the slot's stand-in and
+the figure's density.
+
+**Built.**
+
+1. The kit token carries the note each piece is struck at most, after its
+   level (`o=sf89f5aedfd@0.38@60`, `c=sid@@79` without a level;
+   `Song.kit_pitches`, the most struck rounded note, the lower on a tie).
+   Of the 101 pieces in FFVI's 47 kit tokens, 37 carry a note (18 snares,
+   10 "o", 6 toms, 2 kicks, a cymbal); the one tonal "o" without one is
+   Overture (part 2)'s, whose notes the reading left unpitched.
+2. Every kit sample of the token's song the pack holds takes its slot
+   again (round 63). `render.kit_note_of`: a percussion sample strikes at
+   KIT_NOTE as before (registered to sound as recorded there); a tonal one
+   at the token's note, or where none at the note that plays the
+   recording at its own rate. The Phantom Forest's lead at C4, where the
+   game plays it, not at the kit's note two octaves under.
+3. The kit at its habit's density. The drums table conditions on the kit
+   before the habit (round 58), so a kit with no song behind it in this
+   meter and tempo class took another song's bars at that song's
+   density: The Phantom Forest's one-piece kit in 3/4 wrote Johnny C. Bad's
+   13 snare hits a bar in 4/4 under "sparse repeating", The Wedding
+   Waltz's 3/4 snare (4 a bar) wrote Opening Theme's 13.
+   `writer.kit_table_reaches`: the bars the kit table would draw for this
+   kit, hits a bar over every bar with the rests as `_rhythm_habit` counts
+   a song's tier, must sit under the tier's top (DENSITIES: sparse 2,
+   medium 6, dense open); where they do not, the plan writes the kit from
+   its limbs' tables (drums-KSt, drums-h, drums-c, drums-o) at their own
+   counted group habits, the path a pack without a kit table already
+   took. The never-silent redraw (round 58) and the last resort keep to
+   the group's habit cap where any bar fits it: drawn without it, a
+   sparse "o" group whose context held rests and dense bars alone had
+   filled its rested bars with Johnny C. Bad's ten-hit bars.
+4. The tempo drawn again under the token's class (round 54) is terminal
+   at the class: without the floor the class's votes had their
+   Witten-Bell share and every class's tempos the rest, and 8 of 46
+   written songs sat in another class than their token's, their kits and
+   figures drawn under it. At the word's rounding edge (85 counted under
+   slow from 83, 130 under medium from 128) the tempo moves inside the
+   class, `rhythm.within_band`.
+
+Pack4 refit (98 tables, backup pack.json.r75), the shipped vocabulary
+regenerated. Tests: the token's note, the plan's keeping it, kit_note_of
+by sample class, the kit table's reach and the limbs' draw, the redraw's
+class.
+
+**Measured (sc-tools/kit_density.py: one written song for each FFVI kit
+token, the real plan+write path, hits a played bar against the token
+song's own from the readings; 46 of 47 tokens drawn in 3000 seeds).**
+Median absolute error 1.7 hits a bar before, 1.1 after; mean 4.2 to 3.5;
+35 of 46 unchanged. Off-class songs 8 to 0. The Phantom Forest 13.8 to
+1.3 (the game 1.0 a played bar, 0.1 a bar); Fanatics 3.7 to 16.4 (15.9),
+Under Martial Law 8.2 to 12.4 (14.1), The Day After 8.4 to 4.4 (4.0), all
+by the class alone. The limbs' path taken by three songs. Still wrong:
+The Wedding Waltz-Duel (part 1), a lone snare at "medium varied" in 3/4,
+12.0 against the game's 4.1: its limb is the kick-snare-tom group, whose
+habit sets no cap (`group_caps` caps one-letter groups), and the KSt table
+at slow in 4/4 holds no snare-only bar under six hits. Dancing Mad (part
+2), Grand Finale (part 2), Blackjack and Wild West write a third of their
+game's hits (the readings' figure merges what the game strikes
+together; untouched here).
+
+**The reader, checked (the owner's third step; no change made).** The role
+reader's second clause, a voice on a sample the namer did not call an
+instrument, at most two pitches a sample, eight notes or more, labels 15
+FFVI voices drums. Fourteen are strikes: Johnny C. Bad's and The Phantom
+Train's snare rolls, Wild West's toms, Strago's two-note ostinato (0.21
+beats a note), the 336-frame tick in Train, Quiet Beach and The Phantom
+Train, "??"'s bell. One is not: The Phantom Forest's lead, held a median
+11.9 beats a note, where the 109 drum voices on percussion samples hold a
+median 0.45 beats, three quarters under 0.95, none over 7.9. A clause
+"and its notes shorter than any drum's" flips that one voice in FFVI and
+no other; its token then has no kit, which is the game's truth. Phase 1's
+ground truth for roles (the generator's songs with known answers) has no
+held two-pitch accent to judge it by, so it waits for its own round with
+the readings re-read and the pack refit. With round 75 the written song
+plays that accent on the lead at C4 once or twice a bar, the game's
+gesture at the counted tier.
+
+**Open.** The kick-snare-tom limb's density cap; a kit figure merged as
+the readings merge (Dancing Mad's 21 hits a bar read as 6.6); the
+never-silent rule against FFVI's 0.1 hits a bar (the texture words give
+the drums 11 of 23 bars; each played bar strikes at least once).

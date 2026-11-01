@@ -417,22 +417,22 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             out[role] = {piece: make(name) for piece, name in (voices.get("drums") or {}).items()}
             from ... import samples as samples_mod
             given_kit = plan.extras.get(R.DRUMS, {}).get("kit") or {}   # the token song's own kit (round 63), slot by piece letter, where
-            taken, tonal = [], []                                       # the pack holds the sample AS PERCUSSION (round 74); the pack's slot else
-            for letter, sid in given_kit.items():
+            taken, tonal = [], []                                       # the pack holds the sample; a tonal one is struck where the game struck
+            for letter, sid in given_kit.items():                       # it (round 75, kit_note_of), not at the kit's one note
                 slot = plan_mod.KIT_SLOT.get(letter)
                 if not slot or sid not in own:
                     continue
-                if not samples_mod.is_percussion(f"{pack_name}_{sid}"):   # the balance's song struck a tonal sample (a lead as an accent seven
-                    tonal.append(f"{letter} {sid}")                       # times a song in The Phantom Forest, read as its kit): the pack's
-                    continue                                              # own drum keeps the slot, so the writer never hammers a lead at the kit's note
                 out[role][slot] = make(sid)
                 taken.append(f"{slot} {sid}")
                 if slot == "hihat" and "open_hihat" in out[role]:
                     out[role]["open_hihat"] = make(sid)
+                if not samples_mod.is_percussion(f"{pack_name}_{sid}"):
+                    pitch = plan_mod.kit_piece_pitch(plan, slot)
+                    tonal.append(f"{letter} {sid}" + (f" struck at {pitch}" if pitch is not None else " at the recording's own pitch"))
             if taken:
                 plan.log.append("kit samples from the balance's song: " + ", ".join(taken))
             if tonal:
-                plan.log.append("kit pieces the balance's song struck on tonal samples, the pack's own drums standing in: " + ", ".join(tonal))
+                plan.log.append("kit pieces on the balance's song's tonal samples, played where the game struck them: " + ", ".join(tonal))
             continue
         pool = plan_mod.POOLS.get(role)
         if role == R.BASS:
@@ -701,6 +701,27 @@ def sample_envelope(name: str, pack_name: str = "") -> dict | None:
     return env
 
 
+def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: str = "") -> float:
+    """The note a kit slot's hit is written at. KIT_NOTE for the pack's own kit and for every percussion sample (a kit voice
+    is registered to sound as recorded at KIT_NOTE). A slot the balance token's song filled with one of its tonal samples
+    (round 75; FFVI's "other" pieces are tonal in ten tokens of eleven: a lead struck as an accent, a bell, a pad) plays
+    the note the game struck the piece at (the kit token's pitch, kit_piece_pitch) and, where the readings heard none,
+    the note at which the sample plays at its recording's own rate. Until round 74 such a piece hammered at KIT_NOTE,
+    two octaves under The Phantom Forest's accent; round 74 had the pack's own drum stand in, a snare for a lead."""
+    from ... import samples as samples_mod
+    from ...drums import KIT_NOTE
+    letter = plan_mod.SLOT_LETTER.get(slot)
+    given = (plan.extras.get(R.DRUMS, {}).get("kit") or {}).get(letter) if letter else None
+    if given != name or samples_mod.is_percussion(name) or (pack_name and samples_mod.is_percussion(f"{pack_name}_{name}")):
+        return float(KIT_NOTE)
+    pitch = plan_mod.kit_piece_pitch(plan, slot)
+    if pitch is not None:
+        return float(pitch)
+    c5 = getattr(sample, "c5_speed", 0) or 0
+    source = getattr(sample, "source_rate", None) or c5
+    return 60.0 + 12.0 * math.log2(source / c5) if c5 and source else float(KIT_NOTE)
+
+
 def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",
              master: tuple | None = None):
     """The written parts as a score (spc.convert.Score) on the pack's
@@ -714,7 +735,6 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     second_voice = {role: {v for v, w in enumerate(plan_mod.layers_of(plan, role), start=1) if not w.startswith("doubling")}   # a layered part's own
                     for role in plan.band if role != R.DRUMS}                                                            # lines, on their sample
     from ... import score as score_mod
-    from ...drums import KIT_NOTE
     from ...spc import convert, it_song, notes as notes_mod
     beat_s = 60.0 / plan.bpm
     form_beats = plan.bars * plan_mod.METER
@@ -802,7 +822,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                 if role == R.DRUMS:
                     _, _, _, v, kit_name = n
                     name, sample = samples[R.DRUMS][kit_name]
-                    put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v, piece=kit_name)   # the piece's own level (round 68)
+                    put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name), name, sample, v, piece=kit_name)   # the piece's
                 else:
                     name, sample = sample_of(samples, role, n[3], second_voice)
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)

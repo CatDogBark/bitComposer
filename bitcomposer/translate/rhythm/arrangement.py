@@ -491,7 +491,11 @@ def kit_token(s, top: float = 0.0) -> str:
     one level is the median over every note of every drum voice, which is the most frequent piece's: FFVI's hat is the
     most frequent and its strike the quietest, so Blackjack's token said drums at 0.2 of the top where its kick plays
     at 1.7 and its snare at 0.7, and the written kit was brought to one heard loudness a piece, the kick as quiet as
-    a hat (Song Check 54's Whole 169: the kit 16 dB under Blackjack's). A piece without a level keeps the old form."""
+    a hat (Song Check 54's Whole 169: the kit 16 dB under Blackjack's). A piece without a level keeps the old form.
+    Since round 75 each piece carries the note the song strikes it at most, after the level's slot, where the reading
+    heard one (`o=sf89f5aedfd@0.38@62`; `o=sid@@62` without a level): FFVI's "other" pieces are tonal samples in ten
+    tokens of eleven (a lead struck as an accent once in eight bars in The Phantom Forest, bells, pads), and the
+    written kit had hammered them at the kit's one note two octaves under."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
@@ -502,6 +506,7 @@ def kit_token(s, top: float = 0.0) -> str:
     for (letter, key), n in counts.most_common():
         best.setdefault(letter, key)
     levels = getattr(s, "kit_levels", None) or {}
+    pitches = getattr(s, "kit_pitches", None) or {}
     out = []
     for letter in readings_mod.LETTERS.values():
         if letter not in best:
@@ -509,8 +514,12 @@ def kit_token(s, top: float = 0.0) -> str:
         key = best[letter]
         field = f"{letter}=" + ("s" + key[:10] if len(key) >= 10 else key)
         level = levels.get(key)
-        if top > 0 and level is not None and math.isfinite(level):   # never a "nan" share: the part's level stands in
+        with_level = top > 0 and level is not None and math.isfinite(level)   # never a "nan" share: the part's level stands in
+        if with_level:
             field += f"@{round(level / top, 2):.2f}"                 # in hundredths since round 70: tenths cost 2.9 dB on a snare at 0.14 kept as 0.1
+        pitch = pitches.get(key)
+        if pitch is not None:                                        # the note the song strikes the piece at (round 75), after the level's slot
+            field += ("" if with_level else "@") + f"@{int(pitch)}"
         out.append(field)
     return ",".join(out)
 

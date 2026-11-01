@@ -66,6 +66,14 @@ def kit_piece_level(plan, slot: str) -> float | None:
     levels = plan.extras.get(R.DRUMS, {}).get("kit_levels") or {}
     letter = SLOT_LETTER.get(slot)
     return levels.get(letter) if letter else None
+
+
+def kit_piece_pitch(plan, slot: str) -> int | None:
+    """The note the balance token's song strikes the kit slot's piece at most (round 75: `o=sf89f5aedfd@0.38@62` on the
+    drums' kit field, after the level's slot); None where the token gave none."""
+    pitches = plan.extras.get(R.DRUMS, {}).get("kit_pitches") or {}
+    letter = SLOT_LETTER.get(slot)
+    return pitches.get(letter) if letter else None
 KIT_FOR = {"K": ("kick",), "S": ("snare", "rim"), "h": ("hihat", "open_hihat"), "t": ("tom", "kick"),
            "c": ("crash", "open_hihat", "hihat"), "o": ("rim", "hihat")}   # a figure's letter -> its sample, the first the kit has
 DRUM_LENGTH = 1.0                     # beats a drum hit sounds at most (to the next hit on its voice otherwise)
@@ -588,7 +596,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
-    token_kit, token_kit_levels, token_layer_samples, token_layer_shares = {}, {}, {}, {}
+    token_kit, token_kit_levels, token_kit_pitches, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -629,10 +637,13 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     if "=" not in x:
                         continue
                     letter, _, value = x.partition("=")
-                    sid, _, level = value.partition("@")
+                    sid, _, rest = value.partition("@")
+                    level, _, pitch = rest.partition("@")   # since round 75 the note the piece is struck at follows the level's slot
                     token_kit[letter] = sid
                     if level and math.isfinite(float(level)):
                         token_kit_levels[letter] = float(level)
+                    if pitch:
+                        token_kit_pitches[letter] = int(round(float(pitch)))
             elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels
                 token_samples[role] = fields[7]
             if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
@@ -641,7 +652,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
         was = bpm                                           # an own stream so no other draw moves
-        bpm = float(_draw(models, "tempos", ("song", token_class), random.Random(f"whole:{seed}:tempo"), log))
+        bpm = float(_draw(models, "tempos", ("song", token_class), random.Random(f"whole:{seed}:tempo"), log, floor_k=2))   # terminal at the
+        # class (round 75): without the floor the draw gave the class's own votes their Witten-Bell share and backed off to every
+        # class's tempos for the rest, and 8 of 46 written songs sat in another class than their token's, their kits drawn there
+        if rhythm.band(bpm) != token_class:                 # the word's rounding to five put the tempo on the next class's first value
+            bpm = rhythm.within_band(bpm, token_class)      # (85 under slow, 130 under medium): the class's edge, inside
         tempo = rhythm.band(bpm)
         log.append(f"tempo {was:.0f} BPM is outside the band's class ({token_class}): {bpm:.0f} BPM drawn under it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
@@ -669,7 +684,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 extras[role]["kit"] = token_kit
                 if token_kit_levels:                        # each piece at its own level of the loudest part's (round 68); a piece without
                     extras[role]["kit_levels"] = token_kit_levels   # one plays at the part's level (the fifth field)
+                if token_kit_pitches:                       # the note each piece is struck at (round 75): a piece on a tonal sample plays there
+                    extras[role]["kit_pitches"] = token_kit_pitches
                 log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
+                                                                                            + (f" struck at {token_kit_pitches[k]}" if k in token_kit_pitches else "")
                                                                                             for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
                 extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,
@@ -1183,16 +1201,20 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     if pieces:
         kit_letters &= set(pieces)
     if R.DRUMS in plan.band and kit_letters:
-        if "drums" in models:                               # the kit as one figure: its bars repeat and vary together, as a kit's do
+        kit_value = "".join(x for x in rhythm.LETTERS.values() if x in kit_letters)   # the kit's pieces: the kit figure is drawn from songs with this kit
+        limbs = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
+        whole_kit = "drums" in models and (not limbs or writer.kit_table_reaches(models["drums"], song, kit_letters, kit_value, plan.habits[R.DRUMS]))
+        if whole_kit:                                       # the kit as one figure: its bars repeat and vary together, as a kit's do
             groups = {tuple(rhythm.LETTERS.values()): models["drums"]}
-        else:                                               # a pack with the groups alone: each its own habit and rests
-            groups = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}
+        else:                                               # the kit's limbs, each from its own table at its own counted habit (round 75): where the
+            groups = limbs                                  # kit table holds no bar this kit can play within its habit's density tier (The Phantom
+                                                            # Forest's one-piece kit in 3/4 had backed off to Johnny C. Bad's dense snare bars in
+                                                            # 4/4: 13 hits a bar under "sparse repeating"), or a pack with the groups alone
         if groups:
             group_habits = {g: (plan.habits[R.DRUMS] if len(g) > 3 else plan.extras.get(R.DRUMS, {}).get("".join(g)) or plan.habits[R.DRUMS]) for g in groups}
             # until round 58 the one-letter groups' own habits capped their hits in the kit's draw (writer.group_caps): a kit drawn as one
             # figure is one song's bar, hat and all, and another song's "sparse hat" cutting it had left a dense kit at 8 hits a bar
             # against the game's 12.8; the song's pieces (kit_pieces) now say which sounds the kit has at all
-            kit_value = "".join(x for x in rhythm.LETTERS.values() if x in kit_letters)   # the kit's pieces: the kit figure is drawn from songs with this kit
             hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS], kit_value=kit_value)
             by_voice, notes, dropped = {}, [], Counter()
             for t, letter in hits:
@@ -1218,7 +1240,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"kit habit {plan.habits[R.DRUMS]}; groups " + ", ".join(f"{'+'.join(g)} {h}" for g, h in group_habits.items())
                                                               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
                                                               + (f"; pieces {''.join(sorted(kit_letters, key=list(rhythm.LETTERS.values()).index))}")
-                                                              + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")])
+                                                              + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")
+                                                              + ("; the kit table holds no bar this kit plays within its habit's density: the limbs' tables at their own habits (round 75)" if "drums" in models and not whole_kit else "")])
     if R.BASS in plan.band and "bass" in models:
         # the bass sits on the kit's accents (two pieces together) at the game's share (bass_locks): FFVI's on 0.94 of them;
         # locked to the whole planned band it had met the threshold in no bar, written second with two drum voices to hand

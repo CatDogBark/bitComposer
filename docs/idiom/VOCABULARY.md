@@ -74,7 +74,12 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level with its kit, each
-  piece's sample and level (since round 70 the level and the sample
+  piece's sample, level and, since round 75, the note the song strikes
+  it at most, after the level's slot (`o=sf89f5aedfd@0.38@62`;
+  `o=sid@@62` where the reading heard no level; nothing where it heard
+  no note: a kit piece on a tonal sample, FFVI's "other" pieces in ten
+  tokens of eleven, plays at the game's pitch and not the kit's one
+  note, `render.kit_note_of`) (since round 70 the level and the sample
   fields are the LINE voice's, `readings.part_levels` and
   `part_sample_id`, so the line times each second-voice share reproduces
   every voice, and the kit's piece levels are in hundredths)

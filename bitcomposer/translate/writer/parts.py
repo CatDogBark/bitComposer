@@ -227,7 +227,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                         candidate = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
                     if figure is not None:
                         break
-                figures[k] = figure if figure is not None else last_resort(manner, model, unit, values, rng)
+                figures[k] = figure if figure is not None else last_resort(manner, model, unit, values, rng, env=env, within_of=within_of)
             played[figures[k]] += 1
             previous = figures[k]
     for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
@@ -238,14 +238,20 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     return figures
 
 
-def last_resort(manner, model: tables.Cache, unit: tables.Unit, values: dict, rng: random.Random) -> str:
+def last_resort(manner, model: tables.Cache, unit: tables.Unit, values: dict, rng: random.Random, env=None, within_of=None) -> str:
     """The figure for a bar no draw fits: on a kit (FreeManner with pieces),
     any bar the table knows that the kit can play, evenly (the vocabulary's
     even share, kept to the kit: a bar the plan has the kit in is never
-    silent for want of a draw, round 58); else the table's own draw."""
+    silent for want of a draw, round 58), and among those the bars within
+    the habit's envelope `env` where any are (round 75: a sparse "o" group
+    whose table held rests and dense bars alone had filled its rested bars
+    with any "o" bar of the game, ten hits in one); else the table's own
+    draw."""
     kit = getattr(manner, "kit", None)
     if kit is not None:
         fits = [f for f in sorted(manner.known) if f != figures_mod.REST and manner.fits(f)]
+        if fits and env is not None:
+            fits = [f for f in fits if (within_of or figures_mod.drum_within)(f, env)] or fits
         if fits:
             return rng.choice(fits)
     return model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
@@ -393,15 +399,16 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != figures_mod.REST else rhythm.START, "habit": group_habit, **({"kit": kit_value} if kit_value else {}),
                       "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
             unit = tables.Unit(song.sid, song.game, "", values)
-            env = figures_mod.free_drum_envelope(kit & set(main))(None, values["meter"])
+            env = figures_mod.free_drum_envelope(kit & set(main), figures_mod.group_caps(habit))(None, values["meter"])   # within the group's
+            # habit too (round 75: drawn without the cap, a sparse "o" group's rested bars filled with Johnny C. Bad's thirteen-hit bars)
             f = None
             for _ in range(figures_mod.TRIES):
                 f = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
                 if manner.fits(f) and figures_mod.drum_within(f, env):
                     break
                 f = None
-            if f is None:                                   # nothing drawn fits the kit: any bar the kit can play (round 58)
-                f = last_resort(manner, model, unit, values, rng)
+            if f is None:                                   # nothing drawn fits the kit: any bar the kit can play (round 58), within its habit where one is
+                f = last_resort(manner, model, unit, values, rng, env=env)
             if f != figures_mod.REST:
                 by_group[main][k] = f
                 merged[k] += [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(f)]
@@ -413,6 +420,32 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
             if a + float(Fraction(at)) < b:
                 hits.append((a + float(Fraction(at)), letter))
     return hits, figures
+
+
+def kit_table_reaches(model: tables.Cache, song: rhythm.Song, kit: set, kit_value: str, habit: str | None) -> bool:
+    """Whether the kit table, under this song's context, holds a bar this kit can play within its habit's density tier
+    (round 75). The table conditions on the kit before the habit (round 58: a draw backing off past the kit had landed
+    on other kits' bars and left the bar silent), so a kit with no song behind it in this meter and tempo class takes
+    another song's bars at that song's density whatever the habit says: The Phantom Forest's one-piece kit in 3/4 (a
+    lead struck once in eight bars) wrote Johnny C. Bad's 13 snare hits a bar in 4/4 under "sparse repeating", and The
+    Wedding Waltz's snare in 3/4 (4 a bar) wrote Opening Theme's 13. The plan writes such a kit from its limbs' tables
+    (drums-KSt, drums-h, drums-c, drums-o) at their own counted habits instead. The tier's top is the readings' own
+    (rhythm.DENSITIES: sparse to 2 hits a bar, medium to 6; dense is open, so a dense kit always reaches), and the
+    table reaches when the bars it would draw for this kit average within it, hits a bar over every bar with the
+    rests, as the readings class a song's kit (`_rhythm_habit`; one quiet bar among Opening Theme's thirteen-hit snare
+    bars is no medium kit)."""
+    tier = str(habit).split()[0] if habit else ""
+    top = next((t for t, name in rhythm.DENSITIES if name == tier), None)
+    if top is None or top >= 1e8:
+        return True
+    meter = max(1, round(song.bars[0][1] - song.bars[0][0])) if song.bars else 4
+    values = {"part": R.DRUMS, "meter": meter, "previous": rhythm.START, "habit": habit, "kit": kit_value,
+              "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
+    unit = tables.Unit(song.sid, song.game, "", values)
+    manner = figures_mod.FreeManner(model.table.vocabulary, kit, song.division, rests=True)
+    bars = [(f, p) for f, p in weights.items() if p > 0 and manner.fits(f)] if (weights := model.table.weights(model.table.context(unit), floor_k=model.table.chain_floor)) else []
+    mass = sum(p for _, p in bars)
+    return any(f != figures_mod.REST for f, _ in bars) and sum(p * len(rhythm._tokens(f)) for f, p in bars) / mass < top
 
 
 def plays_as_own(plays, bars: list) -> list:
