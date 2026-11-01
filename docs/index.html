@@ -5,170 +5,557 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>bitComposer</title>
 <link rel="icon" href="images/bitcomposer.svg" type="image/svg+xml">
+<meta name="description" content="Listen to bitComposer's 16-bit game music, written by the program and played live in your browser by libopenmpt.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&amp;display=swap" rel="stylesheet">
-<meta name="description" content="Listen to procedurally generated 16-bit game music, played live in your browser by libopenmpt.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;family=Silkscreen:wght@400;700&amp;display=swap">
 <style>
-  :root {
-    --bg: #0a100e; --tile: #0e1612; --border: #1a2e26; --hover: #142018;
-    --text: #b0ddcc; --dim: #508264; --green: #00ff88; --cyan: #00ffcc; --pink: #ff0055;
-    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "Fira Mono", Menlo, Consolas, monospace;
+/* The listening page as the player's PLAY screen: a header band with the lockup, one now-playing panel
+   (the song, its position as blocks, the transport), then the songs under the window's own headings,
+   THE WRITER before CLASSIC. Every token below is the window's (bitcomposer/player/qml/Main.qml). */
+:root {
+  color-scheme: dark;
+  --bg: #15141a;
+  --panel: #1d1c24;
+  --dither: #22212a;
+  --raised: #2b2a33;
+  --line: #3a3946;
+  --edge: #5a5968;
+  --bevel-light: #8a8898;
+  --bevel-dark: #0a0a0e;
+  --text: #e8e6f0;
+  --text2: #cfcde0;
+  --dim: #a8a6b8;
+  --pink: #ff0055;
+  --pink-light: #ff80aa;
+  --pink-dark: #99003a;
+  --on-fill: #3d2232;
+  --green: #5be37a;
+  --warn: #ffcc33;
+  --shadow: #000000;
+  --cell-hi: rgba(255, 255, 255, 0.08);
+  --cell-hi-lit: rgba(255, 255, 255, 0.35);
+  --pixel: "Silkscreen", "Courier New", monospace;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "Fira Mono", Menlo, Consolas, monospace;
+  --wrap: 880px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.6;
+}
+a { color: var(--text2); text-underline-offset: 3px; }
+a:hover { color: var(--pink-light); }
+:focus-visible { outline: 2px solid var(--pink-light); outline-offset: 2px; }
+
+.wrap {
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* The window's 2x2 dither over the panel face, and its bevelled frame with a hard shadow */
+.dither {
+  background-color: var(--panel);
+  background-image: conic-gradient(transparent 0 25%, var(--dither) 0 50%, transparent 0 75%, var(--dither) 0);
+  background-size: 4px 4px;
+}
+.panel {
+  border: 2px solid var(--edge);
+  box-shadow: inset 1px 1px 0 var(--bevel-light), inset -1px -1px 0 var(--bevel-dark), 6px 6px 0 var(--shadow);
+}
+
+/* The pixel face: titles, labels and buttons */
+.px {
+  font-family: var(--pixel);
+  font-size: 16px;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+/* A button: the panel's edge at small size; pressed, it drops its label */
+.pbtn {
+  appearance: none;
+  font-family: var(--pixel);
+  font-size: 16px;
+  letter-spacing: 1px;
+  line-height: 1;
+  color: var(--text);
+  background: var(--raised);
+  border: 2px solid var(--edge);
+  border-radius: 0;
+  box-shadow: inset 1px 1px 0 var(--bevel-light), inset -1px -1px 0 var(--bevel-dark), 4px 4px 0 var(--shadow);
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.pbtn:hover { border-color: var(--bevel-light); color: var(--text); }
+.pbtn:active { transform: translate(2px, 2px); box-shadow: inset -1px -1px 0 var(--bevel-dark); }
+.pbtn:active > * { transform: translateY(1px); }
+.pbtn.hot {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: var(--bg);
+  box-shadow: inset 1px 1px 0 var(--pink-light), inset -1px -1px 0 var(--pink-dark), 4px 4px 0 var(--shadow);
+}
+.pbtn.hot:active { box-shadow: inset -1px -1px 0 var(--pink-dark); }
+.pbtn.on {
+  background: var(--on-fill);
+  border-color: var(--pink);
+  box-shadow: inset -1px -1px 0 var(--bevel-dark), 4px 4px 0 var(--shadow);
+}
+.pbtn.sq { width: 44px; padding: 0; }
+.pbtn.sm { min-height: 34px; padding: 0 10px; }
+.sprite { display: block; }
+
+/* The window's heading: a pixel label, a rule, an aside */
+.heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.heading .label { color: var(--dim); }
+.heading .rule { flex: 1 1 40px; height: 2px; background: var(--line); }
+.heading .aside { font-size: 12px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* The position as a strip of blocks, and the stepped meter */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(var(--cells, 48), minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  height: 26px;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  cursor: pointer;
+}
+.strip i, .meter i { display: block; background: var(--raised); box-shadow: inset 0 1px 0 var(--cell-hi); }
+.strip i.lit, .meter i.lit { background: var(--pink); box-shadow: inset 0 1px 0 var(--cell-hi-lit); }
+.strip.mini { height: 14px; --cells: 32; margin-top: 8px; }
+.meter { display: inline-flex; gap: 2px; padding: 2px; cursor: pointer; }
+.meter i { width: 10px; height: 14px; }
+
+/* The header band, as the window's */
+.band { border-bottom: 2px solid var(--line); }
+.band .wrap { display: flex; align-items: center; justify-content: space-between; gap: 14px 18px; flex-wrap: wrap; padding-block: 14px; }
+.lockup { display: block; line-height: 0; }
+.lockup svg { height: 32px; width: auto; max-width: 100%; }
+.band nav { display: flex; gap: 12px; flex-wrap: wrap; padding-right: 4px; }
+
+main .wrap { display: grid; gap: 38px; padding-block: 28px 44px; }
+
+.intro { display: grid; gap: 10px; }
+.tagline { margin: 0; font-size: 24px; color: var(--text); text-shadow: 0 2px 0 var(--shadow); text-wrap: balance; }
+.intro p { margin: 0; max-width: 68ch; }
+
+/* PLAY: the song now */
+.now { padding: 20px 22px 24px; display: grid; gap: 12px; }
+.now .status { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.now .state { color: var(--dim); }
+.now .state.playing, .now .lamp.playing { color: var(--green); }
+.now .state.loading { color: var(--warn); }
+.now .state.error { color: var(--pink-light); }
+.now .lamp { color: var(--dim); }
+.now .time { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.now .where { margin-left: auto; color: var(--dim); }
+.now h1 {
+  margin: 4px 0 0;
+  font-family: var(--pixel);
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: 1px;
+  color: var(--text);
+  text-shadow: 0 2px 0 var(--shadow);
+  text-wrap: balance;
+}
+.readout { display: grid; gap: 2px; }
+.readout .meta { color: var(--text2); font-variant-numeric: tabular-nums; }
+.readout .voices { color: var(--dim); }
+.readout .how { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; margin-top: 8px; color: var(--dim); font-size: 13px; }
+code.cmd {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 2px solid var(--line);
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.controls { display: flex; align-items: center; gap: 14px 12px; flex-wrap: wrap; margin-top: 8px; }
+.controls .spacer { flex: 1 1 0; }
+.vol { display: flex; align-items: center; gap: 10px; }
+.vol .label { color: var(--dim); }
+
+/* The songs */
+section { display: grid; gap: 14px; }
+section > p { margin: 0; max-width: 68ch; }
+.list { list-style: none; margin: 0; padding: 3px; }
+.row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-areas: "btn main side";
+  column-gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.row + .row { border-top: 2px solid var(--line); }
+.row.current { background: var(--on-fill); }
+.row .btn { grid-area: btn; }
+.row .main { grid-area: main; min-width: 0; }
+.row .side { grid-area: side; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.row .t { color: var(--text); overflow-wrap: anywhere; }
+.row .meta { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.row .voices { font-size: 13px; color: var(--text2); }
+.row .strip.mini { display: none; }
+.row.current .strip.mini { display: grid; }
+.chip {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+  background: var(--raised);
+  border: 2px solid var(--line);
+  padding: 0 6px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.dur { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+footer { border-top: 2px solid var(--line); }
+footer .wrap { padding-block: 18px 30px; font-size: 12px; color: var(--dim); }
+footer p { margin: 0; max-width: 90ch; }
+
+@media (max-width: 600px) {
+  .lockup svg { height: 26px; }
+  .now { padding: 16px 16px 20px; }
+  .now h1 { font-size: 24px; }
+  .now .where { margin-left: 0; }
+  .tagline { font-size: 16px; }
+  .row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-areas: "btn main" ". side";
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 12px 10px;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.5; }
-  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 30px; color: var(--text); font-weight: 400; margin: 0 0 6px; display: flex; align-items: center; gap: 14px; }
-  h1 img { width: 44px; height: 44px; }
-  .wm-br { color: #2f8f5f; } .wm-bit { color: var(--green); font-weight: 800; }
-  .tag { color: var(--dim); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
-  p.lead { margin: 12px 0 20px; }
-  a { color: var(--green); text-decoration: none; border-bottom: 1px solid rgba(0,255,136,.3); }
-  a:hover { border-bottom-color: var(--green); }
-  .links { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; margin-bottom: 28px; }
-  h2 { font-size: 11px; letter-spacing: 3px; color: var(--cyan); text-transform: uppercase; margin: 28px 0 10px; display: flex; align-items: center; gap: 10px; }
-  h2::after { content: ""; flex: 1; height: 1px; background: rgba(0,255,136,.12); }
-  .note { color: var(--dim); font-size: 12px; margin: -4px 0 12px; }
-  .track { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--tile); margin-bottom: 6px; }
-  .track:hover { background: var(--hover); }
-  .track.active { border-color: var(--green); }
-  .play { width: 44px; height: 36px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: var(--mono); font-size: 14px; cursor: pointer; }
-  .play:hover, .track.active .play { border-color: var(--green); color: var(--green); }
-  .title { color: var(--text); font-weight: 600; }
-  .track.active .title { color: var(--green); }
-  .meta { color: var(--dim); font-size: 11px; }
-  .pal { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--border); color: var(--dim); white-space: nowrap; }
-  .pal.snes { color: var(--green); border-color: rgba(0,255,136,.4); }
-  .pal.genesis { color: var(--pink); border-color: rgba(255,0,85,.4); }
-  .pal.chip { color: var(--cyan); border-color: rgba(0,255,204,.4); }
-  .bar { grid-column: 1 / -1; display: none; align-items: center; gap: 10px; font-size: 11px; color: var(--dim); }
-  .track.active .bar { display: flex; }
-  .seek { flex: 1; height: 6px; border-radius: 3px; background: var(--bg); border: 1px solid var(--border); position: relative; cursor: pointer; }
-  .seek > div { height: 100%; border-radius: 3px; background: var(--green); width: 0; }
-  .bottom { margin-top: 28px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--dim); }
-  input[type=range] { accent-color: var(--green); width: 160px; }
-  .status { font-size: 11px; color: var(--dim); min-height: 1.5em; margin-top: 10px; }
-  footer { margin-top: 48px; font-size: 11px; color: var(--dim); }
-  @media (max-width: 480px) { .track { grid-template-columns: 44px 1fr; } .pal { grid-column: 2; justify-self: start; } }
+  .row .side { flex-direction: row; align-items: center; justify-content: flex-start; flex-wrap: wrap; }
+  .pbtn.sq { width: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pbtn:active, .pbtn:active > * { transform: none; }
+}
 </style>
 </head>
 <body>
+
+<header class="band dither">
+  <div class="wrap">
+    <a class="lockup" href="https://github.com/CatDogBark/bitComposer" aria-label="bitComposer on GitHub">
+      <svg viewBox="0 0 1520 256" role="img" aria-label="bitComposer" xmlns="http://www.w3.org/2000/svg">
+        <g><rect x="4" y="4" width="248" height="248" rx="4" fill="#8a8898"/>
+          <rect x="10" y="10" width="242" height="242" rx="4" fill="#0a0a0e"/>
+          <rect x="10" y="10" width="236" height="236" rx="3" fill="#1d1c24"/>
+          <g fill="#2b2a33">
+            <rect x="42" y="42" width="30" height="30" rx="3"/><rect x="78" y="42" width="30" height="30" rx="3"/><rect x="114" y="42" width="30" height="30" rx="3"/><rect x="150" y="42" width="30" height="30" rx="3"/>
+            <rect x="42" y="78" width="30" height="30" rx="3"/><rect x="78" y="78" width="30" height="30" rx="3"/><rect x="150" y="78" width="30" height="30" rx="3"/>
+            <rect x="42" y="114" width="30" height="30" rx="3"/><rect x="150" y="114" width="30" height="30" rx="3"/>
+          </g>
+          <g fill="#e8e6f0">
+            <rect x="114" y="78" width="30" height="30" rx="3"/><rect x="186" y="78" width="30" height="30" rx="3"/>
+            <rect x="78" y="114" width="30" height="30" rx="3"/><rect x="114" y="114" width="30" height="30" rx="3"/><rect x="186" y="114" width="30" height="30" rx="3"/>
+            <rect x="42" y="150" width="30" height="30" rx="3"/><rect x="78" y="150" width="30" height="30" rx="3"/><rect x="114" y="150" width="30" height="30" rx="3"/><rect x="150" y="150" width="30" height="30" rx="3"/><rect x="186" y="150" width="30" height="30" rx="3"/>
+            <rect x="42" y="186" width="30" height="30" rx="3"/><rect x="78" y="186" width="30" height="30" rx="3"/><rect x="114" y="186" width="30" height="30" rx="3"/><rect x="150" y="186" width="30" height="30" rx="3"/><rect x="186" y="186" width="30" height="30" rx="3"/>
+          </g>
+          <rect x="186" y="42" width="30" height="30" rx="3" fill="#ff0055"/></g>
+        <path fill="#0a0a0e" transform="translate(321.00 191.75) scale(0.15000 -0.15000)" d="M185 -110V830H465V715H310V5H465V-110Z"/>
+        <path fill="#8a8898" transform="translate(312.00 182.75) scale(0.15000 -0.15000)" d="M185 -110V830H465V715H310V5H465V-110Z"/>
+        <path fill="#ff0055" transform="translate(402.00 182.75) scale(0.14100 -0.14100)" d="M125 0V625H625V500H750V125H625V0ZM375 375H495V500H375ZM375 125H495V250H375Z"/>
+        <path fill="#ff0055" transform="translate(525.38 182.75) scale(0.14100 -0.14100)" d="M125 0V625H375V0Z"/>
+        <path fill="#ff0055" transform="translate(595.88 182.75) scale(0.14100 -0.14100)" d="M250 0V500H125V625H625V500H500V0Z"/>
+        <path fill="#0a0a0e" transform="translate(710.62 191.75) scale(0.15000 -0.15000)" d="M135 -110V5H290V715H135V830H415V-110Z"/>
+        <path fill="#5a5968" transform="translate(701.62 182.75) scale(0.15000 -0.15000)" d="M135 -110V5H290V715H135V830H415V-110Z"/>
+        <path fill="#e8e6f0" transform="translate(791.62 182.75) scale(0.15000 -0.15000)" d="M308 -10Q237 -10 185.0 16.5Q133 43 104.5 91.5Q76 140 76 206V524Q76 590 104.5 638.5Q133 687 185.0 713.5Q237 740 308 740Q378 740 430.0 713.5Q482 687 511.0 638.5Q540 590 540 524H414Q414 575 386.5 602.5Q359 630 308 630Q257 630 229.0 602.5Q201 575 201 524V206Q201 155 229.0 127.5Q257 100 308 100Q359 100 386.5 127.5Q414 155 414 206H540Q540 140 511.0 91.5Q482 43 430.0 16.5Q378 -10 308 -10Z"/>
+        <path fill="#e8e6f0" transform="translate(881.62 182.75) scale(0.15000 -0.15000)" d="M300 -9Q194 -9 132.0 50.5Q70 110 70 211V339Q70 441 132.0 500.0Q194 559 300 559Q406 559 468.0 500.0Q530 441 530 339V211Q530 110 468.0 50.5Q406 -9 300 -9ZM300 100Q350 100 377.5 127.5Q405 155 405 207V343Q405 395 377.5 422.5Q350 450 300 450Q250 450 222.5 422.5Q195 395 195 343V207Q195 155 222.5 127.5Q250 100 300 100Z"/>
+        <path fill="#e8e6f0" transform="translate(971.62 182.75) scale(0.15000 -0.15000)" d="M47 0V550H151V470H154Q157 510 182.0 535.0Q207 560 245 560Q282 560 308.0 536.5Q334 513 343 473Q347 513 372.5 536.5Q398 560 437 560Q487 560 520.0 520.5Q553 481 553 419V0H443V410Q443 437 430.5 452.5Q418 468 395 468Q350 468 350 410V0H250V410Q250 437 238.5 452.5Q227 468 205 468Q157 468 157 410V0Z"/>
+        <path fill="#e8e6f0" transform="translate(1061.62 182.75) scale(0.15000 -0.15000)" d="M77 -180V550H199V449Q214 501 253.0 530.5Q292 560 350 560Q403 560 443.5 534.0Q484 508 506.5 460.5Q529 413 529 350V201Q529 106 480.0 48.0Q431 -10 350 -10Q292 -10 252.5 20.0Q213 50 198 104L202 -26V-180ZM303 98Q351 98 377.5 124.0Q404 150 404 204V346Q404 400 377.5 426.0Q351 452 303 452Q255 452 228.5 423.0Q202 394 202 341V209Q202 156 228.5 127.0Q255 98 303 98Z"/>
+        <path fill="#e8e6f0" transform="translate(1151.62 182.75) scale(0.15000 -0.15000)" d="M300 -9Q194 -9 132.0 50.5Q70 110 70 211V339Q70 441 132.0 500.0Q194 559 300 559Q406 559 468.0 500.0Q530 441 530 339V211Q530 110 468.0 50.5Q406 -9 300 -9ZM300 100Q350 100 377.5 127.5Q405 155 405 207V343Q405 395 377.5 422.5Q350 450 300 450Q250 450 222.5 422.5Q195 395 195 343V207Q195 155 222.5 127.5Q250 100 300 100Z"/>
+        <path fill="#e8e6f0" transform="translate(1241.62 182.75) scale(0.15000 -0.15000)" d="M277 -9Q179 -9 122.0 35.5Q65 80 65 156H188Q188 124 211.5 107.0Q235 90 277 90H321Q366 90 390.5 107.0Q415 124 415 156Q415 186 398.0 200.5Q381 215 346 220L209 238Q143 247 107.5 289.0Q72 331 72 398Q72 476 124.0 517.5Q176 559 274 559H320Q412 559 468.0 517.0Q524 475 526 405H402Q401 431 379.0 446.5Q357 462 320 462H274Q234 462 213.0 445.5Q192 429 192 401Q192 376 207.5 364.0Q223 352 253 349L382 331Q458 322 496.5 277.5Q535 233 535 158Q535 78 480.5 34.5Q426 -9 321 -9Z"/>
+        <path fill="#e8e6f0" transform="translate(1331.62 182.75) scale(0.15000 -0.15000)" d="M301 -10Q231 -10 179.0 17.0Q127 44 98.5 93.5Q70 143 70 210V340Q70 407 98.5 456.5Q127 506 179.0 533.0Q231 560 301 560Q370 560 421.5 533.0Q473 506 501.5 457.5Q530 409 530 344V244H190V206Q190 150 219.0 121.5Q248 93 301 93Q340 93 367.5 106.5Q395 120 400 146H524Q511 75 450.0 32.5Q389 -10 301 -10ZM190 344V325L410 326V345Q410 402 382.0 433.0Q354 464 301 464Q246 464 218.0 432.5Q190 401 190 344Z"/>
+        <path fill="#e8e6f0" transform="translate(1421.62 182.75) scale(0.15000 -0.15000)" d="M97 0V550H219V443Q229 497 268.5 528.5Q308 560 371 560Q455 560 502.0 506.0Q549 452 549 355V303H424V349Q424 399 398.0 425.5Q372 452 324 452Q274 452 248.0 422.0Q222 392 222 337V0Z"/>
+      </svg>
+    </a>
+    <nav aria-label="Project links">
+      <a class="pbtn sm" href="https://github.com/CatDogBark/bitComposer">SOURCE</a>
+      <a class="pbtn sm" href="https://github.com/CatDogBark/bitComposer/releases/latest">RELEASE</a>
+      <a class="pbtn sm" href="https://github.com/CatDogBark/bitComposer/blob/main/docs/ANALYSIS.md">MEASUREMENTS</a>
+    </nav>
+  </div>
+</header>
+
 <main>
-  <h1><img src="images/bitcomposer.svg" alt=""><span><span class="wm-br">[</span><span class="wm-bit">bit</span><span class="wm-br">]</span>Composer</span></h1>
-  <div class="tag">procedural 16-bit game music &middot; pure Python &middot; Impulse Tracker output</div>
-  <p class="lead">Every track below was composed by the generator and is played here by <a href="https://lib.openmpt.org/">libopenmpt</a> running in your browser, from the actual <code>.it</code> module, the same engine the desktop player uses. Nothing is pre-rendered.</p>
-  <div class="links">
-    <a href="https://github.com/CatDogBark/bitComposer">source on GitHub</a>
-    <a href="https://github.com/CatDogBark/bitComposer/releases/latest">latest release</a>
-    <a href="https://github.com/CatDogBark/bitComposer/blob/main/docs/ANALYSIS.md">how it got good (measurements)</a>
+  <div class="wrap">
+    <div class="intro">
+      <p class="px tagline">Endless music. Keep what moves you.</p>
+      <p>Every song on this page was written by bitComposer and plays from its own .it module, through <a href="https://lib.openmpt.org/">libopenmpt</a> running in your browser, the same engine the desktop player uses. Nothing is pre-rendered.</p>
+    </div>
+
+    <div class="panel dither now" aria-label="Now playing">
+      <div class="status">
+        <span class="lamp" id="np-lamp"></span>
+        <span class="px state" id="np-state">LOADING THE SONGS</span>
+        <span class="time" id="np-time"></span>
+        <span class="px where" id="np-where"></span>
+      </div>
+      <h1 id="np-title">bitComposer</h1>
+      <div class="readout">
+        <div class="meta" id="np-meta"></div>
+        <div class="voices" id="np-voices"></div>
+        <div class="how"><code class="cmd" id="np-cmd">bitcomposer</code><span id="np-ver"></span></div>
+      </div>
+      <div class="strip" id="np-strip" role="slider" tabindex="0" aria-label="Position in the song" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+      <div class="controls">
+        <button class="pbtn sq" id="btn-prev" type="button" aria-label="Previous song"></button>
+        <button class="pbtn sq hot" id="btn-play" type="button" aria-label="Play"></button>
+        <button class="pbtn sq" id="btn-next" type="button" aria-label="Next song"></button>
+        <span class="spacer"></span>
+        <div class="vol">
+          <span class="px label">VOLUME</span>
+          <div class="meter" id="vol" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="10" aria-valuenow="8"></div>
+        </div>
+        <button class="pbtn on" id="btn-order" type="button" aria-pressed="true">IN ORDER</button>
+      </div>
+    </div>
+
+    <section aria-labelledby="h-writer">
+      <div class="heading"><span class="px label" id="h-writer">THE WRITER</span><span class="rule"></span><span class="aside">2.0 · what GENERATE writes</span></div>
+      <p>What GENERATE writes in 2.0. Each song is drawn whole from a vocabulary of counted habits: how the band is balanced, how its figures repeat and vary, where the tune comes back. The shipped vocabulary was learned from the readings of Final Fantasy VI's 67 songs, as statistics with none of the game's notes or samples, and these songs play on bitComposer's own sound set. They are seeds 1 to 5 as the writer gives them. Nobody picked them, and a seed writes the same song on every machine.</p>
+      <ul class="panel dither list" id="list-writer"></ul>
+    </section>
+
+    <section aria-labelledby="h-classic">
+      <div class="heading"><span class="px label" id="h-classic">CLASSIC</span><span class="rule"></span><span class="aside">1.x · still in 2.0</span></div>
+      <p>The 1.x generator, still in 2.0: CLASSIC (1.X) on the player's WRITE screen, <code class="cmd">--classic</code> on the command line. One song at a fixed seed for six of its seven sounds: the four SNES style packs and the Genesis and chip palettes. They're written again when Classic's sound changes; these six were written by 1.0.0 and still play note for note the same.</p>
+      <ul class="panel dither list" id="list-classic"></ul>
+    </section>
   </div>
-
-  <h2>Straight from the generator</h2>
-  <div class="note">Two fixed seeds, each rendered in all three palettes. Same key, tempo, form and tune; only the sound changes. Nobody chose these, and they are regenerated with each release.</div>
-  <div id="seeds"></div>
-
-  <div class="bottom">
-    <label>volume <input id="vol" type="range" min="0" max="1" step="0.02" value="0.8"></label>
-    <span>tracks play in sequence</span>
-  </div>
-  <div class="status" id="status"></div>
-
-  <footer>Player: <a href="https://github.com/DrSnuggles/chiptune">chiptune3</a> (libopenmpt compiled to WebAssembly), MIT. Music and generator MIT, © 2026 Enlightened Solutions LLC, <a href="https://github.com/CatDogBark/bitComposer">CatDogBark/bitComposer</a>. Contact: <a href="mailto:catdogbark@pm.me">catdogbark@pm.me</a>. <a href="https://github.com/CatDogBark/bitComposer#code-signing-policy">Code signing policy</a> · <a href="https://github.com/CatDogBark/bitComposer#privacy">Privacy</a>.</footer>
 </main>
+
+<footer>
+  <div class="wrap">
+    <p>Player: <a href="https://github.com/DrSnuggles/chiptune">chiptune3</a> (libopenmpt compiled to WebAssembly), MIT. Music and generator MIT, © 2026 Enlightened Solutions LLC, <a href="https://github.com/CatDogBark/bitComposer">CatDogBark/bitComposer</a>. Contact: <a href="mailto:catdogbark@pm.me">catdogbark@pm.me</a>. <a href="https://github.com/CatDogBark/bitComposer#code-signing-policy">Code signing policy</a> · <a href="https://github.com/CatDogBark/bitComposer#privacy">Privacy</a>.</p>
+  </div>
+</footer>
 
 <script type="module">
 import { ChiptuneJsPlayer } from './player/chiptune3.js';
 
-const status = document.getElementById('status');
-const fmt = s => { s = Math.max(0, s|0); return String(s/60|0).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); };
+const SOUNDS = { bit: "BIT SET", megamanx: "SNES · MEGAMANX", ffvi: "SNES · FFVI", mana: "SNES · MANA", evermore: "SNES · EVERMORE", genesis: "GENESIS", chip: "CHIP" };
+const VOICE_NAMES = { fretless: "fretless bass", "bass elec": "electric bass", pulse12_lead: "pulse 12 lead" };
+const GLYPHS = {   // the window's sprites (Main.qml glyphs): # lit
+  play:  ["#.....", "##....", "###...", "####..", "###...", "##....", "#....."],
+  pause: ["##.##", "##.##", "##.##", "##.##", "##.##", "##.##", "##.##"],
+  prev:  ["#...#.#", "#..##.#", "#.#####", "######.", "#.#####", "#..##.#", "#...#.#"],
+  next:  ["#.#...#", "#.##..#", "#####.#", ".######", "#####.#", "#.##..#", "#.#...#"]
+};
+function glyph(name, px) {
+  const rows = GLYPHS[name], w = rows[0].length, h = rows.length;
+  let d = "";
+  rows.forEach((r, y) => { for (let x = 0; x < w; x++) if (r[x] === "#") d += "M" + x + " " + y + "h1v1h-1z"; });
+  return '<svg class="sprite" width="' + w * px + '" height="' + h * px + '" viewBox="0 0 ' + w + " " + h +
+         '" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="' + d + '"/></svg>';
+}
+const $ = id => document.getElementById(id);
+const fmt = s => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const voicesOf = t => t.voices.split(" / ").map(v => {
+  if (VOICE_NAMES[v]) return VOICE_NAMES[v];
+  const name = v.replace(/^(bit|mmx|ffvi|mana|evm|gen)_/, "").replace(/_/g, " ");
+  return VOICE_NAMES[name] || name;
+}).join(" · ");
+const metaOf = t => [t.key, t.tempo + " BPM", t.form].concat(t.bars ? [t.bars + " bars"] : []).join(" · ");
+const soundOf = t => t.generator === "writer" ? "on the bit set"
+  : t.sound === "genesis" ? "the Genesis palette" : t.sound === "chip" ? "the chip palette" : "the " + t.sound + " pack";
+function cells(el, n) { el.style.setProperty("--cells", n); el.innerHTML = "<i></i>".repeat(n); }
+function light(el, frac) {
+  const cs = el.children, lit = Math.round(cs.length * Math.min(1, Math.max(0, frac)));
+  for (let k = 0; k < cs.length; k++) cs[k].classList.toggle("lit", k < lit);
+}
 
-let tracks = [];
-let player = null, ready = false, current = -1, paused = false, advancing = false;
-const rows = [];
+let TRACKS = [];
+let player = null, ready = false, current = 0, loaded = -1, playing = false, advancing = false;
+let inOrder = true, volume = 8, duration = 0, pos = 0, pendingSeek = null;
 
-function row(t, i) {
-  const el = document.createElement('div');
-  el.className = 'track';
-  el.innerHTML = `
-    <button class="play" aria-label="play ${t.title}">&#9654;</button>
-    <div>
-      <div class="title">${t.title}</div>
-      <div class="meta">${t.info} &nbsp;/&nbsp; ${t.arrangement.replace(/ - /g, ' &middot; ')}</div>
-      <div class="meta">${t.voices.replace(/ \/ /g, ' &middot; ')}${t.seed && !t.picked ? ' &nbsp;/&nbsp; ' + t.seed.split(' - ')[0] : ''}</div>
-    </div>
-    <span class="pal ${t.palette}">${t.palette}</span>
-    <div class="bar"><span class="pos">00:00</span><div class="seek"><div></div></div><span class="dur">00:00</span></div>`;
-  el.querySelector('.play').addEventListener('click', () => toggle(i));
-  el.querySelector('.seek').addEventListener('click', ev => {
-    if (!player || current !== i) return;
-    const r = ev.currentTarget.getBoundingClientRect();
-    const frac = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
-    player.seek(frac * (player.duration || 0));
+function setState(text, kind) {
+  $("np-state").textContent = text;
+  $("np-state").className = "px state" + (kind ? " " + kind : "");
+  $("np-lamp").className = "lamp" + (kind === "playing" ? " playing" : "");
+  $("np-lamp").innerHTML = glyph(kind === "playing" ? "play" : "pause", 2);
+}
+function rowOf(i) { return document.querySelector('.row[data-i="' + i + '"]'); }
+function setPlayButtons() {
+  $("btn-play").innerHTML = glyph(playing ? "pause" : "play", 3);
+  $("btn-play").setAttribute("aria-label", playing ? "Pause" : "Play");
+  document.querySelectorAll(".row").forEach(r => {
+    const i = +r.dataset.i, on = playing && i === current, b = r.querySelector(".btn");
+    b.innerHTML = glyph(on ? "pause" : "play", 2);
+    b.classList.toggle("hot", i === current);
+    b.setAttribute("aria-label", (on ? "Pause " : "Play ") + TRACKS[i].title);
   });
-  return el;
+}
+function progress() {
+  const d = loaded === current && duration ? duration : TRACKS[current].seconds;
+  const p = loaded === current ? pos : 0, f = d ? p / d : 0;
+  $("np-time").textContent = fmt(p) + " of " + fmt(d);
+  light($("np-strip"), f);
+  $("np-strip").setAttribute("aria-valuenow", Math.round(f * 100));
+  const r = rowOf(current);
+  if (r) light(r.querySelector(".strip.mini"), f);
+}
+function select(i) {
+  current = (i + TRACKS.length) % TRACKS.length;
+  const t = TRACKS[current];
+  $("np-title").textContent = t.title;
+  $("np-meta").textContent = metaOf(t);
+  $("np-voices").textContent = voicesOf(t);
+  $("np-cmd").textContent = t.command;
+  $("np-ver").textContent = soundOf(t) + " · written by " + t.version;
+  $("np-where").textContent = t.generator === "writer" ? "THE WRITER" : "CLASSIC";
+  document.querySelectorAll(".row").forEach(r => r.classList.toggle("current", +r.dataset.i === current));
+  if (loaded !== current) setState("READY", "");
+  else setState(playing ? "PLAYING" : "PAUSED", playing ? "playing" : "");
+  progress();
+  setPlayButtons();
 }
 
 function ensurePlayer() {
   if (player) return;
   player = new ChiptuneJsPlayer({ repeatCount: 0 });
-  player.onInitialized(() => { ready = true; status.textContent = ''; if (current >= 0) start(current); });
-  player.onMetadata(m => { advancing = false; const r = rows[current]; if (r) r.querySelector('.dur').textContent = fmt(m.dur); });
-  player.onProgress(p => {
-    const r = rows[current]; if (!r) return;
-    r.querySelector('.pos').textContent = fmt(p.pos);
-    const d = player.duration || 0;
-    r.querySelector('.seek > div').style.width = d ? (100 * p.pos / d) + '%' : '0';
+  player.onInitialized(() => { ready = true; start(); });
+  player.onMetadata(m => {
+    advancing = false;
+    duration = m.dur || TRACKS[current].seconds;
+    if (pendingSeek !== null) { player.seek(pendingSeek * duration); pos = pendingSeek * duration; pendingSeek = null; }
+    playing = true;
+    setState("PLAYING", "playing");
+    setPlayButtons();
+    progress();
   });
-  // The worklet posts "end" on every audio quantum after a module has
-  // finished (every few milliseconds), until a new one is loaded. One
-  // advance per ending: stop the finished module so it goes quiet, and
-  // ignore the repeats until the next track's metadata arrives.
+  player.onProgress(p => { if (loaded === current) { pos = p.pos; progress(); } });
+  // The worklet posts "end" on every audio quantum after a module has finished, until a new one is loaded:
+  // one advance per ending; stop the finished module so it goes quiet, and ignore the repeats until the next
+  // song's metadata arrives.
   player.onEnded(() => {
     if (advancing) return;
     advancing = true;
     player.stop();
-    if (current + 1 < tracks.length) start(current + 1);
-    else { setActive(-1); advancing = false; }
+    playing = false;
+    if (inOrder && current < TRACKS.length - 1) { select(current + 1); start(); }
+    else { loaded = -1; pos = 0; advancing = false; setState("END OF THE PAGE", ""); setPlayButtons(); progress(); }
   });
-  player.onError(e => { status.textContent = 'playback error: ' + (e.type || e); });
-  player.setVol(parseFloat(document.getElementById('vol').value));
-  status.textContent = 'loading player…';
+  player.onError(e => { playing = false; loaded = -1; setState("COULD NOT PLAY THIS SONG", "error"); setPlayButtons(); });
+  player.setVol(volume / 10);
+  setState("LOADING THE PLAYER", "loading");
 }
-
-function setActive(i) {
-  rows.forEach((r, k) => {
-    r.classList.toggle('active', k === i);
-    r.querySelector('.play').innerHTML = (k === i && !paused) ? '&#10074;&#10074;' : '&#9654;';
-  });
-  current = i;
-}
-
-function start(i) {
-  paused = false;
-  setActive(i);
-  rows[i].querySelector('.seek > div').style.width = '0';
-  rows[i].querySelector('.pos').textContent = '00:00';
-  player.load('tracks/' + encodeURIComponent(tracks[i].file));
-}
-
-function toggle(i) {
+function start() {
   ensurePlayer();
-  if (!ready) { current = i; setActive(i); return; }   // starts in onInitialized
-  if (current === i) {
-    paused = !paused;
-    player.togglePause();
-    setActive(i);
+  if (!ready) return;                                 // onInitialized starts it
+  if (loaded === current) {
+    if (!playing) { player.unpause(); playing = true; setState("PLAYING", "playing"); setPlayButtons(); }
     return;
   }
-  start(i);
+  loaded = current; pos = 0; duration = TRACKS[current].seconds; playing = false;
+  setState("LOADING", "loading");
+  progress();
+  player.load("tracks/" + encodeURIComponent(TRACKS[current].file));
+}
+function pause() {
+  if (player && playing) { player.pause(); playing = false; setState("PAUSED", ""); setPlayButtons(); }
+}
+function toggle() { if (playing && loaded === current) pause(); else start(); }
+function seekFrom(e, strip) {
+  const rect = strip.getBoundingClientRect();
+  const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  if (loaded === current && duration && player) { player.seek(frac * duration); pos = frac * duration; progress(); if (!playing) start(); }
+  else { pendingSeek = frac; start(); }
 }
 
-document.getElementById('vol').addEventListener('input', ev => { if (player) player.setVol(parseFloat(ev.target.value)); });
+function renderLists() {
+  for (const section of ["writer", "classic"]) {
+    const ul = $("list-" + section);
+    ul.innerHTML = "";
+    TRACKS.forEach((t, i) => {
+      if (t.generator !== section) return;
+      const li = document.createElement("li");
+      li.className = "row";
+      li.dataset.i = i;
+      li.innerHTML =
+        '<button class="pbtn sq btn" type="button" aria-label="Play ' + esc(t.title) + '">' + glyph("play", 2) + "</button>" +
+        '<div class="main"><div class="px t">' + esc(t.title) + '</div><div class="meta">' + esc(metaOf(t)) + '</div><div class="voices">' +
+        esc(voicesOf(t)) + '</div><div class="strip mini" aria-hidden="true"></div></div>' +
+        '<div class="side"><span class="chip">' + esc(SOUNDS[t.sound] || t.sound) + '</span><span class="chip">seed ' + esc(t.seed) +
+        '</span><span class="dur">' + fmt(t.seconds) + "</span></div>";
+      cells(li.querySelector(".strip.mini"), 32);
+      li.addEventListener("click", e => {
+        const strip = e.target.closest(".strip");
+        if (i !== current) { select(i); if (strip) seekFrom(e, strip); else start(); return; }
+        if (strip) seekFrom(e, strip); else toggle();
+      });
+      ul.appendChild(li);
+    });
+  }
+}
 
-fetch('tracks/tracks.json').then(r => r.json()).then(list => {
-  tracks = list;
-  const seeds = document.getElementById('seeds');
-  list.forEach((t, i) => { const el = row(t, i); rows.push(el); seeds.appendChild(el); });
-}).catch(() => { status.textContent = 'could not load the track list'; });
+$("btn-play").addEventListener("click", toggle);
+$("btn-prev").addEventListener("click", () => {
+  if (loaded === current && pos > 3 && player) { player.seek(0); pos = 0; progress(); return; }
+  const was = playing; select(current - 1); if (was) start();
+});
+$("btn-next").addEventListener("click", () => { const was = playing; select(current + 1); if (was) start(); });
+$("btn-order").addEventListener("click", () => {
+  inOrder = !inOrder;
+  $("btn-order").classList.toggle("on", inOrder);
+  $("btn-order").setAttribute("aria-pressed", inOrder ? "true" : "false");
+});
+$("np-strip").addEventListener("click", e => seekFrom(e, $("np-strip")));
+$("np-strip").addEventListener("keydown", e => {
+  if (!(loaded === current && duration && player)) return;
+  const step = e.key === "ArrowRight" ? 5 : e.key === "ArrowLeft" ? -5 : 0;
+  if (step) { pos = Math.min(duration, Math.max(0, pos + step)); player.seek(pos); progress(); e.preventDefault(); }
+});
+function renderVolume() {
+  light($("vol"), volume / 10);
+  $("vol").setAttribute("aria-valuenow", volume);
+  if (player) player.setVol(volume / 10);
+}
+$("vol").addEventListener("click", e => { const k = [...$("vol").children].indexOf(e.target); if (k >= 0) { volume = k + 1; renderVolume(); } });
+$("vol").addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "ArrowUp") { volume = Math.min(10, volume + 1); renderVolume(); e.preventDefault(); }
+  if (e.key === "ArrowLeft" || e.key === "ArrowDown") { volume = Math.max(0, volume - 1); renderVolume(); e.preventDefault(); }
+});
+document.addEventListener("keydown", e => { if (e.code === "Space" && e.target === document.body) { e.preventDefault(); toggle(); } });
+
+$("btn-prev").innerHTML = glyph("prev", 3);
+$("btn-next").innerHTML = glyph("next", 3);
+$("btn-play").innerHTML = glyph("play", 3);
+cells($("np-strip"), 48);
+cells($("vol"), 10);
+renderVolume();
+setState("LOADING THE SONGS", "loading");
+
+fetch("tracks/tracks.json").then(r => r.json()).then(list => {
+  TRACKS = list;
+  renderLists();
+  select(0);
+}).catch(() => setState("COULD NOT LOAD THE SONG LIST", "error"));
 </script>
 </body>
 </html>
