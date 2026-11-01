@@ -31,7 +31,7 @@ And packs of your own: the player's LIBRARY screen makes one from a game's
 own SPC files, the game's samples as its voices ([Packs from your
 games](#packs-from-your-games)).
 
-**[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: one song per sound, straight from the generator, regenerated with each release.
+**[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: five songs from the writer, seeds 1 to 5, and one for each of Classic's six sounds.
 
 **Reproducible, not frozen.** The same seed on the same version gives the same song, byte for byte. A new version may change what a seed draws, and the song message records the version that wrote the file.
 
