@@ -102,7 +102,7 @@ window is Qt (PySide6, installed with the package).
 bitcomposer -s 7 -v
 ```
 
-writes a whole song the way the idiom's writer does (`docs/IDIOM.md`): a
+writes a whole song the way the idiom's writer does ([docs/IDIOM.md](docs/IDIOM.md)): a
 plan for the band, each part's figures bar by bar, a tune with a theme that
 may come back, and the parts' balance, all drawn from a vocabulary of
 counted habits, played on bitComposer's own sound set (generic
@@ -127,7 +127,7 @@ Where the vocabulary comes from, plainly: the shipped one
 (`bitcomposer/vocabularies/default.json.gz`, 377 KB) was fitted on the
 readings of Final Fantasy VI's 67 songs, the game the writing was
 measured against round by round until it held up by ear
-(`docs/idiom/phase-4-writing.md`). It is the statistics of how that
+([docs/idiom/phase-4-writing.md](docs/idiom/phase-4-writing.md)). It is the statistics of how that
 music is put together, the counts of figures, moves, chord changes and
 balances, and none of the game's samples or notes; a release check
 (`tools/copycheck.py`) probes every four-bar window of hundreds of
@@ -137,6 +137,11 @@ games follow. Importing a game (below) fits that game's own vocabulary
 beside its samples and recounts one over everything you have imported;
 WRITE offers each under WRITTEN FROM once 40 songs stand behind it
 (`--vocabulary pack:NAME`, `--vocabulary library`).
+
+Every word in the vocabulary, what it counts and why it exists, is in
+[the vocabulary](docs/idiom/VOCABULARY.md), and [the vocabulary's
+map](docs/idiom/vocabulary-map.md) draws, stage by stage, which words
+condition which.
 
 ## Packs from your games
 
@@ -337,7 +342,7 @@ python3 tools/analyze.py --grid out/song.it  # tracker-style pattern dump
 output was once limited by three silent arrangement bugs that nine commits
 of ear-checking never caught, and every improvement since has been measured
 before and after. Read it before changing Classic. The writer has its own
-record: `docs/IDIOM.md` for the plan, and `docs/idiom/phase-4-writing.md`
+record: [docs/IDIOM.md](docs/IDIOM.md) for the plan, and [docs/idiom/phase-4-writing.md](docs/idiom/phase-4-writing.md)
 for its rounds, each measured against Final Fantasy VI's own songs and
 passed by ear.
 
