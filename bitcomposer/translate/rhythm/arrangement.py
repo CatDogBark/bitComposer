@@ -761,6 +761,33 @@ def part_sample_units(songs) -> list:
     return out
 
 
+ATTACK_STRUCK = 2.0                   # a sample whose strike is this many times its loop body (6 dB) decays: struck
+
+
+def attack_units(songs) -> list:
+    """Each pitched part of each song (SAMPLE_PARTS) as a unit: whether the sample its line plays most is struck (its
+    first STRIKE_SECONDS more than ATTACK_STRUCK times its loop body: a sound that decays after the attack) or
+    sustaining, its value the part. The samples' loudness is what set_loudness holds (readings.SAMPLE_LOUDNESS and
+    SAMPLE_STRIKE), so a count without it yields no units. Round 73 (2026-10-31): FFVI's tunes ride a struck sample in
+    3 of 66 songs (Awakening, Spinach Rag, Good Night), while a built-in set's keys, 14 to 20 dB struck, took 6 of 10
+    default tunes once the bright leads' ranges were capped, and a tune that fades between its notes reads weak at any
+    measured level (Song Checks 59 and 60). A built-in set's pool rule matches the drawn class (render.best_sample)."""
+    out = []
+    for s in songs:
+        for role in SAMPLE_PARTS:
+            if not s.notes.get(role):
+                continue
+            key = cells_mod.main_sample(cells_mod.tune_line(s, role) or s.notes[role])
+            if not key or not isinstance(key, str):
+                continue
+            sid = "s" + key[:10]
+            body, strike = readings_mod.SAMPLE_LOUDNESS.get(sid), readings_mod.SAMPLE_STRIKE.get(sid)
+            if not body or not strike:
+                continue
+            out.append(tables.Unit(s.sid, s.game, "struck" if strike > ATTACK_STRUCK * body else "sustaining", {"part": role}))
+    return out
+
+
 def sample_ambitus_units(songs) -> list:
     """Each sample a song plays pitched, as a unit: its outcome the whole range the song played it in, lowest note to
     highest (part_register's grain, ambitus=True), its value the sample's id as a pack names it. The tune's bound

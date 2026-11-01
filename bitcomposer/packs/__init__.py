@@ -30,7 +30,8 @@ _profiles: dict = {}
 
 def profile(name: str) -> dict | None:
     """What the writer may ask of a built-in voice (phase 6), in the terms an imported game's tables answer in for the
-    game's own samples: {"range": (low, high) MIDI, "speed": notes a second, "floor": the shortest note, seconds}. The
+    game's own samples: {"range": (low, high) MIDI, "speed": notes a second, "floor": the shortest note, seconds, "struck":
+    whether the voice decays after its attack (the attacks word's class)}. The
     range is the pack's RANGES entry; the speed and the floor come from the voice's measured attack (its onset, struck
     or not). None for a voice no pack ranges (a drum, a pack file's own sample, the chip palette's waveforms)."""
     if name in _profiles:
@@ -44,7 +45,7 @@ def profile(name: str) -> dict | None:
     speed = 24.0 if inst["struck"] else next((v for top, v in _SPEED_BY_ONSET if onset <= top), 2.0)
     need = 1.5 * onset / 1000.0
     floor = next((c for c in _FLOOR_CLASSES if c >= need), _FLOOR_CLASSES[-1])
-    _profiles[name] = {"range": (int(rng[0]), int(rng[1])), "speed": speed, "floor": floor}
+    _profiles[name] = {"range": (int(rng[0]), int(rng[1])), "speed": speed, "floor": floor, "struck": bool(inst["struck"])}
     return _profiles[name]
 
 
