@@ -4971,3 +4971,48 @@ level is the count), so those two stay in the forward set.
 a song plays it low and alone; a sample with a sustain loop is no kick,
 and that is the namer's round. A counter without a tune in the band
 writes one extra voice at most (round 76).
+
+### Round 78: a percussion piece at the rate the game struck it (2026-11-06, from Song Check 63's measure: the crash twice as bright)
+
+**Why.** The third cause behind Song Check 63's forward kits was timbre,
+not level. The writer played every percussion sample as recorded (a kit
+voice is registered to sound as recorded at KIT_NOTE), and FFVI plays
+its crash an octave down in all 22 songs that use it: of the game's 118
+drum pieces across the 46 kit tokens, 24 sit at exactly -12 semitones
+and 42 six or more off the recording (`drum_why.py`). A crash an octave
+up is twice as bright (spectral centroid 3.0 against 1.5 kHz) and half as
+long, so it cuts across the band where the game's sits back in it; in
+RMS the two are within a decibel. 23 of the 46 written kits carry a
+crash, and 6 of the 9 forward tokens did.
+
+**Built.** Round 77 had put the count in the token: for a piece the namer
+called a drum, the note slot carries the chip's rate as a note, with an
+r (`c=s3bfa4539ca@0.96@r48@2.23`; the readings' seventh row field). The
+writer now takes it: `render.kit_note_of` strikes a percussion piece the
+token song filled the slot with at KIT_NOTE plus the rate's offset (a kit
+voice's C5 speed is twice its rate, so a note an octave under KIT_NOTE
+halves it), as recorded where the token carries none; `samples_for` logs
+the pieces struck off the recording's rate. The pack's own kit, standing
+in for a sample the pack does not hold, plays as before. The writer's
+part of the word only: no refit (round 77 counted the rates).
+
+**Measured.** The 45 kit tokens' written songs against the game
+(`.../sustain/sc63-drums-r78/`): by integrated loudness the kit sits 1.1
+dB under the game's at the median (round 77: 1.1), 3 dB or more forward
+in 6 of 45 (7); by hit level +0.1 dB (+0.1), 3 dB or more forward in 11
+of 45 (7): a crash an octave down holds a loud 100 ms window twice as
+long, so the hit measure rises on the crash-only kits while the loudness
+measure falls, and the game's own crash does the same. Song Check 64's
+third step, five pairs on the same seed, the kit under the whole within
+a decibel in every pair: The Last Tower (Dancing Mad part 1) and The
+Second Ridge (New Continent), a lone crash an octave down and twice as
+long; Journey of the Quarry (Battle Theme), the snare three semitones up
+and the crash an octave down, the kick and hat as recorded; Cistern of
+Salt (Locke) and Last Vault (Cyan), the crash an octave down and Cyan's
+hat two semitones under.
+
+**Open.** The loudness a drum plays at is still pinned on its sample's
+strike measured at the recording's rate (round 63); struck an octave down
+the first 150 ms are the recording's first 75, which the crash reads 0.6
+dB louder. A hat struck high (The Phantom Train's, +12 semitones) is
+shorter and brighter than the pack's, as the game's is.
