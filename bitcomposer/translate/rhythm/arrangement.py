@@ -857,14 +857,18 @@ VOICE_SEMITONES = 24                 # semitones: a voice's interval against a l
 
 def _beside_lines(songs):
     """Every voice beside a line in an upper part with two voices or more (apart or alternating; a doubling voice follows
-    the line), and the counter-line beside the tune (part counter; its kind the sample relation, counter_kind, which
-    splits FFVI's intervals: thirds on the tune's sample, octaves and unisons on another): (song, part, kind, the
-    voice's notes, the line's notes, the song's scale), sorted in time."""
+    the line), the bass's and, since round 76, the counter's own voices beside its line (part counter, kind apart or
+    alternating: FFVI's layered counters hold two to four voices in 11 of the 46 kit tokens' songs, block chords and
+    parallel lines under the counter's line, and the writer had left every one of them silent beside a counter that
+    follows the tune, "no word yet"), and the counter-line beside the tune (part counter; its kind the sample relation,
+    counter_kind, which splits FFVI's intervals: thirds on the tune's sample, octaves and unisons on another; the two
+    never share a context, the kinds differ): (song, part, kind, the voice's notes, the line's notes, the song's scale),
+    sorted in time."""
     from .. import harmony, harness                         # harness imports this module
     pitched = lambda ns: sorted((n for n in ns if not math.isnan(n[2])), key=lambda n: n[0])   # noqa: E731
     for s in songs:
         scale = {((s.tonic or 0) + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
-        for role in readings_mod.UPPER + (R.BASS,):                       # the bass too: its second voice plays the line's pitch class at 78 % of
+        for role in readings_mod.UPPER + (R.BASS, R.COUNTER):             # the bass too: its second voice plays the line's pitch class at 78 % of
             voices = cells_mod.part_voices(s, role)                   # their shared onsets in FFVI; written apart it had at 31 % (2026-10-24)
             if len(voices) < 2:
                 continue

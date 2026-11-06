@@ -1387,30 +1387,60 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         log = [f"register {plan.bounds.get(role, plan.registers[role])}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items() if k not in ("layer", "letters"))
                + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} notes; the reference set "
                + ("checked" if reference is not None and not beside else "not on this machine" if reference is None else "not asked: the line follows the tune")] + plog
-        n, layer = plan.voices[role], layer_of(x)
-        if n >= 2 and layer[0] == "doubling" and notes:     # the line again at the interval, in the scale
-            scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
-            second = diatonic(line, layer[1], scale, 1)
-            song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in second]
-            line = line + second
-            log.append(f"doubled {layer[1]:+d} semitones, in the scale, on a second voice")
-        elif n >= 2 and layer[0] == "apart" and beside:     # no word yet for a second counter voice beside a counter that follows the tune
-            log.append(f"a second line apart ({layer[1]:+d}, {layer[2]}) not written: the counter follows the tune, and no word counts a voice beside it")
-        elif n >= 2 and layer[0] == "apart" and role == R.COUNTER:   # a second counter-line of its own, clear of the first
-            _, offset, density = layer
-            low, high = plan.registers[role]
-            reg2 = plan.bounds.get(f"{role}:second", (max(24, low + offset), min(100, high + offset)))
-            habit2 = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:second habit"), plan.habits[role], density)
-            notes2, figures2, plog2 = writer.melody(song, [], reg2, models, random.Random(f"{seed}:{role}:second"), habit2,
+        n = plan.voices[role]
+        words = layers_of(plan, role) if n >= 2 else []
+        scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+        beside_v = {0} if beside else set()
+        line_only, line_figures = list(line), list(figures)   # the line voice alone and its bars: what the voices beside it are written against
+        for v, word in enumerate(words, start=1):
+            layer = layer_of({"layer": word})
+            if layer[0] == "doubling" and notes:            # the line again at the interval, in the scale
+                second = diatonic(line_only, layer[1], scale, v)
+                song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in second]
+                line = line + second
+                log.append(f"voice {v + 1} doubles the line at {layer[1]:+d} semitones, in the scale")
+            elif beside and all(k in models for k in ("voice_intervals", "voice_moves", "second_figures")):
+                # a voice beside a counter that follows the tune (round 76): written as the counter is beside the tune (writer.counter
+                # with the counter's line as its tune), its bar a second_figures mask over the line's bar and its pitch the voice words'
+                # under the layer relation (apart, alternating), both counted for the counter's voices beside its line as for an upper
+                # part's. Rounds 29 to 75 had left these voices silent ("no word yet"): FFVI's layered counters beside a tune hold two
+                # to four voices in 11 of 46 kit tokens' songs, block chords and parallel lines, and the written band there sat 6 to
+                # 12 dB thinner than the game's, which put a kit at the game's own volume out in front (Song Check 63's verdict).
+                offset, density = (layer[1], layer[2]) if layer[0] == "apart" else (0, "like")
+                low, high = plan.bounds.get(role, plan.registers[role])
+                reg_v = (max(24, low + offset), min(100, high + offset))
+                span_v = plan.bounds.get(f"{role}:{v}") or plan.bounds.get(f"{role}:second", reg_v)
+                rng_v = random.Random(f"{seed}:{role}:voice {v}")
+                memo = {}
+
+                def masked(f):
+                    drawn = _draw(models, "second_figures", (role, render_mod.layer_class(plan, role), plan.feel, tempo, str(len(f.split())), f), rng_v, floor_k=MASK_FLOOR)
+                    return drawn
+                masks_v = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in line_figures]
+                notes_v, figures_v, plog_v = writer.counter(song, line_only, line_figures, masks_v, span_v, models, rng_v, layer[0], key=key,
+                                                            articulation=x["articulation"], register=span_v)
+                song.notes[role] += [(a, b - a, m, role) for a, b, m in notes_v]
+                line = line + [(a, b, m, v) for a, b, m in notes_v]
+                figures = [f"{f} || {g}" for f, g in zip(figures, figures_v)]
+                beside_v.add(v)
+                log.append(f"voice {v + 1} {layer[0]} ({offset:+d}, {density}) beside the line, register {span_v}: " + plog_v[0])
+            elif layer[0] == "apart" and beside:            # the vocabulary lacks a word for a voice beside the line: the voice stays silent, and says so
+                log.append(f"voice {v + 1} apart ({layer[1]:+d}, {layer[2]}) not written: no voice_intervals, voice_moves or second_figures word")
+            elif layer[0] == "apart" and role == R.COUNTER and v == 1:   # a second counter-line of its own, clear of the first (a band without a tune)
+                _, offset, density = layer
+                low, high = plan.registers[role]
+                reg2 = plan.bounds.get(f"{role}:second", (max(24, low + offset), min(100, high + offset)))
+                habit2 = habit_near(models, role, tempo, plan.weights.get(role, "half"), random.Random(f"{seed}:{role}:second habit"), plan.habits[role], density)
+                notes2, figures2, plog2 = writer.melody(song, [], reg2, models, random.Random(f"{seed}:{role}:second"), habit2,
                                                     key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                     role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"))
-            song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
-            line = line + [(a, b, m, 1) for a, b, m in notes2]
-            figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
-            log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}); {sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
-            log += [f"second: {l}" for l in plog2[-2:]]
-        written[role] = Part(role, line, figures, log, beside={0} if beside else set())
+                song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
+                line = line + [(a, b, m, 1) for a, b, m in notes2]
+                figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
+                log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}); {sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
+                log += [f"second: {l}" for l in plog2[-2:]]
+        written[role] = Part(role, line, figures, log, beside=beside_v)
     if R.MELODY in written:                                 # the theme in the band: doubled where the tune plays it, carried where it does not
         rng_theme = random.Random(f"{seed}:theme band")
         for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):

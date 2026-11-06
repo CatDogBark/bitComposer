@@ -4824,3 +4824,73 @@ gesture at the counted tier.
 the readings merge (Dancing Mad's 21 hits a bar read as 6.6); the
 never-silent rule against FFVI's 0.1 hits a bar (the texture words give
 the drums 11 of 23 bars; each played bar strikes at least once).
+
+### Round 76: a voice beside a counter that follows the tune (2026-11-06, from Song Check 63: "the drums a lot of time just seem louder than they should")
+
+**Why.** The verdict on round 75 was that the kit sits forward, so the
+kit was measured against the game's own, token by token: for each of
+the 46 FFVI balance tokens with a kit, the game's song and the written
+song that drew the token, each rendered whole, drums alone and the rest
+alone, the drums' hit level (the 95th percentile of 100 ms RMS) over the
+rest's (`~/diags/bitcomposer/sc-tools/drum_forward.py`; the results in
+`.../sustain/sc63-drums/`). At the median the written kit sat exactly
+where the game's does (0.0 dB; quartiles -1.9/+2.7); 9 of 46 sat 3 dB or
+more forward, 7 as far back. The forward nine had three causes, and the
+widest was not the kit: in 11 of the 46 songs the counter follows the
+tune and holds two to four voices in the token (Metamorphasis, The
+Phantom Train, The Unforgiven, Gestahl, Kefka, Gogo, Strago, Troops
+March on, Returners, two Wedding Waltzes), and the writer had left every
+voice beside that counter silent since round 29 ("no word yet for a
+second counter voice beside a counter that follows the tune"). The
+game's counters there stack 2.2 to 3.6 voices in 98 % of their frames,
+block chords and parallel lines, 6 to 12 dB of band the written song
+did not have, and a kit at the game's own volume stood in front of what
+was left (part by part, written against game, relative to the kit:
+Metamorphasis's counter -15.8 dB, The Unforgiven's -25.5, Gestahl's
+-8.0). The other two causes, a tonal kit piece's hold and the pitch a
+percussion piece is struck at, are rounds 77 and 78.
+
+**Built.** The word is the one the upper parts already had. The readings
+count the counter's own voices beside its line as an upper part's
+(`arrangement._beside_lines`: part counter, kind apart or alternating by
+`harness.relation`, the line the voice with the most notes; the
+counter-line's own units beside the tune keep their kinds same and
+other, so the two never share a context), into `voice_intervals` and
+`voice_moves`, and `cells.second_figure_units` counts the voices' bar as
+a mask over the counter's bar. The plan writes every layer word of a
+counter that follows the tune (`plan.write`): a doubling as before, and
+an apart or alternating voice through `writer.counter` with the counter's
+line as the tune it is written beside, its bar a `second_figures` mask
+drawn under the counter's layer class, its pitch the voice words' under
+the layer relation, its span the line's at the word's offset within the
+range the game plays its sample over (`plan.bounds["counter:v"]`), its
+level the token's share for that voice (round 70). A third and fourth
+voice take their own words. A vocabulary without the three words leaves
+the voice silent and says so in the log. Pack4 refit (98 tables, backup
+`pack.json.r75`), the shipped vocabulary regenerated: `voice_intervals`
+gains 136 counter contexts. Test: the counter's voices beside its line
+counted and written (`test_a_voice_beside_a_counter_that_follows_the_tune`).
+
+**Measured.** The 46 tokens' written songs again (the plan+write path):
+layered counters 17, with a silent voice 11 before, 0 after; every layer
+word drawn (54 apart, 19 doubling, 4 alternating) now writes. The five
+songs of Song Check 64's first step, before and after, each part under
+the whole (K-weighted, the first minute): the counter +4.5 dB in Plateau
+of Stars (The Phantom Train's token, four voices), +3.5 in Still Pavilion
+(Metamorphasis), +6.4 in The Crossing of Thorns (Troops March on), +2.3
+in The Endless Citadel, +0.9 in The Foundry of Rust; the kit under the
+whole -5.1, -0.8, -1.0, -0.7 and -0.5 dB in the same songs. Over all 46
+tokens the kit over the band's loud moments barely moves (median 0.0 to
+-0.3 dB, the forward nine still nine: The Phantom Train leaves the set,
+The Phantom Forest enters), because the band's loudest part, the bass or
+the tune, is not the counter; by integrated loudness the kit sits 1.6
+then 1.9 dB under the game's. The tune's margin over the loudest other
+line falls where the token's counter voices are loud (Plateau of Stars:
+the token's shares 1.0/2.2/2.1, the game's own balance, -2.5 to -10.8
+dB), which the owner's ear will judge.
+
+**Open.** A counter without a tune in the band (the second branch) still
+writes one extra voice at most. The tune's salience against a loud
+counter stack (Song Check 50's rule: a tune 3 dB or more under did not
+belong in five songs of six) was counted from songs where the counter was
+one voice; whether it holds with the stack is the first thing to hear.

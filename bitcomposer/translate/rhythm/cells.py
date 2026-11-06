@@ -652,10 +652,12 @@ def second_figure_units(songs) -> list:
     of five of its onsets with the line's; its slap bass strikes with three
     quarters of the sustained line's notes and twice as often in all (a
     second bass drawn as a figure of its own, given the line's bar, had
-    struck with 41 % of the line's notes: two basses, 2026-10-24)."""
+    struck with 41 % of the line's notes: two basses, 2026-10-24). The
+    counter's voices beside its line since round 76 (part counter), the
+    mask their bar is written from beside a counter that follows the tune."""
     out = []
     for s in songs:
-        for role in readings_mod.UPPER + (R.BASS,):
+        for role in readings_mod.UPPER + (R.BASS, R.COUNTER):
             voices = part_voices(s, role)
             if len(voices) < 2:
                 continue

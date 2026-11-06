@@ -759,6 +759,40 @@ class NewTablesTests(unittest.TestCase):
         kinds = tables.Table(("part",), "counter_samples", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "same", {"part": "counter"}) for i in range(3)])
         self.assertEqual(whole._draw({"counter_samples": kinds}, "counter_samples", ("counter",), random.Random(1)), "same")
 
+    def test_a_voice_beside_a_counter_that_follows_the_tune(self):
+        """Round 76: the counter's own voices beside its line are counted as an upper part's (voice_intervals and voice_moves
+        under the layer relation, second_figures as a mask over the counter's bar), beside the counter-line's units against
+        the tune (kind same or other), and writer.counter writes such a voice with the counter's line as its tune. Rounds 29
+        to 75 had left every voice beside a counter that follows the tune silent ("no word yet")."""
+        from bitcomposer.translate import writer, tables, vocab
+        s, bars = self._tune_and_counter()
+        third = [(4.0 * k + t, 0.9, m, "ctr") for k in range(3) for t, m in ((0.0, 57.0), (1.0, 59.0), (2.0, 60.0))]   # a third under the line
+        s.notes["counter"] = s.notes["counter"] + third                   # on beats 1 and 3 of bars 0 to 2, its own note on beat 2: apart
+        s.voice_notes[3] = ("counter", third)                             # (harness.relation: half their events shared, under DOUBLING)
+        iv = [u for u in rhythm.voice_interval_units([s]) if u.values["part"] == "counter"]
+        self.assertEqual({u.values["kind"] for u in iv}, {"apart", "other"})               # the voice beside the line, and the line beside the tune
+        self.assertEqual({u.outcome for u in iv if u.values["kind"] == "apart"}, {"-2"})
+        self.assertEqual([u.values["previous"] for u in iv if u.values["kind"] == "apart"][:2], [rhythm.START, "-2"])
+        self.assertTrue([u for u in rhythm.voice_move_units([s]) if u.values["part"] == "counter" and u.values["kind"] == "apart"])
+        sf = [u for u in rhythm.second_figure_units([s]) if u.values["part"] == "counter"]
+        self.assertEqual([u.outcome for u in sf], ["1 1 0 | 1"] * 3 + ["-"])                # with the line's beats 1 and 3, its own on 2; bar 3 the line alone
+        self.assertEqual(sf[0].values["layer"], rhythm.layer_share_class(9 / 11))
+        # the writer: the voice words under the apart relation, the counter's line as the tune it is written beside
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "-2")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])
+        vals = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
+        song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        line = [(4.0 * k + i, 4.0 * k + i + 0.9, 72.0, 0) for k in range(2) for i in range(4)]          # the counter's line: C on every beat
+        notes, figures, log = writer.counter(song, line, ["0 1 2 3"] * 2 + [writer.REST] * 2, ["1 1 1 1", "1 0 1 0", writer.REST, writer.REST], (48, 96),
+                                             {"voice_intervals": iv_t, "voice_moves": mv_t, "values": vals}, random.Random(1), "apart",
+                                             key=(0, "major"), articulation="held", register=(60, 84))
+        self.assertEqual(figures, ["0 1 2 3", "0 2", writer.REST, writer.REST])
+        self.assertEqual({int(m) for _, _, m in notes}, {69})                                 # A under C, a third below, at every masked onset
+        self.assertEqual(len(notes), 6)
+        self.assertIn("beside the tune on the apart sample", log[0])
+
     def test_the_counters_level_is_drawn_under_the_tunes_share(self):
         """counter_shares counts the counter's level as a share of the song's loudest part's, in tenths, by the band the
         tune's own share falls in; the plan draws it after the tune's levels draw, under that draw's band, in place of the
