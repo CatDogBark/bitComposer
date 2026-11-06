@@ -19,7 +19,7 @@ class ShippedVocabularyTests(unittest.TestCase):
         self.assertEqual(vocabularies.DEFAULT, "default")
         self.assertEqual(vocabularies.label("default"), "bitComposer")
         src = vocabularies.source("default")
-        self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 67))
+        self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 68))   # 68 since round 77: Quiet Beach's pad read as a part, not a drum
         self.assertIn("Final Fantasy VI", src["fitted_on"])
         models = vocabularies.load("default")
         for name in ("rhythm", "balance", "habits", "moves", "voice_intervals", "tune_grain"):

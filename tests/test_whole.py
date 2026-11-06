@@ -1311,6 +1311,27 @@ class NewTablesTests(unittest.TestCase):
         p.top_level = 0.8
         self.assertEqual(whole.note_level(p, "drums", 0, piece="kick"), 1.0)                       # 0.8 x 1.7 reaches the cap of full
 
+    def test_a_kit_pieces_hold_follows_its_note_in_the_token(self):
+        """Round 77: the kit field carries each piece's hold, the median length the game keys it for in beats, after the
+        note's slot (`o=sf89f5aedfd@0.38@62@0.25`; `K=s48bab384c7@1.00@27@6.95`); the plan keeps them (extras.drums.kit_holds,
+        kit_piece_hold by slot) and the writer gives a piece on a sustaining sample that length instead of the kit's beat."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.2:::K=sbfe716b9b6@1.7@r48@0.50,S=s1279e119a1@0.7@56,o=sf89f5aedfd@0.38@62@0.25:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(p.extras["drums"]["kit_holds"], {"K": 0.5, "o": 0.25})                 # the snare's slot carries a note and no hold
+        self.assertEqual(p.extras["drums"]["kit_pitches"], {"S": 56, "o": 62})
+        self.assertEqual(p.extras["drums"]["kit_rates"], {"K": 48})                              # the kick's slot: the chip's rate, an octave under
+        self.assertEqual(whole.kit_piece_rate(p, "kick"), 48); self.assertIsNone(whole.kit_piece_rate(p, "rim"))
+        self.assertEqual(whole.kit_piece_hold(p, "kick"), 0.5)
+        self.assertEqual(whole.kit_piece_hold(p, "rim"), 0.25)                                    # the "o" slot's sample
+        self.assertIsNone(whole.kit_piece_hold(p, "hihat"))
+        self.assertTrue(any("o sf89f5aedfd at 0.38 struck at 62 held 0.25 beats" in line for line in p.log), p.log)
+        self.assertTrue(any("K sbfe716b9b6 at 1.70 struck -12 semitones from the recording held 0.50 beats" in line for line in p.log), p.log)
+
     def test_a_doubling_voice_takes_the_tokens_level_and_sample(self):
         """Round 70: a voice beside the line plays at the token's share for that voice and on the token's sample for it,
         doubling or not (the layer word gives a doubling voice its interval only); without a token share a doubling voice

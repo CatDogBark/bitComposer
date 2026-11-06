@@ -4894,3 +4894,80 @@ writes one extra voice at most. The tune's salience against a loud
 counter stack (Song Check 50's rule: a tune 3 dB or more under did not
 belong in five songs of six) was counted from songs where the counter was
 one voice; whether it holds with the stack is the first thing to hear.
+
+### Round 77: the role reader's drum clause holds its notes like a drum, and a kit piece's hold (2026-11-06, from Song Check 63: the pad struck once a bar)
+
+**Why.** Song Check 63's measure (round 76) left two of the forward nine
+to the kit itself: the pad The Quiet Wharf and Ramparts of Salt strike
+once a bar, which the readings call a kick (Another World of Beasts and
+The Empire Gestahl play a bowed-strings sample at E-flat 1 and C1, held
+seven and eight beats, a drone the per-song drum namer heard as a low
+thud), and The Unforgiven's "o", a tonal sample the game taps for 69 ms
+and the writer held for half a beat, 9 dB out in front of the game's
+stem. Both are the same missing count: the kit token had each piece's
+sample, level and struck note, and not how long the game keys it. The
+role reader's second clause (a voice on a sample the namer did not call
+an instrument, one or two pitches, eight notes or more) also took held
+pads for drums: The Phantom Forest's lead, held twelve beats a note, had
+given a written kit one accent struck thirteen times a bar.
+
+**Built.** Two counts and a clause.
+1. The role reader's second drum clause asks a tonal voice to hold its
+   notes under `roles.DRUM_HOLD` (2 beats) at the median. FFVI's 109 drum
+   voices on percussion samples hold a median 0.45 beats, three quarters
+   under 0.95, only cymbal swells two or more; of its 31 drum voices on
+   tonal samples eight held two beats or more. Read fresh from the 82
+   SPCs the clause flips two voices and no other: The Phantom Forest's
+   lead (drums to double; its token has no kit, the game's truth) and
+   Quiet Beach's pad (drums to harmony; the song enters the vocabulary,
+   68 songs). The pads the namer calls kicks stay drums: they are caught
+   by the first clause, by what their sample is, and the hold below gives
+   them their drone. The phase 1 ground truth (`tools/known_answers.py`,
+   mended to carry the namer's piece) reads 672 of 672 drum channels as
+   drums with the clause off and on.
+2. The readings count, per drum sample, the median length the song keys
+   it for (`Song.kit_holds`), and the balance token's kit field carries it
+   after the note's slot (`o=sfd6accf98a@2.08@58@0.19`,
+   `K=s48bab384c7@1.00@r42@6.95`; `plan.kit_piece_hold`). The writer gives
+   a piece on a sustaining sample that length (`render.samples_for` marks
+   the slots whose sample the pack classes tonal), cut by the next hit on
+   its voice; a percussion sample is a one-shot whatever its hit's
+   length, so its hold is counted and not played.
+3. The token's note slot says what it carries. For a piece the namer
+   called a drum it is now the chip's rate as a note, with an r (`r48`:
+   60 as recorded, 48 an octave under; the stored note rows gain a
+   seventh field, the rate, `store.VERSION` 10, every song read again
+   and the lead pass run again); a tonal piece keeps its pitch. A tonal
+   sample the namer took for a drum plays at its own rate's note plus
+   the offset, so the pad is back at E-flat 1 through the rate. The
+   writer takes a percussion piece's rate in round 78.
+Pack4 refit (98 tables, backups `pack.json.before-r77b` and
+`readings.db.before-r77`), the shipped vocabulary regenerated (68 songs).
+Tests: the token's hold and rate slots counted, parsed and given
+(`test_the_kits_pieces_carry_the_note_they_are_struck_at`,
+`test_a_kit_pieces_hold_follows_its_note_in_the_token`); the
+translate tests' hand-packed rows seven fields wide; the vibrato test
+counts its bent notes instead of pinning a number that moves with the
+vocabulary.
+
+**Measured.** The 45 kit tokens' written songs against the game
+(`drum_forward.py`, `.../sustain/sc63-drums-r77/`): the kit over the band
+by hit level sits at the median +0.1 dB from the game's (round 76: -0.3),
+3 dB or more forward in 7 of 45 (9 of 46); by integrated loudness 1.1 dB
+under (1.9). The Unforgiven leaves the forward set: its "o" is a tap
+again. Song Check 64's second step, five pairs on the same seed, the
+token's song the same and the plan the same but for the kit (the 68th
+song shifts a seed's balance draw, so pairs were chosen among the 562 of
+3000 seeds whose plan stands): The Northern Reactor (The Unforgiven)
+drums -5.6 to -10.7 dB under the whole; Winding Citadel (Another World
+of Beasts) and The Coast of Smoke (Gestahl) hold the pad as the game
+does, seven and eight beats at the game's pitch, where a one-beat blip
+was; The Rising Valley (Edgar and Sabin) plays its tonal tom at the
+game's -20 semitones; Sleeping Overpass (Kefka) holds its bell 0.45
+beats. The pad's songs still count the pad the loudest part (the token's
+level is the count), so those two stay in the forward set.
+
+**Open.** The drum namer calls a looping bowed-strings sample a kick when
+a song plays it low and alone; a sample with a sustain loop is no kick,
+and that is the namer's round. A counter without a tune in the band
+writes one extra voice at most (round 76).

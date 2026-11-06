@@ -74,6 +74,24 @@ def kit_piece_pitch(plan, slot: str) -> int | None:
     pitches = plan.extras.get(R.DRUMS, {}).get("kit_pitches") or {}
     letter = SLOT_LETTER.get(slot)
     return pitches.get(letter) if letter else None
+def kit_piece_rate(plan, slot: str) -> int | None:
+    """The rate the balance token's song strikes the kit slot's piece at most, as a note (round 78: `c=s3bfa4539ca@0.96@r48`
+    on the drums' kit field, 60 the sample as recorded, 48 an octave under; a piece the namer called a drum); None where the
+    token gave none."""
+    rates = plan.extras.get(R.DRUMS, {}).get("kit_rates") or {}
+    letter = SLOT_LETTER.get(slot)
+    return rates.get(letter) if letter else None
+
+
+def kit_piece_hold(plan, slot: str) -> float | None:
+    """How long the balance token's song keys the kit slot's piece for, in beats (round 77: `o=sf89f5aedfd@0.38@62@0.25` on
+    the drums' kit field, after the note's slot); None where the token gave none. The writer gives the hold to a piece on a
+    sustaining sample (samples_for's tonal_slots); a percussion one-shot plays out whatever the count, as before."""
+    holds = plan.extras.get(R.DRUMS, {}).get("kit_holds") or {}
+    letter = SLOT_LETTER.get(slot)
+    return holds.get(letter) if letter else None
+
+
 KIT_FOR = {"K": ("kick",), "S": ("snare", "rim"), "h": ("hihat", "open_hihat"), "t": ("tom", "kick"),
            "c": ("crash", "open_hihat", "hihat"), "o": ("rim", "hihat")}   # a figure's letter -> its sample, the first the kit has
 DRUM_LENGTH = 1.0                     # beats a drum hit sounds at most (to the next hit on its voice otherwise)
@@ -596,7 +614,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
-    token_kit, token_kit_levels, token_kit_pitches, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}
+    token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -638,12 +656,17 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                         continue
                     letter, _, value = x.partition("=")
                     sid, _, rest = value.partition("@")
-                    level, _, pitch = rest.partition("@")   # since round 75 the note the piece is struck at follows the level's slot
+                    level, _, rest = rest.partition("@")    # since round 75 the note the piece is struck at follows the level's slot,
+                    pitch, _, hold = rest.partition("@")    # since round 77 a tonal piece's hold in beats follows the note's
                     token_kit[letter] = sid
                     if level and math.isfinite(float(level)):
                         token_kit_levels[letter] = float(level)
-                    if pitch:
+                    if pitch.startswith("r"):               # the chip's rate as a note (round 78), for a piece the namer called a drum
+                        token_kit_rates[letter] = int(round(float(pitch[1:])))
+                    elif pitch:
                         token_kit_pitches[letter] = int(round(float(pitch)))
+                    if hold and float(hold) > 0:
+                        token_kit_holds[letter] = float(hold)
             elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels
                 token_samples[role] = fields[7]
             if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
@@ -686,8 +709,14 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     extras[role]["kit_levels"] = token_kit_levels   # one plays at the part's level (the fifth field)
                 if token_kit_pitches:                       # the note each piece is struck at (round 75): a piece on a tonal sample plays there
                     extras[role]["kit_pitches"] = token_kit_pitches
+                if token_kit_rates:                         # the rate a drum piece is struck at (round 78), as a note: 60 as recorded
+                    extras[role]["kit_rates"] = token_kit_rates
+                if token_kit_holds:                         # how long a tonal piece is keyed for (round 77): its hit lasts that, not the kit's beat
+                    extras[role]["kit_holds"] = token_kit_holds
                 log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
                                                                                             + (f" struck at {token_kit_pitches[k]}" if k in token_kit_pitches else "")
+                                                                                            + (f" struck {token_kit_rates[k] - 60:+d} semitones from the recording" if k in token_kit_rates else "")
+                                                                                            + (f" held {token_kit_holds[k]:.2f} beats" if k in token_kit_holds else "")
                                                                                             for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
                 extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,
@@ -1235,7 +1264,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         continue
                     seen.add(round(t, 3))
                     after = next((u for u, *_ in mine[i + 1:] if u > t + NEAR), None)
-                    notes.append((t, min(after if after is not None else t + DRUM_LENGTH, t + DRUM_LENGTH), letter, v, sample))
+                    held = kit_piece_hold(plan, sample) if sample in (plan.extras.get(R.DRUMS, {}).get("tonal_slots") or ()) else None
+                    length = held or DRUM_LENGTH            # a piece on a sustaining sample for as long as the game keys it (round 77), cut by the next hit
+                    notes.append((t, min(after if after is not None else t + length, t + length), letter, v, sample))
             song.notes[R.DRUMS] = [(t, end - t, float("nan"), sample) for t, end, _, _, sample in notes]
             written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"kit habit {plan.habits[R.DRUMS]}; groups " + ", ".join(f"{'+'.join(g)} {h}" for g, h in group_habits.items())
                                                               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"

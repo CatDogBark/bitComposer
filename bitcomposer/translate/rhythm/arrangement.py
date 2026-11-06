@@ -495,7 +495,15 @@ def kit_token(s, top: float = 0.0) -> str:
     Since round 75 each piece carries the note the song strikes it at most, after the level's slot, where the reading
     heard one (`o=sf89f5aedfd@0.38@62`; `o=sid@@62` without a level): FFVI's "other" pieces are tonal samples in ten
     tokens of eleven (a lead struck as an accent once in eight bars in The Phantom Forest, bells, pads), and the
-    written kit had hammered them at the kit's one note two octaves under."""
+    written kit had hammered them at the kit's one note two octaves under. A piece the namer called a drum carries the
+    chip's rate instead, as a note with an r (`c=s3bfa4539ca@0.96@r48`: 60 as recorded, 48 an octave under; round 78: FFVI
+    plays its crash an octave down in all 22 songs that use it, and a pad the namer took for a kick keeps its pitch through
+    the rate, its own rate's note plus the offset). Since round 77 each piece carries the median
+    length the song keys it for, in beats, after the note's slot (`o=sf89f5aedfd@0.38@62@0.25`; `K=s48bab384c7@1.00@27@6.95`
+    a pad the namer took for a kick, held seven beats; `h=sd1c4c7ce33@0.20@@0.07` a hat): the writer gives a piece on a
+    sustaining sample that hold where it had given every piece a one-beat hit, a tap of 69 ms held half a beat (The
+    Unforgiven's "o", 9 dB out in front of the game's) and a seven-beat drone struck once (Another World of Beasts', Song
+    Check 63); a percussion sample is a one-shot whatever its hit's length, so its hold is counted and not played."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
@@ -507,6 +515,8 @@ def kit_token(s, top: float = 0.0) -> str:
         best.setdefault(letter, key)
     levels = getattr(s, "kit_levels", None) or {}
     pitches = getattr(s, "kit_pitches", None) or {}
+    rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
+    holds = getattr(s, "kit_holds", None) or {}
     out = []
     for letter in readings_mod.LETTERS.values():
         if letter not in best:
@@ -515,12 +525,14 @@ def kit_token(s, top: float = 0.0) -> str:
         field = f"{letter}=" + ("s" + key[:10] if len(key) >= 10 else key)
         level = levels.get(key)
         with_level = top > 0 and level is not None and math.isfinite(level)   # never a "nan" share: the part's level stands in
-        if with_level:
-            field += f"@{round(level / top, 2):.2f}"                 # in hundredths since round 70: tenths cost 2.9 dB on a snare at 0.14 kept as 0.1
-        pitch = pitches.get(key)
-        if pitch is not None:                                        # the note the song strikes the piece at (round 75), after the level's slot
-            field += ("" if with_level else "@") + f"@{int(pitch)}"
-        out.append(field)
+        pitch, rate = pitches.get(key), rates.get(key)
+        hold = holds.get(key)                                        # how long the song keys the piece for (round 77)
+        slots = [f"{round(level / top, 2):.2f}" if with_level else "",                       # in hundredths since round 70: tenths cost 2.9 dB
+                 f"r{int(rate)}" if rate is not None else f"{int(pitch)}" if pitch is not None else "",   # on a snare at 0.14 kept as 0.1
+                 f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else ""]
+        while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
+            slots.pop()
+        out.append(field + "".join(f"@{x}" for x in slots))
     return ",".join(out)
 
 

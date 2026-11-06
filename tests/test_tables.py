@@ -656,12 +656,18 @@ class BalanceLevelTests(unittest.TestCase):
         s.voice_levels = {1: 0.5, 2: 0.1}
         s.levels = {"melody": 0.5, "drums": 0.1}
         s.kit_levels = {"k": 0.8, "o": 0.2}
-        s.kit_pitches = {"k": 36, "o": 62}
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@36,o=o@0.40@62")
-        self.assertEqual(rhythm.kit_token(s), "K=k@@36,o=o@@62")                  # no top, no level: the note still
-        del s.kit_pitches["k"]
+        s.kit_pitches, s.kit_rates = {"o": 62}, {"k": 48}                           # round 78: a drum piece's note slot is the chip's rate, "r48"
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@62")
+        self.assertEqual(rhythm.kit_token(s), "K=k@@r48,o=o@@62")                 # no top, no level: the note still
+        del s.kit_rates["k"]
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,o=o@0.40@62")       # a piece without a note keeps the old form
         self.assertIn("drums=::::0.2:::K=k@1.60,o=o@0.40@62", rhythm.balance_units([s])[0].outcome)
+        s.kit_holds = {"k": 0.5, "o": 6.95}                                        # round 77: each piece's hold follows the note's slot
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50,o=o@0.40@62@6.95")   # (the kick has no note: its slot kept empty)
+        del s.kit_pitches["o"]
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50,o=o@0.40@@6.95")
+        s.kit_levels = {}
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@@@0.50,o=o@@@6.95")
 
     def test_the_kits_pieces_carry_their_own_levels(self):
         """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck

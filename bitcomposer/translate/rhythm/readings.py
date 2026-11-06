@@ -91,6 +91,7 @@ PARTS = (R.BASS, R.HARMONY, R.ACCOMP, R.ARP, R.COUNTER, R.MELODY, R.DRUMS)
 PITCHED = PARTS[:-1]
 DENSE = 6                            # hits a bar a drum sound plays, where it plays, to be the hat
 PIECES = ("kick", "snare", "hat", "tom", "cymbal", "other")     # drums.PIECES; a sample named "none" is no drum
+PERCUSSION = frozenset(PIECES[:-1])   # the pieces that are percussion samples: their struck "note" is the chip's rate, not a tuning (round 78)
 LETTERS = dict(zip(PIECES, "KShtco"))
 SHORT = 0.75                         # a melody note sounding less of its length than this is detached
 TONE_MARKS = {"root": "R", "third": "3", "sus": "s", "fifth": "5", "seventh": "7", "other": "+"}
@@ -154,6 +155,10 @@ class Song:
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
     kit_levels: dict = field(default_factory=dict)    # a drum sample's key -> the median level of the notes struck on it (round 68: the kit's
                                       # level a piece, the part's one median being the hat's where the hat is the most frequent piece)
+    kit_holds: dict = field(default_factory=dict)     # a drum sample's key -> the median length in beats the song keys it for (round 77: a
+                                                      # kit piece on a tonal sample is a drone or a tap, not a one-beat hit)
+    kit_rates: dict = field(default_factory=dict)     # a drum sample's key -> the rate the chip strikes it at most, as a note (round 78: 60 as
+                                                      # recorded, 48 an octave under), for a piece the namer called a drum (PERCUSSION)
     kit_pitches: dict = field(default_factory=dict)   # a drum sample's key -> the note the song strikes it at most (round 75: a kit piece on a
                                       # tonal sample plays at the game's pitch, not the kit's one note)
     loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
@@ -283,7 +288,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
-        level_rows, kit_rows, kit_pitch_rows = {}, {}, {}
+        level_rows, kit_rows, kit_pitch_rows, kit_rate_rows, kit_hold_rows = {}, {}, {}, {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
@@ -294,8 +299,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
                 if SAMPLE_LOUDNESS:                         # a level as loudness: the voice volume times its sample's own (round 56; the drums' too, round 63)
                     secs = 60.0 / (bpm or 120.0)                # the note's length in seconds: its strike, then its body (round 65)
-                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise"), length * secs), pan, i) for s, length, m, level, pan, i in rows]
-                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
+                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise"), length * secs), pan, i, *rest) for s, length, m, level, pan, i, *rest in rows]
+                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i, *_ in rows]
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)
@@ -308,8 +313,14 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                         for r in rows:                      # frequent piece's, the hat's in a kick-snare-hat kit, and the kick plays near full
                             if not math.isnan(r[3]):
                                 kit_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[3])
-                            if not math.isnan(r[2]):        # the note the piece is struck at (round 75), where the reading heard one
-                                kit_pitch_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(int(round(r[2])))
+                            key = keys.get(int(r[5]), "noise")
+                            if song.pieces.get(key) in PERCUSSION:   # a piece the namer called a drum: the rate the chip strikes it at
+                                if len(r) > 6 and not math.isnan(r[6]):   # (round 78: 60 as recorded, 48 an octave under)
+                                    kit_rate_rows.setdefault(key, []).append(int(round(r[6])))
+                            elif not math.isnan(r[2]):      # a tonal piece: the note it is struck at (round 75)
+                                kit_pitch_rows.setdefault(key, []).append(int(round(r[2])))
+                            if not math.isnan(r[1]) and r[1] > 0:   # how long the piece is keyed for (round 77)
+                                kit_hold_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[1])
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
@@ -317,6 +328,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         song.levels = part_levels(song, {role: statistics.median(ls) for role, ls in level_rows.items()})
         song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
         song.kit_pitches = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_pitch_rows.items()}   # the most struck note, the lower on a tie
+        song.kit_rates = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_rate_rows.items()}
+        song.kit_holds = {key: statistics.median(ls) for key, ls in kit_hold_rows.items()}
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         echo = dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'echo'", (sid,)).fetchall())   # the chip's echo

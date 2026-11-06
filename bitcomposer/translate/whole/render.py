@@ -427,8 +427,11 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 if slot == "hihat" and "open_hihat" in out[role]:
                     out[role]["open_hihat"] = make(sid)
                 if not samples_mod.is_percussion(f"{pack_name}_{sid}"):
-                    pitch = plan_mod.kit_piece_pitch(plan, slot)
-                    tonal.append(f"{letter} {sid}" + (f" struck at {pitch}" if pitch is not None else " at the recording's own pitch"))
+                    pitch, rate = plan_mod.kit_piece_pitch(plan, slot), plan_mod.kit_piece_rate(plan, slot)
+                    hold = plan_mod.kit_piece_hold(plan, slot)
+                    plan.extras.setdefault(R.DRUMS, {}).setdefault("tonal_slots", set()).add(slot)   # the writer holds such a piece as the game does (round 77)
+                    tonal.append(f"{letter} {sid}" + (f" struck at {pitch}" if pitch is not None else f" struck {rate - 60:+d} semitones from the recording" if rate is not None
+                                                      else " at the recording's own pitch") + (f", held {hold:.2f} beats" if hold else ""))
             if taken:
                 plan.log.append("kit samples from the balance's song: " + ", ".join(taken))
             if tonal:
@@ -719,7 +722,9 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
         return float(pitch)
     c5 = getattr(sample, "c5_speed", 0) or 0
     source = getattr(sample, "source_rate", None) or c5
-    return 60.0 + 12.0 * math.log2(source / c5) if c5 and source else float(KIT_NOTE)
+    own = 60.0 + 12.0 * math.log2(source / c5) if c5 and source else float(KIT_NOTE)   # the note at the recording's own rate
+    rate = plan_mod.kit_piece_rate(plan, slot)             # a tonal sample the namer took for a drum (Another World of Beasts' pad as a
+    return own + (rate - 60) if rate is not None else own    # kick): the token carries the chip's rate, and the pitch is the rate's offset
 
 
 def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",

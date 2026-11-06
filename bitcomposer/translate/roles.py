@@ -30,6 +30,12 @@ DRUM_PIECES = {"kick", "snare", "hat", "tom", "cymbal"}   # the drum namer's pie
 BY_SOUND = 0.8                        # the share of a voice's notes on drum samples (or on instruments held) that decides
 FEW_PITCHES = 4                       # pitches a sample a drum voice plays at most: a bass on a low sample plays many
                                       # (728 bass voices became drums without this, the namer calling their samples toms)
+DRUM_HOLD = 2.0                       # beats: a voice on a tonal sample taken for a drum by how it plays (one or two pitches, eight
+                                      # notes or more) holds its notes under this at the median. FFVI's 109 drum voices on percussion
+                                      # samples hold a median 0.45 beats, three quarters under 0.95, only cymbal swells two or more;
+                                      # of its 31 drum voices on tonal samples eight held two beats or more, pads and a lead
+                                      # (Another World of Beasts' bowed strings for seven beats, The Phantom Forest's lead for twelve),
+                                      # and a kit written from them struck a pad once a bar (round 77, from Song Check 63)
 LOW_PIECES = {"kick", "tom"}          # the pieces a bass sample can pass for; a voice on them is a drum voice only
 SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on
 
@@ -205,8 +211,9 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES
                 and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)):
             roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
-        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2)):
-            roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
+        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
+                                                                           and f["length_beats"] < DRUM_HOLD)):   # held like a drum, not a pad (round 77)
+            roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")} | {"length_beats": round(f["length_beats"], 2)})
     for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:
             roles[v] = Role(v, DOUBLE, of=u, evidence={"echo_ms": round(delay * 1000, 1)})
