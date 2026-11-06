@@ -668,6 +668,34 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50,o=o@0.40@@6.95")
         s.kit_levels = {}
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@@@0.50,o=o@@@6.95")
+        # round 79: with a key, a tonal piece's note is a degree of it (scale steps from the tonic's fourth-octave note, 7 an
+        # octave; semitones with a c where the note is off the scale), a drum piece the game tunes carries a t on its rate,
+        # and the balance token carries the key before the top
+        s.kit_levels, s.kit_holds = {"k": 0.8, "o": 0.2}, {}
+        s.kit_pitches, s.kit_rates = {"o": 62}, {"k": 48}
+        s.tonic, s.mode = 0, "major"
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@d1")             # D4 is one step above C4 in C major
+        self.assertEqual(rhythm.kit_token(s, 0.5, tuned=frozenset({"k"})), "K=k@1.60@r48t,o=o@0.40@d1")
+        s.kit_pitches["o"] = 75                                                            # D#5: off C major, 15 semitones above C4
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@c15")
+        s.tonic, s.mode = 9, "minor"                                                       # A minor: D#5 off it too, 6 above A4
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@c6")
+        s.kit_pitches["o"] = 76                                                            # E5 in A minor: four steps above A4, a fifth
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@d4")
+        self.assertEqual(rhythm.kit_degree(s, 69), "d0"); self.assertEqual(rhythm.kit_degree(s, 57), "d-7")
+        token = rhythm.balance_units([s])[0].outcome.split()
+        self.assertIn("key=9:minor", token)
+        self.assertLess(token.index("key=9:minor"), token.index("tempo=medium"))
+        # a sample the game strikes at another rate in another song is tuned; one it strikes at one rate in most songs is a sound
+        s2 = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id2", game="G", numbers=[0, 1], parts=[(0, 2)], pieces={"k": "kick"})
+        s2.notes["drums"] = s.notes["drums"]; s2.voice_notes = {2: ("drums", s2.notes["drums"])}
+        s2.kit_rates = {"k": 52}
+        self.assertEqual(rhythm.tuned_samples([s, s2]), frozenset({"k"}))
+        s2.kit_rates = {"k": 48}
+        self.assertEqual(rhythm.tuned_samples([s, s2]), frozenset())
+        s3 = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id3", game="G", numbers=[0, 1], parts=[(0, 2)], pieces={"k": "kick"})
+        s3.notes["drums"] = s.notes["drums"]; s3.voice_notes = {2: ("drums", s3.notes["drums"])}; s3.kit_rates = {"k": 36}
+        self.assertEqual(rhythm.tuned_samples([s, s2, s3]), frozenset())                    # one outlier in three: the same rate holds two
 
     def test_the_kits_pieces_carry_their_own_levels(self):
         """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck

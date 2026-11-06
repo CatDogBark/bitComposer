@@ -480,7 +480,41 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     return out
 
 
-def kit_token(s, top: float = 0.0) -> str:
+TUNED_SHARE = 0.5                    # a kit sample is tuned to the key where no one struck rate holds more than this share of the songs
+                                     # that strike it (two or more), and its rate then moves with the written key (round 79): a crash at
+                                     # -12 in 21 of 22 songs and a hat at 0 in 11 of 12 are sounds; a "snare" at +3, -4, +2, +3 and -17,
+                                     # a tom at -20, -17 and -22, a sizzle at -2, +12 and -5 and a pad at -21 and -18 are tuned
+
+
+def tuned_samples(songs) -> frozenset:
+    """The kit samples the game tunes to the key (round 79): struck in two songs or more, with no one rate in more than
+    TUNED_SHARE of them. FFVI: four of its kit samples, the pitch-bent snare, the tonal tom, Cyan's sizzle and the pad
+    the namer took for a kick; one outlier among many (The Phantom Train's hat an octave up) makes no tuning."""
+    rates = {}
+    for s in songs:
+        for key, rate in (getattr(s, "kit_rates", None) or {}).items():
+            rates.setdefault("s" + key[:10] if len(key) >= 10 else key, []).append(rate)
+    return frozenset(sid for sid, rs in rates.items() if len(rs) >= 2 and Counter(rs).most_common(1)[0][1] <= TUNED_SHARE * len(rs))
+
+
+def kit_degree(s, pitch: int) -> str:
+    """A tonal kit piece's struck note as a degree of the song's key (round 79): scale steps from the tonic (`d9`, 7 an
+    octave, from the tonic's note in the fourth octave) where the note is on the song's scale, semitones (`c-3`) where it
+    is off it, the voice words' own convention; the absolute note where the song has no key. FFVI strikes its tonal kit
+    pieces in the song's scale in 10 of 12, and a written song's key is drawn apart from its balance token (40 of 45 sat
+    in another key than the token's song), so Cyan's sizzle on the minor sixth had landed on the leading tone."""
+    from .. import harmony
+    from ..writer.tune import scale_index
+    if s.tonic is None:
+        return str(int(pitch))
+    scale = {(s.tonic + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
+    tonic4 = 60 + s.tonic
+    if int(pitch) % 12 in scale:
+        return f"d{scale_index(int(pitch), scale) - scale_index(tonic4, scale)}"
+    return f"c{int(pitch) - tonic4}"
+
+
+def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
     with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
     a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots).
@@ -527,8 +561,10 @@ def kit_token(s, top: float = 0.0) -> str:
         with_level = top > 0 and level is not None and math.isfinite(level)   # never a "nan" share: the part's level stands in
         pitch, rate = pitches.get(key), rates.get(key)
         hold = holds.get(key)                                        # how long the song keys the piece for (round 77)
+        sid = "s" + key[:10] if len(key) >= 10 else key
         slots = [f"{round(level / top, 2):.2f}" if with_level else "",                       # in hundredths since round 70: tenths cost 2.9 dB
-                 f"r{int(rate)}" if rate is not None else f"{int(pitch)}" if pitch is not None else "",   # on a snare at 0.14 kept as 0.1
+                 (f"r{int(rate)}" + ("t" if sid in tuned else "")) if rate is not None       # on a snare at 0.14 kept as 0.1; a tuned rate (round 79)
+                 else kit_degree(s, pitch) if pitch is not None else "",                     # a tonal piece's note as a degree of the key (round 79)
                  f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else ""]
         while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
             slots.pop()
@@ -631,6 +667,7 @@ def balance_units(songs) -> list:
         habit_of_part[(u.song, u.values["part"])] = u.outcome
     for u in readings_mod.drum_habit_units(songs):
         habit_of_part[(u.song, R.DRUMS)] = u.outcome
+    tuned = tuned_samples(songs)                             # the kit samples the game tunes to the key (round 79), over the game
     out = []
     for s in songs:
         if not s.notes:
@@ -644,7 +681,7 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top), dh]   # and its kit as the eighth (round 63; each
+                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top, tuned), dh]   # and its kit as the eighth (round 63; each
                                                                                              # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
                     fields.pop()
@@ -660,6 +697,8 @@ def balance_units(songs) -> list:
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
+        if s.tonic is not None:                              # the song's key (round 79): what the kit's degrees and tuned rates are read against
+            tokens.append(f"key={s.tonic}:{'major' if s.mode == 'major' else 'minor'}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with

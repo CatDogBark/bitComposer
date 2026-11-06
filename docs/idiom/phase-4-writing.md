@@ -5016,3 +5016,62 @@ strike measured at the recording's rate (round 63); struck an octave down
 the first 150 ms are the recording's first 75, which the crash reads 0.6
 dB louder. A hat struck high (The Phantom Train's, +12 semitones) is
 shorter and brighter than the pack's, as the game's is.
+
+### Round 79: the struck note as a degree of the key (2026-11-06, from Song Check 64's Last Vault: "the hat almost sounds like a chain rustling and clashes with everything else")
+
+**Why.** Round 75 stored a tonal kit piece's struck note as an absolute
+pitch and round 78 a percussion piece's rate the same way, while the plan
+draws the written key apart from the balance token: 40 of the 45 kit
+tokens' written songs sat in another key than the token's song, 14 of the
+15 with a tonal piece. So Cyan's sizzle, a ringing cymbal with a tone near
+1.9 kHz struck two semitones under its recording, which lands on the minor
+sixth of Cyan's C minor, landed on the leading tone of Last Vault's A
+minor. FFVI strikes its tonal kit pieces in the song's scale in 10 of 12
+(the two off it are Strago's F sharp in G minor, the harmonic seventh),
+so the note is the song's business, not the sample's. The percussion
+samples' spectral tones land in the scale at chance (69 of 113, 7 in 12
+by chance), and a hat's ring at 2.2 kHz sits 16 dB over its band while the
+sizzle's sits 12: a tone in the sample says nothing; what the game does
+with it does. Five of FFVI's kit samples are struck at different rates in
+different songs (the pitch-bent "snare" at +3, -4, +2, +3 and -17, the
+tonal tom at -20, -17 and -22, the sizzle at -2, +12 and -5, the pad at
+-21 and -18, the open hat at 0, -1, 0 and -3); the crash sits at -12 in 21
+of 22 songs and the main hat at 0 in 11 of 12.
+
+**Built.** The balance token carries its song's key (`key=9:minor`,
+before the top). A tonal piece's note slot is a degree of it
+(`arrangement.kit_degree`: scale steps from the tonic's fourth-octave
+note where the note is on the song's scale, `d-7`; semitones where it is
+off it, `c+11`; the voice words' own convention since round 66), and the
+writer realizes it in the written key from the written tonic nearest the
+song's (`render.kit_note_of`: within a tritone, so the register stays
+where the game struck it). A percussion sample the game tunes
+(`arrangement.tuned_samples`: struck in two songs or more with no one
+rate in more than half of them, TUNED_SHARE) carries a t on its rate
+(`r63t`) and the writer moves that rate by the same tonic distance; an
+untuned one keeps its absolute rate, as a sound. The plan keeps the key,
+the degrees and the tuned marks (`kit_token_key`, `kit_piece_degree`,
+`kit_piece_tuned`); the absolute form is read still. Pack4 refit (backup
+`pack.json.r78`), the shipped vocabulary regenerated; the song count
+stands at 68, so the seeds draw as before. Tests: the degree counted and
+realized in three keys, the tuned mark counted and moved
+(`test_the_kits_pieces_carry_the_note_they_are_struck_at`,
+`test_a_kit_pieces_degree_is_realized_in_the_written_key`).
+
+**Measured.** The 45 kit tokens' written songs (`measure_r79.py`): the
+seven tonal kit pieces that carry a degree sat in the written scale 4 of 7
+times before, 6 of 7 after (the seventh is Strago's harmonic seventh,
+off the scale in the game too and written off it, `c+11`); nine tuned
+percussion pieces move with the key in nine songs. Levels do not move:
+Song Check 65's first step, five pairs on the same seed, has every part
+within 0.3 dB of its before. What moves is the note: Overpass of Bells'
+bell from A sharp to A, Last Terminal's from B to E (the fifth of both
+keys), The Endless Valley's from B to G, Last Vault's sizzle three
+semitones lower, The Rising Valley's tom four lower.
+
+**Open.** A tuned sample's rate moves by the tonic distance in semitones,
+not by scale degree: a major token song's third carried into a minor
+written key stays a major third. The sample's own tone is not read, so a
+tuned percussion piece cannot be put on a degree the way a tonal piece
+is. The drums' echo still comes from another song's echo word than the
+kit's (Cyan sends its sizzle to echo; the written song plays it dry).

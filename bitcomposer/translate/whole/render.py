@@ -428,14 +428,15 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                     out[role]["open_hihat"] = make(sid)
                 if not samples_mod.is_percussion(f"{pack_name}_{sid}"):
                     pitch, rate = plan_mod.kit_piece_pitch(plan, slot), plan_mod.kit_piece_rate(plan, slot)
-                    hold = plan_mod.kit_piece_hold(plan, slot)
+                    degree, hold = plan_mod.kit_piece_degree(plan, slot), plan_mod.kit_piece_hold(plan, slot)
                     plan.extras.setdefault(R.DRUMS, {}).setdefault("tonal_slots", set()).add(slot)   # the writer holds such a piece as the game does (round 77)
-                    tonal.append(f"{letter} {sid}" + (f" struck at {pitch}" if pitch is not None else f" struck {rate - 60:+d} semitones from the recording" if rate is not None
+                    tonal.append(f"{letter} {sid}" + (f" struck at {degree[0]}{degree[1]:+d} of the key, {kit_note_of(plan, slot, sid, out[role][slot][1], pack_name):.0f} here" if degree is not None
+                                                      else f" struck at {pitch}" if pitch is not None else f" struck {rate - 60:+d} semitones from the recording" if rate is not None
                                                       else " at the recording's own pitch") + (f", held {hold:.2f} beats" if hold else ""))
                 else:
                     rate = plan_mod.kit_piece_rate(plan, slot)   # a percussion piece's struck rate (round 78), as a note: 60 as recorded
-                    if rate is not None and rate != 60:
-                        off_rate.append(f"{letter} {sid} {rate - 60:+d} semitones")
+                    if rate is not None and (rate != 60 or plan_mod.kit_piece_tuned(plan, slot)):
+                        off_rate.append(f"{letter} {sid} {rate - 60:+d} semitones" + (f", tuned: {kit_note_of(plan, slot, sid, out[role][slot][1], pack_name) - 48:+.0f} in this key" if plan_mod.kit_piece_tuned(plan, slot) else ""))
             if taken:
                 plan.log.append("kit samples from the balance's song: " + ", ".join(taken))
             if tonal:
@@ -722,13 +723,24 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
     octaves under The Phantom Forest's accent; round 74 had the pack's own drum stand in, a snare for a lead."""
     from ... import samples as samples_mod
     from ...drums import KIT_NOTE
+    from ..harmony import MODES
+    from ..writer.tune import scale_index, scale_pitch
     letter = plan_mod.SLOT_LETTER.get(slot)
     given = (plan.extras.get(R.DRUMS, {}).get("kit") or {}).get(letter) if letter else None
     if given != name:
         return float(KIT_NOTE)
+    key = plan_mod.kit_token_key(plan)                      # the token song's key (round 79): a degree or a tuned rate is read against it
+    fold = ((plan.tonic - key[0] + 6) % 12) - 6 if key is not None else 0   # the written tonic's distance from the song's, within a tritone
     if samples_mod.is_percussion(name) or (pack_name and samples_mod.is_percussion(f"{pack_name}_{name}")):
-        rate = plan_mod.kit_piece_rate(plan, slot)        # the chip's rate as a note (round 78): 60 as recorded, 48 an octave under
-        return float(KIT_NOTE + (rate - 60)) if rate is not None else float(KIT_NOTE)
+        rate = plan_mod.kit_piece_rate(plan, slot)        # the chip's rate as a note (round 78): 60 as recorded, 48 an octave under;
+        shift = fold if plan_mod.kit_piece_tuned(plan, slot) else 0   # a tuned sample's rate moves with the key (round 79)
+        return float(KIT_NOTE + (rate - 60) + shift) if rate is not None else float(KIT_NOTE)
+    degree = plan_mod.kit_piece_degree(plan, slot)
+    if degree is not None and key is not None:              # the degree realized in the written key (round 79), from the written tonic
+        ref = 60 + key[0] + fold                            # nearest the song's own (the register the game struck it in, give or take a fourth)
+        wscale = {(plan.tonic + i) % 12 for i in MODES["major" if plan.mode == "major" else "natural_minor"]}
+        form, k = degree
+        return float(scale_pitch(scale_index(ref, wscale) + k, wscale)) if form == "d" else float(ref + k)
     pitch = plan_mod.kit_piece_pitch(plan, slot)
     if pitch is not None:
         return float(pitch)
@@ -736,7 +748,8 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
     source = getattr(sample, "source_rate", None) or c5
     own = 60.0 + 12.0 * math.log2(source / c5) if c5 and source else float(KIT_NOTE)   # the note at the recording's own rate
     rate = plan_mod.kit_piece_rate(plan, slot)             # a tonal sample the namer took for a drum (Another World of Beasts' pad as a
-    return own + (rate - 60) if rate is not None else own    # kick): the token carries the chip's rate, and the pitch is the rate's offset
+    shift = fold if plan_mod.kit_piece_tuned(plan, slot) else 0   # kick): the token carries the chip's rate, and the pitch is the rate's offset
+    return own + (rate - 60) + shift if rate is not None else own
 
 
 def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",

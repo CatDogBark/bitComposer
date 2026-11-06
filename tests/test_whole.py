@@ -849,7 +849,7 @@ class NewTablesTests(unittest.TestCase):
         tokens = rhythm.balance_units([s])[0].outcome.split()
         self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
-        tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud="))]
+        tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
         self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit
         self.assertTrue(tokens[1].startswith("drums=::::0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
@@ -1331,6 +1331,42 @@ class NewTablesTests(unittest.TestCase):
         self.assertIsNone(whole.kit_piece_hold(p, "hihat"))
         self.assertTrue(any("o sf89f5aedfd at 0.38 struck at 62 held 0.25 beats" in line for line in p.log), p.log)
         self.assertTrue(any("K sbfe716b9b6 at 1.70 struck -12 semitones from the recording held 0.50 beats" in line for line in p.log), p.log)
+
+    def test_a_kit_pieces_degree_is_realized_in_the_written_key(self):
+        """Round 79: the balance token carries its song's key; a tonal piece's note slot is a degree of it (`d9`, scale steps
+        from the tonic; `c-3` semitones off the scale) and a tuned drum's rate carries a t. The plan keeps them, and the
+        kit's note is realized in the written key from the written tonic nearest the song's: Cyan's sizzle on the minor
+        sixth stays a minor sixth, where the absolute note had landed on A minor's leading tone."""
+        import importlib
+        from types import SimpleNamespace
+        from bitcomposer.translate import tables
+        render_mod = importlib.import_module("bitcomposer.translate.whole.render")
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.2:::K=sbfe716b9b6@1.7@r48t@0.50,S=s1279e119a1@0.7@r60,o=sf89f5aedfd@0.38@d9@0.25,c=s3bfa4539ca@0.4@c-3:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(whole.kit_token_key(p), (2, "minor"))
+        self.assertEqual(p.extras["drums"]["kit_degrees"], {"o": ("d", 9), "c": ("c", -3)})
+        self.assertEqual(p.extras["drums"]["kit_rates"], {"K": 48, "S": 60})
+        self.assertEqual(p.extras["drums"]["kit_tuned"], {"K"})
+        self.assertEqual(whole.kit_piece_degree(p, "rim"), ("d", 9)); self.assertIsNone(whole.kit_piece_degree(p, "kick"))
+        self.assertTrue(whole.kit_piece_tuned(p, "kick")); self.assertFalse(whole.kit_piece_tuned(p, "snare"))
+        p.extras["drums"]["kit"] = {"K": "kick_sample", "S": "snare_sample", "o": "bell", "c": "crash_sample"}
+        p.tonic, p.mode = 9, "minor"                                                   # written in A minor; the token's song in D minor
+        bell = SimpleNamespace(c5_speed=32000, source_rate=32000)
+        self.assertEqual(render_mod.kit_note_of(p, "rim", "bell", bell), 72.0)              # d9 from the A nearest D4 (A3, 57): an octave and a third up, C5
+        p.tonic = 2
+        self.assertEqual(render_mod.kit_note_of(p, "rim", "bell", bell), 77.0)              # the same key as the token's: D4 + 9 steps = F5, the game's note
+        p.tonic = 7                                                                        # G minor: G4 (67) is the G nearest D4; d9 = Bb5 (82)
+        self.assertEqual(render_mod.kit_note_of(p, "rim", "bell", bell), 82.0)
+        from bitcomposer import samples as samples_mod
+        self.assertTrue(samples_mod.is_percussion("kick_sample"))
+        self.assertEqual(render_mod.kit_note_of(p, "kick", "kick_sample", bell), 48.0 - 12 + 5)   # a tuned rate moves with the key: D to G is +5
+        self.assertEqual(render_mod.kit_note_of(p, "snare", "snare_sample", bell), 48.0)       # an untuned one does not
+        p.extras["drums"]["kit"]["c"] = "crash_sample"
+        self.assertEqual(render_mod.kit_note_of(p, "crash", "crash_sample", bell), 48.0)       # a percussion sample takes no degree
 
     def test_a_doubling_voice_takes_the_tokens_level_and_sample(self):
         """Round 70: a voice beside the line plays at the token's share for that voice and on the token's sample for it,

@@ -83,6 +83,27 @@ def kit_piece_rate(plan, slot: str) -> int | None:
     return rates.get(letter) if letter else None
 
 
+def kit_piece_degree(plan, slot: str) -> tuple | None:
+    """A tonal kit piece's struck note as a degree of the balance token's song's key (round 79: `o=sfd6accf98a@2.08@d9@0.19`
+    on the drums' kit field): ("d", scale steps from the tonic) or ("c", semitones from it, off the scale); None where the
+    token gave none (an absolute note, kit_piece_pitch, or nothing)."""
+    degrees = plan.extras.get(R.DRUMS, {}).get("kit_degrees") or {}
+    letter = SLOT_LETTER.get(slot)
+    return degrees.get(letter) if letter else None
+
+
+def kit_piece_tuned(plan, slot: str) -> bool:
+    """Whether the game tunes the kit slot's percussion sample to the key (round 79: `r63t`): its rate then moves with the
+    written key."""
+    letter = SLOT_LETTER.get(slot)
+    return bool(letter) and letter in (plan.extras.get(R.DRUMS, {}).get("kit_tuned") or ())
+
+
+def kit_token_key(plan) -> tuple | None:
+    """The balance token's song's key, (tonic pitch class, "major"/"minor"), round 79; None for a token without one."""
+    return plan.extras.get(R.DRUMS, {}).get("token_key")
+
+
 def kit_piece_hold(plan, slot: str) -> float | None:
     """How long the balance token's song keys the kit slot's piece for, in beats (round 77: `o=sf89f5aedfd@0.38@62@0.25` on
     the drums' kit field, after the note's slot); None where the token gave none. The writer gives the hold to a piece on a
@@ -615,6 +636,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     loop_bar = loop_bar_of(parts)
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
     token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
+    token_kit_degrees, token_kit_tuned, token_key = {}, set(), None
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -626,6 +648,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             continue
         if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
             token_loud = float(rest)
+            continue
+        if role == "key":                                   # the token's song's key (round 79): the kit's degrees and tuned rates read against it
+            t, _, m = rest.partition(":")
+            token_key = (int(t), m or "major")
             continue
         band.append(role)
         if rest:
@@ -661,9 +687,13 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_kit[letter] = sid
                     if level and math.isfinite(float(level)):
                         token_kit_levels[letter] = float(level)
-                    if pitch.startswith("r"):               # the chip's rate as a note (round 78), for a piece the namer called a drum
-                        token_kit_rates[letter] = int(round(float(pitch[1:])))
-                    elif pitch:
+                    if pitch.startswith("r"):               # the chip's rate as a note (round 78), for a piece the namer called a drum;
+                        if pitch.endswith("t"):              # "t": the game tunes this sample to the key (round 79)
+                            token_kit_tuned.add(letter)
+                        token_kit_rates[letter] = int(round(float(pitch[1:].rstrip("t"))))
+                    elif pitch.startswith(("d", "c")):      # a degree of the token song's key (round 79): scale steps, or semitones off it
+                        token_kit_degrees[letter] = (pitch[0], int(pitch[1:]))
+                    elif pitch:                             # the absolute note (round 75's form, read still)
                         token_kit_pitches[letter] = int(round(float(pitch)))
                     if hold and float(hold) > 0:
                         token_kit_holds[letter] = float(hold)
@@ -711,11 +741,19 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     extras[role]["kit_pitches"] = token_kit_pitches
                 if token_kit_rates:                         # the rate a drum piece is struck at (round 78), as a note: 60 as recorded
                     extras[role]["kit_rates"] = token_kit_rates
+                if token_kit_degrees:                       # a tonal piece's note as a degree of the token song's key (round 79)
+                    extras[role]["kit_degrees"] = token_kit_degrees
+                if token_kit_tuned:                         # the percussion pieces the game tunes to the key (round 79)
+                    extras[role]["kit_tuned"] = token_kit_tuned
+                if token_key is not None:
+                    extras[role]["token_key"] = token_key
                 if token_kit_holds:                         # how long a tonal piece is keyed for (round 77): its hit lasts that, not the kit's beat
                     extras[role]["kit_holds"] = token_kit_holds
                 log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
                                                                                             + (f" struck at {token_kit_pitches[k]}" if k in token_kit_pitches else "")
                                                                                             + (f" struck {token_kit_rates[k] - 60:+d} semitones from the recording" if k in token_kit_rates else "")
+                                                                                            + (", tuned to the key" if k in token_kit_tuned else "")
+                                                                                            + (f" struck at {token_kit_degrees[k][0]}{token_kit_degrees[k][1]:+d} of the key" if k in token_kit_degrees else "")
                                                                                             + (f" held {token_kit_holds[k]:.2f} beats" if k in token_kit_holds else "")
                                                                                             for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
