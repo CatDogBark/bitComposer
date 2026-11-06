@@ -5075,3 +5075,66 @@ written key stays a major third. The sample's own tone is not read, so a
 tuned percussion piece cannot be put on a degree the way a tonal piece
 is. The drums' echo still comes from another song's echo word than the
 kit's (Cyan sends its sizzle to echo; the written song plays it dry).
+
+### Round 80: the kit slot's sample is the one the kit leans on (2026-11-06, from Song Check 64's Journey of the Quarry: "the snare sounds almost like a closed hi-hat with a strange electronic noise attached")
+
+**Why.** Round 63 gave the kit token one sample per piece letter: the
+sample the song strikes the letter on most. Where the drum namer puts two
+of a song's samples on one letter (20 letters in the 68 songs, mostly a
+hat letter shared by the main closed hat and a second hat sample, or a
+snare letter shared by the backbeat snare and a rattle), the most struck
+is the busiest sample, not the one the kit leans on. Battle Theme's snare
+letter holds its backbeat snare (82 hits at 0.31 of the loudest part) and
+a pitch-bent rattle in sixteenths (269 hits at 0.12); the token took the
+rattle, and Journey of the Quarry wrote its backbeats on it, dry, at one
+pitch: a bright 190 ms buzz on every backbeat, which the ear calls a
+closed hat with an electronic tail. Of the 20 split letters, 9 have the
+most struck sitting 3.7 to 11.4 dB under the loudest; in 1 the most struck
+is the loudest; 4 are two hat samples at the same level to the third
+decimal (Fanfare, Mog, Searching for Friends, The Decisive Battle); in 6
+the other sample has under a fifth of the letter's hits.
+
+**Built.** `arrangement.kit_slot_samples`: of the samples a song strikes
+a letter on, those with a fifth of the letter's hits or more (SLOT_SHARE)
+are in the running; the loudest by its median hit level takes the slot;
+samples within a decibel of the loudest (SLOT_TIE_DB, the ear's step) are
+as loud and the most struck of them takes it; with no level read, the most
+struck. `kit_token` takes its slots from it, so the level, note and hold
+slots are the pick's (Battle Theme's snare slot: 0.27 of the loudest part
+at the rattle's tuned rate, now 0.69 at the snare's). Pack4 refit (backup
+`pack.json.r79`), the shipped vocabulary regenerated; 68 songs, the seeds
+draw as before. Test: the pick, the fifth, the tie both ways, the no-level
+fallback and the token's slots
+(`test_the_kits_slot_takes_the_sample_the_kit_leans_on`).
+
+**Measured.** The pick changes in 9 of the 20 split letters (Battle
+Theme's and The Decisive Battle's snares from the rattle to the snare,
+Shadow's from a soft low-tuned sample to the snare, Devil's Lab's to its
+loudest snare, Under Martial Law's and "??"'s hats, Strago's hat and rim,
+Dancing Mad (part 5)'s tom from the rattle to the tom), in 8 tokens and 7
+of the 45 written songs with a kit. The written pattern is unchanged; the
+sample and its level are the game's for that sample, so the drums move
+with the pick. Song Check 65's five pairs, the drums' part level in the
+whole: Journey of the Quarry +0.7 dB, Restless Tides +1.2, Sleeping
+Aqueduct +2.1, The Shore of Mirrors +2.1, The Endless Bridge -0.9. Over
+the 45 kit tokens against the games' own renders (`drum_forward.py`),
+the written kit over the band by integrated loudness sits 0.9 dB under
+the game's at the median (1.1 after round 78), 3 dB or more forward in 7
+of 45 (6), 3 dB or more back in 15 (15); by hit level (the 95th
+percentile of 100 ms RMS) the median is +0.8 (+0.1) and the forward count
+12 (11). Of the seven songs whose kit changed, three moved toward the
+game's balance (Journey of the Quarry -1.2 to 0.0 dB, The Shore of
+Mirrors -3.1 to -0.9, Restless Tides -2.7 to -1.1) and four away (Far
+River -0.5 to +5.3, the one new forward song: Devil's Lab strikes the
+snare the slot now takes at 1.29 of its loudest part, and the written
+song plays every snare hit on it; Sleeping Aqueduct +0.5 to +2.6; The
+Quiet Wharf -1.0 to -3.4; The Endless Bridge -6.9 to -7.9). The pick is a
+question of which sample; its level is the game's for that sample.
+
+**Open.** One sample per letter: a letter the game splits between two
+samples at like levels (Techno de Chocobo's two hats, 561 and 535 hits)
+is written on one, and the rattle beside Battle Theme's backbeat snare is
+a second snare voice the game has and the written song does not; a second
+sample per letter, or the rattle as a piece of its own, is a counted word
+for later. Strago's hat (17 hits at 0.24 beside 18 at 0.06) now plays
+every hat hit on the louder sample.

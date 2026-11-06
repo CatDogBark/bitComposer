@@ -497,6 +497,37 @@ def tuned_samples(songs) -> frozenset:
     return frozenset(sid for sid, rs in rates.items() if len(rs) >= 2 and Counter(rs).most_common(1)[0][1] <= TUNED_SHARE * len(rs))
 
 
+SLOT_SHARE = 0.2                     # a sample struck this share of a piece letter's hits or more is in the running for the letter's
+                                     # slot (round 80); the loudest of those takes it
+SLOT_TIE_DB = 1.0                    # two samples within this of each other are as loud (the ear's step); the most struck of them
+                                     # takes the slot
+
+
+def kit_slot_samples(counts: Counter, levels: dict) -> dict:
+    """The sample each piece letter's slot takes (round 80): of the samples the song strikes the letter on, the loudest
+    (its median level, kit_levels) among those with SLOT_SHARE of the letter's hits or more, the most struck among samples
+    within SLOT_TIE_DB of the loudest; the most struck where no level is known. Round 63 had taken the most struck: FFVI
+    strikes 20 of its kit letters on two samples or more, and in 9 the most struck is not the loudest (Battle Theme's snare
+    slot took its sixteenth-note rattle, 269 hits at 0.12, over the backbeat snare, 82 hits at 0.31; the other 11 are the
+    same sample's hits split with a second at the same level, or a tie to the third decimal, and keep the most struck).
+    `counts`: {(letter, sample key): hits}."""
+    by_letter = {}
+    for (letter, key), n in counts.items():
+        by_letter.setdefault(letter, {})[key] = n
+    out = {}
+    for letter, keys in by_letter.items():
+        total = sum(keys.values())
+        running = [k for k, n in keys.items() if n >= SLOT_SHARE * total] or list(keys)
+        known = [k for k in running if levels.get(k) is not None and math.isfinite(levels[k])]
+        if known:
+            top = max(levels[k] for k in known)
+            tied = [k for k in known if top <= 0 or levels[k] >= top * 10 ** (-SLOT_TIE_DB / 20)]
+            out[letter] = max(tied, key=lambda k: (keys[k], k))
+        else:
+            out[letter] = max(running, key=lambda k: (keys[k], k))
+    return out
+
+
 def kit_degree(s, pitch: int) -> str:
     """A tonal kit piece's struck note as a degree of the song's key (round 79): scale steps from the tonic (`d9`, 7 an
     octave, from the tonic's note in the fourth octave) where the note is on the song's scale, semitones (`c-3`) where it
@@ -515,8 +546,9 @@ def kit_degree(s, pitch: int) -> str:
 
 
 def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
-    """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
-    with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
+    """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song's kit leans on
+    for it (round 80, kit_slot_samples: the loudest of the samples struck a fifth of the letter's hits or more; the most
+    struck until then), (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
     a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots).
     Since round 68 each piece carries its own level too, where the readings heard one: the median level of the notes
     struck on that sample (Song.kit_levels, the loudness factor applied as the part's level has it) as a share of the
@@ -544,10 +576,8 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
         piece = (s.pieces or {}).get(key)
         if key and piece in readings_mod.LETTERS:
             counts[(readings_mod.LETTERS[piece], key)] += 1
-    best = {}
-    for (letter, key), n in counts.most_common():
-        best.setdefault(letter, key)
     levels = getattr(s, "kit_levels", None) or {}
+    best = kit_slot_samples(counts, levels)
     pitches = getattr(s, "kit_pitches", None) or {}
     rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
     holds = getattr(s, "kit_holds", None) or {}

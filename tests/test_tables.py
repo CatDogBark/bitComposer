@@ -697,6 +697,28 @@ class BalanceLevelTests(unittest.TestCase):
         s3.notes["drums"] = s.notes["drums"]; s3.voice_notes = {2: ("drums", s3.notes["drums"])}; s3.kit_rates = {"k": 36}
         self.assertEqual(rhythm.tuned_samples([s, s2, s3]), frozenset())                    # one outlier in three: the same rate holds two
 
+    def test_the_kits_slot_takes_the_sample_the_kit_leans_on(self):
+        """Round 80: a piece letter struck on two samples takes the loudest of those with a fifth of its hits or more, not the
+        most struck (Battle Theme's rattle had taken the snare slot from the backbeat snare); the most struck where no level
+        is known or where the two are within a decibel; a sample under the fifth is not in the running however loud."""
+        from collections import Counter
+        counts = Counter({("S", "rattle"): 354, ("S", "backbeat"): 100, ("K", "kick"): 197, ("S", "accent"): 3})
+        self.assertEqual(rhythm.kit_slot_samples(counts, {"rattle": 0.18, "backbeat": 0.46, "kick": 0.46, "accent": 0.9}), {"S": "backbeat", "K": "kick"})
+        self.assertEqual(rhythm.kit_slot_samples(counts, {}), {"S": "rattle", "K": "kick"})
+        self.assertEqual(rhythm.kit_slot_samples(counts, {"rattle": 0.18}), {"S": "rattle", "K": "kick"})   # the only level known is the rattle's
+        self.assertEqual(rhythm.kit_slot_samples(counts, {"rattle": 0.300, "backbeat": 0.310}), {"S": "rattle", "K": "kick"})   # as loud: the most struck
+        self.assertEqual(rhythm.kit_slot_samples(counts, {"rattle": 0.300, "backbeat": 0.340}), {"S": "backbeat", "K": "kick"})  # 1.1 dB louder
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)],
+                        pieces={"rattle": "snare", "backbeat": "snare", "k": "kick"})
+        s.notes["drums"] = [(x / 4, 0.1, float("nan"), "rattle") for x in range(12)] + [(x, 0.1, float("nan"), "backbeat") for x in (1.0, 3.0, 5.0, 7.0)] + \
+                           [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)]
+        s.voice_notes = {2: ("drums", s.notes["drums"])}
+        s.kit_levels = {"rattle": 0.1, "backbeat": 0.4, "k": 0.5}
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.00,S=backbeat@0.80")                  # the slot's level is the pick's
+        del s.kit_levels["backbeat"]
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.00,S=rattle@0.20")
+
     def test_the_kits_pieces_carry_their_own_levels(self):
         """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck
         on that sample as a share of the loudest part's in tenths (`K=k@1.6,S=s@0.6,h=h@0.2`). The part's one level is the
