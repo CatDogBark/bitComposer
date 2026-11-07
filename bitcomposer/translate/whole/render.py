@@ -621,6 +621,22 @@ def sends_to_echo(echo: dict | None, role: str) -> bool:
     return role in plan_mod.SENDS
 
 
+def pan_of(plan: plan_mod.Plan, role: str, voice: int, letter: str | None = None) -> float:
+    """Where a note sits in the stereo field, as the right side's share (round 84): a kit piece at its slot's pan where the
+    token carries one (extras.drums.kit_pans), a pitched part's voice at the token's pan for that voice (plan.pans, the
+    line first, the voices beyond it by rank), and the writer's fixed pans (plan.PANS) for a token without the field or
+    a voice past its list. FFVI pans half its voices 0.1 or more off centre and a part's voices 0.15 to 0.18 apart at the
+    median; the fixed pans had given every written song one stereo picture, the tune at centre, the counter at 0.6."""
+    if role == R.DRUMS and letter is not None:
+        kit = plan.extras.get(R.DRUMS, {}).get("kit_pans") or {}
+        if letter in kit:
+            return kit[letter]
+    pans = (getattr(plan, "pans", None) or {}).get(role)
+    if pans and 0 <= voice < len(pans):
+        return pans[voice]
+    return plan_mod.PANS[role][voice % len(plan_mod.PANS[role])]
+
+
 def piece_sends(plan: plan_mod.Plan, echo: dict | None, role: str, letter: str | None = None) -> bool:
     """Whether a note sends to the song's echo: a kit piece whose token carries echo marks (round 82) by its letter's mark,
     the game's channel send for that sample, so Wild West's blip is wet while its kick beside it is dry; any other note
@@ -837,7 +853,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None, letter=None):
         idx, addr, c5 = instrument(name, sample)
-        pan = plan_mod.PANS[role][j % len(plan_mod.PANS[role])]
+        pan = pan_of(plan, role, j, letter)                 # the token song's own pan for the voice or the kit piece (round 84)
         send = piece_sends(plan, echo, role, letter)        # the echo word's parts (round 70), a kit piece's own mark (round 82), the upper parts without
         env = sample_envelope(name, pack_name)              # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)

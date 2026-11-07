@@ -189,6 +189,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   their order and votes with the field stripped, so every balance draw
   lands where it did; 17 tokens say same, 34 other (the Dancing Mad pair
   share one).
+  Since round 84 (2026-11-06) a pitched part's token carries its voices'
+  pans as a tenth field (`rhythm.pan_field`: the line voice's median
+  right-side share, then each voice beyond the line's in the sixth field's
+  rank order, kept to twentieths and joined by "/":
+  `accompaniment=half:56-68:0.8:2:0.6:1.2@s5a1fa4d5d3@0.33::s8320f1bea2:dense+varied:0.35/0.65`),
+  and `render.pan_of` pans each written voice there (`Plan.pans`; the log
+  line "pans from the balance: accompaniment=0.35/0.65 melody=0.50 kit
+  K=0.50 h=0.60"), the writer's fixed pans (`plan.PANS`) standing for a
+  token without the field or a voice past its list. Why: every written
+  song had one stereo picture, the tune at centre, the counter at 0.6, the
+  accompaniment's voices at 0.6 and 0.4, where FFVI sits half its voices
+  0.1 or more off centre (the melody in 37 of 76, the counter 63 of 111,
+  the accompaniment 72 of 153) and a part's voices 0.15 to 0.18 apart at
+  the median (the second rules audit, `rules-to-words.md`).
   Since round 63 (2026-10-29) the drums' token carries the song's kit as
   its eighth field (`rhythm.kit_token`: each piece letter with the pack
   id of the sample the song strikes it with most, `K=sbfe716b9b6,S=s1279e119a1`,
@@ -232,7 +246,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   and since round 82 an echo mark where the game sends the slot's sample
   (`@e`: the sample's own share of notes that send, which the readings
   keep beside the voices' since the chip toggles a channel's echo note by
-  note); the song's key (`key=9:minor`) stands before the top, and since
+  note), and since round 84 its pan after the mark (`@0.45`: the median
+  right-side share of the hits struck on the sample, kept to twentieths,
+  `rhythm.PAN_BIN`; `@m@@0.45` where the slot is dry); the song's key
+  (`key=9:minor`) stands before the top, and since
   round 82 its echo word before the key
   (`echo=0.20:80:0.78:melody:bass+drums`, the echo table's outcome), which
   the writer takes in place of a draw, a marked kit piece's notes sent and

@@ -161,6 +161,9 @@ class Song:
                                                       # recorded, 48 an octave under), for a piece the namer called a drum (PERCUSSION)
     kit_pitches: dict = field(default_factory=dict)   # a drum sample's key -> the note the song strikes it at most (round 75: a kit piece on a
                                       # tonal sample plays at the game's pitch, not the kit's one note)
+    voice_pans: dict = field(default_factory=dict)    # voice -> the median pan of its notes, the right side's share 0 (left) to 1 (right)
+                                      # (round 84: the balance token carries each part's voices' pans, so a song's stereo picture is its own)
+    kit_pans: dict = field(default_factory=dict)      # a drum sample's key -> the median pan of the hits struck on it (round 84: a kit slot's pan)
     loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
                                       # readings' feature render/loudness_dbfs, round 59); None where it was not measured
     echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
@@ -289,7 +292,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
-        level_rows, kit_rows, kit_pitch_rows, kit_rate_rows, kit_hold_rows = {}, {}, {}, {}, {}
+        level_rows, kit_rows, kit_pitch_rows, kit_rate_rows, kit_hold_rows, kit_pan_rows = {}, {}, {}, {}, {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
@@ -305,6 +308,9 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)
+                    pans_ = [r[4] for r in rows if not math.isnan(r[4])]   # where the voice sits in the stereo field (round 84)
+                    if pans_:
+                        song.voice_pans[voice] = statistics.median(pans_)
                     finite = [r[3] for r in rows if not math.isnan(r[3])]   # a kit's unread levels (NaN) are notes, not levels: a
                     if finite:                                                   # median over them was NaN, and three FFVI balance tokens
                         song.voice_levels[voice] = statistics.median(finite)   # carried "nan" for the drums, which a written song
@@ -322,6 +328,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                                 kit_pitch_rows.setdefault(key, []).append(int(round(r[2])))
                             if not math.isnan(r[1]) and r[1] > 0:   # how long the piece is keyed for (round 77)
                                 kit_hold_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[1])
+                            if not math.isnan(r[4]):                # where the piece sits in the stereo field (round 84)
+                                kit_pan_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[4])
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
@@ -331,6 +339,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         song.kit_pitches = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_pitch_rows.items()}   # the most struck note, the lower on a tie
         song.kit_rates = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_rate_rows.items()}
         song.kit_holds = {key: statistics.median(ls) for key, ls in kit_hold_rows.items()}
+        song.kit_pans = {key: statistics.median(ps) for key, ps in kit_pan_rows.items()}   # a kit slot's pan (round 84)
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         echo = dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'echo'", (sid,)).fetchall())   # the chip's echo

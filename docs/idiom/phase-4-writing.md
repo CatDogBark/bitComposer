@@ -5359,3 +5359,55 @@ is a drum; what tells a tom line from a fill is whether its pitches
 follow the chords, which the role reader does not know. A split voice
 takes the counter's figures and intervals, counted over FFVI's counters;
 its own figure (the blip's two a bar) is the drum limb's no longer.
+
+### Round 84: the pans ride the balance token (2026-11-06, the second rules audit's first candidate)
+
+**Why.** Every written song sat in one stereo picture: the tune at centre,
+the counter at 0.6, the harmony's voices at 0.35, 0.65 and 0.5, the
+accompaniment's at 0.6 and 0.4, the arp at 0.4, the bass and the kit at
+centre (plan.PANS, the first audit's rule #2, standing since the whole
+writer began). FFVI pans half its voices 0.1 or more off centre (the
+melody in 37 of 76 voices, the counter 63 of 111, the accompaniment 72 of
+153, the harmony 22 of 40, the drums 37 of 115) and sets a part's voices
+apart: the accompaniment's 0.15 at the median (0.2 or more in 17 of 45
+pairs), the counter's 0.18 (12 of 27), the harmony's 0.16, the drums'
+0.11. The store had kept a pan with every note since phase 1 (the right
+side's share of the two voice volumes, `spc.convert._loudness`), unread.
+
+**Built.** The readings keep each voice's median pan (`Song.voice_pans`)
+and each drum sample's (`Song.kit_pans`), from the stored rows; no song
+was read again. The balance token carries them: a pitched part's voices'
+pans as a tenth field (`rhythm.pan_field`: the line voice first, then the
+voices beyond the line in the sixth field's rank order, each kept to
+twentieths, `PAN_BIN`, and joined by "/"; the line's alone where a voice
+beyond it has no pan, so the ranks line up), a kit slot's pan after its
+echo mark (`kit_token`: `K=sid@1.70@r48@0.50@m@@0.45`). The plan reads
+both (`Plan.pans`, `extras.drums.kit_pans`; the log line "pans from the
+balance: accompaniment=0.35/0.65 melody=0.50 kit K=0.50 h=0.60") and
+`render.pan_of` pans each note there: a kit piece at its slot's pan, a
+voice at the token's for its rank, the fixed pans for a token without the
+field or a voice past its list. Pack4 refit on the same readings (backup
+`pack.json.before-r84`), the shipped vocabulary regenerated. Tests: the
+field and the slot forms, a song without pans keeping the old forms, the
+plan's reading and `pan_of`'s fallbacks.
+
+**Measured.** All 68 balance tokens carry their pitched parts' pans and
+all 47 kit tokens their slots'. Thirty seeds composed before and after:
+every song's notes are the same (the pans feed no draw; the one log line
+that moved is the kit's extras listing its pans). Written voices 0.1 or
+more off centre: accompaniment 20 of 60, counter 21 of 41, harmony 9 of
+18, melody 9 of 30, bass 7 of 30 (FFVI 47 %, 57 %, 55 %, 49 %, 32 %); a
+part's voices apart, median: accompaniment 0.20, counter 0.15, harmony
+0.15 (FFVI 0.15, 0.18, 0.16); kit slots 0.1 or more off centre 7 of 36
+(FFVI's drum voices 37 of 115). Song Check 67 pairs five seeds before and
+after: Winding Canopy's tune at 0.25 with its bass at 0.80, Restless
+Causeway Journey's bass at 0.30 under a harmony at 0.75, Coast of Tides'
+four counter voices fanned 0.25 to 0.65, Dusk of the Lagoon's tune at
+0.30 against a counter pair at 0.70, and a kit whose hat sits hard to one
+side.
+
+**Open.** A pan is a voice's median: a game voice that moves across the
+field inside a song (a sweep, a ping-pong echo) is one place here. A
+written voice past the token's count keeps the fixed pan (none in the
+thirty seeds: the voices are the token's). The chip's surround (the two
+sides inverted) reads as no pan; no FFVI kit voice has it.

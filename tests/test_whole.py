@@ -1797,6 +1797,30 @@ class TonalKitPieceTests(unittest.TestCase):
         self.assertEqual(p.extras["drums"]["kit_holds"], {"K": 0.5, "o": 0.25})
         self.assertTrue(any("S s1279e119a1 at 0.70 struck +0 semitones from the recording, an accent" in line for line in p.log), p.log)
 
+    def test_the_pans_ride_the_token(self):
+        """Round 84: the plan reads a pitched part's voices' pans (the token's tenth field) and a kit slot's pan (after the echo
+        mark); render.pan_of pans a voice or a kit piece there and falls to plan.PANS for a token without the field."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0:::sbass123456:medium+roots:0.50 "
+                 "drums=::::0.2:::K=sbfe716b9b6@1.7@r48@0.50@m@@0.45,h=sd1c4c7ce33@0.2@@@d@e@0.65:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7:::slead123456:medium+mixed:0.40 "
+                 "accompaniment=half:56-68:0.8:2:0.6:1.2@sacc1234567@0.50::sacc7654321:dense+varied:0.35/0.65 "
+                 "echo=0.20:80:0.78:melody:bass+drums key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.pans, {"bass": [0.5], "melody": [0.4], "accompaniment": [0.35, 0.65]})
+        self.assertTrue(any(line.startswith("pans from the balance: ") and "accompaniment=0.35/0.65" in line for line in p.log), p.log)
+        self.assertEqual(whole.pan_of(p, "melody", 0), 0.4)
+        self.assertEqual(whole.pan_of(p, "accompaniment", 1), 0.65)
+        self.assertEqual(whole.pan_of(p, "accompaniment", 2), whole.PANS["accompaniment"][0])          # a voice past the token's list: the old rule
+        if "drums" in p.band:
+            self.assertEqual(p.extras["drums"]["kit_pans"], {"K": 0.45, "h": 0.65})
+            self.assertEqual(p.extras["drums"]["kit_echo"], ["h"])                                     # the mark reads as before, the pan after it
+            self.assertEqual(whole.pan_of(p, "drums", 1, letter="h"), 0.65)
+            self.assertEqual(whole.pan_of(p, "drums", 0, letter="S"), whole.PANS["drums"][0])          # a slot without a pan: the old rule
+        p.pans = {}
+        self.assertEqual(whole.pan_of(p, "melody", 0), whole.PANS["melody"][0])
+
     def test_the_kits_echo_rides_the_token(self):
         """Round 82: the plan reads the token's echo word (extras.echo.word) and the slots' echo marks (extras.drums.kit_echo);
         render.echo_word takes the word in place of a draw, a vocabulary without an echo table included; piece_sends sends a
