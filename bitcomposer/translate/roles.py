@@ -25,7 +25,19 @@ channel (split_melodic_pieces, round 83), and on a channel under the tune
 a second instrument in a register of its own (split_second_instruments,
 round 89), each get a voice of their own before the parts are read; a
 tune's or counter's second instrument is the line changing colour and
-stays on its voice."""
+stays on its voice.
+
+A voice is read in stretches too (round 90): runs of notes on one sample
+(stretches_of, blips folded), each asked what it does beside another
+voice (stretch_relation: a double at so many semitones, parallel at one
+generic interval, or its own line). A voice that doubles the tune or
+runs parallel with it for half its notes or more is the tune's: a layer
+of the melody (`of` the tune's voice), whatever its own motion says.
+Kefka's three "counter" channels double its tune in octaves and thirds
+for whole stretches and the bass for another; the whole-voice doubling
+test never fires on a stretch, and parallel thirds are another pitch
+class, so they read as a counter-line with layers and were written as a
+three-voice block of their own at the song's loudest level."""
 import bisect
 import math
 import statistics
@@ -216,6 +228,19 @@ SECOND_SHARE = 0.1                    # the share of a channel's pitched notes a
 SECOND_NOTES = 16                     # and the notes it needs (the echo reader's floor for a voice): an eight-note pedal or effect stays on its channel
 SECOND_APART = 12                     # semitones between the two samples' median pitches that make the second's register its own where the
                                       # registers (each sample's 10th to 90th percentile pitches) overlap; disjoint registers are two at any distance
+STRETCH_NOTES = 8                     # a voice's stretches (round 90): runs of notes on one sample; a run under this many notes spanning under
+STRETCH_BEATS = 8.0                   # this many beats is a blip (a grace, an effect) and folds into the run before it
+STRETCH_NEAR = 0.06                   # beats: onsets this close are one event (rhythm.NEAR, which this module cannot import)
+STRETCH_DOUBLE = 0.8                  # the share of a stretch's notes that start with another voice's at the same pitch class: a double
+STRETCH_PARALLEL = 0.8                # the share that start with another voice's at all, and
+STRETCH_ONE_INTERVAL = 0.5            # the share of those pairs at one generic interval (thirds alternate 3 and 4 semitones): parallel
+STRETCH_COVER = 0.5                   # and either way the stretch strikes with this share of the followed voice's notes within its span (a pad
+                                      # holding the root under a tune that lands on the root at its eight onsets is no double of the tune)
+TUNE_LAYER = 0.5                      # a voice whose stretches double the tune or run parallel with it for this share of its notes or more is
+TUNE_LAYER_OF = (COUNTER, ACCOMP, ARP, HARMONY)   # a layer of the melody, from these parts (the bass stays the song's floor whatever it doubles),
+                                      # with SECOND_NOTES pitched notes at least (Good Night's three-note chord voices had become its tune's)
+GENERIC = (0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6)   # semitones within an octave as scale steps, key-free: a second 1 or 2, a third 3 or 4, a fourth
+                                      # 5, a fifth 6 or 7, a sixth 8 or 9, a seventh 10 or 11
 
 
 def drum_clause(f: dict) -> str | None:
@@ -244,6 +269,106 @@ def _register(mids) -> tuple:
     """A sample's register on a channel: its notes' 10th and 90th percentile pitches."""
     s = sorted(mids)
     return s[int(0.1 * (len(s) - 1))], s[int(0.9 * (len(s) - 1))]
+
+
+def generic(semitones: int) -> int:
+    """A semitone interval as scale steps, key-free (GENERIC): thirds (3 or 4 semitones) are two steps, sixths five, an
+    octave seven, so parallel thirds that alternate major and minor are one interval."""
+    s = abs(int(semitones))
+    steps = 7 * (s // 12) + GENERIC[s % 12]
+    return steps if semitones >= 0 else -steps
+
+
+def stretches_of(notes: list) -> list:
+    """A voice's notes ((beat, midi, sample key), sorted) as stretches: runs on one sample, in time order, each
+    {"key", "notes", "a", "b"} (its sample, its notes, its first and last beat). A run under STRETCH_NOTES notes spanning
+    under STRETCH_BEATS beats is a blip (a grace, an effect) and folds into the run before it (a leading blip into the run
+    after); a voice of blips alone is one stretch on its commonest sample."""
+    runs = []
+    for n in notes:
+        if runs and runs[-1]["key"] == n[2]:
+            runs[-1]["notes"].append(n)
+        else:
+            runs.append({"key": n[2], "notes": [n]})
+    out = []
+    for r in runs:
+        blip = len(r["notes"]) < STRETCH_NOTES and r["notes"][-1][0] - r["notes"][0][0] < STRETCH_BEATS
+        if blip and out:
+            out[-1]["notes"].extend(r["notes"])
+        elif blip:
+            out.append({"key": None, "notes": list(r["notes"])})
+        elif out and out[-1]["key"] is None:
+            out[-1]["key"] = r["key"]
+            out[-1]["notes"].extend(r["notes"])
+        else:
+            out.append({"key": r["key"], "notes": list(r["notes"])})
+    for r in out:
+        if r["key"] is None:
+            r["key"] = Counter(n[2] for n in r["notes"]).most_common(1)[0][0]
+        r["notes"].sort()
+        r["a"], r["b"] = r["notes"][0][0], r["notes"][-1][0]
+    return out
+
+
+def stretch_relation(stretch: dict, others: dict, near: float = STRETCH_NEAR) -> tuple:
+    """What a stretch does beside the other voices ({voice: [(beat, midi, key)], sorted}): ("double", voice, semitones)
+    where STRETCH_DOUBLE of its notes start with that voice's at the same pitch class; ("parallel", voice, semitones) where
+    STRETCH_PARALLEL of them start with that voice's and STRETCH_ONE_INTERVAL of those pairs sit at one generic interval
+    (the semitones the commonest of them); else ("own", None, None). Either way the stretch must strike with STRETCH_COVER
+    of the followed voice's notes within its span (a sparse pad under a busy tune follows nothing). The voice sharing the
+    most onsets is the one asked."""
+    best = None
+    for u, uns in others.items():
+        starts = [n[0] for n in uns]
+        within = bisect.bisect_right(starts, stretch["b"] + near) - bisect.bisect_left(starts, stretch["a"] - near)
+        hits = same = 0
+        semis, steps = Counter(), Counter()
+        for t, m, _ in stretch["notes"]:
+            lo, hi = bisect.bisect_left(starts, t - near), bisect.bisect_right(starts, t + near)
+            if lo == hi:
+                continue
+            k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
+            iv = int(round(m - uns[k][1]))
+            hits += 1
+            same += iv % 12 == 0
+            semis[iv] += 1
+            steps[generic(iv)] += 1
+        n = len(stretch["notes"])
+        if best is None or (hits / n, same / n) > (best[0], best[1]):
+            best = (hits / n, same / n, u, semis, steps, hits, within)
+    if best is None or best[5] == 0:
+        return ("own", None, None)
+    onsets, same, u, semis, steps, hits, within = best
+    if hits < STRETCH_COVER * within:
+        return ("own", None, None)
+    if same >= STRETCH_DOUBLE:
+        return ("double", u, semis.most_common(1)[0][0])
+    step, count = steps.most_common(1)[0]
+    if onsets >= STRETCH_PARALLEL and count >= STRETCH_ONE_INTERVAL * hits:
+        return ("parallel", u, Counter({iv: c for iv, c in semis.items() if generic(iv) == step}).most_common(1)[0][0])
+    return ("own", None, None)
+
+
+def voice_relations(by_voice: dict) -> dict:
+    """Every voice's stretches and what each does (stretches_of, stretch_relation): {voice: [(first beat, last beat,
+    sample key, kind, the voice it follows or None, semitones or None, notes)]}; `by_voice`: {voice: [(beat, midi,
+    key)]}, pitched."""
+    out = {}
+    for v, ns in by_voice.items():
+        if not ns:
+            continue
+        others = {u: uns for u, uns in by_voice.items() if u != v and uns}
+        rows = []
+        for st in stretches_of(sorted(ns)):
+            kind, of, semi = stretch_relation(st, others)
+            rows.append((st["a"], st["b"], st["key"], kind, of, semi, len(st["notes"])))
+        out[v] = rows
+    return out
+
+
+def _beat_notes(notes, grid) -> list:
+    """A voice's pitched notes as (beat, midi, sample key), sorted, for the stretch functions."""
+    return sorted((grid.beats(p.start) if grid else p.start / 0.5, p.midi, p.sample.key) for p in notes if p.midi is not None)
 
 
 def split_second_instruments(song, roles, grid=None) -> dict:
@@ -410,4 +535,20 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
             roles[v] = Role(v, COUNTER, evidence={"entropy": round(f["entropy"], 2), "steps": round(f["steps"], 2)})
         else:
             roles[v] = Role(v, ACCOMP, evidence={"per_beat": round(f["per_beat"], 2), "distinct": f["distinct"]})
+    # a voice that doubles the tune or runs parallel with it for half its notes or more, stretch by stretch, is the tune's
+    # (round 90): a layer of the melody, `of` the tune's voice, the part it read as kept in the evidence. Kefka's three
+    # "counter" channels double its tune in octaves and thirds for whole stretches (and the bass for another); the
+    # whole-voice doubling test above never fires on a stretch, nor on parallel thirds (another pitch class), and read as
+    # a counter line with layers they were written as a three-voice block of their own at the song's loudest level
+    if heard:
+        tune = _beat_notes(by_voice[top], grid)
+        for v in list(roles):
+            if v == top or v >= SECOND_BASE or roles[v].role not in TUNE_LAYER_OF:
+                continue
+            mine = _beat_notes(by_voice[v], grid)
+            if len(mine) < SECOND_NOTES:
+                continue
+            with_tune = sum(len(st["notes"]) for st in stretches_of(mine) if stretch_relation(st, {top: tune})[0] != "own")
+            if with_tune >= TUNE_LAYER * len(mine):
+                roles[v] = Role(v, MELODY, of=top, evidence={"with_tune": round(with_tune / len(mine), 2), "was": roles[v].role})
     return sorted(roles.values(), key=lambda r: r.voice)

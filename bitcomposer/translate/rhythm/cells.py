@@ -96,7 +96,7 @@ def melody_cells(song: readings_mod.Song, role: str = None) -> list:
     the highest): its onsets in twelfths from the bar line and its
     intervals, as one key; None where the bar has no note."""
     role = role or R.MELODY
-    line = sorted(arrangement_mod._line(song.notes.get(role, [])))
+    line = sorted(arrangement_mod._line(tune_line(song, role)))
     out = []
     for a, b in song.bars:
         mine = [n for n in line if a - readings_mod.NEAR <= n[0] < b - readings_mod.NEAR]
@@ -146,7 +146,7 @@ def cell_handoff_units(songs) -> list:
     for s in songs:
         if R.MELODY not in s.notes:
             continue
-        tune = sorted(arrangement_mod._line(s.notes[R.MELODY]))
+        tune = sorted(arrangement_mod._line(tune_line(s, R.MELODY)))
         cells = half_cells(tune, s.bars)
         if sum(1 for c in cells if c) < 4:
             continue
@@ -184,7 +184,7 @@ def half_recall_units(songs) -> list:
     for s in songs:
         if R.MELODY not in s.notes:
             continue
-        cells = [c for c in half_cells(sorted(arrangement_mod._line(s.notes[R.MELODY])), s.bars) if c]
+        cells = [c for c in half_cells(sorted(arrangement_mod._line(tune_line(s, R.MELODY))), s.bars) if c]
         if len(cells) < 4:
             continue
         keys = [c[2] for c in cells]
@@ -369,7 +369,7 @@ def register_notes(song: readings_mod.Song, role: str) -> list | None:
     voices = part_voices(song, role)
     if len(voices) < 2:
         return None
-    return voices[line_voice(voices, role)]
+    return voices[line_voice(voices, role, song)]
 
 
 def register_units(songs) -> list:
@@ -449,7 +449,7 @@ def gap_sound_units(songs) -> list:
             fastest = part_fastest(s, role)             # the part's speed class (round 35): FFVI's string pad played fast sounds a
             speed = speed_tier(fastest if fastest is not None else 0.0)   # fifth to a third of its gap, played slow nearly all of it
             if len(voices) >= 2:
-                line = line_voice(voices, role)
+                line = line_voice(voices, role, s)
                 streams = (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x]))
             else:
                 streams = (("only", next(iter(voices.values()))),)
@@ -612,9 +612,15 @@ def part_voices(song: readings_mod.Song, role: str) -> dict:
     return {v: ns for v, (r, ns) in song.voice_notes.items() if r == role and ns}
 
 
-def line_voice(voices: dict, role: str):
+def line_voice(voices: dict, role: str, song: "readings_mod.Song | None" = None):
     """A layered part's line among its voices: the bass's the voice with the longest notes (its sustained voice under a
-    busier one), another part's the voice with the most notes (layer_units' rule)."""
+    busier one), another part's the voice with the most notes (layer_units' rule); the melody's, given the song, the heard
+    tune (round 90: a melody voice with an `of` in Song.voice_of is a layer of the tune, whatever its note count; The
+    Decisive Battle's parallel voice plays more notes than its tune)."""
+    if role == R.MELODY and song is not None:
+        heard = [v for v in voices if (getattr(song, "voice_of", None) or {}).get(v) is None]
+        if len(heard) == 1:
+            return heard[0]
     if role == R.BASS:
         lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
         return max(lengths, key=lambda v: (lengths[v], -v))
@@ -629,13 +635,16 @@ def line_notes(song: readings_mod.Song, role: str) -> list | None:
     a bar together, the line 6.6 and the second voice 4.5, and a line
     written to the merged count with a second line beside it had struck
     10.3 (2026-10-23); its two-voice basses are a sustained line under a
-    busy staccato voice in the same register."""
-    if role not in readings_mod.UPPER + (R.BASS,):
+    busy staccato voice in the same register. Since round 90 the melody's
+    and the counter's too (the melody's line the heard tune, line_voice):
+    a tune with a voice doubling it in octaves had its figures, habit and
+    speed counted over both voices."""
+    if role == R.DRUMS:
         return None
     voices = part_voices(song, role)
     if len(voices) < 2:
         return None
-    return voices[line_voice(voices, role)]
+    return voices[line_voice(voices, role, song)]
 
 
 
@@ -661,7 +670,7 @@ def second_figure_units(songs) -> list:
             voices = part_voices(s, role)
             if len(voices) < 2:
                 continue
-            line = line_voice(voices, role)
+            line = line_voice(voices, role, s)
             others = [n for v, ns in voices.items() if v != line for n in ns]
             key = lambda struck, a: readings_mod.pattern(p for p, _ in struck)   # noqa: E731  (the line's positions; the bass's marks are the line's own)
             line_bars = {k: key(struck, a) for k, a, struck in readings_mod.numbered_bars_of(s, role, voices[line])}
@@ -716,7 +725,7 @@ def tune_line(song: readings_mod.Song, role: str) -> list:
     (line_voice), else the part's notes; [] where the song has no such part."""
     voices = part_voices(song, role)
     if len(voices) >= 2:
-        return voices[line_voice(voices, role)]
+        return voices[line_voice(voices, role, song)]
     return song.notes.get(role, [])
 
 
@@ -951,7 +960,7 @@ def layer_sample_units(songs) -> list:
             voices = part_voices(s, role)                   # own, and a draw for it fell through to the root: an accompaniment pair)
             if len(voices) < 2:
                 continue
-            line = line_voice(voices, role)
+            line = line_voice(voices, role, s)
             other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
             keys = []
             for v in (line, other):
@@ -977,7 +986,7 @@ def layer_sound_units(songs) -> list:
             voices = part_voices(s, role)
             if len(voices) < 2:
                 continue
-            line = line_voice(voices, role)
+            line = line_voice(voices, role, s)
             for which, ns in (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x])):
                 share = sounded_share(ns)
                 if share is not None:
@@ -1012,7 +1021,7 @@ def tune_doubling_units(songs) -> list:
         if found is None:
             continue
         cells, _, theme_w, theme = found
-        tune = sorted(arrangement_mod._line(s.notes.get(R.MELODY, [])))
+        tune = sorted(arrangement_mod._line(tune_line(s, R.MELODY)))
         others = {role: (melody_cells(s, role), sorted(arrangement_mod._line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
         for k, c in enumerate(cells):
             if not c or c == theme:
@@ -1045,7 +1054,7 @@ def theme_doubling_units(songs) -> list:
         if found is None:
             continue
         cells, _, theme_w, theme = found
-        tune = sorted(arrangement_mod._line(s.notes.get(R.MELODY, [])))
+        tune = sorted(arrangement_mod._line(tune_line(s, R.MELODY)))
         others = {role: (melody_cells(s, role), sorted(arrangement_mod._line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
         for k, c in enumerate(cells):
             if c != theme:

@@ -382,7 +382,7 @@ def chord_tone_habit_units(songs) -> list:
     constant gave 0.75 in the first whole songs, 2026-10-23)."""
     out = []
     for s in songs:
-        line = _line(s.notes.get(R.MELODY, []))
+        line = _line(cells_mod.tune_line(s, R.MELODY))
         hits, total = 0, 0
         for n in line:
             if abs(n[0] - round(n[0])) >= readings_mod.NEAR:
@@ -442,7 +442,7 @@ def voice_level_shares(song: readings_mod.Song, role: str) -> list | None:
     voices = cells_mod.part_voices(song, role)
     if len(voices) < 2:
         return None
-    line = cells_mod.line_voice(voices, role)
+    line = cells_mod.line_voice(voices, role, song)
     a = song.voice_levels.get(line)
     if not a:
         return None
@@ -464,20 +464,74 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     `level share@sample@note share` ("3.2@s5a1fa4d5d3@0.12": its level over the line's, the pack id of the sample it
     plays most, its notes over the line's). FFVI's extra voices are on another sample than the line in 45 of 73
     accompaniments, 27 of 42 counters and 15 of 15 basses, and play 0.5-0.7 of the line's notes; drawn apart, the written
-    ones had taken the line's sample and played 0.84-1.15 of its notes, a sparse pad in the game a busy riff over the tune."""
+    ones had taken the line's sample and played 0.84-1.15 of its notes, a sparse pad in the game a busy riff over the tune.
+    Since round 86 a fourth sub-field, where the song plays the voice's sample; since round 90 a fifth, what the voice does
+    beside which part stretch by stretch (relation_words: "ox9>dm-12x14>o")."""
     shares = voice_level_shares(song, role)
     if shares is None:
         return None
     voices = cells_mod.part_voices(song, role)
-    line = cells_mod.line_voice(voices, role)
+    line = cells_mod.line_voice(voices, role, song)
     others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+    relations = relation_words(song)                        # what each voice does beside the others, stretch by stretch (round 90)
     out = []
     for share, v in zip(shares, others):
         keys = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
         key = keys.most_common(1)[0][0] if keys else ""
         sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
         rng = sample_range_in(voices[v], key) if key else ""    # where the token song plays this voice's sample (round 86)
-        out.append(f"{share}@{sid}@{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}" + (f"@{rng}" if rng else ""))
+        subs = [share, sid, f"{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}", rng, relations.get(v, "")]
+        while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
+            subs.pop()
+        out.append("@".join(subs))
+    return out
+
+
+RELATION_LETTERS = {R.MELODY: "m", R.COUNTER: "c", R.ACCOMP: "a", R.HARMONY: "h", R.ARP: "r", R.BASS: "b"}   # a relation's target part
+RELATION_KINDS = {"double": "d", "parallel": "p", "own": "o"}
+
+
+def bar_index(song: readings_mod.Song, t: float) -> int:
+    """The index in song.bars of the bar beat `t` falls in (the last bar past the end, the first before the start)."""
+    for k, (a, b) in enumerate(song.bars):
+        if a - readings_mod.NEAR <= t < b - readings_mod.NEAR:
+            return k
+    return len(song.bars) - 1 if song.bars and t >= song.bars[-1][1] - readings_mod.NEAR else 0
+
+
+def relation_words(song: readings_mod.Song) -> dict:
+    """Each pitched voice's relation stretches as the balance token has them (round 90): "ox9>dm-12x14>o". In each
+    stretch (roles.stretches_of: a run of notes on one sample, blips folded) what the voice does beside another voice
+    (roles.stretch_relation: a double at so many semitones, "d"; parallel at one generic interval, "p"; or its own line,
+    "o"), the voice followed as its part's letter (RELATION_LETTERS; a voice with no part letter, a double or a drum, reads
+    as own), then the stretch's bars counted from the song's first bar as round 85's pan word counts them, the last stretch
+    open; stretches alike in kind, target and interval run together, and a voice of one own stretch, or of fewer than
+    roles.SECOND_NOTES notes, has no word (the layers table's stands: a three-note voice's word would have the writer
+    play a whole parallel line). Kefka's channel 1: "ox9>dm-12x14>o", its own line for nine bars, the tune an octave under
+    for fourteen, its own again. The writer follows the word stretch by stretch (plan.stretched_notes)."""
+    pitched = {v: sorted((n[0], n[2], n[3]) for n in ns if n[2] is not None and not math.isnan(n[2]))
+               for v, (role, ns) in song.voice_notes.items() if role != R.DRUMS}
+    roles_of = {v: role for v, (role, _) in song.voice_notes.items()}
+    out = {}
+    for v, rows in R.voice_relations({v: ns for v, ns in pitched.items() if ns}).items():
+        if len(pitched[v]) < R.SECOND_NOTES:
+            continue
+        words = []
+        for a, b, key, kind, of, semi, n in rows:
+            letter = RELATION_LETTERS.get(roles_of.get(of)) if of is not None else None
+            word = f"{RELATION_KINDS[kind]}{letter}{semi:+d}" if kind != "own" and letter else "o"
+            end = bar_index(song, b)
+            if words and words[-1][0] == word:
+                words[-1][1] = end
+            else:
+                words.append([word, end])
+        if len(words) == 1 and words[0][0] == "o":
+            continue
+        parts, prev = [], -1
+        for i, (word, end) in enumerate(words):
+            parts.append(word if i == len(words) - 1 else f"{word}x{max(1, end - prev)}")
+            prev = max(prev, end)
+        out[v] = ">".join(parts)
     return out
 
 
@@ -643,7 +697,7 @@ def part_sample_field(s, role: str) -> str:
     notes = s.notes.get(role, [])
     voices = cells_mod.part_voices(s, role)
     if len(voices) >= 2:
-        notes = voices[cells_mod.line_voice(voices, role)]
+        notes = voices[cells_mod.line_voice(voices, role, s)]
     keys = [n[3] for n in notes if isinstance(n[3], str) and n[3] and ("s" + n[3][:10] if len(n[3]) >= 10 else n[3]) == sid]
     rng = sample_range_in(notes, keys[0]) if keys else ""
     return f"{sid}@{rng}" if rng else sid
@@ -662,7 +716,7 @@ def part_sample_id(s, role: str) -> str:
     if role != R.DRUMS:
         voices = cells_mod.part_voices(s, role)
         if len(voices) >= 2:
-            notes = voices[cells_mod.line_voice(voices, role)]
+            notes = voices[cells_mod.line_voice(voices, role, s)]
     c = Counter(n[3] for n in notes if isinstance(n[3], str) and n[3])
     if not c:
         return ""
@@ -696,7 +750,7 @@ def pan_field(song: readings_mod.Song, role: str) -> str:
     voices = cells_mod.part_voices(song, role)
     if not voices:
         return ""
-    line = cells_mod.line_voice(voices, role)
+    line = cells_mod.line_voice(voices, role, song)
     if line not in pans or not math.isfinite(pans[line]):
         return ""
     others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
@@ -1084,7 +1138,7 @@ def _beside_lines(songs):
             voices = cells_mod.part_voices(s, role)                   # their shared onsets in FFVI; written apart it had at 31 % (2026-10-24)
             if len(voices) < 2:
                 continue
-            line = cells_mod.line_voice(voices, role)
+            line = cells_mod.line_voice(voices, role, s)
             lns = pitched(voices[line])
             for other in sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v)):
                 kind = harness.relation(voices[line], voices[other])[0]
@@ -1312,11 +1366,7 @@ def layer_units(songs) -> list:
         for role, voices in by_role.items():
             if len(voices) < 2:
                 continue
-            if role == R.BASS:
-                lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
-                line = max(lengths, key=lambda v: (lengths[v], -v))
-            else:
-                line = max(voices, key=lambda v: (len(voices[v]), -v))
+            line = cells_mod.line_voice(voices, role, s)         # the bass's the voice with the longest notes, the melody's the heard tune (round 90)
             extras = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
             for rank, other in enumerate(extras, start=2):      # every voice beside the line, the busiest first, its own relation
                 kind = harness.relation(voices[line], voices[other])
@@ -1523,7 +1573,7 @@ def melody(songs) -> Melody:
         if R.MELODY not in s.notes:
             continue
         m.songs += 1
-        line = _line(s.notes[R.MELODY])
+        line = _line(cells_mod.tune_line(s, R.MELODY))
         m.notes += len(line)
         pitches = [round(n[2]) for n in line]
         moves = [y - x for x, y in zip(pitches, pitches[1:])]

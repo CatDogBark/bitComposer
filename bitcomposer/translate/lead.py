@@ -61,7 +61,7 @@ def lead_of(voices: dict, window: float = LEAD_WINDOW) -> tuple[int | None, str]
     tonal voices (no drums, no doubles). Returns (voice, why): the labelled melody where heard, else the most varied heard
     voice ("relabel"), else the label ("nothing heard"); (None, "no melody") without a melody."""
     heard_all = {v: x for v, x in voices.items() if x.get("lufs") is not None}
-    mel = next((v for v, x in voices.items() if x["role"] == R.MELODY), None)
+    mel = next((v for v, x in voices.items() if x["role"] == R.MELODY and x.get("of") is None), None)   # a layer of the tune is never the lead (round 90)
     if mel is None:
         return None, "no melody"
     if not heard_all:
@@ -69,7 +69,7 @@ def lead_of(voices: dict, window: float = LEAD_WINDOW) -> tuple[int | None, str]
     loud = max(x["lufs"] for x in heard_all.values())
     if mel in heard_all and heard_all[mel]["lufs"] >= loud - window:
         return mel, "label kept"
-    heard = [v for v, x in heard_all.items() if x["lufs"] >= loud - window and x["role"] != R.BASS]
+    heard = [v for v, x in heard_all.items() if x["lufs"] >= loud - window and x["role"] != R.BASS and x.get("of") is None]
     varied = [v for v in heard if x_fits(heard_all[v])] or heard
     if not varied:
         return mel, "nothing heard"
@@ -83,11 +83,15 @@ def x_fits(x: dict) -> bool:
 def relabel_plan(voices: dict, lead: int) -> dict:
     """{voice: new role} for a song whose lead is `lead`: the lead becomes the melody; the voice that was the melody
     becomes a counter-line, or an accompaniment where the song has a counter already."""
-    mel = next((v for v, x in voices.items() if x["role"] == R.MELODY), None)
+    mel = next((v for v, x in voices.items() if x["role"] == R.MELODY and x.get("of") is None), None)
     if lead is None or lead == mel:
         return {}
     has_counter = any(x["role"] == R.COUNTER for v, x in voices.items() if v != lead)
-    return {lead: R.MELODY, mel: R.ACCOMP if has_counter else R.COUNTER}
+    plan = {lead: R.MELODY, mel: R.ACCOMP if has_counter else R.COUNTER}
+    for v, x in voices.items():                              # the old tune's layers (round 90) go back to the parts they read as
+        if x.get("of") == mel and x.get("was"):
+            plan[v] = x["was"]
+    return plan
 
 
 def render_voices(spc_path: str, song, out_dir: str, seconds: float = SECONDS) -> dict:
@@ -134,9 +138,11 @@ def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bo
             continue
         nbeats = int(s.bars[-1][1] - s.bars[0][0]) if s.bars else 1
         voices = {}
+        evidence = {voice: ev for voice, _, _, ev in s.voices}
         for v, (role, ns) in s.voice_notes.items():
             if v in rendered and role not in (R.DRUMS, R.DOUBLE):
-                voices[v] = {"role": role, "lufs": rendered[v], **features_of(sorted(ns), nbeats)}
+                voices[v] = {"role": role, "lufs": rendered[v], "of": s.voice_of.get(v), "was": (evidence.get(v) or {}).get("was"),
+                             **features_of(sorted(ns), nbeats)}
         lead, why = lead_of(voices, window)
         plan = relabel_plan(voices, lead)
         result[s.sid] = (s.title, why, plan)
@@ -147,11 +153,13 @@ def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bo
             if v != "whole" and l is not None:
                 db.execute("INSERT OR REPLACE INTO features VALUES (?,?,?,?)", (s.sid, "render", f"voice_lufs_{v}", l))
         if plan:
-            mel = next(v for v, x in voices.items() if x["role"] == R.MELODY)
+            mel = next(v for v, x in voices.items() if x["role"] == R.MELODY and x.get("of") is None)
             db.execute("INSERT OR REPLACE INTO features VALUES (?,?,?,?)", (s.sid, "lead", "was_melody", float(mel)))
             db.execute("INSERT OR REPLACE INTO features VALUES (?,?,?,?)", (s.sid, "lead", "now_melody", float(lead)))
             for v, r in plan.items():
                 db.execute("UPDATE voices SET role = ? WHERE song = ? AND voice = ?", (r, s.sid, v))
+                if voices.get(v, {}).get("of") == mel:          # a layer of the old tune follows no voice now
+                    db.execute("UPDATE voices SET [of] = NULL WHERE song = ? AND voice = ?", (s.sid, v))
         db.commit()
         if not keep:
             for p in glob.glob(os.path.join(work, f"{s.sid}*.it")):

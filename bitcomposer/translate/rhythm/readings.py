@@ -143,6 +143,7 @@ class Song:
     mode: str = "major"
     loop_bar: int | None = None                   # the bar number the loop returns to
     voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
+    voice_of: dict = field(default_factory=dict)   # voice -> the voice it follows (Role.of): the melody's layers point at the heard tune (round 90)
     bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
     voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
     second_voices: dict = field(default_factory=dict)   # voice -> (role, its notes): a channel's second instrument in its own register, split
@@ -307,6 +308,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
             except ValueError:
                 song.voices.append((voice, role, of, {}))
+            if of is not None:
+                song.voice_of[voice] = of
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
@@ -440,7 +443,7 @@ def part_levels(song: Song, pooled: dict) -> dict:
         voices = cells_mod.part_voices(song, role)
         if len(voices) < 2:
             continue
-        level = song.voice_levels.get(cells_mod.line_voice(voices, role))
+        level = song.voice_levels.get(cells_mod.line_voice(voices, role, song))
         if level is not None and math.isfinite(level):
             out[role] = level
     return out
