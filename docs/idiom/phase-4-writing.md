@@ -5461,3 +5461,65 @@ A first stay longer than the written song never moves (a 24-bar stay in a
 22-bar song). The change lands on the written bar line where FFVI's came
 in mid-bar in three of four (a pickup, a rest). A kit voice's places are
 not read: its slots' pans are per sample (round 84).
+
+### Round 86: the token song's own range for its own sample (2026-11-06, the second rules audit's second candidate)
+
+**Why.** Round 34 chooses a voice's sample before the writing and binds
+the voice to the range the game plays that sample over, drawn from the
+`ranges` word by sample and part, pooled over every song that plays the
+sample. FFVI shares 13 of its 17 bass samples, their per-song centres 15
+semitones apart, and another song's range overlaps this song's by under
+8 semitones in 88 % of the cross-song pairs; so the draw usually handed
+the bass another song's range, and `bound_of` wrote the voice in the
+overlap, a sliver widened to 8 semitones or the other song's range alone.
+Over thirty seeds 11 of 27 written basses came out narrower than their
+planned register (by 12 semitones at the median) and 9 shifted 4 or more
+semitones from it: Old Catacombs' bass at 28-36 under a planned 32-48, The
+Still Gorge's at 28-36 under 36-56, The Inner Grotto's at 56-76. The token
+already names the sample as its own song's; the draw did not know which
+song. The audit also found the register word itself spanning two
+instruments where a line voice changes sample (Return of the Outpost's
+token bass 28-80, its bass sample played 24-40 there).
+
+**Built.** The balance token's sample field carries the range the song
+plays that sample over in the part's line voice, after the id
+(`rhythm.part_sample_field`: `s1d296a2572@32-52`, `sample_range_in`, the
+ambitus at the registers word's grain, nothing under eight notes), and
+each voice beyond the line carries its own sample's range as a fourth
+slot of its layer entry (`1.3@s5a1fa4d5d3@0.33@52-60`). The plan keeps
+them (`Plan.sample_ranges`, `Plan.layer_ranges`) and `samples_for` binds
+a voice on the token's sample to that range: the line (`bound_of` with the
+planned register, so a register inside the sample's range comes out
+whole), the second voice's sample, and each apart voice's own sample in
+`voice_bounds`; the pooled draw is still made on the stream and left
+unused, so no later draw moves. A tune keeps round 43's wall, the whole
+range the game ever took its sample over: FFVI's tunes change sample
+mid-song, and the main sample's own range had cut 9 of 30 written tunes
+under their token's ambitus in the first cut. Pack4 refit on the same
+readings (backup `pack.json.before-r86`), the shipped vocabulary
+regenerated. Tests: the field and the layer slot, a part under eight
+notes keeping the bare id, the plan's reading, and the bound with and
+without the field against a ranges table that says another song's range.
+
+**Measured.** Thirty seeds, plans identical (registers, band, voices).
+Voices bound narrower than their planned register: bass 11 of 27 to 8,
+accompaniment 10 of 27 to 4, harmony 1 of 11 to 0, counter 0, melody 2 of
+30 unchanged; shifted 4 semitones or more: bass 9 to 8, accompaniment 8
+to 5, harmony 6 to 1. The basses still "narrower" are those whose
+register word spans two instruments: the bound is now that song's own
+use of the sample (28-40 under a 28-80 word). The written bass line spans
+12 semitones at the median (13 before; FFVI's bass register 12). The
+notes change in 28 of 30 songs (the bass in 19, the accompaniment in 17,
+the counter in 9, the harmony in 7, the melody in 4, the last through the
+clash filter against a moved accompaniment). Song Check 69 pairs five:
+Old Catacombs' bass up an octave into 32-48, The Still Gorge's up an
+octave into 36-48, Return of the Outpost's down to 28-40, The Starlit
+Foundry's down to 28-36 with its accompaniment's voices at 52-60, The
+Inner Grotto's 56-76 to 48-76.
+
+**Open.** The register word where a line voice plays two instruments
+(28-80): a register a sample would be the honest word. The role reader's
+bass in The Inner Grotto's token is a tenor-range voice (48-80 on its
+sample); the writer follows it. A tune on the token's sample keeps the
+pooled wall, so it is still written over notes its sample never played in
+that song.

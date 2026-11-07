@@ -457,9 +457,13 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
         given = plan.token_samples.get(role)                # the token song's own instrument for the part (round 60), where the pack holds it
         if given and given in own:
             out[role] = make(given)
-            if ranges is not None and ranges.songs.get((given,), 0):
+            if ranges is not None and ranges.songs.get((given,), 0):   # the pooled draw stays on the stream; the token's own range stands
                 drawn[given] = tuple(int(x) for x in ranges.draw(range_context(given, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
-            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)")
+            own_range = plan.sample_ranges.get(role)         # in its place where the token carries it (round 86)
+            if own_range:
+                drawn[given] = tuple(own_range)
+            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)"
+                            + (f", played {own_range[0]}-{own_range[1]} there" if own_range else ""))
         if role == R.COUNTER and kind and R.MELODY in out and role not in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
             if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
                 out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
@@ -494,7 +498,11 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                                 + (f": it plays {fit[0]}-{fit[1]}" if fit else ": nothing known of its range, drawn from the pool"))
         if register:
             played = drawn.get(raw(out[role][0]))
-            if role in (R.MELODY, R.COUNTER):               # a tune's bound is the whole range the game took the sample over (round 43)
+            own_range = plan.sample_ranges.get(role) if given and raw(out[role][0]) == given and role not in (R.MELODY, R.COUNTER) else None
+            if own_range and own_range[1] - own_range[0] >= plan_mod.MIN_SPAN:   # the token song's own range for its own sample (round 86);
+                played = tuple(own_range)                   # the voice is written where its token song played this very sample. A tune keeps
+            elif role in (R.MELODY, R.COUNTER):             # round 43's wall: FFVI's tunes change sample mid-song, and the main sample's own
+                # range had cut 9 of 30 written tunes under their token's ambitus; a tune's bound is the whole range the game took the sample over
                 played = ambitus_of(models, raw(out[role][0]), pack=pack_name) or played
             else:
                 played = wide_enough(models, raw(out[role][0]), played, role, plan.log, pack=pack_name)
@@ -509,7 +517,10 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             given2 = (plan.layer_samples.get(role) or [""])[0]   # the token song's own sample for its voice beside the line (round 65)
             if given2 and given2 in own:
                 second = make(given2)
-                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own")
+                own2 = (plan.layer_ranges.get(role) or [None])[0]   # where the token song plays the second voice's sample (round 86)
+                if own2:
+                    drawn[given2] = tuple(own2)
+                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own" + (f", played {own2[0]}-{own2[1]} there" if own2 else ""))
             elif pair == ("same", "same"):                  # FFVI gives one sample to both voices in half its layered chord parts
                 second = out[role]
             elif pair is not None and reaches(ranges, pair[0], plan.registers[role], rng, drawn, role) and reaches(ranges, pair[1], reg2, rng, drawn, role):
@@ -539,7 +550,8 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 if word.startswith("doubling"):
                     continue
                 chosen = out.get(f"{role}:{v}") or out.get(f"{role}:second") or out[role]
-                played = ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0]))
+                own_v = (plan.layer_ranges.get(role) or [])[v - 1] if out.get(f"{role}:{v}") and v - 1 < len(plan.layer_ranges.get(role) or []) else None
+                played = tuple(own_v) if own_v else (ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0])))   # the token's own (round 86)
                 plan.bounds[f"{role}:{v}"] = voice_bounds(plan, role, word, played)
                 spans.append(f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word}, {raw(chosen[0])} {played[0]}-{played[1]})" if played
                              else f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word})")

@@ -86,7 +86,7 @@ bar; the stack's width; the tune's note lengths and first note.
 | 7 | the spans | replaced in round 34 as recorded; `BESIDE_SPAN` 24 stays as the second bass voice's fallback bound, `LAYER_OFFSET` 24 the reading's own grain |
 | 8 | the meter | standing: 4 of 68 FFVI songs in 3/4 lend no bars to a 4/4 song (round 81's open item) |
 | 9 | the doubling voice | standing: FFVI's doubled voices sit two semitones or more off their modal interval on 45 % of shared onsets (below) |
-| 10 | the bass's ceiling | replaced in round 34 by the sample's drawn range, and that range is the new rule: drawn pooled over the songs sharing the sample, it narrows the bass (below) |
+| 10 | the bass's ceiling | replaced in round 34 by the sample's drawn range, and that range is the new rule: drawn pooled over the songs sharing the sample, it narrows the bass (below); round 86 binds the voice to its token song's own range for the sample |
 
 ### What the standing rules cost, measured
 
@@ -110,7 +110,9 @@ bar; the stack's width; the tune's note lengths and first note.
   survives (27 of 34); the accompaniment loses 4 semitones in 12 of 55 voices;
   the melody is whole (28 of 30). Fix: the token names the sample, so the range
   is the token song's own for that sample, never a pooled draw, as rounds 63 to
-  83 did for the kit. Small.
+  83 did for the kit. Small. Built in round 86 (the tune keeps round 43's wall;
+  the register word itself spans two instruments where a line voice changes
+  sample, a remaining item).
 - **The kit's two voices** (`DRUM_VOICES`): 14 of FFVI's 48 kit songs overflow
   eight voices once the kit takes two, every one a one-channel game kit (FFVI's
   kits: one channel in 16 songs, two in 22, three or more in 9); `allot` then

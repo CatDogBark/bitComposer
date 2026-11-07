@@ -82,7 +82,14 @@ The words are grouped by where the writing draws them, in the order the song is 
   note, `render.kit_note_of`) (since round 70 the level and the sample
   fields are the LINE voice's, `readings.part_levels` and
   `part_sample_id`, so the line times each second-voice share reproduces
-  every voice, and the kit's piece levels are in hundredths)
+  every voice, and the kit's piece levels are in hundredths) (since round
+  86 the sample field carries the range the song plays that sample over
+  in the line voice, `s1d296a2572@32-52`, `rhythm.part_sample_field`, and
+  each voice beyond the line its own sample's as a fourth slot of its
+  entry, so a voice on the token's sample is written where its song
+  played it, `Plan.sample_ranges`, `Plan.layer_ranges`, never in a range
+  drawn for the sample from the other songs sharing it; the tune keeps
+  round 43's wall, the sample's whole range)
   (`accompaniment=half:56-68:0.8:2:0.6:1.2 bass=half:28-40:0.3:1:1.0
   drums=::::0.2:::K=sbfe716b9b6@1.7,S=s1279e119a1@0.7,h=sd1c4c7ce33@0.2
   melody=main:64-84:0.9:1:0.7`).

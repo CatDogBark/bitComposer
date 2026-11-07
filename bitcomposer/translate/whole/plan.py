@@ -220,6 +220,9 @@ class Plan:
     speeds: dict = field(default_factory=dict)        # a pitched part -> its fastest bar, notes a second (part_speeds): what its sample is fitted to
     bounds: dict = field(default_factory=dict)        # a part or "part:second" -> the register it is written in: where the game plays the sample
                                       # chosen for it (the ranges word's drawn range, bound_of), set by samples_for before the writing (round 34)
+    sample_ranges: dict = field(default_factory=dict)   # a part -> the range its token song plays the token's sample over (round 86): the voice on
+                                      # that sample is bound there (render.samples_for), never to another song's range drawn for the sample
+    layer_ranges: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's range on its own token sample, or None
     pans: dict = field(default_factory=dict)          # a pitched part -> its voices' pans, the right side's share, the line first (the balance
                                       # token's tenth field, round 84); render.pan_of pans a voice there, by plan.PANS without the field; a
                                       # voice in two places keeps the token's word, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85)
@@ -654,6 +657,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
     token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
     token_kit_echo, token_echo, token_pans, token_kit_pans = set(), None, {}, {}
+    token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -694,6 +698,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_samples[role] = [x[1] if len(x) > 1 else "" for x in parts_]
                 if any(len(x) > 2 for x in parts_):
                     token_layer_shares[role] = [float(x[2]) if len(x) > 2 and x[2] else 1.0 for x in parts_]
+                if any(len(x) > 3 and "-" in x[3] for x in parts_):   # each voice's range on its own sample in the token song (round 86)
+                    token_layer_ranges[role] = [tuple(int(y) for y in x[3].split("-")) if len(x) > 3 and "-" in x[3] else None for x in parts_]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
             if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
@@ -726,8 +732,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                         token_kit_pitches[letter] = int(round(float(pitch)))
                     if hold and float(hold) > 0:
                         token_kit_holds[letter] = float(hold)
-            elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels
-                token_samples[role] = fields[7]
+            elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels,
+                sid, _, played = fields[7].partition("@")   # and since round 86 the range the song plays it over ("s1d296a2572@32-52")
+                token_samples[role] = sid
+                if "-" in played:
+                    token_sample_ranges[role] = tuple(int(x) for x in played.split("-"))
             if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
                 token_habits[role] = fields[8].replace("+", " ")
             if len(fields) > 9 and fields[9]:               # the part's voices' pans (round 84): the line's first, then the voices beyond it;
@@ -985,7 +994,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels,
-                top_level=top_level, loudness=token_loud, pans=token_pans)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:

@@ -750,6 +750,26 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_classes(s), {"K": "m", "S": "d"})
         self.assertEqual([h.outcome for h in rhythm.drum_habit_units([s])], ["dense varied"])
 
+    def test_the_token_carries_where_its_samples_are_played(self):
+        """Round 86: the eighth field carries the range the song plays the part's sample over, and each voice beyond the
+        line its own sample's; a part with fewer than eight pitched notes on its sample keeps the bare id."""
+        chords = [Span(0.0, 16.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(float(i * 4), float(i * 4 + 4)) for i in range(4)], chords, bpm=100.0, sid="id", game="G",
+                        numbers=[0, 1, 2, 3], parts=[(0, 4)], tonic=0, mode="major")
+        line = [(float(i), 1.0, 36.0 + (i % 12), "bass0123456789") for i in range(16)]            # 36 to 47 on one sample
+        second = [(float(i), 1.0, 55.0 + (i % 5), "slap0123456789") for i in range(0, 16, 2)]      # 55 to 59
+        s.notes["bass"] = line + second
+        s.voice_notes = {0: ("bass", line), 1: ("bass", second)}
+        s.voice_levels = {0: 0.5, 1: 0.3}; s.levels = {"bass": 0.5}
+        self.assertEqual(rhythm.part_sample_id(s, "bass"), "sbass012345")
+        lo, hi = rhythm.part_register(line, ambitus=True)
+        self.assertEqual(rhythm.part_sample_field(s, "bass"), f"sbass012345@{lo}-{hi}")
+        lo2, hi2 = rhythm.part_register(second, ambitus=True)
+        self.assertTrue(rhythm.layer_tokens(s, "bass")[0].endswith(f"@{lo2}-{hi2}"), rhythm.layer_tokens(s, "bass"))
+        s.notes["melody"] = [(float(i), 1.0, 72.0, "lead0123456789") for i in range(6)]            # six notes: no range
+        s.voice_notes[2] = ("melody", s.notes["melody"]); s.voice_levels[2] = 0.4; s.levels["melody"] = 0.4
+        self.assertEqual(rhythm.part_sample_field(s, "melody"), "slead012345")
+
     def test_the_pans_ride_the_token(self):
         """Round 84: a pitched part's token carries its voices' pans as a tenth field, the line voice first, each the median
         right-side share of the voice's notes kept to twentieths; a kit slot carries its sample's pan after the echo mark; a
@@ -976,7 +996,7 @@ class BalanceLevelTests(unittest.TestCase):
         tokens = {t.partition("=")[0]: t.partition("=")[2].split(":") for t in rhythm.balance_units([s])[0].outcome.split() if "=" in t}
         self.assertEqual(tokens["accompaniment"][4], "0.4")                                         # the line at 0.2 of the top 0.5
         self.assertEqual(tokens["accompaniment"][5].split("@")[0], "2.5")                          # the second voice at 2.5 of the line: 0.5 of full
-        self.assertEqual(tokens["accompaniment"][7], "sa")
+        self.assertEqual(tokens["accompaniment"][7].split("@")[0], "sa")                      # round 86: its played range follows the id
         self.assertEqual((tokens["bass"][4], tokens["bass"][5].split("@")[0], tokens["bass"][7]), ("0.6", "1.6", "slong"))
         self.assertEqual(tokens["melody"][4], "1.0")
 

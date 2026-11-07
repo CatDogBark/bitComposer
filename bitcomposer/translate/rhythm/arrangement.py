@@ -476,7 +476,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
         keys = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
         key = keys.most_common(1)[0][0] if keys else ""
         sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
-        out.append(f"{share}@{sid}@{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}")
+        rng = sample_range_in(voices[v], key) if key else ""    # where the token song plays this voice's sample (round 86)
+        out.append(f"{share}@{sid}@{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}" + (f"@{rng}" if rng else ""))
     return out
 
 
@@ -591,6 +592,31 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
             slots.pop()
         out.append(field + "".join(f"@{x}" for x in slots))
     return ",".join(out)
+
+
+def sample_range_in(notes, key: str) -> str:
+    """The whole range a set of notes plays sample `key` over, as the registers word writes one ("32-52": part_register's
+    grain, the ambitus); "" with fewer than eight pitched notes on it (round 86)."""
+    reg = part_register([n for n in notes if n[3] == key], ambitus=True)
+    return f"{reg[0]}-{reg[1]}" if reg else ""
+
+
+def part_sample_field(s, role: str) -> str:
+    """The balance token's eighth field (round 60's sample id) with, since round 86, the range the song plays that sample
+    over in the part's line voice after an "@" (`s1d296a2572@32-52`): the voice written on the token's sample is bound to
+    where the token song played it, not to a range drawn from the other songs that share the sample (FFVI shares 13 of
+    its 17 bass samples, their per-song centres 15 semitones apart; the pooled draw had bound 11 of 27 written basses
+    narrower than their planned register by 12 semitones at the median, and one an octave above it)."""
+    sid = part_sample_id(s, role)
+    if not sid or role == R.DRUMS:
+        return sid
+    notes = s.notes.get(role, [])
+    voices = cells_mod.part_voices(s, role)
+    if len(voices) >= 2:
+        notes = voices[cells_mod.line_voice(voices, role)]
+    keys = [n[3] for n in notes if isinstance(n[3], str) and n[3] and ("s" + n[3][:10] if len(n[3]) >= 10 else n[3]) == sid]
+    rng = sample_range_in(notes, keys[0]) if keys else ""
+    return f"{sid}@{rng}" if rng else sid
 
 
 def part_sample_id(s, role: str) -> str:
@@ -752,7 +778,7 @@ def balance_units(songs) -> list:
             kind = cells_mod.counter_kind(s) if role == R.COUNTER and role in levels else None
             fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if share is not None else "",
                       str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
-                      part_sample_id(s, role),                # the part's own sample (round 60): a song's instruments are one song's
+                      part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
                       habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
                       pan_field(s, role)]                     # and its voices' pans (round 84): the song's stereo picture together
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty

@@ -235,7 +235,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
         self.assertTrue(tokens[1].startswith("drums") and tokens[1].endswith("+mixed"), tokens)       # the kit's habit rides too (round 62)
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[7] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62)
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[7].split("@")[0] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62)
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
         self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
@@ -1266,10 +1266,36 @@ class NewTablesTests(unittest.TestCase):
         toks = rhythm.balance_units([s])[0].outcome.split()
         self.assertEqual(rhythm.part_sample_id(s, "bass"), "k"); self.assertEqual(rhythm.part_sample_id(s, "nothing"), "")
         self.assertEqual(rhythm.part_sample_id(rhythm.Song("t", 4, 12, [(0.0, 4.0)], [], notes={"melody": [(0.0, 1.0, 60.0, "0123456789abcdef")]}), "melody"), "s0123456789")
-        token = "bass=half:36-44:0.9:1:1.0:::sbass123456 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        token = "bass=half:36-44:0.9:1:1.0:::sbass123456@32-52 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
         t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
         p = whole.plan({"balance": t}, 1, "g")
         self.assertEqual(p.token_samples, {"bass": "sbass123456", "melody": "slead123456"})
+        self.assertEqual(p.sample_ranges, {"bass": (32, 52)})                                     # round 86: where the song plays it
+
+    def test_a_voice_on_the_tokens_sample_is_bound_where_its_song_played_it(self):
+        """Round 86: the ranges word, drawn by sample and part over every song sharing the sample, had bound a bass to another
+        song's range (11 of 27 written basses narrower than planned by 12 semitones at the median, one an octave up); with
+        the token's own range for its own sample the voice is written in its planned register, the pooled draw kept on the
+        stream and left unused. Without the field the old binding stands."""
+        from bitcomposer.translate import tables
+        from bitcomposer import instruments
+        from unittest import mock
+        from types import SimpleNamespace
+        ranges = tables.Table(("part", "role"), "ranges").fit([tables.Unit(f"s{i}", "g", "48-60", {"part": "sbass123456", "role": "bass"}) for i in range(3)])
+        fake = lambda name: SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "bass_heavy": ["pad"], "bass_light": ["pad"], "arp": ["pad"]}}
+        bounds = {}
+        for field in ("sbass123456@32-52", "sbass123456"):
+            token = f"bass=half:36-44:0.9:1:1.0:::{field} melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+            t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+            p = whole.plan({"balance": t, "ranges": ranges}, 1, "g")
+            if "bass" not in p.band:
+                self.skipTest("the bass left out of this seed's textures")
+            with mock.patch.object(instruments, "_make_sample", fake):
+                whole.samples_for(p, pack, {"sbass123456", "slead123456"}, "g", random.Random(1), {"ranges": ranges})
+            bounds[field] = p.bounds["bass"]
+        self.assertEqual(bounds["sbass123456@32-52"], (36, 44))                                     # the planned register, whole
+        self.assertEqual(bounds["sbass123456"], (48, 60))                                          # the other song's range, as before
 
     def test_the_token_songs_kit_rides_the_drums_token(self):
         """Round 63: the song's kit (a piece letter and the pack id of the sample it strikes it with most) is the drums
