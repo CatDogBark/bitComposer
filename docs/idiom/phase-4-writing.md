@@ -6006,3 +6006,105 @@ arc's phrase ceilings (climax, arc, summit) are set aside for a line with
 stretches: the token song's own registers stand in for them there. The
 form's repeats copy a phrase as written and the fold moves it after. The
 echo a sample sends is still the part's.
+
+### Round 93: off the scale and clashes as counted words (2026-11-07, the second of the open items the owner ordered)
+
+**Why.** The second audit's rule 5: the tune's two hard filters,
+`STRONG_SCALE` (no off-scale note on a beat; it removed a move in 52 % of
+the tune's draws) and `CLASH` (no move onto a semitone against a sounding
+chord part; 83 %). Counted first (count_r93.py, count_r93b.py; FFVI's 68
+readings against 60 written songs). FFVI's tune, its line: off the
+natural scale on 0.09 of its strong-beat notes in major and 0.18 in
+minor, 0.10 and 0.24 off the beat; the counter's line 0.14 and 0.22, the
+bass 0.20 and 0.15, the accompaniment 0.07 and 0.13, the arp 0.13 and
+0.42 (harmonic-minor arpeggios). The written minor tune sat at 0.07 on
+the beat under the ban and 0.25 off it; the written major at 0.11 and
+0.29 (FFVI 0.09 and 0.10). A minor tune's off-scale notes spread over the
+flat second, the raised seventh and sixth, the raised fourth and the
+major third in near-equal shares in the game and in the written songs
+alike, so no degree word is needed: the moves table carries it. Clashes:
+FFVI's tune starts a semitone from a sounding part on 0.11 of its strong
+onsets under one and 0.13 of its weak ones (every other part together; a
+song's share from none to 0.38 on the beat, Mt. Koltz 0.33 on 116 onsets,
+Searching for Friends, Dark World: the tail is real, not small songs' noise),
+by pair 0.04 to 0.08; the written tune under the ban at 0.09 to 0.15 by
+pair, and every written pair at about twice FFVI's rate (the
+accompaniment against the counter 0.12 against 0.04, the bass against the
+counter 0.14 against 0.07): the excess is not the tune's drawn moves but
+the recalled cells, re-rooted on the chord with no eye on the band, and
+the parts written in turn without a clash word of their own. The counter
+is far more diatonic than FFVI's (0.03 to 0.06 off the scale against
+0.11 to 0.25): its notes come from the voice words as scale steps from
+the tune's note.
+
+**Built.** Two counted words. `off_scale` (`rhythm.off_scale_units`): a
+part's share of notes off the song's natural scale, by part, mode and
+beat, to a twentieth, for the melody's and the counter's lines, the bass,
+the chord parts and the arp (sixteen notes and more; 440 FFVI units).
+`clashes` (`rhythm.clash_units`): a line's share of onsets under another
+part's sounding note that sit a semitone from it, by beat, to a fiftieth,
+for the melody's line and the counter's, every other pitched part
+together (208 units). The plan draws both once a song for the melody and
+once for the counter, one share a beat class, on their own streams
+(`whole:{seed}:off_scale:{role}:{place}`, `...:clashes:...`), so every
+other draw stands and every seed keeps its plan (400 of 400 tokens and
+draws unchanged against round 92). The melody writer
+(`writer.melody(off_scale=, clash_rates=)`) keeps running shares by the
+beat, as it does for the chord-tone rate, and holds them in three
+places. In `draw_move`, without the words the bans stand; with them an
+off-scale move takes the drawn share of the fitting moves' mass while the
+line is under the share and none while over, on and off the beat, a
+clashing move the same under the clashes share, and the shares are
+fitted together with the chord-tone rate by iterative proportional
+fitting (`hold_shares`): fitted before it, in the first cut, the chord
+weighting had thinned the off-scale moves again and a tune drawn at 0.30
+off the scale on the beat reached 0.10. In `again` and the half-bar
+recall, a cell that comes back is moved within a third, after the chord's
+snap, to the place that adds least to a share the line is already over
+(the first cut had left the recalls alone, and a tune drawn at none off
+the scale sat at 0.21 from its returns). And the bass is among the
+sounding parts the tune is written against (the ban had looked at the
+chord parts alone). The running shares ride the phrase snapshot the copy
+check restores, and the log says what the line held ("off the scale:
+strong 17/60 (0.28; the song's rate 0.30) ..."). The counter draws its
+own shares (the first cut had handed it the melody's). No re-read; pack4
+refit (101 tables), the vocabulary shipped, the map regenerated. Tests:
+the units on a synthetic song, the two lines' draws on their own streams
+(every other draw unchanged), draw_move with and without the words, over
+the share, and together with the chord share; the bans intact without the
+words.
+
+**Measured** (sixty seeds against FFVI, the line). Off the scale on the
+beat: the minor tune 0.15 (FFVI 0.18; 0.07 before), the major 0.11 (0.09;
+0.11); off the beat the minor 0.21 (0.24; 0.25), the major 0.17 (0.10;
+0.29: nine major songs' shares drawn by the song, their mean 0.18). The
+whole melody part, its voices beside the line included, sits lower (0.11
+on the beat in minor) because a parallel voice is written in the scale
+where FFVI's doublings leave it: a LIMITS entry. The counter's line stays
+at 0.06 to 0.08: a counter by the voice words holds no draw. Clashes: the
+tune's line against the parts it is written over at the drawn share
+(0.10 of strong onsets over twenty-four seeds' logs; the song's rate
+tracked within a few hundredths where the tune has draws to make, a
+recall-heavy tune under it); against every other part together 0.17 and
+0.20 (FFVI 0.11 and 0.13), the parts written after the tune holding no
+clash word; the pairs between parts written apart unchanged at about twice
+FFVI's rates (the tune against the accompaniment 0.10 and 0.13 against
+0.06 and 0.08, the counter against the accompaniment 0.13 against 0.05).
+Suite 427 (1 skip); the vocabulary checks pass.
+
+**Song Check 76** (https://claude.ai/artifact/1R4arMrUVqG7dGE9hJRa9c): six pairs, the same six seeds as Song Checks 74
+and 75 (255, 78, 157, 41, 150, 254), the same plan both sides; the tune's
+pitches differ where the words let an off-scale or clashing move through
+or move a returning cell, and the parts written after it follow. Before
+is round 92 (the frozen checkout of its branch and the vocabulary before
+this round), after round 93. The owner listens once the songs settle; the
+gate is the count above.
+
+**Open.** Round 94: the clashes word for every part pair, held by the
+bass, the chord parts, the arp and the voice-word counter as they are
+written in turn, and the voices beside a line. The counter's own
+off-scale share wants a semitone form of the interval word against a
+tune note on the scale; a voice beside the tune wants an exact-interval
+form of the relation word. The arp's harmonic-minor arpeggios (the raised
+seventh 0.80 of its off-scale notes) come from the chord reader's shapes,
+not from a word here.

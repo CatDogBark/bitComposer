@@ -63,6 +63,30 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   since what the voice's own motion was there is not yet a word; and the
   samples a voice changes between stretches are not written (the
   instrument-by-stretch word, the next round).
+- **Parts written apart clash twice as often as FFVI's.** The tune's
+  line holds the game's clash share against the parts it is written
+  over since round 93 (its draws and its recalls' placement), but the
+  parts written after it hold no clash word: a counter by the voice words,
+  the arp, the voices beside the lines, and the chord parts and the bass
+  against each other. So the tune's clashes against every other part
+  together sit at 0.17 of its strong onsets against FFVI's 0.11, and the
+  written pairs at about twice FFVI's rates (the tune against the
+  accompaniment 0.10 against 0.06, the counter against the accompaniment
+  0.13 against 0.05, the counter against the bass 0.11 against 0.05). The
+  next round counts the pairs and holds them in the writers that make
+  them.
+- **The counter is more diatonic than FFVI's.** A counter by the voice
+  words takes scale steps from the tune's note, so it leaves the scale
+  only where the tune does: 0.06 to 0.08 of its line's notes against
+  FFVI's 0.14 to 0.26 (round 93's count). Only a counter written as a
+  line of its own holds its off_scale draw. A semitone form of the
+  interval word against a tune note on the scale would carry the rest.
+- **A voice beside the tune stays on the scale.** A parallel voice is
+  written at its generic interval from the line, in the scale, where
+  FFVI's doublings leave it with the tune and beyond: the game's melody
+  part is off the scale on 0.20 of its strong-beat notes in minor against
+  its line's 0.18, the written part on 0.11 against its line's 0.15. The
+  relation word has no exact-interval form yet.
 - **A tonal sample pumped on two pitches is a kit piece.** Round 77's play
   clause reads a voice on one sample at one or two pitches, eight notes or
   more, held under two beats, as a drum voice; FFVI's percussion plays so

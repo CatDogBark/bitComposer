@@ -397,6 +397,75 @@ def chord_tone_habit_units(songs) -> list:
     return out
 
 
+OFF_SCALE_BIN = 0.05                 # the off_scale word's grain (round 93): a part's share of notes off the song's natural scale
+CLASH_BIN = 0.02                     # the clashes word's grain (round 93): the tune's share of onsets a semitone from a sounding part
+OFF_SCALE_PARTS = (R.MELODY, R.COUNTER, R.BASS, R.ACCOMP, R.HARMONY, R.ARP)
+WORD_NOTES = 16                      # notes a part needs in a place for an off_scale or clashes unit
+
+
+def off_scale_units(songs) -> list:
+    """Each pitched part of each song with a key, by the beat (strong: the onset on a beat; weak: off it), as a unit: its
+    outcome the share of the part's notes whose pitch class lies off the song's natural scale (major, or natural minor;
+    to OFF_SCALE_BIN), its values the part, the mode and the place; for the melody and the counter the line's notes
+    (tune_line), since the writer holds the word on the line it writes and the voices beside it follow their relation
+    words. FFVI (round 93): the melody 0.08 of its strong-beat notes in major and 0.20 in minor (0.10 and 0.24 off the
+    beat), the counter 0.11 and 0.22, the bass 0.20 and 0.15, the accompaniment 0.07 and 0.13, the arp 0.13 and 0.42; a
+    minor tune's off-scale notes spread over the flat second, the raised seventh and sixth, the raised fourth and the major
+    third in near-equal shares, a major tune's lean to the flat seventh. The melody writer had barred every off-scale note
+    on a beat (STRONG_SCALE), and the written minor tunes sat at 0.07; it holds the drawn share instead, in its draws and
+    in placing its recalls (the melody's and the counter's own draws; the other parts' shares wait for their words)."""
+    from .. import harmony
+    out = []
+    for s in songs:
+        if s.tonic is None:
+            continue
+        mode = "major" if s.mode == "major" else "minor"
+        scale = {(s.tonic + st) % 12 for st in harmony.MODES["major" if mode == "major" else "natural_minor"]}
+        for role in OFF_SCALE_PARTS:
+            by_place = {"strong": [0, 0], "weak": [0, 0]}
+            notes = cells_mod.tune_line(s, role) if role in (R.MELODY, R.COUNTER) else s.notes.get(role, [])   # the line the writer
+            for n in notes:                                 # holds the word on; its layer voices follow their relation words
+                if math.isnan(n[2]):
+                    continue
+                place = "strong" if abs(n[0] - round(n[0])) < readings_mod.NEAR else "weak"
+                by_place[place][1] += 1
+                by_place[place][0] += round(n[2]) % 12 not in scale
+            for place, (off, total) in by_place.items():
+                if total >= WORD_NOTES:
+                    out.append(tables.Unit(s.sid, s.game, f"{round(off / total / OFF_SCALE_BIN) * OFF_SCALE_BIN:.2f}", {"part": role, "mode": mode, "place": place}))
+    return out
+
+
+def clash_units(songs) -> list:
+    """The melody and the counter-line of each song, each by the beat, as a unit: its outcome the share of the line's
+    onsets that fall under another part's sounding note and sit a semitone (1 or 11 mod 12) from it (to CLASH_BIN), its
+    values the part and the place. FFVI (round 93): 0.05 of the tune's strong onsets and 0.07 of its weak ones, every other
+    part together (by pair, the accompaniment 0.06 and 0.08, the counter 0.06 and 0.08, the bass 0.04 and 0.05; a song's
+    share from none to 0.38); the written tunes sat at 0.09 to 0.15 under a ban on every drawn clash (CLASH), the excess
+    from recalled cells and from the parts written before the tune. The melody writer holds the drawn share in its draws
+    and in placing its recalls; the other parts' pairs are the next round's."""
+    out = []
+    for s in songs:
+      for role in (R.MELODY, R.COUNTER):                    # the two lines the melody writer writes, each its own unit
+        tune = [n for n in cells_mod.tune_line(s, role) if not math.isnan(n[2])]
+        if len(tune) < WORD_NOTES:
+            continue
+        others = sorted((n[0], n[0] + n[1], round(n[2]) % 12) for r, ns in s.notes.items() if r not in (role, R.DRUMS) for n in ns if not math.isnan(n[2]))
+        by_place = {"strong": [0, 0], "weak": [0, 0]}
+        for n in tune:
+            t = n[0]
+            sounding = {pc for a, b, pc in others if a - readings_mod.NEAR <= t < b - readings_mod.NEAR}
+            if not sounding:
+                continue
+            place = "strong" if abs(t - round(t)) < readings_mod.NEAR else "weak"
+            by_place[place][1] += 1
+            by_place[place][0] += any((round(n[2]) - pc) % 12 in (1, 11) for pc in sounding)
+        for place, (hits, total) in by_place.items():
+            if total >= WORD_NOTES:
+                out.append(tables.Unit(s.sid, s.game, f"{round(hits / total / CLASH_BIN) * CLASH_BIN:.2f}", {"part": role, "place": place}))
+    return out
+
+
 ROLL = 6                             # strikes a beat, a bar over: a roll or tremolo the reader kept as a figure, not a bar to write
 ROLL_PIECE = 4                       # strikes a beat on one drum piece, a bar over: a roll on that piece
 

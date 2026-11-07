@@ -1044,6 +1044,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                             "steps": _draw(models, "step_habits", (R.MELODY,), rng, log),
                             "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
                             "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
+                            "off_scale": ({pl: float(_draw(models, "off_scale", (role, mode, pl), random.Random(f"whole:{seed}:off_scale:{role}:{pl}"), log)) for pl in ("strong", "weak")}
+                                          if "off_scale" in render_mod.models_or_empty(models) else None),   # the line's share off the scale by the beat (round 93), own streams,
+                            "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log)) for pl in ("strong", "weak")}
+                                        if "clashes" in render_mod.models_or_empty(models) else None),   # the melody's and the counter's each its own; its onsets a semitone from a sounding part
                             "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng),
                             "grain": (_draw(models, "tune_grain", (role, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:grain:{role}"), log, floor_k=GRAIN_FLOOR)
                                       if "tune_grain" in render_mod.models_or_empty(models) else None)}   # an own stream, floored at the tier (round 66)
@@ -1730,7 +1734,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                  recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                                 role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"),
+                                                 role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
                                                  letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
                                                  bounds_at=line_bounds_at(plan, role))
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
@@ -1795,7 +1799,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 notes2, figures2, plog2 = writer.melody(song, [], reg2, models, random.Random(f"{seed}:{role}:second"), habit2,
                                                     key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"))
+                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"))
                 song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
                 line = line + [(a, b, m, 1) for a, b, m in notes2]
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
