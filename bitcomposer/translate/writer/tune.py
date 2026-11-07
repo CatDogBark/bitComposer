@@ -169,7 +169,7 @@ def tier_bounds(habit: str) -> tuple[float, float]:
 def share_at(sounds, gap: float) -> float:
     """The share of a gap a note sounds: one share (a float), or the gap_sounds word's by the gap's class (a dict)."""
     if isinstance(sounds, dict):
-        return float(sounds.get(rhythm.gap_class(gap), sounds.get("<1", 0.8)))
+        return float(sounds.get(rhythm.gap_class(gap), sounds.get(rhythm.GAP_CLASSES[0][1], 0.8)))
     return float(sounds)
 
 

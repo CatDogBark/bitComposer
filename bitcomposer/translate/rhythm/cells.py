@@ -427,11 +427,27 @@ def sounded_share(notes) -> float | None:
     return statistics.median(shares) if shares else None
 
 
-GAP_CLASSES = ((1.0, "<1"), (2.0, "1-2"), (4.0, "2-4"), (1e9, "4+"))   # beats to a voice's next onset: a note's sounded share depends on it
+GAP_CLASSES = ((0.5, "<0.5"), (1.0, "0.5-1"), (2.0, "1-2"), (4.0, "2-4"), (1e9, "4+"))   # beats to a voice's next onset: a note's sounded share
+                                      # depends on it; under a beat split at the half since round 95 (FFVI's accompaniment sounds 0.76 of a gap
+                                      # under half a beat, a run, and 0.63 of one at half to one, a peck; the arp 0.67 and 0.40, the bass 0.83 and 0.72)
 
 
 def gap_class(gap: float) -> str:
     return next(name for top, name in GAP_CLASSES if gap < top - readings_mod.NEAR)
+
+
+def gap_shares(notes) -> dict:
+    """A voice's sounded share by gap class (round 95): for each class, the median over its notes of the share of the gap to
+    the voice's next note the note sounds (to SOUND_BIN), None where the class has fewer than two notes. The balance token
+    carries the line voice's for the chord parts and the bass, so a song written on the token keeps its line's own note
+    lengths (Umaro's accompaniment pecks 0.4 of its gap under a beat where the pooled word for a layered line says 1.0)."""
+    line = sorted(n for n in notes if not math.isnan(n[1]) and not math.isnan(n[2]))
+    by = {name: [] for _, name in GAP_CLASSES}
+    for n, m in zip(line, line[1:]):
+        gap = m[0] - n[0]
+        if gap > readings_mod.NEAR:
+            by[gap_class(gap)].append(min(1.0, n[1] / gap))
+    return {name: (round(statistics.median(xs) / SOUND_BIN) * SOUND_BIN if len(xs) >= 2 else None) for name, xs in by.items()}
 
 
 def gap_sound_units(songs) -> list:

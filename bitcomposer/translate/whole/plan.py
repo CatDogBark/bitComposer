@@ -205,6 +205,8 @@ class Plan:
     log: list = field(default_factory=list)
     feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
     gap_sounds: dict = field(default_factory=dict)    # a chord part or the bass -> {only/line/second: {gap class: the share a note sounds}}
+    token_gap_shares: dict = field(default_factory=dict)   # a chord part or the bass -> {gap class: the token song's line's share, or None} (round 95):
+                                      # the song's own note lengths for the part's only or line voice, kept over the gap_sounds draws
     locks: dict = field(default_factory=dict)         # the bass -> the share of the kit's accents it strikes with (bass_locks)
     levels: dict = field(default_factory=dict)        # a part -> its level as a share of the loudest part's (the balance token's field where
                                       # its song has the part; the levels table where not; the counter's from counter_shares)
@@ -791,6 +793,68 @@ def fold_line(plan: "Plan", role: str, notes: list, meter: int) -> list:
     return out
 
 
+def voice_bound_at(plan: "Plan", role: str, v: int):
+    """A bar's register for a voice beside a line (round 95), as a function of the bar: the range the token song plays the
+    voice's sample over in that bar's stretch (layer_stretches, where the voice changes instrument by stretch), else the
+    token's range for the voice's sample over the song (layer_ranges), else the voice's writing span (plan.bounds["part:v"],
+    an apart voice's offset span), else the part's; None where nothing is known."""
+    sts_all = plan.layer_stretches.get(role) or []
+    sts = sts_all[v - 1] if 0 < v <= len(sts_all) else None
+    ranges = plan.layer_ranges.get(role) or []
+    fallback = tuple(ranges[v - 1]) if 0 < v <= len(ranges) and ranges[v - 1] else None
+    if fallback is None:
+        fallback = plan.bounds.get(f"{role}:{v}")
+    if fallback is None:
+        fallback = plan.bounds.get(role) or plan.registers.get(role)
+
+    def at(bar: int):
+        if sts:
+            i = stretch_at(plan, role, bar, v)
+            if i is not None and i < len(sts) and sts[i][1]:
+                return tuple(sts[i][1])
+        return tuple(fallback) if fallback else None
+    return at
+
+
+def fold_voice(plan: "Plan", role: str, v: int, notes: list, meter: int) -> list:
+    """A voice beside a line, written by its relation word, folded by octaves into where the token song plays its sample
+    (voice_bound_at), as fold_line folds a line: each bar first as a whole, the octave count that puts most of its notes
+    inside (a tie keeps the bar before's count, else the smaller move), then the leftovers one by one. Round 95: a relation
+    voice had been written at its word's semitones from the line wherever the written line sat, and Umaro's accompaniment
+    voice, two octaves over a tune the game has low in those bars, reached midi 112 where the game plays its sample at 72-88,
+    a beep two octaves above the song (45 % of relation-voice notes sat outside their sample's played range over sixty
+    seeds). Notes (start, end, midi, voice); only voice v's are touched."""
+    at = voice_bound_at(plan, role, v)
+    mine = lambda n: len(n) > 3 and n[3] == v   # noqa: E731
+    by_bar = {}
+    for k, n in enumerate(notes):
+        if mine(n) and at(int(n[0] // meter)) is not None:
+            by_bar.setdefault(int(n[0] // meter), []).append(k)
+    shift, prev = {}, 0
+    for bar in sorted(by_bar):
+        lo, hi = at(bar)
+        ks = by_bar[bar]
+        best = max(sorted((-36, -24, -12, 0, 12, 24, 36), key=lambda d: (d != prev, abs(d))), key=lambda d: sum(1 for k in ks if lo <= notes[k][2] + d <= hi))
+        shift[bar] = prev = best
+    out, moved, shifted = [], 0, 0
+    for k, n in enumerate(notes):
+        bound = at(int(n[0] // meter)) if mine(n) else None
+        if bound is None:
+            out.append(n)
+            continue
+        bar = int(n[0] // meter)
+        m = n[2] + shift.get(bar, 0)
+        shifted += bool(shift.get(bar))
+        if not bound[0] <= m <= bound[1]:
+            m = float(writer.in_register(int(round(m)), bound))
+            moved += m != n[2] + shift.get(bar, 0)
+        out.append((n[0], n[1], float(m), *n[3:]) if m != n[2] else n)
+    if shifted or moved:
+        plan.log.append(f"{role}'s voice {v + 1}: {shifted} notes moved by octaves" + (f", {moved} folded one by one" if moved else "")
+                        + " into where the game plays its sample (round 95)")
+    return out
+
+
 def line_bounds_at(plan: "Plan", role: str):
     """A bar's register for a part's line (round 92): its stretch's bound where the token song's line changes instrument
     (extras[part]["stretch_bounds"], set by samples_for), as a function of the bar for the writers; None without
@@ -856,6 +920,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
+    token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
@@ -885,7 +950,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 lo, hi = fields[1].split("-")
                 layout[role] = (int(lo), int(hi))
             if len(fields) > 2 and fields[2]:
-                shares[role] = float(fields[2])
+                head, _, by_gap = fields[2].partition("@")   # the line voice's sounded share, and since round 95 its share by gap class
+                shares[role] = float(head)
+                if by_gap:
+                    token_gap_shares[role] = {g: (float(x) if x not in ("", "-") else None) for (_, g), x in zip(rhythm.GAP_CLASSES, by_gap.split("/"))}
             if len(fields) > 3 and fields[3]:
                 if role == R.DRUMS:                         # the kit's channels (round 87): the pieces each game channel plays, "KS|h"
                     token_kit_channels = fields[3].split("|")
@@ -1179,6 +1247,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     gap_sounds = {role: {voice: {g: float(_draw(models, "gap_sounds", (role, voice, g), rng, log)) for _, g in rhythm.GAP_CLASSES}
                          for voice in ("only", "line", "second")}
                   for role in band if role in rhythm.UPPER + (R.BASS,)} if "gap_sounds" in render_mod.models_or_empty(models) else {}
+    _own_gap_sounds(gap_sounds, token_gap_shares, log)      # the balance's song's own note lengths for the line (round 95), the draw where it lacks a class
     locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log))} if R.BASS in band and R.DRUMS in band else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
@@ -1209,7 +1278,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append("pans from the balance: " + " ".join(f"{r}={'/'.join(f'{x:.2f}' if isinstance(x, float) else x for x in token_pans[r])}" for r in band if r in token_pans)
                    + (" kit " + " ".join(f"{k}={v:.2f}" for k, v in token_kit_pans.items()) if token_kit_pans and R.DRUMS in band else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
-                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
+                registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels,
                 top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches)
 
@@ -1229,6 +1298,20 @@ def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
                                                                            # from the coarser level's mass, a value FFVI's dense accompaniments never have
 
 
+def _own_gap_sounds(gap_sounds: dict, token_gap_shares: dict, log: list | None) -> None:
+    """The token song's own sounded shares by gap class for a chord part's or the bass's only and line voices (round 95), over
+    the gap_sounds draws (made all the same, so the stream is as it was); a class the token lacks keeps the draw. The second
+    voices keep the pooled word. Umaro's accompaniment line pecks 0.4 of its gap under a beat where the pooled word for a
+    layered line said 1.0, and the written line had held every note to the next."""
+    for role, own in token_gap_shares.items():
+        if role not in gap_sounds:
+            continue
+        for voice in ("only", "line"):
+            gap_sounds[role][voice] = {g: (own[g] if own.get(g) is not None else gap_sounds[role][voice][g]) for _, g in rhythm.GAP_CLASSES}
+        if log is not None and not any(l.startswith(f"{role}'s note lengths from the balance's song") for l in log):
+            log.append(f"{role}'s note lengths from the balance's song (its line's share by gap): " + " ".join(f"{g} {own[g]:.1f}" if own.get(g) is not None else f"{g} drawn" for _, g in rhythm.GAP_CLASSES))
+
+
 def _plan_sounds(models: dict, p: Plan, rng: random.Random) -> None:
     """The share of its gap a note sounds, drawn again under the part's speed class (gap_sounds: part, voice, speed, gap; round
     35) once the part's speed is drawn, after every other plan draw. FFVI's string pad played fast sounds a fifth to a third
@@ -1242,6 +1325,7 @@ def _plan_sounds(models: dict, p: Plan, rng: random.Random) -> None:
         tier = rhythm.speed_tier(p.speeds[role])
         p.gap_sounds[role] = {voice: {g: float(_draw(models, "gap_sounds", (role, voice, tier, g), rng, p.log)) for _, g in rhythm.GAP_CLASSES}
                               for voice in ("only", "line", "second")}
+    _own_gap_sounds(p.gap_sounds, p.token_gap_shares, None)   # the token song's own shares stand over the speed's redraw too (round 95)
 
 
 def _plan_counter(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1819,7 +1903,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
     for role, v, own, word in pending:                      # the voices beside a line written by the token's stretches (round 90), every line in place
         spans = stretch_spans(relation_stretches(word), len(song.bars))
-        notes_v = stretched_notes(v, own, spans, written, scale, song.meter, written[role].log)
+        notes_v = fold_voice(plan, role, v, stretched_notes(v, own, spans, written, scale, song.meter, written[role].log), song.meter)   # round 95
         song.notes[role] += [(a, b - a, m, role) for a, b, m, *_ in notes_v]
         written[role].notes += notes_v
         written[role].notes.sort(key=lambda n: (n[0], n[3] if len(n) > 3 else 0))

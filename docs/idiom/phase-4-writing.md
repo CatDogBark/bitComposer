@@ -6184,3 +6184,77 @@ returning cells re-rooted with an eye on the band, its endings. The
 counter's own off-scale share (a semitone form of the interval word), the
 arp's thin word. Then the open items' third entry, the doubling voice's
 intervals.
+
+### Round 95: a voice beside a line written where the game plays its sample, and a line's note lengths its song's own (2026-11-07)
+
+**Why.** The owner: First Meridian Return's (seed 254, Umaro's token)
+accompaniment is "a single beeping noise that ruins the song", and that
+keeps the stacked rounds from merging. Measured (acc254.py, umaro_acc.py,
+layers_range.py): three things. The accompaniment's second voice carries
+the relation word `ox12>pm+24`, read from Umaro, where that voice parallels
+the tune two octaves up in bars 13 to 17 while the tune is low (bars 18 and
+19 are the voice's own chromatic run on the same sample, read into the
+stretch); the written tune is high from bar 18, and the voice was written
+at the word's semitones wherever the tune sat: midi 104 to 112, where the
+game plays that sample at 72 to 88. Over sixty seeds 45 % of relation-voice
+notes (3,191 of 7,067) sat outside their sample's played range: round 92
+had left "their registers what their relation gives them". Second, the
+line's note lengths came from the pooled `gap_sounds` draw for a layered
+part's line (1.0, held to the next onset) where Umaro's line pecks 0.2-beat
+ticks, 0.4 of its gap; and the balance token's own sounded field said 0.8
+because it was measured on the part's merged voices, the gap to the other
+voice's note under each note's length. Third, Umaro's accompaniment is
+itself a one- or two-note staccato ostinato (D5 D5 G5; G5 with chromatic
+neighbors and a falling fill) whose neighbor tones the chord reader drops.
+
+**Built.** (A) `plan.fold_voice` and `voice_bound_at`: a voice written by
+its relation word is folded by octaves into where the token song plays
+its sample in each stretch (the layer entry's stretch ranges, else the
+token's range for the voice's sample, else the voice's span), bar by bar
+as `fold_line` folds a line (a whole bar first, then the leftovers), after
+`stretched_notes` in the post-pass; the word's semitones give the interval
+class and the sample's range the octave. (B) The balance token's sounded
+field is the line voice's share (`cells.tune_line`), and for the chord
+parts and the bass it carries the line's share by gap class
+(`cells.gap_shares`, the median per class to a tenth, `-` under two notes:
+`0.4@0.8/0.4/0.2/-/-`); the plan parses it (`Plan.token_gap_shares`) and
+keeps the song's own for the part's only and line voices over the
+`gap_sounds` draws, in `_plan_once` and after the speed's redraw, the draws
+still made so every other draw stands; the second voices keep the pooled
+word. (C) The gap classes split under a beat (`cells.GAP_CLASSES`: under
+half a beat, half to one): FFVI's accompaniment sounds 0.76 of a gap under
+half a beat, a run, and 0.63 of one at half to one, a peck; the arp 0.67
+and 0.40; the bass 0.83 and 0.72. No re-read; pack4 refit (101 tables), the
+vocabulary shipped. The token text changed for every pitched part, so 24
+of 263 part entries move their sounded share (all in layered parts) and
+48 of 400 seeds draw another token song (the table's outcomes sort by
+text); the six Song Check seeds keep theirs. Tests: the field on a
+two-voice part, the plan keeping the song's own over the draws, the fold
+on a voice two octaves over its range; the round-90 test says where its
+voice's sample is played.
+
+**Measured** (sixty seeds). Relation-voice notes outside the range they
+are folded into: 45 % before (against their sample's range), 10 % after
+(730 of 7,625; the leftovers where a sample's range is narrower than the
+line, the arp's parallels on four-semitone ranges worst). The written line
+notes' sounded shares against FFVI's only and line voices, by class: the
+accompaniment 0.81 against 0.76 under half a beat, 0.67 against 0.62 at
+half to one, 0.78 against 0.72 at one to two (before the round 0.77
+against 0.69 under a beat); the bass within 0.02 under two beats; the arp
+0.80 against 0.66 and 0.36 against 0.40. First Meridian Return: the
+accompaniment's second voice at midi 69 to 88 (before 83 to 112), the
+line's notes 0.2 beats at half-beat gaps (before 0.5, held to the next),
+the bass unchanged; the counter's double of the tune two octaves down at
+45 to 64 (before 36 to 69). Suite 429 (1 skip); the vocabulary checks pass.
+
+**Song Check 78** (https://claude.ai/artifact/4KHJPGoFkMc1j8XiGaEVLc): the same six seeds, before round 94 (its
+branch frozen with the vocabulary before this round), after round 95.
+First Meridian Return is the case the owner asked to hear: the beep two
+octaves above the song is gone, the line pecks as Umaro's does, and what
+is left of the single note is Umaro's own ostinato without its neighbor
+tones.
+
+**Open.** A figure word for the chord parts (the tone's neighbors and
+fills) would give Umaro's accompaniment its decoration back; the reader's
+relation runs could break where the relation changes inside a sample run;
+the narrow-range leftovers. Then the open items' third entry.

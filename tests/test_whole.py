@@ -144,6 +144,7 @@ class WholeSongTests(unittest.TestCase):
         p.extras[role] = {**(p.extras.get(role) or {}), "richness": "full", "motion": "block", "layers": ["apart +8 like"], "layer": "apart +8 like"}
         p.voices[role] = 2
         p.bounds[f"{role}:1"] = whole.voice_bounds(p, role, "apart +8 like", (44, 92))
+        p.layer_ranges[role] = [(44, 92)]                   # where the token song plays the voice's sample: the double folds into it (round 95)
         p.layer_relations[role] = ["dm-12x4>o"]
         written = whole.write(p, whole.song_of(p), models, 3)
         tune = {round(n[0], 3): n[2] for n in written[R.MELODY].notes if n[3] == 0}
@@ -673,16 +674,16 @@ class NewTablesTests(unittest.TestCase):
         self.assertIsNone(writer.first_onset(figures, bars, 2))
         notes, _, _ = writer.realize(figures[0], 0.0, 4.0, song, 36, 1.0, {0, 2, 4, 5, 7, 9, 11}, 0, None, runs_to=4.5)
         self.assertEqual([(a, b) for a, b, m in notes], [(0.0, 3.0), (3.0, 4.5)])                 # the last note runs on to 4.5, not 4.0
-        shares = {"<1": 0.5, "1-2": 0.5, "2-4": 1.0, "4+": 1.0}
-        self.assertEqual((writer.share_at(shares, 0.5), writer.share_at(shares, 3.0), writer.share_at(0.7, 3.0)), (0.5, 1.0, 0.7))
+        shares = {"<0.5": 0.9, "0.5-1": 0.5, "1-2": 0.5, "2-4": 1.0, "4+": 1.0}
+        self.assertEqual((writer.share_at(shares, 0.25), writer.share_at(shares, 0.5), writer.share_at(shares, 3.0), writer.share_at(0.7, 3.0)), (0.9, 0.5, 1.0, 0.7))
         s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g")
         line = [(0.0, 3.9, 36.0, "a"), (4.0, 1.0, 36.0, "a"), (6.0, 1.9, 38.0, "a")]
         second = [(0.0, 0.25, 36.0, "b"), (0.5, 0.25, 36.0, "b"), (1.0, 2.9, 36.0, "b"), (4.0, 0.25, 36.0, "b"), (4.5, 3.4, 36.0, "b")]
         s.notes = {"bass": line + second}; s.voice_notes = {1: ("bass", line), 2: ("bass", second)}
         units = rhythm.gap_sound_units([s])
         by = {(u.values["voice"], u.values["gap"]): u.outcome for u in units}
-        self.assertEqual((by[("line", "4+")], by[("second", "<1")], by[("second", "2-4")]), ("1.0", "0.5", "1.0"))
-        self.assertEqual(rhythm.gap_class(0.5), "<1"); self.assertEqual(rhythm.gap_class(4.0), "4+")
+        self.assertEqual((by[("line", "4+")], by[("second", "0.5-1")], by[("second", "2-4")]), ("1.0", "0.5", "1.0"))
+        self.assertEqual((rhythm.gap_class(0.25), rhythm.gap_class(0.5), rhythm.gap_class(4.0)), ("<0.5", "0.5-1", "4+"))   # split at the half since round 95
         # the second bass voice on the line's pitch: a table that says "the same note" with the line and "hold" alone
         iv = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
             [tables.Unit(f"s{i}", "g", "0", {"part": "bass", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "0")])
@@ -1268,6 +1269,49 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual([m for a, b, m, v in whole.diatonic([(0.0, 1.0, 68.0, 0), (1.0, 2.0, 67.0, 0)], -24, major, 1)], [44.0, 43.0])
         self.assertEqual([m for a, b, m, v in whole.diatonic([(0.0, 1.0, 68.0, 0), (1.0, 2.0, 67.0, 0)], 12, major, 1)], [80.0, 79.0])
         self.assertEqual([m for a, b, m, v in whole.diatonic([(0.0, 1.0, 67.0, 0)], -3, major, 1)], [64.0])                      # a third below G: E
+
+    def test_the_lines_own_note_lengths_ride_the_token_and_a_relation_voice_is_written_where_the_game_plays_its_sample(self):
+        """Round 95: the balance token's sounded field is the LINE voice's share (the part's merged voices had put the gap to
+        the other voice's note under a note's length) and carries the line's share by gap class, which the plan keeps over
+        the pooled gap_sounds draws for the part's only and line voices; and a voice beside a line written by its relation
+        word is folded by octaves into where the token song plays its sample, bar by bar, as a line is."""
+        from types import SimpleNamespace
+        from bitcomposer.translate import tables, vocab
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(4.0 * k + i / 2, 0.2, 64.0, "a") for k in range(4) for i in range(8)]      # the line (the busiest voice): staccato eighths, 0.4 of the gap
+        second = [(4.0 * k + i / 2 + 0.25, 0.25, 72.0, "b") for k in range(4) for i in range(8)][:-1]   # a second voice between them, legato
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={"accompaniment": sorted(line + second)}, sid="s", game="g", tonic=0, mode="major")
+        s.voice_notes = {3: ("accompaniment", second), 4: ("accompaniment", line)}
+        self.assertEqual(rhythm.gap_shares(line), {"<0.5": None, "0.5-1": 0.4, "1-2": None, "2-4": None, "4+": None})
+        acc = next(t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("accompaniment="))
+        field = acc.split(":")[2]
+        self.assertEqual(field, "0.4@-/0.4/-/-/-", acc)                                    # the line voice's 0.4, not the merged voices' 0.8; by gap class
+        self.assertGreaterEqual(rhythm.sounded_share(s.notes["accompaniment"]), 0.8)       # what the merged voices had said
+        # the plan: a gap_sounds table that says "hold everything"; the token's own classes stand, the others take the draw
+        units = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        gs = tables.Table(("part", "voice", "speed", "gap"), "gap_sounds", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}{v}{g}", "g", "1.0", {"part": "accompaniment", "voice": v, "speed": "slow", "gap": g}) for i in range(3) for v in ("only", "line", "second") for _, g in rhythm.GAP_CLASSES])
+        token = "melody=main:64-84:0.9:1:0.7:::slead accompaniment=half:60-72:0.4@-/0.4/-/0.2/-:1:0.6:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan({**bal, "gap_sounds": gs}, 7, "g")
+        self.assertEqual(p.token_gap_shares["accompaniment"], {"<0.5": None, "0.5-1": 0.4, "1-2": None, "2-4": 0.2, "4+": None})
+        self.assertEqual(p.gap_sounds["accompaniment"]["only"], {"<0.5": 1.0, "0.5-1": 0.4, "1-2": 1.0, "2-4": 0.2, "4+": 1.0})
+        self.assertEqual(p.gap_sounds["accompaniment"]["line"]["0.5-1"], 0.4)
+        self.assertEqual(p.gap_sounds["accompaniment"]["second"]["0.5-1"], 1.0)           # the second voices keep the pooled word
+        self.assertEqual(p.sounds["accompaniment"], 0.4)
+        self.assertTrue(any("accompaniment's note lengths from the balance's song" in l for l in p.log))
+        # the relation voice: two octaves over a tune written high, folded into the voice's stretches' played ranges, a bar at a time
+        fake = SimpleNamespace(layer_stretches={"accompaniment": [[("sa", (68, 80), 2), ("sb", (72, 88), None)]]}, bounds={}, layer_ranges={}, registers={"accompaniment": (60, 72)},
+                               extras={"accompaniment": {"voice_stretch_spans": {1: [(0, 0, 2), (1, 2, 4)]}}}, log=[])
+        at = whole.voice_bound_at(fake, "accompaniment", 1)
+        self.assertEqual((at(0), at(3)), ((68, 80), (72, 88)))
+        notes = [(4.0 * k + i, 4.0 * k + i + 0.5, m, 1) for k in range(4) for i, m in enumerate((104.0, 106.0, 108.0, 111.0))]   # the tune two octaves up, at 104-111
+        folded = whole.fold_voice(fake, "accompaniment", 1, notes, 4)
+        self.assertTrue(all(at(int(n[0] // 4))[0] <= n[2] <= at(int(n[0] // 4))[1] for n in folded), folded)
+        self.assertEqual([n[2] for n in folded[:4]], [68.0, 70.0, 72.0, 75.0])             # bars 1-2 (68-80): three octaves down as a whole
+        self.assertEqual([n[2] for n in folded[8:12]], [80.0, 82.0, 84.0, 87.0])           # bars 3-4 (72-88): two octaves down, the contour kept
+        self.assertEqual([n[2] for n in whole.fold_voice(fake, "accompaniment", 1, [(0.0, 0.5, 76.0, 0)], 4)], [76.0])   # the line voice is not touched
+        self.assertTrue(any("accompaniment's voice 2:" in l and "round 95" in l for l in fake.log), fake.log)
 
     def test_the_second_voices_levels_are_the_balance_tokens_too(self):
         """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line

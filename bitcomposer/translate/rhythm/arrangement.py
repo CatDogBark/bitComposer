@@ -993,10 +993,15 @@ def balance_units(songs) -> list:
                     fields.pop()
                 tokens.append(role + ("=" + ":".join(fields) if fields else ""))
                 continue
-            reg, share = part_register(cells_mod.register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY), cells_mod.sounded_share(s.notes[role])
+            reg = part_register(cells_mod.register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY)
+            line_notes = cells_mod.tune_line(s, role)       # the line voice's notes where the part has two or more (round 95: the part's merged
+            share = cells_mod.sounded_share(line_notes)     # voices had put the gap to the other voice's note under a note's length, 0.8 for
+            by_gap = cells_mod.gap_shares(line_notes) if role in readings_mod.UPPER + (R.BASS,) else None   # Umaro's 0.4 pecks)
             beside = layer_tokens(s, role) if role in levels else None   # each voice beyond the line: level, sample, note share (round 65)
             kind = cells_mod.counter_kind(s) if role == R.COUNTER and role in levels else None
-            fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if share is not None else "",
+            fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "",
+                      (f"{round(share / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if share is not None else "")
+                      + ("@" + "/".join(f"{x:.1f}" if x is not None else "-" for _, g in cells_mod.GAP_CLASSES for x in (by_gap[g],)) if by_gap and any(x is not None for x in by_gap.values()) else ""),   # the line's share by gap class (round 95)
                       str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
                       part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
                       habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
