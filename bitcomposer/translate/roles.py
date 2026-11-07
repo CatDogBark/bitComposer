@@ -7,8 +7,9 @@ correction overrides it. Drums first: noise, samples with no pitch, or one
 sample struck at one or two pitches (FFVI's percussion plays at G#3, the
 driver's own pitch), or whose samples the drum namer calls drums (drums.py,
 named as a reading names its samples: a tom played at several pitches is a
-drum, a bass pumping one note on an instrument held is not). Then the
-pitched voices by register and motion: the
+drum, a bass pumping one note on an instrument held is not, and nor is a
+pitched pad held two beats or more on a sample the namer took for a kick,
+round 89). Then the pitched voices by register and motion: the
 bass the lowest line, held notes harmony, fast cycling ones an arp; a
 voice playing another's notes (the same pitches and rhythm, a delay or an
 octave apart) its doubling. The melody is the most varied line among the
@@ -17,7 +18,14 @@ readers.md) the most varied line outright was a voice playing six notes in
 a song or a quiet high line under a louder one in two songs of three, so a
 candidate must sound on a quarter of the beats, at a quarter of the loudest
 voice's level, with its median below C6 (Jungle's noises sit above), and
-its variety is weighed by how much it is heard."""
+its variety is weighed by how much it is heard.
+
+A channel is one voice, except where it plays two things: a tune on a drum
+channel (split_melodic_pieces, round 83), and on a channel under the tune
+a second instrument in a register of its own (split_second_instruments,
+round 89), each get a voice of their own before the parts are read; a
+tune's or counter's second instrument is the line changing colour and
+stays on its voice."""
 import bisect
 import math
 import statistics
@@ -201,13 +209,93 @@ MELODIC_PITCHES = 3                   # pitches a tonal sample on a drum voice i
 MELODIC_SHARE = 0.5                   # and no one pitch holds this share of its notes (a bell on one note is a drum, however many its notes)
 MELODIC_NOTES = 8                     # notes it needs
 TUNE_FLOOR = 55                       # midi: a split voice at or over this is a counter-line, under it a bass (the register the bass rule reads)
+SECOND_BASE = 200                     # a channel's second instrument's own voice (split_second_instruments, round 89): SECOND_BASE + its channel, + 10 for a
+                                      # third (the channel stays readable in the id: (voice - SECOND_BASE) % 10)
+UNDER_THE_TUNE = (BASS, HARMONY, ARP, ACCOMP)   # the parts whose channels are split so: a tune's or counter's second instrument is the line changing colour
+SECOND_SHARE = 0.1                    # the share of a channel's pitched notes a second sample carries to be a part of its own,
+SECOND_NOTES = 16                     # and the notes it needs (the echo reader's floor for a voice): an eight-note pedal or effect stays on its channel
+SECOND_APART = 12                     # semitones between the two samples' median pitches that make the second's register its own where the
+                                      # registers (each sample's 10th to 90th percentile pitches) overlap; disjoint registers are two at any distance
+
+
+def drum_clause(f: dict) -> str | None:
+    """Which of assign's two drum clauses a voice's features meet: "sound" (a drum voice by what its samples are: the namer
+    called them drums, struck at few pitches, and not a kick or tom sample sounding on half the beats, a bass passing for one),
+    "play" (by how it plays them: noise, or one sample at one or two pitches, eight notes or more, held under DRUM_HOLD), or
+    None. A voice whose samples are instruments held (named "none") is no drum however it plays them (a bass pumping one
+    note). A voice on drum-named samples whose notes are pitched and held DRUM_HOLD or more at the median is a pad the namer
+    took for a kick (round 89: The Empire Gestahl's and Another World of Beasts' bowed strings, three and two pitches held
+    eight and seven beats; FFVI's thirteen cymbal voices held two beats or more are unpitched and stay drums)."""
+    if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)
+            and not (f["unpitched"] < 0.5 and f["length_beats"] >= DRUM_HOLD)):
+        return "sound"
+    if f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
+                                                                     and f["length_beats"] < DRUM_HOLD)):
+        return "play"
+    return None
 
 
 def is_drum_voice(f: dict) -> bool:
     """assign's two drum clauses on a voice's features: a drum voice by what its samples are, or by how it plays them."""
-    return ((f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE))
-            or (f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
-                                                                            and f["length_beats"] < DRUM_HOLD))))
+    return drum_clause(f) is not None
+
+
+def _register(mids) -> tuple:
+    """A sample's register on a channel: its notes' 10th and 90th percentile pitches."""
+    s = sorted(mids)
+    return s[int(0.1 * (len(s) - 1))], s[int(0.9 * (len(s) - 1))]
+
+
+def split_second_instruments(song, roles, grid=None) -> dict:
+    """A second instrument in its own register on a channel under the tune is a part of its own (round 89): on each voice
+    whose part (`roles`, assign's first reading of the whole channels) is a bass or a chord part (UNDER_THE_TUNE), the notes
+    on a sample other than the one most of its pitched notes are on, carrying SECOND_SHARE of them and SECOND_NOTES or more,
+    whose register is its own (median pitches SECOND_APART apart, or registers that do not overlap), move to a voice of
+    their own (SECOND_BASE + the channel, + 10 for a third), their chip notes with them (so the echo and vibrato readers see
+    the voice); the channel keeps its main instrument, and assign reads the parts again, the second never setting the song's
+    floor nor taking the lead. The readings keep the second's voice beside the counts (readings.Song.second_voices), not in
+    them: the band a token describes is the channels' main instruments, and the second instrument's stretches await a word
+    of their own (a voice's instrument by stretch), since a voice of its own would ask the writer for a ninth chip voice in
+    the eight-channel songs that time-share one. FFVI changes instrument on 108 of
+    its 381 pitched channels and in 61 of them the second plays in a register of its own; on a bass or chord channel that
+    is a second function (Wild West's bass 28 to 80: a bass, then chords two octaves up), and the register word had spanned
+    both. A tune's or counter's second instrument is the line changing colour (47 of 56 take the line over for stretches,
+    a third of the notes, 19 an octave apart) and stays on its voice. Returns {new voice: (channel, sample key, part)}."""
+    parts = {r.voice: r.role for r in roles}
+    by_voice = {}
+    for p in song.notes:
+        by_voice.setdefault(p.voice, []).append(p)
+    out = {}
+    for v, ns in sorted(by_voice.items()):
+        if v >= SPLIT_BASE or parts.get(v) not in UNDER_THE_TUNE:
+            continue
+        by_sample = {}
+        for p in ns:
+            if p.sample is not None and p.midi is not None:
+                by_sample.setdefault(p.sample.key, []).append(p)
+        if len(by_sample) < 2:
+            continue
+        total = sum(len(mine) for mine in by_sample.values())
+        main = max(sorted(by_sample), key=lambda key: len(by_sample[key]))
+        main_mids = [p.midi for p in by_sample[main]]
+        main_low, main_high = _register(main_mids)
+        k = 0
+        for key, mine in sorted(by_sample.items()):
+            if key == main or len(mine) < max(SECOND_NOTES, SECOND_SHARE * total):
+                continue
+            mids = [p.midi for p in mine]
+            low, high = _register(mids)
+            if abs(statistics.median(mids) - statistics.median(main_mids)) < SECOND_APART and min(high, main_high) - max(low, main_low) > 0:
+                continue                                    # the same register: one line on two instruments
+            new = SECOND_BASE + v + 10 * k
+            k += 1
+            for p in ns:
+                if p.sample is not None and p.sample.key == key:
+                    p.voice = new
+                    if p.note is not None:
+                        p.note.voice = new
+            out[new] = (v, key, parts[v])
+    return out
 
 
 def split_melodic_pieces(song, grid=None) -> dict:
@@ -254,18 +342,20 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     roles = {}
     for v, f in feats.items():
+        if v >= SECOND_BASE:                                # a second instrument split from a channel under the tune (round 89): a pitched part
+            continue
         if v >= SPLIT_BASE:                                 # a melodic kit piece, split from its channel (round 83)
             roles[v] = Role(v, BASS if f["median"] is not None and f["median"] < TUNE_FLOOR else COUNTER,
                             evidence={"melodic_piece": v - SPLIT_BASE, "distinct": f["distinct"], "median": round(f["median"], 1) if f["median"] is not None else None})
             continue
         # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
         # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
-        # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)
-        if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES
-                and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)):
+        # are instruments held (named "none") is no drum however it plays them (a bass pumping one note), and a
+        # pitched pad held like a pad on a sample the namer took for a kick is none either (drum_clause, round 89)
+        clause = drum_clause(f)
+        if clause == "sound":
             roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
-        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
-                                                                           and f["length_beats"] < DRUM_HOLD)):   # held like a drum, not a pad (round 77)
+        elif clause == "play":                              # held like a drum, not a pad (round 77)
             roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")} | {"length_beats": round(f["length_beats"], 2)})
     for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:
@@ -283,7 +373,8 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     if not tonal:
         return sorted(roles.values(), key=lambda r: r.voice)
     loudest = max(feats[v]["level"] for v in tonal)
-    lowest = min(tonal, key=lambda v: feats[v]["median"])
+    floor = [v for v in tonal if v < SECOND_BASE] or tonal     # a second instrument never sets the song's floor (round 89: an eight-note
+    lowest = min(floor, key=lambda v: feats[v]["median"])      # pedal split from a chord channel had taken the bass from a 137-note line)
     for v in tonal:
         f = feats[v]
         if f["median"] <= feats[lowest]["median"] + 3 and f["median"] < 55:
@@ -305,7 +396,7 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         return (f["pc_entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
                 * min(1.0, MELODY_DENSE / max(f["per_beat"], 1e-9)))
     heard = [v for v in rest if feats[v]["presence"] >= MELODY_PRESENT and feats[v]["level"] >= MELODY_HEARD * loudest
-             and feats[v]["median"] <= MELODY_CEILING]
+             and feats[v]["median"] <= MELODY_CEILING and v < SECOND_BASE]   # a second instrument split from a channel under the tune is never the lead
     if heard:
         top = max(heard, key=melodic)
         roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("pc_entropy", "steps", "leaps", "presence", "level", "median")})

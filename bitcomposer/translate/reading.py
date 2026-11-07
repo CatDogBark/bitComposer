@@ -219,6 +219,8 @@ def _read(song: events.Song, snap, grid: beat.Grid | None = None) -> Reading:
         grid, roles = beat_and_parts(song)
     else:
         roles = roles_mod.assign(song, grid, roles_mod.echoes(song))
+    if roles_mod.split_second_instruments(song, roles, grid):   # a second instrument in its own register on a channel under
+        roles = roles_mod.assign(song, grid, roles_mod.echoes(song))   # the tune is a voice of its own (round 89)
     source = snap.source if snap is not None else ""
     folder = os.path.basename(os.path.dirname(os.path.abspath(source))) if source else ""
     m = manifest(os.path.dirname(os.path.abspath(source))) if source else {}

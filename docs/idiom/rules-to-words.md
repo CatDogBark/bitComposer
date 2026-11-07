@@ -111,8 +111,9 @@ bar; the stack's width; the tune's note lengths and first note.
   the melody is whole (28 of 30). Fix: the token names the sample, so the range
   is the token song's own for that sample, never a pooled draw, as rounds 63 to
   83 did for the kit. Small. Built in round 86 (the tune keeps round 43's wall;
-  the register word itself spans two instruments where a line voice changes
-  sample, a remaining item).
+  the register word spanning two instruments where a channel changes sample:
+  the bass and chord channels are split in round 89, the tune and the counter
+  a remaining item, their word in the open).
 - **The kit's two voices** (`DRUM_VOICES`): 14 of FFVI's 48 kit songs overflow
   eight voices once the kit takes two, every one a one-channel game kit (FFVI's
   kits: one channel in 16 songs, two in 22, three or more in 9); `allot` then
