@@ -194,6 +194,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   right-side share, then each voice beyond the line's in the sixth field's
   rank order, kept to twentieths and joined by "/":
   `accompaniment=half:56-68:0.8:2:0.6:1.2@s5a1fa4d5d3@0.33::s8320f1bea2:dense+varied:0.35/0.65`),
+  and since round 85 a voice's two places where its song has them
+  (`rhythm.pan_word`, `readings.pan_moves`: stays of a bar or more at
+  exactly two pans a tenth or more apart; `0.60x5|0.45x13` sits at 0.60
+  for five bars and 0.45 for thirteen, again and again; `0.35x4>0.65`
+  moves once, after four bars; FFVI's 44 such voices of 406, a stay ten
+  bars at the median), placed bar by bar by `render.pan_at`),
   and `render.pan_of` pans each written voice there (`Plan.pans`; the log
   line "pans from the balance: accompaniment=0.35/0.65 melody=0.50 kit
   K=0.50 h=0.60"), the writer's fixed pans (`plan.PANS`) standing for a

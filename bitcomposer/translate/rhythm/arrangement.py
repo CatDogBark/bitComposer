@@ -614,7 +614,18 @@ def part_sample_id(s, role: str) -> str:
     return "s" + key[:10] if len(key) >= 10 else key
 
 
-PAN_BIN = 0.05                       # a voice's pan, the right side's share, kept to twentieths (round 84)
+PAN_BIN = 0.05                       # a voice's pan, the right side's share, kept to twentieths (round 84; readings.PAN_BIN, which this package imports around)
+
+
+def pan_word(song: readings_mod.Song, voice) -> str:
+    """One voice's entry in the balance token's tenth field: its pan ("0.50"); since round 85 its two places where it
+    has them (readings.pan_moves): "0.60x5|0.45x13" back and forth, A for 5 bars then B for 13 and again, or
+    "0.35x4>0.65" moving once, A for 4 bars then B for the rest."""
+    moves = (getattr(song, "voice_pan_moves", None) or {}).get(voice)
+    if moves:
+        a, na, b, nb = moves
+        return f"{a:.2f}x{na}>{b:.2f}" if nb is None else f"{a:.2f}x{na}|{b:.2f}x{nb}"
+    return f"{round(song.voice_pans[voice] / PAN_BIN) * PAN_BIN:.2f}"
 
 
 def pan_field(song: readings_mod.Song, role: str) -> str:
@@ -634,7 +645,7 @@ def pan_field(song: readings_mod.Song, role: str) -> str:
         return ""
     others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
     order = [line] + others if all(v in pans and math.isfinite(pans[v]) for v in others) else [line]
-    return "/".join(f"{round(pans[v] / PAN_BIN) * PAN_BIN:.2f}" for v in order)
+    return "/".join(pan_word(song, v) for v in order)
 
 
 def balance_units(songs) -> list:
@@ -709,7 +720,8 @@ def balance_units(songs) -> list:
     pans joined it in round 84 (2026-11-06): a tenth field a pitched part
     (pan_field: each voice's right-side share, the line first) and a slot
     field a kit piece (kit_token), where the writer's fixed pans had given
-    every written song one stereo picture."""
+    every written song one stereo picture; and in round 85 a voice's two
+    places where it has them (pan_word: "0.60x5|0.45x13", "0.35x4>0.65")."""
     habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
     for u in readings_mod.habits(readings_mod.units(songs)) + readings_mod.habits(readings_mod.bass_units(songs)):
         habit_of_part[(u.song, u.values["part"])] = u.outcome

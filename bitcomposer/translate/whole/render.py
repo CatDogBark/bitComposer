@@ -621,7 +621,23 @@ def sends_to_echo(echo: dict | None, role: str) -> bool:
     return role in plan_mod.SENDS
 
 
-def pan_of(plan: plan_mod.Plan, role: str, voice: int, letter: str | None = None) -> float:
+def pan_at(word, bar: int | None) -> float:
+    """A voice's pan word at a bar (round 85): a number is the pan; "0.60x5|0.45x13" sits at 0.60 for 5 bars, at 0.45 for 13
+    and again from the song's first bar; "0.35x4>0.65" sits at 0.35 for 4 bars, then at 0.65; without a bar, the first place."""
+    if isinstance(word, (int, float)):
+        return float(word)
+    once = ">" in word
+    first, second = word.split(">" if once else "|")
+    a, na = first.split("x")
+    a, na = float(a), max(1, int(na))
+    if once:
+        return a if bar is None or bar < na else float(second)
+    b, nb = second.split("x")
+    b, nb = float(b), max(1, int(nb))
+    return a if bar is None or (bar % (na + nb)) < na else b
+
+
+def pan_of(plan: plan_mod.Plan, role: str, voice: int, letter: str | None = None, bar: int | None = None) -> float:
     """Where a note sits in the stereo field, as the right side's share (round 84): a kit piece at its slot's pan where the
     token carries one (extras.drums.kit_pans), a pitched part's voice at the token's pan for that voice (plan.pans, the
     line first, the voices beyond it by rank), and the writer's fixed pans (plan.PANS) for a token without the field or
@@ -633,7 +649,7 @@ def pan_of(plan: plan_mod.Plan, role: str, voice: int, letter: str | None = None
             return kit[letter]
     pans = (getattr(plan, "pans", None) or {}).get(role)
     if pans and 0 <= voice < len(pans):
-        return pans[voice]
+        return pan_at(pans[voice], bar)                     # a voice in two places sits where its word has it at this bar (round 85)
     return plan_mod.PANS[role][voice % len(plan_mod.PANS[role])]
 
 
@@ -853,7 +869,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None, letter=None):
         idx, addr, c5 = instrument(name, sample)
-        pan = pan_of(plan, role, j, letter)                 # the token song's own pan for the voice or the kit piece (round 84)
+        pan = pan_of(plan, role, j, letter, bar)            # the token song's own pan for the voice or the kit piece (round 84), at this bar (85)
         send = piece_sends(plan, echo, role, letter)        # the echo word's parts (round 70), a kit piece's own mark (round 82), the upper parts without
         env = sample_envelope(name, pack_name)              # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)

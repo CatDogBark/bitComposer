@@ -5411,3 +5411,53 @@ field inside a song (a sweep, a ping-pong echo) is one place here. A
 written voice past the token's count keeps the fixed pan (none in the
 thirty seeds: the voices are the token's). The chip's surround (the two
 sides inverted) reads as no pan; no FFVI kit voice has it.
+
+### Round 85: a voice in two places (2026-11-06, from the owner's listening to Song Check 67: a voice on one side all song "seems kinda off" on headphones)
+
+**Why.** Round 84 placed each voice at its token song's median pan, and
+the owner heard a voice held on one side the whole song as off on
+headphones. Measured, that is FFVI's own habit: 428 of its 498 voices
+hold one pan within 0.05 all song, 55 of them 0.2 or more off centre,
+and no voice or echo of its 82 songs is ever phase-inverted (the chip's
+surround), so surround and a moving stereo life are not FFVI words; they
+are parked in `docs/ROADMAP.md` for a game that has them, and the
+headphone question goes to the player (a stereo width setting, there
+too). What FFVI does do is sit a voice in two places: 44 of its 406
+pitched voices (accompaniment 15 of 130, counter 12 of 100, melody 8 of
+66, bass 7 of 78, harmony 2 of 26, in 26 of 68 songs) stay a bar or more
+at each of exactly two pans a tenth or more apart, 21 of them moving once
+(Awakening's tune at 0.35 for four bars, then 0.65 for the rest) and 23
+back and forth (Kefka's accompaniment at 0.60 for five bars and 0.45 for
+thirteen, again and again; Cyan's tune 0.50 for twelve and 0.70 for
+seven), a stay lasting ten bars at the median (quartiles 6 to 21); the
+two places sit across the centre in 20, one at centre in 14, both on one
+side in 10. The median had flattened every one of them to one place.
+
+**Built.** `readings.pan_moves` reads a voice's two places from its
+stored notes: pans kept to twentieths make runs, a run of a bar or more
+is a stay, and where the stays visit exactly two places `PAN_APART`
+(0.1) or more apart the voice carries (A, bars at A, B, bars at B), A the
+first place and each count the median stay there, or (A, bars at A, B,
+None) where it moved once (`Song.voice_pan_moves`). The balance token's
+tenth field carries them as the voice's word (`rhythm.pan_word`:
+`0.60x5|0.45x13` back and forth, `0.35x4>0.65` once; a voice in one place
+keeps its number), the plan keeps the word as written, and
+`render.pan_at` places each note by its bar: A for the first stay's bars,
+then B, cycling where the voice goes back and forth, from the song's
+first bar. Pack4 refit on the same readings (backup
+`pack.json.before-r85`), the shipped vocabulary regenerated. Tests: the
+reading (both shapes, one place, per-note jitter, three places, a
+twentieth apart), the words, the plan's keeping them, the pan at a bar.
+
+**Measured.** Thirty seeds composed before and after write the same notes
+and plans. 24 of their 185 written voices sit in two places (FFVI 44 of
+406), in 15 of 30 songs: The Starlit Foundry's accompaniment second,
+bass and counter all move right at bar 16; a tune at 0.60 for fourteen
+bars and 0.45 for six, again; a bass at 0.25 for three bars, then 0.75.
+Song Check 68 pairs five such seeds before (round 84) and after.
+
+**Open.** The ten sweeping voices and per-note jitter stay at the median.
+A first stay longer than the written song never moves (a 24-bar stay in a
+22-bar song). The change lands on the written bar line where FFVI's came
+in mid-bar in three of four (a pickup, a rest). A kit voice's places are
+not read: its slots' pans are per sample (round 84).

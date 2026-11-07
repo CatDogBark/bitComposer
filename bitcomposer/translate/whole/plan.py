@@ -221,7 +221,8 @@ class Plan:
     bounds: dict = field(default_factory=dict)        # a part or "part:second" -> the register it is written in: where the game plays the sample
                                       # chosen for it (the ranges word's drawn range, bound_of), set by samples_for before the writing (round 34)
     pans: dict = field(default_factory=dict)          # a pitched part -> its voices' pans, the right side's share, the line first (the balance
-                                      # token's tenth field, round 84); render.pan_of pans a voice there, by plan.PANS without the field
+                                      # token's tenth field, round 84); render.pan_of pans a voice there, by plan.PANS without the field; a
+                                      # voice in two places keeps the token's word, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85)
 
     @property
     def bars(self) -> int:
@@ -729,8 +730,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_samples[role] = fields[7]
             if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
                 token_habits[role] = fields[8].replace("+", " ")
-            if len(fields) > 9 and fields[9]:               # the part's voices' pans (round 84): the line's first, then the voices beyond it
-                token_pans[role] = [float(x) for x in fields[9].split("/")]
+            if len(fields) > 9 and fields[9]:               # the part's voices' pans (round 84): the line's first, then the voices beyond it;
+                token_pans[role] = [float(x) if re.fullmatch(r"[0-9.]+", x) else x for x in fields[9].split("/")]   # a voice's two
+                                                            # places kept as written, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85, render.pan_of)
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
@@ -978,7 +980,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                    + ("; drawn from layer_levels: " + " ".join(f"{r}={layer_levels[r]:.1f}" for r in layered if layer_from[r] == "layer_levels")
                       if any(layer_from[r] == "layer_levels" for r in layered) else ""))
     if token_pans or token_kit_pans:                        # the song's stereo picture (round 84): the token song's pans, voice by voice
-        log.append("pans from the balance: " + " ".join(f"{r}={'/'.join(f'{x:.2f}' for x in token_pans[r])}" for r in band if r in token_pans)
+        log.append("pans from the balance: " + " ".join(f"{r}={'/'.join(f'{x:.2f}' if isinstance(x, float) else x for x in token_pans[r])}" for r in band if r in token_pans)
                    + (" kit " + " ".join(f"{k}={v:.2f}" for k, v in token_kit_pans.items()) if token_kit_pans and R.DRUMS in band else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,

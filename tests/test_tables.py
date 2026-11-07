@@ -780,6 +780,32 @@ class BalanceLevelTests(unittest.TestCase):
         s.voice_pans.pop(1)
         self.assertEqual(rhythm.pan_field(s, "accompaniment"), "0.35")                                # a voice without a pan: the line's alone
 
+    def test_a_voice_in_two_places(self):
+        """Round 85: a voice whose pans make stays of a bar or more in exactly two places carries them as its word, back and
+        forth or moving once; jitter under a bar and a voice in one place keep the median."""
+        from bitcomposer.translate.rhythm import readings
+        nan = float("nan")
+        def rows(pans):                                     # a note a beat, 4/4: pans[k] for beat k
+            return [(float(k), 1.0, 60.0, 0.5, p, 0, nan) for k, p in enumerate(pans)]
+        self.assertEqual(readings.pan_moves(rows([0.6] * 20 + [0.45] * 52 + [0.6] * 20 + [0.45] * 52), 4), (0.6, 5, 0.45, 13))
+        self.assertEqual(readings.pan_moves(rows([0.35] * 16 + [0.65] * 100), 4), (0.35, 4, 0.65, None))
+        self.assertIsNone(readings.pan_moves(rows([0.5] * 64), 4))                                   # one place
+        self.assertIsNone(readings.pan_moves(rows([0.45, 0.55] * 32), 4))                            # jitter a note at a time: no stay
+        self.assertIsNone(readings.pan_moves(rows([0.3] * 16 + [0.5] * 16 + [0.7] * 16), 4))        # three places
+        self.assertIsNone(readings.pan_moves(rows([0.6] * 16 + [0.65] * 16), 4))                       # a twentieth apart: a bin's edge, no move
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)], tonic=0, mode="major")
+        line = [(float(i), 1.0, 72.0, "sa") for i in range(8)]
+        s.notes["melody"] = line
+        s.voice_notes = {0: ("melody", line)}
+        s.voice_levels = {0: 0.5}; s.levels = {"melody": 0.5}
+        s.voice_pans = {0: 0.52}
+        self.assertEqual(rhythm.pan_word(s, 0), "0.50")
+        s.voice_pan_moves = {0: (0.6, 5, 0.45, 13)}
+        self.assertEqual(rhythm.pan_word(s, 0), "0.60x5|0.45x13")
+        s.voice_pan_moves = {0: (0.35, 4, 0.65, None)}
+        self.assertEqual(rhythm.pan_field(s, "melody"), "0.35x4>0.65")
+
     def test_the_kits_echo_rides_the_token(self):
         """Round 82: a slot whose sample's hits sit on drum voices that send to echo carries an e after its class (the chip's
         echo is per channel: Wild West sends its blip and keeps its kick dry), and the balance token carries the song's echo

@@ -78,7 +78,7 @@ bar; the stack's width; the tune's note lengths and first note.
 | # | rule | 2026-11-06 |
 |---|---|---|
 | 1 | the echo | replaced: the `echo` word (round 70), the kit's echo marks and the token's own word (round 82); the `SENDS` fallback fired in 0 of 100 songs |
-| 2 | the pans | replaced in round 84: a pitched part's voices' pans as the balance token's tenth field, a kit slot's pan after its echo mark |
+| 2 | the pans | replaced in round 84: a pitched part's voices' pans as the balance token's tenth field, a kit slot's pan after its echo mark; round 85: a voice's two places and their bars in the same word |
 | 3 | the kit | replaced in rounds 58 (pieces), 63 (the token's kit), 68 (a level a piece), 75 (the struck note), 77 (the hold), 78 (the rate), 79 (the degree), 80 (the slot's sample), 81 (the slot's figure), 83 (a tune on the drum channel a part); `DRUM_VOICES` standing, and firing now |
 | 4 | the band's lock | standing, nearly inert: the bass drew under a lock in 170 of 982 bars (none in 37 of 56 songs) and missed it in 35; the accompaniment 29 of 874 and 3; the harmony and arp never |
 | 5 | the tune's filters | standing: `STRONG_SCALE` removes a move in 52 % of the tune's draws, `CLASH` in 83 %, and the written songs clash more than FFVI all the same (below) |

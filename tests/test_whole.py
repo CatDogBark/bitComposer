@@ -1821,6 +1821,24 @@ class TonalKitPieceTests(unittest.TestCase):
         p.pans = {}
         self.assertEqual(whole.pan_of(p, "melody", 0), whole.PANS["melody"][0])
 
+    def test_a_voice_in_two_places_moves_at_its_bars(self):
+        """Round 85: a pan word with two places is kept as written and pan_at puts the voice at the first place for its
+        bars, then the second, back and forth or once; a number is the pan at every bar."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0:::sbass123456:medium+roots:0.50 "
+                 "melody=main:64-84:0.9:1:0.7:::slead123456:medium+mixed:0.35x4>0.65 "
+                 "accompaniment=half:56-68:0.8:2:0.6:1.2@sacc1234567@0.50::sacc7654321:dense+varied:0.60x5|0.45x13/0.50 "
+                 "key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.pans, {"bass": [0.5], "melody": ["0.35x4>0.65"], "accompaniment": ["0.60x5|0.45x13", 0.5]})
+        self.assertTrue(any("melody=0.35x4>0.65" in line and "accompaniment=0.60x5|0.45x13/0.50" in line for line in p.log), p.log)
+        self.assertEqual([whole.pan_of(p, "melody", 0, bar=b) for b in (0, 3, 4, 40)], [0.35, 0.35, 0.65, 0.65])
+        self.assertEqual([whole.pan_of(p, "accompaniment", 0, bar=b) for b in (0, 4, 5, 17, 18, 22, 23)], [0.6, 0.6, 0.45, 0.45, 0.6, 0.6, 0.45])
+        self.assertEqual(whole.pan_of(p, "accompaniment", 1, bar=9), 0.5)
+        self.assertEqual(whole.pan_of(p, "melody", 0), 0.35)                                            # no bar: the first place
+        self.assertEqual(whole.pan_at(0.7, 12), 0.7)
+
     def test_the_kits_echo_rides_the_token(self):
         """Round 82: the plan reads the token's echo word (extras.echo.word) and the slots' echo marks (extras.drums.kit_echo);
         render.echo_word takes the word in place of a draw, a vocabulary without an echo table included; piece_sends sends a
