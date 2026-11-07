@@ -657,31 +657,31 @@ class BalanceLevelTests(unittest.TestCase):
         s.levels = {"melody": 0.5, "drums": 0.1}
         s.kit_levels = {"k": 0.8, "o": 0.2}
         s.kit_pitches, s.kit_rates = {"o": 62}, {"k": 48}                           # round 78: a drum piece's note slot is the chip's rate, "r48"
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@62")
-        self.assertEqual(rhythm.kit_token(s), "K=k@@r48,o=o@@62")                 # no top, no level: the note still
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48@@m,o=o@0.40@62@@s")      # since round 81 the strike class ends the slot
+        self.assertEqual(rhythm.kit_token(s), "K=k@@r48@@m,o=o@@62@@s")                 # no top, no level: the note still
         del s.kit_rates["k"]
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,o=o@0.40@62")       # a piece without a note keeps the old form
-        self.assertIn("drums=::::0.2:::K=k@1.60,o=o@0.40@62", rhythm.balance_units([s])[0].outcome)
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@@m,o=o@0.40@62@@s")       # a piece without a note keeps the old form
+        self.assertIn("drums=::::0.2:::K=k@1.60@@@m,o=o@0.40@62@@s", rhythm.balance_units([s])[0].outcome)
         s.kit_holds = {"k": 0.5, "o": 6.95}                                        # round 77: each piece's hold follows the note's slot
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50,o=o@0.40@62@6.95")   # (the kick has no note: its slot kept empty)
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50@m,o=o@0.40@62@6.95@s")   # (the kick has no note: its slot kept empty)
         del s.kit_pitches["o"]
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50,o=o@0.40@@6.95")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50@m,o=o@0.40@@6.95@s")
         s.kit_levels = {}
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@@@0.50,o=o@@@6.95")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@@@0.50@m,o=o@@@6.95@s")
         # round 79: with a key, a tonal piece's note is a degree of it (scale steps from the tonic's fourth-octave note, 7 an
         # octave; semitones with a c where the note is off the scale), a drum piece the game tunes carries a t on its rate,
         # and the balance token carries the key before the top
         s.kit_levels, s.kit_holds = {"k": 0.8, "o": 0.2}, {}
         s.kit_pitches, s.kit_rates = {"o": 62}, {"k": 48}
         s.tonic, s.mode = 0, "major"
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@d1")             # D4 is one step above C4 in C major
-        self.assertEqual(rhythm.kit_token(s, 0.5, tuned=frozenset({"k"})), "K=k@1.60@r48t,o=o@0.40@d1")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48@@m,o=o@0.40@d1@@s")             # D4 is one step above C4 in C major
+        self.assertEqual(rhythm.kit_token(s, 0.5, tuned=frozenset({"k"})), "K=k@1.60@r48t@@m,o=o@0.40@d1@@s")
         s.kit_pitches["o"] = 75                                                            # D#5: off C major, 15 semitones above C4
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@c15")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48@@m,o=o@0.40@c15@@s")
         s.tonic, s.mode = 9, "minor"                                                       # A minor: D#5 off it too, 6 above A4
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@c6")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48@@m,o=o@0.40@c6@@s")
         s.kit_pitches["o"] = 76                                                            # E5 in A minor: four steps above A4, a fifth
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48,o=o@0.40@d4")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@r48@@m,o=o@0.40@d4@@s")
         self.assertEqual(rhythm.kit_degree(s, 69), "d0"); self.assertEqual(rhythm.kit_degree(s, 57), "d-7")
         token = rhythm.balance_units([s])[0].outcome.split()
         self.assertIn("key=9:minor", token)
@@ -715,9 +715,40 @@ class BalanceLevelTests(unittest.TestCase):
                            [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)]
         s.voice_notes = {2: ("drums", s.notes["drums"])}
         s.kit_levels = {"rattle": 0.1, "backbeat": 0.4, "k": 0.5}
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.00,S=backbeat@0.80")                  # the slot's level is the pick's
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.00@@@m,S=backbeat@0.80@@@m")                  # the slot's level is the pick's
         del s.kit_levels["backbeat"]
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.00,S=rattle@0.20")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.00@@@m,S=rattle@0.20@@@d")
+
+    def test_a_letters_figure_is_its_slots_samples_hits(self):
+        """Round 81: the written kit plays one sample a letter, so a letter's figure counts its slot's sample's hits alone (the
+        backbeats, not the rattle's eighths beside them); the slot carries its strike class after the hold (a under a hit a
+        bar, s to two, m to six, d over); the drum units and the limbs' units carry the kit's classes as a value."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)],
+                        pieces={"rattle": "snare", "backbeat": "snare", "k": "kick", "x": "none"})
+        s.notes["drums"] = [(x / 2, 0.1, float("nan"), "rattle") for x in range(12)] + [(x, 0.1, float("nan"), "backbeat") for x in (1.0, 3.0, 5.0, 7.0)] + \
+                           [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)] + [(3.5, 0.1, float("nan"), "x")]
+        s.voice_notes = {2: ("drums", s.notes["drums"])}
+        s.kit_levels = {"rattle": 0.1, "backbeat": 0.4, "k": 0.5}
+        self.assertEqual(rhythm.kit_slots(s), {"K": "k", "S": "backbeat"})
+        self.assertEqual([u.outcome for u in rhythm.drum_units([s])], ["0:K 1:S 2:K 3:S 7/2:o", "0:K 1:S 2:K 3:S"])   # the rattle's eighths are not the slot's;
+        self.assertEqual(rhythm.kit_classes(s), {"K": "m", "S": "m"})                                            # a letter without a slot keeps its hit
+        self.assertEqual({u.values["classes"] for u in rhythm.drum_units([s])}, {"Km Sm"})
+        self.assertEqual({u.values["classes"] for u in rhythm.drum_group_units([s], ("K", "S", "t"))}, {"Km Sm"})
+        self.assertEqual({(u.values["limb1"], u.values["limb2"], u.values["limb3"]) for u in rhythm.drum_group_units([s], ("K", "S", "t"))}, {("Km", "Sm", "-")})
+        self.assertEqual({u.values["classes"] for u in rhythm.drum_group_units([s], ("o",))}, {"-"})
+        self.assertEqual(rhythm.class_values(rhythm.kit_classes(s), ("K", "S", "t")), {"limb1": "Km", "limb2": "Sm", "limb3": "-"})   # a tie: the kick first
+        self.assertEqual(rhythm.class_values(rhythm.kit_classes(s), ("h",)), {"classes": "-"})
+        self.assertEqual(rhythm.habit_class(rhythm.kit_classes(s), ("K", "S", "t")), "Km")
+        self.assertEqual(rhythm.limb_order({"K": "a", "S": "d", "t": "m"}, {"K", "S", "t"}), ["S", "t", "K"])                        # the densest first
+        self.assertEqual(rhythm.habit_of(0.3, rhythm.SLOT_CLASSES), "x"); self.assertEqual(rhythm.habit_of(0.7, rhythm.SLOT_CLASSES), "a")   # rare under half
+        self.assertEqual(rhythm.classes_value(rhythm.kit_classes(s), ("S", "h")), "Sm")
+        self.assertEqual([h.outcome for h in rhythm.drum_habit_units([s])], ["medium varied"])                 # 4 and 5 hits a bar, the rattle out
+        del s.kit_levels["backbeat"]                                                                              # the rattle takes the slot: its hits are the figure
+        self.assertEqual(rhythm.kit_slots(s), {"K": "k", "S": "rattle"})
+        self.assertEqual([len([t for t in rhythm._tokens(u.outcome) if t.endswith(":S")]) for u in rhythm.drum_units([s])], [8, 4])
+        self.assertEqual(rhythm.kit_classes(s), {"K": "m", "S": "d"})
+        self.assertEqual([h.outcome for h in rhythm.drum_habit_units([s])], ["dense varied"])
 
     def test_the_kits_pieces_carry_their_own_levels(self):
         """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck
@@ -735,14 +766,14 @@ class BalanceLevelTests(unittest.TestCase):
         s.voice_levels = {1: 0.5, 2: 0.1}
         s.levels = {"melody": 0.5, "drums": 0.1}            # the part's median: the hat's, 0.2 of the tune
         s.kit_levels = {"k": 0.8, "s": 0.3, "h": 0.1}       # the kick louder than the tune, the snare at 0.6 of it
-        self.assertEqual(rhythm.kit_token(s), "K=k,S=s,h=h")               # the old form without a top
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,S=s@0.60,h=h@0.20")   # in hundredths since round 70
+        self.assertEqual(rhythm.kit_token(s), "K=k@@@@m,S=s@@@@m,h=h@@@@d")               # the old form without a top
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@@m,S=s@0.60@@@m,h=h@0.20@@@d")   # in hundredths since round 70
         token = rhythm.balance_units([s])[0].outcome
-        self.assertIn("drums=::::0.2:::K=k@1.60,S=s@0.60,h=h@0.20", token)
+        self.assertIn("drums=::::0.2:::K=k@1.60@@@m,S=s@0.60@@@m,h=h@0.20@@@d", token)
         s.kit_levels["s"] = float("nan")
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60,S=s,h=h@0.20")   # an unread level never reaches the token
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@@m,S=s@@@@m,h=h@0.20@@@d")   # an unread level never reaches the token
         s.kit_levels = {}
-        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k,S=s,h=h")
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@@@@m,S=s@@@@m,h=h@@@@d")
 
     def test_the_songs_echo_is_a_counted_word(self):
         """Round 70: the song's echo as the chip had it at key-on (reading.echo_of_notes: the volume of full, the delay in

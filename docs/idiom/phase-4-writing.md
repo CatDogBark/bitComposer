@@ -5138,3 +5138,99 @@ a second snare voice the game has and the written song does not; a second
 sample per letter, or the rattle as a piece of its own, is a counted word
 for later. Strago's hat (17 hits at 0.24 beside 18 at 0.06) now plays
 every hat hit on the louder sample.
+
+### Round 81: the slot's figure (2026-11-06, from Song Check 65: Last Terminal's "beeping in the drum kit" and The Endless Bridge's hat "turned into almost a smacking noise")
+
+**Why.** The kit slot carried its sample, level, note, hold and pick, and
+the figure a letter played came from the pool at the kit's habit tier
+whatever the slot's sample did in its own song. Wild West strikes its
+pitched blip twice a bar, on fifteen pitches, two bars in three rested;
+Last Terminal played it five times a bar on one pitch. Strago strikes its
+click on beat two, seventeen times in twenty bars; The Endless Bridge
+played it on the hat's eighths. Over the 45 written songs' 95 kit letters
+the written density sat within half to double of the game's for that
+sample in 62 (65 %), over double in 10, under half in 23; the snare was
+outside in 11 of 25, the hat in 8 of 16. Where a letter had two samples
+(20 letters), the figure counted both samples' hits while the written
+kit played one: Battle Theme's rattle in sixteenths beside its backbeat
+snare had made the written snare a sixteenth-note part.
+
+**Built.** (1) A letter's figure is its slot's sample's hits
+(`readings.drum_figure` with `kit_slots`): the rattle's hits beside the
+backbeat are not the snare's figure; a letter without a slot keeps every
+hit. The slot's pick (round 80) lives in `readings.kit_slot_samples`.
+(2) Each slot carries its strike class after the hold
+(`readings.kit_classes`, SLOT_CLASSES: the sample's hits a bar of the
+song's meter, rests counted, rare under half a hit a bar, an accent under
+one, sparse to two, medium to six, dense over; `@m`); the drum units and
+the limbs' units carry the kit's classes as values (`classes_value`,
+`class_values`, `habit_class`). (3) A kit whose token carries classes is
+written from its limbs' tables (`plan.write`: the kit table's bar is one
+song's, hat and all, and under a rare kit the draw smoothed that song's
+bars with every kit's); the single-letter limbs condition on the slot's
+class (`drums-h/c/o`: part, meter, classes, tempo, feel, previous), the
+kick-snare-tom limb on a field a letter in the order of the slots'
+density, the densest first (`drums-KSt`: limb1, limb2, limb3;
+`readings.limb_order`), so a draw lets the sparser letters' classes go
+and keeps the backbone's. The class says the density: the habit left the
+limb shapes (a one-song habit level under the class had rested in 0.87
+of its bars and silenced Mog's hat) and drives the recall urn and a kit
+written without classes; the class's bars are their own cap
+(`writer.drums`: no group caps under a class). (4) The group habit is
+drawn under the group's backbone class on its own stream and terminal at
+the class level (`drum_group_habits`: part, classes, habit;
+GROUP_HABIT_FLOOR; `_draw_values`): the Witten-Bell share had let one
+draw in twelve fall to the part's root, where a dense hat took a sparse
+habit whose cap refused every bar of its class, and the hat rested
+through the song. (5) Under a class, a limb's chain floor needs one
+figure besides the rest (LIMB_FLOOR_OUTCOMES: a rare crash's vocabulary
+is the downbeat crash and its rests; FLOOR_OUTCOMES asks two elsewhere),
+the urn's new draw may be a rest again (`Cache.draw_new(rest_new)`: the
+rest is one outcome, and "new to the song" had let a limb rest only from
+the urn's same and earlier shares after its first rest, so Wild West's
+blip bars, two in three rested in the game, rested in one of five), and a
+limb the token strikes that drew only rests over the drum bars draws
+again (LIMB_REDRAWS 3). Pack4 refit (backup `pack.json.r80`), the shipped
+vocabulary regenerated; 68 songs. Tests: the slot's figure and classes,
+the limb's fields and order, the class-conditioned habit and limb draw,
+the plan's reading of the class.
+
+**Measured.** Over the 45 written songs (`survey_kits.py`, the kit
+letters with a game match): the written density within half to double of
+the game's for the slot's sample in 58 of 82 letters (71 %, from 65 %),
+over double in 6 (from 10), under half in 18 (from 23), none silent; the
+kick outside in 0 of 13 (from 2 of 16), the snare in 8 of 22 (from 11 of
+25), the hat in 4 of 13 (from 8 of 16), the other sounds in 2 of 6 (from
+4 of 9); the crash in 7 of 22 (from 6 of 23), written at a median 1.4 of
+the game's density (from 1.2): the urn's earlier share brings a crash bar
+back more often than a rare crash's table would. Last Terminal's blip:
+2.0 a bar (game 2.2; 5.3 before), two bars in three rested; Journey of
+the Quarry's snare 2.0 (game 2.0; 4.2 before). The written drum habit
+tiers moved for the songs whose letters lost a second sample's hits, and
+the texture and entrance tables counted on those tiers moved with them,
+so 329 of 3000 seeds plan again (`scan_pairs.py`: 2671 stand but for the
+kit). Song Check 66's step 1, the drums' part level in the whole, before
+to after: Last Terminal -3.4 to -3.7 dB (the blip 5.3 to 1.9 a bar, two
+bars in three rested), Journey of the Quarry -3.6 to -4.1 (the snare 4.2
+to 2.0), Sleeping Aqueduct -7.4 to -10.2 (Shadow is in 3/4, so its kit's
+bars come from other songs' accent-snare, medium-kick limbs), Far River
+-0.7 to -3.3 (the snare 6.4 to 1.5, the game's 1.8; the song that had
+gone five decibels forward in round 80); The Endless Bridge, whose seed
+plans again, against Glacier Passage on Strago's token: the hat at the
+click's accent class, once in four bars. Over the 45 kit tokens against
+the games' own renders (`drum_forward.py`): the written kit over the band
+by integrated loudness sits 1.0 dB under the game's at the median (0.9
+after round 80), 3 dB or more forward in 5 of 45 (7), 3 dB or more back
+in 12 (15); by hit level the median is +0.2 (+0.8) and the forward count
+12 (12). Far River, the song round 80 had sent five decibels forward,
+sits at the game's balance (-0.1); the forward five are the two
+pad-as-kick songs, Metamorphasis, Kefka and Dancing Mad (Full).
+
+**Open.** The class says how often a piece is struck, not in how many
+bars: a piece struck once in most bars and one struck four times in one
+bar of five share a class, and the written presence is the pool's. A
+song in another meter lends no bars (Shadow in 3/4 to a 4/4 song: its
+accent snare and medium kick come from other songs' bars). The urn's
+earlier share recycles a crash bar; the crash still sits over the game's
+density. The melodic kit pieces (Wild West's blip on fifteen pitches, the
+tom lines, Kefka's and Dancing Mad's "other" pieces) are round 83's.

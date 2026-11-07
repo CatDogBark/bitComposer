@@ -171,9 +171,16 @@ def thinned(env: tuple, ratio: float) -> tuple:
     return (max(1, round(low * r)), max(1, round(high * r)), downbeat, meter)
 
 
+LIMB_FLOOR_OUTCOMES = 1              # figures besides the rest a drum limb's class level needs to stay the chain's floor (round 81): one, the
+                                     # downbeat crash of a rare cymbal; tables.FLOOR_OUTCOMES asks two of every other figure table
+LIMB_REDRAWS = 3                     # a limb whose slot the token strikes that drew only rests over the drum bars draws again this often (round 81:
+                                     # a rest-heavy class pool and the urn's "same" share had left a rim silent through a song, one chance in nine)
+
+
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
-                  energy: list | None = None, extra_values: dict | None = None) -> list[str]:
+                  energy: list | None = None, extra_values: dict | None = None, floor_outcomes: int | None = None,
+                  floor_songs: int | None = None, rest_new: bool = False) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -219,7 +226,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                           manner.fits]
                 figure = None
                 for fit in ladder:
-                    candidate = model.draw(unit, previous, played, rng, keep=fit)
+                    candidate = model.draw(unit, previous, played, rng, keep=fit, floor_outcomes=floor_outcomes, floor_songs=floor_songs, rest_new=rest_new)
                     for _ in range(figures_mod.TRIES):
                         if fit(candidate):
                             figure = candidate
@@ -341,7 +348,7 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
 
 
 def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None, habit: str | None = None,
-          free: bool = False, plays: list | None = None, kit_value: str | None = None) -> tuple[list[tuple[float, str]], list[str]]:
+          free: bool = False, plays: list | None = None, kit_value: str | None = None, class_values: dict | None = None) -> tuple[list[tuple[float, str]], list[str]]:
     """The drums written for the song, a group of pieces at a time (the
     module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
     to its Cache (a group of every letter: the whole kit, its table's part
@@ -351,9 +358,13 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
     the song's pieces; with `plays` (a planned song's bars) a group may
     also draw a rested bar, at its table's rate; `kit_value` (the letters
     of the pieces the song's kit strikes, kit_pieces) conditions the draw
-    and narrows the kit to them. Returns the hits (start in beats, piece
-    letter) and the merged figures."""
+    and narrows the kit to them; `class_values` ({group: its slots' strike
+    classes as the limb table's values, rhythm.class_values}, round 81)
+    conditions each group's draw on how the token song strikes the samples
+    the slots hold. Returns the hits (start in beats, piece letter) and the
+    merged figures."""
     locks = locks or {}
+    class_values = class_values or {}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, R.DRUMS)]
     whole = [rhythm.drum_figure(struck, song) if struck else figures_mod.REST for a, _, struck in bars]
     kit = {rhythm.LETTERS.get(piece, "o") for piece in song.pieces.values() if piece and piece != "none"}
@@ -369,16 +380,24 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         if free:
             manner = figures_mod.FreeManner(model.table.vocabulary, kit & set(letters), song.division, rests=plays is not None)
             group_habit = (habit.get(letters) if isinstance(habit, dict) else habit) or "medium mixed"
-            envelope_of = figures_mod.free_drum_envelope(kit & set(letters), figures_mod.group_caps(habit))
+            envelope_of = figures_mod.free_drum_envelope(kit & set(letters), None if class_values.get(letters) else figures_mod.group_caps(habit))
+            # under a slot's class the class's bars are their own cap (round 81): a habit's cap had refused every bar of a dense hat's class
         else:
             manner = figures_mod.DrumManner(None, model.table.vocabulary, figures=[f for f in own if f != figures_mod.REST])
             mine = [u for u in rhythm.drum_group_units([song], letters)]
             group_habit = habit or (mine[0].values["habit"] if mine else "medium mixed")
             envelope_of = figures_mod.drum_envelope
         if free:
-            figures = _free_figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold,
-                                    locks.get(letters), envelope_of=envelope_of, within_of=figures_mod.drum_within, lock_share=LOCK_DRUMS,
-                                    extra_values={"kit": kit_value} if kit_value else None)   # the kit's pieces (round 58)
+            extra = {**({"kit": kit_value} if kit_value else {}), **class_values.get(letters, {})}
+            classed = bool(class_values.get(letters))
+            for attempt in range(1 + (LIMB_REDRAWS if classed else 0)):
+                figures = _free_figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold,
+                                        locks.get(letters), envelope_of=envelope_of, within_of=figures_mod.drum_within, lock_share=LOCK_DRUMS,
+                                        extra_values=extra or None,   # the kit's pieces (round 58) and the slots' strike classes (round 81)
+                                        floor_outcomes=LIMB_FLOOR_OUTCOMES if classed else None,   # one figure and its rests is a class's vocabulary
+                                        rest_new=classed)                                        # and the rest comes at the class's own rate
+                if not classed or any(f != figures_mod.REST for f in figures) or not any(o != figures_mod.REST for o in own):
+                    break                                   # a limb the token strikes that drew only rests draws again (LIMB_REDRAWS)
         else:
             figures = _figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
                                envelope_of=envelope_of, within_of=figures_mod.drum_within, lock_share=LOCK_DRUMS)
@@ -397,7 +416,7 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
                 continue
             before = by_group[main][k - 1] if k else figures_mod.REST
             values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != figures_mod.REST else rhythm.START, "habit": group_habit, **({"kit": kit_value} if kit_value else {}),
-                      "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
+                      **class_values.get(main, {}), "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
             unit = tables.Unit(song.sid, song.game, "", values)
             env = figures_mod.free_drum_envelope(kit & set(main), figures_mod.group_caps(habit))(None, values["meter"])   # within the group's
             # habit too (round 75: drawn without the cap, a sparse "o" group's rested bars filled with Johnny C. Bad's thirteen-hit bars)

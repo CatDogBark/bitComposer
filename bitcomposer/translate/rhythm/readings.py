@@ -578,6 +578,109 @@ def bass_units(songs) -> list:
 HABITS = ((1 / 3, "detached"), (2 / 3, "mixed"), (2, "held"))   # a song's share of held notes -> its habit
 REPEATS = ((1 / 3, "varied"), (2 / 3, "mixed"), (2, "repeating"))   # its share of bars repeating the one before
 DENSITIES = ((2, "sparse"), (6, "medium"), (1e9, "dense"))        # its onsets a bar
+SLOT_CLASSES = ((0.5, "x"), (1, "a"), (2, "s"), (6, "m"), (1e9, "d"))   # a kit slot's strike class (round 81): its sample's hits a bar of the
+                                                                    # song's meter, rests counted: rare under half a hit a bar (a crash once in
+                                                                    # ten bars), an accent under one, sparse to two, medium to six (DENSITIES'
+                                                                    # edges), dense over. FFVI's 124 kit pieces: 14 / 21 / 21 / 38 / 30
+SLOT_NAMES = {"x": "rare", "a": "an accent", "s": "sparse", "m": "medium", "d": "dense"}
+SLOT_SHARE = 0.2                     # a sample struck this share of a piece letter's hits or more is in the running for the letter's
+                                     # slot (round 80); the loudest of those takes it
+SLOT_TIE_DB = 1.0                    # two samples within this of each other are as loud (the ear's step); the most struck of them
+                                     # takes the slot
+
+
+def kit_slot_samples(counts: Counter, levels: dict) -> dict:
+    """The sample each piece letter's slot takes (round 80): of the samples the song strikes the letter on, the loudest
+    (its median level, kit_levels) among those with SLOT_SHARE of the letter's hits or more, the most struck among samples
+    within SLOT_TIE_DB of the loudest; the most struck where no level is known. Round 63 had taken the most struck: FFVI
+    strikes 20 of its kit letters on two samples or more, and in 9 the most struck is not the loudest (Battle Theme's snare
+    slot took its sixteenth-note rattle, 269 hits at 0.12, over the backbeat snare, 82 hits at 0.31; the other 11 are the
+    same sample's hits split with a second at the same level, or a tie to the third decimal, and keep the most struck).
+    `counts`: {(letter, sample key): hits}."""
+    by_letter = {}
+    for (letter, key), n in counts.items():
+        by_letter.setdefault(letter, {})[key] = n
+    out = {}
+    for letter, keys in by_letter.items():
+        total = sum(keys.values())
+        running = [k for k, n in keys.items() if n >= SLOT_SHARE * total] or list(keys)
+        known = [k for k in running if levels.get(k) is not None and math.isfinite(levels[k])]
+        if known:
+            top = max(levels[k] for k in known)
+            tied = [k for k in known if top <= 0 or levels[k] >= top * 10 ** (-SLOT_TIE_DB / 20)]
+            out[letter] = max(tied, key=lambda k: (keys[k], k))
+        else:
+            out[letter] = max(running, key=lambda k: (keys[k], k))
+    return out
+
+
+def kit_slots(song: "Song") -> dict:
+    """The sample each kit letter's slot takes in the song (kit_slot_samples on its drum hits and kit levels): {letter:
+    sample key}; {} without drums. The written kit has one voice a letter, on this sample."""
+    counts = Counter()
+    for n in song.notes.get(R.DRUMS, []):
+        key = n[3] if isinstance(n[3], str) else None
+        piece = (song.pieces or {}).get(key)
+        if key and piece in LETTERS:
+            counts[(LETTERS[piece], key)] += 1
+    return kit_slot_samples(counts, getattr(song, "kit_levels", None) or {})
+
+
+def kit_classes(song: "Song") -> dict:
+    """Each kit slot's strike class (round 81): the slot's sample's hits a bar of the song's meter, every bar counted as
+    DENSITIES counts a part's density, as SLOT_CLASSES' letter: {letter: class}. Wild West strikes its pitched blip 57
+    times in 26 bars (m) and its hat 193 (d); Strago its click 17 times in 20 bars, every one on beat two (a); Returners
+    its crash 3 times in 29 bars (x)."""
+    slots = kit_slots(song)
+    if not slots:
+        return {}
+    bars = sum(1 for _ in numbered_bars_of(song, R.DRUMS)) or len(song.bars) or 1
+    hits = Counter(n[3] for n in song.notes.get(R.DRUMS, []) if isinstance(n[3], str))
+    return {letter: habit_of(hits[key] / bars, SLOT_CLASSES) for letter, key in slots.items()}
+
+
+def classes_value(classes: dict, letters) -> str:
+    """A kit's strike classes as a table value ("Km Sd ha", the letters in LETTERS' order; "-" with none): a group's
+    letters' for its limb table (the single-letter limbs), the kit's in the drum units."""
+    return " ".join(f"{x}{classes[x]}" for x in LETTERS.values() if x in letters and x in classes) or "-"
+
+
+LIMB = ("K", "S", "t")               # the kick-snare-tom limb's letters; its fields (limb1, limb2, limb3) hold their classes in the order
+                                     # of the slots' density, the densest first (the limb's backbone: Shadow's kick at four a bar over its
+                                     # five snare hits; Wild West's tom line over its kick), ties in this order, so a draw lets the sparser
+                                     # letters' classes go first and keeps the backbone's
+
+
+def limb_order(classes: dict, letters) -> list:
+    """The limb's letters the kit has, the densest class first (SLOT_CLASSES' rank), ties by LIMB's order."""
+    rank = {name: i for i, (_, name) in enumerate(SLOT_CLASSES)}
+    return sorted((x for x in LIMB if x in letters), key=lambda x: (-rank.get(classes.get(x, ""), -1), LIMB.index(x)))
+
+
+def class_values(classes: dict, letters) -> dict:
+    """A group's strike classes as a figure draw's values (round 81): the kick-snare-tom limb a field a letter in limb_order
+    (limb1, limb2, limb3: "Km", "Sa", "-"; "-" for a letter the kit lacks, a condition too: a kit with no toms draws tomless
+    bars), a single-letter limb its one field (classes)."""
+    letters = set(letters)
+    if letters & set(LIMB):
+        order = limb_order(classes, letters)
+        return {f"limb{i + 1}": (f"{order[i]}{classes[order[i]]}" if i < len(order) and order[i] in classes else "-") for i in range(3)}
+    return {"classes": classes_value(classes, letters)}
+
+
+def habit_class(classes: dict, letters) -> str:
+    """The class a group's habit is drawn under (round 81): the kick-snare-tom limb's backbone letter's (limb_order), a
+    single-letter limb's own; "-" with none."""
+    letters = set(letters)
+    if letters & set(LIMB):
+        order = [x for x in limb_order(classes, letters) if x in classes]
+        return f"{order[0]}{classes[order[0]]}" if order else "-"
+    return classes_value(classes, letters)
+
+
+def classes_of(value: str) -> dict:
+    """classes_value back to {letter: class}."""
+    return {t[0]: t[1:] for t in value.split() if t != "-"}
 TONES = ((0.8, "roots", "Rr"), (0.8, "root-fifth", "Rr5"), (0, "walking", ""))   # the share of its bass notes on these marks
 OCTAVES = 0.2                        # the share of a bass's notes an octave up (r) for it to play octaves
 
@@ -677,15 +780,25 @@ def tune_grain_units(songs) -> list:
     return out
 
 
-def drum_figure(struck, song: Song) -> str:
+def drum_figure(struck, song: Song, slots: dict | None = None) -> str:
     """A drum bar's figure as a table's outcome: each hit's position and
     its piece's letter (LETTERS; a sample the reading named no drum, o),
     "position:letter" tokens, two pieces struck together two tokens; a
-    bar rested through "-"."""
+    bar rested through "-". Since round 81 a letter's hits are its slot's
+    sample's (`slots`, kit_slots: the sample the song's kit leans on for
+    the letter, the one the written kit plays): a hit on another sample of
+    the letter is left out, as the written kit has no voice for it (Battle
+    Theme's rattle in sixteenths beside its backbeat snare had made the
+    written snare a sixteenth-note part); a letter without a slot (a sample
+    the namer called no drum, o) keeps every hit."""
+    slots = kit_slots(song) if slots is None else slots
     tokens = set()
     for p, ns in struck:
         for n in ns:
-            tokens.add((p, LETTERS.get(song.pieces.get(n[3]), "o")))
+            letter = LETTERS.get(song.pieces.get(n[3]), "o")
+            if letter in slots and slots[letter] != n[3]:
+                continue
+            tokens.add((p, letter))
     return " ".join(f"{p}:{letter}" for p, letter in sorted(tokens)) or "-"
 
 
@@ -700,17 +813,21 @@ def drum_units(songs) -> list:
     figure by piece (drum_figure()); its values the part, the meter, the
     tempo band, the bar's place in its part of the form (fills land on the
     last), the figure before it (START where none), the kit (which pieces
-    the song strikes at all) and the song's habit (_rhythm_habit: density
-    and repetition)."""
+    the song strikes at all), the kit's strike classes (round 81,
+    classes_value: each slot's sample's hits a bar as a class, "Km Sd ha")
+    and the song's habit (_rhythm_habit: density and repetition). The
+    figures count each letter's slot's sample (drum_figure)."""
     out = []
     for s in songs:
         if R.DRUMS not in s.notes:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
+        slots = kit_slots(s)
+        classes = classes_value(kit_classes(s), LETTERS.values())
         for k, a, struck in numbered_bars_of(s, R.DRUMS):
             if last is not None and k != last + 1:
                 previous = START
-            drawn = drum_figure(struck, s)
+            drawn = drum_figure(struck, s, slots)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
                 "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous, "feel": cells_mod.song_feel(s)}))
             previous, last = drawn, k
@@ -719,6 +836,7 @@ def drum_units(songs) -> list:
             _give_habit(mine, _rhythm_habit(mine))
             for u in mine:
                 u.values["kit"] = kit
+                u.values["classes"] = classes
             out += mine
     return out
 
@@ -860,7 +978,8 @@ def drum_group(figure: str, letters) -> str:
 
 def drum_group_units(songs, letters) -> list:
     """drum_units for one group of pieces: each bar's figure on those pieces alone (its part "drums-" + the
-    letters), with the group's own habit; a song without the group has no units."""
+    letters), with the group's own habit and the group's letters' strike classes (round 81, "Km Sd" for the
+    kick-snare-tom limb); a song without the group has no units."""
     name = "drums-" + "".join(letters)
     out = []
     by_song = {}
@@ -873,6 +992,10 @@ def drum_group_units(songs, letters) -> list:
             figure = drum_group(u.outcome, letters)
             values = dict(u.values)
             values["part"] = name
+            kit_classes = classes_of(u.values.get("classes", "-"))
+            values["classes"] = classes_value(kit_classes, letters)
+            values.update(class_values(kit_classes, letters))   # the limb's graded fields (limb1, limb2, limb3) for the kick-snare-tom limb
+            values["habit_class"] = habit_class(kit_classes, letters)
             values["previous"] = previous if u.values["previous"] != START else START
             mine.append(tables.Unit(u.song, u.game, figure, values))
             previous = figure
@@ -909,7 +1032,7 @@ def kit_piece_units(songs) -> list:
 def drum_group_habit_units(songs) -> list:
     """Each drum group of each song as a unit: its outcome the group's own
     habit (the density and repetition of its bars, rests counted), its
-    values the group (part) and the kit's habit. A kit written free draws
+    values the group (part), its slots' strike classes (round 81) and the kit's habit. A kit written free draws
     each group's habit given the kit's: the cymbals and the other sounds
     are sparse under a dense kit (the readings, 2026-10-23), and a group's
     rest rate follows its own habit (sparse groups rest in six bars of ten)."""
@@ -921,7 +1044,8 @@ def drum_group_habit_units(songs) -> list:
             if u.song in seen:
                 continue
             seen.add(u.song)
-            out.append(tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"], "habit": kit.get(u.song, "medium mixed")}))
+            out.append(tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"], "classes": u.values.get("habit_class", "-"),
+                                                                        "habit": kit.get(u.song, "medium mixed")}))   # the group's leading class (round 81)
     return out
 
 

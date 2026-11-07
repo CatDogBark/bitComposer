@@ -497,35 +497,10 @@ def tuned_samples(songs) -> frozenset:
     return frozenset(sid for sid, rs in rates.items() if len(rs) >= 2 and Counter(rs).most_common(1)[0][1] <= TUNED_SHARE * len(rs))
 
 
-SLOT_SHARE = 0.2                     # a sample struck this share of a piece letter's hits or more is in the running for the letter's
-                                     # slot (round 80); the loudest of those takes it
-SLOT_TIE_DB = 1.0                    # two samples within this of each other are as loud (the ear's step); the most struck of them
-                                     # takes the slot
-
-
 def kit_slot_samples(counts: Counter, levels: dict) -> dict:
-    """The sample each piece letter's slot takes (round 80): of the samples the song strikes the letter on, the loudest
-    (its median level, kit_levels) among those with SLOT_SHARE of the letter's hits or more, the most struck among samples
-    within SLOT_TIE_DB of the loudest; the most struck where no level is known. Round 63 had taken the most struck: FFVI
-    strikes 20 of its kit letters on two samples or more, and in 9 the most struck is not the loudest (Battle Theme's snare
-    slot took its sixteenth-note rattle, 269 hits at 0.12, over the backbeat snare, 82 hits at 0.31; the other 11 are the
-    same sample's hits split with a second at the same level, or a tie to the third decimal, and keep the most struck).
-    `counts`: {(letter, sample key): hits}."""
-    by_letter = {}
-    for (letter, key), n in counts.items():
-        by_letter.setdefault(letter, {})[key] = n
-    out = {}
-    for letter, keys in by_letter.items():
-        total = sum(keys.values())
-        running = [k for k, n in keys.items() if n >= SLOT_SHARE * total] or list(keys)
-        known = [k for k in running if levels.get(k) is not None and math.isfinite(levels[k])]
-        if known:
-            top = max(levels[k] for k in known)
-            tied = [k for k in known if top <= 0 or levels[k] >= top * 10 ** (-SLOT_TIE_DB / 20)]
-            out[letter] = max(tied, key=lambda k: (keys[k], k))
-        else:
-            out[letter] = max(running, key=lambda k: (keys[k], k))
-    return out
+    """The slot's pick (round 80), counted in readings since round 81 (readings.kit_slot_samples, SLOT_SHARE, SLOT_TIE_DB): the
+    figures lean on the slots too."""
+    return readings_mod.kit_slot_samples(counts, levels)
 
 
 def kit_degree(s, pitch: int) -> str:
@@ -569,7 +544,12 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     a pad the namer took for a kick, held seven beats; `h=sd1c4c7ce33@0.20@@0.07` a hat): the writer gives a piece on a
     sustaining sample that hold where it had given every piece a one-beat hit, a tap of 69 ms held half a beat (The
     Unforgiven's "o", 9 dB out in front of the game's) and a seven-beat drone struck once (Another World of Beasts', Song
-    Check 63); a percussion sample is a one-shot whatever its hit's length, so its hold is counted and not played."""
+    Check 63); a percussion sample is a one-shot whatever its hit's length, so its hold is counted and not played. Since
+    round 81 each slot carries its strike class after the hold (`h=s4135fb64a7@0.77@r67@0.95@a`: readings.SLOT_CLASSES,
+    the sample's hits a bar in this song as rare under half, an accent under one, sparse to two, medium to six, dense over), and the drum
+    figure tables condition on the kit's classes: the figure a letter plays had come from the pool at the kit's habit
+    tier whatever the slot's sample did in its own song, so Strago's click, struck on beat two every other bar, played
+    the hat's eighths (Song Check 65: "a smacking noise"), and Wild West's pitched blip, two a bar there, five a bar."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
@@ -578,6 +558,7 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
             counts[(readings_mod.LETTERS[piece], key)] += 1
     levels = getattr(s, "kit_levels", None) or {}
     best = kit_slot_samples(counts, levels)
+    classes = readings_mod.kit_classes(s)                        # each slot's strike class (round 81)
     pitches = getattr(s, "kit_pitches", None) or {}
     rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
     holds = getattr(s, "kit_holds", None) or {}
@@ -595,7 +576,8 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
         slots = [f"{round(level / top, 2):.2f}" if with_level else "",                       # in hundredths since round 70: tenths cost 2.9 dB
                  (f"r{int(rate)}" + ("t" if sid in tuned else "")) if rate is not None       # on a snare at 0.14 kept as 0.1; a tuned rate (round 79)
                  else kit_degree(s, pitch) if pitch is not None else "",                     # a tonal piece's note as a degree of the key (round 79)
-                 f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else ""]
+                 f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else "",
+                 classes.get(letter, "")]                                                  # the slot's strike class (round 81)
         while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
             slots.pop()
         out.append(field + "".join(f"@{x}" for x in slots))

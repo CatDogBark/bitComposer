@@ -1754,6 +1754,49 @@ class TonalKitPieceTests(unittest.TestCase):
         per_bar = Counter(int(t // 4) for t, _ in hits)
         self.assertTrue(hits and all(n <= 2 for n in per_bar.values()), per_bar)                   # the limb's table at its habit: the once-a-bar strike
 
+    def test_a_limbs_figure_follows_its_slots_strike_class(self):
+        """Round 81: the kit token's slot carries its sample's strike class (rare under half a hit a bar, an accent under one,
+        sparse to two, medium to six, dense over), the limb tables and the group habits condition on the group's classes, and a written letter plays
+        bars from songs that strike its sample as the token song does: the once-a-bar "o" draws once-a-bar bars under "os",
+        the eighths under "od", whatever habit the kit was given."""
+        from collections import Counter
+        from bitcomposer.translate import packtables, writer
+        a, d = self._songs()
+        self.assertEqual(rhythm.kit_classes(a), {"o": "d"})
+        self.assertEqual(rhythm.kit_classes(d), {"K": "m", "o": "s"})
+        self.assertEqual(rhythm.classes_value(rhythm.kit_classes(d), ("K", "S", "t")), "Km")
+        self.assertEqual({u.values["classes"] for u in rhythm.drum_units([d])}, {"Km os"})
+        self.assertEqual({u.values["classes"] for u in rhythm.drum_group_units([a, d], ("o",))}, {"od", "os"})
+        self.assertEqual({(u.values["limb1"], u.values["limb2"], u.values["limb3"]) for u in rhythm.drum_group_units([d], ("K", "S", "t"))}, {("Km", "-", "-")})
+        self.assertEqual({(u.values["part"], u.values["classes"]) for u in rhythm.drum_group_habit_units([a, d])}, {("drums-o", "od"), ("drums-o", "os"), ("drums-KSt", "Km")})
+        import copy, importlib
+        plan_mod = importlib.import_module("bitcomposer.translate.whole.plan")
+        a2, d2 = copy.deepcopy(a), copy.deepcopy(d)                                   # two songs a class: a plan's draw asks that many
+        a2.sid, d2.sid = "a2", "d2"
+        songs = [a, a2, d, d2]
+        models = packtables.read({"tables": {"drums-o": packtables.fit("drums-o", rhythm.drum_group_units(songs, ("o",))),
+                                             "drum_group_habits": packtables.fit("drum_group_habits", rhythm.drum_group_habit_units(songs))}})
+        s = rhythm.Song("t", 4, 4, [(4.0 * i, 4.0 * i + 4) for i in range(8)], [], bpm=110.0, sid="t", game="G", numbers=list(range(8)), parts=[(0, 8, None, "A")])
+        s.pieces = {"kick": "kick", "rim": "other"}
+        for cls, tier, low, high in (("os", "sparse", 1, 1), ("od", "dense", 5, 8)):
+            habit = plan_mod._draw_values(models, "drum_group_habits", {"part": "drums-o", "classes": cls, "habit": "medium varied"}, random.Random(1))
+            self.assertTrue(habit.startswith(tier), (cls, habit))                       # the group's habit given its slot's class, not the kit's habit
+            hits, _ = writer.drums(s, {("o",): models["drums-o"]}, random.Random(1), habit={("o",): habit}, free=True, plays=[True] * 8, kit_value="o",
+                                   class_values={("o",): {"classes": cls}})
+            per_bar = Counter(int(t // 4) for t, _ in hits)
+            self.assertTrue(hits and low <= min(per_bar.values()) and max(per_bar.values()) <= high, (cls, per_bar))
+        # the plan reads the class from the token and hands the group its classes
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.2:::K=sbfe716b9b6@1.7@r48@0.50@m,S=s1279e119a1@0.7@r60@@a,o=sf89f5aedfd@0.38@d9@0.25@s:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(p.extras["drums"]["kit_classes"], {"K": "m", "S": "a", "o": "s"})
+        self.assertEqual(p.extras["drums"]["kit_holds"], {"K": 0.5, "o": 0.25})
+        self.assertTrue(any("S s1279e119a1 at 0.70 struck +0 semitones from the recording, an accent" in line for line in p.log), p.log)
+
     def test_the_tempo_drawn_again_under_the_tokens_class_stays_in_it(self):
         """Round 75: the redraw under the balance token's tempo class is terminal at the class. Without the floor it gave the
         class its Witten-Bell share and every class's tempos the rest, and 8 of 46 written songs sat outside their token's

@@ -28,6 +28,12 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
 FIGURE = ("part", "meter", "tempo", "habit", "feel", "previous")   # the figure tables' shape: the tempo class (round 61), the habit, then the song's feel, before the chain (writer.SHAPE);
                                                            # a floor stepping down from a one-song context lets the feel go first and keeps the habit
+DRUM_FIGURE = ("part", "meter", "classes", "tempo", "feel", "previous")   # a single-letter drum limb's: its slot's strike class (round 81) before the tempo class, so a draw
+                                                           # keeps the class while the tempo and the feel go; the class says the density, so the habit is not in the shape
+                                                           # (it drives the recall urn, and the cap of a kit written without classes): a one-song habit level under the
+                                                           # class had rested in 0.87 of its bars and silenced the hat
+LIMB_FIGURE = ("part", "meter", "limb1", "limb2", "limb3", "tempo", "feel", "previous")   # the kick-snare-tom limb's: a field a letter, the densest slot's first
+                                                           # (readings.limb_order), so a draw lets the sparser letters' classes go and keeps the backbone's
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
 # mixture, what the table says), in the record's order
@@ -37,11 +43,11 @@ KEPT = {
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
     "bass_habits": ("rhythm", "bass_habit_units", {}, ("part", "tempo", "weight"), False, False, "the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight"),
-    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "tempo", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece, under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does"),
-    "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, FIGURE, True, True, "the kick, snare and toms' bar"),
-    "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, FIGURE, True, True, "the hat's bar"),
-    "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, FIGURE, True, True, "the cymbals' bar"),
-    "drums-o": ("rhythm", "drum_group_units", {"letters": ("o",)}, FIGURE, True, True, "the other drum sounds' bar"),
+    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "tempo", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece on its slot's sample (round 81), under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does; a kit whose token carries strike classes is written from its limbs instead (round 81)"),
+    "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, LIMB_FIGURE, True, True, "the kick, snare and toms' bar, under the three slots' strike classes, the densest slot's first (round 81: each slot's sample's hits a bar in its song, rare under half, an accent under one, sparse to two, medium to six, dense over)"),
+    "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, DRUM_FIGURE, True, True, "the hat's bar, under the hat slot's strike class (round 81: Strago's click on beat two is an accent, a ride in eighths is dense)"),
+    "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, DRUM_FIGURE, True, True, "the cymbals' bar, under the cymbal slot's strike class (round 81)"),
+    "drums-o": ("rhythm", "drum_group_units", {"letters": ("o",)}, DRUM_FIGURE, True, True, "the other drum sounds' bar, under the slot's strike class (round 81: Wild West's pitched blip, two a bar, is medium)"),
     "drum_habits": ("rhythm", "drum_habit_units", {}, ("part",), False, False, "the drums' density habit, drawn once a song"),
     "kit_pieces": ("rhythm", "kit_piece_units", {}, ("part", "habit"), False, False, "the kit pieces a song's drums strike (letters: kick, snare, hat, tom, cymbal, other), by the kit's habit tier, drawn once a song"),
     "voicings": ("rhythm", "voicing_units", {}, ("part", "shape", "habit"), False, True, "which chord tones an upper part holds in a span"),
@@ -104,7 +110,7 @@ KEPT = {
     "weights": ("rhythm", "weight_units", {}, ("part",), False, False, "a part's weight in the band (minor, half, main)"),
     "sizes": ("rhythm", "form_size_units", {}, ("part",), False, False, "how many parts a song's form has"),
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
-    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, the song's key (key=9:minor), and the drums' kit (each piece's sample, level, struck note (a tonal piece's as a degree of the key, d9; a drum piece's the chip's rate as a note, r48 an octave under, r63t where the game tunes it) and hold), drawn once a song as one unit"),
+    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, the song's key (key=9:minor), and the drums' kit (each piece's sample, level, struck note (a tonal piece's as a degree of the key, d9; a drum piece's the chip's rate as a note, r48 an octave under, r63t where the game tunes it), hold and strike class (round 81: its sample's hits a bar in the song, x/a/s/m/d)), drawn once a song as one unit"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
     "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "speed", "gap"), False, False, "the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "bass_locks": ("rhythm", "bass_lock_units", {}, ("part",), False, False, "the share of the kit's accents (two pieces together) the bass strikes with, in tenths"),
@@ -121,7 +127,7 @@ KEPT = {
     "part_textures": ("rhythm", "part_texture_units", {}, ("part", "habit", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's"),
     "section_levels": ("rhythm", "section_level_units", {}, ("part", "form"), False, False, "a part's level in a section over its level in the whole song, in tenths, by the part and the section's place in the form: dynamics by section"),
     "part_entries": ("rhythm", "part_entry_units", {}, ("part", "habit", "form", "length"), False, False, "where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class"),
-    "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
+    "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "classes", "habit"), False, False, "a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream"),
     "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of the tune's notes on a beat that are chord tones, drawn once a song"),
     "contour_sizes": ("phrases", "contour_size_units", {}, ("part", "mode", "contour"), False, False, "how far a phrase's contour goes, in semitones, by its shape"),
     "phrase_shifts": ("phrases", "phrase_shift_units", {}, ("part", "mode", "relation"), False, False, "how far a phrase sits above or below the one before, in semitones, by its relation to it"),
