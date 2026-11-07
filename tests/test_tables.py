@@ -661,7 +661,7 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_token(s), "K=k@@r48@@m,o=o@@62@@s")                 # no top, no level: the note still
         del s.kit_rates["k"]
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@@m,o=o@0.40@62@@s")       # a piece without a note keeps the old form
-        self.assertIn("drums=::::0.2:::K=k@1.60@@@m,o=o@0.40@62@@s", rhythm.balance_units([s])[0].outcome)
+        self.assertIn("drums=:::Ko:0.2:::K=k@1.60@@@m,o=o@0.40@62@@s", rhythm.balance_units([s])[0].outcome)   # the channels field since round 87
         s.kit_holds = {"k": 0.5, "o": 6.95}                                        # round 77: each piece's hold follows the note's slot
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@0.50@m,o=o@0.40@62@6.95@s")   # (the kick has no note: its slot kept empty)
         del s.kit_pitches["o"]
@@ -769,6 +769,26 @@ class BalanceLevelTests(unittest.TestCase):
         s.notes["melody"] = [(float(i), 1.0, 72.0, "lead0123456789") for i in range(6)]            # six notes: no range
         s.voice_notes[2] = ("melody", s.notes["melody"]); s.voice_levels[2] = 0.4; s.levels["melody"] = 0.4
         self.assertEqual(rhythm.part_sample_field(s, "melody"), "slead012345")
+
+    def test_the_kits_channels_ride_the_token(self):
+        """Round 87: the drums token's fourth field names the pieces each game channel plays, in the song's channel order
+        with the letters in LETTERS' order; a slot's channel is the one its sample is struck on most."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)],
+                        pieces={"k": "kick", "sn": "snare", "h": "hat"}, tonic=0, mode="major")
+        kick = [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)]
+        snare = [(x, 0.1, float("nan"), "sn") for x in (1.0, 3.0, 5.0, 7.0)]
+        hat = [(x + 0.5, 0.1, float("nan"), "h") for x in range(8)]
+        s.notes["drums"] = kick + snare + hat
+        s.notes["melody"] = [(float(i), 1.0, 72.0, "sa") for i in range(8)]
+        s.voice_notes = {0: ("melody", s.notes["melody"]), 3: ("drums", hat), 5: ("drums", kick + snare)}
+        s.voice_levels = {0: 0.5, 3: 0.2, 5: 0.4}; s.levels = {"melody": 0.5, "drums": 0.3}
+        self.assertEqual(rhythm.kit_channels(s), "h|KS")                                            # the song's channel order, hat first
+        drums = next(t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("drums="))
+        self.assertEqual(drums.split("=", 1)[1].split(":")[3], "h|KS")
+        s.voice_notes[5] = ("drums", kick); s.voice_notes[6] = ("drums", snare)
+        self.assertEqual(rhythm.kit_channels(s), "h|K|S")                                           # three channels, one piece each
+        self.assertEqual(rhythm.kit_channels(rhythm.Song("t", 4, 4, [(0.0, 4.0)], chords, notes={"melody": s.notes["melody"]})), "")
 
     def test_the_pans_ride_the_token(self):
         """Round 84: a pitched part's token carries its voices' pans as a tenth field, the line voice first, each the median
@@ -881,7 +901,7 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_token(s), "K=k@@@@m,S=s@@@@m,h=h@@@@d")               # the old form without a top
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@@m,S=s@0.60@@@m,h=h@0.20@@@d")   # in hundredths since round 70
         token = rhythm.balance_units([s])[0].outcome
-        self.assertIn("drums=::::0.2:::K=k@1.60@@@m,S=s@0.60@@@m,h=h@0.20@@@d", token)
+        self.assertIn("drums=:::KSh:0.2:::K=k@1.60@@@m,S=s@0.60@@@m,h=h@0.20@@@d", token)   # one channel, three pieces (round 87)
         s.kit_levels["s"] = float("nan")
         self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@1.60@@@m,S=s@@@@m,h=h@0.20@@@d")   # an unread level never reaches the token
         s.kit_levels = {}

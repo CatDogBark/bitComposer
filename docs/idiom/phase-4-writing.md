@@ -5523,3 +5523,52 @@ bass in The Inner Grotto's token is a tenor-range voice (48-80 on its
 sample); the writer follows it. A tune on the token's sample keeps the
 pooled wall, so it is still written over notes its sample never played in
 that song.
+
+### Round 87: the kit's channels ride the balance token (2026-11-06, the second rules audit's third candidate)
+
+**Why.** The writer put every kit on two voices by a fixed split, the kick,
+snare and toms on one and the hat, cymbals and the rest on the other
+(plan.DRUM_VOICES, the first audit's rule #3's last standing part). FFVI
+does not: 19 of its 47 kits sit on one channel, 20 on two, 8 on three or
+more, and 73 of its 90 kit channels carry one piece, the commonest pair a
+snare channel and a cymbal channel (8 songs). The fixed two cost the band
+a pitched voice wherever the token's eight voices then overflowed, 14 of
+FFVI's 48 kit songs, every one a one-channel kit, and 9 of 40 written
+songs (an accompaniment's fourth voice, a counter's third, a harmony's
+third); and they dropped 120 of 4,903 written kit hits where a kick struck
+under a snare or tom the game had on its own channel (FFVI's own kits
+would lose 2.7 % of their hits to the split).
+
+**Built.** `rhythm.kit_channels` reads the pieces each game channel plays,
+a slot's channel the one its sample is struck on most, the channels in
+the song's order and the letters in LETTERS' order ("KS|h", "S|c", "K"),
+and the drums token carries it as its fourth field, the voices field a
+pitched part fills with a count. The plan reads it (`extras.drums.channels`;
+the log line "kit channels from the balance: 3 (t|K|h)"), `allot` gives the
+kit as many voices as channels (two without the field), `drum_voice_of`
+puts each piece on the channel the game put it on (the fixed split for a
+token without channels or a letter on none, never past the kit's voices),
+and the band's locks see the kit's channels as the plan has them. Pack4
+refit on the same readings (backup `pack.json.before-r87`), the shipped
+vocabulary regenerated. Tests: the field (one channel, three channels, no
+kit), the allotment with one drum voice against two, the voice a letter
+takes, the plan's reading.
+
+**Measured.** Forty seeds, 25 with a kit: drum voices 1 in 12 songs, 2 in
+11, 3 in 2 (every kit on two before); songs with a pitched part trimmed 9
+to 0; kit hits lost to a collision 120 of 4,903 to 25 of 4,925, in 3 songs
+where the two pieces share a channel in the game as well. Return of the
+Outpost, on Wild West's kit (tom | kick | hat), had dropped 72 of 406 hits
+and drops none; Northern Bells (snare | hat | kick) 23 of 127 and none.
+The voices or the band changed in 14 of 40 songs: the nine that regain a
+voice draw one more voice word, so the part's extra voice is new and the
+draws after it can shift; the key, tempo, form, chords and kit stand.
+Song Check 70 pairs the two collision songs and three that regain a voice
+(The Second Ridge's counter, The Endless Valley's accompaniment, The
+Ancient Harbor's harmony).
+
+**Open.** Two pieces that share a channel in the game still collide where
+a limb figure strikes both at once (25 hits in 3 songs): the figure came
+from a table pooling songs that had them apart. A letter struck on two
+samples on two channels (Battle Theme's two snares) folds to one slot and
+one channel, round 80's one-sample-a-letter limit.
