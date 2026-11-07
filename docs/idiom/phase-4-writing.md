@@ -5856,3 +5856,91 @@ voice that plays four bars of the song plays the whole song's. The
 Sleeping Observatory's counter is still Kefka's organ at the game's own
 level over the tune; the stretch word thickens the tune as Kefka does
 and takes the parallel block apart, it does not re-balance the game.
+
+### Round 91: the line's instrument by stretch (2026-11-07, the word promised since round 86)
+
+**Why.** Round 86 found the register word spanning two instruments where
+a game line changes sample; round 89 split a bass or chord channel's
+second instrument into a voice of its own and left the tune's and the
+counter's as "the line changing colour", on the voice, until a word for
+a voice's instrument by stretch; round 90 read every voice in stretches
+for its relations. FFVI counted (stretches91.py): 249 line voices of
+sixteen notes or more, 63 of them changing instrument (25 tunes, 19
+counter-lines, 12 chord lines, 6 basses, 1 arp), 65 with two stretches,
+11 with three, 19 with four or more; the main sample holds 0.62 of a
+line's notes at the median; of 159 changes between consecutive
+stretches 67 move to a disjoint register, the centres 7 semitones apart
+at the median (quartiles 2 to 14.5, one of 42); a stretch spans ten bars
+at the median (5 to 16); the token's sample field named the main
+stretch's sample in 61 of the 63; 32 of 129 voices beyond a line change
+sample too. The written line had played one instrument over the whole
+union of those registers (Kefka's tune over 52-84 on the reed alone,
+Umaro's over 48-92).
+
+**Built.** The balance token's eleventh field a pitched part
+(`rhythm.line_stretches`): the line voice's stretches (`roles.stretches_of`,
+blips folded, consecutive stretches on one sample run together), each
+as its sample's pack id, the range the line plays it over there
+(`part_register`'s ambitus grain) and its bars from the song's first bar
+as the pan word counts them, the last stretch open
+(`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`); "" for a line on one
+instrument, and a line under sixteen notes. The eighth field's sample
+stays the line's default. The plan parses it (`Plan.stretches`,
+`line_stretch_list`, `stretch_bars`); `render.samples_for` registers each
+stretch's sample where the pack holds it (`samples["part:stretch:i"]`)
+and its bound (`bound_of` of the stretch's range within the part's
+register), writes the line over the union of the stretches' ranges
+(`plan.bounds`; a tune without the field keeps round 43's ambitus
+wall), and `plan.fold_line` moves the written line into each stretch's
+bound right after each line writer (the bass, the upper parts, the tune
+and the counter), bar by bar by one octave count each, the count that
+puts most of the bar's notes inside (a tie keeps the bar before's
+count), then the leftovers one by one with the house fold
+(`writer.in_register`); `render.sample_of` plays the line's note on its
+stretch's sample (`plan.stretch_at` by bar). Voices beside a line keep
+the token's one sample; a voice's own stretches of another part (round
+89's second voices) stay unwritten. Two cuts on the fold on the way: one
+octave count a stretch had left Setzer's tune 62 notes to single folds
+(its stretches 56-64, 68-80 and 60-72 under a line written over 56-80),
+a count a bar leaves it six; a note that could not be folded into a
+bound narrower than an octave is no longer counted. No re-read: the
+readings are unchanged, pack4 refit, the vocabulary shipped. Test: the
+field, its parse, samples_for's stretch samples and bounds and the
+union, fold_line, stretch_at, sample_of by stretch. Suite 425 OK.
+
+**Measured** (measure_r91.py): 37 of 68 tokens carry the field (melody
+22, counter 17, accompaniment 11, bass 6, arp 1; 38 lines with two
+stretches, 6 with three, 13 with four or more). Written, seeds 1-120:
+71 songs have a part written by stretch; in 89 of 102 parts whose
+stretches name two pack samples the rendered line changes instrument
+between them. Every one of 400 seeds keeps its token song and its draws
+(178 plan logs identical, 198 note sets): the pairs below are the same
+seed, the same token and the same plan, the line's instrument and
+register the difference, and the parts written after it. Kefka's seed
+255: the tune on s77ca10e256 an octave down for six bars, then the reed;
+the counter's first ten bars on s5d5fe2fd48; the bass's last nine on its
+second sample. Umaro's seed 254, the hardest fold: the tune moved up two
+octaves into 76-92 and 80-88 around a middle stretch left low in 48-64,
+18 notes folded singly.
+
+**Song Check 74** (https://claude.ai/artifact/7oYFqL6EmAnqmRpWg7B1vM): six pairs. Step 1, the two from Song Check
+73: seed 255 The Sleeping Observatory (Kefka) and seed 78 The Still
+Wharf (Overture (part 3): the tune on three instruments, the chord
+parts changing at the close). Step 2, a tune that changes colour and
+register: seed 157 Last Vault (Cyan: twelve bars high on s1bb6264698,
+then the reed over 52-84) and seed 41 Arcade of Rain (Setzer: three
+stretches). Step 3: seed 150 The Terminal of Glass (Battle Theme: 26
+bars on one instrument, then another an octave up) and seed 254 First
+Meridian Return (Umaro). Before is round 90 (the dev checkout's own code
+and vocabulary), after round 91.
+
+**Open.** The line is written over the union of its stretches' ranges
+and moved into each afterwards, so a phrase across a stretch line may
+break where the registers differ; writing each stretch in its own
+register (a register a bar for the writers) is the fuller word. A
+stretch in another part's register (Ending Theme's tune plays bass for
+fifteen bars on b34cb55c14) is written there, which is what that channel
+does. Voices beside a line keep one instrument (32 of 129 change). A
+channel shared by two parts in turn (round 89's second voices) still
+waits for a time-shared chip voice. The echo a sample sends is the
+part's, not the stretch's.

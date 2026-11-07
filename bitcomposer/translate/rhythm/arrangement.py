@@ -703,6 +703,46 @@ def part_sample_field(s, role: str) -> str:
     return f"{sid}@{rng}" if rng else sid
 
 
+def line_stretches(s, role: str) -> str:
+    """The balance token's eleventh field (round 91): the line voice's instrument by stretch, where it has two or more
+    (roles.stretches_of: runs of notes on one sample, blips folded; consecutive stretches on one sample run together), each
+    stretch's sample as the pack's id, the range the voice plays it over there (the ambitus, part_register's grain) and its
+    bars from the song's first bar as the pan word counts them (`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`), the last stretch
+    open; "" for a line on one instrument (the eighth field's sample and range stand). FFVI: 63 of 249 line voices change
+    instrument (25 tunes, 19 counter-lines, 12 chord lines, 6 basses), two in three with the next stretch in another
+    register (centres 7 semitones apart at the median), a stretch ten bars long at the median. The written line plays each
+    note on its stretch's sample and is folded by octaves into each stretch's range in its bars (render.sample_of,
+    plan.fold_line); the eighth field's sample stays the line's default."""
+    if role == R.DRUMS:
+        return ""
+    notes = s.notes.get(role, [])
+    voices = cells_mod.part_voices(s, role)
+    if len(voices) >= 2:
+        notes = voices[cells_mod.line_voice(voices, role, s)]
+    pitched = sorted((n[0], n[2], n[3]) for n in notes if isinstance(n[3], str) and n[3] and n[2] is not None and not math.isnan(n[2]))
+    if len(pitched) < R.SECOND_NOTES:
+        return ""
+    runs = []
+    for st in R.stretches_of(pitched):
+        sid = "s" + st["key"][:10] if len(st["key"]) >= 10 else st["key"]
+        reg = part_register([(t, 0.0, m, k) for t, m, k in st["notes"]], ambitus=True)
+        end = bar_index(s, st["b"])
+        if runs and runs[-1][0] == sid:
+            prev = runs[-1]
+            both = (min(prev[1][0], reg[0]), max(prev[1][1], reg[1])) if prev[1] and reg else (prev[1] or reg)
+            runs[-1] = (sid, both, end)
+        else:
+            runs.append((sid, reg, end))
+    if len(runs) < 2:
+        return ""
+    parts, prev = [], -1
+    for i, (sid, reg, end) in enumerate(runs):
+        word = sid + (f"@{reg[0]}-{reg[1]}" if reg else "")
+        parts.append(word if i == len(runs) - 1 else f"{word}x{max(1, end - prev)}")
+        prev = max(prev, end)
+    return ">".join(parts)
+
+
 def part_sample_id(s, role: str) -> str:
     """The pack's id of the sample a part plays most (its notes' sample key, `s` and the key's first ten characters as
     the pack names it); "" without notes. Round 60 (2026-10-29): FFVI puts 224 of its 1326 possible sample pairs
@@ -831,7 +871,11 @@ def balance_units(songs) -> list:
     (pan_field: each voice's right-side share, the line first) and a slot
     field a kit piece (kit_token), where the writer's fixed pans had given
     every written song one stereo picture; and in round 85 a voice's two
-    places where it has them (pan_word: "0.60x5|0.45x13", "0.35x4>0.65")."""
+    places where it has them (pan_word: "0.60x5|0.45x13", "0.35x4>0.65"). Since
+    round 91 an eleventh field a pitched part whose line changes instrument
+    (line_stretches: `s77ca10e2568@52-64x6>sf89f5aedfd@60-80`, each stretch's
+    sample, range and bars), so the written line changes colour and register
+    where its song's did."""
     habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
     for u in readings_mod.habits(readings_mod.units(songs)) + readings_mod.habits(readings_mod.bass_units(songs)):
         habit_of_part[(u.song, u.values["part"])] = u.outcome
@@ -865,7 +909,8 @@ def balance_units(songs) -> list:
                       str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
                       part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
                       habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
-                      pan_field(s, role)]                     # and its voices' pans (round 84): the song's stereo picture together
+                      pan_field(s, role),                     # and its voices' pans (round 84): the song's stereo picture together
+                      line_stretches(s, role)]                # and the line's instrument by stretch (round 91)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
