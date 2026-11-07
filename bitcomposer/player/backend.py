@@ -140,7 +140,7 @@ class Backend(QObject):
         m = p.metadata()
         st = {
             "status": p.status, "shuffle": p.shuffle, "autoGenerate": p.auto_generate,
-            "volume": p.volume, "currentIndex": p.current_index, "generating": p._generating,
+            "volume": p.volume, "width": p.width, "currentIndex": p.current_index, "generating": p._generating,
             "musicDir": str(p.music_dir), "shortDir": _short(p.music_dir),
         }
         if m:
@@ -403,6 +403,11 @@ class Backend(QObject):
     @Slot(float)
     def setVolume(self, gain):
         self.player.set_volume(gain)
+        self._refresh()
+
+    @Slot(float)
+    def setWidth(self, width):
+        self.player.set_width(width)
         self._refresh()
 
     @Slot(int)

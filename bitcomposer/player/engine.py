@@ -147,6 +147,7 @@ class Player:
         self.module: Module | None = None
         self.status = "Stopped"
         self.volume = 1.0
+        self.width = 1.0               # the stereo width heard: 1.0 the pans as written, less pulled toward centre (WIDTH)
         self.auto_generate = False
         self.auto_generate_settings = ""
         self._generating = False
@@ -166,6 +167,10 @@ class Player:
         saved = self._load_state()
         try:
             self.volume = max(0.0, min(VOLUME_MAX, float(saved.get("volume", 1.0))))
+        except (TypeError, ValueError):
+            pass
+        try:
+            self.width = max(0.0, min(1.0, float(saved.get("width", 1.0))))
         except (TypeError, ValueError):
             pass
         self.shuffle = bool(saved.get("shuffle", False))
@@ -194,7 +199,7 @@ class Player:
             p.parent.mkdir(parents=True, exist_ok=True)
             tmp = str(p) + ".tmp"
             with open(tmp, "w") as fh:
-                json.dump({"volume": round(self.volume, 3), "shuffle": self.shuffle,
+                json.dump({"volume": round(self.volume, 3), "width": round(self.width, 3), "shuffle": self.shuffle,
                            "auto_generate": self.auto_generate,
                            "auto_generate_settings": self.auto_generate_settings,
                            "check_updates": self.check_updates,
@@ -340,6 +345,7 @@ class Player:
             self.last_error = str(e)
             self.on_log(f"[ERROR] {e}")
             return False
+        new.set_stereo_separation(round(self.width * 100))   # the width the listener set, on every module loaded
         with self._lock:
             if self.module:
                 self.module.destroy()
@@ -489,6 +495,18 @@ class Player:
             self._rebuild_shuffle()
         self.persist()
 
+    def set_width(self, width: float) -> None:
+        """The stereo width heard at playback, 0 (mono) to 1 (each voice where the song puts it): libopenmpt's stereo
+        separation on the playing module and on every module loaded after, saved with the settings. A written song's
+        voices sit where its token's game song put them (round 84), by amplitude alone as the SNES pans, which was made
+        for a television's speakers; on headphones a lead at 0.25 held all song sits far to one side. The vocabulary keeps
+        saying where the game put each voice; this is how the player presents it (HEADPHONES: 0.6)."""
+        self.width = max(0.0, min(1.0, float(width)))
+        with self._lock:
+            if self.module:
+                self.module.set_stereo_separation(round(self.width * 100))
+        self._changed()
+
     def set_volume(self, vol: float) -> None:
         self.volume = max(0.0, min(VOLUME_MAX, float(vol)))
         self.persist()
@@ -617,6 +635,7 @@ class Player:
     def _play_preview(self, path: str, stop: threading.Event) -> None:
         try:
             module = Module(path)
+            module.set_stereo_separation(round(self.width * 100))
         except Exception as e:                      # a preview never takes the player down
             self.on_log(f"[PACKS] cannot play the preview: {e}")
             return

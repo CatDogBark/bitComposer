@@ -110,14 +110,21 @@ def _bind(L):
     L.openmpt_module_get_num_patterns.argtypes = [_VP]
     L.openmpt_module_set_repeat_count.restype = ctypes.c_int32
     L.openmpt_module_set_repeat_count.argtypes = [_VP, ctypes.c_int32]
+    L.openmpt_module_set_render_param.restype = ctypes.c_int32
+    L.openmpt_module_set_render_param.argtypes = [_VP, ctypes.c_int32, ctypes.c_int32]
+    L.openmpt_module_get_render_param.restype = ctypes.c_int32
+    L.openmpt_module_get_render_param.argtypes = [_VP, ctypes.c_int32, ctypes.POINTER(ctypes.c_int32)]
     L.openmpt_module_read_interleaved_stereo.restype = ctypes.c_size_t
     L.openmpt_module_read_interleaved_stereo.argtypes = [_VP, ctypes.c_int32, ctypes.c_size_t, _VP]
     L.openmpt_free_string.restype = None
     L.openmpt_free_string.argtypes = [_VP]
 
 
+RENDER_STEREOSEPARATION_PERCENT = 2   # libopenmpt's render parameter: the mixer's stereo separation, 100 the module's pans as written
+
+
 class Module:
-    """One loaded module, with live per-channel volume."""
+    """One loaded module, with live per-channel volume and stereo width."""
 
     def __init__(self, filepath: str):
         L = lib()
@@ -200,6 +207,19 @@ class Module:
         if not self._iface or not (0 <= ch < self.num_channels):
             return False
         return self._iface.set_channel_volume(self._ext, ch, max(0, min(64, vol)) / 64.0) == 1
+
+    def set_stereo_separation(self, percent: int) -> bool:
+        """The mixer's stereo separation: 100 plays each note's pan as the module has it, less pulls every pan toward
+        centre, 0 is mono (the player's WIDTH; a written song's pans are its token's game song's, round 84)."""
+        if not self._mod:
+            return False
+        return lib().openmpt_module_set_render_param(self._mod, RENDER_STEREOSEPARATION_PERCENT, max(0, min(200, int(percent)))) == 1
+
+    def stereo_separation(self) -> int | None:
+        if not self._mod:
+            return None
+        value = ctypes.c_int32(0)
+        return int(value.value) if lib().openmpt_module_get_render_param(self._mod, RENDER_STEREOSEPARATION_PERCENT, ctypes.byref(value)) == 1 else None
 
     def destroy(self) -> None:
         if getattr(self, "_ext", None):
