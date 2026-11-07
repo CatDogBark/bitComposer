@@ -103,6 +103,13 @@ class EngineHeadless(unittest.TestCase):
         self.assertTrue(p.set_channel_volume(1, 5))
         p.seek(20.0); self.pump(0.3)
         self.assertEqual(p.channel_volumes()[1], 5)
+        # the stereo width: libopenmpt's separation on the playing module, 100 the pans as written; WIDTH sets it live
+        self.assertEqual(p.module.stereo_separation(), 100)
+        p.set_width(0.6)
+        self.assertEqual(p.width, 0.6)
+        self.assertAlmostEqual(p.module.stereo_separation(), 60, delta=1)   # libopenmpt keeps it in 128ths: 59 or 60 back
+        p.set_width(1.0)
+        self.assertEqual(p.module.stereo_separation(), 100)
         self.assertTrue(p.apply_mix_to_file())
         with open(p.playlist[1], "rb") as fh:
             fh.seek(0x80)

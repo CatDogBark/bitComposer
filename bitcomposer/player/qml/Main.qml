@@ -152,6 +152,7 @@ ApplicationWindow {
         return String(name).replace(/^(bit|ffvi|mana|evm|mmx|snes|gen|chip)_/, "").replace(/_/g, " ")
     }
     property real volumeGain: backend.state.volume !== undefined ? backend.state.volume : 1.0
+    property real stereoWidth: backend.state.width !== undefined ? backend.state.width : 1.0   // WIDTH: 1.0 the pans as written
     readonly property var levels: backend.levels                   // each channel's level while playing (about 0 to 1), else []
     readonly property bool liveLevels: playbackStatus === "Playing" && levels.length > 0
     function meterCells(ch, cells) {                               // live while playing, the channel's set volume otherwise
@@ -1136,6 +1137,36 @@ ApplicationWindow {
                             font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); horizontalAlignment: Text.AlignRight
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.dbusSetVolume(1.0) }
                         }
+                    }
+
+                    // Width: libopenmpt's stereo separation at playback. 100 % plays each voice where its song puts it (a
+                    // written song's voices sit where its token's FFVI song put them, round 84), less pulls every pan toward
+                    // centre; the SNES pans by amplitude for a television, and a lead held at 0.25 all song sits far out on headphones.
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Math.round(10 * root.ui)
+                        PxLabel { text: "WIDTH"; Layout.preferredWidth: Math.round(72 * root.ui) }
+                        Fader {
+                            ratio: root.stereoWidth
+                            accent: root.accentPink
+                            centreMark: false
+                            onMoved: function(r) { backend.setWidth(Math.round(r * 20) / 20) }
+                        }
+                        Text {
+                            Layout.preferredWidth: Math.round(44 * root.ui)
+                            text: Math.round(root.stereoWidth * 100) + "%"
+                            color: root.textColor
+                            font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); horizontalAlignment: Text.AlignRight
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: backend.setWidth(1.0) }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Math.round(8 * root.ui)
+                        Item { Layout.preferredWidth: Math.round(72 * root.ui) }
+                        PButton { small: true; text: "SPEAKERS"; on: root.stereoWidth > 0.99; onClicked: backend.setWidth(1.0) }
+                        PButton { small: true; text: "HEADPHONES"; on: Math.abs(root.stereoWidth - 0.6) < 0.01; onClicked: backend.setWidth(0.6) }
+                        Body { text: root.stereoWidth > 0.99 ? "each voice where its song puts it" : "every pan pulled toward centre by " + Math.round((1 - root.stereoWidth) * 100) + "%"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui) }
                     }
 
                     // The band, as the file names its channels.
