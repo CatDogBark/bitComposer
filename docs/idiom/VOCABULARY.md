@@ -171,6 +171,21 @@ The words are grouped by where the writing draws them, in the order the song is 
   `layers` table, written as a three-voice block of their own at the
   song's loudest level over a one-voice tune (Song Check 72's The Sleeping
   Observatory).
+  Since round 91 an eleventh field a pitched part whose line changes
+  instrument (`rhythm.line_stretches`: `s77ca10e2568@52-64x6>sf89f5aedfd@60-80`,
+  each stretch's sample, the range the line plays it over there and its
+  bars from the song's first bar, the last stretch open; FFVI: 37 tokens,
+  63 of 249 line voices, 25 tunes, 19 counter-lines, 12 chord lines, 6
+  basses, two changes in three to another register, the centres 7
+  semitones apart at the median, a stretch ten bars long). The writer
+  registers each stretch's sample and bound (`render.samples_for`), writes
+  the line over the union of its stretches' ranges, folds it by octaves
+  into each stretch's range in its bars (`plan.fold_line`, the house
+  fold) and plays each note on its stretch's sample (`render.sample_of`):
+  Kefka's tune on its first instrument for five bars and its reed after,
+  Overture's on three. The eighth field's sample stays the line's default,
+  and a tune without the field keeps round 43's wall (the whole range the
+  game took its sample over).
   Why the sixth field: a second voice at its own `layer_levels` draw on
   a line whose level was the token's had stacked to 1.8 times the tune
   (Whole 03) and the cap of full (Whole 15 and 20), where FFVI's loud

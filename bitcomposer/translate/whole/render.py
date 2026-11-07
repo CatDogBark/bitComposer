@@ -511,6 +511,25 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             else:
                 played = wide_enough(models, raw(out[role][0]), played, role, plan.log, pack=pack_name)
             plan.bounds[role] = bound_of(played, register)
+        stretches = plan.stretches.get(role)                # the line's instrument by stretch (round 91): each stretch's sample where the pack
+        if stretches and register:                          # holds it, bound to the range the token song played it over; the line written over
+            spans = plan_mod.stretch_bars(stretches, plan.bars)   # the union of those ranges and folded into each in its bars (plan.fold_line)
+            x = plan.extras.setdefault(role, {})
+            x["stretch_spans"], x["stretch_bounds"], x["stretch_samples"] = spans, {}, {}
+            for i, a, b in spans:
+                sid, played_i, _ = stretches[i]
+                if sid in own:
+                    out[f"{role}:stretch:{i}"] = make(sid)
+                    x["stretch_samples"][i] = sid
+                if played_i:
+                    x["stretch_bounds"][i] = bound_of(played_i, register)
+            known = [stretches[i][1] for i, _, _ in spans if stretches[i][1]]
+            if known:
+                plan.bounds[role] = bound_of((min(r[0] for r in known), max(r[1] for r in known)), register)
+            plan.log.append(f"{role}'s instrument by stretch (the balance's song's own): " + ", ".join(
+                f"bars {a + 1}-{b} {stretches[i][0]}" + (f" {stretches[i][1][0]}-{stretches[i][1][1]}" if stretches[i][1] else "")
+                + ("" if stretches[i][0] in own else " (not in the pack: the line's sample)") for i, a, b in spans)
+                + f"; written over {plan.bounds[role][0]}-{plan.bounds[role][1]}")
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples) where the
         # pack holds both and each reaches its voice's register; else the second voice's sample by its own register and
         # speed, as the line's is chosen
@@ -936,7 +955,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                     name, sample = samples[R.DRUMS][kit_name]
                     put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name), name, sample, v, piece=kit_name, letter=letter)   # the piece's
                 else:
-                    name, sample = sample_of(samples, role, n[3], second_voice)
+                    name, sample = sample_of(samples, role, n[3], second_voice, plan_mod.stretch_at(plan, role, int(a // plan_mod.METER)) if not n[3] else None)
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // plan_mod.METER))   # the bar's section level (round 48)
     if capped:
@@ -973,9 +992,12 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     return score, first
 
 
-def sample_of(samples: dict, role: str, voice: int, second_voice: dict) -> tuple:
+def sample_of(samples: dict, role: str, voice: int, second_voice: dict, stretch: int | None = None) -> tuple:
     """The (name, ITSample) a part's voice plays: the token song's own for that voice (`role:v`, round 70) where the pack
-    holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's."""
+    holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's; the line's
+    (voice 0) its stretch's sample where the token song changes instrument there (`role:stretch:i`, round 91)."""
+    if not voice and stretch is not None and f"{role}:stretch:{stretch}" in samples:
+        return samples[f"{role}:stretch:{stretch}"]
     own = samples.get(f"{role}:{voice}") if voice else None
     if own is not None:
         return own

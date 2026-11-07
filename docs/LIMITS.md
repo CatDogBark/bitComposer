@@ -27,24 +27,28 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
 - **Every song is in 4/4.** The form and texture tables were counted at
   one meter; FFVI's four 3/4 songs lend no bars (round 81). A meter word
   is the first audit's rule #8, standing.
-- **A tune may play notes its sample never played in its song.** The
-  tune's bound is the whole range the game ever took its sample over
-  (round 43), because FFVI's tunes change sample mid-song; binding the
-  tune to the main sample's own range cut 9 of 30 tunes short (round 86).
-- **A tune's or counter's register word can span two instruments.** Where
-  a game channel changes instrument, the reader hands the whole channel to
-  one part. Since round 89 a bass or chord channel's second instrument in
-  a register of its own is a voice of its own, so those parts' words are
-  their main instrument's (Wild West's bass 28-36, not 28-80); a tune's or
-  counter's second instrument is the line changing colour (FFVI: 47 of 56
-  take the line over for stretches, a third of the notes) and stays on the
-  voice, its register word spanning both until the word for a voice's
-  instrument by stretch (the next round).
+- **A tune without stretches may play notes its sample never played in
+  its song.** Where the token carries the line's instrument by stretch
+  (round 91) the tune is written over its own stretches' ranges and folded
+  into each; a tune on one instrument keeps round 43's wall, the whole
+  range the game ever took its sample over, because binding it to the main
+  sample's own range had cut 9 of 30 tunes short (round 86).
+- **A line's register changes by octave folds.** Since round 91 a line that
+  changes instrument is written over the union of its stretches' ranges and
+  folded by octaves into each stretch's in its bars, so a phrase written
+  across a stretch line may break at it where the two registers differ (FFVI:
+  two changes in three sit in another register, the centres 7 semitones
+  apart at the median); the writers take one register a song.
 - **A channel's second instrument is not written.** The second voices the
-  reader splits off (42 in 25 FFVI songs) are kept beside the counts, not
-  in them: a voice of its own would ask the writer for a ninth chip voice
-  in the eight-channel songs that time-share one, and the written song
-  has no way to time-share yet. The same word as above would carry them.
+  reader splits off (42 in 25 FFVI songs; round 89) are kept beside the
+  counts, not in them: they are another part on the same channel (Kefka's
+  pedal channel carries a high counter piece), and a voice of its own would
+  ask the writer for a ninth chip voice in the eight-channel songs that
+  time-share one. The line's own instrument by stretch (round 91) is
+  written; a channel shared by two parts in turn is not.
+- **A voice beside a line keeps one instrument.** Round 91 writes the
+  line's instrument by stretch; a voice beyond the line (32 of FFVI's 129
+  change sample) plays the token's one sample for it throughout.
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

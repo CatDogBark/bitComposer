@@ -1015,6 +1015,63 @@ class NewTablesTests(unittest.TestCase):
         notes = whole.stretched_notes(1, own, whole.stretch_spans(whole.relation_stretches("pc+4"), 2), {"melody": melody}, major, 4, log)
         self.assertEqual(notes, own)                                                             # no counter written: its own notes throughout
 
+    def test_the_lines_instrument_by_stretch_rides_the_token(self):
+        """Round 91: a line voice that changes instrument carries its stretches as the token's eleventh field
+        (line_stretches: each stretch's sample, the range it plays it over, its bars from the song's first bar, the last
+        open); the plan parses them, samples_for registers each stretch's sample and bound and writes the line over the
+        union of the ranges, fold_line folds a note into its stretch's range by octaves, and the render takes the stretch's
+        sample for the line's notes (sample_of)."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from bitcomposer import instruments
+        from bitcomposer.translate import tables
+        s = self._song()
+        line = s.notes["melody"]                                                                # bars 5-8, a note a beat
+        s.notes["melody"] = [(t, d, m, "m") for t, d, m, _ in line if t < 24] + [(t, d, m - 12.0, "m2") for t, d, m, _ in line if t >= 24]
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        self.assertEqual(rhythm.line_stretches(s, "melody"), "m@68-72x6>m2@56-60")             # the first stretch through bar 6, then the rest
+        self.assertEqual(rhythm.line_stretches(s, "bass"), "")                                   # one instrument: no field
+        mel = next(t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("melody="))
+        self.assertEqual(mel.split(":")[10], "m@68-72x6>m2@56-60", mel)
+        self.assertEqual(whole.line_stretch_list("m@68-72x6>m2@56-60"), [("m", (68, 72), 6), ("m2", (56, 60), None)])
+        self.assertEqual(whole.line_stretch_list("sax3>sb@1-"), [("sa", None, 3), ("sb", None, None)])
+        tok = "melody=main:56-72:0.9:1:0.7:::sm@68-72:::sm@64-76x4>sm2@52-64 bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", tok, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.stretches, {"melody": [("sm", (64, 76), 4), ("sm2", (52, 64), None)]})
+        self.assertEqual(p.token_samples["melody"], "sm")
+        made = []
+        fake = lambda name: made.append(name) or SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "arp": ["pad"]}}
+        with mock.patch.object(instruments, "_make_sample", fake):
+            samples = whole.samples_for(p, pack, {"sm", "sm2", "sbass"}, "g", random.Random(1), {})
+        self.assertEqual(samples["melody"][0], "sm")                                             # the eighth field's sample stays the default
+        self.assertEqual((samples["melody:stretch:0"][0], samples["melody:stretch:1"][0]), ("sm", "sm2"))
+        x = p.extras["melody"]
+        reg = p.registers["melody"]
+        self.assertEqual(x["stretch_spans"], [(0, 0, 4), (1, 4, p.bars)])
+        self.assertEqual(x["stretch_bounds"], {0: whole.bound_of((64, 76), reg), 1: whole.bound_of((52, 64), reg)})
+        self.assertEqual(p.bounds["melody"], whole.bound_of((52, 76), reg))                      # the line is written over the union
+        self.assertTrue(any(l.startswith("melody's instrument by stretch") for l in p.log), p.log[-3:])
+        self.assertEqual([whole.stretch_at(p, "melody", k) for k in (0, 3, 4, p.bars + 3)], [0, 0, 1, 1])
+        self.assertIsNone(whole.stretch_at(p, "bass", 0))
+        lo0, hi0 = x["stretch_bounds"][0]
+        lo1, hi1 = x["stretch_bounds"][1]
+        notes = [(0.0, 1.0, float(lo0 - 9)), (1.0, 2.0, float(hi0)), (16.0, 17.0, float(hi1 + 6)), (17.0, 18.0, float(lo1)), (18.0, 19.0, 76.0, 1)]
+        folded = whole.fold_line(p, "melody", notes, 4)
+        self.assertEqual(folded[0][2], float(lo0 + 3))                                           # up an octave into the first stretch's bound
+        self.assertEqual(folded[1], notes[1])                                                    # inside: untouched
+        self.assertEqual(folded[2][2], float(hi1 - 6))                                           # down an octave into the second's
+        self.assertEqual(folded[3], notes[3])
+        self.assertEqual(folded[4], notes[4])                                                    # a voice beside the line is left alone
+        self.assertTrue(any("folded by octaves" in l for l in p.log))
+        self.assertEqual(whole.fold_line(p, "bass", notes, 4), notes)                            # a part without stretches: as written
+        self.assertEqual(whole.sample_of(samples, "melody", 0, {}, 1)[0], "sm2")                 # the line's note in the second stretch
+        self.assertEqual(whole.sample_of(samples, "melody", 0, {}, 0)[0], "sm")
+        self.assertEqual(whole.sample_of(samples, "melody", 0, {})[0], "sm")
+        self.assertEqual(whole.sample_of(samples, "melody", 1, {}, 1)[0], "sm")                  # a voice beside the line keeps its own
+        self.assertEqual(whole.sample_of(samples, "bass", 0, {}, 0)[0], "sbass")
+
     def test_the_second_voices_levels_are_the_balance_tokens_too(self):
         """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line
         voice's in tenths (the layer_levels unit, capped at 1.5; the busiest voice first) as a sixth field; the plan plays a
