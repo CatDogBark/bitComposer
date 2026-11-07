@@ -185,7 +185,25 @@ The words are grouped by where the writing draws them, in the order the song is 
   Kefka's tune on its first instrument for five bars and its reed after,
   Overture's on three. The eighth field's sample stays the line's default,
   and a tune without the field keeps round 43's wall (the whole range the
-  game took its sample over).
+  game took its sample over). Since round 92 the writers take a register
+  a bar (`bounds_at` on the melody, the bass and the chord parts' line,
+  `spans_at` on the counter): a line whose song changes instrument by
+  stretch is written in each stretch's register, entering it by octaves,
+  every move, recall and ending drawn inside it, so the fold after writing
+  (`plan.fold_line`) has nothing left to move but the form's repeats
+  (36 of 37 written tunes sat wholly inside their bounds in the
+  measure; a counter's, a bass's or a chord line's stretch bound is often
+  narrower than an octave and cannot hold every pitch class, as those
+  parts' own narrow registers never could, and such notes sit where the
+  nearest octave puts them);
+  round 91 had written the line over the union of its stretches' ranges
+  and moved it afterwards, bar by bar, which could break a phrase at a
+  stretch line. And each layer entry carries a sixth sub-field, the
+  voice's own instrument by stretch (`stretch_word` with "~" between a
+  sample and its range: `s605f200105~56-72x14>sf89f5aedfd~60-68`; FFVI:
+  32 voices in 22 songs): `samples_for` registers each stretch's sample
+  (`samples["part:v:stretch:i"]`) and `sample_of` plays the voice's note
+  on it; the voice's register stays its relation's.
   Why the sixth field: a second voice at its own `layer_levels` draw on
   a line whose level was the token's had stacked to 1.8 times the tune
   (Whole 03) and the cap of full (Whole 15 and 20), where FFVI's loud

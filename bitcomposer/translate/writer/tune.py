@@ -271,7 +271,7 @@ def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Ran
 
 def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span: tuple, models: dict, rng: random.Random,
             kind: str, key: tuple | None = None, articulation: str = "mixed", register: tuple | None = None,
-            role: str = R.COUNTER) -> tuple[list, list, list]:
+            role: str = R.COUNTER, spans_at=None) -> tuple[list, list, list]:
     """The counter-line written beside the tune (round 29): its bar from the tune's bar and a counter_figures mask
     (`masks`, one a bar, REST where the plan has it rest; rhythm.apply_mask: the tune's onsets it strikes with and its
     own, its own alone where the tune rests), its pitch by the voice words as the second bass voice's is
@@ -284,7 +284,8 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
     again (two copies of one sample on one pitch), the onset skipped after VOICE_TRIES. FFVI's counter plays WITH the
     tune (0.67 of its onsets on the tune's, as loud, 2.5 semitones under); written as a second tune from the melody
     writer's own stream it had 0.43 of its onsets on the tune's, Whole 28 0.19 on one timbre in one register (2026-10-24).
-    Returns [(start, end, midi)], the bars' patterns and a log."""
+    `spans_at`: bar -> the span the line is kept in there, where the token song's counter changes instrument by stretch
+    (round 92). Returns [(start, end, midi)], the bars' patterns and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b) for _, a, b, _ in rhythm.all_bars_of(song, role)]
@@ -301,6 +302,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
     prev_steps, prev_midi, last_with = rhythm.START, None, None
     with_tune = own = skipped = 0
     for k, (a, b) in enumerate(bars):
+        span_k = tuple(spans_at(k)) if spans_at is not None and spans_at(k) else span   # the bar's span where the line changes instrument (round 92)
         mask = masks[k] if k < len(masks) else figures_mod.REST
         if mask == figures_mod.REST or not mask:
             continue
@@ -319,7 +321,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                     target, steps = beside_pitch(models, role, kind, scale, rng, ref, prev_steps, prev_midi, moved, refused)
                     if target is None:
                         break
-                    midi = upper_mod.in_register(target, span)
+                    midi = upper_mod.in_register(target, span_k)
                     if kind == "same" and midi == int(round(ref)):
                         refused.add(steps)
                         midi = None
@@ -334,9 +336,9 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                 target, _ = beside_pitch(models, role, kind, scale, rng, None, prev_steps, prev_midi, 0)
                 if target is None:                          # nothing before it: the chord's root nearest the counter's register
                     c = _chord_in_bar(song, a + float(p))
-                    centre = sum(register) // 2 if register else sum(span) // 2
-                    target = min((m for m in range(span[0], span[1] + 1) if m % 12 == ((c[0] if c else tonic) % 12)), key=lambda m: abs(m - centre), default=centre)
-                midi = upper_mod.in_register(target, span)
+                    centre = sum(register) // 2 if register else sum(span_k) // 2
+                    target = min((m for m in range(span_k[0], span_k[1] + 1) if m % 12 == ((c[0] if c else tonic) % 12)), key=lambda m: abs(m - centre), default=centre)
+                midi = upper_mod.in_register(target, span_k)
                 own += 1
             prev_midi = midi
             pitched.append((k, p, float(midi)))
@@ -596,7 +598,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
-           letters: dict | None = None, theme_body=None, grain: str | None = None) -> tuple[list, list, list]:
+           letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -627,8 +629,12 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     theme-body table draws (`theme_body`), then goes on new; an AGAIN
     phrase brings back the last phrase whose head was not the theme's; a
     NEW phrase is new, or answers the one before. Without letters the
-    phrases stand only to the one before (the relations table). Returns
-    [(start, end, midi)], the bars' rhythms and a log."""
+    phrases stand only to the one before (the relations table).
+    `bounds_at`: bar -> the register the line is written in there, where
+    the token song's line changes instrument by stretch (round 92); the
+    line enters a new stretch's register by octaves and every move, recall
+    and ending is drawn inside it. Returns [(start, end, midi)], the bars'
+    rhythms and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -666,6 +672,14 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     windows += [[k] for k in range(len(bars)) if k not in covered]
     windows.sort()
     register0 = register                                    # the part's register; `register` is rebound a phrase at a time to its room in the arc
+
+    def reg_of(k: int) -> tuple:
+        """The register bar k is written in: its stretch's bound where the token song's line changes instrument there
+        (`bounds_at`, round 92: samples_for's stretch bounds, a bar at a time), else the phrase's room under the arc
+        (`register`, rebound a phrase at a time)."""
+        b = bounds_at(k) if bounds_at is not None else None
+        return tuple(b) if b else register
+
     tops = {}                                               # a window's first bar -> the phrase's ceiling: the arc (climax, arc, summit tables)
     if role == R.MELODY and all(k in models for k in ("climax", "arc", "summit")) and windows:
         from .. import phrases as phrases_mod
@@ -888,15 +902,18 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         """A new cell for bar k: the notes from the moves table under the phrase's contour."""
         nonlocal last_midi, last_move, last_time
         a, b, _ = bars[k]
+        reg = reg_of(k)
         targets = contour_targets(shape, phrase_size)
         pitches, midi, move, t_from = [], last_midi, last_move, last_time
+        if not reg[0] <= midi <= reg[1]:
+            midi = float(upper_mod.in_register(int(round(midi)), reg))   # the line enters its stretch's register by octaves (round 92)
         for p in positions:
             t = a + p
             third = min(2, int(3 * (t - a0) / max(1e-9, b0 - a0)))
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
             tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
-            step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
+            step = draw_move(moves_table, move, mode, midi, rng, reg, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
                              step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
                              under_chord=wants_chord())
             midi = midi + step
@@ -918,6 +935,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         at every habit tier (sparse 2.7 against 2.0, medium 5.1 against 4.1, dense 8.2 against 7.0)."""
         nonlocal last_midi, last_move, last_time
         a, b, _ = bars[k]
+        reg = reg_of(k)
         half = meters[k] / 2.0
         chord = _chord_in_bar(song, a)
         root = chord[0] if chord else tonic
@@ -949,6 +967,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         raw = {kd: models["half_recall"].p(kd, ctx) for kd in tables.RECALL}
         all_pos, all_pitches, kinds = [], [], []
         midi, move, t_from = last_midi, last_move, last_time
+        if not reg[0] <= midi <= reg[1]:
+            midi = float(upper_mod.in_register(int(round(midi)), reg))   # the line enters its stretch's register by octaves (round 92)
         targets = contour_targets(shape, phrase_size)
         for h in (0, 1):
             lo = h * half
@@ -971,10 +991,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if key_ is not None:
                 ps, entry, steps = pool[key_]
                 pc = (root + entry) % 12
-                low, high = register
+                low, high = reg
                 anchor_ = midi if midi is not None else (low + high) / 2
                 first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor_), m), default=int(round(anchor_)))
-                ms = fold_cell(from_intervals(first, steps), register)   # the half's intervals exact (round 41), the whole half folded in
+                ms = fold_cell(from_intervals(first, steps), reg)   # the half's intervals exact (round 41), the whole half folded in
                 pos_h = [lo + p for p in ps]
             else:
                 pos_h, ms = [p for p in positions if (p < half) == (h == 0)], []
@@ -984,7 +1004,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
                     strong = abs(p - round(p)) < rhythm.NEAR
                     tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
-                    step = draw_move(moves_table, move, mode, midi, rng, register, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
+                    step = draw_move(moves_table, move, mode, midi, rng, reg, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
                                      step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
                                      under_chord=wants_chord())
                     midi = midi + step
@@ -1020,7 +1040,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         chord = _chord_in_bar(song, a)
         root = chord[0] if chord else tonic
         pc = (root + cell.entry) % 12
-        low, high = register
+        low, high = reg_of(k)
         first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
 
         def build(start: int) -> list:
@@ -1048,7 +1068,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             best = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
                        key=lambda x: (on_chord(build(x)), -abs(x - first), -x), default=first)
             pitches = build(best)
-        pitches = fold_cell(pitches, (low, max(high, room_high)))   # the part's whole room (round 49): folded into the phrase's room under the
+        pitches = fold_cell(pitches, (low, max(high, room_high) if bounds_at is None else high))   # the part's whole room (round 49): folded into the phrase's room under the
         last_midi = float(pitches[-1]) if pitches else last_midi    # arc, a wider recalled cell had been clamped and bent
         last_move = f"{pitches[-1] - pitches[-2]:+d}" if len(pitches) >= 2 and pitches[-1] != pitches[-2] else ("0" if len(pitches) >= 2 else last_move)
         return realize(k, cell.positions, pitches)
@@ -1097,7 +1117,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if keep < len(live) and ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches:
                 want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
                 last = phrase_cells[-1]
-                options = [m for m in range(reg_w[0], reg_w[1] + 1) if m % 12 in want]
+                reg_e = reg_of(live[-1])
+                options = [m for m in range(reg_e[0], reg_e[1] + 1) if m % 12 in want]
                 if options:
                     last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
             end_phrase(phrase_cells)
@@ -1141,7 +1162,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             # the new phrase sits where the shift table puts it against the last (the table counts mean pitches): the line
             # is steered there over the phrase's first third by draw_move's contour aim, not jumped there in one move
             # (FFVI's phrase-start moves are half steps; the jump had made them a quarter)
-            aim0 = float(min(reg_w[1], max(reg_w[0], last_midi + shift_of(relation)))) if prev_phrase is not None else None
+            reg_a = reg_of(live[0])
+            aim0 = float(min(reg_a[1], max(reg_a[0], last_midi + shift_of(relation)))) if prev_phrase is not None else None
             for attempt in range(COPY_TRIES):
                 phrase_cells, start_midi = [], aim0
                 snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen),
@@ -1218,7 +1240,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         if ending in DEGREE_PCS and phrase_cells and phrase_cells[-1].pitches and choices.get(live[-1]) in ("new", "answered"):
             want = {(tonic + i) % 12 for i in DEGREE_PCS[ending]}
             last = phrase_cells[-1]
-            options = [m for m in range(reg_w[0], reg_w[1] + 1) if m % 12 in want]
+            reg_e = reg_of(live[-1])
+            options = [m for m in range(reg_e[0], reg_e[1] + 1) if m % 12 in want]
             if options:
                 last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
                 last_midi = float(last.pitches[-1])
