@@ -997,7 +997,7 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(tokens["accompaniment"][4], "0.4")                                         # the line at 0.2 of the top 0.5
         self.assertEqual(tokens["accompaniment"][5].split("@")[0], "2.5")                          # the second voice at 2.5 of the line: 0.5 of full
         self.assertEqual(tokens["accompaniment"][7].split("@")[0], "sa")                      # round 86: its played range follows the id
-        self.assertEqual((tokens["bass"][4], tokens["bass"][5].split("@")[0], tokens["bass"][7]), ("0.6", "1.6", "slong"))
+        self.assertEqual((tokens["bass"][4], tokens["bass"][5].split("@")[0], tokens["bass"][7].split("@")[0]), ("0.6", "1.6", "slong"))   # round 86: the range after the id
         self.assertEqual(tokens["melody"][4], "1.0")
 
 
