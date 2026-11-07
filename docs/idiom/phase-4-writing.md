@@ -5617,3 +5617,111 @@ follow the key across songs would be the honest word. Fanfare's -4 sits
 on the flat seventh of G where the Battle Theme's +3 sits on the minor
 third of A: the composer tunes the rattle to a degree, and the wall keeps
 the degree only where the game's own spread allows.
+
+
+### Round 89: a channel's second instrument is a voice of its own, and a pad is no kit (2026-11-06, the reader round from Song Check 70's limits)
+
+**Why.** Two reader faults stood in `docs/LIMITS.md` after round 88. A
+game channel that changes instrument was one voice to the role reader,
+and its register word spanned both instruments: Wild West's bass channel
+plays its bass sample at 28-36 and, for a stretch, chords two octaves up
+on another sample, and its token said `bass 28-80`; Kefka's 32-72,
+Overture (part 3)'s 32-64, New Continent's 32-76. FFVI changes
+instrument on 108 of its 381 pitched channels, and in 61 the second
+instrument plays in a register of its own. Worse than the register: where
+a channel's second instrument was a drum, the drum hid inside the part.
+Kefka's, Dancing Mad (part 1)'s and Overture (part 3)'s snare (the sample
+the other songs' kits call S, s1279e119a1) shared a channel with a
+pitched part, so the channel read as an accompaniment with 143, 224 and
+159 snare hits among its notes on one pitch; the kit token had no snare,
+and the accompaniment's line, level and density were the snare's. And the
+drum namer took a looping bowed-strings pad played low and alone for a
+kick (The Empire Gestahl, Another World of Beasts), so two kits were a
+seven-beat drone struck once a bar, and Another World of Beasts had no
+bass part.
+
+**Built.** Translator version 13, every song read again, the lead pass
+run again. (1) On a channel under the tune (`roles.UNDER_THE_TUNE`: a
+bass or a chord part by assign's first reading of the whole channels),
+the notes on a sample other than the one most of its pitched notes are
+on, carrying a tenth of them (SECOND_SHARE) and sixteen notes or more
+(SECOND_NOTES, the echo reader's floor for a voice), whose register is
+its own (median pitches SECOND_APART, 12 semitones, apart, or 10th-to-
+90th-percentile registers that do not overlap), move to a voice of their
+own (`roles.split_second_instruments`: SECOND_BASE 200 + the channel, +
+10 for a third, so the channel stays readable in the id), their chip
+notes with them; assign reads the parts again, a second instrument never
+setting the song's floor (in the first cut an eight-note pedal split from
+a chord channel took the bass role from Devil's Lab's 137-note line) nor
+taking the lead. A tune's or counter's second instrument is the line
+changing colour (47 of 56 take the line over for stretches, a third of
+the notes, 19 an octave apart) and stays on its voice. The readings keep
+the second voice beside the counts, not in them
+(`readings.Song.second_voices`): the band a token describes is the
+channels' main instruments, and the second instrument's stretches await
+a word of their own (a voice's instrument by stretch, the next round),
+since a voice of its own asks the writer for a ninth chip voice in the
+eight-channel songs that time-share one (the first cut counted them, and
+Kefka's token asked twelve). (2) The by-sound drum clause
+(`roles.drum_clause`, the two clauses in one place now) refuses a voice
+whose notes are pitched and held DRUM_HOLD (two beats) or more at the
+median: a pad the namer took for a kick. FFVI's thirteen cymbal voices
+held two beats or more are unpitched and stay drums. (3) A voice with no
+note at a level once through is no voice to the counts (Quiet Beach's
+silent pad had counted as a kit channel, then as a harmony voice). Pack4
+refit (backups `pack.json.before-r89`, `readings.db.before-r89`), the
+shipped vocabulary regenerated; the round-88 vocabulary stood beside it
+as `before89` for the comparison and was removed (the player lists every
+shipped vocabulary). Tests: the split and its idempotence, the tune's
+second instrument left whole, a second sample in the same register left
+on its channel, the parts after; the pad no kit and the cymbal still
+one, an instrument held as before; the loader keeping a second voice
+beside the counts and dropping a silent one.
+
+**Measured.** The readings (`measure_r89.py`): 42 second voices split
+from 25 songs (read as accompaniment 25, counter 8, bass 6, double 2,
+arp 1), 12 other roles changed, 26 of 68 balance tokens. Ten bass
+registers come down to their bass: Wild West 28-80 to 28-36, Kefka 32-72
+to 28-36, Overture (part 3) 32-64 to 32-36, New Continent 32-76 to
+32-36, Gau 28-60 to 24-36, Dancing Mad (part 2) 24-60 to 24-44, The
+Phantom Train 24-52 to 24-32, Last Dungeon 32-56 to 32-40, Returners and
+Coin Song 36-56 to 36-44; accompaniments too (Another World of Beasts
+52-76 to 52-64, The Unforgiven 32-52 to 32-48, Blackjack 56-72 to
+56-60). Three snares come out of the accompaniment into the kit (Kefka
+143 hits, Dancing Mad (part 1) 224, Overture (part 3) 159, each S by the
+namer, Overture's kit from none), and the accompaniment's level with
+them: Kefka's and Dancing Mad's loudest part is now the real
+accompaniment (a one-pitch pedal at 60; sparse stabs at 72), the kit at
+0.4 and 0.2 of it. Wild West's two-pitch pump (169 strikes of a tonal
+sample at E2 and C3, 0.23 beats each), unmasked, is a drum voice by
+round 77's play clause (one sample at one or two pitches) and a kit
+piece `o`; its accompaniment part is gone (see LIMITS.md). The pads:
+Gestahl's is a double of its harmony voice (the song has no kit),
+Another World of Beasts' is the bass (14 notes at 28 held seven beats,
+the song's lowest voice; it had no bass part). Techno de Chocobo's third
+accompaniment voice is a counter of its own (44-52) once its stabs are
+split off, Searching for Friends' accompaniment the counter's second
+voice. The lead pass relabels the same nine songs. The reader's edges
+seen and left: Returners' pad voice doubling the bass is a second bass
+voice now (its notes no longer within 1.2 of the thinner line's),
+Dancing Mad (part 2)'s second low channel (32-36) an accompaniment, three
+semitones over the bass channel's new median; The Prelude's low channel
+is an accompaniment (48-76) and the song has no bass part in the counts
+(its eight low notes once through are a second voice). Over seeds 1-160
+the token song holds for 129; every plan is drawn again past its band
+line, every table being refit on the re-read readings. Song Check 72's
+five pairs (the same seed on the same token, the plan re-drawn past the
+band line, said in each description): The Expanse of Rust (Another World
+of Beasts: the pad kit gone, a drone bass), First Quarry (The Empire
+Gestahl: no kit), The Still Wharf (Overture (part 3): a snare kit from
+none, the accompaniment and the bass their own), The Sleeping
+Observatory (Kefka: the snare into the kit, the pedal the loudest part,
+the bass 28-36), Endless Observatory (Wild West: the bass 28-36, the pump
+a kit piece).
+
+**Open.** The second voices await their word: a voice's instrument by
+stretch (sample, register relation, share, stay), realized on the same
+chip voice, for the tune and the counter (the line changing colour) and
+the bass and chord parts alike. The play clause's two-pitch drum (Wild
+West's pump) wants a pitch word: FFVI's percussion plays at the driver's
+own pitch, a pump at musical ones.

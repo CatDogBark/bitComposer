@@ -287,7 +287,13 @@ The words are grouped by where the writing draws them, in the order the song is 
   notes, is read as a voice of its own by the role reader
   (`roles.split_melodic_pieces`: a counter-line, or a bass where it sits
   low), so Wild West's blip on fifteen pitches is a part with the
-  channel's echo and no kit slot.
+  channel's echo and no kit slot. Since round 89 a bass or chord
+  channel's second instrument in a register of its own is a voice of its
+  own too (`roles.split_second_instruments`), kept beside the counts
+  until its word, so the channel's register and sample fields are its
+  main instrument's (Wild West's bass 28-36, not 28-80), and a snare that
+  shared a channel with a pitched part is in the kit (Kefka's, Dancing
+  Mad (part 1)'s, Overture (part 3)'s).
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;
@@ -1246,6 +1252,23 @@ The words are grouped by where the writing draws them, in the order the song is 
   The edge the owner kept in round 32a stays in kind: a draw past the
   bound folds by octaves into it (`writer.in_register`).
   *`ranges`: shape (part, role); drawn in samples_for.*
+
+- **kit_rates** — the rate a percussion kit sample is struck at, as a note
+  (60 the recording, 48 an octave under), by the sample and the piece it is
+  struck as. Counted since round 88 as the wall a tuned kit slot's rate
+  stays inside: round 79 reads a tonal kit piece's rate as a degree of its
+  song's key and moves it with the written key, and the move had taken
+  FFVI's pitched snare, struck in the game within -4 to +3 of its
+  recording, to -10, where its rattle lasts 340 ms and is the guitar (Song
+  Check 70's Northern Bells). Over the game's tuned slots and the twelve
+  keys a written song can land in, the moved rate fell outside the game's
+  rates in 77 of 132 cases. Not a drawn word: `whole.samples_for` reads the
+  slot's sample's rates as its piece into the plan (`kit_rate_walls`,
+  `render.kit_rate_wall`) and `render.walled` holds the moved rate inside
+  them, so the slot keeps the key's move where the game struck the sample
+  there and stops at the game's nearest rate where it did not; a pair the
+  game never struck has no wall.
+  *`kit_rates`: shape (part, piece); read in kit_rate_wall.*
 
 - **part_samples** — the sample a part's line plays (the melody, bass,
   accompaniment, harmony, arp; the counter's is `counter_samples` and
