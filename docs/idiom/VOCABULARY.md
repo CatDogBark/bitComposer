@@ -37,7 +37,7 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **chain, previous** — a figure table conditioned on the bar before's outcome; the writer's bars form a chain through the game's.
 - **mixture, urn** — a figure table drawn once a bar with the song's own bars so far: the same as the bar before, an earlier bar, or new, at the game's rates.
 - **mask** — a second voice's or the counter's bar as which of the line's onsets it strikes with and which are its own (`second_figures`, `counter_figures`).
-- **layer** — a voice beyond a part's line: its relation (lockstep, apart, alternating), its offset, its density and, since round 65, its sample and its notes over the line's.
+- **layer** — a voice beyond a part's line: its relation (lockstep, apart, alternating), its offset, its density and, since round 65, its sample and its notes over the line's; since round 90 the token says what it does beside which part stretch by stretch (a double, parallel, or its own line) and the writer follows.
 - **lead** — the voice that carries the tune in a game song, decided by what is heard (round 64); every tune word counts on it.
 - **own stream** — a draw on its own random stream (`whole:{seed}:name`), so a new word shifts no draw after it on the plan's stream.
 
@@ -138,6 +138,39 @@ The words are grouped by where the writing draws them, in the order the song is 
   a voice beyond the line rather than the second's alone: the token's
   voice count is the song's, and a third or later voice's share differs
   from the second's in 23 of FFVI's 52 (Gau 1.5 then 3.2 before the cap).
+  Since round 86 each entry carries a fourth sub-field, where the song
+  plays the voice's sample (`1.3@s5a1fa4d5d3@0.33@52-64`), and since round
+  90 a fifth, what the voice does beside which part stretch by stretch
+  (`rhythm.relation_words`: `dm-12x6>o`, the tune an octave under through
+  the song's sixth bar and then its own line; `pc+4`, parallel with the
+  counter's line a third up throughout; a kind, a part letter, semitones,
+  the stretch's bars from the song's first bar as the pan word counts
+  them, the last stretch open). A stretch is a run of notes on one sample
+  (`roles.stretches_of`, blips under eight notes and eight beats folded),
+  asked what it does beside each other voice (`roles.stretch_relation`): a
+  double where 0.8 of its notes start with that voice's at the same pitch
+  class, parallel where 0.8 start with that voice's at one generic
+  interval over half the pairs (thirds alternate 3 and 4 semitones), its
+  own line else, and either way only where it strikes with half that
+  voice's notes within its span (a pad holding the root under a tune that
+  lands on the root at its eight onsets follows nothing). The writer
+  follows the word (`plan.stretched_notes`): the followed part's line again
+  at the interval in the scale over those bars, the voice's own notes (its
+  layer word's) over the rest, written after every line is in place; a
+  voice of one own stretch, or of fewer than sixteen notes, has no word
+  and takes the `layers` draw as before. With the stretches read, a voice
+  that doubles the tune or runs parallel with it for half its notes or more
+  is the tune's (role melody, `of` the tune's voice, from the counter and
+  the chord parts; FFVI: 18 voices in 17 songs, read as counter-lines
+  and chord parts before, Edgar and Sabin's and Dancing Mad's thirds, The
+  Decisive Battle's and Metamorphasis's octaves), and the melody's line is
+  the heard tune, not its busiest voice; 55 voices beyond a line carry a
+  word in 38 songs. Kefka's three "counter" channels double its tune in
+  octaves and thirds for whole stretches and the bass for another; read
+  whole, they were a counter-line with two layers drawn from the pooled
+  `layers` table, written as a three-voice block of their own at the
+  song's loudest level over a one-voice tune (Song Check 72's The Sleeping
+  Observatory).
   Why the sixth field: a second voice at its own `layer_levels` draw on
   a line whose level was the token's had stacked to 1.8 times the tune
   (Whole 03) and the cap of full (Whole 15 and 20), where FFVI's loud
@@ -354,6 +387,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   stack: FFVI's accompaniment voices strike together 1.2 to 1.5 to an
   onset, and a stack of voices all striking at every onset had been three
   to four notes loud where the tune has one (Song Check 11's Whole 01).
+  Since round 90 the draw stands for a voice's own stretches only where
+  the balance token says what the voice does by stretch (its layer
+  entry's fifth sub-field, above): a doubling or parallel stretch is the
+  followed part's line again, in the scale, over its bars.
   *`layers`: shape (part, rank); drawn in _plan_once, layers_of; conditions second_figures, voice_intervals, voice_moves.*
 
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,

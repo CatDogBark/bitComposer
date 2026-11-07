@@ -5725,3 +5725,134 @@ chip voice, for the tune and the counter (the line changing colour) and
 the bass and chord parts alike. The play clause's two-pitch drum (Wild
 West's pump) wants a pitch word: FFVI's percussion plays at the driver's
 own pitch, a pump at musical ones.
+
+### Round 90: a voice's stretches (2026-11-07, from Song Check 72's Sleeping Observatory)
+
+**Why.** On Song Check 72 the owner heard the counter of The Sleeping
+Observatory (seed 255, Kefka's token) as odd and asked whether it was a
+bug or the next round's business. Measured: not a pitch fault (written
+counter notes a semitone from the sounding tune 6.7 %, FFVI 4.3 %; a
+first measure that took the written notes' end for a length had said
+81 %), but a reading. Kefka's three "counter" channels double its tune
+in octaves and thirds for whole stretches and the bass for another:
+channel 1 harmonizes the tune, then doubles it an octave under for
+fourteen bars on another sample; channel 2 doubles it an octave under
+for six bars, then doubles the bass in unison for seventeen; channel 3
+runs parallel an octave over for ten bars, then harmonizes the pedal.
+The role reader asks each channel one question for the whole song
+(`_doubles`: 0.8 of another voice's notes at the same pitch class), which
+no stretch answers, and parallel thirds are another pitch class, so the
+three read as a counter-line with two layers, their relation words drawn
+from the pooled `layers` table ("doubling -5", "apart +16"), and the
+written song put a three-voice parallel block at the song's loudest level
+over a one-voice tune (the counter stem 8.6 LU over the melody's; the
+game's own Kefka through the converter has its tune channel 5.5 LU under
+the group, but there the loud voices are the tune in octaves). FFVI
+counted (stretches2.py): 375 pitched voices, 126 beside a line, 54 of
+them with a stretch that doubles or runs parallel with another part; 75
+line voices change sample (the next round's word); and 18 voices spend
+half their notes or more doubling the tune or running parallel with it
+while read as counter-lines or chord voices (Edgar and Sabin's and
+Dancing Mad's thirds, The Decisive Battle's and Metamorphasis's octaves,
+Johnny C. Bad, Devil's Lab, Mt. Koltz, Overture, Troops March on).
+
+**Built.** A voice is read in stretches: runs of notes on one sample
+(`roles.stretches_of`, blips under eight notes and eight beats folded
+into the run before), each asked what it does beside every other voice
+(`roles.stretch_relation`): a double where 0.8 of its notes start with
+that voice's at the same pitch class, parallel where 0.8 start with that
+voice's at one generic interval over half the pairs (`roles.generic`:
+thirds alternate 3 and 4 semitones, key-free), its own line else, and
+either way only where it strikes with half that voice's notes within its
+span (`STRETCH_COVER`: a pad holding the root under a tune that lands on
+the root at its eight onsets follows nothing). The reader's rule
+(`TUNE_LAYER`): a voice of sixteen notes or more from the counter or the
+chord parts whose stretches double the tune or run parallel with it for
+half its notes or more is the tune's, role melody, `of` the tune's
+voice, its old part in the evidence; the bass stays the song's floor
+whatever it doubles. Translator VERSION 14. The readings keep
+`Song.voice_of`; the melody's line is the heard tune where it has
+layers (`cells.line_voice(voices, role, song)`), every tune table counts
+that line (`tune_line` in place of `_line(s.notes[melody])` at seven
+sites), and a layered melody's or counter's figures, habit and speed
+count the line too (`cells.line_notes`, which had covered the chord
+parts and the bass). The balance token's layer entries carry a fifth
+sub-field, the relation stretches (`rhythm.relation_words`:
+`dm-12x6>o`, `pc+4`; the kind, the part letter, the semitones, the bars
+from the song's first bar as the pan word counts them, the last stretch
+open; stretches alike run together; a voice of one own stretch, or
+under sixteen notes, has no word). The plan parses it
+(`Plan.layer_relations`, `relation_stretches`, `stretch_spans`) and a
+layer voice with a word is written stretch by stretch after every line
+is in place (`stretched_notes`, the `pending` pass in `write`): the
+followed part's line again at the semitones in the scale (`diatonic`)
+over a double's or parallel's bars, the voice's own notes (its layer
+word's realization) over its own bars; a part the song lacks leaves the
+stretch its own. The lead pass never takes a layer for the lead and, on
+a relabel, sends the old tune's layers back to the parts they read as
+(their `of` cleared). The `layers` table stands as the draw for a voice
+without a word and for a voice's own stretches. Three cuts on the way:
+the cover rule (the pad test), the sixteen-note floor (Good Night's
+three-note chord voices had become its tune's, and a three-note voice's
+word would have the writer play a whole parallel line), and the line
+count (a tune doubled in octaves had its figures counted over both
+voices). Tests: the stretch functions, the rule on a voice doubling the
+tune for twelve bars of sixteen (its layer), four (its own part), thirds
+throughout (its layer), the bass two octaves under for half the song
+(the bass); `voice_of` loaded; the token's word, the heard-tune line, the
+parsing, `stretched_notes`; a written voice following `dm-12x4>o` (the
+tune an octave under in bars 1-4, its apart voice after). Suite 424 OK.
+
+**Measured** (FFVI re-read at translator 14, the lead pass, pack4 refit,
+the vocabulary shipped; measure_r90.py): 18 voices in 17 songs read as
+the tune's layers (12 were counter-lines, 6 chord voices), one other role
+moved (Under Martial Law's accompaniment to counter); the lead pass
+relabels the same nine songs as before and sends their layers back
+(Shadow's two, The Serpent Trench's two, Under Martial Law's, Aria's);
+55 voices beyond a line carry a word in 38 songs (counter 21,
+accompaniment 16, melody 14, bass 2, arp 2; stretches: 47 parallel, 15
+double, 26 own); 19 of 68 balance tokens changed. Kefka's counter is
+three voices at half weight, its melody two (the layer at 1.1 of the
+tune, `pc+21x6>ox4>dm-12x13>o`), its channel 2 a counter layer that
+doubles the tune an octave under for six bars (`dm-12x6>o`); Edgar and
+Sabin, Johnny C. Bad and Dancing Mad (part 2) lose their counter part,
+their tune gaining its parallel third; Metamorphasis's tune has three
+voices (octaves above and below), its counter two instead of four; The
+Decisive Battle's and Mt. Koltz's parallel voices are the tune's; the
+melody weight turns main in four songs. Two keys moved with the layers'
+weight in the key reader (a melody voice weighs 0.5, a chord voice 1.5):
+The Mines of Narshe C major to E minor, "??" B major to its relative
+G# minor. Written side, seeds 1-400: every plan is drawn again past its
+band line (every table refit), so the Song Check pairs are the same seed
+on the same token where the token holds both sides, and each
+description says so.
+
+**Song Check 73** (https://claude.ai/artifact/NfieAYJYbonDgMunbcrCKP): six pairs, the same seed on the same
+token. Step 1, the two from Song Check 72: seed 255 The Sleeping
+Observatory (Kefka; the melody two voices, its layer at 1.1 following
+`pc+21x6>ox4>dm-12x13>o`; the counter half weight, two voices written,
+its layer `dm-12x6>o`; the counter stem 3.7 LU over the melody's where
+it sat 8.6) and seed 78 The Still Wharf (Overture (part 3); the melody
+main weight with its parallel third `pm+3x32>o`, the counter minor with
+two voices; 1.1 LU over the melody where it sat 4.9). Step 2, a parallel
+third and an octave read as a counter-line or a chord voice: seed 156
+Waking Caldera (Edgar and Sabin; no counter part, the melody's layer a
+third under at 0.8) and seed 57 Restless Tides (The Decisive Battle; the
+accompaniment one voice, the melody main weight with its octave above at
+0.4). Step 3, a block of voices: seed 100 Waking Market Passage
+(Metamorphasis; the counter four voices at main weight in 76-92 before,
+two at half weight in 60-72 after, the melody three voices in octaves)
+and seed 55 Passage of the Meridian (Dancing Mad (part 2); no counter
+part, the melody's third below at the tune's level). Before is round 89
+(the dev checkout's own code and vocabulary), after round 90.
+
+**Open.** A voice that struck with only some of the followed line's
+notes is written striking them all (the cover rule asks for half); a
+voice's own stretches are its layer word's draw, not what its song's
+voice did there; the samples a voice changes between stretches are the
+next round's word (75 line voices change sample; round 89's second
+voices wait for it too); and a single-stretch word has no extent, so a
+voice that plays four bars of the song plays the whole song's. The
+Sleeping Observatory's counter is still Kefka's organ at the game's own
+level over the tune; the stretch word thickens the tune as Kefka does
+and takes the parallel block apart, it does not re-balance the game.

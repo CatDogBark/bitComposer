@@ -14,7 +14,8 @@ from array import array
 from pathlib import Path
 
 SCHEMA = 5                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level; 5: samples.piece
-VERSION = "13"                       # the translator's; a song read by another is read again (9: round 77's drum clause; 10: the note's rate;
+VERSION = "14"                       # the translator's; a song read by another is read again (9: round 77's drum clause; 10: the note's rate;
+# 14 (round 90): a voice doubling the tune or parallel with it for half its notes, stretch by stretch, is the melody's
                                      # 11: round 82's echo send a sample; 12: round 83's melodic kit pieces as voices; 13: round 89's second
                                      # instruments as voices, and the pad on a drum-named sample no kit)
 

@@ -119,6 +119,43 @@ class WholeSongTests(unittest.TestCase):
             self.assertIn("tune", m)
             self.assertLessEqual(m["tune"]["chord_tones"], 1.0)
 
+    def test_a_voice_beside_a_line_follows_the_tokens_stretches(self):
+        """Round 90: a voice beside a line whose token entry says what it does beside which part, stretch by stretch
+        ("dm-12x4>o": the tune an octave under for four bars from the song's first, then its own), is written so after
+        every line is in place: in the doubling bars its notes are the melody's line again at the interval, in the scale;
+        in its own bars the notes its layer word gave it (here apart +8). Kefka's three "counter" channels double its tune
+        in octaves and thirds for whole stretches; read whole, they were written as a three-voice block of their own at the
+        song's loudest level over a one-voice tune (Song Check 72's The Sleeping Observatory)."""
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        p = whole.plan(models, 3, "g", max_bars=16)
+        self.assertIn(R.MELODY, p.band)
+        role = "accompaniment"
+        if role not in p.band:
+            p.band.append(role); p.weights[role] = "half"
+        for r in (role, R.MELODY):
+            p.plays[r] = [True] * p.bars
+        p.textures = [t + " " + role for t in p.textures]
+        p.registers[role] = (56, 64); p.bounds[role] = (56, 64); p.sounds[role] = 0.8
+        p.habits[role] = p.habits.get(role) or "medium mixed"
+        p.extras[role] = {**(p.extras.get(role) or {}), "richness": "full", "motion": "block", "layers": ["apart +8 like"], "layer": "apart +8 like"}
+        p.voices[role] = 2
+        p.bounds[f"{role}:1"] = whole.voice_bounds(p, role, "apart +8 like", (44, 92))
+        p.layer_relations[role] = ["dm-12x4>o"]
+        written = whole.write(p, whole.song_of(p), models, 3)
+        tune = {round(n[0], 3): n[2] for n in written[R.MELODY].notes if n[3] == 0}
+        voice = [n for n in written[role].notes if n[3] == 1]
+        early = [n for n in voice if n[0] < 16 - 1e-6]
+        late = [n for n in voice if n[0] >= 16 - 1e-6]
+        self.assertTrue(early and late, written[role].log)
+        doubled = [n for n in early if round(n[0], 3) in tune and abs(tune[round(n[0], 3)] - 12 - n[2]) <= 1]
+        self.assertGreaterEqual(len(doubled), 0.8 * len(early), (early[:8], written[role].log))
+        self.assertTrue(any("voice 2 double the melody's line at -12 in bars 1-4" in l for l in written[role].log), written[role].log)
+        self.assertTrue(all(60 <= n[2] <= 76 for n in late), sorted({n[2] for n in late}))      # its own bars: the apart voice in its span
+
     def test_an_apart_voice_is_written_at_its_offset_and_a_pedal_line_shares_its_note(self):
         """Round 70: an apart voice of an upper part is written in its own span, the line's span at the layer word's
         offset within the range the game plays its sample over (render.voice_bounds, plan.bounds["role:v"]), so it
@@ -151,7 +188,8 @@ class WholeSongTests(unittest.TestCase):
         p.extras[role] = {**(p.extras.get(role) or {}), "richness": "full", "motion": "block", "layers": ["apart +8 like"], "layer": "apart +8 like"}
         p.voices[role] = 2
         p.bounds[f"{role}:1"] = whole.voice_bounds(p, role, "apart +8 like", (44, 92))
-        written = whole.write(p, whole.song_of(p), models, 3)
+        p.layer_relations.pop(role, None)                   # the generated song's own token says its chord voices run parallel to their line
+        written = whole.write(p, whole.song_of(p), models, 3)   # (round 90), and the writer would follow it over the apart word under test
         notes = written[role].notes
         line = [n for n in notes if n[3] == 0]
         voice = [n for n in notes if n[3] == 1]
@@ -929,6 +967,53 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.note_level(p, "accompaniment", 1, {"accompaniment": {1}}), whole.TOP_LEVEL * 0.3 * 1.5)
         p.levels["accompaniment"] = 1.0
         self.assertEqual(whole.note_level(p, "accompaniment", 1), 1.0)                              # a second voice over its line at the top: the cap
+
+    def test_a_voice_beside_a_lines_stretches_ride_the_token(self):
+        """Round 90: each voice beyond a line carries, as a fifth sub-field of its layer entry, what it does beside which
+        part stretch by stretch (relation_words: "dm-12x6>o", the tune an octave under through the song's sixth bar, then
+        its own line); the melody's line is the heard tune, not its busiest voice (Song.voice_of); the plan parses the
+        word into stretches over the written song's bars, and writes a voice by them (stretched_notes)."""
+        import importlib
+        from bitcomposer.translate import tables
+        plan_mod = importlib.import_module("bitcomposer.translate.whole.plan")
+        s = self._song()
+        line = s.notes["melody"]                                                                # bars 4-7, a note a beat
+        layer = [(t, 0.9, m - 12.0, "m2") for t, _, m, _ in line if t < 24] + [(t + 0.5, 0.4, 60.0, "m3") for t, _, m, _ in line if t >= 24]
+        s.notes["melody"] = line + layer
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", line), 2: ("melody", layer), 3: ("drums", s.notes["drums"])}
+        s.voice_of = {2: 1}
+        s.voice_levels = {0: 0.3, 1: 0.2, 2: 0.3, 3: 0.1}
+        s.levels = {"bass": 0.3, "melody": 0.2, "drums": 0.1}
+        self.assertEqual(rhythm.relation_words(s), {2: "dm-12x6>o"})
+        self.assertEqual(rhythm.line_voice({1: line, 2: layer}, "melody", s), 1)               # the heard tune, though no busier
+        self.assertEqual(rhythm.line_voice({1: line, 2: layer}, "melody"), 1)                  # without the song: the busiest (the first of equals)
+        entries = rhythm.layer_tokens(s, "melody")
+        self.assertEqual(len(entries), 1)
+        self.assertTrue(entries[0].startswith("1.5@m2@1.00@") and entries[0].endswith("@dm-12x6>o"), entries)
+        self.assertIn("@dm-12x6>o", rhythm.balance_units([s])[0].outcome)
+        s.voice_notes[2] = ("melody", [(t + 0.5, 0.4, 60.0, "m3") for t, _, m, _ in line])      # a voice of one own stretch: no word
+        self.assertEqual(rhythm.relation_words(s), {})
+        self.assertFalse(any("@o" in e for e in rhythm.layer_tokens(s, "melody")), rhythm.layer_tokens(s, "melody"))
+        token = "melody=main:64-84:0.9:2:0.7:1.5@sm2@1.00@55-60@dm-12x6>o:::slead bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.layer_relations, {"melody": ["dm-12x6>o"]})
+        self.assertEqual((p.layer_ranges["melody"], p.layer_samples["melody"], p.voice_levels["melody"]), ([(55, 60)], ["sm2"], [1.5]))
+        self.assertEqual(whole.relation_word(p, "melody", 1), "dm-12x6>o")
+        self.assertIsNone(whole.relation_word(p, "melody", 2))
+        self.assertEqual(whole.relation_stretches("dm-12x6>o"), [("double", "melody", -12, 6), ("own", None, None, None)])
+        self.assertEqual(whole.stretch_spans(whole.relation_stretches("ox9>pc+4x14>o"), 32), [("own", None, None, 0, 9), ("parallel", "counter", 4, 9, 23), ("own", None, None, 23, 32)])
+        self.assertEqual(whole.stretch_spans(whole.relation_stretches("dm+12x40>o"), 20), [("double", "melody", 12, 0, 20)])   # a stretch past the end is dropped
+        self.assertEqual(whole.relation_stretches("zz"), [("own", None, None, None)])            # a word the writer cannot read is its own
+        melody = plan_mod.Part("melody", [(0.0, 1.0, 60.0, 0), (1.0, 2.0, 62.0, 0), (4.0, 5.0, 64.0, 0), (4.5, 5.0, 67.0, 1)], [])
+        own = [(0.5, 1.0, 50.0, 1), (4.5, 5.0, 52.0, 1)]
+        major = {0, 2, 4, 5, 7, 9, 11}
+        log = []
+        notes = whole.stretched_notes(1, own, whole.stretch_spans(whole.relation_stretches("dm-12x1>o"), 2), {"melody": melody}, major, 4, log)
+        self.assertEqual(notes, [(0.0, 1.0, 48.0, 1), (1.0, 2.0, 50.0, 1), (4.5, 5.0, 52.0, 1)])   # the line (voice 0 alone) an octave under in bar 1, its own in bar 2
+        self.assertEqual(log, ["voice 2 double the melody's line at -12 in bars 1-1: 2 notes"])
+        notes = whole.stretched_notes(1, own, whole.stretch_spans(whole.relation_stretches("pc+4"), 2), {"melody": melody}, major, 4, log)
+        self.assertEqual(notes, own)                                                             # no counter written: its own notes throughout
 
     def test_the_second_voices_levels_are_the_balance_tokens_too(self):
         """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line

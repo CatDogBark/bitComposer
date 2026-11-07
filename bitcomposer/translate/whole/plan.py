@@ -234,6 +234,8 @@ class Plan:
     sample_ranges: dict = field(default_factory=dict)   # a part -> the range its token song plays the token's sample over (round 86): the voice on
                                       # that sample is bound there (render.samples_for), never to another song's range drawn for the sample
     layer_ranges: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's range on its own token sample, or None
+    layer_relations: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's relation word by stretch (the sixth field's
+                                      # fifth sub-field, round 90: "ox9>dm-12x14>o", what it does beside which part, bar by bar), or None
     pans: dict = field(default_factory=dict)          # a pitched part -> its voices' pans, the right side's share, the line first (the balance
                                       # token's tenth field, round 84); render.pan_of pans a voice there, by plan.PANS without the field; a
                                       # voice in two places keeps the token's word, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85)
@@ -619,6 +621,66 @@ def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
     return [(a, b, float(scale_pitch(scale_index(int(round(m)), scale) + steps, scale)), voice) for a, b, m, *_ in notes]
 
 
+RELATION_PARTS = {"m": R.MELODY, "c": R.COUNTER, "a": R.ACCOMP, "h": R.HARMONY, "r": R.ARP, "b": R.BASS}   # the token's relation letters
+
+
+def relation_word(plan: "Plan", role: str, v: int) -> str | None:
+    """The balance token's relation word for a part's voice v beside the line (round 90), None without one."""
+    words = plan.layer_relations.get(role) or []
+    return words[v - 1] if 0 < v <= len(words) else None
+
+
+def relation_stretches(word: str) -> list:
+    """A layer voice's relation word (round 90) as stretches: "ox9>dm-12x14>o" -> [("own", None, None, 9), ("double",
+    melody, -12, 14), ("own", None, None, None)]: the kind, the part followed, the semitones, the bars (None: to the end).
+    A stretch the writer cannot read is its own."""
+    out = []
+    for part in word.split(">"):
+        body, _, n = part.partition("x")
+        bars = int(n) if n.isdigit() else None
+        kind = {"d": "double", "p": "parallel"}.get(body[:1])
+        target = RELATION_PARTS.get(body[1:2])
+        try:
+            semi = int(body[2:])
+        except ValueError:
+            semi = None
+        out.append((kind, target, semi, bars) if kind and target and semi is not None else ("own", None, None, bars))
+    return out
+
+
+def stretch_spans(stretches: list, bars: int) -> list:
+    """The stretches' bars in a song of `bars` bars, as round 85's pan word counts them: [(kind, target, semitones, first
+    bar, the bar after the last)], the last stretch to the end, one past the end dropped."""
+    out, at = [], 0
+    for i, (kind, target, semi, n) in enumerate(stretches):
+        end = bars if (n is None or i == len(stretches) - 1) else min(bars, at + n)
+        if at < end:
+            out.append((kind, target, semi, at, end))
+        at = end
+        if at >= bars:
+            break
+    return out
+
+
+def stretched_notes(v: int, own: list, spans: list, written: dict, scale: set, meter: int, log: list) -> list:
+    """A layer voice's notes stretch by stretch (round 90): in a double or parallel stretch the followed part's line again
+    at the semitones, in the scale (diatonic), over the stretch's bars; in an own stretch the voice's own notes (`own`,
+    written as the layer word has them) over those bars. A part not written, or with no line in those bars, leaves the
+    stretch to the own notes."""
+    out = []
+    for kind, target, semi, a, b in spans:
+        lo, hi = a * meter, b * meter
+        if kind != "own" and target in written:
+            line = [n for n in written[target].notes if (len(n) < 4 or n[3] == 0) and lo - NEAR <= n[0] < hi - NEAR]
+            if line:
+                out += diatonic(line, semi, scale, v)
+                log.append(f"voice {v + 1} {kind} the {target}'s line at {semi:+d} in bars {a + 1}-{b}: {len(line)} notes")
+                continue
+            log.append(f"voice {v + 1}: no {target} line to {kind} in bars {a + 1}-{b}; its own notes there")
+        out += [n for n in own if lo - NEAR <= n[0] < hi - NEAR]
+    return out
+
+
 THEME_TRIES = 40                      # letter draws before a themed song's letters are given up (none in forty: a table without returns)
 PLAN_TRIES = 10                       # whole plans drawn for a themed song whose tune has nowhere to come back (fewer than two phrases)
 
@@ -671,6 +733,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
     token_kit_echo, token_echo, token_pans, token_kit_pans = set(), None, {}, {}
     token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
+    token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
@@ -717,6 +780,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_shares[role] = [float(x[2]) if len(x) > 2 and x[2] else 1.0 for x in parts_]
                 if any(len(x) > 3 and "-" in x[3] for x in parts_):   # each voice's range on its own sample in the token song (round 86)
                     token_layer_ranges[role] = [tuple(int(y) for y in x[3].split("-")) if len(x) > 3 and "-" in x[3] else None for x in parts_]
+                if any(len(x) > 4 and x[4] for x in parts_):   # and what each does beside which part, stretch by stretch (round 90)
+                    token_layer_relations[role] = [x[4] if len(x) > 4 and x[4] else None for x in parts_]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
             if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
@@ -1014,7 +1079,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1445,6 +1510,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 beside_bass = {1}                           # its pitch drawn beside the line, within its sample's register (writer.bass)
         written[R.BASS] = Part(R.BASS, line, figures, log, beside=beside_bass)
     tempo = rhythm.band(plan.bpm)
+    pending = []                                            # the voices beside a line the token says what they do by stretch (round 90): written last
     for role in rhythm.UPPER:
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
             continue
@@ -1506,8 +1572,13 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}, {density}), "
                            + ("its interval to the line and its own moves drawn, " if drawn_pitch else f"the line's voicing {v} tone{'s' if v > 1 else ''} up, ")
                            + f"{sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars beside the line's" if given else ""))
-            song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
-            notes = notes + notes_v
+            word_v = relation_word(plan, role, v)
+            if word_v:                                      # what the voice does beside which part, by stretch (round 90): after every line is written
+                pending.append((role, v, notes_v, word_v))
+                log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
+            else:
+                song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
+                notes = notes + notes_v
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]
         written[role] = Part(role, notes, all_figures, log, beside=beside_v)
     tempo = rhythm.band(plan.bpm)
@@ -1550,11 +1621,16 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         line_only, line_figures = list(line), list(figures)   # the line voice alone and its bars: what the voices beside it are written against
         for v, word in enumerate(words, start=1):
             layer = layer_of({"layer": word})
+            word_v = relation_word(plan, role, v)           # what the voice does beside which part, by stretch (round 90)
             if layer[0] == "doubling" and notes:            # the line again at the interval, in the scale
                 second = diatonic(line_only, layer[1], scale, v)
-                song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in second]
-                line = line + second
-                log.append(f"voice {v + 1} doubles the line at {layer[1]:+d} semitones, in the scale")
+                if word_v:
+                    pending.append((role, v, second, word_v))
+                    log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
+                else:
+                    song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in second]
+                    line = line + second
+                    log.append(f"voice {v + 1} doubles the line at {layer[1]:+d} semitones, in the scale")
             elif beside and all(k in models for k in ("voice_intervals", "voice_moves", "second_figures")):
                 # a voice beside a counter that follows the tune (round 76): written as the counter is beside the tune (writer.counter
                 # with the counter's line as its tune), its bar a second_figures mask over the line's bar and its pitch the voice words'
@@ -1575,8 +1651,12 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 masks_v = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in line_figures]
                 notes_v, figures_v, plog_v = writer.counter(song, line_only, line_figures, masks_v, span_v, models, rng_v, layer[0], key=key,
                                                             articulation=x["articulation"], register=span_v)
-                song.notes[role] += [(a, b - a, m, role) for a, b, m in notes_v]
-                line = line + [(a, b, m, v) for a, b, m in notes_v]
+                if word_v:
+                    pending.append((role, v, [(a, b, m, v) for a, b, m in notes_v], word_v))
+                    log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
+                else:
+                    song.notes[role] += [(a, b - a, m, role) for a, b, m in notes_v]
+                    line = line + [(a, b, m, v) for a, b, m in notes_v]
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures_v)]
                 beside_v.add(v)
                 log.append(f"voice {v + 1} {layer[0]} ({offset:+d}, {density}) beside the line, register {span_v}: " + plog_v[0])
@@ -1596,7 +1676,17 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
                 log.append(f"a second line apart: register {reg2} ({offset:+d}), habit {habit2} ({density}); {sum(1 for f in figures2 if f != writer.REST)} bars, {len(notes2)} notes")
                 log += [f"second: {l}" for l in plog2[-2:]]
+            elif word_v:                                    # a voice the vocabulary cannot write beside the line: its own stretches stay silent, its
+                pending.append((role, v, [], word_v))       # doubling and parallel ones are written (round 90)
+                log.append(f"voice {v + 1} by the token's stretches ({word_v}) alone: no word for its own stretches")
         written[role] = Part(role, line, figures, log, beside=beside_v)
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    for role, v, own, word in pending:                      # the voices beside a line written by the token's stretches (round 90), every line in place
+        spans = stretch_spans(relation_stretches(word), len(song.bars))
+        notes_v = stretched_notes(v, own, spans, written, scale, song.meter, written[role].log)
+        song.notes[role] += [(a, b - a, m, role) for a, b, m, *_ in notes_v]
+        written[role].notes += notes_v
+        written[role].notes.sort(key=lambda n: (n[0], n[3] if len(n) > 3 else 0))
     if R.MELODY in written:                                 # the theme in the band: doubled where the tune plays it, carried where it does not
         rng_theme = random.Random(f"{seed}:theme band")
         for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):

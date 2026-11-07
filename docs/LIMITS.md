@@ -45,6 +45,16 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   in them: a voice of its own would ask the writer for a ninth chip voice
   in the eight-channel songs that time-share one, and the written song
   has no way to time-share yet. The same word as above would carry them.
+- **A voice beside a line follows its word whole.** Since round 90 the
+  balance token says what a voice beyond a line does beside which part,
+  stretch by stretch (a double, parallel at an interval, or its own line),
+  and the writer copies the followed part's line at the interval over the
+  stretch's bars. A voice that struck with only some of that line's notes
+  (the cover rule asks for half) is written striking them all; a voice's
+  own stretches are its layer word's line (the pooled `layers` draw),
+  since what the voice's own motion was there is not yet a word; and the
+  samples a voice changes between stretches are not written (the
+  instrument-by-stretch word, the next round).
 - **A tonal sample pumped on two pitches is a kit piece.** Round 77's play
   clause reads a voice on one sample at one or two pitches, eight notes or
   more, held under two beats, as a drum voice; FFVI's percussion plays so
