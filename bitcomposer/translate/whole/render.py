@@ -457,9 +457,13 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
         given = plan.token_samples.get(role)                # the token song's own instrument for the part (round 60), where the pack holds it
         if given and given in own:
             out[role] = make(given)
-            if ranges is not None and ranges.songs.get((given,), 0):
+            if ranges is not None and ranges.songs.get((given,), 0):   # the pooled draw stays on the stream; the token's own range stands
                 drawn[given] = tuple(int(x) for x in ranges.draw(range_context(given, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
-            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)")
+            own_range = plan.sample_ranges.get(role)         # in its place where the token carries it (round 86)
+            if own_range:
+                drawn[given] = tuple(own_range)
+            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)"
+                            + (f", played {own_range[0]}-{own_range[1]} there" if own_range else ""))
         if role == R.COUNTER and kind and R.MELODY in out and role not in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
             if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
                 out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
@@ -494,7 +498,11 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                                 + (f": it plays {fit[0]}-{fit[1]}" if fit else ": nothing known of its range, drawn from the pool"))
         if register:
             played = drawn.get(raw(out[role][0]))
-            if role in (R.MELODY, R.COUNTER):               # a tune's bound is the whole range the game took the sample over (round 43)
+            own_range = plan.sample_ranges.get(role) if given and raw(out[role][0]) == given and role not in (R.MELODY, R.COUNTER) else None
+            if own_range and own_range[1] - own_range[0] >= plan_mod.MIN_SPAN:   # the token song's own range for its own sample (round 86);
+                played = tuple(own_range)                   # the voice is written where its token song played this very sample. A tune keeps
+            elif role in (R.MELODY, R.COUNTER):             # round 43's wall: FFVI's tunes change sample mid-song, and the main sample's own
+                # range had cut 9 of 30 written tunes under their token's ambitus; a tune's bound is the whole range the game took the sample over
                 played = ambitus_of(models, raw(out[role][0]), pack=pack_name) or played
             else:
                 played = wide_enough(models, raw(out[role][0]), played, role, plan.log, pack=pack_name)
@@ -509,7 +517,10 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             given2 = (plan.layer_samples.get(role) or [""])[0]   # the token song's own sample for its voice beside the line (round 65)
             if given2 and given2 in own:
                 second = make(given2)
-                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own")
+                own2 = (plan.layer_ranges.get(role) or [None])[0]   # where the token song plays the second voice's sample (round 86)
+                if own2:
+                    drawn[given2] = tuple(own2)
+                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own" + (f", played {own2[0]}-{own2[1]} there" if own2 else ""))
             elif pair == ("same", "same"):                  # FFVI gives one sample to both voices in half its layered chord parts
                 second = out[role]
             elif pair is not None and reaches(ranges, pair[0], plan.registers[role], rng, drawn, role) and reaches(ranges, pair[1], reg2, rng, drawn, role):
@@ -539,7 +550,8 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 if word.startswith("doubling"):
                     continue
                 chosen = out.get(f"{role}:{v}") or out.get(f"{role}:second") or out[role]
-                played = ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0]))
+                own_v = (plan.layer_ranges.get(role) or [])[v - 1] if out.get(f"{role}:{v}") and v - 1 < len(plan.layer_ranges.get(role) or []) else None
+                played = tuple(own_v) if own_v else (ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0])))   # the token's own (round 86)
                 plan.bounds[f"{role}:{v}"] = voice_bounds(plan, role, word, played)
                 spans.append(f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word}, {raw(chosen[0])} {played[0]}-{played[1]})" if played
                              else f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word})")
@@ -619,6 +631,38 @@ def sends_to_echo(echo: dict | None, role: str) -> bool:
     if role in echo.get("sends", ()) or role in echo.get("dry", ()):
         return role in echo["sends"]
     return role in plan_mod.SENDS
+
+
+def pan_at(word, bar: int | None) -> float:
+    """A voice's pan word at a bar (round 85): a number is the pan; "0.60x5|0.45x13" sits at 0.60 for 5 bars, at 0.45 for 13
+    and again from the song's first bar; "0.35x4>0.65" sits at 0.35 for 4 bars, then at 0.65; without a bar, the first place."""
+    if isinstance(word, (int, float)):
+        return float(word)
+    once = ">" in word
+    first, second = word.split(">" if once else "|")
+    a, na = first.split("x")
+    a, na = float(a), max(1, int(na))
+    if once:
+        return a if bar is None or bar < na else float(second)
+    b, nb = second.split("x")
+    b, nb = float(b), max(1, int(nb))
+    return a if bar is None or (bar % (na + nb)) < na else b
+
+
+def pan_of(plan: plan_mod.Plan, role: str, voice: int, letter: str | None = None, bar: int | None = None) -> float:
+    """Where a note sits in the stereo field, as the right side's share (round 84): a kit piece at its slot's pan where the
+    token carries one (extras.drums.kit_pans), a pitched part's voice at the token's pan for that voice (plan.pans, the
+    line first, the voices beyond it by rank), and the writer's fixed pans (plan.PANS) for a token without the field or
+    a voice past its list. FFVI pans half its voices 0.1 or more off centre and a part's voices 0.15 to 0.18 apart at the
+    median; the fixed pans had given every written song one stereo picture, the tune at centre, the counter at 0.6."""
+    if role == R.DRUMS and letter is not None:
+        kit = plan.extras.get(R.DRUMS, {}).get("kit_pans") or {}
+        if letter in kit:
+            return kit[letter]
+    pans = (getattr(plan, "pans", None) or {}).get(role)
+    if pans and 0 <= voice < len(pans):
+        return pan_at(pans[voice], bar)                     # a voice in two places sits where its word has it at this bar (round 85)
+    return plan_mod.PANS[role][voice % len(plan_mod.PANS[role])]
 
 
 def piece_sends(plan: plan_mod.Plan, echo: dict | None, role: str, letter: str | None = None) -> bool:
@@ -837,7 +881,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
 
     def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None, letter=None):
         idx, addr, c5 = instrument(name, sample)
-        pan = plan_mod.PANS[role][j % len(plan_mod.PANS[role])]
+        pan = pan_of(plan, role, j, letter, bar)            # the token song's own pan for the voice or the kit piece (round 84), at this bar (85)
         send = piece_sends(plan, echo, role, letter)        # the echo word's parts (round 70), a kit piece's own mark (round 82), the upper parts without
         env = sample_envelope(name, pack_name)              # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)

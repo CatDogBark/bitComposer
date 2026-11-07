@@ -235,7 +235,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
         self.assertTrue(tokens[1].startswith("drums") and tokens[1].endswith("+mixed"), tokens)       # the kit's habit rides too (round 62)
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[7] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62)
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[7].split("@")[0] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62)
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
         self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
@@ -1266,10 +1266,36 @@ class NewTablesTests(unittest.TestCase):
         toks = rhythm.balance_units([s])[0].outcome.split()
         self.assertEqual(rhythm.part_sample_id(s, "bass"), "k"); self.assertEqual(rhythm.part_sample_id(s, "nothing"), "")
         self.assertEqual(rhythm.part_sample_id(rhythm.Song("t", 4, 12, [(0.0, 4.0)], [], notes={"melody": [(0.0, 1.0, 60.0, "0123456789abcdef")]}), "melody"), "s0123456789")
-        token = "bass=half:36-44:0.9:1:1.0:::sbass123456 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        token = "bass=half:36-44:0.9:1:1.0:::sbass123456@32-52 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
         t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
         p = whole.plan({"balance": t}, 1, "g")
         self.assertEqual(p.token_samples, {"bass": "sbass123456", "melody": "slead123456"})
+        self.assertEqual(p.sample_ranges, {"bass": (32, 52)})                                     # round 86: where the song plays it
+
+    def test_a_voice_on_the_tokens_sample_is_bound_where_its_song_played_it(self):
+        """Round 86: the ranges word, drawn by sample and part over every song sharing the sample, had bound a bass to another
+        song's range (11 of 27 written basses narrower than planned by 12 semitones at the median, one an octave up); with
+        the token's own range for its own sample the voice is written in its planned register, the pooled draw kept on the
+        stream and left unused. Without the field the old binding stands."""
+        from bitcomposer.translate import tables
+        from bitcomposer import instruments
+        from unittest import mock
+        from types import SimpleNamespace
+        ranges = tables.Table(("part", "role"), "ranges").fit([tables.Unit(f"s{i}", "g", "48-60", {"part": "sbass123456", "role": "bass"}) for i in range(3)])
+        fake = lambda name: SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "bass_heavy": ["pad"], "bass_light": ["pad"], "arp": ["pad"]}}
+        bounds = {}
+        for field in ("sbass123456@32-52", "sbass123456"):
+            token = f"bass=half:36-44:0.9:1:1.0:::{field} melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+            t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+            p = whole.plan({"balance": t, "ranges": ranges}, 1, "g")
+            if "bass" not in p.band:
+                self.skipTest("the bass left out of this seed's textures")
+            with mock.patch.object(instruments, "_make_sample", fake):
+                whole.samples_for(p, pack, {"sbass123456", "slead123456"}, "g", random.Random(1), {"ranges": ranges})
+            bounds[field] = p.bounds["bass"]
+        self.assertEqual(bounds["sbass123456@32-52"], (36, 44))                                     # the planned register, whole
+        self.assertEqual(bounds["sbass123456"], (48, 60))                                          # the other song's range, as before
 
     def test_the_token_songs_kit_rides_the_drums_token(self):
         """Round 63: the song's kit (a piece letter and the pack id of the sample it strikes it with most) is the drums
@@ -1796,6 +1822,48 @@ class TonalKitPieceTests(unittest.TestCase):
         self.assertEqual(p.extras["drums"]["kit_classes"], {"K": "m", "S": "a", "o": "s"})
         self.assertEqual(p.extras["drums"]["kit_holds"], {"K": 0.5, "o": 0.25})
         self.assertTrue(any("S s1279e119a1 at 0.70 struck +0 semitones from the recording, an accent" in line for line in p.log), p.log)
+
+    def test_the_pans_ride_the_token(self):
+        """Round 84: the plan reads a pitched part's voices' pans (the token's tenth field) and a kit slot's pan (after the echo
+        mark); render.pan_of pans a voice or a kit piece there and falls to plan.PANS for a token without the field."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0:::sbass123456:medium+roots:0.50 "
+                 "drums=::::0.2:::K=sbfe716b9b6@1.7@r48@0.50@m@@0.45,h=sd1c4c7ce33@0.2@@@d@e@0.65:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7:::slead123456:medium+mixed:0.40 "
+                 "accompaniment=half:56-68:0.8:2:0.6:1.2@sacc1234567@0.50::sacc7654321:dense+varied:0.35/0.65 "
+                 "echo=0.20:80:0.78:melody:bass+drums key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.pans, {"bass": [0.5], "melody": [0.4], "accompaniment": [0.35, 0.65]})
+        self.assertTrue(any(line.startswith("pans from the balance: ") and "accompaniment=0.35/0.65" in line for line in p.log), p.log)
+        self.assertEqual(whole.pan_of(p, "melody", 0), 0.4)
+        self.assertEqual(whole.pan_of(p, "accompaniment", 1), 0.65)
+        self.assertEqual(whole.pan_of(p, "accompaniment", 2), whole.PANS["accompaniment"][0])          # a voice past the token's list: the old rule
+        if "drums" in p.band:
+            self.assertEqual(p.extras["drums"]["kit_pans"], {"K": 0.45, "h": 0.65})
+            self.assertEqual(p.extras["drums"]["kit_echo"], ["h"])                                     # the mark reads as before, the pan after it
+            self.assertEqual(whole.pan_of(p, "drums", 1, letter="h"), 0.65)
+            self.assertEqual(whole.pan_of(p, "drums", 0, letter="S"), whole.PANS["drums"][0])          # a slot without a pan: the old rule
+        p.pans = {}
+        self.assertEqual(whole.pan_of(p, "melody", 0), whole.PANS["melody"][0])
+
+    def test_a_voice_in_two_places_moves_at_its_bars(self):
+        """Round 85: a pan word with two places is kept as written and pan_at puts the voice at the first place for its
+        bars, then the second, back and forth or once; a number is the pan at every bar."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0:::sbass123456:medium+roots:0.50 "
+                 "melody=main:64-84:0.9:1:0.7:::slead123456:medium+mixed:0.35x4>0.65 "
+                 "accompaniment=half:56-68:0.8:2:0.6:1.2@sacc1234567@0.50::sacc7654321:dense+varied:0.60x5|0.45x13/0.50 "
+                 "key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(p.pans, {"bass": [0.5], "melody": ["0.35x4>0.65"], "accompaniment": ["0.60x5|0.45x13", 0.5]})
+        self.assertTrue(any("melody=0.35x4>0.65" in line and "accompaniment=0.60x5|0.45x13/0.50" in line for line in p.log), p.log)
+        self.assertEqual([whole.pan_of(p, "melody", 0, bar=b) for b in (0, 3, 4, 40)], [0.35, 0.35, 0.65, 0.65])
+        self.assertEqual([whole.pan_of(p, "accompaniment", 0, bar=b) for b in (0, 4, 5, 17, 18, 22, 23)], [0.6, 0.6, 0.45, 0.45, 0.6, 0.6, 0.45])
+        self.assertEqual(whole.pan_of(p, "accompaniment", 1, bar=9), 0.5)
+        self.assertEqual(whole.pan_of(p, "melody", 0), 0.35)                                            # no bar: the first place
+        self.assertEqual(whole.pan_at(0.7, 12), 0.7)
 
     def test_the_kits_echo_rides_the_token(self):
         """Round 82: the plan reads the token's echo word (extras.echo.word) and the slots' echo marks (extras.drums.kit_echo);

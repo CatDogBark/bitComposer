@@ -476,7 +476,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
         keys = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
         key = keys.most_common(1)[0][0] if keys else ""
         sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
-        out.append(f"{share}@{sid}@{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}")
+        rng = sample_range_in(voices[v], key) if key else ""    # where the token song plays this voice's sample (round 86)
+        out.append(f"{share}@{sid}@{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}" + (f"@{rng}" if rng else ""))
     return out
 
 
@@ -552,7 +553,9 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     the hat's eighths (Song Check 65: "a smacking noise"), and Wild West's pitched blip, two a bar there, five a bar.
     Since round 82 a slot the game sends to echo carries an e after the class (`o=s5d5fe2fd48@1.21@d4@0.23@m@e`,
     kit_echo): the chip's echo is per channel, and the written kit had sent every piece or none by the echo word's
-    one say for the drums part, drawn from another song; Wild West's blip is wet in the game and its kick dry."""
+    one say for the drums part, drawn from another song; Wild West's blip is wet in the game and its kick dry. Since round 84 each slot carries its pan after the mark
+    (`K=s48bab384c7@1.00@27@6.95@m@@0.45`: the median right-side share of the hits struck on the sample, PAN_BIN), so the kit
+    sits in the stereo field where the game's did; FFVI pans a kit voice 0.1 or more off centre in 37 of 115."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
@@ -566,6 +569,7 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     pitches = getattr(s, "kit_pitches", None) or {}
     rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
     holds = getattr(s, "kit_holds", None) or {}
+    pans = getattr(s, "kit_pans", None) or {}                 # where each piece sits in the stereo field (round 84)
     out = []
     for letter in readings_mod.LETTERS.values():
         if letter not in best:
@@ -582,11 +586,37 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
                  else kit_degree(s, pitch) if pitch is not None else "",                     # a tonal piece's note as a degree of the key (round 79)
                  f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else "",
                  classes.get(letter, ""),                                                  # the slot's strike class (round 81)
-                 "e" if letter in echo_marks else ""]                                      # the slot sends to echo (round 82)
+                 "e" if letter in echo_marks else "",                                      # the slot sends to echo (round 82)
+                 f"{round(pans[key] / PAN_BIN) * PAN_BIN:.2f}" if key in pans and math.isfinite(pans[key]) else ""]   # its pan (round 84)
         while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
             slots.pop()
         out.append(field + "".join(f"@{x}" for x in slots))
     return ",".join(out)
+
+
+def sample_range_in(notes, key: str) -> str:
+    """The whole range a set of notes plays sample `key` over, as the registers word writes one ("32-52": part_register's
+    grain, the ambitus); "" with fewer than eight pitched notes on it (round 86)."""
+    reg = part_register([n for n in notes if n[3] == key], ambitus=True)
+    return f"{reg[0]}-{reg[1]}" if reg else ""
+
+
+def part_sample_field(s, role: str) -> str:
+    """The balance token's eighth field (round 60's sample id) with, since round 86, the range the song plays that sample
+    over in the part's line voice after an "@" (`s1d296a2572@32-52`): the voice written on the token's sample is bound to
+    where the token song played it, not to a range drawn from the other songs that share the sample (FFVI shares 13 of
+    its 17 bass samples, their per-song centres 15 semitones apart; the pooled draw had bound 11 of 27 written basses
+    narrower than their planned register by 12 semitones at the median, and one an octave above it)."""
+    sid = part_sample_id(s, role)
+    if not sid or role == R.DRUMS:
+        return sid
+    notes = s.notes.get(role, [])
+    voices = cells_mod.part_voices(s, role)
+    if len(voices) >= 2:
+        notes = voices[cells_mod.line_voice(voices, role)]
+    keys = [n[3] for n in notes if isinstance(n[3], str) and n[3] and ("s" + n[3][:10] if len(n[3]) >= 10 else n[3]) == sid]
+    rng = sample_range_in(notes, keys[0]) if keys else ""
+    return f"{sid}@{rng}" if rng else sid
 
 
 def part_sample_id(s, role: str) -> str:
@@ -608,6 +638,40 @@ def part_sample_id(s, role: str) -> str:
         return ""
     key = c.most_common(1)[0][0]
     return "s" + key[:10] if len(key) >= 10 else key
+
+
+PAN_BIN = 0.05                       # a voice's pan, the right side's share, kept to twentieths (round 84; readings.PAN_BIN, which this package imports around)
+
+
+def pan_word(song: readings_mod.Song, voice) -> str:
+    """One voice's entry in the balance token's tenth field: its pan ("0.50"); since round 85 its two places where it
+    has them (readings.pan_moves): "0.60x5|0.45x13" back and forth, A for 5 bars then B for 13 and again, or
+    "0.35x4>0.65" moving once, A for 4 bars then B for the rest."""
+    moves = (getattr(song, "voice_pan_moves", None) or {}).get(voice)
+    if moves:
+        a, na, b, nb = moves
+        return f"{a:.2f}x{na}>{b:.2f}" if nb is None else f"{a:.2f}x{na}|{b:.2f}x{nb}"
+    return f"{round(song.voice_pans[voice] / PAN_BIN) * PAN_BIN:.2f}"
+
+
+def pan_field(song: readings_mod.Song, role: str) -> str:
+    """The balance token's tenth field (round 84): the pan of each of a pitched part's voices, the line voice first and
+    the voices beyond it in voice_level_shares' order, each the median right-side share of its notes kept to PAN_BIN
+    ("0.50"; "0.35/0.65"); "" where the readings hold no pan for the line, and the line's alone where a voice beyond it
+    has none (the ranks must line up with the sixth field's). The writer had panned every song alike (plan.PANS: the
+    tune at centre, the counter at 0.6, the accompaniment's voices 0.6 and 0.4), where FFVI sits half its voices 0.1 or
+    more off centre (the melody in 37 of 76, the counter 63 of 111, the accompaniment 72 of 153) and a part's voices
+    0.15 to 0.18 apart at the median; with the field a song's stereo picture is one FFVI song's, with its levels."""
+    pans = getattr(song, "voice_pans", None) or {}
+    voices = cells_mod.part_voices(song, role)
+    if not voices:
+        return ""
+    line = cells_mod.line_voice(voices, role)
+    if line not in pans or not math.isfinite(pans[line]):
+        return ""
+    others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+    order = [line] + others if all(v in pans and math.isfinite(pans[v]) for v in others) else [line]
+    return "/".join(pan_word(song, v) for v in order)
 
 
 def balance_units(songs) -> list:
@@ -678,7 +742,12 @@ def balance_units(songs) -> list:
     line times each sixth-field share reproduces every voice of the part
     and the voices beside the line play the samples the token names for
     them (Troops March on's counter line had played at 0.40 of the top
-    where it sits at 0.27, its bass line on the second voice's sample)."""
+    where it sits at 0.27, its bass line on the second voice's sample). The
+    pans joined it in round 84 (2026-11-06): a tenth field a pitched part
+    (pan_field: each voice's right-side share, the line first) and a slot
+    field a kit piece (kit_token), where the writer's fixed pans had given
+    every written song one stereo picture; and in round 85 a voice's two
+    places where it has them (pan_word: "0.60x5|0.45x13", "0.35x4>0.65")."""
     habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
     for u in readings_mod.habits(readings_mod.units(songs)) + readings_mod.habits(readings_mod.bass_units(songs)):
         habit_of_part[(u.song, u.values["part"])] = u.outcome
@@ -709,8 +778,9 @@ def balance_units(songs) -> list:
             kind = cells_mod.counter_kind(s) if role == R.COUNTER and role in levels else None
             fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "", f"{round(share / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if share is not None else "",
                       str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
-                      part_sample_id(s, role),                # the part's own sample (round 60): a song's instruments are one song's
-                      habit_of_part.get((s.sid, role), "").replace(" ", "+")]   # and its habit (round 62): the song's density tiers together
+                      part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
+                      habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
+                      pan_field(s, role)]                     # and its voices' pans (round 84): the song's stereo picture together
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
