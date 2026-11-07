@@ -5359,3 +5359,167 @@ is a drum; what tells a tom line from a fill is whether its pitches
 follow the chords, which the role reader does not know. A split voice
 takes the counter's figures and intervals, counted over FFVI's counters;
 its own figure (the blip's two a bar) is the drum limb's no longer.
+
+### Round 84: the pans ride the balance token (2026-11-06, the second rules audit's first candidate)
+
+**Why.** Every written song sat in one stereo picture: the tune at centre,
+the counter at 0.6, the harmony's voices at 0.35, 0.65 and 0.5, the
+accompaniment's at 0.6 and 0.4, the arp at 0.4, the bass and the kit at
+centre (plan.PANS, the first audit's rule #2, standing since the whole
+writer began). FFVI pans half its voices 0.1 or more off centre (the
+melody in 37 of 76 voices, the counter 63 of 111, the accompaniment 72 of
+153, the harmony 22 of 40, the drums 37 of 115) and sets a part's voices
+apart: the accompaniment's 0.15 at the median (0.2 or more in 17 of 45
+pairs), the counter's 0.18 (12 of 27), the harmony's 0.16, the drums'
+0.11. The store had kept a pan with every note since phase 1 (the right
+side's share of the two voice volumes, `spc.convert._loudness`), unread.
+
+**Built.** The readings keep each voice's median pan (`Song.voice_pans`)
+and each drum sample's (`Song.kit_pans`), from the stored rows; no song
+was read again. The balance token carries them: a pitched part's voices'
+pans as a tenth field (`rhythm.pan_field`: the line voice first, then the
+voices beyond the line in the sixth field's rank order, each kept to
+twentieths, `PAN_BIN`, and joined by "/"; the line's alone where a voice
+beyond it has no pan, so the ranks line up), a kit slot's pan after its
+echo mark (`kit_token`: `K=sid@1.70@r48@0.50@m@@0.45`). The plan reads
+both (`Plan.pans`, `extras.drums.kit_pans`; the log line "pans from the
+balance: accompaniment=0.35/0.65 melody=0.50 kit K=0.50 h=0.60") and
+`render.pan_of` pans each note there: a kit piece at its slot's pan, a
+voice at the token's for its rank, the fixed pans for a token without the
+field or a voice past its list. Pack4 refit on the same readings (backup
+`pack.json.before-r84`), the shipped vocabulary regenerated. Tests: the
+field and the slot forms, a song without pans keeping the old forms, the
+plan's reading and `pan_of`'s fallbacks.
+
+**Measured.** All 68 balance tokens carry their pitched parts' pans and
+all 47 kit tokens their slots'. Thirty seeds composed before and after:
+every song's notes are the same (the pans feed no draw; the one log line
+that moved is the kit's extras listing its pans). Written voices 0.1 or
+more off centre: accompaniment 20 of 60, counter 21 of 41, harmony 9 of
+18, melody 9 of 30, bass 7 of 30 (FFVI 47 %, 57 %, 55 %, 49 %, 32 %); a
+part's voices apart, median: accompaniment 0.20, counter 0.15, harmony
+0.15 (FFVI 0.15, 0.18, 0.16); kit slots 0.1 or more off centre 7 of 36
+(FFVI's drum voices 37 of 115). Song Check 67 pairs five seeds before and
+after: Winding Canopy's tune at 0.25 with its bass at 0.80, Restless
+Causeway Journey's bass at 0.30 under a harmony at 0.75, Coast of Tides'
+four counter voices fanned 0.25 to 0.65, Dusk of the Lagoon's tune at
+0.30 against a counter pair at 0.70, and a kit whose hat sits hard to one
+side.
+
+**Open.** A pan is a voice's median: a game voice that moves across the
+field inside a song (a sweep, a ping-pong echo) is one place here. A
+written voice past the token's count keeps the fixed pan (none in the
+thirty seeds: the voices are the token's). The chip's surround (the two
+sides inverted) reads as no pan; no FFVI kit voice has it.
+
+### Round 85: a voice in two places (2026-11-06, from the owner's listening to Song Check 67: a voice on one side all song "seems kinda off" on headphones)
+
+**Why.** Round 84 placed each voice at its token song's median pan, and
+the owner heard a voice held on one side the whole song as off on
+headphones. Measured, that is FFVI's own habit: 428 of its 498 voices
+hold one pan within 0.05 all song, 55 of them 0.2 or more off centre,
+and no voice or echo of its 82 songs is ever phase-inverted (the chip's
+surround), so surround and a moving stereo life are not FFVI words; they
+are parked in `docs/ROADMAP.md` for a game that has them, and the
+headphone question goes to the player (a stereo width setting, there
+too). What FFVI does do is sit a voice in two places: 44 of its 406
+pitched voices (accompaniment 15 of 130, counter 12 of 100, melody 8 of
+66, bass 7 of 78, harmony 2 of 26, in 26 of 68 songs) stay a bar or more
+at each of exactly two pans a tenth or more apart, 21 of them moving once
+(Awakening's tune at 0.35 for four bars, then 0.65 for the rest) and 23
+back and forth (Kefka's accompaniment at 0.60 for five bars and 0.45 for
+thirteen, again and again; Cyan's tune 0.50 for twelve and 0.70 for
+seven), a stay lasting ten bars at the median (quartiles 6 to 21); the
+two places sit across the centre in 20, one at centre in 14, both on one
+side in 10. The median had flattened every one of them to one place.
+
+**Built.** `readings.pan_moves` reads a voice's two places from its
+stored notes: pans kept to twentieths make runs, a run of a bar or more
+is a stay, and where the stays visit exactly two places `PAN_APART`
+(0.1) or more apart the voice carries (A, bars at A, B, bars at B), A the
+first place and each count the median stay there, or (A, bars at A, B,
+None) where it moved once (`Song.voice_pan_moves`). The balance token's
+tenth field carries them as the voice's word (`rhythm.pan_word`:
+`0.60x5|0.45x13` back and forth, `0.35x4>0.65` once; a voice in one place
+keeps its number), the plan keeps the word as written, and
+`render.pan_at` places each note by its bar: A for the first stay's bars,
+then B, cycling where the voice goes back and forth, from the song's
+first bar. Pack4 refit on the same readings (backup
+`pack.json.before-r85`), the shipped vocabulary regenerated. Tests: the
+reading (both shapes, one place, per-note jitter, three places, a
+twentieth apart), the words, the plan's keeping them, the pan at a bar.
+
+**Measured.** Thirty seeds composed before and after write the same notes
+and plans. 24 of their 185 written voices sit in two places (FFVI 44 of
+406), in 15 of 30 songs: The Starlit Foundry's accompaniment second,
+bass and counter all move right at bar 16; a tune at 0.60 for fourteen
+bars and 0.45 for six, again; a bass at 0.25 for three bars, then 0.75.
+Song Check 68 pairs five such seeds before (round 84) and after.
+
+**Open.** The ten sweeping voices and per-note jitter stay at the median.
+A first stay longer than the written song never moves (a 24-bar stay in a
+22-bar song). The change lands on the written bar line where FFVI's came
+in mid-bar in three of four (a pickup, a rest). A kit voice's places are
+not read: its slots' pans are per sample (round 84).
+
+### Round 86: the token song's own range for its own sample (2026-11-06, the second rules audit's second candidate)
+
+**Why.** Round 34 chooses a voice's sample before the writing and binds
+the voice to the range the game plays that sample over, drawn from the
+`ranges` word by sample and part, pooled over every song that plays the
+sample. FFVI shares 13 of its 17 bass samples, their per-song centres 15
+semitones apart, and another song's range overlaps this song's by under
+8 semitones in 88 % of the cross-song pairs; so the draw usually handed
+the bass another song's range, and `bound_of` wrote the voice in the
+overlap, a sliver widened to 8 semitones or the other song's range alone.
+Over thirty seeds 11 of 27 written basses came out narrower than their
+planned register (by 12 semitones at the median) and 9 shifted 4 or more
+semitones from it: Old Catacombs' bass at 28-36 under a planned 32-48, The
+Still Gorge's at 28-36 under 36-56, The Inner Grotto's at 56-76. The token
+already names the sample as its own song's; the draw did not know which
+song. The audit also found the register word itself spanning two
+instruments where a line voice changes sample (Return of the Outpost's
+token bass 28-80, its bass sample played 24-40 there).
+
+**Built.** The balance token's sample field carries the range the song
+plays that sample over in the part's line voice, after the id
+(`rhythm.part_sample_field`: `s1d296a2572@32-52`, `sample_range_in`, the
+ambitus at the registers word's grain, nothing under eight notes), and
+each voice beyond the line carries its own sample's range as a fourth
+slot of its layer entry (`1.3@s5a1fa4d5d3@0.33@52-60`). The plan keeps
+them (`Plan.sample_ranges`, `Plan.layer_ranges`) and `samples_for` binds
+a voice on the token's sample to that range: the line (`bound_of` with the
+planned register, so a register inside the sample's range comes out
+whole), the second voice's sample, and each apart voice's own sample in
+`voice_bounds`; the pooled draw is still made on the stream and left
+unused, so no later draw moves. A tune keeps round 43's wall, the whole
+range the game ever took its sample over: FFVI's tunes change sample
+mid-song, and the main sample's own range had cut 9 of 30 written tunes
+under their token's ambitus in the first cut. Pack4 refit on the same
+readings (backup `pack.json.before-r86`), the shipped vocabulary
+regenerated. Tests: the field and the layer slot, a part under eight
+notes keeping the bare id, the plan's reading, and the bound with and
+without the field against a ranges table that says another song's range.
+
+**Measured.** Thirty seeds, plans identical (registers, band, voices).
+Voices bound narrower than their planned register: bass 11 of 27 to 8,
+accompaniment 10 of 27 to 4, harmony 1 of 11 to 0, counter 0, melody 2 of
+30 unchanged; shifted 4 semitones or more: bass 9 to 8, accompaniment 8
+to 5, harmony 6 to 1. The basses still "narrower" are those whose
+register word spans two instruments: the bound is now that song's own
+use of the sample (28-40 under a 28-80 word). The written bass line spans
+12 semitones at the median (13 before; FFVI's bass register 12). The
+notes change in 28 of 30 songs (the bass in 19, the accompaniment in 17,
+the counter in 9, the harmony in 7, the melody in 4, the last through the
+clash filter against a moved accompaniment). Song Check 69 pairs five:
+Old Catacombs' bass up an octave into 32-48, The Still Gorge's up an
+octave into 36-48, Return of the Outpost's down to 28-40, The Starlit
+Foundry's down to 28-36 with its accompaniment's voices at 52-60, The
+Inner Grotto's 56-76 to 48-76.
+
+**Open.** The register word where a line voice plays two instruments
+(28-80): a register a sample would be the honest word. The role reader's
+bass in The Inner Grotto's token is a tenor-range voice (48-80 on its
+sample); the writer follows it. A tune on the token's sample keeps the
+pooled wall, so it is still written over notes its sample never played in
+that song.

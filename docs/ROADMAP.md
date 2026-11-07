@@ -350,6 +350,18 @@ These change how every note sounds, not what notes are played.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 
+- **Surround and a leaning echo, as counted words (parked 2026-11-06).**
+  The chip can invert one side of a voice or of the echo (the IT's
+  surround), and set the echo's two volumes apart; the converter plays
+  both for a game's own songs. Final Fantasy VI never does either: no note
+  of its 82 songs has inverted sides, and its echo sits at the same level
+  both sides in every song (25 of 128 in 68). So the FFVI vocabulary has
+  no such word, by the vocabulary rule, and the writer plays every voice
+  and the echo in phase. When a pack is imported from a game that uses
+  them (Seiken Densetsu 3's master is inverted), count them: a voice's
+  surround as a mark on its pan in the balance token, the echo's two
+  sides in the echo word, and the writer plays them as read.
+
 ## Arrangement
 
 - **Chip chord stabs (J effect).** The `Jxy` arpeggio command cycles one
@@ -522,3 +534,14 @@ After 1.0.0: how the player reaches people and fits their desktop.
   transport buttons, so KEEP and GENERATE cannot go there.
 - Social preview image for the repository (set in the repository's
   settings; the logo SVGs make one).
+- **A stereo width setting (decided 2026-11-06, to build).** Since round
+  84 a written song's voices sit where its token's FFVI song put them,
+  and FFVI pans by amplitude alone for a television's speakers: a lead at
+  0.23 or a bass at 0.80 held all song sounds lopsided on headphones, in
+  the game's own songs as much as the written ones. The player gets a
+  width control beside GAIN: 100 % plays the pans as read, a lower setting
+  narrows every pan toward centre at playback (libopenmpt's stereo
+  separation, live, for imported game songs and written songs alike),
+  with a headphones preset; saved with the other settings. The vocabulary
+  keeps saying where the game put each voice; the player decides how to
+  present it.
