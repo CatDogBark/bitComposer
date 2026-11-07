@@ -344,7 +344,8 @@ of ear-checking never caught, and every improvement since has been measured
 before and after. Read it before changing Classic. The writer has its own
 record: [docs/IDIOM.md](docs/IDIOM.md) for the plan, and [docs/idiom/phase-4-writing.md](docs/idiom/phase-4-writing.md)
 for its rounds, each measured against Final Fantasy VI's own songs and
-passed by ear.
+passed by ear. What the written songs do that can sound odd, and why it
+stands, is in [docs/LIMITS.md](docs/LIMITS.md).
 
 Tests:
 

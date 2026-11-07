@@ -992,6 +992,23 @@ def attack_units(songs) -> list:
     return out
 
 
+def kit_rate_units(songs) -> list:
+    """Each percussion kit sample a song strikes, as a unit: its outcome the rate the chip strikes it at most, as a note
+    (60 as recorded, 48 an octave under; Song.kit_rates), its values the sample's id as a pack names it and the piece
+    the namer called it (round 88). The wall a tuned slot's moved rate stays inside: round 79 moves a tuned sample's rate
+    with the written key, by up to a tritone, and over FFVI's tuned slots and the twelve keys a written song can land in
+    the moved rate fell outside the rates the game ever struck the sample at as that piece in 77 of 132 cases. Fanfare's
+    pitched snare, struck at -4 there and -4 to +3 wherever FFVI uses it as a snare, had been moved to -10 for a song in
+    C# minor, where its 220 Hz tone fell to B2 and rang twice as long: a guitar, the owner heard (Song Check 70)."""
+    out = []
+    for s in songs:
+        for key, rate in (getattr(s, "kit_rates", None) or {}).items():
+            letter = readings_mod.LETTERS.get((s.pieces or {}).get(key))
+            if letter:
+                out.append(tables.Unit(s.sid, s.game, str(int(rate)), {"part": "s" + key[:10] if len(key) >= 10 else key, "piece": letter}))
+    return out
+
+
 def sample_ambitus_units(songs) -> list:
     """Each sample a song plays pitched, as a unit: its outcome the whole range the song played it in, lowest note to
     highest (part_register's grain, ambitus=True), its value the sample's id as a pack names it. The tune's bound

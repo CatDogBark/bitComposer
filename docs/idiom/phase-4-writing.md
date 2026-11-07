@@ -5572,3 +5572,48 @@ a limb figure strikes both at once (25 hits in 3 songs): the figure came
 from a table pooling songs that had them apart. A letter struck on two
 samples on two channels (Battle Theme's two snares) folds to one slot and
 one channel, round 80's one-sample-a-letter limit.
+
+### Round 88: a tuned slot's rate stays inside the game's rates (2026-11-06, from Song Check 70's Northern Bells: a snare "that almost sounds like a guitar")
+
+**Why.** Northern Bells' kit is Fanfare's: snare, hat and kick on three
+channels. The snare is the Battle Theme's pitched rattle, 191 ms with a
+clear tone at 220 Hz, struck 4 semitones below its recording in Fanfare.
+Round 79 marks the sample as tuned to the key (FFVI strikes it at
+different rates in different songs) and moves its rate by the distance
+between the token's key and the written one; Fanfare is G major, Northern
+Bells C# minor, a tritone, so the rattle fell to -10, its tone to B2 and
+its ring to 340 ms. FFVI strikes the sample as a snare at -4 to +3 only.
+Over FFVI's five tuned slots and the twelve keys a written song can land
+in, the moved rate fell outside the rates the game ever struck the
+sample at as that piece in 77 of 132 cases; the other octave of the same
+degree would have rescued 8. The tuning verdict is loose too: a hat
+struck at 0, 0, -1 and -3 counts as tuned (TUNED_SHARE's half), and its
+rate had moved by up to six semitones (Return of the Outpost's hat at +3).
+
+**Built.** The `kit_rates` word (`rhythm.kit_rate_units`): each percussion
+kit sample a song strikes, as a unit, its outcome the rate as a note, its
+values the sample's id and the piece the namer called it. `samples_for`
+reads the word's lowest and highest for each tuned slot's sample as its
+piece (`render.kit_rate_wall`) into `extras.drums.kit_rate_walls`, and
+`kit_note_of` holds the moved rate inside them (`render.walled`), for a
+percussion slot and for a tonal sample the namer took for a drum alike;
+without the word, round 79's move stands. The verdict itself is left as
+it was: with the wall a loose "tuned" costs at most the game's own
+spread. Pack4 refit on the same readings (backup `pack.json.before-r88`),
+the shipped vocabulary regenerated. Tests: the word's units, the wall
+from a table and its absence, the note held at Fanfare's own -4 for C#
+minor and moved to -2 for A minor, an untuned slot untouched.
+
+**Measured.** By construction no tuned slot's rate leaves the game's
+rates for its sample as its piece. Over seeds 1 to 80 two written kits
+had: Northern Bells' snare at -10 (now -4, the token's own) and Return
+of the Outpost's hat at +3 (now 0, the game's highest for it); Upper
+Monorail's and The Second Ridge's snares at 0 and +1 were inside and
+stand. Song Check 71 pairs the two.
+
+**Open.** The tuning verdict (TUNED_SHARE, two of four at one rate) is
+coarse; the wall bounds its cost, and a verdict that asks the rate to
+follow the key across songs would be the honest word. Fanfare's -4 sits
+on the flat seventh of G where the Battle Theme's +3 sits on the minor
+third of A: the composer tunes the rattle to a degree, and the wall keeps
+the degree only where the game's own spread allows.

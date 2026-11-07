@@ -122,6 +122,7 @@ KEPT = {
     "summit": ("phrases", "summit_units", {}, ("part",), False, False, "how far the tune's highest note sits above its register's top"),
     "ranges": ("rhythm", "sample_range_units", {}, ("part", "role"), False, False, "the register a sample is played in, by the sample and the part playing it"),
     "sample_ambitus": ("rhythm", "sample_ambitus_units", {}, ("part",), False, False, "the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound"),
+    "kit_rates": ("rhythm", "kit_rate_units", {}, ("part", "piece"), False, False, "the rate a percussion kit sample is struck at, as a note (60 as recorded), by the sample and the piece: the wall a tuned slot's moved rate stays inside"),
     "part_samples": ("rhythm", "part_sample_units", {}, ("part", "speed"), False, False, "the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
     "part_textures": ("rhythm", "part_texture_units", {}, ("part", "habit", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's"),

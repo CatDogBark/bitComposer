@@ -271,7 +271,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   keep beside the voices' since the chip toggles a channel's echo note by
   note), and since round 84 its pan after the mark (`@0.45`: the median
   right-side share of the hits struck on the sample, kept to twentieths,
-  `rhythm.PAN_BIN`; `@m@@0.45` where the slot is dry); the song's key
+  `rhythm.PAN_BIN`; `@m@@0.45` where the slot is dry), and since round 88 a
+  tuned slot's rate, moved with the written key, stays inside the rates the
+  game struck the sample at as that piece (the `kit_rates` word,
+  `render.kit_rate_wall`: FFVI's pitched snare -4 to +3, and a tritone's
+  move had taken it to -10); the song's key
   (`key=9:minor`) stands before the top, and since
   round 82 its echo word before the key
   (`echo=0.20:80:0.78:melody:bass+drums`, the echo table's outcome), which
