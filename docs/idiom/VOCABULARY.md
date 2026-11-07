@@ -1253,6 +1253,23 @@ The words are grouped by where the writing draws them, in the order the song is 
   bound folds by octaves into it (`writer.in_register`).
   *`ranges`: shape (part, role); drawn in samples_for.*
 
+- **kit_rates** — the rate a percussion kit sample is struck at, as a note
+  (60 the recording, 48 an octave under), by the sample and the piece it is
+  struck as. Counted since round 88 as the wall a tuned kit slot's rate
+  stays inside: round 79 reads a tonal kit piece's rate as a degree of its
+  song's key and moves it with the written key, and the move had taken
+  FFVI's pitched snare, struck in the game within -4 to +3 of its
+  recording, to -10, where its rattle lasts 340 ms and is the guitar (Song
+  Check 70's Northern Bells). Over the game's tuned slots and the twelve
+  keys a written song can land in, the moved rate fell outside the game's
+  rates in 77 of 132 cases. Not a drawn word: `whole.samples_for` reads the
+  slot's sample's rates as its piece into the plan (`kit_rate_walls`,
+  `render.kit_rate_wall`) and `render.walled` holds the moved rate inside
+  them, so the slot keeps the key's move where the game struck the sample
+  there and stops at the game's nearest rate where it did not; a pair the
+  game never struck has no wall.
+  *`kit_rates`: shape (part, piece); read in kit_rate_wall.*
+
 - **part_samples** — the sample a part's line plays (the melody, bass,
   accompaniment, harmony, arp; the counter's is `counter_samples` and
   `counter_pairs`', a second voice's `layer_samples`'), as the pack's id,
