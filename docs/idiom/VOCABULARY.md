@@ -74,7 +74,12 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **balance** — the song's band with each pitched part's weight, register,
   sounded share, voices, level and, where it holds two voices or more,
   its second voices' levels, and the drums' level with its kit, each
-  piece's sample and level (since round 70 the level and the sample
+  piece's sample, level and, since round 75, the note the song strikes
+  it at most, after the level's slot (`o=sf89f5aedfd@0.38@62`;
+  `o=sid@@62` where the reading heard no level; nothing where it heard
+  no note: a kit piece on a tonal sample, FFVI's "other" pieces in ten
+  tokens of eleven, plays at the game's pitch and not the kit's one
+  note, `render.kit_note_of`) (since round 70 the level and the sample
   fields are the LINE voice's, `readings.part_levels` and
   `part_sample_id`, so the line times each second-voice share reproduces
   every voice, and the kit's piece levels are in hundredths)
@@ -216,6 +221,29 @@ The words are grouped by where the writing draws them, in the order the song is 
   under the whole; seeds 161-170's kits a median -15.5 under from -21.3
   (FFVI -9.5), the rest of it the one-piece kits, which the field cannot
   move (one piece's median is the part's).
+  Since round 75 a slot carries the note the piece is struck at (a tonal
+  piece's as a degree of the song's key since round 79, `d-7`, `c+11`; a
+  drum piece's chip rate as a note, `r48`, `r63t` where the game tunes it
+  from song to song), since round 77 how long the song keys it for, since
+  round 80 the sample the kit leans on (the loudest with a fifth of the
+  letter's hits, the most struck within a decibel), and since round 81
+  its strike class (`@m`: the sample's hits a bar in its song, rare under
+  half, an accent under one, sparse to two, medium to six, dense over),
+  and since round 82 an echo mark where the game sends the slot's sample
+  (`@e`: the sample's own share of notes that send, which the readings
+  keep beside the voices' since the chip toggles a channel's echo note by
+  note); the song's key (`key=9:minor`) stands before the top, and since
+  round 82 its echo word before the key
+  (`echo=0.20:80:0.78:melody:bass+drums`, the echo table's outcome), which
+  the writer takes in place of a draw, a marked kit piece's notes sent and
+  the piece beside it dry. The drum figures count each letter's slot's
+  sample's hits (round 81), and a kit whose token carries classes is
+  written from its limbs' tables under them. Since round 83 a tonal sample
+  a drum voice strikes on three pitches or more, no one of them half its
+  notes, is read as a voice of its own by the role reader
+  (`roles.split_melodic_pieces`: a counter-line, or a bass where it sits
+  low), so Wild West's blip on fifteen pitches is a part with the
+  channel's echo and no kit slot.
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;
@@ -246,9 +274,9 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **bass_habits**, **drum_habits**, **drum_group_habits** — the bass's
   habit (density, tones, octaves); the kit's density habit; each drum
-  group's own habit given the kit's. Drawn once; condition `bass`, `drums`
-  and the group figures.
-  *`bass_habits`: shape (part, tempo, weight); drawn in _plan_once, write, write_bass; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_habits`: shape (part); drawn in _plan_once; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_group_habits`: shape (part, habit); drawn in _plan_once; conditions bass, cell_handoffs, changes, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
+  group's own habit given its backbone slot's strike class (round 81) and
+  the kit's. Drawn once; condition `bass`, `drums` and the group figures.
+  *`bass_habits`: shape (part, tempo, weight); drawn in _plan_once, write, write_bass; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_habits`: shape (part); drawn in _plan_once; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_group_habits`: shape (part, classes, habit); drawn in _plan_once; conditions bass, cell_handoffs, changes, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
 
 - **voicing_habits**, **motions** — an upper part's richness (thin, full,
   rich) and how it moves through its tones (block, mixed, arpeggiated).
@@ -876,8 +904,14 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
   toms' bar; the hat's; the cymbals'; the other sounds'. The group figures,
   drawn by the slice writer (`tools/slice1.py`); the whole-song writer
-  draws the kit as one.
-  *`drums-KSt`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-h`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-c`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-o`: shape (part, meter, tempo, habit, feel, previous); drawn in _plan_once, drums, write, write_drums.*
+  draws the kit as one where its token carries no strike classes, and
+  since round 81 from the limbs under the slots' classes: the kick, snare
+  and toms' bar under three fields, the densest slot's class first (the
+  limb's backbone), a single-letter limb's under its class; the class says
+  the density, the group's habit drives the recall urn, and the class's
+  bars are their own cap (a one-figure class, a rare crash and its rests,
+  stays the chain's floor).
+  *`drums-KSt`: shape (part, meter, limb1, limb2, limb3, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-h`: shape (part, meter, classes, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-c`: shape (part, meter, classes, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-o`: shape (part, meter, classes, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums.*
 
 ## The bass
 

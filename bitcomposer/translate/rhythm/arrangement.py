@@ -480,9 +480,50 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     return out
 
 
-def kit_token(s, top: float = 0.0) -> str:
-    """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song strikes it
-    with most (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
+TUNED_SHARE = 0.5                    # a kit sample is tuned to the key where no one struck rate holds more than this share of the songs
+                                     # that strike it (two or more), and its rate then moves with the written key (round 79): a crash at
+                                     # -12 in 21 of 22 songs and a hat at 0 in 11 of 12 are sounds; a "snare" at +3, -4, +2, +3 and -17,
+                                     # a tom at -20, -17 and -22, a sizzle at -2, +12 and -5 and a pad at -21 and -18 are tuned
+
+
+def tuned_samples(songs) -> frozenset:
+    """The kit samples the game tunes to the key (round 79): struck in two songs or more, with no one rate in more than
+    TUNED_SHARE of them. FFVI: four of its kit samples, the pitch-bent snare, the tonal tom, Cyan's sizzle and the pad
+    the namer took for a kick; one outlier among many (The Phantom Train's hat an octave up) makes no tuning."""
+    rates = {}
+    for s in songs:
+        for key, rate in (getattr(s, "kit_rates", None) or {}).items():
+            rates.setdefault("s" + key[:10] if len(key) >= 10 else key, []).append(rate)
+    return frozenset(sid for sid, rs in rates.items() if len(rs) >= 2 and Counter(rs).most_common(1)[0][1] <= TUNED_SHARE * len(rs))
+
+
+def kit_slot_samples(counts: Counter, levels: dict) -> dict:
+    """The slot's pick (round 80), counted in readings since round 81 (readings.kit_slot_samples, SLOT_SHARE, SLOT_TIE_DB): the
+    figures lean on the slots too."""
+    return readings_mod.kit_slot_samples(counts, levels)
+
+
+def kit_degree(s, pitch: int) -> str:
+    """A tonal kit piece's struck note as a degree of the song's key (round 79): scale steps from the tonic (`d9`, 7 an
+    octave, from the tonic's note in the fourth octave) where the note is on the song's scale, semitones (`c-3`) where it
+    is off it, the voice words' own convention; the absolute note where the song has no key. FFVI strikes its tonal kit
+    pieces in the song's scale in 10 of 12, and a written song's key is drawn apart from its balance token (40 of 45 sat
+    in another key than the token's song), so Cyan's sizzle on the minor sixth had landed on the leading tone."""
+    from .. import harmony
+    from ..writer.tune import scale_index
+    if s.tonic is None:
+        return str(int(pitch))
+    scale = {(s.tonic + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
+    tonic4 = 60 + s.tonic
+    if int(pitch) % 12 in scale:
+        return f"d{scale_index(int(pitch), scale) - scale_index(tonic4, scale)}"
+    return f"c{int(pitch) - tonic4}"
+
+
+def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
+    """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song's kit leans on
+    for it (round 80, kit_slot_samples: the loudest of the samples struck a fifth of the letter's hits or more; the most
+    struck until then), (`K=sbfe716b9b6,S=s1279e119a1`), in LETTERS' order; "" without drums. A song's kit is its own samples (FFVI:
     a median two drum samples a song, 31 over the game, and 17 of its 47 kits inside the pack's one kit of seven slots).
     Since round 68 each piece carries its own level too, where the readings heard one: the median level of the notes
     struck on that sample (Song.kit_levels, the loudness factor applied as the part's level has it) as a share of the
@@ -491,17 +532,40 @@ def kit_token(s, top: float = 0.0) -> str:
     one level is the median over every note of every drum voice, which is the most frequent piece's: FFVI's hat is the
     most frequent and its strike the quietest, so Blackjack's token said drums at 0.2 of the top where its kick plays
     at 1.7 and its snare at 0.7, and the written kit was brought to one heard loudness a piece, the kick as quiet as
-    a hat (Song Check 54's Whole 169: the kit 16 dB under Blackjack's). A piece without a level keeps the old form."""
+    a hat (Song Check 54's Whole 169: the kit 16 dB under Blackjack's). A piece without a level keeps the old form.
+    Since round 75 each piece carries the note the song strikes it at most, after the level's slot, where the reading
+    heard one (`o=sf89f5aedfd@0.38@62`; `o=sid@@62` without a level): FFVI's "other" pieces are tonal samples in ten
+    tokens of eleven (a lead struck as an accent once in eight bars in The Phantom Forest, bells, pads), and the
+    written kit had hammered them at the kit's one note two octaves under. A piece the namer called a drum carries the
+    chip's rate instead, as a note with an r (`c=s3bfa4539ca@0.96@r48`: 60 as recorded, 48 an octave under; round 78: FFVI
+    plays its crash an octave down in all 22 songs that use it, and a pad the namer took for a kick keeps its pitch through
+    the rate, its own rate's note plus the offset). Since round 77 each piece carries the median
+    length the song keys it for, in beats, after the note's slot (`o=sf89f5aedfd@0.38@62@0.25`; `K=s48bab384c7@1.00@27@6.95`
+    a pad the namer took for a kick, held seven beats; `h=sd1c4c7ce33@0.20@@0.07` a hat): the writer gives a piece on a
+    sustaining sample that hold where it had given every piece a one-beat hit, a tap of 69 ms held half a beat (The
+    Unforgiven's "o", 9 dB out in front of the game's) and a seven-beat drone struck once (Another World of Beasts', Song
+    Check 63); a percussion sample is a one-shot whatever its hit's length, so its hold is counted and not played. Since
+    round 81 each slot carries its strike class after the hold (`h=s4135fb64a7@0.77@r67@0.95@a`: readings.SLOT_CLASSES,
+    the sample's hits a bar in this song as rare under half, an accent under one, sparse to two, medium to six, dense over), and the drum
+    figure tables condition on the kit's classes: the figure a letter plays had come from the pool at the kit's habit
+    tier whatever the slot's sample did in its own song, so Strago's click, struck on beat two every other bar, played
+    the hat's eighths (Song Check 65: "a smacking noise"), and Wild West's pitched blip, two a bar there, five a bar.
+    Since round 82 a slot the game sends to echo carries an e after the class (`o=s5d5fe2fd48@1.21@d4@0.23@m@e`,
+    kit_echo): the chip's echo is per channel, and the written kit had sent every piece or none by the echo word's
+    one say for the drums part, drawn from another song; Wild West's blip is wet in the game and its kick dry."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
         piece = (s.pieces or {}).get(key)
         if key and piece in readings_mod.LETTERS:
             counts[(readings_mod.LETTERS[piece], key)] += 1
-    best = {}
-    for (letter, key), n in counts.most_common():
-        best.setdefault(letter, key)
     levels = getattr(s, "kit_levels", None) or {}
+    best = kit_slot_samples(counts, levels)
+    classes = readings_mod.kit_classes(s)                        # each slot's strike class (round 81)
+    echo_marks = kit_echo(s)                                     # the slots the game sends to echo (round 82)
+    pitches = getattr(s, "kit_pitches", None) or {}
+    rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
+    holds = getattr(s, "kit_holds", None) or {}
     out = []
     for letter in readings_mod.LETTERS.values():
         if letter not in best:
@@ -509,9 +573,19 @@ def kit_token(s, top: float = 0.0) -> str:
         key = best[letter]
         field = f"{letter}=" + ("s" + key[:10] if len(key) >= 10 else key)
         level = levels.get(key)
-        if top > 0 and level is not None and math.isfinite(level):   # never a "nan" share: the part's level stands in
-            field += f"@{round(level / top, 2):.2f}"                 # in hundredths since round 70: tenths cost 2.9 dB on a snare at 0.14 kept as 0.1
-        out.append(field)
+        with_level = top > 0 and level is not None and math.isfinite(level)   # never a "nan" share: the part's level stands in
+        pitch, rate = pitches.get(key), rates.get(key)
+        hold = holds.get(key)                                        # how long the song keys the piece for (round 77)
+        sid = "s" + key[:10] if len(key) >= 10 else key
+        slots = [f"{round(level / top, 2):.2f}" if with_level else "",                       # in hundredths since round 70: tenths cost 2.9 dB
+                 (f"r{int(rate)}" + ("t" if sid in tuned else "")) if rate is not None       # on a snare at 0.14 kept as 0.1; a tuned rate (round 79)
+                 else kit_degree(s, pitch) if pitch is not None else "",                     # a tonal piece's note as a degree of the key (round 79)
+                 f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else "",
+                 classes.get(letter, ""),                                                  # the slot's strike class (round 81)
+                 "e" if letter in echo_marks else ""]                                      # the slot sends to echo (round 82)
+        while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
+            slots.pop()
+        out.append(field + "".join(f"@{x}" for x in slots))
     return ",".join(out)
 
 
@@ -610,6 +684,7 @@ def balance_units(songs) -> list:
         habit_of_part[(u.song, u.values["part"])] = u.outcome
     for u in readings_mod.drum_habit_units(songs):
         habit_of_part[(u.song, R.DRUMS)] = u.outcome
+    tuned = tuned_samples(songs)                             # the kit samples the game tunes to the key (round 79), over the game
     out = []
     for s in songs:
         if not s.notes:
@@ -623,7 +698,7 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top), dh]   # and its kit as the eighth (round 63; each
+                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top, tuned), dh]   # and its kit as the eighth (round 63; each
                                                                                              # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
                     fields.pop()
@@ -639,6 +714,10 @@ def balance_units(songs) -> list:
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
+        if s.echo is not None:                               # the song's echo word (round 82): the written song sits in its token song's room
+            tokens.append("echo=" + echo_outcome(s))
+        if s.tonic is not None:                              # the song's key (round 79): what the kit's degrees and tuned rates are read against
+            tokens.append(f"key={s.tonic}:{'major' if s.mode == 'major' else 'minor'}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with
@@ -665,20 +744,44 @@ def echo_units(songs) -> list:
     drums in 17 of 52 (round 69); the written songs had sent every upper part at 0.4 (6 dB wetter) with a 48-144 ms
     delay, which the owner heard as vibrato and blur (Song Check 54's Whole 166). The sends ride the word so the song's
     joint holds; a written part named in neither list (the word's song lacked it) keeps the writer's old rule."""
-    out = []
-    for s in songs:
-        if s.echo is None:
+    return [tables.Unit(s.sid, s.game, echo_outcome(s), {"part": ECHO_PART}) for s in songs if s.echo is not None]
+
+
+def echo_outcome(s) -> str:
+    """A song's echo word as the echo table's outcome ("0.20:80:0.78:accompaniment+melody:bass+drums"; see echo_units): the
+    volume of full, the delay in ms, the feedback, the parts that send, the parts that stay dry. Since round 82 the
+    balance token carries it too (`echo=...`), so a written song sits in its token song's room."""
+    by_role = {}
+    for v, (role, ns) in s.voice_notes.items():
+        if role in readings_mod.PARTS and ns and v in s.echo_sends:
+            by_role.setdefault(role, []).append(s.echo_sends[v] >= ECHO_SEND)
+    sends = sorted(role for role, flags in by_role.items() if sum(flags) * 2 >= len(flags))
+    dry = sorted(role for role in by_role if role not in sends)
+    volume, ms, feedback = s.echo
+    return f"{volume:.2f}:{ms:.0f}:{feedback:.2f}:{'+'.join(sends) or '-'}:{'+'.join(dry) or '-'}"
+
+
+def kit_echo(s) -> set:
+    """The kit slots the game sends to echo (round 82): the letters whose slot's sample has ECHO_SEND of its hits or more on
+    drum voices that send (Song.echo_sends, the chip's per-voice send at key-on). FFVI's echo is per channel, so a kit's
+    pieces split: Wild West sends its pitched blip and keeps its kick, hat and toms dry; Cyan sends its sizzle. {} where
+    the readings hold no sends."""
+    sends = getattr(s, "echo_sends", None) or {}
+    by_sample = getattr(s, "echo_sample_sends", None) or {}   # the sample's own share where the readings hold it (the chip toggles
+    if not sends and not by_sample:                          # echo note by note: Wild West's channel 4 holds its hat dry, its blip wet)
+        return set()
+    slots = readings_mod.kit_slots(s)
+    hits, wet = Counter(), Counter()
+    for v, (role, ns) in s.voice_notes.items():
+        if role != R.DRUMS:
             continue
-        by_role = {}
-        for v, (role, ns) in s.voice_notes.items():
-            if role in readings_mod.PARTS and ns and v in s.echo_sends:
-                by_role.setdefault(role, []).append(s.echo_sends[v] >= ECHO_SEND)
-        sends = sorted(role for role, flags in by_role.items() if sum(flags) * 2 >= len(flags))
-        dry = sorted(role for role in by_role if role not in sends)
-        volume, ms, feedback = s.echo
-        out.append(tables.Unit(s.sid, s.game, f"{volume:.2f}:{ms:.0f}:{feedback:.2f}:{'+'.join(sends) or '-'}:{'+'.join(dry) or '-'}",
-                               {"part": ECHO_PART}))
-    return out
+        for n in ns:
+            if isinstance(n[3], str):
+                hits[n[3]] += 1
+                if sends.get(v, 0.0) >= ECHO_SEND:
+                    wet[n[3]] += 1
+    return {letter for letter, key in slots.items()
+            if (by_sample[key] >= ECHO_SEND if key in by_sample else hits[key] and wet[key] >= ECHO_SEND * hits[key])}
 
 
 VIBRATO_DEPTH_BIN = 5.0              # cents the word's depth is kept to
@@ -848,14 +951,18 @@ VOICE_SEMITONES = 24                 # semitones: a voice's interval against a l
 
 def _beside_lines(songs):
     """Every voice beside a line in an upper part with two voices or more (apart or alternating; a doubling voice follows
-    the line), and the counter-line beside the tune (part counter; its kind the sample relation, counter_kind, which
-    splits FFVI's intervals: thirds on the tune's sample, octaves and unisons on another): (song, part, kind, the
-    voice's notes, the line's notes, the song's scale), sorted in time."""
+    the line), the bass's and, since round 76, the counter's own voices beside its line (part counter, kind apart or
+    alternating: FFVI's layered counters hold two to four voices in 11 of the 46 kit tokens' songs, block chords and
+    parallel lines under the counter's line, and the writer had left every one of them silent beside a counter that
+    follows the tune, "no word yet"), and the counter-line beside the tune (part counter; its kind the sample relation,
+    counter_kind, which splits FFVI's intervals: thirds on the tune's sample, octaves and unisons on another; the two
+    never share a context, the kinds differ): (song, part, kind, the voice's notes, the line's notes, the song's scale),
+    sorted in time."""
     from .. import harmony, harness                         # harness imports this module
     pitched = lambda ns: sorted((n for n in ns if not math.isnan(n[2])), key=lambda n: n[0])   # noqa: E731
     for s in songs:
         scale = {((s.tonic or 0) + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
-        for role in readings_mod.UPPER + (R.BASS,):                       # the bass too: its second voice plays the line's pitch class at 78 % of
+        for role in readings_mod.UPPER + (R.BASS, R.COUNTER):             # the bass too: its second voice plays the line's pitch class at 78 % of
             voices = cells_mod.part_voices(s, role)                   # their shared onsets in FFVI; written apart it had at 31 % (2026-10-24)
             if len(voices) < 2:
                 continue

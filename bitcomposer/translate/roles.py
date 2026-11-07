@@ -30,6 +30,12 @@ DRUM_PIECES = {"kick", "snare", "hat", "tom", "cymbal"}   # the drum namer's pie
 BY_SOUND = 0.8                        # the share of a voice's notes on drum samples (or on instruments held) that decides
 FEW_PITCHES = 4                       # pitches a sample a drum voice plays at most: a bass on a low sample plays many
                                       # (728 bass voices became drums without this, the namer calling their samples toms)
+DRUM_HOLD = 2.0                       # beats: a voice on a tonal sample taken for a drum by how it plays (one or two pitches, eight
+                                      # notes or more) holds its notes under this at the median. FFVI's 109 drum voices on percussion
+                                      # samples hold a median 0.45 beats, three quarters under 0.95, only cymbal swells two or more;
+                                      # of its 31 drum voices on tonal samples eight held two beats or more, pads and a lead
+                                      # (Another World of Beasts' bowed strings for seven beats, The Phantom Forest's lead for twelve),
+                                      # and a kit written from them struck a pad once a bar (round 77, from Song Check 63)
 LOW_PIECES = {"kick", "tom"}          # the pieces a bass sample can pass for; a voice on them is a drum voice only
 SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on
 
@@ -190,23 +196,77 @@ def echoes(song) -> dict:
     return out
 
 
+SPLIT_BASE = 100                      # a melodic kit piece's own voice (split_melodic_pieces): SPLIT_BASE + its channel; a channel is 0 to 7
+MELODIC_PITCHES = 3                   # pitches a tonal sample on a drum voice is struck on to be a tune there (Wild West's blip: 15)
+MELODIC_SHARE = 0.5                   # and no one pitch holds this share of its notes (a bell on one note is a drum, however many its notes)
+MELODIC_NOTES = 8                     # notes it needs
+TUNE_FLOOR = 55                       # midi: a split voice at or over this is a counter-line, under it a bass (the register the bass rule reads)
+
+
+def is_drum_voice(f: dict) -> bool:
+    """assign's two drum clauses on a voice's features: a drum voice by what its samples are, or by how it plays them."""
+    return ((f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE))
+            or (f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
+                                                                            and f["length_beats"] < DRUM_HOLD))))
+
+
+def split_melodic_pieces(song, grid=None) -> dict:
+    """A tune on the drum channel is a part (round 83): on each voice that would be a drum voice, the notes on a sample the
+    namer called "other" (a tonal sample, no drum) struck on MELODIC_PITCHES pitches or more with no pitch holding
+    MELODIC_SHARE of them, MELODIC_NOTES notes or more, move to a voice of their own (SPLIT_BASE + the channel, + 1 for a
+    second such sample), their chip notes with them (so the echo and vibrato readers see the voice); the drum voice keeps
+    its drums. FFVI: Wild West's blip on fifteen pitches beside its hat, Dancing Mad (part 5)'s rim on sixteen, Kefka's on
+    eight, The Decisive Battle's on nine; the written kit had struck each on one note (round 75's most struck, round 79's
+    degree). Returns {new voice: (channel, sample key, pitches)}."""
+    by_voice = {}
+    for p in song.notes:
+        by_voice.setdefault(p.voice, []).append(p)
+    out = {}
+    for v, ns in sorted(by_voice.items()):
+        if v >= SPLIT_BASE or not ns or not is_drum_voice(_features(ns, grid)):
+            continue
+        by_sample = {}
+        for p in ns:
+            if p.sample is not None and p.sample.piece == "other" and p.midi is not None:
+                by_sample.setdefault(p.sample.key, []).append(p)
+        k = 0
+        for key, mine in sorted(by_sample.items()):
+            pitches = Counter(round(p.midi) for p in mine)
+            if len(mine) >= MELODIC_NOTES and len(pitches) >= MELODIC_PITCHES and pitches.most_common(1)[0][1] < MELODIC_SHARE * len(mine):
+                new = SPLIT_BASE + v + k
+                k += 1
+                for p in mine:
+                    p.voice = new
+                    if p.note is not None:
+                        p.note.voice = new
+                out[new] = (v, key, len(pitches))
+    return out
+
+
 def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     """Each voice's part over the song (echoed: voices found to be another's
-    echo, by echoes(), each that voice's double)."""
+    echo, by echoes(), each that voice's double). A voice split from a drum
+    channel (split_melodic_pieces, round 83) is a counter-line, or a bass
+    where it sits low: a tune on the drum channel, never the song's lead."""
     by_voice = {}
     for p in song.notes:
         by_voice.setdefault(p.voice, []).append(p)
     feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     roles = {}
     for v, f in feats.items():
+        if v >= SPLIT_BASE:                                 # a melodic kit piece, split from its channel (round 83)
+            roles[v] = Role(v, BASS if f["median"] is not None and f["median"] < TUNE_FLOOR else COUNTER,
+                            evidence={"melodic_piece": v - SPLIT_BASE, "distinct": f["distinct"], "median": round(f["median"], 1) if f["median"] is not None else None})
+            continue
         # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
         # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
         # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)
         if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES
                 and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)):
             roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
-        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2)):
-            roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
+        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
+                                                                           and f["length_beats"] < DRUM_HOLD)):   # held like a drum, not a pad (round 77)
+            roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")} | {"length_beats": round(f["length_beats"], 2)})
     for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:
             roles[v] = Role(v, DOUBLE, of=u, evidence={"echo_ms": round(delay * 1000, 1)})

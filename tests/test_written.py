@@ -19,7 +19,7 @@ class ShippedVocabularyTests(unittest.TestCase):
         self.assertEqual(vocabularies.DEFAULT, "default")
         self.assertEqual(vocabularies.label("default"), "bitComposer")
         src = vocabularies.source("default")
-        self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 67))
+        self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 68))   # 68 since round 77: Quiet Beach's pad read as a part, not a drum
         self.assertIn("Final Fantasy VI", src["fitted_on"])
         models = vocabularies.load("default")
         for name in ("rhythm", "balance", "habits", "moves", "voice_intervals", "tune_grain"):
@@ -65,7 +65,7 @@ class WrittenSongTests(unittest.TestCase):
                 m = re.search(r"voice (\S+) by the pool rule for (\d+)-(\d+) .*: it plays (\d+)-(\d+)", line)
                 self.assertIsNotNone(m, line)
                 lo, hi, plo, phi = (int(x) for x in m.groups()[1:])
-                self.assertLess(max(lo, plo), min(hi, phi), line)            # the voice's range overlaps the register
+                self.assertLessEqual(max(lo, plo), min(hi, phi), line)       # the voice's range overlaps the register (a one-note register, 32-32, included)
             self.assertIn("on its own sounds", out["score"].message[2])
 
     def test_a_seed_names_one_song_on_one_sound_set(self):

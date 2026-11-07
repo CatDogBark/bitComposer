@@ -134,7 +134,12 @@ class PerformanceTests(unittest.TestCase):
         import unittest.mock as mock
         with mock.patch.object(vocabularies, "load", lambda name: bare):
             out = written.compose_written(seed=68554)
-        self.assertEqual(out["info"]["vibrato"], 18)                                 # the old rule: every held note, as before this round
+        bent = [n for n in out["score"].notes if n.bends]                           # the old rule: every held note of the tune and the counter,
+        self.assertGreater(len(bent), 0)                                             # as before this round (the count moves with the vocabulary:
+        self.assertEqual(out["info"]["vibrato"], len(bent))                          # 18 on the 67-song fit, 46 on the 68-song one)
+        first = whole.voice_map(out["plan"], out["written"])
+        allowed = {v for role in performance.VIBRATO_PARTS if role in first for v in range(first[role], first[role] + out["plan"].voices.get(role, 1))}
+        self.assertTrue(all(n.voice in allowed for n in bent))
         self.assertIn("(the player's rule, no vibrato word)", out["score"].message[4])
 
     def test_echo_off_on_the_command_line_holds_for_a_written_song(self):

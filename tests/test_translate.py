@@ -596,8 +596,9 @@ class Vocab(unittest.TestCase):
                 db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "", 0.9))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 12, None, "", 0.0))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 12, 16, 0, "", 0.9))
-        notes = array("f", [0, 4, 36, 0.5, 0.5, 0, 4, 4, 41, 0.5, 0.5, 0, 8, 4, 43, 0.5, 0.5, 0,
-                            12, float("nan"), 36, 0.5, 0.5, 0])
+        nan = float("nan")                                   # a note is NOTE_FIELDS wide: ..., sample index, rate (round 78)
+        notes = array("f", [0, 4, 36, 0.5, 0.5, 0, nan, 4, 4, 41, 0.5, 0.5, 0, nan, 8, 4, 43, 0.5, 0.5, 0, nan,
+                            12, nan, 36, 0.5, 0.5, 0, nan])
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, notes.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, notes.tobytes()))
         songs, left_out = load(db)
@@ -661,6 +662,45 @@ class Rhythm(unittest.TestCase):
         s.chords = [Span(0, 4, None, "", 0.0), Span(4, 8, 5, "", 0.3)]
         self.assertEqual(list(bass([s]).figures[4]), ["?... ?... ?... ?..."])
 
+    def test_a_tune_on_the_drum_channel_is_a_part(self):
+        """Round 83: a tonal sample the namer called "other" that a drum voice strikes on three pitches or more, no one of them
+        half its notes, is split to a voice of its own (SPLIT_BASE + the channel) and read as a counter-line (a bass where it
+        sits low); the channel keeps its drums. A bell on one note, however many its notes, stays a drum."""
+        from bitcomposer.translate import roles
+        from bitcomposer.translate.events import Played, Sample
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+
+        def kit_song(pitches, level=0.6):
+            song = song_of({
+                0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                    # the melody
+                3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # the bass
+                4: [(i * b / 2, 0.05, None) for i in range(128)],                      # the hat: unpitched, on a drum channel
+            })
+            song.samples[4].piece = "hat"
+            blip = Sample((0x900, 0x900), "blip", 440.0, 100, True, piece="other")
+            song.notes += [Played(4, i * b + b / 4, i * b + b / 4 + 0.1, blip, pitches[i % len(pitches)], level, 0.5, None) for i in range(32)]
+            song.notes.sort(key=lambda x: (x.start, x.voice))
+            return song
+
+        song = kit_song([71, 78, 73, 77, 69, 66, 76, 74])
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        self.assertEqual(roles.split_melodic_pieces(song, g), {104: (4, "blip", 8)})
+        self.assertEqual(sum(1 for x in song.notes if x.voice == 104), 32)
+        self.assertEqual(roles.split_melodic_pieces(song, g), {})                                      # split once
+        parts = {r.voice: r.role for r in roles.assign(song, g)}
+        self.assertEqual((parts[0], parts[3], parts[4], parts[104]), (roles.MELODY, roles.BASS, roles.DRUMS, roles.COUNTER))
+        song = kit_song([71])                                                                          # a bell on one note is a drum
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        self.assertEqual(roles.split_melodic_pieces(song, g), {})
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[4], roles.DRUMS)
+        song = kit_song([71, 71, 71, 71, 71, 78, 73, 77])                                              # one pitch holds five of eight: a drum
+        self.assertEqual(roles.split_melodic_pieces(song, beat.find([(x.start, x.level) for x in song.notes])), {})
+        song = kit_song([40, 47, 43, 45, 38, 36, 45, 43])                                              # low: a bass
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        roles.split_melodic_pieces(song, g)
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[104], roles.BASS)
+
     def test_drum_sounds_are_named_by_how_they_play(self):
         from bitcomposer.translate.rhythm import Song, drums
         # four bars: a kick on one and three, a snare on two and four, a hat on the eighths
@@ -709,8 +749,9 @@ class Rhythm(unittest.TestCase):
             db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("beat", a, b, root, "", 0.9))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 16, None, "", 0.0))
         db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?,?)", ("beat", 0, "kickkey", 0, 0, None, 0, 100, 0, None))
-        bass = array("f", [0, 4, 36, 0.5, 0.5, 1, 4, 4, 41, 0.5, 0.5, 1, 6, 1, 43, 0, 0.5, 1, 8, 4, 43, 0.5, 0.5, 1])
-        drum = array("f", [0, 0.5, float("nan"), 0.5, 0.5, 0, 2, 0.5, float("nan"), 0.5, 0.5, -1])
+        nan = float("nan")                                   # seven fields a note since round 78 (the rate as a note)
+        bass = array("f", [0, 4, 36, 0.5, 0.5, 1, nan, 4, 4, 41, 0.5, 0.5, 1, nan, 6, 1, 43, 0, 0.5, 1, nan, 8, 4, 43, 0.5, 0.5, 1, nan])
+        drum = array("f", [0, 0.5, nan, 0.5, 0.5, 0, 48.0, 2, 0.5, nan, 0.5, 0.5, -1, nan])
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, bass.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, drum.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 2, "melody", None, '{"roll": true}', bass.tobytes()))
@@ -818,16 +859,16 @@ class Games(unittest.TestCase):
             for bar, root in enumerate((36, 41, 43, 36)):
                 pitches = (root, root + 2, root + 4, root + 5) if walking else (root, root + 12, root, root + 12)
                 for beat, m in enumerate(pitches):
-                    bass.extend((bar * 4 + beat, 1, m, 0.5, 0.5, -1))
+                    bass.extend((bar * 4 + beat, 1, m, 0.5, 0.5, -1, nan))
             db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 0, "bass", None, None, bass.tobytes()))
             tune = array("f")                                                       # eighths by step, C D E F G A B C
             for i, m in enumerate((60, 62, 64, 65, 67, 69, 71, 72) * 4):
-                tune.extend((i / 2, 0.5, m, 0.8, 0.5, -1))
+                tune.extend((i / 2, 0.5, m, 0.8, 0.5, -1, nan))
             db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 1, "melody", None, None, tune.tobytes()))
             if drums:
                 hits = array("f")
                 for beat in range(16):
-                    hits.extend((beat, 0.2, nan, 0.5, 0.5, -1))
+                    hits.extend((beat, 0.2, nan, 0.5, 0.5, -1, nan))
                 db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 2, "drums", None, None, hits.tobytes()))
         # Alpha and Beta share a driver and a composer; Gamma and Delta share the other driver
         song("a1", "Alpha", "A. Composer", "one", "major", 120.0, 0.5, True, True, False)
@@ -1055,7 +1096,8 @@ class Phrases(unittest.TestCase):
                                                            array("d", [0.0, 2.0, 4.0, 6.0]).tobytes()))
             for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):
                 db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "", 0.9))
-            tune = array("f", [0, 1, 60, 0.8, 0.5, -1, 1, 1, 64, 0.8, 0.5, -1, 2, 1, 67, 0.8, 0.5, -1, 9, 1, 72, 0.8, 0.5, -1])
+            nan = float("nan")
+            tune = array("f", [0, 1, 60, 0.8, 0.5, -1, nan, 1, 1, 64, 0.8, 0.5, -1, nan, 2, 1, 67, 0.8, 0.5, -1, nan, 9, 1, 72, 0.8, 0.5, -1, nan])
             db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 0, "melody", None, None, tune.tobytes()))
         db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 0, "A", 0, 2, 0.0, None, "part"))
         db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 1, "A", 2, 2, 4.0, 0, "part"))

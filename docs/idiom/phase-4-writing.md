@@ -65,6 +65,8 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
 | 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | 58 |
 | 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
+| 74 | 2026-10-31 | a kit piece on a tonal sample leaves the pack's own drum in its slot | 62 |
+| 75 | 2026-10-31 | the kit token's struck note; the kit at its habit's density (the limbs' tables); the tempo redraw inside its class | 63 |
 
 ## Goal
 
@@ -4679,3 +4681,681 @@ place. Beacon of Lanterns' second bass voice runs sixteenths at sixteen a
 second: the bass figure tables against FFVI's second bass voices, a count
 to make. The harmony drew a lead-pool voice through the wider reach in
 Dance of the Harbor: the reach's own class should follow the word too.
+
+### Round 74: a kit piece the balance's song struck on a tonal sample (2026-10-31, from Song Check 61's Crossing of Steel: "a repetitive noise that starts at about 10 seconds and goes on for the whole song")
+
+**Found.** Not the echo or the vibrato: the second drums voice striking the
+counter's own synth lead sample (sf89f5aedfd) at the kit's one note, G#2,
+thirteen times a bar from bar 4 to the end. The song's token is The
+Phantom Forest, whose kit is one piece, `o` on that lead sample at 0.38 of
+the top: in that song a pitched voice plays the lead seven times in 95
+seconds (once every twelve, two distinct pitches, an accent) and the role
+reader labelled it drums, the kit token carried it, and round 63's
+kit-from-the-token put the sample in the rim slot. Of FFVI's 47 kit tokens,
+18 carry at least one sample the pack does not class as percussion: the
+bass sample sa692eac0a6 as a tom in three songs, leads and pads as `o` or
+`c` in the rest; some FFVI really strikes, some misreads like this one. And
+the figure: with the habit "sparse repeating" the drums table gave the lone
+`o` kit 13 hits a bar, because the kit-conditioned context has two songs
+(one a shaker at 13.5 hits a bar) and the draw's back-off drops the habit
+before the kit; FFVI's own lone-`o` kits play 0.1, 1.5 and 13.5 hits a bar.
+
+**Built.** `samples_for` takes a token kit sample into a writer's slot only
+where the pack classes it as percussion (`samples.is_percussion`, the drum
+namer's class at import); a tonal one leaves the pack's own drum in the
+slot and the plan logs "kit pieces the balance's song struck on tonal
+samples, the pack's own drums standing in". A test with a stubbed pack.
+
+**Measured, Crossing of Steel (seed 173 on FFVI's sounds, the player's
+performance), before and after.** The kit's slot plays the pack's rim
+instead of the lead at G#2; hits unchanged at 13 a bar; drums -12.3 under
+the whole (from -14.2), every other part within 0.1 dB. Melody, bass and
+accompaniment decode sample for sample identical. The counter does not:
+same notes, sample and envelope, but before the fix the kit had registered
+the lead sample first and the counter shared its slot at the kit's tuning,
+C5 speed 32834 against the counter's own 32825, half a cent; retuning the
+after stem by that ratio brings the two to 0.98 correlation. Song Check 62
+holds the two renders side by side.
+
+**Open.** The drums figure's density for a lone piece: the table's back-off
+order (part, meter, kit, tempo, habit, feel, previous) drops the habit
+before the kit, so a kit with few songs behind it inherits another song's
+density; FFVI's lone-piece kits are mostly sparse. A back-off that keeps
+the habit longer is a change to every drums draw and wants its own round
+with the FFVI measures beside it. The drums role reader: a pitched voice
+with a handful of notes a song is an accent, not a kit; a check against
+the phase 1 ground truth before any reader change. The kit token could
+carry the pitch each piece was struck at, as it carries the level. And
+the half cent: the kit's and the line's registrations of one sample tune
+it nine C5-speed units apart; one tuning path, when a round touches the
+sample table.
+
+### Round 75: the kit piece's struck note, the kit at its habit's density, the tempo inside its class (2026-10-31, from Song Check 62: "a snare is super out of place on this song")
+
+**Why round 74 came out.** Round 74's rule, a tonal kit piece leaves the
+pack's own drum in its slot, was a writer rule standing where a count
+should be: FFVI's pack has no "other"-class percussion (15 drum samples:
+6 snares, 5 hats, 2 cymbals, a kick, a tom), the import fills the rim slot
+with the snare, so every tonal "o" piece became a snare, and of FFVI's 47
+kit tokens 11 carry an "o" piece and 10 of those are tonal samples (a lead
+struck as an accent, bells, pads). Five tokens have nothing but tonal
+pieces. The owner's question, whether the kit knows the song it is
+chosen for: it does, through one door, the balance token, which is the
+song's own kit; what did not know the song was the slot's stand-in and
+the figure's density.
+
+**Built.**
+
+1. The kit token carries the note each piece is struck at most, after its
+   level (`o=sf89f5aedfd@0.38@60`, `c=sid@@79` without a level;
+   `Song.kit_pitches`, the most struck rounded note, the lower on a tie).
+   Of the 101 pieces in FFVI's 47 kit tokens, 37 carry a note (18 snares,
+   10 "o", 6 toms, 2 kicks, a cymbal); the one tonal "o" without one is
+   Overture (part 2)'s, whose notes the reading left unpitched.
+2. Every kit sample of the token's song the pack holds takes its slot
+   again (round 63). `render.kit_note_of`: a percussion sample strikes at
+   KIT_NOTE as before (registered to sound as recorded there); a tonal one
+   at the token's note, or where none at the note that plays the
+   recording at its own rate. The Phantom Forest's lead at C4, where the
+   game plays it, not at the kit's note two octaves under.
+3. The kit at its habit's density. The drums table conditions on the kit
+   before the habit (round 58), so a kit with no song behind it in this
+   meter and tempo class took another song's bars at that song's
+   density: The Phantom Forest's one-piece kit in 3/4 wrote Johnny C. Bad's
+   13 snare hits a bar in 4/4 under "sparse repeating", The Wedding
+   Waltz's 3/4 snare (4 a bar) wrote Opening Theme's 13.
+   `writer.kit_table_reaches`: the bars the kit table would draw for this
+   kit, hits a bar over every bar with the rests as `_rhythm_habit` counts
+   a song's tier, must sit under the tier's top (DENSITIES: sparse 2,
+   medium 6, dense open); where they do not, the plan writes the kit from
+   its limbs' tables (drums-KSt, drums-h, drums-c, drums-o) at their own
+   counted group habits, the path a pack without a kit table already
+   took. The never-silent redraw (round 58) and the last resort keep to
+   the group's habit cap where any bar fits it: drawn without it, a
+   sparse "o" group whose context held rests and dense bars alone had
+   filled its rested bars with Johnny C. Bad's ten-hit bars.
+4. The tempo drawn again under the token's class (round 54) is terminal
+   at the class: without the floor the class's votes had their
+   Witten-Bell share and every class's tempos the rest, and 8 of 46
+   written songs sat in another class than their token's, their kits and
+   figures drawn under it. At the word's rounding edge (85 counted under
+   slow from 83, 130 under medium from 128) the tempo moves inside the
+   class, `rhythm.within_band`.
+
+Pack4 refit (98 tables, backup pack.json.r75), the shipped vocabulary
+regenerated. Tests: the token's note, the plan's keeping it, kit_note_of
+by sample class, the kit table's reach and the limbs' draw, the redraw's
+class.
+
+**Measured (sc-tools/kit_density.py: one written song for each FFVI kit
+token, the real plan+write path, hits a played bar against the token
+song's own from the readings; 46 of 47 tokens drawn in 3000 seeds).**
+Median absolute error 1.7 hits a bar before, 1.1 after; mean 4.2 to 3.5;
+35 of 46 unchanged. Off-class songs 8 to 0. The Phantom Forest 13.8 to
+1.3 (the game 1.0 a played bar, 0.1 a bar); Fanatics 3.7 to 16.4 (15.9),
+Under Martial Law 8.2 to 12.4 (14.1), The Day After 8.4 to 4.4 (4.0), all
+by the class alone. The limbs' path taken by three songs. Still wrong:
+The Wedding Waltz-Duel (part 1), a lone snare at "medium varied" in 3/4,
+12.0 against the game's 4.1: its limb is the kick-snare-tom group, whose
+habit sets no cap (`group_caps` caps one-letter groups), and the KSt table
+at slow in 4/4 holds no snare-only bar under six hits. Dancing Mad (part
+2), Grand Finale (part 2), Blackjack and Wild West write a third of their
+game's hits (the readings' figure merges what the game strikes
+together; untouched here).
+
+**The reader, checked (the owner's third step; no change made).** The role
+reader's second clause, a voice on a sample the namer did not call an
+instrument, at most two pitches a sample, eight notes or more, labels 15
+FFVI voices drums. Fourteen are strikes: Johnny C. Bad's and The Phantom
+Train's snare rolls, Wild West's toms, Strago's two-note ostinato (0.21
+beats a note), the 336-frame tick in Train, Quiet Beach and The Phantom
+Train, "??"'s bell. One is not: The Phantom Forest's lead, held a median
+11.9 beats a note, where the 109 drum voices on percussion samples hold a
+median 0.45 beats, three quarters under 0.95, none over 7.9. A clause
+"and its notes shorter than any drum's" flips that one voice in FFVI and
+no other; its token then has no kit, which is the game's truth. Phase 1's
+ground truth for roles (the generator's songs with known answers) has no
+held two-pitch accent to judge it by, so it waits for its own round with
+the readings re-read and the pack refit. With round 75 the written song
+plays that accent on the lead at C4 once or twice a bar, the game's
+gesture at the counted tier.
+
+**Open.** The kick-snare-tom limb's density cap; a kit figure merged as
+the readings merge (Dancing Mad's 21 hits a bar read as 6.6); the
+never-silent rule against FFVI's 0.1 hits a bar (the texture words give
+the drums 11 of 23 bars; each played bar strikes at least once).
+
+### Round 76: a voice beside a counter that follows the tune (2026-11-06, from Song Check 63: "the drums a lot of time just seem louder than they should")
+
+**Why.** The verdict on round 75 was that the kit sits forward, so the
+kit was measured against the game's own, token by token: for each of
+the 46 FFVI balance tokens with a kit, the game's song and the written
+song that drew the token, each rendered whole, drums alone and the rest
+alone, the drums' hit level (the 95th percentile of 100 ms RMS) over the
+rest's (`~/diags/bitcomposer/sc-tools/drum_forward.py`; the results in
+`.../sustain/sc63-drums/`). At the median the written kit sat exactly
+where the game's does (0.0 dB; quartiles -1.9/+2.7); 9 of 46 sat 3 dB or
+more forward, 7 as far back. The forward nine had three causes, and the
+widest was not the kit: in 11 of the 46 songs the counter follows the
+tune and holds two to four voices in the token (Metamorphasis, The
+Phantom Train, The Unforgiven, Gestahl, Kefka, Gogo, Strago, Troops
+March on, Returners, two Wedding Waltzes), and the writer had left every
+voice beside that counter silent since round 29 ("no word yet for a
+second counter voice beside a counter that follows the tune"). The
+game's counters there stack 2.2 to 3.6 voices in 98 % of their frames,
+block chords and parallel lines, 6 to 12 dB of band the written song
+did not have, and a kit at the game's own volume stood in front of what
+was left (part by part, written against game, relative to the kit:
+Metamorphasis's counter -15.8 dB, The Unforgiven's -25.5, Gestahl's
+-8.0). The other two causes, a tonal kit piece's hold and the pitch a
+percussion piece is struck at, are rounds 77 and 78.
+
+**Built.** The word is the one the upper parts already had. The readings
+count the counter's own voices beside its line as an upper part's
+(`arrangement._beside_lines`: part counter, kind apart or alternating by
+`harness.relation`, the line the voice with the most notes; the
+counter-line's own units beside the tune keep their kinds same and
+other, so the two never share a context), into `voice_intervals` and
+`voice_moves`, and `cells.second_figure_units` counts the voices' bar as
+a mask over the counter's bar. The plan writes every layer word of a
+counter that follows the tune (`plan.write`): a doubling as before, and
+an apart or alternating voice through `writer.counter` with the counter's
+line as the tune it is written beside, its bar a `second_figures` mask
+drawn under the counter's layer class, its pitch the voice words' under
+the layer relation, its span the line's at the word's offset within the
+range the game plays its sample over (`plan.bounds["counter:v"]`), its
+level the token's share for that voice (round 70). A third and fourth
+voice take their own words. A vocabulary without the three words leaves
+the voice silent and says so in the log. Pack4 refit (98 tables, backup
+`pack.json.r75`), the shipped vocabulary regenerated: `voice_intervals`
+gains 136 counter contexts. Test: the counter's voices beside its line
+counted and written (`test_a_voice_beside_a_counter_that_follows_the_tune`).
+
+**Measured.** The 46 tokens' written songs again (the plan+write path):
+layered counters 17, with a silent voice 11 before, 0 after; every layer
+word drawn (54 apart, 19 doubling, 4 alternating) now writes. The five
+songs of Song Check 64's first step, before and after, each part under
+the whole (K-weighted, the first minute): the counter +4.5 dB in Plateau
+of Stars (The Phantom Train's token, four voices), +3.5 in Still Pavilion
+(Metamorphasis), +6.4 in The Crossing of Thorns (Troops March on), +2.3
+in The Endless Citadel, +0.9 in The Foundry of Rust; the kit under the
+whole -5.1, -0.8, -1.0, -0.7 and -0.5 dB in the same songs. Over all 46
+tokens the kit over the band's loud moments barely moves (median 0.0 to
+-0.3 dB, the forward nine still nine: The Phantom Train leaves the set,
+The Phantom Forest enters), because the band's loudest part, the bass or
+the tune, is not the counter; by integrated loudness the kit sits 1.6
+then 1.9 dB under the game's. The tune's margin over the loudest other
+line falls where the token's counter voices are loud (Plateau of Stars:
+the token's shares 1.0/2.2/2.1, the game's own balance, -2.5 to -10.8
+dB), which the owner's ear will judge.
+
+**Open.** A counter without a tune in the band (the second branch) still
+writes one extra voice at most. The tune's salience against a loud
+counter stack (Song Check 50's rule: a tune 3 dB or more under did not
+belong in five songs of six) was counted from songs where the counter was
+one voice; whether it holds with the stack is the first thing to hear.
+
+### Round 77: the role reader's drum clause holds its notes like a drum, and a kit piece's hold (2026-11-06, from Song Check 63: the pad struck once a bar)
+
+**Why.** Song Check 63's measure (round 76) left two of the forward nine
+to the kit itself: the pad The Quiet Wharf and Ramparts of Salt strike
+once a bar, which the readings call a kick (Another World of Beasts and
+The Empire Gestahl play a bowed-strings sample at E-flat 1 and C1, held
+seven and eight beats, a drone the per-song drum namer heard as a low
+thud), and The Unforgiven's "o", a tonal sample the game taps for 69 ms
+and the writer held for half a beat, 9 dB out in front of the game's
+stem. Both are the same missing count: the kit token had each piece's
+sample, level and struck note, and not how long the game keys it. The
+role reader's second clause (a voice on a sample the namer did not call
+an instrument, one or two pitches, eight notes or more) also took held
+pads for drums: The Phantom Forest's lead, held twelve beats a note, had
+given a written kit one accent struck thirteen times a bar.
+
+**Built.** Two counts and a clause.
+1. The role reader's second drum clause asks a tonal voice to hold its
+   notes under `roles.DRUM_HOLD` (2 beats) at the median. FFVI's 109 drum
+   voices on percussion samples hold a median 0.45 beats, three quarters
+   under 0.95, only cymbal swells two or more; of its 31 drum voices on
+   tonal samples eight held two beats or more. Read fresh from the 82
+   SPCs the clause flips two voices and no other: The Phantom Forest's
+   lead (drums to double; its token has no kit, the game's truth) and
+   Quiet Beach's pad (drums to harmony; the song enters the vocabulary,
+   68 songs). The pads the namer calls kicks stay drums: they are caught
+   by the first clause, by what their sample is, and the hold below gives
+   them their drone. The phase 1 ground truth (`tools/known_answers.py`,
+   mended to carry the namer's piece) reads 672 of 672 drum channels as
+   drums with the clause off and on.
+2. The readings count, per drum sample, the median length the song keys
+   it for (`Song.kit_holds`), and the balance token's kit field carries it
+   after the note's slot (`o=sfd6accf98a@2.08@58@0.19`,
+   `K=s48bab384c7@1.00@r42@6.95`; `plan.kit_piece_hold`). The writer gives
+   a piece on a sustaining sample that length (`render.samples_for` marks
+   the slots whose sample the pack classes tonal), cut by the next hit on
+   its voice; a percussion sample is a one-shot whatever its hit's
+   length, so its hold is counted and not played.
+3. The token's note slot says what it carries. For a piece the namer
+   called a drum it is now the chip's rate as a note, with an r (`r48`:
+   60 as recorded, 48 an octave under; the stored note rows gain a
+   seventh field, the rate, `store.VERSION` 10, every song read again
+   and the lead pass run again); a tonal piece keeps its pitch. A tonal
+   sample the namer took for a drum plays at its own rate's note plus
+   the offset, so the pad is back at E-flat 1 through the rate. The
+   writer takes a percussion piece's rate in round 78.
+Pack4 refit (98 tables, backups `pack.json.before-r77b` and
+`readings.db.before-r77`), the shipped vocabulary regenerated (68 songs).
+Tests: the token's hold and rate slots counted, parsed and given
+(`test_the_kits_pieces_carry_the_note_they_are_struck_at`,
+`test_a_kit_pieces_hold_follows_its_note_in_the_token`); the
+translate tests' hand-packed rows seven fields wide; the vibrato test
+counts its bent notes instead of pinning a number that moves with the
+vocabulary.
+
+**Measured.** The 45 kit tokens' written songs against the game
+(`drum_forward.py`, `.../sustain/sc63-drums-r77/`): the kit over the band
+by hit level sits at the median +0.1 dB from the game's (round 76: -0.3),
+3 dB or more forward in 7 of 45 (9 of 46); by integrated loudness 1.1 dB
+under (1.9). The Unforgiven leaves the forward set: its "o" is a tap
+again. Song Check 64's second step, five pairs on the same seed, the
+token's song the same and the plan the same but for the kit (the 68th
+song shifts a seed's balance draw, so pairs were chosen among the 562 of
+3000 seeds whose plan stands): The Northern Reactor (The Unforgiven)
+drums -5.6 to -10.7 dB under the whole; Winding Citadel (Another World
+of Beasts) and The Coast of Smoke (Gestahl) hold the pad as the game
+does, seven and eight beats at the game's pitch, where a one-beat blip
+was; The Rising Valley (Edgar and Sabin) plays its tonal tom at the
+game's -20 semitones; Sleeping Overpass (Kefka) holds its bell 0.45
+beats. The pad's songs still count the pad the loudest part (the token's
+level is the count), so those two stay in the forward set.
+
+**Open.** The drum namer calls a looping bowed-strings sample a kick when
+a song plays it low and alone; a sample with a sustain loop is no kick,
+and that is the namer's round. A counter without a tune in the band
+writes one extra voice at most (round 76).
+
+### Round 78: a percussion piece at the rate the game struck it (2026-11-06, from Song Check 63's measure: the crash twice as bright)
+
+**Why.** The third cause behind Song Check 63's forward kits was timbre,
+not level. The writer played every percussion sample as recorded (a kit
+voice is registered to sound as recorded at KIT_NOTE), and FFVI plays
+its crash an octave down in all 22 songs that use it: of the game's 118
+drum pieces across the 46 kit tokens, 24 sit at exactly -12 semitones
+and 42 six or more off the recording (`drum_why.py`). A crash an octave
+up is twice as bright (spectral centroid 3.0 against 1.5 kHz) and half as
+long, so it cuts across the band where the game's sits back in it; in
+RMS the two are within a decibel. 23 of the 46 written kits carry a
+crash, and 6 of the 9 forward tokens did.
+
+**Built.** Round 77 had put the count in the token: for a piece the namer
+called a drum, the note slot carries the chip's rate as a note, with an
+r (`c=s3bfa4539ca@0.96@r48@2.23`; the readings' seventh row field). The
+writer now takes it: `render.kit_note_of` strikes a percussion piece the
+token song filled the slot with at KIT_NOTE plus the rate's offset (a kit
+voice's C5 speed is twice its rate, so a note an octave under KIT_NOTE
+halves it), as recorded where the token carries none; `samples_for` logs
+the pieces struck off the recording's rate. The pack's own kit, standing
+in for a sample the pack does not hold, plays as before. The writer's
+part of the word only: no refit (round 77 counted the rates).
+
+**Measured.** The 45 kit tokens' written songs against the game
+(`.../sustain/sc63-drums-r78/`): by integrated loudness the kit sits 1.1
+dB under the game's at the median (round 77: 1.1), 3 dB or more forward
+in 6 of 45 (7); by hit level +0.1 dB (+0.1), 3 dB or more forward in 11
+of 45 (7): a crash an octave down holds a loud 100 ms window twice as
+long, so the hit measure rises on the crash-only kits while the loudness
+measure falls, and the game's own crash does the same. Song Check 64's
+third step, five pairs on the same seed, the kit under the whole within
+a decibel in every pair: The Last Tower (Dancing Mad part 1) and The
+Second Ridge (New Continent), a lone crash an octave down and twice as
+long; Journey of the Quarry (Battle Theme), the snare three semitones up
+and the crash an octave down, the kick and hat as recorded; Cistern of
+Salt (Locke) and Last Vault (Cyan), the crash an octave down and Cyan's
+hat two semitones under.
+
+**Open.** The loudness a drum plays at is still pinned on its sample's
+strike measured at the recording's rate (round 63); struck an octave down
+the first 150 ms are the recording's first 75, which the crash reads 0.6
+dB louder. A hat struck high (The Phantom Train's, +12 semitones) is
+shorter and brighter than the pack's, as the game's is.
+
+### Round 79: the struck note as a degree of the key (2026-11-06, from Song Check 64's Last Vault: "the hat almost sounds like a chain rustling and clashes with everything else")
+
+**Why.** Round 75 stored a tonal kit piece's struck note as an absolute
+pitch and round 78 a percussion piece's rate the same way, while the plan
+draws the written key apart from the balance token: 40 of the 45 kit
+tokens' written songs sat in another key than the token's song, 14 of the
+15 with a tonal piece. So Cyan's sizzle, a ringing cymbal with a tone near
+1.9 kHz struck two semitones under its recording, which lands on the minor
+sixth of Cyan's C minor, landed on the leading tone of Last Vault's A
+minor. FFVI strikes its tonal kit pieces in the song's scale in 10 of 12
+(the two off it are Strago's F sharp in G minor, the harmonic seventh),
+so the note is the song's business, not the sample's. The percussion
+samples' spectral tones land in the scale at chance (69 of 113, 7 in 12
+by chance), and a hat's ring at 2.2 kHz sits 16 dB over its band while the
+sizzle's sits 12: a tone in the sample says nothing; what the game does
+with it does. Five of FFVI's kit samples are struck at different rates in
+different songs (the pitch-bent "snare" at +3, -4, +2, +3 and -17, the
+tonal tom at -20, -17 and -22, the sizzle at -2, +12 and -5, the pad at
+-21 and -18, the open hat at 0, -1, 0 and -3); the crash sits at -12 in 21
+of 22 songs and the main hat at 0 in 11 of 12.
+
+**Built.** The balance token carries its song's key (`key=9:minor`,
+before the top). A tonal piece's note slot is a degree of it
+(`arrangement.kit_degree`: scale steps from the tonic's fourth-octave
+note where the note is on the song's scale, `d-7`; semitones where it is
+off it, `c+11`; the voice words' own convention since round 66), and the
+writer realizes it in the written key from the written tonic nearest the
+song's (`render.kit_note_of`: within a tritone, so the register stays
+where the game struck it). A percussion sample the game tunes
+(`arrangement.tuned_samples`: struck in two songs or more with no one
+rate in more than half of them, TUNED_SHARE) carries a t on its rate
+(`r63t`) and the writer moves that rate by the same tonic distance; an
+untuned one keeps its absolute rate, as a sound. The plan keeps the key,
+the degrees and the tuned marks (`kit_token_key`, `kit_piece_degree`,
+`kit_piece_tuned`); the absolute form is read still. Pack4 refit (backup
+`pack.json.r78`), the shipped vocabulary regenerated; the song count
+stands at 68, so the seeds draw as before. Tests: the degree counted and
+realized in three keys, the tuned mark counted and moved
+(`test_the_kits_pieces_carry_the_note_they_are_struck_at`,
+`test_a_kit_pieces_degree_is_realized_in_the_written_key`).
+
+**Measured.** The 45 kit tokens' written songs (`measure_r79.py`): the
+seven tonal kit pieces that carry a degree sat in the written scale 4 of 7
+times before, 6 of 7 after (the seventh is Strago's harmonic seventh,
+off the scale in the game too and written off it, `c+11`); nine tuned
+percussion pieces move with the key in nine songs. Levels do not move:
+Song Check 65's first step, five pairs on the same seed, has every part
+within 0.3 dB of its before. What moves is the note: Overpass of Bells'
+bell from A sharp to A, Last Terminal's from B to E (the fifth of both
+keys), The Endless Valley's from B to G, Last Vault's sizzle three
+semitones lower, The Rising Valley's tom four lower.
+
+**Open.** A tuned sample's rate moves by the tonic distance in semitones,
+not by scale degree: a major token song's third carried into a minor
+written key stays a major third. The sample's own tone is not read, so a
+tuned percussion piece cannot be put on a degree the way a tonal piece
+is. The drums' echo still comes from another song's echo word than the
+kit's (Cyan sends its sizzle to echo; the written song plays it dry).
+
+### Round 80: the kit slot's sample is the one the kit leans on (2026-11-06, from Song Check 64's Journey of the Quarry: "the snare sounds almost like a closed hi-hat with a strange electronic noise attached")
+
+**Why.** Round 63 gave the kit token one sample per piece letter: the
+sample the song strikes the letter on most. Where the drum namer puts two
+of a song's samples on one letter (20 letters in the 68 songs, mostly a
+hat letter shared by the main closed hat and a second hat sample, or a
+snare letter shared by the backbeat snare and a rattle), the most struck
+is the busiest sample, not the one the kit leans on. Battle Theme's snare
+letter holds its backbeat snare (82 hits at 0.31 of the loudest part) and
+a pitch-bent rattle in sixteenths (269 hits at 0.12); the token took the
+rattle, and Journey of the Quarry wrote its backbeats on it, dry, at one
+pitch: a bright 190 ms buzz on every backbeat, which the ear calls a
+closed hat with an electronic tail. Of the 20 split letters, 9 have the
+most struck sitting 3.7 to 11.4 dB under the loudest; in 1 the most struck
+is the loudest; 4 are two hat samples at the same level to the third
+decimal (Fanfare, Mog, Searching for Friends, The Decisive Battle); in 6
+the other sample has under a fifth of the letter's hits.
+
+**Built.** `arrangement.kit_slot_samples`: of the samples a song strikes
+a letter on, those with a fifth of the letter's hits or more (SLOT_SHARE)
+are in the running; the loudest by its median hit level takes the slot;
+samples within a decibel of the loudest (SLOT_TIE_DB, the ear's step) are
+as loud and the most struck of them takes it; with no level read, the most
+struck. `kit_token` takes its slots from it, so the level, note and hold
+slots are the pick's (Battle Theme's snare slot: 0.27 of the loudest part
+at the rattle's tuned rate, now 0.69 at the snare's). Pack4 refit (backup
+`pack.json.r79`), the shipped vocabulary regenerated; 68 songs, the seeds
+draw as before. Test: the pick, the fifth, the tie both ways, the no-level
+fallback and the token's slots
+(`test_the_kits_slot_takes_the_sample_the_kit_leans_on`).
+
+**Measured.** The pick changes in 9 of the 20 split letters (Battle
+Theme's and The Decisive Battle's snares from the rattle to the snare,
+Shadow's from a soft low-tuned sample to the snare, Devil's Lab's to its
+loudest snare, Under Martial Law's and "??"'s hats, Strago's hat and rim,
+Dancing Mad (part 5)'s tom from the rattle to the tom), in 8 tokens and 7
+of the 45 written songs with a kit. The written pattern is unchanged; the
+sample and its level are the game's for that sample, so the drums move
+with the pick. Song Check 65's five pairs, the drums' part level in the
+whole: Journey of the Quarry +0.7 dB, Restless Tides +1.2, Sleeping
+Aqueduct +2.1, The Shore of Mirrors +2.1, The Endless Bridge -0.9. Over
+the 45 kit tokens against the games' own renders (`drum_forward.py`),
+the written kit over the band by integrated loudness sits 0.9 dB under
+the game's at the median (1.1 after round 78), 3 dB or more forward in 7
+of 45 (6), 3 dB or more back in 15 (15); by hit level (the 95th
+percentile of 100 ms RMS) the median is +0.8 (+0.1) and the forward count
+12 (11). Of the seven songs whose kit changed, three moved toward the
+game's balance (Journey of the Quarry -1.2 to 0.0 dB, The Shore of
+Mirrors -3.1 to -0.9, Restless Tides -2.7 to -1.1) and four away (Far
+River -0.5 to +5.3, the one new forward song: Devil's Lab strikes the
+snare the slot now takes at 1.29 of its loudest part, and the written
+song plays every snare hit on it; Sleeping Aqueduct +0.5 to +2.6; The
+Quiet Wharf -1.0 to -3.4; The Endless Bridge -6.9 to -7.9). The pick is a
+question of which sample; its level is the game's for that sample.
+
+**Open.** One sample per letter: a letter the game splits between two
+samples at like levels (Techno de Chocobo's two hats, 561 and 535 hits)
+is written on one, and the rattle beside Battle Theme's backbeat snare is
+a second snare voice the game has and the written song does not; a second
+sample per letter, or the rattle as a piece of its own, is a counted word
+for later. Strago's hat (17 hits at 0.24 beside 18 at 0.06) now plays
+every hat hit on the louder sample.
+
+### Round 81: the slot's figure (2026-11-06, from Song Check 65: Last Terminal's "beeping in the drum kit" and The Endless Bridge's hat "turned into almost a smacking noise")
+
+**Why.** The kit slot carried its sample, level, note, hold and pick, and
+the figure a letter played came from the pool at the kit's habit tier
+whatever the slot's sample did in its own song. Wild West strikes its
+pitched blip twice a bar, on fifteen pitches, two bars in three rested;
+Last Terminal played it five times a bar on one pitch. Strago strikes its
+click on beat two, seventeen times in twenty bars; The Endless Bridge
+played it on the hat's eighths. Over the 45 written songs' 95 kit letters
+the written density sat within half to double of the game's for that
+sample in 62 (65 %), over double in 10, under half in 23; the snare was
+outside in 11 of 25, the hat in 8 of 16. Where a letter had two samples
+(20 letters), the figure counted both samples' hits while the written
+kit played one: Battle Theme's rattle in sixteenths beside its backbeat
+snare had made the written snare a sixteenth-note part.
+
+**Built.** (1) A letter's figure is its slot's sample's hits
+(`readings.drum_figure` with `kit_slots`): the rattle's hits beside the
+backbeat are not the snare's figure; a letter without a slot keeps every
+hit. The slot's pick (round 80) lives in `readings.kit_slot_samples`.
+(2) Each slot carries its strike class after the hold
+(`readings.kit_classes`, SLOT_CLASSES: the sample's hits a bar of the
+song's meter, rests counted, rare under half a hit a bar, an accent under
+one, sparse to two, medium to six, dense over; `@m`); the drum units and
+the limbs' units carry the kit's classes as values (`classes_value`,
+`class_values`, `habit_class`). (3) A kit whose token carries classes is
+written from its limbs' tables (`plan.write`: the kit table's bar is one
+song's, hat and all, and under a rare kit the draw smoothed that song's
+bars with every kit's); the single-letter limbs condition on the slot's
+class (`drums-h/c/o`: part, meter, classes, tempo, feel, previous), the
+kick-snare-tom limb on a field a letter in the order of the slots'
+density, the densest first (`drums-KSt`: limb1, limb2, limb3;
+`readings.limb_order`), so a draw lets the sparser letters' classes go
+and keeps the backbone's. The class says the density: the habit left the
+limb shapes (a one-song habit level under the class had rested in 0.87
+of its bars and silenced Mog's hat) and drives the recall urn and a kit
+written without classes; the class's bars are their own cap
+(`writer.drums`: no group caps under a class). (4) The group habit is
+drawn under the group's backbone class on its own stream and terminal at
+the class level (`drum_group_habits`: part, classes, habit;
+GROUP_HABIT_FLOOR; `_draw_values`): the Witten-Bell share had let one
+draw in twelve fall to the part's root, where a dense hat took a sparse
+habit whose cap refused every bar of its class, and the hat rested
+through the song. (5) Under a class, a limb's chain floor needs one
+figure besides the rest (LIMB_FLOOR_OUTCOMES: a rare crash's vocabulary
+is the downbeat crash and its rests; FLOOR_OUTCOMES asks two elsewhere),
+the urn's new draw may be a rest again (`Cache.draw_new(rest_new)`: the
+rest is one outcome, and "new to the song" had let a limb rest only from
+the urn's same and earlier shares after its first rest, so Wild West's
+blip bars, two in three rested in the game, rested in one of five), and a
+limb the token strikes that drew only rests over the drum bars draws
+again (LIMB_REDRAWS 3). Pack4 refit (backup `pack.json.r80`), the shipped
+vocabulary regenerated; 68 songs. Tests: the slot's figure and classes,
+the limb's fields and order, the class-conditioned habit and limb draw,
+the plan's reading of the class.
+
+**Measured.** Over the 45 written songs (`survey_kits.py`, the kit
+letters with a game match): the written density within half to double of
+the game's for the slot's sample in 58 of 82 letters (71 %, from 65 %),
+over double in 6 (from 10), under half in 18 (from 23), none silent; the
+kick outside in 0 of 13 (from 2 of 16), the snare in 8 of 22 (from 11 of
+25), the hat in 4 of 13 (from 8 of 16), the other sounds in 2 of 6 (from
+4 of 9); the crash in 7 of 22 (from 6 of 23), written at a median 1.4 of
+the game's density (from 1.2): the urn's earlier share brings a crash bar
+back more often than a rare crash's table would. Last Terminal's blip:
+2.0 a bar (game 2.2; 5.3 before), two bars in three rested; Journey of
+the Quarry's snare 2.0 (game 2.0; 4.2 before). The written drum habit
+tiers moved for the songs whose letters lost a second sample's hits, and
+the texture and entrance tables counted on those tiers moved with them,
+so 329 of 3000 seeds plan again (`scan_pairs.py`: 2671 stand but for the
+kit). Song Check 66's step 1, the drums' part level in the whole, before
+to after: Last Terminal -3.4 to -3.7 dB (the blip 5.3 to 1.9 a bar, two
+bars in three rested), Journey of the Quarry -3.6 to -4.1 (the snare 4.2
+to 2.0), Sleeping Aqueduct -7.4 to -10.2 (Shadow is in 3/4, so its kit's
+bars come from other songs' accent-snare, medium-kick limbs), Far River
+-0.7 to -3.3 (the snare 6.4 to 1.5, the game's 1.8; the song that had
+gone five decibels forward in round 80); The Endless Bridge, whose seed
+plans again, against Glacier Passage on Strago's token: the hat at the
+click's accent class, once in four bars. Over the 45 kit tokens against
+the games' own renders (`drum_forward.py`): the written kit over the band
+by integrated loudness sits 1.0 dB under the game's at the median (0.9
+after round 80), 3 dB or more forward in 5 of 45 (7), 3 dB or more back
+in 12 (15); by hit level the median is +0.2 (+0.8) and the forward count
+12 (12). Far River, the song round 80 had sent five decibels forward,
+sits at the game's balance (-0.1); the forward five are the two
+pad-as-kick songs, Metamorphasis, Kefka and Dancing Mad (Full).
+
+**Open.** The class says how often a piece is struck, not in how many
+bars: a piece struck once in most bars and one struck four times in one
+bar of five share a class, and the written presence is the pool's. A
+song in another meter lends no bars (Shadow in 3/4 to a 4/4 song: its
+accent snare and medium kick come from other songs' bars). The urn's
+earlier share recycles a crash bar; the crash still sits over the game's
+density. The melodic kit pieces (Wild West's blip on fifteen pitches, the
+tom lines, Kefka's and Dancing Mad's "other" pieces) are round 83's.
+
+### Round 82: the kit's echo rides the token (2026-11-06, from Song Check 64's Last Vault and Song Check 65's Last Terminal: Cyan's sizzle and Wild West's blip are wet in the game and were dry in the written songs)
+
+**Why.** The written song's echo came from the `echo` word, drawn once a
+song from the pool: its volume, delay and feedback another song's, and
+the drums wet or dry by that song's say for the whole part. The kit's
+samples came from the balance token's song, which sends some of its kit
+to echo and keeps the rest dry, note by note on a shared channel: Wild
+West's channel 4 holds its hat dry and its pitched blip wet (the blip's
+notes send, 57 of the channel's 250), Cyan sends its sizzle and crash,
+Battle Theme its rattle and nothing else of the kit. The readings kept
+each voice's share of notes that send (round 70), which cannot tell the
+blip from the hat on one channel. In the 42 written songs with a kit and
+a game match, the written kit's send agreed with the game's for the slot's
+sample in 68 of 82 slots; 5 written songs had a wet kit piece, the game 8;
+and the drawn word's feedback was another song's in a third.
+
+**Built.** The reader keeps each sample's share of notes that send
+(`reading.echo_of_notes`: features `sample_N` of source echo, beside the
+voices'; translator version 11, every song read again, the lead pass run
+again). Each kit slot carries an echo mark after its class where the
+slot's sample sends in ECHO_SEND of its hits or more
+(`arrangement.kit_echo`, `@e`: the sample's own share where read, else
+the voices' it sits on), and the balance token carries its song's echo
+word before the key (`echo=0.20:80:0.78:melody:bass+drums`,
+`arrangement.echo_outcome`, the echo table's own outcome). The plan keeps
+both (`extras.echo.word`, `extras.drums.kit_echo`); `render.echo_word`
+takes the token's word in place of a draw (the echo table stands for a
+token without one), and `render.piece_sends` sends a marked kit piece's
+notes and keeps an unmarked piece's dry while a pitched part follows the
+word's say (the score carries echo per note, so the kick beside the blip
+stays dry as on the game's channel). Pack4 refit (backup
+`pack.json.before-r82`), the shipped vocabulary regenerated; 68 songs.
+Tests: the per-sample share read, the mark and the word on the token, the
+plan's reading, the word in place of a draw, a marked piece's send.
+
+**Measured.** Over the 42 written songs with a kit and a game match
+(`measure_r82.py`, `compare_r82.py`, the game side by the samples' own
+sends): the kit slots whose written send agrees with the game's for the
+slot's sample, 82 of 82 (63 of 82 before); written songs with a wet kit
+piece 14, the game's 14 (5 before); the written song's echo word the
+token song's own in 41 of 42 (the drawn word had another song's feedback
+in a third). Of the 68 songs' 100 kit slots, 18 are marked wet. Song
+Check 66's step 2 pairs keep their plans and their levels within 0.7 dB
+(the echo adds no part): Last Vault's sizzle rings into Cyan's room and
+its crash stays dry, Last Terminal's blip echoes while the kit around it
+stays dry, Sleeping Aqueduct's kit steps out of a room the drawn word had
+put it in. Over the 45 kit tokens (`drum_forward.py`) the kit's balance
+is where round 81 left it: 1.1 dB under the game's by loudness at the
+median (1.0), forward in 5 of 45, back in 12, +0.4 by hit level (+0.2);
+Kefka's forward song eases from 7.5 to 5.8 dB with its pieces in the
+game's room.
+
+**Open.** The echo's parameters are the token song's for the whole song
+now; a written song whose token song is dry plays dry whatever its sound
+set's habit says, as the game's song did. A piece marked wet in a song
+whose word sends nothing else still plays wet (the marks decide the kit's
+notes). The performance layer's echo-by-tempo rule stands only where a
+vocabulary has no echo word and the token none.
+
+### Round 83: a tune on the drum channel is a part (2026-11-06, from Song Check 65's Last Terminal: Wild West's pitched blip on fifteen pitches, written on one)
+
+**Why.** The kit token keeps one note a piece (round 75's most struck,
+round 79's degree), which fits a bell struck on one note and not a tonal
+sample the game plays as a tune on the drum channel: Wild West's blip on
+fifteen pitches (the most common one in five of its 57 hits), Dancing Mad
+(part 5)'s rim on sixteen, The Decisive Battle's on nine, Kefka's on
+eight, The Mines of Narshe's on four. Twelve of the 95 written kit letters
+sat on a sample the game plays on three pitches or more, written on one:
+a monotone where the game has an ornament. The role reader had read the
+channel whole: a channel mostly hat is a drum voice, and the blip's notes
+on it were drums.
+
+**Built.** The reader splits a tune from its drum channel
+(`roles.split_melodic_pieces`, before the beat and the roles are read):
+on a voice that would be a drum voice (`roles.is_drum_voice`, the two
+drum clauses), the notes on a sample the namer called "other" (a tonal
+sample, no drum) struck on MELODIC_PITCHES (3) pitches or more with no
+pitch holding MELODIC_SHARE (half) of them, MELODIC_NOTES (8) notes or
+more, move to a voice of their own (SPLIT_BASE 100 + the channel), their
+chip notes with them, so the echo and vibrato readers see the voice; the
+channel keeps its drums. `roles.assign` reads a split voice as a
+counter-line, or a bass under TUNE_FLOOR (midi 55), never the lead: a
+tune on the drum channel is an ornament beside the song's tune. The lead
+pass renders no stem for a split voice (its notes are the channel's in
+the chip's score), so it keeps its role. Translator version 12, every
+song read again, the lead pass run again; pack4 refit (backup
+`pack.json.before-r83`), the shipped vocabulary regenerated. The kit
+loses the piece; the balance token gains the part with its level,
+register and sample, and the written song writes it through the counter
+writer beside the tune (or the bass writer), on the sample, with the
+echo the game gives it. Test: the split, its idempotence, the roles, a
+bell on one note left a drum, a pitch holding half the notes left a
+drum, a low tune a bass.
+
+**Measured.** The readings (`measure_r83.py`): five voices split, all
+counter-lines, all on channels the game sends to echo (Wild West's blip,
+57 notes on 15 pitches; Dancing Mad (part 5)'s rim, 48 on 16; The
+Decisive Battle's, 39 on 9; Kefka's, 16 on 8; The Mines of Narshe's bell,
+12 on 4); one melodic "other" piece stays a drum by the rule (The
+Unforgiven's bell, 10 of its 16 hits on one note). Over the 45 written
+songs the kit letters on a sample the game plays on three pitches or more,
+written on one, fall from 12 to 3, the three the tom lines. Song Check
+66's step 3 pairs (token-matched where the seed planned again): Last
+Terminal's blip is a counter-line of 156 notes on 13 pitches beside the
+tune, written at the blip's own level, 1.21 of the kit's top in Wild
+West, so it is the loudest line and the tune's margin moves from -2.2 to
+-6.9 LU, as Wild West's blip sits over its tune; Restless Tides' counter
+140 notes on 12 pitches; The Endless Valley keeps a snare alone in the
+kit (its drums -12.6 to -22.6 dB under the whole) and Kefka's token a
+crash alone (-43.9). The forwardness measure over the 45 tokens: the
+written kit over the band 1.4 dB under the game's by loudness at the
+median (1.1), forward in 4 (5), back in 12 (12), +0.1 by hit level,
+forward 9 (12); the game's drum stem there is a channel's, the split
+piece on it included, so the five songs' kits read further back than
+their samples are. Every song on the five tokens plans again (the band
+gains a part), and 921 of 3000 seeds keep their plan.
+
+**Open.** A tom the game plays as a line (Wild West's five rates, Dancing
+Mad (part 5)'s three, Edgar and Sabin's four) is still a drum at one
+rate: the namer calls the sample a tom, and a tom fill at three pitches
+is a drum; what tells a tom line from a fill is whether its pitches
+follow the chords, which the role reader does not know. A split voice
+takes the counter's figures and intervals, counted over FFVI's counters;
+its own figure (the blip's two a bar) is the drum limb's no longer.

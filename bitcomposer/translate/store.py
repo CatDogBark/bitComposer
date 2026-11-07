@@ -9,11 +9,13 @@ chords, the form (its parts and loop), and features for the measures packs are m
 generator's songs are held against."""
 import json
 import sqlite3
+import math
 from array import array
 from pathlib import Path
 
 SCHEMA = 5                           # 2: songs.loose; 3: songs.loop_*, form; 4: form.level; 5: samples.piece
-VERSION = "8"                        # the translator's; a song read by another is read again
+VERSION = "12"                       # the translator's; a song read by another is read again (9: round 77's drum clause; 10: the note's rate;
+                                     # 11: round 82's echo send a sample; 12: round 83's melodic kit pieces as voices)
 
 TABLES = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -35,7 +37,8 @@ CREATE TABLE IF NOT EXISTS form (song TEXT, idx INTEGER, label TEXT, bar INTEGER
     level TEXT, PRIMARY KEY (song, idx));     -- level: 'part' (a phrase) or 'section' (a short phrase and its repeats)
 CREATE INDEX IF NOT EXISTS chords_song ON chords (song);
 """
-NOTE_FIELDS = 6                      # start and length in beats, midi (NaN: unpitched), level, pan, sample index (-1: noise)
+NOTE_FIELDS = 7                      # start and length in beats, midi (NaN: unpitched), level, pan, sample index (-1: noise), rate
+                                      # (the chip's pitch register as a note: 60 the sample at 32 kHz, 48 an octave under; NaN unknown)
 
 
 def default_path() -> Path:
@@ -77,8 +80,11 @@ def pack(notes, grid, sample_index: dict) -> bytes:
     for p in notes:
         start = grid.beats(p.start) if grid else p.start
         end = (grid.beats(p.end) if grid else p.end) if p.end is not None else nan
+        chip = getattr(p, "note", None)
+        pitch = getattr(chip, "pitch", 0) if chip is not None else 0
         a.extend((start, end - start, p.midi if p.midi is not None else nan, p.level, p.pan,
-                  sample_index.get(p.sample.key, -1) if p.sample is not None else -1))
+                  sample_index.get(p.sample.key, -1) if p.sample is not None else -1,
+                  60.0 + 12.0 * math.log2(pitch / 4096) if pitch and pitch > 0 else nan))   # the rate as a note (round 78)
     return a.tobytes()
 
 
