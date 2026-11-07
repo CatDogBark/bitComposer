@@ -287,7 +287,13 @@ The words are grouped by where the writing draws them, in the order the song is 
   notes, is read as a voice of its own by the role reader
   (`roles.split_melodic_pieces`: a counter-line, or a bass where it sits
   low), so Wild West's blip on fifteen pitches is a part with the
-  channel's echo and no kit slot.
+  channel's echo and no kit slot. Since round 89 a bass or chord
+  channel's second instrument in a register of its own is a voice of its
+  own too (`roles.split_second_instruments`), kept beside the counts
+  until its word, so the channel's register and sample fields are its
+  main instrument's (Wild West's bass 28-36, not 28-80), and a snare that
+  shared a channel with a pitched part is in the kit (Kefka's, Dancing
+  Mad (part 1)'s, Overture (part 3)'s).
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;

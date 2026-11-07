@@ -145,6 +145,9 @@ class Song:
     voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
     bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
     voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
+    second_voices: dict = field(default_factory=dict)   # voice -> (role, its notes): a channel's second instrument in its own register, split
+                                      # to a voice of its own by the role reader (roles.split_second_instruments, round 89; voice >= roles.SECOND_BASE,
+                                      # its channel (voice - 200) % 10), kept beside the counts and out of them until its word
     copies: dict = field(default_factory=dict)        # a planned song: role -> [(first bar, bars, the bar copied from)], the band
                                                       # coming back with the theme (the writers copy their own earlier bars there)
     periods: dict = field(default_factory=dict)       # a planned song: role -> {bar index: the lag in bars whose bar it plays again}
@@ -296,6 +299,10 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         basses = {}
         level_rows, kit_rows, kit_pitch_rows, kit_rate_rows, kit_hold_rows, kit_pan_rows = {}, {}, {}, {}, {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
+            if voice >= R.SECOND_BASE:                    # a channel's second instrument, a voice of its own (round 89): kept beside the counts,
+                rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and not math.isnan(r[2])]   # not in them, until its word
+                song.second_voices[voice] = (role, [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i, *_ in rows])
+                continue
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
             except ValueError:
@@ -307,6 +314,8 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                     secs = 60.0 / (bpm or 120.0)                # the note's length in seconds: its strike, then its body (round 65)
                     rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise"), length * secs), pan, i, *rest) for s, length, m, level, pan, i, *rest in rows]
                 mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i, *_ in rows]
+                if not mine:                                # a voice with no note at a level once through is no voice (round 89: Quiet
+                    continue                                # Beach's silent pad had counted as a kit channel, then as a harmony voice)
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)

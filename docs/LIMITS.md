@@ -31,16 +31,29 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   tune's bound is the whole range the game ever took its sample over
   (round 43), because FFVI's tunes change sample mid-song; binding the
   tune to the main sample's own range cut 9 of 30 tunes short (round 86).
-- **A register word can span two instruments.** Where a game channel
-  changes instrument, the reader hands the whole channel to one part, and
-  its register word spans both (Wild West's bass 28 to 80); the voice is
-  bound to its own sample's range since round 86, but the word misleads a
-  built-in sound set's sample choice. Splitting such a channel is a reader
-  change awaiting a re-read, with the pad-as-kick namer below.
-- **A looping bowed-strings pad can be called a kick.** The drum namer
-  takes a pad played low and alone for a kick (Another World of Beasts,
-  Gestahl); its hold and pitch are right since rounds 75 and 77, its name
-  is not. A reader change, with the one above.
+- **A tune's or counter's register word can span two instruments.** Where
+  a game channel changes instrument, the reader hands the whole channel to
+  one part. Since round 89 a bass or chord channel's second instrument in
+  a register of its own is a voice of its own, so those parts' words are
+  their main instrument's (Wild West's bass 28-36, not 28-80); a tune's or
+  counter's second instrument is the line changing colour (FFVI: 47 of 56
+  take the line over for stretches, a third of the notes) and stays on the
+  voice, its register word spanning both until the word for a voice's
+  instrument by stretch (the next round).
+- **A channel's second instrument is not written.** The second voices the
+  reader splits off (42 in 25 FFVI songs) are kept beside the counts, not
+  in them: a voice of its own would ask the writer for a ninth chip voice
+  in the eight-channel songs that time-share one, and the written song
+  has no way to time-share yet. The same word as above would carry them.
+- **A tonal sample pumped on two pitches is a kit piece.** Round 77's play
+  clause reads a voice on one sample at one or two pitches, eight notes or
+  more, held under two beats, as a drum voice; FFVI's percussion plays so
+  at G#3, the driver's own pitch, and Wild West's pump (169 strikes at E2
+  and C3, 0.23 beats each) has the same shape. Round 89 unmasked it (the
+  counter-line that shared its channel split off), so it is a kit piece
+  `o`, struck through the kit at the degree it played most, where the game
+  pumps two notes. A pitch word for the clause (percussion at the driver's
+  own pitch) would separate them; a count first.
 - **No surround, no leaning echo.** FFVI never inverts a voice's or the
   echo's sides and sets the echo's two volumes equal in every song, so
   the FFVI vocabulary has no such word ([ROADMAP.md](ROADMAP.md)); a pack

@@ -701,6 +701,67 @@ class Rhythm(unittest.TestCase):
         roles.split_melodic_pieces(song, g)
         self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[104], roles.BASS)
 
+    def test_a_channel_s_second_instrument_in_its_own_register_is_a_part(self):
+        """Round 89: on a channel under the tune (a bass or a chord part) the notes on a second sample carrying a tenth of the
+        channel's pitched notes in a register of its own (medians an octave apart, or no overlap) move to a voice of their
+        own (SECOND_BASE + the channel) and are read as the part they are; a second sample in the same register stays (one
+        line on two instruments); the tune's second instrument is never split (the line changing colour)."""
+        from bitcomposer.translate import roles
+        from bitcomposer.translate.events import Played, Sample
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        bass = [36, 36, 36, 36, 33, 33, 31, 31]
+
+        def song(second, flute_from=10, bass_bars=10):
+            song = song_of({
+                0: [(i * b, 0.4, tune[i % 16]) for i in range(flute_from * 4)],                   # the melody, bars 1-10 on its sample
+                3: [(i * b, 0.8 * b, bass[i % 8]) for i in range(bass_bars * 4)],                 # the bass, a note a beat, bars 1-10
+                4: [(i * b / 2, 0.05, None) for i in range(128)],                                 # the hat, all 16 bars
+            })
+            song.samples[4].piece = "hat"
+            flute = Sample((0x900, 0x900), "flute", 440.0, 100, True, piece="none")             # the tune an octave up on a second sample, bars 11-16
+            song.notes += [Played(0, (flute_from * 4 + i) * b, (flute_from * 4 + i) * b + 0.4, flute, tune[i % 16] + 12, 0.8, 0.5, None) for i in range(24)]
+            other = Sample((0xA00, 0xA00), "second", 440.0, 100, True, piece="none")            # the bass channel's second sample, bars 11-16
+            song.notes += [Played(3, (bass_bars * 4 + i) * b, (bass_bars * 4 + i) * b + 0.3, other, second[i % len(second)], 0.8, 0.5, None) for i in range(24)]
+            song.notes.sort(key=lambda x: (x.start, x.voice))
+            return song
+
+        s = song([60, 64, 67, 64])                                                               # chord stabs two octaves over the bass
+        g = beat.find([(x.start, x.level) for x in s.notes])
+        first = roles.assign(s, g)
+        self.assertEqual({r.voice: r.role for r in first}, {0: roles.MELODY, 3: roles.BASS, 4: roles.DRUMS})
+        self.assertEqual(roles.split_second_instruments(s, first, g), {203: (3, "second", roles.BASS)})
+        self.assertEqual(sum(1 for x in s.notes if x.voice == 203), 24)
+        self.assertEqual(sum(1 for x in s.notes if x.voice == 0), 64)                             # the tune's flute stays on the tune's voice
+        self.assertEqual(roles.split_second_instruments(s, first, g), {})                        # split once
+        parts = {r.voice: r.role for r in roles.assign(s, g)}
+        self.assertEqual(parts, {0: roles.MELODY, 3: roles.BASS, 4: roles.DRUMS, 203: roles.ACCOMP})
+        s = song([36, 33, 31, 33])                                                               # a second bass sample in the bass's register: one line
+        g = beat.find([(x.start, x.level) for x in s.notes])
+        self.assertEqual(roles.split_second_instruments(s, roles.assign(s, g), g), {})
+        self.assertEqual({r.voice: r.role for r in roles.assign(s, g)}[3], roles.BASS)
+
+    def test_a_pad_on_a_drum_named_sample_is_no_kit(self):
+        """Round 89: a voice whose samples the namer called drums is a drum voice unless its notes are pitched and held two
+        beats or more at the median (a looping bowed-strings pad the namer took for a kick, played low and alone: The Empire
+        Gestahl, Another World of Beasts); a cymbal held four beats, unpitched, stays a drum."""
+        from bitcomposer.translate import roles
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        song = song_of({
+            0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                                    # the melody
+            3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # the bass
+            5: [(i * 8 * b, 8 * b, m) for i, m in enumerate([43, 43, 41, 43] * 2)],                 # a pad: pitched, two pitches, held eight beats
+            6: [(i * 4 * b, 4 * b, None) for i in range(16)],                                       # a cymbal: unpitched, held four beats
+        })
+        song.samples[5].piece = "kick"
+        song.samples[6].piece = "cymbal"
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        parts = {r.voice: r.role for r in roles.assign(song, g)}
+        self.assertEqual((parts[5], parts[6]), (roles.HARMONY, roles.DRUMS))
+        song.samples[5].piece = "none"                                                             # an instrument held: never a drum, as before
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.HARMONY)
+
     def test_drum_sounds_are_named_by_how_they_play(self):
         from bitcomposer.translate.rhythm import Song, drums
         # four bars: a kick on one and three, a snare on two and four, a hat on the eighths
@@ -756,6 +817,9 @@ class Rhythm(unittest.TestCase):
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, drum.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 2, "melody", None, '{"roll": true}', bass.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 3, "double", 0, None, bass.tobytes()))
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 203, "accompaniment", None, None, bass.tobytes()))   # channel 3's second instrument (round 89)
+        silent = array("f", [0, 4, 60, 0.0, 0.5, 1, nan, 4, 4, 64, 0.0, 0.5, 1, nan])                 # a voice whose notes are all at no level
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 4, "harmony", None, None, silent.tobytes()))
         songs, left_out = load(db)
         self.assertEqual(left_out, {"free time": 1, "mostly silent": 1})
         self.assertEqual([s.title for s in songs], ["beat"])
@@ -766,6 +830,11 @@ class Rhythm(unittest.TestCase):
         self.assertEqual([n[3] for n in s.notes["drums"]], ["kickkey", "noise"])
         self.assertEqual((list(s.rolls), len(s.rolls["melody"])), (["melody"], 2))
         self.assertNotIn("double", s.notes)
+        self.assertNotIn("accompaniment", s.notes)                                        # a second instrument is kept beside the counts, not in them
+        self.assertEqual(s.second_voices, {203: ("accompaniment", [(0, 4, 36, "noise"), (4, 4, 41, "noise")])})
+        self.assertEqual(sorted(v for v, *_ in s.voices), [0, 1, 2, 3, 4])
+        self.assertNotIn("harmony", s.notes)                                              # a voice with no note at a level is no voice
+        self.assertNotIn(4, s.voice_notes)
 
 
 class DrumsBySound(unittest.TestCase):
