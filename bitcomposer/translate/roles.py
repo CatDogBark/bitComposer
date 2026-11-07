@@ -196,15 +196,68 @@ def echoes(song) -> dict:
     return out
 
 
+SPLIT_BASE = 100                      # a melodic kit piece's own voice (split_melodic_pieces): SPLIT_BASE + its channel; a channel is 0 to 7
+MELODIC_PITCHES = 3                   # pitches a tonal sample on a drum voice is struck on to be a tune there (Wild West's blip: 15)
+MELODIC_SHARE = 0.5                   # and no one pitch holds this share of its notes (a bell on one note is a drum, however many its notes)
+MELODIC_NOTES = 8                     # notes it needs
+TUNE_FLOOR = 55                       # midi: a split voice at or over this is a counter-line, under it a bass (the register the bass rule reads)
+
+
+def is_drum_voice(f: dict) -> bool:
+    """assign's two drum clauses on a voice's features: a drum voice by what its samples are, or by how it plays them."""
+    return ((f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE))
+            or (f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
+                                                                            and f["length_beats"] < DRUM_HOLD))))
+
+
+def split_melodic_pieces(song, grid=None) -> dict:
+    """A tune on the drum channel is a part (round 83): on each voice that would be a drum voice, the notes on a sample the
+    namer called "other" (a tonal sample, no drum) struck on MELODIC_PITCHES pitches or more with no pitch holding
+    MELODIC_SHARE of them, MELODIC_NOTES notes or more, move to a voice of their own (SPLIT_BASE + the channel, + 1 for a
+    second such sample), their chip notes with them (so the echo and vibrato readers see the voice); the drum voice keeps
+    its drums. FFVI: Wild West's blip on fifteen pitches beside its hat, Dancing Mad (part 5)'s rim on sixteen, Kefka's on
+    eight, The Decisive Battle's on nine; the written kit had struck each on one note (round 75's most struck, round 79's
+    degree). Returns {new voice: (channel, sample key, pitches)}."""
+    by_voice = {}
+    for p in song.notes:
+        by_voice.setdefault(p.voice, []).append(p)
+    out = {}
+    for v, ns in sorted(by_voice.items()):
+        if v >= SPLIT_BASE or not ns or not is_drum_voice(_features(ns, grid)):
+            continue
+        by_sample = {}
+        for p in ns:
+            if p.sample is not None and p.sample.piece == "other" and p.midi is not None:
+                by_sample.setdefault(p.sample.key, []).append(p)
+        k = 0
+        for key, mine in sorted(by_sample.items()):
+            pitches = Counter(round(p.midi) for p in mine)
+            if len(mine) >= MELODIC_NOTES and len(pitches) >= MELODIC_PITCHES and pitches.most_common(1)[0][1] < MELODIC_SHARE * len(mine):
+                new = SPLIT_BASE + v + k
+                k += 1
+                for p in mine:
+                    p.voice = new
+                    if p.note is not None:
+                        p.note.voice = new
+                out[new] = (v, key, len(pitches))
+    return out
+
+
 def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     """Each voice's part over the song (echoed: voices found to be another's
-    echo, by echoes(), each that voice's double)."""
+    echo, by echoes(), each that voice's double). A voice split from a drum
+    channel (split_melodic_pieces, round 83) is a counter-line, or a bass
+    where it sits low: a tune on the drum channel, never the song's lead."""
     by_voice = {}
     for p in song.notes:
         by_voice.setdefault(p.voice, []).append(p)
     feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     roles = {}
     for v, f in feats.items():
+        if v >= SPLIT_BASE:                                 # a melodic kit piece, split from its channel (round 83)
+            roles[v] = Role(v, BASS if f["median"] is not None and f["median"] < TUNE_FLOOR else COUNTER,
+                            evidence={"melodic_piece": v - SPLIT_BASE, "distinct": f["distinct"], "median": round(f["median"], 1) if f["median"] is not None else None})
+            continue
         # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
         # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
         # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)

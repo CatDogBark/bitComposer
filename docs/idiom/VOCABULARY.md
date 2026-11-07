@@ -238,7 +238,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   the writer takes in place of a draw, a marked kit piece's notes sent and
   the piece beside it dry. The drum figures count each letter's slot's
   sample's hits (round 81), and a kit whose token carries classes is
-  written from its limbs' tables under them.
+  written from its limbs' tables under them. Since round 83 a tonal sample
+  a drum voice strikes on three pitches or more, no one of them half its
+  notes, is read as a voice of its own by the role reader
+  (`roles.split_melodic_pieces`: a counter-line, or a bass where it sits
+  low), so Wild West's blip on fifteen pitches is a part with the
+  channel's echo and no kit slot.
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;

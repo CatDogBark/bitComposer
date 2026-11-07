@@ -65,7 +65,7 @@ class WrittenSongTests(unittest.TestCase):
                 m = re.search(r"voice (\S+) by the pool rule for (\d+)-(\d+) .*: it plays (\d+)-(\d+)", line)
                 self.assertIsNotNone(m, line)
                 lo, hi, plo, phi = (int(x) for x in m.groups()[1:])
-                self.assertLess(max(lo, plo), min(hi, phi), line)            # the voice's range overlaps the register
+                self.assertLessEqual(max(lo, plo), min(hi, phi), line)       # the voice's range overlaps the register (a one-note register, 32-32, included)
             self.assertIn("on its own sounds", out["score"].message[2])
 
     def test_a_seed_names_one_song_on_one_sound_set(self):

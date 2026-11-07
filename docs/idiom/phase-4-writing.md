@@ -5293,3 +5293,69 @@ set's habit says, as the game's song did. A piece marked wet in a song
 whose word sends nothing else still plays wet (the marks decide the kit's
 notes). The performance layer's echo-by-tempo rule stands only where a
 vocabulary has no echo word and the token none.
+
+### Round 83: a tune on the drum channel is a part (2026-11-06, from Song Check 65's Last Terminal: Wild West's pitched blip on fifteen pitches, written on one)
+
+**Why.** The kit token keeps one note a piece (round 75's most struck,
+round 79's degree), which fits a bell struck on one note and not a tonal
+sample the game plays as a tune on the drum channel: Wild West's blip on
+fifteen pitches (the most common one in five of its 57 hits), Dancing Mad
+(part 5)'s rim on sixteen, The Decisive Battle's on nine, Kefka's on
+eight, The Mines of Narshe's on four. Twelve of the 95 written kit letters
+sat on a sample the game plays on three pitches or more, written on one:
+a monotone where the game has an ornament. The role reader had read the
+channel whole: a channel mostly hat is a drum voice, and the blip's notes
+on it were drums.
+
+**Built.** The reader splits a tune from its drum channel
+(`roles.split_melodic_pieces`, before the beat and the roles are read):
+on a voice that would be a drum voice (`roles.is_drum_voice`, the two
+drum clauses), the notes on a sample the namer called "other" (a tonal
+sample, no drum) struck on MELODIC_PITCHES (3) pitches or more with no
+pitch holding MELODIC_SHARE (half) of them, MELODIC_NOTES (8) notes or
+more, move to a voice of their own (SPLIT_BASE 100 + the channel), their
+chip notes with them, so the echo and vibrato readers see the voice; the
+channel keeps its drums. `roles.assign` reads a split voice as a
+counter-line, or a bass under TUNE_FLOOR (midi 55), never the lead: a
+tune on the drum channel is an ornament beside the song's tune. The lead
+pass renders no stem for a split voice (its notes are the channel's in
+the chip's score), so it keeps its role. Translator version 12, every
+song read again, the lead pass run again; pack4 refit (backup
+`pack.json.before-r83`), the shipped vocabulary regenerated. The kit
+loses the piece; the balance token gains the part with its level,
+register and sample, and the written song writes it through the counter
+writer beside the tune (or the bass writer), on the sample, with the
+echo the game gives it. Test: the split, its idempotence, the roles, a
+bell on one note left a drum, a pitch holding half the notes left a
+drum, a low tune a bass.
+
+**Measured.** The readings (`measure_r83.py`): five voices split, all
+counter-lines, all on channels the game sends to echo (Wild West's blip,
+57 notes on 15 pitches; Dancing Mad (part 5)'s rim, 48 on 16; The
+Decisive Battle's, 39 on 9; Kefka's, 16 on 8; The Mines of Narshe's bell,
+12 on 4); one melodic "other" piece stays a drum by the rule (The
+Unforgiven's bell, 10 of its 16 hits on one note). Over the 45 written
+songs the kit letters on a sample the game plays on three pitches or more,
+written on one, fall from 12 to 3, the three the tom lines. Song Check
+66's step 3 pairs (token-matched where the seed planned again): Last
+Terminal's blip is a counter-line of 156 notes on 13 pitches beside the
+tune, written at the blip's own level, 1.21 of the kit's top in Wild
+West, so it is the loudest line and the tune's margin moves from -2.2 to
+-6.9 LU, as Wild West's blip sits over its tune; Restless Tides' counter
+140 notes on 12 pitches; The Endless Valley keeps a snare alone in the
+kit (its drums -12.6 to -22.6 dB under the whole) and Kefka's token a
+crash alone (-43.9). The forwardness measure over the 45 tokens: the
+written kit over the band 1.4 dB under the game's by loudness at the
+median (1.1), forward in 4 (5), back in 12 (12), +0.1 by hit level,
+forward 9 (12); the game's drum stem there is a channel's, the split
+piece on it included, so the five songs' kits read further back than
+their samples are. Every song on the five tokens plans again (the band
+gains a part), and 921 of 3000 seeds keep their plan.
+
+**Open.** A tom the game plays as a line (Wild West's five rates, Dancing
+Mad (part 5)'s three, Edgar and Sabin's four) is still a drum at one
+rate: the namer calls the sample a tom, and a tom fill at three pitches
+is a drum; what tells a tom line from a fill is whether its pitches
+follow the chords, which the role reader does not know. A split voice
+takes the counter's figures and intervals, counted over FFVI's counters;
+its own figure (the blip's two a bar) is the drum limb's no longer.

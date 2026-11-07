@@ -214,6 +214,7 @@ def of_score(score, song: events.Song | None = None, id: str | None = None, game
 
 
 def _read(song: events.Song, snap, grid: beat.Grid | None = None) -> Reading:
+    roles_mod.split_melodic_pieces(song, grid)           # a tune on the drum channel is a voice of its own (round 83)
     if grid is None:
         grid, roles = beat_and_parts(song)
     else:
