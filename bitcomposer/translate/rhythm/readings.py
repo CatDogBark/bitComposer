@@ -166,6 +166,7 @@ class Song:
     echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
                                       # reading.echo_of_notes): (volume of full, delay in ms, feedback); None where never read
     echo_sends: dict = field(default_factory=dict)   # voice -> the share of its notes that send to the echo
+    echo_sample_sends: dict = field(default_factory=dict)   # sample key -> the share of its notes that send (round 82: the chip toggles echo note by note)
     vibrato: dict = field(default_factory=dict)      # voice -> its vibrato on its held notes (round 72; the readings' features of source
                                       # "vibrato", reading.vibrato_of_notes): {"held": [by length class], "vib": [by class], "depth",
                                       # "rate", "onset" (the last three where it carries any)}; empty where never read
@@ -336,6 +337,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         if all(k in echo for k in ("volume", "delay_ms", "feedback")):                                                      # (round 70)
             song.echo = (float(echo["volume"]), float(echo["delay_ms"]), float(echo["feedback"]))
             song.echo_sends = {int(k[6:]): float(v) for k, v in echo.items() if k.startswith("voice_")}
+            song.echo_sample_sends = {k[7:]: float(v) for k, v in echo.items() if k.startswith("sample_")}   # by the sample's key
         song.vibrato = vibrato_of_features(dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'vibrato'", (sid,)).fetchall()))
         songs.append(song)
     return songs, dict(out)

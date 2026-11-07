@@ -5234,3 +5234,62 @@ accent snare and medium kick come from other songs' bars). The urn's
 earlier share recycles a crash bar; the crash still sits over the game's
 density. The melodic kit pieces (Wild West's blip on fifteen pitches, the
 tom lines, Kefka's and Dancing Mad's "other" pieces) are round 83's.
+
+### Round 82: the kit's echo rides the token (2026-11-06, from Song Check 64's Last Vault and Song Check 65's Last Terminal: Cyan's sizzle and Wild West's blip are wet in the game and were dry in the written songs)
+
+**Why.** The written song's echo came from the `echo` word, drawn once a
+song from the pool: its volume, delay and feedback another song's, and
+the drums wet or dry by that song's say for the whole part. The kit's
+samples came from the balance token's song, which sends some of its kit
+to echo and keeps the rest dry, note by note on a shared channel: Wild
+West's channel 4 holds its hat dry and its pitched blip wet (the blip's
+notes send, 57 of the channel's 250), Cyan sends its sizzle and crash,
+Battle Theme its rattle and nothing else of the kit. The readings kept
+each voice's share of notes that send (round 70), which cannot tell the
+blip from the hat on one channel. In the 42 written songs with a kit and
+a game match, the written kit's send agreed with the game's for the slot's
+sample in 68 of 82 slots; 5 written songs had a wet kit piece, the game 8;
+and the drawn word's feedback was another song's in a third.
+
+**Built.** The reader keeps each sample's share of notes that send
+(`reading.echo_of_notes`: features `sample_N` of source echo, beside the
+voices'; translator version 11, every song read again, the lead pass run
+again). Each kit slot carries an echo mark after its class where the
+slot's sample sends in ECHO_SEND of its hits or more
+(`arrangement.kit_echo`, `@e`: the sample's own share where read, else
+the voices' it sits on), and the balance token carries its song's echo
+word before the key (`echo=0.20:80:0.78:melody:bass+drums`,
+`arrangement.echo_outcome`, the echo table's own outcome). The plan keeps
+both (`extras.echo.word`, `extras.drums.kit_echo`); `render.echo_word`
+takes the token's word in place of a draw (the echo table stands for a
+token without one), and `render.piece_sends` sends a marked kit piece's
+notes and keeps an unmarked piece's dry while a pitched part follows the
+word's say (the score carries echo per note, so the kick beside the blip
+stays dry as on the game's channel). Pack4 refit (backup
+`pack.json.before-r82`), the shipped vocabulary regenerated; 68 songs.
+Tests: the per-sample share read, the mark and the word on the token, the
+plan's reading, the word in place of a draw, a marked piece's send.
+
+**Measured.** Over the 42 written songs with a kit and a game match
+(`measure_r82.py`, `compare_r82.py`, the game side by the samples' own
+sends): the kit slots whose written send agrees with the game's for the
+slot's sample, 82 of 82 (63 of 82 before); written songs with a wet kit
+piece 14, the game's 14 (5 before); the written song's echo word the
+token song's own in 41 of 42 (the drawn word had another song's feedback
+in a third). Of the 68 songs' 100 kit slots, 18 are marked wet. Song
+Check 66's step 2 pairs keep their plans and their levels within 0.7 dB
+(the echo adds no part): Last Vault's sizzle rings into Cyan's room and
+its crash stays dry, Last Terminal's blip echoes while the kit around it
+stays dry, Sleeping Aqueduct's kit steps out of a room the drawn word had
+put it in. Over the 45 kit tokens (`drum_forward.py`) the kit's balance
+is where round 81 left it: 1.1 dB under the game's by loudness at the
+median (1.0), forward in 5 of 45, back in 12, +0.4 by hit level (+0.2);
+Kefka's forward song eases from 7.5 to 5.8 dB with its pieces in the
+game's room.
+
+**Open.** The echo's parameters are the token song's for the whole song
+now; a written song whose token song is dry plays dry whatever its sound
+set's habit says, as the game's song did. A piece marked wet in a song
+whose word sends nothing else still plays wet (the marks decide the kit's
+notes). The performance layer's echo-by-tempo rule stands only where a
+vocabulary has no echo word and the token none.

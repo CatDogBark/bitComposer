@@ -549,7 +549,10 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     the sample's hits a bar in this song as rare under half, an accent under one, sparse to two, medium to six, dense over), and the drum
     figure tables condition on the kit's classes: the figure a letter plays had come from the pool at the kit's habit
     tier whatever the slot's sample did in its own song, so Strago's click, struck on beat two every other bar, played
-    the hat's eighths (Song Check 65: "a smacking noise"), and Wild West's pitched blip, two a bar there, five a bar."""
+    the hat's eighths (Song Check 65: "a smacking noise"), and Wild West's pitched blip, two a bar there, five a bar.
+    Since round 82 a slot the game sends to echo carries an e after the class (`o=s5d5fe2fd48@1.21@d4@0.23@m@e`,
+    kit_echo): the chip's echo is per channel, and the written kit had sent every piece or none by the echo word's
+    one say for the drums part, drawn from another song; Wild West's blip is wet in the game and its kick dry."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
@@ -559,6 +562,7 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     levels = getattr(s, "kit_levels", None) or {}
     best = kit_slot_samples(counts, levels)
     classes = readings_mod.kit_classes(s)                        # each slot's strike class (round 81)
+    echo_marks = kit_echo(s)                                     # the slots the game sends to echo (round 82)
     pitches = getattr(s, "kit_pitches", None) or {}
     rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
     holds = getattr(s, "kit_holds", None) or {}
@@ -577,7 +581,8 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
                  (f"r{int(rate)}" + ("t" if sid in tuned else "")) if rate is not None       # on a snare at 0.14 kept as 0.1; a tuned rate (round 79)
                  else kit_degree(s, pitch) if pitch is not None else "",                     # a tonal piece's note as a degree of the key (round 79)
                  f"{hold:.2f}" if hold is not None and math.isfinite(hold) and hold > 0 else "",
-                 classes.get(letter, "")]                                                  # the slot's strike class (round 81)
+                 classes.get(letter, ""),                                                  # the slot's strike class (round 81)
+                 "e" if letter in echo_marks else ""]                                      # the slot sends to echo (round 82)
         while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
             slots.pop()
         out.append(field + "".join(f"@{x}" for x in slots))
@@ -709,6 +714,8 @@ def balance_units(songs) -> list:
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
+        if s.echo is not None:                               # the song's echo word (round 82): the written song sits in its token song's room
+            tokens.append("echo=" + echo_outcome(s))
         if s.tonic is not None:                              # the song's key (round 79): what the kit's degrees and tuned rates are read against
             tokens.append(f"key={s.tonic}:{'major' if s.mode == 'major' else 'minor'}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
@@ -737,20 +744,44 @@ def echo_units(songs) -> list:
     drums in 17 of 52 (round 69); the written songs had sent every upper part at 0.4 (6 dB wetter) with a 48-144 ms
     delay, which the owner heard as vibrato and blur (Song Check 54's Whole 166). The sends ride the word so the song's
     joint holds; a written part named in neither list (the word's song lacked it) keeps the writer's old rule."""
-    out = []
-    for s in songs:
-        if s.echo is None:
+    return [tables.Unit(s.sid, s.game, echo_outcome(s), {"part": ECHO_PART}) for s in songs if s.echo is not None]
+
+
+def echo_outcome(s) -> str:
+    """A song's echo word as the echo table's outcome ("0.20:80:0.78:accompaniment+melody:bass+drums"; see echo_units): the
+    volume of full, the delay in ms, the feedback, the parts that send, the parts that stay dry. Since round 82 the
+    balance token carries it too (`echo=...`), so a written song sits in its token song's room."""
+    by_role = {}
+    for v, (role, ns) in s.voice_notes.items():
+        if role in readings_mod.PARTS and ns and v in s.echo_sends:
+            by_role.setdefault(role, []).append(s.echo_sends[v] >= ECHO_SEND)
+    sends = sorted(role for role, flags in by_role.items() if sum(flags) * 2 >= len(flags))
+    dry = sorted(role for role in by_role if role not in sends)
+    volume, ms, feedback = s.echo
+    return f"{volume:.2f}:{ms:.0f}:{feedback:.2f}:{'+'.join(sends) or '-'}:{'+'.join(dry) or '-'}"
+
+
+def kit_echo(s) -> set:
+    """The kit slots the game sends to echo (round 82): the letters whose slot's sample has ECHO_SEND of its hits or more on
+    drum voices that send (Song.echo_sends, the chip's per-voice send at key-on). FFVI's echo is per channel, so a kit's
+    pieces split: Wild West sends its pitched blip and keeps its kick, hat and toms dry; Cyan sends its sizzle. {} where
+    the readings hold no sends."""
+    sends = getattr(s, "echo_sends", None) or {}
+    by_sample = getattr(s, "echo_sample_sends", None) or {}   # the sample's own share where the readings hold it (the chip toggles
+    if not sends and not by_sample:                          # echo note by note: Wild West's channel 4 holds its hat dry, its blip wet)
+        return set()
+    slots = readings_mod.kit_slots(s)
+    hits, wet = Counter(), Counter()
+    for v, (role, ns) in s.voice_notes.items():
+        if role != R.DRUMS:
             continue
-        by_role = {}
-        for v, (role, ns) in s.voice_notes.items():
-            if role in readings_mod.PARTS and ns and v in s.echo_sends:
-                by_role.setdefault(role, []).append(s.echo_sends[v] >= ECHO_SEND)
-        sends = sorted(role for role, flags in by_role.items() if sum(flags) * 2 >= len(flags))
-        dry = sorted(role for role in by_role if role not in sends)
-        volume, ms, feedback = s.echo
-        out.append(tables.Unit(s.sid, s.game, f"{volume:.2f}:{ms:.0f}:{feedback:.2f}:{'+'.join(sends) or '-'}:{'+'.join(dry) or '-'}",
-                               {"part": ECHO_PART}))
-    return out
+        for n in ns:
+            if isinstance(n[3], str):
+                hits[n[3]] += 1
+                if sends.get(v, 0.0) >= ECHO_SEND:
+                    wet[n[3]] += 1
+    return {letter for letter, key in slots.items()
+            if (by_sample[key] >= ECHO_SEND if key in by_sample else hits[key] and wet[key] >= ECHO_SEND * hits[key])}
 
 
 VIBRATO_DEPTH_BIN = 5.0              # cents the word's depth is kept to

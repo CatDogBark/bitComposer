@@ -650,6 +650,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
     token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
     token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
+    token_kit_echo, token_echo = set(), None
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -665,6 +666,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if role == "key":                                   # the token's song's key (round 79): the kit's degrees and tuned rates read against it
             t, _, m = rest.partition(":")
             token_key = (int(t), m or "major")
+            continue
+        if role == "echo":                                  # the token's song's echo word (round 82): the written song sits in its room
+            token_echo = rest
             continue
         band.append(role)
         if rest:
@@ -697,10 +701,13 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     sid, _, rest = value.partition("@")
                     level, _, rest = rest.partition("@")    # since round 75 the note the piece is struck at follows the level's slot,
                     pitch, _, rest = rest.partition("@")    # since round 77 a tonal piece's hold in beats follows the note's,
-                    hold, _, cls = rest.partition("@")      # since round 81 the slot's strike class the hold's (a/s/m/d)
+                    hold, _, rest = rest.partition("@")     # since round 81 the slot's strike class the hold's (a/s/m/d),
+                    cls, _, mark = rest.partition("@")      # since round 82 an e where the game sends the piece to echo
                     token_kit[letter] = sid
                     if cls and cls[0] in rhythm.SLOT_NAMES:
                         token_kit_classes[letter] = cls[0]
+                    if mark.startswith("e"):
+                        token_kit_echo.add(letter)
                     if level and math.isfinite(float(level)):
                         token_kit_levels[letter] = float(level)
                     if pitch.startswith("r"):               # the chip's rate as a note (round 78), for a piece the namer called a drum;
@@ -744,6 +751,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         top_level = (min(1.0, TOP_SCALE * float(_draw(models, "top_levels", (rhythm.ARRANGEMENT,), random.Random(f"whole:{seed}:top"), log)))
                      if "top_levels" in render_mod.models_or_empty(models) else TOP_LEVEL)
     registers, sounds, habits, extras = {}, {}, {}, {}
+    if token_echo is not None:                              # the token song's echo word (round 82): render.echo_word takes it in place of a draw
+        extras["echo"] = {"word": token_echo}
+        log.append(f"echo from the balance's song: {token_echo}")
     for role in band:
         if role == R.DRUMS:
             habits[role] = drum_habit
@@ -770,6 +780,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     extras[role]["kit_holds"] = token_kit_holds
                 if token_kit_classes:                       # each slot's strike class (round 81): the letter's figure follows its sample's use
                     extras[role]["kit_classes"] = token_kit_classes
+                if token_echo is not None:                  # the slots the game sends to echo (round 82): per piece, as the chip's channels
+                    extras[role]["kit_echo"] = sorted(token_kit_echo)
                 log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
                                                                                             + (f" struck at {token_kit_pitches[k]}" if k in token_kit_pitches else "")
                                                                                             + (f" struck {token_kit_rates[k] - 60:+d} semitones from the recording" if k in token_kit_rates else "")
@@ -777,6 +789,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                                                                             + (f" struck at {token_kit_degrees[k][0]}{token_kit_degrees[k][1]:+d} of the key" if k in token_kit_degrees else "")
                                                                                             + (f" held {token_kit_holds[k]:.2f} beats" if k in token_kit_holds else "")
                                                                                             + (f", {rhythm.SLOT_NAMES[token_kit_classes[k]]}" if k in token_kit_classes else "")
+                                                                                            + (", to echo" if k in token_kit_echo else "")
                                                                                             for k, v in token_kit.items()) + ")")
             elif "kit_pieces" in render_mod.models_or_empty(models):    # the pieces the song's kit strikes (round 58), on an own stream
                 extras[role]["pieces"] = _draw(models, "kit_pieces", (R.DRUMS, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:kit"), log,

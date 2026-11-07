@@ -750,6 +750,42 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_classes(s), {"K": "m", "S": "d"})
         self.assertEqual([h.outcome for h in rhythm.drum_habit_units([s])], ["dense varied"])
 
+    def test_the_kits_echo_rides_the_token(self):
+        """Round 82: a slot whose sample's hits sit on drum voices that send to echo carries an e after its class (the chip's
+        echo is per channel: Wild West sends its blip and keeps its kick dry), and the balance token carries the song's echo
+        word before the key, as the echo table counts it."""
+        chords = [Span(0.0, 8.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id", game="G", numbers=[0, 1], parts=[(0, 2)],
+                        pieces={"k": "kick", "blip": "other"}, tonic=4, mode="minor")
+        kick = [(x, 0.1, float("nan"), "k") for x in (0.0, 2.0, 4.0, 6.0)]
+        blip = [(x, 0.23, 71.0, "blip") for x in (1.0, 3.0, 5.0, 7.0)]
+        s.notes["drums"] = kick + blip
+        s.notes["melody"] = [(float(i), 1.0, 72.0, "sa") for i in range(8)]
+        s.voice_notes = {0: ("melody", s.notes["melody"]), 2: ("drums", kick), 3: ("drums", blip)}
+        s.voice_levels = {0: 0.5, 2: 0.4, 3: 0.2}
+        s.levels = {"melody": 0.5, "drums": 0.3}
+        s.kit_levels = {"k": 0.4, "blip": 0.2}
+        s.kit_pitches = {"blip": 71}
+        self.assertEqual(rhythm.kit_echo(s), set())                                                    # no sends read: no mark
+        self.assertNotIn("@e", rhythm.kit_token(s, 0.5))
+        s.echo, s.echo_sends = (0.2, 80.0, 0.78), {0: 1.0, 2: 0.0, 3: 1.0}
+        self.assertEqual(rhythm.kit_echo(s), {"o"})
+        self.assertEqual(rhythm.kit_token(s, 0.5), "K=k@0.80@@@m,o=blip@0.40@d4@@m@e")                 # the blip's slot sends, the kick's is dry
+        token = rhythm.balance_units([s])[0].outcome.split()
+        self.assertIn("echo=0.20:80:0.78:drums+melody:-", token)                                      # one of two drum voices sends: half, so the part sends
+        self.assertLess(token.index("echo=0.20:80:0.78:drums+melody:-"), token.index("key=4:minor"))
+        self.assertEqual(rhythm.echo_outcome(s), "0.20:80:0.78:drums+melody:-")
+        s.echo_sends[2] = 1.0
+        self.assertEqual(rhythm.kit_echo(s), {"K", "o"})
+        self.assertEqual(rhythm.echo_outcome(s), "0.20:80:0.78:drums+melody:-")
+        s.echo_sample_sends = {"blip": 1.0, "k": 0.2}                                                 # the sample's own share where read: the kick's
+        self.assertEqual(rhythm.kit_echo(s), {"o"})                                                   # notes on a sending voice mostly dry
+        from types import SimpleNamespace
+        from bitcomposer.translate import reading
+        note = lambda v, send, smp: SimpleNamespace(voice=v, echo=send, echo_writes=True, echo_delay=0.08, echo_volume=(-0.2, 0.2), echo_feedback=0.78, sample=smp)   # noqa: E731
+        echo = reading.echo_of_notes([note(4, False, 3), note(4, False, 3), note(4, True, 5), note(4, False, 3)], {3: "hatkey", 5: "blipkey"})
+        self.assertEqual((echo["voice_4"], echo["sample_hatkey"], echo["sample_blipkey"]), (0.25, 0.0, 1.0))   # one channel, the hat dry and the blip wet
+
     def test_the_kits_pieces_carry_their_own_levels(self):
         """Round 68: a song's kit field carries each piece's level beside its sample, the median level of the notes struck
         on that sample as a share of the loudest part's in tenths (`K=k@1.6,S=s@0.6,h=h@0.2`). The part's one level is the

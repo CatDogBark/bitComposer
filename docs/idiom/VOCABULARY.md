@@ -228,10 +228,17 @@ The words are grouped by where the writing draws them, in the order the song is 
   round 80 the sample the kit leans on (the loudest with a fifth of the
   letter's hits, the most struck within a decibel), and since round 81
   its strike class (`@m`: the sample's hits a bar in its song, rare under
-  half, an accent under one, sparse to two, medium to six, dense over);
-  the song's key (`key=9:minor`) stands before the top. The drum figures
-  count each letter's slot's sample's hits (round 81), and a kit whose
-  token carries classes is written from its limbs' tables under them.
+  half, an accent under one, sparse to two, medium to six, dense over),
+  and since round 82 an echo mark where the game sends the slot's sample
+  (`@e`: the sample's own share of notes that send, which the readings
+  keep beside the voices' since the chip toggles a channel's echo note by
+  note); the song's key (`key=9:minor`) stands before the top, and since
+  round 82 its echo word before the key
+  (`echo=0.20:80:0.78:melody:bass+drums`, the echo table's outcome), which
+  the writer takes in place of a draw, a marked kit piece's notes sent and
+  the piece beside it dry. The drum figures count each letter's slot's
+  sample's hits (round 81), and a kit whose token carries classes is
+  written from its limbs' tables under them.
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;

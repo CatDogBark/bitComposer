@@ -1797,6 +1797,31 @@ class TonalKitPieceTests(unittest.TestCase):
         self.assertEqual(p.extras["drums"]["kit_holds"], {"K": 0.5, "o": 0.25})
         self.assertTrue(any("S s1279e119a1 at 0.70 struck +0 semitones from the recording, an accent" in line for line in p.log), p.log)
 
+    def test_the_kits_echo_rides_the_token(self):
+        """Round 82: the plan reads the token's echo word (extras.echo.word) and the slots' echo marks (extras.drums.kit_echo);
+        render.echo_word takes the word in place of a draw, a vocabulary without an echo table included; piece_sends sends a
+        marked piece's notes and keeps an unmarked piece dry while a pitched part follows the word's say."""
+        from bitcomposer.translate import tables
+        token = ("bass=half:36-44:0.9:1:1.0 drums=::::0.2:::K=sbfe716b9b6@1.7@r48@0.50@m,o=sf89f5aedfd@0.38@d9@0.25@s@e:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 echo=0.20:80:0.78:melody:bass+drums key=2:minor top=0.30 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        self.assertEqual(p.extras["echo"]["word"], "0.20:80:0.78:melody:bass+drums")
+        self.assertEqual(p.extras["drums"]["kit_echo"], ["o"])
+        self.assertTrue(any("o sf89f5aedfd at 0.38 struck at d+9 of the key held 0.25 beats, sparse, to echo" in line for line in p.log), p.log)
+        echo = whole.echo_word({}, p, random.Random(1))                                               # no echo table: the token's word stands
+        self.assertEqual((echo["wet"], echo["seconds"], echo["feedback"], echo["sends"], echo["dry"]), (0.2, 0.08, 0.78, ["melody"], ["bass", "drums"]))
+        self.assertTrue(any(line.startswith("echo (balance): volume 0.20 of full, 80 ms, feedback 0.78; sends melody; dry bass+drums; kit pieces to echo o") for line in p.log), p.log)
+        self.assertTrue(whole.piece_sends(p, echo, "drums", letter="o"))                              # the marked piece sends though the part is dry
+        self.assertFalse(whole.piece_sends(p, echo, "drums", letter="K"))
+        self.assertTrue(whole.piece_sends(p, echo, "melody"))
+        self.assertFalse(whole.piece_sends(p, echo, "bass"))
+        self.assertFalse(whole.piece_sends(p, None, "drums", letter="o"))                             # no echo: nothing sends
+        del p.extras["drums"]["kit_echo"]
+        self.assertFalse(whole.piece_sends(p, echo, "drums", letter="o"))                             # no marks: the part's say
+
     def test_the_tempo_drawn_again_under_the_tokens_class_stays_in_it(self):
         """Round 75: the redraw under the balance token's tempo class is terminal at the class. Without the floor it gave the
         class its Witten-Bell share and every class's tempos the rest, and 8 of 46 written songs sat outside their token's
