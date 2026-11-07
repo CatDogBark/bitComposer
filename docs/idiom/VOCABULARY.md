@@ -473,31 +473,40 @@ The words are grouped by where the writing draws them, in the order the song is 
   draw), and the voices beside the tune stay on the scale (LIMITS).
   *`off_scale`: shape (part, mode, place); drawn in _plan_once; conditions nothing.*
 
-- **clashes** — a line's share of onsets that fall under another pitched
-  part's sounding note and sit a semitone (one or eleven, mod 12) from
-  it, by the beat, to a fiftieth (`rhythm.CLASH_BIN`), for the melody's
-  line and the counter's, every other part together. Counted since round
-  93; drawn once a song for each line on its own stream and held by the
-  melody writer in place of the CLASH ban, against the parts under the
-  line as it is written (the chord parts and the bass; the melody too for
-  the counter): in `draw_move` a clashing move takes the drawn share of
-  the mass while under it and none while over, fitted with the chord and
-  off-scale shares, and a recalled cell is placed to add least while
-  over. FFVI: the tune's line clashes on 0.11 of its strong onsets under
-  another part and 0.13 of its weak ones (a song's share from none to
-  0.38 on the beat: Mt. Koltz 0.33 on 116 onsets, Searching for Friends,
-  Dark World; off the beat to 0.53, New Continent, Dancing Mad part 2),
-  the counter's line 0.10 and 0.13; by pair the tune against the
-  accompaniment 0.06 and 0.08, the counter 0.06 and 0.08, the bass 0.04
-  and 0.05. The written tune now clashes with the parts it is written
-  over at the drawn share (0.10 of strong onsets over twenty-four seeds'
-  logs, the ban's 0.09 to 0.15 behind it); against every other part
-  together it sits at 0.17 and 0.20, since the parts written after it
-  (a counter by the voice words, the arp, the voices beside the lines)
-  hold no clash word yet, and every pair between parts written apart
-  stays at about twice FFVI's rate (the tune against the accompaniment
-  0.10 and 0.13, the counter against the accompaniment 0.13 and 0.13):
-  the pairs are the next round's.
+- **clashes** — a part's share of onsets that fall under a sounding
+  note of a part written before it and sit a semitone (one or eleven, mod
+  12) from it, by the beat, to a fiftieth (`rhythm.CLASH_BIN`), for every
+  pitched part but the bass. The parts are written in a fixed order
+  (`rhythm.CLASH_ORDER`: the bass, then the harmony, the accompaniment and
+  the arp, then the tune, then the counter), and each is counted against
+  the ones before it (`rhythm.clash_under`), which its writer sees; the
+  melody and the counter as their lines, the chord parts every note.
+  Counted since round 93 (the tune alone, against every other part) and
+  by the order since round 94; drawn once a song for each part on its own
+  stream and held by its writer in place of the CLASH ban: the melody
+  writer in its draws (fitted with the chord and off-scale shares) and in
+  placing its recalls; the counter writer by drawing an interval again
+  while the line is over its share and the drawn note sits a semitone
+  from a part under it (VOICE_TRIES draws, the last kept); the upper
+  writer by giving such a tone, while over, to the nearest tone of the
+  voicing clear of the parts under it. A voice that doubles a line at a
+  unison or octaves copies it exactly, off the scale where the line is
+  (round 94: put back on the scale, a double had sat a semitone from the
+  tune's altered notes). FFVI: the accompaniment a semitone from the bass
+  or the harmony on 0.04 of its strong onsets under one and 0.04 of its
+  weak ones (a song's share from none to 0.26), the tune 0.08 and 0.11
+  against the bass and the chord parts (to 0.38: Mt. Koltz 0.33 on 116
+  onsets, Searching for Friends, Dark World), the counter 0.11 and 0.20
+  against all of them (to 0.62), the harmony 0.04 (twelve songs), the arp
+  three songs. The written songs (sixty seeds): the counter 0.23 on the
+  beat before the round and 0.15 after (0.24 and 0.13 off it; its pairs
+  halved, against the tune 0.06 where FFVI has 0.05); the accompaniment
+  0.10 to 0.08 (FFVI 0.04: a voicing of one tone has nowhere to go); the
+  tune 0.13 both sides (FFVI 0.08: its draws hold the share, its returning
+  cells and endings do not). What remains sits in the voices beside the
+  lines: a parallel at a third follows its line into the band's semitones
+  with no word of its own, and an apart voice in a dense band finds no
+  clear tone in VOICE_TRIES draws (LIMITS).
   *`clashes`: shape (part, place); drawn in _plan_once; conditions nothing.*
 
 - **tune_grain** — the tune's grain, since round 66: the share of its

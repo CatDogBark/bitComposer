@@ -436,33 +436,48 @@ def off_scale_units(songs) -> list:
     return out
 
 
+CLASH_ORDER = (R.BASS, R.HARMONY, R.ACCOMP, R.ARP, R.MELODY, R.COUNTER)   # the order whole.plan.write writes the pitched parts in (the bass, then
+                                                                           # readings.UPPER, then the two lines): each part's
+                                                                       # clashes word counts it against the parts before it, which its writer sees
+
+
+def clash_under(role: str) -> tuple:
+    """The parts written before `role` (CLASH_ORDER): the ones its clashes word counts it against and its writer holds the
+    drawn share against; none for the bass, written first."""
+    return CLASH_ORDER[:CLASH_ORDER.index(role)] if role in CLASH_ORDER else ()
+
+
 def clash_units(songs) -> list:
-    """The melody and the counter-line of each song, each by the beat, as a unit: its outcome the share of the line's
-    onsets that fall under another part's sounding note and sit a semitone (1 or 11 mod 12) from it (to CLASH_BIN), its
-    values the part and the place. FFVI (round 93): 0.05 of the tune's strong onsets and 0.07 of its weak ones, every other
-    part together (by pair, the accompaniment 0.06 and 0.08, the counter 0.06 and 0.08, the bass 0.04 and 0.05; a song's
-    share from none to 0.38); the written tunes sat at 0.09 to 0.15 under a ban on every drawn clash (CLASH), the excess
-    from recalled cells and from the parts written before the tune. The melody writer holds the drawn share in its draws
-    and in placing its recalls; the other parts' pairs are the next round's."""
+    """Each pitched part of each song but the bass, by the beat, as a unit: its outcome the share of the part's onsets that
+    fall under a sounding note of a part written before it (clash_under: the bass under the chord parts, those under the
+    tune, all of them under the counter) and sit a semitone (1 or 11 mod 12) from it (to CLASH_BIN), its values the part
+    and the place; the melody and the counter as their lines (tune_line), the chord parts every note. FFVI (round 94):
+    the accompaniment 0.04 of its strong onsets and 0.04 of its weak ones, the tune 0.08 and 0.11, the counter 0.11 and
+    0.20 (a song's share from none to 0.6); the written songs had sat at 0.10, 0.12 and 0.23 on the beat (round 93, when
+    the tune alone held a share, counted against every other part). Each writer holds its part's drawn share against the
+    parts under it: the melody writer in its draws and its recalls' placement, the counter writer in its interval draws,
+    the upper writer in its voicings' tones."""
     out = []
     for s in songs:
-      for role in (R.MELODY, R.COUNTER):                    # the two lines the melody writer writes, each its own unit
-        tune = [n for n in cells_mod.tune_line(s, role) if not math.isnan(n[2])]
-        if len(tune) < WORD_NOTES:
-            continue
-        others = sorted((n[0], n[0] + n[1], round(n[2]) % 12) for r, ns in s.notes.items() if r not in (role, R.DRUMS) for n in ns if not math.isnan(n[2]))
-        by_place = {"strong": [0, 0], "weak": [0, 0]}
-        for n in tune:
-            t = n[0]
-            sounding = {pc for a, b, pc in others if a - readings_mod.NEAR <= t < b - readings_mod.NEAR}
-            if not sounding:
+        for role in CLASH_ORDER[1:]:
+            mine = [n for n in (cells_mod.tune_line(s, role) if role in (R.MELODY, R.COUNTER) else s.notes.get(role, [])) if not math.isnan(n[2])]
+            if len(mine) < WORD_NOTES:
                 continue
-            place = "strong" if abs(t - round(t)) < readings_mod.NEAR else "weak"
-            by_place[place][1] += 1
-            by_place[place][0] += any((round(n[2]) - pc) % 12 in (1, 11) for pc in sounding)
-        for place, (hits, total) in by_place.items():
-            if total >= WORD_NOTES:
-                out.append(tables.Unit(s.sid, s.game, f"{round(hits / total / CLASH_BIN) * CLASH_BIN:.2f}", {"part": role, "place": place}))
+            under = sorted((n[0], n[0] + n[1], round(n[2]) % 12) for r in clash_under(role) for n in s.notes.get(r, []) if not math.isnan(n[2]))
+            if not under:
+                continue
+            by_place = {"strong": [0, 0], "weak": [0, 0]}
+            for n in mine:
+                t = n[0]
+                sounding = {pc for a_, b_, pc in under if a_ - readings_mod.NEAR <= t < b_ - readings_mod.NEAR}
+                if not sounding:
+                    continue
+                place = "strong" if abs(t - round(t)) < readings_mod.NEAR else "weak"
+                by_place[place][1] += 1
+                by_place[place][0] += any((round(n[2]) - pc) % 12 in (1, 11) for pc in sounding)
+            for place, (hits, total) in by_place.items():
+                if total >= WORD_NOTES:
+                    out.append(tables.Unit(s.sid, s.game, f"{round(hits / total / CLASH_BIN) * CLASH_BIN:.2f}", {"part": role, "place": place}))
     return out
 
 

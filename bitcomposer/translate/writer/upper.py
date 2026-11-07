@@ -194,7 +194,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
-          tone_index: int = 0, kind: str | None = None, bounds_at=None) -> tuple[list, list, list]:
+          tone_index: int = 0, kind: str | None = None, bounds_at=None, clash_rates: dict | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -213,7 +213,11 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     under ("line", (bar, position))); without them, the tone that many
     steps up the line's voicing. `bounds_at`: bar -> the line voice's
     register there, where the token song's line changes instrument by
-    stretch (round 92); `registers` else.
+    stretch (round 92); `registers` else. `clash_rates`: the clashes word's
+    draw for the part ({"strong": share, "weak": share}): a tone a semitone
+    from a part written before this one (rhythm.clash_under: the bass, the
+    chord parts before it) while the part is over its share for the beat
+    gives way to the nearest tone of the voicing clear of them (round 94).
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -228,6 +232,26 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     pedals = pedals or {}
     walked = 0.0                                            # how far along the stack the voices have moved (motion)
     tune_line = sorted(song.notes.get(R.MELODY, []) + song.notes.get(R.COUNTER, []))   # what the written part must not clash with
+    under_line = sorted(n for r in rhythm.clash_under(role) for n in song.notes.get(r, [])) if clash_rates else []   # the parts written before this one (round 94)
+    run = {"strong": [0, 0], "weak": [0, 0]}                # its onsets a semitone from one of them, and its onsets under one, so far
+
+    def held(midi: int, options: list, start: float, p) -> int:
+        """The note held to the part's clashes share (round 94): a semitone from a part written before this one while the part
+        is over its drawn share for the beat, the nearest tone of the voicing clear of them, if one is; the running share kept."""
+        if not under_line:
+            return midi
+        under = sounding_pcs(under_line, start)
+        if not under:
+            return midi
+        place = "strong" if abs(float(p) - round(float(p))) < rhythm.NEAR else "weak"
+        r = clash_rates.get(place)
+        hit = any((midi - pc) % 12 in CLASH for pc in under)
+        if hit and r is not None and run[place][1] > 0 and run[place][0] / run[place][1] > r:
+            midi = unclashed(midi, options, under)
+            hit = any((midi - pc) % 12 in CLASH for pc in under)
+        run[place][1] += 1
+        run[place][0] += int(hit)
+        return midi
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     notes, voicings = [], []
@@ -317,6 +341,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             if role == R.ARP and len(voices) == 1:
                 midi = in_register(pitches[i % len(pitches)], regs[voices[0]])
                 midi = unclashed(midi, [in_register(m, regs[voices[0]]) for m in pitches], tune)
+                midi = held(midi, [in_register(m, regs[voices[0]]) for m in pitches], start, p)
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), voices[0]))
                 continue
             # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
@@ -384,6 +409,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                     if shared is not None and not tone_index:
                         shared[("line", (k, p))] = midi     # the line's note here, for the voices beside it
                 midi = unclashed(midi, [in_register(m, regs[v]) for m in pitches], tune)
+                midi = held(midi, [in_register(m, regs[v]) for m in pitches], start, p)
                 if taken is not None:
                     taken.add(int(round(midi)))
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), v))

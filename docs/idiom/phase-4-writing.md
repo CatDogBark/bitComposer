@@ -6108,3 +6108,79 @@ tune note on the scale; a voice beside the tune wants an exact-interval
 form of the relation word. The arp's harmonic-minor arpeggios (the raised
 seventh 0.80 of its off-scale notes) come from the chord reader's shapes,
 not from a word here.
+
+### Round 94: the clashes word by the write order (2026-11-07, the second half of the open items' second entry)
+
+**Why.** Round 93 left the pairs between parts written apart at about
+twice FFVI's clash rates, the counter worst of all: the tune held a drawn
+share against the parts under it, and no other writer held anything.
+Counted first (count_r94.py): the parts are written in a fixed order
+(the bass, then the harmony, the accompaniment and the arp, then the
+tune, then the counter), so each part's clashes can be counted against
+the parts before it, the ones its writer sees. FFVI, by that measure: the
+accompaniment a semitone from the bass or the harmony on 0.04 of its
+strong onsets under one and 0.04 of its weak ones (52 songs, a song's
+share from none to 0.26), the tune 0.08 and 0.11 against the bass and the
+chord parts (62 songs, to 0.38), the counter 0.11 and 0.20 against all of
+them (51 songs, to 0.62), the harmony 0.04 on twelve songs, the arp 0.32
+on three. The written songs (sixty seeds, round 93): the accompaniment
+0.10 and 0.10, the tune 0.12 and 0.16, the counter 0.23 and 0.24.
+
+**Built.** The `clashes` word redefined (`rhythm.clash_units`, with
+`rhythm.CLASH_ORDER` and `clash_under`): every pitched part but the bass,
+by the beat, against the parts written before it; the melody and the
+counter as their lines, the chord parts every note (322 FFVI units,
+shape (part, place) as before). The plan draws the chord parts' shares
+too, once a song each on their own streams
+(`whole:{seed}:clashes:{role}:{place}`), so every other draw stands and
+every seed keeps its plan (400 of 400 tokens and draws unchanged against
+round 93). Three writers hold it. The melody writer as in round 93 (its
+sounding set, the bass and the chord parts, is now what its word counts).
+The counter writer (`writer.counter(clash_rates=)`, the voice words'
+path): an interval drawn a semitone from a part under the line while the
+line is over its share for the beat is drawn again, up to VOICE_TRIES
+times, the last kept, with the tune and alone alike; its log says what it
+held. The upper writer (`writer.upper(clash_rates=)`, the line, the
+voices beside it and the arp): a voicing tone a semitone from a part
+under it, while the part is over its share, gives way to the nearest tone
+of the voicing clear of them, where one is. And a voice that doubles a
+line at a unison or octaves (`plan.diatonic`, the relation words'
+realization) copies it exactly: put back on the scale, a double had sat a
+semitone from the tune's altered notes once round 93 let the tune off the
+scale (First Meridian Return's counter voice, two octaves under Umaro's
+chromatic tune, on 22 of 55 strong onsets). No re-read; pack4 refit (101
+tables), the vocabulary shipped, the map regenerated. Tests: the units by
+the order on a synthetic song, the counter writer and the upper writer
+with and without the word and over the share, the chord parts' draws, the
+exact double.
+
+**Measured** (sixty seeds against FFVI, by the order). The counter: 0.23
+of its strong onsets a semitone from a part under it before, 0.15 after
+(FFVI 0.11); 0.24 and 0.13 off the beat (0.20). Its pairs halved: against
+the tune 0.09 to 0.06 (FFVI 0.05), against the bass 0.11 to 0.07 (0.05),
+against the accompaniment 0.13 to 0.09 (0.05). The accompaniment 0.10 to
+0.08 against the bass and the harmony (0.04). The tune 0.12 to 0.13
+(0.08): its draws hold the drawn share, its returning cells and endings
+sit under no hold, and the voices written after the lines add to what it
+is counted against. By voice (diag_r94.py): a counter's line at its drawn
+share within a few hundredths; a voice beside a line, written as its own
+in a band of four or five sounding parts, at twice it (VOICE_TRIES draws
+find no clear tone); a parallel third of the tune on 0.40 of its beats
+against the band where the tune sits on 0.12 (no word of its own). The
+arp's word rests on three FFVI songs and holds little. Suite 428 (1
+skip); the vocabulary checks pass.
+
+**Song Check 77** (https://claude.ai/artifact/4UBb8xp2NPYwrvyTGAwfpg): the same six seeds as Song Checks 74 to 76,
+before round 93 (its branch frozen with the vocabulary before this
+round), after round 94. Arcade of Rain's counter drew none (14 of 38
+strong onsets clashed before, 3 of 40 after); First Meridian Return's
+double copies the tune (23 of 55 before, 6 after), and its counter holds
+its drawn 0.10. The owner listens once the songs settle.
+
+**Open.** The voices beside the lines: a word for how FFVI's parallels
+bend where a third would land on a semitone, and a hold for an apart
+voice that looks past VOICE_TRIES draws. The tune's own floor: its
+returning cells re-rooted with an eye on the band, its endings. The
+counter's own off-scale share (a semitone form of the interval word), the
+arp's thin word. Then the open items' third entry, the doubling voice's
+intervals.
