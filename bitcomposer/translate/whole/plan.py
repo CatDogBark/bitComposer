@@ -54,6 +54,17 @@ VOICES = 8                            # the SNES chip's voices
 LETTERS = "ABCDEFGHIJKLMNOP"          # the form's labels
 MAX_PARTS = 12
 DRUM_VOICES = (("K", "S", "t"), ("h", "c", "o"))   # the kit on two voices: the kick, snare and toms; the hat, cymbals and the rest
+                                      # (the fallback since round 87: a token's kit sits on the channels its game song gave it, extras.drums.channels)
+
+
+def drum_voice_of(channels, letter: str, voices: int = 2) -> int:
+    """The kit voice a piece letter plays on (round 87): the token's channel whose pieces include it ("KS|h": K and S on the
+    first, h on the second), the fixed split (DRUM_VOICES) where the token carries no channels or the letter is on none,
+    never past the kit's voices."""
+    v = next((i for i, g in enumerate(channels or ()) if letter in g), None)
+    if v is None:
+        v = next((i for i, g in enumerate(DRUM_VOICES) if letter in g), 1)
+    return max(0, min(max(1, voices) - 1, v))
 KIT_PIECES = {"kick": "kick", "snare": "snare", "hihat": "hat", "open_hihat": "hat", "tom": "tom", "crash": "cymbal", "rim": "other"}   # a pack's kit -> the readings' pieces
 KIT_SLOT = {"K": "kick", "S": "snare", "h": "hihat", "t": "tom", "c": "crash", "o": "rim"}   # a piece letter -> the pack kit slot its song's sample fills (round 63)
 SLOT_LETTER = {slot: letter for letter, slot in KIT_SLOT.items()} | {"open_hihat": "h"}   # a kit slot -> the piece letter whose level it plays at (round 68:
@@ -528,17 +539,19 @@ def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng:
     return out
 
 
-def allot(band: list, counts: dict | None = None) -> dict:
+def allot(band: list, counts: dict | None = None, drum_voices: int = 2) -> dict:
     """How the eight voices are shared out. With the balance's counts (a
     song's voices a part, FFVI: the accompaniment and the counter-line two
     each as often as not), each pitched part takes its count and the drums
-    two, trimmed from the largest parts down while the eight are passed.
+    `drum_voices` (the token's kit channels since round 87, two before: a
+    one-channel kit given two had cost a pitched voice in 14 of FFVI's 48
+    kit songs), trimmed from the largest parts down while the eight are passed.
     Without counts: the drums two, the bass and the melody one each, every
     upper part one, then the harmony up to three and the accompaniment up
     to two while voices remain, the counter last."""
     out = {}
     if R.DRUMS in band:
-        out[R.DRUMS] = 2
+        out[R.DRUMS] = max(1, drum_voices)
     if counts:
         for role in band:
             if role != R.DRUMS:
@@ -658,6 +671,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
     token_kit_echo, token_echo, token_pans, token_kit_pans = set(), None, {}, {}
     token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
+    token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
@@ -688,7 +702,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if len(fields) > 2 and fields[2]:
                 shares[role] = float(fields[2])
             if len(fields) > 3 and fields[3]:
-                counts[role] = int(fields[3])
+                if role == R.DRUMS:                         # the kit's channels (round 87): the pieces each game channel plays, "KS|h"
+                    token_kit_channels = fields[3].split("|")
+                else:
+                    counts[role] = int(fields[3])
             if len(fields) > 4 and fields[4] and math.isfinite(float(fields[4])):   # a "nan" level (tables counted before the
                 token_levels[role] = float(fields[4])                             # readings skipped a kit's unread levels) falls to the levels draw
             if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level; since
@@ -802,6 +819,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     extras[role]["kit_echo"] = sorted(token_kit_echo)
                 if token_kit_pans:                          # where each piece sits in the stereo field (round 84)
                     extras[role]["kit_pans"] = token_kit_pans
+                if token_kit_channels:                      # the channels the game gave the kit, each one's pieces (round 87)
+                    extras[role]["channels"] = token_kit_channels
+                    log.append(f"kit channels from the balance: {len(token_kit_channels)} ({'|'.join(token_kit_channels)})")
                 log.append(f"kit from the balance: {extras[role]['pieces']} (" + ", ".join(f"{k} {v}" + (f" at {token_kit_levels[k]:.2f}" if k in token_kit_levels else "")
                                                                                             + (f" struck at {token_kit_pitches[k]}" if k in token_kit_pitches else "")
                                                                                             + (f" struck {token_kit_rates[k] - 60:+d} semitones from the recording" if k in token_kit_rates else "")
@@ -845,7 +865,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted
-    voices = allot(band, counts)
+    voices = allot(band, counts, len(token_kit_channels) or 2)   # the kit on its song's channels (round 87), two without the field
     for role in band:                                       # a part with two voices or more: what each voice beside its line does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             layers = [_draw(models, "layers", (role, str(min(rank, 4))), rng, log) if "layers" in models else "apart +0 like"
@@ -1086,14 +1106,15 @@ def song_of(plan: Plan, kit=()) -> rhythm.Song:
     return song
 
 
-def _voices_of(song: rhythm.Song, exclude: set) -> list:
-    """The onsets of every voice written so far but the part's: a pitched part one voice, the drums their two."""
+def _voices_of(song: rhythm.Song, exclude: set, channels: list | None = None) -> list:
+    """The onsets of every voice written so far but the part's: a pitched part one voice, the drums their channels (the
+    token's since round 87, the fixed two without)."""
     out = []
     for role, ns in song.notes.items():
         if role in exclude:
             continue
         if role == R.DRUMS:
-            for group in DRUM_VOICES:
+            for group in (channels or DRUM_VOICES):
                 starts = sorted(n[0] for n in ns if rhythm.LETTERS.get(song.pieces.get(n[3]), "o") in group)
                 if starts:
                     out.append(starts)
@@ -1110,7 +1131,7 @@ def locks_of(song: rhythm.Song, exclude: set, plan: "Plan | None" = None) -> dic
     part but the one written, written yet or not), so a part written early
     locks to nothing (two drum voices alone are no band) and one written
     late locks to the band's real accents."""
-    voices = _voices_of(song, exclude)
+    voices = _voices_of(song, exclude, plan.extras.get(R.DRUMS, {}).get("channels") if plan is not None else None)
     out = {}
     for k, (a, b) in enumerate(song.bars):
         playing = [starts for starts in voices if any(a - NEAR <= t < b - NEAR for t in starts)]
@@ -1355,7 +1376,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 if sample is None:
                     dropped[letter] += 1
                     continue
-                v = next((i for i, g in enumerate(DRUM_VOICES) if letter in g), 1)
+                v = drum_voice_of(plan.extras.get(R.DRUMS, {}).get("channels"), letter, plan.voices.get(R.DRUMS, 2))   # the game's channel (round 87)
                 by_voice.setdefault(v, []).append((t, letter, sample))
             rank = {name: i for i, (_, name) in enumerate(rhythm.SLOT_CLASSES)}
             sparser = lambda letter: (rank.get(kit_classes.get(letter, ""), len(rank)), letter)   # noqa: E731  the rarer slot first, then by letter

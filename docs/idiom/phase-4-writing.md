@@ -5523,3 +5523,97 @@ bass in The Inner Grotto's token is a tenor-range voice (48-80 on its
 sample); the writer follows it. A tune on the token's sample keeps the
 pooled wall, so it is still written over notes its sample never played in
 that song.
+
+### Round 87: the kit's channels ride the balance token (2026-11-06, the second rules audit's third candidate)
+
+**Why.** The writer put every kit on two voices by a fixed split, the kick,
+snare and toms on one and the hat, cymbals and the rest on the other
+(plan.DRUM_VOICES, the first audit's rule #3's last standing part). FFVI
+does not: 19 of its 47 kits sit on one channel, 20 on two, 8 on three or
+more, and 73 of its 90 kit channels carry one piece, the commonest pair a
+snare channel and a cymbal channel (8 songs). The fixed two cost the band
+a pitched voice wherever the token's eight voices then overflowed, 14 of
+FFVI's 48 kit songs, every one a one-channel kit, and 9 of 40 written
+songs (an accompaniment's fourth voice, a counter's third, a harmony's
+third); and they dropped 120 of 4,903 written kit hits where a kick struck
+under a snare or tom the game had on its own channel (FFVI's own kits
+would lose 2.7 % of their hits to the split).
+
+**Built.** `rhythm.kit_channels` reads the pieces each game channel plays,
+a slot's channel the one its sample is struck on most, the channels in
+the song's order and the letters in LETTERS' order ("KS|h", "S|c", "K"),
+and the drums token carries it as its fourth field, the voices field a
+pitched part fills with a count. The plan reads it (`extras.drums.channels`;
+the log line "kit channels from the balance: 3 (t|K|h)"), `allot` gives the
+kit as many voices as channels (two without the field), `drum_voice_of`
+puts each piece on the channel the game put it on (the fixed split for a
+token without channels or a letter on none, never past the kit's voices),
+and the band's locks see the kit's channels as the plan has them. Pack4
+refit on the same readings (backup `pack.json.before-r87`), the shipped
+vocabulary regenerated. Tests: the field (one channel, three channels, no
+kit), the allotment with one drum voice against two, the voice a letter
+takes, the plan's reading.
+
+**Measured.** Forty seeds, 25 with a kit: drum voices 1 in 12 songs, 2 in
+11, 3 in 2 (every kit on two before); songs with a pitched part trimmed 9
+to 0; kit hits lost to a collision 120 of 4,903 to 25 of 4,925, in 3 songs
+where the two pieces share a channel in the game as well. Return of the
+Outpost, on Wild West's kit (tom | kick | hat), had dropped 72 of 406 hits
+and drops none; Northern Bells (snare | hat | kick) 23 of 127 and none.
+The voices or the band changed in 14 of 40 songs: the nine that regain a
+voice draw one more voice word, so the part's extra voice is new and the
+draws after it can shift; the key, tempo, form, chords and kit stand.
+Song Check 70 pairs the two collision songs and three that regain a voice
+(The Second Ridge's counter, The Endless Valley's accompaniment, The
+Ancient Harbor's harmony).
+
+**Open.** Two pieces that share a channel in the game still collide where
+a limb figure strikes both at once (25 hits in 3 songs): the figure came
+from a table pooling songs that had them apart. A letter struck on two
+samples on two channels (Battle Theme's two snares) folds to one slot and
+one channel, round 80's one-sample-a-letter limit.
+
+### Round 88: a tuned slot's rate stays inside the game's rates (2026-11-06, from Song Check 70's Northern Bells: a snare "that almost sounds like a guitar")
+
+**Why.** Northern Bells' kit is Fanfare's: snare, hat and kick on three
+channels. The snare is the Battle Theme's pitched rattle, 191 ms with a
+clear tone at 220 Hz, struck 4 semitones below its recording in Fanfare.
+Round 79 marks the sample as tuned to the key (FFVI strikes it at
+different rates in different songs) and moves its rate by the distance
+between the token's key and the written one; Fanfare is G major, Northern
+Bells C# minor, a tritone, so the rattle fell to -10, its tone to B2 and
+its ring to 340 ms. FFVI strikes the sample as a snare at -4 to +3 only.
+Over FFVI's five tuned slots and the twelve keys a written song can land
+in, the moved rate fell outside the rates the game ever struck the
+sample at as that piece in 77 of 132 cases; the other octave of the same
+degree would have rescued 8. The tuning verdict is loose too: a hat
+struck at 0, 0, -1 and -3 counts as tuned (TUNED_SHARE's half), and its
+rate had moved by up to six semitones (Return of the Outpost's hat at +3).
+
+**Built.** The `kit_rates` word (`rhythm.kit_rate_units`): each percussion
+kit sample a song strikes, as a unit, its outcome the rate as a note, its
+values the sample's id and the piece the namer called it. `samples_for`
+reads the word's lowest and highest for each tuned slot's sample as its
+piece (`render.kit_rate_wall`) into `extras.drums.kit_rate_walls`, and
+`kit_note_of` holds the moved rate inside them (`render.walled`), for a
+percussion slot and for a tonal sample the namer took for a drum alike;
+without the word, round 79's move stands. The verdict itself is left as
+it was: with the wall a loose "tuned" costs at most the game's own
+spread. Pack4 refit on the same readings (backup `pack.json.before-r88`),
+the shipped vocabulary regenerated. Tests: the word's units, the wall
+from a table and its absence, the note held at Fanfare's own -4 for C#
+minor and moved to -2 for A minor, an untuned slot untouched.
+
+**Measured.** By construction no tuned slot's rate leaves the game's
+rates for its sample as its piece. Over seeds 1 to 80 two written kits
+had: Northern Bells' snare at -10 (now -4, the token's own) and Return
+of the Outpost's hat at +3 (now 0, the game's highest for it); Upper
+Monorail's and The Second Ridge's snares at 0 and +1 were inside and
+stand. Song Check 71 pairs the two.
+
+**Open.** The tuning verdict (TUNED_SHARE, two of four at one rate) is
+coarse; the wall bounds its cost, and a verdict that asks the rate to
+follow the key across songs would be the honest word. Fanfare's -4 sits
+on the flat seventh of G where the Battle Theme's +3 sits on the minor
+third of A: the composer tunes the rattle to a degree, and the wall keeps
+the degree only where the game's own spread allows.

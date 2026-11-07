@@ -216,6 +216,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   0.1 or more off centre (the melody in 37 of 76, the counter 63 of 111,
   the accompaniment 72 of 153) and a part's voices 0.15 to 0.18 apart at
   the median (the second rules audit, `rules-to-words.md`).
+  Since round 87 (2026-11-06) the drums' token carries the kit's channels
+  as its fourth field, the voices field a pitched part fills with a count
+  (`rhythm.kit_channels`: the slot letters each game channel plays, a
+  slot's channel the one its sample is struck on most, "KS|h", "S|c",
+  "K"); the kit takes as many voices as channels (`allot`), each piece
+  plays on its game channel (`plan.drum_voice_of`), and the fixed split
+  (`plan.DRUM_VOICES`) stands for a token without the field. FFVI puts 19
+  of 47 kits on one channel, 20 on two, 8 on three or more; the fixed two
+  had cost a pitched voice in 9 of 40 written songs and dropped kick hits
+  under a snare the game had on its own channel.
   Since round 63 (2026-10-29) the drums' token carries the song's kit as
   its eighth field (`rhythm.kit_token`: each piece letter with the pack
   id of the sample the song strikes it with most, `K=sbfe716b9b6,S=s1279e119a1`,
@@ -261,7 +271,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   keep beside the voices' since the chip toggles a channel's echo note by
   note), and since round 84 its pan after the mark (`@0.45`: the median
   right-side share of the hits struck on the sample, kept to twentieths,
-  `rhythm.PAN_BIN`; `@m@@0.45` where the slot is dry); the song's key
+  `rhythm.PAN_BIN`; `@m@@0.45` where the slot is dry), and since round 88 a
+  tuned slot's rate, moved with the written key, stays inside the rates the
+  game struck the sample at as that piece (the `kit_rates` word,
+  `render.kit_rate_wall`: FFVI's pitched snare -4 to +3, and a tritone's
+  move had taken it to -10); the song's key
   (`key=9:minor`) stands before the top, and since
   round 82 its echo word before the key
   (`echo=0.20:80:0.78:melody:bass+drums`, the echo table's outcome), which

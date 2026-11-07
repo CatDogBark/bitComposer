@@ -852,9 +852,9 @@ class NewTablesTests(unittest.TestCase):
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
         self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit
-        self.assertTrue(tokens[1].startswith("drums=::::0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
+        self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}
-        self.assertTrue(rhythm.balance_units([s])[0].outcome.split()[1].startswith("drums=:::::::K="))   # no levels read: the kit and habit alone
+        self.assertTrue(rhythm.balance_units([s])[0].outcome.split()[1].startswith("drums=:::Kc::::K="))   # no levels read: the channels, the kit and habit alone (round 87)
         units = lambda name, outcome, part, **more: [tables.Unit(f"s{i}", "g", outcome, {"part": part, **more}) for i in range(3)]   # noqa: E731
         token = "accompaniment=half:56-68:0.8:2 bass=half:36-44:0.9:1:1.0 counter=minor:60-72:0.8:1 drums=::::0.6 melody=main:64-84:0.9:1:0.7"
         models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, rhythm.ARRANGEMENT)),
@@ -953,7 +953,7 @@ class NewTablesTests(unittest.TestCase):
         tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith(("tempo=", "top=", "loud="))]
         self.assertTrue(tokens[0].startswith("accompaniment=") and ":3:0.8:1.3@" in tokens[0] and "/2.5@" in tokens[0], tokens)   # each voice beyond the line: level@sample@note share (round 65)
         self.assertTrue(tokens[1].startswith("bass=") and tokens[1].split(":")[5] == "", tokens)     # one voice: no layer field
-        self.assertTrue(tokens[2].startswith("drums=::::0.5:::"), tokens)
+        self.assertTrue(tokens[2].startswith("drums=:::Kc:0.5:::"), tokens)   # the kit's channel (round 87)
         s.voice_levels.pop(5)
         self.assertIsNone(rhythm.voice_level_shares(s, "accompaniment"))                             # a voice without a level: no field
         self.assertIn(":3:0.8:", rhythm.balance_units([s])[0].outcome.split()[0])
@@ -1296,6 +1296,61 @@ class NewTablesTests(unittest.TestCase):
             bounds[field] = p.bounds["bass"]
         self.assertEqual(bounds["sbass123456@32-52"], (36, 44))                                     # the planned register, whole
         self.assertEqual(bounds["sbass123456"], (48, 60))                                          # the other song's range, as before
+
+    def test_the_kit_takes_its_songs_channels(self):
+        """Round 87: the kit gets as many voices as its token song gave it channels, so a one-channel kit no longer costs the
+        band a pitched voice, and each piece plays on the channel the game put it on; the fixed split stands without the
+        field."""
+        from bitcomposer.translate import tables
+        band = ["accompaniment", "bass", "counter", "drums", "melody"]
+        counts = {"accompaniment": 3, "bass": 1, "counter": 2, "melody": 1}
+        self.assertEqual(whole.allot(band, counts, 1), {"drums": 1, "accompaniment": 3, "bass": 1, "counter": 2, "melody": 1})   # eight, untrimmed
+        self.assertEqual(whole.allot(band, counts, 2)["accompaniment"], 2)                           # the old two: the accompaniment trimmed
+        self.assertEqual(whole.allot(band, counts)["drums"], 2)
+        self.assertEqual([whole.drum_voice_of(["KS", "h"], x) for x in "KSh"], [0, 0, 1])
+        self.assertEqual([whole.drum_voice_of(None, x) for x in "KSthco"], [0, 0, 0, 1, 1, 1])      # no channels: the fixed split
+        self.assertEqual(whole.drum_voice_of(["S"], "K", 1), 0)                                      # a letter on no channel, one voice: the first
+        self.assertEqual(whole.drum_voice_of(["h", "K", "S"], "S", 3), 2)
+        token = ("accompaniment=half:56-68:0.8:3:0.6:1.2@sacc1234567@0.50/1.1@sacc7654321@0.40::sacc0000001:dense+varied "
+                 "bass=half:36-44:0.9:1:1.0 counter=minor:60-80:0.9:2:0.5:1.0@scnt0000001@0.5 "
+                 "drums=:::S:0.2:::S=s1279e119a1@0.70@@@m:dense+varied melody=main:64-84:0.9:1:0.7 tempo=medium")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band or "accompaniment" not in p.band:
+            self.skipTest("a part left out of this seed's textures")
+        self.assertEqual(p.extras["drums"]["channels"], ["S"])
+        self.assertEqual((p.voices["drums"], p.voices["accompaniment"]), (1, 3))                    # the eight: 3 + 1 + 2 + 1 + 1
+        self.assertTrue(any(line.startswith("kit channels from the balance: 1 (S)") for line in p.log), p.log)
+
+    def test_a_tuned_slots_rate_stays_inside_the_games_rates(self):
+        """Round 88: a tuned slot's rate, moved with the written key, is held inside the rates the game struck the sample at
+        as that piece (the kit_rates word, kit_rate_wall); without the word the move stands as round 79 made it."""
+        import importlib
+        from types import SimpleNamespace
+        from bitcomposer.translate import tables
+        render_mod = importlib.import_module("bitcomposer.translate.whole.render")
+        token = ("bass=half:36-44:0.9:1:1.0 drums=:::S|h|K:0.5:::K=kick_sample@1.54@r60@0.94@m,S=snare_sample@0.61@r56t@0.46@d@e,h=hat_sample@0.49@r60@0.21@m:dense+varied "
+                 "melody=main:64-84:0.9:1:0.7 key=7:major top=0.30 tempo=fast")
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        p = whole.plan({"balance": t}, 1, "g")
+        if "drums" not in p.band:
+            self.skipTest("the drums left out of this seed's textures")
+        rates = tables.Table(("part", "piece"), "kit_rates").fit([tables.Unit(f"s{i}", "g", str(r), {"part": "snare_sample", "piece": "S"}) for i, r in enumerate((56, 62, 63, 63))])
+        self.assertEqual(whole.kit_rate_wall({"kit_rates": rates}, "snare_sample", "S"), (56, 63))   # FFVI's snare: -4 to +3
+        self.assertIsNone(whole.kit_rate_wall({"kit_rates": rates}, "snare_sample", "K"))             # never struck as a kick: no wall
+        self.assertIsNone(whole.kit_rate_wall({}, "snare_sample", "S"))
+        p.tonic, p.mode = 1, "minor"                                                                  # C# minor, a tritone from the token's G
+        bell = SimpleNamespace(c5_speed=32000, source_rate=32000)
+        self.assertEqual(render_mod.kit_note_of(p, "snare", "snare_sample", bell), 48.0 - 10)          # round 79 alone: -4 moved by -6
+        p.extras["drums"]["kit_rate_walls"] = {"S": (56, 63)}
+        self.assertEqual(render_mod.kit_note_of(p, "snare", "snare_sample", bell), 48.0 - 4)           # held at the game's lowest, Fanfare's own
+        p.tonic = 9                                                                                  # A minor: -4 moved by +2 = -2, inside
+        self.assertEqual(render_mod.kit_note_of(p, "snare", "snare_sample", bell), 48.0 - 2)
+        self.assertEqual(render_mod.kit_note_of(p, "kick", "kick_sample", bell), 48.0)                 # an untuned slot: as the game struck it
+        s = rhythm.Song("t", 4, 4, [(0.0, 4.0)], [], pieces={"snare0123456789": "snare"})
+        s.kit_rates = {"snare0123456789": 56}
+        units = rhythm.kit_rate_units([s])
+        self.assertEqual((units[0].outcome, units[0].values), ("56", {"part": "ssnare01234", "piece": "S"}))
 
     def test_the_token_songs_kit_rides_the_drums_token(self):
         """Round 63: the song's kit (a piece letter and the pack id of the sample it strikes it with most) is the drums

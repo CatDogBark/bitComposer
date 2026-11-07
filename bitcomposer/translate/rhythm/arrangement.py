@@ -521,6 +521,36 @@ def kit_degree(s, pitch: int) -> str:
     return f"c{int(pitch) - tonic4}"
 
 
+def kit_channels(s) -> str:
+    """The kit's channels as the drums token's fourth field (round 87): the slot letters each game channel plays, the
+    channels in the song's order and the letters in LETTERS' order, joined by "|" ("KS|h": the kick and snare on one
+    channel, the hat on another; "S|c"; "K"). A slot's channel is the one its sample is struck on most. The writer had put
+    every kit on two voices by a fixed split (plan.DRUM_VOICES: kick, snare and toms on one, hat, cymbals and the rest on
+    the other): FFVI puts 19 of its 47 kits on one channel, 20 on two, 8 on three or more, and 73 of its 90 kit channels
+    carry one piece, the snare and the cymbal apart (8 songs) the commonest pair; the fixed two had cost a pitched voice
+    in 14 of 48 kit songs (allot trims the band past eight) and dropped 2.2 % of the kit's hits where a kick struck under a
+    snare the game had on its own channel."""
+    counts, by_voice = Counter(), {}
+    for v, (role, ns) in s.voice_notes.items():
+        if role != R.DRUMS:
+            continue
+        for n in ns:
+            key = n[3] if isinstance(n[3], str) else None
+            piece = (s.pieces or {}).get(key)
+            if key and piece in readings_mod.LETTERS:
+                counts[(readings_mod.LETTERS[piece], key)] += 1
+                by_voice.setdefault(key, Counter())[v] += 1
+    if not counts:
+        return ""
+    best = kit_slot_samples(counts, getattr(s, "kit_levels", None) or {})
+    channel_of = {letter: by_voice[key].most_common(1)[0][0] for letter, key in best.items() if key in by_voice}
+    groups = {}
+    for letter in readings_mod.LETTERS.values():
+        if letter in channel_of:
+            groups.setdefault(channel_of[letter], []).append(letter)
+    return "|".join("".join(groups[v]) for v in sorted(groups))
+
+
 def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song's kit leans on
     for it (round 80, kit_slot_samples: the loudest of the samples struck a fifth of the letter's hits or more; the most
@@ -767,7 +797,8 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", "", levels.get(role, ""), "", "", kit_token(s, top, tuned), dh]   # and its kit as the eighth (round 63; each
+                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh]   # and its kit as the eighth (round 63; each
+                                                                                             # channel's pieces as the fourth, round 87;
                                                                                              # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
                     fields.pop()
@@ -958,6 +989,23 @@ def attack_units(songs) -> list:
             if not body or not strike:
                 continue
             out.append(tables.Unit(s.sid, s.game, "struck" if strike > ATTACK_STRUCK * body else "sustaining", {"part": role}))
+    return out
+
+
+def kit_rate_units(songs) -> list:
+    """Each percussion kit sample a song strikes, as a unit: its outcome the rate the chip strikes it at most, as a note
+    (60 as recorded, 48 an octave under; Song.kit_rates), its values the sample's id as a pack names it and the piece
+    the namer called it (round 88). The wall a tuned slot's moved rate stays inside: round 79 moves a tuned sample's rate
+    with the written key, by up to a tritone, and over FFVI's tuned slots and the twelve keys a written song can land in
+    the moved rate fell outside the rates the game ever struck the sample at as that piece in 77 of 132 cases. Fanfare's
+    pitched snare, struck at -4 there and -4 to +3 wherever FFVI uses it as a snare, had been moved to -10 for a song in
+    C# minor, where its 220 Hz tone fell to B2 and rang twice as long: a guitar, the owner heard (Song Check 70)."""
+    out = []
+    for s in songs:
+        for key, rate in (getattr(s, "kit_rates", None) or {}).items():
+            letter = readings_mod.LETTERS.get((s.pieces or {}).get(key))
+            if letter:
+                out.append(tables.Unit(s.sid, s.game, str(int(rate)), {"part": "s" + key[:10] if len(key) >= 10 else key, "piece": letter}))
     return out
 
 
