@@ -40,7 +40,7 @@ SOURCES = {                               # a conditioning -> the tables whose o
     "tier": ["tone_tiers"],
 }
 CONCEPTS = {"mix_level", "lead", "loudness"}   # VOCABULARY entries that are measures, passes or ideas, not tables
-STRUCTURAL = {"part", "meter", "previous", "place", "line", "onsets", "voice", "value", "index", "tone", "rank", "gap", "role", "interval"}
+STRUCTURAL = {"part", "meter", "previous", "place", "line", "onsets", "voice", "value", "index", "tone", "rank", "gap", "role", "interval", "note"}
 STAGES = [                                # where a table is drawn, by the function that draws it (the writer's source)
     ("plan", "the plan, drawn once a song"), ("writing", "the parts' writing (whole.write hands the table to a writer)"), ("drums", "the drums"), ("bass", "the bass"), ("upper", "the upper parts"),
     ("melody", "the tune"), ("counter", "the counter-line"), ("render", "the render"), ("harness", "the harness only"),

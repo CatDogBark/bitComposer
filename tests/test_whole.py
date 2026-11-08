@@ -453,6 +453,87 @@ class ParallelIntervalTests(unittest.TestCase):
         self.assertTrue(all(int(m) % 12 in (4, 7) for a, b, m, v in held))
 
 
+class SmallWordTests(unittest.TestCase):
+    """Round 98: the form's part the loop returns to, and the tune's note lengths as its song's own."""
+
+    def _song(self, bars: int = 8):
+        from bitcomposer.translate import vocab
+        spans = [(4.0 * k, 4.0 * k + 4.0) for k in range(bars)]
+        return rhythm.Song("t", 4, 12, spans, [vocab.Span(0.0, 4.0 * bars, 0, "", 1.0)], notes={}, sid="s", game="g", tonic=0, mode="major")
+
+    def test_the_loop_returns_to_the_games_part(self):
+        """The loop_parts word counts which part of the form a song's loop returns to, by whether the form opens with an
+        intro it never comes back to; the plan draws it in place of the rule (after the intro, else the first bar), which
+        FFVI breaks in 21 of 61 loops, returning to the intro itself in 15 of 53."""
+        from bitcomposer.translate import tables
+        s = self._song()
+        s.parts = [(0, 4, None, "A"), (4, 8, None, "B"), (12, 8, 1, "B")]                        # an intro, then B twice
+        s.loop_bar = 4
+        self.assertEqual([(u.outcome, u.values) for u in rhythm.loop_part_units([s], sure_only=False)], [("1", {"part": "form", "intro": "intro"})])
+        s.loop_bar = 0
+        self.assertEqual(rhythm.loop_part_units([s], sure_only=False)[0].outcome, "0")          # back to the intro
+        s.parts = [(0, 4, None, "A"), (4, 8, None, "B"), (12, 4, 0, "A")]                        # A comes back: no intro
+        self.assertEqual(rhythm.loop_part_units([s], sure_only=False)[0].values["intro"], "none")
+        s.loop_bar = None
+        self.assertEqual(rhythm.loop_part_units([s], sure_only=False), [])
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["loop_parts"][3], ("part", "intro"))
+        # the plan: the rule without the word; the drawn part with it; the rule where the form lacks the part
+        parts = [(0, 4, None, "A"), (4, 8, None, "B"), (12, 8, None, "C")]
+        self.assertEqual(whole.loop_bar_of(parts), 4)
+        mk = lambda outcome, intro: [tables.Unit(f"s{i}{outcome}{intro}", "g", outcome, {"part": "form", "intro": intro}) for i in range(4)]   # noqa: E731
+        t = tables.Table(("part", "intro"), "loop_parts", votes=tables.SHARES).fit(mk("0", "intro") + mk("1", "none"))
+        log = []
+        self.assertEqual(whole.plan_loop({"loop_parts": t}, parts, random.Random(1), log), 0)    # back to the intro, as the word says
+        self.assertTrue(any(l.startswith("loop (loop_parts): back to part 1 of 3, bar 1 (an intro)") for l in log), log)
+        self.assertEqual(whole.plan_loop({}, parts, random.Random(1), []), 4)                   # no word: the rule
+        far = tables.Table(("part", "intro"), "loop_parts", votes=tables.SHARES).fit(mk("7", "intro"))
+        log = []
+        self.assertEqual(whole.plan_loop({"loop_parts": far}, parts, random.Random(1), log), 4)  # a part the form lacks: the rule
+        self.assertTrue(any("the form has 3" in l for l in log), log)
+
+    def test_the_tune_sounds_its_songs_shares(self):
+        """The tune_sounds word counts the median share of its gap a tune's or counter-line's held note sounds, and its
+        detached ones apart (FFVI 0.91 and 0.40 for the tune); the plan draws both once a song a part, and the melody and
+        counter writers sound their notes by them in place of the constants 0.95 and 0.5."""
+        from bitcomposer.translate import tables, writer
+        s = self._song()
+        s.notes["melody"] = [(4.0 * k + i, 0.9 if i % 2 == 0 else 0.3, 67.0, "m") for k in range(8) for i in range(4)]   # held and detached by turns
+        units = {u.values["note"]: u.outcome for u in rhythm.tune_sound_units([s])}
+        self.assertEqual(units, {"held": "0.9", "detached": "0.3"})
+        self.assertEqual(rhythm.TUNE_KINDS, ("held", "detached"))
+        self.assertEqual((writer.sounded_share(None, "held"), writer.sounded_share(None, "detached")), (writer.HELD, writer.DETACHED))
+        self.assertEqual(writer.sounded_share({"held": 0.8, "detached": 0.3}, "detached"), 0.3)
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["tune_sounds"][3], ("part", "note"))
+        # the counter writer: a values table that says held; the song's shares against the constants
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(10) for p in (rhythm.START, "-2")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i in range(10) for o, pl in (("0", "with"), ("1", "alone"))])
+        vals = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
+        models = {"voice_intervals": iv_t, "voice_moves": mv_t, "values": vals}
+        tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 67.0, 0) for k in range(8) for i in range(4)]
+        for sounds, want in ((None, writer.HELD), ({"held": 0.8, "detached": 0.3}, 0.8)):
+            song = self._song()
+            notes, figures, log = writer.counter(song, tune, ["0 1 2 3"] * 8, ["1 1 1 1"] * 8, (48, 96), models, random.Random(3), "other",
+                                                 key=(0, "major"), articulation="held", register=(60, 84), tune_sounds=sounds)
+            lengths = {round(b - a, 3) for a, b, m in notes[:-1]}
+            self.assertEqual(lengths, {round(want, 3)}, (sounds, lengths))                      # a beat's gap sounds the share
+        # the plan: both shares drawn once a song for each line, on their own streams
+        mk = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        many = lambda outcome, **vals: [tables.Unit(f"t{i}", "g", outcome, vals) for i in range(40)]   # noqa: E731  enough songs that the level holds its draw
+        ts = tables.Table(("part", "note"), "tune_sounds", votes=tables.SHARES).fit(
+            many("0.9", part="melody", note="held") + many("0.4", part="melody", note="detached")
+            + many("1.0", part="counter", note="held") + many("0.3", part="counter", note="detached"))
+        token = "melody=main:64-84:0.9:1:0.7:::slead counter=half:55-67:0.8:1:0.5:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan({**bal, "tune_sounds": ts}, 7, "g")
+        self.assertEqual(p.extras["melody"]["tune_sounds"], {"held": 0.9, "detached": 0.4})
+        self.assertEqual(p.extras["counter"]["tune_sounds"], {"held": 1.0, "detached": 0.3})
+        self.assertNotIn("tune_sounds", whole.plan(bal, 7, "g").extras["melody"])
+
+
 if __name__ == "__main__":
     unittest.main()
 

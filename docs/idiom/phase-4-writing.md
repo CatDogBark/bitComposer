@@ -6487,3 +6487,72 @@ by construction). The apart voices' holds (`VOICE_TRIES`), the tune's
 recall placement with an eye on the band, the bass's per-song spread,
 the counter's chord tones off the beat stand from rounds 94 to 96. Then
 the open items' fifth entry, the small words batch.
+
+### Round 98: the small words (2026-11-07, the open items' fifth entry, on the owner's go)
+
+**Why.** The second audit's small standing items: the loop's bar, the
+tune's note lengths, the stack's width, and from rounds 90 to 92 the
+relation word's extent and the echo a stretch sends; the pan word's
+sweeps left at the median since round 85. Measured first (small_ffvi.py,
+small_written.py). The loop: `plan.loop_bar_of` sends every loop to the
+second part after an intro (a first part the form never comes back to)
+and to the first bar without one, right for 40 of FFVI's 61 loops; FFVI
+returns to the intro itself in 15 of its 53 intro songs, to the second
+part in 33, further on in 5, and to the first part in 7 of its 8 songs
+without an intro; every written loop took the rule's bar. The tune's note
+lengths: the writers sounded every held note 0.95 of its gap and every
+detached one 0.5 (`writer.HELD`, `DETACHED`), where FFVI's tunes hold 0.91
+and detach 0.40 at the median over songs, its counter-lines 0.92 and 0.41
+(the values word says which a note is; readings.SHORT at 0.75 splits
+them). The stack's width: a written part's line is one voice, so its
+spread per chord span comes from the voices beside it at the token's own
+offsets; over sixty seeds the accompaniment spans 10 semitones at the
+median against FFVI's 11, the arp 9 against 8, the harmony 8 against 5
+(ten FFVI songs): the token carries the first two, the harmony's is the
+gap, and the `widths` word (the upper parts' width as a whole) has no
+lever in a line written one voice at a time. The relation word's extent:
+FFVI's layer voices play in 0.90 of their line's bars at the median
+(quartiles 0.67 to 1.00), 19 of 129 in under half, where a written voice
+plays wherever its line does. The echo a stretch sends: 11 of FFVI's 89
+voices that change sample send one sample to the echo and keep another
+dry (Kefka's tune and counter, Gau's accompaniment), where the echo word
+names parts. The pan sweeps stand.
+
+**Built.** Two counted words. `loop_parts` (`rhythm.loop_part_units`):
+each sure song's loop as the index of the form's part it returns to, by
+whether the form opens with an intro; `plan.plan_loop` draws it once a
+song on an own stream (`whole:{seed}:loop part`) and takes that part's
+first bar, the rule's bar without the word or for a part the form lacks;
+the `loops` word's chord stands at the loop bar as before. `tune_sounds`
+(`rhythm.tune_sound_units`): each tune's and counter-line's held notes,
+and its detached ones, as the median share of its gap such a note sounds,
+by the part and the kind (`TUNE_KINDS`); drawn once a song for each line
+on its own streams (`whole:{seed}:tune_sounds:{part}:{kind}`), and the
+melody and counter writers sound a note by them (`writer.sounded_share`:
+the constants without the word). The three measured items are LIMITS
+entries (the echo by stretch, the layer voices' extent, the chord parts'
+spread); the pan sweeps are left. No re-read; pack4 refit (107 tables;
+`pack.json.before-r98`), the vocabulary shipped, the map regenerated.
+Tests: the loop units on a synthetic form (an intro, a return to it, no
+intro, no loop), `plan_loop` with the word, without it and for a part the
+form lacks; the tune units on a line of held and detached notes by turns,
+`sounded_share`, the counter writer at the song's share and at the
+constant, the plan's draws for both lines. Suite 436 (1 skip).
+
+**Measured** (sixty seeds). The loop went back to the intro in 19 intro
+songs and to the second part in 37 (FFVI 15 and 33 of 53), moving from
+the rule's bar in 23 of 60. The tune's held notes sound 0.9 of their
+gap at the median over songs and its detached ones 0.4 (FFVI 0.91 and
+0.40; 0.95 and 0.5 before), the counter's 0.9 and 0.4 (0.92 and 0.41).
+Plans: 400 of 400 seeds keep their token song; 229 of 400 songs are note
+for note what they were, the rest moved by the loop bar (the chord at the
+loop and the render's loop point) or by a note's length.
+
+**Song Check 81** (https://claude.ai/artifact/XdLLvbSg8ghCUj6ppNSWa6): six pairs, the six standing seeds, the same
+plan both sides but the loop bar where the word moved it; before is
+round 97 (dev after #120 and the vocabulary before this round), after
+round 98. The owner listens; the gate is the count above.
+
+**Open.** A rest kind in the relation word for a layer voice's extent; an
+echo mark per stretch; the harmony's spread; the pan sweeps. Then the open
+items' sixth entry, the kit round, or whatever the owner's ear puts first.

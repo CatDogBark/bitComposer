@@ -82,7 +82,7 @@ bar; the stack's width; the tune's note lengths and first note.
 | 3 | the kit | replaced in rounds 58 (pieces), 63 (the token's kit), 68 (a level a piece), 75 (the struck note), 77 (the hold), 78 (the rate), 79 (the degree), 80 (the slot's sample), 81 (the slot's figure), 83 (a tune on the drum channel a part); `DRUM_VOICES` replaced in round 87 (the kit on its song's channels) |
 | 4 | the band's lock | standing, nearly inert: the bass drew under a lock in 170 of 982 bars (none in 37 of 56 songs) and missed it in 35; the accompaniment 29 of 874 and 3; the harmony and arp never |
 | 5 | the tune's filters | replaced in rounds 93 and 94: the `off_scale` and `clashes` words are drawn once a song and held as the chord-tone rate is; since round 94 the clashes word counts every pitched part against the parts written before it and each writer holds its share (the counter's clashes with the tune and the bass halved); what remains is the tune's own floor (its returning cells and endings) and the voices beside the lines, which hold no word |
-| 6 | the note lengths | standing: FFVI's detached notes sound 0.40 of the gap at the median, its held 0.89, against 0.5 and 0.95 |
+| 6 | the note lengths | replaced in round 98: the `tune_sounds` word (the share of its gap a held and a detached tune note sounds, drawn once a song a line) stands in for the constants 0.95 and 0.5; FFVI's tunes hold 0.91 and detach 0.40 at the median |
 | 7 | the spans | replaced in round 34 as recorded; `BESIDE_SPAN` 24 stays as the second bass voice's fallback bound, `LAYER_OFFSET` 24 the reading's own grain |
 | 8 | the meter | standing: 4 of 68 FFVI songs in 3/4 lend no bars to a 4/4 song (round 81's open item) |
 | 9 | the doubling voice | replaced in round 97: the `parallel_intervals` word says where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones off it), by the nominal interval and the line note's tone class, and the writer places that tone of the written chord nearest the nominal; the line again in the scale had matched FFVI's voice on 0.31 of its onsets |
@@ -152,15 +152,15 @@ bar; the stack's width; the tune's note lengths and first note.
   fifths and fourths in 14. The writer's doubling voice keeps its scale steps,
   so it bends by a semitone only. Word: the doubling as a kind of
   `voice_intervals`, its interval drawn an onset. Medium.
-- **The loop's bar** (`loop_bar_of`): FFVI's loop returns to the second part in
+- **The loop's bar** (`loop_bar_of`; replaced in round 98 by the `loop_parts` word, drawn once a song by whether the form opens with an intro): FFVI's loop returns to the second part in
   33 of 61 songs, to bar 0 in 22, to another part's start in 6; the rule agrees
   in 40, as in the first audit. Word: the loop's part. Small.
-- **The stack's width** (`stack`; the `widths` word counted, not drawn): FFVI's
+- **The stack's width** (`stack`; the `widths` word counted, not drawn; measured again in round 98: the written accompaniment spans 10 semitones a chord span against FFVI's 11, the arp 9 against 8, the harmony 8 against 5, the token's offsets carrying the first two, see LIMITS.md): FFVI's
   accompaniment voices struck together span 7 semitones at the median (quartiles
   4 to 12, over an octave in 26 %), the written 9 (7 to 21, 33 %: the spare
   voice doubled an octave up); FFVI's harmony spans 8 (5 to 15, over an octave
   in 31 %), the written 6 (5 to 7, 11 %, a fifth or under in 89 %). Small.
-- **The tune's note lengths** (`DETACHED`, `HELD`): FFVI's detached notes sound
+- **The tune's note lengths** (`DETACHED`, `HELD`; replaced in round 98 by the `tune_sounds` word): FFVI's detached notes sound
   0.40 of their gap at the median (0.24 to 0.45), its held 0.89 (0.83 to 0.94);
   72 % of its notes are held. The written notes a touch more legato. Small.
 - **The tune's first note**: the chord's root nearest the register's centre.
