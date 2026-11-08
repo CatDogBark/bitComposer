@@ -426,6 +426,13 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 taken.append(f"{slot} {sid}")
                 if slot == "hihat" and "open_hihat" in out[role]:
                     out[role]["open_hihat"] = make(sid)
+                second = plan_mod.kit_second(plan, slot)    # the letter's second sample (round 99), its own slot name
+                if second and second.get("sample") in own:
+                    slot2 = slot + plan_mod.SECOND_SLOT
+                    out[role][slot2] = make(second["sample"])
+                    taken.append(f"{slot2} {second['sample']} ({second['share']:.2f} of the {letter} hits)")
+                    if not samples_mod.is_percussion(f"{pack_name}_{second['sample']}"):
+                        plan.extras.setdefault(R.DRUMS, {}).setdefault("tonal_slots", set()).add(slot2)
                 if plan_mod.kit_piece_tuned(plan, slot):           # a tuned slot's moved rate stays inside the game's rates for the
                     wall = kit_rate_wall(models, sid, letter)       # sample as this piece (round 88), read before any note is placed
                     if wall is not None:
@@ -820,7 +827,7 @@ def kit_rate_wall(models: dict | None, sid: str, letter: str) -> tuple | None:
 def walled(plan: plan_mod.Plan, slot: str, offset: float) -> float:
     """A kit slot's rate offset from the recording held inside the game's rates for its sample as that piece
     (extras.drums.kit_rate_walls, set by samples_for from the kit_rates word; round 88), as it is without a wall."""
-    letter = plan_mod.SLOT_LETTER.get(slot)
+    letter, _ = plan_mod.slot_letter(slot)
     wall = (plan.extras.get(R.DRUMS, {}).get("kit_rate_walls") or {}).get(letter)
     return max(wall[0] - 60, min(wall[1] - 60, offset)) if wall else offset
 
@@ -839,8 +846,9 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
     from ...drums import KIT_NOTE
     from ..harmony import MODES
     from ..writer.tune import scale_index, scale_pitch
-    letter = plan_mod.SLOT_LETTER.get(slot)
-    given = (plan.extras.get(R.DRUMS, {}).get("kit") or {}).get(letter) if letter else None
+    letter, second = plan_mod.slot_letter(slot)
+    given = (((plan_mod.kit_second(plan, slot) or {}).get("sample") if second else (plan.extras.get(R.DRUMS, {}).get("kit") or {}).get(letter))
+             if letter else None)                           # a second slot plays its own sample's note (round 99)
     if given != name:
         return float(KIT_NOTE)
     key = plan_mod.kit_token_key(plan)                      # the token song's key (round 79): a degree or a tuned rate is read against it

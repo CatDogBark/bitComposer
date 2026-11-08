@@ -696,6 +696,30 @@ def kit_slots(song: "Song") -> dict:
     return kit_slot_samples(counts, getattr(song, "kit_levels", None) or {})
 
 
+SECOND_HITS = 8                      # a kit letter's second sample is struck this many times or more in the song (round 99)
+
+
+def kit_second_samples(song: "Song") -> dict:
+    """The second sample of each kit letter the song strikes on two samples (round 99): the most struck of the letter's
+    samples other than its slot's (kit_slots), with SECOND_HITS hits or more; {letter: sample key}, {} where no letter has
+    one. FFVI: 19 letters in 15 of its 46 kits, the hat in 12 of the 16 kits that have one (a closed hat beside a longer
+    open one, the open one off the beat in most), the snare in 4 of 30 (the Battle Theme's sixteenth-note rattle beside
+    its backbeat snare); the written kit had played one sample a letter (round 80's pick)."""
+    slots = kit_slots(song)
+    counts = Counter()
+    for n in song.notes.get(R.DRUMS, []):
+        key = n[3] if isinstance(n[3], str) else None
+        piece = (song.pieces or {}).get(key)
+        if key and piece in LETTERS:
+            counts[(LETTERS[piece], key)] += 1
+    out = {}
+    for letter, key in slots.items():
+        others = [(k, c) for (l, k), c in counts.items() if l == letter and k != key and c >= SECOND_HITS]
+        if others:
+            out[letter] = max(others, key=lambda kc: (kc[1], kc[0]))[0]
+    return out
+
+
 def kit_classes(song: "Song") -> dict:
     """Each kit slot's strike class (round 81): the slot's sample's hits a bar of the song's meter, every bar counted as
     DENSITIES counts a part's density, as SLOT_CLASSES' letter: {letter: class}. Wild West strikes its pitched blip 57
@@ -706,7 +730,8 @@ def kit_classes(song: "Song") -> dict:
         return {}
     bars = sum(1 for _ in numbered_bars_of(song, R.DRUMS)) or len(song.bars) or 1
     hits = Counter(n[3] for n in song.notes.get(R.DRUMS, []) if isinstance(n[3], str))
-    return {letter: habit_of(hits[key] / bars, SLOT_CLASSES) for letter, key in slots.items()}
+    seconds = kit_second_samples(song)                      # the letter's second sample's hits count too (round 99): the writer's figure
+    return {letter: habit_of((hits[key] + (hits[seconds[letter]] if letter in seconds else 0)) / bars, SLOT_CLASSES) for letter, key in slots.items()}   # gives both their hits
 
 
 def classes_value(classes: dict, letters) -> str:
@@ -850,23 +875,27 @@ def tune_grain_units(songs) -> list:
     return out
 
 
-def drum_figure(struck, song: Song, slots: dict | None = None) -> str:
+def drum_figure(struck, song: Song, slots: dict | None = None, seconds: dict | None = None) -> str:
     """A drum bar's figure as a table's outcome: each hit's position and
     its piece's letter (LETTERS; a sample the reading named no drum, o),
     "position:letter" tokens, two pieces struck together two tokens; a
     bar rested through "-". Since round 81 a letter's hits are its slot's
     sample's (`slots`, kit_slots: the sample the song's kit leans on for
-    the letter, the one the written kit plays): a hit on another sample of
-    the letter is left out, as the written kit has no voice for it (Battle
-    Theme's rattle in sixteenths beside its backbeat snare had made the
-    written snare a sixteenth-note part); a letter without a slot (a sample
-    the namer called no drum, o) keeps every hit."""
+    the letter, the one the written kit plays) and since round 99 its
+    second sample's too (`seconds`, kit_second_samples: the written kit
+    plays both, the second's hits by the kit_seconds word): a hit on any
+    other sample of the letter is left out, as the written kit has no voice
+    for it (Battle Theme's rattle in sixteenths beside its backbeat snare
+    had made the written snare a sixteenth-note part when the kit played
+    one sample a letter); a letter without a slot (a sample the namer
+    called no drum, o) keeps every hit."""
     slots = kit_slots(song) if slots is None else slots
+    seconds = kit_second_samples(song) if seconds is None else seconds
     tokens = set()
     for p, ns in struck:
         for n in ns:
             letter = LETTERS.get(song.pieces.get(n[3]), "o")
-            if letter in slots and slots[letter] != n[3]:
+            if letter in slots and n[3] != slots[letter] and n[3] != seconds.get(letter):
                 continue
             tokens.add((p, letter))
     return " ".join(f"{p}:{letter}" for p, letter in sorted(tokens)) or "-"
@@ -884,20 +913,20 @@ def drum_units(songs) -> list:
     tempo band, the bar's place in its part of the form (fills land on the
     last), the figure before it (START where none), the kit (which pieces
     the song strikes at all), the kit's strike classes (round 81,
-    classes_value: each slot's sample's hits a bar as a class, "Km Sd ha")
-    and the song's habit (_rhythm_habit: density and repetition). The
-    figures count each letter's slot's sample (drum_figure)."""
+    classes_value: each slot's hits a bar as a class, "Km Sd ha") and the
+    song's habit (_rhythm_habit: density and repetition). The figures count
+    each letter's slot's sample and its second (drum_figure)."""
     out = []
     for s in songs:
         if R.DRUMS not in s.notes:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
-        slots = kit_slots(s)
+        slots, seconds = kit_slots(s), kit_second_samples(s)
         classes = classes_value(kit_classes(s), LETTERS.values())
         for k, a, struck in numbered_bars_of(s, R.DRUMS):
             if last is not None and k != last + 1:
                 previous = START
-            drawn = drum_figure(struck, s, slots)
+            drawn = drum_figure(struck, s, slots, seconds)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
                 "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous, "feel": cells_mod.song_feel(s)}))
             previous, last = drawn, k

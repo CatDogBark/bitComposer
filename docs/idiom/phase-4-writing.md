@@ -6556,3 +6556,89 @@ round 98. The owner listens; the gate is the count above.
 **Open.** A rest kind in the relation word for a layer voice's extent; an
 echo mark per stretch; the harmony's spread; the pan sweeps. Then the open
 items' sixth entry, the kit round, or whatever the owner's ear puts first.
+
+### Round 99: a kit slot's second sample (2026-11-07, the kit round, on the owner's go after the discussion)
+
+**Why.** The open items' sixth entry was the kit round, three leftovers
+from rounds 83 to 89: the tuning verdict, the play clause's pitch word and
+the kit-character count. Measured first (kit_facts.py, kit_facts2.py,
+kit_second_ffvi.py): the tuning verdict is closed by the count (the 9 kit
+samples struck at two rates or more across songs land on no one degree
+against the song's tonic; the main snare at rates 59 and 60 over 23
+songs sits on nine degrees: FFVI's percussion rates are sounds, and the
+round-88 wall is as far as the data allows), the pump pitch is one song
+(Wild West) and the character count is for the ear. What the counts did
+show was the one fixed cap left in the kit: round 80's pick of one sample
+a letter. FFVI strikes 19 letters in 15 of its 46 kits on a second sample
+with eight hits or more: the hat in 12 of the 16 kits that have one, a
+short closed hat beside a longer open one at the same level, the open one
+off the beat in most (0.50 of the eighth-note hits take it, 0.31 of the
+beats), the snare in 4 of 30 (the Battle Theme's sixteenth-note rattle,
+269 hits, beside its backbeat snare, 82; The Decisive Battle's two
+snares), a tom, a cymbal and an "other" once each; the second takes 0.35
+of the hat's hits at the median, 0.57 of the snare's; it shares the main's
+channel in 11 of the 19. The written kit played the slot's one sample on
+every hit, so a third of kit songs lost the open-hat lift, and a Battle
+Theme kit played its backbeat snare at the rattle's density (round 80's
+cost, recorded then).
+
+**Built.** One counted word and a token field. The kit token's slot
+carries the letter's second sample after a `+`
+(`readings.kit_second_samples`: the most struck of the letter's other
+samples with SECOND_HITS hits or more), with its level, its note or rate
+(tuned mark and all), its hold and its share of the letter's hits
+(`h=sd1c4c7ce33@0.14@r60@0.43@d@@0.50+s831784ce4b@0.14@r60@0.44@0.14`);
+the letter's figure (`readings.drum_figure`, the drum units and the
+limbs' units) and the slot's strike class (`readings.kit_classes`) count
+both samples' hits, since the written kit now gives both their hits
+(round 81 had counted the slot's alone, the kit playing one sample a
+letter; under eight hits the other sample is no second and round 81's
+figure stands). `kit_seconds`
+(`rhythm.kit_second_units`): each hit of such a letter as "second" or
+"main", by the letter and the hit's place in the beat (on the beat, an
+eighth, a sixteenth, a triplet, finer). The plan parses the field
+(`extras.drums.kit_seconds`); `samples_for` gives the second its own slot
+(`hihat2`, `plan.SECOND_SLOT`) and sample where the pack holds it; the
+writer (`plan.write`, `kit_second_pick`) draws each hit of the letter from
+the word on an own stream (`{seed}:drums:seconds`), none while the
+letter's hits are over the token's share, and plays the pick on the second
+slot; the render reads the second's own level, rate or note and hold
+(`slot_letter`, `kit_second`, the kit_piece helpers) and plays it on the
+main's channel with the main's pan and echo mark. The first cut never
+played a second: `compose` built the song's kit from the pack's drum
+slots before `samples_for` gave the second its slot, so the writer's guard
+(the slot in `song.pieces`) always failed, and the written measure caught
+it (0 of 2,000 hits on a second over 400 seeds); `compose` now adds the
+second slots to the song's kit once the samples are chosen. No re-read;
+pack4 refit (108 tables; `pack.json.before-r99`), the vocabulary shipped,
+the map regenerated. Tests: the reader (the second, the class and the
+figure over both samples, the token's field, the units by place, a second
+under eight hits), the plan's parse and the slot helpers for a second
+slot, the pick's hold to the share and its absence without the word, and a
+whole song that plays the second on its own slot (it fails on the first
+cut). Suite 438 (1 skip).
+
+**Measured** (four hundred seeds). 81 of the 270 written kits carry
+a second sample (68 hats, 21 snares, 7 others, 5 toms, 5 cymbals); the
+second takes 0.32 of its letter's hits at the median against the tokens'
+0.49, a mean gap of 0.09: the token's share is a ceiling the word fills,
+so a hat struck mostly on beats and sixteenths gets less of its open hat
+than the token's share (Inner Dust's 0.30 against 0.49), as the word says.
+By place the written hats put the second on 0.40 of their eighths, 0.17 of
+their beats and 0.25 of their sixteenths (FFVI's 0.50, 0.31 and 0.34), the
+written snares on 0.73 of their sixteenths, 0.61 of their eighths and 0.54
+of their beats (FFVI's 0.86, 0.64 and 0.59): the same order, a little
+under. Plans: the 15 kits' figures and habits changed, so the tables they
+share moved: 17 of 400 seeds draw another token song and 198 of
+400 songs are note for note what they were (the first cut, its second
+never played, had kept every token and 314 songs); the six standing seeds
+keep their token songs, two of them note for note.
+
+**Song Check 82** (https://claude.ai/artifact/TcNY6gdh8nBq3BunGrhBqo): on the owner's word, five new seeds and the
+after side alone, five tokens with a second sample: Inner River Crossing (237, Battle Theme's token: the rattle on 0.69 of the snare hits against the token's 0.77, the open hat on 0.14 of the hat's), Restless River (73, The Decisive Battle's: 0.55 against 0.52, the open hat 0.30 against 0.32), Inner Dust (71, Techno de Chocobo's: the open hat on 0.30 against 0.49), Wandering Silk (106, Blackjack's: 0.15 against 0.15) and Ramparts of Salt (44, Searching for Friends': a hat-only kit, the open hat on 0.29 against 0.29).
+
+**Open.** The second plays on the main's channel with the main's pan and
+echo mark (8 of FFVI's 19 seconds sit on another channel, the Battle
+Theme's two snares among them); a third sample (Techno de Chocobo's third
+hat, Devil's Lab's third snare) is not carried; the pump pitch, the tom
+lines and the shared-channel collisions stand as limits.

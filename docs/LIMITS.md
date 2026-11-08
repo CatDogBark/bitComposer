@@ -148,6 +148,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the median against FFVI's 11, the arp 9 against 8, the harmony 8 against
   5 (ten FFVI songs); the token carries the first two, the harmony's is
   the gap.
+- **A kit letter's second sample plays as its first does, and a third is
+  not carried.** Since round 99 the token names a letter's second sample
+  and the writer gives it its hits by the `kit_seconds` word, but the
+  second plays on the main's channel, at the main's pan and with the
+  main's echo mark: 8 of FFVI's 19 seconds sit on another channel (the
+  Battle Theme's two snares on two), and a channel of its own would ask
+  the kit for a voice the token did not count. A third sample on a letter
+  (Techno de Chocobo's third hat, Devil's Lab's third snare, Dancing Mad
+  (part 5)'s toms on three channels) is folded into the first two.
 - **A tonal sample pumped on two pitches is a kit piece.** Round 77's play
   clause reads a voice on one sample at one or two pitches, eight notes or
   more, held under two beats, as a drum voice; FFVI's percussion plays so

@@ -57,6 +57,20 @@ DRUM_VOICES = (("K", "S", "t"), ("h", "c", "o"))   # the kit on two voices: the 
                                       # (the fallback since round 87: a token's kit sits on the channels its game song gave it, extras.drums.channels)
 
 
+def kit_second_pick(models: dict, letter: str, place: str, run: list, share: float, rng: random.Random) -> bool:
+    """Whether a kit letter's hit takes the slot's second sample (round 99): the kit_seconds word's draw under the letter and
+    the hit's place in the beat, none while the letter's hits so far are over the token's share for the second; `run` the
+    letter's [hits on the second, hits] so far, kept here. Without the word no hit takes it."""
+    t = (models or {}).get("kit_seconds")
+    pick = False
+    if t is not None and (run[1] == 0 or run[0] / run[1] <= share):
+        t = t.table if hasattr(t, "table") else t
+        pick = t.draw((letter, place), rng, floored=False, floor_k=1, min_songs=PLAN_SONGS) == "second"
+    run[1] += 1
+    run[0] += int(pick)
+    return pick
+
+
 def drum_voice_of(channels, letter: str, voices: int = 2) -> int:
     """The kit voice a piece letter plays on (round 87): the token's channel whose pieces include it ("KS|h": K and S on the
     first, h on the second), the fixed split (DRUM_VOICES) where the token carries no channels or the letter is on none,
@@ -65,32 +79,63 @@ def drum_voice_of(channels, letter: str, voices: int = 2) -> int:
     if v is None:
         v = next((i for i, g in enumerate(DRUM_VOICES) if letter in g), 1)
     return max(0, min(max(1, voices) - 1, v))
+SECOND_SLOT = "2"                     # a kit slot's second sample plays as the slot's name with this suffix ("hihat2"; round 99)
 KIT_PIECES = {"kick": "kick", "snare": "snare", "hihat": "hat", "open_hihat": "hat", "tom": "tom", "crash": "cymbal", "rim": "other"}   # a pack's kit -> the readings' pieces
+KIT_PIECES.update({name + SECOND_SLOT: piece for name, piece in list(KIT_PIECES.items())})   # a slot's second sample is the same piece (round 99)
 KIT_SLOT = {"K": "kick", "S": "snare", "h": "hihat", "t": "tom", "c": "crash", "o": "rim"}   # a piece letter -> the pack kit slot its song's sample fills (round 63)
 SLOT_LETTER = {slot: letter for letter, slot in KIT_SLOT.items()} | {"open_hihat": "h"}   # a kit slot -> the piece letter whose level it plays at (round 68:
                                                                                           # the open hat takes the hat's sample and its level with it)
+
+
+def slot_letter(slot: str) -> tuple:
+    """A kit slot's name as (its piece letter, whether it is the slot's second sample): "hihat" -> ("h", False), "hihat2" ->
+    ("h", True); (None, False) for a name no letter plays (round 99)."""
+    second = slot.endswith(SECOND_SLOT) and slot[:-len(SECOND_SLOT)] in SLOT_LETTER
+    return SLOT_LETTER.get(slot[:-len(SECOND_SLOT)] if second else slot), second
+
+
+def kit_second(plan, slot: str) -> dict | None:
+    """The balance token's second sample for the slot's letter (round 99): {"sample": the pack id, "level": its share of the
+    loudest part's or None, "rate": the chip's rate as a note or None, "degree": ("d"/"c", steps) or None, "pitch": an
+    absolute note or None, "hold": beats or None, "share": its share of the letter's hits}; None without one."""
+    letter, _ = slot_letter(slot)
+    return (plan.extras.get(R.DRUMS, {}).get("kit_seconds") or {}).get(letter) if letter else None
+
+
+def _second_or(plan, slot: str, field: str, own):
+    """A second slot's own value for `field` where the token carries one, else `own` (the letter's main value)."""
+    _, second = slot_letter(slot)
+    if second:
+        x = kit_second(plan, slot)
+        if x is not None and x.get(field) is not None:
+            return x[field]
+    return own
 
 
 def kit_piece_level(plan, slot: str) -> float | None:
     """The balance token's own level for the kit slot's piece, as a share of the song's loudest part's (round 68:
     `K=sbfe716b9b6@1.7` on the drums' kit field); None for a slot the token gave no level, which plays at the part's."""
     levels = plan.extras.get(R.DRUMS, {}).get("kit_levels") or {}
-    letter = SLOT_LETTER.get(slot)
-    return levels.get(letter) if letter else None
+    letter, _ = slot_letter(slot)
+    return _second_or(plan, slot, "level", levels.get(letter) if letter else None)
 
 
 def kit_piece_pitch(plan, slot: str) -> int | None:
     """The note the balance token's song strikes the kit slot's piece at most (round 75: `o=sf89f5aedfd@0.38@62` on the
     drums' kit field, after the level's slot); None where the token gave none."""
     pitches = plan.extras.get(R.DRUMS, {}).get("kit_pitches") or {}
-    letter = SLOT_LETTER.get(slot)
+    letter, second = slot_letter(slot)
+    if second:                                              # a second slot's own note, or none: never the main's (round 99)
+        return (kit_second(plan, slot) or {}).get("pitch")
     return pitches.get(letter) if letter else None
 def kit_piece_rate(plan, slot: str) -> int | None:
     """The rate the balance token's song strikes the kit slot's piece at most, as a note (round 78: `c=s3bfa4539ca@0.96@r48`
     on the drums' kit field, 60 the sample as recorded, 48 an octave under; a piece the namer called a drum); None where the
     token gave none."""
     rates = plan.extras.get(R.DRUMS, {}).get("kit_rates") or {}
-    letter = SLOT_LETTER.get(slot)
+    letter, second = slot_letter(slot)
+    if second:
+        return (kit_second(plan, slot) or {}).get("rate")
     return rates.get(letter) if letter else None
 
 
@@ -99,14 +144,18 @@ def kit_piece_degree(plan, slot: str) -> tuple | None:
     on the drums' kit field): ("d", scale steps from the tonic) or ("c", semitones from it, off the scale); None where the
     token gave none (an absolute note, kit_piece_pitch, or nothing)."""
     degrees = plan.extras.get(R.DRUMS, {}).get("kit_degrees") or {}
-    letter = SLOT_LETTER.get(slot)
+    letter, second = slot_letter(slot)
+    if second:
+        return (kit_second(plan, slot) or {}).get("degree")
     return degrees.get(letter) if letter else None
 
 
 def kit_piece_tuned(plan, slot: str) -> bool:
     """Whether the game tunes the kit slot's percussion sample to the key (round 79: `r63t`): its rate then moves with the
     written key."""
-    letter = SLOT_LETTER.get(slot)
+    letter, second = slot_letter(slot)
+    if second:
+        return bool((kit_second(plan, slot) or {}).get("tuned"))
     return bool(letter) and letter in (plan.extras.get(R.DRUMS, {}).get("kit_tuned") or ())
 
 
@@ -120,7 +169,9 @@ def kit_piece_hold(plan, slot: str) -> float | None:
     the drums' kit field, after the note's slot); None where the token gave none. The writer gives the hold to a piece on a
     sustaining sample (samples_for's tonal_slots); a percussion one-shot plays out whatever the count, as before."""
     holds = plan.extras.get(R.DRUMS, {}).get("kit_holds") or {}
-    letter = SLOT_LETTER.get(slot)
+    letter, second = slot_letter(slot)
+    if second:
+        return (kit_second(plan, slot) or {}).get("hold")
     return holds.get(letter) if letter else None
 
 
@@ -1013,6 +1064,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
     token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
     token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
+    token_kit_seconds = {}                                  # each kit letter's second sample (round 99)
     token_kit_echo, token_echo, token_pans, token_kit_pans = set(), None, {}, {}
     token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
     token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
@@ -1079,6 +1131,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     if "=" not in x:
                         continue
                     letter, _, value = x.partition("=")
+                    value, _, second_text = value.partition("+")   # the letter's second sample after a "+" (round 99)
                     sid, _, rest = value.partition("@")
                     level, _, rest = rest.partition("@")    # since round 75 the note the piece is struck at follows the level's slot,
                     pitch, _, rest = rest.partition("@")    # since round 77 a tonal piece's hold in beats follows the note's,
@@ -1104,6 +1157,23 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                         token_kit_pitches[letter] = int(round(float(pitch)))
                     if hold and float(hold) > 0:
                         token_kit_holds[letter] = float(hold)
+                    if second_text:                         # the second sample's id, level, note or rate, hold and share (round 99)
+                        s2, l2, n2, h2, sh2 = (second_text.split("@") + [""] * 5)[:5]
+                        try:
+                            share2 = float(sh2)
+                        except ValueError:
+                            share2 = None
+                        if s2 and share2 is not None:
+                            second = {"sample": s2, "share": share2, "level": float(l2) if l2 and math.isfinite(float(l2)) else None,
+                                      "hold": float(h2) if h2 and float(h2) > 0 else None, "rate": None, "degree": None, "pitch": None, "tuned": False}
+                            if n2.startswith("r"):
+                                second["rate"] = int(round(float(n2[1:].rstrip("t"))))
+                                second["tuned"] = n2.endswith("t")
+                            elif n2.startswith(("d", "c")):
+                                second["degree"] = (n2[0], int(n2[1:]))
+                            elif n2:
+                                second["pitch"] = int(round(float(n2)))
+                            token_kit_seconds[letter] = second
             elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels,
                 sid, _, played = fields[7].partition("@")   # and since round 86 the range the song plays it over ("s1d296a2572@32-52")
                 token_samples[role] = sid
@@ -1176,6 +1246,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     extras[role]["kit_echo"] = sorted(token_kit_echo)
                 if token_kit_pans:                          # where each piece sits in the stereo field (round 84)
                     extras[role]["kit_pans"] = token_kit_pans
+                if token_kit_seconds:                       # each letter's second sample and its share of the letter's hits (round 99)
+                    extras[role]["kit_seconds"] = token_kit_seconds
+                    log.append("kit seconds from the balance: " + ", ".join(f"{k} {v['sample']} at {v['share']:.2f} of the hits" for k, v in token_kit_seconds.items()))
                 if token_kit_channels:                      # the channels the game gave the kit, each one's pieces (round 87)
                     extras[role]["channels"] = token_kit_channels
                     log.append(f"kit channels from the balance: {len(token_kit_channels)} ({'|'.join(token_kit_channels)})")
@@ -1754,6 +1827,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS], kit_value=kit_value,
                                          class_values=group_classes)
             by_voice, notes, dropped = {}, [], Counter()
+            seconds_of = plan.extras.get(R.DRUMS, {}).get("kit_seconds") or {}   # the letters with a second sample (round 99), its hits drawn
+            runs, rng_seconds = {}, random.Random(f"{seed}:drums:seconds")      # by the kit_seconds word on an own stream, held to the token's share
             for t, letter in hits:
                 if letter not in kit_letters:               # a piece the song's kit does not strike (kit_pieces)
                     dropped[letter] += 1
@@ -1762,6 +1837,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 if sample is None:
                     dropped[letter] += 1
                     continue
+                if letter in seconds_of and sample + SECOND_SLOT in song.pieces:   # the letter's second sample takes this hit or not (round 99)
+                    place = rhythm.place(rhythm.position(t - METER * math.floor(t / METER), DIVISION))
+                    if kit_second_pick(models, letter, place, runs.setdefault(letter, [0, 0]), seconds_of[letter]["share"], rng_seconds):
+                        sample += SECOND_SLOT
                 v = drum_voice_of(plan.extras.get(R.DRUMS, {}).get("channels"), letter, plan.voices.get(R.DRUMS, 2))   # the game's channel (round 87)
                 by_voice.setdefault(v, []).append((t, letter, sample))
             rank = {name: i for i, (_, name) in enumerate(rhythm.SLOT_CLASSES)}
@@ -1784,6 +1863,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                               + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")
                                                               + ("; the slots' strike classes: the kit from its limbs' tables under them (round 81)" if kit_classes and limbs else
                                                                  "; the kit table holds no bar this kit plays within its habit's density: the limbs' tables at their own habits (round 75)" if "drums" in models and not whole_kit else "")])
+            if runs:                                        # the second samples' hits (round 99)
+                written[R.DRUMS].log.append("kit seconds (kit_seconds): " + ", ".join(f"{k} {r[0]} of {r[1]} hits on the second sample (the token's share {seconds_of[k]['share']:.2f})" for k, r in runs.items())
+                                            + ("" if "kit_seconds" in models else "; no kit_seconds word: the slot's sample throughout"))
     if R.BASS in plan.band and "bass" in models:
         # the bass sits on the kit's accents (two pieces together) at the game's share (bass_locks): FFVI's on 0.94 of them;
         # locked to the whole planned band it had met the threshold in no bar, written second with two drum voices to hand
