@@ -6451,7 +6451,7 @@ vocabulary shipped, the map regenerated. Tests: the units on a synthetic
 song (the landings, the chain, an off-chord semitone outcome), the writer
 over a major and a minor chord (E G C G, the chord's own fifth either
 way), the scale's interval without the word and at an octave, a stretch
-by the word, the clash hold. Suite 435 (1 skip).
+by the word, the clash hold. Suite 434 (1 skip).
 
 **Measured** (sixty seeds against FFVI, the parallel voices' shared
 onsets). On the chord 0.33 to 0.62 (FFVI 0.65); over a line note on the
