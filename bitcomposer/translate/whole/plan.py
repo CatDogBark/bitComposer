@@ -659,6 +659,17 @@ def habit_at_for(plan, role: str, habit=None):
     return lambda k: rhythm.shift_habit(base, shifts[k] if 0 <= k < len(shifts) else 0)
 
 
+def envelope_at_for(plan, role: str, habit=None):
+    """A part's figure envelope a bar for its writer (round 101): the onsets a bar the section_densities shift asks
+    (rhythm.density_bounds: a tier denser, DENSITY_STEP times the tier's typical or more; a tier sparser, the typical over
+    it or fewer), None for a bar without a shift; None where no bar shifts."""
+    shifts = plan.section_densities.get(role)
+    if not shifts or not any(shifts):
+        return None
+    base = habit if habit is not None else plan.habits[role]
+    return lambda k: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0)
+
+
 def allot(band: list, counts: dict | None = None, drum_voices: int = 2) -> dict:
     """How the eight voices are shared out. With the balance's counts (a
     song's voices a part, FFVI: the accompaniment and the counter-line two
@@ -1920,7 +1931,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
         gs = plan.gap_sounds.get(R.BASS)                    # the share a note sounds by its gap (gap_sounds), the one share without it
         shared_bass = {}                                    # the line's notes, for a second voice following it
-        notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], habit_at=habit_at_for(plan, R.BASS), key=key, lock=lock,
+        notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], habit_at=habit_at_for(plan, R.BASS), envelope_at=envelope_at_for(plan, R.BASS), key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.bounds.get(R.BASS, plan.registers[R.BASS])[0],
                                      sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share,
                                      ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS))
@@ -1980,7 +1991,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         shared = {}                                         # the line's voicing at each onset, for the voices beside it
         tlog = []                                           # what the tone figure word did to the line (round 96)
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
-                                                plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"], habit_at=habit_at_for(plan, role),
+                                                plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"], habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role),
                                                 pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"),
                                                 tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog, tone_tier=plan.extras[role].get("tone_tier"))   # the tone figures on their own stream (round 96)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
@@ -2065,7 +2076,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  tune_sounds=x.get("tune_sounds"), letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
                                                  bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
                                                  moves_rng=random.Random(f"{seed}:{role}:recall moves"),   # the recalls' places on an own stream (round 100)
-                                                 habit_at=habit_at_for(plan, role))                          # the habit a bar: its tier by the section (round 101)
+                                                 habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role))   # the habit and envelope a bar: the tier by the section (round 101)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -2130,7 +2141,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                     role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
                                                     tune_sounds=x.get("tune_sounds"), recall_moves=models.get("recall_moves"),
-                                                    moves_rng=random.Random(f"{seed}:{role}:second:recall moves"), habit_at=habit_at_for(plan, role, habit2))
+                                                    moves_rng=random.Random(f"{seed}:{role}:second:recall moves"), habit_at=habit_at_for(plan, role, habit2), envelope_at=envelope_at_for(plan, role, habit2))
                 song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
                 line = line + [(a, b, m, 1) for a, b, m in notes2]
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]

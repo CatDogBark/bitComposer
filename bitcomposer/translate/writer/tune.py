@@ -735,7 +735,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
            letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None, tune_sounds: dict | None = None,
            off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None,
-           habit_at=None) -> tuple[list, list, list]:
+           habit_at=None, envelope_at=None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -1027,6 +1027,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         always new gave 16.5 distinct cells against 12.5)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
+        shifted = envelope_at(k) if envelope_at is not None else None   # the section's density tier shift as the bar's envelope (round 101)
+        if shifted is not None:
+            env = (shifted[0], shifted[1], False, meters[k])
         h = habit_at(k) if habit_at is not None else habit   # the bar's habit: its density tier shifted where the section says (round 101)
         values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": h, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
         unit = tables.Unit(song.sid, song.game, "", values)
@@ -1060,8 +1063,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             figure = next((f for f in rhythm_played if fit(f)), figure if manner.fits(figure) else "0")
         rhythm_played[figure] += 1
         rhythm_prev = figure
-        new_strikes.append(len(rhythm._tokens(figure)))
-        new_offs.append(offbeats(rhythm._tokens(figure)))
+        if shifted is None:                                 # a shifted section's bars are the word's, not the tune's running tier (round 101)
+            new_strikes.append(len(rhythm._tokens(figure)))
+            new_offs.append(offbeats(rhythm._tokens(figure)))
         return [float(Fraction(t.partition(":")[0])) for t in rhythm._tokens(figure)]
 
     def realize(k: int, positions: list, pitches: list) -> Cell:

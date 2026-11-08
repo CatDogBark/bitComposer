@@ -780,6 +780,27 @@ TONES = ((0.8, "roots", "Rr"), (0.8, "root-fifth", "Rr5"), (0, "walking", ""))  
 OCTAVES = 0.2                        # the share of a bass's notes an octave up (r) for it to play octaves
 
 
+DENSITY_STEP = 1.5                   # a section's level or density over the part's song median counts as a step up at this, down at
+                                     # its inverse (round 101: section_densities)
+DENSITY_TYPICAL = {"sparse": 1.0, "medium": 4.0, "dense": 8.0}   # a pitched part's notes a bar at its density tier's median in FFVI (the bass,
+                                                                  # the counter and the melody; the melody's dense tier 10): what a tier shift is measured from
+
+
+def density_bounds(habit, shift: int):
+    """The onsets a bar a section's figures keep to under a density tier shift (round 101, section_densities): a tier denser,
+    DENSITY_STEP times the part's tier's typical onsets or more (a dense part's 12, a medium one's 6, a sparse one's 2); a
+    tier sparser, the typical over DENSITY_STEP or fewer (5, 2, 1); None without a shift or a tier. The shifted habit alone
+    had capped at the dense tier, so a dense accompaniment drawn denser had stayed as it was."""
+    if not shift or not isinstance(habit, str) or not habit.split():
+        return None
+    typical = DENSITY_TYPICAL.get(habit.split()[0])
+    if typical is None:
+        return None
+    if shift > 0:
+        return (math.ceil(DENSITY_STEP * typical), 64)
+    return (0, max(1, math.floor(typical / DENSITY_STEP)))
+
+
 def shift_habit(habit, delta: int):
     """A part's habit with its density tier moved `delta` tiers along DENSITIES (sparse, medium, dense), the rest of the habit
     kept ("medium mixed" a tier up is "dense mixed"); the ends stay (round 101: a section's density against the part's)."""

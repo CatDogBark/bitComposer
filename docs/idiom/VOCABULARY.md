@@ -799,6 +799,39 @@ The words are grouped by where the writing draws them, in the order the song is 
   part in some section, with the parts' sections at 1.0 in 0.77 to 0.86.
   *`section_levels`: shape (part, form); drawn in _plan_once, plan_section_levels.*
 
+- **section_densities** — a part's density tier in each own section of
+  the form against its song density, by the part and the step the
+  section's level makes, round 101: `d+` where the part's notes a bar in
+  the section (over the bars it plays in) are 1.5 times its song median or
+  more, `d-` at the inverse or less, `d=` between; the step `up` where the
+  section's level (section_levels) is 1.5 or over, `down` at 0.67 or
+  under, `same` between (`rhythm.DENSITY_STEP`, `level_step`). Why: Song
+  Check 82's Inner River Crossing doubled its accompaniment for its last
+  part on the same figure, a bare volume move the owner heard as strange.
+  The level step came from The Mines of Narshe, whose accompaniment doubles
+  in its last section while going from 2 notes a bar to nearly 8 and up an
+  octave; counted over all of FFVI's 803 part-sections, a level step up
+  rides a density or register change in 7 of the accompaniment's 8 but is
+  bare in 7 of the counter's 10 (Overture part 3's counter steps to 1.9
+  four times on the same figure), and at level 1.0 the accompaniment
+  changes density tier in a quarter of its sections (22 sparser, 17 denser
+  of 176), the bass in a sixth, the melody and counter in a sixth; a tier
+  up is 1.8 times at the median, a tier down 0.5. So the word is the
+  density tier by the step, not a rule that a step must change the figure.
+  The plan draws a tier a part an own section it plays in
+  (`plan_section_densities`, an own stream `whole:{seed}:section
+  densities`, a repeated section copying its source's, `Plan.section_densities`
+  as a shift a bar), and the writers take a habit a bar (`habit_at_for`,
+  `rhythm.shift_habit`: the song's habit with its density tier moved one
+  along sparse, medium, dense) for the chord parts' and the bass's figure
+  draws and the tune's new rhythms; the counter follows the tune's figures
+  and takes none; the register is the token song's own by stretch (round
+  92), so a step's register change is not drawn twice. Over sixty seeds 36
+  songs carry a level step (62 steps), 26 of the steps now carry a drawn
+  density change and 22 an achieved one; Inner River Crossing's
+  accompaniment goes a tier denser where it doubles.
+  *`section_densities`: shape (part, step); drawn in _plan_once, plan_section_densities.*
+
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
   sounding bar k bars after the section's start), `leaves:k` (its last k

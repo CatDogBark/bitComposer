@@ -180,7 +180,7 @@ LIMB_REDRAWS = 3                     # a limb whose slot the token strikes that 
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
                   energy: list | None = None, extra_values: dict | None = None, floor_outcomes: int | None = None,
-                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None) -> list[str]:
+                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None, envelope_at=None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -210,6 +210,8 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
+                if envelope_at is not None and (shifted := envelope_at(k)) is not None:   # the section's density tier shift as the bar's
+                    env = (shifted[0], shifted[1], False, meters[k])                       # envelope (round 101, rhythm.density_bounds)
                 thin = energy is not None and k < len(energy) and energy[k] < BREAKDOWN
                 if thin:
                     env = thinned(env, energy[k])
@@ -478,7 +480,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
-         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None,
+         envelope_at=None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -514,7 +517,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     elif free:
         figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), energy=energy,
-                                lock_share=lock_share, habit_at=habit_at)
+                                lock_share=lock_share, habit_at=habit_at, envelope_at=envelope_at)
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)

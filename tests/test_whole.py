@@ -719,6 +719,12 @@ class SectionDensityTests(unittest.TestCase):
         self.assertEqual((at(0), at(5), at(9), at(40)), ("medium walking", "dense walking", "medium walking", "medium walking"))
         self.assertEqual(whole.habit_at_for(plan, "melody", "medium varied")(3), "sparse varied")        # a given habit (the second voice's) shifted the same
         self.assertIsNone(whole.habit_at_for(SimpleNamespace(section_densities={"bass": [0] * 12}, habits={"bass": "medium"}), "bass"))   # nothing shifts: no habit a bar
+        # the shift as an envelope on the bars' figures: DENSITY_STEP times the tier's typical onsets or more, even for a dense part
+        self.assertEqual((rhythm.density_bounds("dense mixed", 1), rhythm.density_bounds("medium mixed", 1), rhythm.density_bounds("sparse varied", 1)), ((12, 64), (6, 64), (2, 64)))
+        self.assertEqual((rhythm.density_bounds("dense mixed", -1), rhythm.density_bounds("medium mixed", -1), rhythm.density_bounds("sparse varied", -1)), ((0, 5), (0, 2), (0, 1)))
+        self.assertIsNone(rhythm.density_bounds("dense mixed", 0)); self.assertIsNone(rhythm.density_bounds("walking", 1))
+        env = whole.envelope_at_for(plan, "bass")
+        self.assertEqual((env(0), env(5), env(9)), (None, (6, 64), None))                                     # the bass's medium tier, denser in B
 
 
 if __name__ == "__main__":

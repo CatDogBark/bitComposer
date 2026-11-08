@@ -246,8 +246,9 @@ def section_length(bars: int) -> str:
     return next(name for top, name in SECTION_LENGTHS if bars <= top)
 
 
-DENSITY_STEP = 1.5                   # a section's level or density over the part's song median counts as a step up at this, down at
-                                     # its inverse (round 101: section_densities)
+DENSITY_STEP = 1.5                   # a section's level or density over the part's song median counts as a step up at this, down at its
+                                     # inverse (round 101: section_densities); readings.DENSITY_STEP is the same (a literal: readings is still
+                                     # loading when this module is)
 
 
 def level_step(ratio: float) -> str:
