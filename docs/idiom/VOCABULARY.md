@@ -149,7 +149,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   (`roles.stretches_of`, blips under eight notes and eight beats folded),
   asked what it does beside each other voice (`roles.stretch_relation`): a
   double where 0.8 of its notes start with that voice's at the same pitch
-  class, parallel where 0.8 start with that voice's at one generic
+  class (since round 96 a stretch's first or last bars that follow nothing
+  bar by bar, two bars and eight notes or more, are a stretch of their own:
+  Umaro's accompaniment voice reads `ox12>pm+24x5>o`, the tune two
+  octaves up for five bars and then a run of its own, where the whole
+  sample run had read as the parallel; 7 of FFVI's 128 words changed and
+  no seed in 400 moved to another token), parallel where 0.8 start with that voice's at one generic
   interval over half the pairs (thirds alternate 3 and 4 semitones), its
   own line else, and either way only where it strikes with half that
   voice's notes within its span (a pad holding the root under a tune that
@@ -452,7 +457,15 @@ The words are grouped by where the writing draws them, in the order the song is 
   counter-line); they condition `values`, `moves`, `melody_recall`, and
   the two rates are held by running-share controllers while the tune is
   written (a draw is weighted toward the chord, or the repeated note, only
-  while the tune is under its rate).
+  while the tune is under its rate). Since round 96 the `chord_tones` word
+  is counted for the counter-line too (FFVI's counters land on the chord
+  on 0.6 of their strong beats at the median, as its tunes do), drawn for
+  it on an own stream and held by the counter writer: on a beat, while
+  the line is not over its share, the interval entries (and the moves it
+  takes alone) landing on the chord take the share of the draw's mass
+  (`hold_shares`, as the tune's draw_move holds it); the written counter,
+  its notes the voice words' intervals from the tune with no chord word,
+  had sat at 0.37, and sits at 0.51 over sixty seeds.
   *`articulation`: shape (part); drawn in _plan_once, melody_models, write_melody · `step_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `repeat_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `echo_habits`: shape (part, tempo, weight); drawn in _plan_once, melody_models, write_melody · `chord_tones`: shape (part); drawn in _plan_once, write · `repeat_rates`: shape (part); drawn in _plan_once.*
 
 - **off_scale** — a part's share of notes off the song's natural scale
@@ -1017,6 +1030,47 @@ The words are grouped by where the writing draws them, in the order the song is 
   chord's shape and the part's richness. Drawn a span as a mixture; the
   tones are stacked on the voices, lowest first.
   *`voicings`: shape (part, shape, habit); drawn in write, write_upper.*
+
+- **tone_tiers**, **tone_figures**, **tone_degrees** — where a chord part's
+  line leaves the chord, and to which tone (round 96). `tone_figures`: a
+  bar of the line as its onsets' tone classes against the chord sounding
+  at each, `c` a tone of the chord and `x` a tone off it (`c c c x`), by
+  the part, the song's tier, the onset count and the line's own pattern;
+  the upper writer draws it under the line's bar as a second voice's mask
+  is drawn (never below the part, the tier and the onset count), read
+  around the line's onsets where the drawn count differs. `tone_tiers`:
+  how much of the line leaves the chord over the song (rare: under a
+  tenth of its onsets; some: under 0.3; many), drawn once a song a part
+  on an own stream and conditioning the figure's draw, so a song is pure
+  or decorated as a whole: FFVI's 58 accompaniments spread from none to
+  0.72 (10 songs rare, 29 some, 19 many; their medians 0.04, 0.23 and
+  0.45), and a draw from the pooled bars alone had put every written song
+  at the pooled 0.28. `tone_degrees`: the degree an off-chord onset plays,
+  as semitones over the chord's root (2 a ninth, 5 a fourth, 9 a sixth, 10
+  a seventh over a triad), by the part, the chord's shape (which decides
+  which degrees are off it) and the bar's previous off-chord degree, drawn
+  an onset and chained within the bar (FFVI keeps the degree from one such
+  onset to the next 0.52 of the time: an ostinato pecks one tone off the
+  chord, a fill walks; drawn once a bar it had repeated always, and
+  'repeat' was 0.42 of the written off-chord notes against FFVI's 0.22);
+  the onset takes the drawn degree nearest the voicing tone it replaces,
+  and the voices beside the line see the note played. FFVI's
+  accompaniment line leaves the chord on a quarter of its notes (the
+  songs' medians 0.12 to 0.38), in 768 of its 1,447 bars, mostly on
+  extensions and ostinato tones rather than neighbors (a leap to the tone
+  0.39 of such notes, a repeat 0.22, a step in or out 0.38; the ninth 0.17
+  of them, the fourth 0.12, the sixth 0.11, the flat sixth 0.11), the
+  harmony on 0.14 of its notes, the arp on 0.14 (three songs; the raised
+  seventh of the minor key 0.74 of them). The written line had held the
+  voicing's tones alone (0.07 of its notes off the chord, and those from
+  voicing marks the chord lacked); after this round the accompaniment
+  line sits at a median 0.35 over sixty seeds (by tier 0.44, 0.33 and
+  0.07 against FFVI's 0.45, 0.23 and 0.04; the figure's own onsets 0.25,
+  the rest the theme the part carries), the harmony at 0.13 (0.14), the
+  arp at 0.03 (its sevenths a semitone from the root give way to its
+  clashes share). The clashes word stands over a tone the figure asks
+  for: a part over its share for the beat gives the tone to the voicing.
+  *`tone_tiers`: shape (part); drawn in _plan_once; conditions tone_figures · `tone_figures`: shape (part, tier, onsets, line); drawn in tone_figure_for, upper · `tone_degrees`: shape (part, shape, previous); drawn in tone_degree_for, upper.*
 
 - **moves** — the tune's move note to note (semitones, to an octave), under
   the song's stepwise habit, by where the arriving note falls in its beat

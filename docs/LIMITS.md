@@ -58,15 +58,31 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   narrow range: a sample the game plays over four or eight semitones
   cannot hold a parallel line, and 10 % of relation-voice notes still sit
   just outside (the arp's parallels worst). The reader's relation runs
-  are a sample run long, too: Umaro's voice doubles the tune for five
+  were a sample run long, too: Umaro's voice doubles the tune for five
   bars and then plays its own chromatic run on the same sample, and the
-  whole run reads as the double.
-- **The accompaniment's neighbor tones are not a word.** Umaro's
-  accompaniment pecks one chord tone and decorates it with chromatic
-  neighbors and a falling fill; the chord reader keeps the chord tone and
-  drops the rest as noise, so a written song on its token pecks the one
-  tone. A figure word for the chord parts (the tone's neighbors and fills)
-  would carry it.
+  whole run read as the double; since round 96 a run's own edge bars (two
+  or more, eight notes or more) are a stretch of their own, and a change
+  in the middle of a run, or a shorter edge, still reads as the relation.
+- **A chord part leaves the chord by degree, not by figure.** Since
+  round 96 the line leaves the chord where its tone figure says (a bar's
+  onsets as chord tones and tones off it, drawn under the song's tier)
+  and plays the drawn degree nearest the voicing tone it replaces, chained
+  within the bar; so FFVI's extensions and ostinato tones come out, and
+  the written off-chord notes fall into FFVI's kinds (a leap to the tone
+  0.36 against 0.39, a repeat 0.18 against 0.22, a step 0.36 against 0.38).
+  A neighbor's return and a passing tone's direction are not a word: a
+  step comes out where the chained degree happens to sit a step from the
+  chord tones around it. The arp's off-chord tones are the minor key's
+  raised seventh, a semitone from the root, and give way to its clashes
+  share (0.03 of its line against FFVI's 0.14): the two words meet there.
+- **The bass leaves the chord at the game's pooled rate, not each
+  song's.** The bass's figures carry its passing tones at FFVI's share of
+  marks (0.19 of tokens against 0.17) and its line sits off the chord on
+  0.18 of its notes pooled against FFVI's 0.16, but by song at a median
+  0.24 against 0.15: FFVI's basses are mostly near pure with a few walking
+  ones (quartiles 0.05 to 0.29), the written ones all near the pooled
+  rate. A tier for the bass as the chord parts have (`tone_tiers`) would
+  carry the spread; the bass_habits word's tones class carries some.
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (57)
+### the plan, drawn once a song (58)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -20,7 +20,7 @@ flowchart LR
 | `bass_habits` | part, tempo, weight | _plan_once, write, write_bass | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight |
 | `drum_habits` | part | _plan_once | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | the drums' density habit, drawn once a song |
 | `kit_pieces` | part, habit | _plan_once | `drums` | the kit pieces a song's drums strike (letters: kick, snare, hat, tom, cymbal, other), by the kit's habit tier, drawn once a song |
-| `voicing_habits` | part | _plan_once, write_upper | `voicings`, `widths` | an upper part's richness habit, drawn once a song |
+| `voicing_habits` | part | _plan_once, write_upper | `tone_degrees`, `voicings`, `widths` | an upper part's richness habit, drawn once a song |
 | `motions` | part | _plan_once, write_upper | - | how an upper part moves through its tones (block, mixed, arpeggiated), drawn once a song |
 | `chords` | part, mode, previous | plan_chords | - | a bar's chord as a numeral in the key, after the bar before's |
 | `loops` | part | plan_chords | - | the chord the loop returns to |
@@ -67,9 +67,10 @@ flowchart LR
 | `section_levels` | part, form | plan_section_levels | - | a part's level in a section over its level in the whole song, in tenths, by the part and the section's place in the form: dynamics by section |
 | `part_entries` | part, habit, form, length | plan_texture | - | where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class |
 | `drum_group_habits` | part, classes, habit | _plan_once | `bass`, `cell_handoffs`, `changes`, `drums`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream |
-| `chord_tones` | part | _plan_once, write | - | the share of the tune's notes on a beat that are chord tones, drawn once a song |
+| `chord_tones` | part | _plan_once, write | - | the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer |
 | `off_scale` | part, mode, place | _plan_once, write | - | the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban |
 | `clashes` | part, place | _plan_once, write | - | a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw |
+| `tone_tiers` | part | _plan_once | `tone_figures` | how much of a chord part's line leaves the chord over the song (rare: under a tenth of its onsets, some: under 0.3, many), drawn once a song a part on an own stream: the tier its tone figures are drawn under (round 96) |
 | `repeat_rates` | part | _plan_once | - | the share of the tune's moves that repeat the note, drawn once a song |
 | `tune_grain` | part, habit | _plan_once | - | the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms |
 | `attacks` | part | attack_for | - | whether a part's line plays a struck sample (its strike over 6 dB above its loop body: a sound that decays) or a sustaining one, by the part; a built-in set's pool rule matches the drawn class (FFVI's tunes: sustaining in 63 of 66 songs) |
@@ -105,11 +106,13 @@ flowchart LR
 | `voice_intervals` | part, kind, line, previous | bass, upper, write | - | a voice beside the line's interval to the line's note where they strike together, in scale steps (7 an octave) where the line's note is on the scale and in semitones (s-4) where it is off it, by the part, the relation (apart or alternating; the counter-line's beside the tune: same sample as the tune, or other), the line note's state (scale, altered) and its interval before |
 | `voice_moves` | part, kind, place | bass, upper, write | - | a voice beside the line's move from its own last note, in scale steps, by the part, the relation and whether it strikes with the line or alone |
 
-### the upper parts (1)
+### the upper parts (3)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
 | `periods` | part, length, tempo | _free_figures, _plan_once, song_of, upper | `period_holds` | a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo |
+| `tone_figures` | part, tier, onsets, line | tone_figure_for, upper | - | a chord part's line bar as its onsets' tone classes against the chord sounding (c a tone of the chord, x a tone off it), by the part, the song's tier, the onset count and the line's own pattern: where the line leaves the chord, drawn a bar under the line's bar by the upper writer (round 96) |
+| `tone_degrees` | part, shape, previous | tone_degree_for, upper | - | the degree a chord part's line plays where it leaves the chord, as semitones from the chord's root (2 a ninth, 5 a fourth, 9 a sixth), by the part, the chord's shape and the bar's previous off-chord degree; drawn an off-chord onset, which takes the degree nearest the voicing tone it replaces (round 96) |
 
 ### the tune (15)
 
@@ -220,6 +223,7 @@ flowchart LR
     chord_tones["chord_tones"]
     off_scale["off_scale"]
     clashes["clashes"]
+    tone_tiers["tone_tiers"]
     repeat_rates["repeat_rates"]
     tune_grain["tune_grain"]
     attacks["attacks"]
@@ -441,13 +445,19 @@ flowchart LR
   length_habits(["length_habits"])
   lengths(["lengths"])
   tempos(["tempos"])
+  tone_tiers(["tone_tiers"])
+  voicing_habits(["voicing_habits"])
   subgraph stage_upper["the upper parts"]
     periods["periods"]
+    tone_figures["tone_figures"]
+    tone_degrees["tone_degrees"]
   end
   balance -- tempo --> periods
   length_habits -- length --> periods
   lengths -- length --> periods
   tempos -- tempo --> periods
+  tone_tiers -- tier --> tone_figures
+  voicing_habits -- shape --> tone_degrees
 ```
 
 ### the tune
