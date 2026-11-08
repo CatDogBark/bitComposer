@@ -905,6 +905,29 @@ def kit_channels(s) -> str:
     return "|".join("".join(groups[v]) for v in sorted(groups))
 
 
+def kit_second_units(songs) -> list:
+    """Each hit of a kit letter the song strikes on two samples (readings.kit_second_samples) as a unit (round 99): its
+    outcome whether the hit is on the letter's second sample ("second") or its slot's ("main"), its values the letter and
+    the hit's place in the beat (readings.place: on the beat, an eighth, a sixteenth, a triplet, finer). The writer draws
+    it a hit for a letter whose token carries a second, holding the letter's hits to the token's share for the second.
+    FFVI's hats take the open hat on 0.50 of their eighth-note hits and 0.31 of their beats; its second snares take 0.86 of
+    the sixteenths (the Battle Theme's rattle) and 0.59 of the beats."""
+    out = []
+    for s in songs:
+        slots, seconds = readings_mod.kit_slots(s), readings_mod.kit_second_samples(s)
+        if not seconds:
+            continue
+        for n in s.notes.get(R.DRUMS, []):
+            key = n[3] if isinstance(n[3], str) else None
+            letter = readings_mod.LETTERS.get((s.pieces or {}).get(key))
+            if letter not in seconds or key not in (slots[letter], seconds[letter]):
+                continue
+            a = s.bars[bar_index(s, n[0])][0]
+            out.append(tables.Unit(s.sid, s.game, "second" if key == seconds[letter] else "main",
+                                   {"part": letter, "place": readings_mod.place(readings_mod.position(n[0] - a, s.division))}))
+    return out
+
+
 def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     """The song's kit as a token field (round 63): each piece letter with the pack id of the sample the song's kit leans on
     for it (round 80, kit_slot_samples: the loudest of the samples struck a fifth of the letter's hits or more; the most
@@ -939,7 +962,11 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
     kit_echo): the chip's echo is per channel, and the written kit had sent every piece or none by the echo word's
     one say for the drums part, drawn from another song; Wild West's blip is wet in the game and its kick dry. Since round 84 each slot carries its pan after the mark
     (`K=s48bab384c7@1.00@27@6.95@m@@0.45`: the median right-side share of the hits struck on the sample, PAN_BIN), so the kit
-    sits in the stereo field where the game's did; FFVI pans a kit voice 0.1 or more off centre in 37 of 115."""
+    sits in the stereo field where the game's did; FFVI pans a kit voice 0.1 or more off centre in 37 of 115. Since round
+    99 a slot whose letter the song strikes on a second sample (readings.kit_second_samples: another sample with eight
+    hits or more) carries that sample after a "+", with its level, its note or rate, its hold and its share of the
+    letter's hits (`h=sd1c4c7ce33@0.14@r60@0.43@d@@0.50+s831784ce4b@0.14@r60@0.44@0.14`): the written kit had played one
+    sample a letter, where FFVI's hats are a closed and an open hat in 12 of 16 kits."""
     counts = Counter()
     for n in s.notes.get(R.DRUMS, []):
         key = n[3] if isinstance(n[3], str) else None
@@ -948,7 +975,8 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
             counts[(readings_mod.LETTERS[piece], key)] += 1
     levels = getattr(s, "kit_levels", None) or {}
     best = kit_slot_samples(counts, levels)
-    classes = readings_mod.kit_classes(s)                        # each slot's strike class (round 81)
+    seconds = readings_mod.kit_second_samples(s)                 # each letter's second sample (round 99)
+    classes = readings_mod.kit_classes(s)                        # each slot's strike class (round 81; over both samples since round 99)
     echo_marks = kit_echo(s)                                     # the slots the game sends to echo (round 82)
     pitches = getattr(s, "kit_pitches", None) or {}
     rates = getattr(s, "kit_rates", None) or {}               # a piece the namer called a drum: the chip's rate as a note, "r48" (round 78)
@@ -974,6 +1002,17 @@ def kit_token(s, top: float = 0.0, tuned: frozenset = frozenset()) -> str:
                  f"{round(pans[key] / PAN_BIN) * PAN_BIN:.2f}" if key in pans and math.isfinite(pans[key]) else ""]   # its pan (round 84)
         while slots and not slots[-1]:                               # the old forms stand: a piece without a note or a hold ends at its level
             slots.pop()
+        second = seconds.get(letter)
+        if second:                                                   # the letter's second sample (round 99): its id, level, note, hold, share
+            s2 = "s" + second[:10] if len(second) >= 10 else second
+            level2, rate2, pitch2, hold2 = levels.get(second), rates.get(second), pitches.get(second), holds.get(second)
+            share = counts[(letter, second)] / max(1, counts[(letter, key)] + counts[(letter, second)])
+            subs = [s2, f"{round(level2 / top, 2):.2f}" if top > 0 and level2 is not None and math.isfinite(level2) else "",
+                    (f"r{int(rate2)}" + ("t" if s2 in tuned else "")) if rate2 is not None else kit_degree(s, pitch2) if pitch2 is not None else "",
+                    f"{hold2:.2f}" if hold2 is not None and math.isfinite(hold2) and hold2 > 0 else "", f"{share:.2f}"]
+            field += "".join(f"@{x}" for x in slots) + "+" + "@".join(subs)
+            out.append(field)
+            continue
         out.append(field + "".join(f"@{x}" for x in slots))
     return ",".join(out)
 

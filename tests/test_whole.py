@@ -534,6 +534,80 @@ class SmallWordTests(unittest.TestCase):
         self.assertNotIn("tune_sounds", whole.plan(bal, 7, "g").extras["melody"])
 
 
+class KitSecondTests(unittest.TestCase):
+    """Round 99: a kit slot's second sample on the token, the kit_seconds word, and the writer's hits on it."""
+
+    def _kit_song(self):
+        from bitcomposer.translate import vocab
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [vocab.Span(0.0, 32.0, 0, "", 1.0)], notes={}, sid="s", game="g", tonic=0, mode="major")
+        closed, opened, kick = "aaaaaaaaaa11", "bbbbbbbbbb22", "cccccccccc33"
+        hats = [(4.0 * k + i / 2, 0.2, float("nan"), closed if i % 2 == 0 else opened) for k in range(8) for i in range(8)]   # closed on the beats, open on the ands
+        kicks = [(4.0 * k + i, 0.2, float("nan"), kick) for k in range(8) for i in (0, 2)]
+        s.notes["drums"] = sorted(hats + kicks)
+        s.pieces = {closed: "hat", opened: "hat", kick: "kick"}                                  # the readings' piece names
+        s.kit_levels = {closed: 0.1, opened: 0.2, kick: 0.5}
+        s.kit_rates = {closed: 60, opened: 59, kick: 48}
+        s.kit_holds = {closed: 0.2, opened: 0.45, kick: 0.5}
+        s.voice_notes = {6: ("drums", s.notes["drums"])}
+        return s, closed, opened, kick
+
+    def test_a_kit_slots_second_sample_rides_the_token_and_takes_its_hits(self):
+        """The reader finds the letter's second sample (the other one with eight hits or more), the slot's strike class counts
+        both samples' hits, the kit token carries the second after a "+" with its level, rate, hold and share, the kit_seconds
+        word says which hits take it by their place in the beat, the plan parses it, and the writer's pick holds the letter's
+        hits to the token's share."""
+        from bitcomposer.translate import tables
+        s, closed, opened, kick = self._kit_song()
+        self.assertEqual(rhythm.kit_slots(s), {"h": opened, "K": kick})                       # the loudest of the two hats takes the slot
+        self.assertEqual(rhythm.kit_second_samples(s), {"h": closed})                          # the other is the second
+        self.assertEqual(rhythm.kit_classes(s), {"h": "d", "K": "m"})                          # eight hat hits a bar over both samples: dense; two kicks: medium
+        units = rhythm.kit_second_units([s])
+        self.assertEqual(len(units), 64)
+        self.assertEqual({(u.values["part"], u.values["place"], u.outcome) for u in units}, {("h", "beat", "second"), ("h", "eighth", "main")})
+        token = rhythm.kit_token(s, top=0.5)
+        hat = next(f for f in token.split(",") if f.startswith("h="))
+        self.assertTrue(hat.startswith(f"h=sbbbbbbbbbb@0.40@r59@0.45@d"), hat)
+        self.assertIn("+saaaaaaaaaa@0.20@r60@0.20@0.50", hat)                                   # the second: id, level, rate, hold, its half of the hits
+        self.assertNotIn("+", next(f for f in token.split(",") if f.startswith("K=")))
+        s.notes["drums"] = [n for n in s.notes["drums"] if n[3] != closed][:40] + [n for n in s.notes["drums"] if n[3] == closed][:7]   # under eight hits: no second
+        self.assertEqual(rhythm.kit_second_samples(s), {})
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["kit_seconds"][3], ("part", "place"))
+        # the plan reads the second from the drums field
+        mk = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        drums = "drums=main:::Kh:0.5:::K=scccccccccc@1.00@r48@0.50@m@@0.50,h=sbbbbbbbbbb@0.40@r59@0.45@d@@0.50+saaaaaaaaaa@0.20@r60@0.20@0.50"
+        token = f"melody=main:64-84:0.9:1:0.7:::slead bass=half:36-44:0.9:1:1.0:::sbass {drums} top=0.30 tempo=medium"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan(bal, 7, "g")
+        self.assertIn("drums", p.band)
+        x = p.extras["drums"]
+        self.assertEqual(x["kit"], {"K": "scccccccccc", "h": "sbbbbbbbbbb"})
+        self.assertEqual(x["kit_seconds"], {"h": {"sample": "saaaaaaaaaa", "share": 0.5, "level": 0.2, "hold": 0.2, "rate": 60, "degree": None, "pitch": None, "tuned": False}})
+        self.assertEqual(x["kit_classes"], {"K": "m", "h": "d"})
+        self.assertTrue(any(l.startswith("kit seconds from the balance: h saaaaaaaaaa at 0.50 of the hits") for l in p.log), p.log)
+        self.assertEqual(whole.slot_letter("hihat2"), ("h", True))
+        self.assertEqual(whole.kit_second(p, "hihat2")["sample"], "saaaaaaaaaa")
+        self.assertEqual((whole.kit_piece_level(p, "hihat"), whole.kit_piece_level(p, "hihat2")), (0.4, 0.2))   # each sample its own level
+        self.assertEqual((whole.kit_piece_rate(p, "hihat"), whole.kit_piece_rate(p, "hihat2")), (59, 60))
+        self.assertEqual((whole.kit_piece_hold(p, "hihat"), whole.kit_piece_hold(p, "hihat2")), (0.45, 0.2))
+        self.assertIsNone(whole.kit_second(p, "kick"))
+        self.assertIsNone(whole.kit_piece_rate(p, "kick2"))                                    # a second slot with no second: nothing
+        # the writer's pick: a word that puts the second on every eighth and never on a beat, held to the token's share
+        seconds = tables.Table(("part", "place"), "kit_seconds", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "h", "place": pl}) for i in range(10) for o, pl in (("second", "eighth"), ("main", "beat"))])
+        run, rng = [0, 0], random.Random(1)
+        picks = [whole.kit_second_pick({"kit_seconds": seconds}, "h", pl, run, 0.5, rng) for pl in ("beat", "eighth") * 16]
+        self.assertEqual(picks[:4], [False, True, False, True])
+        self.assertEqual(sum(picks), 16)                                                       # half the hits, the eighths
+        self.assertEqual(run, [16, 32])
+        run = [0, 0]
+        picks = [whole.kit_second_pick({"kit_seconds": seconds}, "h", "eighth", run, 0.25, rng) for _ in range(32)]
+        self.assertLessEqual(sum(picks), 9)                                                    # held to a quarter: once over, the main
+        self.assertGreaterEqual(sum(picks), 8)
+        self.assertFalse(any(whole.kit_second_pick({}, "h", "eighth", [0, 0], 0.5, rng) for _ in range(8)))   # no word: no second
+
+
 if __name__ == "__main__":
     unittest.main()
 

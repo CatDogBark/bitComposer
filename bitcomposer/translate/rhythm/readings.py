@@ -696,6 +696,30 @@ def kit_slots(song: "Song") -> dict:
     return kit_slot_samples(counts, getattr(song, "kit_levels", None) or {})
 
 
+SECOND_HITS = 8                      # a kit letter's second sample is struck this many times or more in the song (round 99)
+
+
+def kit_second_samples(song: "Song") -> dict:
+    """The second sample of each kit letter the song strikes on two samples (round 99): the most struck of the letter's
+    samples other than its slot's (kit_slots), with SECOND_HITS hits or more; {letter: sample key}, {} where no letter has
+    one. FFVI: 19 letters in 15 of its 46 kits, the hat in 12 of the 16 kits that have one (a closed hat beside a longer
+    open one, the open one off the beat in most), the snare in 4 of 30 (the Battle Theme's sixteenth-note rattle beside
+    its backbeat snare); the written kit had played one sample a letter (round 80's pick)."""
+    slots = kit_slots(song)
+    counts = Counter()
+    for n in song.notes.get(R.DRUMS, []):
+        key = n[3] if isinstance(n[3], str) else None
+        piece = (song.pieces or {}).get(key)
+        if key and piece in LETTERS:
+            counts[(LETTERS[piece], key)] += 1
+    out = {}
+    for letter, key in slots.items():
+        others = [(k, c) for (l, k), c in counts.items() if l == letter and k != key and c >= SECOND_HITS]
+        if others:
+            out[letter] = max(others, key=lambda kc: (kc[1], kc[0]))[0]
+    return out
+
+
 def kit_classes(song: "Song") -> dict:
     """Each kit slot's strike class (round 81): the slot's sample's hits a bar of the song's meter, every bar counted as
     DENSITIES counts a part's density, as SLOT_CLASSES' letter: {letter: class}. Wild West strikes its pitched blip 57
@@ -706,7 +730,8 @@ def kit_classes(song: "Song") -> dict:
         return {}
     bars = sum(1 for _ in numbered_bars_of(song, R.DRUMS)) or len(song.bars) or 1
     hits = Counter(n[3] for n in song.notes.get(R.DRUMS, []) if isinstance(n[3], str))
-    return {letter: habit_of(hits[key] / bars, SLOT_CLASSES) for letter, key in slots.items()}
+    seconds = kit_second_samples(song)                      # the letter's second sample's hits count too (round 99): the writer's figure
+    return {letter: habit_of((hits[key] + (hits[seconds[letter]] if letter in seconds else 0)) / bars, SLOT_CLASSES) for letter, key in slots.items()}   # gives both their hits
 
 
 def classes_value(classes: dict, letters) -> str:

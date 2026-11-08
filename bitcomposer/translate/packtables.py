@@ -124,6 +124,7 @@ KEPT = {
     "summit": ("phrases", "summit_units", {}, ("part",), False, False, "how far the tune's highest note sits above its register's top"),
     "ranges": ("rhythm", "sample_range_units", {}, ("part", "role"), False, False, "the register a sample is played in, by the sample and the part playing it"),
     "sample_ambitus": ("rhythm", "sample_ambitus_units", {}, ("part",), False, False, "the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound"),
+    "kit_seconds": ("rhythm", "kit_second_units", {}, ("part", "place"), False, False, "whether a kit letter's hit takes the slot's second sample (the letter's other sample, struck eight times or more in the song) or the slot's own, by the letter and the hit's place in the beat (on the beat, an eighth, a sixteenth, a triplet, finer); the writer draws it a hit for a letter whose token carries a second, holding the letter's hits to the token's share for it (round 99)"),
     "kit_rates": ("rhythm", "kit_rate_units", {}, ("part", "piece"), False, False, "the rate a percussion kit sample is struck at, as a note (60 as recorded), by the sample and the piece: the wall a tuned slot's moved rate stays inside"),
     "part_samples": ("rhythm", "part_sample_units", {}, ("part", "speed"), False, False, "the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
