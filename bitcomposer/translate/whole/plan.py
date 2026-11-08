@@ -661,13 +661,14 @@ def habit_at_for(plan, role: str, habit=None):
 
 def envelope_at_for(plan, role: str, habit=None):
     """A part's figure envelope a bar for its writer (round 101): the onsets a bar the section_densities shift asks
-    (rhythm.density_bounds: a tier denser, DENSITY_STEP times the tier's typical or more; a tier sparser, the typical over
-    it or fewer), None for a bar without a shift; None where no bar shifts."""
+    (rhythm.density_bounds: a tier denser, DENSITY_STEP times the part's typical or more; a tier sparser, the typical over
+    it or fewer; the writer hands in the part's own running density as the typical, the tier's FFVI median standing in),
+    None for a bar without a shift; None where no bar shifts."""
     shifts = plan.section_densities.get(role)
     if not shifts or not any(shifts):
         return None
     base = habit if habit is not None else plan.habits[role]
-    return lambda k: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0)
+    return lambda k, typical=None: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0, typical)
 
 
 def allot(band: list, counts: dict | None = None, drum_voices: int = 2) -> dict:

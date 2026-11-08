@@ -786,14 +786,17 @@ DENSITY_TYPICAL = {"sparse": 1.0, "medium": 4.0, "dense": 8.0}   # a pitched par
                                                                   # the counter and the melody; the melody's dense tier 10): what a tier shift is measured from
 
 
-def density_bounds(habit, shift: int):
+def density_bounds(habit, shift: int, typical=None):
     """The onsets a bar a section's figures keep to under a density tier shift (round 101, section_densities): a tier denser,
-    DENSITY_STEP times the part's tier's typical onsets or more (a dense part's 12, a medium one's 6, a sparse one's 2); a
-    tier sparser, the typical over DENSITY_STEP or fewer (5, 2, 1); None without a shift or a tier. The shifted habit alone
-    had capped at the dense tier, so a dense accompaniment drawn denser had stayed as it was."""
+    DENSITY_STEP times the part's typical onsets or more; a tier sparser, the typical over DENSITY_STEP or fewer; None
+    without a shift or a tier. `typical`: the part's own onsets a bar so far in its unshifted bars (the writer's running
+    median, the word's own measure), else its tier's FFVI median (DENSITY_TYPICAL: a dense part's 8, so 12 or more; a
+    medium one's 4, so 6; a sparse one's 1, so 2). The shifted habit alone had capped at the dense tier, so a dense
+    accompaniment drawn denser had stayed as it was; the tier's typical alone had left a part already over it unmoved."""
     if not shift or not isinstance(habit, str) or not habit.split():
         return None
-    typical = DENSITY_TYPICAL.get(habit.split()[0])
+    if typical is None or not typical > 0:
+        typical = DENSITY_TYPICAL.get(habit.split()[0])
     if typical is None:
         return None
     if shift > 0:

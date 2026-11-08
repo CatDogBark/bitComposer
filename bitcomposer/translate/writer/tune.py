@@ -1027,7 +1027,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         always new gave 16.5 distinct cells against 12.5)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
-        shifted = envelope_at(k) if envelope_at is not None else None   # the section's density tier shift as the bar's envelope (round 101)
+        shifted = envelope_at(k, statistics.median(new_strikes) if len(new_strikes) >= 2 else None) if envelope_at is not None else None   # the section's
+                                                            # density tier shift as the bar's envelope, from the tune's own running density (round 101)
         if shifted is not None:
             env = (shifted[0], shifted[1], False, meters[k])
         h = habit_at(k) if habit_at is not None else habit   # the bar's habit: its density tier shifted where the section says (round 101)

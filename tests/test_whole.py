@@ -725,8 +725,10 @@ class SectionDensityTests(unittest.TestCase):
         self.assertEqual((rhythm.density_bounds("dense mixed", 1), rhythm.density_bounds("medium mixed", 1), rhythm.density_bounds("sparse varied", 1)), ((12, 64), (6, 64), (2, 64)))
         self.assertEqual((rhythm.density_bounds("dense mixed", -1), rhythm.density_bounds("medium mixed", -1), rhythm.density_bounds("sparse varied", -1)), ((0, 5), (0, 2), (0, 1)))
         self.assertIsNone(rhythm.density_bounds("dense mixed", 0)); self.assertIsNone(rhythm.density_bounds("walking", 1))
+        self.assertEqual((rhythm.density_bounds("dense mixed", 1, 10), rhythm.density_bounds("dense mixed", -1, 10), rhythm.density_bounds("medium mixed", 1, 0)),
+                         ((15, 64), (0, 6), (6, 64)))                                                         # the part's own running density where the writer has one
         env = whole.envelope_at_for(plan, "bass")
-        self.assertEqual((env(0), env(5), env(9)), (None, (6, 64), None))                                     # the bass's medium tier, denser in B
+        self.assertEqual((env(0), env(5), env(9), env(5, 10.0)), (None, (6, 64), None, (15, 64)))            # the bass's medium tier, denser in B
 
 
 if __name__ == "__main__":

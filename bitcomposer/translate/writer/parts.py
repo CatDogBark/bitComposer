@@ -195,7 +195,9 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     within_of = within_of or figures_mod.within
     meters = [max(1, round(b - a)) for a, b, _ in bars]
     figures, played, previous = [figures_mod.REST] * len(bars), Counter(), None
-    periods = getattr(song, "periods", {}).get(role, {})   # the part's period inside a part of the form: a held bar plays the bar a lag before
+    unshifted = []                                          # the strikes of the bars drawn with no density shift: the part's own running
+    periods = getattr(song, "periods", {}).get(role, {})   # density, which a shifted section's envelope is measured from (round 101)
+                                                            # the part's period inside a part of the form: a held bar plays the bar a lag before
     for start, length, _, copy_of in form_spans(song, own):
         for i in range(length):
             k = start + i
@@ -210,8 +212,9 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
-                if envelope_at is not None and (shifted := envelope_at(k)) is not None:   # the section's density tier shift as the bar's
-                    env = (shifted[0], shifted[1], False, meters[k])                       # envelope (round 101, rhythm.density_bounds)
+                shifted = envelope_at(k, statistics.median(unshifted) if len(unshifted) >= 2 else None) if envelope_at is not None else None
+                if shifted is not None:                     # the section's density tier shift as the bar's envelope (round 101, rhythm.density_bounds),
+                    env = (shifted[0], shifted[1], False, meters[k])   # measured from the part's own running density where two bars give one
                 thin = energy is not None and k < len(energy) and energy[k] < BREAKDOWN
                 if thin:
                     env = thinned(env, energy[k])
@@ -238,6 +241,8 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                     if figure is not None:
                         break
                 figures[k] = figure if figure is not None else last_resort(manner, model, unit, values, rng, env=env, within_of=within_of)
+                if shifted is None and figures[k] != figures_mod.REST:
+                    unshifted.append(len(rhythm._tokens(figures[k])))
             played[figures[k]] += 1
             previous = figures[k]
     for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
