@@ -802,17 +802,25 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         r = rates.get(pl) if rates else None
         return r is not None and run[pl][1] > 0 and run[pl][0] / run[pl][1] > r
 
+    def would_pass(run, rates, pl: str) -> bool:
+        """Whether one more such note would put the run's share over the song's word: the share as a budget (round 100)."""
+        r = rates.get(pl) if rates else None
+        return r is not None and (run[pl][0] + 1) / (run[pl][1] + 1) > r
+
     def adds_over(a: float, positions: list, pitches: list) -> int:
-        """How many of a recalled cell's notes, placed so, would add to a share the tune is already over (round 93): a note
-        off the scale while the tune is over the off_scale word's share for its beat, an onset a semitone from a sounding
-        part while over the clashes word's; none without the words. A recall's placement keeps these down, after the chord."""
+        """How many of a recalled cell's notes, placed so, would put a share the tune holds over its word (round 93): a note
+        off the scale where the off-scale share with it in would pass the song's for its beat, an onset a semitone from a
+        sounding part where the clash share with it in would pass the song's; none without the words. A recall's placement
+        keeps these down. Until round 100 a note counted only once the share was already over, so a song's first recalls
+        clashed freely and the hold ran a bar behind the share it held: the recalled bars sat a semitone from the band on
+        0.15 of their strong beats (FFVI 0.10) with a clean shift a third away untaken in half the cases."""
         n = 0
         for p, m in zip(positions, pitches):
-            strong = abs(p - round(p)) < rhythm.NEAR
-            if off_scale and int(round(m)) % 12 not in scale and over_rate(off_run, off_scale, strong):
+            pl = "strong" if abs(p - round(p)) < rhythm.NEAR else "weak"
+            if off_scale and int(round(m)) % 12 not in scale and would_pass(off_run, off_scale, pl):
                 n += 1
-            if clash_rates and over_rate(clash_run, clash_rates, strong):
-                n += int(any((int(round(m)) - pc) % 12 in upper_mod.CLASH for pc in upper_mod.sounding_pcs(clash_line, a + p)))
+            if clash_rates and any((int(round(m)) - pc) % 12 in upper_mod.CLASH for pc in upper_mod.sounding_pcs(clash_line, a + p)) and would_pass(clash_run, clash_rates, pl):
+                n += 1
         return n
     def ending_pick(options: list, last: Cell, a: float) -> int:
         """The phrase ending's note among the drawn degree's options: the nearest that adds least to a share the tune is over
