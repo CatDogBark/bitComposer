@@ -1365,6 +1365,42 @@ The words are grouped by where the writing draws them, in the order the song is 
   writer whose cell was the bar drew a whole new bar (0.39).
   *`half_recall`: shape (part, habit); drawn in melody.*
 
+- **recall_moves** — how far a recalled tune cell sits from its last
+  occurrence, by whether it is the bar before's cell (same) or one heard
+  before that (earlier) and whether the chord under it is the one under
+  its source (same, other), round 100: at pitch (`0`), moved with the
+  chord root (`root`: the root's own motion, folded into the octave either
+  side), or by semitones (`+2`, `-5`, `6`). FFVI's 62 tunes recall 428 bars
+  in their own form parts: a cell comes back at pitch in 0.70 of the
+  earlier recalls and 0.53 of the immediate ones, within a third in 0.88
+  and 0.95; over another chord it stays at pitch in 0.38 (earlier) and
+  0.27 (same), moves with the root in 0.27 and 0.45, by a step in 0.12 and
+  0.22. The tune writer (`again`, the half-bar recall in
+  `new_cell_halves`) had re-rooted every recall on the new chord, the
+  cell's first note the same interval over the new root, so a passage
+  recalled over a chord a fourth away came back a fourth away (at pitch in
+  0.27 of the written recalls, a fourth or fifth off in 0.22), and its
+  recalled bars sat a semitone from the band on 0.15 to 0.25 of their
+  strong beats against FFVI's 0.04 to 0.10, where its fresh bars sat at
+  FFVI's 0.08. Now a recall's first note sits where the word's draw puts
+  it (`writer.tune.recall_anchor`, an own stream `{seed}:{role}:recall
+  moves`), the whole cell then moved within a third where the tune wants
+  its beats on the chord or the cell would put a share over its word, the
+  chord-tone, off-scale and clash holds weighed together (the chord had
+  come first, and a clean shift a third away was passed over for one more
+  chord tone), and a hold counts a note where the share with it in would
+  pass the song's (it had counted only once over, so a song's first
+  recalls clashed freely and the hold ran a bar behind). Over sixty seeds
+  the recalled bars' strong-beat clashes fell from 0.147 to 0.101
+  (earlier; FFVI 0.099) and from 0.167 to 0.117 (the bar before's; FFVI
+  0.043), the tune's from 0.108 to 0.099 (FFVI 0.084; by song 0.109 to
+  0.100, FFVI 0.069), and its recalls at pitch rose from 0.27 to 0.38. The
+  phrase ending's note takes the degree's option that adds least to a
+  share the tune is over (0.17 to 0.16 of phrase ends a semitone from the
+  band, FFVI 0.06: the ending degree is the key's, not the cadence
+  chord's, a limit).
+  *`recall_moves`: shape (part, recall, chord); drawn in melody.*
+
 - **values** — a melody note held or detached, by its value and the song's
   articulation habit. Drawn a note; the tune's note lengths.
   *`values`: shape (part, value, habit); drawn in counter, melody, melody_models, write.*

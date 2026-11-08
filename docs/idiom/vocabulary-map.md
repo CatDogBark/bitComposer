@@ -79,7 +79,7 @@ flowchart LR
 | `tune_grain` | part, habit | _plan_once | - | the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms |
 | `attacks` | part | attack_for | - | whether a part's line plays a struck sample (its strike over 6 dB above its loop body: a sound that decays) or a sustaining one, by the part; a built-in set's pool rule matches the drawn class (FFVI's tunes: sustaining in 63 of 66 songs) |
 
-### the parts' writing (whole.write hands the table to a writer) (9)
+### the parts' writing (whole.write hands the table to a writer) (10)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -92,6 +92,7 @@ flowchart LR
 | `layer_sounds` | part, voice | write | - | the share of its gap a note sounds for a layered part's line and for its second voice |
 | `second_figures` | part, layer, feel, tempo, onsets, line | write | - | a layered part's second line, under its voices' note share over the line (sparse, half, full; round 65) (an upper part's pattern, the bass's figure, the counter's bar beside its line since round 76) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more |
 | `counter_figures` | part, weight, feel, tempo, onsets, line | write | - | the counter-line's bar as a mask over the tune's bar: which of the tune's onsets it strikes with and its own, by the counter's weight in the band, the song's feel and tempo band, the tune's onset count and pattern (its own onsets alone where the tune rests) |
+| `recall_moves` | part, recall, chord | write | - | how far a recalled tune cell sits from its last occurrence (at pitch, with the chord root, or by semitones), by whether it is the bar before's cell and whether the chord under it is the one under its source: the tune's echoes land as the game's do |
 
 ### the drums (5)
 
@@ -337,6 +338,7 @@ flowchart LR
     layer_sounds["layer_sounds"]
     second_figures["second_figures"]
     counter_figures["counter_figures"]
+    recall_moves["recall_moves"]
   end
   balance -- habit --> bass
   balance -- tempo --> bass

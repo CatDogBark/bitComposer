@@ -6642,3 +6642,88 @@ echo mark (8 of FFVI's 19 seconds sit on another channel, the Battle
 Theme's two snares among them); a third sample (Techno de Chocobo's third
 hat, Devil's Lab's third snare) is not carried; the pump pitch, the tom
 lines and the shared-channel collisions stand as limits.
+
+### Round 100: a recalled tune cell lands where the game's does (2026-11-08, the lines' clash floor, my pick on the owner's "proceed")
+
+**Why.** The tune's remaining harshness. Round 94 had left the melody's
+line at 0.13 of its strong onsets a semitone from the parts under it
+(FFVI 0.08) with a floor "from its returning cells and endings". Measured
+by the bar's origin over sixty seeds (tune_clash_origin.py): the freshly
+drawn bars sit at 0.081, FFVI's 0.080; the recalled cells at 0.15 to 0.25
+(a bar heard before 0.147, the bar before's cell again 0.167, a two-bar
+pair again 0.247, a theme return 0.114, a form repeat 0.116) against
+FFVI's 0.04 to 0.10 for the same kinds (ffvi_recall_clash.py: earlier
+0.099, same 0.043, copy 0.098); the phrase endings at 0.169 against 0.057.
+Two causes. The writer re-rooted every recall on the new chord (the
+cell's first note the same interval over the new root), so a passage
+recalled over a chord a fourth away came back a fourth away: at pitch in
+0.27 of the written recalls, where FFVI's come back at pitch in 0.70 of
+the earlier recalls and 0.53 of the immediate ones, within a third in
+0.88 and 0.95, and over another chord stay in 0.38, move with the root in
+0.27 and by a step in 0.12 (ffvi_recall_moves.py; 428 recalled bars in 62
+tunes). And the clash hold acted only once the tune was already over its
+share, so a song's first recalls clashed freely and the hold ran a bar
+behind: of 54 clashing recalled bars, 22 had a clean in-scale shift within
+a third untaken (written_recall_headroom.py). The recalls also sit over
+another chord than their source far more often than FFVI's (0.12 to 0.16
+of them over the same chord against FFVI's 0.39 to 0.53): the urn recalls
+from anywhere where FFVI's tunes recall where the harmony repeats, a
+structural difference left as it is.
+
+**Built.** One counted word and the holds' reach. `recall_moves`
+(`rhythm.recall_move_units`, shape part x recall x chord): each recalled
+bar of the tune in the form's own parts as how far it sits from its last
+occurrence, at pitch (`0`), with the chord root (`root`), or by semitones
+folded into the octave either side, by whether it is the bar before's
+cell (same) or one heard before that (earlier) and whether the chord
+under it is the one under its source. The tune writer anchors a recalled
+bar (`again`) or half bar (`new_cell_halves`) by the word's draw
+(`recall_anchor`, an own stream `{seed}:{role}:recall moves`) instead of
+re-rooting it, then moves the whole cell within a third where the tune
+wants its beats on the chord or the cell would put a share over its word,
+the chord-tone, off-scale and clash holds weighed together (the chord had
+come first, and a clean shift was passed over for one more chord tone); a
+cell keeps the chord it was realized on (`Cell.chord`). Second cut: a hold
+counts a note where the share with it in would pass the song's word
+(`would_pass`, the share as a budget), not only once over; the first cut,
+with the lagging hold, had moved the recalls' placement toward FFVI's
+(at pitch 0.40) without moving their clashes (0.142). The phrase ending's
+note takes the degree's option that adds least to a share the tune is
+over (`ending_pick`). No re-read; pack4 refit (109 tables;
+`pack.json.before-r100`), the vocabulary shipped, the map regenerated.
+Tests: the reader on a synthetic tune (at pitch, with the root, a fourth
+under; the form's repeat not counted), the move's classification, the
+anchor by octave and register. Suite 440 (1 skip).
+
+**Measured** (sixty seeds, strong beats, the tune's line against the
+parts under it). Recalled bars 0.147 to 0.101 (FFVI 0.099), the bar
+before's cell 0.167 to 0.117 (0.043), a pair again 0.247 to 0.179, a
+pair's earlier bar 0.153 to 0.123, a form repeat 0.116 to 0.090 (0.098),
+a theme return 0.114 to 0.127 (0.098); the tune's whole 0.108 to 0.099
+(FFVI 0.084), by song 0.109 to 0.100 (FFVI 0.069); the fresh bars 0.081
+to 0.086 (0.080). Recalls at pitch 0.27 to 0.38 (FFVI 0.53 to 0.70; the
+fit's shifts take the rest), within a third 0.77 to 0.84 (0.88 to 0.95).
+Clashing recalled bars 54 to 38, with a clean shift untaken 22 to 15. The
+endings 0.169 to 0.157 (FFVI 0.057): the ending degree is the key's, not
+the cadence chord's, a limit. Plans (400 seeds): the word draws on an own
+stream, so 400 of 400 keep their token song and their plans; 148 plan
+logs identical (the melody's "recalls placed" line is new), 6 songs note
+for note the same (every tune with a recall moves); the six standing seeds
+keep their tokens and plans.
+
+**Song Check 83** (https://claude.ai/artifact/RDzMM7HWL1cLYTU9bnz4m6): the six standing seeds, before (dev as merged)
+and after. The Sleeping Observatory's tune 3 of 63 strong onsets a
+semitone from the band to 1 of 63 (its recalled bars 1 of 8 to 0 of 8),
+The Still Wharf 8 of 70 to 2 of 70 (3 of 23 to 0), The Terminal of Glass
+6 of 87 to 4 of 96; Last Vault, Arcade of Rain and First Meridian Return
+drew high clash shares of their own (Arcade of Rain the harshest tier)
+and stay where they were.
+
+**Open.** The endings (the key's degree, not the cadence chord's); the
+theme returns and the bars after them (0.12 to 0.13); the recalls' weak
+beats (0.16 to 0.24 against FFVI's 0.09 to 0.13); where the tune recalls
+from (the urn recalls over any chord, FFVI's where the harmony repeats);
+the counter's semitone interval form. Queued on the owner's word: the
+section-level step with its figure change (The Mines of Narshe's
+accompaniment doubles in its last section with a new figure in a new
+register; the written step is a bare level move, 99 of 400 songs).
