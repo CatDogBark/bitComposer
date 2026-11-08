@@ -681,6 +681,46 @@ class RecallMoveTests(unittest.TestCase):
         self.assertEqual(tune.recall_anchor(cell, None, "-5", (58, 62), 60.0), 58)             # a register without the pitch class: its nearest note to the move
 
 
+class SectionDensityTests(unittest.TestCase):
+    """Round 101: a part's density tier in a section by the step its level makes (section_densities), and the writers' habit a bar."""
+
+    def test_a_sections_density_tier_is_counted_by_the_step_its_level_makes(self):
+        from bitcomposer.translate import tables
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        eighths = [(4.0 * i + x / 2, 0.4, 36.0, "b") for i in range(4) for x in range(8)]                    # A: eight notes a bar, soft
+        halves = [(4.0 * i + x, 0.9, 36.0, "b") for i in range(4, 8) for x in (0.0, 2.0)]                     # B: two a bar, loud (an intro's
+        s = rhythm.Song("t", 4, 12, bars, [], notes={"bass": eighths + halves}, sid="s", game="g", numbers=list(range(8)),   # sparse lead, as
+                        parts=[(0, 4, None, "A"), (4, 4, None, "B")])                                        # Another World of Beasts')
+        s.note_levels = {"bass": [(n[0], 0.1) for n in eighths] + [(n[0], 0.3) for n in halves]}            # the median level is A's: B steps up
+        units = rhythm.section_density_units([s])
+        self.assertEqual([(u.values["part"], u.values["step"], u.outcome) for u in units], [("bass", "same", "d+"), ("bass", "up", "d-")])   # 8 and 2 a bar over 5
+        self.assertEqual((rhythm.level_step(2.0), rhythm.level_step(0.6), rhythm.level_step(1.2), rhythm.level_step(1.5)), ("up", "down", "same", "up"))
+        self.assertEqual((rhythm.shift_habit("medium mixed", 1), rhythm.shift_habit("medium mixed", -1), rhythm.shift_habit("dense varied", 1),
+                          rhythm.shift_habit("sparse walking no-octaves", -1), rhythm.shift_habit("medium mixed", 0), rhythm.shift_habit(None, 1)),
+                         ("dense mixed", "sparse mixed", "dense varied", "sparse walking no-octaves", "medium mixed", None))
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["section_densities"][3], ("part", "step"))
+        # the plan: a shift a bar by the part and the step, a repeated section copying its source's
+        units_ = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        t = tables.Table(("part", "step"), "section_densities", votes=tables.SHARES).fit(
+            units_("d+", part="bass", step="up") + units_("d=", part="bass", step="same") + units_("d-", part="melody", step="same"))
+        parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 0, "A")]
+        plays = {"bass": [True] * 12, "melody": [True] * 12}
+        levels = {"bass": [1.0] * 4 + [2.0] * 4 + [1.0] * 4}
+        log = []
+        shifts = whole.plan_section_densities({"section_densities": t}, parts, ["bass", "melody", "drums"], plays, levels, random.Random(1), log)
+        self.assertEqual(shifts["bass"], [0] * 4 + [1] * 4 + [0] * 4)                                      # denser where the level steps up
+        self.assertEqual(shifts["melody"], [-1] * 12)                                                       # sparser at level 1.0, as the table says
+        self.assertNotIn("drums", shifts)
+        self.assertIn("densities by section (section_densities): melody sparser in A; bass denser in B (level 2.0); melody sparser in B", log)
+        from types import SimpleNamespace
+        plan = SimpleNamespace(section_densities=shifts, habits={"bass": "medium walking", "melody": "dense varied"})
+        at = whole.habit_at_for(plan, "bass")
+        self.assertEqual((at(0), at(5), at(9), at(40)), ("medium walking", "dense walking", "medium walking", "medium walking"))
+        self.assertEqual(whole.habit_at_for(plan, "melody", "medium varied")(3), "sparse varied")        # a given habit (the second voice's) shifted the same
+        self.assertIsNone(whole.habit_at_for(SimpleNamespace(section_densities={"bass": [0] * 12}, habits={"bass": "medium"}), "bass"))   # nothing shifts: no habit a bar
+
+
 if __name__ == "__main__":
     unittest.main()
 

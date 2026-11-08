@@ -780,6 +780,19 @@ TONES = ((0.8, "roots", "Rr"), (0.8, "root-fifth", "Rr5"), (0, "walking", ""))  
 OCTAVES = 0.2                        # the share of a bass's notes an octave up (r) for it to play octaves
 
 
+def shift_habit(habit, delta: int):
+    """A part's habit with its density tier moved `delta` tiers along DENSITIES (sparse, medium, dense), the rest of the habit
+    kept ("medium mixed" a tier up is "dense mixed"); the ends stay (round 101: a section's density against the part's)."""
+    if not habit or not delta or not isinstance(habit, str):
+        return habit
+    words = habit.split()
+    tiers = [name for _, name in DENSITIES]
+    if not words or words[0] not in tiers:
+        return habit
+    i = max(0, min(len(tiers) - 1, tiers.index(words[0]) + delta))
+    return " ".join([tiers[i]] + words[1:])
+
+
 def habit_of(share: float, scale=HABITS) -> str:
     """A song's habit from one of its shares (HABITS, REPEATS) or its density a bar (DENSITIES)."""
     return next(name for top, name in scale if share < top)

@@ -180,7 +180,7 @@ LIMB_REDRAWS = 3                     # a limb whose slot the token strikes that 
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
                   energy: list | None = None, extra_values: dict | None = None, floor_outcomes: int | None = None,
-                  floor_songs: int | None = None, rest_new: bool = False) -> list[str]:
+                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -214,7 +214,8 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 if thin:
                     env = thinned(env, energy[k])
                 bar_lock = None if thin else lock.get(k)        # in a breakdown the band's hits are not the band: no lock
-                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm), **(extra_values or {})}
+                values = {"part": role, "meter": meters[k], "previous": previous or rhythm.START, "habit": habit_at(k) if habit_at is not None else habit,   # the bar's habit: its
+                          "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm), **(extra_values or {})}                      # tier by the section (round 101)
                 unit = tables.Unit(song.sid, song.game, "", values)
                 # the filters, loosened in turn where nothing passes: the manner, the envelope and the lock; then
                 # without the lock (the band asks more strikes than the habit: the part keeps its density and locks
@@ -266,7 +267,7 @@ def last_resort(manner, model: tables.Cache, unit: tables.Unit, values: dict, rn
 
 def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
              rng: random.Random, hold=(), lock=None, chord_at=None, reuse: float = 0.0,
-             envelope_of=None, within_of=None, lock_share: float = 1.0) -> list[str]:
+             envelope_of=None, within_of=None, lock_share: float = 1.0, habit_at=None) -> list[str]:
     """The figures written for a part, one a bar (the module): drawn as the
     song's own mixture, in its manner, each bar's envelope and lock, a
     pattern a span, the song's moments its own; `chord_at` and `reuse` let
@@ -287,7 +288,8 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
         meter = env[-1] if env[-1] else song.meter
         fit = lambda f: manner.fits(f) and within_of(f, env) and locked(f, lock.get(at), lock_share)   # noqa: E731
         full = lambda f: fit(f) and (keep is None or keep(f))   # noqa: E731
-        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
+        values = {"part": role, "meter": meter, "previous": previous or rhythm.START, "habit": habit_at(at) if habit_at is not None and at is not None else habit,
+                  "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}   # the bar's habit: its tier by the section (round 101)
         unit = tables.Unit(song.sid, song.game, "", values)
         figure = model.draw(unit, None if previous == figures_mod.REST else previous, state["played"], rng, keep=full)
         nearly = None
@@ -476,7 +478,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
-         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -512,10 +514,10 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     elif free:
         figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), energy=energy,
-                                lock_share=lock_share)
+                                lock_share=lock_share, habit_at=habit_at)
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
-                           chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5))
+                           chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)
     notes, last_root, previous = [], tonic, None
     beside = kind in figures_mod.VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
     prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
