@@ -194,7 +194,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           habit: str, richness: str, sounds: float, key: tuple | None = None, hold=(), lock=None,
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
-          tone_index: int = 0, kind: str | None = None) -> tuple[list, list, list]:
+          tone_index: int = 0, kind: str | None = None, bounds_at=None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -211,7 +211,9 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     its interval to the line's note where they strike together and its own
     move where it strikes alone, drawn (the line's notes are in `shared`
     under ("line", (bar, position))); without them, the tone that many
-    steps up the line's voicing.
+    steps up the line's voicing. `bounds_at`: bar -> the line voice's
+    register there, where the token song's line changes instrument by
+    stretch (round 92); `registers` else.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -261,6 +263,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
         if figure == figures_mod.REST:
             voicings.append(figures_mod.REST)
             continue
+        regs = {v: (tuple(bounds_at(k)) if bounds_at is not None and v == voices[0] and bounds_at(k) else registers[v]) for v in voices}   # the bar's registers (round 92)
         positions = [Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)]
         bar_voicing = []
         runs_to = tune_mod.first_onset(figures, bars, k + 1)        # the bar's last note runs to the next bar's first, as the share was counted
@@ -308,12 +311,12 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             by_bar.setdefault(k, {})[i] = (chord, prev_v, list(marks))
             if shared is not None and not tone_index:
                 shared[(k, p)] = (chord, prev_v, list(marks))
-            pitches = stack(marks, chord[0], chord[1], scale, registers[voices[0]][0], previous_low)
+            pitches = stack(marks, chord[0], chord[1], scale, regs[voices[0]][0], previous_low)
             previous_low = float(pitches[0]) if pitches else previous_low
             tune = sounding_pcs(tune_line, start)
             if role == R.ARP and len(voices) == 1:
-                midi = in_register(pitches[i % len(pitches)], registers[voices[0]])
-                midi = unclashed(midi, [in_register(m, registers[voices[0]]) for m in pitches], tune)
+                midi = in_register(pitches[i % len(pitches)], regs[voices[0]])
+                midi = unclashed(midi, [in_register(m, regs[voices[0]]) for m in pitches], tune)
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), voices[0]))
                 continue
             # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
@@ -325,7 +328,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 stacked = [stacked[0]] + stacked[-(len(voices) - 1):] if len(voices) > 1 else [stacked[0]]
             offset = int(walked) if len(pitches) > 1 else 0
             for j, v in enumerate(voices):
-                low_v, high_v = registers[v]
+                low_v, high_v = regs[v]
                 if high_v - low_v <= PEDAL_VOICE:           # a pedal voice: the song's drone, struck on the figure
                     notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(pedals.get(v, low_v)), v))
                     if shared is not None and not tone_index:   # the line's note here, for the voices beside it (round 70: a pedal line had
@@ -359,7 +362,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                             if move is None:
                                 break
                             target = tune_mod.scale_pitch(tune_mod.scale_index(prev_midi, scale) + move, scale)
-                        midi = in_register(target, registers[v])
+                        midi = in_register(target, regs[v])
                         if taken is None or midi not in taken:
                             break
                         refused.add(steps if steps is not None else move)
@@ -372,15 +375,15 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                     prev_midi = midi
                 elif tone_index and len(voices) == 1:      # no tables for it: a tone up the line's voicing (its rank's, or one drawn a span), walking with the motion
                     order = [(own_tone + int(walked) + d) % len(pitches) for d in range(len(pitches))]
-                    free = [pitches[i] for i in order if taken is None or in_register(pitches[i], registers[v]) not in taken]
+                    free = [pitches[i] for i in order if taken is None or in_register(pitches[i], regs[v]) not in taken]
                     if not free:                            # every tone of the voicing already sounds in the part: the voice sits this onset out
                         continue
-                    midi = in_register(free[0], registers[v])
+                    midi = in_register(free[0], regs[v])
                 else:
-                    midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], registers[v])
+                    midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], regs[v])
                     if shared is not None and not tone_index:
                         shared[("line", (k, p))] = midi     # the line's note here, for the voices beside it
-                midi = unclashed(midi, [in_register(m, registers[v]) for m in pitches], tune)
+                midi = unclashed(midi, [in_register(m, regs[v]) for m in pitches], tune)
                 if taken is not None:
                     taken.add(int(round(midi)))
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), v))

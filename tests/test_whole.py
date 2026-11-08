@@ -989,7 +989,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(rhythm.line_voice({1: line, 2: layer}, "melody"), 1)                  # without the song: the busiest (the first of equals)
         entries = rhythm.layer_tokens(s, "melody")
         self.assertEqual(len(entries), 1)
-        self.assertTrue(entries[0].startswith("1.5@m2@1.00@") and entries[0].endswith("@dm-12x6>o"), entries)
+        self.assertEqual(entries[0], "1.5@m2@1.00@56-60@dm-12x6>o@m2~56-60x6>m3~60-60", entries)   # the sixth sub-field its instrument by stretch (round 92)
         self.assertIn("@dm-12x6>o", rhythm.balance_units([s])[0].outcome)
         s.voice_notes[2] = ("melody", [(t + 0.5, 0.4, 60.0, "m3") for t, _, m, _ in line])      # a voice of one own stretch: no word
         self.assertEqual(rhythm.relation_words(s), {})
@@ -1071,6 +1071,53 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.sample_of(samples, "melody", 0, {})[0], "sm")
         self.assertEqual(whole.sample_of(samples, "melody", 1, {}, 1)[0], "sm")                  # a voice beside the line keeps its own
         self.assertEqual(whole.sample_of(samples, "bass", 0, {}, 0)[0], "sbass")
+
+    def test_a_line_is_written_in_its_stretchs_register_and_a_layer_voice_changes_instrument(self):
+        """Round 92: the writers take a register a bar (bounds_at, spans_at): a line whose token song changes instrument by
+        stretch is written in each stretch's register, entering it by octaves, so the fold after writing has nothing to
+        move; and a voice beside the line carries its own instrument by stretch (the layer entry's sixth sub-field),
+        parsed into Plan.layer_stretches, registered by samples_for and played by sample_of."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from bitcomposer import instruments
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables, tables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        p = whole.plan(models, 3, "g", max_bars=16)
+        self.assertIn(R.MELODY, p.band)
+        p.plays[R.MELODY] = [True] * p.bars
+        x = p.extras.setdefault(R.MELODY, {})
+        x["stretch_spans"], x["stretch_bounds"], x["stretch_samples"] = [(0, 0, 4), (1, 4, p.bars)], {0: (72, 84), 1: (52, 64)}, {}
+        p.bounds[R.MELODY] = (52, 84)
+        written = whole.write(p, whole.song_of(p), models, 3)
+        line = [n for n in written[R.MELODY].notes if n[3] == 0]
+        early = [n for n in line if n[0] < 16 - 1e-6]
+        late = [n for n in line if n[0] >= 16 - 1e-6]
+        self.assertTrue(early and late, written[R.MELODY].log)
+        inside = [n for n in early if 72 <= n[2] <= 84] + [n for n in late if 52 <= n[2] <= 64]
+        self.assertGreaterEqual(len(inside), 0.9 * len(line), (sorted({n[2] for n in early}), sorted({n[2] for n in late}), p.log[-3:]))
+        self.assertFalse(any(l.startswith("melody:") and "folded" in l for l in p.log), [l for l in p.log if "folded" in l])   # written in register: nothing to fold
+        tok = "melody=main:56-72:0.9:2:0.7:1.5@sm2@1.00@55-60@dm-12x6>o@sm2~55-60x6>sm3~55-60::sm@68-72 bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", tok, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        q = whole.plan({"balance": t}, 1, "g")
+        self.assertEqual(q.layer_stretches, {"melody": [[("sm2", (55, 60), 6), ("sm3", (55, 60), None)]]})
+        self.assertEqual(q.layer_relations, {"melody": ["dm-12x6>o"]})
+        made = []
+        fake = lambda name: made.append(name) or SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "arp": ["pad"]}}
+        with mock.patch.object(instruments, "_make_sample", fake):
+            samples = whole.samples_for(q, pack, {"sm", "sm2", "sm3", "sbass"}, "g", random.Random(1), {})
+        self.assertEqual((samples["melody:1:stretch:0"][0], samples["melody:1:stretch:1"][0]), ("sm2", "sm3"))
+        self.assertEqual(q.extras["melody"]["voice_stretch_spans"][1], [(0, 0, 6), (1, 6, q.bars)])
+        self.assertEqual([whole.stretch_at(q, "melody", k, 1) for k in (0, 5, 6, q.bars + 2)], [0, 0, 1, 1])
+        self.assertIsNone(whole.stretch_at(q, "melody", 0))                                        # the line has no stretches here
+        self.assertEqual(whole.sample_of(samples, "melody", 1, {}, 1)[0], "sm3")                    # the voice's note in its second stretch
+        self.assertEqual(whole.sample_of(samples, "melody", 1, {}, 0)[0], "sm2")
+        self.assertEqual(whole.sample_of(samples, "melody", 1, {})[0], "sm2")                       # without a stretch: the voice's own token sample
+        self.assertEqual(whole.sample_of(samples, "melody", 0, {}, 1)[0], "sm")                     # the line keeps its own
+        self.assertTrue(any(l.startswith("melody's voice 2 by stretch") for l in q.log), q.log[-4:])
 
     def test_the_second_voices_levels_are_the_balance_tokens_too(self):
         """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line

@@ -476,7 +476,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
-         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -485,7 +485,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     free_envelope by the habit, which the caller then gives). `plays`: a
     planned song's bars the part plays in (no original: the bars the plan
     has it play, playing anything), with `register` (the midi floor) and
-    `sounds` (the share of its gap a note sounds) given instead of read."""
+    `sounds` (the share of its gap a note sounds) given instead of read.
+    `bounds_at`: bar -> (floor, ceiling) where the token song's bass changes
+    instrument by stretch (round 92); the part's floor and ceiling else."""
     lock = lock or {}
     own = song.notes.get(R.BASS, [])
     if habit is None:
@@ -518,7 +520,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     beside = kind in figures_mod.VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
     prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
-        new, last_root, previous = realize(figure, a, b, song, low, sounds, scale, last_root, previous, runs_to=tune_mod.first_onset(figures, bars, k + 1), high=high)
+        low_k, high_k = (bounds_at(k) or (low, high)) if bounds_at is not None else (low, high)   # the bar's register (round 92)
+        new, last_root, previous = realize(figure, a, b, song, low_k, sounds, scale, last_root, previous, runs_to=tune_mod.first_onset(figures, bars, k + 1), high=high_k)
         if shared is not None and not beside:               # the line: its notes for the voice beside it
             for start, _, midi in new:
                 shared[("line", (k, rhythm.position(start - a, song.division)))] = midi
@@ -535,7 +538,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 else:
                     target, _ = tune_mod.beside_pitch(models, R.BASS, kind, scale, rng, None, prev_steps, prev_midi, 0)
                 if target is not None:
-                    midi = float(upper_mod.in_register(target, (low, high)))
+                    midi = float(upper_mod.in_register(target, (low_k, high_k)))
                 prev_midi = midi
                 repitched.append((start, end, midi))
             new = repitched

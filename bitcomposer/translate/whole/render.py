@@ -565,6 +565,19 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 taken_v.append(f"{v + 1} {sid}")
         if taken_v:
             plan.log.append(f"{role}'s voices beside the line on the balance's song's own samples: " + ", ".join(taken_v))
+        for v, sts in enumerate(plan.layer_stretches.get(role) or [], start=1):   # a voice beside the line's instrument by stretch (round 92)
+            if not sts or v >= plan.voices.get(role, 1):
+                continue
+            spans = plan_mod.stretch_bars(sts, plan.bars)
+            x = plan.extras.setdefault(role, {})
+            x.setdefault("voice_stretch_spans", {})[v] = spans
+            x.setdefault("voice_stretch_samples", {})[v] = {}
+            for i, a, b in spans:
+                if sts[i][0] in own:
+                    out[f"{role}:{v}:stretch:{i}"] = make(sts[i][0])
+                    x["voice_stretch_samples"][v][i] = sts[i][0]
+            plan.log.append(f"{role}'s voice {v + 1} by stretch (the balance's song's own): " + ", ".join(
+                f"bars {a + 1}-{b} {sts[i][0]}" + ("" if sts[i][0] in own else " (not in the pack: the voice's sample)") for i, a, b in spans))
         # an apart or alternating voice of an upper part written in its own span (round 70): the line's span at the layer
         # word's offset, within the whole range the game plays the voice's sample over
         if role in rhythm.UPPER and role in plan.bounds:
@@ -955,7 +968,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                     name, sample = samples[R.DRUMS][kit_name]
                     put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name), name, sample, v, piece=kit_name, letter=letter)   # the piece's
                 else:
-                    name, sample = sample_of(samples, role, n[3], second_voice, plan_mod.stretch_at(plan, role, int(a // plan_mod.METER)) if not n[3] else None)
+                    name, sample = sample_of(samples, role, n[3], second_voice, plan_mod.stretch_at(plan, role, int(a // plan_mod.METER), n[3]))
                     t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // plan_mod.METER))   # the bar's section level (round 48)
     if capped:
@@ -996,8 +1009,10 @@ def sample_of(samples: dict, role: str, voice: int, second_voice: dict, stretch:
     """The (name, ITSample) a part's voice plays: the token song's own for that voice (`role:v`, round 70) where the pack
     holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's; the line's
     (voice 0) its stretch's sample where the token song changes instrument there (`role:stretch:i`, round 91)."""
-    if not voice and stretch is not None and f"{role}:stretch:{stretch}" in samples:
-        return samples[f"{role}:stretch:{stretch}"]
+    if stretch is not None:
+        key = f"{role}:stretch:{stretch}" if not voice else f"{role}:{voice}:stretch:{stretch}"   # a voice beside the line's own stretches (round 92)
+        if key in samples:
+            return samples[key]
     own = samples.get(f"{role}:{voice}") if voice else None
     if own is not None:
         return own

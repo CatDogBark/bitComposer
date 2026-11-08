@@ -33,12 +33,13 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   into each; a tune on one instrument keeps round 43's wall, the whole
   range the game ever took its sample over, because binding it to the main
   sample's own range had cut 9 of 30 tunes short (round 86).
-- **A line's register changes by octave folds.** Since round 91 a line that
-  changes instrument is written over the union of its stretches' ranges and
-  folded by octaves into each stretch's in its bars, so a phrase written
-  across a stretch line may break at it where the two registers differ (FFVI:
-  two changes in three sit in another register, the centres 7 semitones
-  apart at the median); the writers take one register a song.
+- **A line enters a new stretch's register by octaves.** Since round 92
+  the writers take a register a bar, so a line that changes instrument is
+  written in each stretch's register; where the line crosses a stretch line
+  the next note is the last one moved by octaves into the new register, and
+  the contour goes on from there. A phrase the form repeats is copied as
+  written, and the fold after writing moves it into its bars' registers
+  where they differ.
 - **A channel's second instrument is not written.** The second voices the
   reader splits off (42 in 25 FFVI songs; round 89) are kept beside the
   counts, not in them: they are another part on the same channel (Kefka's
@@ -46,9 +47,12 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   ask the writer for a ninth chip voice in the eight-channel songs that
   time-share one. The line's own instrument by stretch (round 91) is
   written; a channel shared by two parts in turn is not.
-- **A voice beside a line keeps one instrument.** Round 91 writes the
-  line's instrument by stretch; a voice beyond the line (32 of FFVI's 129
-  change sample) plays the token's one sample for it throughout.
+- **A voice beside a line changes instrument, not register, by stretch.**
+  Since round 92 its layer entry carries its own stretches and the render
+  plays each note on its stretch's sample; its register stays what its
+  relation to the line gives it (a doubling voice the line's at the
+  interval, an apart voice its span), where the game's voice may also
+  move register with its instrument.
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

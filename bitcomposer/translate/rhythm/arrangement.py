@@ -466,7 +466,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     accompaniments, 27 of 42 counters and 15 of 15 basses, and play 0.5-0.7 of the line's notes; drawn apart, the written
     ones had taken the line's sample and played 0.84-1.15 of its notes, a sparse pad in the game a busy riff over the tune.
     Since round 86 a fourth sub-field, where the song plays the voice's sample; since round 90 a fifth, what the voice does
-    beside which part stretch by stretch (relation_words: "ox9>dm-12x14>o")."""
+    beside which part stretch by stretch (relation_words: "ox9>dm-12x14>o"); since round 92 a sixth, its instrument by
+    stretch (stretch_word with "~": "s605f200105~56-72x14>sf89f5aedfd~60-68")."""
     shares = voice_level_shares(song, role)
     if shares is None:
         return None
@@ -480,7 +481,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
         key = keys.most_common(1)[0][0] if keys else ""
         sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
         rng = sample_range_in(voices[v], key) if key else ""    # where the token song plays this voice's sample (round 86)
-        subs = [share, sid, f"{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}", rng, relations.get(v, "")]
+        subs = [share, sid, f"{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}", rng, relations.get(v, ""),
+                stretch_word(song, voices[v], "~")]        # and its instrument by stretch (round 92; "~" keeps "@" for the sub-fields)
         while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
             subs.pop()
         out.append("@".join(subs))
@@ -703,22 +705,12 @@ def part_sample_field(s, role: str) -> str:
     return f"{sid}@{rng}" if rng else sid
 
 
-def line_stretches(s, role: str) -> str:
-    """The balance token's eleventh field (round 91): the line voice's instrument by stretch, where it has two or more
-    (roles.stretches_of: runs of notes on one sample, blips folded; consecutive stretches on one sample run together), each
-    stretch's sample as the pack's id, the range the voice plays it over there (the ambitus, part_register's grain) and its
-    bars from the song's first bar as the pan word counts them (`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`), the last stretch
-    open; "" for a line on one instrument (the eighth field's sample and range stand). FFVI: 63 of 249 line voices change
-    instrument (25 tunes, 19 counter-lines, 12 chord lines, 6 basses), two in three with the next stretch in another
-    register (centres 7 semitones apart at the median), a stretch ten bars long at the median. The written line plays each
-    note on its stretch's sample and is folded by octaves into each stretch's range in its bars (render.sample_of,
-    plan.fold_line); the eighth field's sample stays the line's default."""
-    if role == R.DRUMS:
-        return ""
-    notes = s.notes.get(role, [])
-    voices = cells_mod.part_voices(s, role)
-    if len(voices) >= 2:
-        notes = voices[cells_mod.line_voice(voices, role, s)]
+def stretch_word(s, notes, sep: str = "@") -> str:
+    """A voice's instrument by stretch as the balance token writes it (rounds 91 and 92): its pitched notes' stretches
+    (roles.stretches_of, blips folded; consecutive stretches on one sample run together), each as its sample's pack id,
+    `sep`, the range the voice plays it over there (the ambitus, part_register's grain) and its bars from the song's first
+    bar as the pan word counts them, the last stretch open (`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`); "" for a voice on
+    one instrument or under roles.SECOND_NOTES notes."""
     pitched = sorted((n[0], n[2], n[3]) for n in notes if isinstance(n[3], str) and n[3] and n[2] is not None and not math.isnan(n[2]))
     if len(pitched) < R.SECOND_NOTES:
         return ""
@@ -737,11 +729,26 @@ def line_stretches(s, role: str) -> str:
         return ""
     parts, prev = [], -1
     for i, (sid, reg, end) in enumerate(runs):
-        word = sid + (f"@{reg[0]}-{reg[1]}" if reg else "")
+        word = sid + (f"{sep}{reg[0]}-{reg[1]}" if reg else "")
         parts.append(word if i == len(runs) - 1 else f"{word}x{max(1, end - prev)}")
         prev = max(prev, end)
     return ">".join(parts)
 
+
+def line_stretches(s, role: str) -> str:
+    """The balance token's eleventh field (round 91): the line voice's instrument by stretch (stretch_word), where it has
+    two or more; "" for a line on one instrument (the eighth field's sample and range stand). FFVI: 63 of 249 line voices
+    change instrument (25 tunes, 19 counter-lines, 12 chord lines, 6 basses), two in three with the next stretch in another
+    register (centres 7 semitones apart at the median), a stretch ten bars long at the median. Since round 92 the writers
+    write the line in each stretch's register (a register a bar); the render plays each note on its stretch's sample
+    (render.sample_of); the eighth field's sample stays the line's default."""
+    if role == R.DRUMS:
+        return ""
+    notes = s.notes.get(role, [])
+    voices = cells_mod.part_voices(s, role)
+    if len(voices) >= 2:
+        notes = voices[cells_mod.line_voice(voices, role, s)]
+    return stretch_word(s, notes, "@")
 
 def part_sample_id(s, role: str) -> str:
     """The pack's id of the sample a part plays most (its notes' sample key, `s` and the key's first ten characters as

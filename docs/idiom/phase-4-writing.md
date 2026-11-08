@@ -5944,3 +5944,65 @@ does. Voices beside a line keep one instrument (32 of 129 change). A
 channel shared by two parts in turn (round 89's second voices) still
 waits for a time-shared chip voice. The echo a sample sends is the
 part's, not the stretch's.
+
+### Round 92: a register a bar, and a voice beside a line's instrument by stretch (2026-11-07, the first of the open items the owner ordered)
+
+**Why.** Round 91 wrote a line that changes instrument over the union of
+its stretches' ranges and moved it into each stretch afterwards, bar by
+bar by octaves, which could break a phrase at a stretch line (Setzer's
+tune under 56-80 with stretches of 56-64, 68-80 and 60-72; Umaro's two
+octaves up and back); the fuller word, written as round 91's open item,
+was a register a bar inside the writers. Round 91 also left the voices
+beside a line on one instrument (32 of FFVI's 129 change sample). The
+owner's order for the open items (2026-11-07): this first, then off-scale
+and clash as counted words, the doubling voice's intervals, time-shared
+channels (with a count first), a batch of small words, a kit round.
+
+**Built.** Each line writer takes a register a bar: `writer.melody`
+(`bounds_at`: bar -> bound) draws every move, recalled cell and ending in
+the bar's register (`reg_of`), the line entering a new stretch's register
+by octaves from its last note (the arc's phrase ceilings stand for a song
+without stretches); `writer.counter` (`spans_at`) keeps each bar's notes
+in that bar's span; `writer.bass` (`bounds_at`) places each bar's figure
+in that bar's floor and ceiling; `writer.upper` (`bounds_at`) stacks and
+folds the line voice in the bar's register. `plan.line_bounds_at` hands
+each writer the stretch bounds `samples_for` set in round 91;
+`plan.fold_line` stays as the safety net for what the form's repeats copy
+across a stretch line. And a voice beside a line's instrument by stretch:
+`rhythm.stretch_word` (the stretch builder shared with the line's
+eleventh field) writes it as the layer entry's sixth sub-field with "~"
+between a sample and its range (`s605f200105~56-72x14>sf89f5aedfd~60-68`;
+"@" and ":" are the token's own separators), the plan parses it
+(`Plan.layer_stretches`), `samples_for` registers each stretch's sample
+(`samples["part:v:stretch:i"]`, `extras[part]["voice_stretch_spans"]`),
+`plan.stretch_at` takes the voice, and `render.sample_of` plays the
+voice's note on its stretch's sample; the voice's register stays its
+relation's (a doubling voice the line's at the interval, an apart voice
+its span). No re-read; pack4 refit (the layer entries changed), the
+vocabulary shipped. Tests: a line written under stretch bounds sits
+inside them with nothing left to fold; the sixth sub-field built, parsed,
+registered and played. Suite green.
+
+**Measured** (measure_r92.py, seeds 1-120): 36 of 37 written tunes
+sit wholly inside their stretch bounds after writing (one note of 4854
+outside), the counter's, bass's and chord lines' far fewer (5 of 31, 3 of
+15, 1 of 24): their stretch bounds are often narrower than an octave
+(bound_of's floor is two register bins, 8 semitones) and cannot hold
+every pitch class, so the writers leave such notes where the nearest
+octave puts them, as those parts' own narrow registers always had; the
+fold still moved 46 melody notes over 120 songs, all copies the form's repeats and the theme band made after the writers, and 85, 228 and 390 notes of counters, basses and chord lines that an under-octave stretch bound cannot hold; 32 voices beside a line in 22 FFVI songs carry their
+instrument by stretch, and in the written songs 42 of 48 such voices with two
+pack samples change instrument in the rendered score. Every one of 400
+seeds keeps its token song and its draws, so the pairs are the same seed,
+token and plan before and after; the lines differ where they are now
+written in their stretches' registers.
+
+**Song Check 75** (https://claude.ai/artifact/4hv35WrUQQRKcmHsv8LxTf): six pairs, the same six seeds as Song Check 74 so each after can be set against its after there: seed 255 The Sleeping Observatory (Kefka: the tune, the counter and the bass written in their stretches' registers, the counter's layer voice on s77ca10e256 for six bars then sb34cb55c14), seed 78 The Still Wharf (Overture part 3), seed 157 Last Vault (Cyan: the tune twelve bars high then low, the second chord voice sf89f5aedfd then sb498c05828), seed 41 Arcade of Rain (Setzer), seed 150 The Terminal of Glass (Battle Theme), seed 254 First Meridian Return (Umaro: the climbs composed, not folded). Before is round 91 (the dev
+checkout's own code and vocabulary), after round 92.
+
+**Open.** A voice beside a line keeps its relation's register across its
+stretches where the game's voice may move with its instrument. The
+arc's phrase ceilings (climax, arc, summit) are set aside for a line with
+stretches: the token song's own registers stand in for them there. The
+form's repeats copy a phrase as written and the fold moves it after. The
+echo a sample sends is still the part's.

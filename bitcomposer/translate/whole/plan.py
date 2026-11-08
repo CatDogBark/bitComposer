@@ -238,6 +238,8 @@ class Plan:
                                       # fifth sub-field, round 90: "ox9>dm-12x14>o", what it does beside which part, bar by bar), or None
     stretches: dict = field(default_factory=dict)       # a pitched part -> its line's instrument by stretch (the eleventh field, round 91): [(sample,
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
+    layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
+                                      # sub-field, round 92), the same shape, or None
     pans: dict = field(default_factory=dict)          # a pitched part -> its voices' pans, the right side's share, the line first (the balance
                                       # token's tenth field, round 84); render.pan_of pans a voice there, by plan.PANS without the field; a
                                       # voice in two places keeps the token's word, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85)
@@ -716,10 +718,12 @@ def stretch_bars(stretches: list, bars: int) -> list:
     return out
 
 
-def stretch_at(plan: "Plan", role: str, bar: int) -> int | None:
-    """Which of a line's stretches bar `bar` falls in (round 91, extras[part]["stretch_spans"] as samples_for set them);
-    None for a part without stretches."""
-    spans = (plan.extras.get(role) or {}).get("stretch_spans")
+def stretch_at(plan: "Plan", role: str, bar: int, voice: int = 0) -> int | None:
+    """Which of a voice's stretches bar `bar` falls in (round 91, extras[part]["stretch_spans"] for the line as samples_for
+    set them; round 92, extras[part]["voice_stretch_spans"][voice] for a voice beside it); None for a voice without
+    stretches."""
+    x = plan.extras.get(role) or {}
+    spans = x.get("stretch_spans") if not voice else (x.get("voice_stretch_spans") or {}).get(voice)
     if not spans:
         return None
     for i, a, b in spans:
@@ -782,6 +786,16 @@ def fold_line(plan: "Plan", role: str, notes: list, meter: int) -> list:
     return out
 
 
+def line_bounds_at(plan: "Plan", role: str):
+    """A bar's register for a part's line (round 92): its stretch's bound where the token song's line changes instrument
+    (extras[part]["stretch_bounds"], set by samples_for), as a function of the bar for the writers; None without
+    stretches, and the writers take the part's one register."""
+    bounds = (plan.extras.get(role) or {}).get("stretch_bounds")
+    if not bounds:
+        return None
+    return lambda k: bounds.get(stretch_at(plan, role, k))
+
+
 THEME_TRIES = 40                      # letter draws before a themed song's letters are given up (none in forty: a table without returns)
 PLAN_TRIES = 10                       # whole plans drawn for a themed song whose tune has nowhere to come back (fewer than two phrases)
 
@@ -836,6 +850,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
     token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
+    token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
@@ -884,6 +899,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_ranges[role] = [tuple(int(y) for y in x[3].split("-")) if len(x) > 3 and "-" in x[3] else None for x in parts_]
                 if any(len(x) > 4 and x[4] for x in parts_):   # and what each does beside which part, stretch by stretch (round 90)
                     token_layer_relations[role] = [x[4] if len(x) > 4 and x[4] else None for x in parts_]
+                if any(len(x) > 5 and x[5] for x in parts_):   # and each one's instrument by stretch (round 92; "~" between a sample and its range)
+                    token_layer_stretches[role] = [line_stretch_list(x[5].replace("~", "@")) if len(x) > 5 and x[5] else None for x in parts_]
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
             if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
@@ -1183,7 +1200,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -1579,7 +1596,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.bounds.get(R.BASS, plan.registers[R.BASS])[0],
                                      sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share,
-                                     ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1])
+                                     ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS))
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -1636,7 +1653,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         shared = {}                                         # the line's voicing at each onset, for the voices beside it
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
-                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0)
+                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role))
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
@@ -1708,13 +1725,14 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                      for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
-                                                  key=key, articulation=x["articulation"], register=span)
+                                                  key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER))
         else:
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                  recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                  role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"),
-                                                 letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"))
+                                                 letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
+                                                 bounds_at=line_bounds_at(plan, role))
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -1803,4 +1821,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     for line in copy_repeats(plan, song, written):
         for part in written.values():
             part.log.append(line)
+    for role, part in written.items():                      # what the theme band, the hand-offs and the form's repeats copied across a
+        if role != R.DRUMS and (plan.extras.get(role) or {}).get("stretch_bounds"):   # stretch line goes into its bars' registers too (round 92)
+            part.notes[:] = fold_line(plan, role, part.notes, song.meter)
     return written
