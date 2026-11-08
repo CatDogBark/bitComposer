@@ -620,15 +620,15 @@ def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng:
 
 
 def plan_section_densities(models: dict, parts: list, band: list, plays: dict, section_levels: dict, rng: random.Random, log: list) -> dict:
-    """Each pitched part's density tier shift a bar (section_densities, round 101): drawn a part an own section it plays in,
+    """Each pitched part's density tier shift a bar but the counter's (section_densities, round 101): drawn a part an own section it plays in,
     by the part and the step the section's level makes (level_step of the section_levels draw, "same" without one): "d+"
     a tier denser than the song's, "d-" a tier sparser, "d=" the song's; a repeated section copies its source's. Drawn on
     an own stream (`whole:{seed}:section densities`). Returns {part: [shift a bar]}; logs the sections off the song's tier.
     FFVI's level steps ride a density change more often than not (the accompaniment's), and a quarter of its level-1.0
     sections change tier too; the written parts had kept one density all song."""
     total = parts[-1][0] + parts[-1][1]
-    out = {role: [0] * total for role in band if role != R.DRUMS}
-    said = []
+    out = {role: [0] * total for role in band if role not in (R.DRUMS, R.COUNTER)}   # the counter follows the tune's figures (its masks):
+    said = []                                                                        # no tier of its own to shift; FFVI's counter steps are mostly bare
     for i, (bar, n, of, letter) in enumerate(parts):
         for role in out:
             if of is not None:

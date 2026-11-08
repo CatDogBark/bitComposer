@@ -708,7 +708,9 @@ class SectionDensityTests(unittest.TestCase):
         plays = {"bass": [True] * 12, "melody": [True] * 12}
         levels = {"bass": [1.0] * 4 + [2.0] * 4 + [1.0] * 4}
         log = []
-        shifts = whole.plan_section_densities({"section_densities": t}, parts, ["bass", "melody", "drums"], plays, levels, random.Random(1), log)
+        plays["counter"] = [True] * 12
+        shifts = whole.plan_section_densities({"section_densities": t}, parts, ["bass", "melody", "drums", "counter"], plays, levels, random.Random(1), log)
+        self.assertNotIn("counter", shifts)                                                                 # the counter follows the tune's figures: no draw
         self.assertEqual(shifts["bass"], [0] * 4 + [1] * 4 + [0] * 4)                                      # denser where the level steps up
         self.assertEqual(shifts["melody"], [-1] * 12)                                                       # sparser at level 1.0, as the table says
         self.assertNotIn("drums", shifts)
