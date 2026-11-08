@@ -734,6 +734,52 @@ def _split_own_edges(song: readings_mod.Song, rows: list, pitched: dict, v) -> l
     return out
 
 
+PARALLEL_SEMITONES = 24              # a parallel voice's interval to its line is counted within two octaves (round 97)
+
+
+def parallel_interval_units(songs) -> list:
+    """Each shared onset of a parallel stretch (a voice's relation word's "p": roles.stretch_relation, its own edge bars
+    split off) as a unit (round 97): its outcome the voice's interval to the line's note in semitones, its values the
+    stretch's nominal interval in scale steps (roles.generic of the word's semitones: 2 a third up, -5 a sixth down), the
+    tone class of the line's note against the chord sounding (root, third, fifth, seventh, sus, other), the voice's part
+    and the interval before it in the stretch (START at the first). The writer follows a parallel stretch by it
+    (whole.parallel): FFVI's parallel voice sits at its nominal semitones on 0.61 of its shared onsets and on a chord
+    tone on 0.62 (123 stretches, 10,057 onsets), where the line again in the scale, as the writer had it, matches the
+    game's note on 0.31 of them and lands on the chord on 0.42: over the chord's third a third up is a major third or a
+    minor sixth (the root), over the fifth a fourth (the root again) or a minor third (the seventh); a parallel voice is
+    a harmony voice, not a shifted copy."""
+    out = []
+    for s in songs:
+        pitched = {v: sorted((n[0], n[2], n[3]) for n in ns if n[2] is not None and not math.isnan(n[2]))
+                   for v, (role, ns) in s.voice_notes.items() if role != R.DRUMS}
+        pitched = {v: ns for v, ns in pitched.items() if ns}
+        roles_of = {v: role for v, (role, _) in s.voice_notes.items()}
+        for v, rows in R.voice_relations(pitched).items():
+            if len(pitched[v]) < R.SECOND_NOTES:
+                continue
+            for a, b, key, kind, of, semi, n in _split_own_edges(s, rows, pitched, v):
+                if kind != "parallel" or of is None or of not in pitched or semi is None:
+                    continue
+                line = pitched[of]
+                starts = [x[0] for x in line]
+                nominal, previous = str(R.generic(semi)), readings_mod.START
+                for t, m, _ in pitched[v]:
+                    if t < a - R.STRETCH_NEAR or t > b + R.STRETCH_NEAR:
+                        continue
+                    lo, hi = bisect.bisect_left(starts, t - R.STRETCH_NEAR), bisect.bisect_right(starts, t + R.STRETCH_NEAR)
+                    if lo == hi:
+                        continue
+                    k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
+                    iv = int(round(m - line[k][1]))
+                    c = _chord_at(s.chords, t)
+                    if abs(iv) > PARALLEL_SEMITONES or c is None or c.root is None or c.fit < FIT:
+                        continue
+                    out.append(tables.Unit(s.sid, s.game, str(iv), {"interval": nominal, "tone": vocab.tone_of(round(line[k][1]) % 12, c.root, c.shape),
+                                                                      "part": roles_of.get(v, "?"), "previous": previous}))
+                    previous = str(iv)
+    return out
+
+
 def relation_words(song: readings_mod.Song) -> dict:
     """Each pitched voice's relation stretches as the balance token has them (round 90): "ox9>dm-12x14>o". In each
     stretch (roles.stretches_of: a run of notes on one sample, blips folded) what the voice does beside another voice
