@@ -378,6 +378,24 @@ def loop_bar_of(parts: list) -> int:
     return 0
 
 
+def plan_loop(models: dict, parts: list, rng: random.Random, log: list) -> int:
+    """The bar the loop returns to (round 98): the form's part the loop_parts word draws, by whether the form opens with an
+    intro (a first part it never comes back to), that part's first bar; loop_bar_of's rule without the word, or for a
+    part the form has not. FFVI returns to its intro in 15 of 53 intro songs where the rule never did."""
+    bar = loop_bar_of(parts)
+    if "loop_parts" not in render_mod.models_or_empty(models):
+        return bar
+    intro = len(parts) > 1 and parts[0][3] not in {p[3] for p in parts[1:]}
+    drawn = _draw(models, "loop_parts", ("form", "intro" if intro else "none"), rng, log)
+    idx = int(drawn) if drawn.isdigit() else None
+    if idx is not None and idx < len(parts):
+        bar = parts[idx][0]
+        log.append(f"loop (loop_parts): back to part {idx + 1} of {len(parts)}, bar {bar + 1}" + (" (an intro)" if intro else ""))
+    else:
+        log.append(f"loop (loop_parts): part {drawn} drawn, the form has {len(parts)}: the rule's bar {bar + 1}")
+    return bar
+
+
 def chord_of(name: str, tonic: int, mode: str):
     """A numeral in a key back to (root, shape): the inverse of vocab.numeral; None where the name is no numeral."""
     m = NUMERAL.match(name)
@@ -991,7 +1009,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if (max_bars is None or total <= max_bars) and (min_bars is None or total >= min_bars):
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
-    loop_bar = loop_bar_of(parts)
+    loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)   # the form's part the loop returns to (round 98), an own stream
     band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
     token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
     token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
@@ -1210,6 +1228,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                       if "tune_grain" in render_mod.models_or_empty(models) else None)}   # an own stream, floored at the tier (round 66)
             if role == R.COUNTER and "chord_tones" in render_mod.models_or_empty(models):   # the counter-line's own chord-tone share (round 96), on an
                 extras[role]["chord_tones"] = float(_draw(models, "chord_tones", (R.COUNTER,), random.Random(f"whole:{seed}:chord_tones:{role}"), log))   # own stream
+            if "tune_sounds" in render_mod.models_or_empty(models):   # the share of its gap a held and a detached note sounds (round 98), own streams
+                extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log))
+                                               for kind in rhythm.TUNE_KINDS}
     if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models):   # the drums' entrances under the kit's tier (round 59), on an own stream
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
@@ -1908,13 +1929,13 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
                                                   key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER), clash_rates=x.get("clashes"),
-                                                  chord_rate=x.get("chord_tones"))   # its own chord-tone share held (round 96)
+                                                  chord_rate=x.get("chord_tones"), tune_sounds=x.get("tune_sounds"))   # its own chord-tone share held (round 96), its note lengths (round 98)
         else:
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                  recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                  role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
-                                                 letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
+                                                 tune_sounds=x.get("tune_sounds"), letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
                                                  bounds_at=line_bounds_at(plan, role))
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
@@ -1958,7 +1979,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     return drawn
                 masks_v = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in line_figures]
                 notes_v, figures_v, plog_v = writer.counter(song, line_only, line_figures, masks_v, span_v, models, rng_v, layer[0], key=key,
-                                                            articulation=x["articulation"], register=span_v, clash_rates=x.get("clashes"))
+                                                            articulation=x["articulation"], register=span_v, clash_rates=x.get("clashes"), tune_sounds=x.get("tune_sounds"))
                 if word_v:
                     pending.append((role, v, [(a, b, m, v) for a, b, m in notes_v], word_v))
                     log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
@@ -1978,7 +1999,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 notes2, figures2, plog2 = writer.melody(song, [], reg2, models, random.Random(f"{seed}:{role}:second"), habit2,
                                                     key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
-                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"))
+                                                    role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
+                                                    tune_sounds=x.get("tune_sounds"))
                 song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
                 line = line + [(a, b, m, 1) for a, b, m in notes2]
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
