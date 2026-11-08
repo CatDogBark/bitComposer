@@ -741,10 +741,13 @@ LEAD_ORDER = (R.MELODY, R.COUNTER, R.HARMONY, R.ACCOMP, R.ARP, R.BASS)   # who l
 
 def parallel_interval_units(songs) -> list:
     """Each shared onset of a parallel stretch (a voice's relation word's "p": roles.stretch_relation, its own edge bars
-    split off) as a unit (round 97): its outcome the voice's interval to the line's note in semitones, its values the
-    stretch's nominal interval in scale steps (roles.generic of the word's semitones: 2 a third up, -5 a sixth down), the
-    tone class of the line's note against the chord sounding (root, third, fifth, seventh, sus, other), the voice's part
-    and the interval before it in the stretch (START at the first). The voice followed is a part's line voice, as the
+    split off) as a unit (round 97): its outcome where the voice's note sits against the chord sounding, the chord tone
+    it lands on (root, third, fifth, seventh, sus: the writer places that tone of the written chord nearest the nominal
+    interval, so a third over a major chord's third is its fifth at +3 and over a minor chord's +4) or, off the chord,
+    its semitones from the line's note (`+4`, `-8`); its values the stretch's nominal interval in scale steps
+    (roles.generic of the word's semitones: 2 a third up, -5 a sixth down), the tone class of the line's note against
+    the chord (root, third, fifth, seventh, sus, other), the voice's part and the outcome before it in the stretch
+    (START at the first). The voice followed is a part's line voice, as the
     writer's parallel voice follows a line; a line that reads as parallel to its own harmony voice is no unit, and two
     lines parallel to each other count once, the one further from the lead following (LEAD_ORDER: the tune leads, then
     the counter, the chord parts, the bass). The writer follows a parallel stretch by it
@@ -787,9 +790,11 @@ def parallel_interval_units(songs) -> list:
                     c = _chord_at(s.chords, t)
                     if abs(iv) > PARALLEL_SEMITONES or c is None or c.root is None or c.fit < FIT:
                         continue
-                    out.append(tables.Unit(s.sid, s.game, str(iv), {"interval": nominal, "tone": vocab.tone_of(round(line[k][1]) % 12, c.root, c.shape),
-                                                                      "part": roles_of.get(v, "?"), "previous": previous}))
-                    previous = str(iv)
+                    landing = vocab.tone_of(int(round(m)) % 12, c.root, c.shape)
+                    outcome = landing if landing != "other" else f"{iv:+d}"
+                    out.append(tables.Unit(s.sid, s.game, outcome, {"interval": nominal, "tone": vocab.tone_of(round(line[k][1]) % 12, c.root, c.shape),
+                                                                     "part": roles_of.get(v, "?"), "previous": previous}))
+                    previous = outcome
     return out
 
 
