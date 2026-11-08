@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (59)
+### the plan, drawn once a song (61)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -24,7 +24,8 @@ flowchart LR
 | `motions` | part | _plan_once, write_upper | - | how an upper part moves through its tones (block, mixed, arpeggiated), drawn once a song |
 | `chords` | part, mode, previous | plan_chords | - | a bar's chord as a numeral in the key, after the bar before's |
 | `loops` | part | plan_chords | - | the chord the loop returns to |
-| `form` | part, meter, index | plan_form | `part_entries`, `part_textures`, `phrase_letters`, `section_levels` | a part of the form: new, again or back, by its index |
+| `loop_parts` | part, intro | plan_loop | - | the form's part the loop returns to (0 the first, 1 the second), by whether the song opens with an intro the form never comes back to; drawn once a song on an own stream (round 98) |
+| `form` | part, meter, index | plan_form, plan_loop | `part_entries`, `part_textures`, `phrase_letters`, `section_levels` | a part of the form: new, again or back, by its index |
 | `lengths` | part, meter, habit | plan_form | `cadences`, `part_entries`, `periods` | a part's length in bars, by the song's habit |
 | `letters` | part | _plan_once, carry_theme, plan_form, write | `part_entries`, `part_textures`, `phrase_letters`, `section_levels` | a song's form as its parts' letters in order (A B A B C), drawn whole |
 | `phrase_letters` | part, phrases, form | _plan_once | - | a part's phrases as letters: the theme head again, an earlier head again, or new |
@@ -54,6 +55,7 @@ flowchart LR
 | `sizes` | part | plan_form | - | how many parts a song's form has |
 | `length_habits` | part | plan_form | `cadences`, `part_entries`, `periods` | a song's part-length habit (short, medium, long), drawn once a song |
 | `balance` | part | _plan_once, kit_piece_hold | `bass`, `bass_habits`, `cell_handoffs`, `changes`, `counter_figures`, `counter_pairs`, `counter_shares`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `parts`, `periods`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `second_figures`, `tempos`, `tune_grain`, `values`, `voice_intervals`, `voice_moves`, `voices`, `voicings` | a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, each pitched part's voices' pans (the right side's share, the line first; round 84), the song's key (key=9:minor), and the drums' kit (each piece's sample, level, struck note (a tonal piece's as a degree of the key, d9; a drum piece's the chip's rate as a note, r48 an octave under, r63t where the game tunes it), hold, strike class (round 81: its sample's hits a bar in the song, x/a/s/m/d) and echo mark (round 82: an e where the game sends the sample's channel to echo)), and the song's echo word (round 82, echo=0.20:80:0.78:sends:dry, as the echo table counts it), drawn once a song as one unit |
+| `tune_sounds` | part, note | _plan_once, write | - | the share of its gap a tune's or counter-line's note sounds, its held notes and its detached ones apart (the values word says which a note is), the median to a tenth, drawn once a song a part on its own streams (round 98) |
 | `sounds` | part | _plan_once | - | the share of its gap a part's note sounds |
 | `gap_sounds` | part, voice, speed, gap | _plan_once, _plan_sounds | - | the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more) |
 | `bass_locks` | part | _plan_once | - | the share of the kit's accents (two pieces together) the bass strikes with, in tenths |
@@ -178,6 +180,7 @@ flowchart LR
     motions["motions"]
     chords["chords"]
     loops["loops"]
+    loop_parts["loop_parts"]
     form["form"]
     lengths["lengths"]
     letters["letters"]
@@ -208,6 +211,7 @@ flowchart LR
     sizes["sizes"]
     length_habits["length_habits"]
     balance["balance"]
+    tune_sounds["tune_sounds"]
     sounds["sounds"]
     gap_sounds["gap_sounds"]
     bass_locks["bass_locks"]

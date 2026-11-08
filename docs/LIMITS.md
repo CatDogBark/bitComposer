@@ -129,6 +129,25 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   chord parts). A class for the line's off-chord tones (a step from which
   chord tone) would carry the rest.
 
+- **A line's echo is its part's across its stretches.** The echo word names
+  the parts that send and the kit pieces by their marks; a line that
+  changes sample between stretches sends every stretch alike. FFVI sends
+  one sample and keeps another dry on 11 of the 89 voices that change
+  sample (Kefka's tune and counter: the organ dry, the strings wet; Gau's
+  accompaniment). An echo mark per stretch on the token's eleventh field
+  would carry it; measured in round 98 and left.
+- **A voice beside a line plays all the line's bars.** FFVI's layer
+  voices play in 0.90 of their line's bars at the median, 19 of 129 in
+  under half; a written voice plays wherever its line does, since the
+  relation word has stretches of notes and no stretch of rest. A rest kind
+  in the word would carry it; measured in round 98 and left.
+- **The chord parts' spread is the token's.** The `widths` word is counted,
+  not drawn: a written part's line is one voice, and its spread per chord
+  span comes from the voices beside it at the token's own offsets. Measured
+  in round 98 over sixty seeds, the accompaniment spans 10 semitones at
+  the median against FFVI's 11, the arp 9 against 8, the harmony 8 against
+  5 (ten FFVI songs); the token carries the first two, the harmony's is
+  the gap.
 - **A tonal sample pumped on two pitches is a kit piece.** Round 77's play
   clause reads a voice on one sample at one or two pitches, eight notes or
   more, held under two beats, as a drum voice; FFVI's percussion plays so

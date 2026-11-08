@@ -484,7 +484,7 @@ TUNE_KINDS = ("held", "detached")    # a tune note sounding readings.SHORT of it
 
 def tune_sound_units(songs) -> list:
     """Each tune's and counter-line's held notes, and its detached ones, as a unit (round 98): its outcome the median share
-    of its gap such a note sounds (to SOUND_BIN), its values the part and the kind (TUNE_KINDS; readings.SHORT splits
+    of its gap such a note sounds (to SOUND_BIN), its values the part and the note's kind (TUNE_KINDS; readings.SHORT splits
     them, as the values word's units are classed). Drawn once a song a part on its own streams, for the melody and
     counter writers' note lengths: they had sounded every held note 0.95 of its gap and every detached one 0.5
     (writer.HELD, DETACHED), where FFVI's tunes hold 0.91 and detach 0.40 at the median, its counter-lines 0.92 and
@@ -503,7 +503,7 @@ def tune_sound_units(songs) -> list:
                 by["held" if n[1] / gap >= readings_mod.SHORT else "detached"].append(min(1.0, n[1] / gap))
             for kind, xs in by.items():
                 if len(xs) >= 8:
-                    out.append(tables.Unit(s.sid, s.game, f"{round(statistics.median(xs) / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role, "kind": kind}))
+                    out.append(tables.Unit(s.sid, s.game, f"{round(statistics.median(xs) / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role, "note": kind}))
     return out
 
 

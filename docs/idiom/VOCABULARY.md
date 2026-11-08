@@ -470,6 +470,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   had sat at 0.37, and sits at 0.51 over sixty seeds.
   *`articulation`: shape (part); drawn in _plan_once, melody_models, write_melody · `step_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `repeat_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `echo_habits`: shape (part, tempo, weight); drawn in _plan_once, melody_models, write_melody · `chord_tones`: shape (part); drawn in _plan_once, write · `repeat_rates`: shape (part); drawn in _plan_once.*
 
+- **tune_sounds** — the share of its gap a tune's or counter-line's note
+  sounds, its held notes and its detached ones apart (round 98; the
+  `values` word says which a note is: held sounds 0.75 of its gap or
+  more), the median to a tenth, by the part and the note's kind. Drawn once a
+  song for each line on its own streams; the melody and counter writers
+  sound a note by them (`writer.sounded_share`) in place of the constants
+  0.95 and 0.5, which had sounded every written tune slightly legato:
+  FFVI's tunes hold 0.91 of a gap and detach 0.40 at the median, its
+  counter-lines 0.92 and 0.41 (the written ones 0.95 and 0.5 before;
+  0.9 and 0.4, 0.9 and 0.4 after). The chord parts and
+  the bass have had theirs since round 26 (`gap_sounds`, by the gap
+  class) and the token's own since round 95.
+  *`tune_sounds`: shape (part, note); drawn in _plan_once, write.*
+
 - **off_scale** — a part's share of notes off the song's natural scale
   (major, or natural minor), by the part, the mode and the beat (strong:
   the onset on a beat; weak: off it), to a twentieth (`rhythm.OFF_SCALE_BIN`);
@@ -877,6 +891,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   intro); the render plays the loop's first bars again at the end of a
   listening page's song.
   *`loops`: shape (part); drawn in plan_chords.*
+
+- **loop_parts** — the part of the form the loop returns to (0 the first,
+  1 the second), by whether the song opens with an intro, a first part the
+  form never comes back to (round 98). Drawn once a song on an own stream
+  (`plan.plan_loop`) in place of the rule that sent every loop to the
+  second part after an intro and to the first bar without one: the rule
+  was right for 40 of FFVI's 61 loops, and FFVI returns to the intro
+  itself in 15 of its 53 intro songs, to the second part in 33, further
+  on in 5, and to the first part in 7 of 8 songs without an intro. Over
+  sixty written seeds the loop went back to the intro in 19
+  intro songs and to the second part in 37, moving from
+  the rule's bar in 23; a part the form lacks leaves the rule's
+  bar. The `loops` word's chord stands at the loop bar as before.
+  *`loop_parts`: shape (part, intro); drawn in plan_loop.*
 
 - **part_textures** — the texture a part of the form keeps (which parts
   sound: `all`, `no drums melody`), by the kit's density tier (round 59;

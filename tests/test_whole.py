@@ -499,13 +499,13 @@ class SmallWordTests(unittest.TestCase):
         from bitcomposer.translate import tables, writer
         s = self._song()
         s.notes["melody"] = [(4.0 * k + i, 0.9 if i % 2 == 0 else 0.3, 67.0, "m") for k in range(8) for i in range(4)]   # held and detached by turns
-        units = {u.values["kind"]: u.outcome for u in rhythm.tune_sound_units([s])}
+        units = {u.values["note"]: u.outcome for u in rhythm.tune_sound_units([s])}
         self.assertEqual(units, {"held": "0.9", "detached": "0.3"})
         self.assertEqual(rhythm.TUNE_KINDS, ("held", "detached"))
         self.assertEqual((writer.sounded_share(None, "held"), writer.sounded_share(None, "detached")), (writer.HELD, writer.DETACHED))
         self.assertEqual(writer.sounded_share({"held": 0.8, "detached": 0.3}, "detached"), 0.3)
         from bitcomposer.translate import packtables
-        self.assertEqual(packtables.KEPT["tune_sounds"][3], ("part", "kind"))
+        self.assertEqual(packtables.KEPT["tune_sounds"][3], ("part", "note"))
         # the counter writer: a values table that says held; the song's shares against the constants
         iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
             [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(10) for p in (rhythm.START, "-2")])
@@ -523,9 +523,9 @@ class SmallWordTests(unittest.TestCase):
         # the plan: both shares drawn once a song for each line, on their own streams
         mk = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
         many = lambda outcome, **vals: [tables.Unit(f"t{i}", "g", outcome, vals) for i in range(40)]   # noqa: E731  enough songs that the level holds its draw
-        ts = tables.Table(("part", "kind"), "tune_sounds", votes=tables.SHARES).fit(
-            many("0.9", part="melody", kind="held") + many("0.4", part="melody", kind="detached")
-            + many("1.0", part="counter", kind="held") + many("0.3", part="counter", kind="detached"))
+        ts = tables.Table(("part", "note"), "tune_sounds", votes=tables.SHARES).fit(
+            many("0.9", part="melody", note="held") + many("0.4", part="melody", note="detached")
+            + many("1.0", part="counter", note="held") + many("0.3", part="counter", note="detached"))
         token = "melody=main:64-84:0.9:1:0.7:::slead counter=half:55-67:0.8:1:0.5:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
         bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", token, part=rhythm.ARRANGEMENT))}
         p = whole.plan({**bal, "tune_sounds": ts}, 7, "g")
