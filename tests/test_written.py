@@ -221,7 +221,7 @@ class SustainedVoicesTests(unittest.TestCase):
         for name in bit.PACK["voices"]["drums"].values():
             self.assertNotIn(name, samples.SAMPLE_ENVELOPES)
         self.assertEqual(bit.PACK["voices"]["lead"].count("bit_square"), 1)
-        out = written.compose_written(seed=68554, pack="bit")
+        out = written.compose_written(seed=68555, pack="bit")   # a band with a kit (seed 68554 lost its drums when round 98 moved its loop point and the plan's draws after it)
         first = whole.voice_map(out["plan"], out["written"])
         drums = set(range(first["drums"], first["drums"] + out["plan"].voices.get("drums", 1))) if "drums" in first else set()
         for n in out["score"].notes:
@@ -234,7 +234,7 @@ class SustainedVoicesTests(unittest.TestCase):
         """The render carries each voice's loop into the module: a sustaining voice's sample loops (the preset's sustain
         loop, the chip's one loop), a one-shot's does not, and the file on disk says the same. Every written render had
         gone out with no looped sample, the imports' too (2026-10-30)."""
-        out = written.compose_written(seed=68554, pack="bit")
+        out = written.compose_written(seed=68555, pack="bit")   # a band with a kit (seed 68554 lost its drums when round 98 moved its loop point and the plan's draws after it)
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "song.it")
             song = convert.render(out["score"], path)
