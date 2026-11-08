@@ -47,12 +47,26 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   ask the writer for a ninth chip voice in the eight-channel songs that
   time-share one. The line's own instrument by stretch (round 91) is
   written; a channel shared by two parts in turn is not.
-- **A voice beside a line changes instrument, not register, by stretch.**
-  Since round 92 its layer entry carries its own stretches and the render
-  plays each note on its stretch's sample; its register stays what its
-  relation to the line gives it (a doubling voice the line's at the
-  interval, an apart voice its span), where the game's voice may also
-  move register with its instrument.
+- **A voice beside a line is folded into its sample's range; a narrow
+  range still leaks.** Since round 95 a voice written by its relation
+  word is folded by octaves into where the token song plays its sample in
+  each stretch, bar by bar as a line is (before, it sat at the word's
+  semitones from the line wherever the written line was: Umaro's
+  accompaniment voice, two octaves over a tune the game has low there,
+  reached midi 112 where the game plays that sample at 72 to 88, and 45 %
+  of such notes sat outside their sample's range). What remains is the
+  narrow range: a sample the game plays over four or eight semitones
+  cannot hold a parallel line, and 10 % of relation-voice notes still sit
+  just outside (the arp's parallels worst). The reader's relation runs
+  are a sample run long, too: Umaro's voice doubles the tune for five
+  bars and then plays its own chromatic run on the same sample, and the
+  whole run reads as the double.
+- **The accompaniment's neighbor tones are not a word.** Umaro's
+  accompaniment pecks one chord tone and decorates it with chromatic
+  neighbors and a falling fill; the chord reader keeps the chord tone and
+  drops the rest as noise, so a written song on its token pecks the one
+  tone. A figure word for the chord parts (the tone's neighbors and fills)
+  would carry it.
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

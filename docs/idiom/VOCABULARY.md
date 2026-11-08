@@ -360,6 +360,14 @@ The words are grouped by where the writing draws them, in the order the song is 
   main instrument's (Wild West's bass 28-36, not 28-80), and a snare that
   shared a channel with a pitched part is in the kit (Kefka's, Dancing
   Mad (part 1)'s, Overture (part 3)'s).
+  Since round 95 the sounded share (the third field) is the line voice's
+  (the part's merged voices had put the gap to the other voice's note
+  under a note's length: Umaro's accompaniment read 0.8 where its line
+  pecks 0.4), and for the chord parts and the bass it carries the line's
+  share by gap class after an `@` (`0.4@0.8/0.4/0.2/-/-`: under half a
+  beat, half to one, one to two, two to four, a bar or more; `-` where
+  the class has fewer than two notes), which the plan keeps for the part's
+  only and line voices over the `gap_sounds` draws.
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
 
 - **parts**, **voices** — whether a song has each part by the band's size;
@@ -424,6 +432,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   the balance token says what the voice does by stretch (its layer
   entry's fifth sub-field, above): a doubling or parallel stretch is the
   followed part's line again, in the scale, over its bars.
+  Since round 95 a voice written by its relation word is folded by
+  octaves into where the token song plays its sample in each stretch
+  (`plan.fold_voice`, `voice_bound_at`: the stretch's range, else the
+  token's range for the voice's sample, else the voice's span), bar by
+  bar as a line is: the word's semitones give the interval class and the
+  sample's range the octave. Before, the voice sat at the word's
+  semitones wherever the written line was (First Meridian Return's
+  accompaniment voice at midi 112; 45 % of such notes outside their
+  sample's range over sixty seeds, 10 % after, where the range is
+  narrower than the line).
   *`layers`: shape (part, rank); drawn in _plan_once, layers_of; conditions second_figures, voice_intervals, voice_moves.*
 
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,
@@ -554,8 +572,11 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **gap_sounds** — the share of its gap a note sounds, by the part, the
   voice (only; line or second where the part has two) and the gap's
-  length to the voice's next onset (under a beat, one to two, two to four,
-  a bar or more); counted a note on the chord parts and the bass. Drawn
+  length to the voice's next onset (under half a beat, half to one, one
+  to two, two to four, a bar or more; the split under a beat since round
+  95: FFVI's accompaniment sounds 0.76 of a gap under half a beat, a run,
+  and 0.63 of one at half to one, a peck, the arp 0.67 and 0.40, the bass
+  0.83 and 0.72); counted a note on the chord parts and the bass. Drawn
   once a song for each part, voice and gap class; the bass and upper
   writers take the share by each note's gap (`writer.share_at`), and a
   bar's last note runs to the next bar's first onset, the gap the share
@@ -574,6 +595,13 @@ The words are grouped by where the writing draws them, in the order the song is 
   and played slow nearly all of it; one share by the gap alone had put
   Whole 02's fast arpeggio on that pad between the two, 90 ms notes at
   0.7 of the gap, a staccato pad neither held nor tremolo.
+  Since round 95 the balance token carries the token song's own shares
+  for its line voice by gap class (the `balance` entry), and the plan
+  keeps them for the part's only and line voices over the draws, which
+  are still made so the stream is as it was; the second voices keep the
+  pooled word. A song on Umaro's token had held every accompaniment note
+  to the next (the pooled share for a layered line, 1.0) where Umaro's
+  line pecks 0.4 of its gap.
   *`gap_sounds`: shape (part, voice, speed, gap); drawn in _plan_once, _plan_sounds.*
 
 - **bass_locks** — the share of the kit's accents (positions where two
