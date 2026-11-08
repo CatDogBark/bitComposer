@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (61)
+### the plan, drawn once a song (62)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -63,6 +63,7 @@ flowchart LR
 | `top_levels` | part | _plan_once | - | a song's loudest part's level of full, drawn once a song: what the band's shares are shares of |
 | `layer_levels` | part | _plan_once | - | a layered part's second voice's level against its line's, in tenths (the fallback for a part the balance token has no second-voice shares for) |
 | `sample_ambitus` | part | ambitus_of | - | the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound |
+| `kit_seconds` | part, place | _plan_once, kit_second, kit_second_pick, write | - | whether a kit letter's hit takes the slot's second sample (the letter's other sample, struck eight times or more in the song) or the slot's own, by the letter and the hit's place in the beat (on the beat, an eighth, a sixteenth, a triplet, finer); the writer draws it a hit for a letter whose token carries a second, holding the letter's hits to the token's share for it (round 99) |
 | `kit_rates` | part, piece | _plan_once, kit_piece_rate, kit_rate_wall | - | the rate a percussion kit sample is struck at, as a note (60 as recorded), by the sample and the piece: the wall a tuned slot's moved rate stays inside |
 | `articulation` | part | _plan_once, melody_models, write_melody | - | the tune's articulation habit (detached, mixed, held), drawn once a song |
 | `part_textures` | part, habit, form, previous | plan_texture | - | the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's |
@@ -219,6 +220,7 @@ flowchart LR
     top_levels["top_levels"]
     layer_levels["layer_levels"]
     sample_ambitus["sample_ambitus"]
+    kit_seconds["kit_seconds"]
     kit_rates["kit_rates"]
     articulation["articulation"]
     part_textures["part_textures"]

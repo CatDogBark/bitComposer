@@ -875,23 +875,27 @@ def tune_grain_units(songs) -> list:
     return out
 
 
-def drum_figure(struck, song: Song, slots: dict | None = None) -> str:
+def drum_figure(struck, song: Song, slots: dict | None = None, seconds: dict | None = None) -> str:
     """A drum bar's figure as a table's outcome: each hit's position and
     its piece's letter (LETTERS; a sample the reading named no drum, o),
     "position:letter" tokens, two pieces struck together two tokens; a
     bar rested through "-". Since round 81 a letter's hits are its slot's
     sample's (`slots`, kit_slots: the sample the song's kit leans on for
-    the letter, the one the written kit plays): a hit on another sample of
-    the letter is left out, as the written kit has no voice for it (Battle
-    Theme's rattle in sixteenths beside its backbeat snare had made the
-    written snare a sixteenth-note part); a letter without a slot (a sample
-    the namer called no drum, o) keeps every hit."""
+    the letter, the one the written kit plays) and since round 99 its
+    second sample's too (`seconds`, kit_second_samples: the written kit
+    plays both, the second's hits by the kit_seconds word): a hit on any
+    other sample of the letter is left out, as the written kit has no voice
+    for it (Battle Theme's rattle in sixteenths beside its backbeat snare
+    had made the written snare a sixteenth-note part when the kit played
+    one sample a letter); a letter without a slot (a sample the namer
+    called no drum, o) keeps every hit."""
     slots = kit_slots(song) if slots is None else slots
+    seconds = kit_second_samples(song) if seconds is None else seconds
     tokens = set()
     for p, ns in struck:
         for n in ns:
             letter = LETTERS.get(song.pieces.get(n[3]), "o")
-            if letter in slots and slots[letter] != n[3]:
+            if letter in slots and n[3] != slots[letter] and n[3] != seconds.get(letter):
                 continue
             tokens.add((p, letter))
     return " ".join(f"{p}:{letter}" for p, letter in sorted(tokens)) or "-"
@@ -909,20 +913,20 @@ def drum_units(songs) -> list:
     tempo band, the bar's place in its part of the form (fills land on the
     last), the figure before it (START where none), the kit (which pieces
     the song strikes at all), the kit's strike classes (round 81,
-    classes_value: each slot's sample's hits a bar as a class, "Km Sd ha")
-    and the song's habit (_rhythm_habit: density and repetition). The
-    figures count each letter's slot's sample (drum_figure)."""
+    classes_value: each slot's hits a bar as a class, "Km Sd ha") and the
+    song's habit (_rhythm_habit: density and repetition). The figures count
+    each letter's slot's sample and its second (drum_figure)."""
     out = []
     for s in songs:
         if R.DRUMS not in s.notes:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
-        slots = kit_slots(s)
+        slots, seconds = kit_slots(s), kit_second_samples(s)
         classes = classes_value(kit_classes(s), LETTERS.values())
         for k, a, struck in numbered_bars_of(s, R.DRUMS):
             if last is not None and k != last + 1:
                 previous = START
-            drawn = drum_figure(struck, s, slots)
+            drawn = drum_figure(struck, s, slots, seconds)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
                 "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous, "feel": cells_mod.song_feel(s)}))
             previous, last = drawn, k

@@ -607,6 +607,39 @@ class KitSecondTests(unittest.TestCase):
         self.assertGreaterEqual(sum(picks), 8)
         self.assertFalse(any(whole.kit_second_pick({}, "h", "eighth", [0, 0], 0.5, rng) for _ in range(8)))   # no word: no second
 
+    def test_a_whole_song_plays_the_second_sample_on_its_own_slot(self):
+        """The second's slot is one the pack's kit does not list: compose adds it to the song's pieces once samples_for has
+        given it its sample, so the writer's hits reach it (the first cut had left it out, and no song played a second)."""
+        from unittest import mock
+        from bitcomposer import instruments
+        from bitcomposer.composer import compose_song
+        from bitcomposer.packs import PACKS
+        from bitcomposer.translate import harness, packtables, tables
+        ctx = harness.load_generated(compose_song(seed=5, pack="ffvi"), "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        drums = "drums=main:::Kh:0.5:::K=scccccccccc@1.00@r48@0.50@m@@0.50,h=sbbbbbbbbbb@0.40@r59@0.45@d@@0.50+saaaaaaaaaa@0.20@r60@0.20@0.50"
+        token = f"melody=main:64-84:0.9:1:0.7:::slead bass=half:36-44:0.9:1:1.0:::sbass {drums} top=0.30 tempo=medium"
+        models["balance"] = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        models["kit_seconds"] = tables.Table(("part", "place"), "kit_seconds", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "second", {"part": "h", "place": pl}) for i in range(10) for pl in ("beat", "eighth", "sixteenth", "triplet", "finer")])
+        real = instruments._make_sample
+        fake = lambda name: real(name) if not name.startswith("g_") else real("ffvi_bassdrum" if "cccc" in name else "ffvi_hat")   # noqa: E731  the token's own ids on real samples
+        own = {"scccccccccc", "sbbbbbbbbbb", "saaaaaaaaaa", "slead", "sbass"}
+        with mock.patch.object(instruments, "_make_sample", fake):
+            out = whole.compose(models, {"voices": dict(PACKS["ffvi"]["voices"])}, own, "g", 7, "g", max_bars=16, read=False)
+        p, song, written = out["plan"], out["song"], out["written"]
+        self.assertEqual(p.extras["drums"]["kit_seconds"]["h"]["share"], 0.5)
+        self.assertEqual(out["samples"]["drums"]["hihat2"][0], "saaaaaaaaaa")                   # the second's own slot and sample
+        self.assertEqual(song.pieces.get("hihat2"), "hat")                                      # on the song's kit, so the writer can reach it
+        hats = [n for n in written["drums"].notes if n[2] == "h"]
+        seconds = [n for n in hats if n[4] == "hihat2"]
+        self.assertTrue(hats, written["drums"].log)
+        self.assertTrue(seconds, written["drums"].log)                                          # the word puts every hit on the second: the share holds it to half
+        self.assertLessEqual(len(seconds), len(hats) // 2 + 1)
+        self.assertGreaterEqual(len(seconds), len(hats) // 2 - 1)
+        self.assertTrue(any(l.startswith(f"kit seconds (kit_seconds): h {len(seconds)} of {len(hats)} hits on the second sample") for l in written["drums"].log), written["drums"].log)
+        self.assertEqual({n[3] for n in song.notes["drums"]} & {"hihat", "hihat2"}, {"hihat", "hihat2"})   # both samples in the song's notes, for the parts after
+
 
 if __name__ == "__main__":
     unittest.main()

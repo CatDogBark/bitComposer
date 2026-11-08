@@ -346,14 +346,18 @@ The words are grouped by where the writing draws them, in the order the song is 
   tuned slot's rate, moved with the written key, stays inside the rates the
   game struck the sample at as that piece (the `kit_rates` word,
   `render.kit_rate_wall`: FFVI's pitched snare -4 to +3, and a tritone's
-  move had taken it to -10); the song's key
+  move had taken it to -10), and since round 99 a slot whose letter the
+  song strikes on a second sample carries that sample after a `+` with its
+  level, note or rate, hold and share of the letter's hits
+  (`h=sd1c4c7ce33@0.14@r60@0.43@d@@0.50+s831784ce4b@0.14@r60@0.44@0.14`,
+  the open hat beside the closed one; `kit_seconds`); the song's key
   (`key=9:minor`) stands before the top, and since
   round 82 its echo word before the key
   (`echo=0.20:80:0.78:melody:bass+drums`, the echo table's outcome), which
   the writer takes in place of a draw, a marked kit piece's notes sent and
   the piece beside it dry. The drum figures count each letter's slot's
-  sample's hits (round 81), and a kit whose token carries classes is
-  written from its limbs' tables under them. Since round 83 a tonal sample
+  sample's hits (round 81) and its second sample's (round 99), and a kit
+  whose token carries classes is written from its limbs' tables under them. Since round 83 a tonal sample
   a drum voice strikes on three pitches or more, no one of them half its
   notes, is read as a voice of its own by the role reader
   (`roles.split_melodic_pieces`: a counter-line, or a bass where it sits
@@ -1557,6 +1561,32 @@ The words are grouped by where the writing draws them, in the order the song is 
   there and stops at the game's nearest rate where it did not; a pair the
   game never struck has no wall.
   *`kit_rates`: shape (part, piece); read in kit_rate_wall.*
+
+- **kit_seconds** — whether a kit letter's hit takes the slot's second
+  sample or the slot's own, by the letter and the hit's place in the beat
+  (on the beat, an eighth, a sixteenth, a triplet, finer), round 99. The
+  balance token's kit field names a letter's second sample where the song
+  strikes the letter on another sample eight times or more
+  (`readings.kit_second_samples`), after a `+` with its level, its note or
+  rate, its hold and its share of the letter's hits; the letter's figure
+  and the slot's strike class count both samples' hits, since the written
+  kit gives both their hits (round 81 had counted the slot's alone, the
+  kit playing one sample a letter). The writer (`plan.write`, `kit_second_pick`) draws each hit
+  of such a letter from this word on an own stream and plays the second
+  while the letter's hits are not over the token's share for it; the
+  render gives the second its own slot (`hihat2`) and sample, level, rate
+  or note and hold, on the main's channel with the main's pan and echo
+  mark. FFVI strikes 19 letters in 15 of its 46 kits on a second sample:
+  the hat in 12 of the 16 kits that have one (a short closed hat beside a
+  longer open one, the open one taking 0.50 of the eighth-note hits and
+  0.31 of the beats, 0.35 of the hat's hits at the median), the snare in 4
+  of 30 (the Battle Theme's sixteenth-note rattle beside its backbeat
+  snare, 0.86 of the sixteenths), a tom, a cymbal and an "other" once
+  each. The written kit had played the slot's one sample on every hit
+  (round 80's pick of the loudest), so a Battle Theme kit played its
+  backbeat snare at the rattle's density and a third of kit songs lost the
+  open-hat lift.
+  *`kit_seconds`: shape (part, place); drawn in kit_second_pick, write.*
 
 - **part_samples** — the sample a part's line plays (the melody, bass,
   accompaniment, harmony, arp; the counter's is `counter_samples` and
