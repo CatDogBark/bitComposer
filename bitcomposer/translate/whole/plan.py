@@ -620,8 +620,13 @@ def layer_of(extras: dict) -> tuple:
 
 
 def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
-    """A line again at an interval, in the scale (a third, fourth or fifth stays diatonic), on another voice."""
+    """A line again at an interval, in the scale (a third, fourth or fifth stays diatonic), on another voice; at a unison or
+    octaves (a double) the line's notes exactly, off the scale where the line is (round 94: a double put back on the scale
+    had sat a semitone from the tune's altered notes once round 93 let the tune off the scale, 22 of a counter voice's 55
+    strong onsets in First Meridian Return; FFVI's doublings leave the scale with the tune)."""
     steps = int(round(interval * 7 / 12))
+    if steps % 7 == 0:
+        return [(a, b, float(int(round(m)) + 12 * (steps // 7)), voice) for a, b, m, *_ in notes]
     return [(a, b, float(scale_pitch(scale_index(int(round(m)), scale) + steps, scale)), voice) for a, b, m, *_ in notes]
 
 
@@ -1037,7 +1042,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         else:
             habits[role] = _draw(models, "habits", (role, tempo, weight), rng, log)
         if role in rhythm.UPPER:
-            extras[role] = {"richness": _draw(models, "voicing_habits", (role,), rng, log), "motion": _draw(models, "motions", (role,), rng, log)}
+            extras[role] = {"richness": _draw(models, "voicing_habits", (role,), rng, log), "motion": _draw(models, "motions", (role,), rng, log),
+                            "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log)) for pl in ("strong", "weak")}
+                                        if "clashes" in render_mod.models_or_empty(models) else None)}   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
         elif role in (R.MELODY, R.COUNTER):                  # the phrase tables count both lines as the tune's: drawn under the melody's part
             extras[role] = {"articulation": _draw(models, "articulation", (role,), rng, log),
                             "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log),
@@ -1657,7 +1664,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         shared = {}                                         # the line's voicing at each onset, for the voices beside it
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
-                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role))
+                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"))
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
@@ -1695,7 +1702,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], gs["second"] if gs else sounds,   # interval from the
                                                               key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
                                                               pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,   # voices beside a line sit in
-                                                              tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v), kind=rel[0])   # (the layer offset's cap), not folded into its offset register
+                                                              tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v), kind=rel[0], clash_rates=plan.extras[role].get("clashes"))   # (the layer offset's cap), not folded into its offset register
                 log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}, {density}), "
                            + ("its interval to the line and its own moves drawn, " if drawn_pitch else f"the line's voicing {v} tone{'s' if v > 1 else ''} up, ")
                            + f"{sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars beside the line's" if given else ""))
@@ -1729,7 +1736,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                      for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
-                                                  key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER))
+                                                  key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER), clash_rates=x.get("clashes"))
         else:
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
@@ -1779,7 +1786,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     return drawn
                 masks_v = [f if f == writer.REST else (memo.setdefault(f, masked(f)) if SECOND_MEMO else masked(f)) for f in line_figures]
                 notes_v, figures_v, plog_v = writer.counter(song, line_only, line_figures, masks_v, span_v, models, rng_v, layer[0], key=key,
-                                                            articulation=x["articulation"], register=span_v)
+                                                            articulation=x["articulation"], register=span_v, clash_rates=x.get("clashes"))
                 if word_v:
                     pending.append((role, v, [(a, b, m, v) for a, b, m in notes_v], word_v))
                     log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")

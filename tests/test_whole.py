@@ -1186,6 +1186,89 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(clash_of(landings(False, {5}, clash_rate=0.3, clash_over=True)), 0) # over it: barred
         self.assertEqual(upper_mod.CLASH, (1, 11))
 
+    def test_each_part_holds_its_clashes_against_the_parts_written_before_it(self):
+        """Round 94: the clashes word counts each pitched part but the bass against the parts written before it (CLASH_ORDER:
+        bass, harmony, accompaniment, arp, melody, counter), and the writers hold the drawn share: the counter writer draws an
+        interval again while the line is over its share and the drawn note sits a semitone from a part under it; the upper
+        writer gives such a tone to the nearest clear tone of the voicing."""
+        from fractions import Fraction
+        from bitcomposer.translate import writer, tables, vocab
+        self.assertEqual(rhythm.clash_under("bass"), ())
+        self.assertEqual(rhythm.clash_under("accompaniment"), ("bass", "harmony"))
+        self.assertEqual(rhythm.clash_under("counter"), ("bass", "harmony", "accompaniment", "arp", "melody"))
+        s = self._song()                                                                      # C major; the bass C on beats 1 and 3
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "m") for i in range(8) for x, m in ((0.0, 67.0), (1.0, 69.0), (2.0, 71.0), (3.0, 72.0))]   # G A B C a bar
+        s.notes["accompaniment"] = [(4.0 * i + x, 1.0, 64.0, "a") for i in range(8) for x in (0.0, 1.0, 2.0, 3.0)]   # E held a beat at a time
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]), 3: ("accompaniment", s.notes["accompaniment"])}
+        units = {(u.values["part"], u.values["place"]): u.outcome for u in rhythm.clash_units([s])}
+        self.assertEqual(set(units), {("accompaniment", "strong"), ("melody", "strong")})      # no unit for the bass, written first
+        self.assertEqual(units[("accompaniment", "strong")], "0.00")                           # E over the bass's C
+        self.assertAlmostEqual(float(units[("melody", "strong")]), 0.25, delta=0.011)           # the B against the accompaniment's... no: against the bass's C on beat 3
+        # the counter writer: a table that says "a third below the tune" (A under C), rarely "a fourth below" (G); the bass holds Bb
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "-2", "-3")]
+            + [tables.Unit(f"t{i}", "g", "-3", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(2) for p in (rhythm.START, "-2", "-3")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "with"), ("1", "alone"))])
+        vals = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
+        models = {"voice_intervals": iv_t, "voice_moves": mv_t, "values": vals}
+        tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 72.0, 0) for k in range(4) for i in range(4)]           # the tune repeats C on every beat
+        tune_figs = ["0 1 2 3"] * 4
+        masks = ["1 1 1 1"] * 4
+
+        def counter_notes(rates):
+            song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+            song.notes["bass"] = [(4.0 * k, 4.0, 70.0, "bass") for k in range(4)]                  # Bb held through every bar: a semitone from A
+            notes, figures, log = writer.counter(song, tune, tune_figs, masks, (48, 96), models, random.Random(3), "other",
+                                                 key=(0, "major"), articulation="held", register=(60, 84), clash_rates=rates)
+            return [int(m) for a, b, m in notes], log
+        free, log_free = counter_notes(None)
+        self.assertGreaterEqual(free.count(69), 12)                                            # without the word: A under C, a semitone from the bass, nearly every time
+        held, log_held = counter_notes({"strong": 0.0, "weak": 0.0})
+        self.assertLessEqual(held.count(69), 1)                                                # with a share of none: the first may clash; from then on the fourth (G)
+        self.assertGreaterEqual(held.count(67), 14)
+        self.assertTrue(any("a semitone from a part under it: strong" in l and "the song's rate 0.00" in l for l in log_held), log_held)
+        self.assertFalse(any("a semitone from a part under it" in l for l in log_free))
+        # the upper writer: a voice beside the line an octave above its C, over a bass holding B; the share of none moves it to the
+        # voicing's nearest clear tone (G) after the first onset
+        iv_u = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "7", {"part": "accompaniment", "kind": "apart", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "7")])
+        mv_u = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "accompaniment", "kind": "apart", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])
+
+        def upper_notes(rates):
+            song = rhythm.Song("w", 4, 12, bars[:2], [vocab.Span(0.0, 8.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+            song.notes["bass"] = [(4.0 * k, 4.0, 71.0, "bass") for k in range(2)]                  # B held: a semitone under C
+            shared = {}
+            for k in range(2):
+                for pos in range(4):
+                    shared[(k, Fraction(pos))] = ((0, ""), "R 3 5", ["R", "3", "5"])
+                    shared[("line", (k, Fraction(pos)))] = 60
+                    shared.setdefault(("taken", (k, Fraction(pos))), set()).add(60)
+            notes, figures, _ = writer.upper(song, "accompaniment", [1], {1: (60, 96)}, {"voice_intervals": iv_u, "voice_moves": mv_u}, random.Random(1),
+                                             "dense", "triad", 0.5, key=(0, "major"), plays=[True, True], figures=["0 2", "0 2"], shared=shared,
+                                             tone_index=writer.ANY_TONE, kind="apart", clash_rates=rates)
+            return [int(m) % 12 for a, b, m, v in notes]
+        self.assertEqual(upper_notes(None), [0, 0, 0, 0])                                      # the octave above C, over the bass's B: a semitone, kept
+        self.assertEqual(upper_notes({"strong": 0.0, "weak": 0.0}), [0, 7, 7, 7])              # over the share from the second onset: G, the nearest clear tone
+        self.assertEqual(upper_notes({"strong": 1.0, "weak": 1.0}), [0, 0, 0, 0])              # a share of everything: never over
+        # the plan draws the chord parts' shares too, on their own streams
+        units = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        cl = tables.Table(("part", "place"), "clashes", votes=tables.SHARES).fit(units("clashes", "0.06", part="melody", place="strong") + units("clashes", "0.08", part="melody", place="weak")
+                                                                                 + units("clashes", "0.02", part="accompaniment", place="strong") + units("clashes", "0.04", part="accompaniment", place="weak"))
+        token = "melody=main:64-84:0.9:1:0.7:::slead accompaniment=half:55-67:0.8:1:0.5:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan({**bal, "clashes": cl}, 7, "g")
+        self.assertEqual(p.extras["accompaniment"]["clashes"], {"strong": 0.02, "weak": 0.04})
+        self.assertEqual(p.extras["melody"]["clashes"], {"strong": 0.06, "weak": 0.08})
+        # a relation voice doubling a line note off the scale copies it exactly (a double at two octaves down of G# is G#, not
+        # the G a scale-bound shift had given, a semitone under the tune); a third stays diatonic
+        major = {0, 2, 4, 5, 7, 9, 11}
+        self.assertEqual([m for a, b, m, v in whole.diatonic([(0.0, 1.0, 68.0, 0), (1.0, 2.0, 67.0, 0)], -24, major, 1)], [44.0, 43.0])
+        self.assertEqual([m for a, b, m, v in whole.diatonic([(0.0, 1.0, 68.0, 0), (1.0, 2.0, 67.0, 0)], 12, major, 1)], [80.0, 79.0])
+        self.assertEqual([m for a, b, m, v in whole.diatonic([(0.0, 1.0, 67.0, 0)], -3, major, 1)], [64.0])                      # a third below G: E
+
     def test_the_second_voices_levels_are_the_balance_tokens_too(self):
         """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line
         voice's in tenths (the layer_levels unit, capped at 1.5; the busiest voice first) as a sixth field; the plan plays a
