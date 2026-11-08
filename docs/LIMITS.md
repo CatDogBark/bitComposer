@@ -102,24 +102,32 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   keeps a floor from its returning cells and endings (0.13 of its strong
   onsets against the bass and chord parts, FFVI 0.08), a chord voicing of
   one tone has no clear tone to go to (the accompaniment 0.08 against
-  0.04), a parallel voice at a third follows its line into the band's
-  semitones (a tune's parallel third in Whole 4 on 0.40 of its beats, the
-  tune itself on 0.12), and an apart voice in a dense band finds no clear
-  tone within VOICE_TRIES draws. A word for how FFVI's parallels bend at a
-  clash, and a placement for returning cells that looks at the band, would
-  carry it further.
+  0.04), a parallel voice followed its line into the band's semitones
+  until round 97 (a tune's parallel third in Whole 4 on 0.40 of its beats,
+  the tune itself on 0.12; a chord part's parallel voice now lands by the
+  chord and holds the part's clashes share, 0.08 of its onsets a
+  semitone from a part under it against 0.11 before), and an apart voice
+  in a dense band finds no clear tone within VOICE_TRIES draws. A
+  placement for returning cells that looks at the band would carry it
+  further.
 - **The counter is more diatonic than FFVI's.** A counter by the voice
   words takes scale steps from the tune's note, so it leaves the scale
   only where the tune does: 0.06 to 0.08 of its line's notes against
   FFVI's 0.14 to 0.26 (round 93's count). Only a counter written as a
   line of its own holds its off_scale draw. A semitone form of the
   interval word against a tune note on the scale would carry the rest.
-- **A voice beside the tune at a third stays on the scale.** A parallel
-  voice is written at its generic interval from the line, in the scale,
-  where FFVI's doublings leave it with the tune and beyond; since round 94
-  a double at a unison or octaves copies the line exactly, altered notes
-  and all, but a third, fourth or fifth is still taken in the scale. The
-  relation word has no exact-interval form yet for those.
+- **A parallel voice rides the chord only where the line does.** Since
+  round 97 a parallel voice lands where the `parallel_intervals` word
+  says against the chord (a third over the chord's third is its fifth, a
+  third over its fifth the root above), which put the written voices on
+  the chord on 0.77 of the onsets where the line's note is on it (FFVI
+  0.82); over a line note off the chord the game's voice is on the chord
+  0.40 of the time and the written one 0.41: the word knows the
+  line's tone class, not which off-chord tone the line took, and the
+  written lines leave the chord as much as FFVI's but elsewhere (a tune's
+  recalls and passing tones; FFVI's parallels mostly ride arpeggiated
+  chord parts). A class for the line's off-chord tones (a step from which
+  chord tone) would carry the rest.
 
 - **A tonal sample pumped on two pitches is a kit piece.** Round 77's play
   clause reads a voice on one sample at one or two pitches, eight notes or

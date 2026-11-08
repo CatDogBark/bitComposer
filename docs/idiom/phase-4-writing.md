@@ -6396,3 +6396,94 @@ the chord tones around it); the arp's sevenths against its clashes
 share; the bass's per-song spread (a tier); the counter's chord tones
 off the beat; a relation changing in the middle of a sample run. Then the
 open items' third entry, the doubling voice's intervals by the chord.
+
+### Round 97: a parallel voice lands where the game's does (2026-11-07, the open items' third entry, on the owner's go)
+
+**Why.** The second audit's rule 9, the doubling voice: FFVI's second
+voices that strike with their line sit two semitones or more off their
+modal interval on 45 % of shared onsets, and the writer's parallel voice
+was the line again at a fixed number of scale steps (`plan.diatonic`:
+round 94 had made a double at octaves exact, a third stayed in the
+scale), so it rode the key where the game's rides the chord. Measured
+first (par_ffvi.py, par_class.py: the relation words' parallel stretches
+over the voices that follow a part's line voice, each pair once from the
+follower; 60 stretches, 4,764 shared onsets in 37 songs): FFVI's parallel
+voice sits at its nominal semitones on 0.58 of its shared onsets and on a
+chord tone on 0.65, 0.82 where the line's note is on the chord (0.95 over
+the chord's third, 0.76 over the root, 0.79 over the fifth) and 0.40 where
+it is off it; the line again in the scale, as the writer had it, would
+match the game's note on 0.31 of those onsets and land on the chord on
+0.48. The semitones depend on the line note's tone class and the chord's
+quality: a third over the chord's third is its fifth (+3 over a major
+third, +4 over a minor one) or the root above (+8), a third over the
+fifth is the root above (+5, 0.47) or the seventh (+3). The written
+parallel voices over sixty seeds (5,205 onsets) sat on the chord on 0.33
+of their onsets, 0.42 over a line note on the chord, 0.22 off it.
+
+**Built.** One counted word. `parallel_intervals`
+(`rhythm.parallel_interval_units`): at each onset a parallel voice shares
+with the line it follows, where its note sits against the chord
+sounding, the chord tone it lands on (root, third, fifth, seventh, sus)
+or, off the chord, its semitones from the line's note (`+4`, `-8`), by
+the stretch's nominal interval in scale steps (`roles.generic` of the
+relation word's semitones), the tone class of the line's note against
+the chord, the voice's part and the landing before it in the stretch
+(START at the first); the voice followed is a part's line voice (a line
+that reads as parallel to its own harmony voice is no unit, and two lines
+parallel to each other count once, the one further from the lead
+following: `LEAD_ORDER`, the tune, the counter, the chord parts, the
+bass). The writer (`plan.parallel`, in `stretched_notes` for a relation
+word's parallel stretch and in place of `diatonic` for a layer word's
+doubling) draws the landing an onset on an own stream
+(`{seed}:{part}:voice {v}:stretch parallel`, `...:layer parallel`) and
+places a drawn chord tone as that tone of the written chord nearest the
+line's note at the nominal interval, so the voice rides the chord's
+quality; a chord part's voice with the part's clashes draw holds the
+share as the part's other voices do (an interval a semitone from a part
+written before the part while over the share is drawn again, VOICE_TRIES
+times, the last kept); a double at a unison or octaves stays exact, and a
+note no chord fits, or a pack without the word, takes the scale's
+interval as before. Two cuts: the first drew absolute semitones, which
+pooled major and minor chords (a voice over a line on the third landed on
+the chord 0.51 against FFVI's 0.95); the landing by name is the second.
+No re-read; pack4 refit (105 tables; `pack.json.before-r97`), the
+vocabulary shipped, the map regenerated. Tests: the units on a synthetic
+song (the landings, the chain, an off-chord semitone outcome), the writer
+over a major and a minor chord (E G C G, the chord's own fifth either
+way), the scale's interval without the word and at an octave, a stretch
+by the word, the clash hold. Suite 434 (1 skip).
+
+**Measured** (sixty seeds against FFVI, the parallel voices' shared
+onsets). On the chord 0.33 to 0.62 (FFVI 0.65); over a line note on the
+chord 0.42 to 0.77 (0.82), by the line's tone 0.78 over the root (0.76),
+0.92 over the third (0.95), 0.76 over the fifth (0.79); over a line note
+off the chord 0.22 to 0.41 (0.40). The written lines under these voices
+are on the chord on 0.58 of the onsets, as FFVI's (0.58). A chord part's
+parallel voice a semitone from a part under it: 0.08 of its onsets
+(0.11 before). Plans: 400 of 400 seeds keep their token song and every
+plan draw; 114 of 400 songs are note for note what they were (the
+songs with no parallel or doubling voice). Vocabulary checks pass.
+
+**Song Check 80** (https://claude.ai/artifact/6ckbXyHBaBcV1xU6wuQ7ND): on the owner's word, five NEW seeds and the
+after side alone, no pairs: 14 Winding Gate Song (Overture part 3's
+token: the tune's second voice a third up for 32 bars, on the chord 0.45
+to 0.61), 39 The Wharf of Shadows (Edgar and Sabin: a third down
+throughout, 0.42 to 0.61), 43 The Quiet Wharf (The Wedding Waltz-Duel part
+1: the accompaniment's two voices a sixth under and over its line, 0.19
+and 0.56 to 0.66 and 0.91), 31 Eastern Sanctum (Ending Theme part 1:
+three parallel voices across the accompaniment, the counter and the
+melody, 0.14, 0.36 and 0.26 to 0.53, 0.71 and 0.62), 6 The Still Gorge
+(Returners: the counter's second voice in three parallel stretches). The
+six standing seeds resume with the next Song Check unless the owner says
+otherwise.
+
+**Open.** The word knows the line note's tone class, not which off-chord
+tone the line took, so over a line off the chord the voice is on it as
+often as FFVI's but not in the same places; a class for the line's
+off-chord tones would carry it. The relation word's nominal still comes
+from the token song, so the written voice's commonest semitones need not
+be the word's (its "at the nominal" share is a third against FFVI's 0.58
+by construction). The apart voices' holds (`VOICE_TRIES`), the tune's
+recall placement with an eye on the band, the bass's per-song spread,
+the counter's chord tones off the beat stand from rounds 94 to 96. Then
+the open items' fifth entry, the small words batch.

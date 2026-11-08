@@ -632,6 +632,84 @@ def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
     return [(a, b, float(scale_pitch(scale_index(int(round(m)), scale) + steps, scale)), voice) for a, b, m, *_ in notes]
 
 
+PARALLEL_FLOOR = 2                    # a parallel voice's interval draw never backs off below (interval, tone): the nominal interval and the
+                                      # chord decide where the voice lands (round 97); the part and the interval before are taken where they reach
+
+
+def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role: str | None = None, models: dict | None = None,
+             rng: random.Random | None = None, clash_rates: dict | None = None, log: list | None = None) -> list:
+    """A line again at an interval on another voice, as the game's parallel voices sit (round 97): at each note where
+    the voice's note sits against the chord is drawn from the parallel_intervals word by the stretch's nominal interval
+    in scale steps, the tone class of the line's note against the chord sounding and the landing before (START at the
+    first): a chord tone (root, third, fifth, seventh, sus), placed as that tone of the chord nearest the line's note at
+    the nominal interval (the chord's own third or fifth, major or minor), or semitones from the line's note (`+4`) off
+    the chord; `diatonic` without the word (or a song, or a stream), under a note no chord fits, and at a unison or
+    octaves (a double: the line exactly). FFVI's parallel voice sits at its nominal semitones on 0.61 of its shared onsets and
+    on a chord tone on 0.62, where the line again in the scale matched it on 0.31 and landed on the chord on 0.42: a
+    third over the chord's third is a major third or a minor sixth (the root), over the fifth a fourth (the root again)
+    or a minor third (the seventh). A chord part's voice with `clash_rates` (the part's clashes draw) holds the share
+    as the part's other voices do: an interval a semitone from a part written before the part (rhythm.clash_under)
+    while the voice is over its share for the beat is drawn again, VOICE_TRIES times, the last kept."""
+    t = (models or {}).get("parallel_intervals")
+    steps = int(round(interval * 7 / 12))
+    if t is None or song is None or rng is None or steps % 7 == 0:
+        return diatonic(notes, interval, scale, voice)
+    t = t.table if hasattr(t, "table") else t
+    nominal = str(R.generic(interval))
+    hold = bool(clash_rates) and role in rhythm.UPPER
+    under = sorted(n for r in rhythm.clash_under(role) for n in song.notes.get(r, [])) if hold else []
+    run = {"strong": [0, 0], "weak": [0, 0]}                # the voice's onsets a semitone from a part under it, and its onsets under one
+    out, previous, drawn, redrawn = [], rhythm.START, 0, 0
+    for n in sorted(notes, key=lambda x: x[0]):
+        a, b, m = n[0], n[1], n[2]
+        ref = int(round(m))
+        c = rhythm._chord_at(song.chords, a)
+        if c is None or c.root is None or c.fit < vocab.FIT:
+            out += diatonic([n], interval, scale, voice)
+            continue
+        tone = vocab.tone_of(ref % 12, c.root, c.shape)
+        place = "strong" if abs(a - round(a)) < NEAR else "weak"
+        pcs = writer.sounding_pcs(under, a) if under else set()
+        over = bool(pcs) and run[place][1] > 0 and run[place][0] / run[place][1] > clash_rates.get(place, 1.0)
+        chord_pcs = {(c.root + i) % 12 for i in harmony.SHAPES.get(c.shape, harmony.SHAPES[""])}
+        aim = ref + interval                                # the nominal placing: the drawn chord tone sits nearest it
+        midi = fallback = landing = None
+        for _ in range(writer.VOICE_TRIES):
+            pick = t.draw((nominal, tone, role or "?", previous), rng, floored=False, floor_k=PARALLEL_FLOOR, min_songs=PLAN_SONGS)
+            if pick.startswith(("+", "-")):                # off the chord: the semitones from the line's note
+                try:
+                    midi = ref + int(pick)
+                except ValueError:
+                    midi = None
+            else:                                           # a chord tone: that tone of the written chord nearest the nominal placing
+                targets = [pc for pc in chord_pcs if vocab.tone_of(pc, c.root, c.shape) == pick] or sorted(chord_pcs)
+                midi = min((aim + ((pc - aim) % 12) - 12 * k for pc in targets for k in (0, 1)), key=lambda x: (abs(x - aim), x))
+            if midi is None:
+                break
+            if over and any((midi - q) % 12 in writer.CLASH for q in pcs):   # over the share and a semitone from a part under it: drawn again
+                fallback, midi = midi, None
+                redrawn += 1
+                continue
+            landing = pick
+            break
+        if midi is None:
+            if fallback is None:
+                out += diatonic([n], interval, scale, voice)
+                continue
+            midi = fallback
+        if pcs:
+            run[place][1] += 1
+            run[place][0] += int(any((midi - q) % 12 in writer.CLASH for q in pcs))
+        previous = landing if landing is not None else (vocab.tone_of(midi % 12, c.root, c.shape) if vocab.tone_of(midi % 12, c.root, c.shape) != "other" else f"{midi - ref:+d}")
+        drawn += 1
+        out.append((a, b, float(midi), voice))
+    if log is not None and drawn:
+        log.append(f"voice {voice + 1} parallel at {interval:+d} by the parallel_intervals word (round 97): {drawn} notes at the interval the line's tone under the chord draws"
+                   + (("; a semitone from a part under it: " + ", ".join(f"{pl} {x[0]}/{x[1]} ({x[0] / x[1]:.2f}; the song's rate {clash_rates[pl]:.2f})" for pl, x in run.items() if x[1])
+                       + (f"; {redrawn} draws given up for a clash" if redrawn else "")) if hold and any(x[1] for x in run.values()) else ""))
+    return out
+
+
 RELATION_PARTS = {"m": R.MELODY, "c": R.COUNTER, "a": R.ACCOMP, "h": R.HARMONY, "r": R.ARP, "b": R.BASS}   # the token's relation letters
 
 
@@ -673,18 +751,20 @@ def stretch_spans(stretches: list, bars: int) -> list:
     return out
 
 
-def stretched_notes(v: int, own: list, spans: list, written: dict, scale: set, meter: int, log: list) -> list:
-    """A layer voice's notes stretch by stretch (round 90): in a double or parallel stretch the followed part's line again
-    at the semitones, in the scale (diatonic), over the stretch's bars; in an own stretch the voice's own notes (`own`,
-    written as the layer word has them) over those bars. A part not written, or with no line in those bars, leaves the
-    stretch to the own notes."""
+def stretched_notes(v: int, own: list, spans: list, written: dict, scale: set, meter: int, log: list, song=None, role: str | None = None,
+                    models: dict | None = None, rng: random.Random | None = None, clash_rates: dict | None = None) -> list:
+    """A layer voice's notes stretch by stretch (round 90): in a double stretch the followed part's line again at the
+    semitones (diatonic: exact), in a parallel stretch the line again at the intervals the parallel_intervals word draws
+    by the chord (`parallel`, round 97; in the scale without the word), over the stretch's bars; in an own stretch the
+    voice's own notes (`own`, written as the layer word has them) over those bars. A part not written, or with no line
+    in those bars, leaves the stretch to the own notes. `song`, `role`, `models`, `rng`, `clash_rates`: for `parallel`."""
     out = []
     for kind, target, semi, a, b in spans:
         lo, hi = a * meter, b * meter
         if kind != "own" and target in written:
             line = [n for n in written[target].notes if (len(n) < 4 or n[3] == 0) and lo - NEAR <= n[0] < hi - NEAR]
             if line:
-                out += diatonic(line, semi, scale, v)
+                out += parallel(line, semi, scale, v, song, role, models, rng, clash_rates, log) if kind == "parallel" else diatonic(line, semi, scale, v)
                 log.append(f"voice {v + 1} {kind} the {target}'s line at {semi:+d} in bars {a + 1}-{b}: {len(line)} notes")
                 continue
             log.append(f"voice {v + 1}: no {target} line to {kind} in bars {a + 1}-{b}; its own notes there")
@@ -1767,7 +1847,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         for v, word in enumerate(layers, start=1):
             rel = layer_of({"layer": word})
             if rel[0] == "doubling":
-                notes_v = diatonic(line_notes, rel[1], scale, v)
+                notes_v = parallel(line_notes, rel[1], scale, v, song, role, models, random.Random(f"{seed}:{role}:voice {v}:layer parallel"),
+                                   plan.extras[role].get("clashes"), log)   # the line again at the interval, by the chord where the word reaches (round 97)
                 figures_v, voicings_v = figures, [f"doubling {rel[1]:+d}"] * len(figures)
                 log.append(f"voice {v + 1} doubles the line at {rel[1]:+d}: {len(notes_v)} notes")
             else:                                           # alternating, or apart: beside the line, on the line's own voicing and lengths
@@ -1849,8 +1930,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         for v, word in enumerate(words, start=1):
             layer = layer_of({"layer": word})
             word_v = relation_word(plan, role, v)           # what the voice does beside which part, by stretch (round 90)
-            if layer[0] == "doubling" and notes:            # the line again at the interval, in the scale
-                second = diatonic(line_only, layer[1], scale, v)
+            if layer[0] == "doubling" and notes:            # the line again at the interval, by the chord where the word reaches (round 97)
+                second = parallel(line_only, layer[1], scale, v, song, role, models, random.Random(f"{seed}:{role}:voice {v}:layer parallel"), None, log)
                 if word_v:
                     pending.append((role, v, second, word_v))
                     log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
@@ -1910,7 +1991,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
     for role, v, own, word in pending:                      # the voices beside a line written by the token's stretches (round 90), every line in place
         spans = stretch_spans(relation_stretches(word), len(song.bars))
-        notes_v = fold_voice(plan, role, v, stretched_notes(v, own, spans, written, scale, song.meter, written[role].log), song.meter)   # round 95
+        notes_v = fold_voice(plan, role, v, stretched_notes(v, own, spans, written, scale, song.meter, written[role].log, song=song, role=role, models=models,
+                                                            rng=random.Random(f"{seed}:{role}:voice {v}:stretch parallel"), clash_rates=(plan.extras.get(role) or {}).get("clashes")), song.meter)   # rounds 95, 97
         song.notes[role] += [(a, b - a, m, role) for a, b, m, *_ in notes_v]
         written[role].notes += notes_v
         written[role].notes.sort(key=lambda n: (n[0], n[3] if len(n) > 3 else 0))

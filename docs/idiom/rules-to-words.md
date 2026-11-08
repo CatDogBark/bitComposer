@@ -85,7 +85,7 @@ bar; the stack's width; the tune's note lengths and first note.
 | 6 | the note lengths | standing: FFVI's detached notes sound 0.40 of the gap at the median, its held 0.89, against 0.5 and 0.95 |
 | 7 | the spans | replaced in round 34 as recorded; `BESIDE_SPAN` 24 stays as the second bass voice's fallback bound, `LAYER_OFFSET` 24 the reading's own grain |
 | 8 | the meter | standing: 4 of 68 FFVI songs in 3/4 lend no bars to a 4/4 song (round 81's open item) |
-| 9 | the doubling voice | standing: FFVI's doubled voices sit two semitones or more off their modal interval on 45 % of shared onsets (below) |
+| 9 | the doubling voice | replaced in round 97: the `parallel_intervals` word says where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones off it), by the nominal interval and the line note's tone class, and the writer places that tone of the written chord nearest the nominal; the line again in the scale had matched FFVI's voice on 0.31 of its onsets |
 | 10 | the bass's ceiling | replaced in round 34 by the sample's drawn range, and that range is the new rule: drawn pooled over the songs sharing the sample, it narrows the bass (below); round 86 binds the voice to its token song's own range for the sample |
 
 ### What the standing rules cost, measured

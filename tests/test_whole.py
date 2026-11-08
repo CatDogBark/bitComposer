@@ -375,6 +375,84 @@ class ChordFigureTests(unittest.TestCase):
         self.assertEqual(rhythm.RELATION_EDGE_BARS, 2)
 
 
+class ParallelIntervalTests(unittest.TestCase):
+    """Round 97: a parallel voice's interval to its line drawn by the chord."""
+
+    def _song(self, bars: int = 8):
+        from bitcomposer.translate import vocab
+        spans = [(4.0 * k, 4.0 * k + 4.0) for k in range(bars)]
+        return rhythm.Song("t", 4, 12, spans, [vocab.Span(0.0, 4.0 * bars, 0, "", 1.0)], notes={}, sid="s", game="g", tonic=0, mode="major")
+
+    def test_a_parallel_voice_lands_where_the_games_do(self):
+        """The parallel_intervals word counts, at each shared onset of a parallel stretch, the voice's semitones from the
+        line by the stretch's nominal interval, the line note's tone class against the chord, the part and the interval
+        before; the writer draws a parallel stretch's (and a layer doubling's) notes by it, so a third over the chord's
+        fifth becomes a fourth, as FFVI's do (its parallels sit on a chord tone 0.62 of the time, the line again in the
+        scale 0.42); without the word, or at an octave, the line again as before. A chord part's parallel voice holds the
+        part's clashes share."""
+        from bitcomposer.translate import tables
+        major = {0, 2, 4, 5, 7, 9, 11}
+        s = self._song()
+        tune = [(4.0 * k + i, 0.9, m, "m") for k in range(8) for i, m in enumerate((60.0, 64.0, 67.0, 64.0))]      # C E G E over C major
+        above = {60.0: 64.0, 64.0: 67.0, 67.0: 72.0}                                                                # the chord tone above each: +4, +3, +5
+        voice = [(t, 0.9, above[m], "v") for t, _, m, _ in tune]
+        s.notes["melody"], s.notes["accompaniment"] = tune, voice
+        s.voice_notes = {1: ("melody", tune), 2: ("accompaniment", voice)}
+        self.assertEqual(rhythm.relation_words(s).get(2), "pm+3")                             # read as a parallel third (the commonest semitones)
+        units = rhythm.parallel_interval_units([s])
+        self.assertEqual(len(units), 32)
+        self.assertEqual([u.outcome for u in units[:4]], ["third", "fifth", "root", "fifth"])   # where the voice lands against the chord
+        self.assertEqual(units[0].values, {"interval": "2", "tone": "root", "part": "accompaniment", "previous": rhythm.START})
+        self.assertEqual((units[1].values["tone"], units[1].values["previous"], units[2].values["tone"]), ("third", "third", "fifth"))
+        s.notes["accompaniment"][0] = (0.0, 0.9, 61.0, "v")                                    # a C# over the C: off the chord, its semitones
+        self.assertEqual(rhythm.parallel_interval_units([s])[0].outcome, "+1")
+        s.notes["accompaniment"][0] = (0.0, 0.9, 64.0, "v")
+        self.assertEqual(rhythm.PARALLEL_SEMITONES, 24)
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["parallel_intervals"][3], ("interval", "tone", "part", "previous"))
+        # the writer: a table of these units; the line C E G E again a third up lands on E G C G, every note on the chord
+        t = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(units)
+        line = [(4.0 * k + i, 4.0 * k + i + 0.9, m, 0) for k in range(8) for i, m in enumerate((60.0, 64.0, 67.0, 64.0))]
+        song = self._song()
+        drawn = whole.parallel(line, 3, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1))
+        self.assertEqual([int(m) for a, b, m, v in drawn[:4]], [64, 67, 72, 67])                # E G C G, each the chord tone nearest a third up
+        self.assertTrue(all(int(m) % 12 in (0, 4, 7) for a, b, m, v in drawn), drawn)
+        self.assertTrue(all(v == 1 for a, b, m, v in drawn))
+        minor = self._song()                                                                    # the same word over C minor: the fifth over Eb is +4
+        minor.chords = [vocab.Span(0.0, 32.0, 0, "m", 1.0)]
+        drawn_m = whole.parallel([(0.0, 0.9, 63.0, 0), (1.0, 1.9, 60.0, 0)], 3, major, 1, minor, "accompaniment", {"parallel_intervals": t}, random.Random(1))
+        self.assertEqual([int(m) for a, b, m, v in drawn_m], [67, 63])                          # Eb to G (+4), C to Eb (+3): the chord's own tones
+        scaled = whole.diatonic(line, 3, major, 1)
+        self.assertEqual([int(m) % 12 for a, b, m, v in scaled[:4]], [4, 7, 11, 7])            # the scale's third over G is B, off the chord
+        self.assertEqual(whole.parallel(line, 3, major, 1, song, "accompaniment", {}, random.Random(1)), scaled)   # without the word
+        self.assertEqual(whole.parallel(line, 12, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1)), whole.diatonic(line, 12, major, 1))   # an octave: exact
+        self.assertEqual(whole.parallel(line, 3, major, 1, None, "accompaniment", {"parallel_intervals": t}, random.Random(1)), scaled)   # no song: the scale
+        log = []
+        whole.parallel(line, 3, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1), None, log)
+        self.assertTrue(any(l.startswith("voice 2 parallel at +3 by the parallel_intervals word (round 97): 32 notes") for l in log), log)
+        # a stretch: the relation word's parallel bars by the word, its own bars its own
+        melody = whole.Part("melody", line, [])
+        own = [(4.0 * k + 0.5, 4.0 * k + 1.0, 50.0, 1) for k in range(8)]
+        log = []
+        notes = whole.stretched_notes(1, own, whole.stretch_spans(whole.relation_stretches("pm+3x4>o"), 8), {"melody": melody}, major, 4, log,
+                                      song=song, role="accompaniment", models={"parallel_intervals": t}, rng=random.Random(2))
+        self.assertEqual([int(m) % 12 for a, b, m, v in notes if a < 16], [4, 7, 0, 7] * 4)   # the parallel bars by the word
+        self.assertEqual([m for a, b, m, v in notes if a >= 16], [50.0] * 4)                   # its own bars
+        self.assertTrue(any("parallel_intervals" in l for l in log), log)
+        # a chord part's parallel voice over a bass holding F (a semitone from E): a share of none sends the E to the table's other entry
+        both = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"interval": "2", "tone": "root", "part": "accompaniment", "previous": p}) for i in range(10) for o in ("third", "fifth") for p in (rhythm.START, "third", "fifth")])
+        roots = [(4.0 * k + i, 4.0 * k + i + 0.9, 60.0, 0) for k in range(8) for i in range(4)]
+        song.notes["bass"] = [(4.0 * k, 4.0, 65.0, "bass") for k in range(8)]
+        free = whole.parallel(roots, 3, major, 1, song, "accompaniment", {"parallel_intervals": both}, random.Random(3), None)
+        held = whole.parallel(roots, 3, major, 1, song, "accompaniment", {"parallel_intervals": both}, random.Random(3), {"strong": 0.0, "weak": 0.0})
+        e_free, e_held = sum(int(m) % 12 == 4 for a, b, m, v in free), sum(int(m) % 12 == 4 for a, b, m, v in held)
+        self.assertGreater(e_free, 8)                                                          # the table's halves: E often
+        self.assertLess(e_held, e_free / 2)                                                    # held to none: the first may clash, then G unless four draws say E
+        self.assertLessEqual(e_held, 5)
+        self.assertTrue(all(int(m) % 12 in (4, 7) for a, b, m, v in held))
+
+
 if __name__ == "__main__":
     unittest.main()
 
