@@ -437,6 +437,69 @@ The words are grouped by where the writing draws them, in the order the song is 
   while the tune is under its rate).
   *`articulation`: shape (part); drawn in _plan_once, melody_models, write_melody · `step_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `repeat_habits`: shape (part); drawn in _plan_once, melody_models, write_melody · `echo_habits`: shape (part, tempo, weight); drawn in _plan_once, melody_models, write_melody · `chord_tones`: shape (part); drawn in _plan_once, write · `repeat_rates`: shape (part); drawn in _plan_once.*
 
+- **off_scale** — a part's share of notes off the song's natural scale
+  (major, or natural minor), by the part, the mode and the beat (strong:
+  the onset on a beat; weak: off it), to a twentieth (`rhythm.OFF_SCALE_BIN`);
+  for the melody and the counter the line's notes (the heard tune, or the
+  voice with the most notes), since the writer holds the word on the line
+  it writes and the voices beside it follow their relation words. Counted
+  since round 93 for the melody, the counter, the bass, the chord parts
+  and the arp (sixteen notes and more); drawn once a song for the melody
+  and once for the counter, each on its own stream, one share a beat
+  class, and held by the melody writer in place of the STRONG_SCALE ban:
+  in `draw_move` an off-scale move takes the drawn share of the fitting
+  moves' mass while the line is under it and none while over, on and off
+  the beat, the share fitted together with the chord-tone rate
+  (`hold_shares`: fitted before it, the chord weighting had thinned the
+  off-scale moves again, a tune drawn at 0.30 reaching 0.10); and a
+  recalled cell or half-bar comes back moved within a third, after the
+  chord, to the place that adds least to a share the line is over. FFVI,
+  the melody's line: 0.09 of its strong-beat notes off the scale in major
+  and 0.18 in minor (0.10 and 0.24 off the beat; a song's share from none
+  to 0.55, Mt. Koltz and Metamorphasis the top), the counter's line 0.14
+  and 0.22 (0.26 and 0.26), the bass 0.20 and 0.15, the accompaniment 0.07
+  and 0.13, the arp 0.13 and 0.42 (harmonic-minor arpeggios, the raised
+  seventh 0.80 of its off-scale notes); a minor tune's off-scale notes
+  spread over the flat second, the raised seventh and sixth, the raised
+  fourth and the major third in near-equal shares, a major tune's lean to
+  the flat seventh, and the written tunes land them in the same
+  proportions without a degree word. The written minor tune had sat at
+  0.07 on the beat under the ban and the major at 0.29 off it; round 93's
+  count (sixty seeds, the line) puts the minor tune at 0.15 on the beat
+  and 0.21 off it (FFVI 0.18 and 0.24), the major at 0.11 and 0.17 (0.09
+  and 0.10: nine major songs' shares, drawn by the song). The counter's
+  line stays at 0.06 to 0.08 (its voice words put it on scale steps from
+  the tune's note; only a counter written as a line of its own holds the
+  draw), and the voices beside the tune stay on the scale (LIMITS).
+  *`off_scale`: shape (part, mode, place); drawn in _plan_once; conditions nothing.*
+
+- **clashes** — a line's share of onsets that fall under another pitched
+  part's sounding note and sit a semitone (one or eleven, mod 12) from
+  it, by the beat, to a fiftieth (`rhythm.CLASH_BIN`), for the melody's
+  line and the counter's, every other part together. Counted since round
+  93; drawn once a song for each line on its own stream and held by the
+  melody writer in place of the CLASH ban, against the parts under the
+  line as it is written (the chord parts and the bass; the melody too for
+  the counter): in `draw_move` a clashing move takes the drawn share of
+  the mass while under it and none while over, fitted with the chord and
+  off-scale shares, and a recalled cell is placed to add least while
+  over. FFVI: the tune's line clashes on 0.11 of its strong onsets under
+  another part and 0.13 of its weak ones (a song's share from none to
+  0.38 on the beat: Mt. Koltz 0.33 on 116 onsets, Searching for Friends,
+  Dark World; off the beat to 0.53, New Continent, Dancing Mad part 2),
+  the counter's line 0.10 and 0.13; by pair the tune against the
+  accompaniment 0.06 and 0.08, the counter 0.06 and 0.08, the bass 0.04
+  and 0.05. The written tune now clashes with the parts it is written
+  over at the drawn share (0.10 of strong onsets over twenty-four seeds'
+  logs, the ban's 0.09 to 0.15 behind it); against every other part
+  together it sits at 0.17 and 0.20, since the parts written after it
+  (a counter by the voice words, the arp, the voices beside the lines)
+  hold no clash word yet, and every pair between parts written apart
+  stays at about twice FFVI's rate (the tune against the accompaniment
+  0.10 and 0.13, the counter against the accompaniment 0.13 and 0.13):
+  the pairs are the next round's.
+  *`clashes`: shape (part, place); drawn in _plan_once; conditions nothing.*
+
 - **tune_grain** — the tune's grain, since round 66: the share of its
   onsets off the beat as a class (`rhythm.GRAINS`: on-beat under 0.25,
   eighths to 0.5, fine over), by the part (melody, counter) and its habit's

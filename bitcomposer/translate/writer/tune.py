@@ -522,10 +522,28 @@ def _weighted(rng: random.Random, options: list, weights: list):
     return options[-1]
 
 
+def hold_shares(weights: list, holds: list, rounds: int = 8) -> list:
+    """The fitting moves' weights rescaled so that each hold's marked moves take its share of the mass and the others the
+    rest: `holds` pairs a mark per move with a share (the chord tones and the song's chord-tone rate; the off-scale moves
+    and the off_scale word's draw; the clashing moves and the clashes word's). One hold is exact; several are fitted in
+    turn and again (iterative proportional fitting) until they stand together as near as the moves allow (a chord tone off
+    the scale, the raised seventh on a minor key's dominant, counts for both). A hold that marks every move or none, or
+    whose sides have no mass (the repeated note at a rate of none), leaves the weights as they are (round 93)."""
+    live = [(marks, min(1.0, max(0.0, r))) for marks, r in holds if any(marks) and not all(marks)]
+    for _ in range(rounds if len(live) > 1 else 1):
+        for marks, r in live:
+            m_in = sum(w for w, k in zip(weights, marks) if k)
+            m_out = sum(w for w, k in zip(weights, marks) if not k)
+            if m_in > 0 and m_out > 0:
+                weights = [w * (r / m_in if k else (1 - r) / m_out) for w, k in zip(weights, marks)]
+    return weights
+
+
 def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Random, register: tuple, scale: set,
               strong: bool, chord, tune: set, aim: float | None, habit: str | None = None, repeats: str = "some",
               chord_rate: float = CHORD_ON_BEAT, repeat_rate: float | None = None, over_repeats: bool = False,
-              over_chord: bool = False, tone: str = "no chord", under_chord: bool = False) -> int:
+              over_chord: bool = False, tone: str = "no chord", under_chord: bool = False,
+              off_rate: float | None = None, off_over: bool = False, clash_rate: float | None = None, clash_over: bool = False) -> int:
     """One move of the tune from the moves table, drawn among the moves that
     fit (the register; off the chords' semitones; steered toward the
     contour when the line strays CONTOUR_RANGE from it), the fitting moves
@@ -534,7 +552,13 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
     without one) unless the tune is already over its share (`over_chord`);
     the repeated note given `repeat_rate` of the mass (the song's, else
     the habit's tier) and none while the tune is over it (`over_repeats`).
-    Returns the move in semitones."""
+    Since round 93 a move onto a note off the scale is barred on a beat
+    only without the off_scale word (`off_rate` None, STRONG_SCALE); with
+    it the off-scale moves take `off_rate` of the mass and none while the
+    tune is over the share (`off_over`), on and off the beat; a move onto
+    a semitone against a sounding part is barred only without the clashes
+    word (`clash_rate` None, CLASH), else takes `clash_rate` of the mass
+    and none while over (`clash_over`). Returns the move in semitones."""
     low, high = register
     values = {"part": R.MELODY, "mode": mode, "previous": previous or rhythm.START, "habit": habit or "mixed",
               "place": "strong" if strong else "weak", "tone": tone}          # the landing: the beat arrived on, the tone left
@@ -543,17 +567,19 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
     if chord is not None:
         root, shape = chord
         chord_pcs = {(root + i) % 12 for i in harmony.SHAPES.get(shape, harmony.SHAPES[""])}
-    options, weights, on_chord = [], [], []
+    options, weights, on_chord, offs, clashes = [], [], [], [], []
     for o in MOVES:
         step = int(o)
         m = midi + step
         if not (low <= m <= high):
             continue
         pc = int(round(m)) % 12
-        if any((pc - t) % 12 in upper_mod.CLASH for t in tune):
-            continue
-        if strong and STRONG_SCALE and pc not in scale:
-            continue
+        clashing = any((pc - t) % 12 in upper_mod.CLASH for t in tune)
+        if clashing and (clash_rate is None or clash_over):   # a semitone against a sounding part: barred without the clashes word (CLASH),
+            continue                                        # and while the tune is over its drawn share (round 93)
+        off = pc not in scale
+        if off and ((off_rate is None and strong and STRONG_SCALE) or (off_rate is not None and off_over)):
+            continue                                        # off the scale: barred on a beat without the off_scale word, and while over the share
         if aim is not None and abs(midi - aim) > CONTOUR_RANGE and (step == 0 or (step > 0) != (aim > midi)):
             continue                                        # steered back toward the contour: standing still is no move toward it
         w = moves_table.p(o, ctx)
@@ -562,6 +588,8 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
         options.append(step)
         weights.append(w)
         on_chord.append(pc in chord_pcs)
+        offs.append(off)
+        clashes.append(clashing)
     if not options:
         return 0
     if 0 in options and len(options) > 1:
@@ -570,23 +598,25 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
         # and it is left out while the tune (its echoed cells too) is over the rate
         if over_repeats:
             kept = [st != 0 for st in options]
-            options, weights, on_chord = ([x for x, k in zip(xs, kept) if k] for xs in (options, weights, on_chord))
+            options, weights, on_chord, offs, clashes = ([x for x, k in zip(xs, kept) if k] for xs in (options, weights, on_chord, offs, clashes))
         else:
             r = repeat_rate if repeat_rate is not None else REPEAT_RATE.get(repeats, REPEAT_RATE["some"])
             r = min(0.95, max(0.0, r))
             rest = sum(w for st, w in zip(options, weights) if st != 0)
             weights = [w if st != 0 else r * rest / (1 - r) for st, w in zip(options, weights)]
+    holds = []                                              # the counted shares the fitting moves' mass is held to, together (hold_shares)
     knows_landing = "tone" in moves_table.conditionings
-    if strong and chord_pcs and any(on_chord) and not all(on_chord) and (under_chord if knows_landing else not over_chord):
+    if strong and chord_pcs and (under_chord if knows_landing else not over_chord):
         # the chord weighting holds the song's chord-tone rate (a counted habit): for a moves table that knows nothing of
         # the landing, whenever the tune is not over its rate; for a table drawn by the beat and the tone left, which
         # carries the game's own approach to the chord (by step, in FFVI), only while the tune is under its rate (the
         # filters shift the chain's balance a little: 0.48 against FFVI's 0.56 with no weighting at all)
-        mc = sum(w for w, c in zip(weights, on_chord) if c)
-        mo = sum(w for w, c in zip(weights, on_chord) if not c)
-        if mc > 0 and mo > 0:                                # a side with no mass (the repeated note at a rate of none) is left as it is
-            weights = [w * (chord_rate / mc if c else (1 - chord_rate) / mo) for w, c in zip(weights, on_chord)]
-    return _weighted(rng, options, weights)
+        holds.append((on_chord, chord_rate))
+    if off_rate is not None:                                # the off-scale and the clashing moves' mass held to the song's drawn shares (round
+        holds.append((offs, off_rate))                      # 93), as the chord tones' is: the game's own rates, not bans. Held together with the
+    if clash_rate is not None:                              # chord's share, not before it: fitted first, the chord weighting had thinned the
+        holds.append((clashes, clash_rate))                 # off-scale moves again (a tune drawn at 0.30 off the scale on the beat reached 0.10)
+    return _weighted(rng, options, hold_shares(weights, holds))
 
 
 def _chord_in_bar(song: rhythm.Song, t: float):
@@ -598,7 +628,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            key: tuple | None = None, hold=(), reference=None, articulation: str = "mixed", echo_habit: str = "mixed",
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
-           letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None) -> tuple[list, list, list]:
+           letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None,
+           off_scale: dict | None = None, clash_rates: dict | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -606,9 +637,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     that comes back is re-rooted on the bar's chord and its moves are scale
     steps, a sequence. A new cell's rhythm comes from the melody's bar
     table and its notes from the moves table, each move drawn among the
-    moves that fit: the register, the scale on the beat, off the chords'
-    semitones, chord tones on the beat at the games' rate, the phrase's
-    contour. Over the bars, phrases of PHRASE bars on the form: their
+    moves that fit (the register, the phrase's contour), chord tones on
+    the beat at the song's rate and, since round 93, notes off the scale
+    and a semitone from a sounding part at the song's drawn shares (the
+    `off_scale` and `clash_rates` words, by the beat; bans without them),
+    the shares held together. Over the bars, phrases of PHRASE bars on the form: their
     relation (repeated, moved, answered, new), contour and ending drawn;
     the last note of a phrase lands on the ending's degree; a phrase that
     copies a game's (the reference set) is drawn again. Lengths from the
@@ -633,8 +666,13 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     `bounds_at`: bar -> the register the line is written in there, where
     the token song's line changes instrument by stretch (round 92); the
     line enters a new stretch's register by octaves and every move, recall
-    and ending is drawn inside it. Returns [(start, end, midi)], the bars'
-    rhythms and a log."""
+    and ending is drawn inside it. `off_scale`: {"strong": share, "weak":
+    share}, the song's share of tune notes off the natural scale by the
+    beat (the off_scale word, round 93), held by draw_move in place of the
+    STRONG_SCALE ban; `clash_rates`: the same for onsets a semitone from a
+    sounding part (the clashes word), in place of the CLASH ban, the bass
+    counted among the sounding parts. Returns [(start, end, midi)], the
+    bars' rhythms and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -644,6 +682,30 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     envelope_of = figures_mod.free_envelope(habit)
     clear_of = rhythm.UPPER + ((R.MELODY, R.COUNTER) if role != R.MELODY else ())   # a second counter-line stays clear of the first too
     tune_line = sorted(n for r in clear_of for n in song.notes.get(r, []))
+    clash_line = sorted(n for r in clear_of + (R.BASS,) for n in song.notes.get(r, [])) if clash_rates else tune_line   # with the clashes word the
+    off_run = {"strong": [0, 0], "weak": [0, 0]}          # bass counts too (round 93); the tune's notes off the scale by the beat, and all of them
+    clash_run = {"strong": [0, 0], "weak": [0, 0]}        # its onsets a semitone from a sounding part, and its onsets under one, so far
+
+    def rate_for(rates, strong: bool):
+        return rates.get("strong" if strong else "weak") if rates else None
+
+    def over_rate(run, rates, strong: bool) -> bool:
+        pl = "strong" if strong else "weak"
+        r = rates.get(pl) if rates else None
+        return r is not None and run[pl][1] > 0 and run[pl][0] / run[pl][1] > r
+
+    def adds_over(a: float, positions: list, pitches: list) -> int:
+        """How many of a recalled cell's notes, placed so, would add to a share the tune is already over (round 93): a note
+        off the scale while the tune is over the off_scale word's share for its beat, an onset a semitone from a sounding
+        part while over the clashes word's; none without the words. A recall's placement keeps these down, after the chord."""
+        n = 0
+        for p, m in zip(positions, pitches):
+            strong = abs(p - round(p)) < rhythm.NEAR
+            if off_scale and int(round(m)) % 12 not in scale and over_rate(off_run, off_scale, strong):
+                n += 1
+            if clash_rates and over_rate(clash_run, clash_rates, strong):
+                n += int(any((int(round(m)) - pc) % 12 in upper_mod.CLASH for pc in upper_mod.sounding_pcs(clash_line, a + p)))
+        return n
     rate = chord_rate if chord_rate is not None else CHORD_ON_BEAT
     on_beat = [0, 0]                                        # the tune's strong-beat notes on the chord, and all of them, so far
     moves_table = models["moves"].table if hasattr(models["moves"], "table") else models["moves"]
@@ -896,6 +958,13 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if here is not None:
                 on_beat[1] += 1
                 on_beat[0] += int(round(m)) % 12 in {(here[0] + i) % 12 for i in harmony.SHAPES.get(here[1], harmony.SHAPES[""])}
+            place = "strong" if abs(p - round(p)) < rhythm.NEAR else "weak"   # the running shares the words are held to (round 93)
+            off_run[place][1] += 1
+            off_run[place][0] += int(round(m)) % 12 not in scale
+            pcs = upper_mod.sounding_pcs(clash_line, a + p)
+            if pcs:
+                clash_run[place][1] += 1
+                clash_run[place][0] += any((int(round(m)) - pc) % 12 in upper_mod.CLASH for pc in pcs)
         return cell
 
     def new_cell(k: int, positions: list, shape: str, phrase_start_midi: float | None, a0: float, b0: float) -> Cell:
@@ -913,9 +982,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
             strong = abs(p - round(p)) < rhythm.NEAR
             tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
-            step = draw_move(moves_table, move, mode, midi, rng, reg, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
+            step = draw_move(moves_table, move, mode, midi, rng, reg, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(clash_line, t), aim,
                              step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
-                             under_chord=wants_chord())
+                             under_chord=wants_chord(), off_rate=rate_for(off_scale, strong), off_over=over_rate(off_run, off_scale, strong),
+                             clash_rate=rate_for(clash_rates, strong), clash_over=over_rate(clash_run, clash_rates, strong))
             midi = midi + step
             move = f"{step:+d}" if step else "0"
             pitches.append(midi)
@@ -994,8 +1064,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 low, high = reg
                 anchor_ = midi if midi is not None else (low + high) / 2
                 first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor_), m), default=int(round(anchor_)))
-                ms = fold_cell(from_intervals(first, steps), reg)   # the half's intervals exact (round 41), the whole half folded in
                 pos_h = [lo + p for p in ps]
+                if adds_over(a, pos_h, from_intervals(first, steps)):   # over a word's share: the half moved within a third, as a bar is (round 93)
+                    first = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
+                                key=lambda x: (-adds_over(a, pos_h, from_intervals(x, steps)), -abs(x - first), -x), default=first)
+                ms = fold_cell(from_intervals(first, steps), reg)   # the half's intervals exact (round 41), the whole half folded in
             else:
                 pos_h, ms = [p for p in positions if (p < half) == (h == 0)], []
                 for p in pos_h:
@@ -1004,9 +1077,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     aim = (phrase_start_midi + targets[third]) if phrase_start_midi is not None else None
                     strong = abs(p - round(p)) < rhythm.NEAR
                     tone = phrases.against_chord(midi, t_from, song) if t_from is not None else "no chord"
-                    step = draw_move(moves_table, move, mode, midi, rng, reg, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(tune_line, t), aim,
+                    step = draw_move(moves_table, move, mode, midi, rng, reg, scale, strong, _chord_in_bar(song, t), upper_mod.sounding_pcs(clash_line, t), aim,
                                      step_habit, repeat_habit, rate, repeat_rate=rep_rate, over_repeats=over_repeats(), over_chord=over_chord(), tone=tone,
-                                     under_chord=wants_chord())
+                                     under_chord=wants_chord(), off_rate=rate_for(off_scale, strong), off_over=over_rate(off_run, off_scale, strong),
+                             clash_rate=rate_for(clash_rates, strong), clash_over=over_rate(clash_run, clash_rates, strong))
                     midi = midi + step
                     move = f"{step:+d}" if step else "0"
                     ms.append(midi)
@@ -1060,13 +1134,15 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             return n
 
         pitches = build(first)
-        if wants_chord() and any(_chord_in_bar(song, a + p) is not None and abs(p - round(p)) < rhythm.NEAR for p in cell.positions):
+        snap = wants_chord() and any(_chord_in_bar(song, a + p) is not None and abs(p - round(p)) < rhythm.NEAR for p in cell.positions)
+        if snap or adds_over(a, cell.positions, pitches):
             # the sequence lands its beats on the new chord as a player's does: the whole cell moved to the nearest scale
             # note within a third that puts the most strong beats on the chord. No single note is bent, so the cell's
             # intervals, and with them the tune's steps, stay what the table drew (bending one note had cost the melody
-            # a point of steps and the counter-line eleven).
+            # a point of steps and the counter-line eleven). Since round 93 the same move, after the chord, keeps the cell
+            # from adding to a share the tune is over: off the scale, or a semitone from a sounding part (the words' draws).
             best = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
-                       key=lambda x: (on_chord(build(x)), -abs(x - first), -x), default=first)
+                       key=lambda x: (on_chord(build(x)) if snap else 0, -adds_over(a, cell.positions, build(x)), -abs(x - first), -x), default=first)
             pitches = build(best)
         pitches = fold_cell(pitches, (low, max(high, room_high) if bounds_at is None else high))   # the part's whole room (round 49): folded into the phrase's room under the
         last_midi = float(pitches[-1]) if pitches else last_midi    # arc, a wider recalled cell had been clamped and bent
@@ -1167,7 +1243,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             for attempt in range(COPY_TRIES):
                 phrase_cells, start_midi = [], aim0
                 snapshot = (dict(played), dict(by_key), last_midi, last_move, dict(rhythm_played), rhythm_prev, prev_cell, dict(source), dict(choices), list(on_beat), list(moves_seen),
-                            Counter(pairs_played), dict(pair_cells), prev_pair, prev_pair_key, prev_pair_at, Counter(pair_kinds), Counter(source_kinds))
+                            Counter(pairs_played), dict(pair_cells), prev_pair, prev_pair_key, prev_pair_at, Counter(pair_kinds), Counter(source_kinds),
+                            {pl: list(v) for pl, v in off_run.items()}, {pl: list(v) for pl, v in clash_run.items()})
                 group_plan = None
                 for i, k in enumerate(live):
                     if i % rhythm.PAIR == 0:                # a new pair: the pair urn (round 40) says the pair before's again, an earlier pair, or new
@@ -1232,6 +1309,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 moves_seen[:] = snapshot[10]
                 pairs_played, pair_cells, prev_pair, prev_pair_key, prev_pair_at = Counter(snapshot[11]), dict(snapshot[12]), snapshot[13], snapshot[14], snapshot[15]
                 pair_kinds, source_kinds = Counter(snapshot[16]), Counter(snapshot[17])
+                for pl in off_run:
+                    off_run[pl][:] = snapshot[18][pl]
+                    clash_run[pl][:] = snapshot[19][pl]
             else:
                 log.append(f"phrase at bar {w[0]}: a game's phrase drawn {COPY_TRIES} times running; the last kept")
         # the ending: the phrase's last note onto the drawn degree, where the last bar is a new cell (round 49: a recalled last
@@ -1258,6 +1338,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         log.append(f"strong-beat notes on the chord: {on_beat[0]}/{on_beat[1]} ({on_beat[0] / on_beat[1]:.2f}; the song's rate {rate:.2f})")
     if moves_seen[1]:
         log.append(f"repeated notes: {moves_seen[0]}/{moves_seen[1]} ({moves_seen[0] / moves_seen[1]:.2f}; the song's rate {rep_rate:.2f})")
+    for name, run, rates in (("off the scale", off_run, off_scale), ("a semitone from a sounding part", clash_run, clash_rates)):
+        if rates and any(v[1] for v in run.values()):          # the words' shares held (round 93)
+            log.append(f"{name}: " + ", ".join(f"{pl} {v[0]}/{v[1]} ({v[0] / v[1]:.2f}; the song's rate {rates[pl]:.2f})" for pl, v in run.items() if v[1]))
     # the notes, with their lengths from the articulation table
     notes = []
     for k in sorted(cells):

@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (55)
+### the plan, drawn once a song (57)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -49,7 +49,7 @@ flowchart LR
 | `cell_handoffs` | part, habit, place | hand_off_cells | - | a tune's half-bar cell taken up by another part in a later bar: which part and how many bars on, by the song's echo habit and the cell's place (theme or other) |
 | `part_speeds` | part, habit | _plan_speeds | `gap_sounds`, `part_samples`, `sample_lengths` | a part's fastest bars (notes a second, a class), by the part and its habit's density: what its sample is fitted to for speed before the part is written |
 | `registers` | part | _plan_once | - | the register a part plays in (midi low-high) |
-| `keys` | part | _plan_once | `cadences`, `chords`, `contour_sizes`, `contours`, `endings`, `moves`, `peaks`, `phrase_shifts`, `relations` | a song's key, tonic and mode |
+| `keys` | part | _plan_once | `cadences`, `chords`, `contour_sizes`, `contours`, `endings`, `moves`, `off_scale`, `peaks`, `phrase_shifts`, `relations` | a song's key, tonic and mode |
 | `tempos` | part, tempo | _plan_once | `bass`, `bass_habits`, `counter_figures`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `periods`, `rhythm`, `second_figures` | a song's tempo, to five beats a minute, by its class (the balance token's since round 54) |
 | `sizes` | part | plan_form | - | how many parts a song's form has |
 | `length_habits` | part | plan_form | `cadences`, `part_entries`, `periods` | a song's part-length habit (short, medium, long), drawn once a song |
@@ -68,6 +68,8 @@ flowchart LR
 | `part_entries` | part, habit, form, length | plan_texture | - | where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class |
 | `drum_group_habits` | part, classes, habit | _plan_once | `bass`, `cell_handoffs`, `changes`, `drums`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream |
 | `chord_tones` | part | _plan_once, write | - | the share of the tune's notes on a beat that are chord tones, drawn once a song |
+| `off_scale` | part, mode, place | _plan_once, write | - | the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban |
+| `clashes` | part, place | _plan_once, write | - | the share of the tune's onsets under another part's note that sit a semitone from it, by the beat, drawn once a song and held in place of a ban |
 | `repeat_rates` | part | _plan_once | - | the share of the tune's moves that repeat the note, drawn once a song |
 | `tune_grain` | part, habit | _plan_once | - | the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms |
 | `attacks` | part | attack_for | - | whether a part's line plays a struck sample (its strike over 6 dB above its loop body: a sound that decays) or a sustaining one, by the part; a built-in set's pool rule matches the drawn class (FFVI's tunes: sustaining in 63 of 66 songs) |
@@ -216,6 +218,8 @@ flowchart LR
     part_entries["part_entries"]
     drum_group_habits["drum_group_habits"]
     chord_tones["chord_tones"]
+    off_scale["off_scale"]
+    clashes["clashes"]
     repeat_rates["repeat_rates"]
     tune_grain["tune_grain"]
     attacks["attacks"]
@@ -275,6 +279,7 @@ flowchart LR
   habits -- habit --> part_textures
   habits -- habit --> tune_grain
   keys -- mode --> chords
+  keys -- mode --> off_scale
   length_habits -- length --> part_entries
   lengths -- length --> part_entries
   letters -- form --> part_entries

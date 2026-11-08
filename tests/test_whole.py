@@ -1119,6 +1119,73 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(whole.sample_of(samples, "melody", 0, {}, 1)[0], "sm")                     # the line keeps its own
         self.assertTrue(any(l.startswith("melody's voice 2 by stretch") for l in q.log), q.log[-4:])
 
+    def test_off_the_scale_and_clashes_are_counted_words_the_tune_holds(self):
+        """Round 93: the off_scale word (a part's share of notes off the song's natural scale, by part, mode and beat) and the
+        clashes word (the tune's share of onsets a semitone from a sounding part, by beat) are counted on the readings,
+        drawn once a song for the tune on their own streams, and held by the melody writer in place of the STRONG_SCALE and
+        CLASH bans: an off-scale move on a beat is barred without the word, takes the drawn share of the mass with it, and
+        none while the tune is over the share; a clashing move the same under the clashes word."""
+        import importlib
+        from collections import Counter
+        from bitcomposer.translate import tables
+        tune_mod = importlib.import_module("bitcomposer.translate.writer.tune")
+        upper_mod = importlib.import_module("bitcomposer.translate.writer.upper")
+        s = self._song()                                                                      # C major: the scale C D E F G A B
+        s.notes["melody"] = [(4.0 * i + x, 0.9, m, "m") for i in range(8) for x, m in ((0.0, 67.0), (1.0, 70.0), (2.0, 71.0), (3.0, 72.0))]   # Bb off the scale, a quarter
+        s.notes["melody"] += [(4.0 * i + 0.5, 0.4, 66.0, "m") for i in range(8) for _ in (0,)] + [(4.0 * i + 2.5, 0.4, 69.0, "m") for i in range(8)]   # weak: F# off, A on
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        units = rhythm.off_scale_units([s])
+        by = {(u.values["part"], u.values["mode"], u.values["place"]): u.outcome for u in units}
+        self.assertEqual(by[("melody", "major", "strong")], "0.25")                           # 8 of 32 strong-beat notes off the scale
+        self.assertEqual(by[("melody", "major", "weak")], "0.50")                             # 8 of 16 weak ones
+        self.assertEqual(by[("bass", "major", "strong")], "0.00")
+        self.assertNotIn(("bass", "major", "weak"), by)                                       # under sixteen notes: no unit
+        clashes = {(u.values["part"], u.values["place"]): u.outcome for u in rhythm.clash_units([s])}
+        self.assertEqual(clashes, {("melody", "strong"): "0.50"})                                         # the bass's C sounds under the tune's G and B on beats 1 and 3: the B clashes
+        # the plan: the words drawn once a song on their own streams, every other draw as it was
+        units = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        off = tables.Table(("part", "mode", "place"), "off_scale", votes=tables.SHARES).fit(
+            units("off_scale", "0.20", part="melody", mode="minor", place="strong") + units("off_scale", "0.25", part="melody", mode="minor", place="weak")
+            + units("off_scale", "0.10", part="melody", mode="major", place="strong") + units("off_scale", "0.10", part="melody", mode="major", place="weak")
+            + [tables.Unit(f"c{i}{mode}{pl}", "g", o, {"part": "counter", "mode": mode, "place": pl}) for i in range(3) for mode in ("major", "minor") for pl, o in (("strong", "0.15"), ("weak", "0.05"))])
+        cl = tables.Table(("part", "place"), "clashes", votes=tables.SHARES).fit(units("clashes", "0.06", part="melody", place="strong") + units("clashes", "0.08", part="melody", place="weak")
+                                                                                 + units("clashes", "0.04", part="counter", place="strong") + units("clashes", "0.00", part="counter", place="weak"))
+        token = "melody=main:64-84:0.9:1:0.7:::slead counter=half:55-67:0.8:1:0.5:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units("balance", token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan({**bal, "off_scale": off, "clashes": cl}, 7, "g")
+        q = whole.plan(bal, 7, "g")
+        x = p.extras["melody"]
+        self.assertEqual(x["off_scale"], {"strong": 0.20 if p.mode == "minor" else 0.10, "weak": 0.25 if p.mode == "minor" else 0.10})
+        self.assertEqual(x["clashes"], {"strong": 0.06, "weak": 0.08})
+        self.assertEqual(p.extras["counter"]["off_scale"], {"strong": 0.15, "weak": 0.05})       # the counter-line's own draws
+        self.assertEqual(p.extras["counter"]["clashes"], {"strong": 0.04, "weak": 0.0})
+        self.assertIsNone(q.extras["melody"].get("off_scale"))
+        self.assertEqual((p.chords, p.textures, p.habits, p.parts, x["chord_tones"]), (q.chords, q.textures, q.habits, q.parts, q.extras["melody"]["chord_tones"]))   # own streams
+        # draw_move: from E in C major, in a register of an octave, every move the table smooths in is a landing; the off-scale
+        # ones (C#, Eb, F#, G#, Bb) are barred on a beat without the word, and take the drawn share of the draws with it
+        moves = tables.Table(("part",), "moves", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", o, {"part": "melody"}) for i in range(3) for o in ("+1", "+2", "+3", "-1", "-2")])
+        major = {0, 2, 4, 5, 7, 9, 11}
+        landings = lambda strong, sounding, **kw: Counter((64 + tune_mod.draw_move(moves, "+1", "major", 64.0, random.Random(i), (60, 72), major, strong, None, sounding, None, **kw)) % 12 for i in range(300))   # noqa: E731
+        off_of = lambda c: sum(n for pc, n in c.items() if pc not in major)   # noqa: E731
+        self.assertEqual(off_of(landings(True, set())), 0)                                   # no word: off the scale barred on the beat (STRONG_SCALE)
+        self.assertGreater(off_of(landings(False, set())), 0)                                # and free off it
+        self.assertEqual(off_of(landings(True, set(), off_rate=0.3, off_over=True)), 0)      # over the share: barred
+        under = off_of(landings(True, set(), off_rate=0.3))
+        self.assertTrue(60 < under < 120, under)                                             # under it: the off-scale landings take the share (0.3 of 300)
+        self.assertEqual(off_of(landings(True, set(), off_rate=0.0)), 0)                     # a share of none: never
+        # held together with the chord-tone rate (C major's tones, half the mass), not thinned by it
+        with_chord = Counter((64 + tune_mod.draw_move(moves, "+1", "major", 64.0, random.Random(i), (60, 72), major, True, (0, ""), set(), None, chord_rate=0.5, off_rate=0.3)) % 12 for i in range(300))
+        self.assertTrue(60 < off_of(with_chord) < 120, off_of(with_chord))
+        chord_hits = sum(n for pc, n in with_chord.items() if pc in (0, 4, 7))
+        self.assertTrue(120 < chord_hits < 180, chord_hits)
+        # a clashing move: the sounding part holds F (pc 5), so E (the repeated note) and F# sit a semitone from it
+        clash_of = lambda c: sum(n for pc, n in c.items() if (pc - 5) % 12 in (1, 11))   # noqa: E731
+        self.assertEqual(clash_of(landings(False, {5})), 0)                                  # no word: barred (CLASH)
+        with_word = clash_of(landings(False, {5}, clash_rate=0.3))
+        self.assertTrue(60 < with_word < 120, with_word)                                     # under the clashes share: drawn at the share
+        self.assertEqual(clash_of(landings(False, {5}, clash_rate=0.3, clash_over=True)), 0) # over it: barred
+        self.assertEqual(upper_mod.CLASH, (1, 11))
+
     def test_the_second_voices_levels_are_the_balance_tokens_too(self):
         """The balance token carries, for a part with two voices or more, each voice beyond the line's level over the line
         voice's in tenths (the layer_levels unit, capped at 1.5; the busiest voice first) as a sixth field; the plan plays a
