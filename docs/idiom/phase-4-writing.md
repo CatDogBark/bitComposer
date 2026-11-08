@@ -6258,3 +6258,141 @@ tones.
 fills) would give Umaro's accompaniment its decoration back; the reader's
 relation runs could break where the relation changes inside a sample run;
 the narrow-range leftovers. Then the open items' third entry.
+
+### Round 96: a chord part's line leaves the chord as the game's does, the counter's chord tones, a mark's nearest tone, a stretch's own edge (2026-11-07, on the owner's go after the open-items discussion)
+
+**Why.** The owner's standing complaint, First Meridian Return's
+accompaniment (seed 254, Umaro's token), had one cause left after round
+95: Umaro's accompaniment decorates its pecked chord tone with neighbors
+and fills, and the written line held the voicing's tones alone. Measured
+first (nonchord.py, nonchord_line.py, offchord60b.py, nct_kinds.py: FFVI's
+68 readings against 60 written songs, the exact chord spans): FFVI's
+accompaniment line plays a note off the chord sounding on a quarter of
+its notes (the songs' median 0.25, quartiles 0.12 to 0.38; pooled 0.27),
+in 768 of its 1,447 bars; the written line on 0.07. Not neighbors,
+mostly: of FFVI's off-chord accompaniment notes a leap to the tone is
+0.39, a repeat of the note before 0.22 (ostinato tones through a chord
+change), a step in or out 0.38 (passing 0.06, a returning neighbor 0.05);
+0.81 diatonic; the degrees over the root the ninth 0.17, the fourth
+0.12, the sixth 0.11, the flat sixth 0.11, the flat seventh 0.09. By
+song the share spreads from none to 0.72 (10 songs under a tenth, 29 to
+0.3, 19 over), and an off-chord onset keeps the previous one's degree
+within the bar 0.52 of the time. The harmony line sits at 0.14 (FFVI)
+against 0.13 (written), the arp at 0.14 (three songs; the minor key's
+raised seventh 0.74 of them). Two more gaps fell out of the same
+measure. The written counter's line left the chord on 0.65 of its notes
+against FFVI's 0.44 (on the beat 0.63 against 0.40): its notes are the
+voice words' intervals from the tune with no chord word, where the tune
+holds its `chord_tones` draw. And the written bass on 0.26 against 0.15:
+by mark, its 7 marks played a note off the chord 81 % of the time, its 3
+marks 41 %, its s marks 91 %, because `writer.tone` realized a mark the
+chord lacked as the tone meant (a 7 over a triad, an s over a plain
+triad: a figure counted over another chord, or a voicing recalled onto
+this one), where the chord reader marks a 7 only where the chord has
+one. The upper parts' voicings share `tone`, so the written
+accompaniment's 0.07 was those marks too. Last, round 95 had left the
+reader's relation runs a sample run long: Umaro's voice doubles the tune
+two octaves up for five bars and then plays a run of its own on the same
+sample, and the whole run read as the double (relsplit.py: 9 of FFVI's
+166 double or parallel stretches end or begin with two or more bars that
+follow nothing, 138 notes).
+
+**Built.** Three counted words and a wall. `tone_figures`
+(`rhythm.tone_figure_units`): each bar of a chord part's line as its
+onsets' tone classes against the chord sounding at each, `c` a tone of
+the chord and `x` a tone off it (`c c c x`), by the part, the song's
+tier, the onset count and the line's own pattern (1,782 FFVI units).
+`tone_tiers` (`tone_tier_units`): how much of the line leaves the chord
+over the song, rare under a tenth of its onsets, some under 0.3, many
+(`TONE_TIERS`; 71 units), drawn once a song a part on an own stream
+(`whole:{seed}:tone_tier:{part}`), the tier the figures are drawn
+under. `tone_degrees` (`tone_degree_units`): the degree an off-chord onset
+plays as semitones over the chord's root, by the part, the chord's shape
+(which decides which degrees are off it) and the bar's previous
+off-chord degree, START at the first (2,901 units). The upper writer
+(`writer.upper`, `tone_figure_for`, `tone_degree_for`, `off_tone`) draws
+the figure under the line's bar as a second voice's mask is drawn (never
+below the part, the tier and the onset count; read around the onsets
+where the drawn count differs) and, at each `x` onset of the line voice,
+the degree chained on the bar's previous, and plays the note at that
+degree nearest the voicing tone it replaces; the voices beside the line
+see the note played; all on an own stream (`{seed}:{part}:tones`), so
+every other draw stands. Two cuts: the first drew the figure from the
+pooled bars and one degree a bar, and every written song sat at the
+pooled 0.28 (FFVI's spread from none to 0.72) with 'repeat' 0.42 of its
+off-chord notes (FFVI 0.22); the tier and the chain are the second. The
+clashes word stands over a tone the figure asks for (`held`: a part over
+its share for the beat gives the tone to the voicing). The `chord_tones`
+word is counted for the counter-line too (`chord_tone_habit_units`,
+`CHORD_TONE_PARTS`; FFVI's counters 0.6 of their strong beats on the
+chord at the median, as its tunes), drawn for it on an own stream
+(`whole:{seed}:chord_tones:counter`, the melody's draw as it was) and
+held by `writer.counter` through `beside_pitch`: on a beat, while the
+line is not over the share, the interval entries, and the moves it takes
+alone, landing on the chord take the share of the draw's mass
+(`hold_shares`), as the tune's draw_move holds a table that knows nothing
+of the landing. `writer.tone` plays a mark the chord lacks as the chord's
+own tone nearest the one meant, the lower at a tie (a 7 over a triad the
+root, a 3 over a bare fifth the fifth, an s over a plain triad the
+third). And `rhythm.relation_words` splits a double or parallel stretch's
+edge bars that follow nothing bar by bar, two bars and eight notes or
+more, into a stretch of their own (`_split_own_edges`,
+`RELATION_EDGE_BARS`): Umaro's voice reads `ox12>pm+24x5>o`; 7 of FFVI's
+128 relation words changed (Umaro, Kefka, Mog, Returners, Another World
+of Beasts, Ending Theme part 1, The Wedding Waltz-Duel part 1). No
+re-read; pack4 refit (104 tables; `pack.json.before-r96`), the vocabulary
+shipped, the map regenerated. Tests (four): the units and the writer on a
+synthetic song (the figure, the tier, the chained degree, the voices
+beside the line, the log, the words absent), the nearest tone (and a
+triad voicing's 7 stacked as the root an octave up), the counter's hold
+(a table of halves held to everything) and the plan's own draw, the edge
+split (and a whole stretch, and a one-bar edge, left whole). Suite 433
+(1 skip).
+
+**Measured** (sixty seeds against FFVI, the line voice, the exact chord
+spans). The accompaniment line's off-chord share 0.07 to a median 0.35
+(FFVI 0.25; the figure's own onsets 0.25 of the line's, the rest the
+theme the part carries: Restless Causeway Journey's accompaniment plays
+the tune's cells for 186 of its 214 notes), by tier 0.44, 0.33 and 0.07
+over 22, 25 and 8 songs against FFVI's 0.45, 0.23 and 0.04 over 19, 29
+and 10; its off-chord notes' kinds a leap 0.36 (FFVI 0.39), a repeat 0.18
+(0.22), a step out 0.18 (0.17), a step in 0.14 (0.10), a neighbor 0.09
+(0.05), passing 0.04 (0.06); bars with any 832 of 1,453 (FFVI 768 of
+1,447). The harmony 0.13 (0.14), the arp 0.03 (0.14: its sevenths, a
+semitone from the root, given to the voicing by its clashes share, 27 of
+76 onsets). The counter's strong-beat chord tones 0.37 to 0.51 (FFVI
+0.6), its line off the chord on 0.54 (0.44); the hold is a floor, so a
+low draw is met part way (The Sleeping Observatory at a draw of 0.10
+plays 0.44). The bass's 7 marks off the chord 187 of 232 to 6 of 235,
+its 3 marks 134 of 324 to 31, its s marks 68 of 75 to 3; its line 0.26 to
+0.24 (on the beat 0.21 to 0.18), its marks at FFVI's shares (the passing
+mark 0.19 of tokens against 0.17, the root 0.56 against 0.57), its
+off-chord share pooled 0.18 against 0.16, by song a median 0.24 against
+0.15: FFVI's basses are mostly near pure with a few walking ones, the
+written ones all near the pooled rate (a LIMITS entry; a tier as the
+chord parts' is the fuller word). The melody unchanged (0.50 on the
+beat). Plans: 400 of 400 seeds keep their token song and every draw but
+the new words' own (compare89: the plan logs differ in the new fields
+alone). Vocabulary checks pass.
+
+**Song Check 79** (https://claude.ai/artifact/UEMt55HM1ykMzzYBxauaeh): six pairs, the same six seeds as Song Checks
+74 to 78 (255, 78, 157, 41, 150, 254), the same plan both sides; before
+is round 95 (the dev checkout at 078f18a and the vocabulary before this
+round), after round 96. The accompaniment lines leave the chord by their
+tiers: The Sleeping Observatory rare (one onset; its voicings' sevenths
+over triads gone, 0.28 to 0.09), The Still Wharf, Last Vault and Arcade
+of Rain many (0.16 to 0.40, 0.12 to 0.46, 0.01 to 0.29), The Terminal of
+Glass and First Meridian Return some (0.01 to 0.20, 0.08 to 0.37); First
+Meridian Return's accompaniment voice follows the tune two octaves up for
+five bars and then plays its own run; the counters hold their draws
+(Arcade of Rain 0.86 at 0.9, The Still Wharf 0.42 at 0.5, First Meridian
+Return 0.56 at 0.7); The Still Wharf's bass comes down from 0.46 to 0.27
+off the chord with its marks. The owner listens; the gate is the count
+above.
+
+**Open.** A neighbor's return and a passing tone's direction as a word
+(the chained degree gives steps only where it happens to sit a step from
+the chord tones around it); the arp's sevenths against its clashes
+share; the bass's per-song spread (a tier); the counter's chord tones
+off the beat; a relation changing in the middle of a sample run. Then the
+open items' third entry, the doubling voice's intervals by the chord.
