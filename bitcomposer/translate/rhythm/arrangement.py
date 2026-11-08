@@ -735,6 +735,8 @@ def _split_own_edges(song: readings_mod.Song, rows: list, pitched: dict, v) -> l
 
 
 PARALLEL_SEMITONES = 24              # a parallel voice's interval to its line is counted within two octaves (round 97)
+LEAD_ORDER = (R.MELODY, R.COUNTER, R.HARMONY, R.ACCOMP, R.ARP, R.BASS)   # who leads when two lines run parallel: the tune, then the counter, then the
+                                     # chord parts, then the bass; the voice further down follows (parallel_interval_units counts each pair once)
 
 
 def parallel_interval_units(songs) -> list:
@@ -742,7 +744,10 @@ def parallel_interval_units(songs) -> list:
     split off) as a unit (round 97): its outcome the voice's interval to the line's note in semitones, its values the
     stretch's nominal interval in scale steps (roles.generic of the word's semitones: 2 a third up, -5 a sixth down), the
     tone class of the line's note against the chord sounding (root, third, fifth, seventh, sus, other), the voice's part
-    and the interval before it in the stretch (START at the first). The writer follows a parallel stretch by it
+    and the interval before it in the stretch (START at the first). The voice followed is a part's line voice, as the
+    writer's parallel voice follows a line; a line that reads as parallel to its own harmony voice is no unit, and two
+    lines parallel to each other count once, the one further from the lead following (LEAD_ORDER: the tune leads, then
+    the counter, the chord parts, the bass). The writer follows a parallel stretch by it
     (whole.parallel): FFVI's parallel voice sits at its nominal semitones on 0.61 of its shared onsets and on a chord
     tone on 0.62 (123 stretches, 10,057 onsets), where the line again in the scale, as the writer had it, matches the
     game's note on 0.31 of them and lands on the chord on 0.42: over the chord's third a third up is a major third or a
@@ -754,12 +759,20 @@ def parallel_interval_units(songs) -> list:
                    for v, (role, ns) in s.voice_notes.items() if role != R.DRUMS}
         pitched = {v: ns for v, ns in pitched.items() if ns}
         roles_of = {v: role for v, (role, _) in s.voice_notes.items()}
+        lines = set()                                       # each part's line voice: the writer's parallel voice follows a line
+        for role in set(roles_of.values()):
+            voices = cells_mod.part_voices(s, role)
+            if voices:
+                lines.add(cells_mod.line_voice(voices, role, s))
+        lead = {r: i for i, r in enumerate(LEAD_ORDER)}
         for v, rows in R.voice_relations(pitched).items():
             if len(pitched[v]) < R.SECOND_NOTES:
                 continue
             for a, b, key, kind, of, semi, n in _split_own_edges(s, rows, pitched, v):
-                if kind != "parallel" or of is None or of not in pitched or semi is None:
+                if kind != "parallel" or of is None or of not in pitched or of not in lines or semi is None:
                     continue
+                if v in lines and lead.get(roles_of.get(v), 9) <= lead.get(roles_of.get(of), 9):
+                    continue                                # two lines parallel to each other: the one further from the lead follows (once)
                 line = pitched[of]
                 starts = [x[0] for x in line]
                 nominal, previous = str(R.generic(semi)), readings_mod.START
