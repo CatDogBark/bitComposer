@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (58)
+### the plan, drawn once a song (59)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -70,6 +70,7 @@ flowchart LR
 | `chord_tones` | part | _plan_once, write | - | the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer |
 | `off_scale` | part, mode, place | _plan_once, write | - | the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban |
 | `clashes` | part, place | _plan_once, write | - | a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw |
+| `parallel_intervals` | interval, tone, part, previous | parallel | - | where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones from the line's note off the chord), by the stretch's nominal interval in scale steps, the tone class of the line's note against the chord, the part and the landing before: the writer's parallel voice lands where the game's does, on the chord, instead of the line again in the scale (round 97) |
 | `tone_tiers` | part | _plan_once | `tone_figures` | how much of a chord part's line leaves the chord over the song (rare: under a tenth of its onsets, some: under 0.3, many), drawn once a song a part on an own stream: the tier its tone figures are drawn under (round 96) |
 | `repeat_rates` | part | _plan_once | - | the share of the tune's moves that repeat the note, drawn once a song |
 | `tune_grain` | part, habit | _plan_once | - | the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms |
@@ -223,6 +224,7 @@ flowchart LR
     chord_tones["chord_tones"]
     off_scale["off_scale"]
     clashes["clashes"]
+    parallel_intervals["parallel_intervals"]
     tone_tiers["tone_tiers"]
     repeat_rates["repeat_rates"]
     tune_grain["tune_grain"]

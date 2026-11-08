@@ -416,7 +416,9 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **layers** — what each voice of a part beside its line does, by its rank
   (the busiest first): doubling at an interval, alternating, or apart (how
   far off, how dense). Drawn once a voice for a part with two voices or
-  more: a doubling voice is written diatonically at the interval; an
+  more: a doubling voice is written at the interval, since round 97 by the
+  chord where the `parallel_intervals` word reaches (the line again in the
+  scale without it); an
   alternating or apart voice becomes a line of its own under the line's
   bars (`second_figures`), in its register, on a tone of the line's own
   voicing (drawn a span) with the line's lengths and the pair's second
@@ -1248,6 +1250,40 @@ The words are grouped by where the writing draws them, in the order the song is 
   against the line alone, without its move, had leapt five steps or more
   at 43 % of its onsets, FFVI 11 %; with the product 3 %.
   *`voice_moves`: shape (part, kind, place); drawn in bass, upper, write.*
+
+- **parallel_intervals** — where a parallel voice's note sits against the
+  chord at each onset it shares with the line it follows (round 97): the
+  chord tone it lands on (root, third, fifth, seventh, sus) or, off the
+  chord, its semitones from the line's note (`+4`, `-8`), by the stretch's
+  nominal interval in scale steps (`roles.generic` of the relation word's
+  semitones: 2 a third up, -5 a sixth down), the tone class of the line's
+  note against the chord, the voice's part and the landing before it in
+  the stretch. Counted over the voices that follow a part's line voice (a
+  line that reads as parallel to its own harmony voice is no unit; two
+  lines parallel to each other count once, the one further from the lead
+  following: the tune leads, then the counter, the chord parts, the
+  bass): 4,764 onsets in 60 stretches of 37 songs. The writer follows a
+  relation word's parallel stretch, and a layer word's doubling, by it
+  (`plan.parallel`, in place of the line again in the scale): a drawn
+  chord tone is placed as that tone of the written chord nearest the
+  line's note at the nominal interval, so a third over a major chord's
+  third is its fifth at +3 and over a minor chord's at +4, and the voice
+  rides the chord's quality; a chord part's voice holds the part's
+  clashes share as its other voices do. FFVI's parallel voice sits on a
+  chord tone on 0.65 of its shared onsets, 0.82 where the line's note is
+  on the chord (0.95 over the third, 0.76 over the root, 0.79 over the
+  fifth) and 0.40 where it is off it, at its nominal semitones on 0.58;
+  the line again in the scale, as the writer had it, lands on the chord on
+  0.48 of the game's onsets and matched the game's note on 0.31. Written
+  (sixty seeds), the parallel voices had sat on the chord on 0.33 of their
+  onsets (0.42 over a line on the chord, 0.22 off it); after this round
+  0.62 (0.77 and 0.41; over the root 0.78,
+  the third 0.92, the fifth 0.76), the rest the
+  written lines' own: they are off the chord on 0.41 of these onsets
+  where FFVI's are on 0.42, but a written tune's off-chord notes are its
+  recalls and passing tones where FFVI's parallel voices mostly ride
+  arpeggiated chord parts.
+  *`parallel_intervals`: shape (interval, tone, part, previous); drawn in parallel.*
 
 ## The upper parts (accompaniment, harmony, arp)
 
