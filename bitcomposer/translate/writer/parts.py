@@ -619,21 +619,27 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
 
 
 def tone(root: int, shape: str, mark: str, scale: set) -> int:
-    """The pitch class a figure's mark names in a chord (the module)."""
+    """The pitch class a figure's mark names in a chord (the module). A mark the chord lacks (a 7 over a triad, a 3 over a
+    bare fifth, an s over a plain triad: the figure was counted over another chord, or a voicing recalled onto this one)
+    plays the chord's own tone nearest the one meant, the lower at a tie (round 96: played as the tone meant, it was a
+    note off the chord, and such notes were 81 % of the written bass's 7 marks, 41 % of its 3 marks and 91 % of its s
+    marks, a seventh of its notes; the chord reader marks a tone 7 only where the chord has one)."""
     ivs = harmony.SHAPES.get(shape, harmony.SHAPES[""])
-    pick = lambda options, default: next((i for i in options if i in ivs), default)   # noqa: E731
     if mark == "3":
-        i = pick((3, 4), 4)
+        options, meant = (3, 4), 4
     elif mark == "5":
-        i = pick((7, 6, 8), 7)
+        options, meant = (7, 6, 8), 7
     elif mark == "7":
-        i = pick((10, 11), 10)
+        options, meant = (10, 11), 10
     elif mark == "s":
-        i = pick((5, 2), 5)
+        options, meant = (5, 2), 5
     elif mark == "+":
-        i = 2 if (root + 2) % 12 in scale else 10 if (root + 10) % 12 in scale else 2
+        return (root + (2 if (root + 2) % 12 in scale else 10 if (root + 10) % 12 in scale else 2)) % 12
     else:                                                   # R, r, ?
-        i = 0
+        return root % 12
+    i = next((i for i in options if i in ivs), None)
+    if i is None:                                           # the chord lacks the tone: its own tone nearest the one meant
+        i = min(ivs, key=lambda x: (min(abs(x - meant), 12 - abs(x - meant)), x))
     return (root + i) % 12
 
 
