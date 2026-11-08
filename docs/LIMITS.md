@@ -99,8 +99,11 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   chord parts in their voicing tones), which halved the counter's pairs
   (against the tune 0.06 of its strong onsets, FFVI 0.05; against the bass
   0.07, FFVI 0.05). The rest sits where no word is held: the tune's line
-  keeps a floor from its returning cells and endings (0.13 of its strong
-  onsets against the bass and chord parts, FFVI 0.08), a chord voicing of
+  keeps a floor from its phrase endings (the ending degree is the key's,
+  not the cadence chord's: 0.16 of phrase ends a semitone from the band,
+  FFVI 0.06) and its theme returns (0.13 of their strong onsets, FFVI's
+  returning bars 0.10), round 100 having brought its recalled bars to
+  FFVI's rate (the line's strong onsets 0.10 against 0.08), a chord voicing of
   one tone has no clear tone to go to (the accompaniment 0.08 against
   0.04), a parallel voice followed its line into the band's semitones
   until round 97 (a tune's parallel third in Whole 4 on 0.40 of its beats,
