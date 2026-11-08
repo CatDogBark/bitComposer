@@ -407,6 +407,37 @@ def chord_tone_habit_units(songs) -> list:
 
 TONE_FIGURE_PARTS = (R.HARMONY, R.ACCOMP, R.ARP)   # the chord parts (readings.UPPER, which this module cannot read at import): their line's tones against the chord (round 96)
 CHORD_TONE, OFF_TONE = "c", "x"          # a tone figure's letters: a tone of the chord sounding, a tone off it
+TONE_TIERS = ((0.1, "rare"), (0.3, "some"), (1.01, "many"))   # a song's share of a chord part's line onsets off the chord, as a tier (round 96:
+                                     # FFVI's 58 accompaniments spread from none to 0.72, 10 under a tenth, 29 to 0.3, 19 over)
+
+
+def tone_tier_of(share: float) -> str:
+    """The tier a song's off-chord share falls in (TONE_TIERS)."""
+    return next(name for top, name in TONE_TIERS if share < top)
+
+
+def _tone_bars(songs):
+    """Each chord part's line of each song as its bars' tone figures: [(song, part, [(bar start, struck, classes)])], the
+    bars no chord fits left out (tone_figure_units, tone_tier_units, tone_degree_units)."""
+    out = []
+    for s in songs:
+        for role in TONE_FIGURE_PARTS:
+            line = cells_mod.tune_line(s, role)
+            if len(line) < WORD_NOTES:
+                continue
+            bars = []
+            for k, a, struck in readings_mod.numbered_bars_of(s, role, line):
+                classes = tone_classes(struck, a, s.chords) if struck else None
+                if classes:
+                    bars.append((a, struck, classes))
+            if bars:
+                out.append((s, role, bars))
+    return out
+
+
+def _tone_share(bars) -> float:
+    """The share of a part's line onsets off the chord over its bars."""
+    return sum(c.count(OFF_TONE) for _, _, c in bars) / max(1, sum(len(c) for _, _, c in bars))
 
 
 def tone_classes(struck, start: float, chords) -> list | None:
@@ -422,49 +453,51 @@ def tone_classes(struck, start: float, chords) -> list | None:
     return out
 
 
+def tone_tier_units(songs) -> list:
+    """Each chord part's line of each song as a unit (round 96): its outcome the tier of its share of onsets off the chord
+    sounding (tone_tier_of: rare under a tenth, some under 0.3, many), its value the part. Drawn once a song for each
+    chord part on an own stream: the tier the part's tone figures are drawn under, so a song is pure or decorated as a
+    whole, as FFVI's are (the first cut had drawn every bar from the pooled table, and every written song sat at the
+    pooled 0.28 where FFVI's spread from none to 0.72)."""
+    return [tables.Unit(s.sid, s.game, tone_tier_of(_tone_share(bars)), {"part": role}) for s, role, bars in _tone_bars(songs)]
+
+
 def tone_figure_units(songs) -> list:
     """Each bar of a chord part's line as a unit (round 96): its outcome the line's onsets' tone classes against the chord
-    sounding at each ("c c c x": CHORD_TONE a tone of the chord, OFF_TONE off it), its values the part, the onset count and
-    the line's own pattern. The upper writer draws it under the line's bar as a second voice's mask is drawn (backing off to
-    the onset count) and plays the OFF_TONE onsets off the chord at the tone_degrees draw. FFVI's accompaniment line leaves
-    the chord on a quarter of its notes (the songs' medians 0.12 to 0.38), in 762 of its 1,447 bars; the written line had
-    held the voicing's tones alone (0.07 of its notes, and those from voicing marks the chord lacked)."""
+    sounding at each ("c c c x": CHORD_TONE a tone of the chord, OFF_TONE off it), its values the part, the song's tier
+    (tone_tier_of, the part's own share over the song), the onset count and the line's own pattern. The upper writer draws
+    it under the line's bar as a second voice's mask is drawn (backing off to the onset count under the tier) and plays
+    the OFF_TONE onsets off the chord at the tone_degrees draws. FFVI's accompaniment line leaves the chord on a quarter
+    of its notes (the songs' medians 0.12 to 0.38), in 762 of its 1,447 bars; the written line had held the voicing's
+    tones alone (0.07 of its notes, and those from voicing marks the chord lacked)."""
     out = []
-    for s in songs:
-        for role in TONE_FIGURE_PARTS:
-            line = cells_mod.tune_line(s, role)
-            if len(line) < WORD_NOTES:
-                continue
-            for k, a, struck in readings_mod.numbered_bars_of(s, role, line):
-                classes = tone_classes(struck, a, s.chords) if struck else None
-                if classes:
-                    out.append(tables.Unit(s.sid, s.game, " ".join(classes),
-                                           {"part": role, "onsets": str(len(struck)), "line": readings_mod.pattern(p for p, _ in struck)}))
+    for s, role, bars in _tone_bars(songs):
+        tier = tone_tier_of(_tone_share(bars))
+        for a, struck, classes in bars:
+            out.append(tables.Unit(s.sid, s.game, " ".join(classes),
+                                   {"part": role, "tier": tier, "onsets": str(len(struck)), "line": readings_mod.pattern(p for p, _ in struck)}))
     return out
 
 
 def tone_degree_units(songs) -> list:
-    """Each note of a chord part's line off the chord sounding as a unit (round 96): its outcome the note's interval from
+    """Each onset of a chord part's line off the chord sounding as a unit (round 96): its outcome the note's interval from
     the chord's root in semitones ("2" a ninth, "5" a fourth, "9" a sixth, "10" a seventh over a triad), its values the
-    part and the chord's shape (which decides which degrees are off it; "major" for the plain triad, as the voicings
-    word names it). Drawn once a bar whose tone figure leaves the chord; the line's off-chord onsets take the degree
-    nearest the voicing tone each replaces, so an ostinato bar pecks one tone off the chord as FFVI's do (a repeated
-    note is 0.22 of FFVI's off-chord accompaniment notes, a leap to one 0.39, a step 0.38)."""
+    part, the chord's shape (which decides which degrees are off it; "major" for the plain triad, as the voicings word
+    names it) and the degree of the bar's previous off-chord onset (START at the first). Drawn an off-chord onset, chained
+    within the bar: FFVI keeps the degree from one off-chord onset to the next 0.52 of the time (an ostinato pecks one
+    tone off the chord, a fill walks), and the line's onset takes the drawn degree nearest the voicing tone it replaces."""
     out = []
-    for s in songs:
-        for role in TONE_FIGURE_PARTS:
-            line = cells_mod.tune_line(s, role)
-            if len(line) < WORD_NOTES:
-                continue
-            for n in line:
-                if math.isnan(n[2]):
+    for s, role, bars in _tone_bars(songs):
+        for a, struck, classes in bars:
+            previous = readings_mod.START
+            for (p, ns), cls in zip(struck, classes):
+                if cls != OFF_TONE:
                     continue
-                c = _chord_at(s.chords, n[0])
-                if c is None or c.root is None or c.fit < FIT:
-                    continue
-                pc = round(n[2]) % 12
-                if vocab.tone_of(pc, c.root, c.shape) == "other":
-                    out.append(tables.Unit(s.sid, s.game, str((pc - c.root) % 12), {"part": role, "shape": c.shape or "major"}))
+                c = _chord_at(s.chords, a + float(p))
+                pc = round(min(n[2] for n in ns if not math.isnan(n[2]))) % 12
+                degree = str((pc - c.root) % 12)
+                out.append(tables.Unit(s.sid, s.game, degree, {"part": role, "shape": c.shape or "major", "previous": previous}))
+                previous = degree
     return out
 
 

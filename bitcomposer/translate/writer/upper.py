@@ -163,8 +163,8 @@ CLASH = (1, 11)                       # semitones (mod 12) a written tone may no
 
 RICH_TONES = {"thin": 1, "full": 2, "rich": 3}   # chord tones a written voicing holds at least, by the richness habit
 PEDAL_VOICE = 2                       # semitones: a voice whose own register is this narrow or narrower is a pedal and keeps its note
-TONE_FLOOR = 2                        # a tone figure's draw never backs off below (part, onsets): the figure is read onset by onset (round 96)
-DEGREE_FLOOR = 1                      # a tone degree's draw never backs off below the part
+TONE_FLOOR = 3                        # a tone figure's draw never backs off below (part, tier, onsets): the figure is read onset by onset (round 96)
+DEGREE_FLOOR = 2                      # a tone degree's draw never backs off below (part, shape): the chord decides which degrees are off it
 TONE_SONGS = 2                        # a finer level of either is used only with this many songs behind it (plan.PLAN_SONGS)
 
 
@@ -193,28 +193,29 @@ def unclashed(midi: int, options: list, tune: set) -> int:
     return min(clear, key=lambda m: (abs(m - midi), m)) if clear else midi
 
 
-def tone_figure_for(models: dict, role: str, pattern: str, rng: random.Random) -> list | None:
+def tone_figure_for(models: dict, role: str, tier: str | None, pattern: str, rng: random.Random) -> list | None:
     """The bar's tone figure (rhythm.tone_figure_units: a letter an onset, CHORD_TONE or OFF_TONE) drawn under the line's
-    bar for the part, read around the line's onsets where the drawn figure's count differs (as a mask is); None without
-    the word or for a resting bar (round 96)."""
+    bar for the part under the song's tier (rhythm.tone_tier_units; "?" without one), read around the line's onsets where
+    the drawn figure's count differs (as a mask is); None without the word or for a resting bar (round 96)."""
     t = models.get("tone_figures")
     if t is None or pattern in (figures_mod.REST, ""):
         return None
     t = t.table if hasattr(t, "table") else t
     n = len(pattern.split())
-    drawn = t.draw((role, str(n), pattern), rng, floored=False, floor_k=TONE_FLOOR, min_songs=TONE_SONGS).split()
+    drawn = t.draw((role, tier or "?", str(n), pattern), rng, floored=False, floor_k=TONE_FLOOR, min_songs=TONE_SONGS).split()
     return [drawn[i % len(drawn)] for i in range(n)] if drawn else None
 
 
-def tone_degree_for(models: dict, role: str, shape: str, rng: random.Random) -> int | None:
-    """The degree (semitones over the chord's root) a line's off-chord onsets take in a bar (rhythm.tone_degree_units),
-    drawn by the part and the chord's shape; None without the word (round 96)."""
+def tone_degree_for(models: dict, role: str, shape: str, previous: str, rng: random.Random) -> int | None:
+    """The degree (semitones over the chord's root) a line's off-chord onset takes (rhythm.tone_degree_units), drawn by the
+    part, the chord's shape and the bar's previous off-chord degree (rhythm.START at the first); None without the word
+    (round 96)."""
     t = models.get("tone_degrees")
     if t is None:
         return None
     t = t.table if hasattr(t, "table") else t
     try:
-        return int(t.draw((role, shape or "major"), rng, floored=False, floor_k=DEGREE_FLOOR, min_songs=TONE_SONGS))
+        return int(t.draw((role, shape or "major", previous), rng, floored=False, floor_k=DEGREE_FLOOR, min_songs=TONE_SONGS))
     except ValueError:
         return None
 
@@ -232,7 +233,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
           tone_index: int = 0, kind: str | None = None, bounds_at=None, clash_rates: dict | None = None,
-          tone_rng: random.Random | None = None, log: list | None = None) -> tuple[list, list, list]:
+          tone_rng: random.Random | None = None, log: list | None = None, tone_tier: str | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -258,9 +259,12 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     gives way to the nearest tone of the voicing clear of them (round 94).
     `tone_rng`: the stream the line's tone figures and degrees are drawn on
     (round 96: with the tone_figures word the line leaves the chord where
-    its bar's figure says, at the tone_degrees draw, the degree nearest the
-    voicing tone it replaces; an own stream, so every other draw stands;
-    `rng` without one). `log`: lines on what the words did, appended.
+    its bar's figure says, drawn under the song's `tone_tier` (the
+    tone_tiers word's draw for the part: how much of the line leaves the
+    chord over the song), each such onset at a tone_degrees draw chained on
+    the bar's previous one, the degree nearest the voicing tone it
+    replaces; an own stream, so every other draw stands; `rng` without
+    one). `log`: lines on what the words did, appended.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -333,8 +337,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             continue
         regs = {v: (tuple(bounds_at(k)) if bounds_at is not None and v == voices[0] and bounds_at(k) else registers[v]) for v in voices}   # the bar's registers (round 92)
         positions = [Fraction(t.partition(":")[0]) for t in rhythm._tokens(figure)]
-        tones = tone_figure_for(models, role, rhythm.pattern(positions), tone_rng or rng) if not tone_index else None   # the line's bar against the chord (round 96)
-        degree = None                                       # the degree its off-chord onsets take, drawn once a bar at the first of them
+        tones = tone_figure_for(models, role, tone_tier, rhythm.pattern(positions), tone_rng or rng) if not tone_index else None   # the line's bar against the chord (round 96)
+        prev_degree = rhythm.START                          # the bar's last off-chord degree: the chain the next is drawn on
         if tones is not None and rhythm.OFF_TONE in tones:
             off_bars += 1
         bar_voicing = []
@@ -391,10 +395,11 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                 if tones is not None:                       # the line's onset off the chord by its tone figure (round 96)
                     off[1] += 1
                     if tones[i] == rhythm.OFF_TONE:
-                        degree = degree if degree is not None else tone_degree_for(models, role, chord[1], tone_rng or rng)
+                        degree = tone_degree_for(models, role, chord[1], prev_degree, tone_rng or rng)
                         if degree is not None:
                             midi = in_register(off_tone(midi, chord[0], degree), regs[voices[0]])
                             off[0] += 1
+                            prev_degree = str(degree)
                 midi = unclashed(midi, [in_register(m, regs[voices[0]]) for m in pitches], tune)
                 midi = held(midi, [in_register(m, regs[voices[0]]) for m in pitches], start, p)
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), voices[0]))
@@ -464,10 +469,11 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                     if tones is not None and j == 0:        # the line's onset off the chord by its tone figure (round 96)
                         off[1] += 1
                         if tones[i] == rhythm.OFF_TONE:
-                            degree = degree if degree is not None else tone_degree_for(models, role, chord[1], tone_rng or rng)
+                            degree = tone_degree_for(models, role, chord[1], prev_degree, tone_rng or rng)
                             if degree is not None:
                                 midi = in_register(off_tone(midi, chord[0], degree), regs[v])
                                 off[0] += 1
+                                prev_degree = str(degree)
                     if shared is not None and not tone_index:
                         shared[("line", (k, p))] = midi     # the line's note here, for the voices beside it
                 midi = unclashed(midi, [in_register(m, regs[v]) for m in pitches], tune)
@@ -478,6 +484,6 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else figures_mod.REST)
     if log is not None and not tone_index and "tone_figures" in models:
-        log.append(f"off the chord by the tone figure (round 96): {off[0]} of {off[1]} line onsets, in {off_bars} bars"
+        log.append(f"off the chord by the tone figure (round 96, the song's tier {tone_tier or '?'}): {off[0]} of {off[1]} line onsets, in {off_bars} bars"
                    + ("" if "tone_degrees" in models else "; no tone_degrees word: the voicing's tones kept"))
     return notes, figures, voicings

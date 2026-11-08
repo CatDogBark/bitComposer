@@ -240,9 +240,16 @@ class ChordFigureTests(unittest.TestCase):
         s.voice_notes = {3: ("accompaniment", s.notes["accompaniment"])}
         units = rhythm.tone_figure_units([s])
         self.assertEqual([u.outcome for u in units], ["c c c x"] * 4)
-        self.assertEqual(units[0].values, {"part": "accompaniment", "onsets": "4", "line": "0 1 2 3"})
+        self.assertEqual(units[0].values, {"part": "accompaniment", "tier": "some", "onsets": "4", "line": "0 1 2 3"})   # a quarter of its onsets off: "some"
+        self.assertEqual([(u.outcome, u.values) for u in rhythm.tone_tier_units([s])], [("some", {"part": "accompaniment"})])
+        self.assertEqual([rhythm.tone_tier_of(x) for x in (0.0, 0.09, 0.1, 0.29, 0.3, 1.0)], ["rare", "rare", "some", "some", "many", "many"])
         degrees = rhythm.tone_degree_units([s])
-        self.assertEqual([(u.outcome, u.values) for u in degrees], [("9", {"part": "accompaniment", "shape": "major"})] * 4)
+        self.assertEqual([(u.outcome, u.values) for u in degrees], [("9", {"part": "accompaniment", "shape": "major", "previous": rhythm.START})] * 4)
+        s.notes["accompaniment"][3] = (3.0, 0.9, 71.0, "a")                                   # the first bar C E G B: the B is a second off-chord onset after none
+        s.notes["accompaniment"][2] = (2.0, 0.9, 69.0, "a")                                   # ... no: C E A B, the A then the B, chained
+        self.assertEqual([(u.outcome, u.values["previous"]) for u in rhythm.tone_degree_units([s])][:2], [("9", rhythm.START), ("11", "9")])
+        self.assertEqual(rhythm.tone_figure_units([s])[0].outcome, "c c x x")
+        s.notes["accompaniment"][2], s.notes["accompaniment"][3] = (2.0, 0.9, 67.0, "a"), (3.0, 0.9, 69.0, "a")
         self.assertEqual(rhythm.tone_classes([(Fraction(0), [(0.0, 1.0, 60.0, "a")]), (Fraction(1), [(1.0, 1.0, 70.0, "a")])], 0.0, s.chords), ["c", "x"])
         self.assertIsNone(rhythm.tone_classes([(Fraction(0), [(0.0, 1.0, 60.0, "a")])], 40.0, s.chords))   # no chord there
         self.assertEqual(upper_mod.off_tone(67, 0, 9), 69)                                    # the A over G, nearer than the A under it
@@ -251,21 +258,27 @@ class ChordFigureTests(unittest.TestCase):
         # the writer: a voicing table that says R 3 5, a tone figure that says the fourth onset leaves the chord, the degree a sixth
         mk = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(6)]   # noqa: E731
         voicings = tables.Cache.fit(mk("voicings", "R 3 5", part="accompaniment", shape="major", habit="full"), ("part", "shape", "habit"), name="voicings", votes=tables.SHARES)
-        figures = tables.Table(("part", "onsets", "line"), "tone_figures", votes=tables.SHARES).fit(mk("tone_figures", "c c c x", part="accompaniment", onsets="4", line="0 1 2 3"))
-        degrees = tables.Table(("part", "shape"), "tone_degrees", votes=tables.SHARES).fit(mk("tone_degrees", "9", part="accompaniment", shape="major"))
+        figures = tables.Table(("part", "tier", "onsets", "line"), "tone_figures", votes=tables.SHARES).fit(
+            mk("tone_figures", "c c c x", part="accompaniment", tier="some", onsets="4", line="0 1 2 3") + mk("tone_figures", "c c x x", part="accompaniment", tier="many", onsets="4", line="0 1 2 3"))
+        degrees = tables.Table(("part", "shape", "previous"), "tone_degrees", votes=tables.SHARES).fit(
+            mk("tone_degrees", "9", part="accompaniment", shape="major", previous=rhythm.START) + mk("tone_degrees", "2", part="accompaniment", shape="major", previous="9"))
 
-        def line(models):
+        def line(models, tier="some"):
             song = self._chord_song()
             shared, log = {}, []
             notes, figs, vcs = writer.upper(song, "accompaniment", [0], {0: (60, 84)}, models, random.Random(1), "dense", "full", 0.5,
-                                            key=(0, "major"), plays=[True] * 4, figures=["0 1 2 3"] * 4, shared=shared, tone_index=0, log=log)
+                                            key=(0, "major"), plays=[True] * 4, figures=["0 1 2 3"] * 4, shared=shared, tone_index=0, log=log, tone_tier=tier)
             return [int(m) % 12 for a, b, m, v in notes], shared, log
         pcs, shared, log = line({"voicings": voicings, "tone_figures": figures, "tone_degrees": degrees})
         self.assertEqual(len(pcs), 16)
         self.assertTrue(all(pc in (0, 4, 7) for i, pc in enumerate(pcs) if i % 4 != 3), pcs)   # the first three onsets on the chord
         self.assertTrue(all(pc == 9 for i, pc in enumerate(pcs) if i % 4 == 3), pcs)          # the fourth a sixth over the root
         self.assertEqual(int(shared[("line", (1, Fraction(3)))]) % 12, 9)                     # the voices beside it see the note played
-        self.assertTrue(any(l.startswith("off the chord by the tone figure (round 96): 4 of 16 line onsets, in 4 bars") for l in log), log)
+        self.assertTrue(any(l.startswith("off the chord by the tone figure (round 96, the song's tier some): 4 of 16 line onsets, in 4 bars") for l in log), log)
+        pcs, _, log = line({"voicings": voicings, "tone_figures": figures, "tone_degrees": degrees}, tier="many")   # the heavier tier: two onsets a bar, the second chained
+        self.assertTrue(all(pc in (0, 4, 7) for i, pc in enumerate(pcs) if i % 4 < 2), pcs)
+        self.assertTrue(all(pcs[i] == 9 and pcs[i + 1] == 2 for i in range(2, 16, 4)), pcs)   # a sixth, then a ninth after it
+        self.assertTrue(any("tier many): 8 of 16 line onsets" in l for l in log), log)
         pcs, _, log = line({"voicings": voicings})
         self.assertTrue(all(pc in (0, 4, 7) for pc in pcs), pcs)                              # without the words: the voicing's tones alone
         self.assertEqual(log, [])
@@ -274,8 +287,15 @@ class ChordFigureTests(unittest.TestCase):
         self.assertTrue(any("no tone_degrees word" in l for l in log), log)
         # the pack keeps both tables
         from bitcomposer.translate import packtables
-        self.assertEqual(packtables.KEPT["tone_figures"][3], ("part", "onsets", "line"))
-        self.assertEqual(packtables.KEPT["tone_degrees"][3], ("part", "shape"))
+        self.assertEqual(packtables.KEPT["tone_figures"][3], ("part", "tier", "onsets", "line"))
+        self.assertEqual(packtables.KEPT["tone_degrees"][3], ("part", "shape", "previous"))
+        self.assertEqual(packtables.KEPT["tone_tiers"][3], ("part",))
+        # the plan draws the part's tier once a song, on its own stream
+        tiers = tables.Table(("part",), "tone_tiers", votes=tables.SHARES).fit(mk("tone_tiers", "many", part="accompaniment"))
+        token = "melody=main:64-84:0.9:1:0.7:::slead accompaniment=half:60-72:0.8:1:0.6:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", token, part=rhythm.ARRANGEMENT))}
+        self.assertEqual(whole.plan({**bal, "tone_tiers": tiers}, 7, "g").extras["accompaniment"]["tone_tier"], "many")
+        self.assertIsNone(whole.plan(bal, 7, "g").extras["accompaniment"]["tone_tier"])
 
     def test_a_figure_mark_the_chord_lacks_plays_the_chords_nearest_tone(self):
         """A bass figure's or a voicing's mark names a chord tone; where the chord has none (a 7 over a triad, a 3 over a bare

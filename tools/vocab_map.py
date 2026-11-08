@@ -37,6 +37,7 @@ SOURCES = {                               # a conditioning -> the tables whose o
     "shape": ["voicing_habits"],
     "tune": ["levels", "balance"],
     "period": ["periods"],
+    "tier": ["tone_tiers"],
 }
 CONCEPTS = {"mix_level", "lead", "loudness"}   # VOCABULARY entries that are measures, passes or ideas, not tables
 STRUCTURAL = {"part", "meter", "previous", "place", "line", "onsets", "voice", "value", "index", "tone", "rank", "gap", "role"}

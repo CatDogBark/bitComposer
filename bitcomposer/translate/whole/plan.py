@@ -1112,7 +1112,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if role in rhythm.UPPER:
             extras[role] = {"richness": _draw(models, "voicing_habits", (role,), rng, log), "motion": _draw(models, "motions", (role,), rng, log),
                             "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log)) for pl in ("strong", "weak")}
-                                        if "clashes" in render_mod.models_or_empty(models) else None)}   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
+                                        if "clashes" in render_mod.models_or_empty(models) else None),   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
+                            "tone_tier": (_draw(models, "tone_tiers", (role,), random.Random(f"whole:{seed}:tone_tier:{role}"), log)
+                                          if "tone_tiers" in render_mod.models_or_empty(models) else None)}   # how much of its line leaves the chord (round 96), an own stream
         elif role in (R.MELODY, R.COUNTER):                  # the phrase tables count both lines as the tune's: drawn under the melody's part
             extras[role] = {"articulation": _draw(models, "articulation", (role,), rng, log),
                             "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log),
@@ -1752,7 +1754,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
                                                 pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"),
-                                                tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog)   # the tone figures on their own stream (round 96)
+                                                tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog, tone_tier=plan.extras[role].get("tone_tier"))   # the tone figures on their own stream (round 96)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
