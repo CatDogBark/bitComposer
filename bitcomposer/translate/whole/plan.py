@@ -2018,7 +2018,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                  role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
                                                  tune_sounds=x.get("tune_sounds"), letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
-                                                 bounds_at=line_bounds_at(plan, role))
+                                                 bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
+                                                 moves_rng=random.Random(f"{seed}:{role}:recall moves"))   # the recalls' places on an own stream (round 100)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -2082,7 +2083,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                     key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                     role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
-                                                    tune_sounds=x.get("tune_sounds"))
+                                                    tune_sounds=x.get("tune_sounds"), recall_moves=models.get("recall_moves"),
+                                                    moves_rng=random.Random(f"{seed}:{role}:second:recall moves"))
                 song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
                 line = line + [(a, b, m, 1) for a, b, m in notes2]
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]

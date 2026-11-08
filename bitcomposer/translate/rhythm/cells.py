@@ -325,6 +325,69 @@ def recall_source_units(songs) -> list:
     return out
 
 
+RECALL_MOVES = ("0", "root", "+1", "-1", "+2", "-2", "+3", "-3", "+4", "-4", "+5", "-5", "6")   # a recalled cell's move from its last
+                                                                                                # occurrence (recall_moves, round 100)
+
+
+def recall_move(offset: int, root_move: int | None) -> str:
+    """A recalled cell's move from its last occurrence as the recall_moves word's outcome (round 100): "0" at pitch, "root"
+    with the chord root where the chord changed and the cell moved by the root's own motion, else the semitones folded into
+    the octave either side ("+2", "-5"; "6" a tritone)."""
+    fo = ((offset + 6) % 12) - 6
+    if fo == 0:
+        return "0"
+    if root_move is not None and root_move % 12 and fo % 12 == root_move % 12:
+        return "root"
+    return "6" if fo == -6 else f"{fo:+d}"
+
+
+def _chord_under(song: readings_mod.Song, t: float):
+    """The chord span's (root, shape) at a time, None where the reader found no chord."""
+    for sp in song.chords:
+        if sp.start - readings_mod.NEAR <= t < sp.end - readings_mod.NEAR:
+            return (sp.root, sp.shape) if sp.root is not None else None
+    return None
+
+
+def recall_move_units(songs) -> list:
+    """Each bar of a song's tune whose cell was heard before (in the form's own parts) as a unit (round 100): its outcome
+    recall_move, how far the cell sits from its last occurrence (first note to first note); its values the part, the recall
+    (same: the bar before's cell again; earlier: a cell heard before that) and the chord (same: the chord under the bar is
+    the one under the cell's last occurrence; other). FFVI: 428 recalled bars in 62 tunes; a cell comes back at pitch in
+    0.70 of the earlier recalls and 0.53 of the immediate ones, within a third in 0.88 and 0.95; over another chord it
+    stays at pitch in 0.38 and 0.27, moves with the root in 0.27 and 0.45, by a step in 0.12 and 0.22. The written tune
+    had re-rooted every recall on the new chord (at pitch 0.27 of recalls, a fourth or fifth off 0.22), and its recalled
+    bars sat a semitone from the band on 0.15 to 0.25 of their strong beats against FFVI's 0.04 to 0.10."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        line = sorted(n for n in arrangement_mod._line(tune_line(s, R.MELODY)) if not math.isnan(n[2]))
+        cells = melody_cells(s)
+        windows, own = _tune_groups(s)
+        first = {}
+        for k, (a, b) in enumerate(s.bars):
+            mine = [n for n in line if a - readings_mod.NEAR <= n[0] < b - readings_mod.NEAR]
+            if mine:
+                first[k] = round(mine[0][2])
+        last_seen, previous = {}, None
+        for i, w in windows:
+            for k in w:
+                c = cells[k]
+                if not c:
+                    previous = None
+                    continue
+                if i in own and c in last_seen and k in first and last_seen[c] in first:
+                    src = last_seen[c]
+                    here, there = _chord_under(s, s.bars[k][0]), _chord_under(s, s.bars[src][0])
+                    root_move = (here[0] - there[0]) if here and there else None
+                    out.append(tables.Unit(s.sid, s.game, recall_move(first[k] - first[src], root_move),
+                                           {"part": R.MELODY, "recall": "same" if c == previous else "earlier", "chord": "same" if here == there else "other"}))
+                last_seen[c] = k
+                previous = c
+    return out
+
+
 CELL_RHYTHMS = ("new", "previous", "earlier")   # a new cell's rhythm: new to the tune, the bar before's, or an earlier one's
 
 

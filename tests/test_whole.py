@@ -641,6 +641,46 @@ class KitSecondTests(unittest.TestCase):
         self.assertEqual({n[3] for n in song.notes["drums"]} & {"hihat", "hihat2"}, {"hihat", "hihat2"})   # both samples in the song's notes, for the parts after
 
 
+class RecallMoveTests(unittest.TestCase):
+    """Round 100: how far a recalled tune cell sits from its last occurrence (recall_moves), and the writer's anchor for it."""
+
+    def test_a_recalled_cells_move_is_counted_against_its_last_occurrence_and_the_chord(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        def bar(k, ps): return [(4.0 * k + i, 0.9, float(p), "a") for i, p in enumerate(ps)]
+        A, B, C = [60, 64, 67, 65], [60, 64, 62, 60], [62, 65, 69, 67]
+        up = lambda cell, n: [p + n for p in cell]                                             # noqa: E731
+        tune = bar(0, A) + bar(1, B) + bar(2, A) + bar(3, A) + bar(4, C) + bar(5, up(A, 7)) + bar(6, C) + bar(7, up(A, 2)) \
+            + bar(8, A) + bar(9, B) + bar(10, A) + bar(11, A)
+        chords = [Span(0.0, 16.0, 0, "", 1.0), Span(16.0, 24.0, 7, "", 1.0), Span(24.0, 32.0, 0, "", 1.0), Span(32.0, 48.0, 0, "", 1.0)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"melody": tune}, sid="s", game="g", numbers=list(range(12)),
+                        parts=[(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 0, "A")])
+        units = rhythm.recall_move_units([s])
+        self.assertEqual([(u.outcome, u.values["recall"], u.values["chord"]) for u in units],
+                         [("0", "earlier", "same"),       # bar 2: A again at pitch over the same C
+                          ("0", "same", "same"),          # bar 3: the bar before's cell again
+                          ("root", "earlier", "other"),   # bar 5: A a fifth up over G, as the root moved
+                          ("0", "earlier", "other"),      # bar 6: C at pitch, the chord back to C
+                          ("-5", "earlier", "other")])    # bar 7: A at 62, a fourth under its last occurrence (67), not the root's move
+        self.assertTrue(all(u.values["part"] == "melody" for u in units))                      # the form's repeat of A (bars 8-11) is not counted
+        self.assertEqual((rhythm.recall_move(0, None), rhythm.recall_move(12, 5), rhythm.recall_move(7, 7), rhythm.recall_move(-5, 7)), ("0", "0", "root", "root"))
+        self.assertEqual((rhythm.recall_move(7, 2), rhythm.recall_move(6, None), rhythm.recall_move(-2, 0)), ("-5", "6", "-2"))
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["recall_moves"][3], ("part", "recall", "chord"))
+
+    def test_the_writer_anchors_a_recall_where_the_word_says(self):
+        from types import SimpleNamespace
+        from bitcomposer.translate.writer import tune
+        cell = SimpleNamespace(pitches=[60, 64, 67], root=0)
+        self.assertEqual(tune.recall_anchor(cell, (0, ""), "0", (55, 79), 70.0), 60)           # at pitch
+        self.assertEqual(tune.recall_anchor(cell, (0, ""), "0", (64, 76), 70.0), 72)           # at pitch, the octave the register holds
+        self.assertEqual(tune.recall_anchor(cell, (7, ""), "root", (55, 79), 60.0), 55)        # with the root: C to G, the fourth down (the nearer way)
+        self.assertEqual(tune.recall_anchor(cell, (5, ""), "root", (55, 79), 60.0), 65)        # C to F: a fourth up
+        self.assertEqual(tune.recall_anchor(cell, None, "+2", (55, 79), 60.0), 62)
+        self.assertEqual(tune.recall_anchor(cell, None, "6", (55, 79), 60.0), 66)
+        self.assertEqual(tune.recall_anchor(cell, None, "-5", (58, 62), 60.0), 58)             # a register without the pitch class: its nearest note to the move
+
+
 if __name__ == "__main__":
     unittest.main()
 

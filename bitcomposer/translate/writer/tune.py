@@ -477,11 +477,13 @@ class Cell:
     intervals, its first note's offset from the bar's chord root, and its
     moves as scale steps, so it can come back on another chord in the scale."""
 
-    def __init__(self, positions: list, pitches: list, root: int, scale: set):
+    def __init__(self, positions: list, pitches: list, root: int, scale: set, chord=None):
         self.positions = list(positions)
         self.pitches = [int(round(m)) for m in pitches]
         self.intervals = [y - x for x, y in zip(self.pitches, self.pitches[1:])]
         self.entry = (self.pitches[0] - root) % 12 if self.pitches else 0
+        self.root = root % 12                   # the chord root the cell was realized on, and the chord (root, shape) where
+        self.chord = chord                      # one was found: a recall's move is drawn by whether the chord changed (round 100)
         self.steps = to_steps(self.pitches, scale)
         self.key = " ".join(str(Fraction(p)) for p in self.positions) + " | " + " ".join(f"{i:+d}" for i in self.intervals)
 
@@ -695,6 +697,26 @@ def draw_move(moves_table, previous: str, mode: str, midi: float, rng: random.Ra
     return _weighted(rng, options, hold_shares(weights, holds))
 
 
+def recall_anchor(cell, chord_now, move: str, register: tuple, near: float) -> int:
+    """Where a recalled cell's first note sits for the recall_moves word's draw (round 100): at the cell's own pitch ("0"),
+    moved by the chord root's motion from the cell's chord to this bar's ("root"), or by the drawn semitones ("+2", "-5",
+    "6"); kept in the register by octaves, the octave nearest the cell's pitch, then the line's last note. FFVI's recalled
+    cells come back at pitch in 0.70 of the earlier recalls (0.53 of the immediate ones), with the root in a quarter of the
+    chord changes and by a step in most of the rest; the writer had re-rooted every recall on the new chord, so a passage
+    recalled over a chord a fourth away came back a fourth away, where FFVI's stays or steps."""
+    first = int(cell.pitches[0])
+    if move == "root":
+        root_now = chord_now[0] if chord_now else cell.root
+        first += ((root_now - cell.root + 6) % 12) - 6
+    elif move != "0":
+        first += 6 if move == "6" else int(move)
+    low, high = int(register[0]), int(register[1])
+    options = [m for m in range(low, high + 1) if m % 12 == first % 12]
+    if options:
+        return min(options, key=lambda m: (abs(m - first), abs(m - near), m))
+    return min(range(low, high + 1), key=lambda m: (abs(m - first), m), default=first)
+
+
 def _chord_in_bar(song: rhythm.Song, t: float):
     c = rhythm._chord_at(song.chords, t)
     return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
@@ -712,7 +734,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
            letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None, tune_sounds: dict | None = None,
-           off_scale: dict | None = None, clash_rates: dict | None = None) -> tuple[list, list, list]:
+           off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -768,6 +790,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     clash_line = sorted(n for r in clear_of + (R.BASS,) for n in song.notes.get(r, [])) if clash_rates else tune_line   # with the clashes word the
     off_run = {"strong": [0, 0], "weak": [0, 0]}          # bass counts too (round 93); the tune's notes off the scale by the beat, and all of them
     clash_run = {"strong": [0, 0], "weak": [0, 0]}        # its onsets a semitone from a sounding part, and its onsets under one, so far
+    recall_moves = recall_moves.table if hasattr(recall_moves, "table") else recall_moves   # the recall_moves word (round 100), drawn on
+    moves_rng = moves_rng if moves_rng is not None else rng                                  # an own stream; the moves drawn, for the log
+    moves_drawn = Counter()
 
     def rate_for(rates, strong: bool):
         return rates.get("strong" if strong else "weak") if rates else None
@@ -789,6 +814,13 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if clash_rates and over_rate(clash_run, clash_rates, strong):
                 n += int(any((int(round(m)) - pc) % 12 in upper_mod.CLASH for pc in upper_mod.sounding_pcs(clash_line, a + p)))
         return n
+    def ending_pick(options: list, last: Cell, a: float) -> int:
+        """The phrase ending's note among the drawn degree's options: the nearest that adds least to a share the tune is over
+        (round 100: the ending had taken the nearest option whatever sounded under it, a semitone from the band on 0.17 of
+        the phrase ends against FFVI's 0.06)."""
+        want = last.pitches[-1]
+        p = [last.positions[-1]] if last.positions else []
+        return min(options, key=lambda m: (adds_over(a, p, [m]) if p else 0, abs(m - want), m))
     rate = chord_rate if chord_rate is not None else CHORD_ON_BEAT
     on_beat = [0, 0]                                        # the tune's strong-beat notes on the chord, and all of them, so far
     moves_table = models["moves"].table if hasattr(models["moves"], "table") else models["moves"]
@@ -1028,7 +1060,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         if positions:
             last_time = a + positions[-1]
         chord = _chord_in_bar(song, a)
-        cell = Cell(positions, pitches, chord[0] if chord else tonic, scale)
+        cell = Cell(positions, pitches, chord[0] if chord else tonic, scale, chord=chord)
         figures[k] = " ".join(str(Fraction(p)) for p in positions)
         cells[k] = cell
         for m in pitches:
@@ -1108,7 +1140,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     continue
                 ps, ms = [c.positions[i] - h * hj for i in idx], [c.pitches[i] for i in idx]
                 key_ = half_key(ps, ms)
-                pool.setdefault(key_, (ps, (ms[0] - rj) % 12, [y - x for x, y in zip(ms, ms[1:])]))   # its intervals, exact (round 41)
+                pool.setdefault(key_, (ps, (ms[0] - rj) % 12, [y - x for x, y in zip(ms, ms[1:])], ms[0], cj))   # its intervals, exact (round 41);
+                                                                                                                # its first pitch and chord (round 100)
                 plays[key_] += 1
         prev_key = None
         if k - 1 in cells:                                  # the half before: the bar before's second half
@@ -1142,14 +1175,19 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     break
             key_ = prev_key if kind == "same" else (_weighted(rng, list(earlier), list(earlier.values())) if kind == "earlier" else None)
             if key_ is not None:
-                ps, entry, steps = pool[key_]
-                pc = (root + entry) % 12
+                ps, entry, steps, src_first, src_chord = pool[key_]
                 low, high = reg
                 anchor_ = midi if midi is not None else (low + high) / 2
-                first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor_), m), default=int(round(anchor_)))
+                if recall_moves is not None:                # the half comes back where the word says (round 100): at pitch, with the root, by a step
+                    move = recall_moves.draw((R.MELODY, kind, "same" if chord == src_chord else "other"), moves_rng, floored=False, floor_k=1)
+                    moves_drawn[move] += 1
+                    first = recall_anchor(SimpleNamespace(pitches=[src_first], root=(src_chord[0] if src_chord else tonic) % 12), chord, move, (low, high), anchor_)
+                else:
+                    pc = (root + entry) % 12
+                    first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - anchor_), m), default=int(round(anchor_)))
                 pos_h = [lo + p for p in ps]
                 if adds_over(a, pos_h, from_intervals(first, steps)):   # over a word's share: the half moved within a third, as a bar is (round 93)
-                    first = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
+                    first = max((x for x in range(first - 4, first + 5) if low <= x <= high and (x == first or x % 12 in scale)),
                                 key=lambda x: (-adds_over(a, pos_h, from_intervals(x, steps)), -abs(x - first), -x), default=first)
                 ms = fold_cell(from_intervals(first, steps), reg)   # the half's intervals exact (round 41), the whole half folded in
             else:
@@ -1181,11 +1219,18 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         half_kinds[k] = kinds
         return realize(k, all_pos, all_pitches)
 
-    def again(k: int, cell: Cell) -> Cell:
-        """An earlier cell in bar k: re-rooted on the bar's chord with its
-        intervals exact, the whole cell moved to land its strong beats on the
-        bar's chord tones (as a player's sequence does), and the whole cell
-        folded by octaves into the register. Its intervals are kept exact
+    def again(k: int, cell: Cell, kind: str = "earlier") -> Cell:
+        """An earlier cell in bar k: where the recall_moves word has a say
+        (round 100) its first note sits where the word's draw puts it (at
+        the cell's pitch, moved with the chord root, or by a step: FFVI's
+        recalls stay at pitch in 0.7 of cases), else re-rooted on the bar's
+        chord; its intervals exact; the whole cell then moved within a third
+        where the tune wants its beats on the chord or the cell adds to a
+        share the tune is over (the chord-tone, off-scale and clash holds
+        weighed together since round 100: the chord had come first, and a
+        clean shift a third away was passed over for one more chord tone);
+        and the whole cell folded by octaves into the register. `kind`: the
+        word's recall (same: the bar before's cell; earlier). Its intervals are kept exact
         rather than as scale steps (round 41, 2026-10-28): rebuilt by steps,
         with each note clamped to the register, 0.46 of the written recalls
         (theme returns, pairs and bars alike) had come back as a cell the
@@ -1196,9 +1241,14 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         a, b, _ = bars[k]
         chord = _chord_in_bar(song, a)
         root = chord[0] if chord else tonic
-        pc = (root + cell.entry) % 12
         low, high = reg_of(k)
-        first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
+        if recall_moves is not None and cell.pitches:
+            move = recall_moves.draw((R.MELODY, kind, "same" if chord == cell.chord else "other"), moves_rng, floored=False, floor_k=1)
+            moves_drawn[move] += 1
+            first = recall_anchor(cell, chord, move, (low, high), last_midi)
+        else:
+            pc = (root + cell.entry) % 12
+            first = min((m for m in range(low, high + 1) if m % 12 == pc), key=lambda m: (abs(m - last_midi), m), default=int(round(last_midi)))
 
         def build(start: int) -> list:
             """The cell from its first note with its intervals exact."""
@@ -1224,8 +1274,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             # intervals, and with them the tune's steps, stay what the table drew (bending one note had cost the melody
             # a point of steps and the counter-line eleven). Since round 93 the same move, after the chord, keeps the cell
             # from adding to a share the tune is over: off the scale, or a semitone from a sounding part (the words' draws).
-            best = max((x for x in range(first - 4, first + 5) if low <= x <= high and x % 12 in scale),
-                       key=lambda x: (on_chord(build(x)) if snap else 0, -adds_over(a, cell.positions, build(x)), -abs(x - first), -x), default=first)
+            best = max((x for x in range(first - 4, first + 5) if low <= x <= high and (x == first or x % 12 in scale)),
+                       key=lambda x: ((on_chord(build(x)) if snap else 0) - adds_over(a, cell.positions, build(x)), -abs(x - first), -x), default=first)
             pitches = build(best)
         pitches = fold_cell(pitches, (low, max(high, room_high) if bounds_at is None else high))   # the part's whole room (round 49): folded into the phrase's room under the
         last_midi = float(pitches[-1]) if pitches else last_midi    # arc, a wider recalled cell had been clamped and bent
@@ -1279,7 +1329,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 reg_e = reg_of(live[-1])
                 options = [m for m in range(reg_e[0], reg_e[1] + 1) if m % 12 in want]
                 if options:
-                    last.pitches[-1] = min(options, key=lambda m: (abs(m - last.pitches[-1]), m))
+                    last.pitches[-1] = ending_pick(options, last, bars[live[-1]][0])
             end_phrase(phrase_cells)
             prev_phrase, prev_phrase_start = phrase_cells, a0
             written_windows[w[0]] = (live, phrase_cells)
@@ -1344,7 +1394,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                             pair_kinds[group_plan[0][5:] if group_plan else "new"] += 1
                     if group_plan is not None:
                         kind_, pr, j_ = group_plan
-                        cell = again(k, pr[i % rhythm.PAIR])
+                        cell = again(k, pr[i % rhythm.PAIR], kind_.split()[-1])
                         choices[k] = kind_
                         source[k] = j_ + i % rhythm.PAIR if j_ + i % rhythm.PAIR in cells else None
                     elif relation == "answered" and prev_phrase and i < len(prev_phrase):
@@ -1354,7 +1404,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                         choice = bar_urn.choose(rng, prev_cell, played)
                         before = k - 1 if k - 1 in cells else None
                         if choice == "same" and prev_cell is not None:
-                            cell = again(k, prev_cell)
+                            cell = again(k, prev_cell, "same")
                             source[k] = source.get(before, before) if before is not None else None
                         elif choice == "earlier":
                             follow = source.get(before)
@@ -1421,6 +1471,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         log.append(f"strong-beat notes on the chord: {on_beat[0]}/{on_beat[1]} ({on_beat[0] / on_beat[1]:.2f}; the song's rate {rate:.2f})")
     if moves_seen[1]:
         log.append(f"repeated notes: {moves_seen[0]}/{moves_seen[1]} ({moves_seen[0] / moves_seen[1]:.2f}; the song's rate {rep_rate:.2f})")
+    if moves_drawn:
+        log.append("recalls placed (recall_moves): " + ", ".join(f"{'at pitch' if k == '0' else 'with the root' if k == 'root' else k} {v}" for k, v in moves_drawn.most_common()))
     for name, run, rates in (("off the scale", off_run, off_scale), ("a semitone from a sounding part", clash_run, clash_rates)):
         if rates and any(v[1] for v in run.values()):          # the words' shares held (round 93)
             log.append(f"{name}: " + ", ".join(f"{pl} {v[0]}/{v[1]} ({v[0] / v[1]:.2f}; the song's rate {rates[pl]:.2f})" for pl, v in run.items() if v[1]))
