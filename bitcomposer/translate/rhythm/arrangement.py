@@ -374,26 +374,97 @@ def part_texture_units(songs) -> list:
 CHORD_TONE_BIN = 0.1                 # the grain a tune's chord-tone share is kept to
 
 
+CHORD_TONE_PARTS = (R.MELODY, R.COUNTER)   # the lines the chord_tones word is counted for and held on (the counter's since round 96)
+
+
 def chord_tone_habit_units(songs) -> list:
-    """Each song with a melody as a unit: its outcome the share of the tune's
-    notes on a beat that are tones of the chord sounding (to
-    CHORD_TONE_BIN); its value the part (melody). The melody writer holds
-    its tune to the drawn share (FFVI's songs: a median 0.56; the writer's
-    constant gave 0.75 in the first whole songs, 2026-10-23)."""
+    """Each song with a melody as a unit, and since round 96 each with a
+    counter-line: its outcome the share of the line's notes on a beat that
+    are tones of the chord sounding (to CHORD_TONE_BIN); its value the part.
+    The melody writer holds its tune to the drawn share (FFVI's songs: a
+    median 0.56; the writer's constant gave 0.75 in the first whole songs,
+    2026-10-23); the counter writer holds its line (writer.counter: FFVI's
+    counter-lines land on the chord on about half their strong beats; the
+    written counter, its notes the voice words' intervals from the tune
+    with no chord word, had sat at 0.37)."""
     out = []
     for s in songs:
-        line = _line(cells_mod.tune_line(s, R.MELODY))
-        hits, total = 0, 0
-        for n in line:
-            if abs(n[0] - round(n[0])) >= readings_mod.NEAR:
+        for role in CHORD_TONE_PARTS:
+            line = _line(cells_mod.tune_line(s, role))
+            hits, total = 0, 0
+            for n in line:
+                if abs(n[0] - round(n[0])) >= readings_mod.NEAR:
+                    continue
+                c = _chord_at(s.chords, n[0])
+                if c is None or c.root is None or c.fit < FIT:
+                    continue
+                total += 1
+                hits += vocab.tone_of(round(n[2]) % 12, c.root, c.shape) != "other"
+            if total >= 8:
+                out.append(tables.Unit(s.sid, s.game, f"{round(hits / total / CHORD_TONE_BIN) * CHORD_TONE_BIN:.1f}", {"part": role}))
+    return out
+
+
+TONE_FIGURE_PARTS = (R.HARMONY, R.ACCOMP, R.ARP)   # the chord parts (readings.UPPER, which this module cannot read at import): their line's tones against the chord (round 96)
+CHORD_TONE, OFF_TONE = "c", "x"          # a tone figure's letters: a tone of the chord sounding, a tone off it
+
+
+def tone_classes(struck, start: float, chords) -> list | None:
+    """A bar's onsets ([(position, [notes])], readings.numbered_bars_of) as a tone figure's letters: the lowest note at each
+    onset a tone of the chord sounding (CHORD_TONE) or off it (OFF_TONE); None where no chord fits an onset."""
+    out = []
+    for p, ns in struck:
+        c = _chord_at(chords, start + float(p))
+        pitched = [n[2] for n in ns if not math.isnan(n[2])]
+        if c is None or c.root is None or c.fit < FIT or not pitched:
+            return None
+        out.append(CHORD_TONE if vocab.tone_of(round(min(pitched)) % 12, c.root, c.shape) != "other" else OFF_TONE)
+    return out
+
+
+def tone_figure_units(songs) -> list:
+    """Each bar of a chord part's line as a unit (round 96): its outcome the line's onsets' tone classes against the chord
+    sounding at each ("c c c x": CHORD_TONE a tone of the chord, OFF_TONE off it), its values the part, the onset count and
+    the line's own pattern. The upper writer draws it under the line's bar as a second voice's mask is drawn (backing off to
+    the onset count) and plays the OFF_TONE onsets off the chord at the tone_degrees draw. FFVI's accompaniment line leaves
+    the chord on a quarter of its notes (the songs' medians 0.12 to 0.38), in 762 of its 1,447 bars; the written line had
+    held the voicing's tones alone (0.07 of its notes, and those from voicing marks the chord lacked)."""
+    out = []
+    for s in songs:
+        for role in TONE_FIGURE_PARTS:
+            line = cells_mod.tune_line(s, role)
+            if len(line) < WORD_NOTES:
                 continue
-            c = _chord_at(s.chords, n[0])
-            if c is None or c.root is None or c.fit < FIT:
+            for k, a, struck in readings_mod.numbered_bars_of(s, role, line):
+                classes = tone_classes(struck, a, s.chords) if struck else None
+                if classes:
+                    out.append(tables.Unit(s.sid, s.game, " ".join(classes),
+                                           {"part": role, "onsets": str(len(struck)), "line": readings_mod.pattern(p for p, _ in struck)}))
+    return out
+
+
+def tone_degree_units(songs) -> list:
+    """Each note of a chord part's line off the chord sounding as a unit (round 96): its outcome the note's interval from
+    the chord's root in semitones ("2" a ninth, "5" a fourth, "9" a sixth, "10" a seventh over a triad), its values the
+    part and the chord's shape (which decides which degrees are off it; "major" for the plain triad, as the voicings
+    word names it). Drawn once a bar whose tone figure leaves the chord; the line's off-chord onsets take the degree
+    nearest the voicing tone each replaces, so an ostinato bar pecks one tone off the chord as FFVI's do (a repeated
+    note is 0.22 of FFVI's off-chord accompaniment notes, a leap to one 0.39, a step 0.38)."""
+    out = []
+    for s in songs:
+        for role in TONE_FIGURE_PARTS:
+            line = cells_mod.tune_line(s, role)
+            if len(line) < WORD_NOTES:
                 continue
-            total += 1
-            hits += vocab.tone_of(round(n[2]) % 12, c.root, c.shape) != "other"
-        if total >= 8:
-            out.append(tables.Unit(s.sid, s.game, f"{round(hits / total / CHORD_TONE_BIN) * CHORD_TONE_BIN:.1f}", {"part": R.MELODY}))
+            for n in line:
+                if math.isnan(n[2]):
+                    continue
+                c = _chord_at(s.chords, n[0])
+                if c is None or c.root is None or c.fit < FIT:
+                    continue
+                pc = round(n[2]) % 12
+                if vocab.tone_of(pc, c.root, c.shape) == "other":
+                    out.append(tables.Unit(s.sid, s.game, str((pc - c.root) % 12), {"part": role, "shape": c.shape or "major"}))
     return out
 
 
@@ -585,6 +656,51 @@ def bar_index(song: readings_mod.Song, t: float) -> int:
     return len(song.bars) - 1 if song.bars and t >= song.bars[-1][1] - readings_mod.NEAR else 0
 
 
+RELATION_EDGE_BARS = 2               # a double or parallel stretch's first or last bars that read as the voice's own line, this many or
+                                     # more and R.STRETCH_NOTES notes, are a stretch of their own (round 96)
+
+
+def _split_own_edges(song: readings_mod.Song, rows: list, pitched: dict, v) -> list:
+    """A relation stretch read whole over a sample run (roles.stretches_of) split where its edge bars are the voice's own
+    line (round 96): at either end, a run of RELATION_EDGE_BARS bars or more whose notes, bar by bar, follow nothing
+    (roles.stretch_relation against the voice the stretch follows), carrying R.STRETCH_NOTES notes or more, becomes an own
+    stretch, RELATION_EDGE_BARS bars of the relation or more left between. Umaro's accompaniment voice doubles the tune two
+    octaves up for five bars and then plays a chromatic run of its own on the same sample; read whole, the run was the
+    double (First Meridian Return's accompaniment at midi 112, round 95). FFVI: 9 of 166 such stretches split, 138 notes."""
+    out = []
+    for row in rows:
+        a, b, key, kind, of, semi, n = row
+        if kind == "own" or of is None or of not in pitched:
+            out.append(row)
+            continue
+        by_bar = {}
+        for x in pitched[v]:
+            if a - readings_mod.NEAR <= x[0] <= b + readings_mod.NEAR:
+                by_bar.setdefault(bar_index(song, x[0]), []).append(x)
+        keys = sorted(by_bar)
+        own = {k: R.stretch_relation({"notes": by_bar[k], "a": by_bar[k][0][0], "b": by_bar[k][-1][0]}, {of: pitched[of]})[0] == "own" for k in keys}
+        head = 0
+        while head < len(keys) and own[keys[head]]:
+            head += 1
+        tail = 0
+        while tail < len(keys) - head and own[keys[-1 - tail]]:
+            tail += 1
+        count = lambda ks: sum(len(by_bar[k]) for k in ks)   # noqa: E731
+        head_ks = keys[:head] if head >= RELATION_EDGE_BARS and count(keys[:head]) >= R.STRETCH_NOTES else []
+        tail_ks = keys[len(keys) - tail:] if tail >= RELATION_EDGE_BARS and count(keys[len(keys) - tail:]) >= R.STRETCH_NOTES else []
+        middle = [k for k in keys if k not in head_ks and k not in tail_ks]
+        if (not head_ks and not tail_ks) or len(middle) < RELATION_EDGE_BARS:
+            out.append(row)
+            continue
+        row_of = lambda ks, kind_, of_, semi_: ((ns := [x for k in ks for x in by_bar[k]])[0][0], ns[-1][0], key, kind_, of_, semi_, len(ns))   # noqa: E731
+        if head_ks:
+            out.append(row_of(head_ks, "own", None, None))
+        out.append(row_of(middle, kind, of, semi))
+        if tail_ks:
+            out.append(row_of(tail_ks, "own", None, None))
+    return out
+
+
 def relation_words(song: readings_mod.Song) -> dict:
     """Each pitched voice's relation stretches as the balance token has them (round 90): "ox9>dm-12x14>o". In each
     stretch (roles.stretches_of: a run of notes on one sample, blips folded) what the voice does beside another voice
@@ -602,6 +718,7 @@ def relation_words(song: readings_mod.Song) -> dict:
     for v, rows in R.voice_relations({v: ns for v, ns in pitched.items() if ns}).items():
         if len(pitched[v]) < R.SECOND_NOTES:
             continue
+        rows = _split_own_edges(song, rows, pitched, v)     # a stretch's own edge bars as stretches of their own (round 96)
         words = []
         for a, b, key, kind, of, semi, n in rows:
             letter = RELATION_LETTERS.get(roles_of.get(of)) if of is not None else None

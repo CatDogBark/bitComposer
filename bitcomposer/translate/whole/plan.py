@@ -1126,6 +1126,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                             "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng),
                             "grain": (_draw(models, "tune_grain", (role, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:grain:{role}"), log, floor_k=GRAIN_FLOOR)
                                       if "tune_grain" in render_mod.models_or_empty(models) else None)}   # an own stream, floored at the tier (round 66)
+            if role == R.COUNTER and "chord_tones" in render_mod.models_or_empty(models):   # the counter-line's own chord-tone share (round 96), on an
+                extras[role]["chord_tones"] = float(_draw(models, "chord_tones", (R.COUNTER,), random.Random(f"whole:{seed}:chord_tones:{role}"), log))   # own stream
     if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models):   # the drums' entrances under the kit's tier (round 59), on an own stream
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
@@ -1746,14 +1748,16 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         # 1.5 of its voices strike together); a stack of voices all striking at every onset had been the writer's own
         # construction, three to four notes loud where the tune has one (Song Check 11's Whole 01).
         shared = {}                                         # the line's voicing at each onset, for the voices beside it
+        tlog = []                                           # what the tone figure word did to the line (round 96)
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
-                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"))
+                                                pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"),
+                                                tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog)   # the tone figures on their own stream (round 96)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
                f"motion {plan.extras[role]['motion']}, sounded {render_mod._sounds_text(sounds)}; {sum(1 for f in figures if f != writer.REST)} bars written, "
-               f"{len(notes)} notes; locked to the band in {len(lock)} bars"]
+               f"{len(notes)} notes; locked to the band in {len(lock)} bars"] + tlog
         all_figures = [f"{f} / {vc}" for f, vc in zip(figures, voicings)]
         line_notes = list(notes)
         scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
@@ -1820,7 +1824,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                      for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
-                                                  key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER), clash_rates=x.get("clashes"))
+                                                  key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER), clash_rates=x.get("clashes"),
+                                                  chord_rate=x.get("chord_tones"))   # its own chord-tone share held (round 96)
         else:
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
