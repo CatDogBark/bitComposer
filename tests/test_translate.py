@@ -928,11 +928,21 @@ class DrumsBySound(unittest.TestCase):
         pitches = [0x1000, 0x1000, 0xE00, 0xE00, 0xC00, 0xC00, 0xB00, 0xB00, 0xAB0, 0xAB0, 0x1000, 0xC00]   # 0, -2, -5, -6, -7 semitones
         found = [SimpleNamespace(voice=4, start=0.5 * i, end=0.5 * i + 0.3, brr=(0x1000, 0x1200), pitch=p, volume=(60, 60), noise=False)
                  for i, p in enumerate(pitches)]
-        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"):
+        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"), \
+             mock.patch.object(events.tuning, "rough_fundamental", lambda s: None):
             song = events.of_notes(found, lambda addr: looped, lambda addr: "guitar", 6.0)   # the namer's verdict pinned: a snare by sound
             self.assertEqual(song.samples[(0x1000, 0x1200)].piece, "other")
             self.assertTrue(song.samples[(0x1000, 0x1200)].by_play)
-            self.assertEqual([round(p.midi) for p in song.notes[:5]], [60, 60, 58, 58, 55])              # the rate as the note
+            self.assertEqual([round(p.midi) for p in song.notes[:5]], [60, 60, 58, 58, 55])              # no rough fundamental: the rate as the note
+        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"):
+            loud = array("h", [int(v) for v in tone(100, 0.4, noise=0.8, seed=5)])                       # a rough 100 Hz loop: a register for the instrument
+            looped_tone = brr.Sample(loud, 1600, len(loud), True, 0x1000, 0x1200, len(loud) // 16)
+            f0 = events.tuning.rough_fundamental(looped_tone)
+            self.assertIsNotNone(f0); self.assertAlmostEqual(f0, 100.0, delta=6.0)
+            song3 = events.of_notes(found, lambda addr: looped_tone, lambda addr: "guitar", 6.0)
+            self.assertTrue(song3.samples[(0x1000, 0x1200)].by_play)
+            self.assertAlmostEqual(song3.notes[0].midi, 43.35, delta=1.2)                                  # 100 Hz at the recording's rate: near G2
+            self.assertIsNone(events.tuning.rough_fundamental(one_shot))
             song2 = events.of_notes(found, lambda addr: one_shot, lambda addr: "snare", 6.0)
             self.assertEqual(song2.samples[(0x1000, 0x1200)].piece, "snare")
             self.assertTrue(all(p.midi is None for p in song2.notes))                                    # a one-shot drum: unpitched

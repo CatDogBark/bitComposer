@@ -30,8 +30,9 @@ class Sample:
     piece: str | None = None         # what the drum namer calls it as the song plays it (drums.name: kick, snare,
                                      # hat, tom, cymbal, other, none); None where it could not be measured
     by_play: bool = False            # an instrument by how the song strikes it (drums.instrument_by_play, round 102): a looped
-                                     # drum-named sound with no fundamental, struck across the chords; its notes take the rate
-                                     # as their pitch, 60 at the recording's, as the kit rates are kept
+                                     # drum-named sound with no clean fundamental, struck across the chords; its f0 is the loop's
+                                     # rough one (tuning.rough_fundamental), else its notes take the rate as their pitch, 60 at the
+                                     # recording's, as the kit rates are kept
 
 
 @dataclass
@@ -149,6 +150,8 @@ def of_notes(found: list, decoded, key, seconds: float, source: str = "", tags=N
             struck = [12.0 * math.log2(n.pitch / 0x1000) for n in found if n.brr == addr and not n.noise and n.pitch and n.pitch > 0]
             if drums_mod.instrument_by_play(struck, s.loops):
                 s.piece, s.by_play = "other", True
+                if addr in pcms:                        # its register from the loop's rough fundamental, where one repeats well enough
+                    s.f0 = tuning.rough_fundamental(pcms[addr])
     raw = [(n, samples.get(n.brr) if not n.noise else None) for n in found]
     for s in samples.values():
         if s.f0:
