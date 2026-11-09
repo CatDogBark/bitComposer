@@ -502,6 +502,11 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
                 if hold_rng.random() < hold_share:          # own stream the hold, so no other draw moves
                     name = previous
                     held_lines += 1
+                elif name == previous and cache is not None:   # the share says change: a chord the chain repeated is drawn again on the own
+                    unit = tables.Unit("", "", "", {"part": R.HARMONY, "mode": mode, "previous": prev_name})   # stream, so the song holds at the
+                    again = cache.draw(unit, previous, played, hold_rng, keep=lambda o: o not in (rhythm.NO_CHORD, previous))   # share, not over it
+                    if again and chord_of(again, tonic, mode) is not None:
+                        name = again
             played[name] += 1
             previous = prev_name = name
             names[k] = name
@@ -1091,15 +1096,22 @@ def ride_the_bass(plan: "Plan", song: rhythm.Song, role: str, notes: list, figur
     an own stream, a repeated part as its source. In a riding bar the line plays the written bass's notes (`bass`: its
     line voice, (start, end, midi, voice)), each in the line's register of the bar (in_register, the house fold) on the
     bass's lengths; the bar's figure is the bass's onsets, and the voices beside the line see the riding notes
-    (`shared`). Returns the notes, figures, voicings and a log line."""
+    (`shared`). A part of the form where the line or the bass rests throughout draws nothing (two of Battle Theme's seven
+    token seeds had drawn their riding part where the accompaniment or the bass sat out). Returns the notes, figures,
+    voicings and a log line."""
     c, s = rides
     share = c * s
+    plays = plan.plays.get(role) or []
+    bass_bars = {k for k, (a, b) in enumerate(song.bars) if any(a - rhythm.NEAR <= x[0] < b - rhythm.NEAR for x in bass)}
     decided, riding = {}, set()
     for i, (bar, n, of, label) in enumerate(plan.parts):
-        decided[i] = decided[of] if of is not None else rng.random() < share
+        if of is not None:
+            decided[i] = decided.get(of, False)
+        else:                                               # a part where the line or the bass rests throughout is no riff's: no draw for it
+            both = any(k < len(plays) and plays[k] and k in bass_bars for k in range(bar, bar + n))
+            decided[i] = both and rng.random() < share
         if decided[i]:
             riding.update(range(bar, bar + n))
-    plays = plan.plays.get(role) or []
     bounds_at = line_bounds_at(plan, role)
     new_notes = list(notes)
     done = 0
