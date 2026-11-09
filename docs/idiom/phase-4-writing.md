@@ -7182,7 +7182,7 @@ in the log), and the line riding a written bass (the bass's onsets and
 pitch classes in the line's register, the figure and the shared voicing
 replaced; a share of 0 riding nothing). The first commit went out with
 four failing tests, a grep having hidden the test runner's status; the
-fix followed, and test chains now set pipefail. Suite SUITE_N (1 skip).
+fix followed, and test chains now set pipefail. Suite 448 (1 skip).
 
 **Measured.** Written, the five Battle Theme token seeds with both
 parts (of seven): the line strikes with the bass on 0.76-0.94 of its
@@ -7198,7 +7198,7 @@ and 0.47 of its onsets with the bass against 0.47; the 10 without sit at
 0.20 and 0.30. Plans (400 seeds, against round 105): 346 keep their
 token song (the new fields re-sort the table), 6 plan logs unchanged.
 
-**Song Check 89** (SC89_LINK): five songs on Battle Theme's token after
+**Song Check 89** (https://claude.ai/artifact/Ybb7DohZPNnoh63ob18ybm): five songs on Battle Theme's token after
 rounds 105 and 106, the after side alone as the owner asked: Journey of
 the Quarry (18), Lunar Island (243), Gate Return (343), The Terminal of
 Glass (150, its plan re-dealt by the re-read: 19 bars) and Second Cistern
