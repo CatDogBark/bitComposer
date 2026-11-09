@@ -716,14 +716,16 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     ones had taken the line's sample and played 0.84-1.15 of its notes, a sparse pad in the game a busy riff over the tune.
     Since round 86 a fourth sub-field, where the song plays the voice's sample; since round 90 a fifth, what the voice does
     beside which part stretch by stretch (relation_words: "ox9>dm-12x14>o"); since round 92 a sixth, its instrument by
-    stretch (stretch_word with "~": "s605f200105~56-72x14>sf89f5aedfd~60-68")."""
+    stretch (stretch_word with "~": "s605f200105~56-72x14>sf89f5aedfd~60-68"); since round 108 a seventh, how a voice struck
+    with another strikes (_struck_text: "w0.82~0.2~0.3~1.0~0.6~-~4.9")."""
     shares = voice_level_shares(song, role)
     if shares is None:
         return None
     voices = cells_mod.part_voices(song, role)
     line = cells_mod.line_voice(voices, role, song)
     others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
-    relations = relation_words(song)                        # what each voice does beside the others, stretch by stretch (round 90)
+    relations, struck = _relations(song)                    # what each voice does beside the others, stretch by stretch (round 90),
+                                                            # and how a voice struck with another strikes (round 108)
     out = []
     for share, v in zip(shares, others):
         keys = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
@@ -731,7 +733,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
         sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
         rng = sample_range_in(voices[v], key) if key else ""    # where the token song plays this voice's sample (round 86)
         subs = [share, sid, f"{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}", rng, relations.get(v, ""),
-                stretch_word(song, voices[v], "~")]        # and its instrument by stretch (round 92; "~" keeps "@" for the sub-fields)
+                stretch_word(song, voices[v], "~"),        # and its instrument by stretch (round 92; "~" keeps "@" for the sub-fields)
+                struck.get(v, "")]                          # and how it strikes where it is struck with another (round 108: _struck_text)
         while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
             subs.pop()
         out.append("@".join(subs))
@@ -860,7 +863,49 @@ def parallel_interval_units(songs) -> list:
     return out
 
 
-def relation_words(song: readings_mod.Song) -> dict:
+STRUCK_NOTES = 2                     # a gap class needs this many struck notes for its sounded share (cells.gap_shares' floor; round 108)
+
+
+def _struck_facts(st: dict, followed: list, line: list, lengths: dict) -> tuple:
+    """One struck stretch's facts (round 108): the followed voice's onsets in the stretch's span and how many of them the
+    voice strikes (within roles.STRETCH_NEAR), each struck note's sounded share of the gap to the part's line's next onset by
+    gap class (cells.GAP_CLASSES: the stab's length is measured against the line it rides, not against the voice's own next
+    stab, which may be bars away where the line rests or the stabs thin), and the longest struck note in beats:
+    (struck, followed, {class: [shares]}, longest). Battle Theme's synth strikes 0.82 of the guitar's onsets, sounds 0.41 of
+    the guitar's next gap at the median, and never rings past 4.9 beats; its own gaps run to 9.9 beats."""
+    a, b = st["a"], st["b"]
+    starts = [x[0] for x in followed if a - readings_mod.NEAR <= x[0] <= b + readings_mod.NEAR]
+    line_on = [x[0] for x in line]
+    hit, by, longest = set(), {name: [] for _, name in cells_mod.GAP_CLASSES}, 0.0
+    for t, m, _ in st["notes"]:
+        lo, hi = bisect.bisect_left(starts, t - R.STRETCH_NEAR), bisect.bisect_right(starts, t + R.STRETCH_NEAR)
+        if lo < hi:
+            hit.add(min(range(lo, hi), key=lambda i: abs(starts[i] - t)))
+        d = lengths.get(t)
+        if d is None or math.isnan(d):
+            continue
+        longest = max(longest, d)
+        j = bisect.bisect_right(line_on, t + readings_mod.NEAR)
+        if j < len(line_on):
+            gap = line_on[j] - t
+            by[cells_mod.gap_class(gap)].append(min(1.0, d / gap))
+    return len(hit), len(starts), by, longest
+
+
+def _struck_text(parts: list) -> str:
+    """A struck-with voice's struck facts as the balance token's seventh layer sub-field (round 108), its struck stretches
+    together: "w0.82~0.2~0.3~1.0~0.6~-~4.9", the share of the followed voice's onsets it strikes, its sounded share of the
+    line's gap by gap class (to cells.SOUND_BIN; "-" under STRUCK_NOTES notes) and its longest note in beats."""
+    struck, followed = sum(p[0] for p in parts), sum(p[1] for p in parts)
+    if not followed:
+        return ""
+    by = {name: [x for p in parts for x in p[2][name]] for _, name in cells_mod.GAP_CLASSES}
+    sounds = [f"{round(statistics.median(xs) / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if len(xs) >= STRUCK_NOTES else "-"
+              for _, name in cells_mod.GAP_CLASSES for xs in (by[name],)]
+    return f"w{min(1.0, struck / followed):.2f}~" + "~".join(sounds) + f"~{max(p[3] for p in parts):.1f}"
+
+
+def _relations(song: readings_mod.Song) -> tuple:
     """Each pitched voice's relation stretches as the balance token has them (round 90): "ox9>dm-12x14>o". In each
     stretch (roles.stretches_of: a run of notes on one sample, blips folded) what the voice does beside another voice
     (roles.stretch_relation: a double at so many semitones, "d"; parallel at one generic interval, "p"; or its own line,
@@ -869,10 +914,14 @@ def relation_words(song: readings_mod.Song) -> dict:
     open; stretches alike in kind, target and interval run together, and a voice of one own stretch, or of fewer than
     roles.SECOND_NOTES notes, has no word (the layers table's stands: a three-note voice's word would have the writer
     play a whole parallel line). Kefka's channel 1: "ox9>dm-12x14>o", its own line for nine bars, the tune an octave under
-    for fourteen, its own again. The writer follows the word stretch by stretch (plan.stretched_notes)."""
+    for fourteen, its own again. The writer follows the word stretch by stretch (plan.stretched_notes). Returns the words
+    and, since round 108, each struck-with voice's struck facts (_struck_text), both by voice."""
     pitched = {v: sorted((n[0], n[2], n[3]) for n in ns if n[2] is not None and not math.isnan(n[2]))
                for v, (role, ns) in song.voice_notes.items() if role != R.DRUMS}
+    lengths = {v: {n[0]: n[1] for n in ns if n[2] is not None and not math.isnan(n[2])}   # each note's length by its onset (round 108)
+               for v, (role, ns) in song.voice_notes.items() if role != R.DRUMS}
     roles_of = {v: role for v, (role, _) in song.voice_notes.items()}
+    struck = {}                                             # a struck-with voice -> its struck stretches' facts (round 108)
     beside = {}                                             # a voice beside its part's line -> (its part, its rank among them, the line, the ranks)
     for role in set(roles_of.values()) - {R.DRUMS}:
         voices = cells_mod.part_voices(song, role)
@@ -903,6 +952,8 @@ def relation_words(song: readings_mod.Song) -> dict:
                     w = R.with_relation(st, {line_v: pitched[line_v]})
                     if w is not None:
                         word = f"wl{w[2]:+d}"
+                if w is not None and pitched.get(line_v):   # how it strikes (round 108): its share of the followed onsets, its lengths by the
+                    struck.setdefault(v, []).append(_struck_facts(st, pitched[w[1]], pitched[line_v], lengths[v]))   # line's gap, its longest
             end = bar_index(song, b)
             if words and words[-1][0] == word:
                 words[-1][1] = end
@@ -915,7 +966,17 @@ def relation_words(song: readings_mod.Song) -> dict:
             parts.append(word if i == len(words) - 1 else f"{word}x{max(1, end - prev)}")
             prev = max(prev, end)
         out[v] = ">".join(parts)
-    return out
+    return out, {v: _struck_text(ps) for v, ps in struck.items() if v in out}
+
+
+def relation_words(song: readings_mod.Song) -> dict:
+    """Each pitched voice's relation word by stretch (round 90; _relations)."""
+    return _relations(song)[0]
+
+
+def struck_words(song: readings_mod.Song) -> dict:
+    """Each struck-with voice's struck facts as the balance token's seventh layer sub-field has them (round 108; _struck_text)."""
+    return _relations(song)[1]
 
 
 TUNED_SHARE = 0.5                    # a kit sample is tuned to the key where no one struck rate holds more than this share of the songs

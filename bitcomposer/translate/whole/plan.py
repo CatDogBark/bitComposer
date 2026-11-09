@@ -32,6 +32,7 @@ levels and pans (LEVELS, PANS), how the eight voices are shared out
 follows the pack's own echo habits as the generator's did (score.of_song).
 """
 from __future__ import annotations
+import bisect
 import math
 import random
 from fractions import Fraction
@@ -296,6 +297,8 @@ class Plan:
                                       # fifth sub-field, round 90: "ox9>dm-12x14>o", what it does beside which part, bar by bar), or None
     stretches: dict = field(default_factory=dict)       # a pitched part -> its line's instrument by stretch (the eleventh field, round 91): [(sample,
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
+    layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
+                                                      # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
                                       # sub-field, round 92), the same shape, or None
     pans: dict = field(default_factory=dict)          # a pitched part -> its voices' pans, the right side's share, the line first (the balance
@@ -859,6 +862,27 @@ def relation_word(plan: "Plan", role: str, v: int) -> str | None:
     return words[v - 1] if 0 < v <= len(words) else None
 
 
+def struck_values_of(text: str) -> dict | None:
+    """The balance token's struck sub-field (round 108, arrangement._struck_text) read: "w0.82~0.2~0.3~1.0~0.6~-~4.9" -> {"share":
+    0.82, "sounds": {gap class: share, or None where the token lacks it}, "longest": 4.9 beats, or None}; None where it cannot
+    be read."""
+    parts = text.split("~")
+    if len(parts) != 2 + len(rhythm.GAP_CLASSES) or not parts[0].startswith("w"):
+        return None
+    try:
+        share, longest = float(parts[0][1:]), float(parts[-1])
+        sounds = {name: (float(x) if x != "-" else None) for (_, name), x in zip(rhythm.GAP_CLASSES, parts[1:-1])}
+    except ValueError:
+        return None
+    return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None}
+
+
+def struck_values(plan: "Plan", role: str, v: int) -> dict | None:
+    """The token song's struck facts for a part's voice v beside the line (round 108), None without them."""
+    xs = plan.layer_struck.get(role) or []
+    return xs[v - 1] if 0 < v <= len(xs) else None
+
+
 def relation_stretches(word: str) -> list:
     """A layer voice's relation word (round 90) as stretches: "ox9>dm-12x14>o" -> [("own", None, None, 9), ("double",
     melody, -12, 14), ("own", None, None, None)]: the kind, the part followed, the semitones, the bars (None: to the end).
@@ -881,15 +905,32 @@ def relation_stretches(word: str) -> list:
     return out
 
 
+STRUCK_TRIES = 6                      # draws of the second_figures mask for a bar whose mask thins nothing while the struck voice is over
+STRUCK_MARGIN = 0.05                  # the token song's struck share (round 108), and how far under or over it the running share may sit
+
+
+def _mask_count(g: str) -> int:
+    """The onsets a masked figure keeps."""
+    return 0 if g in ("", writer.REST) else len(g.split())
+
+
 def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int, models: dict, rng: random.Random, clash_rates, sounds, scale: set,
-                mask_draw=None) -> tuple:
+                mask_draw=None, gaps_ref=None, struck=None) -> tuple:
     """A voice struck with another (round 107): over bars [at, end) the followed voice's onsets (`ref`: (start, end, midi, voice)),
     thinned bar by bar by the second_figures word where `mask_draw` gives a bar's mask (which of the followed voice's onsets
     the voice strikes with), then placed by the parallel_intervals word at the nominal semitones on the chord (`parallel`),
-    each note sounding the voice's share of its gap (`sounds`). Battle Theme's synth strikes on 0.55 of the guitar riff's
-    onsets, a chord tone an octave and more up, a fifth or a fourth apart in its two voices, 0.19 beats long. Returns the
+    each note sounding a share of its gap. Since round 108 the token song's struck facts (`struck`: plan.struck_values_of)
+    rule both: the mask is held toward the token's share of the followed onsets (under it a bar strikes every followed
+    onset, over it a mask that thins nothing is drawn again, STRUCK_TRIES times), a note's gap is to the next onset of the
+    part's line (`gaps_ref`, else `ref`), never to the voice's own next stab, its share by gap class is the token voice's
+    where the token has the class (else `sounds`), and no note rings past the token voice's longest. Battle Theme's synth
+    strikes 0.82 of the guitar riff's onsets, a chord tone an octave and more up, a fifth or a fourth apart in its two
+    voices, 0.19 beats long at the median and never past 4.9 beats; measured against its own next stab, the last stab
+    before a twelve-bar rest of the part had rung through the rest (Song Check 90's Journey of the Quarry). Returns the
     notes, the onsets thinned away and {bar: the bar's figure}."""
     kept, thinned, figs = [], 0, {}
+    struck_n = followed_n = 0                               # the followed onsets struck so far, and seen so far (round 108)
+    target = struck["share"] if struck else None
     for k in range(at, min(end, len(song.bars))):
         a, b = song.bars[k]
         in_bar = sorted(x for x in ref if a - rhythm.NEAR <= x[0] < b - rhythm.NEAR)
@@ -897,6 +938,17 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
             continue
         f = rhythm.pattern(rhythm.position(x[0] - a, song.division) for x in in_bar)
         g = rhythm.apply_mask(f, mask_draw(f)) if mask_draw is not None else f
+        if target is not None and mask_draw is not None:   # the mask held toward the token song's share (round 108)
+            n_g = _mask_count(g)
+            if (struck_n + n_g + 1) / (followed_n + len(in_bar) + 1) < target - STRUCK_MARGIN:
+                g = f                                       # under the share: the bar strikes every followed onset
+            else:
+                for _ in range(STRUCK_TRIES):               # over it with a mask that thins nothing: another draw
+                    if n_g < len(in_bar) or (struck_n + n_g) / (followed_n + len(in_bar)) <= target + STRUCK_MARGIN:
+                        break
+                    g = rhythm.apply_mask(f, mask_draw(f))
+                    n_g = _mask_count(g)
+        followed_n += len(in_bar)
         if g in ("", writer.REST):
             thinned += len(in_bar)
             figs[k] = writer.REST
@@ -904,13 +956,22 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
         pos = {Fraction(tok.partition(":")[0]) for tok in g.split()}
         chosen = [x for x in in_bar if rhythm.position(x[0] - a, song.division) in pos]
         thinned += len(in_bar) - len(chosen)
+        struck_n += len(chosen)
         kept += chosen
         figs[k] = g
     placed = sorted(parallel([(x[0], x[1], x[2], v) for x in kept], semi, scale, v, song, role, models, rng, clash_rates, None), key=lambda x: x[0])
+    line_on = sorted(x[0] for x in (gaps_ref if gaps_ref is not None else ref))   # the line's onsets: a stab's gap is to the line's next (round 108)
+    sounds_w = struck["sounds"] if struck else None
+    longest = struck["longest"] if struck else None
     out = []
-    for i, (a, b, m, vv) in enumerate(placed):
-        gap = (placed[i + 1][0] - a) if i + 1 < len(placed) and placed[i + 1][0] > a else max(b - a, 0.25)
-        out.append((a, a + gap * sounded_share(sounds, gap), m, vv))
+    for a, b, m, vv in placed:
+        j = bisect.bisect_right(line_on, a + rhythm.NEAR)
+        gap = (line_on[j] - a) if j < len(line_on) else max(b - a, 0.25)   # after the line's last onset, the followed note's own length
+        share = sounds_w.get(rhythm.gap_class(gap)) if sounds_w else None
+        length = gap * (share if share is not None else sounded_share(sounds, gap))
+        if longest:
+            length = min(length, longest)
+        out.append((a, a + length, m, vv))
     return out, thinned, figs
 
 
@@ -1234,6 +1295,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
+    token_layer_struck = {}                                 # how each voice struck with another strikes (round 108)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
@@ -1291,6 +1353,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_relations[role] = [x[4] if len(x) > 4 and x[4] else None for x in parts_]
                 if any(len(x) > 5 and x[5] for x in parts_):   # and each one's instrument by stretch (round 92; "~" between a sample and its range)
                     token_layer_stretches[role] = [line_stretch_list(x[5].replace("~", "@")) if len(x) > 5 and x[5] else None for x in parts_]
+                if any(len(x) > 6 and x[6] for x in parts_):   # and how a voice struck with another strikes (round 108): its share of the
+                    token_layer_struck[role] = [struck_values_of(x[6]) if len(x) > 6 and x[6] else None for x in parts_]   # followed onsets, its
+                                                                                                                        # lengths by the line's gap, its longest
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
             if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
@@ -1659,7 +1724,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2201,9 +2266,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         ref = line_notes
                     a0, b0 = song.bars[at][0], song.bars[min(end, len(song.bars)) - 1][1]
                     in_span = [x for x in ref if a0 - rhythm.NEAR <= x[0] < b0 - rhythm.NEAR]
+                    sv = struck_values(plan, role, v) if kind_w == "with" else None   # how the token song's voice strikes (round 108)
                     if kind_w == "with":
                         struck, thinned, figs = struck_with(ref, at, end, semi_w, song, role, v, models, rng_w, plan.extras[role].get("clashes"),
-                                                            gs["second"] if gs else sounds, scale, mask_draw)
+                                                            gs["second"] if gs else sounds, scale, mask_draw, line_notes, sv)
                         for k, f in figs.items():
                             figures_v[k] = f
                     elif kind_w == "double":
@@ -2215,7 +2281,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         voicings_v[k] = f"{kind_w} {'the line' if target == ('line',) else 'voice ' + str(target[1] + 1)} {semi_w:+d}"
                     log.append(f"voice {v + 1} {'struck with' if kind_w == 'with' else kind_w} {'the line' if target == ('line',) else f'voice {target[1] + 1}'} at {semi_w:+d} "
                                f"in bars {at + 1}-{end} (the token's stretches {word_v}): {len(struck)} notes"
-                               + (f" on the chord by the parallel_intervals word, {thinned} of the followed onsets thinned by the second_figures word" if kind_w == "with" else ""))
+                               + (f" on the chord by the parallel_intervals word, {thinned} of the followed onsets thinned by the second_figures word" if kind_w == "with" else "")
+                               + ("" if sv is None else f", the mask held toward the token's share {sv['share']:.2f}; lengths by the line's gap"
+                                  + (f", at most {sv['longest']:.1f} beats" if sv.get("longest") else "")))
                 if any(sp[0] != "own" for sp in spans_v if sp not in inline):
                     log.append(f"voice {v + 1}: the token's stretches of another part's line in {word_v} stay its own beside the struck ones")
                 notes_v.sort(key=lambda x: x[0])

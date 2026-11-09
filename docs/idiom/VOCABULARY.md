@@ -266,6 +266,28 @@ The words are grouped by where the writing draws them, in the order the song is 
   parallel of a sibling follows the sibling's written notes. FFVI: 39
   own-reading stretches of voices beside a line strike with the line, 9
   with a sibling, 71 stay their own.
+  Since round 108 a struck-with voice carries a seventh sub-field, how it
+  strikes (`_struck_text`: `w0.73~0.7~0.2~0.9~-~-~4.9` for Battle Theme's
+  synth): the share of the followed voice's onsets it strikes, its sounded
+  share of the part's line's gap by gap class (a stab's length measured
+  against the line it rides, as the line's own lengths are in field 2,
+  never against the voice's own next stab) and its longest note in beats.
+  The writer holds the `second_figures` mask toward the share (under it a
+  bar strikes every followed onset; over it a mask that thins nothing is
+  drawn again, `STRUCK_TRIES` times), takes the voice's share by the
+  line's gap where the token has the class, and lets no stab ring past the
+  longest. Why: measured against its own next stab, a stab's gap ran to
+  bars wherever the part rested or the mask thinned whole bars, and the
+  pooled second voice's share of a gap over four beats (0.9) made it a
+  drone: Journey of the Quarry's two synth voices (Song Check 90, seed 18)
+  each held one note for 45 beats through the twelve bars the
+  accompaniment sits out, Lunar Island's for 30, and nine of the twenty
+  struck voices in seeds 1-60 held a note two bars or longer, where Battle
+  Theme's synth never rings past 4.9 beats and its own gaps never pass
+  9.9. FFVI: 44 struck-with voices in 32 songs strike 0.78 of the followed
+  onsets at the median (0.12 to 1.00), sound 0.8, 0.4, 0.9, 1.0 and 0.9 of
+  the line's gap by class, and their longest notes run from 0.6 to 15.9
+  beats (median 4.5).
   Why the sixth field: a second voice at its own `layer_levels` draw on
   a line whose level was the token's had stacked to 1.8 times the tune
   (Whole 03) and the cap of full (Whole 15 and 20), where FFVI's loud
