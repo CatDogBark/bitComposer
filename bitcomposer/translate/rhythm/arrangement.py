@@ -1200,6 +1200,29 @@ def pan_field(song: readings_mod.Song, role: str) -> str:
     return "/".join(pan_word(song, v) for v in order)
 
 
+def line_motion(s, role: str, line_notes=None) -> str:
+    """A chord part's line voice's motion as the balance token carries it (round 103): the share of its strikes whose pitch
+    differs from the strike before's, as MOTIONS' class (block under a third, mixed, arpeggiated over two thirds;
+    readings.upper_motion on the line alone, where the motions word counts the whole part's strikes); "" under WORD_NOTES
+    notes. FFVI's Battle Theme: the guitar riff moves on 0.37 of its strikes under two arpeggiating string voices, and the
+    pooled motions draw had arpeggiated the guitar in a written song."""
+    notes = line_notes if line_notes is not None else cells_mod.tune_line(s, role)
+    pitched = [n for n in notes if not math.isnan(n[2])]
+    if len(pitched) < WORD_NOTES:
+        return ""
+    return readings_mod.habit_of(readings_mod.upper_motion(pitched), readings_mod.MOTIONS)
+
+
+def line_tone_tier(s, role: str) -> str:
+    """A chord part's line's off-chord tier as the balance token carries it (round 103): tone_tier_of its share of onsets
+    off the chord sounding over its bars (_tone_bars, the tone_tiers word's own measure for the song); "" where the line
+    is under WORD_NOTES notes or no chord fits."""
+    for _, r, bars in _tone_bars([s]):
+        if r == role:
+            return tone_tier_of(_tone_share(bars))
+    return ""
+
+
 def balance_units(songs) -> list:
     """Each song as a unit: its outcome its band with, for each pitched
     part, its weight, its register, the share of its gap a note sounds,
@@ -1317,7 +1340,9 @@ def balance_units(songs) -> list:
                       part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
                       habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
                       pan_field(s, role),                     # and its voices' pans (round 84): the song's stereo picture together
-                      line_stretches(s, role)]                # and the line's instrument by stretch (round 91)
+                      line_stretches(s, role),                # and the line's instrument by stretch (round 91)
+                      line_motion(s, role, line_notes) if role in readings_mod.UPPER else "",   # a chord part's line motion (round 103)
+                      line_tone_tier(s, role) if role in readings_mod.UPPER else ""]           # and its off-chord tier (round 103)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

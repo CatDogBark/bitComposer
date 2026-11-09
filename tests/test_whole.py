@@ -731,6 +731,43 @@ class SectionDensityTests(unittest.TestCase):
         self.assertEqual((env(0), env(5), env(9), env(5, 10.0)), (None, (6, 64), None, (15, 64)))            # the bass's medium tier, denser in B
 
 
+class TokenMotionTests(unittest.TestCase):
+    """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
+
+    def test_the_token_carries_a_chord_parts_line_motion_and_tier_and_the_plan_takes_them(self):
+        from bitcomposer.translate import tables
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chords = [Span(0.0, 32.0, 0, "", 1.0)]                                                                  # C throughout
+        riff = [(4.0 * k + x / 2, 0.4, 48.0 if x % 8 else 55.0, "g") for k in range(8) for x in range(8)]      # a chugging line: C with a G on each downbeat
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        tune = [(4.0 * k + x, 0.9, 72.0 + x, "m") for k in range(8) for x in (0.0, 1.0, 2.0, 3.0)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": riff, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", riff), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        self.assertEqual((rhythm.line_motion(s, "accompaniment"), rhythm.line_tone_tier(s, "accompaniment")), ("block", "rare"))   # 0.25 of strikes move, all on the chord
+        tok = rhythm.balance_units([s])[0].outcome
+        acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual((acc[11], acc[12]), ("block", "rare"), acc)
+        self.assertNotIn("block", next(f for f in tok.split() if f.startswith("bass=")))                   # the bass carries no motion field
+        # the plan: the token's motion and tier in place of the draws, the voices beside the line keeping the drawn motion
+        token = "accompaniment=main:48-55:0.9:1:0.6:::sacc0123456@44-60:dense+repeating:0.50::block:rare bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        units_ = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units_(token, part=rhythm.ARRANGEMENT)),
+                  "motions": tables.Table(("part",), "motions", votes=tables.SHARES).fit(units_("arpeggiated", part="accompaniment")),
+                  "tone_tiers": tables.Table(("part",), "tone_tiers", votes=tables.SHARES).fit(units_("many", part="accompaniment"))}
+        p = whole.plan(models, 3, "g")
+        x = p.extras["accompaniment"]
+        self.assertEqual((x["motion"], x["motion_drawn"], x["tone_tier"], x["tone_tier_drawn"]), ("block", "arpeggiated", "rare", "many"))
+        self.assertTrue(any(l.startswith("accompaniment's line motion from the balance: block (the draw arpeggiated)") for l in p.log), p.log)
+        bare = "accompaniment=main:48-55:0.9:1:0.6:::sacc0123456@44-60:dense+repeating bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
+        models["balance"] = tables.Table(("part",), "balance", votes=tables.SHARES).fit(units_(bare, part=rhythm.ARRANGEMENT))
+        q = whole.plan(models, 3, "g")
+        self.assertEqual((q.extras["accompaniment"]["motion"], q.extras["accompaniment"]["tone_tier"]), ("arpeggiated", "many"))   # no field: the draws
+        self.assertNotIn("motion_drawn", q.extras["accompaniment"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
