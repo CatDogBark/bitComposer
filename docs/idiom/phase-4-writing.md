@@ -7051,3 +7051,75 @@ the layer words can say; the section densities move a part at a time; the
 form carries no token field; and round 103's line motion. The standing
 list: round 100's endings and theme returns, round 101's sparser side,
 the counter's semitone interval form, round 102's other games' flips.
+
+### Round 105: each section's bar from its kit (2026-11-08, from the Battle Theme investigation, on the owner's go)
+
+**Why.** The owner heard every song on Battle Theme's token as disjointed,
+"all the parts doing their own thing", and asked for a deep look at
+them. Measured against Battle Theme's readings and its real mix
+(bt_deep.py, bt_phase.py, bt_loudness.py in r104), the mix was right
+(the written stems within 1-3 dB of the game's parts), the sounds,
+levels, habit classes, motion and tier were Battle Theme's own, and the
+onsets locked a little less. The large thing was time: in Battle Theme's
+readings the snare sat on the reader's beats one and three in 0.88 of
+its hits and the kick on two and four, a rock groove inverted, because
+the reader's bar lines began a beat late (the kick, bass and guitar
+start at beat 1.06 and the lead enters at beat 9; the reader's bars at
+2, 10, 14). The beat reader had broken the song into twenty sections,
+each with a meter and a downbeat from a few bars' accents (seven in 3,
+one in 2), the accents' rule put each downbeat on the loud backbeat
+snare, and the phase rule's one phase for the song could not follow
+sections whose beats restart off the grid (its signs come out flat
+across the candidate beats). Every written song on the token inherited
+it: in all ten the snare fell on written beats one and three and the
+kick on two and four, under chords that change and tune phrases that
+begin on the one, and the pool mixed in correctly read bars so the
+backbeat flipped in a quarter to a third of the bars of three songs.
+Setzer, The Fierce Battle and Returners read the same way; Techno de
+Chocobo, Mog, Devil's Lab and Gogo read right.
+
+**Built.** `beat.rebar_kit`, called in `reading.beat_and_parts` after
+the bass re-bar and the phase rule, with the kit's voices' hits alone
+(a snare-named sample on a pitched part's voice, New Continent's
+one-pitch pedal or Last Dungeon's ostinato, is no backbeat). A section
+with KIT_HITS (8) on-beat kick and snare hits, KIT_KICKS (4) of them
+kicks, takes the downbeat its kit scores best under the phase model's
+two-level table a sign (KIT_SIGNS: the kick on the one at 0.50, the
+snare 0.12, a cymbal 0.55, FFVI's kit songs read right) where that beats
+the downbeat read by KIT_MARGIN (0.4); a snare alone moves nothing,
+since it cannot tell a backbeat from a march and lands a half-bar either
+way. A section read in 3 or 2 in a song mostly in 4 whose snare
+alternates every two beats (KIT_ALTERNATES 0.7 of KIT_ALTERNATING_HITS
+4 or more) is in 4. Three cuts: the rule, the lower alternation count,
+and the drum-voice restriction after the first scratch re-read moved
+the bars of eleven kit-less songs. Test: a kick on one and three under a
+louder snare on two and four with a tune that never repeats (the
+accents' bar on the snare, the kit's on the kick; barred already, a
+snare alone, too few hits: nothing). FFVI re-read into a scratch
+database first (reread_r105.sh), compared song by song
+(phase_compare.py), then promoted (readings.db.before-r105); pack refit
+(110 tables), the vocabulary shipped and committed.
+
+**Measured.** FFVI: Battle Theme's snare on two and four in 0.97 of its
+on-beat hits (0.07 before) and its kick on one and three in 0.96 (0.08),
+its bars on the real downbeats (5, 9, 13 ...), 31 four-beat bars of 41
+(28); 4 of 68 songs' bars move: Battle Theme, The Decisive Battle (two
+statements of one section now barred alike, its kick on one and three
+0.47 to 0.68), Metamorphasis (its sections barred alike on the kick) and
+two sections of Dancing Mad part 5's hundred and fourteen; every kit
+song read right before is unchanged. Written (seeds 1-100): the seven
+songs on Battle Theme's token have the snare on two and four in 0.68 to
+1.00 of its hits and the kick on one and three with none to 0.08 on two
+and four; over the 15 songs with a kit the snare sits on two and four
+0.53 and on one and three 0.12. Plans (400 seeds, against round 104):
+204 keep their token song, 196 draw another (the re-read moves the
+tables); one plan log unchanged.
+
+**Open.** The beat reader's sectioning (LIMITS: twenty sections for
+Battle Theme, a hundred and fourteen for Dancing Mad part 5; the joins
+leave bars of 1, 2, 3, 5 or 6 beats, 10 of Battle Theme's 41); one grid
+re-locked without a new section is the fix. Snare-only songs barred on
+their snare (Setzer, The Fierce Battle, Returners) stay as read. The
+Battle Theme findings that remain: the riff is not shared material and
+the harmony never sits (round 106), the synth pair, the form, the
+sections' densities.
