@@ -29,6 +29,7 @@ its grid from 0 to 15 s and from 25 to 40, half a step off in between). So
 the grid is followed onset by onset and taken again where three onsets in a
 row miss it: a song is sections, each with its own grid, the beat counted
 on across them."""
+from collections import Counter
 import bisect
 import math
 import statistics
@@ -720,6 +721,91 @@ def rebar(grid: Grid, bass_beats: list[float]) -> bool:
     for x, (i0, i1), d in zip(grid.sections, spans, downbeats):
         x.meter, x.downbeat = m, d
         bars += bt[i0 + d:i1:m]
+    grid.bar_times = bars
+    return True
+
+
+KIT_HITS = 8                         # on-beat kick and snare hits a section needs for its kit to set its bar (round 105)
+KIT_KICKS = 4                        # and on-beat kick hits it needs to move its downbeat: a snare alone cannot tell a backbeat
+                                     # (two and four) from a march (one and three), and lands a half-bar either way
+KIT_MARGIN = 0.4                     # how much better, in the phase model's score, the kit's downbeat must be than the one read
+KIT_ON = 0.2                         # beats: a hit this near a beat is on it (phase.ON)
+KIT_ALTERNATES = 0.7                 # the share of a section's on-beat snare hits on two beats a half-bar apart that says 4, not 3 or 2
+KIT_ALTERNATING_HITS = 4             # and how many such hits a section needs (Battle Theme's short sections hold five or six)
+KIT_SIGNS = {                        # weight, the share of the piece's on-beat hits on the downbeat (FFVI's kit songs read right,
+    "kick": (0.75, 0.50),            # 2026-11-08: the kick on the one 0.40-0.65, the three nearly as much; a backbeat snare on the one
+    "snare": (0.75, 0.12),           # 0.00-0.17 in rock, 0.25-0.37 in a march; a crash on the one 0.4-0.8)
+    "cymbal": (0.5, 0.55),
+}
+
+
+def _section_spans(grid: Grid) -> list[tuple[int, int]]:
+    """Each section's beats as [i0, i1) indices into grid.beat_times."""
+    spans, bt = [], grid.beat_times
+    for x in grid.sections:
+        tol = 0.5 * x.period
+        i0 = bisect.bisect_left(bt, x.first - tol)
+        i1 = bisect.bisect_right(bt, x.end + tol)
+        if spans and i0 < spans[-1][1]:
+            i0 = spans[-1][1]
+        spans.append((i0, max(i0, i1)))
+    return spans
+
+
+def rebar_kit(grid: Grid, kit_beats: dict) -> bool:
+    """Each section's bar from its kit (round 105): a kick drum lands on the one (and the three), a backbeat snare
+    almost never does, a cymbal crash opens a bar. The accents had put Battle Theme's bar on its loud snare in each
+    of its twenty sections, a beat off, and the phase rule's one phase for the song cannot follow sections whose
+    beats restart off the grid, so the written songs on its token had the kick on two and four under chords and
+    phrases that changed on the one. `kit_beats`: {"kick": [...], "snare": [...], "cymbal": [...]}, hits as
+    grid.beats. A section with KIT_HITS on-beat kick and snare hits or more takes the downbeat its kit scores best
+    (the phase model's two-level table a sign, KIT_SIGNS) where that beats the downbeat read by KIT_MARGIN and the
+    section has KIT_KICKS kick hits (a snare alone cannot tell a backbeat from a march); a section read in 3 or 2
+    in a song mostly in 4 whose snare alternates every two beats (KIT_ALTERNATES of its on-beat hits on two beats
+    a half-bar apart) is in 4. The caller passes the kit's voices' hits alone: a drum-named sample on a pitched
+    part's voice is no backbeat. Returns whether a bar changed."""
+    if not grid or grid.loose or not grid.sections:
+        return False
+    spans, bt = _section_spans(grid), grid.beat_times
+    on = {}
+    for piece, beats in kit_beats.items():
+        on[piece] = [round(b) for b in beats if abs(b - round(b)) <= KIT_ON and b >= -KIT_ON]
+    total = sum(x.end - x.start for x in grid.sections) or 1.0
+    mostly_four = sum(x.end - x.start for x in grid.sections if x.meter == 4) / total >= 0.7
+    changed = False
+    for x, (i0, i1) in zip(grid.sections, spans):
+        if i1 - i0 < 4:
+            continue
+        hits = {piece: [i for i in on.get(piece, []) if i0 <= i < i1] for piece in KIT_SIGNS}
+        if len(hits["kick"]) + len(hits["snare"]) < KIT_HITS:
+            continue
+        m = x.meter
+        if m in (3, 2) and mostly_four and len(hits["snare"]) >= KIT_ALTERNATING_HITS:
+            pos = Counter((i - i0) % 4 for i in hits["snare"])
+            (a, na), (b, nb) = (pos.most_common(2) + [(None, 0)])[:2]
+            if b is not None and (a - b) % 4 == 2 and (na + nb) / len(hits["snare"]) >= KIT_ALTERNATES:
+                m = 4
+        scores = [0.0] * m
+        for piece, (weight, share) in KIT_SIGNS.items():
+            xs = hits[piece]
+            if not xs:
+                continue
+            up, down = math.log(share * m), math.log((1 - share) / (m - 1) * m)
+            for phi in range(m):
+                at = sum(1 for i in xs if (i - i0 - phi) % m == 0) / len(xs)
+                scores[phi] += weight * (at * up + (1 - at) * down)
+        best = max(range(m), key=lambda phi: scores[phi])
+        current = x.downbeat % m if m == x.meter else None
+        if current is not None and (len(hits["kick"]) < KIT_KICKS or scores[best] - scores[current] < KIT_MARGIN):
+            continue
+        if m == x.meter and best == current:
+            continue
+        x.meter, x.downbeat, changed = m, best, True
+    if not changed:
+        return False
+    bars = []
+    for x, (i0, i1) in zip(grid.sections, spans):
+        bars += bt[i0 + x.downbeat % x.meter:i1:x.meter]
     grid.bar_times = bars
     return True
 

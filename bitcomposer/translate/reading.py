@@ -189,6 +189,10 @@ def beat_and_parts(song) -> tuple:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
         phase_mod.find(grid, song)
+        drums = {x.voice for x in roles if x.role == roles_mod.DRUMS}   # the kit's voices alone: a snare-named sample on a
+        beat.rebar_kit(grid, {piece: [grid.beats(p.start) for p in song.notes   # pitched part's voice (New Continent's one-pitch
+                                      if p.voice in drums and p.sample is not None and p.sample.piece == piece]   # pedal) is no backbeat
+                              for piece in beat.KIT_SIGNS})   # each section's bar from its kit (round 105)
     return grid, roles
 
 

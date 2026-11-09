@@ -152,6 +152,18 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the median against FFVI's 11, the arp 9 against 8, the harmony 8 against
   5 (ten FFVI songs); the token carries the first two, the harmony's is
   the gap.
+- **The beat reader breaks a driving song into many sections.** A song
+  keeps its tempo but the reader takes its grid again where three onsets
+  in a row miss it, and FFVI's battle songs, whose drivers shift the
+  grid by a few hundredths of a beat now and then, come back in twenty
+  sections (Battle Theme), sixteen (The Decisive Battle) or a hundred and
+  fourteen (Dancing Mad part 5), each with a meter and a downbeat of its
+  own from a few bars' accents; the joins leave bars of 1, 2, 3, 5 or 6
+  beats (Battle Theme: 10 of 41 since round 105, 13 before), and those
+  bars' figures go into the tables as they are. Since round 105 a
+  section's kit sets its downbeat and its meter, so the sections agree;
+  one grid for the song, re-locked without a new section, is the fix.
+
 - **A chord part's line moves more than its motion class says.** Since
   round 103 a chord part's line walks the voicing stack as its token
   song's motion class does (block holds a tone a strike, arpeggiated
