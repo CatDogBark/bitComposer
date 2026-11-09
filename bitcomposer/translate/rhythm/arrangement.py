@@ -1191,6 +1191,8 @@ def part_period_field(s, role: str) -> str:
     part of the form has a period. The writer had drawn a backing part's period and its holds from the pooled tables by
     the part of the form's length, so the riff under a Battle Theme song ran at the tables' lags and holds, not the
     song's."""
+    if not getattr(s, "parts", None) or any(len(part) != 4 for part in s.parts):   # a song without a read form has no period
+        return ""
     weight, held, total = Counter(), Counter(), Counter()
     for idx, n, keys in cells_mod._blocks(s):
         ks = keys.get(role)

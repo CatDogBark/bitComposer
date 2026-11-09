@@ -738,30 +738,30 @@ class TokenRiffTests(unittest.TestCase):
 
     def _song(self):
         from bitcomposer.translate.vocab import Span
-        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
-        chords = [Span(0.0, 16.0, 0, "", 1.0), Span(16.0, 32.0, 7, "", 1.0)]                                   # C for four bars, G for four
-        bass = [(4.0 * k + x / 2, 0.45, 36.0 if x % 2 == 0 else 43.0, "b") for k in range(8) for x in range(8)]   # a two-bar riff? no: one bar, repeated every bar
-        riff = [(4.0 * k + x / 2, 0.45, (48.0 if x % 2 == 0 else 55.0) if k < 6 else 52.0 + (x % 3), "g") for k in range(8) for x in range(8)]   # six bars on the bass's riff an octave up, two bars its own
-        tune = [(4.0 * k + x, 0.9, 72.0 + x, "m") for k in range(8) for x in (0.0, 1.0, 2.0, 3.0)]
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        chords = [Span(0.0, 24.0, 0, "", 1.0), Span(24.0, 48.0, 7, "", 1.0)]                                   # C for six bars, G for six
+        bass = [(4.0 * k + x / 2, 0.45, 36.0 if x % 2 == 0 else 43.0, "b") for k in range(12) for x in range(8)]   # one bar of root-fifth eighths, every bar
+        riff = [(4.0 * k + x / 2, 0.45, (48.0 if x % 2 == 0 else 55.0) if k < 6 else 52.0 + (x % 3), "g") for k in range(12) for x in range(8)]   # six bars on the bass's riff an octave up, six bars its own on the same onsets
+        tune = [(4.0 * k + x, 0.9, 72.0 + x, "m") for k in range(12) for x in (0.0, 1.0, 2.0, 3.0)]
         s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": riff, "bass": bass, "melody": tune}, sid="s", game="g",
-                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+                        numbers=list(range(12)), parts=[(0, 12, None, "A")], tonic=0, mode="major")
         s.voice_notes = {0: ("accompaniment", riff), 1: ("bass", bass), 2: ("melody", tune)}
         s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
         return s
 
     def test_the_token_carries_the_riff_fields(self):
         s = self._song()
-        self.assertEqual(rhythm.line_rides_field(s, "accompaniment"), "b100/75")                # every onset with the bass, six bars of eight at its pitch class
-        self.assertEqual(rhythm.part_period_field(s, "bass"), "p1/86")                          # the bass repeats its bar every bar; at the chord change its
-                                                                                                 # marks change (C and G on G: root and fourth), one bar of seven varied
-        self.assertEqual(rhythm.line_rides_field(s, "melody"), "")                               # not a chord part (the field is asked only for them)
-        self.assertAlmostEqual(rhythm.chord_hold_share(s), 6 / 7)                                # one change at bar line 4 of seven
+        self.assertEqual(rhythm.line_rides_field(s, "accompaniment"), "b100/50")                # every onset with the bass, six bars of twelve at its pitch class
+        self.assertEqual(rhythm.part_period_field(s, "bass"), "p1/91")                          # the bass repeats its bar every bar; at the chord change its
+                                                                                                 # marks change (C and G on G: root and fourth), one bar of eleven varied
+        self.assertAlmostEqual(rhythm.chord_hold_share(s), 10 / 11)                              # one change at bar line 6 of eleven
         tok = rhythm.balance_units([s])[0].outcome
         acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
-        self.assertEqual(acc[14], "b100/75", acc)
+        self.assertEqual(acc[14], "b100/50", acc)
         bass = next(f for f in tok.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
-        self.assertEqual(bass[13], "p1/100", bass)
-        self.assertIn("holds=0.86", tok)
+        self.assertEqual(bass[13], "p1/91", bass)
+        self.assertIn("holds=0.91", tok)
+        self.assertNotIn("holds", " ".join(f for f in tok.split() if f.startswith("melody=")))
 
     def test_the_plan_takes_the_riff_fields(self):
         from bitcomposer.translate import tables
@@ -797,7 +797,9 @@ class TokenRiffTests(unittest.TestCase):
         self.assertTrue(all(48 <= n[2] <= 60 for n in riding))
         self.assertEqual(figs[0], rhythm.pattern(rhythm.position(x / 2, 4) for x in range(8)))
         self.assertEqual(shared[("line", (0, Fraction(0)))], riding[0][2])
-        self.assertNotIn(("line", (0, Fraction(1))), shared)                                                     # the old line's key at beat 2 is gone (the riff struck at 1.0 keeps its own key)
+        bar0 = {key_[1][1]: m for key_, m in shared.items() if key_[0] == "line" and key_[1][0] == 0}
+        self.assertEqual(sorted(bar0), [Fraction(x, 2) for x in range(8)])                                       # the line's keys of bar 0 are the riding onsets, the old beats' gone or replaced
+        self.assertEqual({round(m) % 12 for m in bar0.values()}, {0, 7})
         self.assertIn("rides the bass in 4 bars", log[0])
         notes2, figs2, vcs2, log2 = whole.ride_the_bass(plan, song, "accompaniment", list(own), ["0 1 2 3"] * 4, ["own"] * 4, {}, (48, 60), (0.0, 0.0), bass, random.Random(1))
         self.assertEqual(notes2, sorted(own))                                                                    # a share of 0: nothing rides
@@ -899,7 +901,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
         self.assertTrue(tokens[1].startswith("drums") and tokens[1].endswith("+mixed"), tokens)       # the kit's habit rides too (round 62)
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[7].split("@")[0] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62)
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[7].split("@")[0] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62); a period field after (round 106)
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
         self.assertEqual({u.values["part"] for u in ranges}, {"sk", "sm"})
@@ -1515,7 +1517,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
         self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest
-        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") == 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit
+        self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit (a period field after, round 106)
         self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}
         self.assertTrue(rhythm.balance_units([s])[0].outcome.split()[1].startswith("drums=:::Kc::::K="))   # no levels read: the channels, the kit and habit alone (round 87)
