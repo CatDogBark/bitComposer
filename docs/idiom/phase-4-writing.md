@@ -7287,3 +7287,75 @@ sections' densities and the bass's pitch continuity from the
 investigation stand. The standing list: round 100's endings and theme
 returns, round 101's sparser side, round 103's line motion, round 105's
 sectioning.
+
+### Round 108: a struck voice's share, lengths and longest note are the token song's (2026-11-09, from the owner's listening to Song Check 90, on his go)
+
+**Why.** The owner heard the synth organ in Journey of the Quarry (Song
+Check 90, seed 18) hold one long note from about fifteen seconds in.
+Round 107's struck_with had given each stab its share of the gap to the
+voice's own next stab, the line's rule (round 95's gap_sounds), and that
+gap ran to bars wherever the part rested or the second_figures mask
+thinned whole bars; the pooled second voice's share for a gap over four
+beats, 0.9, made the stab a drone. Both synth voices held one note for
+44.6 and 45.9 beats through bars 12-23, where the form has the
+accompaniment out while the bass, drums and melody play; Lunar Island's
+held 30 beats; over seeds 1-60 nine of the twenty struck voices held a
+note two bars or longer, and the median voice's longest note was 6
+beats. Battle Theme's synth never rings past 4.9 beats, its own gaps
+never pass 9.9, and its guitar never rests more than five. The density
+was pooled too (round 107's open item): the mask struck 0.30-0.79 of the
+guitar's onsets against the token voice's 0.73.
+
+**Built.** A seventh layer sub-field on the balance token for a voice
+struck with another (arrangement._struck_facts and _struck_text:
+`w0.73~0.7~0.2~0.9~-~-~4.9`): the share of the followed voice's onsets
+the voice strikes within its struck stretches, its sounded share of the
+gap to the part's line's next onset by gap class (to SOUND_BIN; "-"
+under STRUCK_NOTES, two notes), and its longest note in beats, a voice's
+struck stretches pooled. The plan reads it (struck_values_of,
+Plan.layer_struck) and struck_with takes it: the mask is held toward the
+share (under it a bar strikes every followed onset; over it a mask that
+thins nothing is drawn again, STRUCK_TRIES six times, on the voice's own
+stream), a stab's gap is to the line's next onset (gaps_ref), never to
+its own next stab, its share by gap class is the token voice's where the
+token has the class (else the pooled second voice's), and no stab rings
+past the token voice's longest. Pack refit (110 tables; no new table),
+the vocabulary shipped and committed. Tests: the sub-field read from a
+riff with a two-voice stab (w0.51 and w1.00, 0.4 of the half-beat gap,
+0.2 beats at the longest), a stab before a two-bar rest of the line
+capped at the token voice's longest and uncapped without it, the mask
+held toward the share (every onset under it, the drawn mask over it).
+Suite 452 (1 skip).
+
+**Measured.** FFVI: 44 struck-with voices in 32 songs strike 0.78 of the
+followed onsets at the median (0.12 to 1.00), sound 0.8, 0.4, 0.9, 1.0
+and 0.9 of the line's gap by class, and their longest notes run from 0.6
+to 15.9 beats (median 4.5). Written, the five Battle Theme seeds: every
+stab 0.10-0.12 beats at the median (Battle Theme 0.19; before
+0.10-1.12), the longest 1.35-2.0 beats, and in Journey of the Quarry
+4.9, the one stab before the rest ringing the token voice's longest;
+struck shares 0.68-0.79 of the guitar's onsets (the token 0.73; before
+0.30-0.79), the second voice on 0.92-0.97 of the first's (1.00); Lunar
+Island from 70 and 54 notes to 168 and 163. Seeds 1-60: 20 struck
+voices, none silent; the longest note's median 2.6 beats (6.0 before),
+its maximum 6.75 (45.9); voices holding a note two bars or more 0 (9),
+two beats or more 11 (17); the written longest 0.56 of the token voice's
+at the median, two voices over it (notes of their own stretches, which
+the cap does not reach); the struck share 0.70 against the tokens' 0.76
+at the median, 0.07 apart. Plans (400 seeds, against round 107): 400
+keep their token song, 345 plan logs and 288 note sets unchanged.
+
+**Song Check 91** (https://claude.ai/artifact/GxcQkxvsHxTr1iExrpJeDa):
+the five Battle Theme songs of Song Checks 89 and 90, round 107 before
+and round 108 after: Journey of the Quarry (18), Lunar Island (243),
+Gate Return (343), The Terminal of Glass (150) and Second Cistern Dance
+(365).
+
+**Open.** Which onsets a bar thins is still the pooled mask's shape,
+held toward the share; a gap class the token voice never played falls to
+the pooled share; a struck voice whose token voice rings long rings as
+long (Mt. Koltz's and Opening Theme part 3's hold 15.9 beats). The
+Battle Theme list: the form never returning, the sections' densities out
+of step, the bass's pitch continuity. The standing list: round 100's
+endings and theme returns, round 101's sparser side, round 103's line
+motion, round 105's sectioning.
