@@ -902,7 +902,50 @@ class Rhythm(unittest.TestCase):
 
 class DrumsBySound(unittest.TestCase):
     """A drum sample named by its sound (drums.py): made-up sounds and the generator's named kits; how the
-    sample is played no longer decides anything (the drum check: it agreed with the ear in 43 % of sounds)."""
+    sample is played no longer decides anything (the drum check: it agreed with the ear in 43 % of sounds), but for one
+    thing since round 102: a looped drum-named sound struck across the chords is an instrument."""
+
+    def test_a_looped_drum_named_sample_struck_across_the_chords_is_an_instrument(self):
+        """Round 102: FFVI's distorted rhythm guitar, noisy and looped with no fundamental, was named a snare and struck on
+        five to thirteen rates following the chords; its real drums sit on one rate. instrument_by_play says which it is,
+        and of_notes renames the sample "other" and gives its notes the rate as their pitch."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from array import array
+        from bitcomposer.spc import brr
+        from bitcomposer.translate import drums, events
+        chug = [0.0] * 8 + [-2.0] * 9 + [-5.0] * 2 + [-4.0] + [3.0] * 2                 # Fanfare's guitar: eight hits on one rate, nine a tone under
+        self.assertTrue(drums.instrument_by_play(chug, True))
+        self.assertFalse(drums.instrument_by_play(chug, False))                         # unlooped: a melodic tom stays a drum
+        self.assertFalse(drums.instrument_by_play([0.0] * 30 + [-1.0, 1.0, 3.0, 5.0], True))   # one rate with ornaments: Techno de Chocobo's hat
+        self.assertFalse(drums.instrument_by_play([0.0, -7.0] * 3, True))               # under eight hits
+        self.assertFalse(drums.instrument_by_play([0.0] * 7 + [-7.0] * 3, True))        # one rate holding 0.7
+        self.assertFalse(drums.instrument_by_play([0.0, 2.0, 4.0] * 4, True))           # a span under five semitones
+        # through of_notes: a noisy sample with body the namer calls a snare, struck on twelve rates across a fifth
+        pcm = array("h", [int(v) for v in tone(300, 0.25, noise=2.0, decay=0.06)])
+        looped = brr.Sample(pcm, 4000, len(pcm), True, 0x1000, 0x1200, len(pcm) // 16)
+        one_shot = brr.Sample(pcm, None, None, True, 0x1000, 0x1200, len(pcm) // 16)
+        pitches = [0x1000, 0x1000, 0xE00, 0xE00, 0xC00, 0xC00, 0xB00, 0xB00, 0xAB0, 0xAB0, 0x1000, 0xC00]   # 0, -2, -5, -6, -7 semitones
+        found = [SimpleNamespace(voice=4, start=0.5 * i, end=0.5 * i + 0.3, brr=(0x1000, 0x1200), pitch=p, volume=(60, 60), noise=False)
+                 for i, p in enumerate(pitches)]
+        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"), \
+             mock.patch.object(events.tuning, "rough_fundamental", lambda s: None):
+            song = events.of_notes(found, lambda addr: looped, lambda addr: "guitar", 6.0)   # the namer's verdict pinned: a snare by sound
+            self.assertEqual(song.samples[(0x1000, 0x1200)].piece, "other")
+            self.assertTrue(song.samples[(0x1000, 0x1200)].by_play)
+            self.assertEqual([round(p.midi) for p in song.notes[:5]], [60, 60, 58, 58, 55])              # no rough fundamental: the rate as the note
+        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"):
+            loud = array("h", [int(v) for v in tone(100, 0.4, noise=0.8, seed=5)])                       # a rough 100 Hz loop: a register for the instrument
+            looped_tone = brr.Sample(loud, 1600, len(loud), True, 0x1000, 0x1200, len(loud) // 16)
+            f0 = events.tuning.rough_fundamental(looped_tone)
+            self.assertIsNotNone(f0); self.assertAlmostEqual(f0, 100.0, delta=6.0)
+            song3 = events.of_notes(found, lambda addr: looped_tone, lambda addr: "guitar", 6.0)
+            self.assertTrue(song3.samples[(0x1000, 0x1200)].by_play)
+            self.assertAlmostEqual(song3.notes[0].midi, 43.35, delta=1.2)                                  # 100 Hz at the recording's rate: near G2
+            self.assertIsNone(events.tuning.rough_fundamental(one_shot))
+            song2 = events.of_notes(found, lambda addr: one_shot, lambda addr: "snare", 6.0)
+            self.assertEqual(song2.samples[(0x1000, 0x1200)].piece, "snare")
+            self.assertTrue(all(p.midi is None for p in song2.notes))                                    # a one-shot drum: unpitched
 
     def test_made_up_sounds_are_named_by_what_they_are(self):
         from bitcomposer.translate import drums

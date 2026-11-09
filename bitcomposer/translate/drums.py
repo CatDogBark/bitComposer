@@ -57,6 +57,7 @@ import math
 import os
 import statistics
 import sys
+from collections import Counter as _Counter
 from collections import Counter
 from dataclasses import dataclass
 
@@ -80,6 +81,25 @@ INSTRUMENT = 0.95                    # periodicity of a pitched instrument playe
 RATE = 32000                         # a sample plays at its own rate at pitch 0x1000
 FRAMES = 4096                        # the spectrum's window, 128 ms at RATE
 PIECES = ("kick", "snare", "hat", "tom", "cymbal", "other")   # and "none": a sound that is no drum
+INSTRUMENT_HITS = 8                  # key-ons a looped drum-named sample needs before how it is struck can call it an instrument (round 102)
+INSTRUMENT_SPAN = 5                  # semitones its rates span, at least
+INSTRUMENT_SHARE = 0.6               # the share of its hits its commonest rate stays under
+
+
+def instrument_by_play(semitones: list, loops: bool) -> bool:
+    """Whether a drum-named sample is an instrument by how the song strikes it (round 102): looped (a sustained sound, which
+    FFVI's kicks, snares and hats never are; its cymbal is, and rings), struck INSTRUMENT_HITS times or more across
+    INSTRUMENT_SPAN semitones with no one rate holding INSTRUMENT_SHARE of its hits. `semitones`: each key-on's rate from
+    the recording's. FFVI's distorted rhythm guitar (noisy, with body, looped, no fundamental the tuner could find) had been
+    named a snare in Fanfare and Mt. Koltz, a second snare in Battle Theme and The Decisive Battle and a tom in Dancing Mad
+    (part 5), struck on 5 to 13 rates that follow the chords (Fanfare: eight hits on one rate, nine a tone under); the
+    game's real kicks, snares, hats and cymbals sit on one rate, its toms on a few, unlooped. Not a spectral test: the
+    namer's noise branch cannot tell a chugging guitar from a gated snare, and a sample is a drum or an instrument by how
+    the song plays it."""
+    if not loops or len(semitones) < INSTRUMENT_HITS:
+        return False
+    rounded = [round(x) for x in semitones]
+    return max(rounded) - min(rounded) >= INSTRUMENT_SPAN and _Counter(rounded).most_common(1)[0][1] < INSTRUMENT_SHARE * len(rounded)
 
 
 @dataclass
