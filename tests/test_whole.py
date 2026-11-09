@@ -732,6 +732,58 @@ class SectionDensityTests(unittest.TestCase):
         self.assertEqual((env(0), env(5), env(9), env(5, 10.0)), (None, (6, 64), None, (15, 64)))            # the bass's medium tier, denser in B
 
 
+class TokenWithTests(unittest.TestCase):
+    """Round 107: a voice beside a line struck with the line or with a sibling voice: the relation word says so ("wl+24",
+    "w1-7"), a double or parallel of a sibling names the sibling's rank, and the writer plays such a voice on the followed
+    voice's onsets, on the chord at the nominal interval."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chords = [Span(0.0, 32.0, 0, "", 1.0)]
+        riff = [(4.0 * k + x / 2, 0.4, 48.0, "g") for k in range(8) for x in range(8)]                        # the line: a chugging riff on C
+        stabs = [72.0, 72.0, 79.0, 74.0, 76.0]
+        upper = [(4.0 * k + x, 0.2, stabs[(4 * k + x) % 5], "s") for k in range(8) for x in range(4)]         # a stab on each beat of the riff: C, C, G, D, E
+        lower = [(t, d, m - (7, 5, 3)[i % 3], "s") for i, (t, d, m, _) in enumerate(upper)]                   # struck with it, a fifth, fourth or third under
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        tune = [(4.0 * k + x, 0.9, 84.0 + x, "m") for k in range(8) for x in (0.0, 1.0, 2.0, 3.0)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": riff + upper + lower, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", riff), 1: ("bass", bass), 2: ("melody", tune), 3: ("accompaniment", upper), 4: ("accompaniment", lower)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4, 3: 0.3, 4: 0.3}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_relation_words_say_struck_with(self):
+        s = self._song()
+        words = rhythm.relation_words(s)
+        self.assertEqual(words.get(3), "wl+24", words)                                          # the stabs: struck with the line, two octaves up at the commonest
+        self.assertEqual(words.get(4), "w1-7", words)                                           # the lower stab: struck with the first voice beside the line
+        tok = rhythm.balance_units([s])[0].outcome
+        acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        layers = acc[5].split("/")
+        self.assertEqual([x.split("@")[4] for x in layers], ["wl+24", "w1-7"], layers)
+        self.assertEqual(whole.relation_stretches("wl+24"), [("with", ("line",), 24, None)])
+        self.assertEqual(whole.relation_stretches("w1-7x6>o"), [("with", ("voice", 1), -7, 6), ("own", None, None, None)])
+        self.assertEqual(whole.relation_stretches("p2-7"), [("parallel", ("voice", 2), -7, None)])
+        self.assertEqual(whole.relation_stretches("dm-12x6>o"), [("double", "melody", -12, 6), ("own", None, None, None)])   # as before
+
+    def test_a_voice_is_struck_with_the_followed_one(self):
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        ref = [(4.0 * k + x / 2, 4.0 * k + x / 2 + 0.4, 48.0 + (x % 2) * 7, 0) for k in range(4) for x in range(8)]   # the line: eighths, C and G
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        notes, thinned, figs = whole.struck_with(ref, 0, 4, 24, song, "accompaniment", 1, {}, random.Random(1), None, 0.5, scale)
+        self.assertEqual([n[0] for n in notes], [n[0] for n in ref])                           # every followed onset, nothing to thin without the word
+        self.assertEqual({round(n[2]) - round(r[2]) for n, r in zip(notes, ref)}, {24})          # two octaves up (diatonic without the parallel word)
+        self.assertTrue(all(abs((n[1] - n[0]) - 0.25) < 1e-6 for n in notes[:-1]))              # half of the half-beat gap sounds
+        self.assertEqual((thinned, figs[0]), (0, rhythm.pattern(rhythm.position(x / 2, 4) for x in range(8))))
+        every_other = lambda f: " ".join("1 0" for _ in range(len(f.split()) // 2)) + "|"            # noqa: E731  a mask: with the odd onsets only
+        notes2, thinned2, figs2 = whole.struck_with(ref, 1, 3, -7, song, "accompaniment", 2, {}, random.Random(1), None, 0.5, scale, every_other)
+        self.assertEqual([n[0] for n in notes2], [4.0 * k + x / 2 for k in (1, 2) for x in range(0, 8, 2)])   # bars 2-3, every other onset
+        self.assertEqual(thinned2, 8)
+        self.assertTrue(all(abs((n[1] - n[0]) - 0.5) < 1e-6 for n in notes2[:-1]))              # half of the beat gap
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""

@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 from .. import harmony, harness, rhythm, tables, vocab, writer
 from ..writer import scale_index, scale_pitch
 from ..writer.upper import in_register as line_in_register   # the module, not the package's `upper` function
+from ..writer.tune import share_at as sounded_share
 from .. import roles as R
 from ..vocab import Span
 
@@ -866,14 +867,51 @@ def relation_stretches(word: str) -> list:
     for part in word.split(">"):
         body, _, n = part.partition("x")
         bars = int(n) if n.isdigit() else None
-        kind = {"d": "double", "p": "parallel"}.get(body[:1])
+        kind = {"d": "double", "p": "parallel", "w": "with"}.get(body[:1])
         target = RELATION_PARTS.get(body[1:2])
+        if body[1:2] == "l":                                # the part's own line (round 107)
+            target = ("line",)
+        elif body[1:2].isdigit():                           # a sibling voice, by its rank among the part's voices beside the line (round 107)
+            target = ("voice", int(body[1:2]))
         try:
             semi = int(body[2:])
         except ValueError:
             semi = None
         out.append((kind, target, semi, bars) if kind and target and semi is not None else ("own", None, None, bars))
     return out
+
+
+def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int, models: dict, rng: random.Random, clash_rates, sounds, scale: set,
+                mask_draw=None) -> tuple:
+    """A voice struck with another (round 107): over bars [at, end) the followed voice's onsets (`ref`: (start, end, midi, voice)),
+    thinned bar by bar by the second_figures word where `mask_draw` gives a bar's mask (which of the followed voice's onsets
+    the voice strikes with), then placed by the parallel_intervals word at the nominal semitones on the chord (`parallel`),
+    each note sounding the voice's share of its gap (`sounds`). Battle Theme's synth strikes on 0.55 of the guitar riff's
+    onsets, a chord tone an octave and more up, a fifth or a fourth apart in its two voices, 0.19 beats long. Returns the
+    notes, the onsets thinned away and {bar: the bar's figure}."""
+    kept, thinned, figs = [], 0, {}
+    for k in range(at, min(end, len(song.bars))):
+        a, b = song.bars[k]
+        in_bar = sorted(x for x in ref if a - rhythm.NEAR <= x[0] < b - rhythm.NEAR)
+        if not in_bar:
+            continue
+        f = rhythm.pattern(rhythm.position(x[0] - a, song.division) for x in in_bar)
+        g = rhythm.apply_mask(f, mask_draw(f)) if mask_draw is not None else f
+        if g in ("", writer.REST):
+            thinned += len(in_bar)
+            figs[k] = writer.REST
+            continue
+        pos = {Fraction(tok.partition(":")[0]) for tok in g.split()}
+        chosen = [x for x in in_bar if rhythm.position(x[0] - a, song.division) in pos]
+        thinned += len(in_bar) - len(chosen)
+        kept += chosen
+        figs[k] = g
+    placed = sorted(parallel([(x[0], x[1], x[2], v) for x in kept], semi, scale, v, song, role, models, rng, clash_rates, None), key=lambda x: x[0])
+    out = []
+    for i, (a, b, m, vv) in enumerate(placed):
+        gap = (placed[i + 1][0] - a) if i + 1 < len(placed) and placed[i + 1][0] > a else max(b - a, 0.25)
+        out.append((a, a + gap * sounded_share(sounds, gap), m, vv))
+    return out, thinned, figs
 
 
 def stretch_spans(stretches: list, bars: int) -> list:
@@ -2115,6 +2153,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         line_notes = list(notes)
         scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
         beside_v = set()                                    # the voices whose pitch is drawn beside the line under the span rule
+        voice_written = {}                                  # each voice beside the line as written, for a sibling struck with it (round 107)
         for v, word in enumerate(layers, start=1):
             rel = layer_of({"layer": word})
             if rel[0] == "doubling":
@@ -2149,12 +2188,47 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                            + ("its interval to the line and its own moves drawn, " if drawn_pitch else f"the line's voicing {v} tone{'s' if v > 1 else ''} up, ")
                            + f"{sum(1 for f in figures_v if f != writer.REST)} bars, {len(notes_v)} notes" + ("; its bars beside the line's" if given else ""))
             word_v = relation_word(plan, role, v)
-            if word_v:                                      # what the voice does beside which part, by stretch (round 90): after every line is written
+            spans_v = stretch_spans(relation_stretches(word_v), len(song.bars)) if word_v else []
+            inline = [sp for sp in spans_v if sp[0] == "with" or isinstance(sp[1], tuple)]   # struck with, or a sibling followed (round 107): written now
+            if inline:
+                figures_v, voicings_v = list(figures_v), list(voicings_v)
+                rng_w = random.Random(f"{seed}:{role}:voice {v}:with")
+                mask_draw = (lambda f: _draw(models, "second_figures", (role, render_mod.layer_class(plan, role), plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f),
+                                             rng_w, floor_k=MASK_FLOOR)) if "second_figures" in models else None
+                for kind_w, target, semi_w, at, end in inline:
+                    ref = line_notes if target == ("line",) else voice_written.get(target[1])
+                    if ref is None:
+                        ref = line_notes
+                    a0, b0 = song.bars[at][0], song.bars[min(end, len(song.bars)) - 1][1]
+                    in_span = [x for x in ref if a0 - rhythm.NEAR <= x[0] < b0 - rhythm.NEAR]
+                    if kind_w == "with":
+                        struck, thinned, figs = struck_with(ref, at, end, semi_w, song, role, v, models, rng_w, plan.extras[role].get("clashes"),
+                                                            gs["second"] if gs else sounds, scale, mask_draw)
+                        for k, f in figs.items():
+                            figures_v[k] = f
+                    elif kind_w == "double":
+                        struck, thinned = diatonic([(x[0], x[1], x[2], v) for x in in_span], semi_w, scale, v), 0
+                    else:
+                        struck, thinned = parallel([(x[0], x[1], x[2], v) for x in in_span], semi_w, scale, v, song, role, models, rng_w, plan.extras[role].get("clashes"), None), 0
+                    notes_v = [x for x in notes_v if not (a0 - rhythm.NEAR <= x[0] < b0 - rhythm.NEAR)] + struck
+                    for k in range(at, min(end, len(voicings_v))):
+                        voicings_v[k] = f"{kind_w} {'the line' if target == ('line',) else 'voice ' + str(target[1] + 1)} {semi_w:+d}"
+                    log.append(f"voice {v + 1} {'struck with' if kind_w == 'with' else kind_w} {'the line' if target == ('line',) else f'voice {target[1] + 1}'} at {semi_w:+d} "
+                               f"in bars {at + 1}-{end} (the token's stretches {word_v}): {len(struck)} notes"
+                               + (f" on the chord by the parallel_intervals word, {thinned} of the followed onsets thinned by the second_figures word" if kind_w == "with" else ""))
+                if any(sp[0] != "own" for sp in spans_v if sp not in inline):
+                    log.append(f"voice {v + 1}: the token's stretches of another part's line in {word_v} stay its own beside the struck ones")
+                notes_v.sort(key=lambda x: x[0])
+                beside_v.discard(v)
+                song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
+                notes = notes + notes_v
+            elif word_v:                                    # what the voice does beside which part, by stretch (round 90): after every line is written
                 pending.append((role, v, notes_v, word_v))
                 log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
             else:
                 song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
                 notes = notes + notes_v
+            voice_written[v] = notes_v
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]
         written[role] = Part(role, notes, all_figures, log, beside=beside_v)
     tempo = rhythm.band(plan.bpm)

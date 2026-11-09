@@ -739,7 +739,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
 
 
 RELATION_LETTERS = {R.MELODY: "m", R.COUNTER: "c", R.ACCOMP: "a", R.HARMONY: "h", R.ARP: "r", R.BASS: "b"}   # a relation's target part
-RELATION_KINDS = {"double": "d", "parallel": "p", "own": "o"}
+RELATION_KINDS = {"double": "d", "parallel": "p", "own": "o"}   # and "w", struck with (round 107): "wl+19" with the line, "w1-7" with the
+                                                                  # part's first voice beside it; a double or parallel of a sibling names its rank too
 
 
 def bar_index(song: readings_mod.Song, t: float) -> int:
@@ -872,6 +873,15 @@ def relation_words(song: readings_mod.Song) -> dict:
     pitched = {v: sorted((n[0], n[2], n[3]) for n in ns if n[2] is not None and not math.isnan(n[2]))
                for v, (role, ns) in song.voice_notes.items() if role != R.DRUMS}
     roles_of = {v: role for v, (role, _) in song.voice_notes.items()}
+    beside = {}                                             # a voice beside its part's line -> (its part, its rank among them, the line, the ranks)
+    for role in set(roles_of.values()) - {R.DRUMS}:
+        voices = cells_mod.part_voices(song, role)
+        if len(voices) < 2:
+            continue
+        line_v = cells_mod.line_voice(voices, role, song)
+        ranked = sorted((u for u in voices if u != line_v), key=lambda u: (-len(voices[u]), u))
+        for i, u in enumerate(ranked):
+            beside[u] = (role, i, line_v, ranked)
     out = {}
     for v, rows in R.voice_relations({v: ns for v, ns in pitched.items() if ns}).items():
         if len(pitched[v]) < R.SECOND_NOTES:
@@ -880,7 +890,19 @@ def relation_words(song: readings_mod.Song) -> dict:
         words = []
         for a, b, key, kind, of, semi, n in rows:
             letter = RELATION_LETTERS.get(roles_of.get(of)) if of is not None else None
+            if of is not None and v in beside and of in beside and beside[of][0] == beside[v][0]:   # a double or parallel of a sibling voice:
+                letter = str(beside[of][1] + 1)             # its rank among the part's voices beside the line, not the part's letter (round 107)
             word = f"{RELATION_KINDS[kind]}{letter}{semi:+d}" if kind != "own" and letter else "o"
+            if kind == "own" and v in beside and n >= 8:   # struck with a sibling voice, or with the line (round 107)
+                role_v, i, line_v, ranked = beside[v]
+                st = {"a": a, "b": b, "notes": [x for x in pitched[v] if a - readings_mod.NEAR <= x[0] <= b + readings_mod.NEAR]}
+                w = R.with_relation(st, {u: pitched[u] for u in ranked[:i] if pitched.get(u)}) if i else None
+                if w is not None:
+                    word = f"w{ranked.index(w[1]) + 1}{w[2]:+d}"
+                elif pitched.get(line_v):
+                    w = R.with_relation(st, {line_v: pitched[line_v]})
+                    if w is not None:
+                        word = f"wl{w[2]:+d}"
             end = bar_index(song, b)
             if words and words[-1][0] == word:
                 words[-1][1] = end

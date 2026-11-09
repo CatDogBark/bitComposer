@@ -7211,3 +7211,79 @@ pedal under a changing reading is not a word. The synth pair, the form
 and the sections' densities from the investigation stand. The standing
 list: round 100's endings and theme returns, round 101's sparser side,
 round 103's line motion, round 105's sectioning.
+
+### Round 107: a voice struck with another (2026-11-08, from the Battle Theme investigation, on the owner's go)
+
+**Why.** The third finding of the Battle Theme investigation, and the
+one the owner heard breaking the whole song: the synth organ. Battle
+Theme's synth is two voices struck as one, two-note stabs on the riff's
+accents a fourth or a fifth apart by the chord (78 fifths, 64 fourths
+and 25 thirds of 202 onsets struck together), the lower with the guitar
+on 0.89 of its notes at chord tones an octave and more up. The relation
+words (round 90) could not say it: roles.stretch_relation asks for one
+generic interval on 0.8 of a stretch's notes, and a voice that strikes
+with the line at the chord's tones is neither a double nor a parallel,
+so each synth voice read as its own and the pooled layers table drew it
+anything a seed at a time (a double of the riff a third under, a line in
+the bass register). Nor could a word follow a sibling voice beside the
+line: the relation's target was the line alone.
+
+**Built.** A third kind of relation word, struck with (`w`).
+roles.with_relation (WITH_SHARE 0.8) names the candidate voice that 0.8
+of a stretch's notes start with (within STRETCH_NEAR), the most hits
+first, with the commonest semitones between them. In relation_words
+(`arrangement.py`) a voice beside a line whose own stretch has eight
+notes or more is tried against its lower-ranked siblings first (`w1-7`:
+with the voice ranked 1, seven semitones under) and then against the
+line (`wl+19`); a double or parallel of a sibling names the sibling's
+rank as its target too. The plan (`plan.py`) parses the targets (the
+line, or a voice by rank) and writes such a stretch in the upper loop:
+`struck_with` plays the voice on the followed voice's onsets bar by bar,
+thinned by the second_figures word's mask (drawn on an own stream),
+places each note on the chord by the parallel_intervals word at the
+word's semitones, and sounds each note the second voice's share of its
+gap (the gap_sounds word); a double or parallel of a sibling follows the
+sibling's written notes, which the loop keeps. FFVI: of the own-reading
+stretches of voices beside a line, 39 strike with the line, 9 with a
+sibling, 71 stay their own. Pack refit (110 tables; no new table), the
+vocabulary shipped and committed. Tests: the reader's words on a riff
+with a two-voice stab above it (`wl+24`, `w1-7`, and the parsed
+targets), and the writer striking on every followed onset two octaves up
+for half the gap, and on every other onset under a mask. Suite 450 (1
+skip).
+
+**Measured.** Battle Theme's synth on its token's five Song Check seeds:
+the written pair strikes with the guitar at +19, +24 and +17 semitones
+(the game +19, +31, +24), its two voices together on 1.00 of their
+onsets (the game 1.00) a fifth or a fourth apart (-7, -5, -8; the game
+-7, -5, -3), on the chord on 0.63-0.92 of their notes, its onsets on a
+guitar onset 0.94-1.00 (the game 0.89). The mask keeps 0.30-0.79 of the
+guitar's onsets (18: 121 of 172, 150: 79 of 120, 243: 76 of 250, 343:
+105 of 159, 365: 83 of 105) where the game's synth plays on 0.82; the
+stabs sound a median 0.10 and 0.20 beats (the two voices) in Journey of
+the Quarry (18) and 0.50-1.12 in the other four, where the game's sound
+0.19. Over seeds 1-60, 38 parts change and no voice goes silent; two
+voices fall hard, both to their token songs' own shares: seed 31 (Aria's
+token) from 255 notes to 23, 0.10 of the line's notes against the token
+voice's 0.10, and seed 51 (Opening Theme part 3's) from 174 to 32, 0.19
+against 0.15; seed 21's voice grows from 8 notes to 25. Battle Theme's
+guitar line is the same up to the tune cells it takes up
+(hand_off_cells), which follow the moved tune (5 of 112 notes differ in
+seed 150, 2 of 169 in seed 18). Plans (400 seeds, against round 106):
+400 keep their token song, 274 plan logs and 222 note sets unchanged.
+
+**Song Check 90** (https://claude.ai/artifact/QTpQHyWCVC2RP8Am1pUsCn):
+the five Battle Theme songs of Song Check 89, round 106 before and round
+107 after: Journey of the Quarry (18), Lunar Island (243), Gate Return
+(343), The Terminal of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The stabs' length and density are pooled: the struck voice's
+notes sound the gap_sounds word's second-voice share and the
+second_figures mask thins its onsets, neither from the token song, so
+four of the five Battle Theme songs ring their stabs half a beat to a
+beat where the game's last a fifth of a beat, and Lunar Island strikes
+on 0.30 of the guitar's onsets against 0.82 (LIMITS). The form, the
+sections' densities and the bass's pitch continuity from the
+investigation stand. The standing list: round 100's endings and theme
+returns, round 101's sparser side, round 103's line motion, round 105's
+sectioning.
