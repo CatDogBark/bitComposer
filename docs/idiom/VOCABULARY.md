@@ -203,7 +203,19 @@ The words are grouped by where the writing draws them, in the order the song is 
   nearest octave puts them);
   round 91 had written the line over the union of its stretches' ranges
   and moved it afterwards, bar by bar, which could break a phrase at a
-  stretch line. And each layer entry carries a sixth sub-field, the
+  stretch line. Since round 104 a stretch's range is the ambitus of its
+  own sample's notes: a blip of another sample folded into the stretch
+  (`roles.stretches_of`) had widened it (Battle Theme's lead stretch read
+  40-80 from one synth note at 42 before bar 1 where the lead plays
+  64-79, and the written tune sat an octave under the lead, two thirds of
+  its notes below the lead's lowest). The register field leaves such
+  blips out too (`own_sample_notes`: Techno de Chocobo's tune had read
+  28-80 from its effect notes on another sample where it plays 60-80).
+  FFVI: 16 tokens' parts in 14 songs change, the register in 7, the
+  stretches in 10, a voice's stretch sub-field in 4; the written tune on
+  Battle Theme's token (seed 150) had two thirds of its notes under the
+  lead's lowest and has 2 of 113 after. And each
+  layer entry carries a sixth sub-field, the
   voice's own instrument by stretch (`stretch_word` with "~" between a
   sample and its range: `s605f200105~56-72x14>sf89f5aedfd~60-68`; FFVI:
   32 voices in 22 songs): `samples_for` registers each stretch's sample

@@ -1569,6 +1569,25 @@ class NewTablesTests(unittest.TestCase):
         notes = whole.stretched_notes(1, own, whole.stretch_spans(whole.relation_stretches("pc+4"), 2), {"melody": melody}, major, 4, log)
         self.assertEqual(notes, own)                                                             # no counter written: its own notes throughout
 
+    def test_a_folded_blip_does_not_widen_its_stretchs_range(self):
+        """Round 104: a stretch's range is the ambitus of its own sample's notes; a blip of another sample folded into it
+        (roles.stretches_of) does not widen it. Battle Theme's lead stretch had read 40-80 from one synth note at 42 before
+        bar 1 where the lead plays 64-79, and the written tune sat an octave under the lead (Song Check 86's The Terminal
+        of Glass)."""
+        s = self._song()
+        line = s.notes["melody"]                                                                # bars 5-8, a note a beat
+        first = [(t, d, m, "m") for t, d, m, _ in line if t < 24]
+        rest = [(t, d, m - 12.0, "m2") for t, d, m, _ in line if t >= 24]
+        blip = [(first[0][0] - 1.0, 0.5, first[0][2] - 24.0, "m2")]                             # one note of the other sample, two octaves under, before the line
+        s.notes["melody"] = blip + first + rest
+        s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
+        self.assertEqual(rhythm.line_stretches(s, "melody"), "m@68-72x6>m2@56-60")             # the blip folds into the first stretch; its range stays the lead's
+        mel = next(t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("melody="))
+        self.assertEqual(mel.split(":")[1], "56-72", mel)                                        # and the token's register field leaves the blip out too (44-72 with it)
+        s.notes["melody"] = first + rest + [(rest[-1][0] + 1.0, 0.5, rest[-1][2] + 24.0, "m")]    # a trailing blip two octaves over: the same
+        s.voice_notes[1] = ("melody", s.notes["melody"])
+        self.assertEqual(rhythm.line_stretches(s, "melody"), "m@68-72x6>m2@56-60")
+
     def test_the_lines_instrument_by_stretch_rides_the_token(self):
         """Round 91: a line voice that changes instrument carries its stretches as the token's eleventh field
         (line_stretches: each stretch's sample, the range it plays it over, its bars from the song's first bar, the last

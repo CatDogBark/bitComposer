@@ -662,12 +662,15 @@ def is_roll(figure: str, meter: int) -> bool:
     return len(tokens) > ROLL * max(1, meter)
 
 
+REGISTER_NOTES = 8                   # pitched notes a part (or a stretch) needs for a register
+
+
 def part_register(notes, ambitus: bool = False) -> tuple | None:
     """A part's register as the registers table keeps it: (low, high) midi to REGISTER_BIN, the notes' 10th and 90th
     percentiles, or the whole ambitus (`ambitus`: the melody's, a tune uses its extremes); None where the part has
-    under eight pitched notes."""
+    under REGISTER_NOTES pitched notes."""
     pitched = sorted(n[2] for n in notes if not math.isnan(n[2]))
-    if len(pitched) < 8:
+    if len(pitched) < REGISTER_NOTES:
         return None
     low, high = (pitched[0], pitched[-1]) if ambitus else (pitched[int(0.1 * (len(pitched) - 1))], pitched[int(0.9 * (len(pitched) - 1))])
     return int(round(low / cells_mod.REGISTER_BIN)) * cells_mod.REGISTER_BIN, int(round(high / cells_mod.REGISTER_BIN)) * cells_mod.REGISTER_BIN
@@ -1100,19 +1103,37 @@ def part_sample_field(s, role: str) -> str:
     return f"{sid}@{rng}" if rng else sid
 
 
+def own_sample_notes(notes: list) -> list:
+    """A line's notes without the blips of another sample folded into its stretches (roles.stretches_of): a grace or an
+    effect on another instrument is not where the line plays, so it widens neither the line's register (the balance
+    token's second field) nor a stretch's range (round 104; Techno de Chocobo's tune read 28-79 from its effect notes
+    where the tune plays 62-79). The notes as given where fewer than REGISTER_NOTES pitched ones would remain."""
+    pitched = sorted((n[0], n[2], n[3]) for n in notes if isinstance(n[3], str) and n[3] and n[2] is not None and not math.isnan(n[2]))
+    if len(pitched) < R.STRETCH_NOTES:
+        return notes
+    folded = {(t, m, k) for st in R.stretches_of(pitched) for t, m, k in st["notes"] if k != st["key"]}
+    if not folded:
+        return notes
+    kept = [n for n in notes if not (isinstance(n[3], str) and (n[0], n[2], n[3]) in folded)]
+    return kept if sum(1 for n in kept if n[2] is not None and not math.isnan(n[2])) >= REGISTER_NOTES else notes
+
+
 def stretch_word(s, notes, sep: str = "@") -> str:
     """A voice's instrument by stretch as the balance token writes it (rounds 91 and 92): its pitched notes' stretches
     (roles.stretches_of, blips folded; consecutive stretches on one sample run together), each as its sample's pack id,
-    `sep`, the range the voice plays it over there (the ambitus, part_register's grain) and its bars from the song's first
-    bar as the pan word counts them, the last stretch open (`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`); "" for a voice on
-    one instrument or under roles.SECOND_NOTES notes."""
+    `sep`, the range the voice plays it over there (the ambitus of the stretch's own sample's notes, part_register's grain;
+    since round 104 a blip folded in from another sample does not widen it: Battle Theme's lead stretch had read 40-80
+    from one synth note at 42 before bar 1 where the lead plays 64-79, and the written tune sat an octave under the lead)
+    and its bars from the song's first bar as the pan word counts them, the last stretch open
+    (`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`); "" for a voice on one instrument or under roles.SECOND_NOTES notes."""
     pitched = sorted((n[0], n[2], n[3]) for n in notes if isinstance(n[3], str) and n[3] and n[2] is not None and not math.isnan(n[2]))
     if len(pitched) < R.SECOND_NOTES:
         return ""
     runs = []
     for st in R.stretches_of(pitched):
         sid = "s" + st["key"][:10] if len(st["key"]) >= 10 else st["key"]
-        reg = part_register([(t, 0.0, m, k) for t, m, k in st["notes"]], ambitus=True)
+        own = [(t, 0.0, m, k) for t, m, k in st["notes"] if k == st["key"]]    # the stretch's own sample's notes (round 104): a
+        reg = part_register(own if len(own) >= REGISTER_NOTES else [(t, 0.0, m, k) for t, m, k in st["notes"]], ambitus=True)   # folded blip is not where it plays
         end = bar_index(s, st["b"])
         if runs and runs[-1][0] == sid:
             prev = runs[-1]
@@ -1327,7 +1348,7 @@ def balance_units(songs) -> list:
                     fields.pop()
                 tokens.append(role + ("=" + ":".join(fields) if fields else ""))
                 continue
-            reg = part_register(cells_mod.register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY)
+            reg = part_register(own_sample_notes(cells_mod.register_notes(s, role) or s.notes[role]), ambitus=role == R.MELODY)   # blips of another sample left out (round 104)
             line_notes = cells_mod.tune_line(s, role)       # the line voice's notes where the part has two or more (round 95: the part's merged
             share = cells_mod.sounded_share(line_notes)     # voices had put the gap to the other voice's note under a note's length, 0.8 for
             by_gap = cells_mod.gap_shares(line_notes) if role in readings_mod.UPPER + (R.BASS,) else None   # Umaro's 0.4 pecks)
