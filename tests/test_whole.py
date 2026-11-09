@@ -762,6 +762,11 @@ class TokenWithTests(unittest.TestCase):
         acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
         layers = acc[5].split("/")
         self.assertEqual([x.split("@")[4] for x in layers], ["wl+24", "w1-7"], layers)
+        self.assertEqual([x.split("@")[6] for x in layers], ["w0.51~-~0.4~-~-~-~0.2", "w1.00~-~0.4~-~-~-~0.2"], layers)   # round 108: the stabs strike
+        # 32 of the riff's 63 onsets in their span and sound 0.4 of the riff's half-beat gap, 0.2 beats at the longest; the lower stab strikes every upper one
+        self.assertEqual(whole.struck_values_of("w0.82~0.2~0.3~1.0~0.6~-~4.9"),
+                         {"share": 0.82, "sounds": {"<0.5": 0.2, "0.5-1": 0.3, "1-2": 1.0, "2-4": 0.6, "4+": None}, "longest": 4.9})
+        self.assertIsNone(whole.struck_values_of("wl+19"))
         self.assertEqual(whole.relation_stretches("wl+24"), [("with", ("line",), 24, None)])
         self.assertEqual(whole.relation_stretches("w1-7x6>o"), [("with", ("voice", 1), -7, 6), ("own", None, None, None)])
         self.assertEqual(whole.relation_stretches("p2-7"), [("parallel", ("voice", 2), -7, None)])
@@ -781,7 +786,39 @@ class TokenWithTests(unittest.TestCase):
         notes2, thinned2, figs2 = whole.struck_with(ref, 1, 3, -7, song, "accompaniment", 2, {}, random.Random(1), None, 0.5, scale, every_other)
         self.assertEqual([n[0] for n in notes2], [4.0 * k + x / 2 for k in (1, 2) for x in range(0, 8, 2)])   # bars 2-3, every other onset
         self.assertEqual(thinned2, 8)
-        self.assertTrue(all(abs((n[1] - n[0]) - 0.5) < 1e-6 for n in notes2[:-1]))              # half of the beat gap
+        self.assertTrue(all(abs((n[1] - n[0]) - 0.25) < 1e-6 for n in notes2[:-1]))             # half of the LINE's half-beat gap (round 108), not of
+        # the gap to the voice's own next stab
+
+    def test_a_stab_before_the_lines_rest_ends_as_the_token_voice_does(self):
+        """Round 108: a stab's gap is to the line's next onset and no stab rings past the token voice's longest note; the last
+        stab before a two-bar rest of the line had rung through the rest."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(6)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(6)), parts=[(0, 6, None, "A")], tonic=0, mode="major")
+        ref = [(4.0 * k + x / 2, 4.0 * k + x / 2 + 0.4, 48.0, 0) for k in (0, 1, 4, 5) for x in range(8)]   # the line: eighths, silent in bars 3-4
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        struck = {"share": 1.0, "sounds": {"<0.5": None, "0.5-1": 0.5, "1-2": None, "2-4": None, "4+": 0.6}, "longest": 2.0}
+        notes, thinned, figs = whole.struck_with(ref, 0, 6, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.9, scale, None, ref, struck)
+        by_start = {round(n[0], 2): round(n[1] - n[0], 3) for n in notes}
+        self.assertEqual(by_start[7.5], 2.0)                                                     # the stab before the rest: 0.6 of the 8.5-beat gap would
+        self.assertEqual(by_start[4.0], 0.25)                                                    # be 5.1, capped at the token voice's longest; a stab
+        self.assertEqual(by_start[16.0], 0.25)                                                   # inside the riff sounds 0.5 of the half-beat gap
+        bare = {"share": 1.0, "sounds": {name: None for _, name in rhythm.GAP_CLASSES}, "longest": None}   # a token without the classes or a longest
+        notes2, _, _ = whole.struck_with(ref, 0, 6, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.9, scale, None, ref, bare)
+        self.assertAlmostEqual({round(n[0], 2): n[1] - n[0] for n in notes2}[7.5], 0.9 * 8.5)    # the pooled share of the line's gap, uncapped
+
+    def test_the_mask_is_held_toward_the_token_voices_struck_share(self):
+        """Round 108: the second_figures mask thins the followed onsets only as far as the token voice's struck share allows."""
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        ref = [(4.0 * k + x / 2, 4.0 * k + x / 2 + 0.4, 48.0, 0) for k in range(4) for x in range(8)]
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        every_other = lambda f: " ".join("1 0" for _ in range(len(f.split()) // 2)) + "|"            # noqa: E731  a mask keeping the odd onsets
+        full = lambda f: " ".join("1" for _ in f.split()) + "|"                                     # noqa: E731  a mask keeping them all
+        for share, mask, want in ((1.0, every_other, 32), (0.5, every_other, 16), (0.5, full, 32), (0.0, every_other, 16)):
+            struck = {"share": share, "sounds": {name: None for _, name in rhythm.GAP_CLASSES}, "longest": None}
+            notes, thinned, _ = whole.struck_with(ref, 0, 4, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.5, scale, mask, ref, struck)
+            self.assertEqual((len(notes), thinned), (want, 32 - want), (share, want))           # under the share every onset is struck; over it the
+            # drawn mask stands (a mask that thins nothing is drawn again, and the same mask comes back)
 
 
 class TokenRiffTests(unittest.TestCase):
