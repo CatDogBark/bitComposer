@@ -29,6 +29,9 @@ class Sample:
     offset: float = 0.0              # its notes' fraction of a semitone, as played (taken out of their midi)
     piece: str | None = None         # what the drum namer calls it as the song plays it (drums.name: kick, snare,
                                      # hat, tom, cymbal, other, none); None where it could not be measured
+    by_play: bool = False            # an instrument by how the song strikes it (drums.instrument_by_play, round 102): a looped
+                                     # drum-named sound with no fundamental, struck across the chords; its notes take the rate
+                                     # as their pitch, 60 at the recording's, as the kit rates are kept
 
 
 @dataclass
@@ -139,13 +142,25 @@ def of_notes(found: list, decoded, key, seconds: float, source: str = "", tags=N
                 samples[addr].piece = drums_mod.name(sound)
         except Exception:
             pass
+    # a looped drum-named sample with no fundamental, struck across the chords, is an instrument the namer took for a drum
+    # (round 102: FFVI's distorted guitar read as a snare in five songs, so the written kits had struck a guitar as one)
+    for addr, s in samples.items():
+        if s.piece in ("kick", "snare", "hat", "tom", "cymbal") and s.f0 is None and s.loops:
+            struck = [12.0 * math.log2(n.pitch / 0x1000) for n in found if n.brr == addr and not n.noise and n.pitch and n.pitch > 0]
+            if drums_mod.instrument_by_play(struck, s.loops):
+                s.piece, s.by_play = "other", True
     raw = [(n, samples.get(n.brr) if not n.noise else None) for n in found]
     for s in samples.values():
         if s.f0:
             s.offset = _offset([tuning.midi(s.f0, n.pitch) for n, x in raw if x is s])
     played = []
     for n, s in raw:
-        m = tuning.midi(s.f0, n.pitch) - s.offset if s is not None and s.f0 else None
+        if s is not None and s.f0:
+            m = tuning.midi(s.f0, n.pitch) - s.offset
+        elif s is not None and s.by_play and n.pitch and n.pitch > 0:
+            m = 60.0 + 12.0 * math.log2(n.pitch / 0x1000)   # the rate as the note: its intervals right, its register the recording's
+        else:
+            m = None
         left, right = abs(n.volume[0]), abs(n.volume[1])
         played.append(Played(n.voice, n.start, n.end, s, m, (left + right) / 256,
                              right / (left + right) if left + right else 0.5, n))
