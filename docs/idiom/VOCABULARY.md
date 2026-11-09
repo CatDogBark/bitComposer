@@ -823,13 +823,25 @@ The words are grouped by where the writing draws them, in the order the song is 
   densities`, a repeated section copying its source's, `Plan.section_densities`
   as a shift a bar), and the writers take a habit a bar (`habit_at_for`,
   `rhythm.shift_habit`: the song's habit with its density tier moved one
-  along sparse, medium, dense) for the chord parts' and the bass's figure
-  draws and the tune's new rhythms; the counter follows the tune's figures
-  and takes none; the register is the token song's own by stretch (round
-  92), so a step's register change is not drawn twice. Over sixty seeds 36
-  songs carry a level step (62 steps), 26 of the steps now carry a drawn
-  density change and 22 an achieved one; Inner River Crossing's
-  accompaniment goes a tier denser where it doubles.
+  along sparse, medium, dense, for the table's conditioning) and an
+  envelope a bar (`envelope_at_for`, `rhythm.density_bounds`: a tier
+  denser, 1.5 times the part's own onsets a bar in its unshifted bars so
+  far or more, the tier's FFVI median standing in before two bars are
+  written, `DENSITY_TYPICAL`; a tier sparser, the same over 1.5 or fewer)
+  for the chord parts' and the bass's figure draws and the tune's new
+  rhythms, a shifted bar kept out of the tune's running tier; the counter
+  follows the tune's figures through its masks and draws none; the register
+  is the token song's own by stretch (round 92), so a step's register
+  change is not drawn twice. The habit alone had capped at the dense tier
+  (a dense accompaniment drawn denser stayed as it was), and the tier's
+  typical alone had left a part already over it unmoved. Over sixty seeds
+  36 songs carry a level step (62 steps), 20 of the steps now carry a
+  drawn density change (the counter's draw none); a section drawn denser
+  sits at 1.63 times the part's unshifted sections at the median (q25 1.17,
+  q75 2.58; FFVI's tier up 1.8), one drawn sparser at 0.78 (q25 0.48;
+  FFVI 0.5: the manner's figures thin less readily than they thicken);
+  Inner River Crossing's accompaniment goes from 4 notes a bar to nearly 8
+  where it doubles in level.
   *`section_densities`: shape (part, step); drawn in _plan_once, plan_section_densities.*
 
 - **part_entries** — where inside a section a part present in it enters
