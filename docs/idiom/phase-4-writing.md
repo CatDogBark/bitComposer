@@ -7123,3 +7123,91 @@ their snare (Setzer, The Fierce Battle, Returners) stay as read. The
 Battle Theme findings that remain: the riff is not shared material and
 the harmony never sits (round 106), the synth pair, the form, the
 sections' densities.
+
+### Round 106: the riff as the token song's own (2026-11-08, from the Battle Theme investigation, on the owner's go)
+
+**Why.** The second thing the Battle Theme investigation found (round 105
+had the first, the beat): the riff was not shared material. Battle
+Theme's bass strikes with its guitar on the same pitch class on 0.69 of
+their common onsets and keeps its main pitch class from one bar to the
+next 0.74 of the time; the written songs on its token sat at 0.29 and
+0.25, their bass walking the roots of a chord that changed at 23 of 37
+bar lines while their guitar line walked its own voicing. The relation
+words (round 90) could not say it: roles.stretch_relation asks for 0.8
+of a stretch's notes with the other voice, and over FFVI's 44 chord-part
+lines with a bass it calls three a double or a parallel of the bass
+(Dark World, The Serpent Trench, Blackjack); Battle Theme's guitar, 0.75
+with the bass and 0.70 at its pitch class, is neither. The riff's
+repetition was pooled too: the periods and period_holds words draw a
+backing part's lag and its holds by the part of the form's length, so
+Battle Theme's bass, a two-bar riff held 0.83 of the time in its riff
+section by the periods word's own reading, was written at the tables'
+lags and holds (seed 150: five bars held of 38). And the chord chain held
+a chord at its pooled rate alone, where Battle Theme's reading holds at
+0.53 of its bar lines.
+
+**Built.** Three fields on the balance token (`arrangement.py`). A
+backing pitched part's fourteenth: its period and holds
+(`part_period_field`, `p2/83`: the lag the most bars have among the
+parts of the form that have one, cells.period_of, with the share of the
+bars inside it that play the bar a lag before again). A chord part's
+fifteenth: how far its line rides the bass line (`line_rides_field`,
+`b75/70`: the share of its onsets within RIDE_NEAR (0.13 beats) of a
+bass onset and, of those, the share at the bass's pitch class; both lines
+RIDE_NOTES (32) notes or more). A song-level `holds=0.53`
+(`chord_hold_share`: the bar lines of the meter's bars after the first
+that no chord span starts within CHORD_NEAR (0.3 beats) of; eight lines
+or more). The plan (`plan.py`) parses them; where the pooled periods
+draw gives a part of the form a period, the token's lag stands (where
+the part is long enough) and the holds are drawn at the token's share
+on an own stream (the pooled draws still made); the chord chain holds a
+chord at the token's share on an own stream, and where the share says
+change and the chain repeated the chord, draws again on that stream
+(the first cut had held on top of the chain's repeats: seed 150 held 12
+of 13 bar lines); and `ride_the_bass` writes the chord part's line on
+the written bass's figure: the product of the two shares (Battle Theme
+0.52, the half of the riff that is the bass an octave up) is the share
+of the form's parts that ride, each new part where the line and the
+bass both play drawn on an own stream (the first cut drew for resting
+parts too: two of seven Battle Theme seeds rode nothing), a repeated
+part as its source, and in a riding bar the line plays the bass's notes
+in its register of the bar on the bass's lengths, its figure the bass's
+onsets, the voices beside it seeing the riding notes. FFVI: 41 of 51
+songs' tokens carry a rides field in seeds 1-60's draws. Pack refit (110
+tables; no new table), the vocabulary shipped and committed. Tests: the
+three fields read (a line six bars of twelve on the bass's riff, a bass
+repeating its bar, one chord change), the plan taking them (the rides
+field in extras, the period's lag and holds in the log, the chord holds
+in the log), and the line riding a written bass (the bass's onsets and
+pitch classes in the line's register, the figure and the shared voicing
+replaced; a share of 0 riding nothing). The first commit went out with
+four failing tests, a grep having hidden the test runner's status; the
+fix followed, and test chains now set pipefail. Suite SUITE_N (1 skip).
+
+**Measured.** Written, the five Battle Theme token seeds with both
+parts (of seven): the line strikes with the bass on 0.76-0.94 of its
+onsets and at its pitch class on 0.72-0.88 of those where parts ride
+(18: 23 of 38 bars, 243: 28 of 35, 343: 18 of 31; the token 0.75 and
+0.70), 0.29-0.90 and 0.38-0.39 where the draws rode four bars (150,
+365); the chords hold at 0.43-0.67 of bar lines (the token 0.53; 0.47 to
+0.94 in the first cut); the bass keeps its main pitch class from bar to
+bar 0.17-0.56 (0.25 before, the game 0.74). Over seeds 1-60, the 41
+songs whose token carries a rides field write the line at a median 0.27
+of its common onsets on the bass's pitch class against the tokens' 0.26
+and 0.47 of its onsets with the bass against 0.47; the 10 without sit at
+0.20 and 0.30. Plans (400 seeds, against round 105): 346 keep their
+token song (the new fields re-sort the table), 6 plan logs unchanged.
+
+**Song Check 89** (SC89_LINK): five songs on Battle Theme's token after
+rounds 105 and 106, the after side alone as the owner asked: Journey of
+the Quarry (18), Lunar Island (243), Gate Return (343), The Terminal of
+Glass (150, its plan re-dealt by the re-read: 19 bars) and Second Cistern
+Dance (365).
+
+**Open.** The riding share by form part is coarse: a short song draws
+all or nothing (150 and 365 rode four bars). The bass's own pitch
+stasis is still the chord chain's (0.17-0.56 against 0.74): the riff's
+pedal under a changing reading is not a word. The synth pair, the form
+and the sections' densities from the investigation stand. The standing
+list: round 100's endings and theme returns, round 101's sparser side,
+round 103's line motion, round 105's sectioning.

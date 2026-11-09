@@ -214,7 +214,34 @@ The words are grouped by where the writing draws them, in the order the song is 
   FFVI: 16 tokens' parts in 14 songs change, the register in 7, the
   stretches in 10, a voice's stretch sub-field in 4; the written tune on
   Battle Theme's token (seed 150) had two thirds of its notes under the
-  lead's lowest and has 2 of 113 after. And each
+  lead's lowest and has 2 of 113 after.
+  Since round 106 the token carries the riff as the song's own: a
+  fourteenth field for a backing pitched part, its period and holds
+  (`p2/83`: the lag in bars at which its bars repeat through the parts
+  of the form that have one, the periods word's own reading, and the
+  share of the bars inside it that play the bar a lag before again;
+  Battle Theme's bass a two-bar riff held 0.83 in its riff section), a
+  fifteenth for a chord part, how far its line rides the bass line
+  (`b75/70`: the share of its onsets struck with a bass onset and, of
+  those, the share at the bass's pitch class; Battle Theme's guitar
+  0.75 and 0.70, which the layer words' relation reader, asking 0.8,
+  had called neither a double nor a parallel), and a song-level
+  `holds=0.53`, the share of its bar lines that keep the chord. The plan
+  takes the period's lag and hold share where the pooled draw gives the
+  part a period (the draws still made, the holds on an own stream), holds
+  a chord at the song's share on an own stream (the chain's draw still
+  made), and writes the chord part's line on the written bass's figure
+  (`plan.ride_the_bass`: the bass's onsets and pitch classes in the
+  line's register of the bar, on the bass's lengths, the voices beside
+  the line seeing the riding notes) in the share of the form's parts
+  the two shares' product gives (0.52 for Battle Theme: the half of the
+  riff that is the bass an octave up), each new part drawn on an own
+  stream, a repeated part as its source. Why: on Battle Theme's token
+  the written bass and guitar shared a pitch class at 0.29 of their
+  common onsets against the game's 0.69, the bass kept its main pitch
+  class from bar to bar 0.25 against 0.74, and the owner heard every
+  song on the token as a band whose players did not listen to each
+  other. And each
   layer entry carries a sixth sub-field, the
   voice's own instrument by stretch (`stretch_word` with "~" between a
   sample and its range: `s605f200105~56-72x14>sf89f5aedfd~60-68`; FFVI:
@@ -1010,6 +1037,9 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **chords** — a bar's chord as a numeral in the key, after the bar
   before's. Drawn a bar as a chain; a repeated part keeps its chords; a
   theme return brings the theme's chords back when `return_band` says so.
+  Since round 106 the chain holds a chord at the token song's share of
+  bar lines (`holds=0.53`, Battle Theme) on an own stream, its own draw
+  still made.
   *`chords`: shape (part, mode, previous); drawn in plan_chords.*
 
 - **period_holds** — inside a period, whether a bar plays the bar a period
@@ -1018,6 +1048,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   before again where it is held (the figure, re-realized on the bar's
   chord; an upper part takes its source bar's voicing too on the same
   chord) and draw the bar fresh where it varies.
+  Since round 106 the token song's own hold share stands in for the
+  draw where the token carries it (the draw still made, so no other
+  draw moves).
   *`period_holds`: shape (part, period); drawn in _plan_once.*
 
 - **kit_pieces** — (since round 63 the balance token's kit field gives
@@ -1418,6 +1451,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   held at a fixed lag: a third of FFVI's bass and accompaniment parts and
   two fifths of its drum parts have one, and the share is much the same
   across the 39 games read.
+  Since round 106 a backing part whose balance token carries its period
+  (`p2/83`) takes the token's lag where the pooled draw gives the part
+  of the form a period, and its holds at the token's share.
   *`periods`: shape (part, length, tempo); drawn in _free_figures, _plan_once, song_of, upper; conditions period_holds.*
 
 ## The tune
