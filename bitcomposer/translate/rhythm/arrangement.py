@@ -1103,6 +1103,21 @@ def part_sample_field(s, role: str) -> str:
     return f"{sid}@{rng}" if rng else sid
 
 
+def own_sample_notes(notes: list) -> list:
+    """A line's notes without the blips of another sample folded into its stretches (roles.stretches_of): a grace or an
+    effect on another instrument is not where the line plays, so it widens neither the line's register (the balance
+    token's second field) nor a stretch's range (round 104; Techno de Chocobo's tune read 28-79 from its effect notes
+    where the tune plays 62-79). The notes as given where fewer than REGISTER_NOTES pitched ones would remain."""
+    pitched = sorted((n[0], n[2], n[3]) for n in notes if isinstance(n[3], str) and n[3] and n[2] is not None and not math.isnan(n[2]))
+    if len(pitched) < R.STRETCH_NOTES:
+        return notes
+    folded = {(t, m, k) for st in R.stretches_of(pitched) for t, m, k in st["notes"] if k != st["key"]}
+    if not folded:
+        return notes
+    kept = [n for n in notes if not (isinstance(n[3], str) and (n[0], n[2], n[3]) in folded)]
+    return kept if sum(1 for n in kept if n[2] is not None and not math.isnan(n[2])) >= REGISTER_NOTES else notes
+
+
 def stretch_word(s, notes, sep: str = "@") -> str:
     """A voice's instrument by stretch as the balance token writes it (rounds 91 and 92): its pitched notes' stretches
     (roles.stretches_of, blips folded; consecutive stretches on one sample run together), each as its sample's pack id,
@@ -1333,7 +1348,7 @@ def balance_units(songs) -> list:
                     fields.pop()
                 tokens.append(role + ("=" + ":".join(fields) if fields else ""))
                 continue
-            reg = part_register(cells_mod.register_notes(s, role) or s.notes[role], ambitus=role == R.MELODY)
+            reg = part_register(own_sample_notes(cells_mod.register_notes(s, role) or s.notes[role]), ambitus=role == R.MELODY)   # blips of another sample left out (round 104)
             line_notes = cells_mod.tune_line(s, role)       # the line voice's notes where the part has two or more (round 95: the part's merged
             share = cells_mod.sounded_share(line_notes)     # voices had put the gap to the other voice's note under a note's length, 0.8 for
             by_gap = cells_mod.gap_shares(line_notes) if role in readings_mod.UPPER + (R.BASS,) else None   # Umaro's 0.4 pecks)

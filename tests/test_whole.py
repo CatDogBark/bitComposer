@@ -1582,6 +1582,8 @@ class NewTablesTests(unittest.TestCase):
         s.notes["melody"] = blip + first + rest
         s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
         self.assertEqual(rhythm.line_stretches(s, "melody"), "m@68-72x6>m2@56-60")             # the blip folds into the first stretch; its range stays the lead's
+        mel = next(t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("melody="))
+        self.assertEqual(mel.split(":")[1], "56-72", mel)                                        # and the token's register field leaves the blip out too (44-72 with it)
         s.notes["melody"] = first + rest + [(rest[-1][0] + 1.0, 0.5, rest[-1][2] + 24.0, "m")]    # a trailing blip two octaves over: the same
         s.voice_notes[1] = ("melody", s.notes["melody"])
         self.assertEqual(rhythm.line_stretches(s, "melody"), "m@68-72x6>m2@56-60")
