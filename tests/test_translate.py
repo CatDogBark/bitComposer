@@ -117,6 +117,39 @@ class Bar(unittest.TestCase):
         g = beat.find(onsets(150, 48, 2, accent=(1.0, 0.7, 0.8, 0.7)))
         self.assertFalse(beat.rebar(g, [float(b) for b in range(48)]))
 
+    def test_a_kit_sets_each_sections_bar(self):
+        """Round 105: a kick on one and three under a louder snare on two and four, with a tune that never repeats and
+        holds nothing (no sign for the phase rule): the accents put the bar on the snare; the kit puts it on the kick.
+        A song barred on its kick already is left alone, and a kit without enough hits sets nothing."""
+        b = 0.5
+        r = random.Random(5)
+        tune = [60 + r.choice((0, 2, 4, 5, 7, 9, 11)) for _ in range(64)]
+        song = song_of({
+            0: [(i * b, 0.3, tune[i]) for i in range(64)],
+            1: [((k * 4) * b, 0.05, None) for k in range(16)] + [((k * 4 + 2) * b, 0.05, None) for k in range(16)],   # the kick
+            2: [((k * 4 + 1) * b, 0.05, None) for k in range(16)] + [((k * 4 + 3) * b, 0.05, None) for k in range(16)],   # the snare
+            3: [(i * b, 0.05, None) for i in range(64)],                                                          # a hat on every beat
+        })
+        for p in song.notes:
+            if p.voice == 1:
+                p.sample.piece = "kick"
+                p.level = 0.6
+            elif p.voice == 2:
+                p.sample.piece = "snare"
+                p.level = 1.0
+            elif p.voice == 3:
+                p.sample.piece = "hat"
+                p.level = 0.3
+        g = beat.find([(p.start, p.level, p.voice) for p in song.notes])
+        self.assertEqual((round(g.bpm), g.meter), (120, 4))
+        self.assertAlmostEqual(g.bar_times[0], g.beat_times[1], places=3)      # the accents' one: the loud snare's beat
+        kit = {piece: [g.beats(p.start) for p in song.notes if p.sample.piece == piece] for piece in beat.KIT_SIGNS}
+        self.assertTrue(beat.rebar_kit(g, kit))
+        self.assertAlmostEqual(g.bar_times[0], g.beat_times[0], places=3)      # the kick's
+        self.assertEqual(len(g.bar_times), 16)
+        self.assertFalse(beat.rebar_kit(g, kit))                                 # barred on its kick already
+        self.assertFalse(beat.rebar_kit(g, {"kick": kit["kick"][:3], "snare": kit["snare"][:3], "cymbal": []}))   # too few hits
+
     def test_the_bar_s_phase_follows_where_the_song_repeats(self):
         # a four-bar phrase at 120 played four times: a melody a note a beat, a chord held through each bar from
         # its first beat, a drum on every beat and two more on every third, which the accents take for the one

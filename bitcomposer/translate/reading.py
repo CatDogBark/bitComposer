@@ -189,6 +189,8 @@ def beat_and_parts(song) -> tuple:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
         phase_mod.find(grid, song)
+        beat.rebar_kit(grid, {piece: [grid.beats(p.start) for p in song.notes if p.sample is not None and p.sample.piece == piece]
+                              for piece in beat.KIT_SIGNS})   # each section's bar from its kit (round 105)
     return grid, roles
 
 
