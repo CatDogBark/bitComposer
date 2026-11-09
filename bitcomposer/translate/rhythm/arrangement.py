@@ -1151,6 +1151,81 @@ def stretch_word(s, notes, sep: str = "@") -> str:
     return ">".join(parts)
 
 
+RIDE_NOTES = 32                      # notes a chord part's line and the bass line need for the rides field (round 106)
+RIDE_NEAR = 0.13                     # beats: an onset this near a bass onset strikes with it (half a sixteenth)
+CHORD_NEAR = 0.3                     # beats: a chord span starting this near a bar line changes the chord there (round 106)
+
+
+def line_rides_field(s, role: str) -> str:
+    """The balance token's fifteenth field for a chord part (round 106): how far its line rides the bass line, the share
+    of its onsets struck with a bass onset and, of those, the share at the bass's pitch class, in hundredths (`b75/70`:
+    Battle Theme's guitar riff on its bass); "" where either line has under RIDE_NOTES pitched notes. The layer words'
+    relation reader (roles.stretch_relation) asks for 0.8 of a stretch's notes with the other voice's and calls three
+    FFVI chord lines a double or a parallel of the bass; Battle Theme's riff, 0.75 with the bass and 0.70 at its pitch
+    class, is neither, and the writer had drawn its line's figures and tones apart from the bass it rides in the game."""
+    if R.BASS not in s.notes or role not in s.notes:
+        return ""
+    line = [n for n in cells_mod.tune_line(s, role) if n[2] is not None and not math.isnan(n[2])]
+    bass = sorted((n for n in cells_mod.tune_line(s, R.BASS) if n[2] is not None and not math.isnan(n[2])), key=lambda n: n[0])
+    if len(line) < RIDE_NOTES or len(bass) < RIDE_NOTES:
+        return ""
+    starts = [n[0] for n in bass]
+    both = same = 0
+    for n in line:
+        i = bisect.bisect_left(starts, n[0] - RIDE_NEAR)
+        near = []
+        while i < len(starts) and starts[i] <= n[0] + RIDE_NEAR:
+            near.append(bass[i][2])
+            i += 1
+        if near:
+            both += 1
+            same += any(round(m) % 12 == round(n[2]) % 12 for m in near)
+    return f"b{round(100 * both / len(line)):02d}/{round(100 * same / both) if both else 0:02d}"
+
+
+def part_period_field(s, role: str) -> str:
+    """The balance token's fourteenth field for a backing part (round 106): the part's own period, the lag in bars at
+    which its bars repeat through the parts of the form that have one (cells.period_of, the periods word's own reading;
+    the lag the most bars have), with the share of the bars inside it that play the bar a lag before again, in
+    hundredths (`p2/83`: Battle Theme's bass, a two-bar riff held 0.83 of the time in its riff section); "" where no
+    part of the form has a period. The writer had drawn a backing part's period and its holds from the pooled tables by
+    the part of the form's length, so the riff under a Battle Theme song ran at the tables' lags and holds, not the
+    song's."""
+    weight, held, total = Counter(), Counter(), Counter()
+    for idx, n, keys in cells_mod._blocks(s):
+        ks = keys.get(role)
+        if ks is None or sum(1 for k in idx if ks[k]) < 2:
+            continue
+        lag = cells_mod.period_of(ks, idx)
+        if not lag:
+            continue
+        weight[lag] += len(idx)
+        for k in idx[lag:]:
+            if ks[k] or ks[k - lag]:
+                total[lag] += 1
+                held[lag] += ks[k] == ks[k - lag]
+    if not weight:
+        return ""
+    lag = weight.most_common(1)[0][0]
+    return f"p{lag}/{round(100 * held[lag] / max(1, total[lag])):02d}"
+
+
+def chord_hold_share(s) -> float | None:
+    """The share of a song's bar lines that keep the chord sounding (round 106): the lines between its bars of the meter's
+    length, after the first, that no chord span starts within CHORD_NEAR of; None under eight such lines or without
+    chords. Battle Theme 0.53 (the chord reader hears its riff's chromatic neighbours as chords, so a riff song's share
+    sits under what the ear holds). The chord chain had held a chord at its pooled rate alone."""
+    if not getattr(s, "chords", None):
+        return None
+    bars = [b for b in s.bars if abs((b[1] - b[0]) - s.meter) < 0.01]
+    lines = [lo for lo, hi in bars[1:]]
+    if len(lines) < 8:
+        return None
+    starts = sorted(c.start for c in s.chords if c.start > 0)
+    changes = sum(1 for t in lines if any(abs(a - t) < CHORD_NEAR for a in starts))
+    return 1 - changes / len(lines)
+
+
 def line_stretches(s, role: str) -> str:
     """The balance token's eleventh field (round 91): the line voice's instrument by stretch (stretch_word), where it has
     two or more; "" for a line on one instrument (the eighth field's sample and range stand). FFVI: 63 of 249 line voices
@@ -1363,7 +1438,9 @@ def balance_units(songs) -> list:
                       pan_field(s, role),                     # and its voices' pans (round 84): the song's stereo picture together
                       line_stretches(s, role),                # and the line's instrument by stretch (round 91)
                       line_motion(s, role, line_notes) if role in readings_mod.UPPER else "",   # a chord part's line motion (round 103)
-                      line_tone_tier(s, role) if role in readings_mod.UPPER else ""]           # and its off-chord tier (round 103)
+                      line_tone_tier(s, role) if role in readings_mod.UPPER else "",           # and its off-chord tier (round 103)
+                      part_period_field(s, role) if role in cells_mod.BACKING and role != R.DRUMS else "",   # the part's own period and holds (round 106)
+                      line_rides_field(s, role) if role in readings_mod.UPPER else ""]         # and how far the line rides the bass (round 106)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
@@ -1371,6 +1448,9 @@ def balance_units(songs) -> list:
             tokens.append("echo=" + echo_outcome(s))
         if s.tonic is not None:                              # the song's key (round 79): what the kit's degrees and tuned rates are read against
             tokens.append(f"key={s.tonic}:{'major' if s.mode == 'major' else 'minor'}")
+        holds = chord_hold_share(s)                          # the song's chord-hold share (round 106): how long its chords sit
+        if holds is not None:
+            tokens.append(f"holds={holds:.2f}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with

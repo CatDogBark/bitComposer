@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 
 from .. import harmony, harness, rhythm, tables, vocab, writer
 from ..writer import scale_index, scale_pitch
+from ..writer.upper import in_register as line_in_register   # the module, not the package's `upper` function
 from .. import roles as R
 from ..vocab import Span
 
@@ -468,7 +469,8 @@ def chord_of(name: str, tonic: int, mode: str):
     return root, shape
 
 
-def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list) -> tuple[list, list]:
+def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list,
+                hold_share: float | None = None, hold_rng: random.Random | None = None) -> tuple[list, list]:
     """A chord a bar, as numerals and as (root, shape): drawn bar by bar
     from the chord mixture (a new part starts the chain's context over,
     the song's urn going on), the loop's first bar from the loops table, a
@@ -478,6 +480,7 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     names = [None] * total
     cache, loops = models.get("chords"), models.get("loops")
     played, previous = Counter(), None
+    held_lines, bar_lines = 0, 0
     for bar, n, of, _ in parts:
         if of is not None:
             src = parts[of][0]
@@ -494,10 +497,17 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
                 name = cache.draw(unit, previous, played, rng, keep=lambda o: o != rhythm.NO_CHORD)
             if name == rhythm.NO_CHORD or chord_of(name, tonic, mode) is None:
                 name = previous if previous is not None else home
+            if hold_share is not None and hold_rng is not None and k > bar and previous is not None:   # the chord held as the token's
+                bar_lines += 1                              # song holds its chords (round 106): the chain's draw above is still made, on an
+                if hold_rng.random() < hold_share:          # own stream the hold, so no other draw moves
+                    name = previous
+                    held_lines += 1
             played[name] += 1
             previous = prev_name = name
             names[k] = name
     log.append("chords " + " ".join(names))
+    if hold_share is not None:
+        log.append(f"chords held at the balance's song's share {hold_share:.2f}: {held_lines} of {bar_lines} bar lines inside the parts")
     return names, [chord_of(x, tonic, mode) for x in names]
 
 
@@ -1073,6 +1083,52 @@ THEME_TRIES = 40                      # letter draws before a themed song's lett
 PLAN_TRIES = 10                       # whole plans drawn for a themed song whose tune has nowhere to come back (fewer than two phrases)
 
 
+def ride_the_bass(plan: "Plan", song: rhythm.Song, role: str, notes: list, figures: list, voicings: list, shared: dict | None,
+                  register: tuple, rides: tuple, bass: list, rng: random.Random) -> tuple:
+    """A chord part's line on the bass's figure (round 106). The token's rides field gives the share of the line's onsets
+    struck with the bass and the share of those at the bass's pitch class; their product (Battle Theme 0.75 x 0.70: the
+    half of the riff that is the bass an octave up) is the share of the form's parts that ride, each new part drawn on
+    an own stream, a repeated part as its source. In a riding bar the line plays the written bass's notes (`bass`: its
+    line voice, (start, end, midi, voice)), each in the line's register of the bar (in_register, the house fold) on the
+    bass's lengths; the bar's figure is the bass's onsets, and the voices beside the line see the riding notes
+    (`shared`). Returns the notes, figures, voicings and a log line."""
+    c, s = rides
+    share = c * s
+    decided, riding = {}, set()
+    for i, (bar, n, of, label) in enumerate(plan.parts):
+        decided[i] = decided[of] if of is not None else rng.random() < share
+        if decided[i]:
+            riding.update(range(bar, bar + n))
+    plays = plan.plays.get(role) or []
+    bounds_at = line_bounds_at(plan, role)
+    new_notes = list(notes)
+    done = 0
+    for k in sorted(riding):
+        if k >= len(plays) or not plays[k] or k >= len(song.bars) or k >= len(figures):
+            continue
+        a, b = song.bars[k]
+        in_bar = [x for x in bass if a - rhythm.NEAR <= x[0] < b - rhythm.NEAR]
+        if not in_bar:
+            continue
+        reg = (bounds_at(k) if bounds_at else None) or register
+        copied = [(x[0], x[1], float(line_in_register(int(round(x[2])), reg)), 0) for x in in_bar]
+        new_notes = [x for x in new_notes if not (a - rhythm.NEAR <= x[0] < b - rhythm.NEAR)] + copied
+        figures[k] = rhythm.pattern(rhythm.position(x[0] - a, song.division) for x in in_bar)
+        voicings[k] = "rides the bass"
+        if shared is not None:
+            for key_ in [key_ for key_ in shared if isinstance(key_, tuple) and len(key_) == 2 and isinstance(key_[1], tuple) and key_[1][0] == k]:
+                del shared[key_]
+            for st, en, m, v in copied:
+                pos = rhythm.position(st - a, song.division)
+                shared[("line", (k, pos))] = m
+                shared[("taken", (k, pos))] = {m}
+        done += 1
+    new_notes.sort(key=lambda x: x[0])
+    parts_ = [plan.parts[i][3] for i in sorted(decided) if decided[i]]
+    return new_notes, figures, voicings, [f"{role}'s line rides the bass in {done} bars (parts {' '.join(parts_) if parts_ else 'none'}: the balance's song "
+                                           f"{c:.2f} of its onsets with the bass, {s:.2f} at its pitch class, so {share:.2f} of the parts drawn)"]
+
+
 def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_bars: int | None = None, min_bars: int | None = None,
          themed: bool = False, band_returns: bool = False) -> Plan:
     """The skeleton of song `seed` from the tables; forms longer than `max_bars` or shorter than `min_bars` are drawn
@@ -1125,6 +1181,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
     token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
+    token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
+                                                            # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
@@ -1136,6 +1194,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             continue
         if role == "top":                                   # the token's song's loudest part, of full (round 59), not a part
             token_top = float(rest)
+            continue
+        if role == "holds":                                 # the token's song's chord-hold share (round 106), not a part
+            token_holds = float(rest)
             continue
         if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
             token_loud = float(rest)
@@ -1246,6 +1307,14 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_motions[role] = fields[11]
             if len(fields) > 12 and fields[12]:             # the line's off-chord tier (round 103): rare, some or many, the token song's own
                 token_tone_tiers[role] = fields[12]
+            if len(fields) > 13 and fields[13]:             # the part's own period and hold share (round 106): `p2/83`
+                m_ = re.fullmatch(r"p(\d+)/(\d+)", fields[13])
+                if m_:
+                    token_periods[role] = (int(m_.group(1)), int(m_.group(2)) / 100)
+            if len(fields) > 14 and fields[14]:             # how far the line rides the bass (round 106): `b75/70`, onsets with it / at its pitch class
+                m_ = re.fullmatch(r"b(\d+)/(\d+)", fields[14])
+                if m_:
+                    token_rides[role] = (int(m_.group(1)) / 100, int(m_.group(2)) / 100)
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
@@ -1257,7 +1326,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             bpm = rhythm.within_band(bpm, token_class)      # (85 under slow, 130 under medium): the class's edge, inside
         tempo = rhythm.band(bpm)
         log.append(f"tempo {was:.0f} BPM is outside the band's class ({token_class}): {bpm:.0f} BPM drawn under it")
-    names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log)
+    names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
+                                hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"))   # held as the token's song holds (round 106)
     drum_habit = (token_habits.get(R.DRUMS) or _draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log)) if R.DRUMS in band else None   # before the
     tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)
     textures, plays = plan_texture(models, parts, band, rng, log, defer=(R.DRUMS,), tier=tier)
@@ -1346,6 +1416,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                         if "clashes" in render_mod.models_or_empty(models) else None),   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
                             "tone_tier": (_draw(models, "tone_tiers", (role,), random.Random(f"whole:{seed}:tone_tier:{role}"), log)
                                           if "tone_tiers" in render_mod.models_or_empty(models) else None)}   # how much of its line leaves the chord (round 96), an own stream
+            if role in token_rides:                         # how far the line rides the bass (round 106): the token song's own
+                extras[role]["rides"] = token_rides[role]
+                log.append(f"{role}'s line rides the bass from the balance: {token_rides[role][0]:.2f} of its onsets with the bass, "
+                           f"{token_rides[role][1]:.2f} of those at its pitch class")
             if role in token_motions:                       # the token song's own line motion (round 103); the draw made all the same, so the streams stand
                 extras[role]["motion_drawn"] = extras[role]["motion"]
                 extras[role]["motion"] = token_motions[role]
@@ -1392,6 +1466,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if role not in rhythm.BACKING:
                 continue
             held, of_part = {}, {}
+            own = token_periods.get(role)                   # the token song's own period and hold share (round 106)
+            own_rng = random.Random(f"{seed}:{role}:period holds")
             for i, (bar, n, of, label) in enumerate(parts):
                 if of is not None:
                     continue
@@ -1399,14 +1475,19 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 if drawn == "none":
                     continue
                 lag = int(drawn)
+                if own and own[0] < n:                      # the song's lag where the part is long enough for it
+                    lag = own[0]
                 of_part[i] = lag
                 for k in range(bar + lag, bar + n):
-                    if "period_holds" not in models or _draw(models, "period_holds", (role, drawn), rng) == "held":
+                    held_draw = "period_holds" not in models or _draw(models, "period_holds", (role, drawn), rng) == "held"
+                    if own:                                 # the pooled draw above is still made, so no other draw moves
+                        held_draw = own_rng.random() < own[1]
+                    if held_draw:
                         held[k] = lag
             if of_part:
                 extras.setdefault(role, {})["periods"] = held
                 log.append(f"{role} period: " + ", ".join(f"{parts[i][3]} every {lag} bar{'s' if lag > 1 else ''}" for i, lag in of_part.items())
-                           + f"; {len(held)} bars held")
+                           + f"; {len(held)} bars held" + (f" (the balance's song's: every {own[0]} bar{'s' if own[0] > 1 else ''}, held {own[1]:.2f})" if own else ""))
     if R.MELODY in band and "phrase_letters" in models:   # the tune's phrases a part: the theme again, an earlier head again, or new
         n_parts = len(parts)
         counts_by_part = {}
@@ -2008,6 +2089,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"], habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role),
                                                 pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"),
                                                 tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog, tone_tier=plan.extras[role].get("tone_tier"))   # the tone figures on their own stream (round 96)
+        rides = plan.extras[role].get("rides")
+        if rides and R.BASS in written and written[R.BASS].notes:   # the line on the written bass's figure where the token song's rides it (round 106)
+            notes, figures, voicings, ride_log = ride_the_bass(plan, song, role, notes, figures, voicings, shared, (low, high), rides,
+                                                               [x for x in written[R.BASS].notes if x[3] == 0], random.Random(f"{seed}:{role}:rides"))
+            tlog += ride_log
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "

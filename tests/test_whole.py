@@ -3,6 +3,7 @@ import math
 import random
 import tempfile
 import unittest
+from fractions import Fraction
 
 from bitcomposer.translate import harmony, pack, rhythm, tables, vocab, whole, writer
 from bitcomposer.translate import roles as R
@@ -729,6 +730,77 @@ class SectionDensityTests(unittest.TestCase):
                          ((15, 64), (0, 6), (6, 64)))                                                         # the part's own running density where the writer has one
         env = whole.envelope_at_for(plan, "bass")
         self.assertEqual((env(0), env(5), env(9), env(5, 10.0)), (None, (6, 64), None, (15, 64)))            # the bass's medium tier, denser in B
+
+
+class TokenRiffTests(unittest.TestCase):
+    """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
+    share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chords = [Span(0.0, 16.0, 0, "", 1.0), Span(16.0, 32.0, 7, "", 1.0)]                                   # C for four bars, G for four
+        bass = [(4.0 * k + x / 2, 0.45, 36.0 if x % 2 == 0 else 43.0, "b") for k in range(8) for x in range(8)]   # a two-bar riff? no: one bar, repeated every bar
+        riff = [(4.0 * k + x / 2, 0.45, (48.0 if x % 2 == 0 else 55.0) if k < 6 else 52.0 + (x % 3), "g") for k in range(8) for x in range(8)]   # six bars on the bass's riff an octave up, two bars its own
+        tune = [(4.0 * k + x, 0.9, 72.0 + x, "m") for k in range(8) for x in (0.0, 1.0, 2.0, 3.0)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": riff, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", riff), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_the_riff_fields(self):
+        s = self._song()
+        self.assertEqual(rhythm.line_rides_field(s, "accompaniment"), "b100/75")                # every onset with the bass, six bars of eight at its pitch class
+        self.assertEqual(rhythm.part_period_field(s, "bass"), "p1/86")                          # the bass repeats its bar every bar; at the chord change its
+                                                                                                 # marks change (C and G on G: root and fourth), one bar of seven varied
+        self.assertEqual(rhythm.line_rides_field(s, "melody"), "")                               # not a chord part (the field is asked only for them)
+        self.assertAlmostEqual(rhythm.chord_hold_share(s), 6 / 7)                                # one change at bar line 4 of seven
+        tok = rhythm.balance_units([s])[0].outcome
+        acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual(acc[14], "b100/75", acc)
+        bass = next(f for f in tok.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(bass[13], "p1/100", bass)
+        self.assertIn("holds=0.86", tok)
+
+    def test_the_plan_takes_the_riff_fields(self):
+        from bitcomposer.translate import tables
+        token = ("accompaniment=main:48-55:0.9:1:0.6:::sacc0123456@44-60:dense+repeating:0.50::block:rare::b75/70 "
+                 "bass=half:36-44:0.9:1:1.0:::sbass::::::p2/83 top=0.30 tempo=medium holds=0.80")
+        units_ = lambda outcome, **v: [tables.Unit(f"s{i}", "g", outcome, v) for i in range(3)]   # noqa: E731
+        periods = []
+        for length in ("short", "medium", "long"):
+            for tempo in ("slow", "medium", "fast"):
+                periods += units_("1", part="bass", length=length, tempo=tempo) + units_("1", part="accompaniment", length=length, tempo=tempo)
+        models = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(units_(token, part=rhythm.ARRANGEMENT)),
+                  "periods": tables.Table(("part", "length", "tempo"), "periods", votes=tables.SHARES).fit(periods)}
+        p = whole.plan(models, 3, "g")
+        self.assertEqual(p.extras["accompaniment"]["rides"], (0.75, 0.70))
+        self.assertTrue(any(l.startswith("accompaniment's line rides the bass from the balance: 0.75 of its onsets") for l in p.log), p.log)
+        self.assertTrue(any(l.startswith("bass period:") and "every 2 bars" in l and "held 0.83" in l for l in p.log), [l for l in p.log if "period" in l])
+        self.assertTrue(any(l.startswith("chords held at the balance's song's share 0.80:") for l in p.log), p.log)
+        self.assertNotIn("rides", p.extras.get("bass", {}))
+
+    def test_the_line_rides_the_written_bass(self):
+        from types import SimpleNamespace
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        plan = SimpleNamespace(parts=[(0, 2, None, "A"), (2, 2, None, "B")], plays={"accompaniment": [True] * 4}, extras={"accompaniment": {}}, bounds={})
+        bass = [(4.0 * k + x / 2, 4.0 * k + x / 2 + 0.4, 36.0 + (x % 2) * 7, 0) for k in range(4) for x in range(8)]   # root and fifth eighths
+        own = [(4.0 * k + x, 4.0 * k + x + 0.9, 60.0 + x, 0) for k in range(4) for x in range(4)]                     # the line's own: a note a beat
+        figures = ["0 1 2 3"] * 4; voicings = ["own"] * 4; shared = {("line", (k, Fraction(x))): 60.0 + x for k in range(4) for x in range(4)}
+        notes, figs, vcs, log = whole.ride_the_bass(plan, song, "accompaniment", own, figures, voicings, shared, (48, 60), (1.0, 1.0), bass, random.Random(1))
+        self.assertEqual(sorted(k for k in range(4) if vcs[k] == "rides the bass"), [0, 1, 2, 3])                 # a share of 1.0: every part rides
+        riding = [n for n in notes if n[0] < 4.0]
+        self.assertEqual([n[0] for n in riding], [x / 2 for x in range(8)])                                      # the bass's onsets
+        self.assertEqual({round(n[2]) % 12 for n in riding}, {0, 7})                                             # its pitch classes, in the line's register
+        self.assertTrue(all(48 <= n[2] <= 60 for n in riding))
+        self.assertEqual(figs[0], rhythm.pattern(rhythm.position(x / 2, 4) for x in range(8)))
+        self.assertEqual(shared[("line", (0, Fraction(0)))], riding[0][2])
+        self.assertNotIn(("line", (0, Fraction(1))), shared)                                                     # the old line's key at beat 2 is gone (the riff struck at 1.0 keeps its own key)
+        self.assertIn("rides the bass in 4 bars", log[0])
+        notes2, figs2, vcs2, log2 = whole.ride_the_bass(plan, song, "accompaniment", list(own), ["0 1 2 3"] * 4, ["own"] * 4, {}, (48, 60), (0.0, 0.0), bass, random.Random(1))
+        self.assertEqual(notes2, sorted(own))                                                                    # a share of 0: nothing rides
 
 
 class TokenMotionTests(unittest.TestCase):
