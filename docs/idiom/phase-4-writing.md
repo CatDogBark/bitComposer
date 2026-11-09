@@ -6976,3 +6976,78 @@ candidate for the next round. The harmony's and the arp's fields rest on
 10 and 2 FFVI lines. The standing list: round 100's endings and theme
 returns, round 101's sparser side, the counter's semitone interval form,
 round 102's other games' flips.
+
+### Round 104: a stretch's range is its own sample's notes' ambitus (2026-11-08, from the owner's listening, on his go)
+
+**Why.** On Song Check 86 the owner heard The Terminal of Glass (seed 150,
+Battle Theme's token) as "all over the place", every part doing its own
+thing. Measured against Battle Theme's readings (terminal_facts*.py): the
+tempo, kit, samples, levels, echo, habit classes, motion and tier were
+Battle Theme's own, and the onsets locked a little less than its do (the
+bass on the guitar's onsets 0.69 against 0.89). The large thing was the
+tune: Battle Theme's melody role carries one synth note at midi 42 before
+bar 1, `roles.stretches_of` folds it into the lead's stretch as a blip,
+and `stretch_word` took the stretch's range as the ambitus of all its
+notes, so the lead's stretch read 40-80 where the lead plays 64-79 (p10
+65, p90 77), and the writer wrote the tune over 40-80: two thirds of its
+notes under Battle Theme's lowest lead note, the median in bars 1-26 at
+57 against the lead's 70, the line from 43 to 78 through the
+accompaniment's voices. Across FFVI, 11 of 174 two-instrument stretches
+were widened five semitones or more by folded notes of another sample
+(Battle Theme's lead by 22, Terra's accompaniment by 15 from one note,
+Cyan's melody by 19); Techno de Chocobo's tune had its register field
+(not a stretch word: its blips lie between runs of one sample) read 28-79
+from its effect notes where it plays 62-79. The other things heard:
+Battle Theme's synth is a locked pair of two-note stabs riding the riff
+(221 onsets, every one a dyad, 0.89 of them on a guitar onset), written
+as two independent "apart" lines; the riff leaps where Battle Theme's
+crawls (the LIMITS item of round 103); the form A B C D E F repeats
+nothing where Battle Theme's A B C B D brings the riff section back, and
+the section densities, drawn a part at a time, move out of step where
+Battle Theme's accompaniment, drums and bass surge and thin together.
+
+**Built.** `arrangement.own_sample_notes`: a line's notes without the
+blips of another sample folded into its stretches; `stretch_word` takes
+each stretch's range from its own sample's notes (all its notes where
+fewer than REGISTER_NOTES (8) own ones remain), and the balance token's
+register field (field 1) takes `own_sample_notes` of the line. Two cuts:
+the stretch word first, then the register field when the measure showed
+Techno de Chocobo's token unchanged. Pack refit (110 tables; no new
+table), the vocabulary shipped and committed, the map unchanged. Test: a
+leading blip two octaves under and a trailing one two octaves over leave
+the stretch word and the register field as the line's own (the old code
+read 44-72 for 68-72). Suite 444 (1 skip).
+
+**Measured.** FFVI: 16 tokens' parts in 14 of 68 songs change, the
+register field in 7 (Battle Theme's melody 40-80 to 52-80, Techno de
+Chocobo's 28-80 to 60-80, New Continent's arp 32-56 to 32-44 and melody
+48-92 to 56-92, Devil's Lab's accompaniment 36-72 to 44-68, Forever
+Rachel's melody 60-88 to 68-88, Kids Run Through the City's harmony 60-68
+to 64-68), the stretch field in 10, a voice's stretch sub-field in 4.
+Written: seed 150's tune has 2 of 113 notes under 64 (72 before), its
+bars 1-26 at a median of 68 (57; the lead's 70); over seeds 1-60 the 45
+stretched lines keep 0.94 of their notes inside their bar's stretch
+range at the median. Plans (400 seeds, against round 103): every seed
+keeps its token song, 318 plan logs and 333 note sets are unchanged, 67
+songs change notes, all on the 14 tokens.
+
+**Song Check 87** (https://claude.ai/artifact/UfG6Z7CmoTacnKWGKR6Skd): five songs, before (round 103) and after,
+the same seed and token on every one: The Terminal of Glass (150, Battle
+Theme's: the tune's first stretch 64-80), Arcade of Rain (41, Techno de
+Chocobo's: the register 60-80 from 28-80, the tune's median from 56 to
+70), Last Vault (157, Cyan's: the second instrument's stretch 52-64 from
+52-84, the tune lower from bar 13 where Cyan's own second instrument
+plays), Winding Foundry Crossing (283, Terra's: the accompaniment's
+stretch 60-64 from 44-64) and The Waking Valley (19, Forever Rachel's:
+the first stretch 68-76 from 60-76).
+
+**Open.** New Continent's counter: its second stretch is one pitch (56)
+on a snare-like sample for 25 bars, a rhythmic pedal the role reader
+calls a counter; with the range its own, the written counter is a
+monotone there (The Restless Gorge, seed 192, left out of the Song Check
+for it). Then the other things heard on The Terminal of Glass: a voice
+parallel to a sibling voice (Battle Theme's synth pair) is not a relation
+the layer words can say; the section densities move a part at a time; the
+form carries no token field; and round 103's line motion. The standing
+list: round 100's endings and theme returns, round 101's sparser side,
+the counter's semitone interval form, round 102's other games' flips.
