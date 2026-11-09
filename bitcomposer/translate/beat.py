@@ -726,6 +726,8 @@ def rebar(grid: Grid, bass_beats: list[float]) -> bool:
 
 
 KIT_HITS = 8                         # on-beat kick and snare hits a section needs for its kit to set its bar (round 105)
+KIT_KICKS = 4                        # and on-beat kick hits it needs to move its downbeat: a snare alone cannot tell a backbeat
+                                     # (two and four) from a march (one and three), and lands a half-bar either way
 KIT_MARGIN = 0.4                     # how much better, in the phase model's score, the kit's downbeat must be than the one read
 KIT_ON = 0.2                         # beats: a hit this near a beat is on it (phase.ON)
 KIT_ALTERNATES = 0.7                 # the share of a section's on-beat snare hits on two beats a half-bar apart that says 4, not 3 or 2
@@ -757,9 +759,11 @@ def rebar_kit(grid: Grid, kit_beats: dict) -> bool:
     beats restart off the grid, so the written songs on its token had the kick on two and four under chords and
     phrases that changed on the one. `kit_beats`: {"kick": [...], "snare": [...], "cymbal": [...]}, hits as
     grid.beats. A section with KIT_HITS on-beat kick and snare hits or more takes the downbeat its kit scores best
-    (the phase model's two-level table a sign, KIT_SIGNS) where that beats the downbeat read by KIT_MARGIN; a
-    section read in 3 or 2 in a song mostly in 4 whose snare alternates every two beats (KIT_ALTERNATES of its
-    on-beat hits on two beats a half-bar apart) is in 4. Returns whether a bar changed."""
+    (the phase model's two-level table a sign, KIT_SIGNS) where that beats the downbeat read by KIT_MARGIN and the
+    section has KIT_KICKS kick hits (a snare alone cannot tell a backbeat from a march); a section read in 3 or 2
+    in a song mostly in 4 whose snare alternates every two beats (KIT_ALTERNATES of its on-beat hits on two beats
+    a half-bar apart) is in 4. The caller passes the kit's voices' hits alone: a drum-named sample on a pitched
+    part's voice is no backbeat. Returns whether a bar changed."""
     if not grid or grid.loose or not grid.sections:
         return False
     spans, bt = _section_spans(grid), grid.beat_times
@@ -792,7 +796,7 @@ def rebar_kit(grid: Grid, kit_beats: dict) -> bool:
                 scores[phi] += weight * (at * up + (1 - at) * down)
         best = max(range(m), key=lambda phi: scores[phi])
         current = x.downbeat % m if m == x.meter else None
-        if current is not None and scores[best] - scores[current] < KIT_MARGIN:
+        if current is not None and (len(hits["kick"]) < KIT_KICKS or scores[best] - scores[current] < KIT_MARGIN):
             continue
         if m == x.meter and best == current:
             continue

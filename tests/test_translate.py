@@ -149,6 +149,9 @@ class Bar(unittest.TestCase):
         self.assertEqual(len(g.bar_times), 16)
         self.assertFalse(beat.rebar_kit(g, kit))                                 # barred on its kick already
         self.assertFalse(beat.rebar_kit(g, {"kick": kit["kick"][:3], "snare": kit["snare"][:3], "cymbal": []}))   # too few hits
+        g2 = beat.find([(p.start, p.level, p.voice) for p in song.notes])
+        self.assertFalse(beat.rebar_kit(g2, {"kick": [], "snare": kit["snare"], "cymbal": []}))                 # a snare alone moves nothing
+        self.assertAlmostEqual(g2.bar_times[0], g2.beat_times[1], places=3)
 
     def test_the_bar_s_phase_follows_where_the_song_repeats(self):
         # a four-bar phrase at 120 played four times: a melody a note a beat, a chord held through each bar from
