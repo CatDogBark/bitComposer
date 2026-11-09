@@ -87,7 +87,7 @@ class PerformanceTests(unittest.TestCase):
             self.assertEqual(word["delay"], out["info"]["echo"])
             self.assertTrue({n.voice for n in out["score"].notes if n.echo})
             self.assertIn(f"echo {word['delay']} at {word['wet']:.2f} of full (the vocabulary's word)", out["score"].message[4])
-            self.assertLessEqual(word["wet"], 0.3)                        # FFVI's 0.20, never the old 0.4 slap
+            self.assertIn(word["word"], models["echo"].vocabulary)        # one of FFVI's own echo words (wet 0 to 0.39), never the old 0.4 slap rule
             self.assertEqual(set(n.echo_delay for n in out["score"].notes), {word["seconds"]})
         # a vocabulary without the word: the sound set's habits, said so
         bare = {k: v for k, v in models.items() if k != "echo"}
