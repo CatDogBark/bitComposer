@@ -6880,3 +6880,99 @@ reader's second-bass and doubling readings in Fanfare and Dancing Mad are
 its heuristics on a truer picture, unheard. The other games' 357 flips
 are unverified. The standing list: round 100's endings and theme returns,
 round 101's sparser side, the counter's semitone interval form.
+
+### Round 103: a chord part's line motion and off-chord tier ride the balance token (2026-11-08, the owner's finding, on his go)
+
+**Why.** On Song Check 85 the owner heard The Terminal of Glass (seed 150,
+Battle Theme's token) as "spastic and clashing" and asked whether the
+guitar, the accompaniment's sample since round 102, was being used
+properly. The sample was: the accompaniment had Battle Theme's register,
+level, density, note lengths, sample and second voices. What it did not
+have was Battle Theme's motion or its tier. The `motions` word and the
+`tone_tiers` word were drawn once a part from the pooled tables (FFVI's
+accompaniment lines: 29 arpeggiated, 18 mixed, 9 block; 31 some, 14
+many, 11 rare), and seed 150 had drawn arpeggiated and some, where
+Battle Theme's riff moves on 0.37 of its strikes (mixed, by the
+`motions` thresholds of a third and two thirds) and rarely leaves the
+chord (rare). A chord part written on one song's token with another's
+motion is the pooled draw the balance token was made to replace, one
+field at a time (the sample in round 63, the level, the layers, the
+stretches, the kit); the motion and the tier were two the token did not
+carry.
+
+**Built.** Two fields on the balance token for the chord parts
+(`rhythm.line_motion`, `rhythm.line_tone_tier` in `arrangement.py`: the
+line alone, under `readings.upper_motion` and the `motions` thresholds,
+and under `tone_tier_of(_tone_share)`; a line under WORD_NOTES (16)
+pitched notes has no motion field, a part without tone bars no tier).
+The plan parses the twelfth and thirteenth fields (`token_motions`,
+`token_tone_tiers`), keeps the draws (`motion_drawn`, `tone_tier_drawn`,
+so no other draw moves) and takes the token's where it has them; the
+upper writer gets the token's motion for the line's walk along the stack
+and the drawn motion for the voices beside the line, whose own words
+were drawn with it. Pack refit (110 tables; no new table, the fields
+ride the balance), the vocabulary shipped, the map unchanged. Tests:
+TokenMotionTests (a token's fields parsed and taken, the draws kept, a
+token without the field drawing as before). Suite 443 (1 skip).
+
+**Also.** Round 102's shipped vocabulary had never been committed: the
+refit after the re-read was shipped into the worktree and the commit
+step was missed, so dev as merged (e0b0ffc) carried round 102's reader
+with round 101's tables (the guitar still a snare in the written kits;
+Song Check 85's clips were rendered from the worktree and are right).
+Found when this round's first before dump, from dev, gave Battle Theme's
+accompaniment two voices at 64-80 where Song Check 85 had three on the
+guitar at 44. The round-102 file is its own branch and PR
+(ship-r102-vocab, #126), merged into this branch so either order is
+clean; this round's vocabulary is the refit from the same readings with
+the two fields; and the before side below is round 102 with its
+vocabulary, not dev as merged. Lesson, into the round procedure: commit
+and push the shipped vocabulary from Ragnarok before the PR, and check
+`git log -- bitcomposer/vocabularies/default.json.gz` on the branch.
+Then CI failed on both branches on one test: round 72's echo test had
+bounded the drawn echo word's wet share at 0.3 ("never the old 0.4
+slap") where FFVI's echo table runs to 0.39, and it had held because its
+seeds drew 0.20 words; the re-read renamed six words' sending parts (the
+nine songs whose roles swapped), the table re-ordered, and seed 68554
+drew the 0.38 word. The test asserts the word is one of the table's
+words now (7f44c29 on ship-r102-vocab, merged here). Second lesson: a
+test with fixed seeds against the shipped vocabulary must assert the
+table's own values, not a bound one draw met.
+
+**Measured.** FFVI: the fields as above; the line repeats its note on
+0.89 of its moves at the median in the block class, 0.50 mixed, 0.05
+arpeggiated. Written (seeds 1-60): 62 of 67 chord parts took both fields
+(5 tokens without them); the accompaniment's motions as drawn 33
+arpeggiated, 9 mixed, 5 block, as used 28, 13, 8 (FFVI 29, 18, 9); its
+tiers used 25 some, 12 rare, 12 many; the written line repeats on 0.44
+of its moves in the block class, 0.36 mixed, 0.26 arpeggiated (leaps of
+a fourth or more 0.21, 0.25, 0.37); on the chord 0.87 of its onsets in
+the rare tier, 0.73 some, 0.60 many (the tiers' own bounds 0.9 and
+0.7). Plans (400 seeds, against round 102 with its vocabulary): every
+seed keeps its token song (the fields sit last in the token, so the
+table's order held); 45 plans are unchanged (no chord part with a field)
+and 118 write the same notes (the token's motion and tier were the
+draw's, or no chord part); on the rest the chord part keeps its onsets
+and changes its pitches, the tune moves where its clash hold sees other
+tones, and the bass where it takes a hand-off cell from the tune.
+Against dev as merged, 238 of 400 seeds had drawn another token song:
+that was round 102's tables arriving, not this round.
+
+**Song Check 86** (https://claude.ai/artifact/3eCu9vZZRw1pDPFuWgGq7h): five
+songs, before (round 102 with its vocabulary) and after, the same seed
+and token on every one: The Terminal of Glass (150, Battle Theme's:
+mixed and rare from arpeggiated and some), Twin Valley Road (258, Dark
+World's: a four-voice accompaniment to block, rare from some), Secret
+Tundra Dance (63, Terra's: block from arpeggiated, rare from some; the
+harmony's field arpeggiated as drawn), Observatory of Smoke (84,
+Fanatics': a one-voice accompaniment to block, rare from many) and
+Sleeping Crossing (211, Strago's: block from arpeggiated, the tier many
+on both sides, the accompaniment the only part that changed).
+
+**Open.** The written block line repeats 0.44 of its moves against
+FFVI's 0.89 (LIMITS: the line moves more than its motion class says;
+what the line keeps from one chord to the next is not yet a word), a
+candidate for the next round. The harmony's and the arp's fields rest on
+10 and 2 FFVI lines. The standing list: round 100's endings and theme
+returns, round 101's sparser side, the counter's semitone interval form,
+round 102's other games' flips.

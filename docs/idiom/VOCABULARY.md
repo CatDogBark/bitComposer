@@ -379,6 +379,28 @@ The words are grouped by where the writing draws them, in the order the song is 
   the class has fewer than two notes), which the plan keeps for the part's
   only and line voices over the `gap_sounds` draws.
   *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
+  Since round 103 a chord part's token carries two more fields, its
+  line's own motion class and its own off-chord tier
+  (`rhythm.line_motion`, `rhythm.line_tone_tier`: the line alone, by the
+  `motions` thresholds (a third of its strikes moving, two thirds) and
+  the `tone_tiers` ones (a tenth of its onsets off the chord, 0.3); FFVI's
+  56 accompaniment lines with the field 29 arpeggiated, 18 mixed, 9
+  block, and 31 some, 14 many, 11 rare; its 10 harmony lines 8
+  arpeggiated and 2 block). The plan takes both where the token has them
+  (`plan.extras[role]["motion"]` and `["tone_tier"]`; the draws are still
+  made and kept as `motion_drawn` and `tone_tier_drawn`, so no other
+  draw moves), the voices beside the line keep the drawn motion, and a
+  token without the field (a line under sixteen pitched notes, or
+  without tone bars) keeps the draw. Why: both had been drawn from the
+  pooled tables once a part, so Battle Theme's token, whose riff moves on
+  0.37 of its strikes and rarely leaves the chord, was written
+  arpeggiated and decorated on seed 150 (The Terminal of Glass, "spastic
+  and clashing" to the owner on Song Check 85) while every other field
+  of its accompaniment was Battle Theme's own. Over seeds 1-60, 62 of 67
+  chord parts took both fields; the accompaniment's motions went from
+  33 arpeggiated, 9 mixed, 5 block as drawn to 28, 13, 8 as used (FFVI
+  29, 18, 9), and every one of 400 seeds kept its token song (the fields
+  sit last in the token, so the table's order held).
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
@@ -416,6 +438,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   rich) and how it moves through its tones (block, mixed, arpeggiated).
   Drawn once a part; condition `voicings`, and the motion walks the voices
   along the stack a step a strike.
+  Since round 103 a chord part whose balance token carries its line's
+  own motion class (the token's twelfth field, `rhythm.line_motion`)
+  takes it in place of the draw for the line's walk; the voices beside
+  the line keep the draw, and a part without the field draws as before.
   *`voicing_habits`: shape (part); drawn in _plan_once, write_upper; conditions voicings, widths · `motions`: shape (part); drawn in _plan_once, write_upper.*
 
 - **layers** — what each voice of a part beside its line does, by its rank
@@ -1125,7 +1151,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   or decorated as a whole: FFVI's 58 accompaniments spread from none to
   0.72 (10 songs rare, 29 some, 19 many; their medians 0.04, 0.23 and
   0.45), and a draw from the pooled bars alone had put every written song
-  at the pooled 0.28. `tone_degrees`: the degree an off-chord onset plays,
+  at the pooled 0.28. Since round 103 a chord part whose balance token
+  carries its line's own tier (the thirteenth field,
+  `rhythm.line_tone_tier`) takes it in place of the draw, so the song is
+  as pure or decorated as its token song, and a part without the field
+  draws as before. `tone_degrees`: the degree an off-chord onset plays,
   as semitones over the chord's root (2 a ninth, 5 a fourth, 9 a sixth, 10
   a seventh over a triad), by the part, the chord's shape (which decides
   which degrees are off it) and the bar's previous off-chord degree, drawn

@@ -1124,6 +1124,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
     token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
+    token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
@@ -1241,6 +1242,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                                             # places kept as written, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85, render.pan_of)
             if len(fields) > 10 and fields[10]:             # the line's instrument by stretch (round 91): each stretch's sample, range and bars
                 token_stretches[role] = line_stretch_list(fields[10])
+            if len(fields) > 11 and fields[11]:             # the line's motion (round 103): block, mixed or arpeggiated, the token song's own
+                token_motions[role] = fields[11]
+            if len(fields) > 12 and fields[12]:             # the line's off-chord tier (round 103): rare, some or many, the token song's own
+                token_tone_tiers[role] = fields[12]
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
@@ -1341,6 +1346,14 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                         if "clashes" in render_mod.models_or_empty(models) else None),   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
                             "tone_tier": (_draw(models, "tone_tiers", (role,), random.Random(f"whole:{seed}:tone_tier:{role}"), log)
                                           if "tone_tiers" in render_mod.models_or_empty(models) else None)}   # how much of its line leaves the chord (round 96), an own stream
+            if role in token_motions:                       # the token song's own line motion (round 103); the draw made all the same, so the streams stand
+                extras[role]["motion_drawn"] = extras[role]["motion"]
+                extras[role]["motion"] = token_motions[role]
+                log.append(f"{role}'s line motion from the balance: {token_motions[role]} (the draw {extras[role]['motion_drawn']}); its voices beside the line keep the draw")
+            if role in token_tone_tiers and extras[role].get("tone_tier") is not None:   # and its off-chord tier (round 103)
+                extras[role]["tone_tier_drawn"] = extras[role]["tone_tier"]
+                extras[role]["tone_tier"] = token_tone_tiers[role]
+                log.append(f"{role}'s off-chord tier from the balance: {token_tone_tiers[role]} (the draw {extras[role]['tone_tier_drawn']})")
         elif role in (R.MELODY, R.COUNTER):                  # the phrase tables count both lines as the tune's: drawn under the melody's part
             extras[role] = {"articulation": _draw(models, "articulation", (role,), rng, log),
                             "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log),
@@ -2031,7 +2044,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 # folded into the line's own band and sat at a median 0 semitones from it (round 69)
                 span_v = plan.bounds.get(f"{role}:{v}") or (plan.bounds.get(f"{role}:second", reg_v) if drawn_pitch else reg_v)
                 notes_v, figures_v, voicings_v = writer.upper(song, role, [v], {v: span_v}, models, rng_v, plan.habits[role], plan.extras[role]["richness"], gs["second"] if gs else sounds,   # interval from the
-                                                              key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role]["motion"],   # line, kept within the span FFVI's
+                                                              key=key, lock=locks_of(song, {role}, plan), motion=plan.extras[role].get("motion_drawn", plan.extras[role]["motion"]),   # line, kept within the span FFVI's
                                                               pedals={v: (reg_v[0] + reg_v[1]) // 2}, plays=plan.plays[role], figures=given, shared=shared,   # voices beside a line sit in
                                                               tone_index=(writer.ANY_TONE if SECOND_ANY_TONE else v), kind=rel[0], clash_rates=plan.extras[role].get("clashes"))   # (the layer offset's cap), not folded into its offset register
                 log.append(f"voice {v + 1} {rel[0]}: register {reg_v} ({offset:+d}, {density}), "
