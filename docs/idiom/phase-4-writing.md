@@ -6793,3 +6793,90 @@ drawn with the step; the counter's density follows the tune's; a shifted
 section's figures feed the part's urn and chain, so a dense section can
 lean into the section after it. The lines' remaining clash floor (round
 100's endings and theme returns), the counter's semitone interval form.
+
+### Round 102: a looped drum-named sample struck across the chords is an instrument (2026-11-08, the owner's finding, on his go)
+
+**Why.** Listening to Northern Bells (Song Check 84) beside Fanfare, the
+song its kit came from, the owner heard that the "snare" was not a snare:
+an electronic guitar noise, in a kit that is really a kick and an open and
+closed hat. He was right. The sample (a7c3eeca0d) is FFVI's distorted
+rhythm guitar: noisy (periodicity 0.27), with body (0.66 of its power
+under 1 kHz), centred at 1.3 kHz, looped, and with no fundamental the
+tuner could find cleanly. The drum namer's noise branch, which judges a
+sample by its spectrum alone and never checked for a loop, called it a
+snare (a tom at Dancing Mad (part 5)'s low rate); the reader then gave its
+notes no pitch, so the round-83 rule that moves a tune-like sample off a
+drum voice, written for samples named "other", never saw it. It was the
+snare of Fanfare and Mt. Koltz (Mt. Koltz's whole kit), the "second snare"
+of Battle Theme and The Decisive Battle (round 99's "sixteenth-note
+rattle") and a second tom in Dancing Mad (part 5), struck on 5 to 13
+distinct rates following the chords in every one of them (Fanfare: eight
+hits on one rate, nine a tone under; Battle Theme's riff on ten); round
+88's "pitched snare" wall was its notes, and Song Check 70's note that at
+-10 semitones "its rattle lasts 340 ms and is the guitar" had the answer.
+FFVI's real kicks, snares, hats and cymbals sit on one rate each; its toms
+on a few, unlooped; its only looped drum is the cymbal, which rings.
+Across the readings' 23 games, 357 more looped drum-named sample-songs
+without a fundamental are struck across five semitones or more with no
+rate holding 0.6 of their hits (Super Turrican 2, Mega Man X, Ogre
+Battle); they flip with this round, unheard.
+
+**Built.** The reader, in two cuts. `drums.instrument_by_play`: a looped
+drum-named sample struck INSTRUMENT_HITS (8) times or more across
+INSTRUMENT_SPAN (5) semitones with no rate holding INSTRUMENT_SHARE (0.6)
+of its hits is an instrument; `events.of_notes` renames it "other" and
+marks it `by_play`. Its register: `tuning.rough_fundamental`, the shortest
+lag between 40 and 1000 Hz at which the loop repeats at 0.5 or better and
+within NEARLY of its best lag, climbed to the peak as `fundamental()`
+does (the guitar's loop repeats at about 95 Hz, near G2; its sub-octave
+repeats as well, the shorter lag is the note); without one the notes keep
+the rate as their pitch, 60 at the recording's. The first cut had used the
+rate alone, and the role reader, seeing a mid-register riff, had made The
+Decisive Battle's guitar the melody; with its register it is a bass. Then
+the role reader, unchanged, gives the voice a pitched part: Fanfare's
+guitar a bass (the song's mid voice reads as a doubling of the tune
+beside it), Battle Theme's and Mt. Koltz's an accompaniment, The Decisive
+Battle's a second bass, Dancing Mad (part 5)'s two voices an
+accompaniment and a bass (the growl an octave and more under the
+recording; the song's bass reads as a counter beside it). FFVI re-read
+(`readings.db.before-r102`; the re-read also carried rounds 89 and 90's
+role reader to nine songs the round-90 re-read had missed: Aria de Mezzo
+Carattere, Epitaph, Gau, Shadow, The Magic House, The Phantom Forest, The
+Serpent Trench, Umaro, Under Martial Law, their melodies and counters
+swapping), pack4 refit (110 tables; `pack.json.before-r102`), the
+vocabulary shipped, the map regenerated. Tests: the rule's edges (a tom on
+many rates unlooped, a hat with ornaments, under eight hits, a rate holding
+0.7, a span under five), of_notes with the namer's verdict pinned (the
+sample renamed, by_play, its notes pitched by rate; a one-shot unpitched),
+the rough fundamental on a rough 100 Hz loop and none on a one-shot. Suite
+442 (1 skip).
+
+**Measured.** FFVI: 44 kits (45), Fanfare's a kick and a hat with the
+open-hat second, Mt. Koltz's none; 17 letters in 15 kits carry a second
+sample, the hat in 13 of 17, the snare in 2 of 28 (4 of 30 with the
+guitar); the tuned pieces are three (the guitar was the fourth, and the
+only "snare"); the drum units 1223 (1259). Plans (400 seeds): a re-read
+moves every table, so 162 of 400 seeds keep their token song, 238 draw
+another, and no plan is what it was. Of the 29 seeds whose token song was
+one of the five, 11 keep it: on those the guitar leaves the kit and
+appears as the bass's sample (Fanfare's and Dancing Mad's tokens), the
+accompaniment's (Battle Theme's, Mt. Koltz's) or a second bass voice's
+(The Decisive Battle's).
+
+**Song Check 85** (https://claude.ai/artifact/BE3tcz3WUaTJcVrvuR3o8J): five
+songs on the five tokens, before (dev as merged) and after, paired by
+token song: The Reactor of Wind (198, Fanfare's: the kit kick and hats, the
+bass on the guitar), The Terminal of Glass (150, Battle Theme's: one
+snare, the accompaniment on the guitar), Waking Lagoon (146, The Decisive
+Battle's: one snare, the guitar a second bass voice), Upper Monorail (72,
+Mt. Koltz's: no drums at all, the guitar in the accompaniment), and
+Dancing Mad (part 5)'s token on two seeds, Inner Dunes Return (24) before
+and The Shore of Mirrors (42) after (one tom, the bass on the guitar).
+
+**Open.** The drum namer still judges a sample by its spectrum alone;
+this round reads the one case the play exposes (a looped sound struck
+across pitches). The guitar's octave is a guess (95 or 190 Hz); the role
+reader's second-bass and doubling readings in Fanfare and Dancing Mad are
+its heuristics on a truer picture, unheard. The other games' 357 flips
+are unverified. The standing list: round 100's endings and theme returns,
+round 101's sparser side, the counter's semitone interval form.

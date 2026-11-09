@@ -345,8 +345,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   `rhythm.PAN_BIN`; `@m@@0.45` where the slot is dry), and since round 88 a
   tuned slot's rate, moved with the written key, stays inside the rates the
   game struck the sample at as that piece (the `kit_rates` word,
-  `render.kit_rate_wall`: FFVI's pitched snare -4 to +3, and a tritone's
-  move had taken it to -10), and since round 99 a slot whose letter the
+  `render.kit_rate_wall`: three tuned pieces since round 102; the "pitched
+  snare" the wall was built for, struck within -4 to +3 and moved to -10,
+  was the game's guitar, read as a snare until then), and since round 99 a slot whose letter the
   song strikes on a second sample carries that sample after a `+` with its
   level, note or rate, hold and share of the letter's hits
   (`h=sd1c4c7ce33@0.14@r60@0.43@d@@0.50+s831784ce4b@0.14@r60@0.44@0.14`,
@@ -1631,9 +1632,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   struck as. Counted since round 88 as the wall a tuned kit slot's rate
   stays inside: round 79 reads a tonal kit piece's rate as a degree of its
   song's key and moves it with the written key, and the move had taken
-  FFVI's pitched snare, struck in the game within -4 to +3 of its
-  recording, to -10, where its rattle lasts 340 ms and is the guitar (Song
-  Check 70's Northern Bells). Over the game's tuned slots and the twelve
+  FFVI's "pitched snare", struck in the game within -4 to +3 of its
+  recording, to -10, where it lasted 340 ms and sounded like a guitar (Song
+  Check 70's Northern Bells). It was one: the sample is the game's
+  distorted rhythm guitar, which the drum namer had called a snare, read as
+  an instrument since round 102 (`drums.instrument_by_play`); the wall
+  stands for the three kit pieces the game does tune. Over the game's tuned slots and the twelve
   keys a written song can land in, the moved rate fell outside the game's
   rates in 77 of 132 cases. Not a drawn word: `whole.samples_for` reads the
   slot's sample's rates as its piece into the plan (`kit_rate_walls`,
@@ -1657,16 +1661,18 @@ The words are grouped by where the writing draws them, in the order the song is 
   while the letter's hits are not over the token's share for it; the
   render gives the second its own slot (`hihat2`) and sample, level, rate
   or note and hold, on the main's channel with the main's pan and echo
-  mark. FFVI strikes 19 letters in 15 of its 46 kits on a second sample:
-  the hat in 12 of the 16 kits that have one (a short closed hat beside a
-  longer open one, the open one taking 0.50 of the eighth-note hits and
-  0.31 of the beats, 0.35 of the hat's hits at the median), the snare in 4
-  of 30 (the Battle Theme's sixteenth-note rattle beside its backbeat
-  snare, 0.86 of the sixteenths), a tom, a cymbal and an "other" once
-  each. The written kit had played the slot's one sample on every hit
-  (round 80's pick of the loudest), so a Battle Theme kit played its
-  backbeat snare at the rattle's density and a third of kit songs lost the
-  open-hat lift.
+  mark. FFVI strikes 17 letters in 15 of its 44 kits on a second sample
+  (as read since round 102): the hat in 13 of the 17 kits that have one (a
+  short closed hat beside a longer open one, the open one off the beat),
+  the snare in 2 of 28, a cymbal and an "other" once each. Round 99 had
+  counted the Battle Theme's and The Decisive Battle's "sixteenth-note
+  rattle beside the backbeat snare" as second snares: the rattle was the
+  game's distorted rhythm guitar, which the drum namer had called a snare
+  (round 102, `drums.instrument_by_play`), so those two kits have one snare
+  and the round's snare numbers (0.86 of the sixteenths on the second) were
+  the guitar's chugging. The written kit had played the slot's one sample
+  on every hit (round 80's pick of the loudest), so a third of kit songs
+  lost the open-hat lift.
   *`kit_seconds`: shape (part, place); drawn in kit_second_pick, write.*
 
 - **part_samples** — the sample a part's line plays (the melody, bass,
