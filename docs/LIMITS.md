@@ -152,6 +152,17 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the median against FFVI's 11, the arp 9 against 8, the harmony 8 against
   5 (ten FFVI songs); the token carries the first two, the harmony's is
   the gap.
+- **A chord part's line moves more than its motion class says.** Since
+  round 103 a chord part's line walks the voicing stack as its token
+  song's motion class does (block holds a tone a strike, arpeggiated
+  moves one), but its pitches are also the voicing drawn for each chord,
+  the off-chord degrees and the themes the part carries, and what the
+  line keeps from one chord to the next is not yet a word. FFVI's block
+  accompaniment lines repeat the note on 0.89 of their moves at the
+  median (mixed 0.50, arpeggiated 0.05); the written lines repeat on
+  0.44, 0.36 and 0.26 over seeds 1-60, so a riff that pecks one tone in
+  the game still wanders in the writing.
+
 - **A level step's company is its density tier alone.** Since round 101 a
   section's level step draws the part's density tier with it
   (`section_densities`), but FFVI's steps also come with register moves
