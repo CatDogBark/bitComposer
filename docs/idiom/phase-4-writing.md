@@ -7359,3 +7359,76 @@ Battle Theme list: the form never returning, the sections' densities out
 of step, the bass's pitch continuity. The standing list: round 100's
 endings and theme returns, round 101's sparser side, round 103's line
 motion, round 105's sectioning.
+
+### Round 109: the struck stretches counted into the interval word; an off-chord landing from the nominal placing (2026-11-09, from the owner's listening to Song Check 91, on his go)
+
+**Why.** The owner heard the synth organ on Battle Theme's token drop to
+a distorted rumble, the guitar fine. Battle Theme's synth sits two
+octaves over its guitar (midi 48-87 and 45-81 against the guitar's
+40-55, one note of 219 below 48); the written one fell to the guitar's
+register and below (midi 17-72 in the first voice, a quarter to a third
+of its stabs below 48; the second, a fifth under it, 7-67), the organ
+sample three octaves under where the game plays it. Two things together:
+the parallel_intervals word, which places every struck stab (round 107),
+had no units at Battle Theme's nominal, a twelfth, because only parallel
+stretches were counted (4,575 units in 37 songs, the thirds' nominals 2
+and -2 holding 2,740 of them), so every draw backed off to the pooled
+mix; and that mix's off-chord outcomes were semitones from the followed
+note, applied from the guitar's note literally, so the thirds' and
+sixths' -4 and +3 and the octave doubles' -12 put a stab a third or an
+octave under the guitar: 36 of 119 draws in Journey of the Quarry, 31 of
+its 115 stabs an octave or more under the nominal. Battle Theme's own
+synth off the chord sits +17 to +42 over the guitar, +25 at the median.
+
+**Built.** parallel_interval_units (arrangement.py) counts the struck-
+with stretches as it counts the parallel ones, at their own nominal
+(struck_relations: _relations' third output, each struck stretch's first
+and last beat, the voice followed and the word's semitones; the line or
+a sibling followed), and an off-chord outcome is the voice's semitones
+from the nominal placing, the followed note at the word's semitones,
+within PARALLEL_SEMITONES of it, where it had been the semitones from
+the followed note itself; so an outcome means the same thing at every
+nominal, which backing off across nominals assumes. plan.parallel places
+such a pick from the nominal placing and chains the landing before from
+it. Pack refit (110 tables; no new table), the vocabulary shipped and
+committed. Tests: the stab song's struck stretches as units at nominal
+14 (the root, the fifth, the third, D two over the nominal C) and at -4
+for the sibling (F a fifth under C at the nominal, +0), a struck voice
+at a twelfth drawn +3 landing three over the twelfth, and round 97's C#
+over C read as -2 from the nominal third. Suite 454 (1 skip).
+
+**Measured.** FFVI: 8,281 units in 50 songs (4,575 in 37); by nominal -2
+2,308, 2 1,706, -3 823, -5 684, 7 596, -7 430, -4 411, 11 193, 0 189, 3
+183, 5 166, 4 149, the rest under 100; Battle Theme 608 (its twelfth
+193: the fifth 49, at the nominal off the chord 36, the third 21, the
+root 19, an octave over the nominal 15, +8 12, sus 7, +19 6); off the
+chord 2,613 of 8,281, the nominal itself (+0) the commonest at 1,183.
+Written, the five Battle Theme seeds: the first synth voice midi 51-89
+(medians 62-66; the game 48-87, 72), none of its stabs below 48 (21-52 a
+song before) or under the guitar (20-41 before), a median +19 to +24
+over the guitar (+17 before; the game +19, +24, +31), 7-16 stabs a song
+an octave or more off the nominal (31-53 before; the game's own +12 and
++19 outcomes among them); the second voice 34-80 (the game 45-81), 3-7
+stabs a song below 48 (33-64 before), 0-2 under the guitar. Seeds 1-60,
+the 20 struck voices: stabs more than an octave off their nominal 104 of
+1,678 before, 55 of 1,616 after; the lowest note's median 40 to 44; the
+lows left are the tokens' own words (Slam Shuffle's w1-38 puts seed 7's
+voice 38 under its sibling, to midi 12; Opening Theme part 3's wl-20,
+Searching for Friends' w1-15, Awakening's wl+4 over a low line reach
+32-34). Plans (400 seeds, against round 108): 400 keep their token song,
+206 plan logs and 120 note sets unchanged, every parallel and doubling
+voice's off-chord picks re-read.
+
+**Song Check 92** (https://claude.ai/artifact/BczvAbwCUjHTpaiwZrSQ8R):
+the five Battle Theme songs of Song Checks 89 to 91, round 108 before
+and round 109 after: Journey of the Quarry (18), Lunar Island (243),
+Gate Return (343), The Terminal of Glass (150) and Second Cistern Dance
+(365).
+
+**Open.** A struck voice's own stretches still take the layer draw's
+register; a token voice that sits far under its sibling by its own word
+(Slam Shuffle) plays there. The Battle Theme list: the form never
+returning, the sections' densities out of step, the bass's pitch
+continuity. The standing list: round 100's endings and theme returns,
+round 101's sparser side, round 103's line motion, round 105's
+sectioning.

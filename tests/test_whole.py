@@ -406,7 +406,7 @@ class ParallelIntervalTests(unittest.TestCase):
         self.assertEqual(units[0].values, {"interval": "2", "tone": "root", "part": "accompaniment", "previous": rhythm.START})
         self.assertEqual((units[1].values["tone"], units[1].values["previous"], units[2].values["tone"]), ("third", "third", "fifth"))
         s.notes["accompaniment"][0] = (0.0, 0.9, 61.0, "v")                                    # a C# over the C: off the chord, its semitones
-        self.assertEqual(rhythm.parallel_interval_units([s])[0].outcome, "+1")
+        self.assertEqual(rhythm.parallel_interval_units([s])[0].outcome, "-2")                 # round 109: two under the nominal placing (C + 3), not one over the C
         s.notes["accompaniment"][0] = (0.0, 0.9, 64.0, "v")
         self.assertEqual(rhythm.PARALLEL_SEMITONES, 24)
         from bitcomposer.translate import packtables
@@ -819,6 +819,34 @@ class TokenWithTests(unittest.TestCase):
             notes, thinned, _ = whole.struck_with(ref, 0, 4, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.5, scale, mask, ref, struck)
             self.assertEqual((len(notes), thinned), (want, 32 - want), (share, want))           # under the share every onset is struck; over it the
             # drawn mask stands (a mask that thins nothing is drawn again, and the same mask comes back)
+
+    def test_struck_stretches_are_counted_into_the_interval_word(self):
+        """Round 109: the parallel_intervals word counts the struck-with stretches too, at their own nominal, an off-chord
+        landing as semitones from the nominal placing; Battle Theme's synth had no units at its twelfth and drew the thirds'
+        and sixths' offsets from the guitar's note."""
+        s = self._song()
+        units = rhythm.parallel_interval_units([s])
+        upper = [u for u in units if u.values["interval"] == "14"]                              # the stabs: struck with the line two octaves up
+        self.assertEqual(len(upper), 32)
+        self.assertEqual(sorted(set(u.outcome for u in upper)), ["+2", "fifth", "root", "third"])   # C the root, G the fifth, E the third, D two over the nominal C
+        self.assertEqual(upper[0].values, {"interval": "14", "tone": "root", "part": "accompaniment", "previous": rhythm.START})
+        lower = [u for u in units if u.values["interval"] == "-4"]                              # the lower stab, struck with the upper a fifth under
+        self.assertEqual(len(lower), 32)
+        self.assertIn("+0", {u.outcome for u in lower})                                         # F a fifth under C: off the chord, at the nominal
+        self.assertIn("fifth", {u.outcome for u in lower})
+
+    def test_an_off_chord_pick_lands_near_the_nominal_placing(self):
+        """Round 109: an off-chord outcome is semitones from the nominal placing, so a struck voice at a twelfth drawn "+3"
+        sits three over the twelfth, not three over the line."""
+        from bitcomposer.translate import tables
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        t = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "+3", {"interval": "11", "tone": "root", "part": "accompaniment", "previous": p}) for i in range(8) for p in (rhythm.START, "+3")])
+        line = [(float(i), i + 0.4, 48.0, 0) for i in range(16)]                                 # C, the chord's root, every beat
+        drawn = whole.parallel(line, 19, {0, 2, 4, 5, 7, 9, 11}, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1))
+        self.assertEqual({int(m) - 48 for a, b, m, v in drawn}, {22})                           # three over the twelfth, not three over the C
 
 
 class TokenRiffTests(unittest.TestCase):

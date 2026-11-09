@@ -1444,25 +1444,40 @@ The words are grouped by where the writing draws them, in the order the song is 
   at 43 % of its onsets, FFVI 11 %; with the product 3 %.
   *`voice_moves`: shape (part, kind, place); drawn in bass, upper, write.*
 
-- **parallel_intervals** — where a parallel voice's note sits against the
-  chord at each onset it shares with the line it follows (round 97): the
-  chord tone it lands on (root, third, fifth, seventh, sus) or, off the
-  chord, its semitones from the line's note (`+4`, `-8`), by the stretch's
+- **parallel_intervals** — where a parallel voice's note sits against the chord at each onset it
+  shares with the voice it follows (round 97): the chord tone it lands on
+  (root, third, fifth, seventh, sus) or, off the chord, its semitones from
+  the nominal placing, the followed note at the stretch's semitones (`+4`,
+  `-8`; from the followed note itself before round 109), by the stretch's
   nominal interval in scale steps (`roles.generic` of the relation word's
-  semitones: 2 a third up, -5 a sixth down), the tone class of the line's
-  note against the chord, the voice's part and the landing before it in
-  the stretch. Counted over the voices that follow a part's line voice (a
-  line that reads as parallel to its own harmony voice is no unit; two
-  lines parallel to each other count once, the one further from the lead
-  following: the tune leads, then the counter, the chord parts, the
-  bass): 4,764 onsets in 60 stretches of 37 songs. The writer follows a
-  relation word's parallel stretch, and a layer word's doubling, by it
-  (`plan.parallel`, in place of the line again in the scale): a drawn
-  chord tone is placed as that tone of the written chord nearest the
-  line's note at the nominal interval, so a third over a major chord's
-  third is its fifth at +3 and over a minor chord's at +4, and the voice
-  rides the chord's quality; a chord part's voice holds the part's
-  clashes share as its other voices do. FFVI's parallel voice sits on a
+  semitones: 2 a third up, -5 a sixth down, 11 a twelfth up), the tone
+  class of the followed note against the chord, the voice's part and the
+  landing before it in the stretch. Counted over the voices that follow a
+  part's line voice (a line that reads as parallel to its own harmony
+  voice is no unit; two lines parallel to each other count once, the one
+  further from the lead following: the tune leads, then the counter, the
+  chord parts, the bass), 4,764 onsets in 60 stretches of 37 songs, and
+  since round 109 over the struck-with stretches too (round 107's `w`
+  words, the line or a sibling voice followed): 8,281 onsets in 50 songs,
+  Battle Theme's synth 193 of them at its twelfth (the fifth 49, at the
+  nominal off the chord 36, the third 21, the root 19, an octave over the
+  nominal 15). The writer follows a relation word's parallel or struck
+  stretch, and a layer word's doubling, by it (`plan.parallel`, in place
+  of the line again in the scale): a drawn chord tone is placed as that
+  tone of the written chord nearest the followed note at the nominal
+  interval, so a third over a major chord's third is its fifth at +3 and
+  over a minor chord's at +4, and the voice rides the chord's quality; an
+  off-chord outcome is placed from the nominal placing; a chord part's
+  voice holds the part's clashes share as its other voices do. Why the
+  nominal placing: an outcome counted from the followed note meant a
+  different place at every nominal, and a draw at a nominal the word had
+  never seen backed off to all of them, so Battle Theme's struck synth at
+  a twelfth drew the thirds' and sixths' `-4` and `+3` and the octave
+  doubles' `-12` from the guitar's note and sat a third or an octave under
+  the guitar (36 of 119 draws in Journey of the Quarry, 31 of its 115
+  stabs an octave or more under the nominal; midi 17-28, its sibling a
+  fifth under at 7-21, where the game's synth never goes below 45): the
+  distorted rumble heard on Song Check 91. FFVI's parallel voice sits on a
   chord tone on 0.65 of its shared onsets, 0.82 where the line's note is
   on the chord (0.95 over the third, 0.76 over the root, 0.79 over the
   fifth) and 0.40 where it is off it, at its nominal semitones on 0.58;

@@ -724,7 +724,7 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     voices = cells_mod.part_voices(song, role)
     line = cells_mod.line_voice(voices, role, song)
     others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
-    relations, struck = _relations(song)                    # what each voice does beside the others, stretch by stretch (round 90),
+    relations, struck, _ = _relations(song)                 # what each voice does beside the others, stretch by stretch (round 90),
                                                             # and how a voice struck with another strikes (round 108)
     out = []
     for share, v in zip(shares, others):
@@ -806,21 +806,23 @@ LEAD_ORDER = (R.MELODY, R.COUNTER, R.HARMONY, R.ACCOMP, R.ARP, R.BASS)   # who l
 
 def parallel_interval_units(songs) -> list:
     """Each shared onset of a parallel stretch (a voice's relation word's "p": roles.stretch_relation, its own edge bars
-    split off) as a unit (round 97): its outcome where the voice's note sits against the chord sounding, the chord tone
+    split off) and, since round 109, of a struck-with stretch (the word's "w", round 107: the line or a sibling voice
+    followed) as a unit (round 97): its outcome where the voice's note sits against the chord sounding, the chord tone
     it lands on (root, third, fifth, seventh, sus: the writer places that tone of the written chord nearest the nominal
     interval, so a third over a major chord's third is its fifth at +3 and over a minor chord's +4) or, off the chord,
-    its semitones from the line's note (`+4`, `-8`); its values the stretch's nominal interval in scale steps
-    (roles.generic of the word's semitones: 2 a third up, -5 a sixth down), the tone class of the line's note against
-    the chord (root, third, fifth, seventh, sus, other), the voice's part and the outcome before it in the stretch
-    (START at the first). The voice followed is a part's line voice, as the
-    writer's parallel voice follows a line; a line that reads as parallel to its own harmony voice is no unit, and two
-    lines parallel to each other count once, the one further from the lead following (LEAD_ORDER: the tune leads, then
-    the counter, the chord parts, the bass). The writer follows a parallel stretch by it
-    (whole.parallel): FFVI's parallel voice sits at its nominal semitones on 0.61 of its shared onsets and on a chord
-    tone on 0.62 (123 stretches, 10,057 onsets), where the line again in the scale, as the writer had it, matches the
-    game's note on 0.31 of them and lands on the chord on 0.42: over the chord's third a third up is a major third or a
-    minor sixth (the root), over the fifth a fourth (the root again) or a minor third (the seventh); a parallel voice is
-    a harmony voice, not a shifted copy."""
+    its semitones from the nominal placing, the followed note at the word's semitones (`+4`, `-8`; from the followed note
+    itself before round 109, which made an outcome mean a different place at every nominal: a struck voice at a twelfth,
+    whose nominal had no units, drew the thirds' "-4" and sat a third under its line); its values the stretch's nominal
+    interval in scale steps (roles.generic of the word's semitones: 2 a third up, -5 a sixth down, 11 a twelfth up), the
+    tone class of the followed note against the chord (root, third, fifth, seventh, sus, other), the voice's part and the
+    outcome before it in the stretch (START at the first). A parallel voice follows a part's line voice, as the writer's
+    does; a line that reads as parallel to its own harmony voice is no unit, and two lines parallel to each other count
+    once, the one further from the lead following (LEAD_ORDER: the tune leads, then the counter, the chord parts, the
+    bass). The writer follows a parallel or struck stretch by it (whole.parallel): FFVI's parallel voice sits at its
+    nominal semitones on 0.61 of its shared onsets and on a chord tone on 0.62 (123 stretches, 10,057 onsets), where the
+    line again in the scale, as the writer had it, matches the game's note on 0.31 of them and lands on the chord on
+    0.42: over the chord's third a third up is a major third or a minor sixth (the root), over the fifth a fourth (the
+    root again) or a minor third (the seventh); a parallel voice is a harmony voice, not a shifted copy."""
     out = []
     for s in songs:
         pitched = {v: sorted((n[0], n[2], n[3]) for n in ns if n[2] is not None and not math.isnan(n[2]))
@@ -833,6 +835,7 @@ def parallel_interval_units(songs) -> list:
             if voices:
                 lines.add(cells_mod.line_voice(voices, role, s))
         lead = {r: i for i, r in enumerate(LEAD_ORDER)}
+        followed = []                                       # (the voice, its stretch's first and last beat, the voice followed, the word's semitones)
         for v, rows in R.voice_relations(pitched).items():
             if len(pitched[v]) < R.SECOND_NOTES:
                 continue
@@ -841,25 +844,29 @@ def parallel_interval_units(songs) -> list:
                     continue
                 if v in lines and lead.get(roles_of.get(v), 9) <= lead.get(roles_of.get(of), 9):
                     continue                                # two lines parallel to each other: the one further from the lead follows (once)
-                line = pitched[of]
-                starts = [x[0] for x in line]
-                nominal, previous = str(R.generic(semi)), readings_mod.START
-                for t, m, _ in pitched[v]:
-                    if t < a - R.STRETCH_NEAR or t > b + R.STRETCH_NEAR:
-                        continue
-                    lo, hi = bisect.bisect_left(starts, t - R.STRETCH_NEAR), bisect.bisect_right(starts, t + R.STRETCH_NEAR)
-                    if lo == hi:
-                        continue
-                    k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
-                    iv = int(round(m - line[k][1]))
-                    c = _chord_at(s.chords, t)
-                    if abs(iv) > PARALLEL_SEMITONES or c is None or c.root is None or c.fit < FIT:
-                        continue
-                    landing = vocab.tone_of(int(round(m)) % 12, c.root, c.shape)
-                    outcome = landing if landing != "other" else f"{iv:+d}"
-                    out.append(tables.Unit(s.sid, s.game, outcome, {"interval": nominal, "tone": vocab.tone_of(round(line[k][1]) % 12, c.root, c.shape),
-                                                                     "part": roles_of.get(v, "?"), "previous": previous}))
-                    previous = outcome
+                followed.append((v, a, b, of, semi))
+        for v, rs in struck_relations(s).items():           # the struck-with stretches (round 109): the line or a sibling voice followed
+            followed += [(v, a, b, of, semi) for a, b, of, semi in rs if of in pitched]
+        for v, a, b, of, semi in followed:
+            line = pitched[of]
+            starts = [x[0] for x in line]
+            nominal, previous = str(R.generic(semi)), readings_mod.START
+            for t, m, _ in pitched[v]:
+                if t < a - R.STRETCH_NEAR or t > b + R.STRETCH_NEAR:
+                    continue
+                lo, hi = bisect.bisect_left(starts, t - R.STRETCH_NEAR), bisect.bisect_right(starts, t + R.STRETCH_NEAR)
+                if lo == hi:
+                    continue
+                k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
+                deviation = int(round(m - line[k][1])) - semi   # from the nominal placing (round 109)
+                c = _chord_at(s.chords, t)
+                if abs(deviation) > PARALLEL_SEMITONES or c is None or c.root is None or c.fit < FIT:
+                    continue
+                landing = vocab.tone_of(int(round(m)) % 12, c.root, c.shape)
+                outcome = landing if landing != "other" else f"{deviation:+d}"
+                out.append(tables.Unit(s.sid, s.game, outcome, {"interval": nominal, "tone": vocab.tone_of(round(line[k][1]) % 12, c.root, c.shape),
+                                                                 "part": roles_of.get(v, "?"), "previous": previous}))
+                previous = outcome
     return out
 
 
@@ -915,13 +922,15 @@ def _relations(song: readings_mod.Song) -> tuple:
     roles.SECOND_NOTES notes, has no word (the layers table's stands: a three-note voice's word would have the writer
     play a whole parallel line). Kefka's channel 1: "ox9>dm-12x14>o", its own line for nine bars, the tune an octave under
     for fourteen, its own again. The writer follows the word stretch by stretch (plan.stretched_notes). Returns the words
-    and, since round 108, each struck-with voice's struck facts (_struck_text), both by voice."""
+    and, since round 108, each struck-with voice's struck facts (_struck_text) and, since round 109, its struck stretches
+    ((first beat, last beat, the voice followed, semitones)), all by voice."""
     pitched = {v: sorted((n[0], n[2], n[3]) for n in ns if n[2] is not None and not math.isnan(n[2]))
                for v, (role, ns) in song.voice_notes.items() if role != R.DRUMS}
     lengths = {v: {n[0]: n[1] for n in ns if n[2] is not None and not math.isnan(n[2])}   # each note's length by its onset (round 108)
                for v, (role, ns) in song.voice_notes.items() if role != R.DRUMS}
     roles_of = {v: role for v, (role, _) in song.voice_notes.items()}
     struck = {}                                             # a struck-with voice -> its struck stretches' facts (round 108)
+    struck_rows = {}                                        # a struck-with voice -> (first beat, last beat, the voice followed, semitones) per stretch (round 109)
     beside = {}                                             # a voice beside its part's line -> (its part, its rank among them, the line, the ranks)
     for role in set(roles_of.values()) - {R.DRUMS}:
         voices = cells_mod.part_voices(song, role)
@@ -954,6 +963,7 @@ def _relations(song: readings_mod.Song) -> tuple:
                         word = f"wl{w[2]:+d}"
                 if w is not None and pitched.get(line_v):   # how it strikes (round 108): its share of the followed onsets, its lengths by the
                     struck.setdefault(v, []).append(_struck_facts(st, pitched[w[1]], pitched[line_v], lengths[v]))   # line's gap, its longest
+                    struck_rows.setdefault(v, []).append((a, b, w[1], w[2]))
             end = bar_index(song, b)
             if words and words[-1][0] == word:
                 words[-1][1] = end
@@ -966,7 +976,7 @@ def _relations(song: readings_mod.Song) -> tuple:
             parts.append(word if i == len(words) - 1 else f"{word}x{max(1, end - prev)}")
             prev = max(prev, end)
         out[v] = ">".join(parts)
-    return out, {v: _struck_text(ps) for v, ps in struck.items() if v in out}
+    return out, {v: _struck_text(ps) for v, ps in struck.items() if v in out}, {v: rs for v, rs in struck_rows.items() if v in out}
 
 
 def relation_words(song: readings_mod.Song) -> dict:
@@ -977,6 +987,12 @@ def relation_words(song: readings_mod.Song) -> dict:
 def struck_words(song: readings_mod.Song) -> dict:
     """Each struck-with voice's struck facts as the balance token's seventh layer sub-field has them (round 108; _struck_text)."""
     return _relations(song)[1]
+
+
+def struck_relations(song: readings_mod.Song) -> dict:
+    """Each struck-with voice's struck stretches (round 109): [(first beat, last beat, the voice followed, semitones)], for the
+    interval word to count them at their own nominal (parallel_interval_units)."""
+    return _relations(song)[2]
 
 
 TUNED_SHARE = 0.5                    # a kit sample is tuned to the key where no one struck rate holds more than this share of the songs

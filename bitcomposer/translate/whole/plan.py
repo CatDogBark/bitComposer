@@ -785,8 +785,9 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
     the voice's note sits against the chord is drawn from the parallel_intervals word by the stretch's nominal interval
     in scale steps, the tone class of the line's note against the chord sounding and the landing before (START at the
     first): a chord tone (root, third, fifth, seventh, sus), placed as that tone of the chord nearest the line's note at
-    the nominal interval (the chord's own third or fifth, major or minor), or semitones from the line's note (`+4`) off
-    the chord; `diatonic` without the word (or a song, or a stream), under a note no chord fits, and at a unison or
+    the nominal interval (the chord's own third or fifth, major or minor), or semitones from the nominal placing (`+4`;
+    round 109: from the line's note itself before, so a backed-off draw at a nominal the word had never seen, Battle
+    Theme's synth at a twelfth, put the voice a third under its line) off the chord; `diatonic` without the word (or a song, or a stream), under a note no chord fits, and at a unison or
     octaves (a double: the line exactly). FFVI's parallel voice sits at its nominal semitones on 0.61 of its shared onsets and
     on a chord tone on 0.62, where the line again in the scale matched it on 0.31 and landed on the chord on 0.42: a
     third over the chord's third is a major third or a minor sixth (the root), over the fifth a fourth (the root again)
@@ -821,7 +822,7 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
             pick = t.draw((nominal, tone, role or "?", previous), rng, floored=False, floor_k=PARALLEL_FLOOR, min_songs=PLAN_SONGS)
             if pick.startswith(("+", "-")):                # off the chord: the semitones from the line's note
                 try:
-                    midi = ref + int(pick)
+                    midi = aim + int(pick)                 # from the nominal placing (round 109; from the line's note before)
                 except ValueError:
                     midi = None
             else:                                           # a chord tone: that tone of the written chord nearest the nominal placing
@@ -843,7 +844,7 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
         if pcs:
             run[place][1] += 1
             run[place][0] += int(any((midi - q) % 12 in writer.CLASH for q in pcs))
-        previous = landing if landing is not None else (vocab.tone_of(midi % 12, c.root, c.shape) if vocab.tone_of(midi % 12, c.root, c.shape) != "other" else f"{midi - ref:+d}")
+        previous = landing if landing is not None else (vocab.tone_of(midi % 12, c.root, c.shape) if vocab.tone_of(midi % 12, c.root, c.shape) != "other" else f"{midi - aim:+d}")
         drawn += 1
         out.append((a, b, float(midi), voice))
     if log is not None and drawn:
