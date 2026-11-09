@@ -349,6 +349,37 @@ def stretch_relation(stretch: dict, others: dict, near: float = STRETCH_NEAR) ->
     return ("own", None, None)
 
 
+WITH_SHARE = 0.8                      # the share of a stretch's notes that start with another voice's for the stretch to be struck with it (round 107)
+
+
+def with_relation(stretch: dict, candidates: dict, near: float = STRETCH_NEAR) -> tuple | None:
+    """A stretch struck with another voice (round 107): the candidate ({voice: [(beat, midi, key)], sorted}) that WITH_SHARE
+    of the stretch's notes start with (within `near`), the one sharing the most onsets where several do, and the semitones
+    from that voice's note the commonest of them: ("with", voice, semitones); None where none reaches the share. Battle
+    Theme's synth is two voices struck as one, a fourth or a fifth apart by the chord (78 fifths, 64 fourths, 25 thirds of
+    202 onsets), which stretch_relation's one generic interval cannot call parallel, and the lower of the two strikes with
+    the guitar riff on 0.89 of its notes at chord tones an octave and more up: a stab is struck with something, on the
+    chord, not at one interval. FFVI: 39 own-reading stretches of voices beside a line strike with the line, 9 with a
+    sibling voice, 71 stay their own."""
+    best = None
+    for u, uns in candidates.items():
+        starts = [n[0] for n in uns]
+        hits, semis = 0, Counter()
+        for t, m, _ in stretch["notes"]:
+            lo, hi = bisect.bisect_left(starts, t - near), bisect.bisect_right(starts, t + near)
+            if lo == hi:
+                continue
+            k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
+            hits += 1
+            semis[int(round(m - uns[k][1]))] += 1
+        n = len(stretch["notes"])
+        if n and hits / n >= WITH_SHARE and (best is None or hits > best[1]):
+            best = (u, hits, semis)
+    if best is None:
+        return None
+    return ("with", best[0], best[2].most_common(1)[0][0])
+
+
 def voice_relations(by_voice: dict) -> dict:
     """Every voice's stretches and what each does (stretches_of, stretch_relation): {voice: [(first beat, last beat,
     sample key, kind, the voice it follows or None, semitones or None, notes)]}; `by_voice`: {voice: [(beat, midi,
