@@ -793,13 +793,18 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
     third over the chord's third is a major third or a minor sixth (the root), over the fifth a fourth (the root again)
     or a minor third (the seventh). A chord part's voice with `clash_rates` (the part's clashes draw) holds the share
     as the part's other voices do: an interval a semitone from a part written before the part (rhythm.clash_under)
-    while the voice is over its share for the beat is drawn again, VOICE_TRIES times, the last kept."""
+    while the voice is over its share for the beat is drawn again, VOICE_TRIES times, the last kept. A nominal that one song
+    plays draws its chain levels with that song alone behind them (round 110; PLAN_SONGS otherwise)."""
     t = (models or {}).get("parallel_intervals")
     steps = int(round(interval * 7 / 12))
     if t is None or song is None or rng is None or steps % 7 == 0:
         return diatonic(notes, interval, scale, voice)
     t = t.table if hasattr(t, "table") else t
     nominal = str(R.generic(interval))
+    own = t.songs.get((nominal,), 0) < PLAN_SONGS       # a nominal one song plays is that song's own (round 110): its chain levels, the part
+                                                        # and the landing before, stand with one song behind them; Battle Theme alone plays a
+                                                        # twelfth, and with the chain passed over its octave-up stabs, a phrase in the game, had
+                                                        # come out as single pops drawn apart (Song Check 92)
     hold = bool(clash_rates) and role in rhythm.UPPER
     under = sorted(n for r in rhythm.clash_under(role) for n in song.notes.get(r, [])) if hold else []
     run = {"strong": [0, 0], "weak": [0, 0]}                # the voice's onsets a semitone from a part under it, and its onsets under one
@@ -819,7 +824,7 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
         aim = ref + interval                                # the nominal placing: the drawn chord tone sits nearest it
         midi = fallback = landing = None
         for _ in range(writer.VOICE_TRIES):
-            pick = t.draw((nominal, tone, role or "?", previous), rng, floored=False, floor_k=PARALLEL_FLOOR, min_songs=PLAN_SONGS)
+            pick = t.draw((nominal, tone, role or "?", previous), rng, floored=False, floor_k=PARALLEL_FLOOR, min_songs=1 if own else PLAN_SONGS)
             if pick.startswith(("+", "-")):                # off the chord: the semitones from the line's note
                 try:
                     midi = aim + int(pick)                 # from the nominal placing (round 109; from the line's note before)
