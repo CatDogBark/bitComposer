@@ -6929,6 +6929,15 @@ the two fields; and the before side below is round 102 with its
 vocabulary, not dev as merged. Lesson, into the round procedure: commit
 and push the shipped vocabulary from Ragnarok before the PR, and check
 `git log -- bitcomposer/vocabularies/default.json.gz` on the branch.
+Then CI failed on both branches on one test: round 72's echo test had
+bounded the drawn echo word's wet share at 0.3 ("never the old 0.4
+slap") where FFVI's echo table runs to 0.39, and it had held because its
+seeds drew 0.20 words; the re-read renamed six words' sending parts (the
+nine songs whose roles swapped), the table re-ordered, and seed 68554
+drew the 0.38 word. The test asserts the word is one of the table's
+words now (7f44c29 on ship-r102-vocab, merged here). Second lesson: a
+test with fixed seeds against the shipped vocabulary must assert the
+table's own values, not a bound one draw met.
 
 **Measured.** FFVI: the fields as above; the line repeats its note on
 0.89 of its moves at the median in the block class, 0.50 mixed, 0.05
