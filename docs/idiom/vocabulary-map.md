@@ -12,7 +12,7 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (62)
+### the plan, drawn once a song (63)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -68,6 +68,7 @@ flowchart LR
 | `articulation` | part | _plan_once, melody_models, write_melody | - | the tune's articulation habit (detached, mixed, held), drawn once a song |
 | `part_textures` | part, habit, form, previous | plan_texture | - | the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's |
 | `section_levels` | part, form | plan_section_levels | - | a part's level in a section over its level in the whole song, in tenths, by the part and the section's place in the form: dynamics by section |
+| `section_densities` | part, step | plan_section_densities | - | a part's density tier in a section against its song density (denser, the same, sparser), by the step the section's level makes: a level step rides a figure change as the game's does |
 | `part_entries` | part, habit, form, length | plan_texture | - | where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class |
 | `drum_group_habits` | part, classes, habit | _plan_once | `bass`, `cell_handoffs`, `changes`, `drums`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream |
 | `chord_tones` | part | _plan_once, write | - | the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer |
@@ -226,6 +227,7 @@ flowchart LR
     articulation["articulation"]
     part_textures["part_textures"]
     section_levels["section_levels"]
+    section_densities["section_densities"]
     part_entries["part_entries"]
     drum_group_habits["drum_group_habits"]
     chord_tones["chord_tones"]

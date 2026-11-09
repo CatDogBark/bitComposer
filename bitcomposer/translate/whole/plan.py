@@ -209,7 +209,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
-            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "top_levels": str(TOP_LEVEL), "kit_pieces": "KShtco",
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "section_densities": "d=", "top_levels": str(TOP_LEVEL), "kit_pieces": "KShtco",
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
 DRUM_ENTRY_FLOOR = 2                  # the drums' entrance draw never backs off past the kit's tier (part, habit): the tier's own entrances
@@ -272,6 +272,9 @@ class Plan:
     master: tuple | None = None                           # (the master volume of 127, the gain the notes took) score_of decided for the whole song: the stems take it
     section_levels: dict = field(default_factory=dict)   # a part -> [its level's multiplier a bar] (section_levels, round 48: a section's level
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
+    section_densities: dict = field(default_factory=dict)   # a part -> [its density tier's shift a bar: +1, 0, -1] (section_densities, round 101:
+                                      # a section's density against the part's, drawn a part an own section by the step its level makes;
+                                      # the writers shift the habit's tier for those bars, habit_at_for)
     token_samples: dict = field(default_factory=dict)   # a part -> the balance token's song's sample for it, the pack's id (the eighth field,
                                       # round 60): samples_for takes it where the pack holds the sample, the part_samples draw else
     layer_samples: dict = field(default_factory=dict)   # a layered part -> the token song's sample for each voice beyond the line (round 65)
@@ -614,6 +617,58 @@ def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng:
     if said:
         log.append("levels by section (section_levels): " + "; ".join(said))
     return out
+
+
+def plan_section_densities(models: dict, parts: list, band: list, plays: dict, section_levels: dict, rng: random.Random, log: list) -> dict:
+    """Each pitched part's density tier shift a bar but the counter's (section_densities, round 101): drawn a part an own section it plays in,
+    by the part and the step the section's level makes (level_step of the section_levels draw, "same" without one): "d+"
+    a tier denser than the song's, "d-" a tier sparser, "d=" the song's; a repeated section copies its source's. Drawn on
+    an own stream (`whole:{seed}:section densities`). Returns {part: [shift a bar]}; logs the sections off the song's tier.
+    FFVI's level steps ride a density change more often than not (the accompaniment's), and a quarter of its level-1.0
+    sections change tier too; the written parts had kept one density all song."""
+    total = parts[-1][0] + parts[-1][1]
+    out = {role: [0] * total for role in band if role not in (R.DRUMS, R.COUNTER)}   # the counter follows the tune's figures (its masks):
+    said = []                                                                        # no tier of its own to shift; FFVI's counter steps are mostly bare
+    for i, (bar, n, of, letter) in enumerate(parts):
+        for role in out:
+            if of is not None:
+                src = parts[of][0]
+                out[role][bar:bar + n] = out[role][src:src + n]
+                continue
+            if not any(plays[role][bar:bar + n]):
+                continue
+            levels = section_levels.get(role)
+            ratio = levels[bar] if levels and bar < len(levels) else 1.0
+            tier = _draw(models, "section_densities", (role, rhythm.level_step(ratio)), rng, log)
+            shift = 1 if tier == "d+" else -1 if tier == "d-" else 0
+            if shift:
+                out[role][bar:bar + n] = [shift] * n
+                said.append(f"{role} {'denser' if shift > 0 else 'sparser'} in {letter}" + (f" (level {ratio:.1f})" if abs(ratio - 1.0) > 1e-9 else ""))
+    if said:
+        log.append("densities by section (section_densities): " + "; ".join(said))
+    return out
+
+
+def habit_at_for(plan, role: str, habit=None):
+    """A part's habit a bar for its writer (round 101): the song's habit with its density tier shifted where the
+    section_densities draw says; None where no bar shifts (the writer keeps its one habit)."""
+    shifts = plan.section_densities.get(role)
+    if not shifts or not any(shifts):
+        return None
+    base = habit if habit is not None else plan.habits[role]
+    return lambda k: rhythm.shift_habit(base, shifts[k] if 0 <= k < len(shifts) else 0)
+
+
+def envelope_at_for(plan, role: str, habit=None):
+    """A part's figure envelope a bar for its writer (round 101): the onsets a bar the section_densities shift asks
+    (rhythm.density_bounds: a tier denser, DENSITY_STEP times the part's typical or more; a tier sparser, the typical over
+    it or fewer; the writer hands in the part's own running density as the typical, the tier's FFVI median standing in),
+    None for a bar without a shift; None where no bar shifts."""
+    shifts = plan.section_densities.get(role)
+    if not shifts or not any(shifts):
+        return None
+    base = habit if habit is not None else plan.habits[role]
+    return lambda k, typical=None: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0, typical)
 
 
 def allot(band: list, counts: dict | None = None, drum_voices: int = 2) -> dict:
@@ -1308,6 +1363,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted
+    section_densities = (plan_section_densities(models, parts, band, plays, section_levels, random.Random(f"whole:{seed}:section densities"), log)
+                         if "section_densities" in render_mod.models_or_empty(models) else {})   # a section's density tier by the step its level makes (round 101)
     voices = allot(band, counts, len(token_kit_channels) or 2)   # the kit on its song's channels (round 87), two without the field
     for role in band:                                       # a part with two voices or more: what each voice beside its line does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
@@ -1457,7 +1514,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                    + (" kit " + " ".join(f"{k}={v:.2f}" for k, v in token_kit_pans.items()) if token_kit_pans and R.DRUMS in band else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels,
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
                 top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches)
 
 
@@ -1875,7 +1932,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
         gs = plan.gap_sounds.get(R.BASS)                    # the share a note sounds by its gap (gap_sounds), the one share without it
         shared_bass = {}                                    # the line's notes, for a second voice following it
-        notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], key=key, lock=lock,
+        notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], habit_at=habit_at_for(plan, R.BASS), envelope_at=envelope_at_for(plan, R.BASS), key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.bounds.get(R.BASS, plan.registers[R.BASS])[0],
                                      sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share,
                                      ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS))
@@ -1935,7 +1992,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         shared = {}                                         # the line's voicing at each onset, for the voices beside it
         tlog = []                                           # what the tone figure word did to the line (round 96)
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
-                                                plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"],
+                                                plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"], habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role),
                                                 pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"),
                                                 tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog, tone_tier=plan.extras[role].get("tone_tier"))   # the tone figures on their own stream (round 96)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
@@ -2019,7 +2076,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
                                                  tune_sounds=x.get("tune_sounds"), letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
                                                  bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
-                                                 moves_rng=random.Random(f"{seed}:{role}:recall moves"))   # the recalls' places on an own stream (round 100)
+                                                 moves_rng=random.Random(f"{seed}:{role}:recall moves"),   # the recalls' places on an own stream (round 100)
+                                                 habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role))   # the habit and envelope a bar: the tier by the section (round 101)
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -2084,7 +2142,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                     recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                     role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
                                                     tune_sounds=x.get("tune_sounds"), recall_moves=models.get("recall_moves"),
-                                                    moves_rng=random.Random(f"{seed}:{role}:second:recall moves"))
+                                                    moves_rng=random.Random(f"{seed}:{role}:second:recall moves"), habit_at=habit_at_for(plan, role, habit2), envelope_at=envelope_at_for(plan, role, habit2))
                 song.notes[role] += [(a, b - a, m, role) for a, b, m in notes2]
                 line = line + [(a, b, m, 1) for a, b, m in notes2]
                 figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]

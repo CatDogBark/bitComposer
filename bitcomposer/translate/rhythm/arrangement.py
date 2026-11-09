@@ -246,6 +246,64 @@ def section_length(bars: int) -> str:
     return next(name for top, name in SECTION_LENGTHS if bars <= top)
 
 
+DENSITY_STEP = 1.5                   # a section's level or density over the part's song median counts as a step up at this, down at its
+                                     # inverse (round 101: section_densities); readings.DENSITY_STEP is the same (a literal: readings is still
+                                     # loading when this module is)
+
+
+def level_step(ratio: float) -> str:
+    """A section's level ratio (section_level_units) as the step the section_densities word conditions on (round 101): "up" at
+    DENSITY_STEP and over, "down" at its inverse and under, "same" between."""
+    return "up" if ratio >= DENSITY_STEP else "down" if ratio <= 1 / DENSITY_STEP else "same"
+
+
+def section_density_units(songs) -> list:
+    """Each part of each own section of a song's form as a unit (round 101): its outcome the section's density tier against the
+    part's song density ("d+": the part's notes a bar in the section, over the bars it plays in, at DENSITY_STEP times its
+    song median or more; "d-": at the inverse or less; "d=" between), its values the part and the step the section's level
+    makes (level_step of the section_level_units ratio). FFVI: a level step up comes with a density or register change in 7
+    of the accompaniment's 8 and is bare in 7 of the counter's 10; at level 1.0 the accompaniment changes density tier in a
+    quarter of its sections (22 sparser, 17 denser of 176), the bass in a sixth; a tier up is 1.8 times at the median, a
+    tier down 0.5. The written parts had kept one density all song, so a level step was a bare volume move (Inner River
+    Crossing's accompaniment, Song Check 82)."""
+    from bisect import bisect_right
+    out = []
+    for s in songs:
+        if not s.notes or not s.parts or not s.note_levels:
+            continue
+        index = {num: k for k, num in enumerate(s.numbers)}
+        starts = [a for a, _ in s.bars]
+        for role, pairs in s.note_levels.items():
+            if role == R.DRUMS or len(pairs) < 16:
+                continue
+            med = statistics.median(lv for _, lv in pairs)
+            notes = [n for n in s.notes.get(role, []) if not math.isnan(n[2])]
+            if med <= 0 or not notes:
+                continue
+            per_bar = Counter()
+            for n in notes:
+                k = bisect_right(starts, n[0] + readings_mod.NEAR) - 1
+                if 0 <= k < len(s.bars) and n[0] < s.bars[k][1] - readings_mod.NEAR:
+                    per_bar[k] += 1
+            song_density = statistics.median(per_bar.values()) if per_bar else 0
+            if not song_density:
+                continue
+            for i, bar, n in chords_mod._own_parts(s):
+                ks = [index[num] for num in range(bar, bar + n) if num in index]
+                if not ks:
+                    continue
+                a, b = s.bars[ks[0]][0], s.bars[ks[-1]][1]
+                mine = [lv for st, lv in pairs if a - readings_mod.NEAR <= st < b - readings_mod.NEAR]
+                played = [k for k in ks if per_bar.get(k)]
+                if len(mine) < 4 or not played:
+                    continue
+                ratio = min(LEVEL_RATIO_CAP[1], max(LEVEL_RATIO_CAP[0], statistics.median(mine) / med))
+                density = sum(per_bar[k] for k in played) / len(played) / song_density
+                tier = "d+" if density >= DENSITY_STEP else "d-" if density <= 1 / DENSITY_STEP else "d="
+                out.append(tables.Unit(s.sid, s.game, tier, {"part": role, "step": level_step(ratio)}))
+    return out
+
+
 def form_place_of(i: int, n: int) -> str:
     """A part's place in a form of n parts: the only, first, middle or last part (form_place, from the index alone)."""
     return "only" if n == 1 else "first" if i == 0 else "last" if i == n - 1 else "middle"

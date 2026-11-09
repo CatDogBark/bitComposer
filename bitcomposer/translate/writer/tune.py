@@ -734,7 +734,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            recall=None, step_habit: str = "mixed", repeat_habit: str = "some", plays: list | None = None,
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
            letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None, tune_sounds: dict | None = None,
-           off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None) -> tuple[list, list, list]:
+           off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None,
+           habit_at=None, envelope_at=None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -1026,9 +1027,14 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         always new gave 16.5 distinct cells against 12.5)."""
         nonlocal rhythm_prev
         env = envelope_of(own[k], meters[k])
-        values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": habit, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
+        shifted = envelope_at(k, statistics.median(new_strikes) if len(new_strikes) >= 2 else None) if envelope_at is not None else None   # the section's
+                                                            # density tier shift as the bar's envelope, from the tune's own running density (round 101)
+        if shifted is not None:
+            env = (shifted[0], shifted[1], False, meters[k])
+        h = habit_at(k) if habit_at is not None else habit   # the bar's habit: its density tier shifted where the section says (round 101)
+        values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": h, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
         unit = tables.Unit(song.sid, song.game, "", values)
-        lo, hi = tier_bounds(habit)                         # the tune keeps to its tier's density and its drawn grain over the song (round 66):
+        lo, hi = tier_bounds(h)                         # the tune keeps to its tier's density and its drawn grain over the song (round 66):
         g_lo, g_hi = grain_bounds(grain)                    # the bar chain, conditioned on the bar before, had locked a "medium" tune into one
         def tier_ok(f):                                     # game song's grain, 2.9 onsets a bar in one song and 12.2 in another (FFVI's medium
                                                             # tunes: 3.4 to 5.1 a bar), and 4 of 7 medium tunes on the beat (0.15-0.21 of their
@@ -1058,8 +1064,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             figure = next((f for f in rhythm_played if fit(f)), figure if manner.fits(figure) else "0")
         rhythm_played[figure] += 1
         rhythm_prev = figure
-        new_strikes.append(len(rhythm._tokens(figure)))
-        new_offs.append(offbeats(rhythm._tokens(figure)))
+        if shifted is None:                                 # a shifted section's bars are the word's, not the tune's running tier (round 101)
+            new_strikes.append(len(rhythm._tokens(figure)))
+            new_offs.append(offbeats(rhythm._tokens(figure)))
         return [float(Fraction(t.partition(":")[0])) for t in rhythm._tokens(figure)]
 
     def realize(k: int, positions: list, pitches: list) -> Cell:

@@ -6727,3 +6727,69 @@ the counter's semitone interval form. Queued on the owner's word: the
 section-level step with its figure change (The Mines of Narshe's
 accompaniment doubles in its last section with a new figure in a new
 register; the written step is a bare level move, 99 of 400 songs).
+
+### Round 101: a section's density by the step its level makes (2026-11-08, the queued section-step round, on the owner's go)
+
+**Why.** Song Check 82's Inner River Crossing (seed 237, Battle Theme's
+token) doubled its accompaniment for its last part on the same figure: a
+6 dB step on one part at the bar line with nothing else changing, which
+the owner heard as "a strange volume change" at 43 s, back at the loop,
+up again at 1:49. The step was the section_levels word's draw of a real
+FFVI unit, The Mines of Narshe's accompaniment at 2.0 in its last section;
+but Narshe's accompaniment there also goes from 2 notes a bar to nearly 8
+and up an octave. Counted over all of FFVI's 803 part-sections
+(ffvi_step_figures.py): a level step up rides a density or register change
+in 7 of the accompaniment's 8 cases but is bare in 7 of the counter's 10
+(Overture part 3's counter steps to 1.9 four times on the same figure); at
+level 1.0 the accompaniment changes density tier in a quarter of its
+sections (22 sparser, 17 denser of 176), the bass in a sixth, the melody
+and counter in a sixth; a tier up is 1.8 times the song's density at the
+median (q25 1.6, q75 2.2), a tier down 0.5. So the counted thing is the
+density tier by the level step, not a rule that a step changes the figure;
+and the written parts had kept one density all song, so every drawn step
+was a bare level move (99 of 400 songs carried one of 1.5 or more).
+
+**Built.** One counted word and the writers' habit a bar.
+`section_densities` (`rhythm.section_density_units`, shape part x step):
+each pitched part's density tier in each own section of the form against
+its song density (`d+` at DENSITY_STEP 1.5 times its song median or more,
+`d-` at the inverse or less, `d=` between) by the step the section's level
+makes (`level_step` of the section_level_units ratio: up, down, same). The
+plan draws a tier a part an own section it plays in
+(`plan_section_densities`, an own stream `whole:{seed}:section
+densities`; a repeated section copies its source's; the counter takes none,
+following the tune's figures through its masks), as `Plan.section_densities`,
+a shift a bar. The writers take a habit a bar (`habit_at_for`,
+`rhythm.shift_habit`: the song's habit with its density tier moved one
+along sparse, medium, dense, for the table's conditioning) and an envelope
+a bar (`envelope_at_for`, `rhythm.density_bounds`: a tier denser, 1.5 times
+the part's own running density in its unshifted bars or more, the tier's
+FFVI median standing in before two bars are written; a tier sparser, the
+same over 1.5 or fewer) for the chord parts' and the bass's figure draws
+(`_free_figures`) and the tune's new rhythms (`new_rhythm`, a shifted bar
+kept out of the tune's running tier). Four cuts: the habit alone had capped
+at the dense tier (a dense accompaniment drawn denser stayed as it was);
+the tier's typical alone had left a part already over it unmoved (a drawn
+tier denser landed at 1.35 times the part's other sections); the counter
+had drawn a shift it could not act on. The register is the token song's
+own by stretch (round 92) and is not drawn again (LIMITS). No re-read;
+pack4 refit (110 tables; `pack.json.before-r101`), the vocabulary shipped,
+the map regenerated. Tests: the reader on a synthetic song (a soft dense
+section, a loud sparse one), the step, shift and bounds helpers, the plan's
+draw and copy (no draw for the counter), the habit and envelope a bar.
+Suite 441 (1 skip).
+
+**Measured** (sixty seeds). 36 of 60 songs carry a level step of 1.5 or more (62 steps); 20 of the steps now carry a drawn density change (the first cut's habit alone had changed the dense parts' nothing; the counter's draw none). By part and step the drawn tiers follow the table: the accompaniment's level-1.0 sections draw a tier denser in 15 of 151 and sparser in 25, its up-steps sparser in 5 of 8 (the table's 2.0 of 7 song-shares) and the same in 3. A section drawn denser sits at 1.63 times the part's unshifted sections at the median (q25 1.17, q75 2.58; FFVI's tier up 1.8); one drawn sparser at 0.78 (q25 0.48; FFVI 0.5: the manner's figures thin less readily than they thicken, a limit). Inner River Crossing's accompaniment: 4 notes a bar through the song, 7.7 in its doubled last part (5.4 before, the same figure louder); its first part drew sparser (3.3). Before this round 17 of the 62 steps had a density change by the writer's own variance, after it 22 (the measure by the song median hides a shifted section that is the song's largest). Plans (400 seeds): the word
+draws on an own stream, so 400 of 400 keep their token song and their
+plans; 67 plan logs identical (the new line in the rest), 86 of 400 songs note for note the same (every part that drew a tier moves), 91 of 400 carry a level step with a density change.
+
+**Song Check 84** (https://claude.ai/artifact/BQefHzWM66dZB7wv37ZZvf): Inner River Crossing before and after, and four
+new songs whose level steps carry a density change, before and after:
+Inner River Crossing (237, Battle Theme's: the accompaniment denser where it doubles, 7.7 against 4 notes a bar), Still Pavilion (62: the accompaniment at double level and a tier denser in its first part, 15 notes a bar against 4 in the last), Overpass of Bells (50: at double level and a tier sparser in its first part, 1 note a bar, then 10 in the second), The Quiet Wharf (43: the bass at a third of its level and a tier sparser in the intro, 2 notes a bar against 7) and Northern Bells (37: the accompaniment at double level and a tier sparser in the last part, 4 against 7, the tune denser).
+
+**Open.** A step's register change (Narshe's octave) and the textures
+where a part leads alone are the token's and the textures word's, not
+drawn with the step; the counter's density follows the tune's; a shifted
+section's figures feed the part's urn and chain, so a dense section can
+lean into the section after it. The lines' remaining clash floor (round
+100's endings and theme returns), the counter's semitone interval form.

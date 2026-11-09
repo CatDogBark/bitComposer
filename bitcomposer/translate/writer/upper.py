@@ -233,7 +233,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           motion: str = "block", energy: list | None = None, pedals: dict | None = None,
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
           tone_index: int = 0, kind: str | None = None, bounds_at=None, clash_rates: dict | None = None,
-          tone_rng: random.Random | None = None, log: list | None = None, tone_tier: str | None = None) -> tuple[list, list, list]:
+          tone_rng: random.Random | None = None, log: list | None = None, tone_tier: str | None = None, habit_at=None,
+          envelope_at=None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -272,7 +273,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     own = parts_mod.plays_as_own(plays, bars) if plays is not None else [rhythm.pattern(p for p, _ in struck) if struck else figures_mod.REST for _, _, struck in bars]
     if figures is None:
         figures = parts_mod._free_figures(song, role, models["rhythm"], figures_mod.FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
-                                habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy)
+                                habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy,
+                                habit_at=habit_at, envelope_at=envelope_at)   # the habit and the envelope a bar: the density tier by the section (round 101)
     else:
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     step = MOTION_STEP.get(motion, 0)

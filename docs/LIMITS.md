@@ -151,6 +151,16 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the median against FFVI's 11, the arp 9 against 8, the harmony 8 against
   5 (ten FFVI songs); the token carries the first two, the harmony's is
   the gap.
+- **A level step's company is its density tier alone.** Since round 101 a
+  section's level step draws the part's density tier with it
+  (`section_densities`), but FFVI's steps also come with register moves
+  (The Mines of Narshe's accompaniment up an octave) and with textures
+  where the part leads alone (Aria de Mezzo Carattere's, Another World of
+  Beasts' intros); the register is the token song's own by stretch (round
+  92) and is not drawn again, and the textures word draws the parts in and
+  out on its own. The counter follows the tune's figures and takes no
+  density tier of its own, where FFVI's counter steps are mostly bare
+  anyway (7 of 10).
 - **A kit letter's second sample plays as its first does, and a third is
   not carried.** Since round 99 the token names a letter's second sample
   and the writer gives it its hits by the `kit_seconds` word, but the

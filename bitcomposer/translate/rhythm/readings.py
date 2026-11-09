@@ -780,6 +780,43 @@ TONES = ((0.8, "roots", "Rr"), (0.8, "root-fifth", "Rr5"), (0, "walking", ""))  
 OCTAVES = 0.2                        # the share of a bass's notes an octave up (r) for it to play octaves
 
 
+DENSITY_STEP = 1.5                   # a section's level or density over the part's song median counts as a step up at this, down at
+                                     # its inverse (round 101: section_densities)
+DENSITY_TYPICAL = {"sparse": 1.0, "medium": 4.0, "dense": 8.0}   # a pitched part's notes a bar at its density tier's median in FFVI (the bass,
+                                                                  # the counter and the melody; the melody's dense tier 10): what a tier shift is measured from
+
+
+def density_bounds(habit, shift: int, typical=None):
+    """The onsets a bar a section's figures keep to under a density tier shift (round 101, section_densities): a tier denser,
+    DENSITY_STEP times the part's typical onsets or more; a tier sparser, the typical over DENSITY_STEP or fewer; None
+    without a shift or a tier. `typical`: the part's own onsets a bar so far in its unshifted bars (the writer's running
+    median, the word's own measure), else its tier's FFVI median (DENSITY_TYPICAL: a dense part's 8, so 12 or more; a
+    medium one's 4, so 6; a sparse one's 1, so 2). The shifted habit alone had capped at the dense tier, so a dense
+    accompaniment drawn denser had stayed as it was; the tier's typical alone had left a part already over it unmoved."""
+    if not shift or not isinstance(habit, str) or not habit.split():
+        return None
+    if typical is None or not typical > 0:
+        typical = DENSITY_TYPICAL.get(habit.split()[0])
+    if typical is None:
+        return None
+    if shift > 0:
+        return (math.ceil(DENSITY_STEP * typical), 64)
+    return (0, max(1, math.floor(typical / DENSITY_STEP)))
+
+
+def shift_habit(habit, delta: int):
+    """A part's habit with its density tier moved `delta` tiers along DENSITIES (sparse, medium, dense), the rest of the habit
+    kept ("medium mixed" a tier up is "dense mixed"); the ends stay (round 101: a section's density against the part's)."""
+    if not habit or not delta or not isinstance(habit, str):
+        return habit
+    words = habit.split()
+    tiers = [name for _, name in DENSITIES]
+    if not words or words[0] not in tiers:
+        return habit
+    i = max(0, min(len(tiers) - 1, tiers.index(words[0]) + delta))
+    return " ".join([tiers[i]] + words[1:])
+
+
 def habit_of(share: float, scale=HABITS) -> str:
     """A song's habit from one of its shares (HABITS, REPEATS) or its density a bar (DENSITIES)."""
     return next(name for top, name in scale if share < top)
