@@ -94,6 +94,16 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   since what the voice's own motion was there is not yet a word; and the
   samples a voice changes between stretches are not written (the
   instrument-by-stretch word, the next round).
+  Since round 107 a voice that strikes with the line or a sibling
+  voice on 0.8 of its notes at no one interval is a struck-with word,
+  written on the followed voice's onsets; its onsets are thinned by
+  the pooled `second_figures` mask and its notes sound the pooled
+  second voice's share of their gap (`gap_sounds`), not the token
+  song's: Battle Theme's synth stabs on 0.82 of the guitar's onsets
+  for a fifth of a beat, the written stabs on 0.30-0.79 of them for
+  0.1 to 1.1 beats. The token's own share of the followed onsets and
+  the struck voice's note length would carry it; measured in round 107
+  and left.
 - **Parts written apart clash more than FFVI's.** Each part holds its
   clashes share against the parts written before it since round 94 (the
   tune in its draws and recalls, the counter in its interval draws, the

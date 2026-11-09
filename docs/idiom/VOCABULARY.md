@@ -248,6 +248,24 @@ The words are grouped by where the writing draws them, in the order the song is 
   32 voices in 22 songs): `samples_for` registers each stretch's sample
   (`samples["part:v:stretch:i"]`) and `sample_of` plays the voice's note
   on it; the voice's register stays its relation's.
+  Since round 107 the relation word has a third kind, struck with
+  (`w`): a voice that strikes with another on 0.8 of its notes
+  (`roles.with_relation`) but at no one interval, with the line
+  (`wl+19`) or with a sibling voice beside the line, named by its rank
+  (`w1-7`); a double or parallel of a sibling names the rank too. Battle
+  Theme's synth is two voices struck as one on the riff's accents, a
+  fourth or a fifth apart by the chord (78 fifths, 64 fourths, 25
+  thirds of 202 onsets), the lower with the guitar on 0.89 of its notes
+  at chord tones an octave and more up; the relation reader's one
+  generic interval had called each its own, and the layers table then
+  drew them anything a seed at a time (a double of the riff a third
+  under, a line in the bass register). The writer plays a struck-with
+  voice on the followed voice's onsets, thinned by the second_figures
+  word, placed on the chord by the parallel_intervals word, each note
+  the voice's share of its gap (`plan.struck_with`); a double or
+  parallel of a sibling follows the sibling's written notes. FFVI: 39
+  own-reading stretches of voices beside a line strike with the line, 9
+  with a sibling, 71 stay their own.
   Why the sixth field: a second voice at its own `layer_levels` draw on
   a line whose level was the token's had stacked to 1.8 times the tune
   (Whole 03) and the cap of full (Whole 15 and 20), where FFVI's loud
