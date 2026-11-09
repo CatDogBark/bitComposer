@@ -729,6 +729,7 @@ KIT_HITS = 8                         # on-beat kick and snare hits a section nee
 KIT_MARGIN = 0.4                     # how much better, in the phase model's score, the kit's downbeat must be than the one read
 KIT_ON = 0.2                         # beats: a hit this near a beat is on it (phase.ON)
 KIT_ALTERNATES = 0.7                 # the share of a section's on-beat snare hits on two beats a half-bar apart that says 4, not 3 or 2
+KIT_ALTERNATING_HITS = 4             # and how many such hits a section needs (Battle Theme's short sections hold five or six)
 KIT_SIGNS = {                        # weight, the share of the piece's on-beat hits on the downbeat (FFVI's kit songs read right,
     "kick": (0.75, 0.50),            # 2026-11-08: the kick on the one 0.40-0.65, the three nearly as much; a backbeat snare on the one
     "snare": (0.75, 0.12),           # 0.00-0.17 in rock, 0.25-0.37 in a march; a crash on the one 0.4-0.8)
@@ -775,7 +776,7 @@ def rebar_kit(grid: Grid, kit_beats: dict) -> bool:
         if len(hits["kick"]) + len(hits["snare"]) < KIT_HITS:
             continue
         m = x.meter
-        if m in (3, 2) and mostly_four and len(hits["snare"]) >= 6:
+        if m in (3, 2) and mostly_four and len(hits["snare"]) >= KIT_ALTERNATING_HITS:
             pos = Counter((i - i0) % 4 for i in hits["snare"])
             (a, na), (b, nb) = (pos.most_common(2) + [(None, 0)])[:2]
             if b is not None and (a - b) % 4 == 2 and (na + nb) / len(hits["snare"]) >= KIT_ALTERNATES:
