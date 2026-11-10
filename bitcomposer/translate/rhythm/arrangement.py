@@ -1328,6 +1328,18 @@ def chord_hold_share(s) -> float | None:
 
 
 SHAPE_BARS = 8                       # bars of chords a song needs for its chord-shape profile (round 112)
+FORM_PARTS = 2                       # parts a song's form needs for the token to carry its letters (round 113)
+
+
+def form_field(s) -> str:
+    """The song's form as the balance token carries it (round 113, `form=`): its parts' letters in order, a returning part by
+    the letter it returns to ("ABCBD" for Battle Theme: a two-bar A, B, C, B again, D); "" under FORM_PARTS parts. The form had
+    been the letters word's pooled draw, one of the game's forms whole, so a song on Battle Theme's token came out A B C D E F
+    or A B C C D as often as anything, and the band never came back to what it had played."""
+    parts = getattr(s, "parts", None) or []
+    if len(parts) < FORM_PARTS or any(not isinstance(p[3], str) or len(p[3]) != 1 or not p[3].isalpha() for p in parts):
+        return ""
+    return "".join(p[3] for p in parts)
 
 
 def chord_shape_profile(s) -> str:
@@ -1607,6 +1619,9 @@ def balance_units(songs) -> list:
         shapes = chord_shape_profile(s)                      # the song's chord shapes (round 112): which qualities its harmony has
         if shapes:
             tokens.append(f"shapes={shapes}")
+        form = form_field(s)                                 # the song's form (round 113): which parts return
+        if form:
+            tokens.append(f"form={form}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with

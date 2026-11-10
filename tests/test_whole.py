@@ -966,6 +966,32 @@ class TokenShapeTests(unittest.TestCase):
         self.assertEqual(names[4:], names[:4])                                                               # a repeated part keeps its chords whole
 
 
+class TokenFormTests(unittest.TestCase):
+    """Round 113: the song's form letters ride the balance token (`form=`), and the plan takes them in place of the letters draw:
+    Battle Theme is A B C B D, the B returning after C, and the songs written on its token had come out A B C D E F or A B C C D."""
+
+    def test_the_token_carries_the_form(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        line = [(4.0 * k + i, 0.9, 48.0, "g") for k in range(8) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"accompaniment": line}, sid="s", game="g", numbers=list(range(8)),
+                        parts=[(0, 2, None, "A"), (2, 2, None, "B"), (4, 2, None, "C"), (6, 2, 1, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", line)}; s.voice_levels = {0: 0.3}; s.levels = {"accompaniment": 0.3}
+        self.assertEqual(rhythm.form_field(s), "ABCB")
+        self.assertIn("form=ABCB", rhythm.balance_units([s])[0].outcome.split())
+        s.parts = [(0, 8, None, "A")]
+        self.assertEqual(rhythm.form_field(s), "")                                                 # one part: no form to carry
+
+    def test_the_plan_takes_the_tokens_form(self):
+        log = []
+        parts = whole.plan_form({}, random.Random(1), log, letters="ABCBD")
+        self.assertEqual([p[3] for p in parts], ["A", "B", "C", "B", "D"])
+        self.assertEqual(parts[3][2], 1)                                                           # the second B repeats the first
+        self.assertEqual(parts[3][1], parts[1][1])                                                 # and is as long
+        self.assertEqual([p[0] for p in parts], [sum(q[1] for q in parts[:i]) for i in range(5)])   # the bars run on
+        self.assertEqual([p[3] for p in whole.plan_form({}, random.Random(1), [])], ["A", "B", "C"])   # without the token: the sizes and form words (defaults)
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""
@@ -1750,7 +1776,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
-        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith("shapes=")], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes= field aside, round 112)
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "form="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes= and form= fields aside, rounds 112-113)
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit (a period field after, round 106)
         self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}

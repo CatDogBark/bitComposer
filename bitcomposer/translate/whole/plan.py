@@ -299,6 +299,7 @@ class Plan:
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
     tone_profiles: dict = field(default_factory=dict)   # a backing part -> its line's chord-tone profile from the token (round 111: field 15)
     chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
+    form_letters: str | None = None                     # the token song's form letters ("ABCBD"; round 113), or None
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -379,17 +380,21 @@ def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
     return float(_draw(models, name, context, rng)) if name in models else None
 
 
-def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None) -> list:
+def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, letters: str | None = None) -> list:
     """The form: one of the game's forms whole (the letters table: "A B A B
     C", a part returning after another in 29 % of FFVI's songs where a
     chain by index returned in 15 %), each new part's length by the song's
     length habit (the lengths table), a repeat as long as the part it
     repeats; without a letters table, how many parts (the sizes table) and
     each part new, again or back by its index (the form table). (first
-    bar, bars, the part repeated or None, letter)."""
+    bar, bars, the part repeated or None, letter). `letters`: the token
+    song's own form (round 113, "ABCBD"), taken in place of the letters
+    draw (the draw still made, so the stream stands); its parts' lengths
+    are drawn as any form's."""
     habit = _draw(models, "length_habits", ("form",), rng, log)
-    if "letters" in models:
-        letters = _draw(models, "letters", ("form",), rng, log).split()[:MAX_PARTS]
+    if "letters" in models or letters:
+        drawn_letters = _draw(models, "letters", ("form",), rng, log).split()[:MAX_PARTS] if "letters" in models else []
+        letters = list(letters[:MAX_PARTS]) if letters else drawn_letters
         parts, bar = [], 0
         for i, label in enumerate(letters):
             of = letters.index(label) if label in letters[:i] else None
@@ -1377,6 +1382,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
     token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
     token_shapes = None                                     # the token song's chord-shape profile (round 112)
+    token_form = None                                       # the token song's form letters (round 113)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
@@ -1394,6 +1400,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             continue
         if role == "holds":                                 # the token's song's chord-hold share (round 106), not a part
             token_holds = float(rest)
+            continue
+        if role == "form":                                  # the token's song's form (round 113), not a part
+            if rest.isalpha() and len(rest) >= rhythm.FORM_PARTS:
+                token_form = rest.upper()
+                log.append(f"the balance's song's form: {' '.join(token_form)}")
             continue
         if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
             token_shapes = shape_profile_of(rest)
@@ -1527,6 +1538,16 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     log.append(f"{role}'s line plays the balance's song's chord tones: " + " ".join(f"{k} {v:.2f}" for k, v in prof.items()))
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
+    if token_form and "".join(p[3] for p in parts) != token_form:   # the token song's form (round 113): its letters, the parts' lengths drawn on an
+        drawn_form = " ".join(p[3] for p in parts)             # own stream, after the balance is read (the form's own draw above stands, so no
+        form_log = []                                           # other draw moves); the loop's part drawn again for the new form, on its own stream
+        for attempt in range(FORM_TRIES):
+            parts = plan_form(models, random.Random(f"whole:{seed}:form:{attempt}"), form_log, max_bars if attempt == FORM_TRIES - 1 else None, letters=token_form)
+            total = parts[-1][0] + parts[-1][1]
+            if (max_bars is None or total <= max_bars) and (min_bars is None or total >= min_bars):
+                break
+        log += form_log[-1:] + [f"form from the balance's song: {' '.join(p[3] for p in parts)} (the draw {drawn_form})"]
+        loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
         was = bpm                                           # an own stream so no other draw moves
         bpm = float(_draw(models, "tempos", ("song", token_class), random.Random(f"whole:{seed}:tempo"), log, floor_k=2))   # terminal at the
@@ -1820,7 +1841,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, chord_shapes=token_shapes)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, chord_shapes=token_shapes, form_letters=token_form)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
