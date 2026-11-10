@@ -242,6 +242,27 @@ The words are grouped by where the writing draws them, in the order the song is 
   class from bar to bar 0.25 against 0.74, and the owner heard every
   song on the token as a band whose players did not listen to each
   other.
+  Since round 123 a chord part's token carries a twentieth field, where
+  its line doubles the bass or runs parallel to it, stretch by stretch
+  (`line_company_field`: the line voice's relation word, read by the
+  form's parts since round 122, every stretch on anything but the bass
+  as its own; `rdb+12x2>ox8>db+12x9>ox8>pb+12` for Battle Theme's
+  guitar: the bass an octave up through A, its own riff through B, the
+  bass again through C, the riff, and parallel to the bass an octave up
+  to the end; six FFVI chord parts carry one). With it
+  `plan.ride_the_bass` draws no parts: the line rides in the bars of the
+  word's stretches on the bass and nowhere else, and plays the bass's
+  notes at the stretch's semitones, moved by octaves only where that
+  leaves where the token song plays the line's sample (the stretch's
+  range, else the sample's); it rides once the line is held and folded,
+  so the double stands as the bass's, and before the voices beside the
+  line are written against it. Why: the rides field counts how much of
+  the line strikes with the bass over the song, not where or at which
+  octave, so the written guitar rode in parts the share drew and,
+  folded into its register, sat at the bass's own pitch on 0.25 of the
+  onsets they shared and an octave over it on 0.15 (Battle Theme: 0.04
+  and 0.66); in the parts Battle Theme's band plays as one, the written
+  guitar and bass were two lines.
   Since round 111 a chord part and the bass carry a sixteenth field, the
   line's chord-tone profile (`line_tone_profile`: `t46/2/8/31/2/11` for
   Battle Theme's guitar, `t33/8/17/19/3/20` for its bass, the share of the

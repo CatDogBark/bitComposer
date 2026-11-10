@@ -1412,6 +1412,70 @@ class TokenLoopTests(unittest.TestCase):
         self.assertTrue(log and "4 on the loop's figure (round 121)" in log[0] and "0 more bars pedaled" in log[0], log)
 
 
+class LineCompanyTests(unittest.TestCase):
+    """Round 123: where a chord part's line doubles the bass or runs parallel to it rides the balance token stretch by stretch
+    (the line voice's relation word, read by the form's parts since round 122), and the line rides the written bass in those
+    bars at the word's semitones. Battle Theme's guitar is its bass an octave up through A, C and D and its own riff through
+    B; the riding parts had been drawn by a share, and the riding notes folded into the line's register."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bass = [(4.0 * k + x / 2, 0.45, 36.0 if x % 2 == 0 else 43.0, "b") for k in range(8) for x in range(8)]
+        line = ([(t, d, m + 12.0, "g") for t, d, m, _ in bass if t < 16.0]                                      # the bass an octave up through A
+                + [(4.0 * k + x / 2 + 0.25, 0.2, 52.0 + (x * 5) % 9, "g") for k in range(4, 8) for x in range(8)])   # its own, between the bass's onsets, through B
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in (0.0, 1.0, 2.0, 3.0)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"accompaniment": line, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", line), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_where_the_line_doubles_the_bass(self):
+        s = self._song()
+        self.assertEqual(rhythm.line_company_field(s, "accompaniment"), "rdb+12x4>o")              # the bass an octave up for four bars, then its own
+        tok = rhythm.balance_units([s])[0].outcome
+        acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual(acc[19], "rdb+12x4>o", acc)                                               # the twentieth field
+        self.assertEqual(rhythm.line_company_field(s, "bass"), "")                                 # the bass's own line follows no bass
+        s.voice_notes[0] = ("accompaniment", [n for n in s.voice_notes[0][1] if n[0] >= 16.0] + [(4.0 * k + x / 2 + 0.25, 0.2, 55.0 + x, "g") for k in range(4) for x in range(8)])
+        self.assertEqual(rhythm.line_company_field(s, "accompaniment"), "")                        # a line that never follows the bass: no field
+
+    def test_the_plan_takes_it(self):
+        token = ("accompaniment=main:48-55:0.9:1:0.6:::sacc0123456@44-60:dense+repeating:0.50::block:rare::b75/70:::::rdb+12x4>o "
+                 "bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium")
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 3, "g")
+        self.assertEqual(p.extras["accompaniment"]["company"], "db+12x4>o")
+        self.assertTrue(any(l == "accompaniment's line doubles the bass where the balance's song's does (round 123): db+12x4>o" for l in p.log), p.log)
+        self.assertNotIn("company", p.extras.get("bass", {}))
+
+    def test_the_line_doubles_the_bass_in_the_words_bars(self):
+        from types import SimpleNamespace
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        plan = SimpleNamespace(parts=[(0, 2, None, "A"), (2, 2, None, "B")], plays={"accompaniment": [True] * 4}, extras={"accompaniment": {}}, bounds={},
+                               sample_ranges={"accompaniment": (44, 56)})
+        bass = [(4.0 * k + x / 2, 4.0 * k + x / 2 + 0.4, 36.0 + (x % 2) * 9, 0) for k in range(4) for x in range(8)]   # C2 and A2, eighths
+        own = [(4.0 * k + x, 4.0 * k + x + 0.9, 50.0 + x, 0) for k in range(4) for x in range(4)]                     # the line's own: a note a beat
+        figures = ["0 1 2 3"] * 4; voicings = ["own"] * 4; shared = {}
+        notes, figs, vcs, log = whole.ride_the_bass(plan, song, "accompaniment", own, figures, voicings, shared, (48, 52), (0.0, 0.0), bass, random.Random(1),
+                                                    word="db+12x2>o")
+        riding = [n for n in notes if n[0] < 8.0]
+        self.assertEqual([n[0] for n in riding], [4.0 * k + x / 2 for k in range(2) for x in range(8)])        # the bass's onsets through the word's two bars
+        self.assertEqual([n[2] for n in riding[:2]], [48.0, 45.0])                                             # C2 an octave up; A2's octave is over the sample's
+        # range (57 over 56), so it is moved an octave into it: the word's interval where the sample can take it
+        self.assertEqual([n for n in notes if n[0] >= 8.0], [n for n in own if n[0] >= 8.0])                   # its own stretch: as written
+        self.assertEqual(vcs, ["rides the bass", "rides the bass", "own", "own"])
+        self.assertTrue(log and log[0].startswith("accompaniment's line doubles the bass in 2 bars"), log)
+        self.assertEqual(shared[("line", (0, Fraction(0)))], 48.0)                                             # the voices beside the line see the double
+        plan.plays["accompaniment"] = [False, True, True, True]
+        notes, _, _, log = whole.ride_the_bass(plan, song, "accompaniment", list(own), ["0 1 2 3"] * 4, ["own"] * 4, {}, (48, 52), (0.0, 0.0), bass, random.Random(1),
+                                               word="db+12x2>o")
+        self.assertEqual([n for n in notes if n[0] < 4.0], [n for n in own if n[0] < 4.0])                     # a bar the part rests in is not ridden
+        self.assertTrue(log[0].startswith("accompaniment's line doubles the bass in 1 bars"), log)
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""
