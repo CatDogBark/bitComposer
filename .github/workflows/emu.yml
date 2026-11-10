@@ -101,6 +101,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.name }}
+          retention-days: 1   # handed to the publish job in this run
           path: emu/dist/*.whl
 
   sdist:
@@ -117,6 +118,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
+          retention-days: 1
           path: emu/dist/*.tar.gz
 
   publish:
