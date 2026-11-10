@@ -970,18 +970,21 @@ def relation_word(plan: "Plan", role: str, v: int) -> str | None:
 
 
 def struck_values_of(text: str) -> dict | None:
-    """The balance token's struck sub-field (round 108, arrangement._struck_text) read: "w0.82~0.2~0.3~1.0~0.6~-~4.9" -> {"share":
-    0.82, "sounds": {gap class: share, or None where the token lacks it}, "longest": 4.9 beats, or None}; None where it cannot
-    be read."""
+    """The balance token's struck sub-field (round 108, arrangement._struck_text) read: "w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53" ->
+    {"share": 0.82, "sounds": {gap class: share, or None where the token lacks it}, "longest": 4.9 beats, or None, "sounding":
+    0.53 (round 115: the beats the voice sounds over the beats of the bars it strikes in), or None}; None where it cannot be
+    read."""
     parts = text.split("~")
-    if len(parts) != 2 + len(rhythm.GAP_CLASSES) or not parts[0].startswith("w"):
+    n = len(rhythm.GAP_CLASSES)
+    if len(parts) not in (2 + n, 3 + n) or not parts[0].startswith("w"):
         return None
     try:
-        share, longest = float(parts[0][1:]), float(parts[-1])
-        sounds = {name: (float(x) if x != "-" else None) for (_, name), x in zip(rhythm.GAP_CLASSES, parts[1:-1])}
+        share, longest = float(parts[0][1:]), float(parts[1 + n])
+        sounds = {name: (float(x) if x != "-" else None) for (_, name), x in zip(rhythm.GAP_CLASSES, parts[1:1 + n])}
+        sounding = float(parts[2 + n]) if len(parts) == 3 + n and parts[2 + n] != "-" else None   # the voice's sounding share (round 115)
     except ValueError:
         return None
-    return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None}
+    return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None, "sounding": sounding}
 
 
 def tone_profile_of(text: str) -> dict | None:
@@ -1031,7 +1034,7 @@ def _mask_count(g: str) -> int:
 
 
 def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int, models: dict, rng: random.Random, clash_rates, sounds, scale: set,
-                mask_draw=None, gaps_ref=None, struck=None) -> tuple:
+                mask_draw=None, gaps_ref=None, struck=None, stats: dict | None = None) -> tuple:
     """A voice struck with another (round 107): over bars [at, end) the followed voice's onsets (`ref`: (start, end, midi, voice)),
     thinned bar by bar by the second_figures word where `mask_draw` gives a bar's mask (which of the followed voice's onsets
     the voice strikes with), then placed by the parallel_intervals word at the nominal semitones on the chord (`parallel`),
@@ -1042,8 +1045,13 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
     where the token has the class (else `sounds`), and no note rings past the token voice's longest. Battle Theme's synth
     strikes 0.82 of the guitar riff's onsets, a chord tone an octave and more up, a fifth or a fourth apart in its two
     voices, 0.19 beats long at the median and never past 4.9 beats; measured against its own next stab, the last stab
-    before a twelve-bar rest of the part had rung through the rest (Song Check 90's Journey of the Quarry). Returns the
-    notes, the onsets thinned away and {bar: the bar's figure}."""
+    before a twelve-bar rest of the part had rung through the rest (Song Check 90's Journey of the Quarry). Since round 115
+    the voice's sounding share is the token voice's too (`struck["sounding"]`: the beats it sounds over the beats of the bars
+    it strikes in): a stab whose length by its gap class would put the share so far, this stab counted, over the token's by
+    STRUCK_MARGIN sounds the token's shortest class share of its gap instead (Battle Theme's synth 0.2: a stab), so a sparse
+    line's long gaps no longer turn the stabs into held organ tones (Journey of the Quarry's synth had sounded 0.68 of its
+    bars' time at 0.9 beats a note where Battle Theme's sounds 0.53 at 0.19). `stats`, where given, takes the sounded and
+    played beats and the stabs shortened. Returns the notes, the onsets thinned away and {bar: the bar's figure}."""
     kept, thinned, figs = [], 0, {}
     struck_n = followed_n = 0                               # the followed onsets struck so far, and seen so far (round 108)
     target = struck["share"] if struck else None
@@ -1079,6 +1087,9 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
     line_on = sorted(x[0] for x in (gaps_ref if gaps_ref is not None else ref))   # the line's onsets: a stab's gap is to the line's next (round 108)
     sounds_w = struck["sounds"] if struck else None
     longest = struck["longest"] if struck else None
+    sounding = struck.get("sounding") if struck else None   # the token voice's sounding share (round 115)
+    stab = min((x for x in sounds_w.values() if x is not None), default=None) if sounds_w else None   # its shortest class share: a stab
+    sounded, bars_seen, shortened = 0.0, set(), 0
     out = []
     for a, b, m, vv in placed:
         j = bisect.bisect_right(line_on, a + rhythm.NEAR)
@@ -1087,7 +1098,18 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
         length = gap * (share if share is not None else sounded_share(sounds, gap))
         if longest:
             length = min(length, longest)
+        if sounding is not None and stab is not None:      # the sounding share held (round 115): over it, this stab counted, a stab's length
+            k = bisect.bisect_right([x[0] for x in song.bars], a + rhythm.NEAR) - 1
+            beats = sum(song.bars[i][1] - song.bars[i][0] for i in bars_seen | {k})
+            if beats > 0 and (sounded + length) / beats > sounding + STRUCK_MARGIN:
+                short = min(length, gap * stab)
+                shortened += short < length
+                length = short
+            bars_seen.add(k)
+        sounded += length
         out.append((a, a + length, m, vv))
+    if stats is not None:
+        stats.update(sounded=sounded, played=sum(song.bars[i][1] - song.bars[i][0] for i in bars_seen), shortened=shortened)
     return out, thinned, figs
 
 
@@ -2428,8 +2450,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     in_span = [x for x in ref if a0 - rhythm.NEAR <= x[0] < b0 - rhythm.NEAR]
                     sv = struck_values(plan, role, v) if kind_w == "with" else None   # how the token song's voice strikes (round 108)
                     if kind_w == "with":
+                        stats_w = {}
                         struck, thinned, figs = struck_with(ref, at, end, semi_w, song, role, v, models, rng_w, plan.extras[role].get("clashes"),
-                                                            gs["second"] if gs else sounds, scale, mask_draw, line_notes, sv)
+                                                            gs["second"] if gs else sounds, scale, mask_draw, line_notes, sv, stats=stats_w)
                         for k, f in figs.items():
                             figures_v[k] = f
                     elif kind_w == "double":
@@ -2443,7 +2466,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                f"in bars {at + 1}-{end} (the token's stretches {word_v}): {len(struck)} notes"
                                + (f" on the chord by the parallel_intervals word, {thinned} of the followed onsets thinned by the second_figures word" if kind_w == "with" else "")
                                + ("" if sv is None else f", the mask held toward the token's share {sv['share']:.2f}; lengths by the line's gap"
-                                  + (f", at most {sv['longest']:.1f} beats" if sv.get("longest") else "")))
+                                  + (f", at most {sv['longest']:.1f} beats" if sv.get("longest") else "")
+                                  + (f"; sounding {stats_w['sounded'] / stats_w['played']:.2f} of its bars' time against the token's {sv['sounding']:.2f}, "
+                                     f"{stats_w['shortened']} stabs cut to the token's shortest class share (round 115)"
+                                     if kind_w == "with" and sv.get("sounding") is not None and stats_w.get("played") else "")))
                 if any(sp[0] != "own" for sp in spans_v if sp not in inline):
                     log.append(f"voice {v + 1}: the token's stretches of another part's line in {word_v} stay its own beside the struck ones")
                 notes_v.sort(key=lambda x: x[0])

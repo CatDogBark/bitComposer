@@ -7823,3 +7823,54 @@ is still pooled (0.25 against the tokens' 0.15), the chord chain's roots
 pooled, a long token song cut not scaled. The standing list: round 100's
 endings and theme returns, round 101's sparser side, round 103's line
 motion, round 105's sectioning.
+
+### Round 115: a struck voice's sounding share is the token song's (2026-11-09, from the owner's listening to Song Check 96: the synth "a monster", four words agreed, the first)
+
+**Why.** The synth organ took the written songs over though its level
+is Battle Theme's: the game's own song from its SNES sound CPU file,
+each SNES chip voice alone through the emulator, has the accompaniment
+(guitar and the two brass voices) as its loudest part A-weighted, the
+synth alone 1.7 dB under it and the lead 1.5, and the written stems sit
+within a decibel or two of that on every part (Journey of the Quarry's
+guitar alone 5.1 dB under the accompaniment against the game's 5.0, its
+synth 1.6 against 1.7). What differs is what the synth plays. The first
+thing: its notes' lengths. The gap-class shares are Battle Theme's, but
+its riff is dense and its stabs almost never fall in the one-to-two-beat
+class where it held 0.9 of the gap; a sparser written line put most of
+the synth's gaps there, so Journey of the Quarry's synth sounded 0.68 of
+its bars' time at 0.9 beats a note (a quarter over 1.35) on a brass
+sample whose SNES chip envelope holds at full till key-off: an organ
+where the game stabs at 0.19 beats, sounding 0.49 of its bars' time.
+
+**Built.** The struck sub-field's eighth part (arrangement._struck_facts,
+_struck_text: `w0.73~0.7~0.2~0.9~-~-~4.9~0.49`): the beats the voice
+sounds, each note to the line's next onset at most, over the beats of
+the bars it strikes in. struck_values_of reads it (`sounding`), and
+struck_with holds the stabs to it: a stab whose length by its gap class
+would put the share so far, this stab counted, over the token's by
+STRUCK_MARGIN sounds the token's shortest class share of its gap instead
+(Battle Theme's 0.2: a stab); the longest-note cap stands; `stats`
+carries the sounded and played beats and the stabs cut to the log. A
+voice under the share is not lengthened: its stabs are their gap
+classes' already. Pack refit (110 tables; no new table), the vocabulary
+shipped and committed. Tests: the part read from the test song's stabs
+(0.20: 32 stabs of 0.2 beats over eight bars) and parsed, the stabs cut
+to the share and none without it. Suite 467 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds: Journey of the
+Quarry's synth voices sound 0.55 of their bars' time (0.68 before; the
+token 0.49; a quarter of its stabs over 0.90 beats where it had been
+1.35); the other four were under the share already (0.29 to 0.49) and
+stay. Seeds 1-60: 22 struck voices, every one with a token share:
+written median 0.60 (0.68 before) against the tokens' 0.65, |written -
+token| median 0.11 (the hold cuts; it does not lengthen). The struck
+voices' motion, the bass's continuity and the lines' profiles are as at
+round 114. Plans (400 seeds, against round 114): 400 keep their token
+song, 397 plan logs and 367 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The cell (round 116), the guitar line's steps (round 117), the
+flourish at a section's end (round 118). The standing list as at round
+114.
