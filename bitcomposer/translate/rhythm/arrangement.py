@@ -781,7 +781,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
         rng = sample_range_in(voices[v], key) if key else ""    # where the token song plays this voice's sample (round 86)
         subs = [share, sid, f"{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}", rng, relations.get(v, ""),
                 stretch_word(song, voices[v], "~"),        # and its instrument by stretch (round 92; "~" keeps "@" for the sub-fields)
-                struck.get(v, "")]                          # and how it strikes where it is struck with another (round 108: _struck_text)
+                struck.get(v, ""),                          # and how it strikes where it is struck with another (round 108: _struck_text)
+                loop_field(song, voices[v]) if role in cells_mod.BACKING else ""]   # and its loops by the form's letters (round 121)
         while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
             subs.pop()
         out.append("@".join(subs))
@@ -1436,6 +1437,115 @@ def bass_continuity_field(s, line_notes=None) -> str:
     return f"k{int(round(100 * sum(x == y for x, y in pairs) / len(pairs)))}"
 
 
+LOOP_LAGS = (1, 2, 4)                # bars: the lengths a looped figure is tried at inside a part of the form (round 121)
+LOOP_SHARE = 0.5                     # the share of the bars a voice plays in a part of the form that must be its figure's, note for note, for
+                                     # the part to be a loop
+LOOP_GAIN = 0.15                     # how much more of the bars a longer figure must hold than a shorter one to be the figure
+LOOP_BARS = 4                        # bars a voice must play in a part of the form for a loop to be read there
+
+
+def voice_bar_keys(song, notes, kit: bool = False) -> list:
+    """A voice's bars note for note (round 121): for each of the song's bars the notes that start in it, each as its place in
+    the bar (readings.position) with its pitch, a kit hit with its sample; () where the voice rests. What the periods
+    word's key (cells.block_key) leaves out: an upper part's bar there is its onset pattern alone."""
+    out = []
+    for a, b in song.bars:
+        row = []
+        for n in notes:
+            if a - readings_mod.NEAR <= n[0] < b - readings_mod.NEAR:
+                if kit:
+                    row.append((readings_mod.position(n[0] - a, song.division), str(n[3])))
+                elif n[2] is not None and not math.isnan(n[2]):
+                    row.append((readings_mod.position(n[0] - a, song.division), int(round(n[2]))))
+        out.append(tuple(sorted(row)))
+    return out
+
+
+def chord_bar_keys(song) -> list:
+    """The song's bars as their chords (round 121): the chord sounding at each beat of the bar (root and shape), () under no
+    chord; a bar's key for the harmony's loop."""
+    out = []
+    for a, b in song.bars:
+        row = []
+        for i in range(int(round(b - a))):
+            c = _chord_at(song.chords or [], a + i + readings_mod.NEAR)
+            if c is not None and c.root is not None:
+                row.append((i, c.root, c.shape))
+        out.append(tuple(row))
+    return out
+
+
+def loop_of(keys: list, idx: list):
+    """A voice's loop inside a part of the form (round 121): (the figure's length in bars, the share of the bars the voice
+    plays there that are the figure's, note for note), or None. The figure at a lag (LOOP_LAGS) is, for each bar of the lag,
+    the bar the voice plays most at that place (twice or more: a bar played once repeats nothing); a longer figure is taken
+    only where it holds LOOP_GAIN more of the bars than a shorter one, and a part is a loop where the figure holds
+    LOOP_SHARE of the bars the voice plays in it (LOOP_BARS or more). Battle Theme's B: the guitar one bar on 8 of 8, the
+    two synths one bar on 6 of 8 (the other two fill where the tune holds a note), the bass and the kit two bars on 8 of 8.
+    The periods word (round 30) reads an upper part's onset pattern and the bass's chord-tone marks: a bar the same there
+    is a bar on the same rhythm, and the writer drew its notes again."""
+    playing = [k for k in idx if keys[k]]
+    if len(playing) < LOOP_BARS:
+        return None
+    best = None
+    for lag in LOOP_LAGS:
+        if 2 * lag > len(idx):
+            break
+        on = 0
+        for phase in range(lag):
+            c = Counter(keys[k] for k in idx[phase::lag] if keys[k])
+            if c and c.most_common(1)[0][1] >= 2:
+                on += c.most_common(1)[0][1]
+        share = on / len(playing)
+        if best is None or share >= best[1] + LOOP_GAIN:
+            best = (lag, share)
+    return best if best is not None and best[1] >= LOOP_SHARE else None
+
+
+def loop_breaks(keys: list, idx: list, lag: int) -> list:
+    """The bars of a looped part of the form that are off its figure (round 121), counted from the part's first bar: a bar
+    the voice plays that is not the bar it plays most at that place of the figure (loop_of's figure). Battle Theme's synths
+    in B: bars 3 and 7, the fills where the tune holds a note; a bar the voice rests in is neither."""
+    figure = {}
+    for phase in range(lag):
+        c = Counter(keys[k] for k in idx[phase::lag] if keys[k])
+        if c and c.most_common(1)[0][1] >= 2:
+            figure[phase] = c.most_common(1)[0][0]
+    return [j for j, k in enumerate(idx) if keys[k] and keys[k] != figure.get(j % lag)]
+
+
+def loops_text(song, keys: list) -> str:
+    """A voice's loops by the form's letters (round 121): "B1~100" (in B a one-bar figure on every bar), "B1~75!3.7" (but in
+    the part's bars 3 and 7, counted from 0), "B2~88!7+D1~60!1.2", each new part of the form that is a loop for the voice
+    (loop_of) with the figure's bars, the share in hundredths and the bars off the figure (loop_breaks); "" for a song
+    whose form the token does not carry (form_field) or a voice with no loop."""
+    if not form_field(song):
+        return ""
+    index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
+    out, seen = [], set()
+    for bar, n, of, label in song.parts:
+        if of is not None or label in seen:
+            continue
+        seen.add(label)
+        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        got = loop_of(keys, idx)
+        if got is not None:
+            off = loop_breaks(keys, idx, got[0])
+            out.append(f"{label}{got[0]}~{int(round(100 * got[1]))}" + ("!" + ".".join(str(j) for j in off) if off else ""))
+    return "+".join(out)
+
+
+def loop_field(song, notes, kit: bool = False) -> str:
+    """A voice's loops as a balance token field (round 121): "l" and loops_text, "" without one."""
+    text = loops_text(song, voice_bar_keys(song, notes, kit))
+    return "l" + text if text else ""
+
+
+def chord_cycle_field(song) -> str:
+    """The harmony's loops by the form's letters (round 121, `cycle=`): loops_text over the bars' chords; "" without one."""
+    return loops_text(song, chord_bar_keys(song)) if getattr(song, "chords", None) else ""
+
+
 def form_field(s) -> str:
     """The song's form as the balance token carries it (round 113, `form=`): its parts' letters in order, each with its bars, a
     returning part by the letter it returns to ("A2B8C9B8D14" for Battle Theme: a two-bar A, eight of B, nine of C, B again, fourteen
@@ -1712,7 +1822,7 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh]   # and its kit as the eighth (round 63; each
+                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh] + [""] * 9 + [loop_field(s, s.notes[role], kit=True)]   # and its kit as the eighth (round 63; each
                                                                                              # channel's pieces as the fourth, round 87;
                                                                                              # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
@@ -1739,7 +1849,8 @@ def balance_units(songs) -> list:
                       line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
                       line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
                       bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
-                      line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else ""]   # and the line's steps (round 117)
+                      line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's steps (round 117)
+                      loop_field(s, line_notes) if role in cells_mod.BACKING else ""]   # and the line's loops by the form's letters (round 121)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
@@ -1756,6 +1867,9 @@ def balance_units(songs) -> list:
         form = form_field(s)                                 # the song's form (round 113): which parts return
         if form:
             tokens.append(f"form={form}")
+        cycle = chord_cycle_field(s)                         # the harmony's loops by the form's letters (round 121)
+        if cycle:
+            tokens.append(f"cycle={cycle}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with

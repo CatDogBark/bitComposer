@@ -1233,6 +1233,138 @@ class TokenContinuityTests(unittest.TestCase):
         self.assertEqual(sorted(int(x[2]) % 12 for x in written["bass"].notes), [0, 0, 0, 0, 7, 7, 7, 7])   # left as they are
 
 
+class TokenLoopTests(unittest.TestCase):
+    """Round 121: a backing voice's loops ride the balance token by the form's letters (the line's, each voice's beside it, the
+    kit's, the harmony's `cycle=`), and where the form is the token song's a bar on a loop's figure plays the figure again note
+    for note. The periods word repeated a bar's rhythm and the writers drew its notes again: Battle Theme's guitar plays one
+    bar through its eight-bar B, and no written backing voice had played a bar twice."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(10)]
+        chords = [Span(0.0, 8.0, 0, "", 1.0), Span(8.0, 36.0, 5, "", 1.0), Span(36.0, 40.0, 7, "", 1.0)]   # C for A; F through B but its last bar, on G
+        riff = [(4.0 * k + x / 2, 0.45, (48.0 if x < 4 else 50.0) if k >= 2 else 55.0 + k + x, "g") for k in range(10) for x in range(8)]   # one bar, every bar of B
+        stab = [(4.0 * k + x, 0.2, (60.0 + 4 * (x % 2)) if k not in (5, 9) else 72.0 - x - k, "s") for k in range(2, 10) for x in range(4)]   # one bar but in B's 4th and 8th
+        bass = [(4.0 * k + x, 0.9, (36.0 if k % 2 == 0 else 41.0) + (x % 2) * 7 if k >= 2 else 30.0 + k + x, "b") for k in range(10) for x in range(4)]   # two bars, four times
+        kit = [(4.0 * k + x, 0.4, float("nan"), "kick" if (x + k) % 2 == 0 else "snare") for k in range(10) for x in range(4)]   # two bars too
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(10) for x in (0.0, 1.0, 2.0, 3.0)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": sorted(riff + stab), "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(10)), parts=[(0, 2, None, "A"), (2, 8, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", riff), 1: ("accompaniment", stab), 2: ("bass", bass), 3: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.2, 2: 0.5, 3: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s, riff, stab, bass, kit
+
+    def test_a_voices_loop_is_read(self):
+        X, Y, F, G = ((0, 60),), ((0, 62),), ((0, 70),), ((0, 71),)
+        idx = list(range(8))
+        self.assertEqual(rhythm.loop_of([X] * 8, idx), (1, 1.0))                                   # one bar, every bar
+        self.assertEqual(rhythm.loop_of([X, Y] * 4, idx), (2, 1.0))                                # two bars: half the bars at one bar, all at two
+        self.assertEqual(rhythm.loop_breaks([X, Y] * 4, idx, 2), [])
+        keys = [X, X, X, F, X, X, X, G]
+        self.assertEqual(rhythm.loop_of(keys, idx), (1, 0.75))                                     # a longer figure holds no more of the bars: the shortest
+        self.assertEqual(rhythm.loop_breaks(keys, idx, 1), [3, 7])                                 # the bars off it, from the part's first
+        self.assertIsNone(rhythm.loop_of([((0, 60 + i),) for i in range(8)], idx))                 # every bar new: no loop
+        self.assertIsNone(rhythm.loop_of([X, X, X], [0, 1, 2]))                                    # under LOOP_BARS bars
+        self.assertEqual(rhythm.loop_of([X, (), X, (), X, X, (), ()], idx), (1, 1.0))              # the bars it rests in are not counted
+
+    def test_the_token_carries_the_loops(self):
+        s, riff, stab, bass, kit = self._song()
+        self.assertEqual(rhythm.loop_field(s, riff), "lB1~100")
+        self.assertEqual(rhythm.loop_field(s, stab), "lB1~75!3.7")
+        self.assertEqual(rhythm.loop_field(s, bass), "lB2~100")
+        self.assertEqual(rhythm.loop_field(s, kit, kit=True), "lB2~100")                           # a kit's bar is its hits by place and sample
+        self.assertEqual(rhythm.chord_cycle_field(s), "B1~88!7")                                   # the harmony: one bar but B's last
+        tok = rhythm.balance_units([s])[0].outcome
+        acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual(acc[18], "lB1~100", acc)                                                  # the line's, the nineteenth field
+        self.assertEqual(acc[5].split("/")[0].split("@")[7], "lB1~75!3.7", acc[5])                # the voice beside it, its eighth sub-field
+        self.assertEqual(next(f for f in tok.split() if f.startswith("bass=")).split(":")[18], "lB2~100")
+        self.assertIn("cycle=B1~88!7", tok.split())
+        s.parts = [(0, 10, None, "A")]                                                             # one part: the token carries no form, so no loops
+        self.assertEqual((rhythm.loop_field(s, riff), rhythm.chord_cycle_field(s)), ("", ""))
+
+    def test_the_plan_takes_the_loops_with_the_form(self):
+        self.assertEqual(whole.loops_of("B1~75!3.7+D2~100"), {"B": (1, 0.75, (3, 7)), "D": (2, 1.0, ())})
+        self.assertEqual(whole.loops_of("B1/75"), {})
+        token = ("accompaniment=main:48-55:0.9:2:0.6:1.0@sx@0.8@48-60@@@@lB1~75!3.7::sacc0123456@44-60:dense+repeating:0.50::block:rare::b75/70::::lB1~100 "
+                 "bass=half:36-44:0.9:1:1.0:::sbass::::::p2/83:::::lB2~100 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium form=A2B8 cycle=B1~88!7")
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan(bal, 7, "g")
+        self.assertEqual([(q[3], q[1]) for q in p.parts], [("A", 2), ("B", 8)])
+        self.assertEqual(p.loops, {"accompaniment": {"B": (1, 1.0, ())}, "accompaniment:1": {"B": (1, 0.75, (3, 7))}, "bass": {"B": (2, 1.0, ())},
+                                   whole.LOOP_CHORDS: {"B": (1, 0.88, (7,))}})
+        line = next(l for l in p.log if l.startswith("loops from the balance's song (round 121):"))
+        self.assertIn("accompaniment's voice 2 B every bar on 0.75 but bars 4 8", line)
+        self.assertIn("bass's line B every 2 bars on 1.00", line)
+        self.assertIn("the harmony B every bar on 0.88 but bar 8", line)
+        self.assertEqual(len(set(p.chords[2:9])), 1)                                               # B's chord through its bars on the figure
+        q = whole.plan(bal, 7, "g", min_bars=16)                                                   # the token's form short of the bars asked: the draw's
+        self.assertEqual(q.loops, {})                                                              # letters are not the song's, and no loop is taken
+        self.assertTrue(any("none taken, the form is not its own" in l for l in q.log), q.log)
+
+    def test_the_harmony_loops(self):
+        class Chain:                                                                               # a chord word that never holds
+            def draw(self, unit, previous, played, rng, keep=None):
+                return rng.choice([x for x in ("I", "IV", "V", "vi", "ii") if x != previous])
+        parts = [(0, 2, None, "A"), (2, 8, None, "B"), (10, 8, 1, "B")]
+        free, _ = whole.plan_chords({"chords": Chain()}, parts, 0, 0, "major", random.Random(5), [])
+        self.assertTrue(all(a != b for a, b in zip(free[2:10], free[3:10])))                       # the chain alone: a change a bar
+        log = []
+        names, chords = whole.plan_chords({"chords": Chain()}, parts, 0, 0, "major", random.Random(5), log, cycle={"B": (1, 0.88, (7,))})
+        self.assertEqual(names[:2], free[:2])                                                      # every bar drawn as before: no other draw moves
+        self.assertEqual(names[2:9], [free[2]] * 7)                                                # B's first chord through the bars on the figure
+        self.assertEqual(names[9], free[9])                                                        # the bar off it keeps its own draw
+        self.assertEqual(names[10:], names[2:10])                                                  # the repeat takes the part's chords as looped
+        self.assertTrue(any(l.startswith("the balance's song's harmony loops (round 121): 6 bars take their figure's chord; ") for l in log), log)
+        two, _ = whole.plan_chords({"chords": Chain()}, parts, 0, 0, "major", random.Random(5), [], cycle={"B": (2, 1.0, ())})
+        self.assertEqual(two[2:10], free[2:4] * 4)                                                 # a two-bar figure, four times
+        same, _ = whole.plan_chords({"chords": Chain()}, parts, 0, 0, "major", random.Random(5), [], cycle={"C": (1, 1.0, ())})
+        self.assertEqual(same, free)                                                               # a loop on a letter the form lacks: nothing
+
+    def test_a_bar_on_the_figure_is_the_figure_again(self):
+        from types import SimpleNamespace
+        plan = SimpleNamespace(parts=[(0, 2, None, "A"), (2, 8, None, "B"), (10, 8, 1, "B")],
+                               loops={"g": {"B": (1, 0.75, (3, 7))}, "b": {"B": (2, 1.0, ())}, "k": {"B": (2, 1.0, ())}, "short": {"A": (2, 1.0, ())}})
+        notes = [(4.0 * k + i, 4.0 * k + i + 0.5, 40.0 + k + i, 0) for k in range(18) for i in range(2) if k != 6]   # a new bar every bar; bar 6 rests
+        bar = lambda ns, k: [n[2] for n in ns if int(n[0] // 4) == k]   # noqa: E731
+        out, copied, held = whole.hold_loop(plan, "g", notes, 4)
+        self.assertEqual([bar(out, k) for k in (2, 3, 4, 7, 8)], [[42.0, 43.0]] * 5)               # the first bar of B on every bar on the figure
+        self.assertEqual((bar(out, 5), bar(out, 9)), ([45.0, 46.0], [49.0, 50.0]))                 # the bars the token song has off it: as written
+        self.assertEqual(bar(out, 6), [])                                                          # a bar the voice rests in still rests
+        self.assertEqual([bar(out, k) for k in (0, 1)], [[40.0, 41.0], [41.0, 42.0]])              # outside the looped part: as written
+        self.assertEqual(bar(out, 11), [50.0, 51.0])                                               # the repeat loops on its own first bar (the form's repeat copies B's)
+        self.assertEqual(held, {2, 3, 4, 7, 8, 10, 11, 12, 14, 15, 16})                            # the figure's bars and its copies, the rest's bar left out
+        self.assertEqual(copied, 9)
+        self.assertEqual([round(n[0] - 4 * 3, 3) for n in out if int(n[0] // 4) == 3], [0.0, 1.0])   # the places in the bar kept
+        low, _, _ = whole.hold_loop(plan, "b", [n[:3] for n in notes], 4)                          # the bass writer's notes, three long
+        self.assertEqual([bar(low, k) for k in range(2, 10)], [[42.0, 43.0], [43.0, 44.0]] * 2 + [[], [43.0, 44.0]] + [[42.0, 43.0], [43.0, 44.0]])
+        kit = [(4.0 * k + i, 4.0 * k + i + 0.4, "K" if (i + k) % 3 else "S", i % 2, "kick") for k in range(10) for i in range(3)]
+        hits, _, _ = whole.hold_loop(plan, "k", kit, 4)                                            # the kit's hits, five long
+        self.assertEqual([[h[2] for h in hits if int(h[0] // 4) == k] for k in (4, 5)], [[h[2] for h in kit if int(h[0] // 4) == k] for k in (2, 3)])
+        same, n, bars = whole.hold_loop(plan, "short", notes, 4)                                   # a part too short to play its figure twice: no loop
+        self.assertEqual((same, n, bars), (notes, 0, set()))
+        self.assertEqual(whole.hold_loop(plan, "none", notes, 4), (notes, 0, set()))               # a voice the plan has no loop for
+
+    def test_the_passes_after_the_writing_leave_a_figure(self):
+        from bitcomposer.translate.vocab import Span
+        self.assertTrue(whole._on_figure({("bass", 0): {2}}, "bass", 8.0, 12.0, 4))
+        self.assertFalse(whole._on_figure({("bass", 0): {2}}, "bass", 12.0, 16.0, 4))             # the bar after
+        self.assertFalse(whole._on_figure({("bass", 0): {2}}, "accompaniment", 8.0, 12.0, 4))     # another part
+        self.assertTrue(whole._on_figure({("accompaniment", 2): {3}}, "accompaniment", 8.0, 16.0, 4))   # any voice of the part, any bar of the span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(4.0 * k, 4.0 * k + 4.0, 0 if k % 2 == 0 else 7, "", 1.0) for k in range(4)], notes={}, sid="w", game="g",
+                           numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        bass = [(4.0 * k + i, 4.0 * k + i + 0.8, 36.0 if k % 2 == 0 else 43.0, 0) for k in range(4) for i in (0, 2)]   # C C | G G | C C | G G
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, [])}
+        p = whole.plan({}, 3, "g")
+        p.bass_continuity, p.tone_profiles, p.bounds, p.registers = 0.9, {}, {}, {"bass": (32, 44)}
+        log = whole.hold_bass_pitch(p, song, written, list(bass), held={("bass", 0): {0, 1, 2, 3}})   # a two-bar figure, held
+        self.assertEqual([int(n[2]) for n in written["bass"].notes], [36, 36, 43, 43, 36, 36, 43, 43])   # not pedaled: the loop's bars stand
+        self.assertTrue(log and "4 on the loop's figure (round 121)" in log[0] and "0 more bars pedaled" in log[0], log)
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""
@@ -1401,7 +1533,7 @@ class NewTablesTests(unittest.TestCase):
         units = rhythm.balance_units([self._song()])
         self.assertEqual(len(units), 1)
         tokens = units[0].outcome.split()
-        self.assertTrue(tokens[1].startswith("drums") and tokens[1].endswith("+mixed"), tokens)       # the kit's habit rides too (round 62)
+        self.assertTrue(tokens[1].startswith("drums") and tokens[1].split(":")[8].endswith("+mixed"), tokens)   # the kit's habit rides too (round 62)
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[7].split("@")[0] == "k", tokens)   # weight:register:sounded share:voices ... sample (round 60), habit (round 62); a period field after (round 106)
         self.assertIn("36-36", tokens[0])                                                       # the bass on one note
         ranges = rhythm.sample_range_units([self._song()])
@@ -2017,7 +2149,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
-        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "form="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes= and form= fields aside, rounds 112-113)
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "form=", "cycle="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes= and form= fields aside, rounds 112-113)
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit (a period field after, round 106)
         self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}

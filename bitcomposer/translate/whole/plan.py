@@ -306,6 +306,10 @@ class Plan:
     chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
     form_letters: list | None = None                    # the token song's form, [(letter, bars)] (round 113), or None
     bass_continuity: float | None = None                # the token song's bass line pitch continuity (round 114), or None
+    loops: dict = field(default_factory=dict)           # a voice (the part for its line, "part:v" for a voice beside it, the drums for the kit,
+                                      # LOOP_CHORDS for the harmony) -> {the form's letter: (the figure's bars, the share of the voice's bars on it,
+                                      # the bars off it counted from the part's first)} where the token song's voice loops (round 121); only where
+                                      # the form is the token song's
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -393,6 +397,67 @@ def form_of(text: str) -> list | None:
         return None
     form = [(m.group(1).upper(), int(m.group(2))) for m in re.finditer(r"([A-Za-z])(\d+)", text)]
     return form if len(form) >= rhythm.FORM_PARTS and all(n > 0 for _, n in form) else None
+
+
+LOOP_CHORDS = "cycle"                 # the harmony's key among a plan's loops (round 121): the balance token's `cycle=` word
+
+
+def loops_of(text: str) -> dict:
+    """A voice's loops read from the balance token (round 121, arrangement.loops_text): "B1~75!3.7+D2~100" -> {"B": (1, 0.75,
+    (3, 7)), "D": (2, 1.0, ())}, by the form's letter the figure's bars, the share of the voice's bars on it and the bars off
+    it counted from the part's first; {} where it cannot be read."""
+    out = {}
+    for item in text.split("+"):
+        m = re.fullmatch(r"([A-Za-z])(\d+)~(\d+)(?:!(\d+(?:\.\d+)*))?", item)
+        if not m or int(m.group(2)) < 1:
+            return {}
+        out[m.group(1).upper()] = (int(m.group(2)), int(m.group(3)) / 100, tuple(int(x) for x in m.group(4).split(".")) if m.group(4) else ())
+    return out
+
+
+def looped_parts(parts: list, spec: dict | None) -> list:
+    """The parts of the form a voice loops in (round 121): (the part's first bar, its bars, the figure's bars, the bars off
+    the figure) for each part whose letter the voice's loops name (`spec`, loops_of) and that is long enough to play the
+    figure twice; a part that repeats another carries its letter, and so its loop."""
+    out = []
+    for bar, n, _, label in parts:
+        got = (spec or {}).get(label)
+        if got and n >= 2 * got[0]:
+            out.append((bar, n, got[0], {bar + j for j in got[2] if j < n}))
+    return out
+
+
+def hold_loop(plan: "Plan", key: str, notes: list, meter: int = None) -> tuple[list, int, set]:
+    """A voice's bars made its figure's where the token song's voice loops (round 121). In each part of the form the voice's
+    loops name (plan.loops[key], looped_parts), the figure is the first bar the voice plays at each place of the figure's
+    length that the token song has on its figure; every later bar on the figure plays it again note for note, pitch and
+    place and length. A bar the token song has off its figure (a fill, a turn) and a bar the voice rests in stay as written.
+    FFVI repeats a backing voice's bar: the figure holds half the bars or more in 0.45 of its accompaniment lines' parts of
+    the form, 0.47 of the voices' beside them and of its basses', 0.69 of its kits', and Battle Theme's guitar plays one bar
+    through all eight of its B. The periods word (round 30) repeats a bar's rhythm, and the writers drew its notes again, so
+    no written bar came out twice. Notes of any writer's shape, (start, end, ...); returns the notes, the bars copied and the
+    bars held on the figure (its own bars and the copies), for the passes after the writing to leave as they are."""
+    meter = meter or METER
+    parts = looped_parts(plan.parts, (plan.loops or {}).get(key))   # (by the attribute: the map of the vocabulary reads a table's name in quotes as its use)
+    if not parts or not notes:
+        return notes, 0, set()
+    by = {}
+    for x in notes:
+        by.setdefault(int((x[0] + rhythm.NEAR) // meter), []).append(x)
+    copied, held = 0, set()
+    for bar, n, lag, off in parts:
+        figure = {}
+        for k in range(bar, bar + n):
+            if k in off or not by.get(k):
+                continue
+            src = figure.setdefault((k - bar) % lag, k)
+            held.add(k)
+            if src != k:
+                shift = float(meter * (k - src))
+                again = [(x[0] + shift, x[1] + shift) + tuple(x[2:]) for x in by[src]]
+                copied += sorted((round(x[0], 3),) + tuple(x[2:3]) for x in again) != sorted((round(x[0], 3),) + tuple(x[2:3]) for x in by[k])
+                by[k] = again
+    return sorted((x for ns in by.values() for x in ns), key=lambda x: x[0]), copied, held
 
 
 def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, form: list | None = None) -> list:
@@ -552,14 +617,21 @@ def reshaped_name(name: str, tonic: int, mode: str, profile: dict, counts) -> tu
 
 
 def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list,
-                hold_share: float | None = None, hold_rng: random.Random | None = None, shape_profile: dict | None = None) -> tuple[list, list]:
+                hold_share: float | None = None, hold_rng: random.Random | None = None, shape_profile: dict | None = None,
+                cycle: dict | None = None) -> tuple[list, list]:
     """A chord a bar, as numerals and as (root, shape): drawn bar by bar
     from the chord mixture (a new part starts the chain's context over,
     the song's urn going on), the loop's first bar from the loops table, a
     repeated part keeping the chords of the part it repeats. `shape_profile`:
     the token song's chord shapes (round 112): a changing chord whose quality
     runs over its share takes the quality most under its share on the same
-    degree (reshaped_name); a held bar keeps its chord whole."""
+    degree (reshaped_name); a held bar keeps its chord whole. `cycle`: the
+    token song's harmony's loops (round 121, loops_of): once every bar is
+    drawn as before (the chain, its holds and its shapes untouched, so no
+    other draw moves), a bar on the figure of a part of the form the loops
+    name takes the chord of the first bar at its place of the figure, a bar
+    off it keeps its own draw, and a part that repeats one takes its chords
+    again."""
     total = parts[-1][0] + parts[-1][1]
     home = "I" if mode == "major" else "i"
     names = [None] * total
@@ -606,6 +678,24 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
             played[name] += 1
             previous = prev_name = name
             names[k] = name
+    looped = 0                                              # the harmony's loops (round 121), on the bars as drawn: a bar on the figure takes
+    for bar, n, lag, off in looped_parts([p for p in parts if p[2] is None], cycle):   # the chord of the first bar at its place of it, whole
+        figure = {}
+        for k in range(bar, bar + n):
+            if k in off or names[k] is None:
+                continue
+            src = figure.setdefault((k - bar) % lag, k)
+            if src != k and names[k] != names[src]:
+                names[k] = names[src]
+                looped += 1
+    if looped:
+        for bar, n, of, _ in parts:                         # a part that repeats one: its chords again, as looped
+            if of is not None:
+                names[bar:bar + n] = names[parts[of][0]:parts[of][0] + n]
+        shape_counts = Counter(ch[1] for ch in (chord_of(x, tonic, mode) for x in names if x) if ch is not None)
+        held_now = sum(1 for bar, n, of, _ in parts if of is None for k in range(bar + 1, bar + n) if names[k] == names[k - 1])
+        lines = sum(n - 1 for _, n, of, _ in parts if of is None)
+        log.append(f"the balance's song's harmony loops (round 121): {looped} bars take their figure's chord; {held_now} of {lines} bar lines inside the parts hold their chord now")
     log.append("chords " + " ".join(names))
     if hold_share is not None:
         log.append(f"chords held at the balance's song's share {hold_share:.2f}: {held_lines} of {bar_lines} bar lines inside the parts")
@@ -1605,6 +1695,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_shapes = None                                     # the token song's chord-shape profile (round 112)
     token_form = None                                       # the token song's form letters (round 113)
     token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
+    token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
@@ -1627,6 +1718,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             token_form = form_of(rest)
             if token_form:
                 log.append("the balance's song's form: " + " ".join(f"{l}{n}" for l, n in token_form))
+            continue
+        if role == "cycle":                                 # the token's song's harmony's loops (round 121), not a part
+            got = loops_of(rest)
+            if got:
+                token_loops[LOOP_CHORDS] = got
             continue
         if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
             token_shapes = shape_profile_of(rest)
@@ -1678,6 +1774,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_layer_stretches[role] = [line_stretch_list(x[5].replace("~", "@")) if len(x) > 5 and x[5] else None for x in parts_]
                 if any(len(x) > 6 and x[6] for x in parts_):   # and how a voice struck with another strikes (round 108): its share of the
                     token_layer_struck[role] = [struck_values_of(x[6]) if len(x) > 6 and x[6] else None for x in parts_]   # followed onsets, its
+                for i, x in enumerate(parts_, start=1):     # and each one's loops by the form's letters (round 121): "lB1~75!3.7"
+                    if len(x) > 7 and x[7].startswith("l") and loops_of(x[7][1:]):
+                        token_loops[f"{role}:{i}"] = loops_of(x[7][1:])
                                                                                                                         # lengths by the line's gap, its longest
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
@@ -1768,6 +1867,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 if steps:
                     token_steps[role] = steps
                     log.append(f"{role}'s line moves as the balance's song's: " + " ".join(f"{k} {v:.2f}" for k, v in steps.items()))
+            if len(fields) > 18 and fields[18].startswith("l") and loops_of(fields[18][1:]):   # the line's loops, the kit's (round 121): `lB1~100`
+                token_loops[role] = loops_of(fields[18][1:])
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
@@ -1782,6 +1883,17 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             parts = taken
             log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
             loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
+    loops = {}                                              # the loops (round 121): the token song's, where the form's letters are its own
+    if token_loops and token_form and [p[3] for p in parts] == [l for l, _ in token_form][:len(parts)]:
+        loops = token_loops
+        said = lambda spec: ", ".join(f"{l} {'every bar' if lag == 1 else f'every {lag} bars'} on {share:.2f}"   # noqa: E731
+                                      + (" but bar" + ("s " if len(off) > 1 else " ") + " ".join(str(j + 1) for j in off) if off else "")
+                                      for l, (lag, share, off) in spec.items())
+        log.append("loops from the balance's song (round 121): " + "; ".join(
+            ("the harmony" if key == LOOP_CHORDS else "the kit" if key == R.DRUMS else f"{key.partition(':')[0]}'s voice {int(key.partition(':')[2]) + 1}" if ":" in key else f"{key}'s line")
+            + " " + said(spec) for key, spec in loops.items()))
+    elif token_loops:
+        log.append("loops from the balance's song (round 121): none taken, the form is not its own")
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
         was = bpm                                           # an own stream so no other draw moves
         bpm = float(_draw(models, "tempos", ("song", token_class), random.Random(f"whole:{seed}:tempo"), log, floor_k=2))   # terminal at the
@@ -1793,7 +1905,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append(f"tempo {was:.0f} BPM is outside the band's class ({token_class}): {bpm:.0f} BPM drawn under it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
                                 hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"),   # held as the token's song holds (round 106)
-                                shape_profile=token_shapes)                                        # its qualities the token's song's (round 112)
+                                shape_profile=token_shapes,                                        # its qualities the token's song's (round 112)
+                                cycle=loops.get(LOOP_CHORDS))                                      # its harmony's loops (round 121)
     drum_habit = (token_habits.get(R.DRUMS) or _draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log)) if R.DRUMS in band else None   # before the
     tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)
     textures, plays = plan_texture(models, parts, band, rng, log, defer=(R.DRUMS,), tier=tier)
@@ -2083,7 +2196,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, bass_continuity=token_continuity)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2241,7 +2354,14 @@ def _replace_bars(part, song: rhythm.Song, role: str, a: float, b: float, copied
     song.notes[role] = sorted([n for n in song.notes.get(role, []) if not inside(n[0])] + [(t, u - t, m, role) for t, u, m, _ in copied], key=lambda n: n[0])
 
 
-def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
+def _on_figure(held: dict | None, role: str, a: float, b: float, meter: int) -> bool:
+    """Whether a part holds a loop's figure (round 121, hold_loop's held bars by (part, voice)) in a bar of [a, b): the theme
+    band and the hand-offs leave such a bar as it is, as the token song's riff plays on under its tune."""
+    first, last = int((a + rhythm.NEAR) // meter), int((b - 2 * rhythm.NEAR) // meter)
+    return any(k in bars for (r, _), bars in (held or {}).items() if r == role for k in range(first, last + 1))
+
+
+def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random, held: dict | None = None) -> list:
     """Where the tune plays its theme cell (its statement and its echoes), the parts the theme_doubling table draws
     play the cell with it, at the drawn interval, in the tune's rhythm: FFVI's hook doubled by a second instrument a
     bar at a time; in every other bar of the tune, the parts the tune_doubling table draws (round 44: FFVI doubles the
@@ -2272,6 +2392,8 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
             role, _, off = token.partition(":")
             if role not in plan.band or role not in written or role == R.MELODY or not off or not bar_notes:
                 continue
+            if _on_figure(held, role, a, b, song.meter):    # the part loops here (round 121): its figure stands
+                continue
             low, high = plan.bounds.get(role, plan.registers.get(role, (24, 100)))   # where the game plays the part's sample (round 34)
             copied = []
             for t, u, m, _ in bar_notes:
@@ -2286,7 +2408,7 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
     return log
 
 
-def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
+def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random, held: dict | None = None) -> list:
     """A phrase whose tune is not the theme may have the theme phrase carried by another part (the theme_carrier
     table: the bass, the counter, the accompaniment, mostly none), the tune's own theme bars played there in that
     part's register while the tune plays what it drew. Returns a log line a phrase carried."""
@@ -2315,6 +2437,8 @@ def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng:
         n = min(len(theme_bars), len(w))
         shift = song.bars[w[0]][0] - a0
         a, b = song.bars[w[0]][0], song.bars[w[0] + n - 1][1]
+        if _on_figure(held, carrier, a, b, song.meter):     # the carrier loops here (round 121): its figure stands
+            continue
         low, high = plan.bounds.get(carrier, plan.registers.get(carrier, (24, 100)))   # where the game plays the carrier's sample (round 34)
         octaves = round(((low + high) / 2 - statistics.median(m for _, _, m, _ in theme_notes)) / 12)
         copied = [(t + shift, u + shift, float(min(high, max(low, m + 12 * octaves))), 0) for t, u, m, _ in theme_notes if t + shift < b - rhythm.NEAR]
@@ -2323,7 +2447,7 @@ def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng:
     return log
 
 
-def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random) -> list:
+def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random, held: dict | None = None) -> list:
     """The tune's half-bar cells taken up by the band (cell_handoffs, round 37): for each cell of the written tune, the
     word draws which other part plays it how many bars on (or none), under the song's echo habit and the cell's place
     (theme or other); where that part does not already play the cell later, its line's half bar there is replaced by
@@ -2373,6 +2497,8 @@ def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, r
         starts = [lo + pos for pos in c[3]]
         ends = [min(hi, s_ + (t_ - c[0]) - 0.0) for s_, t_ in zip(starts, [n[0] + n[1] for n in tune if c[0] - rhythm.NEAR <= n[0] < c[1] - rhythm.NEAR])]
         copied = [(s_, max(s_ + 0.05, e_), float(m), 0) for s_, e_, m in zip(starts, ends, pitches)]
+        if _on_figure(held, role, lo, hi, song.meter):      # the part loops here (round 121): its figure stands
+            continue
         _replace_span(written[role], song, role, lo, hi, copied)
         taken.add((role, target, i % 2))
         log.append(f"bar {target}: the {role} takes up the tune's cell from bar {bar} ({far} on)")
@@ -2426,6 +2552,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     parts, the melody; each put into song.notes for the next to read.
     {role: Part}."""
     written, key = {}, (plan.tonic, plan.mode)
+    held_bars = {}                                          # (part, voice) -> the bars it holds on its loop's figure (round 121, hold_loop)
     kit_letters = {rhythm.LETTERS[p] for p in song.pieces.values() if p in rhythm.LETTERS}
     pieces = plan.extras.get(R.DRUMS, {}).get("pieces")     # the pieces the song's kit strikes (kit_pieces, round 58); every piece without the word
     if pieces:
@@ -2481,6 +2608,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     held = kit_piece_hold(plan, sample) if sample in (plan.extras.get(R.DRUMS, {}).get("tonal_slots") or ()) else None
                     length = held or DRUM_LENGTH            # a piece on a sustaining sample for as long as the game keys it (round 77), cut by the next hit
                     notes.append((t, min(after if after is not None else t + length, t + length), letter, v, sample))
+            notes, kit_looped, _ = hold_loop(plan, R.DRUMS, notes, song.meter)   # the kit's figure again where the token song's kit loops (round 121)
             song.notes[R.DRUMS] = [(t, end - t, float("nan"), sample) for t, end, _, _, sample in notes]
             written[R.DRUMS] = Part(R.DRUMS, notes, figures, [f"kit habit {plan.habits[R.DRUMS]}; groups " + ", ".join(f"{'+'.join(g)} {h}" + (" under " + " ".join(v for v in group_classes[g].values() if v != "-") if group_classes.get(g) else "") for g, h in group_habits.items())
                                                               + f"; {sum(1 for f in figures if f != writer.REST)} bars written, {len(notes)} hits"
@@ -2488,6 +2616,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                               + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")
                                                               + ("; the slots' strike classes: the kit from its limbs' tables under them (round 81)" if kit_classes and limbs else
                                                                  "; the kit table holds no bar this kit plays within its habit's density: the limbs' tables at their own habits (round 75)" if "drums" in models and not whole_kit else "")])
+            if kit_looped:
+                written[R.DRUMS].log.append(f"the kit's figure again, hit for hit, in {kit_looped} bars where the balance's song's kit loops (round 121)")
             if runs:                                        # the second samples' hits (round 99)
                 written[R.DRUMS].log.append("kit seconds (kit_seconds): " + ", ".join(f"{k} {r[0]} of {r[1]} hits on the second sample (the token's share {seconds_of[k]['share']:.2f})" for k, r in runs.items())
                                             + ("" if "kit_seconds" in models else "; no kit_seconds word: the slot's sample throughout"))
@@ -2509,6 +2639,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                      tone_profile=plan.tone_profiles.get(R.BASS),   # the line's chord tones as the token song's (round 111)
                                      continuity=plan.bass_continuity, log=bass_log)   # and its pitch held across bar lines as the song's (round 114)
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
+        notes, bass_looped, held_bars[(R.BASS, 0)] = hold_loop(plan, R.BASS, notes, song.meter)   # the line's figure again where the token song's bass loops (round 121)
+        if bass_looped:
+            bass_log.append(f"the line's figure again, note for note, in {bass_looped} bars where the balance's song's bass loops (round 121)")
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         bass_as_written = list(line)
@@ -2536,6 +2669,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                            free=True, plays=plan.plays[R.BASS], register=bound2[0],
                                            sounds=gs["second"] if gs else sounds2, figures=given, shared=shared_bass,
                                            kind=layer_of(plan.extras.get(R.BASS))[0], models=models, ceiling=bound2[1])
+            notes2, _, held_bars[(R.BASS, 1)] = hold_loop(plan, f"{R.BASS}:1", notes2, song.meter)   # the second line's figure again (round 121)
             song.notes[R.BASS] += [(a, b - a, m, "bass") for a, b, m in notes2]
             line += [(a, b, m, 1) for a, b, m in notes2]
             figures = [f"{f} || {g}" for f, g in zip(figures, figures2)]
@@ -2579,6 +2713,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         if role in plan.step_profiles:                      # the line's steps held to the token song's (round 117), the ride's bars among them
             notes, step_log = hold_line_steps(plan, song, role, notes, shared, (low, high))
             tlog += step_log
+        notes, line_looped, held_bars[(role, 0)] = hold_loop(plan, role, notes, song.meter)   # the line's figure again where the token song's line loops (round
+        if line_looped:                                     # 121): before the voices beside it, which are written against the line as it loops
+            tlog.append(f"the line's figure again, note for note, in {line_looped} bars where the balance's song's line loops (round 121)")
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
                f"motion {plan.extras[role]['motion']}, sounded {render_mod._sounds_text(sounds)}; {sum(1 for f in figures if f != writer.REST)} bars written, "
@@ -2665,12 +2802,18 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     log.append(f"voice {v + 1}: the token's stretches of another part's line in {word_v} stay its own beside the struck ones")
                 notes_v.sort(key=lambda x: x[0])
                 beside_v.discard(v)
+                notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again where the token song's voice loops (round 121)
+                if looped_v:
+                    log.append(f"voice {v + 1}: its figure again, note for note, in {looped_v} bars where the balance's song's voice loops (round 121)")
                 song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
                 notes = notes + notes_v
             elif word_v:                                    # what the voice does beside which part, by stretch (round 90): after every line is written
                 pending.append((role, v, notes_v, word_v))
                 log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
             else:
+                notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again (round 121)
+                if looped_v:
+                    log.append(f"voice {v + 1}: its figure again, note for note, in {looped_v} bars where the balance's song's voice loops (round 121)")
                 song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
                 notes = notes + notes_v
             voice_written[v] = notes_v
@@ -2787,6 +2930,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         spans = stretch_spans(relation_stretches(word), len(song.bars))
         notes_v = fold_voice(plan, role, v, stretched_notes(v, own, spans, written, scale, song.meter, written[role].log, song=song, role=role, models=models,
                                                             rng=random.Random(f"{seed}:{role}:voice {v}:stretch parallel"), clash_rates=(plan.extras.get(role) or {}).get("clashes")), song.meter)   # rounds 95, 97
+        notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again where the token song's voice loops (round 121)
+        if looped_v:
+            written[role].log.append(f"voice {v + 1}: its figure again, note for note, in {looped_v} bars where the balance's song's voice loops (round 121)")
         song.notes[role] += [(a, b - a, m, role) for a, b, m, *_ in notes_v]
         written[role].notes += notes_v
         written[role].notes.sort(key=lambda n: (n[0], n[3] if len(n) > 3 else 0))
@@ -2795,9 +2941,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     hold_under_ceilings(plan, song, written)
     if R.MELODY in written:                                 # the theme in the band: doubled where the tune plays it, carried where it does not
         rng_theme = random.Random(f"{seed}:theme band")
-        for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):
-            written[R.MELODY].log.append(line)
-    for line in hand_off_cells(plan, song, written, models, random.Random(f"{seed}:handoff")):
+        for line in double_theme(plan, song, written, models, rng_theme, held_bars) + carry_theme(plan, song, written, models, rng_theme, held_bars):
+            written[R.MELODY].log.append(line)                # (a part's bars on its loop's figure left as they are, round 121)
+    for line in hand_off_cells(plan, song, written, models, random.Random(f"{seed}:handoff"), held_bars):
         written[R.MELODY].log.append(line)
     for line in copy_repeats(plan, song, written):
         for part in written.values():
@@ -2806,7 +2952,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         if role != R.DRUMS and (plan.extras.get(role) or {}).get("stretch_bounds"):   # stretch line goes into its bars' registers too (round 92)
             part.notes[:] = fold_line(plan, role, part.notes, song.meter)
     if R.BASS in written:
-        written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written)   # the bass's pitch continuity as finally played (round 114)
+        written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
     return written
 
@@ -2869,7 +3015,7 @@ def hold_line_steps(plan: Plan, song: rhythm.Song, role: str, notes: list, share
     return sorted(out + others, key=lambda x: (x[0], x[3] if len(x) > 3 else 0)), log
 
 
-def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: list) -> list:
+def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: list, held: dict | None = None) -> list:
     """The bass's pitch continuity as the token song's on the line as finally played (round 114). The bass writer holds it
     (writer.bass, `continuity`), and the theme band, the hand-offs and the form's repeats rewrite bars of the bass after it
     (a fifth of Journey of the Quarry's), each a bar line or two lost, so the bass kept its pitch class across 0.28 of its bar
@@ -2894,6 +3040,8 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
     for n in as_written:
         was.setdefault(bar_of(n[0]), set()).add((round(n[0], 3), int(round(n[2])) % 12))
     rewritten = {k for k, ns in by_bar.items() if {(round(n[0], 3), int(round(n[2])) % 12) for n in ns} != was.get(k, set())}
+    held = held or {}                                       # the bars each voice holds on its loop's figure (round 121): left as they are, the
+    on_figure = held.get((R.BASS, 0), set())                # bass's own and a riding voice's
 
     def chord_of(k):
         c = rhythm._chord_at(song.chords, song.bars[k][0]) if k < len(song.bars) else None
@@ -2934,7 +3082,7 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
             continue
         main = Counter(int(round(n[2])) % 12 for n in ns).most_common(1)[0][0]
         if prev_main is not None:
-            if main != prev_main and k not in rewritten and (same + 1) / (trans + 1) < share - writer.CONTINUITY_MARGIN:
+            if main != prev_main and k not in rewritten and k not in on_figure and (same + 1) / (trans + 1) < share - writer.CONTINUITY_MARGIN:
                 out = [(n[0], n[1], n[2]) for n in ns]
                 figure = (part.figures[k] if k < len(part.figures) else "").split(" || ")[0]
                 marks = {}
@@ -2962,7 +3110,7 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
                         voices = {0} | followers(role, k)
                         for i in at:
                             x = up.notes[i]
-                            if x[3] not in voices or (x[3] == 0 and int(round(x[2])) % 12 != op):
+                            if x[3] not in voices or (x[3] == 0 and int(round(x[2])) % 12 != op) or k in held.get((role, x[3]), ()):
                                 continue
                             key = (round(x[0], 3), int(round(x[2])))
                             up.notes[i] = (x[0], x[1], float(x[2] + delta)) + tuple(x[3:])
@@ -2978,5 +3126,6 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
     if not trans:
         return []
     return [f"bass pitch as finally played held across bar lines to the balance's song's {share:.2f} (round 114): {same} of {trans} kept; {len(rewritten)} bars "
-            f"rewritten after the writer (the theme band, the hand-offs, the repeats) left as they are, {pedaled} more bars pedaled, {moved} notes moved, "
+            f"rewritten after the writer (the theme band, the hand-offs, the repeats)" + (f" and {len(on_figure)} on the loop's figure (round 121)" if on_figure else "")
+            + f" left as they are, {pedaled} more bars pedaled, {moved} notes moved, "
             f"{riders} riding notes (and the voices following them) with them"]

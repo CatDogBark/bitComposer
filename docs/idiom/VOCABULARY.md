@@ -307,6 +307,43 @@ The words are grouped by where the writing draws them, in the order the song is 
   written guitar leaped between chord tones on 0.34 of its moves, a
   melodic voice driving the song where the game's is a rhythm part under
   it (Song Check 96).
+  Since round 121 the token carries each backing voice's loops by the
+  form's letters: a part's nineteenth field for its line and for the kit
+  (`loop_field`: `lB1~100`, in B a one-bar figure on every bar the voice
+  plays), a voice beside the line's as its eighth sub-field
+  (`lB1~75!3.7`: on three bars in four, off it in the part's bars 3 and
+  7 counted from 0) and the harmony's as a song-level `cycle=` word
+  (`chord_cycle_field`: `cycle=B1~88!7`). A voice's bar is read note for
+  note (`voice_bar_keys`: each note's place in the bar with its pitch, a
+  kit hit with its sample, a bar of the harmony the chord at each beat);
+  the figure at a length of 1, 2 or 4 bars is the bar the voice plays
+  most at each place of it, twice or more (`loop_of`: a longer figure
+  only where it holds LOOP_GAIN more of the bars, a loop where the
+  figure holds LOOP_SHARE of the bars the voice plays in a part of
+  LOOP_BARS or more), and the bars off it are named (`loop_breaks`).
+  Where the plan's form is the token song's (`Plan.loops`, by the
+  letter; none where the form's draw stands), `plan.hold_loop` makes a
+  bar on a figure the figure again, the first such bar the voice plays
+  at that place of the figure copied whole, pitch and place and length:
+  the kit's once its hits are drawn, the bass's and a chord part's
+  line's once the line is held and folded, before the voices beside it
+  are written against it, and each voice's beside it once it is
+  written. A bar the token song has off its figure and a bar the voice
+  rests in stay as written. `plan_chords` gives a bar on the harmony's
+  figure the chord of the first bar at its place once every bar is drawn
+  as before, so no other draw moves; the lines the loop holds come on
+  top of the song's chord-hold share. The passes after the writing leave
+  a figure's bars as they are: the theme band, the hand-offs
+  (`_on_figure`) and the bass's last pass with the voices riding it
+  (`hold_bass_pitch`, `held`). Why: the periods word (round 30) reads
+  an upper part's onset pattern and the bass's chord-tone marks, so a
+  held bar was a bar on the same rhythm whose notes the writers drew
+  again, and every hold since (the chord-tone profile, the bass's
+  continuity, the steps, the cell) kept a share over the song while no
+  bar came out twice. FFVI's backing voices loop in 0.45 to 0.69 of the
+  parts of the form they play four bars or more in; the written ones
+  did in 0.05 to 0.37 (`docs/LIMITS.md` for what the loop does not yet
+  do).
   Since round 114 the bass's token carries a seventeenth field, its pitch
   continuity (`bass_continuity_field`: the share of its bar lines across
   which the bass keeps the bar's main pitch class, in hundredths, `k58`
