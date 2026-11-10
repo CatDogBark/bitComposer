@@ -8462,3 +8462,73 @@ texture has the voice's own part playing there. In C Battle Theme's
 synths strike on the tune's main notes because the guitar they follow
 does; the written guitar keeps its own density there (a part's density
 by section is a pooled word). The standing list as at round 114.
+
+### Round 123: a chord part's line doubles the bass where the token song's does (2026-11-09, the third change from Song Check 98's investigation, on the owner's go)
+
+**Why.** Round 122 read the voices beside a line part by part of the
+form; the line itself has the same story and no word for it. Battle
+Theme's guitar is its bass an octave up through A, C and D (the bass's
+rhythm, its notes, twelve semitones over) and plays its own riff
+through B: read part by part its relation word is
+`db+12x2>ox8>db+12x9>ox8>pb+12`. In the parts where Battle Theme's band
+plays as one, under the tune's main notes, the written guitar and bass
+were two lines on two rhythms.
+
+**Found.** Round 106 gave the line its rides field (`b75/70`: 0.75 of
+its onsets with the bass, 0.70 of those at its pitch class) and
+`ride_the_bass`, which writes the line on the bass's figure in parts of
+the form drawn by the shares' product. Two things the field does not
+say went wrong. Which parts: the draw rode B as soon as A or C, and
+Battle Theme's B is the one part where the guitar is not the bass. And
+the octave: the riding notes were folded into the line's register,
+eight semitones wide on this token, so most of them landed at the
+bass's own pitch; the written guitar sat at the bass's pitch on 0.25 of
+the onsets they shared and an octave over it on 0.15, where Battle
+Theme's sits on 0.04 and 0.66.
+
+**Built.** The reader: `line_company_field`, the line voice's relation
+word (already read for every voice, by the form's parts since round
+122) with every stretch on anything but the bass as its own, an "r"
+before it, a chord part's twentieth field; "" for a line that never
+follows the bass. Six FFVI chord parts carry one (Battle Theme, Aria de
+Mezzo Carattere, Grand Finale part 2, Blackjack, The Fierce Battle,
+Dancing Mad part 2). The plan keeps it (`extras[part]["company"]`). The
+writer: with the word `ride_the_bass` draws nothing; the line rides in
+the bars of the word's stretches on the bass and nowhere else, and plays
+the bass's notes at the stretch's semitones, moved by octaves only where
+that leaves where the token song plays the line's sample (the stretch's
+range where the line changes instrument, else the sample's: 40 to 56
+for Battle Theme's guitar over a bass at 28 to 44). It runs once the
+line is held to its steps and folded, so nothing after it moves the
+double off the bass, and before the line's loop and the voices beside
+it, which are written against the line as it rides. A token without the
+word rides by the share as before. Tests: the field from a line that is
+its bass an octave up through one part and its own through the next,
+and none from a line that never follows the bass; the plan's keeping
+it; the ride in the word's bars alone, at the semitones, a note over
+the sample's range moved an octave, a bar the part rests in left, the
+voices beside the line seeing the double. Suite 488 (1 skip).
+
+**Measured.** The five Battle Theme songs: the line an octave over the
+bass on 0.47 of the onsets they share (0.15 before; Battle Theme 0.66)
+and at its pitch on 0.10 (0.25; 0.04). Where the line plays through C
+and D, 0.93 to 1.00 of its notes are on a bass onset, twelve semitones
+over it (Lunar Island 40 of 40 in C and 84 of 89 in D; Gate Return 46
+and 58; The Terminal of Glass 48 in C; Second Cistern Dance 46 in C);
+it doubles the bass in 5 to 25 bars a song (Journey of the Quarry's
+accompaniment plays in few bars outside B). Plans (400 seeds, against
+round 122): 400 keep their token song; 365 note sets and 364 plan logs
+unchanged (the 36 plans on the six tokens that carry the word); no note
+over a sample's ceiling; the loops as round 121 left them.
+
+**Song Check 99**: see below, the three rounds together.
+
+**Open.** A part's density by section is still a pooled word: Battle
+Theme's bass and guitar thin to four notes a bar in C and D, the
+written ones keep six to eight, so the unison is busier than the
+game's. The line follows only the bass: a line that doubles the tune
+through a part is written as its own. The double is of the bars the
+bass plays; where the texture rests the bass, or the accompaniment, the
+line is as before (which parts play in which part of the form is the
+pooled textures word, not the token song's: Battle Theme's A is the
+guitar and the bass alone). The standing list as at round 114.

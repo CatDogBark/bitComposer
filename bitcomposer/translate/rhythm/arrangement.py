@@ -1119,6 +1119,35 @@ def relation_words(song: readings_mod.Song) -> dict:
     return _relations(song)[0]
 
 
+def line_company_field(song: readings_mod.Song, role: str) -> str:
+    """The balance token's twentieth field for a chord part (round 123): where its line doubles the bass or runs parallel
+    to it, part by part of the form. It is the line voice's relation word (relation_words, read by the form's parts since
+    round 122) with every stretch on anything but the bass read as its own, after an "r": "rdb+12x2>ox8>db+12x9>ox8>pb+12"
+    for Battle Theme's guitar, the bass an octave up through A, its own riff through B, the bass again through C, the riff,
+    and parallel to the bass an octave up to the end; "" where the line never follows the bass. The rides field (round 106)
+    counts how much of the line strikes with the bass over the song and how much of that at its pitch class; which parts
+    of the form, and at which octave, it did not say."""
+    voices = cells_mod.part_voices(song, role)
+    if not voices:
+        return ""
+    word = relation_words(song).get(cells_mod.line_voice(voices, role, song))
+    if not word:
+        return ""
+    out = []
+    for part in word.split(">"):
+        body, _, n = part.partition("x")
+        if not (body[:1] in ("d", "p") and body[1:2] == RELATION_LETTERS[R.BASS]):
+            body = "o"
+        bars = int(n) if n.isdigit() else None
+        if out and out[-1][0] == body:
+            out[-1][1] = None if bars is None or out[-1][1] is None else out[-1][1] + bars
+        else:
+            out.append([body, bars])
+    if all(body == "o" for body, _ in out):
+        return ""
+    return "r" + ">".join(body + (f"x{bars}" if bars is not None and i < len(out) - 1 else "") for i, (body, bars) in enumerate(out))
+
+
 def struck_words(song: readings_mod.Song) -> dict:
     """Each struck-with voice's struck facts as the balance token's seventh layer sub-field has them (round 108; _struck_text)."""
     return _relations(song)[1]
@@ -1898,7 +1927,8 @@ def balance_units(songs) -> list:
                       line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
                       bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
                       line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's steps (round 117)
-                      loop_field(s, line_notes) if role in cells_mod.BACKING else ""]   # and the line's loops by the form's letters (round 121)
+                      loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
+                      line_company_field(s, role) if role in readings_mod.UPPER else ""]   # and where the line doubles the bass, by part (round 123)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

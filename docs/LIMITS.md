@@ -320,7 +320,12 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   strike together under the tune's main notes and its synths double the
   tune, and the written parts keep their own rhythm at their own
   density. Since round 122 a voice beside a line is read part by part
-  (the written synths double the tune through D); the line itself has
-  no such word yet (Battle Theme's guitar doubles its bass an octave up
-  in A, C and D), and a part's density by section is a pooled word, not
-  the token song's.
+  (the written synths double the tune through D), and since round 123
+  the line doubles the bass where the token song's does (Battle Theme's
+  guitar through A, C and D), at its octave. What is left: a part's
+  density by section is a pooled word, not the token song's (Battle
+  Theme's bass and guitar thin to four notes a bar in C and D, the
+  written ones keep six to eight); the line follows only the bass (a
+  line that doubles the tune through a part is its own there); and the
+  double is of the bars the bass plays, so where the texture rests the
+  bass the line keeps its own notes.
