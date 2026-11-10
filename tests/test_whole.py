@@ -923,6 +923,49 @@ class TokenProfileTests(unittest.TestCase):
         self.assertEqual(counts, Counter({"root": 4}))
 
 
+class TokenShapeTests(unittest.TestCase):
+    """Round 112: the song's chord-shape profile rides the balance token (`shapes=`), and the chord chain holds a changing chord's
+    quality to it: Battle Theme's reading has a seventh chord on 0.56 of its beats, the songs written on its token on a tenth of
+    their bars, and the guitar held to the riff's sevenths (round 111) had none to play."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chords = [Span(0.0, 16.0, 0, "7", 1.0), Span(16.0, 32.0, 0, "", 1.0)]                                 # C7 four bars, C four bars
+        line = [(4.0 * k + i, 0.9, (48.0, 48.0, 55.0, 55.0)[i], "g") for k in range(8) for i in range(4)]
+        bass = [(4.0 * k + i, 0.9, (36.0, 43.0, 36.0, 43.0)[i], "b") for k in range(8) for i in range(4)]
+        tune = [(4.0 * k + i, 0.9, 72.0 + i, "m") for k in range(8) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": line, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", line), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_the_songs_chord_shapes(self):
+        s = self._song()
+        self.assertEqual(rhythm.chord_shape_profile(s), "maj:50/7:50")                                     # equal shares: the plain triad first
+        self.assertIn("shapes=maj:50/7:50", rhythm.balance_units([s])[0].outcome.split())
+        self.assertEqual(whole.shape_profile_of("maj7:45/5:17/maj:3"), {"maj7": 0.45, "5": 0.17, "": 0.03})
+        self.assertIsNone(whole.shape_profile_of("x9:50"))
+        for name, shape, want in (("IV", "maj7", "IVmaj7"), ("IVmaj7", "", "IV"), ("iv", "m7", "iv7"), ("V7", "m", "v"), ("bVII", "5", "bVII5"), ("ii7", "7", "II7"), ("vi", "dim", "vidim")):
+            self.assertEqual(whole.with_shape(name, shape), want, (name, shape))
+            self.assertEqual(whole.chord_of(want, 0, "major")[1], shape, want)                            # the same degree in the shape asked
+
+    def test_a_changing_chords_quality_is_held_to_the_profile(self):
+        parts = [(0, 4, None, "A")]
+        names, chords = whole.plan_chords({}, parts, 0, 0, "major", random.Random(1), [])                   # no chord word: the home chord a bar
+        self.assertEqual(names, ["I"] * 4)
+        names, chords = whole.plan_chords({}, parts, 0, 0, "major", random.Random(1), [], shape_profile={"maj7": 1.0})
+        self.assertEqual((names, chords), (["Imaj7"] * 4, [(0, "maj7")] * 4))                                # every bar the quality the song has
+        log = []
+        names, chords = whole.plan_chords({}, parts, 0, 0, "major", random.Random(1), log, shape_profile={"": 0.5, "maj7": 0.5})
+        self.assertEqual(names, ["Imaj7", "I", "I", "I"])                                                   # the first bar takes the quality most under its share, the
+        # second changes back within the margin, and a chord the chain repeats keeps its quality: the hold acts where the chord changes
+        self.assertTrue(any(l.startswith("chord shapes held to the balance's song's profile") for l in log), log)
+        names, _ = whole.plan_chords({}, [(0, 4, None, "A"), (4, 4, 0, "A")], 0, 0, "major", random.Random(1), [], shape_profile={"": 0.5, "maj7": 0.5})
+        self.assertEqual(names[4:], names[:4])                                                               # a repeated part keeps its chords whole
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""
@@ -1707,7 +1750,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
-        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith("shapes=")], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes= field aside, round 112)
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit (a period field after, round 106)
         self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}

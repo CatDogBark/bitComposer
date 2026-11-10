@@ -298,6 +298,7 @@ class Plan:
     stretches: dict = field(default_factory=dict)       # a pitched part -> its line's instrument by stretch (the eleventh field, round 91): [(sample,
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
     tone_profiles: dict = field(default_factory=dict)   # a backing part -> its line's chord-tone profile from the token (round 111: field 15)
+    chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -474,22 +475,77 @@ def chord_of(name: str, tonic: int, mode: str):
     return root, shape
 
 
+SHAPE_MARGIN = 0.05                   # how far over its share of the token song's chord-shape profile a quality may run before a
+                                      # changing chord takes the quality most under its share (round 112)
+
+
+def shape_profile_of(text: str) -> dict | None:
+    """The balance token's `shapes=` field read (round 112, arrangement.chord_shape_profile): "maj7:45/5:17/maj:3" -> {"maj7":
+    0.45, "5": 0.17, "": 0.03}; None where it cannot be read."""
+    out = {}
+    for part in text.split("/"):
+        name, _, pct = part.partition(":")
+        shape = "" if name == "maj" else name
+        if shape not in harmony.SHAPES or not pct.isdigit():
+            return None
+        out[shape] = int(pct) / 100
+    return out or None
+
+
+def with_shape(name: str, shape: str) -> str:
+    """A numeral with another quality on the same degree (round 112): "IV" with "maj7" is "IVmaj7", "V7" with "m" is "v", as
+    vocab.numeral spells them (a minor-family shape a lower-case numeral with its m dropped)."""
+    m = NUMERAL.match(name)
+    if not m:
+        return name
+    acc, roman, _ = m.groups()
+    base = acc + roman.upper()
+    return base.lower() + vocab.MINOR_SHAPES[shape] if shape in vocab.MINOR_SHAPES else base + shape
+
+
+def reshaped_name(name: str, tonic: int, mode: str, profile: dict, counts) -> tuple[str, int]:
+    """A changing chord's quality held to the token song's chord-shape profile (round 112): the name as drawn while its shape,
+    with this bar counted, is within SHAPE_MARGIN of the profile's share (`counts`: the shapes of the bars so far), else the
+    same degree in the profile's shape most under its share, where one is; (the name, 1 where it was re-qualified)."""
+    ch = chord_of(name, tonic, mode)
+    if ch is None:
+        return name, 0
+    cur = ch[1]
+    total = sum(counts.values())
+    if (counts[cur] + 1) / (total + 1) <= profile.get(cur, 0.0) + SHAPE_MARGIN:
+        return name, 0
+    under = {sh: profile[sh] - counts[sh] / (total + 1) for sh in profile if sh != cur}
+    best = max(under, key=lambda sh: (under[sh], sh)) if under else None
+    if best is None or under[best] <= 0:
+        return name, 0
+    new = with_shape(name, best)
+    return (new, 1) if chord_of(new, tonic, mode) is not None else (name, 0)
+
+
 def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list,
-                hold_share: float | None = None, hold_rng: random.Random | None = None) -> tuple[list, list]:
+                hold_share: float | None = None, hold_rng: random.Random | None = None, shape_profile: dict | None = None) -> tuple[list, list]:
     """A chord a bar, as numerals and as (root, shape): drawn bar by bar
     from the chord mixture (a new part starts the chain's context over,
     the song's urn going on), the loop's first bar from the loops table, a
-    repeated part keeping the chords of the part it repeats."""
+    repeated part keeping the chords of the part it repeats. `shape_profile`:
+    the token song's chord shapes (round 112): a changing chord whose quality
+    runs over its share takes the quality most under its share on the same
+    degree (reshaped_name); a held bar keeps its chord whole."""
     total = parts[-1][0] + parts[-1][1]
     home = "I" if mode == "major" else "i"
     names = [None] * total
     cache, loops = models.get("chords"), models.get("loops")
     played, previous = Counter(), None
     held_lines, bar_lines = 0, 0
+    shape_counts, reshaped = Counter(), 0                   # the bars' chord shapes so far, for the token's profile (round 112)
     for bar, n, of, _ in parts:
         if of is not None:
             src = parts[of][0]
             names[bar:bar + n] = names[src:src + n]
+            for x in names[src:src + n]:
+                ch = chord_of(x, tonic, mode) if x else None
+                if ch is not None:
+                    shape_counts[ch[1]] += 1
             continue
         prev_name = rhythm.START
         for k in range(bar, bar + n):
@@ -512,12 +568,23 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
                     again = cache.draw(unit, previous, played, hold_rng, keep=lambda o: o not in (rhythm.NO_CHORD, previous))   # share, not over it
                     if again and chord_of(again, tonic, mode) is not None:
                         name = again
+            if shape_profile and (k == bar or name != previous):   # a changing chord's quality held to the token song's shapes (round 112)
+                name, re_ = reshaped_name(name, tonic, mode, shape_profile, shape_counts)
+                reshaped += re_
+            ch = chord_of(name, tonic, mode)
+            if ch is not None:
+                shape_counts[ch[1]] += 1
             played[name] += 1
             previous = prev_name = name
             names[k] = name
     log.append("chords " + " ".join(names))
     if hold_share is not None:
         log.append(f"chords held at the balance's song's share {hold_share:.2f}: {held_lines} of {bar_lines} bar lines inside the parts")
+    if shape_profile:
+        tot = max(1, sum(shape_counts.values()))
+        log.append(f"chord shapes held to the balance's song's profile (round 112): {reshaped} of {tot} bars re-qualified; written "
+                   + " ".join(f"{sh or 'maj'} {c / tot:.2f}" for sh, c in shape_counts.most_common()) + " (the song's "
+                   + " ".join(f"{sh or 'maj'} {v:.2f}" for sh, v in shape_profile.items()) + ")")
     return names, [chord_of(x, tonic, mode) for x in names]
 
 
@@ -1309,6 +1376,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
     token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
     token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
+    token_shapes = None                                     # the token song's chord-shape profile (round 112)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
@@ -1326,6 +1394,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             continue
         if role == "holds":                                 # the token's song's chord-hold share (round 106), not a part
             token_holds = float(rest)
+            continue
+        if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
+            token_shapes = shape_profile_of(rest)
+            if token_shapes:
+                log.append("the balance's song's chord shapes: " + " ".join(f"{sh or 'maj'} {v:.2f}" for sh, v in token_shapes.items()))
             continue
         if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
             token_loud = float(rest)
@@ -1464,7 +1537,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         tempo = rhythm.band(bpm)
         log.append(f"tempo {was:.0f} BPM is outside the band's class ({token_class}): {bpm:.0f} BPM drawn under it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
-                                hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"))   # held as the token's song holds (round 106)
+                                hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"),   # held as the token's song holds (round 106)
+                                shape_profile=token_shapes)                                        # its qualities the token's song's (round 112)
     drum_habit = (token_habits.get(R.DRUMS) or _draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log)) if R.DRUMS in band else None   # before the
     tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)
     textures, plays = plan_texture(models, parts, band, rng, log, defer=(R.DRUMS,), tier=tier)
@@ -1746,7 +1820,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, chord_shapes=token_shapes)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:

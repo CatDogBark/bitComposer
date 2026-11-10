@@ -260,6 +260,22 @@ The words are grouped by where the writing draws them, in the order the song is 
   and never the seventh, and the synth struck with them, whose landings
   the interval word conditions on the guitar's tone, drew from the cells
   where the game's synth leaps (Song Check 93).
+  Since round 112 the token carries a song-level `shapes=` field, the
+  song's chord shapes (`chord_shape_profile`: the share of its beats under
+  each shape the reader heard, in hundredths, the largest first,
+  `shapes=maj7:45/5:17/sus4:12/m:9/7:8/m7:3/maj:3/dim:3` for Battle Theme;
+  67 of FFVI's 68 tokens carry one). `plan_chords` holds a changing
+  chord's quality to it (`reshaped_name`): a quality that, with the bar
+  counted, runs over its share by SHAPE_MARGIN gives way to the profile's
+  quality most under its share on the same degree (`with_shape`: IV to
+  IVmaj7, V7 to v), and a held or repeated chord keeps its quality. Why:
+  the chord chain drew its qualities from the pooled chords word, and
+  Battle Theme's reading has a seventh chord on 0.56 of its beats where
+  FFVI's median song has one on 0.08 (7 songs over 0.3), so the songs
+  written on its token had one on a tenth of their bars, the guitar held
+  to the riff's chord tones (round 111) had no seventh to play, and the
+  synth struck with it never saw the tone the game's synth sits still
+  over.
   And each
   layer entry carries a sixth sub-field, the
   voice's own instrument by stretch (`stretch_word` with "~" between a
