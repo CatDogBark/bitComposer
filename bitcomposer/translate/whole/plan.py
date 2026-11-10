@@ -792,9 +792,97 @@ def reshaped_name(name: str, tonic: int, mode: str, profile: dict, counts) -> tu
     return (new, 1) if chord_of(new, tonic, mode) is not None else (name, 0)
 
 
+THIRDLESS = ("5", "sus2", "sus4")      # the chord shapes with no third: a chord of either third may take one
+
+
+def chord_third(name: str, tonic: int, mode: str) -> str | None:
+    """A chord's third as its name has it (round 127): "m" for a minor-family shape (vocab.MINOR_SHAPES), "M" for a major
+    one; for a shape with no third (THIRDLESS) the third its root has in the key's scale (a minor key's with its raised
+    seventh too, so its dominant may be major or minor), None where the scale gives its root neither or both."""
+    ch = chord_of(name, tonic, mode)
+    if ch is None:
+        return None
+    root, shape = ch
+    if shape in vocab.MINOR_SHAPES:
+        return "m"
+    if shape not in THIRDLESS:
+        return "M"
+    scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]} | ({(tonic + 11) % 12} if mode != "major" else set())
+    minor, major = (root + 3) % 12 in scale, (root + 4) % 12 in scale
+    return "m" if minor and not major else "M" if major and not minor else None
+
+
+def quals_of(text: str) -> dict:
+    """The balance token's `quals=` field read (round 127, arrangement.chord_degree_shapes): "1~maj7:86+0~5:45/sus4:25" ->
+    {1: [("maj7", 0.86)], 0: [("5", 0.45), ("sus4", 0.25)]}, by a degree's semitones over the tonic the qualities its song
+    gives it with their share of the degree's beats, the most heard first; {} where it cannot be read."""
+    out = {}
+    for item in text.split("+"):
+        offset, _, shapes = item.partition("~")
+        pairs = [x.partition(":") for x in shapes.split("/")] if shapes else []
+        if not offset.isdigit() or not 0 <= int(offset) < 12 or not pairs or any((n != "maj" and n not in harmony.SHAPES) or not pct.isdigit() for n, _, pct in pairs):
+            return {}
+        out[int(offset)] = [("" if n == "maj" else n, int(pct) / 100) for n, _, pct in pairs]
+    return out
+
+
+DEGREE_OWN = 0.6                      # a quality a degree has on this share of its beats or more in the token song is the degree's own (round 127)
+
+
+def hold_chord_shapes(names: list, drawn: list, parts: list, tonic: int, mode: str, degree_shapes: dict | None = None) -> tuple[int, int]:
+    """A chord takes the quality its degree has in the token song, and keeps one quality through the song (round 127), on
+    the bars as the chain drew and re-qualified them. `drawn` holds, for each bar whose chord the chain drew anew, the
+    chord's name before the token song's shape profile was held on it (round 112, reshaped_name), None for a bar that
+    holds the bar before's chord. A chord as drawn on a degree that has one quality in the token song (`degree_shapes`,
+    quals_of: by its semitones over the tonic; DEGREE_OWN of the degree's beats or more) takes that quality: Battle
+    Theme's major sevenths sit on its flat second, and the profile's hold, which knows no degrees, had put one on the
+    written song's tonic and left its flat second a bare fifth. Any other chord takes, of the qualities the profile's
+    hold gave it bar by bar, the one it took in the most bars among those the song gives its degree and those that keep
+    its own third (chord_third: a major chord is not made minor, nor a minor one major; a shape with no third suits
+    either), the name as drawn at a tie or where none fits. A held bar takes the bar before's chord again, and a part of the form
+    that repeats one its chords. In place; returns (the bars that took their degree's quality, the other bars changed).
+    The profile's hold decides bar by bar from the shapes so far, so one drawn chord came out in two or three qualities
+    in a song (Gogo's G minor, G major, G5, G7 in four bars): a chord changed its quality on its own degree in 0.19 of
+    the written songs' chord changes against 0.09 of FFVI's."""
+    took = {}
+    for k, d in enumerate(drawn):
+        if d is not None and names[k] is not None:
+            took.setdefault(d, Counter())[names[k]] += 1
+    final, by_degree = {}, set()
+    for d, c in took.items():
+        ch = chord_of(d, tonic, mode)
+        own = (degree_shapes or {}).get((ch[0] - tonic) % 12) if ch is not None else None
+        if own:
+            by_degree.add(d)
+        if own and own[0][1] >= DEGREE_OWN:                 # the degree has one quality in the token song: the chord takes it
+            new = d if ch[1] == own[0][0] else with_shape(d, own[0][0])
+            final[d] = new if chord_of(new, tonic, mode) is not None else d
+            continue
+        third = chord_third(d, tonic, mode)                 # else, of the qualities the profile's hold gave it, the one it took in the most
+        songs = {sh for sh, _ in own} if own else set()     # bars among those the song gives the degree and those that keep its third
+        fits = {n: x for n, x in c.items() if chord_of(n, tonic, mode)[1] in songs or third is None or chord_of(n, tonic, mode)[1] in THIRDLESS
+                or chord_third(n, tonic, mode) == third}
+        final[d] = max(fits, key=lambda n: (fits[n], n == d, n)) if fits else d
+    changed, taken = 0, 0
+    for bar, n, of, _ in parts:
+        if of is not None:
+            continue
+        for k in range(bar, bar + n):
+            want = final.get(drawn[k]) if drawn[k] is not None else (names[k - 1] if k > bar else names[k])
+            if want is not None and want != names[k]:
+                names[k] = want
+                changed += 1
+            if drawn[k] in by_degree:
+                taken += 1
+    for bar, n, of, _ in parts:
+        if of is not None:
+            names[bar:bar + n] = names[parts[of][0]:parts[of][0] + n]
+    return taken, changed
+
+
 def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list,
                 hold_share: float | None = None, hold_rng: random.Random | None = None, shape_profile: dict | None = None,
-                cycle: dict | None = None) -> tuple[list, list]:
+                cycle: dict | None = None, degree_shapes: dict | None = None) -> tuple[list, list]:
     """A chord a bar, as numerals and as (root, shape): drawn bar by bar
     from the chord mixture (a new part starts the chain's context over,
     the song's urn going on), the loop's first bar from the loops table, a
@@ -815,6 +903,7 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     played, previous = Counter(), None
     held_lines, bar_lines = 0, 0
     shape_counts, reshaped = Counter(), 0                   # the bars' chord shapes so far, for the token's profile (round 112)
+    drawn = [None] * total                                  # a bar's chord as the chain drew it, before the profile's hold (round 127)
     for bar, n, of, _ in parts:
         if of is not None:
             src = parts[of][0]
@@ -845,6 +934,8 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
                     again = cache.draw(unit, previous, played, hold_rng, keep=lambda o: o not in (rhythm.NO_CHORD, previous))   # share, not over it
                     if again and chord_of(again, tonic, mode) is not None:
                         name = again
+            if (shape_profile or degree_shapes) and (k == bar or name != previous):
+                drawn[k] = name                             # the chord as the chain drew it (round 127)
             if shape_profile and (k == bar or name != previous):   # a changing chord's quality held to the token song's shapes (round 112)
                 name, re_ = reshaped_name(name, tonic, mode, shape_profile, shape_counts)
                 reshaped += re_
@@ -854,6 +945,10 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
             played[name] += 1
             previous = prev_name = name
             names[k] = name
+    by_degree, one_shape = hold_chord_shapes(names, drawn, parts, tonic, mode, degree_shapes) if shape_profile or degree_shapes else (0, 0)
+    if one_shape:                                           # a chord's quality its degree's in the token song, and one through the song (round
+        shape_counts = Counter(ch[1] for ch in (chord_of(x, tonic, mode) for x in names if x) if ch is not None)   # 127), once the chain is
+                                                            # drawn: its draws, its holds and its shapes stand, so no other draw moves
     looped = 0                                              # the harmony's loops (round 121), on the bars as drawn: a bar on the figure takes
     for bar, n, lag, off in looped_parts([p for p in parts if p[2] is None], cycle):   # the chord of the first bar at its place of it, whole
         figure = {}
@@ -877,7 +972,8 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
         log.append(f"chords held at the balance's song's share {hold_share:.2f}: {held_lines} of {bar_lines} bar lines inside the parts")
     if shape_profile:
         tot = max(1, sum(shape_counts.values()))
-        log.append(f"chord shapes held to the balance's song's profile (round 112): {reshaped} of {tot} bars re-qualified; written "
+        log.append(f"chord shapes held to the balance's song's profile (round 112): {reshaped} of {tot} bars re-qualified, "
+                   f"{by_degree} chords on a degree the song has and {one_shape} bars put to their chord's one quality (round 127); written "
                    + " ".join(f"{sh or 'maj'} {c / tot:.2f}" for sh, c in shape_counts.most_common()) + " (the song's "
                    + " ".join(f"{sh or 'maj'} {v:.2f}" for sh, v in shape_profile.items()) + ")")
     return names, [chord_of(x, tonic, mode) for x in names]
@@ -1918,6 +2014,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
     token_steps = {}                                        # a backing line's step profile (round 117)
     token_shapes = None                                     # the token song's chord-shape profile (round 112)
+    token_quals = {}                                        # the qualities each degree has in the token song (round 127)
     token_form = None                                       # the token song's form letters (round 113)
     token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
@@ -1953,6 +2050,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             got = loops_of(rest)
             if got:
                 token_loops[LOOP_CHORDS] = got
+            continue
+        if role == "quals":                                 # the qualities each degree has in the token's song (round 127), not a part
+            token_quals = quals_of(rest)
             continue
         if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
             token_shapes = shape_profile_of(rest)
@@ -2150,6 +2250,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
                                 hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"),   # held as the token's song holds (round 106)
                                 shape_profile=token_shapes,                                        # its qualities the token's song's (round 112)
+                                degree_shapes=token_quals,                                         # each on the degree the song has it on (round 127)
                                 cycle=loops.get(LOOP_CHORDS))                                      # its harmony's loops (round 121)
     drum_habit = (token_habits.get(R.DRUMS) or _draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log)) if R.DRUMS in band else None   # before the
     tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)

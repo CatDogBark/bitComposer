@@ -1054,11 +1054,76 @@ class TokenShapeTests(unittest.TestCase):
         self.assertEqual((names, chords), (["Imaj7"] * 4, [(0, "maj7")] * 4))                                # every bar the quality the song has
         log = []
         names, chords = whole.plan_chords({}, parts, 0, 0, "major", random.Random(1), log, shape_profile={"": 0.5, "maj7": 0.5})
-        self.assertEqual(names, ["Imaj7", "I", "I", "I"])                                                   # the first bar takes the quality most under its share, the
-        # second changes back within the margin, and a chord the chain repeats keeps its quality: the hold acts where the chord changes
+        self.assertEqual(names, ["I", "I", "I", "I"])                                                       # the first bar takes the quality most under its share and the
+        # second is as drawn, within the margin: one chord in two qualities, which round 127 puts to one, the name as drawn at a tie
         self.assertTrue(any(l.startswith("chord shapes held to the balance's song's profile") for l in log), log)
         names, _ = whole.plan_chords({}, [(0, 4, None, "A"), (4, 4, 0, "A")], 0, 0, "major", random.Random(1), [], shape_profile={"": 0.5, "maj7": 0.5})
         self.assertEqual(names[4:], names[:4])                                                               # a repeated part keeps its chords whole
+
+
+class ChordShapeHeldTests(unittest.TestCase):
+    """Round 127: a chord takes the quality its degree has in the token song (`quals=`), and keeps one quality through the
+    song. The token song's shape profile (round 112) is held bar by bar from the shapes so far and knows no degrees, so
+    one drawn chord came out in two or three qualities (Gogo's G minor, G major, G5, G7 in four bars) and Battle Theme's
+    major seventh, the flat second's, sat on the written tonic; once the chain is drawn a chord on a degree the song has
+    takes the song's quality for it, and any other, of the qualities the hold gave it, the one it took in the most bars
+    among those that keep its own third."""
+
+    def test_a_chords_third(self):
+        for name, mode, want in (("I", "major", "M"), ("i", "minor", "m"), ("IV7", "major", "M"), ("ii7", "major", "m"), ("vidim", "major", "m"),
+                                 ("V5", "major", "M"), ("II5", "major", "m"), ("I5", "minor", "m"), ("VIIsus4", "minor", "M")):
+            self.assertEqual(whole.chord_third(name, 0, mode), want, (name, mode))                   # a shape with no third: the third its root has in the key
+        self.assertIsNone(whole.chord_third("bII5", 0, "major"))                                    # a root the scale gives neither third
+        self.assertIsNone(whole.chord_third("V5", 0, "minor"))                                      # a minor key's dominant: either, by its raised seventh
+        self.assertIsNone(whole.chord_third(rhythm.NO_CHORD, 0, "major"))
+
+    def test_a_chord_takes_the_quality_it_took_most_within_its_third(self):
+        parts = [(0, 6, None, "A"), (6, 6, 0, "A")]
+        drawn = ["I", "I", "I", "IV", "IV", None] + [None] * 6
+        names = ["Imaj7", "I", "Imaj7", "iv", "iv", "iv"] * 2
+        taken, changed = whole.hold_chord_shapes(names, drawn, parts, 0, "major")
+        self.assertEqual(names[:6], ["Imaj7", "Imaj7", "Imaj7", "IV", "IV", "IV"])                   # I as it came out in two bars of three; IV never made minor; a held bar the bar before's
+        self.assertEqual(names[6:], names[:6])                                                      # a part that repeats one: its chords
+        self.assertEqual((taken, changed), (0, 4))
+        names = ["I5", "I", "I5"]
+        whole.hold_chord_shapes(names, ["I", "I", "I"], [(0, 3, None, "A")], 0, "major")
+        self.assertEqual(names, ["I5"] * 3)                                                         # a shape with no third suits either
+        names = ["I", "Imaj7"]
+        self.assertEqual(whole.hold_chord_shapes(names, ["I", "I"], [(0, 2, None, "A")], 0, "major"), (0, 1))
+        self.assertEqual(names, ["I", "I"])                                                         # a tie: the name as drawn
+
+    def test_a_chord_takes_its_degrees_quality_in_the_token_song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        chords = [Span(0.0, 16.0, 0, "7", 1.0), Span(16.0, 32.0, 1, "maj7", 1.0), Span(32.0, 40.0, 0, "", 1.0), Span(40.0, 48.0, 5, "m", 1.0)]   # C7 four bars, D-flat major seventh four, C two, F minor two
+        tune = [(4.0 * k + i, 0.9, 72.0 + i, "m") for k in range(12) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"melody": tune}, sid="s", game="g", numbers=list(range(12)), parts=[(0, 12, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("melody", tune)}; s.voice_levels = {0: 0.4}; s.levels = {"melody": 0.4}
+        self.assertEqual(rhythm.chord_degree_shapes(s), "0~7:67/maj:33+1~maj7:100")                 # by a degree's semitones over the tonic, its qualities and their shares, the most heard
+        self.assertIn("quals=0~7:67/maj:33+1~maj7:100", rhythm.balance_units([s])[0].outcome.split())   # first; a degree heard under four bars (the F minor) is left out
+        self.assertEqual(whole.quals_of("1~maj7:86+0~5:45/7:30/m:25"), {1: [("maj7", 0.86)], 0: [("5", 0.45), ("7", 0.30), ("m", 0.25)]})
+        self.assertEqual(whole.quals_of("x~maj7:50"), {}); self.assertEqual(whole.quals_of("1~x9:50"), {}); self.assertEqual(whole.quals_of("1~maj7"), {})
+        quals = {0: [("5", 0.5), ("m", 0.5)], 1: [("maj7", 1.0)], 5: [("sus4", 0.8), ("", 0.2)]}
+        names = ["Imaj7", "bII5", "IV", "I5", "i"]                                                   # as the profile's hold left them
+        taken, changed = whole.hold_chord_shapes(names, ["i", "bII5", "IV", "i", "i"], [(0, 5, None, "A")], 0, "minor", quals)
+        self.assertEqual(names, ["i", "bIImaj7", "IVsus4", "i", "i"])                               # a degree with one quality in the song takes it; the tonic, of what the hold gave
+        self.assertEqual((taken, changed), (5, 4))                                                  # it, a quality the song gives the tonic (never the major seventh), as drawn at a tie
+        names, chords = whole.plan_chords({}, [(0, 4, None, "A")], 0, 0, "minor", random.Random(1), [], shape_profile={"maj7": 1.0}, degree_shapes={0: [("m", 0.5), ("5", 0.5)]})
+        self.assertEqual(names, ["i"] * 4)                                                          # the profile's major seventh is not put on a tonic the song has minor
+        names, chords = whole.plan_chords({}, [(0, 4, None, "A")], 0, 0, "minor", random.Random(1), [], degree_shapes={0: [("5", 1.0)]})
+        self.assertEqual(chords, [(0, "5")] * 4)                                                    # the degree's one quality, without a profile too
+
+    def test_the_chain_holds_one_quality_a_chord(self):
+        parts = [(0, 4, None, "A")]
+        log = []
+        names, chords = whole.plan_chords({}, parts, 0, 0, "minor", random.Random(1), log, shape_profile={"": 1.0})
+        self.assertEqual((names, chords), (["i"] * 4, [(0, "m")] * 4))                               # the profile asks a major triad: the home chord is not made major
+        self.assertTrue(any("put to their chord's one quality (round 127)" in l for l in log), log)
+        names, chords = whole.plan_chords({}, parts, 0, 0, "minor", random.Random(1), [], shape_profile={"5": 1.0})
+        self.assertEqual(chords, [(0, "5")] * 4)                                                    # a shape with no third it takes
+        names, _ = whole.plan_chords({}, parts, 0, 0, "major", random.Random(1), [], shape_profile={"maj7": 1.0})
+        self.assertEqual(names, ["Imaj7"] * 4)                                                      # within its third the profile's quality stands
 
 
 class TokenFormTests(unittest.TestCase):
@@ -2482,7 +2547,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
-        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "form=", "cycle="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes= and form= fields aside, rounds 112-113)
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "quals=", "form=", "cycle="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes=, quals= and form= fields aside, rounds 112, 127 and 113)
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit (a period field after, round 106)
         self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}

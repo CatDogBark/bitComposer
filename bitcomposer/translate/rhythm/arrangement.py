@@ -1760,6 +1760,40 @@ def chord_shape_profile(s) -> str:
     return "/".join(f"{name}:{pct}" for name, pct in parts if pct >= 1)
 
 
+DEGREE_BARS = 4                      # bars a degree must be heard for the token to carry its qualities (round 127): under it, what the
+                                     # degree has is a passing chord's, not a habit of the song's
+DEGREE_SHARE = 0.2                   # a quality a degree has for this share of its beats or more is one of the degree's (round 127)
+DEGREE_SHAPES = 3                    # the qualities kept a degree, the most heard first
+
+
+def chord_degree_shapes(s) -> str:
+    """The qualities each degree of the song's key has, as the balance token carries them (round 127, `quals=`): for each
+    root the reader heard for DEGREE_BARS bars or more, by its semitones over the tonic, the shapes it has on DEGREE_SHARE of its
+    beats or more with their share of the degree's beats in hundredths, the most heard first, DEGREE_SHAPES at most:
+    "1~maj7:86+0~5:45/sus4:25+5~sus4:100" for a song whose major sevenths are on the flat second, the tonic a power
+    chord or suspended, the fourth suspended (the plain major triad "maj"); "" under SHAPE_BARS bars of chords. The shape profile (round 112) says which qualities the song
+    has and not on which degrees, and the chain, holding a changing chord to it bar by bar, gave the written Battle
+    Theme a major seventh on its tonic and one drawn chord two or three qualities in a song."""
+    if not getattr(s, "chords", None) or s.tonic is None:
+        return ""
+    beats = {}
+    for c in s.chords:
+        if c.root is None or c.fit < FIT or c.end <= c.start:
+            continue
+        beats.setdefault((c.root - s.tonic) % 12, Counter())[c.shape or ""] += c.end - c.start
+    if sum(sum(v.values()) for v in beats.values()) < SHAPE_BARS * s.meter:
+        return ""
+    out = []
+    for offset, shapes in sorted(beats.items(), key=lambda kv: (-sum(kv[1].values()), kv[0])):
+        total = sum(shapes.values())
+        if total < DEGREE_BARS * s.meter:
+            continue
+        kept = [(sh, b) for sh, b in sorted(shapes.items(), key=lambda kv: (-kv[1], kv[0])) if b >= DEGREE_SHARE * total][:DEGREE_SHAPES]
+        if kept:
+            out.append(f"{offset}~" + "/".join(f"{sh or 'maj'}:{int(round(100 * b / total))}" for sh, b in kept))
+    return "+".join(out)
+
+
 def line_stretches(s, role: str) -> str:
     """The balance token's eleventh field (round 91): the line voice's instrument by stretch (stretch_word), where it has
     two or more; "" for a line on one instrument (the eighth field's sample and range stand). FFVI: 63 of 249 line voices
@@ -2048,6 +2082,9 @@ def balance_units(songs) -> list:
         shapes = chord_shape_profile(s)                      # the song's chord shapes (round 112): which qualities its harmony has
         if shapes:
             tokens.append(f"shapes={shapes}")
+        quals = chord_degree_shapes(s)                       # and which degree has which (round 127)
+        if quals:
+            tokens.append(f"quals={quals}")
         form = form_field(s)                                 # the song's form (round 113): which parts return
         if form:
             tokens.append(f"form={form}")
