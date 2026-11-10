@@ -2622,6 +2622,8 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
         words = (getattr(plan, "layer_relations", None) or {}).get(role) or []
         target = {}
         for v, word in enumerate(words, start=1):
+            if not word:                                    # a voice without a relation word: its own
+                continue
             bar = 0
             for kind, who, _, bars in relation_stretches(word):
                 end = None if bars is None else bar + bars

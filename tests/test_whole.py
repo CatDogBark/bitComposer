@@ -1057,7 +1057,7 @@ class TokenContinuityTests(unittest.TestCase):
         written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, []), "accompaniment": whole.Part("accompaniment", list(rider), [""] * 4, [])}
         p = whole.plan({}, 3, "g")
         p.bass_continuity, p.tone_profiles, p.bounds, p.registers = 0.9, {}, {}, {"bass": (32, 44)}
-        p.layer_relations = {"accompaniment": ["wl+19"]}
+        p.layer_relations = {"accompaniment": ["wl+19", None]}                                      # the third voice has no relation word
         log = whole.hold_bass_pitch(p, song, written, list(bass))
         mains = [max(set(int(m) % 12 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4), key=lambda pc: sum(1 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4 and int(m) % 12 == pc)) for k in range(4)]
         self.assertEqual(mains, [0, 7, 7, 7])                                                      # the first bar line is free (the budget counts it kept), the
