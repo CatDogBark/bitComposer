@@ -281,9 +281,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-
   bar A, B, C, B again, D; 67 of 68 FFVI tokens carry one), and the plan
   rebuilds its form from them once the balance is read: the form's own
-  draw stands, so no other draw moves; each new part's length is drawn on
-  an own stream and a repeat is as long as the part it repeats; the loop's
-  part is drawn again for the new form. Why: the form had been one of the
+  draw stands, so no other draw moves; each part takes the token's bars (a
+  returning part its first statement's, played whole), a form past the
+  bars asked is cut as any and one short of them leaves the draw standing;
+  the loop's part is drawn again for the new form. Why: the form had been one of the
   game's forms whole from the pooled letters word, right in the aggregate
   (34 of FFVI's 67 songs repeat a part and 18 bring one back after
   another; 42 and 20 of sixty written songs) and wrong for the song, so
