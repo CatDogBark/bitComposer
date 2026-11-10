@@ -276,6 +276,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   to the riff's chord tones (round 111) had no seventh to play, and the
   synth struck with it never saw the tone the game's synth sits still
   over.
+  Since round 113 the token carries the song's form as a song-level
+  `form=` field (`form_field`: the parts' letters in order, a returning
+  part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-
+  bar A, B, C, B again, D; 67 of 68 FFVI tokens carry one), and the plan
+  rebuilds its form from them once the balance is read: the form's own
+  draw stands, so no other draw moves; each part takes the token's bars (a
+  returning part its first statement's, played whole), a form past the
+  bars asked is cut as any and one short of them leaves the draw standing;
+  the loop's part is drawn again for the new form. Why: the form had been one of the
+  game's forms whole from the pooled letters word, right in the aggregate
+  (34 of FFVI's 67 songs repeat a part and 18 bring one back after
+  another; 42 and 20 of sixty written songs) and wrong for the song, so
+  four of the five Song Check songs on Battle Theme's token never came
+  back to what they had played.
   And each
   layer entry carries a sixth sub-field, the
   voice's own instrument by stretch (`stretch_word` with "~" between a

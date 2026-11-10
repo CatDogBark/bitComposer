@@ -109,6 +109,12 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   token voice never played falls to the pooled second voice's share; and a
   struck voice whose token voice rings long rings as long (Mt. Koltz's and
   Opening Theme part 3's hold notes of 15.9 beats).
+  The sections' densities were thought to move out of step on Battle
+  Theme's token (the round 104 investigation) and do not, by the measure:
+  at a section boundary the written pitched parts step alike on 0.33 of
+  boundaries and agree pairwise on 0.53 (sixty seeds), FFVI's on 0.27 and
+  0.53 at the median, and Battle Theme's own on 0.00 and 0.33 of its four;
+  measured in round 113 and left as it is.
   The relation reader counts channels, and a game sometimes splits one
   line over two: of FFVI's 56 pairs of voices that strike together on 0.8
   of their notes, 7 trade the top note between their channels on a fifth
