@@ -1327,6 +1327,30 @@ def chord_hold_share(s) -> float | None:
     return 1 - changes / len(lines)
 
 
+SHAPE_BARS = 8                       # bars of chords a song needs for its chord-shape profile (round 112)
+
+
+def chord_shape_profile(s) -> str:
+    """The song's chord-shape profile as the balance token carries it (round 112, `shapes=`): the share of its beats under each
+    chord shape the reader heard (harmony.SHAPES; the plain major triad as "maj"), in hundredths, the largest first, shapes
+    under a hundredth left out: "maj7:45/5:17/sus4:12/m:9/7:8/m7:3/dim:3/maj:3" for Battle Theme, whose riff's sevenths the
+    reader hears as seventh chords on 0.56 of its beats where FFVI's median song has them on 0.08; "" under SHAPE_BARS bars of
+    chords. The chord chain draws its shapes from the pooled chords word, so a song on Battle Theme's token had a seventh chord
+    on a tenth of its bars, and its guitar, held to the riff's chord tones (round 111), had no seventh to play."""
+    if not getattr(s, "chords", None):
+        return ""
+    beats = Counter()
+    for c in s.chords:
+        if c.root is None or c.fit < FIT or c.end <= c.start:
+            continue
+        beats[c.shape or ""] += c.end - c.start
+    total = sum(beats.values())
+    if total < SHAPE_BARS * s.meter:
+        return ""
+    parts = [(shape or "maj", int(round(100 * b / total))) for shape, b in sorted(beats.items(), key=lambda kv: (-kv[1], kv[0]))]
+    return "/".join(f"{name}:{pct}" for name, pct in parts if pct >= 1)
+
+
 def line_stretches(s, role: str) -> str:
     """The balance token's eleventh field (round 91): the line voice's instrument by stretch (stretch_word), where it has
     two or more; "" for a line on one instrument (the eighth field's sample and range stand). FFVI: 63 of 249 line voices
@@ -1580,6 +1604,9 @@ def balance_units(songs) -> list:
         holds = chord_hold_share(s)                          # the song's chord-hold share (round 106): how long its chords sit
         if holds is not None:
             tokens.append(f"holds={holds:.2f}")
+        shapes = chord_shape_profile(s)                      # the song's chord shapes (round 112): which qualities its harmony has
+        if shapes:
+            tokens.append(f"shapes={shapes}")
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with
