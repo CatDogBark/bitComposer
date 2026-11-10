@@ -486,7 +486,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
          models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None,
-         envelope_at=None, tone_profile: dict | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         envelope_at=None, tone_profile: dict | None = None, continuity: float | None = None, log: list | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -498,7 +498,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     `sounds` (the share of its gap a note sounds) given instead of read.
     `bounds_at`: bar -> (floor, ceiling) where the token song's bass changes
     instrument by stretch (round 92); the part's floor and ceiling else. `tone_profile`: the token song's chord-tone profile
-    for the line (round 111, profile_tone), held on the line's marks."""
+    for the line (round 111, profile_tone), held on the line's marks. `continuity`: the token song's share of bar lines the bass
+    keeps its pitch class across (round 114): while the line's share runs under it, a bar whose chord root would move the
+    bass is realized on the bar before's main pitch class instead (the riff's pedal under a changing chord)."""
     lock = lock or {}
     own = song.notes.get(R.BASS, [])
     if habit is None:
@@ -529,12 +531,25 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                            chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)
     notes, last_root, previous = [], tonic, None
     tone_counts = Counter()                                 # the line's chord-tone classes written, for the profile hold (round 111)
+    prev_main, same, trans, pedaled = None, 0, 0, 0       # the bar before's main pitch class and the bar lines kept, for the continuity hold (round 114)
     beside = kind in figures_mod.VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
     prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         low_k, high_k = (bounds_at(k) or (low, high)) if bounds_at is not None else (low, high)   # the bar's register (round 92)
+        override = None
+        if continuity is not None and not beside and prev_main is not None and figure != figures_mod.REST:   # the pitch held across the bar line (round 114)
+            c_k = chord_at(k)
+            if c_k is not None and c_k[0] % 12 != prev_main and (same + 1) / (trans + 1) < continuity - CONTINUITY_MARGIN:
+                override = prev_main
         new, last_root, previous = realize(figure, a, b, song, low_k, sounds, scale, last_root, previous, runs_to=tune_mod.first_onset(figures, bars, k + 1), high=high_k,
-                                           profile=tone_profile if not beside else None, counts=tone_counts)
+                                           profile=tone_profile if not beside else None, counts=tone_counts, root_override=override)
+        if new and not beside:
+            main = Counter(int(round(m)) % 12 for _, _, m in new).most_common(1)[0][0]
+            if prev_main is not None:
+                trans += 1
+                same += main == prev_main
+                pedaled += override is not None
+            prev_main = main
         if shared is not None and not beside:               # the line: its notes for the voice beside it
             for start, _, midi in new:
                 shared[("line", (k, rhythm.position(start - a, song.division)))] = midi
@@ -557,6 +572,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             new = repitched
             previous = new[-1][2] if new else previous
         notes += new
+    if log is not None and continuity is not None and not beside and trans:
+        log.append(f"bass pitch held across bar lines to the balance's song's {continuity:.2f} (round 114): {same} of {trans} kept, {pedaled} bars on the bar before's pitch class")
     return notes, figures
 
 
@@ -592,11 +609,13 @@ def passing(previous: float | None, toward: int | None, scale: set, low: int, ro
 
 def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds, scale: set,
             last_root: int, previous: float | None = None, runs_to: float | None = None, high: int | None = None,
-            profile: dict | None = None, counts=None) -> tuple[list, int, float | None]:
+            profile: dict | None = None, counts=None, root_override: int | None = None) -> tuple[list, int, float | None]:
     """A figure's tokens as notes in the bar [a, b) (see the module); returns
     them, the last chord root used and the last note's midi. `profile`: the
     token song's chord-tone profile, held on the marks' tones (profile_tone,
-    round 111) with `counts` the classes written so far."""
+    round 111) with `counts` the classes written so far. `root_override`: the
+    pitch class the bar's marks are realized from in place of the chords'
+    roots (round 114: the bass's pitch held across a chord change)."""
     tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
     chords = []
     for p, _ in tokens:
@@ -606,6 +625,8 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
         else:
             shape = ""
         chords.append((last_root, shape))
+    if root_override is not None:
+        chords = [(root_override % 12, sh) for _, sh in chords]
     out, direction = [], 1
     for i, (p, mark) in enumerate(tokens):
         start = a + float(p)
@@ -639,6 +660,8 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
     return out, last_root, previous
 
 
+CONTINUITY_MARGIN = 0.05              # how far under the token song's bass continuity the line may run before a changing bar is realized on the
+                                      # bar before's pitch class (round 114)
 PROFILE_MARGIN = 0.05                 # how far over its share of the token song's chord-tone profile a line's tone may run before the
                                       # line takes the chord's tone most under its share instead (round 111)
 

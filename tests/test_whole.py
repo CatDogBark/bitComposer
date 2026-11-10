@@ -995,6 +995,37 @@ class TokenFormTests(unittest.TestCase):
         self.assertEqual([p[3] for p in whole.plan_form({}, random.Random(1), [])], ["A", "B", "C"])   # without the token: the sizes and form words (defaults)
 
 
+class TokenContinuityTests(unittest.TestCase):
+    """Round 114: the bass line's pitch continuity rides the balance token, and the bass writer holds its pitch class across bar lines
+    to it: Battle Theme's bass keeps its riff's pitch under the chord reader's changes on 0.57 of its bar lines, the written basses
+    walked the chain's roots on 0.26."""
+
+    def test_the_token_carries_the_bass_continuity(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(10)]
+        mains = (0, 0, 7, 0, 0, 0, 5, 5, 0, 0)                                                         # C C G C C C F F C C: 9 transitions, 5 kept
+        bass = [(4.0 * k + i, 0.9, 36.0 + mains[k], "b") for k in range(10) for i in range(4)]
+        tune = [(4.0 * k + i, 0.9, 72.0, "m") for k in range(10) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 40.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(10)), parts=[(0, 10, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}; s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        self.assertEqual(rhythm.bass_continuity_field(s), "k56")
+        tok = rhythm.balance_units([s])[0].outcome
+        bass_f = next(f for f in tok.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(bass_f[16], "k56")
+        self.assertEqual(rhythm.bass_continuity_field(s, bass[:16]), "")                              # under CONTINUITY_BARS transitions: no field
+
+    def test_a_bar_is_realized_on_the_bar_befores_pitch_class(self):
+        from bitcomposer.translate.writer import parts
+        from bitcomposer.translate.vocab import Span
+        song = rhythm.Song("w", 4, 4, [(0.0, 4.0)], [Span(0.0, 4.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=[0], parts=[(0, 1, None, "A")], tonic=0, mode="major")
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        plain, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0)
+        self.assertEqual([int(m) % 12 for a, b, m in plain], [0, 7, 0, 7])                             # C and G over C
+        held, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0, root_override=9)
+        self.assertEqual([int(m) % 12 for a, b, m in held], [9, 4, 9, 4])                              # the bar on A: A and its fifth E, the chord's shape kept
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""

@@ -300,6 +300,7 @@ class Plan:
     tone_profiles: dict = field(default_factory=dict)   # a backing part -> its line's chord-tone profile from the token (round 111: field 15)
     chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
     form_letters: list | None = None                    # the token song's form, [(letter, bars)] (round 113), or None
+    bass_continuity: float | None = None                # the token song's bass line pitch continuity (round 114), or None
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -1396,6 +1397,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
     token_shapes = None                                     # the token song's chord-shape profile (round 112)
     token_form = None                                       # the token song's form letters (round 113)
+    token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
@@ -1544,6 +1546,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 m_ = re.fullmatch(r"b(\d+)/(\d+)", fields[14])
                 if m_:
                     token_rides[role] = (int(m_.group(1)) / 100, int(m_.group(2)) / 100)
+            if len(fields) > 16 and fields[16] and role == R.BASS:   # the bass line's pitch continuity (round 114): `k57`
+                m_ = re.fullmatch(r"k(\d+)", fields[16])
+                if m_:
+                    token_continuity = int(m_.group(1)) / 100
+                    log.append(f"the bass keeps its pitch class across {token_continuity:.2f} of its bar lines in the balance's song")
             if len(fields) > 15 and fields[15]:             # the line's chord-tone profile (round 111): `t45/2/9/30/2/12`
                 prof = tone_profile_of(fields[15])
                 if prof:
@@ -1850,7 +1857,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, chord_shapes=token_shapes, form_letters=token_form)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, chord_shapes=token_shapes, form_letters=token_form, bass_continuity=token_continuity)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2267,16 +2274,19 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
         gs = plan.gap_sounds.get(R.BASS)                    # the share a note sounds by its gap (gap_sounds), the one share without it
         shared_bass = {}                                    # the line's notes, for a second voice following it
+        bass_log = []                                       # what the bass writer's holds did (round 114)
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], habit_at=habit_at_for(plan, R.BASS), envelope_at=envelope_at_for(plan, R.BASS), key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.bounds.get(R.BASS, plan.registers[R.BASS])[0],
                                      sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share,
                                      ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS),
-                                     tone_profile=plan.tone_profiles.get(R.BASS))   # the line's chord tones as the token song's (round 111)
+                                     tone_profile=plan.tone_profiles.get(R.BASS),   # the line's chord tones as the token song's (round 111)
+                                     continuity=plan.bass_continuity, log=bass_log)   # and its pitch held across bar lines as the song's (round 114)
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         log = [f"habit {plan.habits[R.BASS]}, register {plan.bounds.get(R.BASS, plan.registers[R.BASS])}, {sum(1 for f in figures if f != writer.REST)} bars written, "
                f"{len(notes)} notes; " + (f"on the kit's accents in {len(lock)} bars at {lock_share:.1f}" if R.BASS in plan.locks else f"locked to the band in {len(lock)} bars")]
+        log += bass_log
         layer = layer_of(plan.extras.get(R.BASS))
         beside_bass = set()
         if plan.voices.get(R.BASS, 1) >= 2 and layer[0] == "apart":   # a second bass line of its own (FFVI's layered basses are all apart)
