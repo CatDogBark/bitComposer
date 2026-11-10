@@ -8541,3 +8541,83 @@ bass plays; where the texture rests the bass, or the accompaniment, the
 line is as before (which parts play in which part of the form is the
 pooled textures word, not the token song's: Battle Theme's A is the
 guitar and the bass alone). The standing list as at round 114.
+
+### Round 124: the parts that sound in each part of the form are the token song's (2026-11-10, the first change from Song Check 100's investigation and the Arrangement Check, on the owner's go)
+
+**Why.** Song Check 100
+(https://claude.ai/artifact/R4oU5wSH8gCGmNwFLCeovK) played one song for
+each of FFVI's 68, the theme asked for as the token song has it. The
+owner marked eleven: "its all pretty musical at this point", and dull
+beside the game's; the song on Edgar and Sabin's token abrasive
+("garbled noise, especially the beginning"); on Locke's, "the parts
+drop a lot of the instruments and play a super basic musical system for
+a bit". Each written song was then read beside its token song by the
+same readers. Bar by bar they agree (notes a bar, rhythm repeats, the
+voices sounding at once). Section by section they do not: every part of
+the band sounds in 0.48 of a written song's bars against 0.62 of its
+token song's, the bass is gone four bars or more in 28 written songs
+against 14, and the parts sounding change at 0.32 of the bar lines
+against 0.15. The written Edgar and Sabin plays its accompaniment and
+bass alone for fourteen bars and its tune alone for six; the game's
+four parts play every bar.
+
+**Found.** A song takes its band, sounds, levels, form and loops from
+its token song, and what sounds in each part of that form from the
+`part_textures` word, with the `part_entries` word for the entrances:
+both pooled over the game and drawn by a part's place in the form. The
+form has been the token song's since round 113, so a pooled texture
+lands on a part of the form it was never counted in.
+
+**The experiment first.** The Arrangement Check
+(https://claude.ai/artifact/VH45E5aZHe1RBtcvbL9yCk): four Song Check 100
+songs (Locke's, Gogo's, Edgar and Sabin's, Battle Theme's), each as dev
+writes it and with the token song's own arrangement by section patched
+in at run time (this round's word with those of rounds 125 and 126).
+The owner marked all four better after, and asked for the changes
+built.
+
+**Built.** The reader: `part_spans_field`, every part's twenty-first
+field, the kit's too: the parts of the form the part sounds in by the
+form's letters, each with the bars after its start the part enters and
+the bars before its end it leaves where it does not sound it whole
+(`eA+B2.0+D0.4`); a letter left out is a part of the form it rests
+through. A part sounds in a bar as the texture words count it
+(`sounding_bars`), and its span runs from the first bar it sounds in to
+the last, as the entrance word reads one. The plan: `spans_of` reads
+the field; where the form's letters are the token song's (`own_form`,
+the loops' condition) `token_textures` sets the textures and each
+part's bars from the spans, a part of the form too short for its
+entrance played whole, a returning part copying its first statement's
+bars. The pooled draws are made all the same (their log lines unsaid),
+so no other draw moves; the drums' entrance draw, on its own stream, is
+left out. A part that then sounds nowhere leaves the band, as before.
+Tests: the field from a song whose accompaniment enters two bars into
+A, whose tune rests A and leaves C early, the kit's, none without a
+form; the field's place in the token; the plan's textures, entrances
+and log with the token's form, and the pooled draw without it; a
+returning part and a part too short. Suite 492 (1 skip).
+
+**Measured.** 62 of FFVI's 68 tokens carry the field (the songs whose
+form the token carries). Of 1058 cases of a part in a part of the form,
+835 are whole, 120 enter late or leave early, 103 rest through it; six
+songs have every part through every part of the form. Edgar and Sabin:
+`eA+B+C` for the tune, the accompaniment and the bass, `eA+B0.1+C` for
+the kit. The Song Check 100 songs, the 59 whose form is their token
+song's: a part sounds in a bar as its token song's does in 0.97 of the
+cases (0.80 before); every part of the band sounds in 0.57 of the bars
+(0.48; FFVI 0.60); the bass is gone four bars or more in 11 songs (24;
+FFVI 14), the tune in 11 (18; 15), the tune and the counter both in 5
+(9; 6). Plans (400 seeds, against round 123): 383 keep their token
+song; 17 themed plans settle on another draw, since a tune that sounds
+in more of the form can come back where it could not; 40 note sets are
+unchanged, the songs whose form is not their token song's.
+
+**Open.** How busy each part is inside a part of the form is still
+pooled (round 125). A span is one run: a bar a part rests inside it is
+its figures' to rest. A returning part of the form sounds as its first
+statement. A song whose form is drawn keeps the pooled words. And an
+unthemed song's tune now sounds in more of the form, so its phrase
+letters bring the theme back more often: three of Song Check 100's 43
+songs picked for a theme that never returns have a return now, and one
+of its two picked for a return with the tune alone has the band back
+with it.

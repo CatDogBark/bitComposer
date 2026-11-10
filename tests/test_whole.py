@@ -1549,6 +1549,81 @@ class TokenRiffTests(unittest.TestCase):
         self.assertEqual(notes2, sorted(own))                                                                    # a share of 0: nothing rides
 
 
+class TokenSpansTests(unittest.TestCase):
+    """Round 124: the parts of the form each part sounds in, with where it enters and leaves inside one, ride the balance
+    token by the form's letters (`eA+B2.0+D0.4`), and where the form is the token song's the textures are those. The
+    part-textures and part-entries words are pooled: a song on Edgar and Sabin's token, whose four parts play every bar,
+    drew a first part with the accompaniment and the bass alone, and its tune rested fourteen bars."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        bass = [(4.0 * k + x, 0.9, 36.0 + (x % 2) * 7, "b") for k in range(12) for x in range(4)]              # every bar
+        acc = [(4.0 * k + x / 2, 0.4, 55.0 + (x % 3) * 4, "g") for k in range(2, 12) for x in range(8)]         # from A's third bar on
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(4, 10) for x in range(4)]        # B whole, C but its last two bars
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 48.0, 0, "", 1.0)], notes={"accompaniment": acc, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(12)), parts=[(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, None, "C")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", acc), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    @staticmethod
+    def _token(role, fields):
+        out = [""] * (max(fields) + 1)
+        for i, v in fields.items():
+            out[i] = v
+        return f"{role}=" + ":".join(out)
+
+    def test_the_token_carries_where_a_part_sounds(self):
+        s = self._song()
+        self.assertEqual(rhythm.part_spans_field(s, "bass"), "eA+B+C")                              # every part of the form, whole
+        self.assertEqual(rhythm.part_spans_field(s, "accompaniment"), "eA2.0+B+C")                  # in A from its third bar
+        self.assertEqual(rhythm.part_spans_field(s, "melody"), "eB+C0.2")                           # not in A; C but its last two bars
+        self.assertEqual(rhythm.part_spans_field(s, "counter"), "")                                 # a part the song lacks
+        tok = rhythm.balance_units([s])[0].outcome
+        for role, want in (("accompaniment", "eA2.0+B+C"), ("bass", "eA+B+C"), ("melody", "eB+C0.2")):
+            fields = next(f for f in tok.split() if f.startswith(role + "=")).split("=", 1)[1].split(":")
+            self.assertEqual(fields[20], want, fields)                                              # the twenty-first field
+        s.notes["drums"] = [(4.0 * k + x, 0.4, float("nan"), "kick") for k in range(4, 12) for x in range(4)]
+        self.assertEqual(rhythm.part_spans_field(s, "drums"), "eB+C")                               # the kit's too
+        s.parts = [(0, 12, None, "A")]
+        self.assertEqual(rhythm.part_spans_field(s, "bass"), "")                                    # a form the token does not carry: no field
+
+    def test_the_spans_are_read(self):
+        self.assertEqual(whole.spans_of("A+B2.0+D0.4"), {"A": (0, 0), "B": (2, 0), "D": (0, 4)})
+        self.assertEqual(whole.spans_of("A+B2"), {})                                                # an entrance without its exit: unread
+        self.assertEqual(whole.spans_of(""), {})
+
+    def test_the_plan_takes_the_textures_with_the_form(self):
+        band = [self._token("accompaniment", {0: "main", 1: "48-55", 2: "0.9", 3: "1", 4: "0.6", 20: "eA2.0+B+C"}),
+                self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 20: "eA+B+C"}),
+                self._token("drums", {4: "0.5", 20: "eB+C"}),
+                self._token("melody", {0: "half", 1: "60-72", 2: "0.9", 3: "1", 4: "0.8", 20: "eB+C0.2"})]
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        fit = lambda token: {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}   # noqa: E731
+        p = whole.plan(fit(" ".join(band) + " top=0.30 tempo=medium form=A4B4C4"), 7, "g")
+        self.assertEqual([(q[3], q[1]) for q in p.parts], [("A", 4), ("B", 4), ("C", 4)])
+        self.assertEqual(p.plays["bass"], [True] * 12)
+        self.assertEqual(p.plays["accompaniment"], [False, False] + [True] * 10)                    # enters two bars into A
+        self.assertEqual(p.plays["melody"], [False] * 4 + [True] * 6 + [False, False])              # rests A; leaves two bars before C's end
+        self.assertEqual(p.plays["drums"], [False] * 4 + [True] * 8)
+        self.assertEqual(p.textures[0], "bass"); self.assertEqual(p.textures[5], "accompaniment bass drums melody")
+        self.assertTrue(any(l.startswith("textures from the balance's song (round 124): A: bass | B: accompaniment bass drums melody | C: ") for l in p.log), p.log)
+        self.assertTrue(any(l == "entrances from the balance's song (round 124): accompaniment enters 2 in A; melody leaves 2 before the end of C" for l in p.log), p.log)
+        self.assertFalse(any(l.startswith("textures A:") for l in p.log), p.log)                    # the pooled draw's line is not said
+        q = whole.plan(fit(" ".join(band) + " top=0.30 tempo=medium"), 7, "g")                      # no form of the token's: the draw stands
+        self.assertFalse(any("round 124" in l for l in q.log), q.log)
+        self.assertTrue(all(all(q.plays[r]) for r in q.band))
+
+    def test_a_repeated_part_and_a_short_one(self):
+        log = []
+        parts = [(0, 4, None, "A"), (4, 2, None, "B"), (6, 4, 0, "A")]
+        textures, plays = whole.token_textures(parts, ["bass", "melody"], {"bass": {"A": (0, 0), "B": (0, 0)}, "melody": {"A": (1, 0), "B": (1, 1)}}, log)
+        self.assertEqual(plays["melody"], [False, True, True, True] + [True, True] + [False, True, True, True])   # B too short for its entrance and exit: whole; the second A as the first
+        self.assertEqual(plays["bass"], [True] * 10)
+        self.assertEqual(textures[0], "bass"); self.assertEqual(textures[6], "bass")
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 
@@ -2307,7 +2382,7 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]), 3: ("counter", s.notes["counter"])}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "counter": 0.22}
         ctr = [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0]
-        self.assertTrue(":0.8::same:" in ctr and ctr.count(":") == 8, ctr)
+        self.assertTrue(":0.8::same:" in ctr and ctr.count(":") == 20 and ctr.endswith(":eB"), ctr)   # the kind the seventh field; the parts of the form it sounds in the twenty-first (round 124)
         s.notes["counter"] = [(a, b, c, "x") for a, b, c, _ in s.notes["counter"]]; s.voice_notes[3] = ("counter", s.notes["counter"])
         self.assertIn("::other:", [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0])
         s.levels = {}
