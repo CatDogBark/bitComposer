@@ -98,7 +98,11 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   bass carries much of the theme (The Terminal of Glass, 13 of 23 playing
   bars) stays under the share; and the hold pedals the bar after a change
   rather than the bars of a riff's stretch, so the pedal moves every bar
-  or two where Battle Theme's stays for a part.
+  or two where Battle Theme's stays for a part. Since round 117 a chord
+  part's line keeps the token song's step profile (its moves the same
+  pitch, a step, a leap); the bass's token carries the field too and the
+  bass writer does not read it yet (FFVI's basses and the written ones
+  leap alike, 0.41 and 0.37 of their moves on Battle Theme's token).
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

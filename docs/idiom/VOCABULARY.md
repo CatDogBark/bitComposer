@@ -290,6 +290,23 @@ The words are grouped by where the writing draws them, in the order the song is 
   another; 42 and 20 of sixty written songs) and wrong for the song, so
   four of the five Song Check songs on Battle Theme's token never came
   back to what they had played.
+  Since round 117 a chord part's and the bass's token carry an
+  eighteenth field, the line's step profile (`line_step_profile`:
+  `j63/24/13`, the share of its note-to-note moves that repeat the pitch,
+  step within a whole tone, or leap a minor third or more, STEP_CLASSES;
+  Battle Theme's guitar 0.63/0.24/0.07... read `j63/24/13` as its reading
+  rounds), and `plan.hold_line_steps` holds a chord part's line to it once
+  the line is written and rides the bass, so every move counts as the
+  reader counts them: a move whose class, the note counted, runs over its
+  share by STEP_MARGIN gives way to the class most under, `same` the note
+  before again, `step` the chord's tone within a whole tone of it (the
+  scale's where the chord has none), a leap never forced; the voices
+  beside the line see the held note. Why: the motion word (`line_motion`)
+  says how often a line's pitch changes, not how far, so a chug with a
+  semitone neighbour read "mixed" like a walking chord-tone line and the
+  written guitar leaped between chord tones on 0.34 of its moves, a
+  melodic voice driving the song where the game's is a rhythm part under
+  it (Song Check 96).
   Since round 114 the bass's token carries a seventeenth field, its pitch
   continuity (`bass_continuity_field`: the share of its bar lines across
   which the bass keeps the bar's main pitch class, in hundredths, `k58`
@@ -341,6 +358,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   parallel of a sibling follows the sibling's written notes. FFVI: 39
   own-reading stretches of voices beside a line strike with the line, 9
   with a sibling, 71 stay their own.
+  Since round 116 the struck sub-field carries a ninth part, the voice's
+  cell (`...~4.9~0.49~0.49`: of its notes with a note of its own at the
+  same position of the bar before, the share that sound that note's
+  pitch again), and `struck_with` repeats the cell to it: a stab with a
+  stab at the same place of the bar before takes that stab's pitch while
+  the share so far, this stab counted, runs under the token's by
+  STRUCK_MARGIN, and the interval word's landing otherwise. Why: Battle
+  Theme's synth hammers one cell (C D E F) bar after bar, the hook, and
+  the written stabs, each landing drawn anew by the interval word, changed
+  their pitches every bar, loud and never the same (Song Check 96).
   Since round 115 the struck sub-field carries an eighth part, the
   voice's sounding share (`w0.73~0.7~0.2~0.9~-~-~4.9~0.49`: the beats it
   sounds, each note to the line's next onset at most, over the beats of

@@ -7874,3 +7874,146 @@ Theme songs, round 114 before.
 **Open.** The cell (round 116), the guitar line's steps (round 117), the
 flourish at a section's end (round 118). The standing list as at round
 114.
+
+### Round 116: a struck voice's cell repetition is the token song's (2026-11-09, the second of the four words from Song Check 96)
+
+**Why.** Loud and always the same reads as the riff; loud and never the
+same reads as something sitting on the song. Battle Theme's synth
+hammers one cell, C D E F, in ten of its thirty-eight bars and near it
+in the rest, over a guitar on A and B-flat; the written synth's pitch
+set changed nearly every bar (the commonest covered 2 to 7 of 38),
+because each landing is drawn per note by the interval word with the
+chord's shape and the guitar's tone, and the guitar line itself varies.
+Nothing in the vocabulary said a struck voice repeats itself.
+
+**Built.** The struck sub-field's ninth part (arrangement._struck_facts,
+_struck_text: `...~4.9~0.49~0.49`): of the voice's notes with a note of
+its own at the same position of the bar before (to a sixteenth), the
+share that sound that note's pitch again; "-" under STRUCK_NOTES
+comparable notes. struck_values_of reads it (`cell`), and struck_with
+repeats the cell to it: once the landings are drawn, a stab with a stab
+at the same place of the bar before takes that stab's pitch while the
+share so far, this stab counted, runs under the token's by
+STRUCK_MARGIN, and keeps the interval word's landing otherwise; `stats`
+carries the repeats and the comparable stabs to the log. Pack refit
+(110 tables; no new table), the vocabulary shipped and committed. Tests:
+the part read from the test song's stabs (0.21) and parsed, the cell
+held bar after bar at a share of one (the budget counts a stab kept
+until one differs, so a share of one is near, not exact), free without
+it, near a share of a half. Suite 468 (1 skip).
+
+**Measured.** Battle Theme's synth repeats its cell on 0.49 of its
+comparable stabs (the second voice 0.50). Written, the five Battle Theme
+seeds: Journey of the Quarry 0.00 to 0.22 and 0.28 (18 comparable stabs
+in a sparse line), Lunar Island 0.25 to 0.45, Gate Return 0.04 to 0.37,
+The Terminal of Glass 0.18 to 0.40, Second Cistern Dance 0.12 to 0.40;
+under the token by the margin's width, as the budget's first comparable
+stab is always free. Seeds 1-60: 22 struck voices, 20 with a token cell
+share; written median 0.15 (0.11 before) against the tokens' 0.21,
+|written - token| median 0.07. The struck voices' motion holds (12
+high-register notes in 8 runs, none of three; 1.9 spikes per 100).
+Plans (400 seeds, against round 115): 400 keep their token song, 384
+plan logs and 328 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The guitar line's steps (round 117), the flourish at a
+section's end (round 118). The standing list as at round 114.
+
+### Round 117: a backing line's step profile is the token song's (2026-11-09, the third of the four words from Song Check 96: the guitar drives the song)
+
+**Why.** The guitar's level is Battle Theme's (rendered alone, 3.3 to
+5.1 dB under the accompaniment against the game's 5.0), and still it
+drove the song: it moved like a melodic voice. Battle Theme's guitar is
+a chug, A2 and B-flat 2 for eight bars of B, two pitches a semitone
+apart, thinning to a small figure under the lead in C: it repeats its
+pitch on 0.63 of its note-to-note moves, stays within a whole tone on
+0.87 and leaps a fourth or more on 0.07. The written guitar played
+three distinct pitches a bar, leaping between chord tones (root, fifth,
+seventh from the figures' marks, or the walking bass's notes where it
+rides) on 0.34 of its moves, five times the game's. The motion word
+(line_motion: block, mixed, arpeggiated) counts how often a line's
+pitch changes, not how far, so the chug with its neighbour read "mixed"
+like a walking chord-tone line; the tune has a steps habit, the backing
+lines had none.
+
+**Built.** A chord part's and the bass's balance token gain an
+eighteenth field (arrangement.line_step_profile, STEP_CLASSES,
+STEP_LEAP 3): the share of the line's moves, in time order, that repeat
+the pitch, step within a whole tone, or leap a minor third or more, in
+hundredths (`j63/24/13` for Battle Theme's guitar); "" under WORD_NOTES
+moves. The plan reads it (step_profile_of, Plan.step_profiles) and holds
+a chord part's line to it (plan.hold_line_steps) once the line is
+written, rides the bass and is folded into its stretches' registers, so
+every move counts as the reader counts them: each note after the
+first, its move's class with the note counted over its share by
+STEP_MARGIN gives way to the class most under its share where one has
+room, "same" playing the note before again, "step" the chord's tone
+within a whole tone of it (the scale's where the chord has none, the
+whole tone up else), "leap" keeping the note as written (a leap is never
+forced); the voices beside the line see the held note through `shared`.
+The bass carries the field and its writer does not read it yet
+(LIMITS). Pack refit (110 tables; no new table), the vocabulary shipped
+and committed. Tests: the field read from a chug (`j51/49/0`) and
+parsed, a line of leaps held to a chug within its register, the voices
+beside it told, as written without a profile. Suite 470 (1 skip).
+
+**Measured.** Battle Theme's guitar carries `j63/24/13`. Written, the five Battle Theme seeds' guitars: the same pitch again on 0.42, 0.56, 0.57, 0.58 and 0.55 of their moves (0.19, 0.27, 0.32, 0.35 and 0.32 before; the token 0.63), a leap on 0.39, 0.18, 0.22, 0.23 and 0.17 (0.58, 0.49, 0.47, 0.55 and 0.42 before; the token 0.13); Journey of the Quarry's guitar plays 21 bars, 77 moves, and the theme band's and the hand-offs' rewrites, which come after the hold, leave its leaps highest. Seeds 1-60: 50 accompaniment lines, 48 with a token profile; written medians same 0.27 (0.22 before), step 0.23 (0.21), leap 0.54 (0.56) against the tokens' 0.18, 0.11 and 0.59, |leap written - token| median 0.11: most of FFVI's accompaniment lines leap as the written ones did, and the hold tells where a song's does not (Battle Theme, a chug). The harmony lines' leaps 0.56 to 0.43 against the tokens' 0.42. The bass is not held: written leaps 0.39 against the tokens' 0.29. The struck voices move with the guitar: 2.3 isolated spikes per 100 stabs (1.9), 15 notes two octaves or more over the line in 13 runs, none of three (12 in 8); the lines' profile distance 0.18 (0.17), the bass's continuity 0.38 (0.40). Plans (400 seeds, against round 116): 400 keep their token song, 16 plan logs (the new line) and 92 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The flourish at a section's end (round 118). The standing list
+as at round 114.
+
+### Round 118: the flourish at a section's end, a section_fills word (2026-11-09, the last of the four words from Song Check 96)
+
+**Why.** "Battle Theme's accompaniment kinda just accompanies most of the
+time and has small parts of flourishing to compliment the song in
+transitions" (the owner). Measured: its synth plays 15 notes in the last
+bar of B against 8 a bar, the flourish into C, and 7 against 4 at the
+end of C; its guitar chugs on through the bar line and its lead does not
+fill. Across FFVI a voice ends a section at 1.5 times its median bar or
+more in 0.14 of its sections (votes by song), thinner in 0.36; the accompaniment's voices beside the line fuller in 0.12 (0.18 of first sections, 0.13 of middle, 0.09 of last), its line in 0.14. The written synths never did: their mask is drawn
+bar by bar from the pooled second_figures word, which knows no bar's
+place in its section. The thinning side existed (section_densities,
+part_entries); the flourish had no word.
+
+**Built.** A new table, section_fills (arrangement.section_fill_units,
+FILL_BARS 4): each pitched voice of each own section of four bars or
+more as a unit, its outcome what the voice does in the section's last
+bar against the section's bars before ("fuller" at DENSITY_STEP times
+the median of the other bars it plays in or more, "thinner" at the
+inverse or less, a rest among them, "same" between), its values the
+voice's part, whether it is the part's line or a voice beside it
+(cells.line_voice) and the section's place in the form (form_place_of).
+The plan draws it a section for the part's line and for its voices
+beside the line on an own stream (plan_section_fills; a repeated
+section copies its source's; Plan.section_fills), and the writers fill:
+the line's fill rides the density shift its writer already reads
+(habit_at_for, envelope_at_for: a tier denser on the section's last
+bar), and a struck voice strikes every followed onset there and one
+between each pair half a beat or more apart (struck_with, `fills`);
+"thinner" is the line a tier sparser and the struck voice on the bar's
+first onset alone. Pack refit (111 tables), the vocabulary shipped and
+committed, the vocabulary map regenerated. Tests: the units from a song
+whose stabs double in a section's last bar (the line "same", the stabs
+"fuller"), a section under four bars counting nothing, the plan's draw
+on a section's last bar and its repeat's and none for a one-voice part's
+beside, the struck voice's fill (seven stabs on a four-onset bar) and
+its thinning. Suite 472 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds, the section_fills draws in their plan logs: Journey of the Quarry's synth voices fuller in the last bar of B (7 and 13 stabs against 4 a bar) and thinner at the end of C, its bass fuller at the end of C; Lunar Island's synth fuller at the end of B (16 against 8) and thinner at D's; Gate Return's synth fuller at the end of C (5 against 3) and thinner at B's and D's, its bass thinner at B's; The Terminal of Glass's synth thinner at the end of B, its lead fuller at D's; Second Cistern Dance's bass fuller at the end of C. Seeds 1-60, every own section of four bars or more against its median bar: the lines fuller in 0.17 (0.19 before), the same 0.48, thinner 0.35; the voices beside a line fuller in 0.16 (0.17), the same 0.39, thinner 0.45 (0.38): the shares were the game's by chance already and are its by the word now, by part, voice kind and place. The other holds stand: the accompaniment lines' leaps 0.50 (tokens 0.59), the struck voices' cell 0.18 (tokens 0.21), their motion 1.7 spikes per 100 stabs and no run of three high notes, the bass's continuity 0.39 (tokens 0.35), the lines' profile distance 0.19. Plans (400 seeds, against round 117): 400 keep their token song, 1 plan log (the fills' line) and 54 note sets unchanged.
+
+**Song Check 97** (): the five
+Battle Theme songs of Song Checks 89 to 96, round 114 before and round
+118 after, rounds 115 to 118 heard together as the owner asked: Journey
+of the Quarry (18), Lunar Island (243), Gate Return (343), The Terminal
+of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The fill's shape is one shape (every onset and the midpoints
+for a struck voice; a tier denser for a line): Battle Theme's synth fill
+is also a run up its cell, and a word for the fill's figure would be the
+next. The bass does not read its step profile. The standing list as at
+round 114.
