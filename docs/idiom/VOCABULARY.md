@@ -395,6 +395,27 @@ The words are grouped by where the writing draws them, in the order the song is 
   parallel of a sibling follows the sibling's written notes. FFVI: 39
   own-reading stretches of voices beside a line strike with the line, 9
   with a sibling, 71 stay their own.
+  Since round 122 what a voice does is read part by part of the form
+  (`_split_by_parts`): a stretch is a run of notes on one sample, so a
+  voice on one sample all song had one reading, and each part of the
+  form the stretch plays eight notes or more in (roles.STRETCH_NOTES)
+  is now asked on its own, the tune's voices first of those it strikes
+  with equally (LEAD_ORDER), a part of fewer notes taking its
+  neighbour's reading; parts alike run together, a stretch whose parts
+  all read alike stays whole, and a song whose token carries no form is
+  read whole as before. Battle Theme's synths: `wl+19x27>pm+12` and
+  `w1-7x10>da+12x9>w1-7x8>pm+4`, struck with the guitar's riff through
+  B and C (the lower doubling the guitar an octave up through C) and in
+  D parallel to the tune an octave and a third over it, every note on a
+  tune onset; read whole they were `wl+19` and `w1-7`. The writer had
+  left a struck voice's stretches on another part's line as the voice's
+  own notes; they are written once every line is
+  (`plan.late_stretch_notes`), the line again at the interval, and
+  folded into where the token song plays the voice's sample, the struck
+  stretches standing as they were written in place. FFVI: 58 of 157
+  voices beside a line read differently, 99 carry a word (88 before);
+  the interval word is counted over the stretches as now read (7,372
+  onsets in 50 songs; 8,281).
   Since round 116 the struck sub-field carries a ninth part, the voice's
   cell (`...~4.9~0.49~0.49`: of its notes with a note of its own at the
   same position of the bar before, the share that sound that note's

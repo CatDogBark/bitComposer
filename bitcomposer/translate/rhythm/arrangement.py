@@ -852,6 +852,53 @@ LEAD_ORDER = (R.MELODY, R.COUNTER, R.HARMONY, R.ACCOMP, R.ARP, R.BASS)   # who l
                                      # chord parts, then the bass; the voice further down follows (parallel_interval_units counts each pair once)
 
 
+def _split_by_parts(song: readings_mod.Song, rows: list, pitched: dict, v, roles_of: dict) -> list:
+    """A relation stretch read whole over a sample run (roles.stretches_of), read again part by part of the form (round
+    122) and split where what the voice does changes. Each part of the form the stretch plays roles.STRETCH_NOTES notes
+    or more in is asked what it does there (roles.stretch_relation, the tune's voices asked first, then the counter's,
+    the chord parts', the bass's: LEAD_ORDER, so of two voices it strikes with equally it follows the one that leads); a
+    part with fewer notes takes the reading of the part before it (the first of the part after). Parts alike run
+    together, and a stretch whose parts all read alike stays as it was read whole. Battle Theme's two synths play one
+    sample through the song: struck with the guitar's riff through B and C, and in D the tune's own rhythm, one an octave
+    over it and one a third (45 of 45 notes on a tune onset each); read whole they were struck with the riff throughout,
+    and the written synths kept the riff's rhythm under the tune to the song's end. FFVI: of 362 voices with a stretch of
+    STRETCH_NOTES notes in a song whose token carries its form, 183 do another thing in one part of it than in another.
+    A song whose token carries no form (form_field) is read whole as before."""
+    if not form_field(song):
+        return rows
+    index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
+    spans = []
+    for bar, n, _, _ in song.parts:
+        ks = [index[num] for num in range(bar, bar + n) if num in index]
+        if ks:
+            spans.append((song.bars[ks[0]][0], song.bars[ks[-1]][1]))
+    lead = lambda u: (LEAD_ORDER.index(roles_of[u]) if roles_of.get(u) in LEAD_ORDER else len(LEAD_ORDER), u)   # noqa: E731
+    others = {u: pitched[u] for u in sorted(pitched, key=lead) if u != v and pitched[u]}
+    out = []
+    for row in rows:
+        a, b, key, kind, of, semi, n = row
+        notes = [x for x in pitched[v] if a - readings_mod.NEAR <= x[0] <= b + readings_mod.NEAR]
+        pieces = [ns for ns in ([x for x in notes if pa - readings_mod.NEAR <= x[0] < pb - readings_mod.NEAR] for pa, pb in spans) if ns]
+        read = [R.stretch_relation({"notes": ns, "a": ns[0][0], "b": ns[-1][0]}, others) if len(ns) >= R.STRETCH_NOTES else None for ns in pieces]
+        for i in range(1, len(read)):                       # a part of few notes: the part before's reading
+            if read[i] is None:
+                read[i] = read[i - 1]
+        for i in range(len(read) - 2, -1, -1):              # the first parts, of few notes: the part after's
+            if read[i] is None:
+                read[i] = read[i + 1]
+        runs = []
+        for ns, r in zip(pieces, read):
+            if runs and runs[-1][1] == r:
+                runs[-1][0].extend(ns)
+            else:
+                runs.append([list(ns), r])
+        if len(runs) < 2 or any(r is None for _, r in runs):
+            out.append(row)
+            continue
+        out += [(ns[0][0], ns[-1][0], key, r[0], r[1], r[2], len(ns)) for ns, r in runs]
+    return out
+
+
 def parallel_interval_units(songs) -> list:
     """Each shared onset of a parallel stretch (a voice's relation word's "p": roles.stretch_relation, its own edge bars
     split off) and, since round 109, of a struck-with stretch (the word's "w", round 107: the line or a sibling voice
@@ -1030,6 +1077,7 @@ def _relations(song: readings_mod.Song) -> tuple:
     for v, rows in R.voice_relations({v: ns for v, ns in pitched.items() if ns}).items():
         if len(pitched[v]) < R.SECOND_NOTES:
             continue
+        rows = _split_by_parts(song, rows, pitched, v, roles_of)   # what the voice does, part by part of the form (round 122)
         rows = _split_own_edges(song, rows, pitched, v)     # a stretch's own edge bars as stretches of their own (round 96)
         words = []
         for a, b, key, kind, of, semi, n in rows:

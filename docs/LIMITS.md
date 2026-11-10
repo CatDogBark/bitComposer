@@ -125,6 +125,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   under the share is not lengthened: its stabs are its gap classes'
   already), and (Mt. Koltz's and
   Opening Theme part 3's hold notes of 15.9 beats).
+  Since round 122 the relation is read part by part of the form, so a
+  voice struck with its line in one part and on the tune in another is
+  written each way; a part the voice plays under eight notes in takes
+  its neighbour's reading, a change inside a part is not seen, and a
+  song with many short parts gets a word of many stretches (Mt. Koltz's
+  second accompaniment voice, ten). A stretch on another part's line is
+  written wherever that line plays, the voice's own part resting or not:
+  where the texture rests the accompaniment through a part and its
+  synths double the tune there, they play as the tune's layers.
   The sections' densities were thought to move out of step on Battle
   Theme's token (the round 104 investigation) and do not, by the measure:
   at a section boundary the written pitched parts step alike on 0.33 of
@@ -310,5 +319,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   Battle Theme's C and D are no loops: there its guitar, bass and kick
   strike together under the tune's main notes and its synths double the
   tune, and the written parts keep their own rhythm at their own
-  density. What a voice strikes with is read over the whole song, and a
-  part's density by section is a pooled word, not the token song's.
+  density. Since round 122 a voice beside a line is read part by part
+  (the written synths double the tune through D); the line itself has
+  no such word yet (Battle Theme's guitar doubles its bass an octave up
+  in A, C and D), and a part's density by section is a pooled word, not
+  the token song's.

@@ -1322,6 +1322,24 @@ def stretched_notes(v: int, own: list, spans: list, written: dict, scale: set, m
     return out
 
 
+def late_stretch_notes(plan: "Plan", song, role: str, v: int, own: list, word: str, written: dict, scale: set, models: dict | None,
+                       rng: random.Random, struck_too: bool = False) -> list:
+    """A voice beside a line by the token's stretches once every line is written (round 90): its stretches on another
+    part's line written over those bars (stretched_notes) and the voice folded into where the token song plays its sample
+    (fold_voice, round 95). `struck_too` (round 122): the voice is struck with another voice in some parts of the form and
+    doubles or runs parallel to a part's line in others (Battle Theme's synths, with the guitar's riff through B and C, on
+    the tune in D); its struck stretches were written in place as the game strikes them (round 107) and stand as they are,
+    and the stretches on another part's line alone are folded."""
+    spans = stretch_spans(relation_stretches(word), len(song.bars))
+    got = stretched_notes(v, own, spans, written, scale, song.meter, written[role].log, song=song, role=role, models=models, rng=rng,
+                          clash_rates=(plan.extras.get(role) or {}).get("clashes"))
+    if not struck_too:
+        return fold_voice(plan, role, v, got, song.meter)
+    late = [(a, b) for kind, target, _, a, b in spans if kind in ("double", "parallel") and not isinstance(target, tuple)]
+    inside = lambda t: any(a * song.meter - rhythm.NEAR <= t < b * song.meter - rhythm.NEAR for a, b in late)   # noqa: E731
+    return sorted([n for n in got if not inside(n[0])] + fold_voice(plan, role, v, [n for n in got if inside(n[0])], song.meter), key=lambda n: n[0])
+
+
 def line_stretch_list(word: str) -> list:
     """The balance token's eleventh field (round 91) as stretches: "s77ca10e2568@52-64x6>sf89f5aedfd@60-80" ->
     [("s77ca10e2568", (52, 64), 6), ("sf89f5aedfd", (60, 80), None)]: each stretch's sample, the range it is played over
@@ -2798,15 +2816,18 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                   + (f"; the cell repeated on {stats_w['repeats']} of {stats_w['comparable']} stabs with a stab at the same place of the bar "
                                      f"before, the token's {sv['cell']:.2f} (round 116)" if kind_w == "with" and sv.get("cell") is not None and stats_w.get("comparable") else "")
                                   + (f"; {stats_w['filled']} stabs added in the fill bars (round 118)" if stats_w.get("filled") else "")))
-                if any(sp[0] != "own" for sp in spans_v if sp not in inline):
-                    log.append(f"voice {v + 1}: the token's stretches of another part's line in {word_v} stay its own beside the struck ones")
+                late = [sp for sp in spans_v if sp not in inline and sp[0] != "own"]   # its stretches on another part's line (round 122)
                 notes_v.sort(key=lambda x: x[0])
                 beside_v.discard(v)
                 notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again where the token song's voice loops (round 121)
                 if looped_v:
                     log.append(f"voice {v + 1}: its figure again, note for note, in {looped_v} bars where the balance's song's voice loops (round 121)")
-                song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
-                notes = notes + notes_v
+                if late:                                    # a voice struck with another in some parts of the form that doubles or runs parallel to a
+                    pending.append((role, v, notes_v, word_v, True))   # part's line in others (round 122): those written once every line is, as any
+                    log.append(f"voice {v + 1}: its stretches on another part's line in {word_v} written after the lines, its struck ones as they stand (round 122)")
+                else:
+                    song.notes[role] += [(a, b - a, m, role) for a, b, m, _ in notes_v]
+                    notes = notes + notes_v
             elif word_v:                                    # what the voice does beside which part, by stretch (round 90): after every line is written
                 pending.append((role, v, notes_v, word_v))
                 log.append(f"voice {v + 1} by the token's stretches ({word_v}): written after the lines")
@@ -2926,10 +2947,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 log.append(f"voice {v + 1} by the token's stretches ({word_v}) alone: no word for its own stretches")
         written[role] = Part(role, line, figures, log, beside=beside_v)
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
-    for role, v, own, word in pending:                      # the voices beside a line written by the token's stretches (round 90), every line in place
-        spans = stretch_spans(relation_stretches(word), len(song.bars))
-        notes_v = fold_voice(plan, role, v, stretched_notes(v, own, spans, written, scale, song.meter, written[role].log, song=song, role=role, models=models,
-                                                            rng=random.Random(f"{seed}:{role}:voice {v}:stretch parallel"), clash_rates=(plan.extras.get(role) or {}).get("clashes")), song.meter)   # rounds 95, 97
+    for role, v, own, word, *struck_too in pending:         # the voices beside a line written by the token's stretches (round 90), every line in place
+        notes_v = late_stretch_notes(plan, song, role, v, own, word, written, scale, models, random.Random(f"{seed}:{role}:voice {v}:stretch parallel"),
+                                     struck_too=bool(struck_too))
         notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again where the token song's voice loops (round 121)
         if looped_v:
             written[role].log.append(f"voice {v + 1}: its figure again, note for note, in {looped_v} bars where the balance's song's voice loops (round 121)")

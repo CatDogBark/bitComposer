@@ -8365,7 +8365,7 @@ loops and a form of their own draw, 50 a token with none; the harmony's
 loop changed a chord in 274; 73 note sets are unchanged. No note over a
 sample's ceiling in any of the 400 (round 120's measure).
 
-**Song Check 99** will carry rounds 121 and 122 together.
+**Song Check 99** will carry rounds 121 to 123 together.
 
 **Open.** Outside its loops the backing still plays a new bar every
 bar, and Battle Theme's C and D are no loops: there its guitar, bass
@@ -8379,3 +8379,86 @@ written, with no shape of its own (a run, a climb). The loops come on
 top of the song's chord-hold share (the chain holds as before, and the
 loop holds more). A loop is taken only with the token song's form, and
 a figure of eight bars is not read. The standing list as at round 114.
+
+### Round 122: what a voice beside a line does is read part by part of the form (2026-11-09, the second change from Song Check 98's investigation, on the owner's go)
+
+**Why.** The investigation's second finding. In Battle Theme's B the
+two synths play the riff's rhythm with the guitar; in its other parts
+they do not. In C they strike with the guitar's sparse hits, the lower
+one the guitar an octave up, and in D they play the tune's own rhythm:
+every one of their 45 notes there lands on a tune onset, the upper an
+octave over the tune and the lower a third. The written synths kept the
+riff's rhythm under the tune to the song's end (in D between 0.63 and
+0.80 of their notes on a tune onset, their rhythm sharing a third of
+the tune's), so through the song's longest part a second rhythm ran
+against the tune: "I just hear the accompaniment and what its doing more
+than the tune".
+
+**Found.** The reader was right about the notes and wrong about the
+grain. What a voice does beside another (round 90: a double, parallel
+at one interval, its own; round 107: struck with) is read a stretch at
+a time, and a stretch is a run of notes on one sample
+(`roles.stretches_of`). Battle Theme's synths play one sample from
+their first note to their last: one stretch, one reading, struck with
+the riff. FFVI changes what a voice does without changing its sample
+often: of 362 voices with a stretch of eight notes or more in a song
+whose token carries its form, 183 read differently in one part of the
+form than in another. And the writer had no way to write such a voice:
+a struck-with stretch is written in place, beside its line, and a
+voice with one left its stretches on another part's line as its own
+notes ("stay its own beside the struck ones").
+
+**Built.** The reader: `_split_by_parts`, before round 96's edge split.
+Each part of the form a stretch plays `STRETCH_NOTES` (8) notes or more
+in is asked what it does there (`roles.stretch_relation`), the
+candidates in LEAD_ORDER so that of two voices it strikes with equally
+it follows the one that leads (the tune before a sibling: Battle
+Theme's lower synth in D strikes with the tune and with the upper synth
+on every note); a part of fewer notes takes the reading of the part
+before it, the first parts the part after's; parts alike run together,
+a stretch whose parts all read alike stays whole as read before, and a
+song whose token carries no form is read whole. The struck-with reading
+(round 107) and its facts (round 108) are then asked of each own run
+as before. Battle Theme's words: `wl+19x27>pm+12` and
+`w1-7x10>da+12x9>w1-7x8>pm+4` (`wl+19`, `w1-7`). The writer: a voice
+with struck stretches and stretches on another part's line is written
+both ways. Its struck stretches are written in place (and looped,
+round 121) as before; the voice then waits with the voices written
+after the lines, and `late_stretch_notes` writes its stretches on a
+line (`stretched_notes`: the line again at the interval, by the chord
+where it is parallel) and folds those bars alone into where the token
+song plays the voice's sample (`fold_voice`), the struck bars standing
+as written. Tests: a voice struck with its line through one part and
+doubling the tune through the next (read whole without a form, split
+with one, whole again where both parts read alike or the second has
+too few notes); the writer's two ways in one voice, the struck bars
+untouched and the late ones folded. Suite 485 (1 skip).
+
+**Measured.** FFVI's tokens: 157 voices beside a line; 99 carry a
+relation word (88 before) and 58 read differently. The interval word
+(`parallel_intervals`) is counted over the stretches as now read: 7,372
+onsets in 50 songs (8,281). The five Battle Theme songs, part D: every
+synth note on a tune onset in all five (0.63, 0.80 and 0.65 in the
+three whose synths played there; Battle Theme 1.00), the synths' rhythm
+the tune's on 0.93 to 1.00 of a bar (0.32 to 0.33; Battle Theme 1.00),
+the upper synth an octave over the tune on every note; in C the lower
+synth doubles the guitar an octave up. Plans (400 seeds, against round
+121): 400 keep their token song; 62 note sets unchanged (the interval
+word's table moved under every parallel and struck voice); no note over
+a sample's ceiling; the loops of round 121 as they were (a line's
+figure in 0.40 of its parts of the form, a voice's beside it 0.32, the
+bass's 0.42, the kit's 0.70).
+
+**Song Check 99** will carry rounds 121 to 123 together.
+
+**Open.** The line itself has no such word: Battle Theme's guitar
+doubles its bass an octave up through A, C and D and plays its own
+figure in B, and the written line rides the bass in parts drawn by a
+share, at whatever octave its register gives (the next round). A part
+of the form under eight of the voice's notes takes its neighbour's
+reading, and a change inside a part is not seen. A stretch on another
+part's line is written wherever that line plays, whether or not the
+texture has the voice's own part playing there. In C Battle Theme's
+synths strike on the tune's main notes because the guitar they follow
+does; the written guitar keeps its own density there (a part's density
+by section is a pooled word). The standing list as at round 114.
