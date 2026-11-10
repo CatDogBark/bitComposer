@@ -2827,6 +2827,43 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(bounds["sbass123456@32-52"], (36, 44))                                     # the planned register, whole
         self.assertEqual(bounds["sbass123456"], (48, 60))                                          # the other song's range, as before
 
+    def test_a_kit_voice_given_to_a_pitched_part_plays_by_its_tonal_reading(self):
+        """Round 119: the token song's own sample for a part may be a kit voice in the pack (Final Fantasy VI's rhythm guitar,
+        Battle Theme's riff line); samples_for takes the pack's tonal reading of it for a pitched voice, the kit voice for a kit
+        piece, and says so where the pack has no reading."""
+        from bitcomposer.translate import tables
+        from bitcomposer import instruments, samples as smp
+        from unittest import mock
+        from types import SimpleNamespace
+        fake = lambda name: SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "bass_heavy": ["pad"], "bass_light": ["pad"], "arp": ["pad"]}}
+        token = "bass=half:36-44:0.9:1:1.0:::sgtr1234567@32-52 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        smp.PERCUSSION_PRESETS.add("g_sgtr1234567")
+        self.addCleanup(smp.PERCUSSION_PRESETS.discard, "g_sgtr1234567")
+        self.addCleanup(smp.TONAL_VIEWS.pop, "g_sgtr1234567", None)
+        for view in ("g_sgtr1234567_tonal", None):
+            if view:
+                smp.TONAL_VIEWS["g_sgtr1234567"] = view
+            else:
+                smp.TONAL_VIEWS.pop("g_sgtr1234567", None)
+            p = whole.plan({"balance": t}, 1, "g")
+            if "bass" not in p.band:
+                self.skipTest("the bass left out of this seed's textures")
+            with mock.patch.object(instruments, "_make_sample", fake):
+                out = whole.samples_for(p, pack, {"sgtr1234567", "slead123456"}, "g", random.Random(1), {})
+            name, sample = out["bass"]
+            self.assertEqual(name, "sgtr1234567")                                                    # the pack's id, as the plan and the tables name it
+            if view:
+                self.assertEqual(sample.name, "g_sgtr1234567_tonal")                                 # the recording as a pitched instrument
+                self.assertTrue(sample.tonal_view)
+                self.assertTrue(any("played as pitched instruments by their tonal readings" in l and "sgtr1234567" in l for l in p.log), p.log)
+            else:
+                self.assertEqual(sample.name, "g_sgtr1234567")                                       # no reading: the kit voice, and the log says so
+                self.assertFalse(getattr(sample, "tonal_view", False))
+                self.assertTrue(any("no tonal reading" in l and "sgtr1234567" in l for l in p.log), p.log)
+            self.assertEqual(out["melody"][1].name, "g_slead123456")                                 # a tonal voice is itself
+
     def test_the_kit_takes_its_songs_channels(self):
         """Round 87: the kit gets as many voices as its token song gave it channels, so a one-channel kit no longer costs the
         band a pitched voice, and each piece plays on the channel the game put it on; the fixed split stands without the
@@ -3051,6 +3088,32 @@ class NewTablesTests(unittest.TestCase):
         finally:
             sm.SAMPLE_ENVELOPES.pop("g_sx", None)
             sm.SAMPLE_ENVELOPES.pop("g_sy", None)
+
+    def test_a_note_over_its_samples_chip_ceiling_is_logged(self):
+        """Round 119: the SNES chip's pitch register stops at 0x3FFF, four times the recording's rate, so a sample sounds no
+        higher than two octaves over the note it plays at 32 kHz; score_of plays a note written higher at that ceiling
+        (score._pitch), and now says so in the plan's log, by part, voice and sample, with the ceiling as a note (found by
+        the round's tuning measure: a voice beside the line written over its sample's range sounded one pitch on every
+        note). A note at the ceiling itself is not counted."""
+        from types import SimpleNamespace
+        from bitcomposer import score
+        self.assertAlmostEqual(score.pitch_ceiling(32000), 84.0, places=2)                       # two octaves over the recording's C-5
+        self.assertAlmostEqual(score.pitch_ceiling(64000), 72.0, places=2)
+        smp = lambda: SimpleNamespace(c5_speed=32000, data=b"\x00\x10" * 64, loop=False, sus_loop=False, loop_start=0, loop_end=0,   # noqa: E731
+                                      sus_loop_start=0, sus_loop_end=0)
+        p = whole.plan({}, 1, "g")                                                               # bass, drums, melody; 12 bars
+        written = {"bass": SimpleNamespace(notes=[(0.0, 1.0, 40, 0)]),
+                   "melody": SimpleNamespace(notes=[(0.0, 1.0, 84, 0), (1.0, 2.0, 86, 0), (2.0, 3.0, 91, 0)])}
+        sc, first = whole.score_of(p, written, {"bass": ("sx", smp()), "melody": ("sy", smp())}, loops=1, fade=0.0, pack_name="g")
+        self.assertEqual([n.pitch for n in sc.notes if n.voice == first["melody"]], [score.PITCH_MAX] * 3)   # all three at the register's top
+        lines = [line for line in p.log if line.startswith("pitch: notes written over")]
+        self.assertEqual(len(lines), 1, p.log)
+        self.assertIn("melody 2 on sy (no higher than 84)", lines[0])                            # 86 and 91; 84 is the ceiling's own note
+        self.assertNotIn("bass", lines[0])
+        p = whole.plan({}, 1, "g")
+        written["melody"] = SimpleNamespace(notes=[(0.0, 1.0, 72, 0)])
+        whole.score_of(p, written, {"bass": ("sx", smp()), "melody": ("sy", smp())}, loops=1, fade=0.0, pack_name="g")
+        self.assertFalse(any(line.startswith("pitch: notes written over") for line in p.log), p.log)   # inside the sample's range: nothing said
 
     def test_the_echo_is_the_games_own_drawn_on_its_own_stream(self):
         """Round 70: with an `echo` word the written song's echo is the counted triple (volume of full, delay as the chip's

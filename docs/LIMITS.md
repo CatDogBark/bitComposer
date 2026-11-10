@@ -260,3 +260,27 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   headphones, as the game's own songs do. The player's WIDTH (under
   GAIN) narrows every pan toward centre at playback; the vocabulary is
   untouched.
+- **A drum played as a pitched part is tuned as the reader heard it.**
+  Since round 119 a kit voice given to a pitched part is tuned by its
+  tonal reading (the readings' fundamental of the recording), so the
+  written part plays the recording at the rates the game does. For
+  FFVI's rhythm guitar the reading is the pitch heard: Battle Theme's
+  riff on the SNES chip is on the reading on every note. For a drum it
+  is one reading of a sound with no single pitch. Mt. Koltz's tom, an
+  accompaniment to the role reader, sounds two semitones over its
+  reading through its strike, in the game's own audio as in a song
+  written on it; The Empire Gestahl's snare, struck at one rate there,
+  is written a line. Whether such a voice is a part or a kit piece is
+  the role reader's question; the tuning only keeps the game's rates.
+- **A voice beside a line can be written over what the SNES chip can
+  play of its sample.** The chip's pitch register stops at four times a
+  recording's rate, so a sample sounds no higher than two octaves over
+  the note it plays at 32 kHz, and a note written higher sounds at that
+  ceiling whatever its pitch class. A line is written where the game
+  plays its sample and stays under it; a voice beside a line, placed by
+  its relation word, does not always: 7 of 400 seeds hold one (2,015 of
+  582,713 notes; an accompaniment's third voice written to 121 on a
+  sample that stops at 87, a second voice on the guitar over 66), since
+  before round 112. Since round 119 the render's log names the part,
+  the voice, the sample and its ceiling (`pitch: notes written over
+  ...`); the writer does not read the ceiling yet.

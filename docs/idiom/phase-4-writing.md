@@ -8006,7 +8006,7 @@ its thinning. Suite 472 (1 skip).
 
 **Measured.** Written, the five Battle Theme seeds, the section_fills draws in their plan logs: Journey of the Quarry's synth voices fuller in the last bar of B (7 and 13 stabs against 4 a bar) and thinner at the end of C, its bass fuller at the end of C; Lunar Island's synth fuller at the end of B (16 against 8) and thinner at D's; Gate Return's synth fuller at the end of C (5 against 3) and thinner at B's and D's, its bass thinner at B's; The Terminal of Glass's synth thinner at the end of B, its lead fuller at D's; Second Cistern Dance's bass fuller at the end of C. Seeds 1-60, every own section of four bars or more against its median bar: the lines fuller in 0.17 (0.19 before), the same 0.48, thinner 0.35; the voices beside a line fuller in 0.16 (0.17), the same 0.39, thinner 0.45 (0.38): the shares were the game's by chance already and are its by the word now, by part, voice kind and place. The other holds stand: the accompaniment lines' leaps 0.50 (tokens 0.59), the struck voices' cell 0.18 (tokens 0.21), their motion 1.7 spikes per 100 stabs and no run of three high notes, the bass's continuity 0.39 (tokens 0.35), the lines' profile distance 0.19. Plans (400 seeds, against round 117): 400 keep their token song, 1 plan log (the fills' line) and 54 note sets unchanged.
 
-**Song Check 97** (): the five
+**Song Check 97** (https://claude.ai/artifact/1pAKMP7yNWd8dxk72avJMP): the five
 Battle Theme songs of Song Checks 89 to 96, round 114 before and round
 118 after, rounds 115 to 118 heard together as the owner asked: Journey
 of the Quarry (18), Lunar Island (243), Gate Return (343), The Terminal
@@ -8016,4 +8016,141 @@ of Glass (150) and Second Cistern Dance (365).
 for a struck voice; a tier denser for a line): Battle Theme's synth fill
 is also a run up its cell, and a word for the fill's figure would be the
 next. The bass does not read its step profile. The standing list as at
+round 114.
+
+### Round 119: a kit voice carries its tonal reading, and a pitched part is tuned by it (2026-11-09, from the owner's question after Song Check 97, on his go)
+
+**Why.** After Song Check 97 the owner asked what is going on with the
+accompaniment voices of the songs written on Battle Theme: "a deep
+investigation looking at all aspects", assuming nothing right "just
+cause its in the code". Every measure of rounds 104 to 118 had read the
+written notes; none had heard what the renderer makes of them. So the
+investigation went to the SNES chip's own registers and audio for Battle
+Theme, and then tested the written songs' rendered audio, note by note,
+against the pitch written.
+
+**Found.** The guitar was a minor third flat on every note. Battle
+Theme's riff line plays the game's distorted rhythm guitar
+(sa7c3eeca0d), an instrument in the readings since round 102. The pack
+files that recording as a kit voice (its drum namer's snare: noisy, no
+fundamental its tuner could find), with no pitch and no loop, and a part
+takes its token song's own sample whatever the pack calls it (round 60).
+A kit voice is registered to sound as recorded at KIT_NOTE, 48; the
+recording sounds 45.04 there (95.0 Hz at the chip's 32 kHz by
+the readings, the file at 37,133 Hz). So every note a pitched part
+played on it sounded 2.96 semitones under the note written, and without
+its loop. The reading itself is right: Battle Theme's own guitar on the
+SNES chip, each key-on's audio against the readings' fundamental on the
+chip's pitch register, is on pitch on 290 of 290 notes. Where the
+written guitar should double the bass it sat a major sixth over it, and
+0.8 to 0.9 of its notes were off the chord (0.2 to 0.35 as written): the
+owner's verdicts on the guitar and the synth in Song Checks 89 to 97,
+"driving the song" and "a monster", were given against that. Two more
+of the pack's kit voices are parts in the readings: The Empire Gestahl's snare
+(s1279e119a1: its accompaniment, New Continent's counter), which sounded
+8.21 semitones over the note written, and Mt. Koltz's tom (seb20f89721:
+its accompaniment), half a semitone over. Of the 400 seeds 39 give a
+kit voice to a pitched part: the guitar in 27 (the accompaniment's line
+in 7 of them, the bass's in 11), the snare in 12, the tom in 5.
+
+**Built.** The pack file: a kit voice's entry may carry `tonal`, the
+same recording read as a pitched instrument (`{"note": 45.04, "loop":
+[2720, 7104]}`: `note` or `hz`, and optionally `loop` and `release`;
+`packfile._sample`). The loader keeps the reading as a sample of its own
+under the voice's name with `_tonal` after it (`samples.TONAL_SUFFIX`; no
+other sample may take the name) and maps the kit voice to it
+(`samples.TONAL_VIEWS`, `tonal_view`). The renderer: `samples_for` gives
+a pitched voice the kit voice's tonal reading at every place a part, a
+second voice or a voice beside a line takes a sample; a kit piece still
+strikes the kit voice; `score_of` keeps the reading an instrument of its
+own, so one song may strike the recording and play it. The log names the
+kit voices played by their readings, and those with none, played as the
+kit plays them, their pitch unknown. The pack builder: `pack.tonal_reading`
+(the readings' fundamental at the file's rate as a note, the loop in the
+file's frames), written for each kit sample the game plays as a pitched
+part (`played_as_pitched`); `tools/pack_tonal.py` adds the readings to a
+pack already built. The FFVI pack took three by the tool (the guitar
+45.04 with its loop, the snare 56.21, the tom 48.5): no table was refit
+and the shipped vocabulary is the same file. The measure
+(`tuning_measure.py`, beside the Song Check tools): the song rendered,
+each pitched voice's channel alone, each note's audio from 15 ms after
+its onset tested against harmonic combs at the written pitch and at
+every semitone from 7 under to 7 over; a note is decisive where the best
+comb beats the next by 1.2, a voice has a verdict where a third of its
+notes are decisive, and is flagged under 0.80 of them on pitch.
+`chip_tuning.py` runs the same test on a game song's own voices off the
+SNES chip emulator, against the readings' fundamentals: it tells a fault
+of the render from a limit of the measure. Both join the round's
+routine: a Song Check's seeds are heard by the measure before the page
+is built. Last, what the measure found beside the guitar (below):
+`score.pitch_ceiling` names the highest note the chip can play of a
+sample, and `score_of` logs the notes written over it by part, voice and
+sample. Tests: the pack file's field (on a kit voice, refused on a tonal
+one, its loop and release, the kept name), the builder's reading (45.04
+from 95.0 Hz at 37,133 Hz), the renderer's choice and its two log lines,
+the ceiling's line (a note at the ceiling itself not counted). Suite 476
+(1 skip).
+
+**Measured.** The render, 40 seeds (1 to 12, the five Song Check seeds
+and 23 more whose songs give a kit voice to a part), 231 pitched voices.
+Round 118 on the pack as it was: 203 voices with a verdict, 26 under
+0.80 on pitch. Those are the guitar's ten lines with a verdict (seven
+accompaniments and three basses, every decisive note three under),
+eight voices beside a line on the guitar (0.00 to 0.64) and the snare's
+eight lines (0.06 to 0.32, most notes nearest seven over). Round 119:
+198 with a verdict, 2 under 0.80; the guitar's twelve lines with a
+verdict on pitch on every decisive note (three low basses without one),
+and 191 voices on pitch on every decisive note where 172 were. The
+snare's eight lines have no verdict now: at the game's rate a snare
+gives the combs near ties, as The Empire Gestahl's own does on the chip
+(0.09 of its notes decisive). The two left are not the tuning. The
+Overpass of Snow (203), its accompaniment on the tom: two semitones over
+on every decisive note, a third of its notes; Mt. Koltz's own tom on the
+chip reads the same (two over on 0.92 of its decisive notes, 0.35 of
+them decisive), so the render keeps the game's rates and the tom's
+strike sits over the readings' fundamental in the game too. The Shore
+of Mirrors (42), its second accompaniment voice on the guitar: every
+note written over 66 sounds at 66. That is the SNES chip's pitch
+register, which stops at four times a recording's rate: a sample sounds
+no higher than two octaves over the note it plays at 32 kHz, and the
+guitar's ceiling is 66.46. Counted in the score, 7 of 400 seeds hold
+notes over their sample's ceiling, 2,015 of 582,713 notes, each a voice
+beside a line: accompaniment third voices on The Wandering Bazaar (60:
+764 notes, written to 121 on a sample that stops at 87), Lower Aqueduct
+(126: all 232), The Restless Gorge (192: 319) and Northern Mist (277:
+4), second voices on the guitar on The Shore of Mirrors (42: 672) and
+Starlit Stone (153: 4), an arp's second voice on Bastion Passage (54:
+20). Round 118 had 6 seeds and 1,763 notes, and round 112 already had
+two of them (Lower Aqueduct, The Restless Gorge): older than this round,
+and now in the log. The Song Check seeds,
+both sides (round 114 with the fix, round 119): the guitar on pitch on
+every decisive note in all five songs, as is every other voice with a
+verdict (24 of 25 a side). Plans (400 seeds, against round 118): 400
+keep their token song and the written notes of all 400 are the same;
+356 plan logs unchanged (39 gain the tonal reading's line, 7 the
+ceiling's, 2 of them both).
+
+**Song Check 98** (https://claude.ai/artifact/WEc3VmiF2dmP1RAqijiucB):
+the five Battle Theme songs of Song Checks 89 to 97 with the guitar in
+tune on both sides, round 114 with this round's fix before and round 119
+after: Song Check 97's question, whether rounds 115 to 118 help, asked
+again fairly.
+
+**Open.** The verdicts first: rounds 115 to 118, and 111 and 114 where
+they touch the guitar's line, answered songs heard with a flat guitar,
+and are to be heard again on Song Check 98 before any is judged. A voice beside a line over
+its sample's ceiling (7 seeds): round 95's fold holds such a voice where
+the game plays its sample and these escape it; the writer does not read
+the ceiling. A drum as a part: the role reader makes The Empire
+Gestahl's snare (one pitch register in the game) and Mt. Koltz's tom
+(four) accompaniments and the writer writes them lines; the reading
+keeps the game's rates, and whether they are parts is the reader's
+question. Two gaps the investigation counted on Battle Theme, not yet
+words: its guitar sits an octave over the bass on 0.66 of the onsets
+they share, where the written guitar is at the bass's own pitch on 0.24
+to 0.34 and an octave over on 0.13 to 0.17 (its riding notes are folded
+into a register nine semitones wide); and its riff is a stack, the bass,
+the guitar an octave up, the lower synth two octaves up and the upper a
+twelfth over the guitar on 0.39 to 0.40 of its onsets, where the written
+upper synth holds the twelfth on 0.19 to 0.34. The standing list as at
 round 114.

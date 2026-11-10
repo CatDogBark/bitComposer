@@ -111,6 +111,19 @@ frames).
 - **`percussion`**: `true` for a kit voice: it is left at its own level
   rather than evened out with the tonal voices. Defaults to `true` for a
   voice the `drums` use and `false` otherwise.
+- **`tonal`**: on a kit voice only, the same recording read as a pitched
+  instrument: `{"note": 45.04, "loop": [2720, 7104]}`, with `note` or
+  `hz` as above and `loop` and `release` optional, as above. A game may
+  play as an instrument a recording the pack holds as a kit voice (Final
+  Fantasy VI's distorted rhythm guitar, a snare to the pack's drum
+  namer, is Battle Theme's riff). The kit still strikes the voice as
+  recorded; a pitched part given it is tuned, and looped, by this
+  reading. Without one a pitched part plays the kit voice as the kit
+  does, its pitch unknown, and the written song's log says so. The
+  reading is kept as a sample of its own under the voice's name with
+  `_tonal` after it, so no other sample may take that name. The pack
+  builder writes it for a kit sample the game plays as a pitched part;
+  `tools/pack_tonal.py` adds it to a pack already built.
 - **`volume`**: the default note volume, 1 to 64. Defaults to 60.
 
 Tonal voices are evened out the way the built-in ones are: a sustaining

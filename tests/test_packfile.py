@@ -188,6 +188,59 @@ class PackFiles(unittest.TestCase):
             pf.parse(plain, Path(self.dir.name), source="t")
         self.assertIn("tables: not a pack field", str(cm.exception))
 
+    def test_a_kit_voice_carries_its_tonal_reading(self):
+        """Round 119: a kit voice's `tonal` field registers the same recording as a pitched voice beside it, tuned by the note it
+        sounds at its own rate and looped; the kit voice keeps the kit's convention (as recorded at KIT_NOTE). Final Fantasy VI's
+        rhythm guitar is a kit voice in its pack and the riff's line in Battle Theme: by the kit's convention it sounded a minor
+        third under every note written for it."""
+        pack = dict(self.pack, samples=dict(self.pack["samples"], thump={"file": "thump.wav", "tonal": {"hz": 60, "loop": [2000, 8000]}}))
+        name = self.load(pack)
+        kit, view = f"{name}_thump", f"{name}_thump_tonal"
+        self.assertEqual(samples.tonal_view(kit), view)
+        self.assertIsNone(samples.tonal_view(f"{name}_flute"))
+        self.assertTrue(samples.is_percussion(kit)); self.assertFalse(samples.is_percussion(view))
+        k, t = samples.generate_instrument(kit), samples.generate_instrument(view)
+        self.assertEqual(k["rate"], 2 * 22050)                                                      # the kit: as recorded at KIT_NOTE (48), C-5 an octave up
+        self.assertEqual(t["rate"], round(22050 * 2 ** ((60 - (69 + 12 * math.log2(60 / 440))) / 12)))   # the reading: 60 Hz at the file's rate
+        self.assertFalse(k["loop"]); self.assertTrue(t["loop"])
+        self.assertEqual((t["loop_start"], t["loop_end"]), (2000, 8000))
+        self.assertEqual(t["source_rate"], 22050)
+        pf.unload(name)
+        self.assertIsNone(samples.tonal_view(kit))                                                   # gone with the pack
+        for bad, word in (({"file": "flute.wav", "hz": 441, "tonal": {"hz": 441}}, "a kit voice's reading"),
+                          ({"file": "thump.wav", "tonal": {}}, "note (MIDI) or hz, one of them"),
+                          ({"file": "thump.wav", "tonal": {"hz": 60, "note": 35}}, "one of them"),
+                          ({"file": "thump.wav", "tonal": {"hz": 60, "loop": [9000, 100]}}, "start first"),
+                          ({"file": "thump.wav", "tonal": {"hz": 60, "release": "bass"}}, "give the reading a loop"),
+                          ({"file": "thump.wav", "tonal": {"hz": 60, "speed": 2}}, "optionally loop and release")):
+            key = "flute" if bad["file"] == "flute.wav" else "thump"
+            with self.assertRaises(pf.PackError) as e:
+                pf.parse(dict(self.pack, samples=dict(self.pack["samples"], **{key: bad})), Path(self.dir.name))
+            self.assertIn(word, str(e.exception), bad)
+        write_wav(os.path.join(self.dir.name, "other.wav"), [0.1] * 400)
+        with self.assertRaises(pf.PackError) as e:                                                   # the reading's name is its own
+            pf.parse(dict(self.pack, samples=dict(pack["samples"], thump_tonal={"file": "other.wav", "hz": 100})), Path(self.dir.name))
+        self.assertIn("kept for the tonal reading", str(e.exception))
+
+    def test_the_builder_writes_a_kit_voices_tonal_reading(self):
+        """Round 119: the reading's note is the pitch at the rate the kit voice's file is written at; the loop only where the
+        file holds the sample whole; an existing pack gains the field for the kit voices its game plays pitched."""
+        from bitcomposer.translate import pack as tpack
+        self.assertEqual(tpack.tonal_reading(95.0, 37133, (2720, 7104), 7104), {"note": 45.04, "loop": [2720, 7104]})   # FFVI's guitar: A2 as struck
+        self.assertEqual(tpack.tonal_reading(95.0, tpack.RATE, None, 7104), {"note": 42.46})
+        self.assertIsNone(tpack.tonal_reading(None, 32000, None, 100))
+        data = {"samples": {"sgtr": {"file": "sgtr.wav", "percussion": True, "piece": "snare"}, "skick": {"file": "skick.wav", "percussion": True},
+                            "slead": {"file": "slead.wav", "note": 64.0}}}
+        changed = tpack.add_tonal_readings(data, {"sgtr": (37133, 7104), "skick": (32000, 2192)},
+                                           {"sgtr": (95.0, (2720, 7104), 7104), "slead": (333.3, (1824, 1920), 1920)})
+        self.assertEqual(changed, ["sgtr"])
+        self.assertEqual(data["samples"]["sgtr"]["tonal"], {"note": 45.04, "loop": [2720, 7104]})
+        self.assertNotIn("tonal", data["samples"]["skick"]); self.assertNotIn("tonal", data["samples"]["slead"])
+        self.assertEqual(tpack.add_tonal_readings(data, {"sgtr": (37133, 7104)}, {"sgtr": (95.0, (2720, 7104), 7104)}), [])   # already there
+        cut = {"samples": {"sgtr": {"file": "sgtr.wav", "percussion": True}}}
+        tpack.add_tonal_readings(cut, {"sgtr": (37133, 4000)}, {"sgtr": (95.0, (2720, 7104), 7104)})
+        self.assertEqual(cut["samples"]["sgtr"]["tonal"], {"note": 45.04})                           # a cut file: no loop
+
     def test_wav_sample_formats(self):
         """8, 16 and 24-bit, mono and stereo all come out as the same 16-bit voice."""
         values = [math.sin(i / 7) * 0.8 for i in range(200)]
