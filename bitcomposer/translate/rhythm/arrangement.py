@@ -765,7 +765,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     beside which part stretch by stretch (relation_words: "ox9>dm-12x14>o"); since round 92 a sixth, its instrument by
     stretch (stretch_word with "~": "s605f200105~56-72x14>sf89f5aedfd~60-68"); since round 108 a seventh, how a voice struck
     with another strikes (_struck_text: "w0.82~0.2~0.3~1.0~0.6~-~4.9"); since round 121 an eighth, its loops; since round
-    125 a ninth, its onsets a bar by the form's letters (section_onsets_field)."""
+    125 a ninth, its onsets a bar by the form's letters (section_onsets_field); since round 126 a tenth for a bass's
+    voice, what it does beside the line as the layers word names it (layer_word: "vapart_+0_denser", "vdoubling_+0")."""
     shares = voice_level_shares(song, role)
     if shares is None:
         return None
@@ -784,7 +785,9 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
                 stretch_word(song, voices[v], "~"),        # and its instrument by stretch (round 92; "~" keeps "@" for the sub-fields)
                 struck.get(v, ""),                          # and how it strikes where it is struck with another (round 108: _struck_text)
                 loop_field(song, voices[v]) if role in cells_mod.BACKING else "",   # and its loops by the form's letters (round 121)
-                section_onsets_field(song, voices[v])]      # and its onsets a bar by them (round 125)
+                section_onsets_field(song, voices[v]),      # and its onsets a bar by them (round 125)
+                "v" + (layer_word(voices[line], voices[v]) or "").replace(" ", "_") if role == R.BASS and layer_word(voices[line], voices[v]) else ""]   # and, a
+                                                            # bass's, what it does beside the line, the layers word's own outcome (round 126)
         while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
             subs.pop()
         out.append("@".join(subs))
@@ -2547,21 +2550,29 @@ def layer_units(songs) -> list:
             line = cells_mod.line_voice(voices, role, s)         # the bass's the voice with the longest notes, the melody's the heard tune (round 90)
             extras = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
             for rank, other in enumerate(extras, start=2):      # every voice beside the line, the busiest first, its own relation
-                kind = harness.relation(voices[line], voices[other])
-                if kind[0] == "doubling":
-                    outcome = f"doubling {kind[1]:+d}"
-                elif kind[0] == "alternating":
-                    outcome = "alternating"
-                else:
-                    a, b = part_register(voices[line]), part_register(voices[other])
-                    if a is None or b is None:
-                        continue
-                    offset = int(round(((b[0] + b[1]) - (a[0] + a[1])) / 2 / cells_mod.REGISTER_BIN)) * cells_mod.REGISTER_BIN
-                    offset = max(-LAYER_OFFSET, min(LAYER_OFFSET, offset))
-                    density = readings_mod.habit_of(len(voices[other]) / max(1, len(voices[line])), LAYER_DENSITY)
-                    outcome = f"apart {offset:+d} {density}"
-                out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "rank": str(min(rank, 4))}))
+                outcome = layer_word(voices[line], voices[other])
+                if outcome is not None:
+                    out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "rank": str(min(rank, 4))}))
     return out
+
+
+def layer_word(line: list, other: list) -> str | None:
+    """What a voice does beside its part's line, as the layers word names it (layer_units' outcome): "doubling +4",
+    "alternating", or "apart +0 denser" (how far its register sits from the line's, how dense it is against it); None
+    where a register cannot be read."""
+    from .. import harness                                  # harness imports this module
+    kind = harness.relation(line, other)
+    if kind[0] == "doubling":
+        return f"doubling {kind[1]:+d}"
+    if kind[0] == "alternating":
+        return "alternating"
+    a, b = part_register(line), part_register(other)
+    if a is None or b is None:
+        return None
+    offset = int(round(((b[0] + b[1]) - (a[0] + a[1])) / 2 / cells_mod.REGISTER_BIN)) * cells_mod.REGISTER_BIN
+    offset = max(-LAYER_OFFSET, min(LAYER_OFFSET, offset))
+    density = readings_mod.habit_of(len(other) / max(1, len(line)), LAYER_DENSITY)
+    return f"apart {offset:+d} {density}"
 
 
 @dataclass

@@ -8699,3 +8699,53 @@ snare, read at thirty-two a bar, plays sixteen). The tune and the
 counter are not held to the section's onsets, and the counter still
 rests more than the game's. A voice beside a line takes only its last
 bar's fill. The bass's second voice is the next round's.
+
+### Round 126: the bass's second voice does what the token song's does (2026-11-10, the third change from Song Check 100's investigation and the Arrangement Check, on the owner's go)
+
+**Why.** The owner on the song written on Gogo's token: "not as
+coherent as Gogo actually is, sounds much more wandering". Part of that
+is its bass. Gogo's bass is two voices, a held line under a busy one
+that plays four to nine notes a bar, the bounce under the tune; the
+written bass played one note a bar for the whole song and its second
+channel never sounded.
+
+**Found.** A part's voices beside its line take what they do from the
+`layers` word, pooled by the part and the voice's rank. For a bass the
+writer writes a second voice only where the word is a line of its own
+(`apart`); FFVI's fifteen two-voice basses are that in twelve, one line
+on two samples in two (Returners, Overture part 3) and alternating in
+one (Fanfare). The pooled draw gave Gogo's bass `alternating` and
+Locke's `doubling +0`, and neither was written: seven of Song Check
+100's 68 songs had a bass channel that never played.
+
+**Built.** The reader: `layer_word`, the layers word's outcome for one
+voice (taken out of `layer_units`, which counts with it as before), and
+a bass's voice beside the line carries it as a tenth sub-field
+(`vapart_+0_denser`, `vdoubling_+0`). The plan: the `layers` draw is
+made as before and a bass's voice then takes its token's word where
+that is one the bass writer writes (`BASS_LAYER_KINDS`: a line of its
+own, the line again). The writer: `double_bass`, a second voice that
+doubles the line: the line as finally played, again on the second voice
+at the word's interval (`diatonic`), written after the theme band, the
+form's repeats and the bass's last pass so the double stays the line's.
+Tests: the word and the sub-field from a held line under a busy voice,
+and from the line again; the plan's taking it over a layers draw of
+`alternating`, and leaving the draw for an alternating bass; the double
+as the line an octave up, note for note, a stale note of the second
+voice gone. Suite 499 (1 skip).
+
+**Measured.** The Song Check 100 songs, the 59 whose form is their
+token song's: the channels that never play go from 8 to 3 (the third
+bass voice of Dancing Mad's two readings, and one tune voice). Locke's
+(seed 10): 135 bass notes where it had 26, the second voice two to
+twelve a bar. Returners' and Overture part 3's: the line on both
+voices. Plans (400 seeds, against round 125): all keep their token
+song; 352 note sets unchanged, the 48 others the songs on a two-voice
+bass's token.
+
+**Open.** A third bass voice is not written. An alternating bass keeps
+the pooled draw. The second voice's busyness is the mask word's, drawn
+under the line's figure: Gogo's busy voice plays eight a bar through
+its C and the written one follows the line's figure there. The other
+parts' voices beside the line still draw their layer word for the
+stretches the token leaves them their own.

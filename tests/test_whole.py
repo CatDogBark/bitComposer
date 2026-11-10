@@ -1717,6 +1717,60 @@ class TokenSectionTests(unittest.TestCase):
         self.assertEqual(sorted({letter for t, letter in free}), ["K", "S"])                         # without the bounds: the table's bar
 
 
+class BassVoicesTests(unittest.TestCase):
+    """Round 126: what a bass's second voice does beside its line rides the balance token (the layers word's own outcome,
+    `vapart_+0_denser`), and the plan takes it in place of the pooled layers draw; a second voice that doubles the line is
+    written. FFVI's two-voice basses are a line of its own beside the line in twelve of fifteen and one line on two
+    samples in two; the pooled draw gave a doubling or an alternating in seven of Song Check 100's songs, and the bass
+    writer wrote a second voice only for a line of its own: Gogo's busy bass voice never played."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        held = [(4.0 * k, 3.8, 36.0, "b") for k in range(8)]                                                       # the line: a note a bar
+        busy = [(4.0 * k + x / 2, 0.2, 35.0 + (x % 2) * 2, "s") for k in range(8) for x in range(8)]              # the voice beside it: eight, round the line's note
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": sorted(held + busy), "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", held), 1: ("bass", busy), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4, 2: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s, held, busy
+
+    def test_the_token_carries_what_the_bass_voice_does(self):
+        s, held, busy = self._song()
+        self.assertEqual(rhythm.layer_word(held, busy), "apart +0 denser")                          # a line of its own in the line's register, busier
+        self.assertEqual(rhythm.layer_word(held, [(a, b, m, "s") for a, b, m, _ in held]), "doubling +0")   # the line again
+        self.assertEqual({u.outcome for u in rhythm.layer_units([s]) if u.values["part"] == "bass"}, {"apart +0 denser"})   # the layers word's own outcome
+        tok = rhythm.balance_units([s])[0].outcome
+        bass = next(f for f in tok.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(bass[5].split("@")[9], "vapart_+0_denser", bass[5])                        # the voice's tenth sub-field
+
+    def test_the_plan_takes_it_over_the_layers_draw(self):
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        layers = tables.Table(("part", "rank"), "layers", votes=tables.SHARES).fit(mk("alternating", part="bass", rank="2"))
+        plan = lambda word: whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(   # noqa: E731
+            f"bass=half:36-44:0.9:2:1.0:1.0@sx@2.00@32-44@@@@@@{word}::sbass melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium", part=rhythm.ARRANGEMENT)), "layers": layers}, 7, "g")
+        p = plan("vapart_+0_denser")
+        self.assertEqual(p.extras["bass"]["layer"], "apart +0 denser")
+        self.assertIn("bass's voice 2 beside the line from the balance (round 126): apart +0 denser (the draw alternating)", p.log)
+        self.assertEqual(plan("vdoubling_+0").extras["bass"]["layer"], "doubling +0")
+        q = plan("valternating")                                                                    # a word the bass writer does not write: the draw stands
+        self.assertEqual(q.extras["bass"]["layer"], "alternating"); self.assertFalse(any("round 126" in l for l in q.log), q.log)
+
+    def test_a_doubling_voice_is_the_line_as_finally_played(self):
+        from types import SimpleNamespace
+        line = [(4.0 * k + x, 4.0 * k + x + 0.9, 36.0 + x, 0) for k in range(2) for x in range(4)]
+        part = SimpleNamespace(notes=line + [(0.0, 1.0, 50.0, 1)], log=[])                          # a stale note on the second voice
+        song = SimpleNamespace(notes={"bass": []})
+        plan = SimpleNamespace(voices={"bass": 2}, extras={"bass": {"layer": "doubling +12"}}, tonic=0, mode="major")
+        log = whole.double_bass(plan, song, {"bass": part})
+        self.assertEqual([(a, b, m) for a, b, m, v in part.notes if v == 1], [(a, b, m + 12.0) for a, b, m, _ in line])   # the line an octave up, note for note
+        self.assertEqual(len(part.notes), 16); self.assertEqual(len(song.notes["bass"]), 16)
+        self.assertEqual(log, ["voice 2 doubles the line at +12 semitones, the line as finally played: 8 notes (round 126)"])
+        plan.extras["bass"]["layer"] = "apart +0 like"
+        self.assertEqual(whole.double_bass(plan, song, {"bass": part}), [])                         # a line of its own is the bass writer's
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

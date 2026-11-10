@@ -326,6 +326,24 @@ The words are grouped by where the writing draws them, in the order the song is 
   the written Edgar and Sabin's accompaniment, drawn a tier denser,
   played seventeen notes a bar in each of three voices where the
   game's plays two to six.
+  Since round 126 a bass's voice beside its line carries a tenth
+  sub-field, what it does beside the line as the `layers` word names it
+  (`layer_word`, the word's own outcome for the song: `vapart_+0_denser`,
+  `vdoubling_+0`). FFVI's fifteen two-voice basses: a line of its own in
+  twelve (in the line's register in six, busier than the line in
+  five), the line again on a second sample in two (Returners, Overture
+  part 3), alternating in one (Fanfare). The plan takes the word in
+  place of the `layers` draw for the voice, the draw made all the same
+  so no other draw moves (`BASS_LAYER_KINDS`: a word the bass writer
+  writes; an alternating bass keeps the draw), and a second voice that
+  doubles the line is written last (`whole.double_bass`): the line as
+  finally played, after the theme band, the form's repeats and the
+  bass's last pass, again at the word's interval. Why: the pooled draw
+  gave a bass a doubling or an alternating as often as not, and the
+  bass writer wrote a second voice only for a line of its own, so the
+  second channel was silent in seven of Song Check 100's 68 songs;
+  Gogo's bass is a held line under a busy one, and the written bass
+  played the held line alone, a note a bar.
   Since round 111 a chord part and the bass carry a sixteenth field, the
   line's chord-tone profile (`line_tone_profile`: `t46/2/8/31/2/11` for
   Battle Theme's guitar, `t33/8/17/19/3/20` for its bass, the share of the
@@ -824,6 +842,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   its ceiling (`plan.hold_under_ceilings`), into where the token song
   plays its sample and under the ceiling; a voice with no such note
   stays where its word put it (`docs/LIMITS.md`).
+  Since round 126 a bass's voice takes its token song's own word (the
+  balance token's sixth field, a tenth sub-field); the draw is made
+  all the same.
   *`layers`: shape (part, rank); drawn in _plan_once, layers_of; conditions second_figures, voice_intervals, voice_moves.*
 
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,

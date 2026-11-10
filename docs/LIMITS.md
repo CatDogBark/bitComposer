@@ -339,6 +339,19 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **A bass has two voices at most, and the other parts' voices still
+  draw their layer word.** Since round 126 a bass's second voice does
+  what its token song's does (a line of its own, or the line again). A
+  third bass voice is not written (Dancing Mad's two readings have
+  one), a bass whose two voices alternate keeps the pooled draw
+  (Fanfare's), and the second voice's busyness comes from the mask word
+  drawn under the line's figure, not from the song's own onsets by
+  section. A chord part's or the tune's voices beside the line take
+  what they do part by part from the token (rounds 90 and 122) and, in
+  the stretches the token leaves them their own, a layer word that is
+  still the pooled draw: Edgar and Sabin's two accompaniment voices
+  beside the line are lines of their own in the game, and the first
+  was drawn a doubling a fourth under.
 - **A section's density is a median and an envelope, and the tune's and
   the counter's are not held.** Since round 125 a backing line's figures
   are drawn within half to one and a half times the token song's median
