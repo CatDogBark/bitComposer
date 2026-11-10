@@ -399,11 +399,16 @@ def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None 
     each part new, again or back by its index (the form table). (first
     bar, bars, the part repeated or None, letter). `form`: the token
     song's own form (round 113, [(letter, bars)]), its letters taken in
-    place of the letters draw and its bars in place of the lengths draws
-    (a repeat as long as the part it repeats, as read); a form past the
-    bars asked is cut as any."""
+    place of the letters draw and its bars in place of the lengths draws;
+    a repeat is as long as the part it repeats, so a part read returning
+    with other bars (15 of FFVI's 62 token forms: a fragment, or a longer
+    second statement) plays whole at its first statement's bars; a form
+    past the bars asked is cut as any (one short of them leaves the
+    plan's draw standing: _plan_once)."""
     habit = _draw(models, "length_habits", ("form",), rng, log)
-    sizes = {l: n for l, n in form} if form else {}
+    sizes = {}
+    for l, n in form or []:                                 # a letter's bars are its first statement's (round 113)
+        sizes.setdefault(l, n)
     if "letters" in models or form:
         drawn_letters = _draw(models, "letters", ("form",), rng, log).split()[:MAX_PARTS] if "letters" in models else []
         letters = [l for l, _ in form[:MAX_PARTS]] if form else drawn_letters
@@ -1561,9 +1566,15 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
         drawn_form = " ".join(f"{p[3]}{p[1]}" for p in parts)   # balance is read (the form's own draw above stands, so no other draw moves); a
         form_log = []                                           # form past the bars asked is cut as any; the loop's part drawn again for it
-        parts = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, max_bars, form=token_form)
-        log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
-        loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
+        taken = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, max_bars, form=token_form)
+        taken_bars = taken[-1][0] + taken[-1][1]
+        if min_bars is not None and taken_bars < min_bars:     # a token form short of the bars asked (4 of FFVI's 62): the draw stands
+            log.append(f"the balance's song's form {''.join(f'{l}{n}' for l, n in token_form)} is {taken_bars} bars, short of the {min_bars} asked: "
+                       f"the draw {drawn_form} stands")
+        else:
+            parts = taken
+            log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
+            loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
         was = bpm                                           # an own stream so no other draw moves
         bpm = float(_draw(models, "tempos", ("song", token_class), random.Random(f"whole:{seed}:tempo"), log, floor_k=2))   # terminal at the
