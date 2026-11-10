@@ -290,6 +290,32 @@ The words are grouped by where the writing draws them, in the order the song is 
   another; 42 and 20 of sixty written songs) and wrong for the song, so
   four of the five Song Check songs on Battle Theme's token never came
   back to what they had played.
+  Since round 114 the bass's token carries a seventeenth field, its pitch
+  continuity (`bass_continuity_field`: the share of its bar lines across
+  which the bass keeps the bar's main pitch class, in hundredths, `k58`
+  for Battle Theme; FFVI's basses 0.30 at the median), and the bass holds
+  its line to it twice: the writer (`bass`, `continuity`), while the share
+  runs under the token's with the bar line counted, realizes a bar on the
+  bar before's main pitch class as a pedal, the figure's marks from it as
+  from a root and the fewest notes moved onto it until it is the bar's
+  main pitch class (`realize`'s `root_override`, `pedal`: a passing mark
+  first, then the class most over the song's chord-tone profile, the
+  earliest first, the classes written kept counted); and `hold_bass_pitch`
+  walks the line as finally played, after the theme band, the hand-offs
+  and the form's repeats have rewritten bars of it, pedaling bars the
+  writer's own notes still stand in where the share runs under, a chord
+  part riding the bass moving with it and the voices its relation words
+  have following the line moving the same. And `parallel` draws a line
+  note that is off the chord but on the pitch class the written bass
+  sounds under it as over the chord's root: a part riding the pedal is on
+  the riff's root whatever the chain's chord, and drawn as "other" the
+  synth struck with it had taken the cells where Battle Theme's synth
+  leaps over the riff's neighbours. Why: the bass had walked the chord
+  chain's roots, keeping its pitch class across 0.29 of its bar lines at
+  the median, where Battle Theme's riff hammers one pitch under the
+  changing chords the reader hears in its chromatic neighbours and keeps
+  it across 0.58; the five Song Check basses on its token kept 0.17 to
+  0.41 and keep 0.53, 0.53, 0.50, 0.39 and 0.50 now.
   And each
   layer entry carries a sixth sub-field, the
   voice's own instrument by stretch (`stretch_word` with "~" between a

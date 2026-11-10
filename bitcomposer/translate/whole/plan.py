@@ -2667,7 +2667,7 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
                 gone = {(round(n[0], 3), int(round(n[2]))) for n in ns}
                 part.notes[:] = sorted([n for n in part.notes if not (n[3] == 0 and bar_of(n[0]) == k)] + [(s, e, m, 0) for s, e, m in out], key=lambda n: (n[0], n[3]))
                 song.notes[R.BASS] = sorted([x for x in song.notes.get(R.BASS, []) if (round(x[0], 3), int(round(x[2]))) not in gone]
-                                            + [(s, e - s, m, "bass") for s, e, m in out], key=lambda x: x[0])
+                                            + [(s, e - s, m, R.BASS) for s, e, m in out], key=lambda x: x[0])
                 for (s, _, m), op in zip(out, old):         # the chord parts riding the bass move with it
                     npc = int(round(m)) % 12
                     if npc == op:

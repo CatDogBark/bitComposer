@@ -7732,3 +7732,94 @@ whole at its first statement's bars (15 of 62 token forms). The
 standing list: round 100's
 endings and theme returns, round 101's sparser side, round 103's line
 motion, round 105's sectioning.
+
+### Round 114: the bass line's pitch continuity is the token song's (2026-11-09, the last of the Battle Theme list, on the owner's go to make them all)
+
+**Why.** The Battle Theme investigation's last finding: the bass walks
+where the riff sits. Battle Theme's bass hammers one pitch under the
+changing chords (the chord reader hears its chromatic neighbours as
+changes: Imaj7, I5, Isus4, bII5), keeping the bar's main pitch class
+across 0.58 of its bar lines where FFVI's basses keep it across 0.30 at
+the median; the written basses on its token walked the chord chain's
+roots, keeping it across 0.17 to 0.41 (sixty seeds' median 0.29).
+Nothing in the vocabulary said how still a song's bass is.
+
+**Built.** The bass's balance token gains a seventeenth field
+(arrangement.bass_continuity_field, CONTINUITY_BARS 8): the share of its
+bar-to-bar transitions, consecutive bars it plays in, that keep the
+bar's main pitch class, in hundredths (`k58` for Battle Theme). The plan
+reads it (Plan.bass_continuity) and the bass holds its line to it twice.
+In the writer (parts.bass, `continuity`): while the written share, with
+the bar line counted, runs under the token's by CONTINUITY_MARGIN, the
+bar is realized on the bar before's main pitch class (realize's
+root_override: the figure's marks from the pedal as from a root, the
+chord's shape kept), and the fewest notes are moved onto the pedal until
+it is the bar's main pitch class (parts.pedal: a passing mark first,
+then the note whose tone class is most over the token song's chord-tone
+profile, the earliest first; the classes written kept counted, so the
+profile hold answers). Then on the line as finally played
+(plan.hold_bass_pitch): the theme band, the hand-offs and the form's
+repeats rewrite bars of the bass after its writer (11 of Journey of the
+Quarry's 41), each a bar line or two lost, and the writer's 0.53 had
+come out 0.28; the bars are walked again as the reader counts them, a
+rest bar breaking the chain, and where the share runs under, a bar the
+writer's own notes still stand in is pedaled the same way, a bar
+rewritten after the writer left as it is; a chord part riding the bass
+moves with it (its line's note at a moved onset on the bass's old pitch
+class takes the new, and the voices its relation words have following
+the line there, struck with it, parallel or doubling, move the same).
+One more thing the pedal uncovered: the voice struck with a chord part
+draws its landing by the line's tone class under the chord (round 97),
+and a line riding the pedal is off the chain's chord on every pedaled
+bar, so the synth drew from the cells where Battle Theme's synth leaps
+over the riff's neighbours (+19 and +14 over the twelfth: Journey of
+the Quarry's synth two octaves or more over the guitar on 0.36 of its
+stabs, 0.11 before the hold); `parallel` now draws a line note off the
+chord but on the written bass's pitch class as over the chord's root,
+the riff's root, as Battle Theme's reader hears the riff's pitch. Pack
+refit (110 tables; no new table), the vocabulary shipped and committed.
+Tests: the field read from a ten-bar bass and parsed; a bar realized on
+another pitch class with the chord's shape kept, its fifth moved onto
+the pedal in the octave nearest its own, a passing tone first and the
+classes counted true; the final pass pedaling a bar, moving a rider and
+the voice struck with it, leaving a stacked voice and rewritten bars;
+the same line note drawn high over a bass on another pitch and near the
+twelfth over the bass pedaling its own. Suite 466 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds: the bass keeps its
+pitch class across 0.53, 0.53, 0.50, 0.39 and 0.50 of its bar lines (the
+token 0.58) where it had kept 0.30, 0.35, 0.10, 0.35 and 0.34 at round
+113 (0.21, 0.41, 0.17, 0.41 and 0.30 at round 112, Song Check 96's
+before side); the one under 0.45, The Terminal of Glass, has 13 of its
+23 playing bars rewritten by the theme band and the hand-offs. Seeds
+1-60: 54 of 57 basses carry a token share; written median 0.40 against
+the tokens' median 0.35, |written - token| median 0.08 (before: 0.29, no
+hold). The bass's chord-tone profile (round 111) gives a little: the
+basses' off-chord share rises from 0.26 to 0.29 at the median (the
+tokens' 0.16; the pedal under the chain's chord is off it), the root
+from 0.37 to 0.33 (the tokens' 0.35), the lines' distance from their
+profiles 0.16 to 0.17 at the median. The struck voices' motion (round
+110) holds: sixty seeds' 22 struck voices step an octave or more on 0.12
+of their stabs (0.11 before), 1.9 isolated spikes per 100 (1.5), 14
+notes two octaves or more over the line in 10 runs, none of three or
+more (11 in 9, none); the five Battle Theme synths sit that high on 0.13
+to 0.19 of their stabs (0.08 to 0.28 before) with no run of three (0 to
+15 before). The form (round 113) unchanged: 47 of 57 token forms taken
+whole. Plans (400 seeds, against round 113): 400 keep their token song,
+56 plan logs and 181 note sets unchanged (the hold touches the bass, the
+riders and the voices struck with them).
+
+**Song Check 96** (https://claude.ai/artifact/RgR56VsWP3KGEsXQW8buWD):
+the five Battle Theme songs of Song Checks 89 to 95, round 112 before
+and round 114 after, rounds 113 and 114 heard together as the owner
+asked: Journey of the Quarry (18), Lunar Island (243), Gate Return
+(343), The Terminal of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The pedal moves every bar or two where Battle Theme's stays
+for a part: the hold spends its share on the bar after a change, not on
+a riff's stretch; a stretch-wise hold (the pedal held through a part,
+released at its end) would be the next word. The lines' off-chord share
+is still pooled (0.25 against the tokens' 0.15), the chord chain's roots
+pooled, a long token song cut not scaled. The standing list: round 100's
+endings and theme returns, round 101's sparser side, round 103's line
+motion, round 105's sectioning.
