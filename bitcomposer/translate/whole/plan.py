@@ -295,6 +295,8 @@ class Plan:
     sample_ranges: dict = field(default_factory=dict)   # a part -> the range its token song plays the token's sample over (round 86): the voice on
                                       # that sample is bound there (render.samples_for), never to another song's range drawn for the sample
     layer_ranges: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's range on its own token sample, or None
+    ceilings: dict = field(default_factory=dict)        # a sample slot of samples_for (the part, part:second, part:v, part:stretch:i, part:v:stretch:i)
+                                      # -> the highest note the SNES chip can play of the sample chosen for it (round 120; score.pitch_ceiling)
     layer_relations: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's relation word by stretch (the sixth field's
                                       # fifth sub-field, round 90: "ox9>dm-12x14>o", what it does beside which part, bar by bar), or None
     stretches: dict = field(default_factory=dict)       # a pitched part -> its line's instrument by stretch (the eleventh field, round 91): [(sample,
@@ -1331,18 +1333,19 @@ def fold_line(plan: "Plan", role: str, notes: list, meter: int) -> list:
     return out
 
 
-def voice_bound_at(plan: "Plan", role: str, v: int):
+def voice_bound_at(plan: "Plan", role: str, v: int, part: bool = True):
     """A bar's register for a voice beside a line (round 95), as a function of the bar: the range the token song plays the
     voice's sample over in that bar's stretch (layer_stretches, where the voice changes instrument by stretch), else the
     token's range for the voice's sample over the song (layer_ranges), else the voice's writing span (plan.bounds["part:v"],
-    an apart voice's offset span), else the part's; None where nothing is known."""
+    an apart voice's offset span), else the part's; None where nothing is known. Without `part` the part's range is not
+    taken for the voice's (round 120: it is the line's sample's, not the voice's)."""
     sts_all = plan.layer_stretches.get(role) or []
     sts = sts_all[v - 1] if 0 < v <= len(sts_all) else None
     ranges = plan.layer_ranges.get(role) or []
     fallback = tuple(ranges[v - 1]) if 0 < v <= len(ranges) and ranges[v - 1] else None
     if fallback is None:
         fallback = plan.bounds.get(f"{role}:{v}")
-    if fallback is None:
+    if fallback is None and part:
         fallback = plan.bounds.get(role) or plan.registers.get(role)
 
     def at(bar: int):
@@ -1354,15 +1357,16 @@ def voice_bound_at(plan: "Plan", role: str, v: int):
     return at
 
 
-def fold_voice(plan: "Plan", role: str, v: int, notes: list, meter: int) -> list:
+def fold_voice(plan: "Plan", role: str, v: int, notes: list, meter: int, at=None, why: str = "into where the game plays its sample (round 95)") -> list:
     """A voice beside a line, written by its relation word, folded by octaves into where the token song plays its sample
     (voice_bound_at), as fold_line folds a line: each bar first as a whole, the octave count that puts most of its notes
     inside (a tie keeps the bar before's count, else the smaller move), then the leftovers one by one. Round 95: a relation
     voice had been written at its word's semitones from the line wherever the written line sat, and Umaro's accompaniment
     voice, two octaves over a tune the game has low in those bars, reached midi 112 where the game plays its sample at 72-88,
     a beep two octaves above the song (45 % of relation-voice notes sat outside their sample's played range over sixty
-    seeds). Notes (start, end, midi, voice); only voice v's are touched."""
-    at = voice_bound_at(plan, role, v)
+    seeds). Notes (start, end, midi, voice); only voice v's are touched. `at`: another bound a bar (hold_under_ceilings,
+    round 120), `why` its words for the log."""
+    at = at or voice_bound_at(plan, role, v)
     mine = lambda n: len(n) > 3 and n[3] == v   # noqa: E731
     by_bar = {}
     for k, n in enumerate(notes):
@@ -1388,9 +1392,93 @@ def fold_voice(plan: "Plan", role: str, v: int, notes: list, meter: int) -> list
             moved += m != n[2] + shift.get(bar, 0)
         out.append((n[0], n[1], float(m), *n[3:]) if m != n[2] else n)
     if shifted or moved:
-        plan.log.append(f"{role}'s voice {v + 1}: {shifted} notes moved by octaves" + (f", {moved} folded one by one" if moved else "")
-                        + " into where the game plays its sample (round 95)")
+        plan.log.append(f"{role}'s voice {v + 1}: {shifted} notes moved by octaves" + (f", {moved} folded one by one" if moved else "") + " " + why)
     return out
+
+
+CEILING_SLACK = 0.05                  # semitones a note may sit over its sample's ceiling on the SNES chip and still sound its pitch (round 119)
+
+
+def sample_slot(slots, role: str, voice: int, second: bool, stretch: int | None = None) -> str:
+    """The slot of samples_for's choices a part's voice plays from: its stretch's where the token song changes instrument
+    there (`role:stretch:i` the line's, round 91; `role:v:stretch:i` a voice beside it, round 92), else the token song's
+    own for that voice (`role:v`, round 70), else the part's second sample for a voice beside the line that is no doubling
+    (`second`), else the line's. One order for the sample a note plays (render.sample_of) and for the ceiling the SNES
+    chip sets on it (voice_ceiling_at)."""
+    if stretch is not None:
+        key = f"{role}:stretch:{stretch}" if not voice else f"{role}:{voice}:stretch:{stretch}"
+        if key in slots:
+            return key
+    if voice and slots.get(f"{role}:{voice}") is not None:
+        return f"{role}:{voice}"
+    if second and f"{role}:second" in slots:
+        return f"{role}:second"
+    return role
+
+
+def voice_ceiling_at(plan: "Plan", role: str, v: int):
+    """A bar's ceiling for a part's voice (round 120), as a function of the bar: the highest note the SNES chip can play of
+    the sample the voice plays there (plan.ceilings, set by samples_for; the slot by sample_slot, as the render chooses the
+    sample), None where the plan holds none (a plan no samples were chosen for)."""
+    layers = layers_of(plan, role)
+    second = 0 < v <= len(layers) and not layers[v - 1].startswith("doubling")
+    return lambda bar: plan.ceilings.get(sample_slot(plan.ceilings, role, v, second, stretch_at(plan, role, bar, v)))
+
+
+def hold_under_ceilings(plan: "Plan", song: rhythm.Song, written: dict) -> None:
+    """No voice plays over what the SNES chip can play of its sample, on the notes as finally written (round 120). The
+    chip's pitch register stops at four times a recording's rate, so a sample sounds no higher than two octaves over the
+    note it plays at 32 kHz (score.pitch_ceiling) and a note written higher sounds at that ceiling whatever its pitch
+    class. The lines are written where the game plays their samples and round 95 folds a voice written after the lines by
+    its relation word (fold_voice), but a voice beside a line written by its layer word alone (a doubling at its
+    interval, a pedal at its offset) and one struck with another voice (round 107) are placed from the line and never
+    folded: The Wandering Bazaar's third accompaniment voice doubled its line a twelfth up to midi 121 on a sample the
+    chip stops at 87, and sounded that one pitch on 764 notes. Here a voice that holds a note over its ceiling is folded
+    whole, as round 95 folds: into where the token song plays its sample (voice_bound_at without the part's range: the
+    voice's stretches, its range, its writing span), cut at the ceiling; where the plan knows no range for the voice, into
+    the span it was written over, cut at the ceiling; a line into its own bound. A voice with no note over its ceiling is
+    left exactly as written."""
+    meter = song.meter
+    for role, part in written.items():
+        if role == R.DRUMS:
+            continue
+        for v in sorted({n[3] for n in part.notes if len(n) > 3}):
+            top = voice_ceiling_at(plan, role, v)
+            mine = [n for n in part.notes if len(n) > 3 and n[3] == v]
+            over = [n for n in mine if top(int(n[0] // meter)) is not None and n[2] - top(int(n[0] // meter)) > CEILING_SLACK]
+            if not over:
+                continue
+            if v:
+                known = voice_bound_at(plan, role, v, part=False)
+            else:
+                line_at = line_bounds_at(plan, role)
+                whole = plan.bounds.get(role) or plan.registers.get(role)
+                known = lambda bar, line_at=line_at, whole=whole: (line_at(bar) if line_at else None) or whole   # noqa: E731
+            floor = int(math.floor(min(n[2] for n in mine)))
+
+            def at(bar, top=top, known=known, floor=floor):
+                ceiling, bound = top(bar), known(bar)
+                low, high = bound if bound else (floor, max(int(math.ceil(n[2])) for n in mine))
+                if ceiling is not None:
+                    high = min(high, int(math.floor(ceiling + CEILING_SLACK)))
+                return (low if low <= high else high - 11, high)   # a range wholly over the ceiling: the octave under it
+            was = list(part.notes)
+            part.notes[:] = fold_voice(plan, role, v, part.notes, meter, at=at,
+                                       why=f"under what the SNES chip can play of its sample (round 120): {len(over)} of its {len(mine)} notes sat over "
+                                           f"it, no higher than {int(math.floor(min(top(int(n[0] // meter)) for n in over) + CEILING_SLACK))}")
+            moved = Counter((round(a[0], 3), int(round(a[2]))) for a, b in zip(was, part.notes) if a[2] != b[2])
+            to = {}
+            for a, b in zip(was, part.notes):
+                if a[2] != b[2]:
+                    to.setdefault((round(a[0], 3), int(round(a[2]))), []).append(b[2])
+            sung = []
+            for y in song.notes.get(role, []):              # the song's own copy of the part, a note for a note
+                key = (round(y[0], 3), int(round(y[2])))
+                if moved.get(key):
+                    moved[key] -= 1
+                    y = (y[0], y[1], float(to[key].pop(0)), *y[3:])
+                sung.append(y)
+            song.notes[role] = sung
 
 
 def line_bounds_at(plan: "Plan", role: str):
@@ -2702,6 +2790,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         song.notes[role] += [(a, b - a, m, role) for a, b, m, *_ in notes_v]
         written[role].notes += notes_v
         written[role].notes.sort(key=lambda n: (n[0], n[3] if len(n) > 3 else 0))
+    # every voice under what the SNES chip can play of its sample (round 120): here, beside round 95's fold, so the theme band
+    # and the form's repeats copy the voices as folded, and once more on the notes as finally played (the last line)
+    hold_under_ceilings(plan, song, written)
     if R.MELODY in written:                                 # the theme in the band: doubled where the tune plays it, carried where it does not
         rng_theme = random.Random(f"{seed}:theme band")
         for line in double_theme(plan, song, written, models, rng_theme) + carry_theme(plan, song, written, models, rng_theme):
@@ -2716,6 +2807,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             part.notes[:] = fold_line(plan, role, part.notes, song.meter)
     if R.BASS in written:
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written)   # the bass's pitch continuity as finally played (round 114)
+    hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
     return written
 
 

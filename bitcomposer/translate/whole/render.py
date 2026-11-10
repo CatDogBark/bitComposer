@@ -57,9 +57,6 @@ REACH = 7                             # semitones a part's top may sit above the
 SPEED_WEIGHT = 3                      # a sample's score loses this a note a second the part's fastest bar runs past the sample's fastest in the game
 
 
-CEILING_SLACK = 0.05                  # semitones a note may sit over its sample's ceiling on the SNES chip and still sound its pitch (round 119)
-
-
 def builtin_profile(rid: str, pack: str | None = None) -> dict | None:
     """A built-in voice's profile (packs.profile: its range, speed and floor, set for the voice itself), the stand-in for
     the tables' answers about a game's own sample where the sample is a built-in voice (phase 6). `rid` is the id as the
@@ -627,6 +624,9 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
     for name_, speed in fastest.items():
         floors[name_] = sample_floor(models, raw(name_), rng, speed if plan.speeds else None, pack=pack_name)
     out["floors"] = floors
+    from ... import score as score_mod
+    plan.ceilings = {key: score_mod.pitch_ceiling(chosen[1].c5_speed) for key, chosen in out.items()   # what the SNES chip can play of each chosen
+                     if isinstance(chosen, tuple) and getattr(chosen[1], "c5_speed", 0)}                # sample (round 120): the writing holds under it
     if plan.bounds:
         plan.log.append("written where the game plays each sample: " + ", ".join(f"{k} {lo}-{hi}" for k, (lo, hi) in plan.bounds.items()))
     if viewed:
@@ -980,7 +980,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
         played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0, piece)
         heard.append((t0 / beat_s, (min(t1, seconds) - t0) / beat_s, perceived))
-        if role != R.DRUMS and midi - score_mod.pitch_ceiling(c5) > CEILING_SLACK:   # over what the SNES chip can play of the sample (round 119):
+        if role != R.DRUMS and midi - score_mod.pitch_ceiling(c5) > plan_mod.CEILING_SLACK:   # over what the SNES chip can play of the sample (round 119):
             over.setdefault((role, j, name), [0, score_mod.pitch_ceiling(c5)])[0] += 1   # the register's top sounds, whatever the note's pitch class
         notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(played, pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
@@ -1013,7 +1013,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         plan.log.append("loudness: notes capped at full, their sample too quiet for their level: " + ", ".join(f"{k} {v}" for k, v in capped.most_common()))
     if over:
         plan.log.append("pitch: notes written over what the SNES chip can play of their sample (four times its recorded rate at most) sound at that ceiling: "
-                        + ", ".join(f"{role}{f' voice {j + 1}' if j else ''} {n} on {name} (no higher than {math.floor(top + CEILING_SLACK)})"
+                        + ", ".join(f"{role}{f' voice {j + 1}' if j else ''} {n} on {name} (no higher than {math.floor(top + plan_mod.CEILING_SLACK)})"
                                     for (role, j, name), (n, top) in sorted(over.items())))
     notes.sort(key=lambda x: (x.start, x.voice))
     last = {}                                                # a floored note never runs into the voice's next: the key-on cuts it
@@ -1051,16 +1051,7 @@ def sample_of(samples: dict, role: str, voice: int, second_voice: dict, stretch:
     """The (name, ITSample) a part's voice plays: the token song's own for that voice (`role:v`, round 70) where the pack
     holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's; the line's
     (voice 0) its stretch's sample where the token song changes instrument there (`role:stretch:i`, round 91)."""
-    if stretch is not None:
-        key = f"{role}:stretch:{stretch}" if not voice else f"{role}:{voice}:stretch:{stretch}"   # a voice beside the line's own stretches (round 92)
-        if key in samples:
-            return samples[key]
-    own = samples.get(f"{role}:{voice}") if voice else None
-    if own is not None:
-        return own
-    if f"{role}:second" in samples and voice in second_voice.get(role, ()):
-        return samples[f"{role}:second"]
-    return samples[role]
+    return samples[plan_mod.sample_slot(samples, role, voice, voice in second_voice.get(role, ()), stretch)]   # one order for the sample and its ceiling (round 120)
 
 
 def layer_class(plan: plan_mod.Plan, role: str) -> str:
