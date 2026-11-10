@@ -7658,3 +7658,56 @@ the form never returning, the sections' densities out of step, the
 bass's pitch continuity. The standing list: round 100's endings and
 theme returns, round 101's sparser side, round 103's line motion, round
 105's sectioning.
+
+### Round 113: the form is the token song's (2026-11-09, the first of the Battle Theme list's remaining items, on the owner's go to make them all)
+
+**Why.** The Battle Theme investigation's fourth finding: the form never
+returns. Battle Theme is A B C B D, a two-bar A, eight of B, nine of C,
+the B again, fourteen of D, and the five songs written on its token had
+come out A B C C D E, A B C D, A B C C D, A B C D E F and A B B B: one
+of the five brings a part back after another, where the game's B returns
+after its C. The form was one of the game's forms whole from the pooled
+letters word, right in the aggregate (34 of FFVI's 67 songs repeat a
+part and 18 bring one back after another; 42 and 20 of sixty written
+songs) and wrong for the song.
+
+**Built.** A song-level balance field, `form=` (arrangement.form_field;
+FORM_PARTS 2): the parts' letters in order, each with its bars, a
+returning part by the letter it returns to (`form=A2B8C9B8D14` for
+Battle Theme; 67 of 68 FFVI tokens carry one). The plan reads it
+(form_of, Plan.form_letters) and, once the balance is read, rebuilds its
+form from it (plan_form with `form`): the form's own draw stands, so no
+other draw moves; the token's letters take the place of the letters
+word's and its bars the place of the lengths draws, a repeat as long as
+the part it repeats; a form past the bars asked is cut as any; the
+loop's part is drawn again for the new form on its own stream. Pack
+refit (110 tables; no new table), the vocabulary shipped and committed.
+Tests: the field read from a four-part song and parsed, the plan's form
+from the token (the letters, the bars, a repeat as long as its source,
+the bars running on), the band-levels test skipping the song-level
+fields. Suite 461 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds: every one A2 B8 C9
+B8 D14, 41 bars, where they had been 19 to 38 bars of A B C C D E and
+the like; each brings its B back after its C. Seeds 1-60: 57 of 60 songs
+carry a token form, 51 take its letters whole and 35 its bars too (the
+rest cut to the bars asked), 22 songs bring a part back where 18 tokens
+do (20 before). The sections' densities, the investigation's other
+structural item, were measured and left: at a section boundary the
+written pitched parts step alike on 0.33 of boundaries and agree
+pairwise on 0.53 (sixty seeds), FFVI's on 0.27 and 0.53 at the median,
+Battle Theme's own on 0.00 and 0.33 of its four, so there is no deficit
+to carry (LIMITS). Plans (400 seeds, against round 112): 353 keep their
+token song, 24 plan logs and 24 note sets unchanged (the form moves
+every later draw of a song whose token form differs from its drawn one).
+
+**Song Check 96** (https://claude.ai/artifact/RgR56VsWP3KGEsXQW8buWD):
+the five Battle Theme songs of Song Checks 89 to 95, round 112 before
+and round 114 after, this round and the next heard together as the owner
+asked: Journey of the Quarry (18), Lunar Island (243), Gate Return
+(343), The Terminal of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The bass's pitch continuity (round 114). A token song longer
+than the bars asked is cut, not scaled. The standing list: round 100's
+endings and theme returns, round 101's sparser side, round 103's line
+motion, round 105's sectioning.
