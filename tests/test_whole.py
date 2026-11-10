@@ -762,13 +762,14 @@ class TokenWithTests(unittest.TestCase):
         acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
         layers = acc[5].split("/")
         self.assertEqual([x.split("@")[4] for x in layers], ["wl+24", "w1-7"], layers)
-        self.assertEqual([x.split("@")[6] for x in layers], ["w0.51~-~0.4~-~-~-~0.2~0.20", "w1.00~-~0.4~-~-~-~0.2~0.20"], layers)   # round 108: the stabs
-        # strike 32 of the riff's 63 onsets in their span and sound 0.4 of the riff's half-beat gap, 0.2 beats at the longest; the lower stab strikes every
-        # upper one; round 115: each sounds 0.20 of its bars' time (32 stabs of 0.2 beats over eight bars)
+        self.assertEqual([x.split("@")[6] for x in layers], ["w0.51~-~0.4~-~-~-~0.2~0.20~0.21", "w1.00~-~0.4~-~-~-~0.2~0.20~0.21"], layers)   # round 108: the
+        # stabs strike 32 of the riff's 63 onsets in their span and sound 0.4 of the riff's half-beat gap, 0.2 beats at the longest; the lower stab strikes
+        # every upper one; round 115: each sounds 0.20 of its bars' time (32 stabs of 0.2 beats over eight bars); round 116: the cell's repeats
         self.assertEqual(whole.struck_values_of("w0.82~0.2~0.3~1.0~0.6~-~4.9"),
-                         {"share": 0.82, "sounds": {"<0.5": 0.2, "0.5-1": 0.3, "1-2": 1.0, "2-4": 0.6, "4+": None}, "longest": 4.9, "sounding": None})
+                         {"share": 0.82, "sounds": {"<0.5": 0.2, "0.5-1": 0.3, "1-2": 1.0, "2-4": 0.6, "4+": None}, "longest": 4.9, "sounding": None, "cell": None})
         self.assertEqual(whole.struck_values_of("w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53")["sounding"], 0.53)   # the eighth part (round 115)
         self.assertIsNone(whole.struck_values_of("w0.82~0.2~0.3~1.0~0.6~-~4.9~-")["sounding"])
+        self.assertEqual(whole.struck_values_of("w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53~0.72")["cell"], 0.72)   # the ninth (round 116)
         self.assertIsNone(whole.struck_values_of("wl+19"))
         self.assertEqual(whole.relation_stretches("wl+24"), [("with", ("line",), 24, None)])
         self.assertEqual(whole.relation_stretches("w1-7x6>o"), [("with", ("voice", 1), -7, 6), ("own", None, None, None)])
@@ -828,6 +829,30 @@ class TokenWithTests(unittest.TestCase):
         loose = dict(struck, sounding=None)                                                        # no share on the token: every stab its class share
         notes2, _, _ = whole.struck_with(ref, 0, 4, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.9, scale, None, ref, loose)
         self.assertEqual({round(n[1] - n[0], 2) for n in notes2[:-1]}, {0.9})
+
+    def test_the_cell_is_repeated_to_the_token_voices_share(self):
+        """Round 116: a stab with a stab of the voice's own at the same place of the bar before takes that stab's pitch while the
+        share of such stabs runs under the token's; Battle Theme's synth hammers one cell where the written stabs changed every bar."""
+        from bitcomposer.translate import tables
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        ref = [(4.0 * k + x, 4.0 * k + x + 0.4, 48.0 + [0, 4, 7, 4][x], 0) for k in range(8) for x in range(4)]   # the line: C E G E every bar
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        mk = lambda tone, outcome: [tables.Unit(f"s{i}{tone}{outcome}", "g", outcome, {"interval": "11", "tone": tone, "part": "accompaniment", "previous": rhythm.START}) for i in range(3)]   # noqa: E731
+        t = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(mk("root", "fifth") + mk("root", "third") + mk("third", "root") + mk("third", "fifth") + mk("fifth", "root") + mk("fifth", "third"))
+        models = {"parallel_intervals": t}
+        base = {"share": 1.0, "sounds": {name: None for _, name in rhythm.GAP_CLASSES}, "longest": None, "sounding": None}
+        free, _, _ = whole.struck_with(ref, 0, 8, 19, song, "accompaniment", 1, models, random.Random(3), None, 0.5, scale, None, ref, dict(base, cell=None))
+        by_bar = lambda notes: [tuple(int(n[2]) for n in notes if 4.0 * k <= n[0] < 4.0 * k + 4.0) for k in range(8)]   # noqa: E731
+        self.assertGreater(len(set(by_bar(free))), 1)                                                # drawn anew each bar, the bars differ
+        stats = {}
+        held, _, _ = whole.struck_with(ref, 0, 8, 19, song, "accompaniment", 1, models, random.Random(3), None, 0.5, scale, None, ref, dict(base, cell=1.0), stats=stats)
+        self.assertGreaterEqual(stats["repeats"] / stats["comparable"], 0.85)                         # the cell held bar after bar (the budget counts a stab
+        self.assertEqual(stats["comparable"], 28)                                                    # kept until one differs, so a share of one is not exact)
+        self.assertLess(len(set(by_bar(held)[1:])), len(set(by_bar(free)[1:])))                      # fewer different bars than drawn free
+        some, _, _ = whole.struck_with(ref, 0, 8, 19, song, "accompaniment", 1, models, random.Random(3), None, 0.5, scale, None, ref, dict(base, cell=0.5), stats=stats)
+        self.assertTrue(0.4 <= stats["repeats"] / stats["comparable"] <= 0.65, stats)               # held to about the share
 
     def test_the_mask_is_held_toward_the_token_voices_struck_share(self):
         """Round 108: the second_figures mask thins the followed onsets only as far as the token voice's struck share allows."""

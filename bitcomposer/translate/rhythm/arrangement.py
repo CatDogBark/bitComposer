@@ -879,18 +879,30 @@ def _struck_facts(st: dict, followed: list, line: list, lengths: dict, bars: lis
     gap class (cells.GAP_CLASSES: the stab's length is measured against the line it rides, not against the voice's own next
     stab, which may be bars away where the line rests or the stabs thin), the longest struck note in beats, and (round 115)
     the beats the voice sounds in the stretch (each note to the line's next onset at most) with the beats of the bars it
-    strikes in: (struck, followed, {class: [shares]}, longest, sounded, played). Battle Theme's synth strikes 0.82 of the
-    guitar's onsets, sounds 0.41 of the guitar's next gap at the median, never rings past 4.9 beats, and sounds 0.53 of
-    the time over the bars it plays in; its own gaps run to 9.9 beats."""
+    strikes in, and (round 116) how often it repeats its cell: of its notes with a note of its own at the same position of
+    the bar before, how many sound that note's pitch again: (struck, followed, {class: [shares]}, longest, sounded, played,
+    repeats, comparable). Battle Theme's synth strikes 0.82 of the guitar's onsets, sounds 0.41 of the guitar's next gap at
+    the median, never rings past 4.9 beats, sounds 0.53 of the time over the bars it plays in, and hammers one cell (C D E
+    F) bar after bar; its own gaps run to 9.9 beats."""
     a, b = st["a"], st["b"]
     starts = [x[0] for x in followed if a - readings_mod.NEAR <= x[0] <= b + readings_mod.NEAR]
     line_on = [x[0] for x in line]
     hit, by, longest = set(), {name: [] for _, name in cells_mod.GAP_CLASSES}, 0.0
     sounded, played_bars = 0.0, set()
+    at_pos, repeats, comparable = {}, 0, 0                  # the voice's pitch by (bar, position), for the cell's repeats (round 116)
     for t, m, _ in st["notes"]:
         lo, hi = bisect.bisect_left(starts, t - R.STRETCH_NEAR), bisect.bisect_right(starts, t + R.STRETCH_NEAR)
         if lo < hi:
             hit.add(min(range(lo, hi), key=lambda i: abs(starts[i] - t)))
+        if bars and m is not None and not math.isnan(m):
+            k = bar_index_of(bars, t)
+            if k is not None:
+                pos = round((t - bars[k][0]) * 4) / 4         # the onset's place in its bar, to a sixteenth
+                before = at_pos.get((k - 1, pos))
+                if before is not None:
+                    comparable += 1
+                    repeats += int(round(m)) == before
+                at_pos[(k, pos)] = int(round(m))
         d = lengths.get(t)
         if d is None or math.isnan(d):
             continue
@@ -907,7 +919,7 @@ def _struck_facts(st: dict, followed: list, line: list, lengths: dict, bars: lis
             if k is not None:
                 played_bars.add(k)
     played = sum(bars[k][1] - bars[k][0] for k in played_bars) if bars else 0.0
-    return len(hit), len(starts), by, longest, sounded, played
+    return len(hit), len(starts), by, longest, sounded, played, repeats, comparable
 
 
 def bar_index_of(bars: list, t: float) -> int | None:
@@ -918,10 +930,13 @@ def bar_index_of(bars: list, t: float) -> int | None:
 
 def _struck_text(parts: list) -> str:
     """A struck-with voice's struck facts as the balance token's seventh layer sub-field (round 108), its struck stretches
-    together: "w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53", the share of the followed voice's onsets it strikes, its sounded share of
-    the line's gap by gap class (to cells.SOUND_BIN; "-" under STRUCK_NOTES notes), its longest note in beats and (round
+    together: "w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53~0.72", the share of the followed voice's onsets it strikes, its sounded share
+    of the line's gap by gap class (to cells.SOUND_BIN; "-" under STRUCK_NOTES notes), its longest note in beats, (round
     115) its sounding share: the beats it sounds over the beats of the bars it strikes in (Battle Theme's synth 0.53; the
-    written stabs on a sparse line had sounded 0.68, each 0.9 of a long gap, an organ where the game stabs)."""
+    written stabs on a sparse line had sounded 0.68, each 0.9 of a long gap, an organ where the game stabs), and (round 116)
+    its cell: of its notes with a note of its own at the same position of the bar before, the share that sound that note's
+    pitch again (Battle Theme's synth hammers C D E F bar after bar; the written stabs, each landing drawn anew by the
+    interval word, changed their pitches every bar)."""
     struck, followed = sum(p[0] for p in parts), sum(p[1] for p in parts)
     if not followed:
         return ""
@@ -930,7 +945,9 @@ def _struck_text(parts: list) -> str:
               for _, name in cells_mod.GAP_CLASSES for xs in (by[name],)]
     played = sum(p[5] for p in parts if len(p) > 5)         # the voice's sounding share over the bars it strikes in (round 115), "-" without bars
     sounding = f"{min(1.0, sum(p[4] for p in parts) / played):.2f}" if played > 0 else "-"
-    return f"w{min(1.0, struck / followed):.2f}~" + "~".join(sounds) + f"~{max(p[3] for p in parts):.1f}~{sounding}"
+    comparable = sum(p[7] for p in parts if len(p) > 7)     # its cell's repeats (round 116): "-" under STRUCK_NOTES comparable notes
+    cell = f"{sum(p[6] for p in parts) / comparable:.2f}" if comparable >= STRUCK_NOTES else "-"
+    return f"w{min(1.0, struck / followed):.2f}~" + "~".join(sounds) + f"~{max(p[3] for p in parts):.1f}~{sounding}~{cell}"
 
 
 def _relations(song: readings_mod.Song) -> tuple:
