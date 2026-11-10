@@ -7586,3 +7586,75 @@ the form never returning, the sections' densities out of step, the
 bass's pitch continuity. The standing list: round 100's endings and
 theme returns, round 101's sparser side, round 103's line motion, round
 105's sectioning.
+
+### Round 112: the song's chord-shape profile is the token song's (2026-11-09, from round 111's measure, on the owner's go)
+
+**Why.** Round 111 held the backing lines' chord tones to the token
+song's and the sevenths still did not come: the hold can only pick a
+tone the written chord has, and Battle Theme's reading has a seventh
+chord on 0.56 of its beats (major sevenths 0.45, dominant 0.08, minor
+0.03) where FFVI's median song has one on 0.08 and the five songs
+written on its token had one on 0.00 to 0.13 of their bars. The chord
+chain drew its qualities from the pooled chords word, held at the
+token's change rate since round 106 but in no quality of the song's own;
+so the riff's third of sevenths had nowhere to go, and the synth, whose
+landings the interval word conditions on the guitar's tone against the
+written chord, never saw the 'seventh' the game's synth sits still over.
+
+**Built.** A song-level balance field, `shapes=`
+(arrangement.chord_shape_profile; SHAPE_BARS 8): the share of the song's
+beats under each chord shape the reader heard, in hundredths, the
+largest first, shapes under a hundredth left out
+(`shapes=maj7:45/5:17/sus4:12/m:9/7:8/m7:3/maj:3/dim:3` for Battle
+Theme; the plain triad as `maj`). The plan reads it (shape_profile_of,
+Plan.chord_shapes) and plan_chords holds a changing chord's quality to
+it (reshaped_name, SHAPE_MARGIN 0.05): a quality that, with the bar
+counted, runs over its share gives way to the profile's quality most
+under its share on the same degree (with_shape: IV to IVmaj7, V7 to v,
+as vocab.numeral spells them); a bar the hold share keeps, or a chord
+the chain repeats, keeps its quality; a repeated part keeps its chords
+whole and they count toward the shares. Pack refit (110 tables; no new
+table), the vocabulary shipped and committed. Tests: the field read from
+four bars of C7 and four of C and parsed, numerals re-qualified on their
+degree and read back, the chain held to a profile (every bar the one
+quality; the first bar re-qualified and a repeated chord kept), a
+repeated part kept whole; the band-levels test skips the song-level
+field. Suite 459 (1 skip).
+
+**Measured.** FFVI: 67 of 68 tokens carry the field; the median song has
+a seventh chord on 0.08 of its beats, 7 songs over 0.3; the commonest
+quality is the plain triad in 23 songs, the bare fifth in 20, minor in
+16, a major seventh in 3. Written, the five Battle Theme seeds: bars
+with a seventh chord 0.13, 0.00, 0.06, 0.11, 0.00 to 0.61, 0.63, 0.45,
+0.53, 0.43 (the token 0.56), their shape profiles 0.14 to 0.20 from the
+token's; seeds 1-60: 58 of 60 songs with token shapes sit a median 0.11
+from them (p90 0.21), the median song's seventh-chord share 0.12. The
+lines follow: the guitars' sevenths 0.00 to 0.11 before to 0.10, 0.10,
+0.10, 0.22, 0.12 (the token 0.31), the basses' 0.00 to 0.07 to 0.18,
+0.07, 0.10, 0.20, 0.12 (0.19); seeds 1-60's 116 backing lines a median
+0.15 from their profiles (0.17 before), off the chord 0.25 against 0.15
+still (the pooled tone figure). The synth's leaps land in the game's
+range for the first time: isolated leaps per 100 stabs 3.5, 5.7, 5.2,
+2.4, 4.5 (round 111: 0.9, 6.5, 4.1, 10.5, 4.6; the game 3.7), octave-or-
+more steps 0.22, 0.21, 0.19, 0.17, 0.23 (the game 0.17); seeds 1-60 1.6
+per 100, high stabs in runs of three or more 13 (the game 31 of 89).
+Plans (400 seeds, against round 111): 345 keep their token song, 55 move
+(the new song-level token re-sorts the balance table, as rounds 95 and
+106 did); 6 plan logs and 6 note sets unchanged; the five Song Check
+seeds keep theirs.
+
+**Song Check 95** (https://claude.ai/artifact/DyTDpNmhNKsnsgnkL2yhaf):
+the five Battle Theme songs of Song Checks 89 to 94, round 111 before
+and round 112 after: Journey of the Quarry (18), Lunar Island (243),
+Gate Return (343), The Terminal of Glass (150) and Second Cistern Dance
+(365).
+
+**Open.** The lines' off-chord share is the pooled tone figure's (0.25
+against the tokens' 0.15), and the guitar's sevenths sit at a third of
+the riff's where its chords allow them. The chord chain's roots are the
+pooled chords word's with the token's change rate and qualities; which
+degrees the song's harmony visits is not a word. The Battle Theme list:
+the form never returning, the sections' densities out of step, the
+bass's pitch continuity. The standing list: round 100's endings and
+theme returns, round 101's sparser side, round 103's line motion, round
+105's sectioning.
