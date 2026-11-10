@@ -241,7 +241,26 @@ The words are grouped by where the writing draws them, in the order the song is 
   common onsets against the game's 0.69, the bass kept its main pitch
   class from bar to bar 0.25 against 0.74, and the owner heard every
   song on the token as a band whose players did not listen to each
-  other. And each
+  other.
+  Since round 111 a chord part and the bass carry a sixteenth field, the
+  line's chord-tone profile (`line_tone_profile`: `t46/2/8/31/2/11` for
+  Battle Theme's guitar, `t33/8/17/19/3/20` for its bass, the share of the
+  line's notes on the chord's root, third, fifth, seventh and sus and off
+  the chord, in hundredths; FFVI: 56 accompaniments, 58 basses, 10
+  harmonies and 2 arps carry one). The chord-part writer and the bass
+  writer hold the line's chord tones to it (`parts.profile_tone`): a
+  chord-tone onset whose class, with the note counted, runs over its share
+  by PROFILE_MARGIN takes the chord's own tone most under its share
+  instead; the off-chord onsets stay the tone figure's and the passing
+  marks'. Why: the voicings, the motion and the bass's marks said which
+  chord tones a line walks, and none knew the token song's: FFVI's
+  accompaniment lines play the seventh on 0.01 of their notes at the
+  median and Battle Theme's riff on 0.30 (one other FFVI accompaniment
+  reaches 0.2), so the written lines on its token played fifths and thirds
+  and never the seventh, and the synth struck with them, whose landings
+  the interval word conditions on the guitar's tone, drew from the cells
+  where the game's synth leaps (Song Check 93).
+  And each
   layer entry carries a sixth sub-field, the
   voice's own instrument by stretch (`stretch_word` with "~" between a
   sample and its range: `s605f200105~56-72x14>sf89f5aedfd~60-68`; FFVI:

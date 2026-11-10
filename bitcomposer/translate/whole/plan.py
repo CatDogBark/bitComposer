@@ -297,6 +297,7 @@ class Plan:
                                       # fifth sub-field, round 90: "ox9>dm-12x14>o", what it does beside which part, bar by bar), or None
     stretches: dict = field(default_factory=dict)       # a pitched part -> its line's instrument by stretch (the eleventh field, round 91): [(sample,
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
+    tone_profiles: dict = field(default_factory=dict)   # a backing part -> its line's chord-tone profile from the token (round 111: field 15)
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -883,6 +884,15 @@ def struck_values_of(text: str) -> dict | None:
     return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None}
 
 
+def tone_profile_of(text: str) -> dict | None:
+    """The balance token's chord-tone profile field (round 111, arrangement.line_tone_profile) read: "t45/2/9/30/2/12" -> {"root":
+    0.45, "third": 0.02, "fifth": 0.09, "seventh": 0.30, "sus": 0.02, "other": 0.12}; None where it cannot be read."""
+    m = re.fullmatch(r"t(\d+)/(\d+)/(\d+)/(\d+)/(\d+)/(\d+)", text)
+    if not m:
+        return None
+    return {k: int(x) / 100 for k, x in zip(rhythm.TONE_PROFILE_CLASSES, m.groups())}
+
+
 def struck_values(plan: "Plan", role: str, v: int) -> dict | None:
     """The token song's struck facts for a part's voice v beside the line (round 108), None without them."""
     xs = plan.layer_struck.get(role) or []
@@ -1298,6 +1308,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
     token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
+    token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
@@ -1436,6 +1447,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 m_ = re.fullmatch(r"b(\d+)/(\d+)", fields[14])
                 if m_:
                     token_rides[role] = (int(m_.group(1)) / 100, int(m_.group(2)) / 100)
+            if len(fields) > 15 and fields[15]:             # the line's chord-tone profile (round 111): `t45/2/9/30/2/12`
+                prof = tone_profile_of(fields[15])
+                if prof:
+                    token_profiles[role] = prof
+                    log.append(f"{role}'s line plays the balance's song's chord tones: " + " ".join(f"{k} {v:.2f}" for k, v in prof.items()))
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
@@ -1730,7 +1746,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2150,7 +2166,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures = writer.bass(song, models["bass"], random.Random(f"{seed}:bass"), habit=plan.habits[R.BASS], habit_at=habit_at_for(plan, R.BASS), envelope_at=envelope_at_for(plan, R.BASS), key=key, lock=lock,
                                      free=True, plays=plan.plays[R.BASS], register=plan.bounds.get(R.BASS, plan.registers[R.BASS])[0],
                                      sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share,
-                                     ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS))
+                                     ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS),
+                                     tone_profile=plan.tone_profiles.get(R.BASS))   # the line's chord tones as the token song's (round 111)
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
@@ -2209,7 +2226,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes, figures, voicings = writer.upper(song, role, [0], {0: (low, high)}, models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                 plan.extras[role]["richness"], sounds, key=key, lock=lock, motion=plan.extras[role]["motion"], habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role),
                                                 pedals={0: (low + high) // 2}, plays=plan.plays[role], shared=shared, tone_index=0, bounds_at=line_bounds_at(plan, role), clash_rates=plan.extras[role].get("clashes"),
-                                                tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog, tone_tier=plan.extras[role].get("tone_tier"))   # the tone figures on their own stream (round 96)
+                                                tone_rng=random.Random(f"{seed}:{role}:tones"), log=tlog, tone_tier=plan.extras[role].get("tone_tier"),   # the tone figures on their own stream (round 96)
+                                                tone_profile=plan.tone_profiles.get(role))   # the line's chord tones as the token song's (round 111)
         rides = plan.extras[role].get("rides")
         if rides and R.BASS in written and written[R.BASS].notes:   # the line on the written bass's figure where the token song's rides it (round 106)
             notes, figures, voicings, ride_log = ride_the_bass(plan, song, role, notes, figures, voicings, shared, (low, high), rides,
