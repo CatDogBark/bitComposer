@@ -8521,7 +8521,16 @@ round 122): 400 keep their token song; 365 note sets and 364 plan logs
 unchanged (the 36 plans on the six tokens that carry the word); no note
 over a sample's ceiling; the loops as round 121 left them.
 
-**Song Check 99**: see below, the three rounds together.
+**Song Check 99** (https://claude.ai/artifact/NjuHnhLr6GXavypoA3XjHu):
+rounds 121 to 123 together on the five Battle Theme songs of Song
+Checks 89 to 98, round 120 before (the songs as Song Check 98's after
+side) and round 123 after: Journey of the Quarry (18), Lunar Island
+(243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365). The render heard before the page was built (round
+119's measure): 24 voices with a verdict before and 25 after, every one
+on pitch. Its notes say how it differs from the experiment the owner
+chose: that looped every section, and this loops where Battle Theme
+does (B) and through C and D has the band play as one.
 
 **Open.** A part's density by section is still a pooled word: Battle
 Theme's bass and guitar thin to four notes a bar in C and D, the
