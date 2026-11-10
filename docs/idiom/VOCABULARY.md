@@ -290,6 +290,23 @@ The words are grouped by where the writing draws them, in the order the song is 
   another; 42 and 20 of sixty written songs) and wrong for the song, so
   four of the five Song Check songs on Battle Theme's token never came
   back to what they had played.
+  Since round 117 a chord part's and the bass's token carry an
+  eighteenth field, the line's step profile (`line_step_profile`:
+  `j63/24/13`, the share of its note-to-note moves that repeat the pitch,
+  step within a whole tone, or leap a minor third or more, STEP_CLASSES;
+  Battle Theme's guitar 0.63/0.24/0.07... read `j63/24/13` as its reading
+  rounds), and `plan.hold_line_steps` holds a chord part's line to it once
+  the line is written and rides the bass, so every move counts as the
+  reader counts them: a move whose class, the note counted, runs over its
+  share by STEP_MARGIN gives way to the class most under, `same` the note
+  before again, `step` the chord's tone within a whole tone of it (the
+  scale's where the chord has none), a leap never forced; the voices
+  beside the line see the held note. Why: the motion word (`line_motion`)
+  says how often a line's pitch changes, not how far, so a chug with a
+  semitone neighbour read "mixed" like a walking chord-tone line and the
+  written guitar leaped between chord tones on 0.34 of its moves, a
+  melodic voice driving the song where the game's is a rhythm part under
+  it (Song Check 96).
   Since round 114 the bass's token carries a seventeenth field, its pitch
   continuity (`bass_continuity_field`: the share of its bar lines across
   which the bass keeps the bar's main pitch class, in hundredths, `k58`
