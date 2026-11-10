@@ -824,10 +824,10 @@ class TokenWithTests(unittest.TestCase):
         # last stab's gap is the followed note's own length)
         self.assertLessEqual(stats["sounded"] / stats["played"], 0.5 + 0.05 + 0.05)   # the voice sounds about the token's share of its bars' time (STRUCK_MARGIN 0.05)
         self.assertGreaterEqual(stats["sounded"] / stats["played"], 0.5 - 0.05 - 0.05)
-        self.assertEqual(stats["shortened"], lengths.count(0.2))
+        self.assertEqual(stats["shortened"], sum(1 for x in lengths if x < 0.9))                    # the stabs cut, the last one (its own gap) among them
         loose = dict(struck, sounding=None)                                                        # no share on the token: every stab its class share
         notes2, _, _ = whole.struck_with(ref, 0, 4, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.9, scale, None, ref, loose)
-        self.assertEqual({round(n[1] - n[0], 2) for n in notes2}, {0.9})
+        self.assertEqual({round(n[1] - n[0], 2) for n in notes2[:-1]}, {0.9})
 
     def test_the_mask_is_held_toward_the_token_voices_struck_share(self):
         """Round 108: the second_figures mask thins the followed onsets only as far as the token voice's struck share allows."""
