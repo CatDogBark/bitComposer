@@ -116,7 +116,10 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   token voice's. Which onsets a bar thins is still the pooled
   `second_figures` mask's shape, held toward the share; a gap class the
   token voice never played falls to the pooled second voice's share; and a
-  struck voice whose token voice rings long rings as long (Mt. Koltz's and
+  struck voice whose token voice rings long rings as long (since round
+  115 within the token voice's sounding share of its bars' time; a voice
+  under the share is not lengthened: its stabs are its gap classes'
+  already), and (Mt. Koltz's and
   Opening Theme part 3's hold notes of 15.9 beats).
   The sections' densities were thought to move out of step on Battle
   Theme's token (the round 104 investigation) and do not, by the measure:

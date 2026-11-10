@@ -341,6 +341,19 @@ The words are grouped by where the writing draws them, in the order the song is 
   parallel of a sibling follows the sibling's written notes. FFVI: 39
   own-reading stretches of voices beside a line strike with the line, 9
   with a sibling, 71 stay their own.
+  Since round 115 the struck sub-field carries an eighth part, the
+  voice's sounding share (`w0.73~0.7~0.2~0.9~-~-~4.9~0.49`: the beats it
+  sounds, each note to the line's next onset at most, over the beats of
+  the bars it strikes in), and `struck_with` holds the stabs to it: a
+  stab whose length by its gap class would put the share so far, this
+  stab counted, over the token's by STRUCK_MARGIN sounds the token's
+  shortest class share of its gap instead, a stab. Why: the gap-class
+  shares are Battle Theme's, but its riff is dense and its stabs almost
+  never fall in the one-to-two-beat class where it held 0.9; a sparser
+  written line put most of the synth's gaps there, and Journey of the
+  Quarry's synth sounded 0.68 of its bars' time at 0.9 beats a note, a
+  held organ tone on a brass sample that holds till key-off, where Battle
+  Theme's sounds 0.49 at 0.19 (Song Check 96).
   Since round 108 a struck-with voice carries a seventh sub-field, how it
   strikes (`_struck_text`: `w0.73~0.7~0.2~0.9~-~-~4.9` for Battle Theme's
   synth): the share of the followed voice's onsets it strikes, its sounded
