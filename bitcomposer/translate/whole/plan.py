@@ -298,6 +298,7 @@ class Plan:
     stretches: dict = field(default_factory=dict)       # a pitched part -> its line's instrument by stretch (the eleventh field, round 91): [(sample,
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
     tone_profiles: dict = field(default_factory=dict)   # a backing part -> its line's chord-tone profile from the token (round 111: field 15)
+    step_profiles: dict = field(default_factory=dict)   # a backing part -> its line's step profile from the token (round 117: field 17)
     chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
     form_letters: list | None = None                    # the token song's form, [(letter, bars)] (round 113), or None
     bass_continuity: float | None = None                # the token song's bass line pitch continuity (round 114), or None
@@ -989,6 +990,15 @@ def struck_values_of(text: str) -> dict | None:
     return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None, "sounding": sounding, "cell": cell}
 
 
+def step_profile_of(text: str) -> dict | None:
+    """The balance token's step profile field (round 117, arrangement.line_step_profile) read: "j63/24/13" -> {"same": 0.63,
+    "step": 0.24, "leap": 0.13}; None where it cannot be read."""
+    m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)", text or "")
+    if not m:
+        return None
+    return {k: int(v) / 100 for k, v in zip(rhythm.STEP_CLASSES, m.groups())}
+
+
 def tone_profile_of(text: str) -> dict | None:
     """The balance token's chord-tone profile field (round 111, arrangement.line_tone_profile) read: "t45/2/9/30/2/12" -> {"root":
     0.45, "third": 0.02, "fifth": 0.09, "seventh": 0.30, "sus": 0.02, "other": 0.12}; None where it cannot be read."""
@@ -1457,6 +1467,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_stretches = {}                                    # the line's instrument by stretch (round 91)
     token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
     token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
+    token_steps = {}                                        # a backing line's step profile (round 117)
     token_shapes = None                                     # the token song's chord-shape profile (round 112)
     token_form = None                                       # the token song's form letters (round 113)
     token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
@@ -1618,6 +1629,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 if prof:
                     token_profiles[role] = prof
                     log.append(f"{role}'s line plays the balance's song's chord tones: " + " ".join(f"{k} {v:.2f}" for k, v in prof.items()))
+            if len(fields) > 17 and fields[17]:             # the line's step profile (round 117): `j63/24/13`
+                steps = step_profile_of(fields[17])
+                if steps:
+                    token_steps[role] = steps
+                    log.append(f"{role}'s line moves as the balance's song's: " + " ".join(f"{k} {v:.2f}" for k, v in steps.items()))
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
@@ -1925,7 +1941,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, chord_shapes=token_shapes, form_letters=token_form, bass_continuity=token_continuity)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, bass_continuity=token_continuity)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2418,6 +2434,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                                [x for x in written[R.BASS].notes if x[3] == 0], random.Random(f"{seed}:{role}:rides"))
             tlog += ride_log
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
+        if role in plan.step_profiles:                      # the line's steps held to the token song's (round 117), the ride's bars among them
+            notes, step_log = hold_line_steps(plan, song, role, notes, shared, (low, high))
+            tlog += step_log
         song.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
         log = [f"voices {n}, register {(low, high)}, habit {plan.habits[role]}, voicing {plan.extras[role]['richness']}, "
                f"motion {plan.extras[role]['motion']}, sounded {render_mod._sounds_text(sounds)}; {sum(1 for f in figures if f != writer.REST)} bars written, "
@@ -2642,6 +2661,64 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     if R.BASS in written:
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written)   # the bass's pitch continuity as finally played (round 114)
     return written
+
+
+STEP_MARGIN = 0.05                    # how far over its share of the token song's step profile a line's move class may run before the
+                                      # note takes the class most under instead (round 117)
+
+
+def hold_line_steps(plan: Plan, song: rhythm.Song, role: str, notes: list, shared: dict | None, register: tuple) -> tuple:
+    """A chord part's line held to the token song's step profile (round 117, plan.step_profiles: the share of its moves that
+    repeat the pitch, step within a whole tone, or leap a minor third or more), once the line is written and rides the bass,
+    so every move counts as the reader counts them. Each note after the first: its move's class with the note counted over
+    its share by STEP_MARGIN gives way to the class most under its share, where one has room: "same" plays the note before
+    again, "step" the chord's tone within a whole tone of it (the scale's where the chord has none, the whole tone up else),
+    "leap" keeps the note as written (a leap is never forced). The voices beside the line see the held note (`shared`).
+    Returns the line's notes and a log line. Battle Theme's guitar repeats its pitch on 0.63 of its moves and leaps on 0.07,
+    a chug on A and B-flat; the written guitar, from the figures' chord-tone marks and the walking bass it rides, leaped on
+    0.34 and drove the song (Song Check 96)."""
+    profile = plan.step_profiles.get(role)
+    line = [n for n in notes if len(n) < 4 or n[3] == 0]
+    if not profile or len(line) < 2:
+        return notes, []
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    low, high = register
+    counts, moved, out, prev = Counter(), 0, [], None
+    for n in sorted(line, key=lambda x: x[0]):
+        midi = int(round(n[2]))
+        if prev is not None:
+            cls = rhythm.step_class(midi - prev)
+            total = sum(counts.values())
+            if (counts[cls] + 1) / (total + 1) > profile.get(cls, 0.0) + STEP_MARGIN:
+                room = {k: profile.get(k, 0.0) - counts[k] / (total + 1) for k in rhythm.STEP_CLASSES if k != cls}
+                best = max(room, key=lambda k: (room[k], k == "same"))
+                if room[best] > 0:
+                    c = rhythm._chord_at(song.chords, n[0])
+                    chord_pcs = {(c.root + i) % 12 for i in harmony.SHAPES.get(c.shape, harmony.SHAPES[""])} if c is not None and c.root is not None and c.fit >= vocab.FIT else set()
+                    new = None
+                    if best == "same":
+                        new = prev
+                    elif best == "step":
+                        near = [prev + d for d in (1, -1, 2, -2) if low <= prev + d <= high]
+                        new = next((m for m in near if m % 12 in chord_pcs), None) or next((m for m in near if m % 12 in scale), None) or (prev + 2 if prev + 2 <= high else prev - 2)
+                    if new is not None and new != midi:
+                        midi, moved = new, moved + 1
+                    cls = rhythm.step_class(midi - prev)
+            counts[cls] += 1
+        prev = midi
+        out.append((n[0], n[1], float(midi)) + tuple(n[3:]))
+        if shared is not None and midi != int(round(n[2])):
+            k = int(n[0] // song.meter)
+            pos = rhythm.position(n[0] - song.bars[k][0], song.division) if k < len(song.bars) else None
+            if pos is not None:
+                shared[("line", (k, pos))] = float(midi)
+                if ("taken", (k, pos)) in shared:
+                    shared[("taken", (k, pos))] = {midi}
+    total = sum(counts.values())
+    log = [f"the line's steps held to the balance's song's profile (round 117): " + " ".join(f"{k} {counts[k] / total:.2f}" for k in rhythm.STEP_CLASSES)
+           + " (the song's " + " ".join(f"{k} {profile.get(k, 0.0):.2f}" for k in rhythm.STEP_CLASSES) + f"); {moved} notes moved"] if total else []
+    others = [n for n in notes if len(n) >= 4 and n[3] != 0]
+    return sorted(out + others, key=lambda x: (x[0], x[3] if len(x) > 3 else 0)), log
 
 
 def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: list) -> list:

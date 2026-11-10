@@ -7920,3 +7920,49 @@ Theme songs, round 114 before.
 
 **Open.** The guitar line's steps (round 117), the flourish at a
 section's end (round 118). The standing list as at round 114.
+
+### Round 117: a backing line's step profile is the token song's (2026-11-09, the third of the four words from Song Check 96: the guitar drives the song)
+
+**Why.** The guitar's level is Battle Theme's (rendered alone, 3.3 to
+5.1 dB under the accompaniment against the game's 5.0), and still it
+drove the song: it moved like a melodic voice. Battle Theme's guitar is
+a chug, A2 and B-flat 2 for eight bars of B, two pitches a semitone
+apart, thinning to a small figure under the lead in C: it repeats its
+pitch on 0.63 of its note-to-note moves, stays within a whole tone on
+0.87 and leaps a fourth or more on 0.07. The written guitar played
+three distinct pitches a bar, leaping between chord tones (root, fifth,
+seventh from the figures' marks, or the walking bass's notes where it
+rides) on 0.34 of its moves, five times the game's. The motion word
+(line_motion: block, mixed, arpeggiated) counts how often a line's
+pitch changes, not how far, so the chug with its neighbour read "mixed"
+like a walking chord-tone line; the tune has a steps habit, the backing
+lines had none.
+
+**Built.** A chord part's and the bass's balance token gain an
+eighteenth field (arrangement.line_step_profile, STEP_CLASSES,
+STEP_LEAP 3): the share of the line's moves, in time order, that repeat
+the pitch, step within a whole tone, or leap a minor third or more, in
+hundredths (`j63/24/13` for Battle Theme's guitar); "" under WORD_NOTES
+moves. The plan reads it (step_profile_of, Plan.step_profiles) and holds
+a chord part's line to it (plan.hold_line_steps) once the line is
+written, rides the bass and is folded into its stretches' registers, so
+every move counts as the reader counts them: each note after the
+first, its move's class with the note counted over its share by
+STEP_MARGIN gives way to the class most under its share where one has
+room, "same" playing the note before again, "step" the chord's tone
+within a whole tone of it (the scale's where the chord has none, the
+whole tone up else), "leap" keeping the note as written (a leap is never
+forced); the voices beside the line see the held note through `shared`.
+The bass carries the field and its writer does not read it yet
+(LIMITS). Pack refit (110 tables; no new table), the vocabulary shipped
+and committed. Tests: the field read from a chug (`j51/49/0`) and
+parsed, a line of leaps held to a chug within its register, the voices
+beside it told, as written without a profile. Suite 470 (1 skip).
+
+**Measured.** Battle Theme's guitar carries `j63/24/13`. Written, the five Battle Theme seeds' guitars: the same pitch again on 0.42, 0.56, 0.57, 0.58 and 0.55 of their moves (0.19, 0.27, 0.32, 0.35 and 0.32 before; the token 0.63), a leap on 0.39, 0.18, 0.22, 0.23 and 0.17 (0.58, 0.49, 0.47, 0.55 and 0.42 before; the token 0.13); Journey of the Quarry's guitar plays 21 bars, 77 moves, and the theme band's and the hand-offs' rewrites, which come after the hold, leave its leaps highest. Seeds 1-60: 50 accompaniment lines, 48 with a token profile; written medians same 0.27 (0.22 before), step 0.23 (0.21), leap 0.54 (0.56) against the tokens' 0.18, 0.11 and 0.59, |leap written - token| median 0.11: most of FFVI's accompaniment lines leap as the written ones did, and the hold tells where a song's does not (Battle Theme, a chug). The harmony lines' leaps 0.56 to 0.43 against the tokens' 0.42. The bass is not held: written leaps 0.39 against the tokens' 0.29. The struck voices move with the guitar: 2.3 isolated spikes per 100 stabs (1.9), 15 notes two octaves or more over the line in 13 runs, none of three (12 in 8); the lines' profile distance 0.18 (0.17), the bass's continuity 0.38 (0.40). Plans (400 seeds, against round 116): 400 keep their token song, 16 plan logs (the new line) and 92 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The flourish at a section's end (round 118). The standing list
+as at round 114.

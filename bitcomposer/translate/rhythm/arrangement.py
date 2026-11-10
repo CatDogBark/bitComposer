@@ -1505,6 +1505,32 @@ def line_motion(s, role: str, line_notes=None) -> str:
     return readings_mod.habit_of(readings_mod.upper_motion(pitched), readings_mod.MOTIONS)
 
 
+STEP_CLASSES = ("same", "step", "leap")   # a line's note-to-note moves (round 117): the pitch again, within a whole tone, a minor third or more
+STEP_LEAP = 3                        # semitones from which a move is a leap
+
+
+def step_class(semitones: int) -> str:
+    """A move's class (round 117): "same" at 0 semitones, "step" under STEP_LEAP, "leap" from it."""
+    d = abs(int(semitones))
+    return "same" if d == 0 else "step" if d < STEP_LEAP else "leap"
+
+
+def line_step_profile(s, role: str, line_notes=None) -> str:
+    """A backing line's step profile as the balance token carries it (round 117, the seventeenth field of a chord part's and
+    the bass's token): the share of its note-to-note moves, in time order, that repeat the pitch, move within a whole tone, or
+    leap a minor third or more (STEP_CLASSES), in hundredths: "j63/24/13" for Battle Theme's guitar, a chug on A and B-flat
+    with a leap on 0.07 of its moves; "" under WORD_NOTES moves. The motion word (line_motion) says how often a line's pitch
+    changes, not how far, so a chug with a semitone neighbour read "mixed" like a walking chord-tone line and the written
+    guitar leaped between chord tones on 0.34 of its moves, a melodic voice driving the song where the game's is a rhythm
+    part under it (Song Check 96)."""
+    notes = line_notes if line_notes is not None else s.notes.get(role, [])
+    pitched = sorted((n[0], int(round(n[2]))) for n in notes if n[2] is not None and not (isinstance(n[2], float) and math.isnan(n[2])))
+    moves = [step_class(b - a) for (_, a), (_, b) in zip(pitched, pitched[1:])]
+    if len(moves) < WORD_NOTES:
+        return ""
+    return "j" + "/".join(str(int(round(100 * moves.count(k) / len(moves)))) for k in STEP_CLASSES)
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 
@@ -1665,7 +1691,8 @@ def balance_units(songs) -> list:
                       part_period_field(s, role) if role in cells_mod.BACKING and role != R.DRUMS else "",   # the part's own period and holds (round 106)
                       line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
                       line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
-                      bass_continuity_field(s, line_notes) if role == R.BASS else ""]   # and the bass line's pitch continuity (round 114)
+                      bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
+                      line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else ""]   # and the line's steps (round 117)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

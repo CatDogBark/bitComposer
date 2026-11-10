@@ -1054,6 +1054,47 @@ class TokenFormTests(unittest.TestCase):
         self.assertEqual([(q[3], q[1]) for q in whole.plan(bal, 7, "g").parts], [("A", 2), ("B", 12)])   # without a minimum the token's form is taken
 
 
+class TokenStepTests(unittest.TestCase):
+    """Round 117: a backing line's step profile rides the balance token (`j63/24/13`: the share of its moves that repeat the pitch, step
+    within a whole tone, or leap), and the line is held to it once written: Battle Theme's guitar is a chug on A and B-flat where the
+    written guitar leaped between chord tones."""
+
+    def test_the_token_carries_the_steps(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chug = [(4.0 * k + i / 2, 0.4, 45.0 if i % 4 != 3 else 46.0, "g") for k in range(8) for i in range(8)]   # A A A B-flat, eighths
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 9, "m", 1.0)], notes={"accompaniment": chug}, sid="s", game="g", numbers=list(range(8)),
+                        parts=[(0, 8, None, "A")], tonic=9, mode="minor")
+        s.voice_notes = {0: ("accompaniment", chug)}; s.voice_levels = {0: 0.3}; s.levels = {"accompaniment": 0.3}
+        self.assertEqual(rhythm.step_class(0), "same"); self.assertEqual(rhythm.step_class(-2), "step"); self.assertEqual(rhythm.step_class(3), "leap")
+        self.assertEqual(rhythm.line_step_profile(s, "accompaniment"), "j51/49/0")                   # 63 moves: 32 the same pitch, 31 a semitone
+        acc = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual(acc[17], "j51/49/0")
+        self.assertEqual(whole.step_profile_of("j63/24/13"), {"same": 0.63, "step": 0.24, "leap": 0.13})
+        self.assertIsNone(whole.step_profile_of("t63/24/13"))
+        self.assertEqual(rhythm.line_step_profile(s, "accompaniment", chug[:10]), "")               # under WORD_NOTES moves: no field
+
+    def test_the_line_is_held_to_the_tokens_steps(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        line = [(4.0 * k + i, 4.0 * k + i + 0.8, float([48, 55, 52, 59][i]), 0) for k in range(4) for i in range(4)]   # C G E B: every move a leap
+        p = whole.plan({}, 3, "g")
+        p.tonic, p.mode = 0, "major"
+        p.step_profiles = {"accompaniment": {"same": 0.6, "step": 0.3, "leap": 0.1}}
+        shared = {("line", (0, rhythm.position(1.0, 4))): 55.0, ("taken", (0, rhythm.position(1.0, 4))): {55}}
+        held, log = whole.hold_line_steps(p, song, "accompaniment", list(line), shared, (40, 64))
+        classes = [rhythm.step_class(int(b[2]) - int(a[2])) for a, b in zip(held, held[1:])]
+        self.assertGreaterEqual(classes.count("same") / len(classes), 0.5)                            # most moves the pitch again
+        self.assertLessEqual(classes.count("leap") / len(classes), 0.2)                               # few leaps left (the first move is free)
+        self.assertTrue(all(40 <= n[2] <= 64 for n in held))
+        self.assertTrue(log and "notes moved" in log[0], log)
+        self.assertEqual(shared[("line", (0, rhythm.position(1.0, 4)))], held[1][2])                 # the voices beside the line see the held note
+        same, _ = whole.hold_line_steps(p, song, "accompaniment", list(line), None, (40, 64))
+        p.step_profiles = {}
+        self.assertEqual(whole.hold_line_steps(p, song, "accompaniment", list(line), None, (40, 64)), (list(line), []))   # no profile: as written
+
+
 class TokenContinuityTests(unittest.TestCase):
     """Round 114: the bass line's pitch continuity rides the balance token, and the bass writer holds its pitch class across bar lines
     to it: Battle Theme's bass keeps its riff's pitch under the chord reader's changes on 0.57 of its bar lines, the written basses
