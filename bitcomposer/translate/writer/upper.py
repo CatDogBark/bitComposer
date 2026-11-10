@@ -114,7 +114,7 @@ from collections import Counter
 from fractions import Fraction
 
 from .. import harmony, phrases, rhythm, roles as R, tables
-from ..vocab import FIT
+from ..vocab import FIT, tone_of
 
 from . import figures as figures_mod, tune as tune_mod, parts as parts_mod   # noqa: E402  the package's other sections
 
@@ -234,7 +234,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
           tone_index: int = 0, kind: str | None = None, bounds_at=None, clash_rates: dict | None = None,
           tone_rng: random.Random | None = None, log: list | None = None, tone_tier: str | None = None, habit_at=None,
-          envelope_at=None) -> tuple[list, list, list]:
+          envelope_at=None, tone_profile: dict | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -265,7 +265,10 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     chord over the song), each such onset at a tone_degrees draw chained on
     the bar's previous one, the degree nearest the voicing tone it
     replaces; an own stream, so every other draw stands; `rng` without
-    one). `log`: lines on what the words did, appended.
+    one). `tone_profile`: the token song's chord-tone profile for the line
+    (round 111): a chord-tone onset of the line whose class runs over its
+    share takes the chord's tone most under its share instead
+    (parts.profile_tone). `log`: lines on what the words did, appended.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -333,6 +336,13 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
         return next(reversed(weights))
     in_bar = {}                                             # bar -> positions the line's voicing is known at (shared), for a voice beside it
     off, off_bars = [0, 0], 0                               # the line's onsets written off the chord by the tone figure, its onsets, its bars with any (round 96)
+    tone_counts = Counter()                                 # the line's chord-tone classes written, for the profile hold (round 111)
+    def profiled(midi, i_, reg):
+        """The line's chord-tone onset under the token song's profile (round 111): the tone meant, or the chord's tone most under its share."""
+        if not tone_profile or tone_index or (tones is not None and tones[i_] == rhythm.OFF_TONE):
+            return midi
+        pc = parts_mod.profile_tone(int(round(midi)) % 12, chord[0], chord[1], tone_profile, tone_counts)
+        return in_register(off_tone(midi, chord[0], (pc - chord[0]) % 12), reg) if pc != int(round(midi)) % 12 else midi
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         if figure == figures_mod.REST:
             voicings.append(figures_mod.REST)
@@ -393,7 +403,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
             previous_low = float(pitches[0]) if pitches else previous_low
             tune = sounding_pcs(tune_line, start)
             if role == R.ARP and len(voices) == 1:
-                midi = in_register(pitches[i % len(pitches)], regs[voices[0]])
+                midi = profiled(in_register(pitches[i % len(pitches)], regs[voices[0]]), i, regs[voices[0]])
                 if tones is not None:                       # the line's onset off the chord by its tone figure (round 96)
                     off[1] += 1
                     if tones[i] == rhythm.OFF_TONE:
@@ -404,6 +414,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                             prev_degree = str(degree)
                 midi = unclashed(midi, [in_register(m, regs[voices[0]]) for m in pitches], tune)
                 midi = held(midi, [in_register(m, regs[voices[0]]) for m in pitches], start, p)
+                if tone_profile and not tone_index:
+                    tone_counts[tone_of(int(round(midi)) % 12, chord[0], chord[1])] += 1
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), voices[0]))
                 continue
             # the tones onto the voices, lowest first; spare voices double the stack an octave up; spare tones are dropped
@@ -468,6 +480,8 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                     midi = in_register(free[0], regs[v])
                 else:
                     midi = in_register(pitches[(j + offset) % len(pitches)] if offset else stacked[j], regs[v])
+                    if j == 0:
+                        midi = profiled(midi, i, regs[v])   # the line's chord tone under the token song's profile (round 111)
                     if tones is not None and j == 0:        # the line's onset off the chord by its tone figure (round 96)
                         off[1] += 1
                         if tones[i] == rhythm.OFF_TONE:
@@ -480,11 +494,17 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
                         shared[("line", (k, p))] = midi     # the line's note here, for the voices beside it
                 midi = unclashed(midi, [in_register(m, regs[v]) for m in pitches], tune)
                 midi = held(midi, [in_register(m, regs[v]) for m in pitches], start, p)
+                if tone_profile and j == 0 and not tone_index:
+                    tone_counts[tone_of(int(round(midi)) % 12, chord[0], chord[1])] += 1
                 if taken is not None:
                     taken.add(int(round(midi)))
                 notes.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi), v))
             walked += step
         voicings.append(" | ".join(bar_voicing) if bar_voicing else figures_mod.REST)
+    if log is not None and tone_profile and not tone_index and sum(tone_counts.values()):
+        n_ = sum(tone_counts.values())
+        log.append("the line's chord tones held to the balance's song's profile (round 111): " + " ".join(f"{k} {tone_counts[k] / n_:.2f}" for k in rhythm.TONE_PROFILE_CLASSES)
+                   + " (the song's " + " ".join(f"{k} {tone_profile.get(k, 0.0):.2f}" for k in rhythm.TONE_PROFILE_CLASSES) + ")")
     if log is not None and not tone_index and "tone_figures" in models:
         log.append(f"off the chord by the tone figure (round 96, the song's tier {tone_tier or '?'}): {off[0]} of {off[1]} line onsets, in {off_bars} bars"
                    + ("" if "tone_degrees" in models else "; no tone_degrees word: the voicing's tones kept"))

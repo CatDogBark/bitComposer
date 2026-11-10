@@ -1410,6 +1410,33 @@ def line_motion(s, role: str, line_notes=None) -> str:
     return readings_mod.habit_of(readings_mod.upper_motion(pitched), readings_mod.MOTIONS)
 
 
+TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
+
+
+def line_tone_profile(s, role: str, line_notes=None) -> str:
+    """A backing line's chord-tone profile as the balance token carries it (round 111): the share of its notes on the chord's
+    root, third, fifth, seventh and sus and off the chord (vocab.tone_of against the chord sounding), in hundredths,
+    "t45/2/9/30/2/12" for Battle Theme's guitar; "" where the line is under WORD_NOTES notes under a chord. The chord parts'
+    lines are written from the voicings and the motion, the bass's from its figures' marks, and neither says which of the
+    chord's tones a line favours: FFVI's accompaniment lines play the seventh on 0.01 of their notes at the median and Battle
+    Theme's riff on 0.30, which no pooled draw reaches, and the synth struck with that riff leaps over the sevenths and sits
+    on the roots (Song Check 93)."""
+    notes = line_notes if line_notes is not None else s.notes.get(role, [])
+    counts = Counter()
+    for n in notes:
+        m = n[2]
+        if m is None or (isinstance(m, float) and math.isnan(m)):
+            continue
+        c = _chord_at(s.chords, n[0])
+        if c is None or c.root is None or c.fit < FIT:
+            continue
+        counts[vocab.tone_of(int(round(m)) % 12, c.root, c.shape)] += 1
+    total = sum(counts.values())
+    if total < WORD_NOTES:
+        return ""
+    return "t" + "/".join(str(int(round(100 * counts[k] / total))) for k in TONE_PROFILE_CLASSES)
+
+
 def line_tone_tier(s, role: str) -> str:
     """A chord part's line's off-chord tier as the balance token carries it (round 103): tone_tier_of its share of onsets
     off the chord sounding over its bars (_tone_bars, the tone_tiers word's own measure for the song); "" where the line
@@ -1541,7 +1568,8 @@ def balance_units(songs) -> list:
                       line_motion(s, role, line_notes) if role in readings_mod.UPPER else "",   # a chord part's line motion (round 103)
                       line_tone_tier(s, role) if role in readings_mod.UPPER else "",           # and its off-chord tier (round 103)
                       part_period_field(s, role) if role in cells_mod.BACKING and role != R.DRUMS else "",   # the part's own period and holds (round 106)
-                      line_rides_field(s, role) if role in readings_mod.UPPER else ""]         # and how far the line rides the bass (round 106)
+                      line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
+                      line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else ""]   # and the line's chord-tone profile (round 111)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

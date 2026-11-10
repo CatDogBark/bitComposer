@@ -114,7 +114,7 @@ from collections import Counter
 from fractions import Fraction
 
 from .. import harmony, phrases, rhythm, roles as R, tables
-from ..vocab import FIT
+from ..vocab import FIT, tone_of
 
 from . import figures as figures_mod, upper as upper_mod, tune as tune_mod   # noqa: E402  the package's other sections
 
@@ -486,7 +486,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
          models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None,
-         envelope_at=None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         envelope_at=None, tone_profile: dict | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -497,7 +497,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     has it play, playing anything), with `register` (the midi floor) and
     `sounds` (the share of its gap a note sounds) given instead of read.
     `bounds_at`: bar -> (floor, ceiling) where the token song's bass changes
-    instrument by stretch (round 92); the part's floor and ceiling else."""
+    instrument by stretch (round 92); the part's floor and ceiling else. `tone_profile`: the token song's chord-tone profile
+    for the line (round 111, profile_tone), held on the line's marks."""
     lock = lock or {}
     own = song.notes.get(R.BASS, [])
     if habit is None:
@@ -527,11 +528,13 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)
     notes, last_root, previous = [], tonic, None
+    tone_counts = Counter()                                 # the line's chord-tone classes written, for the profile hold (round 111)
     beside = kind in figures_mod.VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
     prev_steps, prev_midi, last_with = rhythm.START, None, None   # a second voice following the line: its last interval with it, its last note
     for k, ((a, b, _), figure) in enumerate(zip(bars, figures)):
         low_k, high_k = (bounds_at(k) or (low, high)) if bounds_at is not None else (low, high)   # the bar's register (round 92)
-        new, last_root, previous = realize(figure, a, b, song, low_k, sounds, scale, last_root, previous, runs_to=tune_mod.first_onset(figures, bars, k + 1), high=high_k)
+        new, last_root, previous = realize(figure, a, b, song, low_k, sounds, scale, last_root, previous, runs_to=tune_mod.first_onset(figures, bars, k + 1), high=high_k,
+                                           profile=tone_profile if not beside else None, counts=tone_counts)
         if shared is not None and not beside:               # the line: its notes for the voice beside it
             for start, _, midi in new:
                 shared[("line", (k, rhythm.position(start - a, song.division)))] = midi
@@ -588,9 +591,12 @@ def passing(previous: float | None, toward: int | None, scale: set, low: int, ro
 
 
 def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds, scale: set,
-            last_root: int, previous: float | None = None, runs_to: float | None = None, high: int | None = None) -> tuple[list, int, float | None]:
+            last_root: int, previous: float | None = None, runs_to: float | None = None, high: int | None = None,
+            profile: dict | None = None, counts=None) -> tuple[list, int, float | None]:
     """A figure's tokens as notes in the bar [a, b) (see the module); returns
-    them, the last chord root used and the last note's midi."""
+    them, the last chord root used and the last note's midi. `profile`: the
+    token song's chord-tone profile, held on the marks' tones (profile_tone,
+    round 111) with `counts` the classes written so far."""
     tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
     chords = []
     for p, _ in tokens:
@@ -620,12 +626,43 @@ def realize(figure: str, a: float, b: float, song: rhythm.Song, low: int, sounds
                 direction = -direction                              # climbing out of where the game plays the sample (round 34: a bass
                 midi = upper_mod.in_register(midi, (low, high))               # of bars all "+" had walked from 42 to 79 on a 32-40 sample)
         else:
-            midi = place(tone(root, shape, mark, scale), low, previous, mark == "r", high=high)
+            pc = tone(root, shape, mark, scale)
+            if profile is not None and counts is not None:   # the mark's tone under the token song's profile (round 111)
+                pc = profile_tone(pc, root, shape, profile, counts)
+            midi = place(pc, low, previous, mark == "r", high=high)
+        if counts is not None:
+            counts[tone_of(int(round(midi)) % 12, root, shape)] += 1
         if previous is not None and midi != previous:
             direction = 1 if midi > previous else -1
         out.append((start, start + (until - start) * tune_mod.share_at(sounds, until - start), float(midi)))
         previous = float(midi)
     return out, last_root, previous
+
+
+PROFILE_MARGIN = 0.05                 # how far over its share of the token song's chord-tone profile a line's tone may run before the
+                                      # line takes the chord's tone most under its share instead (round 111)
+
+
+def profile_tone(pc: int, root: int, shape: str, profile: dict, counts) -> int:
+    """The pitch class a backing line's onset takes under the token song's chord-tone profile (round 111): the tone meant
+    (`pc`, a chord tone) while its class, with this note counted, is within PROFILE_MARGIN of the profile's share (`counts`: the
+    line's classes written), else the chord's own tone whose class is most under its share, where one is. Battle Theme's guitar plays the
+    root on 0.45 of its notes and the seventh on 0.30, where the written lines on its token had played fifths and thirds and
+    never the seventh, and the synth struck with them leaped where the game's sits still."""
+    total = sum(counts.values())
+    if not total:
+        return pc
+    c0 = tone_of(pc % 12, root, shape)
+    if (counts[c0] + 1) / (total + 1) <= profile.get(c0, 0.0) + PROFILE_MARGIN:   # with this note counted (round 100's budget): a class the
+        return pc                                           # song never plays is refused at once, not after its first
+    options = {}
+    for i in harmony.SHAPES.get(shape, harmony.SHAPES[""]):
+        cls = tone_of((root + i) % 12, root, shape)
+        if cls != c0 and cls != "other":
+            options.setdefault(cls, (root + i) % 12)
+    under = {cls: profile.get(cls, 0.0) - counts[cls] / (total + 1) for cls in options}   # each class's room with this note counted
+    best = max(under, key=lambda cls: (under[cls], -options[cls])) if under else None
+    return options[best] if best is not None and under[best] > 0 else pc
 
 
 def tone(root: int, shape: str, mark: str, scale: set) -> int:

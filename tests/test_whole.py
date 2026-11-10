@@ -872,6 +872,57 @@ class TokenWithTests(unittest.TestCase):
         self.assertGreater(sum(1 for x, y in zip(drawn2, drawn2[1:]) if x != y), 24, drawn2)
 
 
+class TokenProfileTests(unittest.TestCase):
+    """Round 111: a backing line's chord-tone profile rides the balance token, and the chord-part and bass writers hold the line's
+    chord tones to it: Battle Theme's guitar plays the root on 0.45 of its notes and the seventh on 0.30, where the written lines
+    on its token had played fifths and thirds and never the seventh."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chords = [Span(0.0, 32.0, 0, "7", 1.0)]                                                                # C7 throughout
+        line = [(4.0 * k + i, 0.9, (48.0, 48.0, 55.0, 58.0)[i], "g") for k in range(8) for i in range(4)]   # C C G Bb: root, root, fifth, seventh
+        bass = [(4.0 * k + i, 0.9, (36.0, 43.0, 36.0, 46.0)[i], "b") for k in range(8) for i in range(4)]   # C G C Bb
+        tune = [(4.0 * k + i, 0.9, 72.0 + i, "m") for k in range(8) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, chords, notes={"accompaniment": line, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", line), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_the_lines_chord_tone_profile(self):
+        s = self._song()
+        self.assertEqual(rhythm.line_tone_profile(s, "accompaniment"), "t50/0/25/25/0/0")                   # root, third, fifth, seventh, sus, other
+        self.assertEqual(rhythm.line_tone_profile(s, "bass"), "t50/0/25/25/0/0")
+        tok = rhythm.balance_units([s])[0].outcome
+        acc = next(f for f in tok.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        bass = next(f for f in tok.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual((acc[15], bass[15]), ("t50/0/25/25/0/0", "t50/0/25/25/0/0"), (acc, bass))
+        self.assertEqual(whole.tone_profile_of("t45/2/9/30/2/12"), {"root": 0.45, "third": 0.02, "fifth": 0.09, "seventh": 0.30, "sus": 0.02, "other": 0.12})
+        self.assertIsNone(whole.tone_profile_of("b75/70"))
+
+    def test_a_lines_tone_is_held_to_the_profile(self):
+        from collections import Counter
+        from bitcomposer.translate.writer import parts
+        profile = {"root": 0.5, "seventh": 0.5}
+        self.assertEqual(parts.profile_tone(0, 0, "7", profile, Counter()), 0)                               # nothing written yet: the tone meant
+        self.assertEqual(parts.profile_tone(0, 0, "7", profile, Counter({"root": 6})), 10)                   # roots over their share: the seventh, most under
+        self.assertEqual(parts.profile_tone(0, 0, "7", profile, Counter({"root": 3, "seventh": 4})), 0)      # within the margin: the tone meant
+        self.assertEqual(parts.profile_tone(7, 0, "7", profile, Counter({"fifth": 2, "root": 1})), 10)       # a fifth the profile never plays: the tone most under
+        self.assertEqual(parts.profile_tone(7, 0, "", {"fifth": 1.0}, Counter({"root": 4})), 7)              # the fifth is under its share: kept
+        # the bass: its marks' tones under the profile
+        from bitcomposer.translate.vocab import Span
+        bars = [(0.0, 4.0)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(0.0, 4.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=[0], parts=[(0, 1, None, "A")], tonic=0, mode="major")
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        plain, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0)
+        self.assertEqual([int(m) % 12 for a, b, m in plain], [0, 7, 0, 7])
+        counts = Counter()
+        held, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0, profile={"root": 1.0}, counts=counts)
+        self.assertEqual([int(m) % 12 for a, b, m in held], [0, 0, 0, 0])                                     # every fifth over its share of none: the root
+        self.assertEqual(counts, Counter({"root": 4}))
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""
