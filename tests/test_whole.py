@@ -1054,6 +1054,57 @@ class TokenFormTests(unittest.TestCase):
         self.assertEqual([(q[3], q[1]) for q in whole.plan(bal, 7, "g").parts], [("A", 2), ("B", 12)])   # without a minimum the token's form is taken
 
 
+class SectionFillTests(unittest.TestCase):
+    """Round 118: the section_fills word says what a voice does in a section's last bar (fuller, the same, thinner) by its part,
+    whether it is the line or a voice beside it, and the section's place; the plan draws it a section and the writers fill."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        line = [(4.0 * k + i, 0.8, 48.0, "g") for k in range(8) for i in range(4)]                          # the guitar: four a bar throughout
+        stabs = [(4.0 * k + i, 0.2, 72.0, "s") for k in range(8) for i in ((0, 2) if k != 3 else (0, 0.5, 1, 1.5, 2, 2.5, 3))]   # the synth: two a bar,
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"accompaniment": line + stabs}, sid="s", game="g",   # seven in A's last
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", line), 1: ("accompaniment", stabs)}
+        return s
+
+    def test_the_word_counts_a_sections_last_bar(self):
+        units = rhythm.section_fill_units([self._song()])
+        self.assertEqual([(u.values["part"], u.values["voice"], u.values["place"], u.outcome) for u in units],
+                         [("accompaniment", "line", "first", "same"), ("accompaniment", "line", "last", "same"),
+                          ("accompaniment", "beside", "first", "fuller"), ("accompaniment", "beside", "last", "same")])
+        from bitcomposer.translate import packtables
+        self.assertEqual(packtables.KEPT["section_fills"][3], ("part", "voice", "place"))
+        s = self._song(); s.parts = [(0, 3, None, "A"), (3, 5, None, "B")]                                # a section under FILL_BARS bars counts nothing
+        self.assertEqual([u.values["place"] for u in rhythm.section_fill_units([s])], ["last", "last"])
+
+    def test_the_plan_draws_a_fill_and_the_struck_voice_fills(self):
+        from bitcomposer.translate import tables
+        mk = lambda voice, outcome: [tables.Unit(f"s{i}{voice}", "g", outcome, {"part": "accompaniment", "voice": voice, "place": "first"}) for i in range(3)]   # noqa: E731
+        t = tables.Table(("part", "voice", "place"), "section_fills", votes=tables.SHARES).fit(mk("beside", "fuller") + mk("line", "same"))
+        parts = [(0, 4, None, "A"), (4, 4, 0, "A"), (8, 2, None, "B")]
+        log = []
+        fills = whole.plan_section_fills({"section_fills": t}, parts, ["accompaniment", "bass"], {"accompaniment": [True] * 10, "bass": [True] * 10},
+                                         {"accompaniment": 3, "bass": 1}, random.Random(1), log)
+        self.assertEqual(fills["accompaniment"]["beside"], [0, 0, 0, 1, 0, 0, 0, 1, 0, 0])                 # the fill on A's last bar, and its repeat's
+        self.assertEqual(fills["accompaniment"]["line"], [0] * 10)                                        # the line the same; B too short to draw
+        self.assertEqual(fills["bass"]["beside"], [0] * 10)                                               # one voice: no beside draw
+        self.assertTrue(any("fills by section" in l for l in log), log)
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        ref = [(4.0 * k + x, 4.0 * k + x + 0.4, 48.0, 0) for k in range(4) for x in range(4)]              # the line: quarters
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        stats = {}
+        notes, thinned, figs = whole.struck_with(ref, 0, 4, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.5, scale, None, ref, None,
+                                                 stats=stats, fills=[0, 0, 0, 1])
+        per_bar = [sum(1 for n in notes if 4.0 * k <= n[0] < 4.0 * k + 4.0) for k in range(4)]
+        self.assertEqual(per_bar, [4, 4, 4, 7])                                                            # the fill bar: every onset and one between each pair
+        self.assertEqual(stats["filled"], 3)
+        self.assertEqual(figs[3], rhythm.pattern(rhythm.position(x / 2, 4) for x in range(7)))
+        thin, thinned2, _ = whole.struck_with(ref, 0, 4, 12, song, "accompaniment", 1, {}, random.Random(1), None, 0.5, scale, None, ref, None, fills=[0, -1, 0, 0])
+        self.assertEqual([sum(1 for n in thin if 4.0 * k <= n[0] < 4.0 * k + 4.0) for k in range(4)], [4, 1, 4, 4])   # a thinning: the first onset alone
+
+
 class TokenStepTests(unittest.TestCase):
     """Round 117: a backing line's step profile rides the balance token (`j63/24/13`: the share of its moves that repeat the pitch, step
     within a whole tone, or leap), and the line is held to it once written: Battle Theme's guitar is a chug on A and B-flat where the

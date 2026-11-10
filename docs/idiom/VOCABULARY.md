@@ -993,6 +993,24 @@ The words are grouped by where the writing draws them, in the order the song is 
   part in some section, with the parts' sections at 1.0 in 0.77 to 0.86.
   *`section_levels`: shape (part, form); drawn in _plan_once, plan_section_levels.*
 
+- **section_fills** — what a voice does in a section's last bar against
+  the section's bars before, by its part, whether it is the part's line
+  or a voice beside it, and the section's place in the form (round 118):
+  `fuller` where its notes there are `rhythm.DENSITY_STEP` times the
+  median of the other bars it plays in or more, `thinner` at the inverse
+  or less (a rest among them), `same` between; a section under
+  `FILL_BARS` bars counts nothing. The plan draws it a section for the
+  part's line and for its voices beside the line (`plan_section_fills`),
+  a repeated section copying its source's: `fuller` is a fill on the
+  section's last bar, a tier denser for the line through the density
+  shift its writer reads (`habit_at_for`, `envelope_at_for`) and, for a
+  struck voice, every followed onset and one between each pair half a
+  beat or more apart (`struck_with`, `fills`); `thinner` the line a tier
+  sparser and the struck voice on the bar's first onset alone. Why:
+  Battle Theme's synth plays 15 notes into C against its 8 a bar and 7
+  into D against 4, the flourish at the transition, while its guitar
+  chugs on; the written synths never filled, their mask drawn bar by
+  bar from the pooled second_figures word alone (Song Check 96).
 - **section_densities** — a part's density tier in each own section of
   the form against its song density, by the part and the step the
   section's level makes, round 101: `d+` where the part's notes a bar in

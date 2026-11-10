@@ -212,7 +212,7 @@ DEFAULTS = {"keys": "0 minor", "tempos": "120", "sizes": "3", "length_habits": "
             "bass_habits": "medium roots no-octaves", "habits": "medium mixed", "voicing_habits": "full", "motions": "block",
             "articulation": "mixed", "echo_habits": "mixed", "step_habits": "mixed", "repeat_habits": "some", "sounds": "0.8", "loops": "I",
             "levels": "0.8", "layer_levels": "0.9", "gap_sounds": "0.8", "bass_locks": "0.9", "counter_samples": "other", "counter_shares": "0.6", "part_speeds": "6", "cell_handoffs": "none",
-            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "section_densities": "d=", "top_levels": str(TOP_LEVEL), "kit_pieces": "KShtco",
+            "chord_tones": str(writer.CHORD_ON_BEAT), "part_textures": None, "section_levels": "1.0", "section_densities": "d=", "section_fills": "same", "top_levels": str(TOP_LEVEL), "kit_pieces": "KShtco",
             "registers": {R.BASS: "36-52", R.HARMONY: "56-72", R.ACCOMP: "56-72", R.ARP: "60-80", R.MELODY: "64-84", R.COUNTER: "60-80"}}
 ENTRY_TRIES = 6                       # part_entries draws for a part before it plays a short section whole
 DRUM_ENTRY_FLOOR = 2                  # the drums' entrance draw never backs off past the kit's tier (part, habit): the tier's own entrances
@@ -275,6 +275,8 @@ class Plan:
     master: tuple | None = None                           # (the master volume of 127, the gain the notes took) score_of decided for the whole song: the stems take it
     section_levels: dict = field(default_factory=dict)   # a part -> [its level's multiplier a bar] (section_levels, round 48: a section's level
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
+    section_fills: dict = field(default_factory=dict)   # a part -> {"line": [a fill's shift a bar], "beside": [the same for its voices beside the
+                                      # line]}: +1 the last bar of a section drawn fuller, -1 thinner (section_fills, round 118)
     section_densities: dict = field(default_factory=dict)   # a part -> [its density tier's shift a bar: +1, 0, -1] (section_densities, round 101:
                                       # a section's density against the part's, drawn a part an own section by the step its level makes;
                                       # the writers shift the habit's tier for those bars, habit_at_for)
@@ -761,6 +763,40 @@ def plan_section_densities(models: dict, parts: list, band: list, plays: dict, s
     return out
 
 
+def plan_section_fills(models: dict, parts: list, band: list, plays: dict, voices: dict, rng: random.Random, log: list) -> dict:
+    """What each pitched part does in each own section's last bar (section_fills, round 118): drawn a section for the part's
+    line and, where it has voices beside the line, for those, by the part, the voice kind and the section's place in the form:
+    "fuller" a fill, +1 on the section's last bar (a tier denser for the line through the density shift its writer reads; every
+    followed onset and one between each pair for a struck voice), "thinner" -1, "same" nothing; a section under FILL_BARS bars
+    draws nothing, a repeated section copies its source's. Drawn on an own stream. Returns {part: {"line": [shift a bar],
+    "beside": [shift a bar]}}; logs the fills. Battle Theme's synth plays 15 notes into C against 8 a bar and 7 into D against
+    4; the written synths never filled."""
+    total = parts[-1][0] + parts[-1][1]
+    out, said = {}, []
+    for i, (bar, n, of, letter) in enumerate(parts):
+        for role in band:
+            if role == R.DRUMS:
+                continue
+            kinds = ["line"] + (["beside"] if voices.get(role, 1) >= 2 else [])
+            mine = out.setdefault(role, {"line": [0] * total, "beside": [0] * total})
+            if of is not None:
+                src = parts[of][0]
+                for kind in kinds:
+                    mine[kind][bar:bar + n] = mine[kind][src:src + n]
+                continue
+            if n < rhythm.FILL_BARS or not any(plays[role][bar:bar + n]):
+                continue
+            for kind in kinds:
+                drawn = _draw(models, "section_fills", (role, kind, rhythm.form_place_of(i, len(parts))), rng, log)
+                shift = 1 if drawn == "fuller" else -1 if drawn == "thinner" else 0
+                if shift:
+                    mine[kind][bar + n - 1] = shift
+                    said.append(f"{role}'s {'line' if kind == 'line' else 'voices beside the line'} {'fuller' if shift > 0 else 'thinner'} in the last bar of {letter}")
+    if said:
+        log.append("fills by section (section_fills): " + "; ".join(said))
+    return out
+
+
 def habit_at_for(plan, role: str, habit=None):
     """A part's habit a bar for its writer (round 101): the song's habit with its density tier shifted where the
     section_densities draw says; None where no bar shifts (the writer keeps its one habit)."""
@@ -1046,7 +1082,7 @@ def _mask_count(g: str) -> int:
 
 
 def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int, models: dict, rng: random.Random, clash_rates, sounds, scale: set,
-                mask_draw=None, gaps_ref=None, struck=None, stats: dict | None = None) -> tuple:
+                mask_draw=None, gaps_ref=None, struck=None, stats: dict | None = None, fills: list | None = None) -> tuple:
     """A voice struck with another (round 107): over bars [at, end) the followed voice's onsets (`ref`: (start, end, midi, voice)),
     thinned bar by bar by the second_figures word where `mask_draw` gives a bar's mask (which of the followed voice's onsets
     the voice strikes with), then placed by the parallel_intervals word at the nominal semitones on the chord (`parallel`),
@@ -1067,9 +1103,11 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
     stab's pitch while the share of such stabs so far, this one counted, runs under the token's by STRUCK_MARGIN, and the
     interval word's landing otherwise (Battle Theme's synth hammers C D E F bar after bar, the hook; the written stabs
     changed their pitches every bar, loud and never the same). `stats`, where given, takes the sounded and played beats,
-    the stabs shortened, and the cell's repeats and comparable stabs. Returns the notes, the onsets thinned away and {bar:
-    the bar's figure}."""
-    kept, thinned, figs = [], 0, {}
+    the stabs shortened, and the cell's repeats and comparable stabs. `fills` (round 118, plan.section_fills): a bar's shift,
+    +1 a fill (the voice strikes every followed onset and one between each pair half a beat or more apart, Battle Theme's
+    synth's 15 notes into C against its 8 a bar), -1 a thinning (the bar's first onset alone). Returns the notes, the onsets
+    thinned away and {bar: the bar's figure}."""
+    kept, thinned, figs, filled = [], 0, {}, 0
     struck_n = followed_n = 0                               # the followed onsets struck so far, and seen so far (round 108)
     target = struck["share"] if struck else None
     for k in range(at, min(end, len(song.bars))):
@@ -1078,8 +1116,9 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
         if not in_bar:
             continue
         f = rhythm.pattern(rhythm.position(x[0] - a, song.division) for x in in_bar)
-        g = rhythm.apply_mask(f, mask_draw(f)) if mask_draw is not None else f
-        if target is not None and mask_draw is not None:   # the mask held toward the token song's share (round 108)
+        shift = fills[k] if fills and 0 <= k < len(fills) else 0   # a fill or a thinning in this bar (round 118)
+        g = rhythm.apply_mask(f, mask_draw(f)) if mask_draw is not None and shift <= 0 else f
+        if target is not None and mask_draw is not None and shift <= 0:   # the mask held toward the token song's share (round 108)
             n_g = _mask_count(g)
             if (struck_n + n_g + 1) / (followed_n + len(in_bar) + 1) < target - STRUCK_MARGIN:
                 g = f                                       # under the share: the bar strikes every followed onset
@@ -1097,9 +1136,16 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
         pos = {Fraction(tok.partition(":")[0]) for tok in g.split()}
         chosen = [x for x in in_bar if rhythm.position(x[0] - a, song.division) in pos]
         thinned += len(in_bar) - len(chosen)
+        if shift > 0:                                       # a fill (round 118): every followed onset and one between each pair half a beat or more apart
+            extra = [(x[0] + (y[0] - x[0]) / 2, x[1], x[2], x[3]) for x, y in zip(chosen, chosen[1:]) if y[0] - x[0] >= 0.5 - rhythm.NEAR]
+            chosen = sorted(chosen + extra, key=lambda x: x[0])
+            filled += len(extra)
+        elif shift < 0 and len(chosen) > 1:                 # a thinning: the bar's first onset alone
+            thinned += len(chosen) - 1
+            chosen = chosen[:1]
         struck_n += len(chosen)
         kept += chosen
-        figs[k] = g
+        figs[k] = rhythm.pattern(rhythm.position(x[0] - a, song.division) for x in chosen) if shift else g
     placed = sorted(parallel([(x[0], x[1], x[2], v) for x in kept], semi, scale, v, song, role, models, rng, clash_rates, None), key=lambda x: x[0])
     cell = struck.get("cell") if struck else None           # the token voice's cell repeats (round 116)
     repeats = comparable = 0
@@ -1145,7 +1191,7 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
         out.append((a, a + length, m, vv))
     if stats is not None:
         stats.update(sounded=sounded, played=sum(song.bars[i][1] - song.bars[i][0] for i in bars_seen), shortened=shortened,
-                     repeats=repeats, comparable=comparable)
+                     repeats=repeats, comparable=comparable, filled=filled)
     return out, thinned, figs
 
 
@@ -1785,6 +1831,14 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     section_densities = (plan_section_densities(models, parts, band, plays, section_levels, random.Random(f"whole:{seed}:section densities"), log)
                          if "section_densities" in render_mod.models_or_empty(models) else {})   # a section's density tier by the step its level makes (round 101)
     voices = allot(band, counts, len(token_kit_channels) or 2)   # the kit on its song's channels (round 87), two without the field
+    section_fills = (plan_section_fills(models, parts, band, plays, voices, random.Random(f"whole:{seed}:section fills"), log)   # what each voice does in a
+                     if "section_fills" in render_mod.models_or_empty(models) else {})                                        # section's last bar (round 118)
+    for role, kinds in section_fills.items():               # the line's fill rides the density shift its writer reads (habit_at_for, envelope_at_for)
+        if any(kinds["line"]):
+            shifts = section_densities.setdefault(role, [0] * len(kinds["line"]))
+            for k, x in enumerate(kinds["line"]):
+                if x and k < len(shifts):
+                    shifts[k] = max(-1, min(2, shifts[k] + x))
     for role in band:                                       # a part with two voices or more: what each voice beside its line does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             layers = [_draw(models, "layers", (role, str(min(rank, 4))), rng, log) if "layers" in models else "apart +0 like"
@@ -1940,7 +1994,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                    + (" kit " + " ".join(f"{k}={v:.2f}" for k, v in token_kit_pans.items()) if token_kit_pans and R.DRUMS in band else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities,
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities, section_fills=section_fills,
                 top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, bass_continuity=token_continuity)
 
 
@@ -2497,7 +2551,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                     if kind_w == "with":
                         stats_w = {}
                         struck, thinned, figs = struck_with(ref, at, end, semi_w, song, role, v, models, rng_w, plan.extras[role].get("clashes"),
-                                                            gs["second"] if gs else sounds, scale, mask_draw, line_notes, sv, stats=stats_w)
+                                                            gs["second"] if gs else sounds, scale, mask_draw, line_notes, sv, stats=stats_w,
+                                                            fills=(plan.section_fills.get(role) or {}).get("beside"))   # a fill at a section's end (round 118)
                         for k, f in figs.items():
                             figures_v[k] = f
                     elif kind_w == "double":
@@ -2516,7 +2571,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                      f"{stats_w['shortened']} stabs cut to the token's shortest class share (round 115)"
                                      if kind_w == "with" and sv.get("sounding") is not None and stats_w.get("played") else "")
                                   + (f"; the cell repeated on {stats_w['repeats']} of {stats_w['comparable']} stabs with a stab at the same place of the bar "
-                                     f"before, the token's {sv['cell']:.2f} (round 116)" if kind_w == "with" and sv.get("cell") is not None and stats_w.get("comparable") else "")))
+                                     f"before, the token's {sv['cell']:.2f} (round 116)" if kind_w == "with" and sv.get("cell") is not None and stats_w.get("comparable") else "")
+                                  + (f"; {stats_w['filled']} stabs added in the fill bars (round 118)" if stats_w.get("filled") else "")))
                 if any(sp[0] != "own" for sp in spans_v if sp not in inline):
                     log.append(f"voice {v + 1}: the token's stretches of another part's line in {word_v} stay its own beside the struck ones")
                 notes_v.sort(key=lambda x: x[0])
