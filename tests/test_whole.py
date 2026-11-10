@@ -376,6 +376,53 @@ class ChordFigureTests(unittest.TestCase):
         self.assertEqual(rhythm.RELATION_EDGE_BARS, 2)
 
 
+    def test_what_a_voice_does_is_read_part_by_part_of_the_form(self):
+        """Round 122: a relation stretch was read whole over a sample run, so a voice that plays one sample through the song
+        did one thing in it: Battle Theme's synths are struck with the guitar's riff through B and C and play the tune's own
+        rhythm in D, an octave and a third over it, and read whole they were struck with the riff throughout. Each part of the
+        form is asked on its own, the tune's voices first, and the stretch splits where the answer changes."""
+        s = self._chord_song(8)
+        tune = [(4.0 * k + i, 0.9, m, "m") for k in range(8) for i, m in enumerate((64.0, 65.0, 67.0, 69.0))]
+        line = [(4.0 * k + x / 2, 0.45, 48.0 if x % 2 == 0 else 50.0, "g") for k in range(8) for x in range(8)]   # eighths, the part's line
+        steps = (7.0, 4.0, 9.0, 12.0)                                                                            # a fifth, a third, a sixth, an octave: no one interval
+        with_line = [(t, 0.2, m + steps[i % 4], "v") for i, (t, _, m, _) in enumerate(line) if t < 16]           # struck with the line through A
+        on_tune = [(t, 0.9, m + 12.0, "v") for t, _, m, _ in tune if t >= 16]                                     # the tune an octave up through B
+        voice = with_line + on_tune
+        s.notes.update({"melody": tune, "accompaniment": sorted(line + voice)})
+        s.voice_notes = {0: ("accompaniment", line), 1: ("melody", tune), 2: ("accompaniment", voice)}
+        s.numbers = list(range(8))
+        s.parts = [(0, 8, None, "A")]                                                              # no form on the token: read whole, as before
+        self.assertEqual(rhythm.relation_words(s).get(2), "wl+7")                                  # with the line's onsets all through: struck with it
+        s.parts = [(0, 4, None, "A"), (4, 4, None, "B")]
+        self.assertEqual(rhythm.form_field(s), "A4B4")
+        self.assertEqual(rhythm.relation_words(s).get(2), "wl+7x4>dm+12")                          # with the line for four bars, then the tune's double
+        s.voice_notes[2] = ("accompaniment", [(t, 0.2, m + steps[i % 4], "v") for i, (t, _, m, _) in enumerate(line)])
+        self.assertEqual(rhythm.relation_words(s).get(2), "wl+7")                                  # the same thing in both parts: one stretch, whole
+        s.voice_notes[2] = ("accompaniment", with_line + on_tune[:4])                              # four notes in B: too few to say, A's reading stands
+        self.assertEqual(rhythm.relation_words(s).get(2), "wl+7")
+
+    def test_a_voice_struck_in_some_parts_follows_a_line_in_others(self):
+        """Round 122: the writer had left a struck voice's stretches on another part's line as its own notes ("stay its own
+        beside the struck ones"); they are written once every line is, the tune's line again at the interval, and folded into
+        where the token song plays the voice's sample, and the struck stretches, written in place, stand as they are."""
+        from types import SimpleNamespace
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        song = rhythm.Song("w", 4, 4, bars, [], notes={}, sid="w", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 64.0 + i, 0) for k in range(8) for i in range(4)]
+        written = {"melody": whole.Part("melody", tune, [""] * 8, []), "accompaniment": whole.Part("accompaniment", [], [""] * 8, [])}
+        plan = SimpleNamespace(layer_stretches={}, layer_ranges={"accompaniment": [(60, 84)]}, bounds={}, registers={"accompaniment": (48, 60)}, extras={}, log=[], parts=song.parts)
+        struck = [(4.0 * k + x / 2, 4.0 * k + x / 2 + 0.2, 40.0 + x, 1) for k in range(4) for x in range(8)]      # struck in place through A, under its sample's range
+        base = [(4.0 * k + i, 4.0 * k + i + 0.5, 50.0, 1) for k in range(4, 8) for i in range(2)]                # the layer word's own notes in B
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        out = whole.late_stretch_notes(plan, song, "accompaniment", 1, struck + base, "wl+7x4>dm+12", written, scale, {}, random.Random(1), struck_too=True)
+        self.assertEqual([n for n in out if n[0] < 16.0], struck)                                  # the struck bars as written: not folded
+        late = [n for n in out if n[0] >= 16.0]
+        self.assertEqual([(n[0], n[2]) for n in late], [(t, m + 12.0) for t, _, m, _ in tune if t >= 16.0])   # the tune an octave up, in the range
+        self.assertTrue(any("voice 2 double the melody's line at +12 in bars 5-8: 16 notes" in l for l in written["accompaniment"].log), written["accompaniment"].log)
+        whole_fold = whole.late_stretch_notes(plan, song, "accompaniment", 1, struck + base, "wl+7x4>dm+12", written, scale, {}, random.Random(1))
+        self.assertTrue(all(60 <= n[2] <= 84 for n in whole_fold))                                 # without the flag the voice is folded whole (round 95)
+
+
 class ParallelIntervalTests(unittest.TestCase):
     """Round 97: a parallel voice's interval to its line drawn by the chord."""
 
@@ -2245,7 +2292,8 @@ class NewTablesTests(unittest.TestCase):
         s.voice_of = {2: 1}
         s.voice_levels = {0: 0.3, 1: 0.2, 2: 0.3, 3: 0.1}
         s.levels = {"bass": 0.3, "melody": 0.2, "drums": 0.1}
-        self.assertEqual(rhythm.relation_words(s), {2: "dm-12x6>o"})
+        self.assertEqual(rhythm.relation_words(s).get(2), "dm-12x6>o")                         # (the bass, read part by part since round 122, has a word
+        self.assertNotIn(1, rhythm.relation_words(s))                                          # of its own where it strikes with the tune; the tune has none)
         self.assertEqual(rhythm.line_voice({1: line, 2: layer}, "melody", s), 1)               # the heard tune, though no busier
         self.assertEqual(rhythm.line_voice({1: line, 2: layer}, "melody"), 1)                  # without the song: the busiest (the first of equals)
         entries = rhythm.layer_tokens(s, "melody")
@@ -2253,7 +2301,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(entries[0], "1.5@m2@1.00@56-60@dm-12x6>o@m2~56-60x6>m3~60-60", entries)   # the sixth sub-field its instrument by stretch (round 92)
         self.assertIn("@dm-12x6>o", rhythm.balance_units([s])[0].outcome)
         s.voice_notes[2] = ("melody", [(t + 0.5, 0.4, 60.0, "m3") for t, _, m, _ in line])      # a voice of one own stretch: no word
-        self.assertEqual(rhythm.relation_words(s), {})
+        self.assertNotIn(2, rhythm.relation_words(s))
         self.assertFalse(any("@o" in e for e in rhythm.layer_tokens(s, "melody")), rhythm.layer_tokens(s, "melody"))
         token = "melody=main:64-84:0.9:2:0.7:1.5@sm2@1.00@55-60@dm-12x6>o:::slead bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium"
         t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
