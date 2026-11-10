@@ -322,13 +322,13 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   density. Since round 122 a voice beside a line is read part by part
   (the written synths double the tune through D), and since round 123
   the line doubles the bass where the token song's does (Battle Theme's
-  guitar through A, C and D), at its octave. What is left: a part's
-  density by section is a pooled word, not the token song's (Battle
-  Theme's bass and guitar thin to four notes a bar in C and D, the
-  written ones keep six to eight); the line follows only the bass (a
-  line that doubles the tune through a part is its own there); and the
-  double is of the bars the bass plays, so where the texture rests the
-  bass the line keeps its own notes.
+  guitar through A, C and D), at its octave, and since round 125 a
+  backing line's onsets a bar in each part of the form are the token
+  song's (Battle Theme's bass and guitar thin to four and five a bar in
+  C and D). What is left: the line follows only the bass (a line that
+  doubles the tune through a part is its own there); and the double is
+  of the bars the bass plays, so where the texture rests the bass the
+  line keeps its own notes.
 - **A part's bars in a part of the form are one span, and a returning
   part is its first statement.** Since round 124 the parts that sound in
   each part of the form are the token song's, each from the bar it
@@ -338,5 +338,20 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   sounds as its first statement did, where the game's second A can add
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
-  form) keeps the pooled textures and entrances. How busy each part is
-  inside a part of the form is still a pooled word.
+  form) keeps the pooled textures and entrances.
+- **A section's density is a median and an envelope, and the tune's and
+  the counter's are not held.** Since round 125 a backing line's figures
+  are drawn within half to one and a half times the token song's median
+  onsets a bar in the part of the form, and each kit piece within what
+  the song strikes of it there. The bars inside a part of the form are
+  not told apart (but the last, where it is a fill or a thinning): a
+  line the game plays eleven, five, six and three notes a bar is asked
+  for three to nine in each. The writers' grid stops at sixteenths, so
+  a snare the game rolls at twenty-eight a bar plays sixteen. The tune
+  keeps its own density and takes only the song's tier against it; the
+  counter-line follows the tune's figures and rests more than the
+  game's (it sounds in 0.72 of the Song Check 100 songs' bars against
+  0.91); a voice beside a line follows its line and takes only the last
+  bar's fill; and a kit piece the song plays in under three bars in
+  four of a part of the form plays by its figures' own chain inside its
+  bounds.

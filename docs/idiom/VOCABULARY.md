@@ -284,6 +284,48 @@ The words are grouped by where the writing draws them, in the order the song is 
   Edgar and Sabin's token, whose four parts play every bar, played its
   accompaniment and bass alone for fourteen bars and its tune alone for
   six (Song Check 100: "garbled noise, especially the beginning").
+  Since round 125 a pitched part's token carries a twenty-second field,
+  its line's onsets a bar by the form's letters (`section_onsets_field`:
+  `nA6+B2!1+C4.5!7`, the median over the bars the line plays in the part
+  of the form, onsets as the figure tables count them, and after a `!`
+  its onsets in the part's last bar where that bar is a fill or a
+  thinning as the `section_fills` word reads one); each voice beside a
+  line carries the same as a ninth sub-field; and the kit's token
+  carries each piece's hits a bar with the share of the part's bars it
+  plays in (`kit_onsets_field`: `nAS28.5@100,c1@50+BS20@75`). FFVI: 129
+  backing lines carry theirs over 422 parts of the form, 155 with a
+  last bar of its own; of the 118 with two parts of the form or more,
+  the busiest part is 1.5 times the sparsest at the median and at 1.5
+  times or more in 66; 40 kits carry their pieces, 210 cases of a piece
+  played through a part of the form, 52 in some of its bars, 13 rarely.
+  Where the plan's form is the token song's, `whole.token_sections`
+  sets `plan.section_onsets` (a backing part's line: the bass, a chord
+  part) and `plan.kit_bounds`, and the writers take them through
+  `habit_at_for` and `envelope_at_for`: a bar's figure is drawn under
+  the density tier the section's onsets sit in and within the writers'
+  own envelope of them (`writer.TIGHT`, half to one and a half times, as
+  a part written over a game's bar keeps to that bar), the last bar by
+  its own; a drum group's figure is drawn with each piece within its
+  bounds (`kit_piece_bounds`: the envelope for a piece the song plays
+  through the part, KIT_THROUGH; none to its most for one it plays in
+  some bars, KIT_SOME; one at most for one it strikes more rarely; none
+  for one the part never hears, whose hits are dropped if the draw's
+  ladder lets them through), a group none of whose pieces sounds rests
+  the bar, and a bar every group rests is the kit's to rest. The tune
+  keeps its own density and takes the song's tier against its typical
+  onsets a bar (DENSITY_STEP); the tune's and the counter's last bar,
+  and the last bar of the first voice beside any line, take the song's
+  fill or thinning. The `section_densities` and `section_fills` words
+  are not drawn then (they draw on their own streams). Why: a part's
+  habit (round 62) says how busy it is over the song, and where it
+  thins or fills was the pooled words' draw by the section's place: the
+  written Locke's snare ran through A and stopped for seven bars of B
+  where the game's plays in fourteen bars of sixteen, its
+  accompaniment played two notes a bar where the game's plays five or
+  six, and
+  the written Edgar and Sabin's accompaniment, drawn a tier denser,
+  played seventeen notes a bar in each of three voices where the
+  game's plays two to six.
   Since round 111 a chord part and the bass carry a sixteenth field, the
   line's chord-tone profile (`line_tone_profile`: `t46/2/8/31/2/11` for
   Battle Theme's guitar, `t33/8/17/19/3/20` for its bass, the share of the
@@ -1146,6 +1188,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   into D against 4, the flourish at the transition, while its guitar
   chugs on; the written synths never filled, their mask drawn bar by
   bar from the pooled second_figures word alone (Song Check 96).
+  Since round 125 a song whose form is its token song's takes that
+  song's own (the balance token's twenty-second field) and does not
+  draw this word.
 - **section_densities** — a part's density tier in each own section of
   the form against its song density, by the part and the step the
   section's level makes, round 101: `d+` where the part's notes a bar in
@@ -1189,6 +1234,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   FFVI 0.5: the manner's figures thin less readily than they thicken);
   Inner River Crossing's accompaniment goes from 4 notes a bar to nearly 8
   where it doubles in level.
+  Since round 125 a song whose form is its token song's takes that
+  song's own (the balance token's twenty-second field) and does not
+  draw this word.
   *`section_densities`: shape (part, step); drawn in _plan_once, plan_section_densities.*
 
 - **part_entries** — where inside a section a part present in it enters

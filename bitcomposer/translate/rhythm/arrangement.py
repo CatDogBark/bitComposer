@@ -764,7 +764,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
     Since round 86 a fourth sub-field, where the song plays the voice's sample; since round 90 a fifth, what the voice does
     beside which part stretch by stretch (relation_words: "ox9>dm-12x14>o"); since round 92 a sixth, its instrument by
     stretch (stretch_word with "~": "s605f200105~56-72x14>sf89f5aedfd~60-68"); since round 108 a seventh, how a voice struck
-    with another strikes (_struck_text: "w0.82~0.2~0.3~1.0~0.6~-~4.9")."""
+    with another strikes (_struck_text: "w0.82~0.2~0.3~1.0~0.6~-~4.9"); since round 121 an eighth, its loops; since round
+    125 a ninth, its onsets a bar by the form's letters (section_onsets_field)."""
     shares = voice_level_shares(song, role)
     if shares is None:
         return None
@@ -782,7 +783,8 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
         subs = [share, sid, f"{min(9.0, len(voices[v]) / max(1, len(voices[line]))):.2f}", rng, relations.get(v, ""),
                 stretch_word(song, voices[v], "~"),        # and its instrument by stretch (round 92; "~" keeps "@" for the sub-fields)
                 struck.get(v, ""),                          # and how it strikes where it is struck with another (round 108: _struck_text)
-                loop_field(song, voices[v]) if role in cells_mod.BACKING else ""]   # and its loops by the form's letters (round 121)
+                loop_field(song, voices[v]) if role in cells_mod.BACKING else "",   # and its loops by the form's letters (round 121)
+                section_onsets_field(song, voices[v])]      # and its onsets a bar by them (round 125)
         while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
             subs.pop()
         out.append("@".join(subs))
@@ -1662,6 +1664,78 @@ def part_spans_field(song, role: str) -> str:
     return "e" + "+".join(out) if out else ""
 
 
+def _halves(x: float) -> str:
+    """A median of whole numbers as the token writes it: 6, 4.5."""
+    return str(int(x)) if float(x) == int(x) else f"{x:.1f}"
+
+
+def section_onsets_text(song, notes) -> str:
+    """A voice's onsets a bar by the form's letters (round 125): "A6+B2!1+C4.5!7", for each new part of the form the voice
+    plays in, the median of its onsets a bar over the bars it plays there (onsets as the figure tables count them: notes
+    within NEAR one onset, on the song's grid), and after a "!" its onsets in the part's last bar where that bar is a
+    fill or a thinning as the section_fills word reads one (DENSITY_STEP times the median of the part's bars before it,
+    or more; its inverse or less, a rest among them; a part of the form of FILL_BARS bars or more with two played before
+    the last); "" for a song whose form the token does not carry (form_field) or a voice that plays in no part of it."""
+    if not form_field(song) or not notes:
+        return ""
+    index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
+    counts = {index[num]: len(struck) for num, _, struck in readings_mod.numbered_bars_of(song, "", notes)}
+    out, seen = [], set()
+    for bar, n, of, label in song.parts:
+        if of is not None or label in seen:
+            continue
+        seen.add(label)
+        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        played = [counts[k] for k in idx if counts.get(k)]
+        if not played:
+            continue
+        text = label + _halves(statistics.median(played))
+        before = [counts[k] for k in idx[:-1] if counts.get(k)]
+        if len(idx) >= FILL_BARS and len(before) >= 2:
+            med, last = statistics.median(before), counts.get(idx[-1], 0)
+            if last >= DENSITY_STEP * med or last <= med / DENSITY_STEP:
+                text += f"!{last}"
+        out.append(text)
+    return "+".join(out)
+
+
+def section_onsets_field(song, notes) -> str:
+    """A voice's onsets a bar by the form's letters as a balance token field (round 125): "n" and section_onsets_text, ""
+    without one. A part's twenty-second field carries its line's; a voice beside the line's ninth sub-field its own."""
+    text = section_onsets_text(song, notes)
+    return "n" + text if text else ""
+
+
+def kit_onsets_field(song) -> str:
+    """The kit's twenty-second token field (round 125): each piece's hits a bar by the form's letters, "nAS28.5@100,c1@50+
+    BS20@75": in A the snare 28.5 hits a bar at the median of the bars it plays, in every bar; the cymbal one, in half
+    the bars; a piece by its letter (LETTERS), as the kit's figures name it, the share of the part's bars it plays in in
+    hundredths; "" for a song whose form the token does not carry or a kit that plays in no part of it. The kit's habit
+    and each slot's strike class (round 81) say how a piece plays over the song; which parts of the form it plays in, and
+    how hard, they did not: the written Locke's snare ran through A and stopped for seven bars of B."""
+    if not form_field(song) or not song.notes.get(R.DRUMS):
+        return ""
+    index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
+    hits = {}
+    for num, _, _, struck in readings_mod.all_bars_of(song, R.DRUMS):
+        if struck:
+            hits[index[num]] = Counter(t.partition(":")[2] for t in readings_mod._tokens(readings_mod.drum_figure(struck, song)))
+    order = list(readings_mod.LETTERS.values())
+    out, seen = [], set()
+    for bar, n, of, label in song.parts:
+        if of is not None or label in seen:
+            continue
+        seen.add(label)
+        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        pieces = []
+        for letter in sorted({x for k in idx for x in hits.get(k, ())}, key=lambda x: order.index(x) if x in order else len(order)):
+            played = [hits[k][letter] for k in idx if hits.get(k, {}).get(letter)]
+            pieces.append(f"{letter}{_halves(statistics.median(played))}@{int(round(100 * len(played) / len(idx)))}")
+        if pieces:
+            out.append(label + ",".join(pieces))
+    return "n" + "+".join(out) if out else ""
+
+
 def chord_shape_profile(s) -> str:
     """The song's chord-shape profile as the balance token carries it (round 112, `shapes=`): the share of its beats under each
     chord shape the reader heard (harmony.SHAPES; the plain major triad as "maj"), in hundredths, the largest first, shapes
@@ -1926,7 +2000,7 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh] + [""] * 9 + [loop_field(s, s.notes[role], kit=True), "", part_spans_field(s, role)]   # and its kit as the eighth (round 63; each
+                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh] + [""] * 9 + [loop_field(s, s.notes[role], kit=True), "", part_spans_field(s, role), kit_onsets_field(s)]   # and its kit as the eighth (round 63; each
                                                                                              # channel's pieces as the fourth, round 87;
                                                                                              # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
@@ -1956,7 +2030,8 @@ def balance_units(songs) -> list:
                       line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's steps (round 117)
                       loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
                       line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
-                      part_spans_field(s, role)]              # and the parts of the form it sounds in, with its entrances (round 124)
+                      part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
+                      section_onsets_field(s, line_notes)]    # and its line's onsets a bar in each (round 125)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

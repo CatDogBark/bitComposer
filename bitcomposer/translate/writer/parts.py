@@ -180,7 +180,7 @@ LIMB_REDRAWS = 3                     # a limb whose slot the token strikes that 
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
                   energy: list | None = None, extra_values: dict | None = None, floor_outcomes: int | None = None,
-                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None, envelope_at=None) -> list[str]:
+                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None, envelope_at=None, envelope_by_bar=None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -189,7 +189,11 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     part rests in rest (the arrangement is not this slice's); the song's
     moments and stops (`hold`) keep the old bar; `energy`, the band's
     energy a bar against its median, thins the part where the band thins
-    (a breakdown) and rests it where the band is nearly gone (THIN)."""
+    (a breakdown) and rests it where the band is nearly gone (THIN).
+    `envelope_by_bar` (round 125): (bar, meter) -> the bar's envelope in
+    `within_of`'s own shape, or None for the habit's: a drum group's
+    pieces each within what the token song strikes of them in the part of
+    the form."""
     lock = lock or {}
     envelope_of = envelope_of or figures_mod.envelope
     within_of = within_of or figures_mod.within
@@ -212,6 +216,8 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                 figures[k] = own[k]
             else:
                 env = envelope_of(own[k], meters[k])
+                if envelope_by_bar is not None:             # the bar's own envelope, in the part's own shape (round 125)
+                    env = envelope_by_bar(k, meters[k]) or env
                 shifted = envelope_at(k, statistics.median(unshifted) if len(unshifted) >= 2 else None) if envelope_at is not None else None
                 if shifted is not None:                     # the section's density tier shift as the bar's envelope (round 101, rhythm.density_bounds),
                     env = (shifted[0], shifted[1], False, meters[k])   # measured from the part's own running density where two bars give one
@@ -357,7 +363,8 @@ def _figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: lis
 
 
 def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=None, habit: str | None = None,
-          free: bool = False, plays: list | None = None, kit_value: str | None = None, class_values: dict | None = None) -> tuple[list[tuple[float, str]], list[str]]:
+          free: bool = False, plays: list | None = None, kit_value: str | None = None, class_values: dict | None = None,
+          bounds_at=None) -> tuple[list[tuple[float, str]], list[str]]:
     """The drums written for the song, a group of pieces at a time (the
     module): `models` maps a group (a tuple of letters, rhythm.DRUM_GROUPS)
     to its Cache (a group of every letter: the whole kit, its table's part
@@ -370,7 +377,13 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
     and narrows the kit to them; `class_values` ({group: its slots' strike
     classes as the limb table's values, rhythm.class_values}, round 81)
     conditions each group's draw on how the token song strikes the samples
-    the slots hold. Returns the hits (start in beats, piece letter) and the
+    the slots hold; `bounds_at` (round 125): bar -> {piece letter: (the
+    least, the most hits it takes there)} or None, each piece as the token
+    song strikes it in the bar's part of the form: a group's figure is
+    drawn within its pieces' bounds, a group none of whose pieces sounds
+    there rests the bar, and a hit of a piece the part of the form never
+    hears, which the draw's ladder can let through once nothing fits, is
+    dropped. Returns the hits (start in beats, piece letter) and the
     merged figures."""
     locks = locks or {}
     class_values = class_values or {}
@@ -399,14 +412,27 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         if free:
             extra = {**({"kit": kit_value} if kit_value else {}), **class_values.get(letters, {})}
             classed = bool(class_values.get(letters))
+            mine = kit & set(letters)
+            by_bar = None
+            if bounds_at is not None:                       # each piece as the token song strikes it in the bar's part of the form (round 125)
+                by_bar = lambda k, meter, _m=mine: None if bounds_at(k) is None else ({x: bounds_at(k).get(x, (0, 0)) for x in _m}, False, meter)   # noqa: E731
+                own = [figures_mod.REST if o != figures_mod.REST and bounds_at(k) is not None and not any(bounds_at(k).get(x, (0, 0))[1] for x in mine) else o
+                       for k, o in enumerate(own)]          # none of the group's pieces sounds in the part of the form: the group rests the bar
             for attempt in range(1 + (LIMB_REDRAWS if classed else 0)):
                 figures = _free_figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold,
                                         locks.get(letters), envelope_of=envelope_of, within_of=figures_mod.drum_within, lock_share=LOCK_DRUMS,
                                         extra_values=extra or None,   # the kit's pieces (round 58) and the slots' strike classes (round 81)
                                         floor_outcomes=LIMB_FLOOR_OUTCOMES if classed else None,   # one figure and its rests is a class's vocabulary
-                                        rest_new=classed)                                        # and the rest comes at the class's own rate
+                                        rest_new=classed,                                        # and the rest comes at the class's own rate
+                                        envelope_by_bar=by_bar)
                 if not classed or any(f != figures_mod.REST for f in figures) or not any(o != figures_mod.REST for o in own):
                     break                                   # a limb the token strikes that drew only rests draws again (LIMB_REDRAWS)
+            if bounds_at is not None:                       # a piece the part of the form never hears does not sound there, whatever the
+                for k, f in enumerate(figures):             # ladder let through once nothing fit
+                    if f != figures_mod.REST and bounds_at(k) is not None:
+                        kept = [t for t in rhythm._tokens(f) if bounds_at(k).get(t.partition(":")[2], (0, 0))[1]]
+                        if len(kept) != len(rhythm._tokens(f)):
+                            figures[k] = " ".join(kept) or figures_mod.REST
         else:
             figures = _figures(song, part_of(letters), model, manner, own, bars, group_habit, rng, hold, locks.get(letters),
                                envelope_of=envelope_of, within_of=figures_mod.drum_within, lock_share=LOCK_DRUMS)
@@ -423,6 +449,8 @@ def drums(song: rhythm.Song, models: dict, rng: random.Random, hold=(), locks=No
         for k, (a, b, _) in enumerate(bars):
             if not (k < len(plays) and plays[k]) or merged[k]:
                 continue
+            if bounds_at is not None and bounds_at(k) is not None:   # the token song's own pieces by section (round 125): a bar every group
+                continue                                    # rested is the kit's to rest, as the game's kits rest single bars
             before = by_group[main][k - 1] if k else figures_mod.REST
             values = {"part": part_of(main), "meter": max(1, round(b - a)), "previous": before if before != figures_mod.REST else rhythm.START, "habit": group_habit, **({"kit": kit_value} if kit_value else {}),
                       **class_values.get(main, {}), "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
