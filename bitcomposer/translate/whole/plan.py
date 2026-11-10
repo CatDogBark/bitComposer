@@ -1551,7 +1551,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 m_ = re.fullmatch(r"b(\d+)/(\d+)", fields[14])
                 if m_:
                     token_rides[role] = (int(m_.group(1)) / 100, int(m_.group(2)) / 100)
-            if len(fields) > 16 and fields[16] and role == R.BASS:   # the bass line's pitch continuity (round 114): `k57`
+            if len(fields) > 16 and fields[16] and role == R.BASS:   # the bass line's pitch continuity (round 114): `k58`
                 m_ = re.fullmatch(r"k(\d+)", fields[16])
                 if m_:
                     token_continuity = int(m_.group(1)) / 100
@@ -2276,6 +2276,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             if runs:                                        # the second samples' hits (round 99)
                 written[R.DRUMS].log.append("kit seconds (kit_seconds): " + ", ".join(f"{k} {r[0]} of {r[1]} hits on the second sample (the token's share {seconds_of[k]['share']:.2f})" for k, r in runs.items())
                                             + ("" if "kit_seconds" in models else "; no kit_seconds word: the slot's sample throughout"))
+    bass_as_written = []                                    # the bass writer's line, to tell its bars from those rewritten after it (round 114)
     if R.BASS in plan.band and "bass" in models:
         # the bass sits on the kit's accents (two pieces together) at the game's share (bass_locks): FFVI's on 0.94 of them;
         # locked to the whole planned band it had met the threshold in no bar, written second with two drum voices to hand
@@ -2295,6 +2296,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
         song.notes[R.BASS] = [(a, b - a, m, "bass") for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
+        bass_as_written = list(line)
         log = [f"habit {plan.habits[R.BASS]}, register {plan.bounds.get(R.BASS, plan.registers[R.BASS])}, {sum(1 for f in figures if f != writer.REST)} bars written, "
                f"{len(notes)} notes; " + (f"on the kit's accents in {len(lock)} bars at {lock_share:.1f}" if R.BASS in plan.locks else f"locked to the band in {len(lock)} bars")]
         log += bass_log
@@ -2574,4 +2576,89 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     for role, part in written.items():                      # what the theme band, the hand-offs and the form's repeats copied across a
         if role != R.DRUMS and (plan.extras.get(role) or {}).get("stretch_bounds"):   # stretch line goes into its bars' registers too (round 92)
             part.notes[:] = fold_line(plan, role, part.notes, song.meter)
+    if R.BASS in written:
+        written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written)   # the bass's pitch continuity as finally played (round 114)
     return written
+
+
+def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: list) -> list:
+    """The bass's pitch continuity as the token song's on the line as finally played (round 114). The bass writer holds it
+    (writer.bass, `continuity`), and the theme band, the hand-offs and the form's repeats rewrite bars of the bass after it
+    (a fifth of Journey of the Quarry's), each a bar line or two lost, so the bass kept its pitch class across 0.28 of its bar
+    lines where the writer had kept 0.53. Here the bars are walked again as the reader counts them (consecutive bars the bass
+    plays in, a rest bar breaking the chain): where the share runs under the token song's, with the bar line counted, a bar
+    the writer's own notes still stand in is pedaled on the bar before's main pitch class (writer.pedal: the fewest notes
+    moved, a passing mark first, the tone classes written kept counted against the token song's profile relative to the bar's
+    chord); a bar rewritten after the writer is left as it is. A chord part riding the bass moves with it: its line's note at
+    a moved onset on the bass's old pitch class takes the new. Returns a log line."""
+    share = getattr(plan, "bass_continuity", None)
+    if share is None or R.BASS not in written or not written[R.BASS].notes:
+        return []
+    part, meter = written[R.BASS], song.meter
+    profile = (getattr(plan, "tone_profiles", None) or {}).get(R.BASS)
+    bar_of = lambda t: int((t + rhythm.NEAR) // meter)       # noqa: E731
+    by_bar, was = {}, {}
+    for n in part.notes:
+        if n[3] == 0:
+            by_bar.setdefault(bar_of(n[0]), []).append(n)
+    for n in as_written:
+        was.setdefault(bar_of(n[0]), set()).add((round(n[0], 3), int(round(n[2])) % 12))
+    rewritten = {k for k, ns in by_bar.items() if {(round(n[0], 3), int(round(n[2])) % 12) for n in ns} != was.get(k, set())}
+
+    def chord_of(k):
+        c = rhythm._chord_at(song.chords, song.bars[k][0]) if k < len(song.bars) else None
+        return (c.root % 12, c.shape) if c is not None and c.root is not None and c.fit >= vocab.FIT else (plan.tonic % 12, "")
+    counts = Counter()                                      # the line's tone classes as played, for the profile's budget in pedal
+    for k, ns in by_bar.items():
+        root, shape = chord_of(k)
+        for n in ns:
+            counts[vocab.tone_of(int(round(n[2])) % 12, root, shape)] += 1
+    low, high = plan.bounds.get(R.BASS, plan.registers[R.BASS])
+    prev_main, same, trans, pedaled, moved, riders = None, 0, 0, 0, 0, 0
+    for k in range(len(song.bars)):
+        ns = by_bar.get(k)
+        if not ns:
+            prev_main = None                                # a rest bar: no bar line counted across it
+            continue
+        main = Counter(int(round(n[2])) % 12 for n in ns).most_common(1)[0][0]
+        if prev_main is not None:
+            if main != prev_main and k not in rewritten and (same + 1) / (trans + 1) < share - writer.CONTINUITY_MARGIN:
+                out = [(n[0], n[1], n[2]) for n in ns]
+                figure = (part.figures[k] if k < len(part.figures) else "").split(" || ")[0]
+                marks = {}
+                for tok in (rhythm._tokens(figure) if figure and figure != writer.REST else []):
+                    pos, _, mark = tok.partition(":")
+                    marks[round(song.bars[k][0] + float(Fraction(pos)), 3)] = mark
+                old = [int(round(m)) % 12 for _, _, m in out]
+                moved += writer.pedal(out, [marks.get(round(s, 3), "") for s, _, _ in out], [chord_of(k)] * len(out), prev_main, low, high, profile, counts)
+                gone = {(round(n[0], 3), int(round(n[2]))) for n in ns}
+                part.notes[:] = sorted([n for n in part.notes if not (n[3] == 0 and bar_of(n[0]) == k)] + [(s, e, m, 0) for s, e, m in out], key=lambda n: (n[0], n[3]))
+                song.notes[R.BASS] = sorted([x for x in song.notes.get(R.BASS, []) if (round(x[0], 3), int(round(x[2]))) not in gone]
+                                            + [(s, e - s, m, "bass") for s, e, m in out], key=lambda x: x[0])
+                for (s, _, m), op in zip(out, old):         # the chord parts riding the bass move with it
+                    npc = int(round(m)) % 12
+                    if npc == op:
+                        continue
+                    delta = ((npc - op + 6) % 12) - 6
+                    for role in rhythm.UPPER:
+                        up = written.get(role)
+                        if up is None:
+                            continue
+                        for i, x in enumerate(up.notes):
+                            if x[3] == 0 and abs(x[0] - s) < rhythm.NEAR and int(round(x[2])) % 12 == op:
+                                key = (round(x[0], 3), int(round(x[2])))
+                                up.notes[i] = (x[0], x[1], float(x[2] + delta)) + tuple(x[3:])
+                                song.notes[role] = [(y[0], y[1], float(y[2] + delta), y[3]) if (round(y[0], 3), int(round(y[2]))) == key else y
+                                                    for y in song.notes.get(role, [])]
+                                riders += 1
+                by_bar[k] = [(s, e, m, 0) for s, e, m in out]
+                pedaled += 1
+                main = prev_main
+            trans += 1
+            same += main == prev_main
+        prev_main = main
+    if not trans:
+        return []
+    return [f"bass pitch as finally played held across bar lines to the balance's song's {share:.2f} (round 114): {same} of {trans} kept; {len(rewritten)} bars "
+            f"rewritten after the writer (the theme band, the hand-offs, the repeats) left as they are, {pedaled} more bars pedaled, {moved} notes moved, "
+            f"{riders} riding notes with them"]

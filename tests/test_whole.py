@@ -1033,8 +1033,42 @@ class TokenContinuityTests(unittest.TestCase):
         scale = {0, 2, 4, 5, 7, 9, 11}
         plain, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0)
         self.assertEqual([int(m) % 12 for a, b, m in plain], [0, 7, 0, 7])                             # C and G over C
-        held, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0, root_override=9)
-        self.assertEqual([int(m) % 12 for a, b, m in held], [9, 4, 9, 4])                              # the bar on A: A and its fifth E, the chord's shape kept
+        moved = []
+        held, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0, root_override=9, moved=moved)
+        self.assertEqual([int(m) % 12 for a, b, m in held], [9, 9, 9, 4])                              # the bar on A: A, its fifth E where A outnumbers it (the
+        self.assertEqual(moved, [1])                                                                 # earliest fifth moved onto the pedal), the chord's shape kept
+        self.assertEqual(int(held[1][2]), 45)                                                        # in the octave nearest its own (E 40 -> A 45, not 33)
+        from collections import Counter
+        counts = Counter()
+        held, _, _ = parts.realize("0:5 1:+ 3/2:5 2:R", 0.0, 4.0, song, 36, 0.8, scale, 0, counts=counts, root_override=0, moved=moved)
+        self.assertEqual([int(m) % 12 for a, b, m in held], [0, 0, 7, 0])                              # G A G C: the passing tone first, then the earliest fifth
+        self.assertEqual(moved, [1, 2])
+        self.assertEqual({k: v for k, v in counts.items() if v}, {"root": 3, "fifth": 1})          # the classes written stay counted true
+
+    def test_the_bass_as_finally_played_is_held(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(4.0 * k, 4.0 * k + 4.0, 0 if k % 2 == 0 else 7, "", 1.0) for k in range(4)], notes={}, sid="w", game="g",
+                           numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        bass = [(4.0 * k + i, 4.0 * k + i + 0.8, 36.0 if k % 2 == 0 else 43.0, 0) for k in range(4) for i in (0, 2)]   # C C | G G | C C | G G: the roots
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        rider = [(8.0, 8.8, 48.0, 0), (10.0, 10.8, 62.0, 0)]                                         # the accompaniment on the bass's C at bar 3, then a D
+        song.notes["accompaniment"] = [(a, b - a, m, "accompaniment") for a, b, m, _ in rider]
+        written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, []), "accompaniment": whole.Part("accompaniment", list(rider), [""] * 4, [])}
+        p = whole.plan({}, 3, "g")
+        p.bass_continuity, p.tone_profiles, p.bounds, p.registers = 0.9, {}, {}, {"bass": (32, 44)}
+        log = whole.hold_bass_pitch(p, song, written, list(bass))
+        mains = [max(set(int(m) % 12 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4), key=lambda pc: sum(1 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4 and int(m) % 12 == pc)) for k in range(4)]
+        self.assertEqual(mains, [0, 7, 7, 7])                                                      # the first bar line is free (the budget counts it kept), the
+        self.assertTrue(log and "2 of 3 kept" in log[0] and "1 more bars pedaled" in log[0], log)   # second pedals bar 3 on G, the third keeps
+        self.assertEqual(int(written["accompaniment"].notes[0][2]), 43)                            # the rider's C at bar 3 moved with the bass to G, nearest
+        self.assertEqual(int(written["accompaniment"].notes[1][2]), 62)                            # its D, not the bass's pitch class, stays
+        self.assertEqual(sorted(int(x[2]) % 12 for x in song.notes["bass"]), [0, 0, 7, 7, 7, 7, 7, 7])   # the song's bass notes follow
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, [])}
+        log = whole.hold_bass_pitch(p, song, written, bass[:2] + [(a + 0.5, b + 0.5, m, v) for a, b, m, v in bass[2:]])   # bars 2-4 not as the writer wrote them
+        self.assertTrue(log and "0 of 3 kept" in log[0] and "3 bars rewritten" in log[0] and "0 more bars pedaled" in log[0], log)
+        self.assertEqual(sorted(int(x[2]) % 12 for x in written["bass"].notes), [0, 0, 0, 0, 7, 7, 7, 7])   # left as they are
 
 
 class TokenRiffTests(unittest.TestCase):

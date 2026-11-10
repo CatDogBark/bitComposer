@@ -1334,10 +1334,10 @@ CONTINUITY_BARS = 8                  # bar-to-bar transitions a bass line needs 
 
 def bass_continuity_field(s, line_notes=None) -> str:
     """The bass line's pitch continuity as the balance token carries it (round 114, the bass's seventeenth field): the share of its
-    bar-to-bar transitions (consecutive bars it plays in) that keep the bar's main pitch class, in hundredths, "k57" for Battle
+    bar-to-bar transitions (consecutive bars it plays in) that keep the bar's main pitch class, in hundredths, "k58" for Battle
     Theme; "" under CONTINUITY_BARS transitions. Battle Theme's bass rides its riff's pitch while the chord reader hears its
     chromatic neighbours as changes; the written bass walked the chain's roots, keeping its pitch class across 0.26 of its bar
-    lines at the median where the game's basses keep it across 0.30 and Battle Theme's across 0.57."""
+    lines at the median where the game's basses keep it across 0.30 and Battle Theme's across 0.58."""
     notes = line_notes if line_notes is not None else s.notes.get(R.BASS, [])
     bars = getattr(s, "bars", None) or []
     main = []
