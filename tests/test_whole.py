@@ -1052,17 +1052,21 @@ class TokenContinuityTests(unittest.TestCase):
                            numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
         bass = [(4.0 * k + i, 4.0 * k + i + 0.8, 36.0 if k % 2 == 0 else 43.0, 0) for k in range(4) for i in (0, 2)]   # C C | G G | C C | G G: the roots
         song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
-        rider = [(8.0, 8.8, 48.0, 0), (10.0, 10.8, 62.0, 0)]                                         # the accompaniment on the bass's C at bar 3, then a D
-        song.notes["accompaniment"] = [(a, b - a, m, "accompaniment") for a, b, m, _ in rider]
+        rider = [(8.0, 8.8, 48.0, 0), (8.0, 8.8, 67.0, 1), (8.0, 8.8, 64.0, 2), (10.0, 10.8, 62.0, 0)]   # the accompaniment on the bass's C at bar 3 with a
+        song.notes["accompaniment"] = [(a, b - a, m, "accompaniment") for a, b, m, _ in rider]      # voice struck with its line (+19) and a stacked E; then a D
         written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, []), "accompaniment": whole.Part("accompaniment", list(rider), [""] * 4, [])}
         p = whole.plan({}, 3, "g")
         p.bass_continuity, p.tone_profiles, p.bounds, p.registers = 0.9, {}, {}, {"bass": (32, 44)}
+        p.layer_relations = {"accompaniment": ["wl+19"]}
         log = whole.hold_bass_pitch(p, song, written, list(bass))
         mains = [max(set(int(m) % 12 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4), key=lambda pc: sum(1 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4 and int(m) % 12 == pc)) for k in range(4)]
         self.assertEqual(mains, [0, 7, 7, 7])                                                      # the first bar line is free (the budget counts it kept), the
         self.assertTrue(log and "2 of 3 kept" in log[0] and "1 more bars pedaled" in log[0], log)   # second pedals bar 3 on G, the third keeps
         self.assertEqual(int(written["accompaniment"].notes[0][2]), 43)                            # the rider's C at bar 3 moved with the bass to G, nearest
-        self.assertEqual(int(written["accompaniment"].notes[1][2]), 62)                            # its D, not the bass's pitch class, stays
+        self.assertEqual(int(written["accompaniment"].notes[1][2]), 62)                            # the voice struck with the line moved the same (67 -> 62)
+        self.assertEqual(int(written["accompaniment"].notes[2][2]), 64)                            # the stacked voice, no relation word, stays
+        self.assertEqual(int(written["accompaniment"].notes[3][2]), 62)                            # its D, not the bass's pitch class, stays
+        self.assertEqual(sorted(int(x[2]) for x in song.notes["accompaniment"]), [43, 62, 62, 64])   # the song's notes follow
         self.assertEqual(sorted(int(x[2]) % 12 for x in song.notes["bass"]), [0, 0, 7, 7, 7, 7, 7, 7])   # the song's bass notes follow
         song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
         written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, [])}

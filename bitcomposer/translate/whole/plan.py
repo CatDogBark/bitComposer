@@ -2590,7 +2590,9 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
     the writer's own notes still stand in is pedaled on the bar before's main pitch class (writer.pedal: the fewest notes
     moved, a passing mark first, the tone classes written kept counted against the token song's profile relative to the bar's
     chord); a bar rewritten after the writer is left as it is. A chord part riding the bass moves with it: its line's note at
-    a moved onset on the bass's old pitch class takes the new. Returns a log line."""
+    a moved onset on the bass's old pitch class takes the new, and the voices its relation words have following the line
+    there (struck with it, parallel, doubling; and theirs) move the same, so what the token said they do beside the line
+    holds. Returns a log line."""
     share = getattr(plan, "bass_continuity", None)
     if share is None or R.BASS not in written or not written[R.BASS].notes:
         return []
@@ -2614,6 +2616,26 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
         for n in ns:
             counts[vocab.tone_of(int(round(n[2])) % 12, root, shape)] += 1
     low, high = plan.bounds.get(R.BASS, plan.registers[R.BASS])
+
+    def followers(role, k):
+        """The part's voices (by number) that follow its line in bar k by their relation words: the line's and, in turn, theirs."""
+        words = (getattr(plan, "layer_relations", None) or {}).get(role) or []
+        target = {}
+        for v, word in enumerate(words, start=1):
+            bar = 0
+            for kind, who, _, bars in relation_stretches(word):
+                end = None if bars is None else bar + bars
+                if bar <= k and (end is None or k < end):
+                    if kind != "own" and who is not None:
+                        target[v] = 0 if who == ("line",) else who[1] if who[0] == "voice" else None
+                    break
+                bar = end
+        out = {0}
+        while True:
+            more = {v for v, t in target.items() if t in out and v not in out}
+            if not more:
+                return out - {0}
+            out |= more
     prev_main, same, trans, pedaled, moved, riders = None, 0, 0, 0, 0, 0
     for k in range(len(song.bars)):
         ns = by_bar.get(k)
@@ -2644,13 +2666,19 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
                         up = written.get(role)
                         if up is None:
                             continue
-                        for i, x in enumerate(up.notes):
-                            if x[3] == 0 and abs(x[0] - s) < rhythm.NEAR and int(round(x[2])) % 12 == op:
-                                key = (round(x[0], 3), int(round(x[2])))
-                                up.notes[i] = (x[0], x[1], float(x[2] + delta)) + tuple(x[3:])
-                                song.notes[role] = [(y[0], y[1], float(y[2] + delta), y[3]) if (round(y[0], 3), int(round(y[2]))) == key else y
-                                                    for y in song.notes.get(role, [])]
-                                riders += 1
+                        at = [i for i, x in enumerate(up.notes) if abs(x[0] - s) < rhythm.NEAR]
+                        if not any(up.notes[i][3] == 0 and int(round(up.notes[i][2])) % 12 == op for i in at):
+                            continue                        # the part's line is not on the bass's pitch here: not riding it
+                        voices = {0} | followers(role, k)
+                        for i in at:
+                            x = up.notes[i]
+                            if x[3] not in voices or (x[3] == 0 and int(round(x[2])) % 12 != op):
+                                continue
+                            key = (round(x[0], 3), int(round(x[2])))
+                            up.notes[i] = (x[0], x[1], float(x[2] + delta)) + tuple(x[3:])
+                            song.notes[role] = [(y[0], y[1], float(y[2] + delta), y[3]) if (round(y[0], 3), int(round(y[2]))) == key else y
+                                                for y in song.notes.get(role, [])]
+                            riders += 1
                 by_bar[k] = [(s, e, m, 0) for s, e, m in out]
                 pedaled += 1
                 main = prev_main
@@ -2661,4 +2689,4 @@ def hold_bass_pitch(plan: Plan, song: rhythm.Song, written: dict, as_written: li
         return []
     return [f"bass pitch as finally played held across bar lines to the balance's song's {share:.2f} (round 114): {same} of {trans} kept; {len(rewritten)} bars "
             f"rewritten after the writer (the theme band, the hand-offs, the repeats) left as they are, {pedaled} more bars pedaled, {moved} notes moved, "
-            f"{riders} riding notes with them"]
+            f"{riders} riding notes (and the voices following them) with them"]
