@@ -7687,19 +7687,37 @@ from the token (the letters, the bars, a repeat as long as its source,
 the bars running on), the band-levels test skipping the song-level
 fields. Suite 461 (1 skip).
 
+**Fixed, the same day.** The suite on the shipped vocabulary found the
+rebuild shortening songs: seed 11's token form is A2B12, fourteen bars,
+under the player's sixteen, and the rebuild took it whole
+(test_performance). A token form built short of the bars asked now
+leaves the plan's own draw standing, logged (4 of FFVI's 62 token forms
+are under sixteen bars). And a letter's bars had been its last
+statement's, so a song whose part returns with other bars than its
+first (15 of the 62 forms: B15 ... B2, a fragment, or B2 ... B8, a
+longer second statement) came out with every B at the return's length;
+a repeat is as long as the part it repeats, so the part plays whole at
+its first statement's bars. Tests: the first statement's bars taken,
+the short form leaving the draw. Suite 462 (1 skip), the shipped
+vocabulary in the tree.
+
 **Measured.** Written, the five Battle Theme seeds: every one A2 B8 C9
 B8 D14, 41 bars, where they had been 19 to 38 bars of A B C C D E and
 the like; each brings its B back after its C. Seeds 1-60: 57 of 60 songs
-carry a token form, 51 take its letters whole and 35 its bars too (the
-rest cut to the bars asked), 22 songs bring a part back where 18 tokens
-do (20 before). The sections' densities, the investigation's other
+carry a token form, 47 take its letters whole and 33 its bars too (the
+rest cut to the bars asked, a returning part played whole at its first
+statement's bars, or a form short of the sixteen asked leaving the
+draw), 23 songs bring a part back where 16 tokens do (20 before). The
+sections' densities, the investigation's other
 structural item, were measured and left: at a section boundary the
 written pitched parts step alike on 0.33 of boundaries and agree
 pairwise on 0.53 (sixty seeds), FFVI's on 0.27 and 0.53 at the median,
 Battle Theme's own on 0.00 and 0.33 of its four, so there is no deficit
-to carry (LIMITS). Plans (400 seeds, against round 112): 353 keep their
-token song, 24 plan logs and 24 note sets unchanged (the form moves
-every later draw of a song whose token form differs from its drawn one).
+to carry (LIMITS). Plans (400 seeds, against round 112): 358 keep their
+token song, 25 plan logs and 44 note sets unchanged (the form moves
+every later draw of a song whose token form differs from its drawn one;
+a plan whose form changes may be drawn again for its theme, and its
+token with it).
 
 **Song Check 96** (https://claude.ai/artifact/RgR56VsWP3KGEsXQW8buWD):
 the five Battle Theme songs of Song Checks 89 to 95, round 112 before
@@ -7708,6 +7726,9 @@ asked: Journey of the Quarry (18), Lunar Island (243), Gate Return
 (343), The Terminal of Glass (150) and Second Cistern Dance (365).
 
 **Open.** The bass's pitch continuity (round 114). A token song longer
-than the bars asked is cut, not scaled. The standing list: round 100's
+than the bars asked is cut, not scaled; one shorter leaves the draw
+standing; a part read returning with other bars than its first plays
+whole at its first statement's bars (15 of 62 token forms). The
+standing list: round 100's
 endings and theme returns, round 101's sparser side, round 103's line
 motion, round 105's sectioning.
