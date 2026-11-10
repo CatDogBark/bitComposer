@@ -57,6 +57,9 @@ REACH = 7                             # semitones a part's top may sit above the
 SPEED_WEIGHT = 3                      # a sample's score loses this a note a second the part's fastest bar runs past the sample's fastest in the game
 
 
+CEILING_SLACK = 0.05                  # semitones a note may sit over its sample's ceiling on the SNES chip and still sound its pitch (round 119)
+
+
 def builtin_profile(rid: str, pack: str | None = None) -> dict | None:
     """A built-in voice's profile (packs.profile: its range, speed and floor, set for the voice itself), the stand-in for
     the tables' answers about a game's own sample where the sample is a built-in voice (phase 6). `rid` is the id as the
@@ -937,6 +940,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     from ... import samples as samples_mod
 
     loud_of, strike_of, drum_loud_of, capped = {}, {}, {}, Counter()   # a sample's own loudness (round 56): a note plays at its level over it
+    over = {}                                             # (part, voice, sample) -> [its notes written over the sample's ceiling on the SNES chip, the ceiling] (round 119)
     heard = []                                            # (start in beats, length in beats, perceived level): the mix level (round 59)
 
     def level_of(role, j, bar=None, name=None, sample=None, seconds=0.0, piece=None):
@@ -976,6 +980,8 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
         played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0, piece)
         heard.append((t0 / beat_s, (min(t1, seconds) - t0) / beat_s, perceived))
+        if role != R.DRUMS and midi - score_mod.pitch_ceiling(c5) > CEILING_SLACK:   # over what the SNES chip can play of the sample (round 119):
+            over.setdefault((role, j, name), [0, score_mod.pitch_ceiling(c5)])[0] += 1   # the register's top sounds, whatever the note's pitch class
         notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(played, pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
@@ -1005,6 +1011,10 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // plan_mod.METER))   # the bar's section level (round 48)
     if capped:
         plan.log.append("loudness: notes capped at full, their sample too quiet for their level: " + ", ".join(f"{k} {v}" for k, v in capped.most_common()))
+    if over:
+        plan.log.append("pitch: notes written over what the SNES chip can play of their sample (four times its recorded rate at most) sound at that ceiling: "
+                        + ", ".join(f"{role}{f' voice {j + 1}' if j else ''} {n} on {name} (no higher than {math.floor(top + CEILING_SLACK)})"
+                                    for (role, j, name), (n, top) in sorted(over.items())))
     notes.sort(key=lambda x: (x.start, x.voice))
     last = {}                                                # a floored note never runs into the voice's next: the key-on cuts it
     for n in notes:

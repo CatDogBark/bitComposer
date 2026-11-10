@@ -3089,6 +3089,32 @@ class NewTablesTests(unittest.TestCase):
             sm.SAMPLE_ENVELOPES.pop("g_sx", None)
             sm.SAMPLE_ENVELOPES.pop("g_sy", None)
 
+    def test_a_note_over_its_samples_chip_ceiling_is_logged(self):
+        """Round 119: the SNES chip's pitch register stops at 0x3FFF, four times the recording's rate, so a sample sounds no
+        higher than two octaves over the note it plays at 32 kHz; score_of plays a note written higher at that ceiling
+        (score._pitch), and now says so in the plan's log, by part, voice and sample, with the ceiling as a note (found by
+        the round's tuning measure: a voice beside the line written over its sample's range sounded one pitch on every
+        note). A note at the ceiling itself is not counted."""
+        from types import SimpleNamespace
+        from bitcomposer import score
+        self.assertAlmostEqual(score.pitch_ceiling(32000), 84.0, places=2)                       # two octaves over the recording's C-5
+        self.assertAlmostEqual(score.pitch_ceiling(64000), 72.0, places=2)
+        smp = lambda: SimpleNamespace(c5_speed=32000, data=b"\x00\x10" * 64, loop=False, sus_loop=False, loop_start=0, loop_end=0,   # noqa: E731
+                                      sus_loop_start=0, sus_loop_end=0)
+        p = whole.plan({}, 1, "g")                                                               # bass, drums, melody; 12 bars
+        written = {"bass": SimpleNamespace(notes=[(0.0, 1.0, 40, 0)]),
+                   "melody": SimpleNamespace(notes=[(0.0, 1.0, 84, 0), (1.0, 2.0, 86, 0), (2.0, 3.0, 91, 0)])}
+        sc, first = whole.score_of(p, written, {"bass": ("sx", smp()), "melody": ("sy", smp())}, loops=1, fade=0.0, pack_name="g")
+        self.assertEqual([n.pitch for n in sc.notes if n.voice == first["melody"]], [score.PITCH_MAX] * 3)   # all three at the register's top
+        lines = [line for line in p.log if line.startswith("pitch: notes written over")]
+        self.assertEqual(len(lines), 1, p.log)
+        self.assertIn("melody 2 on sy (no higher than 84)", lines[0])                            # 86 and 91; 84 is the ceiling's own note
+        self.assertNotIn("bass", lines[0])
+        p = whole.plan({}, 1, "g")
+        written["melody"] = SimpleNamespace(notes=[(0.0, 1.0, 72, 0)])
+        whole.score_of(p, written, {"bass": ("sx", smp()), "melody": ("sy", smp())}, loops=1, fade=0.0, pack_name="g")
+        self.assertFalse(any(line.startswith("pitch: notes written over") for line in p.log), p.log)   # inside the sample's range: nothing said
+
     def test_the_echo_is_the_games_own_drawn_on_its_own_stream(self):
         """Round 70: with an `echo` word the written song's echo is the counted triple (volume of full, delay as the chip's
         nearest step, feedback) with the parts that send and the parts that stay dry, drawn once on the song's own echo

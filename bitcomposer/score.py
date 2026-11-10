@@ -68,11 +68,23 @@ class _Pcm:
         return len(self.pcm)
 
 
+PITCH_MAX = 0x3FFF                    # the SNES chip's pitch register is 14 bits: just under four times the recording's rate
+
+
 def _pitch(c5_speed: int, midi: float) -> int:
     """The SNES chip's pitch register that plays a sample recorded for C-5 at
     c5_speed at this midi note, under the converter's model (0x1000 is the
-    sample at 32 kHz)."""
-    return max(1, min(0x3FFF, round(0x1000 * c5_speed / 32000 * 2 ** ((midi - 60) / 12))))
+    sample at 32 kHz). A note over the sample's ceiling (pitch_ceiling)
+    gets the register's top: it sounds at the ceiling, not at its pitch."""
+    return max(1, min(PITCH_MAX, round(0x1000 * c5_speed / 32000 * 2 ** ((midi - 60) / 12))))
+
+
+def pitch_ceiling(c5_speed: int) -> float:
+    """The highest midi note the SNES chip can play a sample recorded for C-5
+    at c5_speed: its pitch register stops at 0x3FFF, just under four times
+    the recording's rate, so two octaves over the note the sample sounds at
+    32 kHz."""
+    return 60 + 12 * math.log2(PITCH_MAX * 32000 / (0x1000 * c5_speed))
 
 
 def _sides(level: float, pan: float) -> tuple[int, int]:
