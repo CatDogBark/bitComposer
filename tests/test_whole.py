@@ -993,6 +993,17 @@ class TokenFormTests(unittest.TestCase):
         self.assertEqual(parts[3][1], parts[1][1])                                                 # and is as long
         self.assertEqual([p[0] for p in parts], [sum(q[1] for q in parts[:i]) for i in range(5)])   # the bars run on
         self.assertEqual([p[3] for p in whole.plan_form({}, random.Random(1), [])], ["A", "B", "C"])   # without the token: the sizes and form words (defaults)
+        parts = whole.plan_form({}, random.Random(1), [], form=[("A", 2), ("B", 15), ("C", 5), ("B", 2)])
+        self.assertEqual([p[1] for p in parts], [2, 15, 5, 15])                                          # a part read returning with other bars plays whole, at its first statement's
+
+    def test_a_token_form_short_of_the_bars_asked_leaves_the_draw(self):
+        mk = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "melody=main:64-84:0.9:1:0.7:::slead accompaniment=half:60-72:0.8:1:0.6:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium form=A2B12"
+        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", token, part=rhythm.ARRANGEMENT))}
+        p = whole.plan(bal, 7, "g", min_bars=16)
+        self.assertEqual([q[3] for q in p.parts], ["A", "B", "C"])                                 # the draw stands (the defaults' three parts)
+        self.assertTrue(any("short of the 16 asked: the draw" in l for l in p.log), p.log)
+        self.assertEqual([(q[3], q[1]) for q in whole.plan(bal, 7, "g").parts], [("A", 2), ("B", 12)])   # without a minimum the token's form is taken
 
 
 class TokenRiffTests(unittest.TestCase):
