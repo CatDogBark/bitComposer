@@ -674,6 +674,14 @@ The words are grouped by where the writing draws them, in the order the song is 
   accompaniment voice at midi 112; 45 % of such notes outside their
   sample's range over sixty seeds, 10 % after, where the range is
   narrower than the line).
+  Since round 120 no voice is written over what the SNES chip can play
+  of its sample (four times the recording's rate; `plan.ceilings`, each
+  chosen sample's ceiling as a note, set by `samples_for`): a voice the
+  fold above never sees, one written by its layer word alone or struck
+  with another voice, is folded the same way once it holds a note over
+  its ceiling (`plan.hold_under_ceilings`), into where the token song
+  plays its sample and under the ceiling; a voice with no such note
+  stays where its word put it (`docs/LIMITS.md`).
   *`layers`: shape (part, rank); drawn in _plan_once, layers_of; conditions second_figures, voice_intervals, voice_moves.*
 
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,

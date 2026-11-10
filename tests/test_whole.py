@@ -3157,6 +3157,14 @@ class NewTablesTests(unittest.TestCase):
         again = list(written["accompaniment"].notes)
         whole.hold_under_ceilings(p, song, written)                                                      # nothing over a ceiling now: nothing moves
         self.assertEqual(written["accompaniment"].notes, again)
+        # a line over its sample's ceiling (none in 400 seeds: a line is written where the game plays its sample) goes into its own bound, cut there
+        low = [(0.0, 1.0, 50.0, 0), (1.0, 2.0, 52.0, 0), (4.0, 5.0, 43.0, 0)]
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in low]
+        written["bass"] = whole.Part("bass", list(low), [""] * 4, [])
+        p.bounds["bass"], p.ceilings["bass"] = (36, 52), 45.3
+        whole.hold_under_ceilings(p, song, written)
+        self.assertEqual([n[2] for n in written["bass"].notes], [38.0, 40.0, 43.0])                      # the bar an octave down; the bar under the ceiling stays
+        self.assertEqual(sorted(m for _, _, m, _ in song.notes["bass"]), [38.0, 40.0, 43.0])
         # the slot a voice's sample and its ceiling are read from: one order (render.sample_of's)
         slots = {"accompaniment": 1, "accompaniment:second": 2, "accompaniment:2": 3, "accompaniment:stretch:0": 4, "accompaniment:1:stretch:1": 5}
         self.assertEqual([whole.sample_slot(slots, "accompaniment", v, second, stretch) for v, second, stretch in
