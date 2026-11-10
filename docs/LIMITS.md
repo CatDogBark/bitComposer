@@ -89,7 +89,16 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   carry the spread; the bass_habits word's tones class carries some.
   Since round 111 the bass's chord tones follow the token song's profile
   (its root, third, fifth and seventh shares); its off-chord share is
-  still its figures' passing marks at the pooled rate.
+  still its figures' passing marks at the pooled rate. Since round 114
+  the bass keeps its pitch class across the token song's share of bar
+  lines (a pedal under the changing chords, the bar before's main pitch
+  class), as far as the bars left to it allow: the theme band, the
+  hand-offs and the form's repeats rewrite bars of the bass after its
+  writer and those bars stay as the theme wants them, so a song whose
+  bass carries much of the theme (The Terminal of Glass, 13 of 23 playing
+  bars) stays under the share; and the hold pedals the bar after a change
+  rather than the bars of a riff's stretch, so the pedal moves every bar
+  or two where Battle Theme's stays for a part.
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

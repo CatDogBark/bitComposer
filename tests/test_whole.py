@@ -1006,6 +1006,93 @@ class TokenFormTests(unittest.TestCase):
         self.assertEqual([(q[3], q[1]) for q in whole.plan(bal, 7, "g").parts], [("A", 2), ("B", 12)])   # without a minimum the token's form is taken
 
 
+class TokenContinuityTests(unittest.TestCase):
+    """Round 114: the bass line's pitch continuity rides the balance token, and the bass writer holds its pitch class across bar lines
+    to it: Battle Theme's bass keeps its riff's pitch under the chord reader's changes on 0.57 of its bar lines, the written basses
+    walked the chain's roots on 0.26."""
+
+    def test_the_token_carries_the_bass_continuity(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(10)]
+        mains = (0, 0, 7, 0, 0, 0, 5, 5, 0, 0)                                                         # C C G C C C F F C C: 9 transitions, 5 kept
+        bass = [(4.0 * k + i, 0.9, 36.0 + mains[k], "b") for k in range(10) for i in range(4)]
+        tune = [(4.0 * k + i, 0.9, 72.0, "m") for k in range(10) for i in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 40.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(10)), parts=[(0, 10, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}; s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        self.assertEqual(rhythm.bass_continuity_field(s), "k56")
+        tok = rhythm.balance_units([s])[0].outcome
+        bass_f = next(f for f in tok.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(bass_f[16], "k56")
+        self.assertEqual(rhythm.bass_continuity_field(s, bass[:16]), "")                              # under CONTINUITY_BARS transitions: no field
+
+    def test_a_bar_is_realized_on_the_bar_befores_pitch_class(self):
+        from bitcomposer.translate.writer import parts
+        from bitcomposer.translate.vocab import Span
+        song = rhythm.Song("w", 4, 4, [(0.0, 4.0)], [Span(0.0, 4.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=[0], parts=[(0, 1, None, "A")], tonic=0, mode="major")
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        plain, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0)
+        self.assertEqual([int(m) % 12 for a, b, m in plain], [0, 7, 0, 7])                             # C and G over C
+        moved = []
+        held, _, _ = parts.realize("0:R 1:5 2:R 3:5", 0.0, 4.0, song, 36, 0.8, scale, 0, root_override=9, moved=moved)
+        self.assertEqual([int(m) % 12 for a, b, m in held], [9, 9, 9, 4])                              # the bar on A: A, its fifth E where A outnumbers it (the
+        self.assertEqual(moved, [1])                                                                 # earliest fifth moved onto the pedal), the chord's shape kept
+        self.assertEqual(int(held[1][2]), 45)                                                        # in the octave nearest its own (E 40 -> A 45, not 33)
+        from collections import Counter
+        counts = Counter()
+        held, _, _ = parts.realize("0:5 1:+ 3/2:5 2:R", 0.0, 4.0, song, 36, 0.8, scale, 0, counts=counts, root_override=0, moved=moved)
+        self.assertEqual([int(m) % 12 for a, b, m in held], [0, 0, 7, 0])                              # G A G C: the passing tone first, then the earliest fifth
+        self.assertEqual(moved, [1, 2])
+        self.assertEqual({k: v for k, v in counts.items() if v}, {"root": 3, "fifth": 1})          # the classes written stay counted true
+
+    def test_a_line_on_the_basss_pedal_is_over_the_riffs_root_for_the_struck_voice(self):
+        from bitcomposer.translate import tables
+        from bitcomposer.translate.vocab import Span
+        mk = lambda tone, outcome: [tables.Unit(f"s{i}", "g", outcome, {"interval": "11", "tone": tone, "part": "accompaniment", "previous": rhythm.START}) for i in range(3)]   # noqa: E731
+        t = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(mk("root", "fifth") + mk("other", "+19"))
+        major = {0, 2, 4, 5, 7, 9, 11}
+        song = rhythm.Song("w", 4, 4, [(0.0, 4.0)], [Span(0.0, 4.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=[0], parts=[(0, 1, None, "A")], tonic=0, mode="major")
+        line = [(0.0, 0.9, 62.0, 0)]                                                                  # a D over C major: off the chord
+        song.notes["bass"] = [(0.0, 0.9, 36.0, "bass")]                                               # the bass on C: the D is the line's own
+        high = whole.parallel(line, 19, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1))
+        self.assertEqual(int(high[0][2]), 62 + 19 + 19)                                              # "other": the game's synth leaps, +19 over the twelfth
+        song.notes["bass"] = [(0.0, 0.9, 38.0, "bass")]                                               # the bass pedals on D under the chord: the line rides it
+        log = []
+        low = whole.parallel(line, 19, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1), None, log)
+        self.assertEqual(int(low[0][2]) % 12, 7)                                                      # drawn as over the riff's root: the chord's fifth near the twelfth
+        self.assertLess(int(low[0][2]), 62 + 19 + 6)
+        self.assertTrue(any("1 of the line's notes on the bass's pedal" in l for l in log), log)
+
+    def test_the_bass_as_finally_played_is_held(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(4.0 * k, 4.0 * k + 4.0, 0 if k % 2 == 0 else 7, "", 1.0) for k in range(4)], notes={}, sid="w", game="g",
+                           numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+        bass = [(4.0 * k + i, 4.0 * k + i + 0.8, 36.0 if k % 2 == 0 else 43.0, 0) for k in range(4) for i in (0, 2)]   # C C | G G | C C | G G: the roots
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        rider = [(8.0, 8.8, 48.0, 0), (8.0, 8.8, 67.0, 1), (8.0, 8.8, 64.0, 2), (10.0, 10.8, 62.0, 0)]   # the accompaniment on the bass's C at bar 3 with a
+        song.notes["accompaniment"] = [(a, b - a, m, "accompaniment") for a, b, m, _ in rider]      # voice struck with its line (+19) and a stacked E; then a D
+        written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, []), "accompaniment": whole.Part("accompaniment", list(rider), [""] * 4, [])}
+        p = whole.plan({}, 3, "g")
+        p.bass_continuity, p.tone_profiles, p.bounds, p.registers = 0.9, {}, {}, {"bass": (32, 44)}
+        p.layer_relations = {"accompaniment": ["wl+19", None]}                                      # the third voice has no relation word
+        log = whole.hold_bass_pitch(p, song, written, list(bass))
+        mains = [max(set(int(m) % 12 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4), key=lambda pc: sum(1 for a, b, m, v in written["bass"].notes if 4 * k <= a < 4 * k + 4 and int(m) % 12 == pc)) for k in range(4)]
+        self.assertEqual(mains, [0, 7, 7, 7])                                                      # the first bar line is free (the budget counts it kept), the
+        self.assertTrue(log and "2 of 3 kept" in log[0] and "1 more bars pedaled" in log[0], log)   # second pedals bar 3 on G, the third keeps
+        self.assertEqual(int(written["accompaniment"].notes[0][2]), 43)                            # the rider's C at bar 3 moved with the bass to G, nearest
+        self.assertEqual(int(written["accompaniment"].notes[1][2]), 62)                            # the voice struck with the line moved the same (67 -> 62)
+        self.assertEqual(int(written["accompaniment"].notes[2][2]), 64)                            # the stacked voice, no relation word, stays
+        self.assertEqual(int(written["accompaniment"].notes[3][2]), 62)                            # its D, not the bass's pitch class, stays
+        self.assertEqual(sorted(int(x[2]) for x in song.notes["accompaniment"]), [43, 62, 62, 64])   # the song's notes follow
+        self.assertEqual(sorted(int(x[2]) % 12 for x in song.notes["bass"]), [0, 0, 7, 7, 7, 7, 7, 7])   # the song's bass notes follow
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        written = {"bass": whole.Part("bass", list(bass), ["0:R 2:R"] * 4, [])}
+        log = whole.hold_bass_pitch(p, song, written, bass[:2] + [(a + 0.5, b + 0.5, m, v) for a, b, m, v in bass[2:]])   # bars 2-4 not as the writer wrote them
+        self.assertTrue(log and "0 of 3 kept" in log[0] and "3 bars rewritten" in log[0] and "0 more bars pedaled" in log[0], log)
+        self.assertEqual(sorted(int(x[2]) % 12 for x in written["bass"].notes), [0, 0, 0, 0, 7, 7, 7, 7])   # left as they are
+
+
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
     share ride the balance token; the plan takes them, and the chord part's line plays the written bass's figure."""

@@ -1329,6 +1329,25 @@ def chord_hold_share(s) -> float | None:
 
 SHAPE_BARS = 8                       # bars of chords a song needs for its chord-shape profile (round 112)
 FORM_PARTS = 2                       # parts a song's form needs for the token to carry its letters (round 113)
+CONTINUITY_BARS = 8                  # bar-to-bar transitions a bass line needs for its continuity share (round 114)
+
+
+def bass_continuity_field(s, line_notes=None) -> str:
+    """The bass line's pitch continuity as the balance token carries it (round 114, the bass's seventeenth field): the share of its
+    bar-to-bar transitions (consecutive bars it plays in) that keep the bar's main pitch class, in hundredths, "k58" for Battle
+    Theme; "" under CONTINUITY_BARS transitions. Battle Theme's bass rides its riff's pitch while the chord reader hears its
+    chromatic neighbours as changes; the written bass walked the chain's roots, keeping its pitch class across 0.26 of its bar
+    lines at the median where the game's basses keep it across 0.30 and Battle Theme's across 0.58."""
+    notes = line_notes if line_notes is not None else s.notes.get(R.BASS, [])
+    bars = getattr(s, "bars", None) or []
+    main = []
+    for a, b in bars:
+        pcs = Counter(int(round(n[2])) % 12 for n in notes if a <= n[0] < b and n[2] is not None and not math.isnan(n[2]))
+        main.append(pcs.most_common(1)[0][0] if pcs else None)
+    pairs = [(x, y) for x, y in zip(main, main[1:]) if x is not None and y is not None]
+    if len(pairs) < CONTINUITY_BARS:
+        return ""
+    return f"k{int(round(100 * sum(x == y for x, y in pairs) / len(pairs)))}"
 
 
 def form_field(s) -> str:
@@ -1606,7 +1625,8 @@ def balance_units(songs) -> list:
                       line_tone_tier(s, role) if role in readings_mod.UPPER else "",           # and its off-chord tier (round 103)
                       part_period_field(s, role) if role in cells_mod.BACKING and role != R.DRUMS else "",   # the part's own period and holds (round 106)
                       line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
-                      line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else ""]   # and the line's chord-tone profile (round 111)
+                      line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
+                      bass_continuity_field(s, line_notes) if role == R.BASS else ""]   # and the bass line's pitch continuity (round 114)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
