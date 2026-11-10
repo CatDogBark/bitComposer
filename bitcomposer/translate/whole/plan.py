@@ -299,7 +299,7 @@ class Plan:
                                       # (low, high) or None, bars or None)] in time order, the last open; samples_for sets extras[part]["stretch_*"]
     tone_profiles: dict = field(default_factory=dict)   # a backing part -> its line's chord-tone profile from the token (round 111: field 15)
     chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
-    form_letters: str | None = None                     # the token song's form letters ("ABCBD"; round 113), or None
+    form_letters: list | None = None                    # the token song's form, [(letter, bars)] (round 113), or None
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -380,25 +380,38 @@ def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
     return float(_draw(models, name, context, rng)) if name in models else None
 
 
-def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, letters: str | None = None) -> list:
+def form_of(text: str) -> list | None:
+    """The balance token's `form=` field read (round 113, arrangement.form_field): "A2B8C9B8D14" -> [("A", 2), ("B", 8), ("C", 9),
+    ("B", 8), ("D", 14)]; None where it cannot be read or has fewer than FORM_PARTS parts."""
+    if not re.fullmatch(r"(?:[A-Za-z]\d+)+", text):
+        return None
+    form = [(m.group(1).upper(), int(m.group(2))) for m in re.finditer(r"([A-Za-z])(\d+)", text)]
+    return form if len(form) >= rhythm.FORM_PARTS and all(n > 0 for _, n in form) else None
+
+
+def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, form: list | None = None) -> list:
     """The form: one of the game's forms whole (the letters table: "A B A B
     C", a part returning after another in 29 % of FFVI's songs where a
     chain by index returned in 15 %), each new part's length by the song's
     length habit (the lengths table), a repeat as long as the part it
     repeats; without a letters table, how many parts (the sizes table) and
     each part new, again or back by its index (the form table). (first
-    bar, bars, the part repeated or None, letter). `letters`: the token
-    song's own form (round 113, "ABCBD"), taken in place of the letters
-    draw (the draw still made, so the stream stands); its parts' lengths
-    are drawn as any form's."""
+    bar, bars, the part repeated or None, letter). `form`: the token
+    song's own form (round 113, [(letter, bars)]), its letters taken in
+    place of the letters draw and its bars in place of the lengths draws
+    (a repeat as long as the part it repeats, as read); a form past the
+    bars asked is cut as any."""
     habit = _draw(models, "length_habits", ("form",), rng, log)
-    if "letters" in models or letters:
+    sizes = {l: n for l, n in form} if form else {}
+    if "letters" in models or form:
         drawn_letters = _draw(models, "letters", ("form",), rng, log).split()[:MAX_PARTS] if "letters" in models else []
-        letters = list(letters[:MAX_PARTS]) if letters else drawn_letters
+        letters = [l for l, _ in form[:MAX_PARTS]] if form else drawn_letters
         parts, bar = [], 0
         for i, label in enumerate(letters):
             of = letters.index(label) if label in letters[:i] else None
-            if of is None:
+            if of is None and label in sizes:               # the token song's bars for the part (round 113)
+                n = max(1, int(sizes[label]))
+            elif of is None:
                 drawn = _draw(models, "lengths", ("form", METER, habit), rng, log)
                 n = rhythm.LONG if drawn.endswith("+") else max(1, int(drawn))
             else:
@@ -1402,9 +1415,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             token_holds = float(rest)
             continue
         if role == "form":                                  # the token's song's form (round 113), not a part
-            if rest.isalpha() and len(rest) >= rhythm.FORM_PARTS:
-                token_form = rest.upper()
-                log.append(f"the balance's song's form: {' '.join(token_form)}")
+            token_form = form_of(rest)
+            if token_form:
+                log.append("the balance's song's form: " + " ".join(f"{l}{n}" for l, n in token_form))
             continue
         if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
             token_shapes = shape_profile_of(rest)
@@ -1538,15 +1551,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     log.append(f"{role}'s line plays the balance's song's chord tones: " + " ".join(f"{k} {v:.2f}" for k, v in prof.items()))
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
-    if token_form and "".join(p[3] for p in parts) != token_form:   # the token song's form (round 113): its letters, the parts' lengths drawn on an
-        drawn_form = " ".join(p[3] for p in parts)             # own stream, after the balance is read (the form's own draw above stands, so no
-        form_log = []                                           # other draw moves); the loop's part drawn again for the new form, on its own stream
-        for attempt in range(FORM_TRIES):
-            parts = plan_form(models, random.Random(f"whole:{seed}:form:{attempt}"), form_log, max_bars if attempt == FORM_TRIES - 1 else None, letters=token_form)
-            total = parts[-1][0] + parts[-1][1]
-            if (max_bars is None or total <= max_bars) and (min_bars is None or total >= min_bars):
-                break
-        log += form_log[-1:] + [f"form from the balance's song: {' '.join(p[3] for p in parts)} (the draw {drawn_form})"]
+    if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
+        drawn_form = " ".join(f"{p[3]}{p[1]}" for p in parts)   # balance is read (the form's own draw above stands, so no other draw moves); a
+        form_log = []                                           # form past the bars asked is cut as any; the loop's part drawn again for it
+        parts = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, max_bars, form=token_form)
+        log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
         loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
     if token_class and rhythm.band(bpm) != token_class:     # the band's own pace (round 54): the tempo drawn again under the token's class, on
         was = bpm                                           # an own stream so no other draw moves

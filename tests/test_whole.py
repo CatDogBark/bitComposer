@@ -977,15 +977,18 @@ class TokenFormTests(unittest.TestCase):
         s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"accompaniment": line}, sid="s", game="g", numbers=list(range(8)),
                         parts=[(0, 2, None, "A"), (2, 2, None, "B"), (4, 2, None, "C"), (6, 2, 1, "B")], tonic=0, mode="major")
         s.voice_notes = {0: ("accompaniment", line)}; s.voice_levels = {0: 0.3}; s.levels = {"accompaniment": 0.3}
-        self.assertEqual(rhythm.form_field(s), "ABCB")
-        self.assertIn("form=ABCB", rhythm.balance_units([s])[0].outcome.split())
+        self.assertEqual(rhythm.form_field(s), "A2B2C2B2")
+        self.assertIn("form=A2B2C2B2", rhythm.balance_units([s])[0].outcome.split())
+        self.assertEqual(whole.form_of("A2B8C9B8D14"), [("A", 2), ("B", 8), ("C", 9), ("B", 8), ("D", 14)])
+        self.assertIsNone(whole.form_of("ABCBD"))
         s.parts = [(0, 8, None, "A")]
         self.assertEqual(rhythm.form_field(s), "")                                                 # one part: no form to carry
 
     def test_the_plan_takes_the_tokens_form(self):
         log = []
-        parts = whole.plan_form({}, random.Random(1), log, letters="ABCBD")
+        parts = whole.plan_form({}, random.Random(1), log, form=[("A", 2), ("B", 8), ("C", 9), ("B", 8), ("D", 14)])
         self.assertEqual([p[3] for p in parts], ["A", "B", "C", "B", "D"])
+        self.assertEqual([p[1] for p in parts], [2, 8, 9, 8, 14])                                        # the token song's bars
         self.assertEqual(parts[3][2], 1)                                                           # the second B repeats the first
         self.assertEqual(parts[3][1], parts[1][1])                                                 # and is as long
         self.assertEqual([p[0] for p in parts], [sum(q[1] for q in parts[:i]) for i in range(5)])   # the bars run on

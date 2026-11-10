@@ -1332,14 +1332,15 @@ FORM_PARTS = 2                       # parts a song's form needs for the token t
 
 
 def form_field(s) -> str:
-    """The song's form as the balance token carries it (round 113, `form=`): its parts' letters in order, a returning part by
-    the letter it returns to ("ABCBD" for Battle Theme: a two-bar A, B, C, B again, D); "" under FORM_PARTS parts. The form had
+    """The song's form as the balance token carries it (round 113, `form=`): its parts' letters in order, each with its bars, a
+    returning part by the letter it returns to ("A2B8C9B8D14" for Battle Theme: a two-bar A, eight of B, nine of C, B again, fourteen
+    of D); "" under FORM_PARTS parts. The form had
     been the letters word's pooled draw, one of the game's forms whole, so a song on Battle Theme's token came out A B C D E F
     or A B C C D as often as anything, and the band never came back to what it had played."""
     parts = getattr(s, "parts", None) or []
     if len(parts) < FORM_PARTS or any(not isinstance(p[3], str) or len(p[3]) != 1 or not p[3].isalpha() for p in parts):
         return ""
-    return "".join(p[3] for p in parts)
+    return "".join(f"{p[3]}{int(p[1])}" for p in parts)
 
 
 def chord_shape_profile(s) -> str:
