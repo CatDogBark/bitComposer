@@ -103,6 +103,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   token voice never played falls to the pooled second voice's share; and a
   struck voice whose token voice rings long rings as long (Mt. Koltz's and
   Opening Theme part 3's hold notes of 15.9 beats).
+  The relation reader counts channels, and a game sometimes splits one
+  line over two: of FFVI's 56 pairs of voices that strike together on 0.8
+  of their notes, 7 trade the top note between their channels on a fifth
+  or more of their steps (Returners' bass pair on 0.81, Mt. Koltz's
+  accompaniment on 0.50, Aria's on 0.54), each channel reading as a voice
+  where the ear hears one line; Battle Theme's synth pair is not one of
+  them (channel 0 holds the top note on every one of their 219 stabs, and
+  the lower voice's octave flips are the game's own voicing). Measured in
+  round 110 and left.
 - **Parts written apart clash more than FFVI's.** Each part holds its
   clashes share against the parts written before it since round 94 (the
   tune in its draws and recalls, the counter in its interval draws, the

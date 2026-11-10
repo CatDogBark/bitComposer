@@ -7432,3 +7432,80 @@ returning, the sections' densities out of step, the bass's pitch
 continuity. The standing list: round 100's endings and theme returns,
 round 101's sparser side, round 103's line motion, round 105's
 sectioning.
+
+### Round 110: a nominal one song plays keeps that song's chain (2026-11-09, from the owner's listening to Song Check 92, on his go)
+
+**Why.** The owner heard the synth organ leap from low to a quick,
+intrusive high pitch and asked whether Battle Theme does that. It does
+leap: 17 percent of its lower synth voice's stab-to-stab steps are an
+octave or more, nearly half its stabs sit an octave or more over the
+twelfth, and it climbs there 63 times in 219 stabs, 24 of them by a
+clean octave; 3.7 of every 100 stabs are an isolated leap up and
+straight back. What it does not do is the two-octave pop: its six two-
+octave stabs come as one phrase, since after a two-octave landing the
+next stab stays there two times in three, and after an octave-up landing
+comes the fifth four times in five. The written songs had two to six
+two-octave stabs each, all isolated and a tenth of a beat long, each
+doubled a fifth under by the second voice. The interval word carries the
+game's chain as its last conditioning, the landing before, but the draw
+uses a finer level only where PLAN_SONGS (two) songs support it, and
+Battle Theme is the only song in FFVI with a voice at a twelfth, so the
+chain never engaged and each stab's class was drawn apart.
+
+**Built.** plan.parallel draws the parallel_intervals word's finer
+levels, the part and the landing before, with a one-song minimum where
+the nominal's own level has fewer than PLAN_SONGS songs: a nominal that
+one song plays is that song's own. FFVI has eight such nominals (11,
+-16, -14, 22, -22, -12, -10, 17, 21 in scale steps). No refit: the
+tables are as they were. Test: a one-song chain alternating the root and
+the octave over the nominal alternates in the writing (the draw had
+mixed them), two songs' chain as before. Suite 455 (1 skip).
+
+**Measured.** The chain engages where the game's cells exist: in Journey
+of the Quarry 83 of the synth's 120 picks are picks the game's chain
+makes from that landing, in Second Cistern Dance 48 of 92. The two-
+octave stabs come in phrases: stabs an octave or more over the twelfth
+in runs of three or more, none before, 4 in Journey of the Quarry, 3 in
+Lunar Island, 7 in The Terminal of Glass, 3 in Second Cistern Dance (the
+game: 31 of its 89 high stabs). The isolated leaps did not fall overall:
+per 100 stabs 2.6 to 3.5 (Journey of the Quarry), 9.5 to 9.5 (Lunar
+Island), 9.1 to 5.8 (Gate Return), 7.0 to 2.3 (The Terminal of Glass),
+9.3 to 11.1 (Second Cistern Dance), against the game's 3.7; octave-or-
+more steps 0.15, 0.25, 0.28, 0.26, 0.31 to 0.17, 0.32, 0.24, 0.15, 0.40
+(the game 0.17). Seeds 1-60, the 20 struck voices: isolated leaps 2.0 to
+1.9 per 100, high stabs in runs of three or more 0 to 8. Plans (400
+seeds, against round 109): 400 keep their token song, 399 plan logs and
+381 note sets unchanged (the eight one-song nominals). Why the leaps
+stay: Battle Theme's synth is calm over the guitar's roots (the fifth 47
+of 91 stabs) and leaps over its sevenths (+0 30, +12 14, +8 12 of 65)
+and its off-chord notes (+19 6, +0 5, +14 4 of 25); the game's guitar at
+the stabs plays roots 91 times, sevenths 65, off-chord notes 25, fifths
+6, thirds 5, where Journey of the Quarry's guitar plays roots 57, fifths
+42, off-chord notes 14, and Second Cistern Dance's fifths 34, off-chord
+notes 23, thirds 18, roots 17: the written synth draws from the leaping
+cells because the written guitar plays other tones than the riff's. The
+channel question raised in round 109 is closed: Battle Theme's channel 0
+holds the pair's top note on every one of their 219 stabs, the lower
+voice's octave flips (0.45 of its steps) are the game's voicing; of
+FFVI's 56 pairs of voices that strike together on 0.8 of their notes, 43
+never trade the top note between channels and 7 do on a fifth or more of
+their steps (Returners' bass pair 0.81, Aria's accompaniment 0.54, Mt.
+Koltz's 0.50), each channel reading as a voice where the ear hears one
+line (LIMITS).
+
+**Song Check 93** (https://claude.ai/artifact/MU4TKRXx3RdVZFqqP1YuGJ):
+the five Battle Theme songs of Song Checks 89 to 92, round 109 before
+and round 110 after: Journey of the Quarry (18), Lunar Island (243),
+Gate Return (343), The Terminal of Glass (150) and Second Cistern Dance
+(365).
+
+**Open.** The guitar's chord-tone profile is not the token's: Battle
+Theme's riff is a third sevenths and the written lines are fifths and
+thirds, and the synth follows the guitar's tone, so the leaps stay until
+the line plays the riff's tones (a token field for the line's chord-tone
+profile, the next candidate). The second voice's own inversion flips. A
+pair split over two channels reads as two voices. The Battle Theme list:
+the form never returning, the sections' densities out of step, the
+bass's pitch continuity. The standing list: round 100's endings and
+theme returns, round 101's sparser side, round 103's line motion, round
+105's sectioning.

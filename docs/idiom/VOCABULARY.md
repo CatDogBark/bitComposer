@@ -1491,6 +1491,17 @@ The words are grouped by where the writing draws them, in the order the song is 
   where FFVI's are on 0.42, but a written tune's off-chord notes are its
   recalls and passing tones where FFVI's parallel voices mostly ride
   arpeggiated chord parts.
+  Since round 110 a nominal that one song alone plays draws the word's
+  finer levels, the part and the landing before, with that song behind
+  them (`plan.parallel`: a one-song minimum where the nominal's level has
+  fewer than PLAN_SONGS songs); the draw had passed over any level under
+  two songs, so Battle Theme's chain at its twelfth, after an octave-up
+  landing the fifth four times in five, after a two-octave landing another
+  two-octave stab two times in three, never engaged, and the game's
+  phrase-shaped excursions came out as single stabs two octaves up, drawn
+  apart, a tenth of a beat each (Song Check 92). FFVI has eight such one-
+  song nominals (11, -16, -14, 22, -22, -12, -10, 17 and 21 in scale
+  steps).
   *`parallel_intervals`: shape (interval, tone, part, previous); drawn in parallel.*
 
 ## The upper parts (accompaniment, harmony, arp)

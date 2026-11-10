@@ -848,6 +848,29 @@ class TokenWithTests(unittest.TestCase):
         drawn = whole.parallel(line, 19, {0, 2, 4, 5, 7, 9, 11}, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1))
         self.assertEqual({int(m) - 48 for a, b, m, v in drawn}, {22})                           # three over the twelfth, not three over the C
 
+    def test_a_one_song_nominal_keeps_its_own_chain(self):
+        """Round 110: where one song alone plays a nominal, the interval word's chain (the landing before) stands with that
+        song behind it; the draw had passed over any level under two songs, so Battle Theme's phrase-shaped excursions at
+        its twelfth came out as single pops drawn apart."""
+        from bitcomposer.translate import tables
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        song = rhythm.Song("w", 4, 4, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        chain = [("start", "root")] + [("root", "+12")] * 40 + [("+12", "root")] * 40                        # one song: root, then an octave up, then back, in turn
+        t = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(
+            [tables.Unit("one", "g", o, {"interval": "11", "tone": "root", "part": "accompaniment", "previous": p}) for p, o in chain])
+        self.assertEqual(t.songs.get(("11",)), 1)
+        line = [(float(i), i + 0.4, 48.0, 0) for i in range(32)]                                   # C, the chord's root, every beat
+        drawn = [int(m) for a, b, m, v in whole.parallel(line, 19, {0, 2, 4, 5, 7, 9, 11}, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1))]
+        alternations = sum(1 for x, y in zip(drawn, drawn[1:]) if x != y)
+        self.assertGreater(alternations, 24, drawn)                                                  # the chain: root, +12, root, +12, nearly every step
+        self.assertEqual(set(drawn), {72, 79}, drawn)                                                # C, the root nearest the twelfth, and the octave over the nominal
+        two = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(s, "g", o, {"interval": "11", "tone": "root", "part": "accompaniment", "previous": p}) for s in ("one", "two") for p, o in chain])
+        self.assertEqual(two.songs.get(("11",)), 2)                                                 # two songs: the chain stands as before
+        drawn2 = [int(m) for a, b, m, v in whole.parallel(line, 19, {0, 2, 4, 5, 7, 9, 11}, 1, song, "accompaniment", {"parallel_intervals": two}, random.Random(1))]
+        self.assertGreater(sum(1 for x, y in zip(drawn2, drawn2[1:]) if x != y), 24, drawn2)
+
 
 class TokenRiffTests(unittest.TestCase):
     """Round 106: a backing part's own period and holds, how far a chord part's line rides the bass, and the song's chord-hold
