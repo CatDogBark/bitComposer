@@ -272,15 +272,26 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   written on it; The Empire Gestahl's snare, struck at one rate there,
   is written a line. Whether such a voice is a part or a kit piece is
   the role reader's question; the tuning only keeps the game's rates.
-- **A voice beside a line can be written over what the SNES chip can
-  play of its sample.** The chip's pitch register stops at four times a
+- **A voice beside a line that the fold does not see sits where its
+  word puts it, up to the SNES chip's ceiling.** Round 95 folds a voice
+  written after the lines by its relation word into where the token song
+  plays its sample. A voice written by its layer word alone (a doubling
+  at its interval, an apart voice in its span) and a voice struck with
+  another (round 107) are placed from the line and never folded: over
+  400 seeds 0.30 of the first kind's notes and 0.21 of the second's sit
+  outside the range the token song plays their sample over (0.08 of the
+  folded kind's), in 267 songs. Since round 120 one bound holds for
+  every voice: the chip's pitch register stops at four times a
   recording's rate, so a sample sounds no higher than two octaves over
-  the note it plays at 32 kHz, and a note written higher sounds at that
-  ceiling whatever its pitch class. A line is written where the game
-  plays its sample and stays under it; a voice beside a line, placed by
-  its relation word, does not always: 7 of 400 seeds hold one (2,015 of
-  582,713 notes; an accompaniment's third voice written to 121 on a
-  sample that stops at 87, a second voice on the guitar over 66), since
-  before round 112. Since round 119 the render's log names the part,
-  the voice, the sample and its ceiling (`pitch: notes written over
-  ...`); the writer does not read the ceiling yet.
+  the note it plays at 32 kHz, and a voice that holds a note over that
+  ceiling is folded whole, as round 95 folds, into where the token song
+  plays its sample and under the ceiling (7 of 400 seeds had held such a
+  voice, every note of it over the ceiling sounding the ceiling's one
+  pitch). A voice with no such note is left as written, wherever it
+  sits: folding them all is the same fold, and it would move 267 songs,
+  a change to hear before it is made. One cause stands under it: an
+  apart voice whose span is a pedal's width holds the middle of its
+  offset register, not of its span (5 of 400 seeds: Lower Aqueduct's
+  third accompaniment voice at 99 where its span is 58 to 60, at 51 now
+  for the ceiling's sake; Twin Glass's second at 24 where its span is
+  68).

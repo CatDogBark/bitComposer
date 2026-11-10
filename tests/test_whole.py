@@ -3115,6 +3115,74 @@ class NewTablesTests(unittest.TestCase):
         whole.score_of(p, written, {"bass": ("sx", smp()), "melody": ("sy", smp())}, loops=1, fade=0.0, pack_name="g")
         self.assertFalse(any(line.startswith("pitch: notes written over") for line in p.log), p.log)   # inside the sample's range: nothing said
 
+    def test_a_voice_over_what_the_chip_can_play_is_folded_under_it(self):
+        """Round 120: a voice beside a line that round 95's fold never sees (one written by its layer word alone, one struck
+        with another voice) could be written over what the SNES chip can play of its sample, and sounded the ceiling's one
+        pitch on every such note. The plan holds each chosen sample's ceiling (samples_for), and the writing's last pass
+        folds a voice that holds a note over its ceiling, whole, as round 95 folds: into where the token song plays its
+        sample, cut at the ceiling; under the ceiling alone where the plan knows no range for the voice. A voice with no
+        note over its ceiling, and a plan without ceilings, keep their notes exactly."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from bitcomposer import instruments
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 4, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        line = [(4.0 * k + i, 4.0 * k + i + 0.5, 72.0 + i, 0) for k in range(4) for i in range(4)]       # the line at 72-75
+        twelfth = [(a, b, m + 19, 1) for a, b, m, _ in line]                                            # a doubling a twelfth up: 91-94
+        pedal = [(4.0 * k, 4.0 * k + 2.0, 99.0, 2) for k in range(4)]                                    # a pedal at its offset: 99
+        under = [(4.0 * k + 1, 4.0 * k + 1.5, 60.0, 3) for k in range(4)]                                # a voice under its ceiling
+        notes = sorted(line + twelfth + pedal + under, key=lambda n: (n[0], n[3]))
+        song.notes["accompaniment"] = [(a, b - a, m, "accompaniment") for a, b, m, _ in notes]
+        written = {"accompaniment": whole.Part("accompaniment", list(notes), [""] * 4, [])}
+        p = whole.plan({}, 3, "g")
+        p.bounds, p.registers, p.layer_stretches, p.extras = {"accompaniment": (72, 80)}, {"accompaniment": (72, 80)}, {}, {}
+        p.layer_ranges = {"accompaniment": [None, (56, 60), (56, 64)]}                                   # the token's ranges: none for the doubling
+        whole.hold_under_ceilings(p, song, written)                                                      # no ceilings on the plan: nothing is touched
+        self.assertEqual(written["accompaniment"].notes, notes)
+        p.ceilings = {"accompaniment": 99.5, "accompaniment:1": 90.2, "accompaniment:2": 87.08, "accompaniment:3": 87.08}
+        self.assertEqual((whole.voice_ceiling_at(p, "accompaniment", 0)(0), whole.voice_ceiling_at(p, "accompaniment", 2)(3)), (99.5, 87.08))
+        whole.hold_under_ceilings(p, song, written)
+        by = lambda v: [n[2] for n in written["accompaniment"].notes if n[3] == v]   # noqa: E731
+        self.assertEqual(by(0), [n[2] for n in line])                                                    # the line under its ceiling: as written
+        self.assertEqual(by(3), [60.0] * 4)                                                              # a voice with no note over its ceiling too
+        self.assertEqual(by(1)[:4], [79.0, 80.0, 81.0, 82.0])                                            # no range known: the bar an octave down as a
+        self.assertEqual([int(m) % 12 for m in by(1)], [int(n[2]) % 12 for n in twelfth])                # whole, under the ceiling (90), the pitch classes kept
+        self.assertEqual(by(2), [51.0] * 4)                                                              # where the token song plays the sample (56-60): no
+        self.assertEqual(sorted((a, m) for a, _, m, _ in song.notes["accompaniment"]),                    # octave of the note fits, the one just under its top
+                         sorted((n[0], n[2]) for n in written["accompaniment"].notes))                    # the song's own copy of the part moved with it
+        lines = [l for l in p.log if "(round 120)" in l]
+        self.assertEqual(len(lines), 2, p.log)
+        self.assertIn("accompaniment's voice 2: 16 notes moved by octaves under what the SNES chip can play of its sample (round 120): "
+                      "16 of its 16 notes sat over it, no higher than 90", lines)
+        again = list(written["accompaniment"].notes)
+        whole.hold_under_ceilings(p, song, written)                                                      # nothing over a ceiling now: nothing moves
+        self.assertEqual(written["accompaniment"].notes, again)
+        # a line over its sample's ceiling (none in 400 seeds: a line is written where the game plays its sample) goes into its own bound, cut there
+        low = [(0.0, 1.0, 50.0, 0), (1.0, 2.0, 52.0, 0), (4.0, 5.0, 43.0, 0)]
+        song.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in low]
+        written["bass"] = whole.Part("bass", list(low), [""] * 4, [])
+        p.bounds["bass"], p.ceilings["bass"] = (36, 52), 45.3
+        whole.hold_under_ceilings(p, song, written)
+        self.assertEqual([n[2] for n in written["bass"].notes], [38.0, 40.0, 43.0])                      # the bar an octave down; the bar under the ceiling stays
+        self.assertEqual(sorted(m for _, _, m, _ in song.notes["bass"]), [38.0, 40.0, 43.0])
+        # the slot a voice's sample and its ceiling are read from: one order (render.sample_of's)
+        slots = {"accompaniment": 1, "accompaniment:second": 2, "accompaniment:2": 3, "accompaniment:stretch:0": 4, "accompaniment:1:stretch:1": 5}
+        self.assertEqual([whole.sample_slot(slots, "accompaniment", v, second, stretch) for v, second, stretch in
+                          ((0, False, None), (0, False, 0), (0, False, 1), (1, True, None), (1, False, None), (1, True, 1), (2, True, None), (3, True, 0))],
+                         ["accompaniment", "accompaniment:stretch:0", "accompaniment", "accompaniment:second", "accompaniment", "accompaniment:1:stretch:1",
+                          "accompaniment:2", "accompaniment:second"])
+        # samples_for leaves each chosen sample's ceiling on the plan: two octaves over the note it plays at 32 kHz
+        fake = lambda name: SimpleNamespace(c5_speed=64000 if "lead" in name else 32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "bass_heavy": ["pad"], "bass_light": ["pad"], "arp": ["pad"]}}
+        token = "bass=half:36-44:0.9:1:1.0:::sbass123456@32-52 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        q = whole.plan({"balance": t}, 1, "g")
+        with mock.patch.object(instruments, "_make_sample", fake):
+            whole.samples_for(q, pack, {"sbass123456", "slead123456"}, "g", random.Random(1), {})
+        for role, top in (("bass", 84.0), ("melody", 72.0)):
+            if role in q.band:
+                self.assertAlmostEqual(q.ceilings[role], top, places=2)
+
     def test_the_echo_is_the_games_own_drawn_on_its_own_stream(self):
         """Round 70: with an `echo` word the written song's echo is the counted triple (volume of full, delay as the chip's
         nearest step, feedback) with the parts that send and the parts that stay dry, drawn once on the song's own echo

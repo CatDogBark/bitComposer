@@ -8154,3 +8154,117 @@ the guitar an octave up, the lower synth two octaves up and the upper a
 twelfth over the guitar on 0.39 to 0.40 of its onsets, where the written
 upper synth holds the twelfth on 0.19 to 0.34. The standing list as at
 round 114.
+
+### Round 120: no voice over what the SNES chip can play of its sample (2026-11-09, the older bug round 119's measure found, on the owner's go)
+
+**Why.** Round 119's measure heard, beside the guitar, a voice that
+sounded one pitch on every note written over 66. The SNES chip's pitch
+register stops at 0x3FFF, four times a recording's rate, so a sample
+sounds no higher than two octaves over the note it plays at 32 kHz, and
+a note written higher is played at that ceiling whatever its pitch
+class. Seven of 400 seeds held such notes, 2,015 of 582,713, each in a
+voice beside a line, two of the seven since before round 112. Round 119
+logged them; the owner: "go ahead and fix the older bug".
+
+**Found.** The lines are written where the game plays their samples
+(round 34) and stay under the ceiling, and round 95 folds a voice
+written after the lines by its relation word into where the token song
+plays its sample (`fold_voice`). Two kinds of voice never reach that
+fold, and all seven are of them. A voice with no relation word is
+written by its layer word alone. A doubling is the line again at the
+word's interval (`parallel`), wherever that lands: The Wandering Bazaar
+(60) and The Restless Gorge (192), a third accompaniment voice
+"doubling +19" written 85 to 121 and 84 to 121 on samples the chip
+stops at 87 and 95, and Bastion Passage (54), an arp's second voice
+"doubling +4" written to 98 on a sample that stops at 95. An apart
+voice is written in its span, but a span a pedal's width wide is a
+pedal voice, and its pedal is the middle of its offset register, not of
+its span: Lower Aqueduct (126), a third voice whose span is 58 to 60
+(the token song plays its sample at 56 to 60), held 99 (the line's 74
+to 82 plus its word's 24, cut at 100) on all 104 notes. A voice struck
+with another, or following a sibling voice (round 107), is written in
+place and added as written: The Shore of Mirrors (42), a second
+accompaniment voice on the guitar, a doubling at +4 for 28 bars and
+then struck with the line, written 38 to 81 where the chip stops the
+guitar at 66 and the token song plays it at 28 to 44; Starlit Stone
+(153), a second voice on the guitar struck with the line at +4, to 68;
+Northern Mist (277), a third voice, a doubling at +19 for 16 bars and
+then struck with the second, to 111 on a sample that stops at 100. The
+token's own range for the voice was on the plan in five of the seven
+(`layer_ranges`, `layer_stretches`) and nothing read it. The hole is
+wider than the ceiling shows: over 400 seeds the voices written by
+their layer word alone (396) have 0.30 of their notes outside the range
+the token song plays their sample over, the struck ones (316) 0.21, the
+ones round 95 folds (194) 0.08; 267 songs hold such a note.
+
+**Built.** The ceiling on the plan: `samples_for` leaves each chosen
+sample's ceiling as a note (`plan.ceilings`, `score.pitch_ceiling` of
+its C-5 speed, by the slot the sample was chosen for), and
+`plan.voice_ceiling_at` reads a voice's ceiling a bar by the order the
+render picks the voice's sample in (`plan.sample_slot`, now the one
+order for `render.sample_of` too: the stretch's, the voice's own, the
+part's second, the line's). The fold: `plan.hold_under_ceilings`. A
+voice that holds a note over its ceiling is folded whole, as round 95
+folds (`fold_voice`, each bar first as a whole by the octave count that
+puts most of its notes inside, the leftovers one by one): into where
+the token song plays its sample (`voice_bound_at` without the part's
+range: the voice's stretches, its range, its writing span), cut at the
+ceiling; where the plan knows no range for the voice, into the span it
+was written over, cut at the ceiling; a range wholly over the ceiling
+gives the octave under it; a line, should one ever hold such a note,
+into its own bound. It runs twice in `write`: beside round 95's fold,
+once every line and voice is written, so the theme band and the form's
+repeats copy the voices as folded; and last, on the notes as finally
+played, for whatever a pass since has moved over a ceiling (nothing, in
+400 seeds). The song's own copy of the part moves note for note with
+it, and the plan's log says what was folded. A voice with no note over
+its ceiling is not touched, so a song without one keeps its notes
+exactly; the fold for every such voice is the same fold without the
+condition, and is left to be heard first (Open). Tests: a doubling a
+twelfth up with no range known (a bar an octave down as a whole, under
+the ceiling, its pitch classes kept), a pedal over its ceiling folded
+to the octave just under its token range's top, a voice under its
+ceiling and the line untouched, the song's copy, a second pass moving
+nothing, a plan without ceilings moving nothing, a line over its ceiling into its own bound, the slot's order,
+the ceilings `samples_for` leaves. Suite 477 (1 skip).
+
+**Measured.** The score over 400 seeds: no note at the register's top
+in any song (7 songs, 2,015 notes before). Plans (400 seeds, against
+round 119): 400 keep their token song; 393 keep their notes and their
+plan logs, and the seven that do not are the seven: in each, one voice
+of one part moved and nothing else. The Wandering Bazaar's third
+accompaniment voice, all 370 notes, from 85-121 to 49-60, where the
+token song plays its sample (56 to 60, a range a twelfth's doubling
+cannot fit: the octave under its top); Lower Aqueduct's, all 104, from
+99 to 51; The Shore of Mirrors's second voice, 478 of 527, from 38-81 to
+28-56 (the guitar's 28 to 44, then its second stretch's 44 to 56);
+Starlit Stone's, 60 of 138, from 38-68 to 38-48; Northern Mist's third,
+16 of 22, from 61-111 to 58-95; and, with no range known, The Restless
+Gorge's third, 153 of its 271 notes, from 84-121 to 84-95, and Bastion
+Passage's arp voice, the 7 of its 145 that sat over the ceiling, from
+77-98 to 77-94. The render heard (round 119's measure, the seven
+songs): before, 47 voices with a verdict and 3 under 0.80 on pitch (The
+Wandering Bazaar's voice 0.06, The Restless Gorge's 0.45, The Shore of
+Mirrors's 0.60), Bastion Passage's at 0.95 and Northern Mist's at 0.91;
+after, 46 with a verdict and every one on pitch on every decisive note.
+The Shore of Mirrors's voice has no verdict now: in the guitar's low
+range the test's combs tie, as on the guitar basses (0.23 of its notes
+decisive). The five Battle Theme seeds of the Song Checks are note for
+note and log for log as round 119 left them.
+
+**Open.** The fold for every voice it would move: 267 of 400 songs hold
+a voice round 95's fold never sees with notes outside the range the
+token song plays its sample over. It is this round's fold without its
+condition, it changes most songs, and it is the owner's to hear and
+decide. The pedal at its offset (5 of 400 seeds: Twin Stone, Lower
+Aqueduct, Market of Rain, Ancient Wires, Twin Glass): `write` gives an
+apart voice's pedal the middle of the line's register at the word's
+offset where the voice's span, the range the game plays its sample
+over, is elsewhere. A layer word and a token range that disagree by
+octaves: Johnny C. Bad's third accompaniment voice is "doubling +19"
+with its sample played at 56 to 60 under a line at 72 to 84, so the
+word's octave is not the range's, a question for the layer reader. The
+Shore of Mirrors now has the guitar twice in the bass's octaves: the
+readings hold Dancing Mad (part 5)'s guitar under its bass and under
+its accompaniment (159 notes each), and both are written. The standing
+list as at round 114.
