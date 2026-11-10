@@ -76,6 +76,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   chord tones around it. The arp's off-chord tones are the minor key's
   raised seventh, a semitone from the root, and give way to its clashes
   share (0.03 of its line against FFVI's 0.14): the two words meet there.
+  Since round 111 which of the chord's tones the line favours is the token
+  song's profile (the hold on the voicing tone); its off-chord onsets are
+  still the tone figure's and its degrees the tone_degrees word's.
 - **The bass leaves the chord at the game's pooled rate, not each
   song's.** The bass's figures carry its passing tones at FFVI's share of
   marks (0.19 of tokens against 0.17) and its line sits off the chord on
@@ -84,6 +87,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   ones (quartiles 0.05 to 0.29), the written ones all near the pooled
   rate. A tier for the bass as the chord parts have (`tone_tiers`) would
   carry the spread; the bass_habits word's tones class carries some.
+  Since round 111 the bass's chord tones follow the token song's profile
+  (its root, third, fifth and seventh shares); its off-chord share is
+  still its figures' passing marks at the pooled rate.
 - **A voice beside a line follows its word whole.** Since round 90 the
   balance token says what a voice beyond a line does beside which part,
   stretch by stretch (a double, parallel at an interval, or its own line),

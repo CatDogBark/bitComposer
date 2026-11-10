@@ -7509,3 +7509,80 @@ the form never returning, the sections' densities out of step, the
 bass's pitch continuity. The standing list: round 100's endings and
 theme returns, round 101's sparser side, round 103's line motion, round
 105's sectioning.
+
+### Round 111: a backing line's chord-tone profile is the token song's (2026-11-09, from the owner's listening to Song Check 93, on his go)
+
+**Why.** Round 110's measure found the synth's leaps upstream of the
+synth: Battle Theme's synth sits on the fifth over the guitar's roots
+and leaps over its sevenths and off-chord notes, the game's riff plays
+roots on 0.45 of its notes and sevenths on 0.30, and the written guitars
+on its token played fifths and thirds (0.37 and 0.03 in Journey of the
+Quarry, 0.31 and 0.21 in Second Cistern Dance) and never the seventh, so
+the synth drew from the game's leaping cells. The voicings word, the
+motion and the bass's figure marks say which chord tones a line walks,
+and none of them knew the token song's own: FFVI's accompaniment lines
+play the seventh on 0.01 of their notes at the median, one other song
+reaching 0.2.
+
+**Built.** A sixteenth balance field for the chord parts and the bass
+(arrangement.line_tone_profile; TONE_PROFILE_CLASSES): the share of the
+line's notes on the chord's root, third, fifth, seventh and sus and off
+the chord sounding (vocab.tone_of), in hundredths, `t46/2/8/31/2/11` for
+Battle Theme's guitar and `t33/8/17/19/3/20` for its bass; "" under
+WORD_NOTES notes. The plan reads it (tone_profile_of,
+Plan.tone_profiles) and passes it to the line's call of writer.upper and
+to the bass's call of writer.bass, which hold the line's chord tones to
+it (parts.profile_tone, PROFILE_MARGIN 0.05): a chord-tone onset whose
+class, with the note counted, runs over its share takes the chord's own
+tone whose class is most under its share, placed nearest the tone meant;
+the off-chord onsets stay the tone figure's and the passing marks'. Pack
+refit (110 tables; no new table), the vocabulary shipped and committed.
+Tests: the field read from a line of roots, fifths and sevenths over a
+seventh chord and its parse, the hold's choices (a class over its share,
+a class the song never plays, the margin, nothing written yet), the
+bass's fifths held to roots. Suite 457 (1 skip).
+
+**Measured.** FFVI: 56 accompaniments, 58 basses, 10 harmonies and 2
+arps carry the field; the accompaniments' medians root 0.26, third 0.16,
+fifth 0.23, seventh 0.01, off the chord 0.23, the basses' root 0.55,
+fifth 0.12, seventh 0.02, off 0.14. Written, seeds 1-60: 115 backing
+lines with a token profile sit a median 0.17 from it (half the absolute
+differences summed; p90 0.31), their medians root 0.37, third 0.11,
+fifth 0.20 and seventh 0.01 against the tokens' 0.34, 0.10, 0.19 and
+0.02, off the chord 0.25 against 0.16 (the off-chord share is still the
+pooled tone figure's). The five Battle Theme seeds' guitars: roots
+0.34-0.45 (the token 0.46; before 0.10-0.46), fifths 0.12-0.32 (0.08;
+before 0.14-0.38), thirds 0.06-0.10 (0.02; before 0.03-0.22), sevenths
+0.00-0.11 (0.31; before 0.00), 0.25-0.45 from the token; their basses'
+sevenths 0.00-0.07 (0.19). The sevenths do not come because the hold
+picks among the written chord's own tones and the written chords have
+few: Battle Theme's read chords carry a seventh on 0.56 of its beats
+(maj7 0.45, 7 0.08, m7 0.03; FFVI's median 0.08, 8 of 68 songs over
+0.3), the five written songs' chords on 0.13, 0.00, 0.06, 0.11 and 0.00
+of their bars. The synth's leaps follow the guitar: isolated leaps per
+100 stabs 3.5 to 0.9 (Journey of the Quarry), 9.5 to 6.5 (Lunar Island),
+5.8 to 4.1 (Gate Return), 2.3 to 10.5 (The Terminal of Glass), 11.1 to
+4.6 (Second Cistern Dance), the game 3.7; octave-or-more steps 0.17,
+0.32, 0.24, 0.15, 0.40 to 0.11, 0.24, 0.15, 0.28, 0.26 (the game 0.17);
+seeds 1-60 1.9 to 1.7 per 100, high stabs in runs of three or more 8 to
+11. Plans (400 seeds, against round 110): 400 keep their token song; 16
+plan logs and 16 note sets unchanged (every backing line with a profile
+moves).
+
+**Song Check 94** (https://claude.ai/artifact/5baYwkCpqNF2WZMQfhRjo9):
+the five Battle Theme songs of Song Checks 89 to 93, round 110 before
+and round 111 after: Journey of the Quarry (18), Lunar Island (243),
+Gate Return (343), The Terminal of Glass (150) and Second Cistern Dance
+(365).
+
+**Open.** The written harmony's chord qualities are not the token's: the
+chord chain draws its shapes from the pooled chords word, so a song on
+Battle Theme's token has a seventh chord on a tenth of its bars where
+the game has one on more than half, and the line's sevenths, the synth's
+calm cells and its conditioning on the guitar's tone all wait on it (a
+song-level chord-shape profile held in plan_chords, the next candidate).
+The off-chord share is the pooled tone figure's. The Battle Theme list:
+the form never returning, the sections' densities out of step, the
+bass's pitch continuity. The standing list: round 100's endings and
+theme returns, round 101's sparser side, round 103's line motion, round
+105's sectioning.
