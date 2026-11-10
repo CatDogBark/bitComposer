@@ -1045,6 +1045,24 @@ class TokenContinuityTests(unittest.TestCase):
         self.assertEqual(moved, [1, 2])
         self.assertEqual({k: v for k, v in counts.items() if v}, {"root": 3, "fifth": 1})          # the classes written stay counted true
 
+    def test_a_line_on_the_basss_pedal_is_over_the_riffs_root_for_the_struck_voice(self):
+        from bitcomposer.translate import tables
+        from bitcomposer.translate.vocab import Span
+        mk = lambda tone, outcome: [tables.Unit(f"s{i}", "g", outcome, {"interval": "11", "tone": tone, "part": "accompaniment", "previous": rhythm.START}) for i in range(3)]   # noqa: E731
+        t = tables.Table(("interval", "tone", "part", "previous"), "parallel_intervals", votes=tables.SHARES).fit(mk("root", "fifth") + mk("other", "+19"))
+        major = {0, 2, 4, 5, 7, 9, 11}
+        song = rhythm.Song("w", 4, 4, [(0.0, 4.0)], [Span(0.0, 4.0, 0, "", 1.0)], notes={}, sid="w", game="g", numbers=[0], parts=[(0, 1, None, "A")], tonic=0, mode="major")
+        line = [(0.0, 0.9, 62.0, 0)]                                                                  # a D over C major: off the chord
+        song.notes["bass"] = [(0.0, 0.9, 36.0, "bass")]                                               # the bass on C: the D is the line's own
+        high = whole.parallel(line, 19, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1))
+        self.assertEqual(int(high[0][2]), 62 + 19 + 19)                                              # "other": the game's synth leaps, +19 over the twelfth
+        song.notes["bass"] = [(0.0, 0.9, 38.0, "bass")]                                               # the bass pedals on D under the chord: the line rides it
+        log = []
+        low = whole.parallel(line, 19, major, 1, song, "accompaniment", {"parallel_intervals": t}, random.Random(1), None, log)
+        self.assertEqual(int(low[0][2]) % 12, 7)                                                      # drawn as over the riff's root: the chord's fifth near the twelfth
+        self.assertLess(int(low[0][2]), 62 + 19 + 6)
+        self.assertTrue(any("1 of the line's notes on the bass's pedal" in l for l in log), log)
+
     def test_the_bass_as_finally_played_is_held(self):
         from bitcomposer.translate.vocab import Span
         bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]

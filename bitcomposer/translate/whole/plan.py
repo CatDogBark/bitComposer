@@ -886,7 +886,11 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
     or a minor third (the seventh). A chord part's voice with `clash_rates` (the part's clashes draw) holds the share
     as the part's other voices do: an interval a semitone from a part written before the part (rhythm.clash_under)
     while the voice is over its share for the beat is drawn again, VOICE_TRIES times, the last kept. A nominal that one song
-    plays draws its chain levels with that song alone behind them (round 110; PLAN_SONGS otherwise)."""
+    plays draws its chain levels with that song alone behind them (round 110; PLAN_SONGS otherwise). A line note off the
+    chord but at the pitch class the written bass sounds under it is drawn as over the chord's root (round 114): a chord
+    part riding the bass's pedal (round 106, ride_the_bass) is on the riff's root whatever the chain's chord, where Battle
+    Theme's reader hears the riff's pitch as the chord root; drawn as "other", the synth struck with it took the cells where
+    the game's synth leaps over the riff's neighbours (+19, +14 over the twelfth) on every pedaled bar."""
     t = (models or {}).get("parallel_intervals")
     steps = int(round(interval * 7 / 12))
     if t is None or song is None or rng is None or steps % 7 == 0:
@@ -900,7 +904,8 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
     hold = bool(clash_rates) and role in rhythm.UPPER
     under = sorted(n for r in rhythm.clash_under(role) for n in song.notes.get(r, [])) if hold else []
     run = {"strong": [0, 0], "weak": [0, 0]}                # the voice's onsets a semitone from a part under it, and its onsets under one
-    out, previous, drawn, redrawn = [], rhythm.START, 0, 0
+    bass_notes = sorted(song.notes.get(R.BASS, [])) if role in rhythm.UPPER else []   # the written bass, for a line riding its pedal (round 114)
+    out, previous, drawn, redrawn, on_pedal = [], rhythm.START, 0, 0, 0
     for n in sorted(notes, key=lambda x: x[0]):
         a, b, m = n[0], n[1], n[2]
         ref = int(round(m))
@@ -909,6 +914,9 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
             out += diatonic([n], interval, scale, voice)
             continue
         tone = vocab.tone_of(ref % 12, c.root, c.shape)
+        if tone == "other" and any(x[0] - NEAR <= a < x[0] + x[1] and int(round(x[2])) % 12 == ref % 12 for x in bass_notes
+                                   if not (isinstance(x[2], float) and math.isnan(x[2]))):
+            tone, on_pedal = "root", on_pedal + 1          # the line on the bass's pedal: the riff's root (round 114)
         place = "strong" if abs(a - round(a)) < NEAR else "weak"
         pcs = writer.sounding_pcs(under, a) if under else set()
         over = bool(pcs) and run[place][1] > 0 and run[place][0] / run[place][1] > clash_rates.get(place, 1.0)
@@ -946,6 +954,7 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
         out.append((a, b, float(midi), voice))
     if log is not None and drawn:
         log.append(f"voice {voice + 1} parallel at {interval:+d} by the parallel_intervals word (round 97): {drawn} notes at the interval the line's tone under the chord draws"
+                   + (f"; {on_pedal} of the line's notes on the bass's pedal drawn as over the riff's root (round 114)" if on_pedal else "")
                    + (("; a semitone from a part under it: " + ", ".join(f"{pl} {x[0]}/{x[1]} ({x[0] / x[1]:.2f}; the song's rate {clash_rates[pl]:.2f})" for pl, x in run.items() if x[1])
                        + (f"; {redrawn} draws given up for a clash" if redrawn else "")) if hold and any(x[1] for x in run.values()) else ""))
     return out
