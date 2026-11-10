@@ -112,6 +112,9 @@ def load_pack_file(path) -> str:
         smp.register_sample_voice(voice, v["data"], v["length"], v["meta"], v["volume"],
                                   release=v["release"], percussion=v["percussion"])
         registered.append(voice)
+    for key, v in voices.items():                           # a kit voice's tonal reading, registered beside it (round 119)
+        if v.get("view_of"):
+            smp.TONAL_VIEWS[f"{name}_{v['view_of']}"] = f"{name}_{key}"
     PACKS[name] = pack["table"]
     _loaded[name], _seen[name] = registered, stamp
     return name
@@ -179,6 +182,12 @@ def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
         if key in BUILTIN_VOICES:
             fail(f"samples.{key}", "a built-in voice has this name; give the pack's voice its own")
         own[key] = _sample(spec, base, f"samples.{key}", key in kit_voices, fail)
+    for key in list(own):                                   # a kit voice's tonal reading is a voice of its own beside it (round 119)
+        view = own[key].pop("tonal", None)
+        if view is not None:
+            if key + smp.TONAL_SUFFIX in samples:
+                fail(f"samples.{key + smp.TONAL_SUFFIX}", f"this name is kept for the tonal reading of the kit voice {key!r}; give the sample another")
+            own[key + smp.TONAL_SUFFIX] = dict(view, view_of=key)
 
     def voice_name(v, where):
         if v in own:
@@ -313,8 +322,8 @@ def _habit(h, v, where, voice_name, fail):
 
 def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
     if not isinstance(spec, dict):
-        fail(where, "an object: file, note (or hz), and optionally loop, release, percussion, volume, envelope")
-    allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume", "envelope", "piece"}
+        fail(where, "an object: file, note (or hz), and optionally loop, release, percussion, volume, envelope, tonal")
+    allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume", "envelope", "piece", "tonal"}
     for k in spec:
         if k not in allowed:
             fail(f"{where}.{k}", f"not a sample field ({', '.join(sorted(allowed))})")
@@ -375,8 +384,44 @@ def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
     volume = spec.get("volume", 60)
     if not _is_int(volume) or not 1 <= volume <= 64:
         fail(f"{where}.volume", "the default note volume, from 1 to 64")
-    return {"data": data, "length": frames, "meta": meta, "volume": volume,
-            "release": release, "percussion": percussion}
+    out = {"data": data, "length": frames, "meta": meta, "volume": volume,
+           "release": release, "percussion": percussion}
+    tonal = spec.get("tonal")
+    if tonal is not None:                                   # a kit voice's reading as a pitched instrument (round 119): the same recording,
+        tw = f"{where}.tonal"                               # tuned by the note it sounds at its own rate, looped where the game loops it
+        if not percussion:
+            fail(tw, "a kit voice's reading as a pitched instrument; a tonal voice says its pitch in note or hz")
+        if not isinstance(tonal, dict) or not set(tonal) <= {"note", "hz", "loop", "release"}:
+            fail(tw, "an object: note (or hz), and optionally loop and release")
+        if ("note" in tonal) == ("hz" in tonal):
+            fail(tw, "the pitch the recording sounds at its own rate: note (MIDI) or hz, one of them")
+        if "hz" in tonal:
+            if not _is_number(tonal["hz"]) or not 8 <= tonal["hz"] <= 20000:
+                fail(f"{tw}.hz", "the recording's pitch in Hz")
+            note_t = 69 + 12 * math.log2(tonal["hz"] / 440)
+        else:
+            note_t = tonal["note"]
+            if not _is_number(note_t) or not 0 <= note_t <= 127:
+                fail(f"{tw}.note", "the MIDI note the recording sounds at (60 is middle C; fractions are cents)")
+        c5_t = round(rate * 2 ** ((60 - note_t) / 12))
+        if not 1000 <= c5_t <= 9_999_999:
+            fail(tw, f"that pitch puts the playback rate at {c5_t} Hz, out of range")
+        meta_t = {"rate": c5_t, "loop": False, "loop_start": 0, "loop_end": frames, "source_rate": rate, "source_frames": frames}
+        loop_t = tonal.get("loop")
+        if loop_t is not None:
+            if not isinstance(loop_t, list) or len(loop_t) != 2 or not all(_is_int(x) for x in loop_t) or not 0 <= loop_t[0] < loop_t[1] <= frames:
+                fail(f"{tw}.loop", f"[start, end] in sample frames, inside the sample's {frames}, start first")
+            meta_t.update(loop=True, loop_start=loop_t[0], loop_end=loop_t[1])
+        if envelope is not None:
+            meta_t["envelope"] = envelope
+        release_t = tonal.get("release")
+        if release_t is not None:
+            if release_t not in smp.RELEASE:
+                fail(f"{tw}.release", f"one of {', '.join(smp.RELEASE)}")
+            if loop_t is None:
+                fail(f"{tw}.release", "a release fades a held note out of its loop; give the reading a loop")
+        out["tonal"] = {"data": data, "length": frames, "meta": meta_t, "volume": volume, "release": release_t, "percussion": False}
+    return out
 
 
 def read_wav(path: Path, where: str = "file", fail=None) -> tuple[bytes, int, int]:

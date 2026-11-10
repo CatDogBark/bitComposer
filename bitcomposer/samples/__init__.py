@@ -257,6 +257,20 @@ def is_percussion(name: str) -> bool:
     return name in PERCUSSION_PRESETS or any(part in _PERCUSSION_WORDS for part in name.split("_"))
 
 
+# A kit voice from a pack file may also be a pitched instrument in its game (Final Fantasy VI strikes its rhythm guitar as a
+# drum in some songs and plays it as the riff's line or the bass in five): the pack file then gives the recording a tonal
+# reading (its `tonal` field), registered as a voice of its own beside the kit voice, the kit voice's name + TONAL_SUFFIX.
+# A kit voice is tuned by the kit's convention (every piece at KIT_NOTE, as recorded); played as a line by that convention
+# the guitar sounded a minor third under every note written for it (round 119).
+TONAL_SUFFIX = "_tonal"
+TONAL_VIEWS: dict[str, str] = {}     # a kit voice -> the voice that plays the same recording as a pitched instrument
+
+
+def tonal_view(name: str) -> str | None:
+    """The voice that plays a kit voice's recording as a pitched instrument, None where its pack gives no tonal reading."""
+    return TONAL_VIEWS.get(name)
+
+
 def echo_variant(name: str, cutoff_hz: float, poles: int = 2,
                  strike_rule: bool = False) -> dict:
     """A darker copy of a preset for an echo tap.
@@ -432,6 +446,9 @@ def register_sample_voice(name: str, data: bytes, length: int, meta: dict, volum
 def unregister_voice(name: str) -> None:
     for table in (INSTRUMENT_PRESETS, PRESET_RELEASE):
         table.pop(name, None)
+    TONAL_VIEWS.pop(name, None)
+    for kit in [k for k, view in TONAL_VIEWS.items() if view == name]:
+        del TONAL_VIEWS[kit]
     SAMPLE_ENVELOPES.pop(name, None)
     PERCUSSION_PRESETS.discard(name)
     STRUCK_PRESETS.discard(name)

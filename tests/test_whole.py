@@ -2827,6 +2827,43 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(bounds["sbass123456@32-52"], (36, 44))                                     # the planned register, whole
         self.assertEqual(bounds["sbass123456"], (48, 60))                                          # the other song's range, as before
 
+    def test_a_kit_voice_given_to_a_pitched_part_plays_by_its_tonal_reading(self):
+        """Round 119: the token song's own sample for a part may be a kit voice in the pack (Final Fantasy VI's rhythm guitar,
+        Battle Theme's riff line); samples_for takes the pack's tonal reading of it for a pitched voice, the kit voice for a kit
+        piece, and says so where the pack has no reading."""
+        from bitcomposer.translate import tables
+        from bitcomposer import instruments, samples as smp
+        from unittest import mock
+        from types import SimpleNamespace
+        fake = lambda name: SimpleNamespace(c5_speed=32000, data=b"\0\0" * 64, loop=False, sus_loop=False, name=name)   # noqa: E731
+        pack = {"voices": {"harmony": ["pad"], "lead": ["pad"], "bass_medium": ["pad"], "bass_heavy": ["pad"], "bass_light": ["pad"], "arp": ["pad"]}}
+        token = "bass=half:36-44:0.9:1:1.0:::sgtr1234567@32-52 melody=main:64-84:0.9:1:0.7:::slead123456 tempo=medium"
+        t = tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", token, {"part": rhythm.ARRANGEMENT}) for i in range(3)])
+        smp.PERCUSSION_PRESETS.add("g_sgtr1234567")
+        self.addCleanup(smp.PERCUSSION_PRESETS.discard, "g_sgtr1234567")
+        self.addCleanup(smp.TONAL_VIEWS.pop, "g_sgtr1234567", None)
+        for view in ("g_sgtr1234567_tonal", None):
+            if view:
+                smp.TONAL_VIEWS["g_sgtr1234567"] = view
+            else:
+                smp.TONAL_VIEWS.pop("g_sgtr1234567", None)
+            p = whole.plan({"balance": t}, 1, "g")
+            if "bass" not in p.band:
+                self.skipTest("the bass left out of this seed's textures")
+            with mock.patch.object(instruments, "_make_sample", fake):
+                out = whole.samples_for(p, pack, {"sgtr1234567", "slead123456"}, "g", random.Random(1), {})
+            name, sample = out["bass"]
+            self.assertEqual(name, "sgtr1234567")                                                    # the pack's id, as the plan and the tables name it
+            if view:
+                self.assertEqual(sample.name, "g_sgtr1234567_tonal")                                 # the recording as a pitched instrument
+                self.assertTrue(sample.tonal_view)
+                self.assertTrue(any("played as pitched instruments by their tonal readings" in l and "sgtr1234567" in l for l in p.log), p.log)
+            else:
+                self.assertEqual(sample.name, "g_sgtr1234567")                                       # no reading: the kit voice, and the log says so
+                self.assertFalse(getattr(sample, "tonal_view", False))
+                self.assertTrue(any("no tonal reading" in l and "sgtr1234567" in l for l in p.log), p.log)
+            self.assertEqual(out["melody"][1].name, "g_slead123456")                                 # a tonal voice is itself
+
     def test_the_kit_takes_its_songs_channels(self):
         """Round 87: the kit gets as many voices as its token song gave it channels, so a one-channel kit no longer costs the
         band a pitched voice, and each piece plays on the channel the game put it on; the fixed split stands without the
