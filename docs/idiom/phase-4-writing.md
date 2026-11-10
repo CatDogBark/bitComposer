@@ -7874,3 +7874,49 @@ Theme songs, round 114 before.
 **Open.** The cell (round 116), the guitar line's steps (round 117), the
 flourish at a section's end (round 118). The standing list as at round
 114.
+
+### Round 116: a struck voice's cell repetition is the token song's (2026-11-09, the second of the four words from Song Check 96)
+
+**Why.** Loud and always the same reads as the riff; loud and never the
+same reads as something sitting on the song. Battle Theme's synth
+hammers one cell, C D E F, in ten of its thirty-eight bars and near it
+in the rest, over a guitar on A and B-flat; the written synth's pitch
+set changed nearly every bar (the commonest covered 2 to 7 of 38),
+because each landing is drawn per note by the interval word with the
+chord's shape and the guitar's tone, and the guitar line itself varies.
+Nothing in the vocabulary said a struck voice repeats itself.
+
+**Built.** The struck sub-field's ninth part (arrangement._struck_facts,
+_struck_text: `...~4.9~0.49~0.49`): of the voice's notes with a note of
+its own at the same position of the bar before (to a sixteenth), the
+share that sound that note's pitch again; "-" under STRUCK_NOTES
+comparable notes. struck_values_of reads it (`cell`), and struck_with
+repeats the cell to it: once the landings are drawn, a stab with a stab
+at the same place of the bar before takes that stab's pitch while the
+share so far, this stab counted, runs under the token's by
+STRUCK_MARGIN, and keeps the interval word's landing otherwise; `stats`
+carries the repeats and the comparable stabs to the log. Pack refit
+(110 tables; no new table), the vocabulary shipped and committed. Tests:
+the part read from the test song's stabs (0.21) and parsed, the cell
+held bar after bar at a share of one (the budget counts a stab kept
+until one differs, so a share of one is near, not exact), free without
+it, near a share of a half. Suite 468 (1 skip).
+
+**Measured.** Battle Theme's synth repeats its cell on 0.49 of its
+comparable stabs (the second voice 0.50). Written, the five Battle Theme
+seeds: Journey of the Quarry 0.00 to 0.22 and 0.28 (18 comparable stabs
+in a sparse line), Lunar Island 0.25 to 0.45, Gate Return 0.04 to 0.37,
+The Terminal of Glass 0.18 to 0.40, Second Cistern Dance 0.12 to 0.40;
+under the token by the margin's width, as the budget's first comparable
+stab is always free. Seeds 1-60: 22 struck voices, 20 with a token cell
+share; written median 0.15 (0.11 before) against the tokens' 0.21,
+|written - token| median 0.07. The struck voices' motion holds (12
+high-register notes in 8 runs, none of three; 1.9 spikes per 100).
+Plans (400 seeds, against round 115): 400 keep their token song, 384
+plan logs and 328 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The guitar line's steps (round 117), the flourish at a
+section's end (round 118). The standing list as at round 114.

@@ -341,6 +341,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   parallel of a sibling follows the sibling's written notes. FFVI: 39
   own-reading stretches of voices beside a line strike with the line, 9
   with a sibling, 71 stay their own.
+  Since round 116 the struck sub-field carries a ninth part, the voice's
+  cell (`...~4.9~0.49~0.49`: of its notes with a note of its own at the
+  same position of the bar before, the share that sound that note's
+  pitch again), and `struck_with` repeats the cell to it: a stab with a
+  stab at the same place of the bar before takes that stab's pitch while
+  the share so far, this stab counted, runs under the token's by
+  STRUCK_MARGIN, and the interval word's landing otherwise. Why: Battle
+  Theme's synth hammers one cell (C D E F) bar after bar, the hook, and
+  the written stabs, each landing drawn anew by the interval word, changed
+  their pitches every bar, loud and never the same (Song Check 96).
   Since round 115 the struck sub-field carries an eighth part, the
   voice's sounding share (`w0.73~0.7~0.2~0.9~-~-~4.9~0.49`: the beats it
   sounds, each note to the line's next onset at most, over the beats of
