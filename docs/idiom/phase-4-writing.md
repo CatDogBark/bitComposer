@@ -8268,3 +8268,114 @@ Shore of Mirrors now has the guitar twice in the bass's octaves: the
 readings hold Dancing Mad (part 5)'s guitar under its bass and under
 its accompaniment (159 notes each), and both are written. The standing
 list as at round 114.
+
+### Round 121: a backing voice loops where the token song's does (2026-11-09, from the owner's verdict on Song Check 98 and the listening experiment he chose, on his go)
+
+**Why.** Song Check 98, the guitar in tune: "we still have an issue ...
+where the accompaniment is doing too much and taking away from the
+rythm of the song ... I just hear the accompaniment and what its doing
+more than the tune" (the owner), and a deep look asked for. The look
+went past the measures of rounds 104 to 118, which each compare a share
+over the song, to the bars themselves, Battle Theme's beside the written
+songs', and ended in an experiment the owner heard and chose ("the
+experiment is the way"): three of the songs with every backing voice
+playing its first bar of a section again through the section.
+
+**Found.** It is not the levels: against the tune, A-weighted, Battle
+Theme's backing sits 1.4 dB over it and the written songs' 0.1 dB (the
+median of the five; their synths 3 dB under the game's). It is what the
+backing plays. Battle Theme's rhythm section is a loop. Through its B,
+16 of its 41 bars, the guitar plays one bar eight times, the two synths
+one bar in six of eight (the other two fills, where the tune holds a
+note), the bass and the kit two bars four times, and the harmony is one
+bar, A then B flat. In the five written songs no backing voice played a
+bar twice. The rhythm did repeat: the periods word (round 30; the
+token's own lag and share since round 106) reads an upper part's bar as
+its onset pattern and the bass's as its chord-tone marks
+(`cells.block_key`), so a held bar was a bar on the same rhythm, and the
+writers drew its notes again; the holds since (the chord-tone profile,
+the bass's continuity, the steps, the struck voice's cell) each keep a
+share right over the song and none keeps a bar. Three voices each
+played new notes every bar, under a tune that moves less. It became
+plain to hear with round 113: the token's own form has parts of 8 to 14
+bars, where the pooled forms' short parts, repeated, had hidden it (a
+backing bar repeated from the eight before it in about 0.2 of the bars
+through round 112, 0.02 since). And it is the game's habit, not this
+song's alone: read note for note, FFVI's backing voices loop (a figure
+of 1, 2 or 4 bars on half the bars or more) in 0.45 of the parts of the
+form a chord part's line plays four bars or more in, 0.47 of a voice's
+beside it and of a bass's, 0.69 of a kit's, and its harmony in 0.58; 56
+of its 68 songs have a loop somewhere. The bars off a figure fall a
+little more at a part's end: 0.35 of last bars and 0.29 of a phrase's
+fourth against 0.16 to 0.24 elsewhere.
+
+**Built.** The reader: a voice's bar note for note (`voice_bar_keys`:
+each note's place in the bar with its pitch, a kit hit with its sample;
+`chord_bar_keys`: the chord at each beat), its loop inside a part of
+the form (`loop_of`: the figure at a length of 1, 2 or 4 bars is the
+bar played most at each place of it, twice or more; a longer figure only
+where it holds LOOP_GAIN 0.15 more of the bars; a loop where the figure
+holds LOOP_SHARE 0.5 of the bars the voice plays, LOOP_BARS 4 or more)
+and the bars off the figure (`loop_breaks`). The token: the loops by
+the form's letters (`loops_text`: "B1~75!3.7", in B a one-bar figure on
+0.75 of the bars, off it in the part's bars 3 and 7), a nineteenth field
+on a backing part's token for its line and on the kit's (`lB1~100`), an
+eighth sub-field on each voice beside a line, and a song-level
+`cycle=B1~88!7` for the harmony; Battle Theme's reads the guitar
+`lB1~100`, both synths `lB1~75!3.7`, the bass and the kit `lB2~100`. The
+plan: `loops_of` reads them and `Plan.loops` keeps them where the form's
+letters are the token song's (none where the form's draw stands);
+`plan_chords` draws every bar as before and then gives a bar on the
+harmony's figure the chord of the first bar at its place (a part that
+repeats one takes its chords again), so no other draw moves. The
+writing: `hold_loop` makes a bar on a voice's figure the figure again,
+the first such bar the voice plays at that place copied whole, pitch and
+place and length; a bar the token song has off its figure and a bar the
+voice rests in stay as written. It runs where each voice is finished:
+on the kit's hits before the bass reads its accents, on the bass's line
+once folded, on a chord part's line once held and folded and before the
+voices beside it are written against it, on each voice beside a line
+once written. The passes after the writing leave a figure's bars as
+they are: the theme band and the hand-offs (`_on_figure`), the bass's
+last pass and the voices riding it (`hold_bass_pitch`, `held`). The
+first version changed the chord chain's state where the harmony looped,
+which shifted the draws after it and gave 24 of 400 seeds another
+song's token; the loop is a pass after the chain for that. Tests: the
+reader's loop and its bars off the figure, the token's fields, the
+plan's taking them with the form and leaving them without, the
+harmony's loop over an unholding chain, the copy over each writer's
+note shape with a rest and a fill, the passes after it. Suite 483 (1
+skip).
+
+**Measured.** The five Battle Theme songs: in B the guitar's figure
+holds 1.00 of its bars, each synth's 0.75, the bass's and the kit's
+1.00 at two bars, the token's shares to the hundredth, where every one
+was 0.00 at round 120; the chord of B is one chord through seven bars
+and a turn in the eighth. Sixty seeds, each backing voice in each part
+of the form it plays four bars or more in, read as the reader reads the
+game: a chord part's line loops in 0.41 of them (0.09 before; FFVI
+0.45), a voice beside a line in 0.32 (0.05; 0.47), the bass in 0.42
+(0.17; 0.47), the kit in 0.70 (0.37; 0.69), the figure's share where it
+loops 0.80, 0.75, 0.67 and 1.00 (0.50, 0.50, 0.50, 0.69 before; the
+game 0.80, 0.75, 1.00, 1.00); where the token names a loop the written
+share is the token's (the median difference 0.00) and the figure's
+length the token's in 0.85 to 0.96. Plans (400 seeds, against round
+120): 400 keep their token song; 336 took loops, 14 have a token with
+loops and a form of their own draw, 50 a token with none; the harmony's
+loop changed a chord in 274; 73 note sets are unchanged. No note over a
+sample's ceiling in any of the 400 (round 120's measure).
+
+**Song Check 99** will carry rounds 121 and 122 together.
+
+**Open.** Outside its loops the backing still plays a new bar every
+bar, and Battle Theme's C and D are no loops: there its guitar, bass
+and kick strike together under the tune's main notes and its synths
+double the tune, which is the next round's (what a voice strikes with,
+read part by part of the form). The figure is the first bar the voice
+plays on it, drawn note by note as before: a riff built as one figure
+(Battle Theme's synth alternates a low note on the beat with a high one
+off it) is a word not yet counted. A bar off the figure is the bar as
+written, with no shape of its own (a run, a climb). The loops come on
+top of the song's chord-hold share (the chain holds as before, and the
+loop holds more). A loop is taken only with the token song's form, and
+a figure of eight bars is not read. The standing list as at round 114.

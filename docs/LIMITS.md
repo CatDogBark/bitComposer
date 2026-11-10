@@ -295,3 +295,20 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   third accompaniment voice at 99 where its span is 58 to 60, at 51 now
   for the ceiling's sake; Twin Glass's second at 24 where its span is
   68).
+- **A loop is the token song's or none.** Since round 121 a backing
+  voice plays its figure again where its token song's voice loops, by
+  the form's letters; where the plan keeps its own form (a token form
+  short of the bars asked, 14 of 400 seeds) no loop is taken, and a
+  pack whose token carries no form has none. The figure is the first bar the
+  voice plays on it, as the writers wrote it: a bar drawn note by note,
+  not a riff built as one. A bar the token song has off its figure (a
+  fill where the tune holds a note, a turn at the part's end) is the
+  bar as written, with the `section_fills` word's density on a part's
+  last bar and no figure of its own; a figure eight bars long is not
+  read.
+- **Outside its loops the backing still plays a new bar every bar.**
+  Battle Theme's C and D are no loops: there its guitar, bass and kick
+  strike together under the tune's main notes and its synths double the
+  tune, and the written parts keep their own rhythm at their own
+  density. What a voice strikes with is read over the whole song, and a
+  part's density by section is a pooled word, not the token song's.
