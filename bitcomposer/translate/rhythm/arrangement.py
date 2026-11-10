@@ -324,6 +324,53 @@ def entry_of(outcome: str) -> tuple:
 LEVEL_RATIO_CAP = (0.3, 2.0)         # a section's level over the part's song median is counted within this, in tenths
 
 
+FILL_BARS = 4                        # bars a section needs for its last bar to count as a fill or a thinning (round 118)
+
+
+def section_fill_units(songs) -> list:
+    """Each pitched voice of each own section of a song's form as a unit (round 118): its outcome what the voice does in the
+    section's last bar against the section's bars before ("fuller": its notes there at DENSITY_STEP times the median of the
+    other bars it plays in, or more; "thinner": at the inverse or less, a rest among them; "same" between), its values the
+    voice's part, whether it is the part's line or a voice beside it (cells.line_voice), and the section's place in the form
+    (form_place_of); a section under FILL_BARS bars, or a voice playing under two of its bars, counts nothing. Battle
+    Theme's synth plays 15 notes in the last bar of its B against 8 a bar, the flourish into C, and 7 against 4 at the end of
+    C, while its guitar chugs on and its lead does not fill; the written synths never filled (Song Check 96)."""
+    out = []
+    for s in songs:
+        if not s.parts or not getattr(s, "voice_notes", None):
+            continue
+        index = {num: k for k, num in enumerate(s.numbers)}
+        starts = [a for a, _ in s.bars]
+        owns = list(chords_mod._own_parts(s))
+        by_part = {}
+        for v, (role, notes) in s.voice_notes.items():
+            if role != R.DRUMS:
+                by_part.setdefault(role, {})[v] = notes
+        for role, voices in by_part.items():
+            line = cells_mod.line_voice(voices, role, s)
+            for v, notes in voices.items():
+                pitched = [n for n in notes if n[2] is not None and not math.isnan(n[2])]
+                if len(pitched) < WORD_NOTES:
+                    continue
+                per_bar = Counter()
+                for n in pitched:
+                    k = bisect.bisect_right(starts, n[0] + readings_mod.NEAR) - 1
+                    if 0 <= k < len(s.bars) and n[0] < s.bars[k][1] - readings_mod.NEAR:
+                        per_bar[k] += 1
+                for i, bar, n in owns:
+                    ks = [index[num] for num in range(bar, bar + n) if num in index]
+                    if len(ks) < FILL_BARS:
+                        continue
+                    before = [per_bar[k] for k in ks[:-1] if per_bar.get(k)]
+                    if len(before) < 2:
+                        continue
+                    med, last = statistics.median(before), per_bar.get(ks[-1], 0)
+                    outcome = "fuller" if last >= DENSITY_STEP * med else "thinner" if last <= med / DENSITY_STEP else "same"
+                    out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "voice": "line" if v == line else "beside",
+                                                                     "place": form_place_of(i, len(s.parts))}))
+    return out
+
+
 def section_level_units(songs) -> list:
     """Each part of each own section of a song's form as a unit: its outcome the part's median note level in the section
     over its median level in the whole song, in tenths within LEVEL_RATIO_CAP ("1.0": the part at its usual level; "0.5":

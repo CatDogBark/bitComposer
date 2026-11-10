@@ -7966,3 +7966,54 @@ Theme songs, round 114 before.
 
 **Open.** The flourish at a section's end (round 118). The standing list
 as at round 114.
+
+### Round 118: the flourish at a section's end, a section_fills word (2026-11-09, the last of the four words from Song Check 96)
+
+**Why.** "Battle Theme's accompaniment kinda just accompanies most of the
+time and has small parts of flourishing to compliment the song in
+transitions" (the owner). Measured: its synth plays 15 notes in the last
+bar of B against 8 a bar, the flourish into C, and 7 against 4 at the
+end of C; its guitar chugs on through the bar line and its lead does not
+fill. Across FFVI a voice ends a section at 1.5 times its median bar or
+more in 0.14 of its sections (votes by song), thinner in 0.36; the accompaniment's voices beside the line fuller in 0.12 (0.18 of first sections, 0.13 of middle, 0.09 of last), its line in 0.14. The written synths never did: their mask is drawn
+bar by bar from the pooled second_figures word, which knows no bar's
+place in its section. The thinning side existed (section_densities,
+part_entries); the flourish had no word.
+
+**Built.** A new table, section_fills (arrangement.section_fill_units,
+FILL_BARS 4): each pitched voice of each own section of four bars or
+more as a unit, its outcome what the voice does in the section's last
+bar against the section's bars before ("fuller" at DENSITY_STEP times
+the median of the other bars it plays in or more, "thinner" at the
+inverse or less, a rest among them, "same" between), its values the
+voice's part, whether it is the part's line or a voice beside it
+(cells.line_voice) and the section's place in the form (form_place_of).
+The plan draws it a section for the part's line and for its voices
+beside the line on an own stream (plan_section_fills; a repeated
+section copies its source's; Plan.section_fills), and the writers fill:
+the line's fill rides the density shift its writer already reads
+(habit_at_for, envelope_at_for: a tier denser on the section's last
+bar), and a struck voice strikes every followed onset there and one
+between each pair half a beat or more apart (struck_with, `fills`);
+"thinner" is the line a tier sparser and the struck voice on the bar's
+first onset alone. Pack refit (111 tables), the vocabulary shipped and
+committed, the vocabulary map regenerated. Tests: the units from a song
+whose stabs double in a section's last bar (the line "same", the stabs
+"fuller"), a section under four bars counting nothing, the plan's draw
+on a section's last bar and its repeat's and none for a one-voice part's
+beside, the struck voice's fill (seven stabs on a four-onset bar) and
+its thinning. Suite 472 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds, the section_fills draws in their plan logs: Journey of the Quarry's synth voices fuller in the last bar of B (7 and 13 stabs against 4 a bar) and thinner at the end of C, its bass fuller at the end of C; Lunar Island's synth fuller at the end of B (16 against 8) and thinner at D's; Gate Return's synth fuller at the end of C (5 against 3) and thinner at B's and D's, its bass thinner at B's; The Terminal of Glass's synth thinner at the end of B, its lead fuller at D's; Second Cistern Dance's bass fuller at the end of C. Seeds 1-60, every own section of four bars or more against its median bar: the lines fuller in 0.17 (0.19 before), the same 0.48, thinner 0.35; the voices beside a line fuller in 0.16 (0.17), the same 0.39, thinner 0.45 (0.38): the shares were the game's by chance already and are its by the word now, by part, voice kind and place. The other holds stand: the accompaniment lines' leaps 0.50 (tokens 0.59), the struck voices' cell 0.18 (tokens 0.21), their motion 1.7 spikes per 100 stabs and no run of three high notes, the bass's continuity 0.39 (tokens 0.35), the lines' profile distance 0.19. Plans (400 seeds, against round 117): 400 keep their token song, 1 plan log (the fills' line) and 54 note sets unchanged.
+
+**Song Check 97** (): the five
+Battle Theme songs of Song Checks 89 to 96, round 114 before and round
+118 after, rounds 115 to 118 heard together as the owner asked: Journey
+of the Quarry (18), Lunar Island (243), Gate Return (343), The Terminal
+of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The fill's shape is one shape (every onset and the midpoints
+for a struck voice; a tier denser for a line): Battle Theme's synth fill
+is also a run up its cell, and a word for the fill's figure would be the
+next. The bass does not read its step profile. The standing list as at
+round 114.
