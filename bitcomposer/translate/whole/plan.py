@@ -438,7 +438,7 @@ def hold_loop(plan: "Plan", key: str, notes: list, meter: int = None) -> tuple[l
     no written bar came out twice. Notes of any writer's shape, (start, end, ...); returns the notes, the bars copied and the
     bars held on the figure (its own bars and the copies), for the passes after the writing to leave as they are."""
     meter = meter or METER
-    parts = looped_parts(plan.parts, (getattr(plan, "loops", None) or {}).get(key))
+    parts = looped_parts(plan.parts, (plan.loops or {}).get(key))   # (by the attribute: the map of the vocabulary reads a table's name in quotes as its use)
     if not parts or not notes:
         return notes, 0, set()
     by = {}
