@@ -1519,6 +1519,26 @@ def bass_continuity_field(s, line_notes=None) -> str:
     return f"k{int(round(100 * sum(x == y for x, y in pairs) / len(pairs)))}"
 
 
+def bass_downbeat_field(s, line_notes=None) -> str:
+    """The balance token's twenty-third field for the bass (round 129): of the bars its line strikes on the first beat, the
+    share where that note is the root of the chord the reader hears there, in hundredths after a "d": "d73"; "" under
+    CONTINUITY_BARS such bars. The line's tone profile (round 111) says how many of its notes are roots over the song, and
+    its pitch across bar lines (round 114) what it holds; where in the bar the root falls neither says, and held to both
+    the written bass struck a bar's first beat on the plan's root in half of the bars and off the chord in a sixth, where
+    FFVI's bass is on the root there in 0.73 of the bars at the median and off the chord in 0.05."""
+    notes = line_notes if line_notes is not None else s.notes.get(R.BASS, [])
+    pitched = [n for n in notes if n[2] is not None and not (isinstance(n[2], float) and math.isnan(n[2]))]
+    hits = roots = 0
+    for a, _ in s.bars:
+        on = [n for n in pitched if a - readings_mod.NEAR <= n[0] < a + readings_mod.NEAR]
+        c = _chord_at(s.chords or [], a) if on else None
+        if c is None or c.root is None or c.fit < FIT:
+            continue
+        hits += 1
+        roots += int(round(min(n[2] for n in on))) % 12 == c.root % 12
+    return f"d{int(round(100 * roots / hits))}" if hits >= CONTINUITY_BARS else ""
+
+
 LOOP_LAGS = (1, 2, 4)                # bars: the lengths a looped figure is tried at inside a part of the form (round 121)
 LOOP_SHARE = 0.5                     # the share of the bars a voice plays in a part of the form that must be its figure's, note for note, for
                                      # the part to be a loop
@@ -2071,7 +2091,8 @@ def balance_units(songs) -> list:
                       loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
                       line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
                       part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
-                      section_onsets_field(s, line_notes)]    # and its line's onsets a bar in each (round 125)
+                      section_onsets_field(s, line_notes),    # and its line's onsets a bar in each (round 125)
+                      bass_downbeat_field(s, line_notes) if role == R.BASS else ""]   # and how often the bass roots a bar's first beat (round 129)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

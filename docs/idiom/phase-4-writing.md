@@ -8857,3 +8857,54 @@ the written bass on the plan's root in 0.50 and off the chord in 0.17
 **Open.** A loop is one figure a part of the form; a harmony that
 cycles through half of a part and moves on is read off its figure for
 the rest.
+
+### Round 129: the bass strikes a bar's first beat on the chord's root as often as the token song's does (2026-11-10, the sixth change from Song Check 100's investigation, on the owner's go)
+
+**Why.** Round 128 found the wander in what is heard: the plans' own
+chords repeat a degree more than FFVI's do, and read back a written
+bar is on the plan's root in 0.66 of the bars. The bass is where a
+band says which chord it is on.
+
+**Found.** FFVI's bass strikes a bar's first beat in 0.93 of the bars
+it plays, and its note there is the root of the chord heard in 0.73 at
+the median and off the chord in 0.05. The written bass was on the
+plan's root in 0.50 and off the chord in 0.17 (0.53 and 0.20 on dev).
+Its figures' marks carry the game's own first-beat roots, and two
+holds then move them without regard to the place: the tone profile
+(round 111) gives way a chord-tone class over its share wherever the
+note falls, and the continuity (round 114) realizes a whole bar on the
+bar before's pitch class.
+
+**Built.** The reader: `bass_downbeat_field`, the bass's twenty-third
+field: of the bars its line strikes on the first beat, the share where
+its lowest note there is the root of the chord heard, after a "d"
+(`d73`); none under eight such bars. The plan keeps it
+(`bass_downbeat`). The writer: `writer.bass` takes `downbeat` and holds
+the line as it writes, bar by bar: a first-beat note off the root moves
+onto it, in the octave nearest where it was, where the share of bars on
+the root, with this bar counted off it, runs under the song's. It runs
+after the bar is realized (the profile and the pedal as before) and
+before the loop copies the bar, the line's notes go to the voice beside
+it and the chord parts read the bass. Tests: the field from a bass on
+the root in six bars of eight, none from seven bars; the plan's keeping
+it; a bass whose figures strike the fifth written at a share of 1.00
+(every first beat on the root), 0.50 (four of eight) and without one
+(the fifth). Suite 507 (1 skip).
+
+**Measured.** FFVI: 55 basses carry the field, 0.78 at the median, ten
+under a half (Battle Theme's 0.37, its riff off the reader's root) and
+seventeen at 0.9 or more. The 68 Song Check 100 songs, against the
+plan's chord: the bass on the root on a bar's first beat in 0.73 of the
+bars (0.50 after round 128; FFVI 0.73 against the chord heard), off the
+chord in 0.10 (0.17; 0.05). The chord reader hears a bar on the plan's
+root in 0.70 of the bars (0.66), a bar's chord the chord two bars
+before in 0.42 (0.39; FFVI 0.50) and 0.84 of the chords in the key
+(0.81; 0.81). Plans (400 seeds, against round 128): all keep their
+token song; 149 note sets unchanged.
+
+**Open.** A bar is still heard off the plan's root in three bars of
+ten. The plan's power chords and suspended chords leave their third to
+the other parts; the voice beside a bass line is drawn by its interval
+to the line, not by the chord (the written Locke's plays an A over a
+C-sharp fifth); a bass under eight first beats in
+its song carries no share. The standing list as at round 114.

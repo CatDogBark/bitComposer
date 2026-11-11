@@ -345,9 +345,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a song planned on six chords is heard on eleven. FFVI's chords are
   the reader's own, so there is no plan to hold them against, but its
   bass strikes a bar's first beat on the root of the chord heard there
-  in 0.73 of the bars where the written bass, held to its token song's
-  tone profile and its pitch across bar lines, does in 0.50 against
-  the plan's chord. The harmony's loops (round 128) and a chord's one
+  in 0.73 of the bars, and since round 129 the written bass is held to
+  its token song's share of that (it was on the plan's root in 0.50).
+  That brought the bars heard on the plan's root from 0.66 to 0.70 and
+  no further: a plan's power chord or suspended chord leaves its third
+  to whatever the tune and the chord parts play over it, the voice
+  beside a bass line is drawn by its interval to the line and not by
+  the chord, and the chord parts' off-chord tones are their token
+  song's tier. The harmony's loops (round 128) and a chord's one
   quality (round 127) are the plan's; what the ear gets of them is the
   writers'.
 - **A chord's degree is the pooled chain's; only its quality is the

@@ -1844,6 +1844,57 @@ class BassVoicesTests(unittest.TestCase):
         self.assertEqual(whole.double_bass(plan, song, {"bass": part}), [])                         # a line of its own is the bass writer's
 
 
+class BassDownbeatTests(unittest.TestCase):
+    """Round 129: how often the bass strikes a bar's first beat on the chord's root rides its token (`d73`), and the bass
+    writer holds the written line to it. Held to its tone profile (round 111) and its pitch across bar lines (round 114),
+    the written bass was on the plan's root there in half of the bars and off the chord in a sixth, where FFVI's bass is on
+    the heard chord's root in 0.73 of the bars at the median and off the chord in 0.05."""
+
+    def _song(self, first=(36.0,) * 6 + (43.0,) * 2):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bass = [(4.0 * k + x, 0.9, (first[k] if x == 0.0 else 40.0), "b") for k in range(8) for x in (0.0, 2.0)]   # the bar's first beat, then the third
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_how_often_the_bass_roots_the_first_beat(self):
+        s = self._song()
+        self.assertEqual(rhythm.bass_downbeat_field(s), "d75")                                      # the root in six bars of eight, the fifth in two
+        bass = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(bass[22], "d75", bass)                                                     # the twenty-third field
+        s.notes["bass"] = [n for n in s.notes["bass"] if n[0] < 24.0]
+        self.assertEqual(rhythm.bass_downbeat_field(s), "")                                         # under eight bars struck on the first beat: no field
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 23
+        fields[:5] = ["half", "36-44", "0.9", "1", "1.0"]; fields[22] = "d73"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=" + ":".join(fields) + " melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.bass_downbeat, 0.73)
+        self.assertIn("the bass strikes a bar's first beat on the chord's root in 0.73 of its bars in the balance's song", p.log)
+        q = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token.replace(":d73", ""), part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertIsNone(q.bass_downbeat)
+
+    def test_the_writer_holds_the_first_beat_to_the_share(self):
+        fifths = self._song(first=(43.0,) * 8)                                                      # a bass that strikes every bar's first beat on the fifth
+        model = writer.fit(rhythm.bass_units([fifths]))
+        song = self._song(); song.notes = {}
+        first_pcs = lambda notes: [int(round(next(m for a, _, m in notes if a == 4.0 * k))) % 12 for k in range(8)]   # noqa: E731
+        log = []
+        notes, _ = writer.bass(song, model, random.Random(1), habit="medium walking no-octaves", key=(0, "major"), free=True, plays=[True] * 8, register=36, log=log, downbeat=1.0)
+        self.assertEqual(first_pcs(notes), [0] * 8)                                                 # every bar's first beat moved onto the root
+        self.assertIn("bass on the chord's root on a bar's first beat to the balance's song's 1.00 (round 129): 8 of 8 bars, 8 notes moved onto it", log)
+        notes, _ = writer.bass(song, model, random.Random(1), habit="medium walking no-octaves", key=(0, "major"), free=True, plays=[True] * 8, register=36, downbeat=0.5)
+        self.assertEqual(sum(1 for pc in first_pcs(notes) if pc == 0), 4)                           # half of them, as the share asks
+        notes, _ = writer.bass(song, model, random.Random(1), habit="medium walking no-octaves", key=(0, "major"), free=True, plays=[True] * 8, register=36)
+        self.assertEqual(first_pcs(notes), [7] * 8)                                                 # without the share: the figures' own fifth
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 
