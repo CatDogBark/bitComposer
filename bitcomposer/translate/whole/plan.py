@@ -1182,11 +1182,16 @@ def envelope_at_for(plan, role: str, habit=None):
     """A part's figure envelope a bar for its writer (round 101): the onsets a bar the section_densities shift asks
     (rhythm.density_bounds: a tier denser, DENSITY_STEP times the part's typical or more; a tier sparser, the typical over
     it or fewer; the writer hands in the part's own running density as the typical, the tier's FFVI median standing in),
-    None for a bar without a shift; None where no bar shifts."""
+    None for a bar without a shift; None where no bar shifts. Where the plan has the token song's own onsets a bar for
+    the part (round 125) the envelope is half to one and a half times them, and it says so (`own`: round 134)."""
     own = getattr(plan, "section_onsets", {}).get(role) if habit is None else None
     if own and any(own):                                    # the token song's own onsets a bar by section (round 125): within the writers' TIGHT of them
         low, high = writer.TIGHT
-        return lambda k, typical=None: (max(1, math.ceil(low * own[k])), max(1, math.floor(high * own[k]))) if 0 <= k < len(own) and own[k] else None
+
+        def own_envelope(k, typical=None):
+            return (max(1, math.ceil(low * own[k])), max(1, math.floor(high * own[k]))) if 0 <= k < len(own) and own[k] else None
+        own_envelope.own = True                             # the song's own, not a tier's shift: a bar copied for a theme's return keeps within it
+        return own_envelope                                 # too (round 134, parts._free_figures)
     shifts = plan.section_densities.get(role)
     if not shifts or not any(shifts):
         return None

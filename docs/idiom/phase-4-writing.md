@@ -9156,3 +9156,49 @@ song; 163 note sets unchanged.
 first beat asked. The share is only raised to, never lowered to: a
 song on a token whose bass sits off the beat strikes it as its drawn
 bars do. The standing list as at round 114.
+
+### Round 134: a part back with the theme keeps within its part of the form's own onsets (2026-11-11, the first of four items after Song Check 101, on the owner's go)
+
+**Why.** The owner at Song Check 101, six songs of six marked better:
+"Terra has some hard stops and notes on like offbeats that are kind of
+meh". Rounds 124 to 133 were merged into dev on his word the same day.
+
+**Found.** The stops are bars 13 to 16 and 29 to 32 of the written
+Terra: after B's eight bass notes and twenty accompaniment notes a
+bar, the bass and the accompaniment strike the first beat once (0.4 of
+a beat) and rest, four bars running. The plan says "theme at bars 0-3;
+returns bar 12 with chords + bass + accompaniment". The theme is the
+first phrase of the first part the tune plays in, and since round 124
+the tune rests where its token song's does (Terra's enters in A's last
+bar), so the theme's bars are the intro's, the bass at a note a bar;
+the `return_band` word then has the band play those bars again at the
+return, in C, where the token song's bass plays 6.5 a bar and its
+accompaniment 7. On dev before the stack the theme's bars held the
+tune and a full band. Over 400 plans the theme is stated where the
+tune rests in half its bars or more in 35, the band back with it in
+33; of 337 returns that carry the bass, 48 copy bars the token song
+plays half as busy or less than the part of the form they land in.
+
+**Built.** `envelope_at_for` marks the envelope it builds from the
+token song's own onsets a bar (`own`), apart from a density tier's
+shift (round 101). `_free_figures`, copying a part's theme bars under a
+return (`song.copies`), leaves a bar as it was drawn where the theme's
+bar is not within that envelope, and says how many (the bass's and the
+chord parts' logs). The bar's own figure is drawn before the copy, as
+it always was, so no draw moves. The chords still come back with the
+return. Tests: a return's bars keeping their own under the song's own
+envelope, copied under a tier's shift and where the theme's bars are
+as busy; the plan's envelope marked. Suite 523 (1 skip; run on
+Ragnarok from this round, 2m19 against the laptop's five minutes).
+
+**Measured.** The 68 Song Check 100 songs: the bass's bars within its
+part of the form's own onsets 1421 of 1524 (1402), the accompaniment's
+1336 of 1426 (1317); backing lines within range by the part of the
+form 368 of 386 (363). The written Terra's bars 13 to 16: the bass
+eight notes a bar (one), the accompaniment its part of the form's.
+Plans (400 seeds, against round 133): all keep their token song; 275
+note sets unchanged.
+
+**Open.** The theme is still stated where the tune mostly rests in 35
+of 400 plans, and the chords still come back with it. The standing
+list as at round 114.

@@ -2152,6 +2152,59 @@ class BassFirstBeatTests(unittest.TestCase):
         self.assertTrue(all(n >= 4 for n in half), half)                                            # asked half: four bars or more
 
 
+class ReturnCopyTests(unittest.TestCase):
+    """Round 134: a bar a part copies for a theme's return keeps within its part of the form's own onsets. Since round 124
+    the tune rests where its token song's does, so a theme stated over a thin intro is the intro's band, and the band
+    back with it put the intro's one-note bars over a part of the form the song plays full: the written Terra's bass and
+    accompaniment struck the first beat and stopped for four bars, twice."""
+
+    FIGURES = ("0:R", "0:R 2:5", "0:R 1:+ 2:5 3:+", "0:R 1:R 2:R 3:R", "0:R 1/2:R 1:R 3/2:R 2:R 3:R")
+
+    def _figures(self, envelope_at, log=None):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 4, bars, [Span(0.0, 32.0, 0, "", 1.0)], sid="s", game="g", numbers=list(range(8)),
+                        parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.copies = {"bass": [(4, 4, 0)]}                    # the plan: the bass back with the theme at bar 4, four bars
+        units = [tables.Unit(f"s{i}", "g", f, {"part": "bass", "meter": 4, "habit": "medium walking no-octaves", "previous": rhythm.START})
+                 for i, f in enumerate(self.FIGURES)]
+        cache = tables.Cache.fit(units, ("part", "meter", "habit", "previous"), name="bass", votes=tables.SHARES)
+        figs = writer._free_figures(s, "bass", cache, writer.FreeManner(cache.table.vocabulary, division=4), ["0"] * 8, [(a, b, []) for a, b in bars],
+                                    "medium walking no-octaves", random.Random(3), (), {}, envelope_of=writer.free_envelope("medium"),
+                                    envelope_at=envelope_at, log=log)
+        return [len(f.split()) for f in figs], figs
+
+    def test_a_copied_bar_keeps_within_the_songs_own_onsets(self):
+        thin_then_full = lambda k, typical=None: (1, 2) if k < 4 else (4, 6)   # noqa: E731  the theme's bars thin, the return's part of the form full
+        strikes, figs = self._figures(thin_then_full)
+        self.assertEqual(figs[4:], figs[:4])                                                        # a tier's shift, not the song's own: the theme's bars again
+        self.assertTrue(all(n <= 2 for n in strikes), strikes)
+        own = lambda k, typical=None: thin_then_full(k)                                             # noqa: E731
+        own.own = True                                                                              # the token song's own onsets a bar
+        log = []
+        strikes, figs = self._figures(own, log)
+        self.assertTrue(all(n <= 2 for n in strikes[:4]) and all(4 <= n <= 6 for n in strikes[4:]), strikes)   # the return's bars keep their own
+        self.assertEqual(log, ["back with the theme: 0 bars play the theme's bars again; 4 keep their own, the theme's bar not within "
+                               "the balance's song's onsets for the part of the form (round 134)"])
+        level = lambda k, typical=None: (1, 2)                                                      # noqa: E731
+        level.own = True
+        log = []
+        strikes, figs = self._figures(level, log)
+        self.assertEqual(figs[4:], figs[:4]); self.assertEqual(log, [])                             # as busy as the part of the form: the theme's bars again
+
+    def test_the_plans_envelope_says_it_is_the_songs_own(self):
+        fields = {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 20: "eA+B", 21: "nA4!8+B2"}
+        bass = "bass=" + ":".join(fields.get(i, "") for i in range(22))
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = bass + " melody=half:60-72:0.9:1:0.8 top=0.30 tempo=medium "
+        plan = lambda form: whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token + form, part=rhythm.ARRANGEMENT))}, 7, "g")   # noqa: E731
+        env = whole.envelope_at_for(plan("form=A4B4"), "bass")
+        self.assertTrue(env.own); self.assertEqual(env(4), (1, 3))
+        from types import SimpleNamespace
+        shifted = whole.envelope_at_for(SimpleNamespace(section_densities={"bass": [0] * 4 + [1] * 4}, habits={"bass": "medium walking"}), "bass")
+        self.assertFalse(getattr(shifted, "own", False))                                            # a density tier's shift (round 101) is not the song's own
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

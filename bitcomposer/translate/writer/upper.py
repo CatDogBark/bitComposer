@@ -277,7 +277,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     if figures is None:
         figures = parts_mod._free_figures(song, role, models["rhythm"], figures_mod.FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
                                 habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy,
-                                habit_at=habit_at, envelope_at=envelope_at)   # the habit and the envelope a bar: the density tier by the section (round 101)
+                                habit_at=habit_at, envelope_at=envelope_at, log=log)   # the habit and the envelope a bar: the density tier by the section (round 101)
     else:
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     step = MOTION_STEP.get(motion, 0)

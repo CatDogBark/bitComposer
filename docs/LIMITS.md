@@ -347,6 +347,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **A theme may be stated where the tune mostly rests.** The theme is
+  the first phrase of the first part of the form the tune plays in, and
+  since round 124 the tune rests where its token song's rests: in 35 of
+  400 plans the theme's four bars are ones the tune rests in for half of
+  them or more (Terra's tune enters in the intro's last bar). Since
+  round 134 the band no longer brings such an intro's bars back over a
+  fuller part of the form, but the chords still come back with the
+  return (the intro's one chord for four bars), and what the tune
+  brings back is a theme of a bar or two.
 - **Only the token counts a half-speed song in double time.** Since
   round 131 Locke's and Blackjack's tokens are counted at twice the
   tempo the reading has them at, so a song written on them is a fast
