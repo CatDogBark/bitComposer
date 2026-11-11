@@ -2799,6 +2799,30 @@ def _on_figure(held: dict | None, role: str, a: float, b: float, meter: int) -> 
     return any(k in bars for (r, _), bars in (held or {}).items() if r == role for k in range(first, last + 1))
 
 
+def own_keeps(plan: Plan, role: str):
+    """A part's test of a bar against its token song's own onsets for the part of the form (round 139): (bar, onsets of the
+    part's line there) -> whether the bar is within them (envelope_at_for's own envelope: half to one and a half times,
+    rounds 125 and 134); always so for a part without them. The theme band and the hand-offs put the tune's bar into
+    another part's, and since round 138 the tune's bars are as thin as its token song's: a bass doubling a tune's bar of
+    one note stopped for the bar where the game's bass plays six or seven (the written Terra, four bars)."""
+    env = envelope_at_for(plan, role)
+    if not getattr(env, "own", False):
+        return lambda k, n: True
+
+    def keeps(k: int, n: int) -> bool:
+        e = env(k)
+        return e is None or e[0] <= n <= e[1]
+    return keeps
+
+
+def _kept_line(kept: Counter, what: str) -> list:
+    """The log line for the bars a part kept as its own (round 139), or none."""
+    if not kept:
+        return []
+    return [f"the tune's {what} in {sum(kept.values())} bars fewer, the bar not within the part's own onsets for its part of the form "
+            f"(round 139): " + ", ".join(f"{role} {n}" for role, n in sorted(kept.items()))]
+
+
 def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random, held: dict | None = None) -> list:
     """Where the tune plays its theme cell (its statement and its echoes), the parts the theme_doubling table draws
     play the cell with it, at the drawn interval, in the tune's rhythm: FFVI's hook doubled by a second instrument a
@@ -2814,7 +2838,7 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
     if theme is None:
         return []
     tune = [n for n in written[R.MELODY].notes if n[3] == 0]
-    log = []
+    log, kept, keeps = [], Counter(), {}
     for k, c in enumerate(cells):
         if not c:
             continue
@@ -2841,9 +2865,14 @@ def double_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng
                 while p > high:
                     p -= 12
                 copied.append((t, u, float(p), 0))
+            if role not in keeps:
+                keeps[role] = own_keeps(plan, role)
+            if not keeps[role](k, len({round(t * 12) for t, *_ in copied})):   # the bar would not be within the part's own onsets (round 139):
+                kept[role] += 1                                              # the part keeps its bar
+                continue
             _replace_bars(written[role], song, role, a, b, copied)
             log.append(f"bar {k}: the {role} doubles the {'theme' if c == theme else 'tune'}'s cell ({int(off):+d})")
-    return log
+    return log + _kept_line(kept, "cell doubled")
 
 
 def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random, held: dict | None = None) -> list:
@@ -2860,7 +2889,7 @@ def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng:
     if not theme_notes:
         return []
     letters = {int(k): v for k, v in x["letters"].items()}
-    counts, log = {}, []
+    counts, log, kept = {}, [], Counter()
     for i, w in rhythm.phrase_windows(song):
         if i is None or not any(plan.plays[R.MELODY][k] for k in w if k < len(plan.plays[R.MELODY])):
             continue                                        # the letters count the live windows only
@@ -2880,9 +2909,14 @@ def carry_theme(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng:
         low, high = plan.bounds.get(carrier, plan.registers.get(carrier, (24, 100)))   # where the game plays the carrier's sample (round 34)
         octaves = round(((low + high) / 2 - statistics.median(m for _, _, m, _ in theme_notes)) / 12)
         copied = [(t + shift, u + shift, float(min(high, max(low, m + 12 * octaves))), 0) for t, u, m, _ in theme_notes if t + shift < b - rhythm.NEAR]
+        keeps = own_keeps(plan, carrier)
+        if not all(keeps(k, len({round(t * 12) for t, *_ in copied if song.bars[k][0] - rhythm.NEAR <= t < song.bars[k][1] - rhythm.NEAR}))
+                   for k in range(w[0], w[0] + n)):         # a bar of the phrase would not be within the carrier's own onsets (round 139)
+            kept[carrier] += n
+            continue
         _replace_bars(written[carrier], song, carrier, a, b, copied)
         log.append(f"bar {w[0]}: the {carrier} carries the theme phrase ({12 * octaves:+d})")
-    return log
+    return log + _kept_line(kept, "theme phrase carried")
 
 
 def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, rng: random.Random, held: dict | None = None) -> list:
@@ -2901,11 +2935,12 @@ def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, r
     x = plan.extras.get(R.MELODY, {})
     theme_bars = set(x.get("theme_bars") or []) | {k for r in (x.get("returns") or []) for k in r.get("bars", [])}
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
-    log, taken = [], set()
-    lines = {}
+    log, taken, kept = [], set(), Counter()
+    lines, keeps = {}, {}
     for role in rhythm.HANDOFF_PARTS:
         if role in written and role in plan.band:
             lines[role] = lambda role=role: sorted(rhythm._line([(a, b - a, m, 0) for a, b, m, v in written[role].notes if v == 0]))
+            keeps[role] = own_keeps(plan, role)
     for i, c in enumerate(cells):
         if not c:
             continue
@@ -2937,10 +2972,15 @@ def hand_off_cells(plan: Plan, song: rhythm.Song, written: dict, models: dict, r
         copied = [(s_, max(s_ + 0.05, e_), float(m), 0) for s_, e_, m in zip(starts, ends, pitches)]
         if _on_figure(held, role, lo, hi, song.meter):      # the part loops here (round 121): its figure stands
             continue
+        beside = {round(n[0] * 12) for n in written[role].notes
+                  if n[3] == 0 and a_t - rhythm.NEAR <= n[0] < b_t - rhythm.NEAR and not lo - rhythm.NEAR <= n[0] < hi - rhythm.NEAR}
+        if not keeps[role](target, len(beside) + len(copied)):   # the bar, with the cell in its half, would not be within the part's own
+            kept[role] += 1                                     # onsets (round 139): the part keeps its half
+            continue
         _replace_span(written[role], song, role, lo, hi, copied)
         taken.add((role, target, i % 2))
         log.append(f"bar {target}: the {role} takes up the tune's cell from bar {bar} ({far} on)")
-    return log
+    return log + _kept_line(kept, "cell taken up")
 
 
 def _replace_span(part, song: rhythm.Song, role: str, a: float, b: float, copied: list) -> None:

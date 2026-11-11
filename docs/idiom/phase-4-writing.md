@@ -9477,3 +9477,60 @@ form run a little under the game's (Battle Theme's). A theme stated
 over a thin part of the form is two statements. The counter-line
 beside a tune still follows the tune's figures, not its own onsets.
 The standing list as at round 114.
+
+### Round 139: a part plays the tune's bar only where its own bar keeps within its own onsets (2026-11-11, found while building Song Check 102, on the owner's go for the four items)
+
+**Why.** The first of the four items was Terra's hard stops, and
+round 134 took out the ones the theme's return made. Song Check 102's
+Terra, written at round 138, had four new ones: the bass at one note
+in bars 6, 10, 22 and 26 where it plays eight around them.
+
+**Found.** The theme band (`double_theme`: a drawn part plays the
+tune's bar at an interval; `carry_theme`: a part plays the theme
+phrase under another phrase) and the hand-offs (`hand_off_cells`: a
+part's half bar replaced by the tune's half-bar cell) put the tune's
+notes into another part's line, whatever that part's own onsets a bar
+(round 125). Since round 138 the tune's bars are as thin, or as busy,
+as its token song's: Terra's tune plays three notes and one in turn
+through a part of the form its bass plays six or seven in, and the
+bass doubled the bars of one. Gogo's bass, two notes a bar in the
+game, took the tune's five in six bars. Over the 59 Song Check 100
+songs on their token song's arrangement the bass's bars within its
+own onsets were 1,437 of 1,523 and the accompaniment's 1,333 of
+1,427.
+
+**Built.** `own_keeps(plan, role)`: a part's test of a bar against
+its own onsets for the part of the form (`envelope_at_for`'s own
+envelope, half to one and a half times; always passed by a part
+without them). `double_theme` asks it of the tune's bar's onsets,
+`carry_theme` of every bar of the phrase, `hand_off_cells` of the
+bar with the cell in its half; where it fails the part keeps what it
+wrote, and each logs how many bars it kept. The words are drawn as
+before, so no draw moves. Tests: the test itself; a bass of eight
+notes a bar does not double a tune's bar of three, and does where its
+own onsets are three; a theme phrase is carried where every bar
+keeps; a cell is taken up where the bar with it keeps. Each fails
+with the test switched off. Suite 541 (1 skip). The vocabulary map
+is unchanged.
+
+**Measured.** The same 59 songs (round 138's in brackets): the bass's
+bars within its own onsets 1,501 of 1,528 (1,437 of 1,523), the
+accompaniment's 1,367 of 1,426 (1,333 of 1,427), the harmony's 230 of
+270 (229). Terra's bass: eight notes in each of the four bars, 44 of
+44 bars within (38); Gogo's 18 of 18 (12). Over the 68 songs the bass
+is given 134 bars of the tune to double and doubles 89, the
+accompaniment 61 and 32, the harmony 7 and 5; one theme phrase of
+five is not carried; of the half-bar cells handed on the bass takes
+up 44 of 63 and the accompaniment 25 of 36; the counter's 129
+doubled bars and 78 cells are as drawn. The paired measures: cells
+sounding as the FFVI song's 0.963 (0.962), backing lines within range
+375 of 386 (372). Plans (400 seeds, against round 138): all keep
+their token song, title, key and tempo; of the 360 on their token
+song's arrangement 230 change, the bass in 181, the accompaniment in
+131, the harmony in 11; no tune, counter-line or kit changes; the 40
+others are as they were.
+
+**Open.** The doubling and hand-off words' shares now fall short for
+the bass and the chord parts: a third of the bass's doublings are not
+made. What FFVI's parts do with a tune's bar thinner or busier than
+their own is not counted. The standing list as at round 114.

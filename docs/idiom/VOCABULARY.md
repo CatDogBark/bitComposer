@@ -1664,6 +1664,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   theme-cell bar after the parts are written: the drawn parts play the
   tune's bar at the interval, in their register. FFVI doubles the hook in
   a third of its theme-cell bars, the bass two octaves down most often.
+  Since round 139 a drawn part with its token song's onsets a bar for
+  the part of the form (round 125: the bass, a chord part) plays the
+  tune's bar only where that bar is within half to one and a half times
+  them (`whole.own_keeps`), and keeps the bar it wrote elsewhere; the
+  word is drawn all the same. The same holds for `tune_doubling`, for
+  `theme_carrier` (every bar of the phrase) and for `cell_handoffs`
+  (the bar with the cell in its half). Why: since round 138 the tune's
+  bars are as thin as its token song's, and the written Terra's bass,
+  doubling a tune's bar of one note, stopped for four bars where the
+  game's bass plays six or seven.
   *`theme_doubling`: shape (part, place); drawn in double_theme.*
 
 - **theme_carrier** — the part that carries the theme phrase under a phrase

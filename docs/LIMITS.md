@@ -364,6 +364,18 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   shortest usual note, the notes of a rhythm quicker than the token
   song's tune plays (a gap under the floor sounds whole). The chord
   parts' and the bass's notes carry no such floor.
+- **The band takes the tune up less than the words say.** Since round
+  139 a part plays the tune's bar (doubled, the theme phrase carried,
+  a half-bar cell taken up) only where its own bar then keeps within
+  its token song's onsets for the part of the form. Over the 68 Song
+  Check 100 songs the bass is given 134 bars of the tune to double and
+  doubles 89, the accompaniment 61 and 32; of the half-bar cells handed
+  on, the bass takes up 44 of 63 and the accompaniment 25 of 36. The
+  `tune_doubling`, `theme_doubling` and `cell_handoffs` words' shares
+  are FFVI's over all its songs; what they come to in a song whose
+  bass plays eight notes a bar under a tune of two is not counted. The
+  counter-line's are as drawn (it has no onsets of its own beside a
+  tune).
 - **The tune's grain is not its token song's.** Since round 138 a tune
   bar drawn within its part of the form's own onsets is not held to the
   pooled `tune_grain` word (a share over the whole tune, which a bar of
