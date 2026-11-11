@@ -2057,6 +2057,48 @@ class DoubleTimeTests(unittest.TestCase):
         self.assertEqual(q.bars, 30)                                                                # without the word the form is cut as any
 
 
+class LoopPartTests(unittest.TestCase):
+    """Round 132: the part of the form a song's loop returns to rides its token (`loop=1`), and a song written on the
+    token song's own form loops there. The pooled loop_parts word had the loop's part right for half of them, and the
+    written Edgar and Sabin came back to its last four bars where the game's goes back to its start."""
+
+    def _song(self, loop_bar=4):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 2, None, "A"), (2, 2, None, "B"), (4, 4, None, "C")], tonic=0, mode="major", loop_bar=loop_bar)
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_the_part_the_loop_returns_to(self):
+        self.assertEqual(rhythm.loop_part_field(self._song(4)), "2")                                     # the third part
+        self.assertEqual(rhythm.loop_part_field(self._song(3)), "1")                                     # a bar inside the second: that part
+        self.assertEqual(rhythm.loop_part_field(self._song(0)), "0")
+        self.assertEqual(rhythm.loop_part_field(self._song(None)), "")                                   # no loop read
+        self.assertEqual(rhythm.loop_part_field(self._song(9)), "")                                      # a bar in no part
+        self.assertIn("loop=2", rhythm.balance_units([self._song(4)])[0].outcome.split())
+        self.assertFalse(any(t.startswith("loop=") for t in rhythm.balance_units([self._song(None)])[0].outcome.split()))
+        short = self._song(4); short.parts = []
+        self.assertEqual(rhythm.loop_part_field(short), "")                                              # no form carried: no loop's part
+
+    def test_the_plan_loops_where_the_token_song_does(self):
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium form=A4B4C8"
+        model = lambda t: {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(t, part=rhythm.ARRANGEMENT))}   # noqa: E731
+        p = whole.plan(model(token + " loop=2"), 7, "g")
+        self.assertEqual(([x[3] for x in p.parts], p.loop_bar), (["A", "B", "C"], 8))               # back to the third part's first bar
+        self.assertIn("loop from the balance's song: back to part 3 of 3, bar 9 (the loop_parts draw: bar 5)", p.log)
+        self.assertNotIn("loop", p.band)
+        q = whole.plan(model(token), 7, "g")
+        self.assertEqual(q.loop_bar, 4)                                                             # without the word: the rule's, after the intro
+        r = whole.plan(model(token + " loop=5"), 7, "g")
+        self.assertEqual(r.loop_bar, 4)                                                             # a part the form has not: the same
+        self.assertEqual((p.tonic, p.mode, p.bpm, p.parts, p.names, p.textures), (q.tonic, q.mode, q.bpm, q.parts, q.names, q.textures))   # no draw moved
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

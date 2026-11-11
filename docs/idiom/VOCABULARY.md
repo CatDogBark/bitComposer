@@ -501,6 +501,17 @@ The words are grouped by where the writing draws them, in the order the song is 
   march's sixteenths at 140 was read as thirty-seconds at 70, so the
   token asked a slow song with a kit no writer could strike, and the
   written Locke ran at 80 with its snare at the cap.
+  Since round 132 the token carries, with its form, the part of it the
+  song's loop returns to (`loop_part_field`: a song-level `loop=1`, the
+  index of the form's part that holds the loop's bar, 0 the first; none
+  without a form or a loop read), and where the plan's form is the
+  token song's own the loop's bar is that part's first bar, set once
+  the chords are drawn: the pooled `loop_parts` draw is still made and
+  the chain's draw at its bar stands, so no other draw moves. Why: the
+  form was the token song's (round 113) and the loop's part the pooled
+  word's by whether the form opens with an intro, right for half of
+  the songs on their token song's form; the written Edgar and Sabin
+  came back to its last four bars.
   Since round 121 the token carries each backing voice's loops by the
   form's letters: a part's nineteenth field for its line and for the kit
   (`loop_field`: `lB1~100`, in B a one-bar figure on every bar the voice

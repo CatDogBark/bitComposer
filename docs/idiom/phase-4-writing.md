@@ -9053,3 +9053,44 @@ kit bars. A written tune on the two tokens is busier than the game's
 sixteen at 85 beats a minute and over stay capped, and so do the
 pitched voices in thirty-seconds over a slow tune. The standing list
 as at round 114.
+
+### Round 132: a song loops where its token song loops (2026-11-10, the ninth change from Song Check 100's investigation, on the owner's go)
+
+**Why.** The Arrangement Check's Edgar and Sabin came back, after its
+24 bars, to its last four and played them over; the game's goes back
+to its start. Noted on the check's card as not changed.
+
+**Found.** The form is the token song's own since round 113; the part
+of it the loop returns to stayed the pooled `loop_parts` word's draw,
+by whether the form opens with an intro (round 98). Of the 54
+Song Check 100 songs on their token song's form with a loop read, 27
+loop to the part the game's does. Eleven loop to the second part where
+the game returns to the first, eight to the first where the game
+leaves it behind as an intro, two (Edgar and Sabin's one) to a late
+part where the game goes back to the start, and the rest elsewhere.
+
+**Built.** The reader: `loop_part_field`, a song-level `loop=` word
+beside `form=`: the index of the form's part that holds the loop's
+bar. The plan reads it and, where the form is the token song's own and
+has the part, sets the loop's bar to that part's first bar once the
+chords are drawn. The `loop_parts` draw is still made, on its own
+stream, and the chord chain is drawn with its bar as before, so no
+draw moves: a song's notes are what they were and its loop's bar is
+the token song's. Tests: the field for a loop at a part's first bar,
+inside a part, at the song's start, none without a loop or a form; the
+plan's loop at the token song's part, the rule's without the word or
+for a part the form has not, and no other draw moved. Suite 518 (1
+skip).
+
+**Measured.** FFVI: 58 songs carry the word; the loop returns to the
+second part in 32, the first in 20 and a later one in 6, always at the
+part's first bar. The 68 Song Check 100 songs: all 54 of the
+54 on their token song's form loop to the game's part (27
+before); the written Edgar and Sabin goes back to bar 1 (bar 21).
+Plans (400 seeds, against round 131): all keep their token song; every
+note set unchanged; 178 plans' loops moved.
+
+**Open.** The chord at the bar the loop now returns to is the chain's
+own, not the `loops` word's draw for a return. A song whose form is
+not its token song's keeps the pooled draw. The standing list as at
+round 114.

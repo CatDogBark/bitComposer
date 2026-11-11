@@ -304,6 +304,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   third accompaniment voice at 99 where its span is 58 to 60, at 51 now
   for the ceiling's sake; Twin Glass's second at 24 where its span is
   68).
+- **The loop's bar is the token song's part's first bar, and its chord
+  is not drawn for the turn.** Since round 132 a song on its token
+  song's own form loops to the part the game's loop returns to. The
+  chord chain is drawn before the loop's bar is moved (so that no other
+  draw moves), with the pooled loop_parts draw's bar as the loop's: the
+  chord the `loops` word draws for a loop's return sits at that bar,
+  and the bar the loop now returns to has the chain's own chord. A
+  song whose form is not its token song's keeps the pooled draw.
 - **A loop is the token song's or none.** Since round 121 a backing
   voice plays its figure again where its token song's voice loops, by
   the form's letters; where the plan keeps its own form (a token form

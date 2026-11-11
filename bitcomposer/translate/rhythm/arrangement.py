@@ -1663,6 +1663,19 @@ def form_field(s) -> str:
     return "".join(f"{p[3]}{int(p[1])}" for p in parts)
 
 
+def loop_part_field(s) -> str:
+    """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
+    the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
+    read, no form carried, or a loop's bar in none of its parts. The plan had drawn the part from the pooled loop_parts
+    word, by whether the form opens with an intro: right for half of the songs written on a token song's own form, and
+    the written Edgar and Sabin came back to its last four bars where the game's goes back to its start."""
+    parts = getattr(s, "parts", None) or []
+    if s.loop_bar is None or not form_field(s):
+        return ""
+    idx = next((i for i, part in enumerate(parts) if part[0] <= s.loop_bar < part[0] + part[1]), None)
+    return "" if idx is None else str(idx)
+
+
 def part_spans_field(song, role: str) -> str:
     """The balance token's twenty-first field (round 124): the parts of the form the part sounds in, by the form's letters,
     and where inside one it enters and leaves: "eA+B2.0+D0.4" (through A whole; in B from its third bar; through D but its
@@ -2179,6 +2192,8 @@ def balance_units(songs) -> list:
         form = form_field(s)                                 # the song's form (round 113): which parts return
         if form:
             tokens.append(f"form={form}")
+            if loop_part_field(s):                           # and the part of it the loop returns to (round 132)
+                tokens.append(f"loop={loop_part_field(s)}")
         cycle = chord_cycle_field(s)                         # the harmony's loops by the form's letters (round 121)
         if cycle:
             tokens.append(f"cycle={cycle}")
