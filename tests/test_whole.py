@@ -2099,6 +2099,59 @@ class LoopPartTests(unittest.TestCase):
         self.assertEqual((p.tonic, p.mode, p.bpm, p.parts, p.names, p.textures), (q.tonic, q.mode, q.bpm, q.parts, q.names, q.textures))   # no draw moved
 
 
+class BassFirstBeatTests(unittest.TestCase):
+    """Round 133: how often the bass strikes a bar's first beat rides its token (`f93`), and the bass writer asks a new
+    bar the first beat while the written line's share runs under it. A free-written bar asks no first beat, and since
+    round 125 a bar's strikes are its token song's by the part of the form: a bar drawn off the first beat and looped
+    left the written Battle Theme's bass on the first beat in 10 of its 41 bars where the game's strikes it in 38."""
+
+    def _song(self, on_one=(True,) * 6 + (False,) * 2):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bass = [(4.0 * k + x + (0.0 if on_one[k] else 1.0), 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]   # beats 1 and 3, or 2 and 4
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_how_often_the_bass_strikes_the_first_beat(self):
+        s = self._song()
+        self.assertEqual(rhythm.bass_first_beat_field(s), "f75")                                    # six bars of eight
+        bass = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(bass[23], "f75", bass)                                                     # the twenty-fourth field
+        self.assertEqual(rhythm.bass_first_beat_field(self._song((False,) * 8)), "f0")
+        s.notes["bass"] = [n for n in s.notes["bass"] if n[0] < 28.0]
+        self.assertEqual(rhythm.bass_first_beat_field(s), "")                                       # under eight bars played: no field
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 24
+        fields[:5] = ["half", "36-44", "0.9", "1", "1.0"]; fields[23] = "f93"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=" + ":".join(fields) + " melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.bass_first, 0.93)
+        self.assertIn("the bass strikes a bar's first beat in 0.93 of its bars in the balance's song", p.log)
+        q = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token.replace(":f93", ""), part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertIsNone(q.bass_first)
+
+    def test_the_writer_asks_the_first_beat_to_the_share(self):
+        model = writer.fit(rhythm.bass_units([self._song((True, False) * 4)]))                      # a bass with both bars: on the first beat, off it
+        song = self._song(); song.notes = {}
+        on_one = lambda notes: [any(abs(a - 4.0 * k) < 0.06 for a, _, _ in notes) for k in range(8)]   # noqa: E731
+        write = lambda seed, **kw: writer.bass(song, model, random.Random(seed), habit="sparse walking no-octaves", key=(0, "major"), free=True,   # noqa: E731
+                                               plays=[True] * 8, register=36, **kw)[0]
+        free = [sum(on_one(write(seed))) for seed in range(6)]
+        self.assertTrue(any(n < 8 for n in free), free)                                             # left to the draw, a bar falls off the first beat
+        log = []
+        for seed in range(6):
+            self.assertEqual(sum(on_one(write(seed, first_beat=1.0, log=log))), 8, seed)            # asked every bar: every bar on it
+        self.assertIn("bass on a bar's first beat as often as the balance's song's 1.00 (round 133): 8 of 8 bars", log)
+        half = [sum(on_one(write(seed, first_beat=0.5))) for seed in range(6)]
+        self.assertTrue(all(n >= 4 for n in half), half)                                            # asked half: four bars or more
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

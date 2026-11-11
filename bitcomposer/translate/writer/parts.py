@@ -180,7 +180,8 @@ LIMB_REDRAWS = 3                     # a limb whose slot the token strikes that 
 def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own: list, bars: list, habit: str,
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
                   energy: list | None = None, extra_values: dict | None = None, floor_outcomes: int | None = None,
-                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None, envelope_at=None, envelope_by_bar=None) -> list[str]:
+                  floor_songs: int | None = None, rest_new: bool = False, habit_at=None, envelope_at=None, envelope_by_bar=None,
+                  first_beat: float | None = None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -193,12 +194,17 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     `envelope_by_bar` (round 125): (bar, meter) -> the bar's envelope in
     `within_of`'s own shape, or None for the habit's: a drum group's
     pieces each within what the token song strikes of them in the part of
-    the form."""
+    the form. `first_beat` (round 133): the share of the part's bars the
+    token song's part strikes on the first beat; a new bar is asked the
+    first beat while the share of the bars written so far, with this one
+    counted off it, runs under the song's, before the bar's other filters
+    are loosened."""
     lock = lock or {}
     envelope_of = envelope_of or figures_mod.envelope
     within_of = within_of or figures_mod.within
     meters = [max(1, round(b - a)) for a, b, _ in bars]
     figures, played, previous = [figures_mod.REST] * len(bars), Counter(), None
+    struck_bars = on_one = 0                                # the bars written so far, and those struck on the first beat (round 133)
     unshifted = []                                          # the strikes of the bars drawn with no density shift: the part's own running
     periods = getattr(song, "periods", {}).get(role, {})   # density, which a shifted section's envelope is measured from (round 101)
                                                             # the part's period inside a part of the form: a held bar plays the bar a lag before
@@ -236,14 +242,21 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                           lambda f, _e=env: manner.fits(f) and within_of(f, _e),
                           lambda f, _l=bar_lock: manner.fits(f) and locked(f, _l, lock_share),
                           manner.fits]
+                asked = first_beat is not None and on_one / (struck_bars + 1) < first_beat
+                if asked:                                   # the part's first beats run under its token song's share (round 133): this bar's
+                    one = (env[0], env[1], True) + tuple(env[3:])   # envelope asks the first beat, with the lock and then without
+                    ladder = [lambda f, _l=bar_lock, _e=one: manner.fits(f) and within_of(f, _e) and locked(f, _l, lock_share),
+                              lambda f, _e=one: manner.fits(f) and within_of(f, _e)] + ladder
                 figure = None
-                for fit in ladder:
+                for rung, fit in enumerate(ladder):
                     candidate = model.draw(unit, previous, played, rng, keep=fit, floor_outcomes=floor_outcomes, floor_songs=floor_songs, rest_new=rest_new)
                     for _ in range(figures_mod.TRIES):
                         if fit(candidate):
                             figure = candidate
                             break
                         candidate = model.table.draw(model.table.context(unit), rng, values, floored=False, floor_k=model.table.chain_floor)
+                    if figure is None and asked and rung == 1:   # no draw struck the first beat: the context's bars seldom do (a shuffle's bass),
+                        figure = among(manner, model, unit, rng, fit)   # so one of the known figures that do, by the table's own shares there
                     if figure is not None:
                         break
                 figures[k] = figure if figure is not None else last_resort(manner, model, unit, values, rng, env=env, within_of=within_of)
@@ -251,12 +264,27 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                     unshifted.append(len(rhythm._tokens(figures[k])))
             played[figures[k]] += 1
             previous = figures[k]
+            if figures[k] != figures_mod.REST:
+                struck_bars += 1
+                on_one += figures_mod.on_first_beat(figures[k])
     for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
         for i in range(length):
             k, src = start + i, copy_of + i
             if k < len(figures) and src < len(figures) and own[k] != figures_mod.REST and figures[src] != figures_mod.REST:
                 figures[k] = figures[src]
     return figures
+
+
+def among(manner, model: tables.Cache, unit: tables.Unit, rng: random.Random, fit) -> str | None:
+    """A figure among the known ones that pass `fit`, by the table's own probabilities in the bar's context (round 133); evenly
+    where the context gives none of them any; None where none passes. For a bar asked what its context's bars seldom do,
+    where drawing again and again finds none."""
+    fits = [f for f in sorted(manner.known) if f != figures_mod.REST and fit(f)]
+    if not fits:
+        return None
+    ctx = model.table.context(unit)
+    weights = [model.table.p(f, ctx, unit.values) for f in fits]
+    return rng.choices(fits, weights)[0] if sum(weights) > 0 else rng.choice(fits)
 
 
 def last_resort(manner, model: tables.Cache, unit: tables.Unit, values: dict, rng: random.Random, env=None, within_of=None) -> str:
@@ -515,7 +543,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
          models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None,
          envelope_at=None, tone_profile: dict | None = None, continuity: float | None = None, log: list | None = None,
-         downbeat: float | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         downbeat: float | None = None, first_beat: float | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -555,7 +583,11 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     elif free:
         figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), energy=energy,
-                                lock_share=lock_share, habit_at=habit_at, envelope_at=envelope_at)
+                                lock_share=lock_share, habit_at=habit_at, envelope_at=envelope_at, first_beat=first_beat)
+        if first_beat is not None and log is not None:      # the line's first beats against its token song's (round 133)
+            struck = [f for f in figures if f != figures_mod.REST]
+            log.append(f"bass on a bar's first beat as often as the balance's song's {first_beat:.2f} (round 133): "
+                       f"{sum(1 for f in struck if figures_mod.on_first_beat(f))} of {len(struck)} bars")
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)

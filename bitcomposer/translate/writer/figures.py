@@ -270,6 +270,12 @@ def drum_within(figure: str, env: tuple) -> bool:
     return meter is None or all(Fraction(t[0]) < meter for t in tokens)
 
 
+def on_first_beat(figure: str) -> bool:
+    """Whether a figure strikes the bar's first beat."""
+    tokens = rhythm._tokens(figure)
+    return bool(tokens) and tokens[0].partition(":")[0] == "0"
+
+
 def within(figure: str, env: tuple) -> bool:
     """Whether a figure is within the bar's envelope."""
     tokens = rhythm._tokens(figure)

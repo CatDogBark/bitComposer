@@ -427,6 +427,23 @@ The words are grouped by where the writing draws them, in the order the song is 
   the bar before's pitch class; neither says where in the bar the root
   falls, and the written bass was on the plan's root on the first beat
   in half of the bars and off the chord in a sixth.
+  Since round 133 it carries a twenty-fourth, how often its line
+  strikes a bar's first beat at all (`bass_first_beat_field`: of the
+  bars the bass plays in, any voice of it, the share struck on the
+  first beat, in hundredths: `f93`; 63 FFVI basses carry one, 0.93 at
+  the median, six under a half and 37 at 0.9 or more). The bass writer
+  asks a new bar of its line
+  the first beat while the share of the bars written so far, this one
+  counted off it, runs under the song's (`_free_figures`, `first_beat`):
+  the bar's envelope asks it, with the band's lock and then without,
+  before the bar's other filters are loosened, and where no draw
+  strikes it the figure is one of the known figures that do, by the
+  table's own shares in the bar's context (`among`). Why: a
+  free-written bar asks no first beat (`free_envelope`: the habit
+  conditions the table), and since round 125 a bass's strikes a bar are
+  its token song's by the part of the form, so a bar drawn off the
+  first beat within them, then played again where the song's bass
+  loops (round 121), put a whole part of the form off the first beat.
   Since round 113 the token carries the song's form as a song-level
   `form=` field (`form_field`: the parts' letters in order, a returning
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-

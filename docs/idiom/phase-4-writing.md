@@ -9094,3 +9094,65 @@ note set unchanged; 178 plans' loops moved.
 own, not the `loops` word's draw for a return. A song whose form is
 not its token song's keeps the pooled draw. The standing list as at
 round 114.
+
+### Round 133: the bass strikes a bar's first beat as often as the token song's does (2026-11-10, found while the six songs for Song Check 101 were rendered, on the owner's go)
+
+**Why.** Counting the six songs picked for the listening check, the
+written Battle Theme's bass struck a bar's first beat in 10 of its 41
+bars, where it struck it in 29 on dev and the game's strikes it in 38.
+A band without its bass on the one has lost what the owner called
+punch, and the stack had done it.
+
+**Found.** A free-written part's bar asks no first beat: the habit
+conditions the table and the envelope is strikes a bar alone
+(`free_envelope`). On dev the habit's bars mostly struck it (0.91 of a
+bass's bars at the median over the 68 Song Check 100 songs; FFVI
+0.93). Since round 125 a bass's bar is drawn within its token song's
+strikes a bar for the part of the form, and the bar that fits may be
+one off the first beat; since round 121 that bar is played again
+wherever the song's bass loops. After round 132 the written bass
+struck the first beat in 0.80 of its bars at the median and fifteen
+basses in under half (seven on dev; six of FFVI's). The kit did not
+lose it: the kick strikes the first beat in every bar it plays at the
+median (FFVI 0.93).
+
+**Built.** The reader: `bass_first_beat_field`, the bass's
+twenty-fourth field: of the bars the bass plays in, any voice of it,
+the share struck on the first beat, after an "f" (`f93`); none under
+eight bars. A first cut counted the line alone, and where a bass is
+two voices the first beat may be the other's: Gogo's line holds under
+a busier voice (under eight bars: no share) and Fanfare's two voices
+play in turn (the line off the beat in every bar), so the songs on
+those tokens stayed off it. The
+plan keeps it (`bass_first`). The writer: `_free_figures` takes
+`first_beat` and counts the bars written and those on the first beat;
+a new bar is asked the first beat while the share, with this bar
+counted off it, runs under the song's: two rungs ahead of the bar's
+own ladder, the envelope with the first beat and the lock, then
+without the lock. A first cut left it there, and a shuffle's bass
+stayed off the beat (Edgar and Sabin's 2 bars of 24): the bars its
+context holds seldom strike it and forty draws found none. So where
+neither rung draws one the figure is one of the known figures that
+pass the rung, by the table's own probabilities in the bar's context
+(`among`). Tests: the field from six bars of eight, none from seven
+bars played; the plan's keeping it; a bass fitted on bars on and off
+the first beat written free (a bar off it), asked every bar (all
+eight on it) and asked half. Suite 521 (1 skip).
+
+**Measured.** FFVI: 63 basses carry the field, 0.93 at the median,
+six under a half, 37 at 0.9 or more. The 68 Song Check 100 songs: the
+bass's line on the first beat in 0.96 of its bars at the median (0.80
+after round 132; 0.91 on dev; FFVI 0.93), the mean 0.92 (0.70; 0.81;
+0.83), no bass under a half (fifteen; seven; six). The written Battle
+Theme's: 35 of 41 bars (10 of 41; the game's 38 of 41). Edgar and
+Sabin's: 22 of 24 (2 of 24; the game's 24 of 26). On the first beat
+the bass is on the plan's chord's root in 0.75 of the bars (FFVI
+0.73 against the chord heard) and the chord reader hears a bar on the
+plan's root in 0.72 of the bars at the median (0.70 after
+round 129). Plans (400 seeds, against round 132): all keep their token
+song; 163 note sets unchanged.
+
+**Open.** A chord part's line and the kit are still drawn with no
+first beat asked. The share is only raised to, never lowered to: a
+song on a token whose bass sits off the beat strikes it as its drawn
+bars do. The standing list as at round 114.
