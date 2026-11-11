@@ -685,7 +685,7 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertEqual(rhythm.kit_degree(s, 69), "d0"); self.assertEqual(rhythm.kit_degree(s, 57), "d-7")
         token = rhythm.balance_units([s])[0].outcome.split()
         self.assertIn("key=9:minor", token)
-        self.assertLess(token.index("key=9:minor"), token.index("tempo=medium"))
+        self.assertLess(token.index("key=9:minor"), next(i for i, t in enumerate(token) if t.startswith("tempo=medium:")))   # the tempo's class and, since round 137, the tempo
         # a sample the game strikes at another rate in another song is tuned; one it strikes at one rate in most songs is a sound
         s2 = rhythm.Song("t", 4, 4, [(0.0, 4.0), (4.0, 8.0)], chords, bpm=100.0, sid="id2", game="G", numbers=[0, 1], parts=[(0, 2)], pieces={"k": "kick"})
         s2.notes["drums"] = s.notes["drums"]; s2.voice_notes = {2: ("drums", s2.notes["drums"])}

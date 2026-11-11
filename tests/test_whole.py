@@ -2038,11 +2038,11 @@ class DoubleTimeTests(unittest.TestCase):
         field = lambda tokens, name: next(t for t in tokens if t.startswith(name + "=")).split("=", 1)[1]   # noqa: E731
         fast = rhythm.balance_units([self._song()])[0].outcome.split()
         self.assertIn("beat=2", fast)
-        self.assertEqual((field(fast, "tempo"), field(fast, "form")), ("fast", "A8B9"))
+        self.assertEqual((field(fast, "tempo"), field(fast, "form")), ("fast:140", "A8B9"))
         self.assertTrue(field(fast, "drums").split(":")[21].startswith("nAS12@100"), fast)          # the snare's strikes a bar halved
         slow = rhythm.balance_units([self._song(hits=16)])[0].outcome.split()
         self.assertFalse(any(t.startswith("beat=") for t in slow))
-        self.assertEqual((field(slow, "tempo"), field(slow, "form")), ("slow", "A4B5"))
+        self.assertEqual((field(slow, "tempo"), field(slow, "form")), ("slow:70", "A4B5"))
         self.assertTrue(field(slow, "drums").split(":")[21].startswith("nAS16@100"), slow)
 
     def test_the_plan_lets_its_form_run_to_twice_the_bars(self):
@@ -2328,6 +2328,49 @@ class TuneShortestTests(unittest.TestCase):
         self.assertGreater(floor, 0.3)
         self.assertTrue(all(length >= min(gap, floor) - 1e-6 for length, gap in held), (floor, held))   # every note its gap or the song's shortest
         self.assertGreaterEqual(min(length for length, _ in held), min(length for length, _ in free))
+
+
+class OwnTempoTests(unittest.TestCase):
+    """Round 137: the token carries its song's own tempo beside its class (`tempo=fast:140`), and a written song runs
+    within a tenth of it, at one of the class's tempos. The class alone is a third of the game's tempos wide: of the 59
+    Song Check 100 songs on their token song's arrangement 24 ran within a tenth of the game's tempo, and Edgar and
+    Sabin's, 90 beats a minute in the game, ran at 125."""
+
+    def _models(self, token):
+        mk = lambda name, outcome, **vals: [tables.Unit(f"{name}{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        tempos = [u for o, c in (("70", "slow"), ("90", "medium"), ("125", "medium"), ("135", "fast"), ("140", "fast"), ("160", "fast"))
+                  for u in mk("t" + o, o, part="song", tempo=c)]
+        return {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("b", token, part=rhythm.ARRANGEMENT)),
+                "tempos": tables.Table(("part", "tempo"), "tempos", votes=tables.SHARES).fit(tempos)}
+
+    BAND = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 "
+
+    def test_the_token_carries_the_songs_own_tempo(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        notes = {"bass": [(4.0 * k, 0.9, 36.0, "b") for k in range(8)], "melody": [(4.0 * k + x, 0.9, 72.0, "m") for k in range(8) for x in range(4)]}
+        for bpm, want in ((92.0, "tempo=medium:92"), (144.4, "tempo=fast:144"), (83.0, "tempo=slow:83")):
+            s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes=notes, bpm=bpm, sid="s", game="g", numbers=list(range(8)), tonic=0, mode="major")
+            s.voice_notes = {0: ("bass", notes["bass"]), 1: ("melody", notes["melody"])}
+            s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+            self.assertEqual(rhythm.balance_units([s])[0].outcome.split()[-1], want)                 # the tempo's class, and the tempo in beats a minute
+
+    def test_a_song_runs_within_a_tenth_of_it(self):
+        near = [whole.plan(self._models(self.BAND + "tempo=fast:140"), seed, "g").bpm for seed in range(1, 13)]
+        self.assertTrue(all(b in (135.0, 140.0) for b in near), near)                               # the class's tempos within 126 to 154
+        self.assertEqual(len(set(near)), 2, near)                                                   # either of them, by the word's shares
+        p = next(whole.plan(self._models(self.BAND + "tempo=fast:140"), seed, "g") for seed in range(1, 13))
+        self.assertTrue(any(" BPM is not within a tenth of the balance's song's 140: " in l for l in p.log) or p.bpm in (135.0, 140.0))
+        wide = {whole.plan(self._models(self.BAND + "tempo=fast"), seed, "g").bpm for seed in range(1, 25)}
+        self.assertIn(160.0, wide)                                                                  # the class alone: any of its tempos
+        self.assertEqual({whole.plan(self._models(self.BAND + "tempo=medium:90"), seed, "g").bpm for seed in range(1, 9)}, {90.0})
+
+    def test_the_songs_own_tempo_where_the_word_has_none_near(self):
+        models = self._models(self.BAND + "tempo=fast:200")
+        self.assertEqual(whole.tempo_near(models, "fast", 200.0, random.Random(1)), 200.0)          # no tempo of the class within 180 to 220
+        self.assertEqual(whole.tempo_near(models, "slow", 85.0, random.Random(1)), 84.0)            # its own, kept inside its class
+        self.assertEqual(whole.tempo_near(models, "medium", 120.0, random.Random(1)), 125.0)        # one near it
+        self.assertEqual(whole.plan(models, 3, "g").bpm, 200.0)
 
 
 class TokenMotionTests(unittest.TestCase):
@@ -3038,7 +3081,7 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"])}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14}
         tokens = rhythm.balance_units([s])[0].outcome.split()
-        self.assertEqual(tokens[-1], "tempo=medium")                                                # the song's tempo class rides last (round 54)
+        self.assertEqual(tokens[-1], "tempo=medium:120")                                            # the song's tempo class rides last (round 54), its own tempo with it (round 137)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
         self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "quals=", "form=", "cycle="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes=, quals= and form= fields aside, rounds 112, 127 and 113)
