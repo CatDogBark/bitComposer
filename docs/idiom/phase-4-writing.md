@@ -8908,3 +8908,75 @@ the other parts; the voice beside a bass line is drawn by its interval
 to the line, not by the chord (the written Locke's plays an A over a
 C-sharp fifth); a bass under eight first beats in
 its song carries no share. The standing list as at round 114.
+
+### Round 130: a tune moves as its token song's tune does (2026-11-10, the seventh change from Song Check 100's investigation, on the owner's go)
+
+**Why.** The owner on the Arrangement Check's Gogo and Edgar and Sabin:
+"still kinda mindless in a bad way", "still sounds more aimless like
+the gogo song". The chords were rounds 127 to 129; this is the tune.
+
+**Found.** Counted on the 68 Song Check 100 songs read back, beside
+FFVI's tunes, at the median: a written tune steps into a bar's first
+note in 0.38 of the bars (FFVI 0.59) and goes a fourth or more there in
+0.33 (0.23); onto a beat it steps in 0.48 of its moves (0.67) and goes a
+fourth or more in 0.28 (0.14). The moves table is the game's own and
+the `step_habits` word conditions it, but the draw then re-weights the
+fitting moves: on a beat the chord's tones take the song's chord-tone
+share of the mass, and a chord tone a third or a fourth away was taken
+where one lay a step off (where one lay a step off the tune stepped in
+0.50 of the cases, FFVI's in 0.74). About a quarter of a tune's notes
+are drawn moves; the rest are bars played again, which enter from
+wherever the bar before ended: by a fourth or more in 0.31 of the bars
+back at pitch and 0.49 of those moved (FFVI 0.19 and 0.19).
+
+**Built.** The reader: `tune_step_profile`, the melody's and the
+counter's eighteenth field in four classes (`tune_move_class`,
+TUNE_MOVES: the note again, a step within a whole tone, a third, a
+fourth or more from FAR_MOVE), where a backing line keeps its three
+(round 117); `step_profile_of` reads either. The writer:
+`writer.melody` takes `move_profile` and counts the tune's thirds and
+far moves as it writes; `draw_move` draws no move of a class the tune
+is over its share of (`third_over`, `far_over`) where a move of another
+class fits; the repeated note takes the song's own share; a bar played
+again (`again`) that would enter by a move of a class the tune is over
+is weighed with the chord and the over-share holds in its one move
+within a third; a phrase written again puts the counts back. A first
+cut held the far moves alone and the leaps became thirds (onto a beat
+by a third in 0.35 of the moves, FFVI 0.24), so the thirds are counted
+too. A second gave each class its share of every draw's mass, as the
+off-scale and clash shares are held: it sat nearer the songs' shares
+(0.037 from the far share at the mean against 0.050) and spent the
+thirds evenly instead of where they land on the chord, so a bar's first
+note fell on the chord in 0.48 of the bars against 0.52 (0.55 before
+the round; FFVI 0.61). Tests: a move's class; the field, none under
+sixteen moves; the plan reading a tune's four classes and a backing
+line's three; a draw with a class left out while over, a far move
+standing where no other fits; a tune written to a profile of steps.
+Suite 512 (1 skip).
+
+**Measured.** FFVI: 65 melodies carry the field (0.12 repeated, 0.56
+steps, 0.15 thirds, 0.10 far at the median; ten under 0.05 far, three
+at 0.25 or more), 50 counters. The 68 songs, at the median, before and
+after, FFVI last: into a bar's first note by step 0.38, 0.50, 0.59; by
+a fourth or more 0.33, 0.27, 0.23; onto a beat by step 0.48, 0.62,
+0.67; by a fourth or more 0.28, 0.18, 0.14; inside a bar by step 0.57,
+0.69, 0.69; the tune's steps of all its moves 0.54, 0.64, 0.65. A
+written tune's far moves are 0.12 of its moves at the median (its
+token songs' 0.10) and its thirds 0.15 (0.15). A new bar is entered by
+step in 0.49 of the cases (0.39; FFVI 0.51) and by a fourth or more in
+0.22 (0.30; 0.22). Bars back at pitch are 0.21 of the bars entered
+(0.20; FFVI 0.30), the tune's echoes 0.41 (0.39; 0.33). The tune's
+strong-beat notes on the chord: 0.46 of them (0.48; the songs' rate
+0.60). The arrangement's measures stand (cells sounding as the FFVI
+song's 0.96, backing lines within range 361 of 384, kit pieces 173 of
+180). Plans (400 seeds, against round 129): all keep their token song;
+11 note sets unchanged.
+
+**Open.** A bar played again is still entered by a fourth or more in
+0.31 of the cases at pitch and 0.40 moved (FFVI 0.19): which bar comes
+back, and where, does not know the bar before. A tune turns back on its
+last move in 0.61 of its moves (0.62; FFVI 0.53) and repeats a note
+after a repeated note in 0.35 (FFVI 0.56). Its range is 17 semitones at
+the median (18.5; FFVI 22), and its strong beats sit on the chord less
+than its song's rate asks. The counter beside a tune does not use its
+profile. The standing list as at round 114.

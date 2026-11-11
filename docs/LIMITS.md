@@ -339,6 +339,23 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **A bar played again enters from wherever the bar before left the
+  tune.** Since round 130 a tune's thirds and far moves are kept to its
+  token song's shares, and a new bar is entered as FFVI's new bars are
+  (by step in 0.49 of the cases, FFVI 0.51; by a fourth or more in 0.22,
+  0.22). A bar the tune plays again comes back at its pitch, or where
+  the recall_moves word puts it, whatever the bar before ended on: it is
+  entered by a fourth or more in 0.31 of the cases at pitch and 0.40
+  moved, where FFVI's are in 0.19, because the game's bars mostly come
+  back after the bars they followed the first time. The shares say how
+  many moves of each class a tune has, not their order beyond the moves
+  table's one move of memory: a written tune turns back on its last
+  move in 0.61 of its moves where FFVI's does in 0.53, and repeats a
+  note after a repeated note in 0.35 where FFVI's does in 0.56. Kept to
+  fewer thirds, the tune lands a bar's first note on the chord a little
+  less (0.52 of the bars, 0.55 before; FFVI 0.61). A counter-line
+  written beside a tune (`writer.counter`) is drawn by its interval to
+  the tune and does not use its profile.
 - **The band does not always spell the plan's chord.** Read back by the
   chord reader, a written song's bar is heard on the plan's root in
   0.66 of its bars and as the plan's chord, root and quality, in 0.35;

@@ -1926,6 +1926,32 @@ def line_step_profile(s, role: str, line_notes=None) -> str:
     return "j" + "/".join(str(int(round(100 * moves.count(k) / len(moves)))) for k in STEP_CLASSES)
 
 
+TUNE_MOVES = ("same", "step", "third", "far")   # a tune's note-to-note moves (round 130): the pitch again, within a whole tone, a third, a fourth or more
+FAR_MOVE = 5                         # semitones from which a tune's move is far
+
+
+def tune_move_class(semitones: int) -> str:
+    """A tune's move as one of TUNE_MOVES."""
+    d = abs(int(semitones))
+    return "same" if d == 0 else "step" if d <= 2 else "third" if d < FAR_MOVE else "far"
+
+
+def tune_step_profile(s, role: str, line_notes=None) -> str:
+    """A tune's step profile as the balance token carries it (round 130, the eighteenth field of the melody's and the
+    counter's token, where a backing line carries its own of three classes): the share of its line's note-to-note moves
+    that repeat the pitch, step within a whole tone, move a third, or go a fourth or more (TUNE_MOVES), in hundredths:
+    "j11/58/19/12"; "" under WORD_NOTES moves. The step_habits word says whether a tune is stepwise, mixed or leaping and
+    conditions the moves table; how many of its moves go far the draw's holds then decided (the chord tones on the beat,
+    the contour's aim, the register), and the written tunes went a fourth or more on 0.22 of their moves where FFVI's go
+    on 0.13."""
+    notes = line_notes if line_notes is not None else s.notes.get(role, [])
+    pitched = sorted((n[0], int(round(n[2]))) for n in notes if n[2] is not None and not (isinstance(n[2], float) and math.isnan(n[2])))
+    moves = [tune_move_class(b - a) for (_, a), (_, b) in zip(pitched, pitched[1:])]
+    if len(moves) < WORD_NOTES:
+        return ""
+    return "j" + "/".join(str(int(round(100 * moves.count(k) / len(moves)))) for k in TUNE_MOVES)
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 
@@ -2087,7 +2113,8 @@ def balance_units(songs) -> list:
                       line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
                       line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
                       bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
-                      line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's steps (round 117)
+                      line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,)   # and the line's steps (round 117); a tune's
+                      else tune_step_profile(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # own, of four classes (round 130)
                       loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
                       line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
                       part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
