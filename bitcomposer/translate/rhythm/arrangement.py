@@ -1539,6 +1539,25 @@ def bass_downbeat_field(s, line_notes=None) -> str:
     return f"d{int(round(100 * roots / hits))}" if hits >= CONTINUITY_BARS else ""
 
 
+def bass_first_beat_field(s, notes=None) -> str:
+    """The balance token's twenty-fourth field for the bass (round 133): of the bars the bass plays in, the share it
+    strikes on the first beat, in hundredths after an "f": "f93"; "" under CONTINUITY_BARS such bars. The part's, every
+    voice of it: where a bass is two voices the first beat may be the other voice's (Gogo's line holds under a busier
+    voice that strikes it; Fanfare's two voices play in turn), and the written line is what is asked. A free-written
+    part's bar is drawn within its strikes a bar and asks no first beat (figures.free_envelope), and since round 125 a
+    backing line's strikes a bar are its token song's by the part of the form: a bass's bar drawn off the first beat,
+    then played again where the song's bass loops, left the written Battle Theme's bass on the first beat in 10 of its
+    41 bars where the game's strikes it in 38. FFVI's bass strikes the first beat in 0.93 of its bars at the median."""
+    notes = notes if notes is not None else s.notes.get(R.BASS, [])
+    played = first = 0
+    for a, b in s.bars:
+        on = [n for n in notes if a - readings_mod.NEAR <= n[0] < b - readings_mod.NEAR]
+        if on:
+            played += 1
+            first += any(n[0] < a + readings_mod.NEAR for n in on)
+    return f"f{int(round(100 * first / played))}" if played >= CONTINUITY_BARS else ""
+
+
 LOOP_LAGS = (1, 2, 4)                # bars: the lengths a looped figure is tried at inside a part of the form (round 121)
 LOOP_SHARE = 0.5                     # the share of the bars a voice plays in a part of the form that must be its figure's, note for note, for
                                      # the part to be a loop
@@ -2172,7 +2191,8 @@ def balance_units(songs) -> list:
                       line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
                       part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
                       section_onsets_field(s, line_notes),    # and its line's onsets a bar in each (round 125)
-                      bass_downbeat_field(s, line_notes) if role == R.BASS else ""]   # and how often the bass roots a bar's first beat (round 129)
+                      bass_downbeat_field(s, line_notes) if role == R.BASS else "",   # and how often the bass roots a bar's first beat (round 129)
+                      bass_first_beat_field(s) if role == R.BASS else ""]   # and how often the bass strikes it, any voice of it (round 133)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
