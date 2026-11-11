@@ -2034,8 +2034,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
     token_beat = 1                                          # 2 where the token's song is counted in double time (round 131)
+    token_loop = None                                       # the part of its form the token's song's loop returns to (round 132)
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
+        if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
+            token_loop = int(rest) if rest.isdigit() else None
+            continue
         if role == "beat":                                  # the token's song is counted in double time (round 131), not a part
             token_beat = int(rest) if rest.isdigit() and int(rest) > 0 else 1
             continue
@@ -2240,6 +2244,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
             loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
     own_form = bool(token_form) and [p[3] for p in parts] == [l for l, _ in token_form][:len(parts)]   # the form's letters are the token song's
+    own_loop = parts[token_loop][0] if own_form and token_loop is not None and token_loop < len(parts) else None   # the token song's loop's part (round 132)
     loops = {}                                              # the loops (round 121): the token song's, where the form's letters are its own
     if token_loops and own_form:
         loops = token_loops
@@ -2265,6 +2270,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                 shape_profile=token_shapes,                                        # its qualities the token's song's (round 112)
                                 degree_shapes=token_quals,                                         # each on the degree the song has it on (round 127)
                                 cycle=loops.get(LOOP_CHORDS))                                      # its harmony's loops (round 121)
+    if own_loop is not None and own_loop != loop_bar:       # the loop returns to the token song's own part of the form (round 132), once the
+        log.append(f"loop from the balance's song: back to part {token_loop + 1} of {len(parts)}, bar {own_loop + 1} "   # chords are drawn: the
+                   f"(the loop_parts draw: bar {loop_bar + 1})")   # loop_parts draw and the chain's draw at its bar stand, so no other draw moves
+        loop_bar = own_loop
     drum_habit = (token_habits.get(R.DRUMS) or _draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log)) if R.DRUMS in band else None   # before the
     tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)
     own_textures = bool(token_spans) and own_form           # the token song's own textures and entrances (round 124), where the form's letters
