@@ -1895,6 +1895,100 @@ class BassDownbeatTests(unittest.TestCase):
         self.assertEqual(first_pcs(notes), [7] * 8)                                                 # without the share: the figures' own fifth
 
 
+class TuneMovesTests(unittest.TestCase):
+    """Round 130: how a tune moves rides its token as four classes (the note again, a step, a third, a fourth or more:
+    `j11/58/19/12`), and the tune writer holds the written tune's thirds and far moves to the song's shares. The written
+    tunes went a fourth or more on 0.22 of their moves where FFVI's go on 0.13, and into a bar's first note by step in
+    0.40 of the bars where FFVI's step in 0.59."""
+
+    MOVES = [0, 2, -3, 7, 0, -2, 4, -5]                     # two of each class
+
+    def _song(self, notes=32):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        pitches = [60.0]
+        for i in range(notes - 1):
+            pitches.append(pitches[-1] + self.MOVES[i % 8])
+        tune = [(float(i), 0.9, m, "m") for i, m in enumerate(pitches)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_a_tunes_move_has_one_of_four_classes(self):
+        self.assertEqual(rhythm.TUNE_MOVES, ("same", "step", "third", "far"))
+        for d, want in ((0, "same"), (1, "step"), (-2, "step"), (3, "third"), (-4, "third"), (5, "far"), (-7, "far"), (12, "far")):
+            self.assertEqual(rhythm.tune_move_class(d), want, d)
+
+    def test_the_token_carries_the_tunes_moves_by_class(self):
+        s = self._song()
+        self.assertEqual(rhythm.tune_step_profile(s, "melody"), "j26/26/26/23")                    # 31 moves: eight repeats, steps and thirds, seven far
+        tune = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("melody=")).split("=", 1)[1].split(":")
+        self.assertEqual(tune[17], "j26/26/26/23", tune)                                            # the eighteenth field, where a backing line has three classes
+        self.assertEqual(rhythm.tune_step_profile(self._song(notes=16), "melody"), "")              # fifteen moves: no profile
+
+    def test_the_plan_takes_a_tunes_profile_and_a_backing_lines(self):
+        self.assertEqual(whole.step_profile_of("j11/58/19/12"), {"same": 0.11, "step": 0.58, "third": 0.19, "far": 0.12})
+        self.assertEqual(whole.step_profile_of("j63/24/13"), {"same": 0.63, "step": 0.24, "leap": 0.13})
+        self.assertIsNone(whole.step_profile_of("j63/24"))
+        fields = [""] * 18
+        fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[17] = "j11/58/19/12"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.step_profiles["melody"], {"same": 0.11, "step": 0.58, "third": 0.19, "far": 0.12})
+        self.assertIn("melody's line moves as the balance's song's: same 0.11 step 0.58 third 0.19 far 0.12", p.log)
+
+    def test_a_draw_leaves_out_the_class_the_tune_is_over(self):
+        from collections import Counter
+        from bitcomposer.translate.writer import tune as tune_mod
+        moves = tables.Table(("part",), "moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "melody"}) for i in range(3) for o in ("+1", "+2", "-1", "-2", "+3", "+4", "-3", "+5", "+7", "-5")])
+        every = set(range(12))
+        draws = lambda register=(52, 76), **kw: Counter(abs(tune_mod.draw_move(moves, "+1", "major", 64.0, random.Random(i), register, every, False, None, set(), None,   # noqa: E731
+                                                                              repeat_rate=0.0, **kw)) for i in range(300))
+        far = lambda c: sum(n for d, n in c.items() if d >= tune_mod.FAR_MOVE)                       # noqa: E731
+        thirds = lambda c: sum(n for d, n in c.items() if tune_mod.THIRD_MOVE <= d < tune_mod.FAR_MOVE)   # noqa: E731
+        free = draws()
+        self.assertTrue(far(free) > 120 and thirds(free) > 30, free)                                # the table alone, smoothed over every move: half of them far
+        no_far = draws(far_over=True)
+        self.assertEqual(far(no_far), 0)                                                            # over its share of far moves: none,
+        self.assertGreater(thirds(no_far), thirds(free))                                            # and the thirds and steps as the table has them
+        self.assertEqual(thirds(draws(third_over=True)), 0)                                         # over its thirds: none
+        steps = draws(far_over=True, third_over=True)
+        self.assertEqual(far(steps) + thirds(steps), 0)                                             # over both: steps alone
+        self.assertEqual(far(draws(register=(69, 71), far_over=True)), 300)                         # where no other move fits, the far one stands
+
+    def test_the_tune_is_written_to_its_songs_moves(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+
+        def written_tune(profile):
+            p = whole.plan(models, 3, "g", max_bars=16)
+            self.assertIn(R.MELODY, p.band)
+            p.plays[R.MELODY] = [True] * p.bars
+            p.step_profiles.pop(R.MELODY, None)
+            if profile:
+                p.step_profiles[R.MELODY] = profile
+            part = whole.write(p, whole.song_of(p), models, 3)[R.MELODY]
+            line = sorted((n[0], int(round(n[2]))) for n in part.notes if n[3] == 0)
+            sizes = [abs(b - a) for (_, a), (_, b) in zip(line, line[1:])]
+            return part.log, sizes
+
+        log, sizes = written_tune(None)
+        self.assertFalse(any("moves of a fourth or more" in l for l in log))                       # no profile: the table's moves as they fall
+        wide = sum(1 for d in sizes if d >= 3)
+        log, held = written_tune({"same": 0.1, "step": 0.9, "third": 0.0, "far": 0.0})
+        self.assertTrue(any(l.startswith("moves of a fourth or more: ") and "(round 130)" in l for l in log), log)
+        self.assertLess(sum(1 for d in held if d >= 3), wide, (sizes, held))                       # a tune of steps: fewer thirds and leaps than the table's own
+        self.assertGreater(sum(1 for d in held if 0 < d <= 2) / len(held), sum(1 for d in sizes if 0 < d <= 2) / len(sizes))
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

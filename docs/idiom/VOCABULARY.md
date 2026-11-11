@@ -458,6 +458,28 @@ The words are grouped by where the writing draws them, in the order the song is 
   written guitar leaped between chord tones on 0.34 of its moves, a
   melodic voice driving the song where the game's is a rhythm part under
   it (Song Check 96).
+  Since round 130 the melody's and the counter's token carry their own
+  profile in the same field, of four classes (`tune_step_profile`:
+  `j11/58/19/12`, the share of the line's moves that repeat the note,
+  step within a whole tone, move a third, or go a fourth or more,
+  TUNE_MOVES; 65 FFVI melodies carry one, 0.12, 0.56, 0.15 and 0.10 at
+  the median, Locke's 0.44 repeated notes and 0.05 far, The Decisive
+  Battle's 0.32 far; 50 counters). The tune writer keeps the written
+  tune to it as it writes (`writer.melody`, `move_profile`): a drawn
+  move (`draw_move`) is of no class the tune, its recalled bars counted,
+  is over its share of (`third_over`, `far_over`), where a move of
+  another class fits, and under its shares the moves fall as the table
+  and the chord's share have them; the repeated note takes the song's
+  own share in place of the pooled `repeat_rates` draw (the draw is
+  still made); and a bar played again (`again`) that would enter by a
+  move of a class the tune is over is weighed, one for one, with the
+  chord and the over-share holds in its one move within a third. Why:
+  `step_habits` says stepwise, mixed or leaping and conditions the moves
+  table, and the table carries the game's own moves, but the chord-tone
+  hold on the beat then drew the line to a chord tone a third or a
+  fourth away where one lay a step off: the written tunes went a fourth
+  or more onto a beat in 0.28 of their moves there against FFVI's 0.14
+  and stepped there in 0.48 against 0.67.
   Since round 121 the token carries each backing voice's loops by the
   form's letters: a part's nineteenth field for its line and for the kit
   (`loop_field`: `lB1~100`, in B a one-bar figure on every bar the voice

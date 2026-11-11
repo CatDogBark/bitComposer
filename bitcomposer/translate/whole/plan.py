@@ -1409,7 +1409,8 @@ def step_profile_of(text: str) -> dict | None:
     "step": 0.24, "leap": 0.13}; None where it cannot be read."""
     m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)", text or "")
     if not m:
-        return None
+        m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)/(\d+)", text or "")   # a tune's, of four classes (round 130, arrangement.tune_step_profile)
+        return {k: int(v) / 100 for k, v in zip(rhythm.TUNE_MOVES, m.groups())} if m else None
     return {k: int(v) / 100 for k, v in zip(rhythm.STEP_CLASSES, m.groups())}
 
 
@@ -3224,6 +3225,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  recall=models.get("melody_recall"), step_habit=x["steps"], repeat_habit=x["repeats"], plays=plan.plays[role],
                                                  role=role, chord_rate=x.get("chord_tones"), repeat_rate=x.get("repeat_rate"), grain=x.get("grain"), off_scale=x.get("off_scale"), clash_rates=x.get("clashes"),
                                                  tune_sounds=x.get("tune_sounds"), letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
+                                                 move_profile=(getattr(plan, "step_profiles", None) or {}).get(role),   # the tune's moves held to its token song's (round 130)
                                                  bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
                                                  moves_rng=random.Random(f"{seed}:{role}:recall moves"),   # the recalls' places on an own stream (round 100)
                                                  habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role))   # the habit and envelope a bar: the tier by the section (round 101)
