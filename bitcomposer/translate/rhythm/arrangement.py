@@ -1989,6 +1989,41 @@ def line_tone_tier(s, role: str) -> str:
     return ""
 
 
+HALF_TIME_HITS = 16                  # strikes a bar a kit voice passes in a song read at half its speed: the writers' grid, sixteen to the bar
+HALF_TIME_SHARE = 0.25               # of the bars the voice plays, the share over HALF_TIME_HITS that says so
+HALF_TIME_STEADY = 0.5               # of the song's bars, the share the voice plays in: the kit's pulse, not a roll now and then
+HALF_TIME_BARS = 4                   # bars a kit voice plays to have a say
+
+
+def half_time(s) -> bool:
+    """Whether the reading has the song at half its speed (round 131): a song in the slow tempo class (readings.BANDS'
+    first) one of whose kit voices plays in HALF_TIME_STEADY of the song's bars or more (HALF_TIME_BARS at least) and
+    strikes more than HALF_TIME_HITS times in HALF_TIME_SHARE or more of the bars it plays, on a grid that halves. A kit
+    that keeps the song's pulse in thirty-seconds keeps it in sixteenths at twice the tempo: Locke's snare strikes 28
+    times a bar at 70 beats a minute, a march's sixteenths at 140, and no writer strikes a piece more than sixteen times
+    in a bar. FFVI: Locke (70) and Blackjack (72). Dancing Mad's first part (60) rolls its snare past sixteen in a
+    quarter of its bars, a slow song with rolls, and stays as read; the steady kits past sixteen at 87 beats a minute
+    and over (Dancing Mad's fifth part, Grand Finale's second) are no slow songs, and would double past the fastest
+    tempo the game is read at."""
+    if not s.bpm or readings_mod.band(s.bpm) != readings_mod.BANDS[0][1] or s.division % 2:
+        return False
+    for role, notes in s.voice_notes.values():
+        if role != R.DRUMS:
+            continue
+        starts = sorted(n[0] for n in notes)
+        played = [n for n in (bisect.bisect_left(starts, b - readings_mod.NEAR) - bisect.bisect_left(starts, a - readings_mod.NEAR) for a, b in s.bars) if n]
+        if (len(played) >= max(HALF_TIME_BARS, HALF_TIME_STEADY * len(s.bars))
+                and sum(1 for n in played if n > HALF_TIME_HITS) >= HALF_TIME_SHARE * len(played)):
+            return True
+    return False
+
+
+def token_song(s):
+    """The song as its balance token counts it (round 131): in double time where the reading has it at half its speed
+    (half_time, readings.double_time), else as read."""
+    return readings_mod.double_time(s) if half_time(s) else s
+
+
 def balance_units(songs) -> list:
     """Each song as a unit: its outcome its band with, for each pitched
     part, its weight, its register, the share of its gap a note sounds,
@@ -2066,7 +2101,12 @@ def balance_units(songs) -> list:
     round 91 an eleventh field a pitched part whose line changes instrument
     (line_stretches: `s77ca10e2568@52-64x6>sf89f5aedfd@60-80`, each stretch's
     sample, range and bars), so the written line changes colour and register
-    where its song's did."""
+    where its song's did. Since round 131 a song the reading has at half
+    its speed is counted here in double time (token_song): its tempo class,
+    its form's bars and every count by the bar are the song's at the pace
+    it is heard at, where Locke's token had asked a slow song with 28
+    snare strikes to the bar."""
+    songs = [token_song(s) for s in songs]                # a song the reading has at half its speed, in double time (round 131)
     habit_of_part = {}                                    # (song, part) -> the part's habit (round 62: the song's density tiers ride the token)
     for u in readings_mod.habits(readings_mod.units(songs)) + readings_mod.habits(readings_mod.bass_units(songs)):
         habit_of_part[(u.song, u.values["part"])] = u.outcome
@@ -2142,6 +2182,8 @@ def balance_units(songs) -> list:
         cycle = chord_cycle_field(s)                         # the harmony's loops by the form's letters (round 121)
         if cycle:
             tokens.append(f"cycle={cycle}")
+        if s.beat == 2:                                      # the song counted in double time (round 131): its bars are half the reading's,
+            tokens.append("beat=2")                          # so its form runs to twice the bars a song is asked
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with
