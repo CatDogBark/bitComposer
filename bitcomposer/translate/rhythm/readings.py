@@ -76,7 +76,7 @@ import statistics
 import sys
 from array import array
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
 from .. import drums as drums_mod, roles as R, store, tables, vocab
@@ -176,9 +176,49 @@ class Song:
                                       # reading.echo_of_notes): (volume of full, delay in ms, feedback); None where never read
     echo_sends: dict = field(default_factory=dict)   # voice -> the share of its notes that send to the echo
     echo_sample_sends: dict = field(default_factory=dict)   # sample key -> the share of its notes that send (round 82: the chip toggles echo note by note)
+    beat: int = 1                                    # 2 for a song counted in double time (round 131, double_time): its bars are half the reading's
     vibrato: dict = field(default_factory=dict)      # voice -> its vibrato on its held notes (round 72; the readings' features of source
                                       # "vibrato", reading.vibrato_of_notes): {"held": [by length class], "vib": [by class], "depth",
                                       # "rate", "onset" (the last three where it carries any)}; empty where never read
+
+
+def double_time(s: Song) -> Song:
+    """The song as it reads at twice its tempo (round 131): every time in beats doubled, so a note falls where it fell
+    and lasts as long in seconds; a bar of the song's meter two bars (a shorter bar, a pickup or the reader's odd bar,
+    stays one, twice as many beats long); the bars numbered on, with the form's parts, its sections and the loop's bar
+    moved with them; the grid's division halved, so a grid step is the step it was. The song is not changed: a new Song,
+    for what is counted by the bar or by the tempo of a song the reading has at half its speed (arrangement.half_time)."""
+    def doubled(notes: list) -> list:
+        return [(2 * n[0], 2 * n[1]) + tuple(n[2:]) for n in notes]
+
+    numbers = s.numbers or list(range(len(s.bars)))
+    pieces = {}                                             # a bar's number -> the bars it becomes
+    for (a, b), k in zip(s.bars, numbers):
+        pieces[k] = [(2 * a, a + b), (a + b, 2 * b)] if b - a >= s.meter - NEAR else [(2 * a, 2 * b)]
+    top = max(numbers, default=-1)
+    starts, at = {}, 0                                      # a bar's number -> its first bar's number in double time: a number the reading
+    for k in range(top + 2):                                # kept no bar for (under a beat long) keeps its one place
+        starts[k] = at
+        at += len(pieces.get(k, [None]))
+
+    def start_of(k: int) -> int:
+        return starts[k] if k in starts else starts[top + 1] + 2 * (k - top - 1)
+
+    def moved(parts: list) -> list:
+        return [(start_of(bar), start_of(bar + n) - start_of(bar), of, label) for bar, n, of, label in parts]
+
+    return replace(
+        s, beat=2 * s.beat, bpm=2 * s.bpm, division=s.division // 2 if s.division % 2 == 0 else s.division,
+        bars=[x for k in numbers for x in pieces[k]], numbers=[start_of(k) + i for k in numbers for i in range(len(pieces[k]))],
+        parts=moved(s.parts), sections=moved(s.sections), loop_bar=None if s.loop_bar is None else start_of(s.loop_bar),
+        chords=[Span(2 * c.start, 2 * c.end, c.root, c.shape, c.fit) for c in s.chords],
+        notes={role: doubled(ns) for role, ns in s.notes.items()}, rolls={role: doubled(ns) for role, ns in s.rolls.items()},
+        bass_voices={v: doubled(ns) for v, ns in s.bass_voices.items()},
+        voice_notes={v: (role, doubled(ns)) for v, (role, ns) in s.voice_notes.items()},
+        second_voices={v: (role, doubled(ns)) for v, (role, ns) in s.second_voices.items()},
+        note_levels={role: [(2 * t, level) for t, level in rows] for role, rows in s.note_levels.items()},
+        kit_holds={key: 2 * beats for key, beats in s.kit_holds.items()},
+        voice_pan_moves={v: (a, 2 * bars_a, b, None if bars_b is None else 2 * bars_b) for v, (a, bars_a, b, bars_b) in s.voice_pan_moves.items()})
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)

@@ -1989,6 +1989,74 @@ class TuneMovesTests(unittest.TestCase):
         self.assertGreater(sum(1 for d in held if 0 < d <= 2) / len(held), sum(1 for d in sizes if 0 < d <= 2) / len(sizes))
 
 
+class DoubleTimeTests(unittest.TestCase):
+    """Round 131: a song the reading has at half its speed is counted for its token in double time. Locke's snare strikes
+    28 times a bar at 70 beats a minute, a march's sixteenths at 140; its token had asked a slow song with a kit no
+    writer can strike (sixteen to the bar at most), and the written Locke ran at 80."""
+
+    def _song(self, bpm=70.0, hits=24, division=24, kit_bars=8):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)] + [(32.0, 34.0)]                                     # eight bars and a bar of two beats
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        kit = [(4.0 * k + 4.0 * x / hits, 0.1, float("nan"), "snare") for k in range(kit_bars) for x in range(hits)]
+        s = rhythm.Song("t", 4, division, bars, [Span(0.0, 16.0, 0, "", 1.0), Span(16.0, 34.0, 7, "", 1.0)], notes={"bass": bass, "melody": tune, "drums": kit},
+                        bpm=bpm, sid="s", game="g", numbers=list(range(9)), parts=[(0, 4, None, "A"), (4, 5, None, "B")], tonic=0, mode="major", loop_bar=4)
+        s.pieces = {"snare": "snare"}
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune), 2: ("drums", kit)}
+        s.voice_levels = {0: 0.5, 1: 0.4, 2: 0.3}; s.levels = {"bass": 0.5, "melody": 0.4, "drums": 0.3}
+        s.kit_holds = {"snare": 0.1}
+        return s
+
+    def test_a_song_in_double_time(self):
+        s = self._song()
+        d = rhythm.double_time(s)
+        self.assertEqual((d.bpm, d.division, d.meter, d.beat), (140.0, 12, 4, 2))                   # twice the tempo on the same grid step
+        self.assertEqual(d.bars[:3], [(0.0, 4.0), (4.0, 8.0), (8.0, 12.0)])                         # a bar of the meter is two bars,
+        self.assertEqual((len(d.bars), d.bars[-1]), (17, (64.0, 68.0)))                             # a shorter one stays one
+        self.assertEqual(d.numbers, list(range(17)))
+        self.assertEqual(d.parts, [(0, 8, None, "A"), (8, 9, None, "B")])                           # the form's parts and the loop's bar with them
+        self.assertEqual(d.loop_bar, 8)
+        self.assertEqual(d.notes["melody"][1], (2.0, 1.8, 73.0, "m"))                               # a note where it fell, as long in seconds
+        self.assertEqual(d.voice_notes[2][1][1][:2], (2 * 4.0 / 24, 0.2))
+        self.assertEqual([(c.start, c.end, c.root) for c in d.chords], [(0.0, 32.0, 0), (32.0, 68.0, 7)])
+        self.assertEqual(d.kit_holds, {"snare": 0.2})
+        self.assertEqual((s.bpm, len(s.bars), s.parts[1], s.notes["melody"][1], s.beat), (70.0, 9, (4, 5, None, "B"), (1.0, 0.9, 73.0, "m"), 1))   # the reading as it was
+
+    def test_a_slow_song_whose_kit_runs_past_sixteen_is_at_half_speed(self):
+        self.assertTrue(rhythm.half_time(self._song()))                                             # 24 strikes a bar at 70
+        self.assertFalse(rhythm.half_time(self._song(bpm=100.0)))                                   # not a slow song
+        self.assertFalse(rhythm.half_time(self._song(hits=16)))                                     # sixteen a bar is written as it is
+        self.assertFalse(rhythm.half_time(self._song(division=3)))                                  # a grid that does not halve
+        self.assertFalse(rhythm.half_time(self._song(kit_bars=4)))                                  # a roll in four bars of nine is not the song's pulse
+        self.assertTrue(rhythm.half_time(self._song(kit_bars=5)))                                   # a kit voice through half the song is
+        self.assertIs(rhythm.token_song(self._song(hits=16)).beat, 1)
+        self.assertEqual(rhythm.token_song(self._song()).bpm, 140.0)
+        self.assertFalse(rhythm.half_time(rhythm.double_time(self._song())))                        # in double time it is no slow song
+
+    def test_the_token_counts_it_in_double_time(self):
+        field = lambda tokens, name: next(t for t in tokens if t.startswith(name + "=")).split("=", 1)[1]   # noqa: E731
+        fast = rhythm.balance_units([self._song()])[0].outcome.split()
+        self.assertIn("beat=2", fast)
+        self.assertEqual((field(fast, "tempo"), field(fast, "form")), ("fast", "A8B9"))
+        self.assertTrue(field(fast, "drums").split(":")[21].startswith("nAS12@100"), fast)          # the snare's strikes a bar halved
+        slow = rhythm.balance_units([self._song(hits=16)])[0].outcome.split()
+        self.assertFalse(any(t.startswith("beat=") for t in slow))
+        self.assertEqual((field(slow, "tempo"), field(slow, "form")), ("slow", "A4B5"))
+        self.assertTrue(field(slow, "drums").split(":")[21].startswith("nAS16@100"), slow)
+
+    def test_the_plan_lets_its_form_run_to_twice_the_bars(self):
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=fast form=A30B30"
+        model = lambda t: {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(t, part=rhythm.ARRANGEMENT))}   # noqa: E731
+        p = whole.plan(model(token + " beat=2"), 7, "g", max_bars=48)
+        self.assertEqual((p.bars, [x[3] for x in p.parts]), (60, ["A", "B"]))                       # sixty bars stand where forty-eight were asked
+        self.assertIn("the balance's song is counted in double time: its form may run to 96 bars", p.log)
+        self.assertNotIn("beat", p.band)
+        q = whole.plan(model(token), 7, "g", max_bars=48)
+        self.assertEqual(q.bars, 30)                                                                # without the word the form is cut as any
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

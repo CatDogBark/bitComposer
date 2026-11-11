@@ -339,6 +339,24 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **Only the token counts a half-speed song in double time.** Since
+  round 131 Locke's and Blackjack's tokens are counted at twice the
+  tempo the reading has them at, so a song written on them is a fast
+  song with a kit a writer can strike. The figure tables, the tune's
+  cells and the tempos word still hold the two songs as read (a slow
+  song, its snare's bars past sixteen strikes left out as rolls), so
+  the march Locke's snare plays is not among the fast songs' kit
+  figures and a song on its token takes its kit bars from the other
+  fast songs, within the strikes the token asks. Counting every table
+  in double time moved 130 of 400 seeds onto another token song (the
+  tempos word is the plan's first draw), so it waits for a Song Check
+  whose seeds are picked again. A steady kit past sixteen strikes a bar
+  in a song at 85 beats a minute or more (Dancing Mad's fifth part,
+  Grand Finale's second) is still capped at sixteen: doubled, the song
+  would pass the fastest tempo the game is read at. A written tune on
+  the two tokens is busier than the game's (2.9 notes a second on
+  Blackjack's against 1.4): the tune keeps its own density tier, and a
+  medium tune of a fast song is four to six notes a bar.
 - **A bar played again enters from wherever the bar before left the
   tune.** Since round 130 a tune's thirds and far moves are kept to its
   token song's shares, and a new bar is entered as FFVI's new bars are

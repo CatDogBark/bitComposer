@@ -8980,3 +8980,76 @@ after a repeated note in 0.35 (FFVI 0.56). Its range is 17 semitones at
 the median (18.5; FFVI 22), and its strong beats sit on the chord less
 than its song's rate asks. The counter beside a tune does not use its
 profile. The standing list as at round 114.
+
+### Round 131: a song read at half its speed is counted in double time (2026-11-10, the eighth change from Song Check 100's investigation, on the owner's go)
+
+**Why.** The owner on Locke's, at Song Check 100 and again after the
+Arrangement Check: "missing the pazaz", "still lacking that drive".
+The reading has FFVI's Locke at 70 beats a minute, and a song written
+on its token ran at 80.
+
+**Found.** Eleven FFVI songs have a voice past sixteen strikes a bar in
+a quarter of the song or more, and no writer strikes a piece more than
+sixteen times in a bar. For two of them it is the kit's pulse: Locke's
+snare plays in 0.88 of the song's bars and passes sixteen in 0.64 of
+those (25 strikes a bar at the median, at 70 beats a minute),
+Blackjack's hat plays in every bar and passes sixteen in 0.63 (at 72).
+Those are a march and a rock beat in sixteenths at 140 and 144, read
+at half their speed: the token says a slow song, the figure tables are
+asked a slow song's bars, and the kit's strikes are capped. The others
+are not: Dancing Mad's first part (60) rolls its snare in a quarter of
+its bars, a slow song with rolls; Gau's arpeggio, The Day After's
+accompaniment and New Continent's counter run in thirty-seconds or
+sextuplets over a slow tune; and the steady kits past sixteen at 87
+beats a minute and over would double past the fastest tempo the game
+is read at (168).
+
+**Built.** `readings.double_time`: the song as it reads at twice its
+tempo, a new Song (`beat` 2): every time in beats doubled, a bar of the
+meter two bars and a shorter bar one, the bars numbered on with the
+form's parts, sections and the loop's bar, chord spans, every voice's
+notes, the kit's holds and the pans' bars with them, the grid's
+division halved. `half_time`: a slow song one of whose kit voices plays
+in half of the song's bars or more and passes sixteen strikes in a
+quarter or more of the bars it plays. `token_song`: the one or the
+other, and `balance_units` counts every song through it, so the token
+of a half-speed song is its double-time self's, with a `beat=2` word.
+The plan reads the word and lets the token song's own form run to
+twice the bars asked. A first criterion (any kit voice past sixteen in
+a quarter of its bars) took Dancing Mad's first part and the whole of
+it too: written in double time the first part's form ran to 58 bars at
+85 beats a minute and its kit, the snare in 0.38 of the half bars,
+thinned to a strike and a half a bar; the steady share leaves both as
+read.
+Counting every table in double time, both readings' songs at the pack
+build, put the snare's march among the fast figures (the written
+Locke's kit at 6.8 strikes a second) and moved 130 of 400 seeds onto
+another token song; left for a Song Check whose seeds are picked
+again. Tests: a song in double time, its short bar, its form and loop,
+the reading untouched; which songs are at half speed; the token's
+tempo class, form, kit strikes and word; the plan's form at sixty bars
+where forty-eight were asked. Suite 516 (1 skip).
+
+**Measured.** Two tokens change (Locke's: `tempo=fast`, `form=A8A8B16`,
+the snare `S14.5@100` in A; Blackjack's: `form=A1B12C6D8E20`, the hat
+`h10.5@100`, the kick 3.5 and the snare 2 a bar). The songs on their
+own forms among seeds 1-400, before and after, the game last. Locke's
+(four songs): 50 to 84 beats a minute, 135 to 170, 140 in double time;
+16 bars, 32; 50 seconds once through, 50, 55; the kit's strikes a
+second 4.6, 6.3, 6.2; the bass's notes 3.1, 3.0, 2.6; the tune's 2.3,
+2.6, 1.9. Blackjack's (six songs): 55 to 80 beats a minute, 130 to
+170, 144; 30 bars, 47; 111 seconds once through, 74, 80; the kit's
+strikes a second 6.5, 9.9, 9.9; the bass's 4.0, 5.2, 4.9; the tune's
+0.9, 2.9, 1.4. The 68 Song Check 100 songs: 66 as they were, the two
+picks on these tokens changed; the arrangement's measures stand (cells
+sounding as the FFVI song's 0.96, backing lines within range 363 of
+386, kit pieces 175 of 179). Plans (400 seeds, against round 130): all
+keep their token song; 390 note sets unchanged.
+
+**Open.** The figure tables, the tune's cells and the tempos word hold
+the two songs as read: the snare's march is not among the fast songs'
+kit bars. A written tune on the two tokens is busier than the game's
+(Blackjack's 2.9 notes a second against 1.4). The steady kits past
+sixteen at 85 beats a minute and over stay capped, and so do the
+pitched voices in thirty-seconds over a slow tune. The standing list
+as at round 114.

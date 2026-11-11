@@ -2033,8 +2033,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
+    token_beat = 1                                          # 2 where the token's song is counted in double time (round 131)
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
         role, _, rest = token.partition("=")
+        if role == "beat":                                  # the token's song is counted in double time (round 131), not a part
+            token_beat = int(rest) if rest.isdigit() and int(rest) > 0 else 1
+            continue
         if role == "tempo":                                 # the token's song's tempo class (round 54), not a part
             token_class = rest
             continue
@@ -2223,7 +2227,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
         drawn_form = " ".join(f"{p[3]}{p[1]}" for p in parts)   # balance is read (the form's own draw above stands, so no other draw moves); a
         form_log = []                                           # form past the bars asked is cut as any; the loop's part drawn again for it
-        taken = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, max_bars, form=token_form)
+        own_max = max_bars if max_bars is None or token_beat == 1 else max_bars * token_beat   # a song counted in double time has twice the
+        if own_max != max_bars:                                 # bars for the same music (round 131): its form's bound doubles with them
+            log.append(f"the balance's song is counted in double time: its form may run to {own_max} bars")
+        taken = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, own_max, form=token_form)
         taken_bars = taken[-1][0] + taken[-1][1]
         if min_bars is not None and taken_bars < min_bars:     # a token form short of the bars asked (4 of FFVI's 62): the draw stands
             log.append(f"the balance's song's form {''.join(f'{l}{n}' for l, n in token_form)} is {taken_bars} bars, short of the {min_bars} asked: "

@@ -480,6 +480,27 @@ The words are grouped by where the writing draws them, in the order the song is 
   fourth away where one lay a step off: the written tunes went a fourth
   or more onto a beat in 0.28 of their moves there against FFVI's 0.14
   and stepped there in 0.48 against 0.67.
+  Since round 131 a song the reading has at half its speed is counted
+  for its token in double time (`token_song`): `half_time` says which
+  (a song in the slow tempo class one of whose kit voices plays in
+  HALF_TIME_STEADY of the song's bars or more and strikes more than
+  HALF_TIME_HITS times, the writers' sixteen, in HALF_TIME_SHARE of the
+  bars it plays or more, on a grid that halves: Locke at 70 beats a
+  minute and Blackjack at 72), and `readings.double_time` gives the
+  song as it reads at twice the tempo: every time in beats doubled, a
+  bar of the song's meter two bars and a shorter one one, the bars
+  numbered on with the form's parts and the loop's bar, the grid's
+  division halved; the reading itself is not changed, and the other
+  tables count the song as read. The token of such a song says
+  `tempo=fast`, its form in twice the bars (`form=A8A8B16` for Locke),
+  every count by the bar the double-time bar's (the snare `S14.5@100`
+  where it was `S28.5@100`), and a song-level `beat=2`, on which the
+  plan lets the token song's form run to twice the bars asked
+  (`own_max`): the same music in twice the bars. Why: the kit's bar is
+  written sixteen strikes to the bar at most, and a snare that keeps a
+  march's sixteenths at 140 was read as thirty-seconds at 70, so the
+  token asked a slow song with a kit no writer could strike, and the
+  written Locke ran at 80 with its snare at the cap.
   Since round 121 the token carries each backing voice's loops by the
   form's letters: a part's nineteenth field for its line and for the kit
   (`loop_field`: `lB1~100`, in B a one-bar figure on every bar the voice
