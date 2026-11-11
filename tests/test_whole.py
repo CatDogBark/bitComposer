@@ -1395,6 +1395,14 @@ class TokenLoopTests(unittest.TestCase):
         s.parts = [(0, 10, None, "A")]                                                             # one part: the token carries no form, so no loops
         self.assertEqual((rhythm.loop_field(s, riff), rhythm.chord_cycle_field(s)), ("", ""))
 
+    def test_the_harmonys_loop_is_read_by_its_roots(self):
+        """Round 128: a bar on the figure's root is on the figure, whatever quality the reader heard it in."""
+        from bitcomposer.translate.vocab import Span
+        s, riff, stab, bass, kit = self._song()
+        s.chords = [Span(0.0, 8.0, 0, "", 1.0)] + [Span(8.0 + 4.0 * k, 12.0 + 4.0 * k, 5, "" if k % 2 == 0 else "5", 1.0) for k in range(8)]   # F through B: a triad one bar, its fifth alone the next
+        self.assertEqual(rhythm.chord_bar_keys(s)[2], ((0, 5), (1, 5), (2, 5), (3, 5)))            # a bar's key: each beat's root
+        self.assertEqual(rhythm.chord_cycle_field(s), "B1~100")                                    # one bar's harmony through B; by root and shape it read as two bars
+
     def test_the_plan_takes_the_loops_with_the_form(self):
         self.assertEqual(whole.loops_of("B1~75!3.7+D2~100"), {"B": (1, 0.75, (3, 7)), "D": (2, 1.0, ())})
         self.assertEqual(whole.loops_of("B1/75"), {})

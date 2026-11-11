@@ -8814,3 +8814,46 @@ fewer distinct chords than the game's. A bar's chord is the chord two
 bars before in 0.34 of the written songs' bars against 0.50 of FFVI's
 (round 128). A chord's third still flips where the chain itself draws
 both.
+
+### Round 128: the harmony's loops are read by their roots (2026-11-10, the fifth change from Song Check 100's investigation, on the owner's go)
+
+**Why.** Round 127 left one count open: a bar's chord, as the chord
+reader hears the written songs, is the chord two bars before in 0.34 of
+the bars against 0.50 of FFVI's. The harmony's loops ride the token
+since round 121 (`cycle=`), and a bar on a loop's figure takes the
+figure's chord.
+
+**Found.** The loop's key for a bar was each beat's chord, root and
+shape. The reader hears a quality from the notes sounding, so a harmony
+that sits on one root reads as two chords wherever a bar's voicing drops
+the third: by root and shape 114 of FFVI's 198 parts of the form of
+four bars or more are a loop, and by the roots alone 140 are, holding
+0.59 of the bars where it was 0.45.
+
+**Built.** `chord_bar_keys` keys a bar by the root at each beat. Nothing
+else moves: the loop's reading (`loop_of`: the figure's bars, the share
+on it, the bars off it), the token's word and the plan's use of it are
+round 121's. Test: a harmony on one root through a part, a triad one
+bar and its fifth the next, reads as a one-bar loop.
+
+**Measured.** FFVI: 55 tokens carry a cycle (48), over 140 parts of the
+form (114): a one-bar harmony in 110, two bars in 23, four in 7. The 68
+Song Check 100 songs: 29 take other chords; a bar's chord as heard is
+the chord two bars before in 0.39 of the bars (0.34; FFVI 0.50), four
+bars before in 0.36 (0.33; 0.37). Plans (400 seeds, against round 127):
+all keep their token song; 232 note sets unchanged.
+
+**Found on the way.** Counted on the plans' own chords the written
+songs already repeat a degree more than FFVI does (the degree two bars
+before in 0.48 of the bars against 0.44, a degree held 2.4 bars against
+1.6, four degrees a song against six). What wanders is what is heard:
+read back, a bar is on the plan's root in 0.66 of the bars and is the
+plan's chord in 0.35, and a song planned on six chords is heard on
+eleven. The bass is the first place to look: FFVI's strikes a bar's
+first beat on the root of the chord heard there in 0.73 of the bars,
+the written bass on the plan's root in 0.50 and off the chord in 0.17
+(FFVI 0.05). Round 129.
+
+**Open.** A loop is one figure a part of the form; a harmony that
+cycles through half of a part and moves on is read off its figure for
+the rest.
