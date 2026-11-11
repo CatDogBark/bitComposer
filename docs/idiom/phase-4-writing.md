@@ -9202,3 +9202,51 @@ note sets unchanged.
 **Open.** The theme is still stated where the tune mostly rests in 35
 of 400 plans, and the chords still come back with it. The standing
 list as at round 114.
+
+### Round 135: a chord part strikes a bar's first beat as often as the token song's does (2026-11-11, the second of four items after Song Check 101, on the owner's go)
+
+**Why.** The owner on Song Check 101's Terra: "notes on like offbeats
+that are kind of meh". Round 133 asked the bass the first beat; the
+chord parts' bars are drawn the same way and were not asked.
+
+**Found.** The written Terra's accompaniment strikes a bar's first
+beat in 17 of its 44 bars (30 on dev before the stack); the game's
+strikes it in 0.99 of its bars. FFVI's accompaniments strike the first
+beat in 0.83 of their bars at the median, twelve of 55 in under half
+(after-beat parts: Shadow's and Devil's Lab's in none), its harmonies
+in 0.99. Over the 68 Song Check 100 songs the written accompaniment's
+line strikes it in 0.78 at the median, seventeen in under half, and
+which songs is the draw's: a written accompaniment's share is within
+0.15 of its token song's in 24 of 51 songs, under it by more in 16 and
+over it by more in 11.
+
+**Built.** The reader: `first_beat_field`, round 133's field for any
+backing part (the bass's `bass_first_beat_field` is it for the bass),
+carried in the twenty-fourth field of the harmony's, the
+accompaniment's and the arpeggio's token. The plan keeps a share a
+part (`first_beats`; `bass_first` is the bass's). The writer:
+`writer.upper` takes `first_beat` and hands it to `_free_figures`, as
+`writer.bass` does. Tests: the field for an accompaniment, the bass's
+unchanged, none for a tune; the plan's share a part; a line written
+free (a bar off the first beat) and asked every bar. Suite 526 (1
+skip).
+
+**Measured.** FFVI: 55 accompaniments carry the field, 0.83 at the
+median, twelve under a half, 25 at 0.9 or more; 14 harmonies, 0.99; 2
+arpeggios. The 68 Song Check 100 songs: the accompaniment's line on
+the first beat in 0.94 of its bars at the median (0.78), two under a
+half (seventeen); within 0.15 of its token song's share in 34 of 51
+songs (24), under it by more in none (16), over it by more in 17 (11);
+the harmony within 0.15 in 7 of 9 (4). The written Terra's
+accompaniment: 42 of 44 bars (17), its harmony 44 of 44. Plans (400
+seeds, against round 134): all keep their token song; 158 note sets
+unchanged.
+
+**Open.** The share is only raised to. A part the game plays off the
+beat is written mostly on it: seventeen accompaniments and fourteen
+basses sit over their token song's share by 0.15 or more (Devil's
+Lab's accompaniment on the first beat in every bar, the game's in
+none). Asking a bar off the beat by the whole song's share would put
+its off-beat bars anywhere; the game's sit in parts of the form, so
+the share wants carrying by the part of the form first. The standing
+list as at round 114.
