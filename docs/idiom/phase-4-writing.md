@@ -8621,3 +8621,81 @@ letters bring the theme back more often: three of Song Check 100's 43
 songs picked for a theme that never returns have a return now, and one
 of its two picked for a return with the tune alone has the band back
 with it.
+
+### Round 125: how busy each part is in each part of the form is the token song's (2026-11-10, the second change from Song Check 100's investigation and the Arrangement Check, on the owner's go)
+
+**Why.** Round 124 made the parts that sound in each part of the form
+the token song's. How busy each is there was still drawn: the written
+Locke had all five parts in every bar and still dropped to "something
+basic". Its snare ran sixteen hits a bar through A and stopped for
+seven bars of B, where the game's rolls fifteen to thirty-two a bar in
+thirteen bars of sixteen; its accompaniment played two notes a bar in
+fourteen bars of sixteen, where the game's plays five or six at the
+median. The
+written Edgar and Sabin's accompaniment played up to eighteen notes a
+bar in each of three voices at 125 beats a minute, the third voice's
+notes 24 milliseconds long, where the game's plays two to six a bar at
+90.
+
+**Found.** A part's habit rides the token (round 62): its density tier
+over the song. Where it thins and fills inside the song is the
+`section_densities` word (a tier up or down by section, round 101) and
+the `section_fills` word (round 118), both pooled and drawn by the
+section's place in the form; the kit has neither, its pieces' figures
+running on their own chains through the song. Edgar and Sabin's
+accompaniment drew a tier denser in A under a fine grain; Locke's drew
+a tier sparser in A, and its snare's chain, once it drew a rest at a
+part's end, stayed at rest.
+
+**Built.** The readers: `section_onsets_field`, a pitched part's
+twenty-second field for its line and a voice beside a line's ninth
+sub-field: its onsets a bar by the form's letters, the median over the
+bars it plays in the part of the form, and after a `!` its onsets in
+the part's last bar where that is a fill or a thinning (the fills
+word's own rule); `kit_onsets_field`, the kit's twenty-second field:
+each piece's median hits a bar and the share of the part's bars it
+plays in. The plan: `onsets_of` and `kit_onsets_of` read them; where
+the form's letters are the token song's, `token_sections` sets a
+backing line's onsets a bar (`plan.section_onsets`, the last bar its
+own), the kit's pieces' bounds a bar (`plan.kit_bounds`,
+`kit_piece_bounds`), the tune's tier against its typical onsets, and
+the fills of the tune, the counter and the first voice beside a line;
+the pooled words are not drawn then. The writers: `habit_at_for` gives
+a backing line's bar the density tier the section's onsets sit in and
+`envelope_at_for` the writers' own envelope of them (`writer.TIGHT`),
+both through the hooks round 101 built; `writer.drums` takes
+`bounds_at`, draws a group's figure with each piece within its bounds
+(`_free_figures`' new `envelope_by_bar`), rests a group none of whose
+pieces sounds in the part of the form, drops a hit of a piece the part
+never hears, and leaves a bar every group rests at rest. Tests: the
+fields from a bass with a fill at A's end and a kit whose kick plays
+half of A's bars and whose snare never sounds in B; the readers and the
+bounds; the plan's onsets, tier, bounds, envelope, habit and log lines
+with the token's form, the pooled words without; a kit piece kept to
+its bounds, the table's other piece dropped and a part of the form
+with no piece at rest. Suite 496 (1 skip).
+
+**Measured.** FFVI: 129 backing lines carry their onsets over 422
+parts of the form, 155 with a last bar of its own; of the 118 lines
+with two parts of the form or more the busiest is 1.5 times the
+sparsest at the median, and 1.5 times or more in 66. 40 kits carry
+their pieces: 210 cases of a piece played through a part of the form,
+52 in some of its bars, 13 rarely. The Song Check 100 songs, the 59
+whose form is their token song's: a backing line's onsets a bar in a
+part of the form are within the envelope of its token song's in 362 of
+384 cases (237 after round 124, 194 of 389 on dev); a kit piece the
+song plays through a part plays through it within its bounds in 173 of
+180 (109; 107 of 193); the kit sounds in 0.94 of the bars at the median
+(1.00 after round 124; FFVI 0.97). Locke's (seed 10): the snare twelve
+to sixteen hits in every bar, the accompaniment three to eight notes a
+bar. Edgar and Sabin's (193): the accompaniment one to six a bar, the
+bass two to four (eight before), no voice with a fifth of its notes
+under 40 milliseconds. Plans (400 seeds, against round 124): all keep
+their token song; 41 note sets unchanged.
+
+**Open.** The envelope is the section's median: its bars are not told
+apart but the last. The writers' grid stops at sixteenths (Locke's
+snare, read at thirty-two a bar, plays sixteen). The tune and the
+counter are not held to the section's onsets, and the counter still
+rests more than the game's. A voice beside a line takes only its last
+bar's fill. The bass's second voice is the next round's.

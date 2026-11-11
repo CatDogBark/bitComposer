@@ -1624,6 +1624,99 @@ class TokenSpansTests(unittest.TestCase):
         self.assertEqual(textures[0], "bass"); self.assertEqual(textures[6], "bass")
 
 
+class TokenSectionTests(unittest.TestCase):
+    """Round 125: how busy each part is in each part of the form rides the balance token by the form's letters (a line's
+    onsets a bar `nA6+B2!1`, a voice beside it's, the kit's pieces' hits a bar `nAS28.5@100,c1@50`), and where the form
+    is the token song's the backing lines' figures keep within the writers' TIGHT of them and each kit piece within what
+    the song strikes of it. The section_densities and section_fills words are pooled: the written Locke's snare stopped
+    for seven bars of B, and the written Edgar and Sabin's accompaniment played seventeen notes a bar where the game's
+    plays four."""
+
+    def _song(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bass = ([(4.0 * k + x, 0.9, 36.0 + (x % 2) * 7, "b") for k in range(3) for x in range(4)]               # four a bar through A
+                + [(12.0 + x / 2, 0.4, 36.0 + x, "b") for x in range(8)]                                         # eight in A's last bar: a fill
+                + [(4.0 * k + x, 1.8, 36.0, "b") for k in range(4, 8) for x in (0.0, 2.0)])                      # two a bar through B
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        kit = ([(4.0 * k + x / 2, 0.2, float("nan"), "snare") for k in range(4) for x in range(8)]              # the snare eight a bar through A
+               + [(4.0 * k, 0.2, float("nan"), "kick") for k in (0, 2)]                                         # the kick in half of A's bars
+               + [(4.0 * k + x, 0.2, float("nan"), "kick") for k in range(4, 8) for x in range(4)])             # the kick alone through B
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune, "drums": kit}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.pieces = {"kick": "kick", "snare": "snare"}
+        return s, bass, tune
+
+    @staticmethod
+    def _token(role, fields):
+        out = [""] * (max(fields) + 1)
+        for i, v in fields.items():
+            out[i] = v
+        return f"{role}=" + ":".join(out)
+
+    def _plan(self, form="form=A4B4"):
+        band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 20: "eA+B", 21: "nA4!8+B2"}),
+                self._token("drums", {4: "0.5", 20: "eA+B", 21: "nAK1@50,S8@100+BK4@100"}),
+                self._token("melody", {0: "half", 1: "60-72", 2: "0.9", 3: "1", 4: "0.8", 20: "eA+B", 21: "nA2!5+B6"})]
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = " ".join(band) + " top=0.30 tempo=medium " + form
+        return whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+
+    def test_the_token_carries_each_parts_onsets_by_section(self):
+        s, bass, tune = self._song()
+        self.assertEqual(rhythm.section_onsets_field(s, bass), "nA4!8+B2")                          # A's last bar a fill; B's no other than its bars
+        self.assertEqual(rhythm.section_onsets_field(s, tune), "nA4+B4")
+        self.assertEqual(rhythm.section_onsets_field(s, []), "")
+        self.assertEqual(rhythm.kit_onsets_field(s), "nAK1@50,S8@100+BK4@100")                      # each piece's hits a bar and the share of the bars it plays
+        s.parts = [(0, 8, None, "A")]
+        self.assertEqual(rhythm.section_onsets_field(s, bass), ""); self.assertEqual(rhythm.kit_onsets_field(s), "")   # a form the token does not carry
+
+    def test_the_fields_are_read(self):
+        self.assertEqual(whole.onsets_of("A6+B2!1+C4.5!7"), {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)})
+        self.assertEqual(whole.onsets_of("A6+B"), {}); self.assertEqual(whole.onsets_of("A0"), {})
+        self.assertEqual(whole.kit_onsets_of("AS28.5@100,c1@50+BS20@75"), {"A": {"S": (28.5, 1.0), "c": (1.0, 0.5)}, "B": {"S": (20.0, 0.75)}})
+        self.assertEqual(whole.kit_onsets_of("AS28"), {})
+        b = whole.kit_piece_bounds({"S": (28.5, 1.0), "c": (1.0, 0.5), "K": (4.0, 0.1)})
+        self.assertEqual(b["S"], (8, 24))                                                           # played through: half to one and a half of sixteen, the writers' most
+        self.assertEqual(b["c"], (0, 1)); self.assertEqual(b["K"], (0, 1)); self.assertEqual(b["h"], (0, 0))   # in some bars; rarely; never
+        self.assertEqual(whole.kit_piece_bounds({"K": (2.0, 0.5)})["K"], (0, 3))
+        self.assertEqual(whole.kit_piece_bounds(None)["K"], (0, 0))
+
+    def test_the_plan_takes_them_with_the_form(self):
+        p = self._plan()
+        self.assertEqual(p.section_onsets, {"bass": [4.0, 4.0, 4.0, 8.0, 2.0, 2.0, 2.0, 2.0]})       # the line's onsets a bar, A's last bar its own
+        self.assertEqual(p.section_densities["melody"], [-1, -1, -1, 0, 1, 1, 1, 1])                # the tune a tier under its typical four in A, its last bar a fill; a tier over in B
+        self.assertEqual(p.section_densities["bass"], [0] * 8)                                      # a backing line takes no tier shift: its envelope is the section's own
+        self.assertEqual(p.kit_bounds[0]["S"], (4, 12)); self.assertEqual(p.kit_bounds[0]["K"], (0, 1)); self.assertEqual(p.kit_bounds[4]["K"], (2, 6))
+        self.assertEqual(p.kit_bounds[4]["S"], (0, 0))                                              # the snare never sounds in B
+        env, hab = whole.envelope_at_for(p, "bass"), whole.habit_at_for(p, "bass")
+        self.assertEqual([env(k) for k in (0, 3, 4)], [(2, 6), (4, 12), (1, 3)])                    # within the writers' TIGHT of the section's
+        self.assertEqual([hab(k) for k in (0, 3, 4)], ["medium walking no-octaves", "dense walking no-octaves", "medium walking no-octaves"])   # and the tier they sit in
+        self.assertTrue(any(l.startswith("onsets a bar by section from the balance's song (round 125): bass 4 in A (8 in its last bar); melody sparser in A; bass 2 in B; melody denser in B") for l in p.log), p.log)
+        self.assertTrue(any(l == "kit pieces by section from the balance's song (round 125): A: K 0-1 S 4-12 | B: K 2-6" for l in p.log), p.log)
+        self.assertTrue(any(l == "fills by section from the balance's song (round 125): melody's line fuller in the last bar of A" for l in p.log), p.log)
+        q = self._plan(form="")                                                                     # no form of the token's: the pooled words stand
+        self.assertEqual(q.section_onsets, {}); self.assertEqual(q.kit_bounds, [])
+        self.assertIsNone(whole.envelope_at_for(q, "bass")); self.assertFalse(any("round 125" in l for l in q.log), q.log)
+
+    def test_a_kit_piece_keeps_to_its_sections_bounds(self):
+        from bitcomposer.translate import packtables
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={}, sid="s", game="g", numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.notes["drums"] = [(4.0 * i + x, 0.25, float("nan"), "kick") for i in range(8) for x in (0.0, 2.0)] + [(4.0 * i + x, 0.25, float("nan"), "snare") for i in range(8) for x in (1.0, 3.0)]
+        s.pieces = {"kick": "kick", "snare": "snare"}
+        model = packtables.read({"tables": {"drums": packtables.fit("drums", rhythm.drum_units([s]))}})["drums"]
+        every = tuple(rhythm.LETTERS.values())
+        bounds = [whole.kit_piece_bounds({"K": (2.0, 1.0)})] * 4 + [whole.kit_piece_bounds(None)] * 4       # the kick alone through A; no piece in B
+        hits, figures = writer.drums(s, {every: model}, random.Random(1), habit="medium repeating", free=True, plays=[True] * 8, bounds_at=lambda k: bounds[k])
+        self.assertEqual(sorted({letter for t, letter in hits}), ["K"])                              # the snare the table's one bar holds is not struck
+        self.assertEqual([t for t, _ in hits], [4.0 * i + x for i in range(4) for x in (0.0, 2.0)])  # and B, where no piece sounds, rests
+        self.assertEqual(figures[4:], ["-"] * 4)
+        free, _ = writer.drums(s, {every: model}, random.Random(1), habit="medium repeating", free=True, plays=[True] * 8)
+        self.assertEqual(sorted({letter for t, letter in free}), ["K", "S"])                         # without the bounds: the table's bar
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 
@@ -2382,7 +2475,7 @@ class NewTablesTests(unittest.TestCase):
         s.voice_notes = {0: ("bass", s.notes["bass"]), 1: ("melody", s.notes["melody"]), 2: ("drums", s.notes["drums"]), 3: ("counter", s.notes["counter"])}
         s.levels = {"melody": 0.22, "bass": 0.28, "drums": 0.14, "counter": 0.22}
         ctr = [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0]
-        self.assertTrue(":0.8::same:" in ctr and ctr.count(":") == 20 and ctr.endswith(":eB"), ctr)   # the kind the seventh field; the parts of the form it sounds in the twenty-first (round 124)
+        self.assertTrue(":0.8::same:" in ctr and ctr.count(":") == 21 and ctr.endswith(":eB:nB2"), ctr)   # the kind the seventh field; the parts of the form it sounds in the twenty-first (round 124), its onsets a bar there the twenty-second (round 125)
         s.notes["counter"] = [(a, b, c, "x") for a, b, c, _ in s.notes["counter"]]; s.voice_notes[3] = ("counter", s.notes["counter"])
         self.assertIn("::other:", [t for t in rhythm.balance_units([s])[0].outcome.split() if t.startswith("counter=")][0])
         s.levels = {}
@@ -2437,7 +2530,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(rhythm.line_voice({1: line, 2: layer}, "melody"), 1)                  # without the song: the busiest (the first of equals)
         entries = rhythm.layer_tokens(s, "melody")
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0], "1.5@m2@1.00@56-60@dm-12x6>o@m2~56-60x6>m3~60-60", entries)   # the sixth sub-field its instrument by stretch (round 92)
+        self.assertEqual(entries[0], "1.5@m2@1.00@56-60@dm-12x6>o@m2~56-60x6>m3~60-60@@@nB4", entries)   # the sixth sub-field its instrument by stretch (round 92); the ninth its onsets a bar by the form's letters (round 125)
         self.assertIn("@dm-12x6>o", rhythm.balance_units([s])[0].outcome)
         s.voice_notes[2] = ("melody", [(t + 0.5, 0.4, 60.0, "m3") for t, _, m, _ in line])      # a voice of one own stretch: no word
         self.assertNotIn(2, rhythm.relation_words(s))

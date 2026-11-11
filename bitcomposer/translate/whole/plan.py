@@ -277,6 +277,10 @@ class Plan:
                                       # over the part's song level, drawn a part an own section, a repeated section copying it)
     section_fills: dict = field(default_factory=dict)   # a part -> {"line": [a fill's shift a bar], "beside": [the same for its voices beside the
                                       # line]}: +1 the last bar of a section drawn fuller, -1 thinner (section_fills, round 118)
+    section_onsets: dict = field(default_factory=dict)   # a backing part -> [its line's onsets a bar in the token song's part of the form, or
+                                      # None, a bar] (round 125): the writers keep the line's figures within writer.TIGHT of it (envelope_at_for)
+    kit_bounds: list = field(default_factory=list)      # a bar -> {a kit piece's letter: (the least, the most hits it takes there)}, or None (round
+                                      # 125, kit_piece_bounds): each piece as the token song strikes it in the part of the form
     section_densities: dict = field(default_factory=dict)   # a part -> [its density tier's shift a bar: +1, 0, -1] (section_densities, round 101:
                                       # a section's density against the part's, drawn a part an own section by the step its level makes;
                                       # the writers shift the habit's tier for those bars, habit_at_for)
@@ -468,6 +472,135 @@ def token_textures(parts: list, band: list, spans: dict, log: list) -> tuple[lis
     if cuts:
         log.append("entrances from the balance's song (round 124): " + "; ".join(cuts))
     return textures, plays
+
+
+def onsets_of(text: str) -> dict:
+    """A voice's onsets a bar by the form's letters, read from the balance token (round 125, arrangement.section_onsets_text):
+    "A6+B2!1+C4.5!7" -> {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)}, by the letter the median of its onsets a bar there
+    and its onsets in the part's last bar where that is a fill or a thinning; {} where it cannot be read."""
+    out = {}
+    for item in text.split("+"):
+        m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)(?:!(\d+))?", item)
+        if not m or float(m.group(2)) <= 0:
+            return {}
+        out[m.group(1).upper()] = (float(m.group(2)), int(m.group(3)) if m.group(3) is not None else None)
+    return out
+
+
+def kit_onsets_of(text: str) -> dict:
+    """The kit's pieces' hits a bar by the form's letters, read from the balance token (round 125, arrangement.kit_onsets_field):
+    "AS28.5@100,c1@50+BS20@75" -> {"A": {"S": (28.5, 1.0), "c": (1.0, 0.5)}, "B": {"S": (20.0, 0.75)}}, by the letter each
+    piece's median hits a bar over the bars it plays there and the share of the part's bars it plays in; {} where it cannot
+    be read."""
+    out = {}
+    for item in text.split("+"):
+        if not item or not item[0].isalpha():
+            return {}
+        pieces = {}
+        for piece in item[1:].split(","):
+            m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)@(\d+)", piece)
+            if not m:
+                return {}
+            pieces[m.group(1)] = (float(m.group(2)), int(m.group(3)) / 100)
+        out[item[0].upper()] = pieces
+    return out
+
+
+KIT_THROUGH = 0.75                    # a kit piece the token song plays in this share of a part of the form's bars or more plays in every bar of it
+KIT_SOME = 0.25                       # one it plays in this share or more may play in a bar; one under it strikes a bar once at most
+KIT_FLOOR_CAP = 12                    # hits a bar the least a piece's bar must hold is never set over: a snare the game rolls at 28 a bar is asked
+                                      # for twelve or more, and the writers' grid gives it sixteen
+
+
+def kit_piece_bounds(stats: dict | None) -> dict:
+    """The hits a bar each kit piece keeps to in a part of the form (round 125): a piece's median hits there within the
+    writers' own TIGHT (figures.TIGHT: half to one and a half times), for a piece the token song plays through the part
+    (KIT_THROUGH of its bars); none to that many for one it plays in some bars (KIT_SOME); one at most for one it strikes
+    more rarely; none for a piece the part of the form never hears. {piece letter: (least, most)} for every letter."""
+    out = {}
+    low, high = writer.TIGHT
+    cap = writer.FREE_HITS[1]
+    for letter in rhythm.LETTERS.values():
+        got = (stats or {}).get(letter)
+        if not got:
+            out[letter] = (0, 0)
+            continue
+        n = min(cap, got[0])
+        least, most = min(KIT_FLOOR_CAP, max(1, math.ceil(low * n))), max(1, math.floor(high * n))
+        out[letter] = (least, most) if got[1] >= KIT_THROUGH else (0, most) if got[1] >= KIT_SOME else (0, 1)
+    return out
+
+
+def token_sections(parts: list, band: list, plays: dict, voices: dict, onsets: dict, kit_onsets: dict, layer_onsets: dict, log: list) -> tuple[dict, list, dict, dict]:
+    """How busy each part is in each part of the form, as the token song has it (round 125), where the form's letters are
+    its own. Returns ({a backing part: [its line's onsets a bar, or None, a bar]}, [the kit's pieces' bounds a bar
+    (kit_piece_bounds), or None], {a part: [its density tier's shift a bar]}, {a part: {"line": [a fill's shift a bar],
+    "beside": [...]}}), the last two in plan_section_densities' and plan_section_fills' shapes. A backing part's line
+    (the bass, a chord part) takes its onsets a bar from the token's part of the form, its last bar that bar's own where
+    the token says a fill or a thinning; the tune keeps its own density and takes the token song's tier against it (a
+    part of the form at DENSITY_STEP times the tune's typical onsets a bar or more a tier up, at the inverse or less a
+    tier down); the tune's and the counter's last bar, and the last bar of the first voice beside any line, take the
+    token's fill or thinning; a part of the form that returns takes its first statement's. The section_densities and
+    section_fills words are not drawn: they are drawn on their own streams, so no other draw moves."""
+    total = parts[-1][0] + parts[-1][1]
+    lines = {role: [None] * total for role in band if role in rhythm.UPPER + (R.BASS,) and onsets.get(role)}
+    kit = [None] * total
+    densities = {role: [0] * total for role in band if role not in (R.DRUMS, R.COUNTER)}
+    fills = {role: {"line": [0] * total, "beside": [0] * total} for role in band if role != R.DRUMS}
+    step = rhythm.DENSITY_STEP
+    fill_of = lambda pair: 0 if not pair or pair[1] is None else 1 if pair[1] >= pair[0] else -1   # noqa: E731  the token's "!": over the median a fill, under it a thinning
+    tune = onsets.get(R.MELODY) or {}
+    tune_bars = [tune[label][0] for bar, n, of, label in parts if label in tune for k in range(bar, bar + n) if plays.get(R.MELODY, [False] * total)[k]]
+    typical = statistics.median(tune_bars) if tune_bars else None
+    said = []
+    for bar, n, of, label in parts:
+        if of is not None:
+            src, m = parts[of][0], parts[of][1]
+            for j in range(n):
+                at = src + min(j, m - 1)
+                kit[bar + j] = kit[at]
+                for role in lines:
+                    lines[role][bar + j] = lines[role][at]
+                for role in densities:
+                    densities[role][bar + j] = densities[role][at]
+                for role in fills:
+                    for kind in ("line", "beside"):
+                        fills[role][kind][bar + j] = fills[role][kind][at]
+            continue
+        if R.DRUMS in band and kit_onsets:
+            bounds = kit_piece_bounds(kit_onsets.get(label))
+            for k in range(bar, bar + n):
+                kit[k] = bounds
+        for role in lines:
+            got = onsets[role].get(label)
+            if got is None:
+                continue
+            for k in range(bar, bar + n):
+                lines[role][k] = got[0]
+            if got[1] is not None:
+                lines[role][bar + n - 1] = float(max(1, got[1]))
+            said.append(f"{role} {got[0]:g} in {label}" + (f" ({got[1]} in its last bar)" if got[1] is not None else ""))
+        if typical and R.MELODY in densities and label in tune:
+            shift = 1 if tune[label][0] >= step * typical else -1 if tune[label][0] <= typical / step else 0
+            if shift:
+                densities[R.MELODY][bar:bar + n] = [shift if plays[R.MELODY][k] else 0 for k in range(bar, bar + n)]
+                said.append(f"melody {'denser' if shift > 0 else 'sparser'} in {label}")
+        if n >= rhythm.FILL_BARS:
+            for role in fills:
+                if role in (R.MELODY, R.COUNTER):
+                    fills[role]["line"][bar + n - 1] = fill_of((onsets.get(role) or {}).get(label))
+                if voices.get(role, 1) >= 2:
+                    fills[role]["beside"][bar + n - 1] = fill_of(((layer_onsets.get(role) or {}).get(1) or {}).get(label))
+    filled = [f"{role}'s {'line' if kind == 'line' else 'voices beside the line'} {'fuller' if x > 0 else 'thinner'} in the last bar of {label}"
+              for bar, n, of, label in parts if of is None for role, kinds in fills.items() for kind in ("line", "beside") for x in (kinds[kind][bar + n - 1],) if x]
+    if said:
+        log.append("onsets a bar by section from the balance's song (round 125): " + "; ".join(said))
+    if any(b is not None for b in kit):
+        log.append("kit pieces by section from the balance's song (round 125): " + " | ".join(
+            f"{label}: " + (" ".join(f"{letter} {lo}-{hi}" for letter, (lo, hi) in kit[bar].items() if hi) or "none") for bar, n, of, label in parts if of is None and kit[bar] is not None))
+    if filled:
+        log.append("fills by section from the balance's song (round 125): " + "; ".join(filled))
+    return lines, kit, densities, fills
 
 
 def hold_loop(plan: "Plan", key: str, notes: list, meter: int = None) -> tuple[list, int, set]:
@@ -935,6 +1068,11 @@ def plan_section_fills(models: dict, parts: list, band: list, plays: dict, voice
 def habit_at_for(plan, role: str, habit=None):
     """A part's habit a bar for its writer (round 101): the song's habit with its density tier shifted where the
     section_densities draw says; None where no bar shifts (the writer keeps its one habit)."""
+    own = getattr(plan, "section_onsets", {}).get(role) if habit is None else None
+    if own and any(own):                                    # the token song's own onsets a bar by section (round 125): the tier they sit in
+        base = plan.habits[role]
+        tier = lambda n: " ".join([rhythm.habit_of(n, rhythm.DENSITIES)] + str(base).split()[1:]) if n and isinstance(base, str) and base.split() else base   # noqa: E731
+        return lambda k: tier(own[k] if 0 <= k < len(own) else None)
     shifts = plan.section_densities.get(role)
     if not shifts or not any(shifts):
         return None
@@ -947,6 +1085,10 @@ def envelope_at_for(plan, role: str, habit=None):
     (rhythm.density_bounds: a tier denser, DENSITY_STEP times the part's typical or more; a tier sparser, the typical over
     it or fewer; the writer hands in the part's own running density as the typical, the tier's FFVI median standing in),
     None for a bar without a shift; None where no bar shifts."""
+    own = getattr(plan, "section_onsets", {}).get(role) if habit is None else None
+    if own and any(own):                                    # the token song's own onsets a bar by section (round 125): within the writers' TIGHT of them
+        low, high = writer.TIGHT
+        return lambda k, typical=None: (max(1, math.ceil(low * own[k])), max(1, math.floor(high * own[k]))) if 0 <= k < len(own) and own[k] else None
     shifts = plan.section_densities.get(role)
     if not shifts or not any(shifts):
         return None
@@ -1776,6 +1918,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
+    token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
+                                                            # voice beside a line's (round 125)
     token_line_company = {}                                 # where a chord part's line doubles the bass or runs parallel to it, by stretch (round 123)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
@@ -1858,6 +2002,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 for i, x in enumerate(parts_, start=1):     # and each one's loops by the form's letters (round 121): "lB1~75!3.7"
                     if len(x) > 7 and x[7].startswith("l") and loops_of(x[7][1:]):
                         token_loops[f"{role}:{i}"] = loops_of(x[7][1:])
+                    if len(x) > 8 and x[8].startswith("n") and onsets_of(x[8][1:]):   # and its onsets a bar by them (round 125)
+                        token_layer_onsets.setdefault(role, {})[i] = onsets_of(x[8][1:])
                                                                                                                         # lengths by the line's gap, its longest
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
@@ -1954,6 +2100,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_line_company[role] = fields[19][1:]   # doubles the bass, by stretch (round 123): `rdb+12x2>ox8>db+12`
             if len(fields) > 20 and fields[20].startswith("e") and spans_of(fields[20][1:]):   # the parts of the form the part sounds
                 token_spans[role] = spans_of(fields[20][1:])   # in, with its entrances (round 124): `eA+B2.0+D0.4`
+            if len(fields) > 21 and fields[21].startswith("n"):   # how busy it is in each (round 125): the line's onsets a bar `nA6+B2!1`,
+                if role == R.DRUMS:                         # the kit's pieces' hits a bar `nAS28.5@100,c1@50`
+                    token_kit_onsets = kit_onsets_of(fields[21][1:])
+                elif onsets_of(fields[21][1:]):
+                    token_onsets[role] = onsets_of(fields[21][1:])
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
@@ -2121,11 +2272,16 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted
-    section_densities = (plan_section_densities(models, parts, band, plays, section_levels, random.Random(f"whole:{seed}:section densities"), log)
-                         if "section_densities" in render_mod.models_or_empty(models) else {})   # a section's density tier by the step its level makes (round 101)
     voices = allot(band, counts, len(token_kit_channels) or 2)   # the kit on its song's channels (round 87), two without the field
-    section_fills = (plan_section_fills(models, parts, band, plays, voices, random.Random(f"whole:{seed}:section fills"), log)   # what each voice does in a
-                     if "section_fills" in render_mod.models_or_empty(models) else {})                                        # section's last bar (round 118)
+    own_density = own_form and bool(token_onsets or token_kit_onsets)   # how busy each part is in each part of the form: the token song's own
+    section_onsets, kit_bounds = {}, []                     # (round 125), where the form's letters are its own
+    if own_density:
+        section_onsets, kit_bounds, section_densities, section_fills = token_sections(parts, band, plays, voices, token_onsets, token_kit_onsets, token_layer_onsets, log)
+    else:
+        section_densities = (plan_section_densities(models, parts, band, plays, section_levels, random.Random(f"whole:{seed}:section densities"), log)
+                             if "section_densities" in render_mod.models_or_empty(models) else {})   # a section's density tier by the step its level makes (round 101)
+        section_fills = (plan_section_fills(models, parts, band, plays, voices, random.Random(f"whole:{seed}:section fills"), log)   # what each voice does in a
+                         if "section_fills" in render_mod.models_or_empty(models) else {})                                        # section's last bar (round 118)
     for role, kinds in section_fills.items():               # the line's fill rides the density shift its writer reads (habit_at_for, envelope_at_for)
         if any(kinds["line"]):
             shifts = section_densities.setdefault(role, [0] * len(kinds["line"]))
@@ -2287,7 +2443,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                    + (" kit " + " ".join(f"{k}={v:.2f}" for k, v in token_kit_pans.items()) if token_kit_pans and R.DRUMS in band else ""))
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
-                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_densities=section_densities, section_fills=section_fills,
+                level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
                 top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity)
 
 
@@ -2668,8 +2824,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             # figure is one song's bar, hat and all, and another song's "sparse hat" cutting it had left a dense kit at 8 hits a bar
             # against the game's 12.8; the song's pieces (kit_pieces) now say which sounds the kit has at all
             group_classes = {g: rhythm.class_values(kit_classes, set(g) & kit_letters) for g in groups} if kit_classes else {}
+            kit_bounds = getattr(plan, "kit_bounds", None) or []
             hits, figures = writer.drums(song, groups, random.Random(f"{seed}:drums"), habit=group_habits, free=True, plays=plan.plays[R.DRUMS], kit_value=kit_value,
-                                         class_values=group_classes)
+                                         class_values=group_classes,
+                                         bounds_at=(lambda k: kit_bounds[k] if 0 <= k < len(kit_bounds) else None) if any(b is not None for b in kit_bounds) else None)   # each piece as the token song strikes it in the part of the form (round 125)
             by_voice, notes, dropped = {}, [], Counter()
             seconds_of = plan.extras.get(R.DRUMS, {}).get("kit_seconds") or {}   # the letters with a second sample (round 99), its hits drawn
             runs, rng_seconds = {}, random.Random(f"{seed}:drums:seconds")      # by the kit_seconds word on an own stream, held to the token's share
