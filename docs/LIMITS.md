@@ -339,6 +339,19 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **A chord's degree is the pooled chain's; only its quality is the
+  token song's.** Since round 127 a chord takes the quality its degree
+  has in its token song and keeps one quality through the song. Which
+  degrees the harmony visits, and in what order, is still the pooled
+  chords word's chain: the written Edgar and Sabin sits on its tonic in
+  most bars where the game's is on it in two of seventeen, and a
+  written song has six distinct chords at the median where FFVI's has
+  nine. A degree the token song stays on under four bars carries no
+  quality (a chord there keeps what the profile's hold gave it most,
+  within its third), and a quality is the degree's own only at 0.6 of
+  its beats: Battle Theme's tonic is a power chord for 0.44 of its
+  beats and nothing else for a fifth of them, so its tonic chords keep
+  what the profile's hold gave them, within their third.
 - **A bass has two voices at most, and the other parts' voices still
   draw their layer word.** Since round 126 a bass's second voice does
   what its token song's does (a line of its own, or the line again). A

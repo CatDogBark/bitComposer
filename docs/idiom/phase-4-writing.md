@@ -8749,3 +8749,68 @@ under the line's figure: Gogo's busy voice plays eight a bar through
 its C and the written one follows the line's figure there. The other
 parts' voices beside the line still draw their layer word for the
 stretches the token leaves them their own.
+
+### Round 127: a chord takes the quality its degree has in the token song, and keeps it (2026-11-10, the fourth change from Song Check 100's investigation, on the owner's go)
+
+**Why.** The owner on the songs of Song Check 100 that were not their
+arrangement's fault: Gogo's "wandering", "random noise that makes sense
+musically"; Edgar and Sabin's, after the Arrangement Check, "still
+sounds more aimless". The arrangement rounds (124 to 126) leave the
+chords as they were, and the chords wander: the written Gogo opens G
+minor, G major, G5, G7.
+
+**Found.** The chain draws a chord a bar from the pooled chords word,
+and round 112 holds each changing chord's quality to the token song's
+shape profile, bar by bar from the shapes so far. The profile says
+which qualities the song has, not on which degrees, and the hold has no
+memory of what it gave a chord before. So one drawn chord came out in
+two or three qualities in a song, a major chord was made minor and a
+minor one major, and a quality landed on any degree: Battle Theme's
+major sevenths are all on its flat second (0.92 of that degree's
+beats), and the written song had one on its tonic and a bare fifth on
+its flat second. Counted on the plans' chords, the 68 Song Check 100
+songs beside FFVI's own bars: a chord change keeps its degree and
+changes its quality in 0.21 of the changes (FFVI 0.12), flips its third
+on its degree in 0.12 (0.06), and a degree has 1.81 qualities in a song
+(1.62). Switched off, the profile's hold left 0.84 of the chords heard
+in the key where it left 0.74 (FFVI 0.81).
+
+**Built.** The reader: `chord_degree_shapes`, a song-level `quals=`
+field: for each degree the song stays on four bars or more, by its
+semitones over the tonic, its qualities with their share of the
+degree's beats. The plan: `quals_of` reads it; `plan_chords` keeps each
+changing bar's chord as the chain drew it, and once the chain is drawn
+`hold_chord_shapes` gives each drawn chord one quality: its degree's
+own where the song gives the degree one (0.6 of its beats); else, of
+the qualities the profile's hold gave it, the one it took in the most
+bars among those the song gives the degree and those that keep the
+chord's own third (`chord_third`), the name as drawn at a tie. A held
+bar follows the bar before and a returning part its first statement.
+It runs after the chain and before the harmony's loops, so the chain's
+draws and every later draw stand. A first cut gave every chord its
+degree's most heard quality and left a song five distinct chords where
+FFVI's has nine; a second kept one quality a drawn chord with no
+degrees and left Battle Theme's flat second a fifth; this is the two
+together. Tests: a chord's third, with a minor key's dominant either;
+the quality taken most within the third, a held bar and a returning
+part; the field, its reading, a degree's own quality and the tonic's
+among the song's; the chain's own cases. Suite 503 (1 skip).
+
+**Measured.** FFVI: 67 tokens carry the field, 182 degrees; 131 have
+one quality on 0.6 of their beats or more (the major triad 43, the
+power chord 40, minor 32, the major seventh 5). The 68 Song Check 100
+songs, on the plans' chords: a change keeps its degree and changes its
+quality in 0.09 of the changes at the mean (0.21; FFVI 0.12), flips its
+third in 0.05 (0.12; 0.06); a degree has 1.35 qualities (1.81; 1.62); a
+song has 6 distinct chords at the median (8.5; 9). As the chord reader
+hears them: 0.82 of the chords in the key (0.74; 0.81), the tonic with
+the other third in 0.05 of the bars (0.07; 0.02). Battle Theme's (seed
+18): the tonic suspended, a power chord or minor, the flat second a
+major seventh through its six bars. Plans (400 seeds, against round
+126): all keep their token song; 27 note sets unchanged.
+
+**Open.** The degrees are still the pooled chain's, and a song has
+fewer distinct chords than the game's. A bar's chord is the chord two
+bars before in 0.34 of the written songs' bars against 0.50 of FFVI's
+(round 128). A chord's third still flips where the chain itself draws
+both.

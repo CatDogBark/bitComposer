@@ -378,6 +378,30 @@ The words are grouped by where the writing draws them, in the order the song is 
   to the riff's chord tones (round 111) had no seventh to play, and the
   synth struck with it never saw the tone the game's synth sits still
   over.
+  Since round 127 the token carries a song-level `quals=` field too, the
+  qualities each degree of the song's key has (`chord_degree_shapes`:
+  for each root the reader heard for DEGREE_BARS bars or more, by its
+  semitones over the tonic, the shapes it has on DEGREE_SHARE of its
+  beats or more with their share, the most heard first;
+  `quals=1~maj7:92+0~5:44` for Battle Theme, whose major sevenths sit on
+  its flat second; 67 tokens carry one, 182 degrees, 131 of them with
+  one quality on 0.6 of their beats or more: the major triad 43, the
+  power chord 40, minor 32, the major seventh 5). Once the chain is
+  drawn (its draws, its holds and the profile's hold as before, so no
+  other draw moves) `hold_chord_shapes` gives each chord as drawn one
+  quality: its degree's own in the token song where the degree has one
+  (DEGREE_OWN); else, of the qualities the profile's hold gave it bar
+  by bar, the one it took in the most bars among those the song gives
+  the degree and those that keep the chord's own third (`chord_third`:
+  a major chord is not made minor, nor a minor one major; a shape with
+  no third suits either; a minor key's dominant may be either), the
+  name as drawn at a tie; a held bar follows the bar before, a returning
+  part its first statement. Why: the profile's hold decides bar by bar
+  from the shapes so far and knows no degrees, so one drawn chord came
+  out in two or three qualities in a song (Gogo's G minor, G major, G5,
+  G7 in four bars), a chord's third flipped on its own degree in 0.12
+  of the written songs' chord changes against 0.06 of FFVI's, and
+  Battle Theme's major seventh sat on the written tonic.
   Since round 113 the token carries the song's form as a song-level
   `form=` field (`form_field`: the parts' letters in order, a returning
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-
