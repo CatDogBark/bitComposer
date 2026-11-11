@@ -310,6 +310,7 @@ class Plan:
     chord_shapes: dict | None = None                    # the token song's chord-shape profile ({shape: share}; round 112), or None
     form_letters: list | None = None                    # the token song's form, [(letter, bars)] (round 113), or None
     bass_continuity: float | None = None                # the token song's bass line pitch continuity (round 114), or None
+    bass_downbeat: float | None = None                  # the share of its bars' first beats the token song's bass strikes on the chord's root (round 129), or None
     loops: dict = field(default_factory=dict)           # a voice (the part for its line, "part:v" for a voice beside it, the drums for the kit,
                                       # LOOP_CHORDS for the harmony) -> {the form's letter: (the figure's bars, the share of the voice's bars on it,
                                       # the bars off it counted from the part's first)} where the token song's voice loops (round 121); only where
@@ -2017,6 +2018,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_quals = {}                                        # the qualities each degree has in the token song (round 127)
     token_form = None                                       # the token song's form letters (round 113)
     token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
+    token_downbeat = None                                   # how often the token song's bass roots a bar's first beat (round 129)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
     token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
@@ -2207,6 +2209,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_line_company[role] = fields[19][1:]   # doubles the bass, by stretch (round 123): `rdb+12x2>ox8>db+12`
             if len(fields) > 20 and fields[20].startswith("e") and spans_of(fields[20][1:]):   # the parts of the form the part sounds
                 token_spans[role] = spans_of(fields[20][1:])   # in, with its entrances (round 124): `eA+B2.0+D0.4`
+            if len(fields) > 22 and role == R.BASS and re.fullmatch(r"d\d+", fields[22]):   # how often the bass strikes a bar's first beat on the
+                token_downbeat = int(fields[22][1:]) / 100   # chord's root (round 129): `d73`
+                log.append(f"the bass strikes a bar's first beat on the chord's root in {token_downbeat:.2f} of its bars in the balance's song")
             if len(fields) > 21 and fields[21].startswith("n"):   # how busy it is in each (round 125): the line's onsets a bar `nA6+B2!1`,
                 if role == R.DRUMS:                         # the kit's pieces' hits a bar `nAS28.5@100,c1@50`
                     token_kit_onsets = kit_onsets_of(fields[21][1:])
@@ -2556,7 +2561,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2999,7 +3004,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                      sounds=gs["line" if layered else "only"] if gs else sounds_line, shared=shared_bass, lock_share=lock_share,
                                      ceiling=plan.bounds.get(R.BASS, plan.registers[R.BASS])[1], bounds_at=line_bounds_at(plan, R.BASS),
                                      tone_profile=plan.tone_profiles.get(R.BASS),   # the line's chord tones as the token song's (round 111)
-                                     continuity=plan.bass_continuity, log=bass_log)   # and its pitch held across bar lines as the song's (round 114)
+                                     continuity=plan.bass_continuity, log=bass_log,   # and its pitch held across bar lines as the song's (round 114)
+                                     downbeat=getattr(plan, "bass_downbeat", None))   # and a bar's first beat on the chord's root as often as the song's (round 129)
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
         notes, bass_looped, held_bars[(R.BASS, 0)] = hold_loop(plan, R.BASS, notes, song.meter)   # the line's figure again where the token song's bass loops (round 121)
         if bass_looped:

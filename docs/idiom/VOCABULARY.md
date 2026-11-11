@@ -411,6 +411,22 @@ The words are grouped by where the writing draws them, in the order the song is 
   the reader heard its quality another way, a triad one bar and its
   fifth alone the next; and since round 127 a written chord keeps one
   quality, so a bar on the figure takes the first bar's chord whole.
+  Since round 129 the bass's token carries a twenty-third field, how
+  often its line strikes a bar's first beat on the chord's root
+  (`bass_downbeat_field`: of the bars the line strikes on the first
+  beat, the share where its lowest note there is the root of the chord
+  the reader hears, in hundredths: `d73`; 55 FFVI basses carry one, 0.78
+  at the median, ten under a half and seventeen at 0.9 or more). The
+  bass writer holds the line to it as it writes (`writer.bass`,
+  `downbeat`): a bar's first-beat note off the root, where the share
+  with the bar counted runs under the song's, moves onto the root in
+  the octave nearest where it was, before the line's loop copies the
+  bar and before the parts written after the bass read it. Why: the
+  line's tone profile (round 111) holds how many of its notes are
+  roots over the song and its continuity (round 114) pedals a bar on
+  the bar before's pitch class; neither says where in the bar the root
+  falls, and the written bass was on the plan's root on the first beat
+  in half of the bars and off the chord in a sixth.
   Since round 113 the token carries the song's form as a song-level
   `form=` field (`form_field`: the parts' letters in order, a returning
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-

@@ -514,7 +514,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
          models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None,
-         envelope_at=None, tone_profile: dict | None = None, continuity: float | None = None, log: list | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         envelope_at=None, tone_profile: dict | None = None, continuity: float | None = None, log: list | None = None,
+         downbeat: float | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -560,6 +561,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                            chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)
     notes, last_root, previous = [], tonic, None
     tone_counts = Counter()                                 # the line's chord-tone classes written, for the profile hold (round 111)
+    down_bars, down_roots, down_moved = 0, 0, 0             # the bars struck on the first beat, those on the chord's root there, the notes moved onto it (round 129)
     prev_main, same, trans, pedaled, moved = None, 0, 0, 0, 0   # the bar before's main pitch class, the bar lines kept, the bars and notes on the
                                                           # pedal, for the continuity hold (round 114)
     beside = kind in figures_mod.VOICE_KINDS and shared is not None and models is not None and "voice_intervals" in models and "voice_moves" in models
@@ -572,6 +574,18 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
                 override = prev_main                        # bar before's main pitch class, which stays the bar's main pitch class (realize's pedal)
         new, last_root, previous = realize(figure, a, b, song, low_k, sounds, scale, last_root, previous, runs_to=tune_mod.first_onset(figures, bars, k + 1), high=high_k,
                                            profile=tone_profile if not beside else None, counts=tone_counts, root_override=override, moved=moved_here)
+        if downbeat is not None and not beside and new and new[0][0] < a + rhythm.NEAR:   # the bar's first beat on the chord's root as often as the
+            c0 = rhythm._chord_at(song.chords, a)           # token song's bass (round 129): under the share with this bar counted off the root, the
+            if c0 is not None and c0.root is not None:      # note moves to the root, in the octave nearest where it was
+                on_root = int(round(new[0][2])) % 12 == c0.root % 12
+                if not on_root and down_roots / (down_bars + 1) < downbeat:
+                    m = place(c0.root % 12, low_k, new[0][2], high=high_k)
+                    new[0] = (new[0][0], new[0][1], float(m))
+                    on_root, down_moved = True, down_moved + 1
+                    if len(new) == 1:
+                        previous = float(m)
+                down_bars += 1
+                down_roots += on_root
         if new and not beside:
             main = Counter(int(round(m)) % 12 for _, _, m in new).most_common(1)[0][0]
             if prev_main is not None:
@@ -602,6 +616,9 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             new = repitched
             previous = new[-1][2] if new else previous
         notes += new
+    if log is not None and downbeat is not None and not beside and down_bars:
+        log.append(f"bass on the chord's root on a bar's first beat to the balance's song's {downbeat:.2f} (round 129): {down_roots} of {down_bars} bars, "
+                   f"{down_moved} notes moved onto it")
     if log is not None and continuity is not None and not beside and trans:
         log.append(f"bass pitch held across bar lines to the balance's song's {continuity:.2f} (round 114): {same} of {trans} kept, {pedaled} bars on the bar before's "
                    f"pitch class, {moved} notes moved onto it")
