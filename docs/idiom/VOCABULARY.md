@@ -263,6 +263,27 @@ The words are grouped by where the writing draws them, in the order the song is 
   onsets they shared and an octave over it on 0.15 (Battle Theme: 0.04
   and 0.66); in the parts Battle Theme's band plays as one, the written
   guitar and bass were two lines.
+  Since round 124 every part's token carries a twenty-first field, the
+  parts of the form it sounds in by the form's letters, with where it
+  enters and leaves inside one (`part_spans_field`: `eA+B2.0+D0.4`,
+  through A whole, in B from its third bar, through D but its last four
+  bars; a letter left out is a part of the form it rests through; a
+  part sounds in a bar as the texture words count it, and its span runs
+  from the first bar it sounds in to the last). 62 FFVI tokens carry it,
+  the songs whose form the token carries: of 1058 cases of a part in a
+  part of the form, 835 are whole, 120 enter late or leave early and 103
+  rest through it. Where the plan's form is the token song's
+  (`own_form`: the letters, as the loops ask) `whole.token_textures`
+  sets the textures and every part's bars from the spans, a part of the
+  form too short for an entrance played whole and a returning part
+  copying its first statement; the `part_textures` and `part_entries`
+  draws are made all the same, their lines unsaid, so no other draw
+  moves, and the drums' own entrance draw is left out. Why: the form has
+  been the token song's since round 113 and what sounded in each part
+  of it a pooled draw by the part's place in the form, so a song on
+  Edgar and Sabin's token, whose four parts play every bar, played its
+  accompaniment and bass alone for fourteen bars and its tune alone for
+  six (Song Check 100: "garbled noise, especially the beginning").
   Since round 111 a chord part and the bass carry a sixteenth field, the
   line's chord-tone profile (`line_tone_profile`: `t46/2/8/31/2/11` for
   Battle Theme's guitar, `t33/8/17/19/3/20` for its bass, the share of the
@@ -1193,6 +1214,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   at a boundary (exits 12 and 6). FFVI by part: the melody plays its
   section whole 0.81 of the time, the counter 0.86, the bass 0.89, the
   accompaniment 0.90; the rest enter a bar or two in, or leave a bar early.
+  Since round 124 a song whose form is its token song's takes that
+  song's own entrances (the balance token's twenty-first field); the
+  word is drawn all the same and stands for a song whose form is drawn.
   *`part_entries`: shape (part, habit, form, length); drawn in _plan_once, plan_texture.*
 
 - **sample_lengths** — the shortest note a song plays a sample at, as a
@@ -1291,7 +1315,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   of a hundred, its sparse kits in fifteen, and the written dense kits had
   sat out one in ten. After round 59 the written kits sound in 0.94 of
   the bars (dense; FFVI 0.97), 0.75 (medium; 0.83) and 0.64 (sparse;
-  0.69).
+  0.69). Since round 124 a song whose form is its token song's takes
+  that song's own textures (the balance token's twenty-first field);
+  the word is drawn all the same and stands for a song whose form is
+  drawn.
   *`part_textures`: shape (part, habit, form, previous); drawn in plan_texture.*
 
 - **chords** — a bar's chord as a numeral in the key, after the bar

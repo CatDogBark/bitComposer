@@ -236,8 +236,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   (The Mines of Narshe's accompaniment up an octave) and with textures
   where the part leads alone (Aria de Mezzo Carattere's, Another World of
   Beasts' intros); the register is the token song's own by stretch (round
-  92) and is not drawn again, and the textures word draws the parts in and
-  out on its own. The counter follows the tune's figures and takes no
+  92) and is not drawn again, and which parts sound is its own word (the
+  token song's since round 124). The counter follows the tune's figures and takes no
   density tier of its own, where FFVI's counter steps are mostly bare
   anyway (7 of 10).
 - **A kit letter's second sample plays as its first does, and a third is
@@ -329,3 +329,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   line that doubles the tune through a part is its own there); and the
   double is of the bars the bass plays, so where the texture rests the
   bass the line keeps its own notes.
+- **A part's bars in a part of the form are one span, and a returning
+  part is its first statement.** Since round 124 the parts that sound in
+  each part of the form are the token song's, each from the bar it
+  enters to the bar it leaves. A bar a part rests between those is not
+  carried: the kit's figures rest single bars at their tables' rate, a
+  pitched part's writer plays through. A part of the form that returns
+  sounds as its first statement did, where the game's second A can add
+  a voice. And a song whose form is not its token song's (four FFVI
+  forms are under the sixteen bars a song is asked, six tokens carry no
+  form) keeps the pooled textures and entrances. How busy each part is
+  inside a part of the form is still a pooled word.

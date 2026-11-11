@@ -427,6 +427,49 @@ def looped_parts(parts: list, spec: dict | None) -> list:
     return out
 
 
+def spans_of(text: str) -> dict:
+    """The parts of the form a part sounds in, read from the balance token (round 124, arrangement.part_spans_field):
+    "A+B2.0+D0.4" -> {"A": (0, 0), "B": (2, 0), "D": (0, 4)}, by the form's letter the bars after the part's start it
+    enters and the bars before its end it leaves; {} where it cannot be read."""
+    out = {}
+    for item in text.split("+"):
+        m = re.fullmatch(r"([A-Za-z])(?:(\d+)\.(\d+))?", item)
+        if not m:
+            return {}
+        out[m.group(1).upper()] = (int(m.group(2) or 0), int(m.group(3) or 0))
+    return out
+
+
+def token_textures(parts: list, band: list, spans: dict, log: list) -> tuple[list, dict]:
+    """Which parts sound in each bar, as the token song has them (round 124): a part of the form holds the parts whose
+    spans name its letter (spans_of), each from the bar it enters to the bar it leaves (whole where the plan's part is
+    too short for the entrance); a part that repeats one copies its bars, as plan_texture's do. Returns the textures a
+    bar and each part's bars, in plan_texture's shapes."""
+    total = parts[-1][0] + parts[-1][1]
+    textures = [""] * total
+    cuts = []
+    for bar, n, of, label in parts:
+        if of is not None:
+            src, m = parts[of][0], parts[of][1]
+            for j in range(n):
+                textures[bar + j] = textures[src + min(j, m - 1)]
+            continue
+        for role in band:
+            got = (spans.get(role) or {}).get(label)
+            if got is None:
+                continue
+            enters, leaves = got if got[0] + got[1] < n else (0, 0)
+            for k in range(bar + enters, bar + n - leaves):
+                textures[k] = f"{textures[k]} {role}".strip()
+            if enters or leaves:
+                cuts.append(f"{role} " + " ".join(x for x in (f"enters {enters} in" if enters else "", f"leaves {leaves} before the end of" if leaves else "") if x) + f" {label}")
+    plays = {role: [role in textures[k].split() for k in range(total)] for role in band}
+    log.append("textures from the balance's song (round 124): " + " | ".join(f"{p[3]}: {textures[p[0]] or 'none'}" for p in parts))
+    if cuts:
+        log.append("entrances from the balance's song (round 124): " + "; ".join(cuts))
+    return textures, plays
+
+
 def hold_loop(plan: "Plan", key: str, notes: list, meter: int = None) -> tuple[list, int, set]:
     """A voice's bars made its figure's where the token song's voice loops (round 121). In each part of the form the voice's
     loops name (plan.loops[key], looped_parts), the figure is the first bar the voice plays at each place of the figure's
@@ -1732,6 +1775,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_form = None                                       # the token song's form letters (round 113)
     token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
+    token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
     token_line_company = {}                                 # where a chord part's line doubles the bass or runs parallel to it, by stretch (round 123)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
@@ -1908,6 +1952,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_loops[role] = loops_of(fields[18][1:])
             if len(fields) > 19 and fields[19].startswith("r") and any(st[0] != "own" for st in relation_stretches(fields[19][1:])):   # where the line
                 token_line_company[role] = fields[19][1:]   # doubles the bass, by stretch (round 123): `rdb+12x2>ox8>db+12`
+            if len(fields) > 20 and fields[20].startswith("e") and spans_of(fields[20][1:]):   # the parts of the form the part sounds
+                token_spans[role] = spans_of(fields[20][1:])   # in, with its entrances (round 124): `eA+B2.0+D0.4`
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
@@ -1922,8 +1968,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             parts = taken
             log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
             loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
+    own_form = bool(token_form) and [p[3] for p in parts] == [l for l, _ in token_form][:len(parts)]   # the form's letters are the token song's
     loops = {}                                              # the loops (round 121): the token song's, where the form's letters are its own
-    if token_loops and token_form and [p[3] for p in parts] == [l for l, _ in token_form][:len(parts)]:
+    if token_loops and own_form:
         loops = token_loops
         said = lambda spec: ", ".join(f"{l} {'every bar' if lag == 1 else f'every {lag} bars'} on {share:.2f}"   # noqa: E731
                                       + (" but bar" + ("s " if len(off) > 1 else " ") + " ".join(str(j + 1) for j in off) if off else "")
@@ -1948,7 +1995,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                 cycle=loops.get(LOOP_CHORDS))                                      # its harmony's loops (round 121)
     drum_habit = (token_habits.get(R.DRUMS) or _draw(models, "drum_habits", (R.DRUMS,), random.Random(f"whole:{seed}:drum-habit"), log)) if R.DRUMS in band else None   # before the
     tier = str(drum_habit).split()[0] if drum_habit else rhythm.NO_TIER   # textures, on an own stream: the kit's tier conditions them (round 59)
-    textures, plays = plan_texture(models, parts, band, rng, log, defer=(R.DRUMS,), tier=tier)
+    own_textures = bool(token_spans) and own_form           # the token song's own textures and entrances (round 124), where the form's letters
+    textures, plays = plan_texture(models, parts, band, rng, [] if own_textures else log, defer=(R.DRUMS,), tier=tier)   # are its own: the pooled
+    if own_textures:                                        # draw is made all the same (its lines unsaid), so no other draw moves
+        textures, plays = token_textures(parts, band, token_spans, log)
     silent = [r for r in band if not any(plays[r])]
     if silent:
         log.append(f"never in a texture, left out of the band: {silent}")
@@ -2067,7 +2117,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if "tune_sounds" in render_mod.models_or_empty(models):   # the share of its gap a held and a detached note sounds (round 98), own streams
                 extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log))
                                                for kind in rhythm.TUNE_KINDS}
-    if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models):   # the drums' entrances under the kit's tier (round 59), on an own stream
+    if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models) and not own_textures:   # the drums' entrances under the kit's tier (round 59), on an own stream; the token song's own stand (round 124)
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted

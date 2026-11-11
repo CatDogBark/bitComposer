@@ -1635,6 +1635,33 @@ def form_field(s) -> str:
     return "".join(f"{p[3]}{int(p[1])}" for p in parts)
 
 
+def part_spans_field(song, role: str) -> str:
+    """The balance token's twenty-first field (round 124): the parts of the form the part sounds in, by the form's letters,
+    and where inside one it enters and leaves: "eA+B2.0+D0.4" (through A whole; in B from its third bar; through D but its
+    last four bars; a letter left out is a part of the form it rests through), an "e" before; "" for a song whose form the
+    token does not carry (form_field) or a part that sounds in none. A part sounds in a bar as the texture words count it
+    (sounding_bars: a note struck there, or held into it a beat), from the first bar of the part of the form it sounds in
+    to the last, as the part_entries word reads an entrance; a bar it rests between those is its figures' to rest. The
+    part-textures and part-entries words are pooled: a song on Edgar and Sabin's token, whose four parts play every bar,
+    drew a first part of the form with the accompaniment and the bass alone and gave its tune fourteen bars of rest."""
+    if not form_field(song) or role not in song.notes:
+        return ""
+    plays = sounding_bars(song, role)
+    index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
+    out, seen = [], set()
+    for bar, n, of, label in song.parts:
+        if of is not None or label in seen:
+            continue
+        seen.add(label)
+        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        mine = [j for j, k in enumerate(idx) if k in plays]
+        if not mine:
+            continue
+        enters, leaves = mine[0], len(idx) - 1 - mine[-1]
+        out.append(label + (f"{enters}.{leaves}" if enters or leaves else ""))
+    return "e" + "+".join(out) if out else ""
+
+
 def chord_shape_profile(s) -> str:
     """The song's chord-shape profile as the balance token carries it (round 112, `shapes=`): the share of its beats under each
     chord shape the reader heard (harmony.SHAPES; the plain major triad as "maj"), in hundredths, the largest first, shapes
@@ -1899,7 +1926,7 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh] + [""] * 9 + [loop_field(s, s.notes[role], kit=True)]   # and its kit as the eighth (round 63; each
+                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh] + [""] * 9 + [loop_field(s, s.notes[role], kit=True), "", part_spans_field(s, role)]   # and its kit as the eighth (round 63; each
                                                                                              # channel's pieces as the fourth, round 87;
                                                                                              # piece's own level beside its sample, round 68)
                 while fields and not fields[-1]:
@@ -1928,7 +1955,8 @@ def balance_units(songs) -> list:
                       bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
                       line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's steps (round 117)
                       loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
-                      line_company_field(s, role) if role in readings_mod.UPPER else ""]   # and where the line doubles the bass, by part (round 123)
+                      line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
+                      part_spans_field(s, role)]              # and the parts of the form it sounds in, with its entrances (round 124)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
