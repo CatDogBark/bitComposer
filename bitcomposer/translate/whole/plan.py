@@ -1158,6 +1158,10 @@ def layers_of(plan: "Plan", role: str) -> list:
     return list(x.get("layers") or ([x["layer"]] if x.get("layer") else []))
 
 
+BASS_LAYER_KINDS = ("apart", "doubling")   # what the bass writer writes of a second voice: a line of its own, the line again at an interval
+                                           # (round 126); a bass whose voices alternate (one of FFVI's fifteen, Fanfare's) keeps the layers draw
+
+
 def layer_of(extras: dict) -> tuple:
     """A part's second voice as the plan drew it: ("apart", offset, density), ("doubling", interval) or ("alternating",)."""
     words = (extras or {}).get("layer", "").split()
@@ -1920,6 +1924,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
     token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
                                                             # voice beside a line's (round 125)
+    token_layer_words = {}                                  # the bass's voices beside its line: what each does, the layers word's outcome (round 126)
     token_line_company = {}                                 # where a chord part's line doubles the bass or runs parallel to it, by stretch (round 123)
     token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
@@ -2004,6 +2009,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                         token_loops[f"{role}:{i}"] = loops_of(x[7][1:])
                     if len(x) > 8 and x[8].startswith("n") and onsets_of(x[8][1:]):   # and its onsets a bar by them (round 125)
                         token_layer_onsets.setdefault(role, {})[i] = onsets_of(x[8][1:])
+                    if len(x) > 9 and x[9].startswith("v") and layer_of({"layer": x[9][1:].replace("_", " ")})[0] in BASS_LAYER_KINDS:   # and what a
+                        token_layer_words.setdefault(role, {})[i] = x[9][1:].replace("_", " ")   # bass's voice does beside the line (round 126)
                                                                                                                         # lengths by the line's gap, its longest
             if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
                 token_kinds[role] = fields[6]
@@ -2292,6 +2299,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if role != R.DRUMS and voices.get(role, 1) >= 2:
             layers = [_draw(models, "layers", (role, str(min(rank, 4))), rng, log) if "layers" in models else "apart +0 like"
                       for rank in range(2, voices[role] + 1)]
+            for i, word in sorted((token_layer_words.get(role) or {}).items()):   # the bass's voices as the token song's own (round 126): the draw
+                if 1 <= i <= len(layers) and layers[i - 1] != word:               # above is made all the same, so no other draw moves
+                    log.append(f"{role}'s voice {i + 1} beside the line from the balance (round 126): {word} (the draw {layers[i - 1]})")
+                    layers[i - 1] = word
             extras.setdefault(role, {})["layers"] = layers
             extras[role]["layer"] = layers[0]
     feel = _draw(models, "feels", ("song",), rng, log) if "feels" in models else "duple"
@@ -3210,8 +3221,30 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             part.notes[:] = fold_line(plan, role, part.notes, song.meter)
     if R.BASS in written:
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
+        written[R.BASS].log += double_bass(plan, song, written)   # a second voice that doubles the line: the line as finally played, again (round 126)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
     return written
+
+
+def double_bass(plan: Plan, song: rhythm.Song, written: dict) -> list:
+    """A bass's second voice that doubles its line (round 126): the line as finally played, again on the second voice at
+    the layer word's interval (in the scale; a unison or an octave the line's notes exactly, `diatonic`). Two of FFVI's
+    fifteen two-voice basses are one line on two samples (Returners, Overture part 3), and the bass writer wrote a second
+    voice only where the word was a line of its own, so a doubling left the second channel silent (seven of Song Check
+    100's songs, the layers word's pooled draw). Written last, after the theme band, the form's repeats and the bass's
+    last pass have moved the line, so the double stays the line's. Returns a log line."""
+    layer = layer_of(plan.extras.get(R.BASS))
+    if plan.voices.get(R.BASS, 1) < 2 or layer[0] != "doubling" or R.BASS not in written:
+        return []
+    part = written[R.BASS]
+    line = [n for n in part.notes if n[3] == 0]
+    if not line:
+        return []
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    double = diatonic(line, layer[1], scale, 1)
+    part.notes[:] = sorted(line + double, key=lambda n: (n[0], n[3]))
+    song.notes[R.BASS] = [(n[0], n[1] - n[0], n[2], R.BASS) for n in part.notes]
+    return [f"voice 2 doubles the line at {layer[1]:+d} semitones, the line as finally played: {len(double)} notes (round 126)"]
 
 
 STEP_MARGIN = 0.05                    # how far over its share of the token song's step profile a line's move class may run before the

@@ -778,7 +778,7 @@ class BalanceLevelTests(unittest.TestCase):
         lo, hi = rhythm.part_register(line, ambitus=True)
         self.assertEqual(rhythm.part_sample_field(s, "bass"), f"sbass012345@{lo}-{hi}")
         lo2, hi2 = rhythm.part_register(second, ambitus=True)
-        self.assertTrue(rhythm.layer_tokens(s, "bass")[0].endswith(f"@{lo2}-{hi2}"), rhythm.layer_tokens(s, "bass"))
+        self.assertEqual(rhythm.layer_tokens(s, "bass")[0].split("@")[3], f"{lo2}-{hi2}", rhythm.layer_tokens(s, "bass"))   # the fourth sub-field (a bass's voice carries a tenth since round 126)
         s.notes["melody"] = [(float(i), 1.0, 72.0, "lead0123456789") for i in range(6)]            # six notes: no range
         s.voice_notes[2] = ("melody", s.notes["melody"]); s.voice_levels[2] = 0.4; s.levels["melody"] = 0.4
         self.assertEqual(rhythm.part_sample_field(s, "melody"), "slead012345")
