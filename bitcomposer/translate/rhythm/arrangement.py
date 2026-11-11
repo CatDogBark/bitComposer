@@ -1544,15 +1544,18 @@ def voice_bar_keys(song, notes, kit: bool = False) -> list:
 
 
 def chord_bar_keys(song) -> list:
-    """The song's bars as their chords (round 121): the chord sounding at each beat of the bar (root and shape), () under no
-    chord; a bar's key for the harmony's loop."""
+    """The song's bars as their chords (round 121): the root of the chord sounding at each beat of the bar, () under no
+    chord; a bar's key for the harmony's loop. By the root alone since round 128: with the shape in the key a bar on the
+    figure's root read as off it wherever the reader heard its quality another way (a triad one bar, its fifth alone the
+    next), and 114 of FFVI's 198 parts of the form of four bars or more read as a loop where 140 are one by their roots;
+    since round 127 a chord keeps one quality through a written song, so the root is what a bar on the figure takes."""
     out = []
     for a, b in song.bars:
         row = []
         for i in range(int(round(b - a))):
             c = _chord_at(song.chords or [], a + i + readings_mod.NEAR)
             if c is not None and c.root is not None:
-                row.append((i, c.root, c.shape))
+                row.append((i, c.root))
         out.append(tuple(row))
     return out
 

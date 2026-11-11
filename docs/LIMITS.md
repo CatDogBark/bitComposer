@@ -339,6 +339,17 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **The band does not always spell the plan's chord.** Read back by the
+  chord reader, a written song's bar is heard on the plan's root in
+  0.66 of its bars and as the plan's chord, root and quality, in 0.35;
+  a song planned on six chords is heard on eleven. FFVI's chords are
+  the reader's own, so there is no plan to hold them against, but its
+  bass strikes a bar's first beat on the root of the chord heard there
+  in 0.73 of the bars where the written bass, held to its token song's
+  tone profile and its pitch across bar lines, does in 0.50 against
+  the plan's chord. The harmony's loops (round 128) and a chord's one
+  quality (round 127) are the plan's; what the ear gets of them is the
+  writers'.
 - **A chord's degree is the pooled chain's; only its quality is the
   token song's.** Since round 127 a chord takes the quality its degree
   has in its token song and keeps one quality through the song. Which

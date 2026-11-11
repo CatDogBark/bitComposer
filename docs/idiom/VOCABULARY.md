@@ -402,6 +402,15 @@ The words are grouped by where the writing draws them, in the order the song is 
   G7 in four bars), a chord's third flipped on its own degree in 0.12
   of the written songs' chord changes against 0.06 of FFVI's, and
   Battle Theme's major seventh sat on the written tonic.
+  Since round 128 the harmony's loops (`cycle=`, round 121) are read by
+  the bars' roots: `chord_bar_keys` gives a bar the root of the chord at
+  each of its beats, without the shape. 55 FFVI tokens carry a cycle
+  where 48 did, over 140 parts of the form where it was 114 (a one-bar
+  harmony in 110, two bars in 23, four in 7). Why: with the shape in
+  the key a bar on the figure's root read as off the figure wherever
+  the reader heard its quality another way, a triad one bar and its
+  fifth alone the next; and since round 127 a written chord keeps one
+  quality, so a bar on the figure takes the first bar's chord whole.
   Since round 113 the token carries the song's form as a song-level
   `form=` field (`form_field`: the parts' letters in order, a returning
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-
