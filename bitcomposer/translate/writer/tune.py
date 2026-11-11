@@ -792,7 +792,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     theme-body table draws (`theme_body`), then goes on new; an AGAIN
     phrase brings back the last phrase whose head was not the theme's; a
     NEW phrase is new, or answers the one before. Without letters the
-    phrases stand only to the one before (the relations table).
+    phrases stand only to the one before (the relations table). Where the
+    bars have their token song's own onsets (`envelope_at` marked `own`,
+    round 138) a phrase, a bar or a half bar comes back only where the
+    bars keep within them, and the theme is stated anew where its head
+    does not (`keeps`).
     `bounds_at`: bar -> the register the line is written in there, where
     the token song's line changes instrument by stretch (round 92); the
     line enters a new stretch's register by octaves and every move, recall
@@ -937,8 +941,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             if w and any(own[k] != figures_mod.REST for k in w):
                 part_of_window[w[0]] = (i, j)
                 j += 1
-    theme = None                                            # the theme phrase's cells (the first phrase's), once written
-    theme_bars = set()                                      # the theme phrase's bars: where an echo may point (recall_sources)
+    themes = []                                             # the theme's statements, their cells: the first phrase the letters name the theme,
+                                                            # and since round 138 any later one written new (see keeps), latest last
+    theme_bars = set()                                      # the theme's statements' bars: where an echo may point (recall_sources)
     others = []                                             # the phrases written whose head is not the theme's, latest last
     part_of = {k: i for i, (mine, _, _) in by_part.items() for w_ in mine for k in w_}   # a bar -> its part of the form (its section)
     pair_urn = Urn(models["pair_recall"], echo_habit) if "pair_recall" in models else None   # the urn at the pair (round 40)
@@ -1064,6 +1069,24 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         draws[name] = (played_, out)
         return out
 
+    own_onsets = envelope_at if getattr(envelope_at, "own", False) else None   # the token song's own onsets a bar for the tune's parts of the form
+    own_new = [0, 0, 0]                                     # (round 138); the new bars drawn within them, those among the table's bars that fit, those none fit
+
+    def keeps(k: int, n: int) -> bool:
+        """Whether a bar of n notes is within bar k's own onsets (round 138: the token song's for its part of the form,
+        half to one and a half times them); True for a bar without them. A bar that comes back, a half that comes back
+        and a phrase answered keep within them as a new bar does: the urns' recalls had brought a busy part of the
+        form's bars into a thin one's, and a recalled half gave a new bar notes its drawn rhythm had not (with the new
+        bars' draws alone held, the tune was still out of range in 30 of 193 parts of the form). So do the letters' and the
+        relation's phrases: the theme comes back as its latest statement whose head keeps within the phrase's first
+        bar, bar by bar while its bars keep, and where no statement's head does the phrase is written new and stands
+        as the theme's statement for the phrases after it (a theme first played over a part of the form of one note a
+        bar had come back as a note a bar through a part of three: 31 bars of whole notes in a song on Searching for
+        Friends); an earlier phrase comes back, and a phrase is repeated or moved, where every bar keeps, else the
+        phrase is new. The form's repeat plays its own part of the form's bars, which keep already."""
+        e = own_onsets(k) if own_onsets is not None else None
+        return e is None or e[0] <= n <= e[1]
+
     def new_rhythm(k: int) -> list:
         """A new bar's onsets for a new cell: by the cell-rhythms table's draw
         (rhythm.new_cell_rhythm_units: new to the tune in 77 % of the games'
@@ -1079,6 +1102,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                                                             # density tier shift as the bar's envelope, from the tune's own running density (round 101)
         if shifted is not None:
             env = (shifted[0], shifted[1], False, meters[k])
+        own_env = shifted is not None and own_onsets is not None   # the token song's own onsets a bar for this part of the form (round 138):
+                                                            # the bar's density is theirs, not the tier's running mean
         h = habit_at(k) if habit_at is not None else habit   # the bar's habit: its density tier shifted where the section says (round 101)
         values = {"part": role, "meter": meters[k], "previous": rhythm_prev or rhythm.START, "habit": h, "feel": rhythm.song_feel(song), "tempo": rhythm.band(song.bpm)}
         unit = tables.Unit(song.sid, song.game, "", values)
@@ -1087,6 +1112,12 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         def tier_ok(f):                                     # game song's grain, 2.9 onsets a bar in one song and 12.2 in another (FFVI's medium
                                                             # tunes: 3.4 to 5.1 a bar), and 4 of 7 medium tunes on the beat (0.15-0.21 of their
                                                             # onsets off it; FFVI's medium tunes 0.33-0.51, the tune_grain word's draw)
+            if own_env:                                     # a bar with the song's own onsets is asked neither (round 138): its density is the
+                return True                                 # song's, and the grain is a share over the tune that a bar's density decides more
+                                                            # than the tune does (FFVI's one-note bars strike off the beat in 0.10 of cases, its
+                                                            # five-to-eight-note bars in 0.51). With every bar the song's own no running share
+                                                            # was left, and the grain held to a bar by itself refused every one-note bar (0 or 1
+                                                            # off the beat, never 0.33-0.51) and put one of each two-note bar's notes off the beat
             toks = rhythm._tokens(f)
             n = sum(new_strikes) + len(toks)
             off = (sum(new_offs) + offbeats(toks)) / max(1, n)
@@ -1109,7 +1140,15 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 break
             figure = models["rhythm"].table.draw(models["rhythm"].table.context(unit), rng, values, floored=False, floor_k=models["rhythm"].table.chain_floor)
         else:
-            figure = next((f for f in rhythm_played if fit(f)), figure if manner.fits(figure) else "0")
+            drawn = figure
+            figure = next((f for f in rhythm_played if fit(f)), None)
+            if figure is None and own_env:                  # a bar asked what its context's bars seldom play (round 138): among the bars the
+                figure = parts_mod.among(manner, models["rhythm"], unit, rng, fit)   # table knows that fit, by its own probabilities here
+                own_new[1] += figure is not None                                     # (parts.among, round 133), before a bar that does not
+            if figure is None:
+                figure = drawn if manner.fits(drawn) else "0"
+                own_new[2] += own_env
+        own_new[0] += own_env
         rhythm_played[figure] += 1
         rhythm_prev = figure
         if shifted is None:                                 # a shifted section's bars are the word's, not the tune's running tier (round 101)
@@ -1225,11 +1264,14 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         for h in (0, 1):
             lo = h * half
             shares = dict(raw)
+            beside = len(all_pos) if h else sum(1 for p in positions if p >= half)   # the bar's notes beside this half: the half before's as
+            back = lambda kk: keeps(k, beside + len(pool[kk][0]))   # noqa: E731     # written, the half after's as drawn; a half comes back
+                                                                                      # where the bar stays within its own onsets (round 138)
             if sum(1 for p in positions if (p < half) == (h == 0)) < rhythm.HALF_CELL_NOTES:
                 shares = {"new": 1.0, "same": 0.0, "earlier": 0.0}   # a half the drawn rhythm gives fewer notes than a cell is no cell: it stays as
-            if prev_key not in pool:                                  # drawn (round 47: the word counts halves of HALF_CELL_NOTES and more, and the urn
+            if prev_key not in pool or not back(prev_key):            # drawn (round 47: the word counts halves of HALF_CELL_NOTES and more, and the urn
                 shares["new"], shares["same"] = shares["new"] + shares["same"], 0.0   # run on every half had turned the tune's one-note
-            earlier = {kk: n for kk, n in plays.items() if kk != prev_key}
+            earlier = {kk: n for kk, n in plays.items() if kk != prev_key and back(kk)}
             if not earlier:
                 shares["new"], shares["earlier"] = shares["new"] + shares["earlier"], 0.0
             total = sum(shares.values()) or 1.0
@@ -1376,15 +1418,17 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             log.append(f"bar {w[0]}: the form's repeat of bar {src0}, its tune again")
             continue
         letter = letter_of(w[0])
-        if letter == rhythm.THEME and theme is not None:   # the hook comes back: its head, as much of its body as the table says, then on
+        stated = next((t for t in reversed(themes) if keeps(live[0], len(t[0].positions))), None) if letter == rhythm.THEME else None   # the theme's
+                                                            # latest statement whose head keeps within this phrase's first bar's own onsets (round 138)
+        if stated is not None:                              # the hook comes back: its head, as much of its body as the table says, then on
             keep = 1 + (int(theme_body.draw((R.MELODY,), rng, floored=False)) if theme_body is not None else 0)
             shape = draw_shape("contours", {})
             phrase_size = size_of(shape)
             ending = draw_shape("endings", {})
             phrase_cells, start_midi = [], None
             for i, k in enumerate(live):
-                if i < keep and i < len(theme):
-                    cell = again(k, theme[i])
+                if i < keep and i < len(stated) and keeps(k, len(stated[i].positions)):
+                    cell = again(k, stated[i])
                     choices[k] = "theme"
                 else:
                     cell = (new_cell_halves if "half_recall" in models else new_cell)(k, new_rhythm(k), shape, start_midi, a0, b0)
@@ -1406,10 +1450,12 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             end_phrase(phrase_cells)
             prev_phrase, prev_phrase_start = phrase_cells, a0
             written_windows[w[0]] = (live, phrase_cells)
-            log.append(f"bar {w[0]}: the theme again, {min(keep, len(live))} of its bars, then {shape}, ends {ending}")
+            back = min(keep, len(live)) if own_onsets is None else sum(1 for k in live if choices.get(k) == "theme")
+            log.append(f"bar {w[0]}: the theme again, {back} of its bars, then {shape}, ends {ending}")
             continue
-        if letter == rhythm.AGAIN and others:               # an earlier phrase again, the last whose head was not the theme's
-            src_phrase = others[-1]
+        src_phrase = (next((ph for ph in reversed(others) if all(keeps(k, len(ph[i % len(ph)].positions)) for i, k in enumerate(live))), None)
+                      if letter == rhythm.AGAIN else None)   # the last whose bars keep within these bars' own onsets (round 138); none: a new phrase
+        if src_phrase is not None:                          # an earlier phrase again, the last whose head was not the theme's
             phrase_cells = [again(k, src_phrase[i % len(src_phrase)]) for i, k in enumerate(live)]
             for i, (k, c) in enumerate(zip(live, phrase_cells)):
                 choices[k] = "again"
@@ -1430,6 +1476,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         phrase_size = size_of(shape)
         ending = draw_shape("endings", {})
         phrase_cells = []
+        if (relation in ("repeated", "moved up", "moved down") and prev_phrase
+                and not all(keeps(k, len(prev_phrase[i % len(prev_phrase)].positions)) for i, k in enumerate(live))):
+            relation = "new"                                # a bar of the phrase before would not keep within this bar's own onsets (round 138)
         if relation in ("repeated", "moved up", "moved down") and prev_phrase:
             shift = int(round(shift_of(relation))) if relation != "repeated" else 0
             for i, k in enumerate(live):
@@ -1457,10 +1506,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                         group_plan = None
                         if pair_urn is not None and i + rhythm.PAIR <= len(live):
                             kind_ = pair_urn.choose(rng, SimpleNamespace(key=prev_pair_key) if prev_pair_key else None, pairs_played)
-                            if kind_ == "same" and prev_pair is not None:
+                            pair_keeps = lambda pr: all(keeps(live[i + x], len(pr[x].positions)) for x in range(rhythm.PAIR))   # noqa: E731 -- a pair
+                            if kind_ == "same" and prev_pair is not None and pair_keeps(prev_pair):   # comes back where both bars keep (round 138)
                                 group_plan = ("pair same", prev_pair, prev_pair_at)
                             elif kind_ == "earlier":
-                                pool_ = by_source(k, [(j, pr) for j, pr in pair_cells.items() if j < k and (pr[0].key, pr[1].key) != prev_pair_key])
+                                pool_ = by_source(k, [(j, pr) for j, pr in pair_cells.items() if j < k and (pr[0].key, pr[1].key) != prev_pair_key and pair_keeps(pr)])
                                 if pool_:
                                     j_, pr = _weighted(rng, pool_, [pairs_played.get((pr[0].key, pr[1].key), 1) for _, pr in pool_])
                                     group_plan = ("pair earlier", pr, j_)
@@ -1470,22 +1520,25 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                         cell = again(k, pr[i % rhythm.PAIR], kind_.split()[-1])
                         choices[k] = kind_
                         source[k] = j_ + i % rhythm.PAIR if j_ + i % rhythm.PAIR in cells else None
-                    elif relation == "answered" and prev_phrase and i < len(prev_phrase):
+                    elif relation == "answered" and prev_phrase and i < len(prev_phrase) and keeps(k, len(prev_phrase[i].positions)):
                         cell = new_cell(k, prev_phrase[i].positions, shape, start_midi, a0, b0)
                         choices[k] = "answered"
                     else:
                         choice = bar_urn.choose(rng, prev_cell, played)
                         before = k - 1 if k - 1 in cells else None
+                        if choice == "same" and prev_cell is not None and not keeps(k, len(prev_cell.positions)):
+                            choice = "new"                  # the bar before's cell is not within this bar's own onsets (round 138): a new bar
                         if choice == "same" and prev_cell is not None:
                             cell = again(k, prev_cell, "same")
                             source[k] = source.get(before, before) if before is not None else None
                         elif choice == "earlier":
                             follow = source.get(before)
-                            if follow is not None and follow + 1 in cells and follow + 1 < k and continues():
+                            if follow is not None and follow + 1 in cells and follow + 1 < k and keeps(k, len(cells[follow + 1].positions)) and continues():
                                 cell = again(k, cells[follow + 1])      # the passage recalled goes on with its next bar
                                 source[k] = follow + 1
                             else:
-                                pool = by_source(k, [(j, c) for j, c in cells.items() if j < k and (prev_cell is None or c.key != prev_cell.key)])
+                                pool = by_source(k, [(j, c) for j, c in cells.items() if j < k and (prev_cell is None or c.key != prev_cell.key)
+                                                     and keeps(k, len(c.positions))])
                                 if pool:
                                     j, c = _weighted(rng, pool, [played.get(c.key, 1) for _, c in pool])
                                     cell = again(k, c)
@@ -1535,9 +1588,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         prev_phrase, prev_phrase_start = phrase_cells, a0
         written_windows[w[0]] = (live, phrase_cells)
         if letters is not None and phrase_cells:
-            if theme is None and letter_of(w[0]) == rhythm.THEME:
-                theme = list(phrase_cells)                  # the song's theme: the first phrase the letters name so
-                theme_bars = set(live)
+            if letter_of(w[0]) == rhythm.THEME:             # a phrase the letters name the theme, written new: the song's theme (the first so
+                themes.append(list(phrase_cells))           # named), or the theme stated again where no statement's head kept (round 138)
+                theme_bars |= set(live)
             elif letter_of(w[0]) == rhythm.NEW:
                 others.append(list(phrase_cells))
         log.append(f"bar {w[0]}: {relation}, {shape}" + (f" {phrase_size:.0f}" if phrase_size is not None else "") + f", ends {ending}, bars {[choices.get(k, '-') for k in live]}")
@@ -1569,6 +1622,9 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             held = models["values"].draw((role, value, articulation), rng) if "values" in models else "held"
             notes.append((t, t + sounded(gap, tune_sounds, held, shortest), float(m)))   # the song's own shares (tune_sounds, round 98), no note
                                                             # under its token song's shortest usual one (round 136)
+    if own_new[0]:                                          # the tune's bars by its part of the form's own onsets (round 138)
+        log.append(f"new bars drawn within the balance's song's own onsets for their part of the form (round 138): {own_new[0] - own_new[2]} of {own_new[0]}"
+                   + (f", {own_new[1]} among the table's bars that fit" if own_new[1] else "") + "; a bar or a half that comes back and a phrase answered keep within them too")
     if half_kinds:
         c = Counter(kd for ks in half_kinds.values() for kd in ks)
         log.append("halves (half_recall): " + ", ".join(f"{kd} {c[kd]}" for kd in ("same", "earlier", "new", "rest") if c[kd]) + f" over {len(half_kinds)} new bars")

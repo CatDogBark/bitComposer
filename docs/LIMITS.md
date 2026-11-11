@@ -364,6 +364,28 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   shortest usual note, the notes of a rhythm quicker than the token
   song's tune plays (a gap under the floor sounds whole). The chord
   parts' and the bass's notes carry no such floor.
+- **The tune's grain is not its token song's.** Since round 138 a tune
+  bar drawn within its part of the form's own onsets is not held to the
+  pooled `tune_grain` word (a share over the whole tune, which a bar of
+  one note cannot meet alone): its notes fall on or off the beat as the
+  bar table has bars of that density in the song's feel and tempo class.
+  Bar for bar the written tunes then sit near the game's (bars of two
+  notes all on the beat 0.57 against 0.53, of three or four 0.34
+  against 0.35; five to eight notes 0.52 off the beat against 0.51),
+  but song by song the tune's share of notes off the beat is within a
+  tenth of its token song's tune's in 28 of 59 songs and 0.05 under it
+  at the median: the token carries no grain of its song's tune.
+- **A theme stated over a thin part of the form is stated again in a
+  busy one.** Since round 138 the theme comes back only where its bars
+  keep within the bars' own onsets; a phrase the letters name the theme
+  where its head does not is written new and stands as the theme for
+  the phrases after it. A song whose first part is an intro of a note a
+  bar then has two statements that share no bar, and where the letters
+  return the theme once, into a part of the form of another density,
+  that return is a new statement: in one of the 23 themed Song Check
+  100 songs on their token song's arrangement (a song on Returners) the
+  theme comes back by the form's repeat alone. The chords still come
+  back with the letters' return (round 134).
 - **A theme may be stated where the tune mostly rests.** The theme is
   the first phrase of the first part of the form the tune plays in, and
   since round 124 the tune rests where its token song's rests: in 35 of
@@ -463,16 +485,19 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   still the pooled draw: Edgar and Sabin's two accompaniment voices
   beside the line are lines of their own in the game, and the first
   was drawn a doubling a fourth under.
-- **A section's density is a median and an envelope, and the tune's and
-  the counter's are not held.** Since round 125 a backing line's figures
+- **A section's density is a median and an envelope, and the counter's
+  beside a tune is not held.** Since round 125 a backing line's figures
   are drawn within half to one and a half times the token song's median
   onsets a bar in the part of the form, and each kit piece within what
-  the song strikes of it there. The bars inside a part of the form are
-  not told apart (but the last, where it is a fill or a thinning): a
-  line the game plays eleven, five, six and three notes a bar is asked
-  for three to nine in each. The writers' grid stops at sixteenths, so
-  a snare the game rolls at twenty-eight a bar plays sixteen. The tune
-  keeps its own density and takes only the song's tier against it; the
+  the song strikes of it there; since round 138 the tune's bars keep
+  within the same envelope of its own. The bars inside a part of the
+  form are not told apart (but the last, where it is a fill or a
+  thinning): a line the game plays eleven, five, six and three notes a
+  bar is asked for three to nine in each, and a tune's busiest parts of
+  the form (over six notes a bar) are written at 0.88 of the game's at
+  the median, the bar table's thinner bars being the commoner inside
+  the envelope. The writers' grid stops at sixteenths, so a snare the
+  game rolls at twenty-eight a bar plays sixteen. The
   counter-line follows the tune's figures and rests more than the
   game's (it sounds in 0.72 of the Song Check 100 songs' bars against
   0.91); a voice beside a line follows its line and takes only the last

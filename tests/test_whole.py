@@ -1757,7 +1757,8 @@ class TokenSectionTests(unittest.TestCase):
 
     def test_the_plan_takes_them_with_the_form(self):
         p = self._plan()
-        self.assertEqual(p.section_onsets, {"bass": [4.0, 4.0, 4.0, 8.0, 2.0, 2.0, 2.0, 2.0]})       # the line's onsets a bar, A's last bar its own
+        self.assertEqual(p.section_onsets, {"bass": [4.0, 4.0, 4.0, 8.0, 2.0, 2.0, 2.0, 2.0],       # the line's onsets a bar, A's last bar its own;
+                                            "melody": [2.0, 2.0, 2.0, 5.0, 6.0, 6.0, 6.0, 6.0]})    # the tune's too since round 138
         self.assertEqual(p.section_densities["melody"], [-1, -1, -1, 0, 1, 1, 1, 1])                # the tune a tier under its typical four in A, its last bar a fill; a tier over in B
         self.assertEqual(p.section_densities["bass"], [0] * 8)                                      # a backing line takes no tier shift: its envelope is the section's own
         self.assertEqual(p.kit_bounds[0]["S"], (4, 12)); self.assertEqual(p.kit_bounds[0]["K"], (0, 1)); self.assertEqual(p.kit_bounds[4]["K"], (2, 6))
@@ -1765,7 +1766,8 @@ class TokenSectionTests(unittest.TestCase):
         env, hab = whole.envelope_at_for(p, "bass"), whole.habit_at_for(p, "bass")
         self.assertEqual([env(k) for k in (0, 3, 4)], [(2, 6), (4, 12), (1, 3)])                    # within the writers' TIGHT of the section's
         self.assertEqual([hab(k) for k in (0, 3, 4)], ["medium walking no-octaves", "dense walking no-octaves", "medium walking no-octaves"])   # and the tier they sit in
-        self.assertTrue(any(l.startswith("onsets a bar by section from the balance's song (round 125): bass 4 in A (8 in its last bar); melody sparser in A; bass 2 in B; melody denser in B") for l in p.log), p.log)
+        self.assertTrue(any(l.startswith("onsets a bar by section from the balance's song (round 125): bass 4 in A (8 in its last bar); melody 2 in A (5 in its last bar); "
+                                         "melody sparser in A; bass 2 in B; melody 6 in B; melody denser in B") for l in p.log), p.log)   # the tune's onsets too (round 138)
         self.assertTrue(any(l == "kit pieces by section from the balance's song (round 125): A: K 0-1 S 4-12 | B: K 2-6" for l in p.log), p.log)
         self.assertTrue(any(l == "fills by section from the balance's song (round 125): melody's line fuller in the last bar of A" for l in p.log), p.log)
         q = self._plan(form="")                                                                     # no form of the token's: the pooled words stand
@@ -2371,6 +2373,89 @@ class OwnTempoTests(unittest.TestCase):
         self.assertEqual(whole.tempo_near(models, "slow", 85.0, random.Random(1)), 84.0)            # its own, kept inside its class
         self.assertEqual(whole.tempo_near(models, "medium", 120.0, random.Random(1)), 125.0)        # one near it
         self.assertEqual(whole.plan(models, 3, "g").bpm, 200.0)
+
+
+class TuneSectionTests(unittest.TestCase):
+    """Round 138: the tune's line takes its token song's onsets a bar by the part of the form, as the backing lines do
+    since round 125, and the new bars its writer draws keep within them. The tune had kept its own density tier
+    (sparse to 2, medium to 6) and taken only the song's tier against it: a medium tune of a fast song runs four to six
+    notes a bar, and the written Blackjack's tune played 3.8 notes a second where the game's plays 1.4."""
+
+    @staticmethod
+    def _token(role, fields):
+        out = [""] * (max(fields) + 1)
+        for i, v in fields.items():
+            out[i] = v
+        return f"{role}=" + ":".join(out)
+
+    def _plan(self, tune="nA2+B6", band_tune=True):
+        band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 20: "eA+B", 21: "nA4+B2"}),
+                self._token("melody" if band_tune else "counter", {0: "half", 1: "60-72", 2: "0.9", 3: "1", 4: "0.8", 8: "medium+varied", 20: "eA+B", 21: tune})]
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = " ".join(band) + " top=0.30 tempo=medium form=A4B4"
+        return whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+
+    def test_the_plan_takes_the_tunes_onsets_by_section(self):
+        p = self._plan()
+        self.assertEqual(p.section_onsets["melody"], [2.0] * 4 + [6.0] * 4)
+        env, hab = whole.envelope_at_for(p, "melody"), whole.habit_at_for(p, "melody")
+        self.assertTrue(env.own); self.assertEqual([env(0), env(4)], [(1, 3), (3, 9)])              # within the writers' TIGHT of the song's own
+        self.assertEqual([hab(0), hab(4)], ["medium varied", "dense varied"])                       # and the tier they sit in
+        q = self._plan(band_tune=False)                                                             # a band without a melody: the counter is the tune
+        self.assertEqual(q.section_onsets["counter"], [2.0] * 4 + [6.0] * 4)
+        self.assertNotIn("melody", q.section_onsets)
+
+    @classmethod
+    def _models(cls):
+        if not hasattr(cls, "_built"):
+            from bitcomposer.composer import compose_song
+            from bitcomposer.translate import harness, packtables
+            song = compose_song(seed=5, pack="ffvi")
+            ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+            cls._built = packtables.read(packtables.build(ctx.db, "test"))
+        return cls._built
+
+    def _onsets(self, own, grain=None, letters=None):
+        """The written tune's onsets a bar and its log: every bar played, its own onsets a bar as given; no theme and no
+        recalled phrase, or every part of the form's phrases by the letters given."""
+        models = self._models()
+        p = whole.plan(models, 3, "g", max_bars=16)
+        p.plays[R.MELODY] = [True] * p.bars
+        p.extras[R.MELODY]["letters"] = {i: letters for i in range(len(p.parts))} if letters else {}
+        if grain:
+            p.extras[R.MELODY]["grain"] = grain
+        if own:
+            p.section_onsets[R.MELODY] = [float(own)] * p.bars if not isinstance(own, list) else (own * p.bars)[:p.bars]
+        part = whole.write(p, whole.song_of(p), models, 3)[R.MELODY]
+        line = [n for n in part.notes if n[3] == 0]
+        return [len({round(n[0] * 12) for n in line if 4.0 * k - 0.06 <= n[0] < 4.0 * k + 3.94}) for k in range(p.bars)], part.log
+
+    def test_a_new_bar_of_the_tune_keeps_within_them(self):
+        (free, _), (thin, log), (busy, _) = self._onsets(None), self._onsets(1), self._onsets(3)
+        self.assertTrue(any(n == 1 for n in free) and any(n >= 2 for n in free), free)              # the tier alone: one note a bar here, two or three there
+        self.assertTrue(all(n == 1 for n in thin), thin)                                            # one a bar in the song: one a bar written
+        self.assertTrue(all(2 <= n <= 4 for n in busy), busy)                                       # three a bar: two to four
+        self.assertTrue(any(l.startswith("new bars drawn within the balance's song's own onsets for their part of the form (round 138): ") for l in log), log)
+
+    def test_a_bar_that_comes_back_keeps_within_them_too(self):
+        counts, _ = self._onsets([3.0, 3.0, 1.0, 1.0])                                              # two bars of three, two of one, and round again
+        self.assertEqual([n for k, n in enumerate(counts) if k % 4 >= 2], [1] * (len(counts) // 2), counts)    # no bar of three back in a bar of one
+        self.assertTrue(all(2 <= n <= 4 for k, n in enumerate(counts) if k % 4 < 2), counts)        # and no bar of one in a bar of three
+
+    def test_the_theme_comes_back_as_its_statement_that_keeps(self):
+        phrases = lambda log: [l.split(": ", 1)[1] for l in log if l.startswith("bar ") and (", bars [" in l or "the theme again" in l)]   # noqa: E731
+        _, free = self._onsets(None, letters="T")                                                   # every phrase opens with the theme
+        self.assertTrue(len(phrases(free)) >= 4 and all(l.startswith("the theme again") for l in phrases(free)[1:]), phrases(free))
+        counts, log = self._onsets([1.0] * 4 + [3.0] * 60, letters="T")                             # the theme's four bars of one note, then bars of three
+        said = phrases(log)
+        self.assertTrue(said[1].startswith("new, "), said)                                          # a note a bar does not come back through bars of three:
+        self.assertTrue(all(l.startswith("the theme again, 1 of its bars") for l in said[2:]), said)   # the theme is stated anew there, and that comes back
+        self.assertTrue(all(n == 1 for n in counts[:4]) and all(2 <= n <= 4 for n in counts[4:]), counts)
+
+    def test_the_grain_is_not_asked_of_a_bar_with_them(self):
+        for grain in ("on-beat", "eighths", "fine"):                                                # a bar of one note is all on the beat or all off it:
+            counts, _ = self._onsets(1, grain=grain)                                                # held to its bar alone, a grain between refused each one
+            self.assertTrue(all(n == 1 for n in counts), (grain, counts))
 
 
 class TokenMotionTests(unittest.TestCase):
