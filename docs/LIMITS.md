@@ -347,6 +347,16 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **A tune's short notes are floored, not counted.** Since round 136
+  a tune note sounds at least as long as the note at the fifth
+  percentile of its token song's tune, where its gap leaves room. How
+  many of a tune's notes are short, and which, is still the pooled
+  `tune_sounds` and `values` words': a written tune's notes under 100
+  ms are 0.090 of them where FFVI's are 0.210, and eight written tunes
+  still have a tenth of their notes shorter than their token song's
+  shortest usual note, the notes of a rhythm quicker than the token
+  song's tune plays (a gap under the floor sounds whole). The chord
+  parts' and the bass's notes carry no such floor.
 - **A theme may be stated where the tune mostly rests.** The theme is
   the first phrase of the first part of the form the tune plays in, and
   since round 124 the tune rests where its token song's rests: in 35 of

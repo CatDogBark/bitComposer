@@ -9250,3 +9250,54 @@ none). Asking a bar off the beat by the whole song's share would put
 its off-beat bars anywhere; the game's sit in parts of the form, so
 the share wants carrying by the part of the form first. The standing
 list as at round 114.
+
+### Round 136: a tune's note sounds no shorter than its token song's tune's shortest usual note (2026-11-11, the second of four items after Song Check 101, its other half, on the owner's go)
+
+**Why.** The owner on Song Check 101's Terra: "notes on like offbeats
+that are kind of meh". Besides the accompaniment off the first beat
+(round 135), the written tune has notes of 62 ms on the half beat: a
+blip, not a note.
+
+**Found.** A tune note sounds a share of its gap, held or detached by
+the `values` word and how much by the `tune_sounds` word (round 98),
+both pooled: one share for a detached note whatever its gap. The
+written Terra drew 0.3 for a detached note; an eighth at 145 beats a
+minute is 207 ms and sounded 62. The game's Terra's tune sounds no
+note under 152 ms. FFVI's tunes do play short notes (0.121 of their
+notes under 80 ms, Battle Theme's 0.44), song by song: the note at a
+tune's fifth percentile sounds 116 ms at the median over the songs,
+under 80 ms in nineteen. Over the 68 Song Check 100 songs 24 written
+tunes have a tenth of their notes shorter than that note of their
+token song's by 10 ms or more.
+
+**Built.** The reader: `tune_shortest_field`, the melody's and the
+counter's twenty-fifth field: how long the note at the fifth
+percentile of the line's notes sounds, in milliseconds to the nearest
+ten after an "m" (`m150`); none under sixteen notes. The plan keeps it
+(`tune_shortest`) and gives the writers its length in beats at the
+song's tempo (`shortest_beats`). The writers: `tune.sounded`, a note's
+length as its gap's share or the song's shortest usual note, whichever
+is longer, the gap at most; `writer.melody` and `writer.counter` take
+`shortest`. Tests: the field (one short note in 32 is not usual, two
+are; milliseconds, not beats; none under sixteen notes); the plan's
+keeping it and its length at the plan's tempo; a note's length under
+the share alone, floored, at a gap under the floor and where the share
+is longer; a tune written with every note its gap or the floor. Suite
+530 (1 skip).
+
+**Measured.** FFVI: 65 melodies carry the field, 120 ms at the median,
+seventeen under 80 ms, 27 at 150 ms or more; 51 counters, 130 ms. The
+68 Song Check 100 songs: tunes with a tenth of their notes shorter
+than their token song's shortest usual note 8 (24), the share of a
+tune's notes under it 0.064 at the mean (0.147); tune notes under 60
+ms 0.010 of them (0.047; FFVI 0.026), under 80 ms 0.047 (0.102;
+0.121). The written Terra's tune: its shortest note 150 ms (62).
+Plans (400 seeds, against round 135): all keep their token song;
+70 note sets unchanged.
+
+**Open.** The floor says how short a note may sound, not how many
+notes are short: written tunes now have fewer short notes than FFVI's
+(under 100 ms: 0.090 against 0.210). Eight written tunes still have a
+tenth of their notes under their token song's shortest usual note, by
+a rhythm quicker than the token song's tune. The standing list as at
+round 114.

@@ -2229,7 +2229,7 @@ class PartFirstBeatTests(unittest.TestCase):
         tokens = {t.split("=", 1)[0]: t.split("=", 1)[1].split(":") for t in rhythm.balance_units([s])[0].outcome.split() if "=" in t}
         self.assertEqual(tokens["accompaniment"][23], "f75", tokens["accompaniment"])               # the twenty-fourth field, the bass's too
         self.assertEqual(tokens["bass"][23], "f100")
-        self.assertLess(len(tokens["melody"]), 24)                                                  # a tune carries none
+        self.assertEqual(tokens["melody"][23:24], [""])                                             # a tune carries none
 
     def test_the_plan_takes_a_share_a_part(self):
         field = lambda head, f: ":".join(head + [""] * (23 - len(head)) + [f])                      # noqa: E731
@@ -2260,6 +2260,74 @@ class PartFirstBeatTests(unittest.TestCase):
         log = []
         self.assertEqual([on_one(seed, first_beat=1.0, log=log) for seed in range(6)], [8] * 6)     # asked every bar: every bar on it
         self.assertIn("on a bar's first beat as often as the balance's song's 1.00 (round 135): 8 of 8 bars", log)
+
+
+class TuneShortestTests(unittest.TestCase):
+    """Round 136: a tune's shortest usual note rides its token in milliseconds (`m150`), and no written tune note sounds
+    shorter where its gap leaves room. The share of its gap a tune note sounds is a pooled draw, one share for a detached
+    note whatever its gap: the written Terra's detached eighths sounded 62 ms where the game's tune sounds none under 152."""
+
+    def _song(self, short=0, notes=32, bpm=120.0):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        tune = [(float(i), 0.1 if i < short else 0.9, 72.0 + (i % 5), "m") for i in range(notes)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, bpm=bpm, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_the_tunes_shortest_usual_note(self):
+        self.assertEqual(rhythm.tune_shortest_field(self._song(), "melody"), "m450")                # 0.9 of a beat at 120 beats a minute
+        self.assertEqual(rhythm.tune_shortest_field(self._song(short=1), "melody"), "m450")         # one short note in 32 is not usual
+        self.assertEqual(rhythm.tune_shortest_field(self._song(short=2), "melody"), "m50")          # two are: the fifth percentile
+        self.assertEqual(rhythm.tune_shortest_field(self._song(bpm=60.0), "melody"), "m900")        # milliseconds, not beats
+        self.assertEqual(rhythm.tune_shortest_field(self._song(notes=15), "melody"), "")            # under sixteen notes: no field
+        tune = next(f for f in rhythm.balance_units([self._song(short=2)])[0].outcome.split() if f.startswith("melody=")).split("=", 1)[1].split(":")
+        self.assertEqual(tune[24], "m50", tune)                                                     # the twenty-fifth field
+
+    def test_the_plan_takes_it_in_beats_at_its_tempo(self):
+        fields = [""] * 25
+        fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[24] = "m150"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.tune_shortest, {"melody": 150})
+        self.assertAlmostEqual(whole.shortest_beats(p, "melody"), 150 * p.bpm / 60000.0)
+        self.assertIsNone(whole.shortest_beats(p, "counter"))
+        self.assertIn("the melody's shortest usual note sounds 150 ms in the balance's song", p.log)
+
+    def test_a_note_sounds_no_shorter_where_its_gap_leaves_room(self):
+        from bitcomposer.translate.writer import tune as tune_mod
+        detached = {"held": 1.0, "detached": 0.3}
+        self.assertAlmostEqual(tune_mod.sounded(0.5, detached, "detached"), 0.15)                   # the share of its gap alone
+        self.assertAlmostEqual(tune_mod.sounded(0.5, detached, "detached", 0.37), 0.37)             # the song's shortest usual note
+        self.assertAlmostEqual(tune_mod.sounded(0.25, detached, "detached", 0.37), 0.25)            # a gap under it: the whole gap
+        self.assertAlmostEqual(tune_mod.sounded(2.0, detached, "detached", 0.37), 0.6)              # a longer share stands
+        self.assertAlmostEqual(tune_mod.sounded(0.5, detached, "held", 0.37), 0.5)
+
+    def test_the_tune_is_written_with_no_note_under_it(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+
+        def lengths(ms):
+            p = whole.plan(models, 3, "g", max_bars=16)
+            p.plays[R.MELODY] = [True] * p.bars
+            p.extras[R.MELODY]["tune_sounds"] = {"held": 1.0, "detached": 0.2}
+            p.tune_shortest = {R.MELODY: ms} if ms else {}
+            line = sorted(n for n in whole.write(p, whole.song_of(p), models, 3)[R.MELODY].notes if n[3] == 0)
+            floor = whole.shortest_beats(p, R.MELODY) or 0.0
+            return [(b - a, min(nxt[0], 4.0 * (a // 4.0 + 1)) - a) for (a, b, _, _), nxt in zip(line, line[1:])], floor   # a note's gap: to the next
+                                                                                                    # onset or the bar line
+        free, _ = lengths(None)
+        held, floor = lengths(300)
+        self.assertGreater(floor, 0.3)
+        self.assertTrue(all(length >= min(gap, floor) - 1e-6 for length, gap in held), (floor, held))   # every note its gap or the song's shortest
+        self.assertGreaterEqual(min(length for length, _ in held), min(length for length, _ in free))
 
 
 class TokenMotionTests(unittest.TestCase):

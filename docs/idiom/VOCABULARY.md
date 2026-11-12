@@ -506,6 +506,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   fourth away where one lay a step off: the written tunes went a fourth
   or more onto a beat in 0.28 of their moves there against FFVI's 0.14
   and stepped there in 0.48 against 0.67.
+  Since round 136 the melody's and the counter's token carry a
+  twenty-fifth field, the line's shortest usual note
+  (`tune_shortest_field`: how long the note at the fifth percentile of
+  its notes sounds, SHORT_NOTE, in milliseconds to the nearest ten:
+  `m150`; 65 FFVI melodies carry one, 120 ms at the median, seventeen
+  under 80 ms and 27 at 150 ms or more; 51 counters, 130 ms). The plan
+  keeps it (`tune_shortest`) and hands the writers its length in beats
+  at the song's tempo (`shortest_beats`); a tune note then sounds its
+  gap's share (`tune_sounds`, round 98) or the song's shortest usual
+  note, whichever is longer, and never past its gap (`tune.sounded`).
+  Why: the share is one pooled draw for a detached note whatever its
+  gap, so a detached eighth at 0.3 of its gap sounded 62 ms at 145
+  beats a minute, where the game's Terra's tune sounds no note under
+  152 ms.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in

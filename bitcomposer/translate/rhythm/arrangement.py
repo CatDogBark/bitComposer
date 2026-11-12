@@ -1993,6 +1993,24 @@ def tune_step_profile(s, role: str, line_notes=None) -> str:
     return "j" + "/".join(str(int(round(100 * moves.count(k) / len(moves)))) for k in TUNE_MOVES)
 
 
+SHORT_NOTE = 0.05                    # the share of a tune's notes under its shortest usual one (round 136): the fifth percentile
+SHORT_NOTE_MS = 10                   # milliseconds the token's shortest usual note is rounded to
+
+
+def tune_shortest_field(s, role: str, line_notes=None) -> str:
+    """The balance token's twenty-fifth field for the melody and the counter (round 136): the line's shortest usual note,
+    how long the note at the fifth percentile of its notes sounds (SHORT_NOTE), in milliseconds to the nearest ten after
+    an "m": "m150"; "" under WORD_NOTES notes or for a song with no tempo. The share of its gap a tune note sounds is the
+    pooled `tune_sounds` word's draw (round 98), one share for a detached note whatever its gap: a detached eighth at 0.3
+    of its gap sounds 62 ms at 145 beats a minute, where the game's Terra's tune sounds no note under 152 ms."""
+    notes = line_notes if line_notes is not None else s.notes.get(role, [])
+    lengths = sorted(n[1] for n in notes if n[1] == n[1] and n[1] > 0)
+    if len(lengths) < WORD_NOTES or not s.bpm:
+        return ""
+    ms = lengths[int(SHORT_NOTE * len(lengths))] * 60000.0 / s.bpm
+    return f"m{int(round(ms / SHORT_NOTE_MS)) * SHORT_NOTE_MS}"
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 
@@ -2201,8 +2219,9 @@ def balance_units(songs) -> list:
                       part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
                       section_onsets_field(s, line_notes),    # and its line's onsets a bar in each (round 125)
                       bass_downbeat_field(s, line_notes) if role == R.BASS else "",   # and how often the bass roots a bar's first beat (round 129)
-                      first_beat_field(s, role) if role in readings_mod.UPPER + (R.BASS,) else ""]   # and how often the bass strikes it, any
+                      first_beat_field(s, role) if role in readings_mod.UPPER + (R.BASS,) else "",   # and how often the bass strikes it, any
                                                              # voice of it (round 133), and a chord part (round 135)
+                      tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else ""]   # and a tune's shortest usual note (round 136)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
