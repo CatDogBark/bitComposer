@@ -2527,6 +2527,66 @@ class BandFollowsTests(unittest.TestCase):
         self.assertEqual(taken[3.0][1], ["the tune's cell taken up in 7 bars fewer, the bar not within the part's own onsets for its part of the form (round 139): bass 7"])
 
 
+class TuneGapTests(unittest.TestCase):
+    """Round 140: a tune note's gap runs to the next note across the bar line (a bar's last note's to the next bar's first
+    onset where the tune plays on in it, as the counter's and the bass's do), and the last note of a part of the form played
+    again sounds against the note that follows the repeat. The gap had ended at the bar line: the written Terra's tune
+    stopped at eight bar lines before a bar that opens with a rest, where the game's holds the note to the pickup."""
+
+    BARS = [(4.0 * k, 4.0 * k + 4.0) for k in range(6)]
+
+    def test_a_gap_runs_to_the_next_note_in_the_bar_or_the_next(self):
+        self.assertAlmostEqual(rhythm.tune_gap(self.BARS, 2.0, 2.5), 0.5)                            # the next note in the bar
+        self.assertAlmostEqual(rhythm.tune_gap(self.BARS, 3.0, 7.0), 4.0)                            # in the next bar: over the bar line
+        self.assertAlmostEqual(rhythm.tune_gap(self.BARS, 3.0, 8.5), 1.0)                            # a bar's rest between: the bar's end
+        self.assertAlmostEqual(rhythm.tune_gap(self.BARS, 22.0, None), 2.0)                          # the line's last note: the bar's end
+        self.assertEqual(rhythm.tune_gap(self.BARS, 30.0, None), 0.0)                                # a note in no bar
+
+    def test_the_tune_is_written_to_the_next_bars_first_onset(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        p = whole.plan(models, 3, "g", max_bars=16)
+        p.plays[R.MELODY] = [True] * p.bars
+        p.extras[R.MELODY]["tune_sounds"] = {"held": 1.0, "detached": 1.0}                         # every note its whole gap
+        s = whole.song_of(p)
+        line = sorted(n for n in whole.write(p, s, models, 3)[R.MELODY].notes if n[3] == 0)
+        for (a, b, _, _), nxt in zip(line, line[1:]):
+            self.assertAlmostEqual(b - a, rhythm.tune_gap(s.bars, a, nxt[0]), 6, (a, b, nxt[0]))    # to the next note, in the bar or the next
+        over = [(a, b) for a, b, _, _ in line if b > next(e for st, e in s.bars if st - 1e-6 <= a < e - 1e-6) + 0.06]
+        self.assertGreater(len(over), 5, over)                                                      # bars that open with a rest: notes over the bar line
+
+    def _repeat(self, tune, bass=()):
+        s = rhythm.Song("t", 4, 12, list(self.BARS), [], notes={}, sid="s", game="g", parts=[(0, 2, None, "A"), (2, 2, 0, "A"), (4, 2, None, "B")])
+        written = {}
+        for role, notes in (("melody", tune), ("bass", bass)):
+            if notes:
+                s.notes[role] = [(a, b - a, m, role) for a, b, m, _ in notes]
+                written[role] = whole.Part(role, list(notes), ["0"] * 6)
+        import types
+        log = whole.copy_repeats(types.SimpleNamespace(parts=s.parts), s, written)
+        self.assertEqual(log, ["A (bars 2-3) plays A (bars 0-1) again note for note"])
+        return s, written
+
+    def test_a_repeats_last_note_sounds_against_what_follows_it(self):
+        # the first statement's pickup sounds its beat to the next bar's first note; after the repeat the next bar opens on its fourth beat
+        tune = [(0.0, 1.0, 60.0, 0), (7.0, 8.0, 62.0, 0), (8.0, 9.0, 64.0, 0), (15.0, 19.0, 65.0, 0), (19.0, 20.0, 67.0, 0)]
+        s, written = self._repeat(tune, bass=[(0.0, 1.0, 36.0, 0), (7.0, 8.0, 38.0, 0), (8.0, 9.0, 36.0, 0), (15.0, 19.0, 38.0, 0), (19.0, 20.0, 40.0, 0)])
+        self.assertEqual(written["melody"].notes, [(0.0, 1.0, 60.0, 0), (7.0, 8.0, 62.0, 0), (8.0, 9.0, 60.0, 0), (15.0, 19.0, 62.0, 0), (19.0, 20.0, 67.0, 0)])
+        self.assertEqual(s.notes["melody"], [(0.0, 1.0, 60.0, "melody"), (7.0, 1.0, 62.0, "melody"), (8.0, 1.0, 60.0, "melody"), (15.0, 4.0, 62.0, "melody"), (19.0, 1.0, 67.0, "melody")])
+        self.assertEqual(written["bass"].notes[3], (15.0, 16.0, 38.0, 0))                           # a backing line's copy stands as it did
+        # a note held over the bar line, nine tenths of its three beats, before a repeat followed by a note on the bar line: nine tenths of two
+        tune = [(0.0, 1.0, 60.0, 0), (6.0, 8.7, 62.0, 0), (9.0, 10.0, 64.0, 0), (14.0, 15.8, 65.0, 0), (16.0, 17.0, 67.0, 0)]
+        s, written = self._repeat(tune)
+        self.assertEqual([(a, round(b, 6), m) for a, b, m, _ in written["melody"].notes], [(0.0, 1.0, 60.0), (6.0, 8.7, 62.0), (8.0, 9.0, 60.0), (14.0, 15.8, 62.0), (16.0, 17.0, 67.0)])
+        # the same gap after the repeat as after the first statement: the copy stands
+        tune = [(0.0, 1.0, 60.0, 0), (7.0, 7.5, 62.0, 0), (8.0, 9.0, 64.0, 0), (15.0, 16.0, 65.0, 0), (16.0, 17.0, 67.0, 0)]
+        s, written = self._repeat(tune)
+        self.assertEqual(written["melody"].notes[3], (15.0, 15.5, 62.0, 0))
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 
