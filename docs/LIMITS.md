@@ -391,16 +391,19 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   less (0.52 of the bars, 0.55 before; FFVI 0.61). A counter-line
   written beside a tune (`writer.counter`) is drawn by its interval to
   the tune and does not use its profile.
-- **Only the bass is asked the first beat.** Since round 133 the bass
-  strikes a bar's first beat as often as its token song's does. A chord
-  part's line and the kit are drawn within their strikes a bar with no
-  first beat asked (the kit's kick strikes it in every bar at the
-  median, FFVI's 0.93), and a bass that plays in under eight bars of
-  its token song carries no share: its bars fall as they are drawn.
-  The share is counted over every voice of the token song's bass and
-  asked of the written line alone, and it is only ever raised to: a
-  song on a token whose bass sits off the beat (Slam Shuffle's 0.28)
-  strikes it as often as its drawn bars do.
+- **A part is asked the first beat, never asked off it.** Since rounds
+  133 and 135 the bass and the chord parts strike a bar's first beat at
+  least as often as their token song's part does. The share is only
+  raised to: a part the game plays off the beat (after-beat chords
+  over a bass on the one: Devil's Lab's accompaniment strikes the first
+  beat in none of its bars, Techno de Chocobo's in 0.28) is written as
+  its drawn bars fall, mostly on it: of the Song Check 100 songs,
+  seventeen accompaniments and fourteen basses sit over their token
+  song's share by 0.15 or more. The share is the part's over the whole
+  song, any voice of it, asked of the written line; the kit is drawn
+  with no first beat asked (its kick strikes it in every bar at the
+  median, FFVI's 0.93), and a part that plays in under eight bars of
+  its token song carries no share.
 - **The band does not always spell the plan's chord.** Read back by the
   chord reader, a written song's bar is heard on the plan's root in
   0.66 of its bars and as the plan's chord, root and quality, in 0.35;

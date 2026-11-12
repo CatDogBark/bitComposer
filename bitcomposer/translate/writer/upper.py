@@ -234,7 +234,7 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
           plays: list | None = None, figures: list | None = None, shared: dict | None = None,
           tone_index: int = 0, kind: str | None = None, bounds_at=None, clash_rates: dict | None = None,
           tone_rng: random.Random | None = None, log: list | None = None, tone_tier: str | None = None, habit_at=None,
-          envelope_at=None, tone_profile: dict | None = None) -> tuple[list, list, list]:
+          envelope_at=None, tone_profile: dict | None = None, first_beat: float | None = None) -> tuple[list, list, list]:
     """An upper part written for the song under its own chords (the module):
     the rhythm from the part's bar table (free of the song's own part), the
     chord tones a span from the voicings mixture, the spread from the widths
@@ -268,7 +268,11 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     one). `tone_profile`: the token song's chord-tone profile for the line
     (round 111): a chord-tone onset of the line whose class runs over its
     share takes the chord's tone most under its share instead
-    (parts.profile_tone). `log`: lines on what the words did, appended.
+    (parts.profile_tone). `first_beat` (round 135): the share of its bars
+    the token song's part strikes on the first beat; a new bar of the line
+    is asked it while the written share runs under (parts._free_figures,
+    as the bass since round 133). `log`: lines on what the words did,
+    appended.
     Returns the notes [(start, end in beats, midi, voice)], the figures and
     the voicings drawn a bar."""
     lock = lock or {}
@@ -277,7 +281,12 @@ def upper(song: rhythm.Song, role: str, voices: list, registers: dict, models: d
     if figures is None:
         figures = parts_mod._free_figures(song, role, models["rhythm"], figures_mod.FreeManner(models["rhythm"].table.vocabulary, division=song.division), own, bars,
                                 habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), lock_share=UPPER_LOCK.get(role, 1.0), energy=energy,
-                                habit_at=habit_at, envelope_at=envelope_at, log=log)   # the habit and the envelope a bar: the density tier by the section (round 101)
+                                habit_at=habit_at, envelope_at=envelope_at, log=log,   # the habit and the envelope a bar: the density tier by the section (round 101)
+                                first_beat=first_beat)
+        if first_beat is not None and log is not None:      # the line's first beats against its token song's part's (round 135)
+            struck = [f for f in figures if f != figures_mod.REST]
+            log.append(f"on a bar's first beat as often as the balance's song's {first_beat:.2f} (round 135): "
+                       f"{sum(1 for f in struck if figures_mod.on_first_beat(f))} of {len(struck)} bars")
     else:
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     step = MOTION_STEP.get(motion, 0)

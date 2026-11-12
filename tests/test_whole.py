@@ -2205,6 +2205,63 @@ class ReturnCopyTests(unittest.TestCase):
         self.assertFalse(getattr(shifted, "own", False))                                            # a density tier's shift (round 101) is not the song's own
 
 
+class PartFirstBeatTests(unittest.TestCase):
+    """Round 135: how often a chord part strikes a bar's first beat rides its token as the bass's does (`f99`, round 133),
+    and the part's writer asks a new bar of its line the first beat while the written share runs under it. FFVI's Terra's
+    accompaniment strikes the first beat in 0.99 of its bars; the written Terra's struck it in 17 of 44."""
+
+    def _song(self, on_one=(True,) * 6 + (False,) * 2):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        chug = [(4.0 * k + x + (0.0 if on_one[k] else 0.5), 0.4, 60.0, "g") for k in range(8) for x in (0.0, 1.0, 2.0, 3.0)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        tune = [(4.0 * k + x, 0.9, 72.0 + (3 * k + x) % 7, "m") for k in range(8) for x in range(4)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"accompaniment": chug, "bass": bass, "melody": tune}, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", chug), 1: ("bass", bass), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        return s
+
+    def test_the_token_carries_a_chord_parts_first_beats(self):
+        s = self._song()
+        self.assertEqual(rhythm.first_beat_field(s, "accompaniment"), "f75")                        # six bars of eight
+        self.assertEqual(rhythm.first_beat_field(s, "bass"), rhythm.bass_first_beat_field(s))       # the bass's field, as round 133 had it
+        tokens = {t.split("=", 1)[0]: t.split("=", 1)[1].split(":") for t in rhythm.balance_units([s])[0].outcome.split() if "=" in t}
+        self.assertEqual(tokens["accompaniment"][23], "f75", tokens["accompaniment"])               # the twenty-fourth field, the bass's too
+        self.assertEqual(tokens["bass"][23], "f100")
+        self.assertLess(len(tokens["melody"]), 24)                                                  # a tune carries none
+
+    def test_the_plan_takes_a_share_a_part(self):
+        field = lambda head, f: ":".join(head + [""] * (23 - len(head)) + [f])                      # noqa: E731
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = ("accompaniment=" + field(["half", "56-68", "0.8", "1", "0.7"], "f99") + " bass=" + field(["half", "36-44", "0.9", "1", "1.0"], "f93")
+                 + " melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium")
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.first_beats, {"accompaniment": 0.99, "bass": 0.93})
+        self.assertEqual(p.bass_first, 0.93)                                                        # the bass's, under its round 133 name
+        self.assertIn("the accompaniment strikes a bar's first beat in 0.99 of its bars in the balance's song", p.log)
+
+    def test_the_writer_asks_the_line_the_first_beat(self):
+        mk = lambda name, outcome, **vals: [tables.Unit(f"{name}{i}", "g", outcome, vals) for i in range(6)]   # noqa: E731
+        voicings = tables.Cache.fit(mk("v", "R 3 5", part="accompaniment", shape="major", habit="full"), ("part", "shape", "habit"), name="voicings", votes=tables.SHARES)
+        bars = ("0 1 2 3", "1/2 3/2 5/2 7/2", "1 2 3", "0 2")                                       # two bars on the first beat, two off it
+        rhythm_ = tables.Cache.fit([u for f in bars for u in mk(f, f, part="accompaniment", meter=4, habit="medium", previous=rhythm.START)],
+                                   ("part", "meter", "habit", "previous"), name="rhythm", votes=tables.SHARES)
+
+        def on_one(seed, **kw):
+            from bitcomposer.translate.vocab import Span
+            song = rhythm.Song("t", 4, 4, [(4.0 * k, 4.0 * k + 4.0) for k in range(8)], [Span(0.0, 32.0, 0, "", 1.0)], sid="s", game="g",
+                               numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+            notes, figs, _ = writer.upper(song, "accompaniment", [0], {0: (60, 84)}, {"voicings": voicings, "rhythm": rhythm_}, random.Random(seed), "medium", "full", 0.5,
+                                          key=(0, "major"), plays=[True] * 8, shared={}, tone_index=0, **kw)
+            return sum(1 for k in range(8) if any(abs(a - 4.0 * k) < 0.06 for a, _, _, _ in notes))
+        free = [on_one(seed) for seed in range(6)]
+        self.assertTrue(any(n < 8 for n in free), free)                                             # left to the draw, a bar falls off the first beat
+        log = []
+        self.assertEqual([on_one(seed, first_beat=1.0, log=log) for seed in range(6)], [8] * 6)     # asked every bar: every bar on it
+        self.assertIn("on a bar's first beat as often as the balance's song's 1.00 (round 135): 8 of 8 bars", log)
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 

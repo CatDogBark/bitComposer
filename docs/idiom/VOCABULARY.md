@@ -444,6 +444,15 @@ The words are grouped by where the writing draws them, in the order the song is 
   its token song's by the part of the form, so a bar drawn off the
   first beat within them, then played again where the song's bass
   loops (round 121), put a whole part of the form off the first beat.
+  Since round 135 the chord parts carry the same field (`first_beat_field`,
+  the bass's reader for any backing part: 55 FFVI accompaniments, 0.83
+  at the median and twelve under a half; 14 harmonies, 0.99; 2
+  arpeggios) and `writer.upper` asks its line's new bars the same way
+  (`first_beat`); the plan keeps a share a part (`first_beats`). Why:
+  the chord parts' bars are drawn as the bass's were, within their
+  strikes a bar with no first beat asked, and the written Terra's
+  accompaniment struck the first beat in 17 of its 44 bars where the
+  game's strikes it in 0.99.
   Since round 113 the token carries the song's form as a song-level
   `form=` field (`form_field`: the parts' letters in order, a returning
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-
