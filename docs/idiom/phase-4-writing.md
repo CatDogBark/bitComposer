@@ -9534,3 +9534,87 @@ others are as they were.
 the bass and the chord parts: a third of the bass's doublings are not
 made. What FFVI's parts do with a tune's bar thinner or busier than
 their own is not counted. The standing list as at round 114.
+
+### Round 140: a tune's note is measured to the next note across the bar line (2026-11-11, on the owner's go after Song Check 102)
+
+**Why.** The owner on Song Check 102's Terra, marked better: "I like
+the tune it just had some minor things where the tune plays some
+short notes with large gaps of nothing in between or just some short
+notes where it seems like it should have played a little longer. Tune
+just sounds like it cuts off a little more in its notes than it
+should in more areas than I would like." He asked whether it touches
+other songs, and on the findings said go.
+
+**Found.** Read back, 19 of the written Terra's 75 tune notes sound
+under half the way to a next note a beat or more away, and the tune
+is silent 0.39 of its own time; the game's Terra's tune holds 0.99 of
+its notes and is silent 0.07. Two causes. Eight of the nineteen stop
+at their bar's end before a bar that opens with a rest (a note two
+beats long, then three beats of nothing to the pickup); the game's
+tune holds that note nearly six beats, over the bar line to the
+pickup, and sounds 0.24 of its notes past their bar's end. The other
+eleven are drawn short (the next round's). The melody's writer
+measured a bar's last note to the bar's end; the counter-line's
+writer has measured it to the next bar's first onset since round 29
+and the bass's since round 26, and the words that say how long a tune
+note sounds (`values`, `tune_sounds`) count the gap to the next note
+across the bar line. Over the 62 Song Check 100 songs read back with
+a tune and paired with their token song's: a written tune sounds none
+of its notes past their bar's end at the median and the mean (FFVI
+0.01 and 0.05; over 0.03 of them in 20 of the game's tunes), and of
+the notes before a bar that opens with a rest the game's tunes carry
+0.75 over the line at the median, the written none.
+
+**Built.** `rhythm.tune_gap(bars, start, after)`: the gap a tune's
+note is sounded against, to the line's next note where that starts
+in the note's bar or the next, else to its bar's end. The melody's
+writer measures a bar's last note to the next bar's first onset where
+the tune plays on in it (the bar line stays at a rest bar), and asks
+the `values` word the gap's value across the bar line. `copy_repeats`
+keeps a repeated part's last tune note (the melody's and the
+counter-line's lines) sounding the share of its gap it sounds in the
+part it repeats, the gap measured to the note that follows the repeat
+(`_repeat_last`): the copy had kept the length the note has before
+what follows the first statement (the written Terra's B ends on a
+pickup a beat long; after its repeat the next part opens with three
+beats' rest). Tests: the gap itself; every note of a written tune
+sounds to the next note in its bar or the next where every note
+sounds its whole gap, some of them over the bar line; a repeat's last
+note against what follows it, both ways, a backing line's copy as it
+was. Each fails with its change switched off. Suite 544 (1 skip). The
+vocabulary map is unchanged; no token changes and no table is refit.
+
+**Measured.** The written Terra: 13 of 75 tune notes sound past their
+bar's end (none before; the game's 0.24 of them), every note before a
+bar's opening rest is carried (13 of 13), none stops at a bar line,
+and the tune is silent 0.03 of its time (0.39; the game's 0.07); six
+notes are still cut, all drawn. The 62 songs (round 139's in
+brackets, then FFVI's): notes past their bar's end 0.04 of a tune's
+at the median and 0.05 at the mean (0.00 and 0.00; 0.01 and 0.05);
+notes before a bar's opening rest carried 0.72 at the median over the
+23 songs with four or more (0.00; 0.75); the tune silent 0.19 of its
+time at the median (0.25; 0.21), over its token song's tune's by more
+than 0.05 in 22 songs (27) and under it in 30 (24); notes cut short
+before a beat or more 0.05 of a tune's (0.07; 0.03), over the token
+song's tune's by more than 0.03 in 21 songs (26). The paired
+measures are as they were: cells sounding as the FFVI song's 0.963,
+backing lines within range 375 of 386, kit pieces 175 of 179, the
+same note counts and chords in all 68 songs. Plans (400 seeds,
+against round 139): every seed keeps its title, token song and band.
+The tune's line keeps every onset and pitch; its lengths change in
+354 seeds, 4,937 notes longer and 1,807 shorter (the `values` draw is
+asked a carried note's value across the bar line, and the draws after
+it run on from there). The counter-line changes in 178 seeds, in
+onsets or pitches in 57: its pitch beside the tune reads the tune as
+it sounds. The bass's lengths change in 121 seeds and the
+accompaniment's in 86, the harmony's in 6: the bars of the tune they
+double or carry. A voice beside a line changes pitch in four seeds
+(the melody's second voice in one, the accompaniment's in three). No
+kit changes; 45 seeds are as they were.
+
+**Open.** A note before a rest of a bar or more is measured to its
+own bar's end, where the game's may ring on (LIMITS). A part that
+doubles or carries the tune's bar now takes notes that sound past
+the bar; the render ends them at the voice's next note. Which notes
+are held at all is still the pooled draws' (the next round). The
+standing list as at round 114.

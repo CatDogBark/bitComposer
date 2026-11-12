@@ -541,6 +541,17 @@ The words are grouped by where the writing draws them, in the order the song is 
   gap, so a detached eighth at 0.3 of its gap sounded 62 ms at 145
   beats a minute, where the game's Terra's tune sounds no note under
   152 ms.
+  Since round 140 the tune's gap is measured across the bar line, as
+  the counter-line's and the bass's are and as the `values` and
+  `tune_sounds` words count it (`rhythm.tune_gap`: to the line's next
+  note where that starts in the note's bar or the next, else to its
+  bar's end). A bar's last note runs to the next bar's first onset,
+  so a note held before a bar that opens with a rest sounds over the
+  bar line: the game's Terra sounds 0.24 of its tune's notes past
+  their bar's end, and the written one had none. The last note of a
+  part of the form played again sounds the share of its gap it sounds
+  in the part it repeats, measured to the note that follows the
+  repeat (`copy_repeats`).
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in

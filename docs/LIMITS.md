@@ -364,6 +364,22 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   shortest usual note, the notes of a rhythm quicker than the token
   song's tune plays (a gap under the floor sounds whole). The chord
   parts' and the bass's notes carry no such floor.
+- **A tune's note before a rest of a bar or more stops at its bar's
+  end.** Since round 140 a tune's note is measured to the next note
+  where that starts in its bar or the next, so a note held before a
+  bar that opens with a rest sounds over the bar line. Where the tune
+  then rests a whole bar or more the note is still measured to its
+  own bar's end, and the game's may ring past it (its Terra's tune
+  holds the last note before a long rest six and a half beats, two
+  and a half of them past the bar line). Whether a note is held at
+  all is the pooled words' draw: the notes before a bar's opening
+  rest are carried over the line in 0.72 of the cases at the median
+  (FFVI's 0.75), but song by song the written tune sounds over 0.03
+  more of its notes past a bar line than its token song's tune in 18
+  of 62 songs and over 0.03 fewer in 11. A part that doubles or
+  carries the tune's bar takes the notes as they sound and a voice's
+  note ends at its next (the render): where the part's own next bar
+  opens with a rest, its copy rings on with the tune.
 - **The band takes the tune up less than the words say.** Since round
   139 a part plays the tune's bar (doubled, the theme phrase carried,
   a half-bar cell taken up) only where its own bar then keeps within
