@@ -125,6 +125,7 @@ PHRASE = 4                            # bars a phrase, as the phrase tables were
 CONTOUR_STEP = 2.0                    # semitones a contour's thirds aim apart (phrases.LEVEL)
 DETACHED = 0.5                        # the share of its gap a detached melody note sounds (the readings: under 0.75)
 HELD = 0.95                           # and a held one
+LENGTH_SLACK = 1.0                    # notes a line's held notes at a gap class may sit from its token song's share of them (round 141)
 COPY_TRIES = 12                       # tunes drawn again when one copies a game's phrase (the reference set)
 ARC_ABOVE = {"0": 0, "1-2": 2, "3-5": 4, "6+": 7}             # the summit table's classes, as semitones the climax may rise above the register
 ARC_BELOW = {"0": 1, "1-2": 2, "3-5": 4, "6-9": 7, "10+": 11}   # the arc table's classes, as semitones a phrase's ceiling sits under the climax
@@ -284,7 +285,8 @@ def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Ran
 def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span: tuple, models: dict, rng: random.Random,
             kind: str, key: tuple | None = None, articulation: str = "mixed", register: tuple | None = None,
             role: str = R.COUNTER, spans_at=None, clash_rates: dict | None = None, chord_rate: float | None = None,
-            tune_sounds: dict | None = None, shortest: float | None = None) -> tuple[list, list, list]:
+            tune_sounds: dict | None = None, shortest: float | None = None, lengths: dict | None = None,
+            lengths_rng: random.Random | None = None) -> tuple[list, list, list]:
     """The counter-line written beside the tune (round 29): its bar from the tune's bar and a counter_figures mask
     (`masks`, one a bar, REST where the plan has it rest; rhythm.apply_mask: the tune's onsets it strikes with and its
     own, its own alone where the tune rests), its pitch by the voice words as the second bass voice's is
@@ -414,6 +416,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                     chord_run[0] += int(int(round(midi)) % 12 in pcs)
             prev_midi = midi
             pitched.append((k, p, float(midi)))
+    length_run, lengths_rng = {}, lengths_rng or random.Random(f"{role}:note lengths")
     notes = []                                              # the lengths as the melody's: the values table under the articulation habit, whose
     for i, (k, p, m) in enumerate(pitched):                 # value is the gap to the next note across the bar line (a bar's last note runs to
         a, b = bars[k]                                      # the next bar's first onset, as the bass's does since round 26; at a rest bar the
@@ -425,14 +428,19 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
             continue
         value = str(rhythm.position(gap, song.division))
         held = models["values"].draw((role, value, articulation), rng) if "values" in models else "held"
-        notes.append((t, t + sounded(gap, tune_sounds, held, shortest), m))   # the song's own shares (tune_sounds, round 98), no note under its
-                                                            # token song's shortest usual one (round 136)
+        share = None
+        if lengths:                                         # held or detached as its token song's line is at the gap (round 141); the pooled
+            held, share = own_length(lengths, gap, length_run, lengths_rng, tune_sounds)   # draw is made all the same, so the stream stands
+        notes.append((t, t + sounded(gap, tune_sounds, held, shortest, share), m))   # the song's own shares (tune_sounds, round 98), no note under
+                                                            # its token song's shortest usual one (round 136)
     log = [f"beside the tune on the {kind} sample: {sum(1 for f in figures if f != figures_mod.REST)} bars, {len(notes)} notes, {with_tune} with the tune's onsets, "
            f"{own} its own" + (f"; {skipped} onsets skipped (a unison on one sample)" if skipped else "") + f"; span {span}"]
     if clash_rates and any(v[1] for v in run.values()):     # the clashes word's share held (round 94)
         log.append("a semitone from a part under it: " + ", ".join(f"{pl} {v[0]}/{v[1]} ({v[0] / v[1]:.2f}; the song's rate {clash_rates[pl]:.2f})" for pl, v in run.items() if v[1]))
     if chord_rate is not None and chord_run[1]:             # the chord_tones word's share held (round 96)
         log.append(f"chord tones on the beat: {chord_run[0]}/{chord_run[1]} ({chord_run[0] / chord_run[1]:.2f}; the song's rate {chord_rate:.2f})")
+    if lengths and length_run:
+        log.append(length_log(lengths, length_run))
     return notes, figures, log
 MOVED = {"moved up": 2, "moved down": -2}   # semitones a moved phrase shifts (a scale step; the scale then corrects each note)
 DEGREE_PCS = {"1": (0,), "3": (3, 4), "5": (7,)}   # a phrase's ending degree -> intervals from the tonic it may land on
@@ -738,12 +746,52 @@ def _chord_in_bar(song: rhythm.Song, t: float):
     return (c.root, c.shape) if c is not None and c.root is not None and c.fit >= FIT else None
 
 
-def sounded(gap: float, tune_sounds: dict | None, held: str, shortest: float | None = None) -> float:
-    """How long a tune note sounds, in beats: its gap's share for a held or a detached note (sounded_share), and since
-    round 136 no shorter than the token song's tune's shortest usual note (`shortest`, in beats at the song's tempo)
-    where the gap leaves room: a detached eighth at 0.3 of its gap had sounded 62 ms at 145 beats a minute."""
-    length = gap * sounded_share(tune_sounds, held)
+def sounded(gap: float, tune_sounds: dict | None, held: str, shortest: float | None = None, share: float | None = None) -> float:
+    """How long a tune note sounds, in beats: its gap's share for a held or a detached note (sounded_share; `share`, round
+    141: the token song's own share for the note, own_length's, in place of the pooled draw's), and since round 136 no
+    shorter than the token song's tune's shortest usual note (`shortest`, in beats at the song's tempo) where the gap
+    leaves room: a detached eighth at 0.3 of its gap had sounded 62 ms at 145 beats a minute."""
+    length = gap * (share if share is not None else sounded_share(tune_sounds, held))
     return max(length, min(gap, shortest)) if shortest else length
+
+
+def own_length(own: dict, gap: float, run: dict, rng: random.Random, tune_sounds: dict | None = None) -> tuple[str, float]:
+    """A tune note's kind (held, detached) and the share of its gap it sounds, by its token song's own note lengths (round
+    141; `own`: Plan.tune_lengths for the line: the whole line's entry under rhythm.LENGTH_WHOLE and each gap class's, the
+    share of the notes held, the share of its gap a held note sounds and a detached one). The note is held at the song's
+    rate for its gap's class (the whole line's where the song has too few notes of the class), drawn on the lengths' own
+    stream, and the class's held notes so far are kept within LENGTH_SLACK notes of the song's share of them (`run`: class
+    -> [held, notes], counted on here). It sounds the song's share for its kind at the class; where the song has no
+    note of the kind at the class, its share at the nearest class that has one (the longer of two as near: a held note
+    stops a little short of the next whatever its gap and a cut one is a stab whatever its gap, so either's share of a
+    gap between two classes sits nearer the longer's; the game's Terra plays eighths and long notes, held 0.80 and 0.95
+    of their gaps, and no quarter); the whole line's where no class has one; the pooled tune_sounds draw's where the
+    song has none of the kind at all."""
+    names = [n for _, n in rhythm.GAP_CLASSES]
+    name = rhythm.gap_class(gap)
+    whole = own[rhythm.LENGTH_WHOLE]
+    rate = (own.get(name) or whole)[0]
+    seen = run.setdefault(name, [0, 0])
+    held = rng.random() < rate
+    if held and seen[0] + 1 - rate * (seen[1] + 1) >= LENGTH_SLACK:
+        held = False                                        # a held note more would put the class a note over the song's share
+    elif not held and rate * (seen[1] + 1) - seen[0] >= LENGTH_SLACK:
+        held = True                                         # a detached one more, a note under it
+    seen[0] += held
+    seen[1] += 1
+    kind, i = ("held", 1) if held else ("detached", 2)
+    k = names.index(name)
+    near = min(((abs(j - k), -j, own[n][i]) for j, n in enumerate(names) if n in own and own[n][i] is not None), default=None)
+    share = near[2] if near is not None else whole[i] if whole[i] is not None else sounded_share(tune_sounds, kind)
+    return kind, share
+
+
+def length_log(own: dict, run: dict) -> str:
+    """The log line for a line written by its token song's note lengths (round 141): its notes held, whole and by the gap."""
+    held, n = sum(v[0] for v in run.values()), sum(v[1] for v in run.values())
+    return (f"note lengths from the balance's song (round 141): {held} of {n} notes held ({held / n:.2f}; the song's line {own[rhythm.LENGTH_WHOLE][0]:.2f}), by the gap: "
+            + ", ".join(f"{name} {run[name][0]}/{run[name][1]}" + (f" ({own[name][0]:.2f})" if name in own else " (the whole line's share)")
+                        for _, name in rhythm.GAP_CLASSES if name in run))
 
 
 def sounded_share(tune_sounds: dict | None, held: str) -> float:
@@ -759,7 +807,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            role: str = R.MELODY, chord_rate: float | None = None, repeat_rate: float | None = None,
            letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None, tune_sounds: dict | None = None,
            off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None,
-           habit_at=None, envelope_at=None, move_profile: dict | None = None, shortest: float | None = None) -> tuple[list, list, list]:
+           habit_at=None, envelope_at=None, move_profile: dict | None = None, shortest: float | None = None,
+           lengths: dict | None = None, lengths_rng: random.Random | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -816,8 +865,12 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     gap leaves room. A note's gap runs to the next note, a bar's last
     note's to the next bar's first onset where the tune plays on in it
     (round 140), so a note held before a bar that opens with a rest
-    sounds over the bar line. Returns [(start, end, midi)], the bars'
-    rhythms and a log."""
+    sounds over the bar line. `lengths` (round 141): how the token
+    song's tune sounds its notes by the gap (Plan.tune_lengths); a note
+    is then held or detached at the song's own rate for its gap, drawn
+    on `lengths_rng`, and sounds the song's own share (own_length), in
+    place of the pooled values and tune_sounds draws. Returns [(start,
+    end, midi)], the bars' rhythms and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -1616,6 +1669,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     # gap had ended at the bar line: a note before a bar that opens with a rest stopped there, where the game's is held to the
     # next note (the game's Terra sounds 0.24 of its tune's notes past their bar's end, the written one none)
     notes, onward = [], 0
+    length_run, lengths_rng = {}, lengths_rng or random.Random(f"{role}:note lengths")
     for k in sorted(cells):
         a, b, _ = bars[k]
         cell = cells[k]
@@ -1630,10 +1684,15 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 continue
             value = str(rhythm.position(gap, song.division))
             held = models["values"].draw((role, value, articulation), rng) if "values" in models else "held"
-            notes.append((t, t + sounded(gap, tune_sounds, held, shortest), float(m)))   # the song's own shares (tune_sounds, round 98), no note
-                                                            # under its token song's shortest usual one (round 136)
+            share = None
+            if lengths:                                     # held or detached as its token song's tune is at the gap (round 141); the pooled
+                held, share = own_length(lengths, gap, length_run, lengths_rng, tune_sounds)   # draw is made all the same, so the stream stands
+            notes.append((t, t + sounded(gap, tune_sounds, held, shortest, share), float(m)))   # the song's own shares (tune_sounds, round 98), no
+                                                            # note under its token song's shortest usual one (round 136)
     if onward:
         log.append(f"{onward} bars' last notes measured to the next bar's first onset, past the bar line (round 140)")
+    if lengths and length_run:
+        log.append(length_log(lengths, length_run))
     if own_new[0]:                                          # the tune's bars by its part of the form's own onsets (round 138)
         log.append(f"new bars drawn within the balance's song's own onsets for their part of the form (round 138): {own_new[0] - own_new[2]} of {own_new[0]}"
                    + (f", {own_new[1]} among the table's bars that fit" if own_new[1] else "") + "; a bar or a half that comes back and a phrase answered keep within them too")

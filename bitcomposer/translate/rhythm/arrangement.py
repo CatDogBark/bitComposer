@@ -2022,6 +2022,51 @@ def tune_gap(bars: list, start: float, after: float | None) -> float:
     return after - start if after is not None and after < reach - readings_mod.NEAR else bars[k][1] - start
 
 
+LENGTH_NOTES = 4                     # notes at a gap class a tune's line needs for the class's own entry in its lengths field (round 141)
+LENGTH_BIN = 0.05                    # the grain that field's sounded shares are kept to: a detached note before a gap of a beat or more
+                                     # sounds a fifth of it at the game's median, which cells.SOUND_BIN's tenth would halve or leave
+LENGTH_WHOLE = "line"                # the field's first entry, the whole line's, as the plan keys it
+
+
+def tune_gaps(s, notes) -> list:
+    """A tune's line's notes as [(gap, share)] (round 141): the gap each is sounded against in beats (tune_gap: to the
+    line's next note where that starts in the note's bar or the next, else to its bar's end) and the share of it the note
+    sounds, 1.0 at most. Notes struck together count once, the highest (_line); a note with no length or in no bar is
+    left out."""
+    line = _line([n for n in notes if n[1] == n[1]])
+    out = []
+    for n, after in zip(line, line[1:] + [None]):
+        gap = tune_gap(s.bars, n[0], after[0] if after is not None else None)
+        if gap > readings_mod.NEAR:
+            out.append((gap, min(1.0, n[1] / gap)))
+    return out
+
+
+def tune_lengths_field(s, role: str, line_notes=None) -> str:
+    """The balance token's twenty-sixth field for the melody and the counter (round 141): how the line sounds its notes,
+    by the gap to the next (tune_gaps). After an "h", an entry for the whole line and one for each gap class
+    (cells.GAP_CLASSES), joined by "/"; an entry is `held~share~share`: the percent of the notes held (sounding
+    readings.SHORT of the gap or more), then the median share of its gap a held note sounds and a detached one (to
+    LENGTH_BIN and never under it; "-" where the line has none of the kind); a class of fewer than LENGTH_NOTES notes is
+    "-". "" under WORD_NOTES notes. The pooled words (`articulation`, `values`, `tune_sounds`) say how a tune of the game
+    sounds its notes: one habit a song, a note held or detached by its value under the habit, and one share for a held
+    note and one for a detached whatever the gap. Song by song that is not the song's tune: the game's Terra holds every
+    note of its tune and its Gogo four in ten, and the written tune on either held as the draws fell."""
+    notes = line_notes if line_notes is not None else s.notes.get(role, [])
+    gaps = tune_gaps(s, notes)
+    if len(gaps) < WORD_NOTES:
+        return ""
+
+    def entry(shares: list) -> str:
+        held = [x for x in shares if x >= readings_mod.SHORT]
+        cut = [x for x in shares if x < readings_mod.SHORT]
+        median = lambda xs: f"{max(LENGTH_BIN, round(statistics.median(xs) / LENGTH_BIN) * LENGTH_BIN):.2f}" if xs else "-"   # noqa: E731
+        return f"{int(round(100 * len(held) / len(shares)))}~{median(held)}~{median(cut)}"
+
+    by = {name: [share for gap, share in gaps if cells_mod.gap_class(gap) == name] for _, name in cells_mod.GAP_CLASSES}
+    return "h" + "/".join([entry([share for _, share in gaps])] + [entry(by[name]) if len(by[name]) >= LENGTH_NOTES else "-" for _, name in cells_mod.GAP_CLASSES])
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 
@@ -2232,7 +2277,8 @@ def balance_units(songs) -> list:
                       bass_downbeat_field(s, line_notes) if role == R.BASS else "",   # and how often the bass roots a bar's first beat (round 129)
                       first_beat_field(s, role) if role in readings_mod.UPPER + (R.BASS,) else "",   # and how often the bass strikes it, any
                                                              # voice of it (round 133), and a chord part (round 135)
-                      tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else ""]   # and a tune's shortest usual note (round 136)
+                      tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and a tune's shortest usual note (round 136)
+                      tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else ""]   # and how it sounds its notes, by the gap (round 141)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
