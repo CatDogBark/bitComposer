@@ -847,7 +847,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None, tune_sounds: dict | None = None,
            off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None,
            habit_at=None, envelope_at=None, move_profile: dict | None = None, shortest: float | None = None,
-           lengths: dict | None = None, lengths_rng: random.Random | None = None, places: tuple | None = None) -> tuple[list, list, list]:
+           lengths: dict | None = None, lengths_rng: random.Random | None = None, with_lead: dict | None = None,
+           places: tuple | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -908,7 +909,33 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     song's tune sounds its notes by the gap (Plan.tune_lengths); a note
     is then held or detached at the song's own rate for its gap, drawn
     on `lengths_rng`, and sounds the song's own share (own_length), in
-    place of the pooled values and tune_sounds draws. `places` (round
+    place of the pooled values and tune_sounds draws. `with_lead` (round
+    146, plan.tune_lead): the bass line's bars as they will be played
+    ("cells"), the token song's shares of the bars in which the bass
+    plays an earlier bar again that the tune plays again too, where the
+    bass's bar is further back than the bar before ("far": a phrase come
+    round) and where it is the bar right before ("near": a figure the
+    bass stands on; either None where the song has no count), and its
+    share of the tune's bars with an earlier one that are an earlier bar
+    note for note ("overall"). Where the urn decides a bar (not a
+    theme's, a phrase's or a pair's return), the bass plays an earlier
+    bar again there, the nearest within rhythm.TONES_BACK, the tune
+    played in that bar and the song has a count for the kind, the tune
+    plays that bar again note for note while its share of such bars of
+    the kind so far is under the song's (under the same chord, within
+    the bar's own onsets and register); and for each bar so played
+    again one of the urn's own returns is left a new bar, where the
+    tune's bars that are an earlier bar note for note are at the song's
+    share of them, so the tune comes back where the bass does in place
+    of somewhere else. A tune given no bar with the bass is as the urn
+    draws it. The urn knew nothing of the
+    bass: a written tune played an earlier bar again in 0.26 of the
+    bars in which the bass brought one back from further off (FFVI's
+    0.48) and in 0.24 of the bars in which the bass played no earlier
+    bar again (0.13). The two kinds are held apart because a written
+    bass stands on one bar twice as often as the game's, and held to one
+    share the tune stood on its bar with it, which the game's tune does
+    in two songs. `places` (round
     147, plan.own_places): the share of the token song's tune's onsets
     on a quarter of the beat, on a third and finer than either
     (rhythm.FINE_PLACES; None for the third in a song written in triple
@@ -1235,7 +1262,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     fine[kind] += t * x
         return n, fine
 
-    def placed(k: int, positions, so_far: tuple | None = None) -> bool:
+    def in_places(k: int, positions, so_far: tuple | None = None) -> bool:
         """Whether bar k with these onsets keeps the tune within its token song's places in the beat (round 147,
         rhythm.keeps_places): for each place finer than the half beat the bar plays on (a quarter of the beat, a third,
         finer), the tune's onsets there over the bars before it, with the bar's, are no more than the song's tune's share
@@ -1282,7 +1309,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
 
     def on_places(k: int, positions: list, pitches: list) -> tuple:
         """Bar k's notes on the nearest rhythm that keeps the tune within its token song's places in the beat (round 147).
-        Among the rhythms the table knows in the song's manner (rhythms_of) that keep them (placed) and put no note on
+        Among the rhythms the table knows in the song's manner (rhythms_of) that keep them (in_places) and put no note on
         a held fine place the bar had fewer on (rhythm.adds_places: a note moves onto the beat or the half beat, or
         stays), the one its notes reach with the least moving in time (nearest); of those within PLACE_SLACK of the
         nearest, the one that brings the fewest notes onto a beat off the chord sounding there, then the nearer, then
@@ -1309,7 +1336,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     continue
                 found = []
                 for f, at in rhythms_of(m, meters[k]):
-                    if not rhythm.adds_places(places, positions, at) and placed(k, at, so_far):
+                    if not rhythm.adds_places(places, positions, at) and in_places(k, at, so_far):
                         near = nearest(at, positions)
                         if near is not None:
                             found.append((round(near[0], 6), round(near[1], 6), at, near[2]))
@@ -1392,10 +1419,52 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             new_offs.append(offbeats(rhythm._tokens(figure)))
         return [float(Fraction(t.partition(":")[0])) for t in rhythm._tokens(figure)]
 
+    lead_cells = (with_lead or {}).get("cells")             # the bass line's bars (round 146): the tune comes back with them
+    lead_shares = {False: (with_lead or {}).get("far"), True: (with_lead or {}).get("near")}   # by whether the bass's bar is the bar right before
+    overall_share = (with_lead or {}).get("overall")
+    with_said = Counter()                                   # for the log: the bars played again with the bass, the urn's returns left new
+
+    def bar_key(c: Cell) -> tuple:
+        """A cell as the token counts a bar (rhythm.bar_cells): the place in the bar and the pitch of each note."""
+        return tuple(sorted((max(0, int(round(p * 12))), int(round(m))) for p, m in zip(c.positions, c.pitches)))
+
+    def lead_back(k: int) -> int | None:
+        """The bar the bass plays again in bar k (the nearest note for note), where the tune played in it; None without."""
+        if lead_cells is None or not 0 <= k < len(lead_cells):
+            return None
+        j = rhythm.bar_back(lead_cells, k)
+        return j if j is not None and j in cells and cells[j].pitches else None
+
+    def together_so_far(k: int, near: bool) -> tuple[int, int]:
+        """(bars, both) over the tune's bars before bar k: the bars in which the bass plays an earlier bar again that the
+        tune played in, the bar right before (`near`) or one further back, and those of them the tune plays again too
+        (rhythm.together's count of the one kind, on the bars written)."""
+        n = b = 0
+        for i in sorted(cells):
+            if i >= k:
+                break
+            j = lead_back(i)
+            if j is not None and cells[i].pitches and (j == i - 1) == near:
+                n += 1
+                b += bar_key(cells[i]) == bar_key(cells[j])
+        return n, b
+
+    def returns_so_far(k: int) -> tuple[int, int]:
+        """(bars, again) over the tune's bars before bar k: those with an earlier bar it played in within rhythm.TONES_BACK,
+        and those of them that are an earlier bar note for note (rhythm.returns' count, on the bars written)."""
+        keys = {i: bar_key(c) for i, c in cells.items() if i < k and c.pitches}
+        n = b = 0
+        for i in sorted(keys):
+            before = [keys[j] for j in range(i - 1, i - 1 - rhythm.TONES_BACK, -1) if j in keys]
+            if before:
+                n += 1
+                b += keys[i] in before
+        return n, b
+
     def realize(k: int, positions: list, pitches: list, asked: bool = True) -> Cell:
         nonlocal last_time
         a, b, _ = bars[k]
-        if asked and places is not None and positions and len(positions) == len(pitches) and not placed(k, positions):
+        if asked and places is not None and positions and len(positions) == len(pitches) and not in_places(k, positions):
             positions, pitches = on_places(k, positions, pitches)   # off the song's tune's places in the beat (round 147): its notes moved onto them
         if positions:
             last_time = a + positions[-1]
@@ -1566,7 +1635,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         half_kinds[k] = kinds
         return realize(k, all_pos, all_pitches)
 
-    def again(k: int, cell: Cell, kind: str = "earlier") -> Cell:
+    def again(k: int, cell: Cell, kind: str = "earlier", literal: bool = False) -> Cell:
         """An earlier cell in bar k: where the recall_moves word has a say
         (round 100) its first note sits where the word's draw puts it (at
         the cell's pitch, moved with the chord root, or by a step: FFVI's
@@ -1589,6 +1658,12 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         chord = _chord_in_bar(song, a)
         root = chord[0] if chord else tonic
         low, high = reg_of(k)
+        if literal and cell.pitches:                        # the bar itself (round 146): its notes at their pitch, where the bar's register
+            own = [int(round(m)) for m in cell.pitches]     # holds them; else placed as any earlier cell
+            if all(low <= m <= (max(high, room_high) if bounds_at is None else high) for m in own):
+                last_move = f"{own[-1] - own[-2]:+d}" if len(own) >= 2 and own[-1] != own[-2] else ("0" if len(own) >= 2 else last_move)
+                last_midi = float(own[-1])
+                return realize(k, cell.positions, own)
         if recall_moves is not None and cell.pitches:
             move = recall_moves.draw((R.MELODY, kind, "same" if chord == cell.chord else "other"), moves_rng, floored=False, floor_k=1)
             moves_drawn[move] += 1
@@ -1765,9 +1840,29 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     else:
                         choice = bar_urn.choose(rng, prev_cell, played)
                         before = k - 1 if k - 1 in cells else None
-                        if choice == "same" and prev_cell is not None and not keeps(k, len(prev_cell.positions)):
+                        placed = False
+                        back = lead_back(k) if with_lead else None   # the bar the bass plays again here (round 146), where it is this bar's:
+                        lead_share = lead_shares[back == k - 1] if back is not None else None   # its song has a count for the kind (the bar
+                        if back is not None and not (lead_share is not None and keeps(k, len(cells[back].positions)) and _chord_in_bar(song, bars[k][0]) == _chord_in_bar(song, bars[back][0])):
+                            back = None                     # right before, one further back), within its own onsets and under the same chord
+                        if back is not None:
+                            n_, b_ = together_so_far(k, back == k - 1)
+                            if b_ < lead_share * (n_ + 1):  # the tune's share of such bars, this one in, under its song's: the bar itself again
+                                cell = again(k, cells[back], "earlier", literal=True)
+                                source[k] = back
+                                choice, placed = "with the bass", True
+                                with_said["with the bass"] += 1
+                        if not placed and choice in ("same", "earlier") and overall_share is not None and with_said["left new"] < with_said["with the bass"]:
+                            n_, b_ = returns_so_far(k)      # one of the urn's own returns is left new for each bar played again with the bass, where
+                            if b_ >= overall_share * (n_ + 1):   # the tune's bars that are an earlier bar are at its song's share of them
+                                choice = "new"
+                                with_said["left new"] += 1
+                        if placed:
+                            pass
+                        elif choice == "same" and prev_cell is not None and not keeps(k, len(prev_cell.positions)):
                             choice = "new"                  # the bar before's cell is not within this bar's own onsets (round 138): a new bar
-                        if choice == "same" and prev_cell is not None:
+                            cell = (new_cell_halves if "half_recall" in models else new_cell)(k, new_rhythm(k), shape, start_midi, a0, b0)
+                        elif choice == "same" and prev_cell is not None:
                             cell = again(k, prev_cell, "same")
                             source[k] = source.get(before, before) if before is not None else None
                         elif choice == "earlier":
@@ -1833,6 +1928,14 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             elif letter_of(w[0]) == rhythm.NEW:
                 others.append(list(phrase_cells))
         log.append(f"bar {w[0]}: {relation}, {shape}" + (f" {phrase_size:.0f}" if phrase_size is not None else "") + f", ends {ending}, bars {[choices.get(k, '-') for k in live]}")
+    if with_lead:                                           # the tune's returns with the bass, and its returns at all (round 146)
+        (fn, fb), (nn, nb) = together_so_far(len(bars), False), together_so_far(len(bars), True)
+        m_, r_ = returns_so_far(len(bars))
+        said = lambda x: "no count" if x is None else f"{x:.2f}"   # noqa: E731
+        log.append(f"an earlier bar played again where the bass plays one from further back again in {fb} of {fn} such bars ({fb / max(1, fn):.2f}; the balance's song's {said(lead_shares[False])}), "
+                   f"where it plays the bar before again in {nb} of {nn} ({nb / max(1, nn):.2f}; {said(lead_shares[True])}), "
+                   f"an earlier bar again in {r_} of {m_} bars ({r_ / max(1, m_):.2f}; {overall_share if overall_share is not None else 0.0:.2f}); "
+                   f"{with_said['with the bass']} bars played again with the bass, {with_said['left new']} of the urn's returns left new (round 146)")
     if on_beat[1]:
         log.append(f"strong-beat notes on the chord: {on_beat[0]}/{on_beat[1]} ({on_beat[0] / on_beat[1]:.2f}; the song's rate {rate:.2f})")
     if moves_seen[1]:

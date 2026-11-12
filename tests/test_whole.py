@@ -1,6 +1,7 @@
 import os
 import math
 import random
+import re
 import tempfile
 import unittest
 from collections import Counter
@@ -2784,8 +2785,9 @@ class TogetherTests(unittest.TestCase):
         lead = [(1,), (1,), (2,), (1,), (), (1,)]
         part = [(5,), (5,), (6,), (7,), (5,), ()]
         self.assertEqual(rhythm.together(lead, part), (2, 1))                                       # bars 1 and 3 (the lead's bar 5 has no part): one again
-        self.assertEqual([rhythm.lead_of(r, ["bass", "melody"]) for r in ("accompaniment", "harmony", "arp", "counter", "melody", "bass")], ["bass", "bass", "bass", "melody", None, None])
-        self.assertEqual(rhythm.lead_of("counter", ["bass"]), None)                                 # a counter-line without a tune has none
+        self.assertEqual([rhythm.lead_of(r, ["bass", "melody"]) for r in ("accompaniment", "harmony", "arp", "counter", "melody", "bass")], ["bass", "bass", "bass", "melody", "bass", None])
+        self.assertEqual(rhythm.lead_of("counter", ["bass"]), "bass")                               # a counter-line without a melody is the tune: the bass
+        self.assertEqual((rhythm.lead_of("counter", ["harmony"]), rhythm.lead_of("melody", ["counter"])), (None, None))   # no lead in the song: none
 
     def test_the_token_carries_it(self):
         from bitcomposer.translate.vocab import Span
@@ -2851,6 +2853,108 @@ class TogetherTests(unittest.TestCase):
         whole.hold_together(plan, types.SimpleNamespace(bars=self.BARS[:2], meter=4, notes={}), "accompaniment", two, [(0.0, 3.9, 36.0, 0), (4.0, 7.9, 36.0, 0)])
         self.assertEqual(sorted((n[3], n[2]) for n in two.notes if n[0] >= 4.0), [(0, 60.0), (0, 64.0), (0, 67.0), (1, 62.0), (1, 67.0), (1, 71.0)])   # the bar whole: every voice
         self.assertEqual(two.figures, ["0 1 2", "0 1 2"])
+
+
+class TuneReturnsTests(unittest.TestCase):
+    """Round 146, an experiment that stands alone: the tune comes back with the bass as often as its token song's does. The
+    tune's token carries the share of the bars in which the bass plays an earlier bar again that the tune plays again too,
+    where the bass's bar is further back than the bar before and where it is the bar right before, and the share of the
+    tune's bars that are an earlier bar note for note (`w48/-/29`); where the tune's urn decides a bar and the bass plays
+    an earlier bar again there, the tune plays that bar again while its share of such bars of the kind is under the
+    song's, and for each bar so given one of the urn's own returns is left new where the tune's returns are at the
+    song's share, so a tune given no bar is as the urn draws it. The urn knew nothing of
+    the bass: a written tune played an earlier bar again in 0.26 of the bars in which the bass brought one back from
+    further off (FFVI's 0.48) and in 0.24 of the bars in which it played no earlier bar again (0.13)."""
+
+    def test_the_count(self):
+        cells = [(1,), (2,), (1,), (), (3,), (2,), (4,)]
+        self.assertEqual(rhythm.returns(cells), (5, 2))                                             # bars 1, 2, 4, 5 and 6 have an earlier bar played in: two again
+        self.assertEqual(rhythm.returns([(), (), (1,)]), (0, 0))                                    # no earlier bar the line plays in
+        self.assertEqual(rhythm.returns([(1,)] + [()] * 9 + [(1,)]), (0, 0))                        # further back than TONES_BACK: none within reach
+        lead = [(1,), (1,), (2,), (1,), (2,), (2,)]                                                 # the bar before again in bars 1 and 5, one further back in 3 and 4
+        part = [(5,), (5,), (6,), (5,), (7,), (7,)]
+        self.assertEqual(rhythm.together(lead, part), (4, 3))
+        self.assertEqual((rhythm.together(lead, part, near=True), rhythm.together(lead, part, near=False)), ((2, 2), (2, 1)))   # the two kinds apart
+
+    def test_the_tunes_token_carries_it(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        rows = [(72, 74), (72, 74), (76, 77), (72, 74), (79, 77), (72, 74), (72, 74), (81, 79)]
+        tune = [(4.0 * k + 2 * i, 1.9, float(m), "m") for k, ms in enumerate(rows) for i, m in enumerate(ms)]
+        bass = [(4.0 * k, 3.9, 36.0, "b") for k in range(8)]                                         # one bar eight times: every bar after the first comes back
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        self.assertEqual(rhythm.together_field(s, "melody"), "w-/29/57")                            # the bass stands on its bar: the tune plays the bar before's
+        token = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("melody=")).split("=", 1)[1].split(":")   # again in two of the
+        self.assertEqual(token[27], "w-/29/57", token)                                              # seven, and an earlier bar again in four; no bar from further back
+        two = [(4.0 * k, 3.9, 36.0 + 7 * (k % 2), "b") for k in range(8)]                            # two bars four times: every bar from the third is the bar two back
+        s.notes["bass"], s.voice_notes[0] = two, ("bass", two)
+        self.assertEqual(rhythm.together_field(s, "melody"), "w33/-/57")                            # the tune plays that bar again in two of the six
+        s.notes["counter"], s.voice_notes[2] = s.notes.pop("melody"), ("counter", tune); del s.voice_notes[1]
+        s.levels = {"bass": 0.5, "counter": 0.4}; s.voice_levels = {0: 0.5, 2: 0.4}
+        self.assertEqual(rhythm.together_field(s, "counter"), "w33/-/57")                           # a counter-line without a melody is the tune
+        s.notes["bass"], s.voice_notes[0] = two[:5], ("bass", two[:5])                              # three such bars of the bass's: no count, no field
+        self.assertEqual(rhythm.together_field(s, "counter"), "")
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 28
+        fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[27] = "w48/-/29"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual((p.tune_together, p.together), ({"melody": (0.48, None, 0.29)}, {}))
+        self.assertIn("the melody plays an earlier bar again where the bass plays one from further back again in 0.48 of such bars in the balance's song, "
+                      "where it plays the bar before again by no count (under four such bars), and an earlier bar again in 0.29 of its bars (round 146)", p.log)
+        import types
+        song = types.SimpleNamespace(bars=[(4.0 * k, 4.0 * k + 4.0) for k in range(4)])
+        plan = types.SimpleNamespace(tune_together={"melody": (0.48, None, 0.29)}, parts=[(0, 2, None, "A"), (2, 2, 0, "A")])
+        bass = whole.Part("bass", [(0.0, 3.9, 36.0, 0), (4.0, 7.9, 43.0, 0), (8.0, 11.9, 40.0, 0), (12.0, 15.9, 41.0, 0), (0.0, 3.9, 48.0, 1)], ["0"] * 4)
+        lead = whole.tune_lead(plan, song, "melody", {"bass": bass})
+        self.assertEqual((lead["far"], lead["near"], lead["overall"]), (0.48, None, 0.29))
+        self.assertEqual(lead["cells"], [((0, 36),), ((0, 43),), ((0, 36),), ((0, 43),)])           # the bass's line, a part played again as it will be played
+        self.assertIsNone(whole.tune_lead(plan, song, "melody", {}))                               # no bass: nothing to come back with
+        self.assertIsNone(whole.tune_lead(types.SimpleNamespace(tune_together={}, parts=plan.parts), song, "melody", {"bass": bass}))
+
+    def test_the_tune_comes_back_with_the_bass(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=9, pack="ffvi")                                                    # a song with a tune over a bass that comes back
+        ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+
+        def written(own):
+            p = whole.plan(models, 1, "g", max_bars=16)
+            p.tune_together = {R.MELODY: own} if own else {}
+            sg = whole.song_of(p)
+            w = whole.write(p, sg, models, 1)
+            line = lambda r: rhythm.bar_cells([(n[0], n[1] - n[0], n[2]) for n in w[r].notes if n[3] == 0], sg.bars)   # noqa: E731
+            count = lambda near=None: rhythm.together(line(R.BASS), line(R.MELODY), near=near)       # noqa: E731
+            return w, count, [l for l in w[R.MELODY].log if "(round 146)" in l]
+
+        share = lambda t: t[1] / max(1, t[0])                                                       # noqa: E731
+        free, count, log = written(None)
+        self.assertEqual(log, [])
+        self.assertGreaterEqual(min(count(True)[0], count(False)[0]), 4)                            # the bass plays the bar before again under the tune, and
+        held, count_h, log = written((1.0, 1.0, 1.0))                                               # bars from further back
+        self.assertEqual(len(log), 1)
+        self.assertGreater(share(count_h()), share(count()))                                        # the tune with it more often, in both kinds of bar
+        self.assertGreater(share(count_h(True)), share(count(True)))
+        self.assertGreater(share(count_h(False)), share(count(False)))
+        self.assertIn(" bars played again with the bass, ", log[0])
+        self.assertEqual([(n[0], n[2]) for n in held[R.BASS].notes], [(n[0], n[2]) for n in free[R.BASS].notes])   # the bass as it was written
+        _, count_f, log = written((1.0, None, 1.0))                                                 # a song with no count for the bar before: the tune comes
+        self.assertGreater(share(count_f(False)), share(count(False)))                              # back with the bass's bars from further off and is not
+        self.assertLessEqual(count_f(True)[1], count(True)[1])                                      # made to stand on its bar with it
+        self.assertIn("where it plays the bar before again in 0 of 4 (0.00; no count)", log[0])
+        none, count_n, log = written((0.0, 0.0, 0.0))                                               # a song whose tune never comes back with its bass: no bar is
+        self.assertIn("0 bars played again with the bass, 0 of the urn's returns left new", log[0])   # given, so none of the urn's returns is left new and
+        self.assertEqual([(n[0], n[2]) for n in none[R.MELODY].notes], [(n[0], n[2]) for n in free[R.MELODY].notes])   # the tune is as the urn drew it
+        _, _, log = written((1.0, None, 0.0))                                                       # bars given, and the tune's returns over its song's: one of the
+        given, left = [int(x) for x in re.search(r"(\d+) bars played again with the bass, (\d+) of the urn's returns left new", log[0]).groups()]   # urn's left new
+        self.assertGreater(given, 0)                                                                # for each at the most
+        self.assertLessEqual(left, given)
 
 
 class CounterLineTests(unittest.TestCase):
@@ -3051,14 +3155,18 @@ class TunePlacesTests(unittest.TestCase):
         ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
         models = packtables.read(packtables.build(ctx.db, "test"))
 
-        def line(seed, places, token_feel="duple"):
+        said = []                                                                                   # the tune's whole log, of the last line written
+
+        def line(seed, places, token_feel="duple", together=None):
             p = whole.plan(models, seed, "g", max_bars=16)
             p.plays[R.MELODY] = [True] * p.bars
             p.tune_places, p.token_feel = ({R.MELODY: places} if places else {}), token_feel
+            p.tune_together = {R.MELODY: together} if together else {}                             # the places alone, unless the tune is brought back with the bass too
             s = whole.song_of(p)
             part = whole.write(p, s, models, seed)[R.MELODY]
             notes = sorted(n for n in part.notes if n[3] == 0)
             fine = rhythm.fine_places(rhythm.position(a - 4.0 * math.floor(a / 4.0 + 1e-9), 12) for a, _, _, _ in notes)
+            said[:] = part.log
             return [(a, m) for a, _, m, _ in notes], fine, [l for l in part.log if "(round 147)" in l]
 
         free, fine, log = line(1, None)
@@ -3079,6 +3187,10 @@ class TunePlacesTests(unittest.TestCase):
         self.assertTrue(0 < fine5["sixteenth"] <= 0.1 * len(free5), (fine5, len(free5)))           # a tune within its song's places already
         self.assertEqual(kept, free5)                                                               # is the tune it was, note for note
         self.assertIn("; 0 bars' notes moved onto them, 0 notes left out; ", log[0])
+        both, fine, log = line(1, (0.0, 0.0, 0.0), together=(1.0, 1.0, 1.0))                        # with the tune brought back with the bass (round 146):
+        self.assertEqual(fine, Counter())                                                           # the places are kept all the same,
+        self.assertRegex(" ".join(said), r"; [1-9]\d* bars played again with the bass, ")            # and the bars are still given
+        self.assertRegex(" ".join(log), r"; [1-9]\d* bars' notes moved onto them, ")
 
     def test_the_counter_lines_mask_keeps_its_songs_places(self):
         busy, thin = "1 1 1 1 | 1/4 1/2 3/4 5/4", "1 0 1 0"

@@ -655,6 +655,50 @@ The words are grouped by where the writing draws them, in the order the song is 
   Why: in the game a bar comes back whole, and the written parts
   each came back by their own draws, so under a tune's bar played
   again the band played another bar.
+  Since round 145 the kit's bar tables are kept a second time with a
+  song the reading has at half its speed counted in double time
+  (`packtables.DOUBLE_TIME`: `drums@2`, `drums-KSt@2`, `drums-h@2`,
+  `drums-c@2`; a table that comes out as the one as read is left out,
+  the other sounds'), and a song whose token is counted in double
+  time (round 131, `Plan.beat`) draws its kit from them. Why: such a
+  song's kit bars were asked of tables that hold its token song at
+  half speed, its snare's march left out as rolls, so the written
+  Locke took a fast song's bars within the strikes its token asks
+  and never its own march.
+  Since round 146 (built as an experiment, taken at Song Check 105)
+  the tune's token
+  carries the twenty-eighth field too, against the bass (`lead_of`:
+  the melody's lead, and the counter-line's in a song without one), as
+  three numbers (`together_field`, `together`'s `near`, `returns`): of
+  the bars in which the bass plays an earlier bar again note for note
+  and the tune plays in both, the percent in which the tune plays that
+  bar again too, first where the bass's bar is further back than the
+  bar before (a phrase come round), then where it is the bar right
+  before (a figure the bass stands on), each `-` under four such bars
+  (TOGETHER_BARS); and the percent of the tune's bars with an earlier
+  one within eight that are an earlier bar note for note: `w47/-/40`
+  for Terra's tune. 42 of FFVI's 66 tune tokens carry the field, 34
+  with a share for the bars from further back (none of them in 8, all
+  of them in 8) and 13 for the bar before (none in 8); no
+  counter-line's does. The plan keeps them (`tune_together`) and gives
+  the tune's writer the bass's bars as they will be played
+  (`tune_lead`; `writer.melody`'s `with_lead`). Where the tune's urn
+  decides a bar (not a theme's, a phrase's or a pair's return), the
+  bass plays an earlier bar again there that the tune played in, the
+  song has a count for the kind, the bar keeps within its own onsets
+  and the plan's chord is the same under both, the tune plays that bar
+  again note for note while its share of such bars of the kind so far,
+  this one in, is under its song's; and for each bar so given one of
+  the urn's own returns is left a new bar where the tune's bars that
+  are an earlier bar are at its song's share, so the tune comes back
+  where the bass does in place of somewhere else. A tune given no bar
+  is as the urn draws it. Why: the tune's urn knew nothing of the
+  bass's bars, so a written tune came back where the bass did not; and
+  the two kinds are counted apart because they are two things in the
+  game (a phrase that comes round brings the tune with it in half its
+  bars; under a figure the bass stands on the tune stands too in a few
+  songs and never in 8 of the 13 with a count), and a written bass
+  stands on one bar more than the game's.
   Since round 147 the melody's and the counter's token carry a
   twenty-ninth field, where in the beat the line's notes fall
   (`tune_places_field`): after a `p`, the percent of its onsets on a
@@ -697,16 +741,6 @@ The words are grouped by where the writing draws them, in the order the song is 
   token song's feel, 133 ended over their song's share of a place and
   79 played on a quarter of the beat where their song's tune never
   does.
-  Since round 145 the kit's bar tables are kept a second time with a
-  song the reading has at half its speed counted in double time
-  (`packtables.DOUBLE_TIME`: `drums@2`, `drums-KSt@2`, `drums-h@2`,
-  `drums-c@2`; a table that comes out as the one as read is left out,
-  the other sounds'), and a song whose token is counted in double
-  time (round 131, `Plan.beat`) draws its kit from them. Why: such a
-  song's kit bars were asked of tables that hold its token song at
-  half speed, its snare's march left out as rolls, so the written
-  Locke took a fast song's bars within the strikes its token asks
-  and never its own march.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in

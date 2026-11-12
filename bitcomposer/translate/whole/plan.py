@@ -315,6 +315,12 @@ class Plan:
     tones_kept: dict = field(default_factory=dict)      # a chord part -> (the share of its bars with an earlier bar on their root that sound
                                                         # such a bar's pitch classes again in the token song, of those the share that sound
                                                         # the bar before's) (round 142)
+    tune_together: dict = field(default_factory=dict)   # the tune's part (the melody; the counter-line in a band without one) -> (the share
+                                                        # of the bars in which the bass plays an earlier bar again that the tune plays again
+                                                        # too, where that bar is further back than the bar before; the same where it is the
+                                                        # bar right before; either None where the song has under TOGETHER_BARS such bars;
+                                                        # the share of the tune's bars with an earlier one that are an earlier bar note for
+                                                        # note) in the token song (round 146)
     beat: int = 1                                       # 2 where the token's song is counted in double time (round 131): its kit's bars are
                                                         # the kit tables' counted so (round 145)
     together: dict = field(default_factory=dict)        # a chord part, the counter-line beside a tune -> the share of the bars in which its lead
@@ -2202,6 +2208,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_lengths = {}                                      # and how it sounds its notes, by the gap to the next (round 141)
     token_tones = {}                                        # how often a chord part sounds a chord's tones again in the token song (round 142)
     token_together = {}                                     # and how often a part comes back with its lead (round 144)
+    token_tune_together = {}                                # the tune's with the bass, and how often its bars come back at all (round 146)
     token_places = {}                                       # where in the beat a tune's notes fall in the token song (round 147)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
@@ -2426,6 +2433,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if len(fields) > 27 and role in rhythm.UPPER + (R.COUNTER,) and re.fullmatch(r"w\d+", fields[27]):   # how often it plays an earlier bar
                 token_together[role] = int(fields[27][1:]) / 100   # again where its lead does (round 144): `w66`
                 log.append(f"the {role} plays an earlier bar again where the {'tune' if role == R.COUNTER else 'bass'} does in {token_together[role]:.2f} of such bars in the balance's song (round 144)")
+            if len(fields) > 27 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"w(\d+|-)/(\d+|-)/\d+", fields[27]):   # the tune: how often it
+                token_tune_together[role] = tuple(None if x == "-" else int(x) / 100 for x in fields[27][1:].split("/"))   # plays an earlier bar again
+                far, near, overall = token_tune_together[role]   # where the bass brings one back from further off, where it stands on the bar before,
+                said = lambda x: "by no count (under four such bars)" if x is None else f"in {x:.2f} of such bars"   # noqa: E731    # and how often
+                log.append(f"the {role} plays an earlier bar again where the bass plays one from further back again {said(far)} in the balance's song, "   # at all (round
+                           f"where it plays the bar before again {said(near)}, and an earlier bar again in {overall:.2f} of its bars (round 146)")   # 146): `w48/-/29`
             if len(fields) > 28 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"p\d+/\d+/\d+", fields[28]):   # where in the beat a tune's
                 token_places[role] = tuple(int(x) / 100 for x in fields[28][1:].split("/"))   # notes fall (round 147): `p12/0/3`
                 log.append(f"the {role} plays {token_places[role][0]:.2f} of its notes on a quarter of the beat in the balance's song, {token_places[role][1]:.2f} on a third, "
@@ -2794,7 +2807,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, beat=token_beat, tune_places=token_places, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, token_feel=token_feel)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2950,6 +2963,23 @@ def _replace_bars(part, song: rhythm.Song, role: str, a: float, b: float, copied
     inside = lambda t: a - rhythm.NEAR <= t < b - rhythm.NEAR   # noqa: E731
     part.notes[:] = sorted([n for n in part.notes if not inside(n[0])] + copied, key=lambda n: n[0])
     song.notes[role] = sorted([n for n in song.notes.get(role, []) if not inside(n[0])] + [(t, u - t, m, role) for t, u, m, _ in copied], key=lambda n: n[0])
+
+
+def tune_lead(plan: "Plan", song: rhythm.Song, role: str, written: dict) -> dict | None:
+    """What the tune's writer needs to bring the tune back with the bass (round 146, Plan.tune_together): the bass line's
+    bars as they will be played (rhythm.bar_cells of its line; a bar of a part of the form played again as the bar it
+    plays, played_again), the token song's shares of the bars in which the bass plays an earlier bar again that the tune
+    plays again too, where that bar is further back (`far`) and where it is the bar right before (`near`; either None
+    where the song has no count), and its share of the tune's bars that are an earlier bar note for note; None for a
+    tune without the token's field or a song without a bass."""
+    own = (getattr(plan, "tune_together", None) or {}).get(role)
+    if own is None or R.BASS not in written:
+        return None
+    cells = rhythm.bar_cells([(x[0], x[1] - x[0], x[2]) for x in written[R.BASS].notes if len(x) < 4 or x[3] == 0], song.bars)
+    for k, j in sorted(played_again(plan, song).items()):
+        if k < len(cells) and j < len(cells):
+            cells[k] = cells[j]
+    return {"cells": cells, "far": own[0], "near": own[1], "overall": own[2]}
 
 
 def played_again(plan: "Plan", song: rhythm.Song) -> dict:
@@ -3762,6 +3792,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  lengths=own_lengths(plan, role), lengths_rng=random.Random(f"{seed}:{role}:note lengths"),   # held as its token song's tune is, on an own stream (round 141)
                                                  places=own_places(plan, role),   # and within its token song's tune's places in the beat (round 147)
                                                  bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
+                                                 with_lead=tune_lead(plan, song, role, written),   # the tune comes back with the bass as its token song's does (round 146)
                                                  moves_rng=random.Random(f"{seed}:{role}:recall moves"),   # the recalls' places on an own stream (round 100)
                                                  habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role))   # the habit and envelope a bar: the tier by the section (round 101)
         if beside and sum(mask_said.values()):              # the counter-line's bars by its part of the form's own onsets (round 143)
