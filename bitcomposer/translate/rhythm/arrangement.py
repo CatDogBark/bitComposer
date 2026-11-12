@@ -2067,6 +2067,111 @@ def tune_lengths_field(s, role: str, line_notes=None) -> str:
     return "h" + "/".join([entry([share for _, share in gaps])] + [entry(by[name]) if len(by[name]) >= LENGTH_NOTES else "-" for _, name in cells_mod.GAP_CLASSES])
 
 
+FINE_PLACES = ("sixteenth", "triplet", "finer")   # the places in the beat finer than its half (readings.PLACES past the beat and the eighth): what
+                                     # a tune's places field counts (round 147), in this order
+PLACE_NEAR = 0.03                    # beats an onset may sit from a place and be on it: a reading's onsets sit within 0.02 of their place, and
+                                     # a thirty-second (an eighth of the beat) is 0.04 from the sixth beside it
+BEAT_PLACES = tuple((Fraction(i, d), name) for d, name in ((1, None), (2, None), (4, "sixteenth"), (3, "triplet"), (6, "triplet"))
+                    for i in range(d + 1) if math.gcd(i, d) == 1 or d == 1)   # a place in the beat -> its name among FINE_PLACES; None on the beat and the half
+
+
+def beat_place(offset: float) -> str | None:
+    """Where an onset falls in its beat, by its time (round 147): None on the beat or the half beat, else the place finer
+    than the half it is on (FINE_PLACES): a quarter of the beat (a sixteenth place), a third or a sixth (a triplet place),
+    within PLACE_NEAR of it; "finer" on none of them. `offset`: beats from a bar line, as played or as written. The
+    reading's grid (readings.position) is the grid its song's notes fit best, a half beat for nine FFVI songs and a
+    quarter for twenty: on it the game's Dancing Mad (part 2) plays no tune note finer than the half beat, where 0.07 of
+    them fall on a quarter of the beat and 0.15 on a third or a sixth."""
+    f = offset - math.floor(offset)
+    at, name = min(BEAT_PLACES, key=lambda x: abs(f - float(x[0])))
+    return name if abs(f - float(at)) <= PLACE_NEAR else "finer"
+
+
+def fine_places(offsets) -> Counter:
+    """A bar's onsets on the places in the beat finer than its half (beat_place): {a place among FINE_PLACES: how many}; a
+    place with none is left out. `offsets`: the onsets in beats from the bar line."""
+    return Counter(x for x in (beat_place(float(p)) for p in offsets) if x is not None)
+
+
+def tune_places(s, notes) -> tuple:
+    """(a line's onsets, those of them on each place finer than the half beat) over the song's bars of its meter (as the
+    bar tables take them: readings.numbered_bars_of), notes struck together one onset (readings.onsets), each onset
+    where it is played (fine_places), not where the reading's grid puts it."""
+    n, fine = 0, Counter()
+    numbers = s.numbers or range(len(s.bars))
+    for _, (a, b) in zip(numbers, s.bars):
+        if round(b - a) != s.meter:
+            continue
+        on = [t - a for t, _ in readings_mod.onsets(notes, a, b)]
+        n += len(on)
+        fine.update(fine_places(on))
+    return n, fine
+
+
+def tune_places_field(s, role: str, line_notes=None) -> str:
+    """The balance token's twenty-ninth field for the melody and the counter (round 147): where in the beat the line's
+    notes fall. After a "p", the percent of its onsets on a quarter of the beat (a sixteenth place), on a third (a triplet
+    place) and finer than either (FINE_PLACES), joined by "/": "p0/0/0" for a tune that plays on the beat and the half
+    beat alone, as Locke's and Terra's do; "" under WORD_NOTES onsets. The tune's bars are drawn from the melody's bar
+    table, pooled over the game under the habit's density, the tempo class and the feel, and since round 138 held to
+    their song's own onsets a bar; where in the beat a song's tune plays the draw did not know. The game's tune never
+    plays on a quarter of the beat in 33 of the 65 test songs with a tune, and the written tune on 7 of them did: a
+    third of its notes in the song on Locke, from a bar one song of the game plays once."""
+    notes = line_notes if line_notes is not None else s.notes.get(role, [])
+    n, fine = tune_places(s, notes)
+    if n < WORD_NOTES:
+        return ""
+    return "p" + "/".join(str(int(round(100 * fine[k] / n))) for k in FINE_PLACES)
+
+
+def keeps_places(shares, n: int, fine, positions: list, least: int = 0, times: int = 1) -> bool:
+    """Whether a bar keeps a line within its song's places in the beat (round 147). `shares`: the song's line's share of
+    onsets on each of FINE_PLACES (tune_places_field's, as fractions; None for a place that is not held: held_places);
+    `n` and `fine`: the line's onsets so far and those
+    of them on each fine place; `positions`: the bar's onsets, Fractions of a beat from the bar line; `least`: the least
+    onsets the line will play over the song (its bars' own onsets' least, a note a bar without them); `times`: how often
+    the bar is played over the song (once, and once more for each part of the form that plays its part again: the
+    repeat plays the bar as it was, so its onsets are asked for all of them at once). True for a bar
+    with no onset on a fine place; else, for each fine place the bar plays on, the line's onsets there with the bar's
+    are no more than the song's share of the line's onsets with the bar's, or of `least` where that is more. The share
+    is a ceiling on the line over the song: a tune whose song's never plays on a quarter of the beat is given no bar that
+    does, and one whose song's does in a twentieth of its notes may play there early, up to a twentieth of the least it
+    will play, and after that as its notes allow. Held to its notes so far alone, a line could play on no fine place
+    until it had played twenty notes on the beat, and a figure its song opens with came late or never."""
+    mine = fine_places(positions)
+    if not mine:
+        return True
+    total = max(n + times * len(positions), least)
+    return all(fine[kind] + times * mine[kind] <= share * total + 1e-9 for kind, share in zip(FINE_PLACES, shares) if mine[kind] and share is not None)
+
+
+def adds_places(shares, old, new) -> bool:
+    """Whether a bar's onsets `new` have more onsets than `old` on a fine place that is held (round 147: `shares` as
+    keeps_places takes them, None for a place not held). A bar's notes moved onto its song's places move onto the beat,
+    the half beat or a place they were on: a sixteenth is nearer a third of the beat than the half, and a song whose
+    tune plays some of its notes on a third would have had its sixteenths moved there, one against three with its band."""
+    was, now = fine_places(old), fine_places(new)
+    return any(now[kind] > was[kind] for kind, share in zip(FINE_PLACES, shares) if share is not None)
+
+
+FEEL_PLACE = {"triple": "triplet"}   # a feel (cells.FEELS) -> the fine place that is its own division of the beat: a song in triple feel plays
+                                     # its off-beats on a third, as a duple one on the half (round 147)
+
+
+def held_places(shares, feel: str, song_feel: str):
+    """A line's places as a song written in `feel` holds them (round 147): the token song's shares (tune_places_field's, as
+    fractions), with None for the place that is the feel's own division of the beat (FEEL_PLACE: the third in a triple
+    feel, the band's and not the tune's); None without shares, and None where the song is written in another feel than
+    its token song's (`song_feel`, the token's `feel=` word): a tune's places are its song's feel's. A written song's
+    feel is the pooled `feels` word's draw, not its token song's (21 of the 68 test songs are written in the other): a
+    song on Dark World's token drawn in triple feel plays its off-beats on the third with its band, where Dark World's
+    own tune plays on none; and one on Dancing Mad's fifth part's token drawn duple, held to that tune's places (a
+    third in 0.46 of its notes, a quarter in 0.06), was given the organ's triplets over a band in sixteenths."""
+    if shares is None or feel != song_feel:
+        return None
+    return tuple(None if kind == FEEL_PLACE.get(feel) else share for kind, share in zip(FINE_PLACES, shares))
+
+
 TONES_BACK = 8                       # bars back a chord part's last bar on a chord is looked for (round 142)
 TONES_SHARE = 0.15                   # a pitch class sounding this share of the part's beats in a bar is in the bar's set (the chord reader's
                                      # own share for the chordal voices' set, harmony.SET_SHARE)
@@ -2421,7 +2526,8 @@ def balance_units(songs) -> list:
                       tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and a tune's shortest usual note (round 136)
                       tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and how it sounds its notes, by the gap (round 141)
                       tones_kept_field(s, role) if role in readings_mod.UPPER else "",   # and how often a chord part sounds a chord's tones again (round 142)
-                      together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER,) else ""]   # and how often it comes back with its lead (round 144)
+                      together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER,) else "",   # and how often it comes back with its lead (round 144)
+                      tune_places_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else ""]   # and where in the beat a tune's notes fall (round 147)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
@@ -2448,6 +2554,8 @@ def balance_units(songs) -> list:
             tokens.append(f"cycle={cycle}")
         if s.beat == 2:                                      # the song counted in double time (round 131): its bars are half the reading's,
             tokens.append("beat=2")                          # so its form runs to twice the bars a song is asked
+        if cells_mod.song_feel(s) != cells_mod.FEELS[0]:     # the song's feel where it is not duple (round 147): what its tune's places in the
+            tokens.append(f"feel={cells_mod.song_feel(s)}")  # beat are counted in, and held in
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with

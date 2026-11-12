@@ -3,6 +3,7 @@ import math
 import random
 import tempfile
 import unittest
+from collections import Counter
 from fractions import Fraction
 
 from bitcomposer.translate import harmony, pack, rhythm, tables, vocab, whole, writer
@@ -2938,6 +2939,166 @@ class CounterLineTests(unittest.TestCase):
         self.assertRegex(log[-1], r"^moves of a fourth or more: [01]/15 \(0\.0\d; the balance's song's line 0\.00\) \(round 143\)$")
         some, _, _ = writer.counter(*args, random.Random(2), "other", move_profile={"far": 0.5}, **kw)
         self.assertGreater(far(some), far(held))                                                    # a song's line that does: as far as its share
+
+
+class TunePlacesTests(unittest.TestCase):
+    """Round 147: where in the beat a tune's notes fall rides its token (`p12/0/3`: the percent of its line's onsets on a
+    quarter of the beat, on a third and finer than either), with the song's feel where it is not duple (`feel=triple`),
+    and the tune's and the counter-line's writers keep the written line at or under its song's share of each over the
+    song, where the song is written in its token song's feel. The tune's bars are the melody's bar table's, pooled over
+    the game: a tune on Locke's token, whose tune plays on the beat and the half beat alone, drew a bar one song of the
+    game plays once and sat a quarter of the beat off the band for its second half."""
+
+    def _song(self, tune, others=()):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)] + list(others)
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def _tune(self, offsets):
+        """A note a beat through eight bars, the notes at these indexes moved this far off their beat."""
+        return [(float(i) + offsets.get(i, 0.0), 0.2, 72.0 + (i % 5), "m") for i in range(32)]
+
+    def test_a_bars_fine_places(self):
+        F = Fraction
+        self.assertEqual(rhythm.FINE_PLACES, ("sixteenth", "triplet", "finer"))
+        self.assertEqual(rhythm.fine_places([F(0), F(1, 2), F(2), F(7, 2)]), Counter())                # the beat and the half beat: none
+        self.assertEqual(rhythm.fine_places([F(0), F(1, 4), F(7, 4), F(4, 3), F(11, 6), F(1, 12)]), Counter({"sixteenth": 2, "triplet": 2, "finer": 1}))
+        place = rhythm.beat_place                                                                      # by the onset's time, within 0.03 of a beat
+        self.assertEqual([place(x) for x in (0.0, 3.98, 0.02, 1.5, 2.52)], [None] * 5)                # on the beat, the half beat
+        self.assertEqual([place(x) for x in (0.25, 1.77, 0.23)], ["sixteenth"] * 3)                   # a quarter of the beat
+        self.assertEqual([place(x) for x in (1 / 3, 2.66, 1 / 6, 3 + 5 / 6)], ["triplet"] * 4)        # a third, a sixth
+        self.assertEqual([place(x) for x in (0.125, 0.3, 1 / 12, 0.45)], ["finer"] * 4)               # none of them: a thirty-second, a twelfth
+
+    def test_the_token_carries_where_in_the_beat_the_tune_plays(self):
+        on_beat = self._tune({})
+        self.assertEqual(rhythm.tune_places_field(self._song(on_beat), "melody"), "p0/0/0")           # on the beat alone
+        self.assertEqual(rhythm.tune_places_field(self._song(self._tune({i: 0.5 for i in range(0, 32, 2)})), "melody"), "p0/0/0")   # and on the half beat
+        mixed = self._tune({1: 0.25, 5: 0.75, 9: 0.25, 13: 0.75, 2: 1 / 3, 6: 2 / 3, 3: 1 / 12})      # four on a quarter, two on a third, one finer
+        self.assertEqual(rhythm.tune_places_field(self._song(mixed), "melody"), "p12/6/3")             # of thirty-two: 12, 6 and 3 in a hundred
+        self.assertEqual(rhythm.tune_places(self._song(mixed), mixed), (32, Counter({"sixteenth": 4, "triplet": 2, "finer": 1})))
+        self.assertEqual(rhythm.tune_places_field(self._song(on_beat[:15]), "melody"), "")             # under sixteen onsets: no field
+        coarse = self._song(mixed)
+        coarse.division = 2                                                                            # a song read on a grid of half beats: its notes are
+        self.assertEqual(rhythm.tune_places_field(coarse, "melody"), "p12/6/3")                        # counted where they are played, not where the grid puts them
+        struck = on_beat + [(float(i), 0.2, 60.0, "m") for i in range(8)]                              # notes struck together are one onset
+        self.assertEqual(rhythm.tune_places(self._song(struck), struck)[0], 32)
+        unit = rhythm.balance_units([self._song(mixed)])[0].outcome.split()
+        tune = next(f for f in unit if f.startswith("melody=")).split("=", 1)[1].split(":")
+        self.assertEqual(tune[28], "p12/6/3", tune)                                                    # the twenty-ninth field
+        self.assertFalse(any(t.startswith("feel=") for t in unit))                                     # a duple song: the token does not say
+        swung = [(4.0 * k + b + x, 0.2, 48.0, "b") for k in range(8) for b in range(4) for x in (1 / 3, 2 / 3)]
+        self.assertIn("feel=triple", rhythm.balance_units([self._song(on_beat, swung)])[0].outcome.split())   # a song two thirds on the triplet
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 29
+        fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[28] = "p12/40/3"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        plan = lambda token: whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = plan(token)
+        self.assertEqual((p.tune_places, p.token_feel, p.feel), ({"melody": (0.12, 0.4, 0.03)}, "duple", "duple"))
+        self.assertEqual(whole.own_places(p, "melody"), (0.12, 0.4, 0.03))                              # a duple song on a duple song's token: all three held
+        self.assertIsNone(whole.own_places(p, "counter"))
+        self.assertIn("the melody plays 0.12 of its notes on a quarter of the beat in the balance's song, 0.40 on a third, 0.03 finer (round 147)", p.log)
+        p.feel = "triple"                                                                               # written in the other feel than its token song's:
+        self.assertIsNone(whole.own_places(p, "melody"))                                                # the places are its song's feel's, and not held
+        p = plan(token + " feel=triple")
+        self.assertEqual((p.token_feel, p.feel), ("triple", "duple"))
+        self.assertIsNone(whole.own_places(p, "melody"))
+        self.assertIn("the balance's song is in triple feel and the song in duple: its tune's places in the beat are not held (round 147)", p.log)
+        p.feel = "triple"                                                                               # a triple song on a triple song's token: the third is the
+        self.assertEqual(whole.own_places(p, "melody"), (0.12, None, 0.03))                             # feel's own division of the beat, and not held
+        for text in ("p12/40", "p12/40/x", "12/40/3", "p12/40/3/1"):                                   # not the field's: no places
+            fields[28] = text
+            self.assertEqual(plan("bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium").tune_places, {}, text)
+
+    def test_a_bar_keeps_the_line_within_its_songs_places(self):
+        F = Fraction
+        keeps = rhythm.keeps_places
+        none, dotted = (0.0, 0.0, 0.0), [F(0), F(3, 4), F(1), F(2)]
+        self.assertTrue(keeps(none, 0, Counter(), [F(0), F(1, 2), F(3)]))                               # no onset on a fine place: any bar
+        self.assertFalse(keeps(none, 400, Counter(), dotted))                                           # a song whose tune plays on no quarter: never
+        tenth = (0.1, 0.0, 0.0)
+        self.assertFalse(keeps(tenth, 5, Counter(), dotted))                                            # one of nine notes on a quarter: over a tenth
+        self.assertTrue(keeps(tenth, 6, Counter(), dotted))                                             # one of ten
+        self.assertFalse(keeps(tenth, 16, Counter({"sixteenth": 2}), dotted))                           # with the two it has played there: three of twenty
+        self.assertTrue(keeps(tenth, 26, Counter({"sixteenth": 2}), dotted))                            # three of thirty
+        self.assertTrue(keeps(tenth, 0, Counter(), dotted, least=10))                                   # early: against the least it will play over the song
+        self.assertFalse(keeps(tenth, 0, Counter(), dotted, least=9))
+        self.assertFalse(keeps(tenth, 6, Counter(), dotted, times=2))                                   # a bar the form plays twice: two of fourteen
+        self.assertTrue(keeps(tenth, 12, Counter(), dotted, times=2))                                   # two of twenty
+        self.assertFalse(keeps(tenth, 60, Counter(), [F(0), F(1, 3)]))                                  # each place by its own share: no third
+        self.assertTrue(keeps((0.1, None, 0.0), 60, Counter(), [F(0), F(1, 3)]))                        # a place that is not held
+        self.assertEqual(rhythm.held_places(tenth, "duple", "duple"), tenth)
+        self.assertEqual(rhythm.held_places(tenth, "triple", "triple"), (0.1, None, 0.0))               # the third is a triple feel's own
+        self.assertIsNone(rhythm.held_places(tenth, "triple", "duple")); self.assertIsNone(rhythm.held_places(tenth, "duple", "triple"))   # another feel
+        self.assertIsNone(rhythm.held_places(None, "duple", "duple"))
+        adds = rhythm.adds_places                                                                       # a bar moved onto the places takes no fine place it
+        self.assertFalse(adds(tenth, [F(1, 4), F(3, 4)], [F(0), F(1, 2)]))                              # was not on: onto the beat and the half beat,
+        self.assertFalse(adds(tenth, [F(1, 4), F(3, 4)], [F(0), F(3, 4)]))                              # or where it was
+        self.assertTrue(adds(tenth, [F(1, 4), F(3, 4)], [F(1, 3), F(2, 3)]))                            # not from a quarter onto a third
+        self.assertFalse(adds((0.1, None, 0.0), [F(1, 4), F(3, 4)], [F(1, 3), F(2, 3)]))                # but onto a place that is not held
+
+    def test_the_tune_is_written_within_its_songs_places(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=9, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+
+        def line(seed, places, token_feel="duple"):
+            p = whole.plan(models, seed, "g", max_bars=16)
+            p.plays[R.MELODY] = [True] * p.bars
+            p.tune_places, p.token_feel = ({R.MELODY: places} if places else {}), token_feel
+            s = whole.song_of(p)
+            part = whole.write(p, s, models, seed)[R.MELODY]
+            notes = sorted(n for n in part.notes if n[3] == 0)
+            fine = rhythm.fine_places(rhythm.position(a - 4.0 * math.floor(a / 4.0 + 1e-9), 12) for a, _, _, _ in notes)
+            return [(a, m) for a, _, m, _ in notes], fine, [l for l in part.log if "(round 147)" in l]
+
+        free, fine, log = line(1, None)
+        self.assertGreater(fine["sixteenth"], 5)                                                    # the pooled draws: notes on a quarter of the beat
+        self.assertEqual(log, [])
+        held, fine, log = line(1, (0.0, 0.0, 0.0))
+        self.assertEqual(fine, Counter())                                                           # a song whose tune plays on none: none written
+        self.assertEqual([m for _, m in held], [m for _, m in free])                                # the same notes in the same order, moved in time
+        moved = [abs(x[0] - y[0]) for x, y in zip(held, free) if x[0] != y[0]]
+        self.assertTrue(moved and max(moved) <= 0.5, moved)                                         # each to a place near it
+        self.assertRegex(log[0], rf"^notes on a quarter of the beat, a third, finer: 0/{len(held)} \(0\.00; the balance's song's tune 0\.00\), .*; [1-9]\d* bars' notes moved onto them, 0 notes left out; ")
+        some, fine, log = line(1, (0.1, 0.0, 0.0))
+        self.assertTrue(0 < fine["sixteenth"] <= 0.1 * len(some), (fine, len(some)))               # a song's tune that does in a tenth of its notes: no more
+        other, fine_o, log_o = line(1, (0.0, 0.0, 0.0), token_feel="triple")
+        self.assertEqual((other, log_o), (free, []))                                                # a song written in another feel than its token song's: not held
+        free5, fine5, _ = line(5, None)
+        kept, _, log = line(5, (0.1, 0.0, 0.0))
+        self.assertTrue(0 < fine5["sixteenth"] <= 0.1 * len(free5), (fine5, len(free5)))           # a tune within its song's places already
+        self.assertEqual(kept, free5)                                                               # is the tune it was, note for note
+        self.assertIn("; 0 bars' notes moved onto them, 0 notes left out; ", log[0])
+
+    def test_the_counter_lines_mask_keeps_its_songs_places(self):
+        busy, thin = "1 1 1 1 | 1/4 1/2 3/4 5/4", "1 0 1 0"
+        m = CounterLineTests._masks([busy] * 30 + [thin] * 10)
+        on_grid = lambda bar, was=None: not rhythm.fine_places(Fraction(t) for t in bar.split()) if bar != "-" else True   # noqa: E731
+        ask = lambda mask, bounds, **kw: whole.counter_mask(m, CounterLineTests.CTX, "0 1 2 3", mask, bounds, random.Random(5), **kw)   # noqa: E731
+        self.assertEqual(ask(thin, None, placed=on_grid), (thin, "first"))                          # a line with no own onsets, its first mask within the places
+        self.assertEqual(ask(busy, None, placed=on_grid), (thin, "again"))                          # off them: the word drawn again
+        self.assertEqual(ask(busy, None, placed=on_grid, tries=0), (thin, "among"))                 # no draw left: among the table's masks that keep them
+        self.assertEqual(ask(busy, None, placed=lambda bar, was=None: False), (busy, "first"))      # none the table knows keeps them: the first draw
+        self.assertEqual(ask(thin, (1, 3), placed=on_grid), (thin, "first"))                        # within its own onsets and the places: as drawn
+        self.assertEqual(ask(busy, (1, 9), placed=on_grid), (thin, "again"))                        # within its own onsets, off the places: drawn again
+        self.assertEqual(ask(busy, (4, 9), placed=on_grid), (busy, "first"))                        # none within both: the answer the onsets alone gave
+        self.assertEqual(ask(busy, (1, 9), placed=lambda bar, was=None: True), (busy, "first"))     # a line the places leave alone: as it was
+        near, far = "1 1 1 1 | 1/2 3/2 5/2 7/2", "1 1 1 1 | 5/2 7/2"                                 # masks on the half beat: as many onsets of its own, and fewer
+        m = CounterLineTests._masks([busy] * 30 + [thin] * 10 + [near] * 2 + [far] * 2)
+        ask = lambda mask, bounds, **kw: whole.counter_mask(m, CounterLineTests.CTX, "0 1 2 3", mask, bounds, random.Random(5), **kw)   # noqa: E731
+        self.assertEqual(ask(busy, None, placed=on_grid), (near, "moved"))                          # the nearest mask the table knows that keeps the places:
+        self.assertEqual(ask(busy, (1, 9), placed=on_grid), (near, "moved"))                        # the same of the tune's onsets, as many of its own
+        self.assertEqual(ask("1 0 1 0 | 1/4", None, placed=on_grid), (thin, "again"))               # none so: the word drawn again
 
 
 class ChordTonesTests(unittest.TestCase):
