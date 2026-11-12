@@ -2730,6 +2730,94 @@ class TuneLengthsTests(unittest.TestCase):
         self.assertEqual((tune, bass), ([round(beat, 3)] * 2, [0.4, 0.4]))                          # the tune's line as written; the bass's floor stands
 
 
+class CounterLineTests(unittest.TestCase):
+    """Round 143: the counter-line beside a tune keeps to its token song's own line. Its bar's mask is drawn within the
+    song's onsets a bar for the part of the form (it had been the pooled counter_figures word's, whatever the song's
+    counter-line plays); a note is drawn among the notes its span holds (a note drawn outside it was played an octave
+    off: a seventh where a step was drawn); and its moves of a fourth or more are held to its song's line's share. The
+    written Locke's counter-line ran sixteenths that leapt up to a seventh beside a tune of quarter notes; the game's
+    has no sixteenths."""
+
+    CTX = ("counter", "half", "duple", "fast", "4", "0 1 2 3")
+    SCALE = {0, 2, 4, 5, 7, 9, 11}
+
+    @staticmethod
+    def _masks(outcomes):
+        units = [tables.Unit(f"s{i}", "g", o, {"part": "counter", "weight": "half", "feel": "duple", "tempo": "fast", "onsets": "4", "line": "0 1 2 3"}) for i, o in enumerate(outcomes)]
+        return {"counter_figures": tables.Table(("part", "weight", "feel", "tempo", "onsets", "line"), "counter_figures", votes=tables.SHARES).fit(units)}
+
+    @staticmethod
+    def _token(role, fields):
+        out = [""] * (max(fields) + 1)
+        for i, v in fields.items():
+            out[i] = v
+        return f"{role}=" + ":".join(out)
+
+    def test_the_plan_takes_the_counter_lines_onsets_by_section(self):
+        band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 20: "eA+B", 21: "nA4+B2"}),
+                self._token("melody", {0: "half", 1: "60-72", 2: "0.9", 3: "1", 4: "0.8", 8: "medium+varied", 20: "eA+B", 21: "nA2+B6"}),
+                self._token("counter", {0: "half", 1: "64-76", 2: "0.9", 3: "1", 4: "0.6", 8: "medium+varied", 20: "eA+B", 21: "nA1+B3"})]
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(" ".join(band) + " top=0.30 tempo=medium form=A4B4", part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.section_onsets["counter"], [1.0] * 4 + [3.0] * 4)                        # beside a tune too: its line's onsets a bar
+        self.assertEqual(p.section_onsets["melody"], [2.0] * 4 + [6.0] * 4)
+        env = whole.envelope_at_for(p, "counter")
+        self.assertTrue(env.own); self.assertEqual([env(0), env(4)], [(1, 1), (2, 4)])              # within the writers' TIGHT of them
+        self.assertIn("counter 1 in A", " ".join(p.log)); self.assertIn("counter 3 in B", " ".join(p.log))
+
+    def test_a_bars_mask_within_the_songs_own_onsets(self):
+        busy, thin = "1 1 1 1 | 1/4 1/2 3/4 5/4", "1 0 1 0"
+        m = self._masks([busy] * 30 + [thin] * 10)
+        self.assertEqual([whole.mask_strikes("0 1 2 3", busy), whole.mask_strikes("0 1 2 3", thin), whole.mask_strikes("-", "| 0 2"), whole.mask_strikes("0 1", "-")], [8, 2, 2, 0])
+        ask = lambda mask, bounds, **kw: whole.counter_mask(m, self.CTX, "0 1 2 3", mask, bounds, random.Random(5), **kw)   # noqa: E731
+        self.assertEqual(ask(busy, None), (busy, "first"))                                          # a bar without the song's own onsets: as drawn
+        self.assertEqual(ask(thin, (1, 3)), (thin, "first"))                                        # within them: as drawn
+        self.assertEqual(ask(busy, (1, 3)), (thin, "again"))                                        # over them: the word drawn again
+        self.assertEqual(ask(busy, (1, 3), tries=0), (thin, "among"))                               # no draw left: among the table's masks that fit
+        self.assertEqual(ask(busy, (4, 6)), (busy, "none"))                                         # none the table knows fits: the first draw
+        self.assertEqual(ask(thin, (1, 9), want=(7, 9)), (busy, "again"))                           # within the envelope, the part of the form's bars
+        self.assertEqual(ask(thin, (1, 9), want=(4, 6)), (thin, "first"))                           # short of the song's: drawn again; none within both: the envelope alone
+
+    def _words(self, with_moves=("0",)):
+        iv = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}:{p}", "g", o, {"part": "counter", "kind": "other", "line": "scale", "previous": p})
+             for p in (rhythm.START, "-2", "5") for i, o in enumerate(["-2"] * 20 + ["5"] * 20)])
+        mv = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i, (o, pl) in enumerate([("1", "alone")] * 20 + [("-1", "alone")] * 20 + [(x, "with") for x in with_moves] * 20)])
+        return {"voice_intervals": iv, "voice_moves": mv}
+
+    def test_a_note_is_drawn_among_the_spans_own(self):
+        models = self._words()
+        beside = lambda span: {writer.beside_pitch(models, "counter", "other", self.SCALE, random.Random(i), 72.0, rhythm.START, None, 0, span=span)[0] for i in range(24)}   # noqa: E731
+        self.assertEqual(beside(None), {69, 81})                                                    # a third under the tune's C or a sixth over it
+        self.assertEqual(beside((76, 88)), {81})                                                    # the span holds the sixth over alone
+        self.assertEqual(beside((60, 71)), {69})
+        self.assertEqual(beside((40, 50)), {69, 81})                                                # neither: as without it (the caller moves the note an octave in)
+        alone = lambda span: {writer.beside_pitch(models, "counter", "other", self.SCALE, random.Random(i), None, rhythm.START, 71.0, 0, span=span)[0] for i in range(24)}   # noqa: E731
+        self.assertEqual(alone(None), {69, 72})                                                     # a step either way from its B
+        self.assertEqual(alone((60, 71)), {69}); self.assertEqual(alone((72, 84)), {72})            # the step that stays inside the span
+
+    def test_the_lines_far_moves_are_held_to_its_songs(self):
+        from bitcomposer.translate import vocab
+        models = dict(self._words(with_moves=("0", "7", "-7")))
+        models["values"] = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 72.0, 0) for k in range(4) for i in range(4)]         # the tune repeats C on every beat
+        args = (song, tune, ["0 1 2 3"] * 4, ["1 1 1 1"] * 4, (48, 96), models)
+        kw = dict(key=(0, "major"), articulation="held", register=(60, 84))
+        far = lambda notes: sum(1 for x, y in zip(notes, notes[1:]) if abs(y[2] - x[2]) >= 5)   # noqa: E731
+        free, _, log = writer.counter(*args, random.Random(2), "other", **kw)
+        self.assertGreater(far(free), 3)                                                            # between the third under and the sixth over, an octave apart
+        self.assertEqual(log[1], "notes drawn among the span's own: 16 of 16; 0 moved an octave into it, the span holding none the words allow (round 143)")
+        held, _, log = writer.counter(*args, random.Random(2), "other", move_profile={"far": 0.0}, **kw)
+        self.assertLessEqual(far(held), 1)                                                          # a song's line that never moves a fourth: the note drawn again
+        self.assertEqual(len(held), len(free))
+        self.assertRegex(log[-1], r"^moves of a fourth or more: [01]/15 \(0\.0\d; the balance's song's line 0\.00\) \(round 143\)$")
+        some, _, _ = writer.counter(*args, random.Random(2), "other", move_profile={"far": 0.5}, **kw)
+        self.assertGreater(far(some), far(held))                                                    # a song's line that does: as far as its share
+
+
 class ChordTonesTests(unittest.TestCase):
     """Round 142: how often a chord part sounds again the pitch classes it played on a chord before rides its token
     (`c60/47`: of its bars with an earlier bar on their root within eight, the percent that sound one of those bars'

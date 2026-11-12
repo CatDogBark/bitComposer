@@ -392,6 +392,48 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
     return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS, floor_songs=floor_songs)
 
 
+def mask_strikes(tune_pat: str, mask: str) -> int:
+    """The onsets of the bar a counter_figures mask makes of the tune's bar (rhythm.apply_mask); none for a rest."""
+    bar = "-" if mask in (writer.REST, "-", "") else rhythm.apply_mask(tune_pat, mask)
+    return 0 if bar == "-" else len(bar.split())
+
+
+MASK_SLACK = 0.5                      # of the song's own onsets a bar (a note at the least): how far a part of the form's bars so far may run from them
+
+
+def counter_mask(models: dict, context: tuple, tune_pat: str, mask: str, bounds: tuple | None, rng: random.Random, tries: int | None = None,
+                 want: tuple | None = None) -> tuple[str, str]:
+    """A counter-line's bar's mask within its token song's own onsets for the part of the form (round 143): `mask`, the
+    counter_figures draw for the bar (`context`, over the tune's bar `tune_pat`), where the bar it makes of the tune's
+    (mask_strikes) strikes within `bounds` (least, most: plan.envelope_at_for's own envelope, half to one and a half
+    times the song's onsets a bar there) and within `want` (least, most: what keeps the part of the form's bars so far
+    at the song's own onsets a bar, MASK_SLACK of them either way; bars within the envelope alone, the first to fit
+    taken, ran thin: 0.89 of the game's counter-lines' notes a bar at the median, a third of them under three
+    quarters); else the word drawn again on `rng`, the bar's own stream, `tries` times (writer.TRIES); else one among
+    the masks the table knows that fit, by its probabilities in the bar's context (evenly where it gives them none:
+    parts.among's way, round 133); and where no mask is within both, the same asked of the envelope alone; else the
+    first draw. Returns (the mask, how it was come by: "first", "again", "among", "none")."""
+    if bounds is None:
+        return mask, "first"
+    t = models["counter_figures"]
+    t = t.table if hasattr(t, "table") else t
+    drawn = [mask]
+    for both in ((True, False) if want is not None else (False,)):
+        fits = lambda m: bounds[0] <= mask_strikes(tune_pat, m) <= bounds[1] and (not both or want[0] <= mask_strikes(tune_pat, m) <= want[1])   # noqa: E731,B023
+        if fits(mask):
+            return mask, "first"
+        for i in range(writer.TRIES if tries is None else tries):
+            if i >= len(drawn) - 1:
+                drawn.append(t.draw(tuple(context), rng, floored=False, floor_k=COUNTER_MASK_FLOOR, min_songs=PLAN_SONGS, floor_songs=PLAN_SONGS))
+            if fits(drawn[i + 1]):                          # the draws made for the first asking are the second's too: one stream a bar
+                return drawn[i + 1], "again"
+        known = [m for m in sorted(t.vocabulary) if fits(m)]
+        if known:
+            weights = [t.p(m, tuple(context)) for m in known]
+            return (rng.choices(known, weights)[0] if sum(weights) > 0 else rng.choice(known)), "among"
+    return mask, "none"
+
+
 def _draw_values(models: dict, name: str, values: dict, rng: random.Random, log: list | None = None, floor_k: int | None = None) -> str:
     """_draw with the context built from the table's own conditionings (round 81): a table fitted before a conditioning
     was added keeps its shape, and a value it does not condition on is dropped rather than misread as another. `floor_k`
@@ -556,12 +598,17 @@ def token_sections(parts: list, band: list, plays: dict, voices: dict, onsets: d
     melody's, or the counter's in a band without one: the new bars its writer draws keep within them), where it had
     kept its own density and taken only the token song's tier against it (a part of the form at DENSITY_STEP times the
     tune's typical onsets a bar or more a tier up, at the inverse or less a tier down: still returned, for a part
-    without the onsets); the counter's last bar beside a tune, and the last bar of the first voice beside any line,
+    without the onsets); since round 143 the counter-line beside a tune takes its line's onsets a bar too (its bar's
+    mask is drawn within them, counter_mask): its bar had been a mask over the tune's bar from the pooled
+    counter_figures word, whatever the song's own counter-line plays (the written Locke's ran 4.4 notes a bar where the
+    game's plays 2.8, a quarter of its moves a sixteenth apart where the game's has none); the counter's last bar
+    beside a tune, and the last bar of the first voice beside any line,
     take the token's fill or thinning; a part of the form that returns takes its first statement's. The section_densities and
     section_fills words are not drawn: they are drawn on their own streams, so no other draw moves."""
     total = parts[-1][0] + parts[-1][1]
     tune_role = R.MELODY if R.MELODY in band else R.COUNTER   # the part that carries the tune: the counter's where the band has no melody
-    lines = {role: [None] * total for role in band if role in rhythm.UPPER + (R.BASS, tune_role) and onsets.get(role)}   # the tune's too (round 138)
+    lines = {role: [None] * total for role in band if role in rhythm.UPPER + (R.BASS, tune_role, R.COUNTER) and onsets.get(role)}   # the tune's too (round 138),
+                                                            # and the counter-line's beside it (round 143)
     kit = [None] * total
     densities = {role: [0] * total for role in band if role not in (R.DRUMS, R.COUNTER)}
     fills = {role: {"line": [0] * total, "beside": [0] * total} for role in band if role != R.DRUMS}
@@ -3494,16 +3541,33 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             # 0.19, on the tune's sample in the tune's register: two tunes interleaved on one timbre)
             rng_c = random.Random(f"{seed}:{role}")
             tune_figs = [f if f == writer.REST else rhythm.pattern(rhythm.position(float(Fraction(t)), song.division) for t in f.split()) for f in written[R.MELODY].figures]
+            mask_ctx = lambda pat: (R.COUNTER, plan.weights.get(R.COUNTER, "minor"), plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat)   # noqa: E731
             masks = [writer.REST if not plan.plays[role][k] else
-                     _draw(models, "counter_figures", (R.COUNTER, plan.weights.get(R.COUNTER, "minor"), plan.feel, tempo, "0" if pat == writer.REST else str(len(pat.split())), "-" if pat == writer.REST else pat),
-                           rng_c, floor_k=COUNTER_MASK_FLOOR, floor_songs=PLAN_SONGS)
+                     _draw(models, "counter_figures", mask_ctx(pat), rng_c, floor_k=COUNTER_MASK_FLOOR, floor_songs=PLAN_SONGS)
                      for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs)))]
+            own_env = envelope_at_for(plan, R.COUNTER)      # the line's own onsets a bar for its part of the form (round 143): a bar's mask
+            mask_said = Counter()                           # within them, drawn again on the bar's own stream (the first draws above stand,
+            if getattr(own_env, "own", False):              # so the line's stream is as it was wherever the first mask fits)
+                own_c, starts, owed = plan.section_onsets[R.COUNTER], {bar for bar, *_ in plan.parts}, 0.0
+                for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs))):
+                    if k in starts:
+                        owed = 0.0                          # the onsets the part of the form's bars so far are short of the song's own (over: under 0)
+                    bounds = own_env(k) if masks[k] != writer.REST else None
+                    if bounds is None:
+                        continue
+                    slack = max(1.0, MASK_SLACK * own_c[k])
+                    tune_pat = "-" if pat == writer.REST else pat
+                    masks[k], how = counter_mask(models, mask_ctx(pat), tune_pat, masks[k], bounds, random.Random(f"{seed}:{role}:mask {k}"),
+                                                 want=(owed + own_c[k] - slack, owed + own_c[k] + slack))
+                    owed += own_c[k] - mask_strikes(tune_pat, masks[k])
+                    mask_said[how] += 1
             span = plan.bounds.get(R.COUNTER, plan.registers[R.COUNTER])   # where the game plays the counter's sample (round 34)
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
                                                   key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER), clash_rates=x.get("clashes"),
                                                   chord_rate=x.get("chord_tones"), tune_sounds=x.get("tune_sounds"),   # its own chord-tone share held (round 96), its note lengths (round 98)
                                                   shortest=shortest_beats(plan, R.COUNTER),   # and no note under its token song's shortest usual one (round 136)
-                                                  lengths=own_lengths(plan, R.COUNTER), lengths_rng=random.Random(f"{seed}:{role}:note lengths"))   # held as its token song's line is, on an own stream (round 141)
+                                                  lengths=own_lengths(plan, R.COUNTER), lengths_rng=random.Random(f"{seed}:{role}:note lengths"),   # held as its token song's line is, on an own stream (round 141)
+                                                  move_profile=(getattr(plan, "step_profiles", None) or {}).get(R.COUNTER))   # and no more far moves than its song's line (round 143)
         else:
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
@@ -3516,6 +3580,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
                                                  moves_rng=random.Random(f"{seed}:{role}:recall moves"),   # the recalls' places on an own stream (round 100)
                                                  habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role))   # the habit and envelope a bar: the tier by the section (round 101)
+        if beside and sum(mask_said.values()):              # the counter-line's bars by its part of the form's own onsets (round 143)
+            plog.append(f"bars' masks within the balance's song's own onsets for their part of the form (round 143): {sum(mask_said.values()) - mask_said['none']} of {sum(mask_said.values())}"
+                        + f"; {mask_said['again']} drawn again, {mask_said['among']} among the table's masks that fit, {mask_said['none']} no mask fits")
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
