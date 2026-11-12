@@ -2551,6 +2551,7 @@ class TuneGapTests(unittest.TestCase):
         p = whole.plan(models, 3, "g", max_bars=16)
         p.plays[R.MELODY] = [True] * p.bars
         p.extras[R.MELODY]["tune_sounds"] = {"held": 1.0, "detached": 1.0}                         # every note its whole gap
+        p.tune_lengths = {}                                                                         # (the pooled shares: the token's own, round 141, set aside)
         s = whole.song_of(p)
         line = sorted(n for n in whole.write(p, s, models, 3)[R.MELODY].notes if n[3] == 0)
         for (a, b, _, _), nxt in zip(line, line[1:]):
@@ -2585,6 +2586,148 @@ class TuneGapTests(unittest.TestCase):
         tune = [(0.0, 1.0, 60.0, 0), (7.0, 7.5, 62.0, 0), (8.0, 9.0, 64.0, 0), (15.0, 16.0, 65.0, 0), (16.0, 17.0, 67.0, 0)]
         s, written = self._repeat(tune)
         self.assertEqual(written["melody"].notes[3], (15.0, 15.5, 62.0, 0))
+
+
+class TuneLengthsTests(unittest.TestCase):
+    """Round 141: how a tune sounds its notes rides its token by the gap to the next note (`h50~0.95~0.20/-/-/50~0.95~0.20/-/-`:
+    the share of the notes held, then the share of its gap a held note sounds and a detached one, for the whole line and
+    for each gap class), and the tune's and the counter-line's writers hold or detach a note at the song's own rate for
+    its gap. The pooled words drew one habit a song and one share for a detached note whatever its gap: the game's Terra
+    holds every note of its tune, and the written one cut a quarter of them short."""
+
+    def _song(self, tune):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        bass = [(4.0 * k + x, 0.9, 36.0, "b") for k in range(8) for x in (0.0, 2.0)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        return s
+
+    def _quarters(self, notes=32, held=lambda i: i % 2 == 0):
+        return self._song([(float(i), 0.95 if held(i) else 0.2, 72.0 + (i % 5), "m") for i in range(notes)])
+
+    def test_a_notes_share_is_of_its_gap_across_the_bar_line(self):
+        tune = [(3.0, 2.85, 72.0, "m"), (6.0, 0.5, 74.0, "m"), (15.0, 0.9, 76.0, "m"), (16.0, 2.0, 77.0, "m")]
+        gaps = rhythm.tune_gaps(self._song(tune), tune)
+        self.assertEqual([(g, round(x, 6)) for g, x in gaps], [(3.0, 0.95), (2.0, 0.25), (1.0, 0.9), (4.0, 0.5)])   # over the bar line to the next
+        # bar's note; a bar's rest ahead: to the bar's end; the next note on the next bar's first beat; the line's last note: its bar's end
+
+    def test_the_token_carries_how_the_tune_sounds_its_notes(self):
+        self.assertEqual(rhythm.tune_lengths_field(self._quarters(), "melody"), "h50~0.95~0.20/-/-/50~0.95~0.20/-/-")   # half held, half cut to a fifth
+        self.assertEqual(rhythm.tune_lengths_field(self._quarters(held=lambda i: True), "melody"), "h100~0.95~-/-/-/100~0.95~-/-/-")   # none detached
+        mixed = [(0.5 * i, 0.2, 72.0, "m") for i in range(16)] + [(8.0 + i, 0.95, 74.0, "m") for i in range(24)]      # eighths cut to 0.4, quarters held
+        self.assertEqual(rhythm.tune_lengths_field(self._song(mixed), "melody"), "h60~0.95~0.40/-/0~-~0.40/100~0.95~-/-/-")
+        few = [(0.5 * i, 0.2, 72.0, "m") for i in range(3)] + [(8.0 + i, 0.95, 74.0, "m") for i in range(24)]         # three eighths: under LENGTH_NOTES,
+        self.assertEqual(rhythm.tune_lengths_field(self._song(few), "melody"), "h89~0.95~0.40/-/-/100~0.95~-/-/-")     # no entry of the class's own
+        stab = [(float(i), 0.02, 72.0, "m") for i in range(32)]                                                        # never under the grain
+        self.assertEqual(rhythm.tune_lengths_field(self._song(stab), "melody"), "h0~-~0.05/-/-/0~-~0.05/-/-")
+        self.assertEqual(rhythm.tune_lengths_field(self._quarters(notes=15), "melody"), "")                            # under sixteen notes: no field
+        tune = next(f for f in rhythm.balance_units([self._quarters()])[0].outcome.split() if f.startswith("melody=")).split("=", 1)[1].split(":")
+        self.assertEqual(tune[25], "h50~0.95~0.20/-/-/50~0.95~0.20/-/-", tune)                                         # the twenty-sixth field
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 26
+        fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[25] = "h50~0.95~0.20/-/-/26~0.90~0.55/100~1.00~-/-"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        own = {rhythm.LENGTH_WHOLE: (0.5, 0.95, 0.2), "1-2": (0.26, 0.9, 0.55), "2-4": (1.0, 1.0, None)}
+        self.assertEqual(p.tune_lengths, {"melody": own})
+        self.assertEqual(whole.own_lengths(p, "melody"), own)
+        self.assertIsNone(whole.own_lengths(p, "counter"))
+        self.assertIn("the melody holds 0.50 of its notes in the balance's song; its note lengths by the gap (round 141): 50~0.95~0.20/-/-/26~0.90~0.55/100~1.00~-/-", p.log)
+        for text in ("50~0.95~0.20/-/-", "-/-/-/-/-/-", "50~0.95/-/-/-/-/-", "x~0.95~0.20/-/-/-/-/-"):                 # not the field's: no entry
+            self.assertEqual(whole.lengths_of(text), {}, text)
+
+    def test_a_note_is_held_at_the_songs_rate_within_a_note(self):
+        from bitcomposer.translate.writer import tune as tune_mod
+        for share in (0.0, 0.26, 0.5, 0.99, 1.0):
+            own, run, rng = {rhythm.LENGTH_WHOLE: (share, 0.9, 0.3)}, {}, random.Random(3)
+            for n in range(1, 61):
+                kind, sounds = tune_mod.own_length(own, 1.0, run, rng)
+                self.assertLess(abs(run["1-2"][0] - share * n), 1.0, (share, n))                    # the class's held notes within a note of the song's share
+                self.assertEqual(sounds, 0.9 if kind == "held" else 0.3)
+            self.assertEqual(run["1-2"][1], 60)
+        self.assertEqual(run["1-2"][0], 60)                                                         # a song that holds every note: none detached
+        own = {rhythm.LENGTH_WHOLE: (0.0, 0.9, None), "2-4": (1.0, 1.0, None)}
+        run, rng = {}, random.Random(3)
+        self.assertEqual(tune_mod.own_length(own, 2.0, run, rng), ("held", 1.0))                    # the gap's class's own entry
+        self.assertEqual(tune_mod.own_length(own, 0.5, run, rng, {"held": 0.9, "detached": 0.35}), ("detached", 0.35))   # the whole line's rate; no share of
+        self.assertEqual(tune_mod.own_length(own, 0.5, run, rng), ("detached", writer.DETACHED))    # the kind in the song: the pooled draw's, or the default
+        self.assertEqual(run, {"2-4": [1, 1], "0.5-1": [0, 2]})
+        own = {rhythm.LENGTH_WHOLE: (1.0, 0.8, 0.5), "0.5-1": (1.0, 0.8, None), "2-4": (1.0, 0.95, None), "4+": (0.0, None, 0.1)}
+        self.assertEqual(tune_mod.own_length(own, 1.0, {}, rng), ("held", 0.95))                    # no note of the class in the song: the nearest class
+        self.assertEqual(tune_mod.own_length(own, 0.25, {}, rng), ("held", 0.8))                    # that has the kind, the longer of two as near
+        self.assertEqual(tune_mod.own_length(own, 4.0, {}, rng), ("detached", 0.1))                 # the class's own rate and share
+        self.assertEqual(tune_mod.own_length({rhythm.LENGTH_WHOLE: (0.0, None, 0.5)}, 1.0, {}, rng), ("detached", 0.5))   # no class with the kind: the whole line's
+        self.assertAlmostEqual(tune_mod.sounded(2.0, None, "detached", None, 0.25), 0.5)            # the song's share of the gap
+        self.assertAlmostEqual(tune_mod.sounded(2.0, None, "detached", 0.75, 0.25), 0.75)           # no shorter than its shortest usual note
+
+    def test_the_tune_is_written_as_its_song_sounds_its_notes(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=5, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+
+        def line(lengths):
+            p = whole.plan(models, 3, "g", max_bars=16)
+            p.plays[R.MELODY] = [True] * p.bars
+            p.extras[R.MELODY]["tune_sounds"] = {"held": 1.0, "detached": 0.2}
+            p.tune_shortest, p.tune_lengths = {}, ({R.MELODY: lengths} if lengths else {})
+            s = whole.song_of(p)
+            part = whole.write(p, s, models, 3)[R.MELODY]
+            notes = sorted(n for n in part.notes if n[3] == 0)
+            return [(a, m) for a, _, m, _ in notes], {round((b - a) / rhythm.tune_gap(s.bars, a, nxt[0]), 6) for (a, b, _, _), nxt in zip(notes, notes[1:])}, part.log
+
+        pooled, shares, log = line(None)
+        self.assertEqual(shares, {1.0, 0.2})                                                        # the pooled draws: held and detached notes
+        self.assertFalse(any("round 141" in l for l in log))
+        notes, shares, log = line({rhythm.LENGTH_WHOLE: (1.0, 0.9, None)})
+        self.assertEqual((notes, shares), (pooled, {0.9}))                                          # the same notes, every one held nine tenths of its gap
+        self.assertTrue(any(l.startswith(f"note lengths from the balance's song (round 141): {len(notes)} of {len(notes)} notes held") for l in log), log[-4:])
+        notes, shares, log = line({rhythm.LENGTH_WHOLE: (0.0, None, 0.25)})
+        self.assertEqual((notes, shares), (pooled, {0.25}))                                         # and every one cut to a quarter of it
+
+    def test_the_counter_line_is_written_so_too(self):
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        iv_t = tables.Table(("part", "kind", "line", "previous"), "voice_intervals", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "-2", {"part": "counter", "kind": "other", "line": "scale", "previous": p}) for i in range(20) for p in (rhythm.START, "-2")])
+        mv_t = tables.Table(("part", "kind", "place"), "voice_moves", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", o, {"part": "counter", "kind": "other", "place": pl}) for i in range(20) for o, pl in (("0", "with"), ("-1", "with"), ("1", "alone"))])
+        vals = tables.Table(("part", "value", "habit"), "values", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "held", {"part": "counter", "value": "1", "habit": "held"}) for i in range(3)])
+        song = rhythm.Song("w", 4, 12, bars, [vocab.Span(0.0, 16.0, 0, "", 1.0)], notes={}, sid="w", game="g", tonic=0, mode="major")
+        tune = [(4.0 * k + i, 4.0 * k + i + 0.9, 72.0, 0) for k in range(3) for i in range(4)]
+        args = (song, tune, ["0 1 2 3"] * 3 + [writer.REST], ["1 0 1 0 | 7/2", "1 1 1 1", writer.REST, "| 0 2"], (48, 96), {"voice_intervals": iv_t, "voice_moves": mv_t, "values": vals})
+        kw = dict(key=(0, "major"), articulation="held", register=(60, 84))
+        pooled, _, _ = writer.counter(*args, random.Random(1), "other", **kw)
+        own, _, log = writer.counter(*args, random.Random(1), "other", lengths={rhythm.LENGTH_WHOLE: (0.0, None, 0.25)}, lengths_rng=random.Random(2), **kw)
+        self.assertEqual([(a, m) for a, _, m in own], [(a, m) for a, _, m in pooled])               # the same notes
+        self.assertAlmostEqual(pooled[1][1] - pooled[1][0], 1.5 * writer.HELD, places=3)            # the pooled draw: held
+        self.assertAlmostEqual(own[1][1] - own[1][0], 1.5 * 0.25, places=3)                         # the song's: a quarter of the gap
+        self.assertTrue(log[-1].startswith("note lengths from the balance's song (round 141): 0 of 9 notes held"), log)
+
+    def test_the_render_sounds_such_a_line_as_written(self):
+        """The sample's floor (round 36: the shortest note the game plays a sample at, under the written part's speed class)
+        raised a short note to it; a tune's line written by its token song's own note lengths is not asked it."""
+        from types import SimpleNamespace
+        smp = lambda: SimpleNamespace(c5_speed=32000, data=b"\x00\x10" * 64, loop=False, sus_loop=False, loop_start=0, loop_end=0,   # noqa: E731
+                                      sus_loop_start=0, sus_loop_end=0)
+
+        def lengths(own):
+            p = whole.plan({}, 1, "g")                                                              # bass, drums, melody
+            p.tune_lengths = {"melody": {rhythm.LENGTH_WHOLE: (0.0, None, 0.2)}} if own else {}
+            written = {"bass": SimpleNamespace(notes=[(0.0, 0.1, 40, 0), (2.0, 2.1, 40, 0)]), "melody": SimpleNamespace(notes=[(0.0, 0.1, 72, 0), (2.0, 2.1, 74, 0)])}
+            samples = {"bass": ("sx", smp()), "melody": ("sy", smp()), "floors": {"sx": 0.4, "sy": 0.4}}
+            sc, first = whole.score_of(p, written, samples, loops=1, fade=0.0, pack_name="g")
+            return [[round(n.end - n.start, 3) for n in sc.notes if n.voice == first[role]][:2] for role in ("melody", "bass")], 0.1 * 60.0 / p.bpm
+
+        (tune, bass), beat = lengths(False)
+        self.assertEqual((tune, bass), ([0.4, 0.4], [0.4, 0.4]))                                    # the samples' floors
+        (tune, bass), beat = lengths(True)
+        self.assertEqual((tune, bass), ([round(beat, 3)] * 2, [0.4, 0.4]))                          # the tune's line as written; the bass's floor stands
 
 
 class TokenMotionTests(unittest.TestCase):

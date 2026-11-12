@@ -312,6 +312,9 @@ class Plan:
     bass_continuity: float | None = None                # the token song's bass line pitch continuity (round 114), or None
     bass_downbeat: float | None = None                  # the share of its bars' first beats the token song's bass strikes on the chord's root (round 129), or None
     tune_shortest: dict = field(default_factory=dict)   # the melody, the counter -> the token song's line's shortest usual note in ms (round 136)
+    tune_lengths: dict = field(default_factory=dict)    # the melody, the counter -> how the token song's line sounds its notes (round 141):
+                                                        # {the whole line (rhythm.LENGTH_WHOLE) or a gap class: (the share of the notes held,
+                                                        # the share of its gap a held note sounds, a detached one; None where it has none)}
     first_beats: dict = field(default_factory=dict)     # a part -> the share of its bars the token song's part strikes on the first beat: the
                                                         # bass (round 133), a chord part (round 135)
     loops: dict = field(default_factory=dict)           # a voice (the part for its line, "part:v" for a voice beside it, the drums for the kit,
@@ -1227,6 +1230,32 @@ def envelope_at_for(plan, role: str, habit=None):
     return lambda k, typical=None: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0, typical)
 
 
+def lengths_of(text: str) -> dict:
+    """A tune's note lengths as its token's twenty-sixth field carries them (round 141, rhythm.tune_lengths_field, without
+    the "h"): {rhythm.LENGTH_WHOLE or a gap class: (the share of the notes held, the share of its gap a held note sounds, a
+    detached one; None where the line has none of the kind)}, a class the field leaves out ("-") left out; {} where the
+    text is not the field's."""
+    names = [rhythm.LENGTH_WHOLE] + [name for _, name in rhythm.GAP_CLASSES]
+    entries = text.split("/")
+    if len(entries) != len(names):
+        return {}
+    out = {}
+    for name, e in zip(names, entries):
+        if e == "-":
+            continue
+        m = re.fullmatch(r"(\d+)~([\d.]+|-)~([\d.]+|-)", e)
+        if not m:
+            return {}
+        out[name] = (int(m.group(1)) / 100, None if m.group(2) == "-" else float(m.group(2)), None if m.group(3) == "-" else float(m.group(3)))
+    return out if rhythm.LENGTH_WHOLE in out else {}
+
+
+def own_lengths(plan, role: str) -> dict | None:
+    """How the token song's tune sounds its notes (round 141, Plan.tune_lengths), for the tune's writer; None where the
+    token carries none."""
+    return (getattr(plan, "tune_lengths", None) or {}).get(role) or None
+
+
 def shortest_beats(plan, role: str) -> float | None:
     """The token song's tune's shortest usual note (round 136, Plan.tune_shortest, in milliseconds) in beats at the plan's
     tempo, for the tune's writer; None where the token carries none."""
@@ -2063,6 +2092,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_downbeat = None                                   # how often the token song's bass roots a bar's first beat (round 129)
     token_first = {}                                        # and how often it strikes it (round 133), and a chord part (round 135)
     token_shortest = {}                                     # a tune's shortest usual note in the token song, in milliseconds (round 136)
+    token_lengths = {}                                      # and how it sounds its notes, by the gap to the next (round 141)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
     token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
@@ -2272,6 +2302,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if len(fields) > 24 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"m\d+", fields[24]) and int(fields[24][1:]) > 0:   # a tune's
                 token_shortest[role] = int(fields[24][1:])  # shortest usual note (round 136): `m150`
                 log.append(f"the {role}'s shortest usual note sounds {token_shortest[role]} ms in the balance's song")
+            if len(fields) > 25 and role in (R.MELODY, R.COUNTER) and fields[25].startswith("h") and lengths_of(fields[25][1:]):   # how the tune
+                token_lengths[role] = lengths_of(fields[25][1:])   # sounds its notes, by the gap (round 141): `h50~0.90~0.40/-/26~0.90~0.55/...`
+                log.append(f"the {role} holds {token_lengths[role][rhythm.LENGTH_WHOLE][0]:.2f} of its notes in the balance's song; its note lengths by the gap (round 141): {fields[25][1:]}")
             if len(fields) > 21 and fields[21].startswith("n"):   # how busy it is in each (round 125): the line's onsets a bar `nA6+B2!1`,
                 if role == R.DRUMS:                         # the kit's pieces' hits a bar `nAS28.5@100,c1@50`
                     token_kit_onsets = kit_onsets_of(fields[21][1:])
@@ -2634,7 +2667,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -3363,7 +3396,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             notes, figures, plog = writer.counter(song, written[R.MELODY].notes, tune_figs, masks, span, models, rng_c, x.get("sample", "other"),
                                                   key=key, articulation=x["articulation"], register=span, spans_at=line_bounds_at(plan, R.COUNTER), clash_rates=x.get("clashes"),
                                                   chord_rate=x.get("chord_tones"), tune_sounds=x.get("tune_sounds"),   # its own chord-tone share held (round 96), its note lengths (round 98)
-                                                  shortest=shortest_beats(plan, R.COUNTER))   # and no note under its token song's shortest usual one (round 136)
+                                                  shortest=shortest_beats(plan, R.COUNTER),   # and no note under its token song's shortest usual one (round 136)
+                                                  lengths=own_lengths(plan, R.COUNTER), lengths_rng=random.Random(f"{seed}:{role}:note lengths"))   # held as its token song's line is, on an own stream (round 141)
         else:
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],
                                                  key=key, hold=(), reference=reference, articulation=x["articulation"], echo_habit=x["echo"],
@@ -3372,6 +3406,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                  tune_sounds=x.get("tune_sounds"), letters=x.get("letters") if role == R.MELODY else None, theme_body=models.get("theme_body"),
                                                  move_profile=(getattr(plan, "step_profiles", None) or {}).get(role),   # the tune's moves held to its token song's (round 130)
                                                  shortest=shortest_beats(plan, role),   # and no note under its token song's shortest usual one (round 136)
+                                                 lengths=own_lengths(plan, role), lengths_rng=random.Random(f"{seed}:{role}:note lengths"),   # held as its token song's tune is, on an own stream (round 141)
                                                  bounds_at=line_bounds_at(plan, role), recall_moves=models.get("recall_moves"),
                                                  moves_rng=random.Random(f"{seed}:{role}:recall moves"),   # the recalls' places on an own stream (round 100)
                                                  habit_at=habit_at_for(plan, role), envelope_at=envelope_at_for(plan, role))   # the habit and envelope a bar: the tier by the section (round 101)

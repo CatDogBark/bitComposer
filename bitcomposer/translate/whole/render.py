@@ -909,6 +909,10 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     its hook; the echo as given (echo_of). Returns the score and {role:
     first voice}."""
     floors = samples.get("floors") or {}
+    own_lines = {role for role in (R.MELODY, R.COUNTER) if plan_mod.own_lengths(plan, role)}   # the lines written by their token song's own note lengths
+    # (round 141): the sample's floor, the shortest note the game plays the sample at under the written part's speed class, is not
+    # asked of them. It had sounded a tune's cut notes whole in the songs whose tune is cut most: the floor drawn for the written
+    # Gogo's tune was 240 ms where the game's tune stabs 50, for Umaro's 400 where its token's shortest usual note is 140
     second_voice = {role: {v for v, w in enumerate(plan_mod.layers_of(plan, role), start=1) if not w.startswith("doubling")}   # a layered part's own
                     for role in plan.band if role != R.DRUMS}                                                            # lines, on their sample
     from ... import score as score_mod
@@ -1007,7 +1011,8 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                     put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name), name, sample, v, piece=kit_name, letter=letter)   # the piece's
                 else:
                     name, sample = sample_of(samples, role, n[3], second_voice, plan_mod.stretch_at(plan, role, int(a // plan_mod.METER), n[3]))
-                    t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
+                    if not (n[3] == 0 and role in own_lines):   # never shorter than the game plays the sample (the next key-on cuts an overlap);
+                        t1 = max(t1, t0 + floors.get(name, 0.0))   # a tune's line written by its token song's note lengths sounds them (round 141)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // plan_mod.METER))   # the bar's section level (round 48)
     if capped:
         plan.log.append("loudness: notes capped at full, their sample too quiet for their level: " + ", ".join(f"{k} {v}" for k, v in capped.most_common()))
