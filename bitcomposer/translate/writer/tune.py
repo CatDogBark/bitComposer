@@ -216,15 +216,20 @@ def interval_pitch(entry: str, ref: float, scale: set) -> int:
     return int(round(ref)) + v if form == "semis" else scale_pitch(scale_index(int(round(ref)), scale) + v, scale)
 
 
-def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=None, move_ctx: tuple | None = None, prev_midi: float | None = None) -> dict:
+def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=None, move_ctx: tuple | None = None, prev_midi: float | None = None,
+                     span: tuple | None = None) -> dict:
     """{entry: weight} over the voice_intervals word's entries under `ctx` (its third value the line note's state, which
     picks the entries' form), within two octaves and off `refused`; with `t_mv` and the voice's last note, each weighed
-    by the voice_moves word for the move the entry's note would make from it: the note both words agree on."""
+    by the voice_moves word for the move the entry's note would make from it: the note both words agree on. `span`
+    (round 143): the entries whose note the voice's span holds, alone: a note outside it is played an octave off
+    (upper.in_register), so neither the interval it sounds nor the move it makes is the one weighed."""
     form = "semis" if ctx[2] == "altered" else "steps"
     out = {}
     for entry in sorted(t_iv.vocabulary, key=interval_entry):   # the vocabulary is a set: in a fixed order, or the draw rides the hash seed
         f, v = interval_entry(entry)
         if f != form or entry in refused or abs(v) > (rhythm.VOICE_SEMITONES if f == "semis" else rhythm.VOICE_STEPS):
+            continue
+        if span is not None and not span[0] <= interval_pitch(entry, ref, scale) <= span[1]:
             continue
         w = t_iv.p(entry, ctx)
         if t_mv is not None and prev_midi is not None:
@@ -238,14 +243,20 @@ def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=Non
 
 
 def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Random, ref: float | None, prev_steps: str,
-                 prev_midi: float | None, moved: int = 0, refused=(), chord: set | None = None, chord_rate: float | None = None) -> tuple[int | None, str | None]:
+                 prev_midi: float | None, moved: int = 0, refused=(), chord: set | None = None, chord_rate: float | None = None,
+                 span: tuple | None = None) -> tuple[int | None, str | None]:
     """The note of a voice beside the line, as the voice_intervals and voice_moves words give it: with the line (`ref`, the
     line's note), the interval both words agree on, drawn from their product (the move the interval's note would make
     from the voice's last note; `moved`, the line's own move, is no longer needed and kept for the callers); alone, the
     voice's own move. `chord` and `chord_rate` (round 96): the chord's pitch classes and the line's drawn chord-tone
     share: the entries (or moves) landing on the chord take that share of the mass and the others the rest
-    (hold_shares), as the melody's draw_move holds its tune. (midi, the interval entry drawn, the chain's next
-    `prev_steps`) or None; (None, None) where nothing can be drawn."""
+    (hold_shares), as the melody's draw_move holds its tune. `span` (round 143, the counter-line's): the note is drawn
+    among the notes the voice's span holds, the interval and the move weighed as they will sound; where the span holds
+    none of them, as without it (the caller then moves the note an octave into the span). The words count the interval
+    a voice sounds against the line and the move it makes: a note drawn outside the span and played an octave off
+    sounded another interval and made another move, a seventh where a step was drawn (a span under an octave holds each
+    pitch class once, so a line stepping over its top came back in at its bottom). (midi, the interval entry drawn, the
+    chain's next `prev_steps`) or None; (None, None) where nothing can be drawn."""
     t_iv = models["voice_intervals"].table if hasattr(models["voice_intervals"], "table") else models["voice_intervals"]
     t_mv = models["voice_moves"].table if hasattr(models["voice_moves"], "table") else models["voice_moves"]
 
@@ -262,7 +273,9 @@ def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Ran
     if ref is not None:
         ctx = (role, kind, line_state(ref, scale), prev_steps)
         chained = prev_steps != rhythm.START and prev_midi is not None
-        weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None)
+        weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None, span) if span is not None else {}
+        if not weights:                                     # no span, or none of the entries' notes inside it: every entry, as before round 143
+            weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None)
         if chord and chord_rate is not None and weights:     # the chord's tones at the line's drawn share (round 96)
             entries = list(weights)
             held = hold_shares([weights[e] for e in entries], [([interval_pitch(e, ref, scale) % 12 in chord for e in entries], chord_rate)])
@@ -274,6 +287,9 @@ def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Ran
     moves = {c: t_mv.p(str(c), (role, kind, "alone")) for c in range(-rhythm.VOICE_STEPS, rhythm.VOICE_STEPS + 1)
              if c not in refused and str(c) in t_mv.vocabulary}
     at = scale_index(int(round(prev_midi)), scale)
+    if span is not None:                                    # the moves that stay inside the span, where any does (round 143)
+        inside = {c: w for c, w in moves.items() if span[0] <= scale_pitch(at + c, scale) <= span[1]}
+        moves = inside if sum(inside.values()) > 0 else moves
     if chord and chord_rate is not None and moves:          # alone too: the chord's tones at the share (round 96)
         cs = list(moves)
         held = hold_shares([moves[c] for c in cs], [([scale_pitch(at + c, scale) % 12 in chord for c in cs], chord_rate)])
@@ -286,7 +302,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
             kind: str, key: tuple | None = None, articulation: str = "mixed", register: tuple | None = None,
             role: str = R.COUNTER, spans_at=None, clash_rates: dict | None = None, chord_rate: float | None = None,
             tune_sounds: dict | None = None, shortest: float | None = None, lengths: dict | None = None,
-            lengths_rng: random.Random | None = None) -> tuple[list, list, list]:
+            lengths_rng: random.Random | None = None, move_profile: dict | None = None) -> tuple[list, list, list]:
     """The counter-line written beside the tune (round 29): its bar from the tune's bar and a counter_figures mask
     (`masks`, one a bar, REST where the plan has it rest; rhythm.apply_mask: the tune's onsets it strikes with and its
     own, its own alone where the tune rests), its pitch by the voice words as the second bass voice's is
@@ -305,8 +321,11 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
     drawn again, VOICE_TRIES times, the last kept (round 94). `chord_rate`: the chord_tones word's draw for the line (round
     96): on a beat, while the line is not over the share, the interval or move entries landing on the chord take the share
     of the draw's mass (beside_pitch); the voice words know nothing of the landing, as the melody's moves table without
-    the tone did, so the hold acts whenever the line is not over its rate. Returns [(start, end, midi)], the bars' patterns
-    and a log."""
+    the tone did, so the hold acts whenever the line is not over its rate. Since round 143 a note is drawn among the notes
+    the bar's span holds (beside_pitch's `span`), and `move_profile`, the token song's counter-line's moves (round 130's
+    field, plan.step_profiles), holds its far moves: while the line's share of moves of a fourth or more (FAR_MOVE) is
+    over the song's line's, a note a fourth or more from the last is drawn again, as a clash is. Returns [(start, end,
+    midi)], the bars' patterns and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b) for _, a, b, _ in rhythm.all_bars_of(song, role)]
@@ -321,10 +340,17 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
     line_times.sort()
     figures, pitched = [figures_mod.REST] * len(bars), []
     prev_steps, prev_midi, last_with = rhythm.START, None, None
-    with_tune = own = skipped = 0
+    with_tune = own = skipped = moved_in = 0
     under_line = sorted(n for r in rhythm.clash_under(role) for n in song.notes.get(r, [])) if clash_rates else []   # the parts written before this one (round 94)
     run = {"strong": [0, 0], "weak": [0, 0]}                # the line's onsets a semitone from one of them, and its onsets under one, so far
     chord_run = [0, 0]                                      # its strong-beat notes on the chord, and its strong-beat notes under a chord (round 96)
+    far_rate = (move_profile or {}).get("far")              # the token song's line's share of moves of a fourth or more (round 143), or None
+    far_run = [0, 0]                                        # the line's moves of a fourth or more, and its moves, so far
+
+    def far_over(m: int) -> bool:
+        """A note a fourth or more from the line's last while the line is over its song's share of such moves."""
+        return (far_rate is not None and prev_midi is not None and abs(int(round(m)) - int(round(prev_midi))) >= FAR_MOVE
+                and far_run[1] > 0 and far_run[0] / far_run[1] > far_rate)
 
     def chord_pcs(t: float):
         c = _chord_in_bar(song, t)
@@ -356,6 +382,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
         for p in (Fraction(t) for t in positions.split()):
             ref = at.get((k, p))
             midi = steps = None
+            octave = False                                  # the note drawn outside the bar's span and moved an octave into it
             t = a + float(p)
             place = "strong" if abs(float(p) - round(float(p))) < rhythm.NEAR else "weak"
             fallback = None                                 # the last pitch refused for a clash alone: kept when every try clashes (round 94)
@@ -364,17 +391,18 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                 refused = set()
                 for _ in range(figures_mod.VOICE_TRIES):
                     target, steps = beside_pitch(models, role, kind, scale, rng, ref, prev_steps, prev_midi, moved, refused,
-                                                 chord=chord_hold(place, t), chord_rate=chord_rate)
+                                                 chord=chord_hold(place, t), chord_rate=chord_rate, span=span_k)   # among the span's notes (round 143)
                     if target is None:
                         break
                     midi = upper_mod.in_register(target, span_k)
+                    octave = midi != target
                     if kind == "same" and midi == int(round(ref)):
                         refused.add(steps)
                         midi = None
                         continue
-                    if clash_rates and over(place) and clashing(midi, t):   # over the drawn share and a semitone from a part under it: drawn again
-                        refused.add(steps)
-                        fallback, midi = midi, None
+                    if (clash_rates and over(place) and clashing(midi, t)) or far_over(midi):   # over the drawn share and a semitone from a part under
+                        refused.add(steps)                  # it: drawn again; and a far move while the line is over its song's share of them
+                        fallback, midi = midi, None         # (round 143)
                         continue
                     break
                 if midi is None and fallback is not None:
@@ -388,7 +416,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                 refused = set()
                 for _ in range(figures_mod.VOICE_TRIES):
                     target, _ = beside_pitch(models, role, kind, scale, rng, None, prev_steps, prev_midi, 0, refused,
-                                             chord=chord_hold(place, t), chord_rate=chord_rate)
+                                             chord=chord_hold(place, t), chord_rate=chord_rate, span=span_k)
                     if target is None:                      # nothing before it: the chord's root nearest the counter's register
                         c = _chord_in_bar(song, t)
                         centre = sum(register) // 2 if register else sum(span_k) // 2
@@ -396,8 +424,9 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                         midi = upper_mod.in_register(target, span_k)
                         break
                     midi = upper_mod.in_register(target, span_k)
-                    if clash_rates and prev_midi is not None and over(place) and clashing(midi, t):   # as with the tune: its own move drawn again
-                        refused.add(scale_index(int(round(target)), scale) - scale_index(int(round(prev_midi)), scale))
+                    octave = midi != target
+                    if (clash_rates and prev_midi is not None and over(place) and clashing(midi, t)) or far_over(midi):   # as with the tune: its own
+                        refused.add(scale_index(int(round(target)), scale) - scale_index(int(round(prev_midi)), scale))   # move drawn again
                         fallback, midi = midi, None
                         continue
                     break
@@ -414,7 +443,11 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                 if pcs:
                     chord_run[1] += 1
                     chord_run[0] += int(int(round(midi)) % 12 in pcs)
+            if prev_midi is not None:                       # the line's far moves so far (round 143)
+                far_run[1] += 1
+                far_run[0] += int(abs(int(round(midi)) - int(round(prev_midi))) >= FAR_MOVE)
             prev_midi = midi
+            moved_in += octave
             pitched.append((k, p, float(midi)))
     length_run, lengths_rng = {}, lengths_rng or random.Random(f"{role}:note lengths")
     notes = []                                              # the lengths as the melody's: the values table under the articulation habit, whose
@@ -434,13 +467,16 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
         notes.append((t, t + sounded(gap, tune_sounds, held, shortest, share), m))   # the song's own shares (tune_sounds, round 98), no note under
                                                             # its token song's shortest usual one (round 136)
     log = [f"beside the tune on the {kind} sample: {sum(1 for f in figures if f != figures_mod.REST)} bars, {len(notes)} notes, {with_tune} with the tune's onsets, "
-           f"{own} its own" + (f"; {skipped} onsets skipped (a unison on one sample)" if skipped else "") + f"; span {span}"]
+           f"{own} its own" + (f"; {skipped} onsets skipped (a unison on one sample)" if skipped else "") + f"; span {span}",
+           f"notes drawn among the span's own: {len(pitched) - moved_in} of {len(pitched)}; {moved_in} moved an octave into it, the span holding none the words allow (round 143)"]
     if clash_rates and any(v[1] for v in run.values()):     # the clashes word's share held (round 94)
         log.append("a semitone from a part under it: " + ", ".join(f"{pl} {v[0]}/{v[1]} ({v[0] / v[1]:.2f}; the song's rate {clash_rates[pl]:.2f})" for pl, v in run.items() if v[1]))
     if chord_rate is not None and chord_run[1]:             # the chord_tones word's share held (round 96)
         log.append(f"chord tones on the beat: {chord_run[0]}/{chord_run[1]} ({chord_run[0] / chord_run[1]:.2f}; the song's rate {chord_rate:.2f})")
     if lengths and length_run:
         log.append(length_log(lengths, length_run))
+    if far_rate is not None and far_run[1]:                 # the line's far moves against its token song's line's (round 143)
+        log.append(f"moves of a fourth or more: {far_run[0]}/{far_run[1]} ({far_run[0] / far_run[1]:.2f}; the balance's song's line {far_rate:.2f}) (round 143)")
     return notes, figures, log
 MOVED = {"moved up": 2, "moved down": -2}   # semitones a moved phrase shifts (a scale step; the scale then corrects each note)
 DEGREE_PCS = {"1": (0,), "3": (3, 4), "5": (7,)}   # a phrase's ending degree -> intervals from the tonic it may land on

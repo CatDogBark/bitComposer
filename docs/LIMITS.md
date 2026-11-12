@@ -237,7 +237,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   where the part leads alone (Aria de Mezzo Carattere's, Another World of
   Beasts' intros); the register is the token song's own by stretch (round
   92) and is not drawn again, and which parts sound is its own word (the
-  token song's since round 124). The counter follows the tune's figures and takes no
+  token song's since round 124). The counter follows the tune's figures (within its
+  own onsets a bar by the part of the form since round 143) and takes no
   density tier of its own, where FFVI's counter steps are mostly bare
   anyway (7 of 10).
 - **A kit letter's second sample plays as its first does, and a third is
@@ -414,8 +415,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   `tune_doubling`, `theme_doubling` and `cell_handoffs` words' shares
   are FFVI's over all its songs; what they come to in a song whose
   bass plays eight notes a bar under a tune of two is not counted. The
-  counter-line's are as drawn (it has no onsets of its own beside a
-  tune).
+  counter-line's are tested against its own onsets too since round 143
+  (70 bars fewer over the Song Check 100 songs).
 - **The tune's grain is not its token song's.** Since round 138 a tune
   bar drawn within its part of the form's own onsets is not held to the
   pooled `tune_grain` word (a share over the whole tune, which a bar of
@@ -481,7 +482,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   fewer thirds, the tune lands a bar's first note on the chord a little
   less (0.52 of the bars, 0.55 before; FFVI 0.61). A counter-line
   written beside a tune (`writer.counter`) is drawn by its interval to
-  the tune and does not use its profile.
+  the tune; since round 143 its moves of a fourth or more are held to
+  its token song's line's share, its thirds and its repeated notes are
+  not.
 - **A part is asked the first beat, never asked off it.** Since rounds
   133 and 135 the bass and the chord parts strike a bar's first beat at
   least as often as their token song's part does. The share is only
@@ -583,8 +586,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   still the pooled draw: Edgar and Sabin's two accompaniment voices
   beside the line are lines of their own in the game, and the first
   was drawn a doubling a fourth under.
-- **A section's density is a median and an envelope, and the counter's
-  beside a tune is not held.** Since round 125 a backing line's figures
+- **A section's density is a median and an envelope, and the
+  counter-line's pace is its notes a bar.** Since round 125 a backing line's figures
   are drawn within half to one and a half times the token song's median
   onsets a bar in the part of the form, and each kit piece within what
   the song strikes of it there; since round 138 the tune's bars keep
@@ -596,9 +599,17 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the median, the bar table's thinner bars being the commoner inside
   the envelope. The writers' grid stops at sixteenths, so a snare the
   game rolls at twenty-eight a bar plays sixteen. The
-  counter-line follows the tune's figures and rests more than the
-  game's (it sounds in 0.72 of the Song Check 100 songs' bars against
-  0.91); a voice beside a line follows its line and takes only the last
+  counter-line beside a tune keeps within its own envelope since round
+  143, its part of the form's bars held to the song's own onsets a bar
+  (within half of them), and is still a mask over the tune's bar from
+  the pooled `counter_figures` word. A bar the word draws as a rest
+  stays one: it sounds in 0.76 of the Song Check 100 songs' bars at the
+  median against the game's 0.91. And the token counts how many notes
+  a bar, not how close together: in six of the 49 songs with a
+  counter-line it still runs sixteenths on a tenth more of its moves
+  than the game's line does (The Unforgiven's leaps a fourth or more
+  inside a sixteenth 21 times where the game's does twice);
+  a voice beside a line follows its line and takes only the last
   bar's fill; and a kit piece the song plays in under three bars in
   four of a part of the form plays by its figures' own chain inside its
   bounds.
