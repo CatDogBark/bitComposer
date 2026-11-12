@@ -312,6 +312,9 @@ class Plan:
     bass_continuity: float | None = None                # the token song's bass line pitch continuity (round 114), or None
     bass_downbeat: float | None = None                  # the share of its bars' first beats the token song's bass strikes on the chord's root (round 129), or None
     tune_shortest: dict = field(default_factory=dict)   # the melody, the counter -> the token song's line's shortest usual note in ms (round 136)
+    tones_kept: dict = field(default_factory=dict)      # a chord part -> (the share of its bars with an earlier bar on their root that sound
+                                                        # such a bar's pitch classes again in the token song, of those the share that sound
+                                                        # the bar before's) (round 142)
     tune_lengths: dict = field(default_factory=dict)    # the melody, the counter -> how the token song's line sounds its notes (round 141):
                                                         # {the whole line (rhythm.LENGTH_WHOLE) or a gap class: (the share of the notes held,
                                                         # the share of its gap a held note sounds, a detached one; None where it has none)}
@@ -2093,6 +2096,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_first = {}                                        # and how often it strikes it (round 133), and a chord part (round 135)
     token_shortest = {}                                     # a tune's shortest usual note in the token song, in milliseconds (round 136)
     token_lengths = {}                                      # and how it sounds its notes, by the gap to the next (round 141)
+    token_tones = {}                                        # how often a chord part sounds a chord's tones again in the token song (round 142)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
     token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
@@ -2305,6 +2309,10 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if len(fields) > 25 and role in (R.MELODY, R.COUNTER) and fields[25].startswith("h") and lengths_of(fields[25][1:]):   # how the tune
                 token_lengths[role] = lengths_of(fields[25][1:])   # sounds its notes, by the gap (round 141): `h50~0.90~0.40/-/26~0.90~0.55/...`
                 log.append(f"the {role} holds {token_lengths[role][rhythm.LENGTH_WHOLE][0]:.2f} of its notes in the balance's song; its note lengths by the gap (round 141): {fields[25][1:]}")
+            if len(fields) > 26 and role in rhythm.UPPER and re.fullmatch(r"c\d+/\d+", fields[26]):   # how often a chord part sounds again
+                token_tones[role] = tuple(int(x) / 100 for x in fields[26][1:].split("/"))   # the pitch classes it played on a chord before, and
+                log.append(f"the {role} sounds an earlier bar's pitch classes on a chord again in {token_tones[role][0]:.2f} of such bars in the balance's song, "   # how often the bar before's
+                           f"the bar before's in {token_tones[role][1]:.2f} of those (round 142)")   # (round 142): `c60/47`
             if len(fields) > 21 and fields[21].startswith("n"):   # how busy it is in each (round 125): the line's onsets a bar `nA6+B2!1`,
                 if role == R.DRUMS:                         # the kit's pieces' hits a bar `nAS28.5@100,c1@50`
                     token_kit_onsets = kit_onsets_of(fields[21][1:])
@@ -2667,7 +2675,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -2823,6 +2831,78 @@ def _replace_bars(part, song: rhythm.Song, role: str, a: float, b: float, copied
     inside = lambda t: a - rhythm.NEAR <= t < b - rhythm.NEAR   # noqa: E731
     part.notes[:] = sorted([n for n in part.notes if not inside(n[0])] + copied, key=lambda n: n[0])
     song.notes[role] = sorted([n for n in song.notes.get(role, []) if not inside(n[0])] + [(t, u - t, m, role) for t, u, m, _ in copied], key=lambda n: n[0])
+
+
+def hold_chord_tones(plan: "Plan", song: rhythm.Song, role: str, part, held: dict | None = None, leave=(), over=()) -> list:
+    """A chord part held to its token song's share of bars that sound again the pitch classes the part played on the chord
+    before (round 142, Plan.tones_kept: the share of such bars, and of those the share that sound the bar before's own;
+    rhythm.tones_kept_field counts both). Bar by bar, once every voice of the part is written: a bar with earlier bars on
+    the plan's same chord, rhythm.TONES_BACK bars back at most and in the same part of the form, in which the part sounds,
+    is such a bar. One that sounds none of those bars' pitch classes, while the part's share of such bars that do runs
+    under the song's, keeps its own onsets and lengths and takes, voice by voice, the pitch of an earlier bar's note
+    nearest it in the bar: the bar before's while the share of the kept bars that sound the bar before's runs under the
+    song's, else the nearest bar further back that sounds another set than the bar before (a figure of two bars or more,
+    as the song's); and of those only a bar with this bar's own rhythm, voice by voice, so that the earlier bar's notes
+    come again one for one (the written parts repeat a rhythm on a chord more often than the game's do, and its pitch
+    classes far less; onto another rhythm an earlier bar's pitches fall as a part of its set, and a voice with one note
+    there holds it through). Where there is no such bar the bar stands, the figure's next bar. A bar on its loop's figure (round 121,
+    `held`) and a bar the line rides the bass in or doubles it (`leave`: bar indices) stand as written, and so does a
+    bar one of whose notes would then sit a semitone from a note of the tune or the counter-line sounding at its onset
+    (`over`: their notes, written before this hold and over the part as it stood) where its own did not. The part's tones are drawn a bar at a time (a voicing at each bar's first onset, the motion's walk
+    along it, the tone figure's onsets off the chord, the profile's hold), so under one chord two bars seldom sounded one
+    set of pitch classes, and the chord reader heard the chord change its shape. Returns a log line."""
+    own = (getattr(plan, "tones_kept", None) or {}).get(role)
+    if own is None or not part.notes:
+        return []
+    share, near_share = own
+    bars = song.bars[:len(plan.chords)]
+    part_of = {}
+    for i, (bar, n, *_) in enumerate(plan.parts):
+        part_of.update({k: i for k in range(bar, bar + n)})
+    chords = [(part_of.get(k),) + tuple(c) if c is not None else None for k, c in enumerate(plan.chords[:len(bars)])]   # a chord in its part of the form
+    in_bar = lambda x, k: bars[k][0] - rhythm.NEAR <= x[0] < bars[k][1] - rhythm.NEAR   # noqa: E731
+    lengths = lambda: [(x[0], x[1] - x[0], x[2]) for x in part.notes]   # noqa: E731
+    rhythm_of = lambda b_: sorted((x[3], round((x[0] - bars[b_][0]) * 12)) for x in part.notes if in_bar(x, b_))   # noqa: E731  a bar's onsets, voice by voice
+    tones = rhythm.bar_tones(lengths(), bars)
+    seen = kept = near = moved = 0
+    for k in range(1, len(bars)):
+        before = rhythm.tones_before(tones, chords, k)
+        if not before:
+            continue
+        seen += 1
+        match = next((j for j in before if tones[j] == tones[k]), None)
+        j = None
+        if match is None and kept / seen < share and k not in leave and not _on_figure(held, role, bars[k][0], bars[k][1], song.meter):
+            last = before[0] == k - 1                       # the bar before is on the chord: its pitch classes again is a figure of one bar
+            further = [i for i in before if not (last and tones[i] == tones[k - 1])]   # the bars back that sound another set than the bar before's
+            pool = ([k - 1] if last and near < near_share * (kept + 1) else []) + [i for i in further if i != k - 1]
+            j = next((i for i in pool if rhythm_of(i) == rhythm_of(k)), None)   # the nearest of them with this bar's own rhythm, voice by voice: its
+                                                            # notes then come again one for one (none: the bar stands, a figure's new bar)
+        if j is not None:
+            source = {(y[3], round((y[0] - bars[j][0]) * 12)): y[2] for y in part.notes if in_bar(y, j)}   # the earlier bar's notes, by voice and place
+            again = {}
+            for i, x in enumerate(part.notes):
+                if not in_bar(x, k):
+                    continue
+                pitch = source[(x[3], round((x[0] - bars[k][0]) * 12))]
+                above = {int(round(t[2])) % 12 for t in over if t[0] - rhythm.NEAR <= x[0] < t[1] - rhythm.NEAR}
+                clash = lambda m: any((int(round(m)) - pc) % 12 in (1, 11) for pc in above)   # noqa: E731
+                if clash(pitch) and not clash(x[2]):        # a semitone from the tune as it sounds there, where the bar's own note is not:
+                    again = None                            # the bar stands whole (a bar part the earlier one's and part its own is neither's)
+                    break
+                again[i] = pitch
+            if again:
+                for i, pitch in again.items():
+                    part.notes[i] = part.notes[i][:2] + (pitch,) + tuple(part.notes[i][3:])
+                moved += 1
+                tones[k] = rhythm.bar_tones(lengths(), [bars[k]])[0]
+                match = next((j for j in before if tones[j] == tones[k]), None)
+        kept += match is not None
+        near += match == k - 1
+    if moved:
+        song.notes[role] = [(x[0], x[1] - x[0], x[2], role) for x in part.notes]
+    return [f"{role}: an earlier bar's pitch classes on the chord sounded again in {kept} of {seen} such bars ({kept / seen:.2f}; the balance's song's {share:.2f}), "
+            f"the bar before's in {near} of them ({near_share:.2f} of the song's); {moved} bars given an earlier bar's pitches (round 142)"] if seen else []
 
 
 def _on_figure(held: dict | None, role: str, a: float, b: float, meter: int) -> bool:
@@ -3225,6 +3305,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS] = Part(R.BASS, line, figures, log, beside=beside_bass)
     tempo = rhythm.band(plan.bpm)
     pending = []                                            # the voices beside a line the token says what they do by stretch (round 90): written last
+    riding = {}                                             # a chord part -> the bars its line rides the bass in
     for role in rhythm.UPPER:
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
             continue
@@ -3373,6 +3454,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             voice_written[v] = notes_v
             all_figures = [f"{x} || {f} / {vc}" for x, f, vc in zip(all_figures, figures_v, voicings_v)]
         written[role] = Part(role, notes, all_figures, log, beside=beside_v)
+        riding[role] = {k for k, vc in enumerate(voicings) if vc == "rides the bass"}   # the bars the line is the bass's (rounds 106, 123)
     tempo = rhythm.band(plan.bpm)
     for role in (R.MELODY, R.COUNTER):                    # the tune, then the counter-line beside it
         if role not in plan.band or not all(k in models for k in ("rhythm", "moves", "contours", "endings", "relations", "values")):
@@ -3484,7 +3566,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 pending.append((role, v, [], word_v))       # doubling and parallel ones are written (round 90)
                 log.append(f"voice {v + 1} by the token's stretches ({word_v}) alone: no word for its own stretches")
         written[role] = Part(role, line, figures, log, beside=beside_v)
-    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    tune_notes = [x for r in (R.MELODY, R.COUNTER) if r in written for x in written[r].notes]
+    for role in rhythm.UPPER:                               # a chord part sounds a chord's pitch classes again as often as its token song's part does
+        if role in written:                                 # (round 142): once the tune is written, so the tune stands as it was written over the part,
+            written[role].log += hold_chord_tones(plan, song, role, written[role], held_bars, leave=riding.get(role, ()), over=tune_notes)   # and before the
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}   # voices that follow a line by the token's stretches
     for role, v, own, word, *struck_too in pending:         # the voices beside a line written by the token's stretches (round 90), every line in place
         notes_v = late_stretch_notes(plan, song, role, v, own, word, written, scale, models, random.Random(f"{seed}:{role}:voice {v}:stretch parallel"),
                                      struck_too=bool(struck_too))

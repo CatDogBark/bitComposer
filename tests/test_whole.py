@@ -2730,6 +2730,124 @@ class TuneLengthsTests(unittest.TestCase):
         self.assertEqual((tune, bass), ([round(beat, 3)] * 2, [0.4, 0.4]))                          # the tune's line as written; the bass's floor stands
 
 
+class ChordTonesTests(unittest.TestCase):
+    """Round 142: how often a chord part sounds again the pitch classes it played on a chord before rides its token
+    (`c60/47`: of its bars with an earlier bar on their root within eight, the percent that sound one of those bars'
+    pitch classes, and of those the percent that sound the bar before's), and the plan holds a written chord part to it:
+    a bar with an earlier bar on its chord, of its own rhythm, plays that bar's notes again. The parts' tones are drawn a
+    bar at a time, and under one chord FFVI's accompaniments sound an earlier bar's pitch classes again in 0.60 of such
+    bars where the written ones did in 0.36."""
+
+    BARS = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+    A, B, C, D = (60, 64, 67), (60, 65, 69), (62, 67, 71), (62, 65, 69)
+
+    def _part(self, rows, voice=0):
+        return [(4.0 * k + i, 4.0 * k + i + 0.9, float(m), voice) for k, ms in enumerate(rows) for i, m in enumerate(ms)]
+
+    def _hold(self, rows, own, chords=None, parts=None, **kw):
+        import types
+        part = whole.Part("accompaniment", self._part(rows), ["0 1 2"] * len(rows))
+        plan = types.SimpleNamespace(tones_kept={"accompaniment": own} if own else {}, chords=chords or [(0, "")] * len(rows), parts=parts or [(0, len(rows), None, "A")])
+        song = types.SimpleNamespace(bars=self.BARS[:len(rows)], meter=4, notes={})
+        log = whole.hold_chord_tones(plan, song, "accompaniment", part, **kw)
+        names = {self.A: "A", self.B: "B", self.C: "C", self.D: "D"}
+        return "".join(names.get(tuple(int(n[2]) for n in part.notes if a <= n[0] < b), "?") for a, b in song.bars), log, song, part
+
+    def test_the_count(self):
+        sets = [frozenset(x) for x in "ababaacc"]
+        self.assertEqual(rhythm.tones_before(sets, [0] * 8, 3), [2, 1, 0])                          # the nearest first
+        self.assertEqual(rhythm.tones_before(sets, [0, 0, 1, 0, 0, 0, 0, 0], 3), [1, 0])            # on the bar's own chord
+        self.assertEqual(rhythm.tones_before(sets, [0] * 8, 0), [])
+        self.assertEqual(rhythm.tones_kept(sets, [0] * 8), (7, 5, 2))                               # a b A B A a c C: five again, two the bar before's
+        self.assertEqual(rhythm.tones_kept(sets, [0, 1] * 4), (6, 3, 0))                            # two chords in turn: each bar against the bars on its own
+        notes = [(0.0, 3.0, 60.0, "x"), (0.0, 0.3, 64.0, "x"), (4.0, 2.0, 62.0, "x"), (6.0, 2.0, 65.0, "x")]
+        self.assertEqual(rhythm.bar_tones(notes, self.BARS[:3]), [frozenset({0}), frozenset({2, 5}), frozenset()])   # under 0.15 of the bar's sounding: not in its set
+
+    def test_the_token_carries_it(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        rows = [self.A, self.B] * 5 + [self.C, self.C]                                               # a figure of two bars, then a bar and itself
+        acc = [(a, b - a, m, "a") for a, b, m, _ in self._part(rows)]
+        bass = [(4.0 * k, 3.9, 36.0, "b") for k in range(12)]
+        tune = [(float(i), 0.9, 72.0 + (i % 5), "m") for i in range(48)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 48.0, 0, "", 1.0)], notes={"bass": bass, "accompaniment": acc, "melody": tune}, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(12)), parts=[(0, 12, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("accompaniment", acc), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4, 2: 0.4}; s.levels = {"bass": 0.5, "accompaniment": 0.4, "melody": 0.4}
+        self.assertEqual(rhythm.tones_kept_field(s, "accompaniment"), "c82/11")                    # nine of eleven again, one of them the bar before's
+        self.assertEqual(rhythm.tones_kept_field(s, "harmony"), "")                                # no such part
+        s.notes["accompaniment"] = acc[:24]
+        self.assertEqual(rhythm.tones_kept_field(s, "accompaniment"), "")                          # seven bars with a bar before them: under TONES_BARS
+        s.notes["accompaniment"] = acc
+        token = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual(token[26], "c82/11", token)                                               # the twenty-seventh field
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 27
+        fields[:8] = ["half", "52-76", "0.9", "1", "0.7", "", "", "sstr"]; fields[26] = "c60/47"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 accompaniment=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.tones_kept, {"accompaniment": (0.6, 0.47)})
+        self.assertIn("the accompaniment sounds an earlier bar's pitch classes on a chord again in 0.60 of such bars in the balance's song, the bar before's in 0.47 of those (round 142)", p.log)
+
+    def test_a_bar_plays_an_earlier_bar_on_its_chord_again(self):
+        rows = [self.A, self.B, self.C, self.D, self.A, self.B, self.C, self.D]
+        self.assertEqual(self._hold(rows, (1.0, 1.0))[0], "AAAAAAAA")                               # the bar before's, bar after bar: a figure of one bar
+        self.assertEqual(self._hold(rows, (1.0, 0.0))[0], "ABABABAB")                               # never the bar before's: a figure of two
+        self.assertEqual(self._hold(rows, (0.0, 1.0))[0], "ABCDABCD")                               # a song that never does: as written
+        self.assertEqual(self._hold(rows, None)[0], "ABCDABCD")                                    # no share in the token: no hold
+        got, log, song, part = self._hold(rows, (0.5, 1.0))
+        self.assertEqual(got, "AACCABCD")                                                           # while the share runs under the song's, and no further
+        self.assertEqual(log, ["accompaniment: an earlier bar's pitch classes on the chord sounded again in 4 of 7 such bars (0.57; the balance's song's 0.50), "
+                               "the bar before's in 2 of them (1.00 of the song's); 2 bars given an earlier bar's pitches (round 142)"])
+        self.assertEqual([(a, round(n, 6), m, r) for a, n, m, r in song.notes["accompaniment"][3:6]],   # the song's notes with the part's
+                         [(4.0, 0.9, 60.0, "accompaniment"), (5.0, 0.9, 64.0, "accompaniment"), (6.0, 0.9, 67.0, "accompaniment")])
+        self.assertEqual([(round(a, 6), round(b, 6)) for a, b, _, _ in part.notes[3:6]], [(4.0, 4.9), (5.0, 5.9), (6.0, 6.9)])   # its own onsets and lengths
+
+    def test_the_bars_that_stand(self):
+        rows = [self.A, self.B, self.C, self.D]
+        self.assertEqual(self._hold(rows, (1.0, 1.0), chords=[(0, ""), (0, ""), (5, ""), (5, "m")])[0], "AACD")   # another chord, another shape: no bar before on it
+        self.assertEqual(self._hold(rows, (1.0, 1.0), parts=[(0, 2, None, "A"), (2, 2, None, "B")])[0], "AACC")  # the bar before in another part of the form
+        self.assertEqual(self._hold(rows, (1.0, 1.0), leave={1, 2})[0], "ABCC")                    # bars the line rides the bass in
+        self.assertEqual(self._hold(rows, (1.0, 1.0), held={("accompaniment", 0): {1}})[0], "ABBB")  # a bar on its loop's figure
+        self.assertEqual(self._hold(rows, (1.0, 1.0), over=[(5.0, 6.0, 77.0, 0)])[0], "ABBB")       # F over the E the bar would take: the bar stands whole
+        self.assertEqual(self._hold(rows, (1.0, 1.0), over=[(5.0, 6.0, 76.0, 0)])[0], "AAAA")       # E over its own F: no worse than it stood
+        import types
+        part = whole.Part("accompaniment", self._part([self.A]) + [(4.0, 4.9, 60.0, 0), (5.5, 5.9, 65.0, 0), (6.0, 6.9, 69.0, 0)], ["0 1 2", "0 3/2 2"])
+        plan = types.SimpleNamespace(tones_kept={"accompaniment": (1.0, 1.0)}, chords=[(0, "")] * 2, parts=[(0, 2, None, "A")])
+        whole.hold_chord_tones(plan, types.SimpleNamespace(bars=self.BARS[:2], meter=4, notes={}), "accompaniment", part)
+        self.assertEqual([n[2] for n in part.notes[3:]], [60.0, 65.0, 69.0])                        # another rhythm than the bar before's: it stands
+        two = whole.Part("accompaniment", self._part([self.A, self.B]) + self._part([self.C, self.D], voice=1), ["0 1 2"] * 2)
+        whole.hold_chord_tones(plan, types.SimpleNamespace(bars=self.BARS[:2], meter=4, notes={}), "accompaniment", two)
+        self.assertEqual(sorted((n[3], n[2]) for n in two.notes if n[0] >= 4.0), [(0, 60.0), (0, 64.0), (0, 67.0), (1, 62.0), (1, 67.0), (1, 71.0)])   # voice by voice
+
+    def test_the_tune_is_as_it_was_written(self):
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=4, pack="ffvi")                                                    # a song with an accompaniment and an arp
+        ctx = harness.load_generated(song, "seed 4", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+
+        def written(own):
+            p = whole.plan(models, 3, "g", max_bars=16)
+            roles = [r for r in rhythm.UPPER if r in p.band]
+            p.tones_kept = {r: own for r in roles} if own else {}
+            w = whole.write(p, whole.song_of(p), models, 3)
+            return roles, {r: [(n[0], n[2], n[3]) for n in w[r].notes] for r in w if r != R.DRUMS}, [l for r in roles for l in w[r].log if "(round 142)" in l]
+
+        roles, free, log = written(None)
+        self.assertTrue(roles)
+        self.assertEqual(log, [])
+        _, held, log = written((1.0, 1.0))
+        self.assertTrue(log and any(not l.endswith(" 0 bars given an earlier bar's pitches (round 142)") for l in log), log)   # some bar plays an earlier one again
+        for r in free:
+            if r not in roles:
+                self.assertEqual(held[r], free[r], r)                                               # the tune, the counter-line and the bass as they were written
+        self.assertTrue(any(held[r] != free[r] for r in roles))
+        self.assertTrue(all([(a, v) for a, _, v in held[r]] == [(a, v) for a, _, v in free[r]] for r in roles))   # the chord parts' own onsets
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 
