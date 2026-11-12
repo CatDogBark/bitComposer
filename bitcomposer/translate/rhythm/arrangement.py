@@ -2079,9 +2079,9 @@ def beat_place(offset: float) -> str | None:
     """Where an onset falls in its beat, by its time (round 147): None on the beat or the half beat, else the place finer
     than the half it is on (FINE_PLACES): a quarter of the beat (a sixteenth place), a third or a sixth (a triplet place),
     within PLACE_NEAR of it; "finer" on none of them. `offset`: beats from a bar line, as played or as written. The
-    reading's grid (readings.position) is the grid its song's notes fit best, a half beat for nine FFVI songs and a
-    quarter for twenty: on it the game's Dancing Mad (part 2) plays no tune note finer than the half beat, where 0.07 of
-    them fall on a quarter of the beat and 0.15 on a third or a sixth."""
+    reading's grid (readings.position) is the grid its song's notes fit best, a half beat or a whole one for nine FFVI
+    songs and a quarter for twenty-six: on it the game's Dancing Mad (part 2) plays no tune note finer than the half
+    beat, where 0.04 of them fall on a quarter of the beat and 0.11 on a third or a sixth."""
     f = offset - math.floor(offset)
     at, name = min(BEAT_PLACES, key=lambda x: abs(f - float(x[0])))
     return name if abs(f - float(at)) <= PLACE_NEAR else "finer"
