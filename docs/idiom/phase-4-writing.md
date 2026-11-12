@@ -9351,3 +9351,129 @@ title's energy word follows the pace).
 **Open.** The tempo is one of the game's tempos near the song's, not
 the song's. The figures are drawn by the tempo's class. The standing
 list as at round 114.
+
+### Round 138: a tune keeps within its token song's notes a bar by the part of the form (2026-11-11, the fourth of four items after Song Check 101, on the owner's go)
+
+**Why.** Song Check 101's Blackjack card: the tune "well over twice as
+busy as the game's". Round 125 gave the backing lines and the kit the
+token song's onsets a bar by the part of the form; the tune kept its
+own density tier (sparse to two notes a bar, medium to six) and took
+only the song's tier against it.
+
+**Found.** The 59 Song Check 100 songs on their token song's
+arrangement, as round 137 writes them: the tune's notes a bar are
+within half to one and a half times the token song's in 131 of 193
+parts of the form (47 over, 15 under; 32 songs have a part out of
+range) and within a quarter in 75; bar by bar 974 of 1,648 are within
+(439 over, 235 under), the new bars 0.62 and the bars that come back
+0.56; in the twelve parts of the form the game's tune plays a note a
+bar in, the written tune plays two. The tune's notes a second are
+within two thirds to one and a half times the game's tune's in 46
+songs, over in 8 (to 3.75 times), under in 5: Blackjack's 2.8 against
+1.4, seven notes a bar in a part of the form the game plays three in.
+
+**Built.** The plan: `token_sections` sets `plan.section_onsets` for
+the tune's line too (the melody's, or the counter's in a band without
+a melody), its last bar its own where the token says a fill or a
+thinning, so `envelope_at_for` and `habit_at_for` hand the tune's
+writer the song's own envelope (round 134's `own`) and the tier it
+sits in. The writer (`tune.melody`): `keeps(k, n)`, whether a bar of
+n notes is within bar k's own onsets, and every way a bar is made asks
+it. A new bar is drawn within the envelope and asked neither the
+tier's running mean nor the grain; where no draw fits, one of the bar
+table's bars that fit, by its own probabilities in the bar's context
+(`parts.among`, round 133), before a bar that does not. A half bar
+comes back (`half_recall`) where the bar with it still keeps; a pair
+of bars (`pair_recall`) where both keep; the bar before's cell, an
+earlier bar and a passage going on (the bar urn) where the bar keeps;
+a phrase answered takes the phrase before's rhythm bar by bar where
+it keeps, else the bar is the urn's; a phrase repeated or moved, and
+an earlier phrase again (the letters' `r`: the last such phrase every
+bar of which keeps), where every bar keeps, else the phrase is new.
+The theme (the letters' `T`) comes back as its latest statement whose
+head keeps within the phrase's first bar, bar by bar while its bars
+keep; where no statement's head does, the phrase is written new and
+stands as a statement of the theme for the phrases after it. The
+form's repeat plays its own part of the form's bars. A song without
+the token song's form is written as before: no draw of it moves.
+
+Three cuts. The first bounded the new bars' draws alone: 163 of 193
+parts of the form in range (25 over, 5 under). (1) The bars that came
+back were not asked: a busy part of the form's bar in a thin one, a
+recalled half giving a new bar notes its rhythm had not, and
+an answered phrase taking a busier phrase's rhythm (Mt. Koltz's
+answered bars of six notes where the game plays two). (2) With every
+bar the song's own no bar was left in the tier's running tally, and
+the `tune_grain` word, a share of the tune's notes off the beat held
+over the tally, was held to each bar by itself: a bar of one note is
+none or all off the beat and passed no grain between, so it fell to
+the draw's last resort, a bar that fits nothing (a bar of sixteen
+notes where the game plays one, in a song on The Phantom Forest); the
+tunes' bars of one note fell from 203 to 110 (the game's songs have
+214) and their bars of two notes all on the beat from 0.40 to 0.22
+(0.53). Held instead as a running share over every new bar, the bars
+of two to four notes came out more off the beat than the game's (two
+notes all on the beat 0.41, three or four 0.23 against 0.35); not
+held, the bar table's context gives the game's shares, so a bar with
+the song's own onsets is not asked it. (3) The theme: the first
+phrase the tune plays, which in a song on Searching for Friends is
+the intro's four bars of a note each, and the letters brought it back
+through three parts of the form the game plays three notes a bar in:
+31 bars of whole notes where round 137 wrote the theme's head and
+went on. Hence the statement that keeps.
+
+Tests: the plan takes the tune's onsets by the part of the form, the
+counter's in a band without a melody; a new bar keeps within them
+(one note a bar in the song, one written; three, two to four); a bar
+that comes back keeps (two bars of three and two of one in turn: no
+bar of three in a bar of one); the theme of four bars of one note is
+stated anew over bars of three and that statement comes back; a bar
+of one note is written under each grain. Each of the last three fails
+with its change taken out. Suite 538 (1 skip). The vocabulary map
+is unchanged.
+
+**Measured.** The same 59 songs (round 137's in brackets). The tune's
+bars within their part of the form's own onsets: 1,648 of 1,648
+(974). Its notes a bar by the part of the form within half to one and
+a half times the token song's: 193 of 193 (131); within a quarter 131
+(75); at the median what the game plays in every class of part but
+the busiest (over six notes a bar: 0.88 of it). Its notes a second
+within two thirds to one and a half times the game's tune's: 53 songs
+(46), over in 2 (8; the most 1.71 times, 3.75), under in 4 (5), the
+median 0.90 of it (1.00). Blackjack's tune 1.5 notes a second (2.8;
+the game's 1.4), Edgar and Sabin's 1.9 (1.8; 2.1), Locke's 2.2 (2.2;
+1.9), Terra's 1.2 (1.1; 0.9), and Battle Theme's 2.0 (2.7; 3.2), its
+three parts of the form at four, four and two notes a bar where the
+game plays five, six and two. Bars that come back: 885 of 1,648
+(852); the theme's bars back by the letters 85 (77), in 22 of the 23
+themed songs (23: a song on Returners, whose one return falls in a
+part of the form of nine notes a bar against the theme's four, brings
+its theme back by the form's repeat). Off the beat, bar for bar
+against the game's songs: bars of one note all on the beat 0.88
+(0.87; the game's 0.90), of two 0.57 (0.40; 0.53), of three or four
+0.34 (0.14; 0.35); the notes of bars of five to eight off the beat
+0.52 (0.49; 0.51), of nine and more 0.72 (0.72; 0.72); song by song
+the tune's share off the beat within a tenth of its token song's
+tune's in 28 (26), the median 0.05 under (0.00). Tune notes under 80
+ms 0.037 (0.048). The backing lines within their own onsets: the
+bass's bars 1,437 of 1,523 (1,420 of 1,524), the accompaniment's
+1,333 of 1,427 (1,336 of 1,426). The paired measures: cells sounding
+as the FFVI song's 0.962 (0.961), backing lines within range 372 of
+386 (369); one song more reads back with its tune gone four bars or
+more (12; 11): the song on Searching for Friends, whose tune plays in
+every one of those bars, the reader dropping the stretches on the
+tune's first sample. Plans (400 seeds, against round 137): all keep
+their token song, title, tempo and form; of the 360 on their token
+song's arrangement 355 change their tune, and with it the counter in
+292, the bass in 293 and the accompaniment in 234 (the cells they
+take up or double); no kit changes; the 40 others are as they were.
+
+**Open.** The grain is no longer held where the song's own onsets
+are: an own word for it (the token song's tune's share off the beat,
+perhaps by the part of the form) is what would bring the 28 of 59 up.
+The envelope is half to one and a half times, and the bar table's
+thinner bars are the commoner inside it: the busiest parts of the
+form run a little under the game's (Battle Theme's). A theme stated
+over a thin part of the form is two statements. The counter-line
+beside a tune still follows the tune's figures, not its own onsets.
+The standing list as at round 114.

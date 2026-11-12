@@ -546,13 +546,16 @@ def token_sections(parts: list, band: list, plays: dict, voices: dict, onsets: d
     (kit_piece_bounds), or None], {a part: [its density tier's shift a bar]}, {a part: {"line": [a fill's shift a bar],
     "beside": [...]}}), the last two in plan_section_densities' and plan_section_fills' shapes. A backing part's line
     (the bass, a chord part) takes its onsets a bar from the token's part of the form, its last bar that bar's own where
-    the token says a fill or a thinning; the tune keeps its own density and takes the token song's tier against it (a
-    part of the form at DENSITY_STEP times the tune's typical onsets a bar or more a tier up, at the inverse or less a
-    tier down); the tune's and the counter's last bar, and the last bar of the first voice beside any line, take the
-    token's fill or thinning; a part of the form that returns takes its first statement's. The section_densities and
+    the token says a fill or a thinning; since round 138 the tune's line takes its onsets a bar the same way (the
+    melody's, or the counter's in a band without one: the new bars its writer draws keep within them), where it had
+    kept its own density and taken only the token song's tier against it (a part of the form at DENSITY_STEP times the
+    tune's typical onsets a bar or more a tier up, at the inverse or less a tier down: still returned, for a part
+    without the onsets); the counter's last bar beside a tune, and the last bar of the first voice beside any line,
+    take the token's fill or thinning; a part of the form that returns takes its first statement's. The section_densities and
     section_fills words are not drawn: they are drawn on their own streams, so no other draw moves."""
     total = parts[-1][0] + parts[-1][1]
-    lines = {role: [None] * total for role in band if role in rhythm.UPPER + (R.BASS,) and onsets.get(role)}
+    tune_role = R.MELODY if R.MELODY in band else R.COUNTER   # the part that carries the tune: the counter's where the band has no melody
+    lines = {role: [None] * total for role in band if role in rhythm.UPPER + (R.BASS, tune_role) and onsets.get(role)}   # the tune's too (round 138)
     kit = [None] * total
     densities = {role: [0] * total for role in band if role not in (R.DRUMS, R.COUNTER)}
     fills = {role: {"line": [0] * total, "beside": [0] * total} for role in band if role != R.DRUMS}

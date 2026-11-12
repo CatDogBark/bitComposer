@@ -319,9 +319,22 @@ The words are grouped by where the writing draws them, in the order the song is 
   some bars, KIT_SOME; one at most for one it strikes more rarely; none
   for one the part never hears, whose hits are dropped if the draw's
   ladder lets them through), a group none of whose pieces sounds rests
-  the bar, and a bar every group rests is the kit's to rest. The tune
-  keeps its own density and takes the song's tier against its typical
-  onsets a bar (DENSITY_STEP); the tune's and the counter's last bar,
+  the bar, and a bar every group rests is the kit's to rest. Until
+  round 138 the tune kept its own density and took the song's tier
+  against its typical onsets a bar (DENSITY_STEP). Since round 138
+  `plan.section_onsets` holds the tune's line too (the melody's, or the
+  counter's in a band without one), its last bar its own where the token
+  says a fill or a thinning, and every bar the tune's writer writes
+  keeps within the same envelope (`keeps` in `tune.melody`): a new bar
+  is drawn within it, asked neither the tier's running mean nor the
+  `tune_grain` word, and among the bar table's bars that fit where no
+  draw does (`parts.among`); a bar, a pair of bars or a half bar comes
+  back, and a phrase's rhythm is answered, only where the bar still
+  keeps; the letters' phrases as `phrase_letters` says below. Why: a
+  medium tune is four to six notes a bar whatever the part of the form,
+  and the written Blackjack's tune played 2.8 notes a second where the
+  game's plays 1.4, seven notes a bar through a part of the form the
+  game plays three in. The counter's last bar beside a tune,
   and the last bar of the first voice beside any line, take the song's
   fill or thinning. The `section_densities` and `section_fills` words
   are not drawn then (they draw on their own streams). Why: a part's
@@ -1117,6 +1130,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   first draws, and the theme's echoes multiply them. The tier alone
   conditions the draw: under the whole habit it backed off to the part and
   gave a dense tune "on-beat", which no dense tune of FFVI is.
+  Since round 138 a bar drawn within its token song's own onsets for the
+  part of the form (the balance token's twenty-second field) is not held
+  to this word. Why: the share is one over the tune, and a bar's density
+  decides it more than the tune does (of FFVI's tune bars of one note
+  0.10 are off the beat, of its bars of five to eight notes 0.51); with
+  every bar the song's own, no running share was left to hold, and the
+  word held to a bar by itself refused every bar of one note (none or
+  all of it off the beat) and put one note of each bar of two off it:
+  the written tunes' bars of one note fell from 203 to 110 where the
+  game's songs have 214, and their bars of two notes all on the beat
+  from 0.40 to 0.22 against the game's 0.53. Not held, the bar table's
+  own context (the bar's density tier, the feel, the tempo class) gives
+  0.88 of the bars of one note on the beat (FFVI 0.90), 0.57 of the
+  bars of two (0.53) and 0.34 of the bars of three or four (0.35).
   *`tune_grain`: shape (part, habit); drawn in _plan_once.*
 
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
@@ -1577,6 +1604,18 @@ The words are grouped by where the writing draws them, in the order the song is 
   part has and its place in the form. Drawn a part of the form; the first
   phrase the tune plays is the song's theme. With the *carry a theme*
   switch the letters are drawn again until the theme comes back.
+  Since round 138, where the tune's bars have their token song's own
+  onsets, a phrase comes back only where its bars keep within them
+  (half to one and a half times): `T` brings back the theme's latest
+  statement whose head keeps within the phrase's first bar, bar by bar
+  while its bars keep, and where no statement's head does the phrase is
+  written new and stands as a statement of the theme for the phrases
+  after it; `r` brings back the last earlier phrase every bar of which
+  keeps, and is a new phrase where none does. Why: the theme is the
+  first phrase the tune plays, and where that falls in an intro the
+  game plays a note a bar in, the letters brought a note a bar back
+  through parts of the form the game plays three in (a song on
+  Searching for Friends: 31 bars of whole notes).
   *`phrase_letters`: shape (part, phrases, form); drawn in _plan_once.*
 
 - **return_band** — which of the chords, the bass and the accompaniment come
