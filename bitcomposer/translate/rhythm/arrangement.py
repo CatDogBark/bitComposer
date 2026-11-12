@@ -2067,6 +2067,81 @@ def tune_lengths_field(s, role: str, line_notes=None) -> str:
     return "h" + "/".join([entry([share for _, share in gaps])] + [entry(by[name]) if len(by[name]) >= LENGTH_NOTES else "-" for _, name in cells_mod.GAP_CLASSES])
 
 
+TONES_BACK = 8                       # bars back a chord part's last bar on a chord is looked for (round 142)
+TONES_SHARE = 0.15                   # a pitch class sounding this share of the part's beats in a bar is in the bar's set (the chord reader's
+                                     # own share for the chordal voices' set, harmony.SET_SHARE)
+TONES_BARS = 8                       # such bars a part needs for the field
+
+
+def _bar_beats(notes, bars) -> list:
+    """The beats each pitch class sounds in each bar, every voice together. `notes`: (start, length, midi, ...) in beats."""
+    out = []
+    for a, b in bars:
+        beats = [0.0] * 12
+        for n in notes:
+            if n[1] != n[1] or n[2] != n[2]:
+                continue
+            share = min(b, n[0] + n[1]) - max(a, n[0])
+            if share > 0:
+                beats[int(round(n[2])) % 12] += share
+        out.append(beats)
+    return out
+
+
+def bar_tones(notes, bars) -> list:
+    """A part's pitch classes in each bar (round 142): the classes sounding TONES_SHARE of the beats its notes sound in the bar,
+    every voice of it together; an empty set where it rests. `notes`: (start, length, midi, ...) in beats; `bars`: (start, end)."""
+    return [frozenset(k for k in range(12) if sum(beats) and beats[k] / sum(beats) >= TONES_SHARE) for beats in _bar_beats(notes, bars)]
+
+
+def bass_roots(notes, bars) -> list:
+    """The bass's root in each bar (round 142): its most-sounded pitch class there, the chord reader's own first reading of a
+    bar (harmony.chords: a bar starts a new chord where it differs from the last bar's); None where the bass rests. The one
+    reading of a bar's root to be had alike of the game's song and of a written song while it is being written: the chord
+    reader's root is a read song's, and the plan's a written one's."""
+    return [max(range(12), key=beats.__getitem__) if sum(beats) > 0 else None for beats in _bar_beats(notes, bars)]
+
+
+def tones_before(tones: list, chords: list, k: int, back: int = TONES_BACK) -> list:
+    """The bars before bar k, the nearest first and `back` bars back at most, on bar k's chord (`chords`: a bar's chord,
+    whatever names it: a root, a root and a shape; None for none) in which the part sounds; [] where the part rests in bar k."""
+    if not tones[k] or chords[k] is None:
+        return []
+    return [j for j in range(k - 1, max(-1, k - 1 - back), -1) if chords[j] == chords[k] and tones[j]]
+
+
+def tones_kept(tones: list, chords: list) -> tuple[int, int, int]:
+    """(bars, kept, near): the bars with a bar before them on their chord (tones_before); how many of them sound the pitch
+    classes of one of those bars again; and of those, how many the bar before's own (the nearest bar that matches is the
+    bar before: a figure of one bar; a figure of two bars matches the bar two back)."""
+    bars = kept = near = 0
+    for k in range(1, len(tones)):
+        before = tones_before(tones, chords, k)
+        if not before:
+            continue
+        bars += 1
+        match = next((j for j in before if tones[j] == tones[k]), None)
+        kept += match is not None
+        near += match == k - 1
+    return bars, kept, near
+
+
+def tones_kept_field(s, role: str) -> str:
+    """The balance token's twenty-seventh field for a chord part (round 142): of its bars with an earlier bar on the same
+    root within TONES_BACK bars in which it sounds, the percent sounding one of those bars' pitch classes again
+    (bar_tones), and of those the percent sounding the bar before's (the rest a bar further back: a figure of two bars or
+    more), after a "c": "c60/47"; "" under TONES_BARS such bars. A bar's root is the bass's (bass_roots), so that the plan's
+    hold counts a written part as this counts the song's: the chord reader's roots are a read song's alone, and counted by
+    the plan's chords a part at its song's share could read far under it (the written Terra's harmony sounds an earlier
+    bar's pitch classes again in 0.74 of such bars on the bass's root, 0.46 on the plan's chord in a part of the form). The chord reader hears a new chord where the chordal
+    voices' set changes by half, and a chord's shape by what sounds over its root: FFVI's accompaniments sound an earlier
+    bar's pitch classes again in 0.60 of such bars and its harmonies in 0.67, where the written ones, their tones drawn a
+    bar at a time (the voicing, the motion's walk along it, the tone figure, the profile's hold), did far less often, and
+    a written song's chord changed its shape on a held root in 0.21 of its changes against the game's 0.13."""
+    bars, kept, near = tones_kept(bar_tones(s.notes.get(role, []), s.bars), bass_roots(s.notes.get(R.BASS, []), s.bars))
+    return f"c{int(round(100 * kept / bars))}/{int(round(100 * near / kept)) if kept else 0}" if bars >= TONES_BARS else ""
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 
@@ -2278,7 +2353,8 @@ def balance_units(songs) -> list:
                       first_beat_field(s, role) if role in readings_mod.UPPER + (R.BASS,) else "",   # and how often the bass strikes it, any
                                                              # voice of it (round 133), and a chord part (round 135)
                       tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and a tune's shortest usual note (round 136)
-                      tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else ""]   # and how it sounds its notes, by the gap (round 141)
+                      tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and how it sounds its notes, by the gap (round 141)
+                      tones_kept_field(s, role) if role in readings_mod.UPPER else ""]   # and how often a chord part sounds a chord's tones again (round 142)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

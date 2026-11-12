@@ -585,6 +585,36 @@ The words are grouped by where the writing draws them, in the order the song is 
   eighths and half its quarters and every longer note, and a cut note
   before a beat or more sounds a fifth of the gap at the game's
   median where the pooled share is two fifths.
+  Since round 142 a chord part's token carries a twenty-seventh
+  field, how often it sounds again the pitch classes it played on a
+  root before (`tones_kept_field`): of its bars with an earlier bar
+  on the same root within eight (TONES_BACK) in which it sounds, the
+  percent that sound one of those bars' pitch classes again (a bar's
+  set: the classes with 0.15 of the beats the part sounds in it,
+  `bar_tones`; a bar's root: the bass's most-sounded class,
+  `bass_roots`, the one reading of a root to be had alike of the
+  game's song and of a song being written), then of those the
+  percent that sound the bar before's (the rest match a bar further
+  back: a figure of two bars or more), after a `c`: `c75/82` for
+  Terra's accompaniment, `c60/25` for Locke's; none under eight such
+  bars. 49 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens and 1 of its 3 arp tokens. The plan keeps it (`tones_kept`) and holds each
+  chord part to it once the tune and the counter-line are written
+  (`hold_chord_tones`), counting as the token counts and the song as
+  it will be played (a part of the form played again counts with the
+  bars it plays, and is left as it is): while the part's share over
+  the whole song is under the song's, a bar that sounds none of the
+  pitch classes of the earlier bars on its root takes voice by voice
+  the notes of one of them that is on the plan's same chord in its
+  part of the form and has its rhythm: the bar before's while the
+  share of the kept bars that are the bar before's runs under the
+  song's, else a bar further back that sounds another set (a figure
+  of two bars). A bar on its loop's figure, a bar the line rides the
+  bass in and a bar that would then sit a semitone from the tune
+  stand, and a bar with no earlier bar of its rhythm stands. Why: a
+  chord part's tones are drawn a bar at a time (the voicing, the
+  motion's walk along it, the tone figure, the profile's hold), so
+  under one chord two bars seldom sounded one set of pitch classes,
+  and the game's accompaniments do in three such bars of five.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in
