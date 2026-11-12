@@ -2142,6 +2142,69 @@ def tones_kept_field(s, role: str) -> str:
     return f"c{int(round(100 * kept / bars))}/{int(round(100 * near / kept)) if kept else 0}" if bars >= TONES_BARS else ""
 
 
+TOGETHER_BARS = 4                    # bars in which its lead plays an earlier bar again a part needs for the field (round 144): a line
+                                     # plays an earlier bar again note for note within eight in six such bars a song at FFVI's median
+
+
+def bar_cells(notes, bars) -> list:
+    """A line's bars as their notes (round 144): for each bar the (place in the bar in twelfths of a beat, pitch) of every
+    note begun in it, in order; () where the line rests. A bar is another note for note where the two are equal: the
+    onsets and the pitches, whatever the lengths. `notes`: one voice's (start, length, midi, ...) in beats."""
+    out = [[] for _ in bars]
+    starts = [a for a, _ in bars]
+    for n in notes:
+        if n[2] != n[2]:
+            continue
+        k = bisect.bisect_right(starts, n[0] + readings_mod.NEAR) - 1
+        if 0 <= k < len(bars) and n[0] < bars[k][1] - readings_mod.NEAR:
+            out[k].append((max(0, int(round((n[0] - bars[k][0]) * 12))), int(round(n[2]))))
+    return [tuple(sorted(c)) for c in out]
+
+
+def bar_back(cells: list, k: int, back: int = TONES_BACK) -> int | None:
+    """The nearest bar before bar k, `back` bars back at most, that is bar k note for note (bar_cells); None where bar k
+    rests or there is none."""
+    if not cells[k]:
+        return None
+    return next((j for j in range(k - 1, max(-1, k - 1 - back), -1) if cells[j] == cells[k]), None)
+
+
+def together(lead: list, part: list) -> tuple[int, int]:
+    """(bars, both): the bars in which a part's lead plays an earlier bar again note for note (bar_back: the nearest) and
+    the part plays in both bars; and how many of them the part plays that bar again in too. `lead`, `part`: bar_cells."""
+    bars = both = 0
+    for k in range(1, min(len(lead), len(part))):
+        j = bar_back(lead, k)
+        if j is None or not part[k] or not part[j]:
+            continue
+        bars += 1
+        both += part[k] == part[j]
+    return bars, both
+
+
+def lead_of(role: str, parts) -> str | None:
+    """The part a part comes back with (round 144): a chord part's is the bass, the counter-line's the tune; None for
+    another part, or where the song (`parts`: its parts) has no such lead."""
+    lead = R.BASS if role in readings_mod.UPPER else R.MELODY if role == R.COUNTER else None
+    return lead if lead in parts else None
+
+
+def together_field(s, role: str) -> str:
+    """The balance token's twenty-eighth field for a chord part and for the counter-line beside a tune (round 144): of the
+    bars in which its lead (lead_of: the bass, the tune) plays an earlier bar again note for note, the nearest within
+    TONES_BACK, and the part plays in both, the percent in which the part's line plays that bar again too, after a "w":
+    "w66"; "" under TOGETHER_BARS such bars. In the game a bar comes back whole: where the tune plays an earlier bar
+    again the bass plays that bar again too in 0.79 of such bars, the counter-line in 0.66 and the accompaniment in
+    0.68, and where the bass does the accompaniment does in 0.57. The written parts each came back by their own draws
+    (0.52, 0.44, 0.40 and 0.40), so a bar that returned in one part seldom returned in the others and the chord reader
+    heard another chord over the same root."""
+    lead = lead_of(role, [r for r in s.notes if s.notes.get(r)])
+    if lead is None or not s.notes.get(role):
+        return ""
+    bars, both = together(bar_cells(cells_mod.tune_line(s, lead), s.bars), bar_cells(cells_mod.tune_line(s, role), s.bars))
+    return f"w{int(round(100 * both / bars))}" if bars >= TOGETHER_BARS else ""
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 
@@ -2354,7 +2417,8 @@ def balance_units(songs) -> list:
                                                              # voice of it (round 133), and a chord part (round 135)
                       tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and a tune's shortest usual note (round 136)
                       tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and how it sounds its notes, by the gap (round 141)
-                      tones_kept_field(s, role) if role in readings_mod.UPPER else ""]   # and how often a chord part sounds a chord's tones again (round 142)
+                      tones_kept_field(s, role) if role in readings_mod.UPPER else "",   # and how often a chord part sounds a chord's tones again (round 142)
+                      together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER,) else ""]   # and how often it comes back with its lead (round 144)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

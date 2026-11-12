@@ -2730,6 +2730,108 @@ class TuneLengthsTests(unittest.TestCase):
         self.assertEqual((tune, bass), ([round(beat, 3)] * 2, [0.4, 0.4]))                          # the tune's line as written; the bass's floor stands
 
 
+class TogetherTests(unittest.TestCase):
+    """Round 144: how often a part comes back with its lead rides its token (`w66`: of the bars in which the lead, the bass
+    for a chord part and the tune for the counter-line, plays an earlier bar again note for note and the part plays in
+    both, the percent in which the part plays that bar again too), and the plan holds a written part to it: such a bar
+    takes the earlier bar whole. The game's bars come back whole (the counter-line with the tune in 0.66 of such bars,
+    the accompaniment with the bass in 0.57); the written parts each came back by their own draws (0.44 and 0.40)."""
+
+    BARS = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+    A, B, C, D = (60, 64, 67), (60, 65, 69), (62, 67, 71), (62, 65, 69)
+
+    def _notes(self, rows, voice=0, length=0.9):
+        return [(4.0 * k + i, 4.0 * k + i + length, float(m), voice) for k, ms in enumerate(rows) for i, m in enumerate(ms)]
+
+    def _hold(self, rows, own, lead=None, chords=None, parts=None, onsets=None, **kw):
+        import types
+        part = whole.Part("accompaniment", self._notes(rows), ["0 1 2"] * len(rows))
+        plan = types.SimpleNamespace(together={"accompaniment": own} if own is not None else {}, chords=chords or [(0, "")] * len(rows), parts=parts or [(0, len(rows), None, "A")],
+                                     section_onsets={"accompaniment": onsets} if onsets else {}, section_densities={}, habits={})
+        song = types.SimpleNamespace(bars=self.BARS[:len(rows)], meter=4, notes={})
+        bass = [(4.0 * k, 4.0 * k + 3.9, 36.0 + r, 0) for k, r in enumerate(lead if lead is not None else [0] * len(rows))]   # one bar again and again, or as given
+        log = whole.hold_together(plan, song, "accompaniment", part, bass, **kw)
+        names = {self.A: "A", self.B: "B", self.C: "C", self.D: "D"}
+        return "".join(names.get(tuple(int(n[2]) for n in part.notes if a <= n[0] < b), "?") for a, b in song.bars), log, song, part
+
+    def test_the_count(self):
+        notes = [(0.0, 1.0, 60.0), (2.0, 1.0, 64.0), (3.98, 1.0, 67.0), (4.51, 0.4, 67.0), (8.0, 1.0, 60.0), (10.0, 0.2, 64.0)]
+        cells = rhythm.bar_cells(notes, self.BARS[:3])
+        self.assertEqual(cells, [((0, 60), (24, 64)), ((0, 67), (6, 67)), ((0, 60), (24, 64))])     # the onsets and the pitches; a note NEAR the bar
+        self.assertEqual([rhythm.bar_back(cells, k) for k in range(3)], [None, None, 0])            # line is the next bar's; whatever the lengths
+        self.assertEqual(rhythm.bar_back(cells, 2, back=1), None)                                   # no further back than asked
+        lead = [(1,), (1,), (2,), (1,), (), (1,)]
+        part = [(5,), (5,), (6,), (7,), (5,), ()]
+        self.assertEqual(rhythm.together(lead, part), (2, 1))                                       # bars 1 and 3 (the lead's bar 5 has no part): one again
+        self.assertEqual([rhythm.lead_of(r, ["bass", "melody"]) for r in ("accompaniment", "harmony", "arp", "counter", "melody", "bass")], ["bass", "bass", "bass", "melody", None, None])
+        self.assertEqual(rhythm.lead_of("counter", ["bass"]), None)                                 # a counter-line without a tune has none
+
+    def test_the_token_carries_it(self):
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        acc = [(a, b - a, m, "a") for a, b, m, _ in self._notes([self.A, self.A, self.A, self.B, self.A, self.C, self.A, self.A])]
+        bass = [(4.0 * k, 3.9, 36.0, "b") for k in range(8)]                                         # one bar eight times: every bar after the first comes back
+        tune = [(float(i), 0.9, 72.0 + (i % 5), "m") for i in range(32)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"bass": bass, "accompaniment": acc, "melody": tune}, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("accompaniment", acc), 2: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4, 2: 0.4}; s.levels = {"bass": 0.5, "accompaniment": 0.4, "melody": 0.4}
+        self.assertEqual(rhythm.together_field(s, "accompaniment"), "w43")                         # the bar before's again in three of the seven
+        self.assertEqual(rhythm.together_field(s, "harmony"), "")                                  # no such part
+        self.assertEqual(rhythm.together_field(s, "counter"), "")
+        token = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("accompaniment=")).split("=", 1)[1].split(":")
+        self.assertEqual(token[27], "w43", token)                                                  # the twenty-eighth field
+        s.notes["bass"] = bass[:4]; s.voice_notes[0] = ("bass", bass[:4])
+        self.assertEqual(rhythm.together_field(s, "accompaniment"), "")                            # three such bars: under TOGETHER_BARS
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 28
+        fields[:8] = ["half", "52-76", "0.9", "1", "0.7", "", "", "sstr"]; fields[27] = "w66"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        token = "bass=half:36-44:0.9:1:1.0 accompaniment=" + ":".join(fields) + " top=0.30 tempo=medium"
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")
+        self.assertEqual(p.together, {"accompaniment": 0.66})
+        self.assertIn("the accompaniment plays an earlier bar again where the bass does in 0.66 of such bars in the balance's song (round 144)", p.log)
+
+    def test_a_bar_comes_back_with_its_lead(self):
+        rows = [self.A, self.B, self.C, self.D]
+        self.assertEqual(self._hold(rows, 1.0)[0], "AAAA")                                          # the bass plays one bar: the part its bar with it
+        self.assertEqual(self._hold(rows, None)[0], "ABCD")                                         # no share in the token: no hold
+        self.assertEqual(self._hold(rows, 0.0)[0], "ABCD")                                          # a song whose part never does
+        got, log, song, part = self._hold(rows, 0.5)
+        self.assertEqual(got, "AAAD")                                                               # while the share is under the song's, and no further
+        self.assertEqual(log, ["accompaniment: an earlier bar played again where the bass plays it again in 2 of 3 such bars (0.67; the balance's song's 0.50); "
+                               "2 bars given the earlier bar (round 144)"])
+        self.assertEqual([(a, round(n, 6), m, r) for a, n, m, r in song.notes["accompaniment"][3:6]],   # the song's notes with the part's
+                         [(4.0, 0.9, 60.0, "accompaniment"), (5.0, 0.9, 64.0, "accompaniment"), (6.0, 0.9, 67.0, "accompaniment")])
+        self.assertEqual(self._hold(rows, 1.0, lead=[0, 5, 0, 5])[0], "ABAB")                       # the bar the bass plays again: two back
+        self.assertEqual(self._hold(rows, 1.0, lead=[0, 2, 4, 5])[0], "ABCD")                       # a bass that never comes back: nothing to come back with
+
+    def test_the_bars_that_stand(self):
+        rows = [self.A, self.B, self.C, self.D]
+        got, log, *_ = self._hold(rows, 1.0, chords=[(0, ""), (0, ""), (0, "m"), (0, "m")])
+        self.assertEqual(got, "AACC")                                                               # another chord under the same bass bar: not this bar's
+        self.assertIn("stood: 1 over another chord", log[0])
+        got, log, *_ = self._hold(rows, 1.0, parts=[(0, 2, None, "A"), (2, 2, 0, "A")])
+        self.assertEqual(got, "AACD")                                                               # a part of the form played again: counted as it will be
+        self.assertIn(" in 3 of 3 such bars ", log[0])                                              # played, and left
+        self.assertEqual(self._hold(rows, 1.0, leave={1, 2})[0], "ABCC")                            # bars the line rides the bass in
+        self.assertEqual(self._hold(rows, 1.0, held={("accompaniment", 0): {1}})[0], "ABBB")        # a bar on its loop's figure
+        got, log, *_ = self._hold(rows, 1.0, over=[(5.0, 6.0, 77.0, 0)])
+        self.assertEqual(got, "ABBB")                                                               # F over the E the bar would take: it stands
+        self.assertIn("stood: 1 a semitone from a line over or under it", log[0])
+        self.assertEqual(self._hold(rows, 1.0, over=[(5.0, 6.0, 76.0, 0)])[0], "AAAA")              # E over its own F: no worse than it stood
+        got, log, *_ = self._hold([self.A, self.B[:1], self.C, self.D], 1.0, onsets=[3.0, 1.0, 3.0, 3.0])
+        self.assertIn("stood: 2 not within the part's own onsets", log[0])                          # a bar of one note where the song's part plays one, among
+        self.assertEqual(got, "A?CC")                                                               # bars of three: neither is the other's bar
+        import types
+        two = whole.Part("accompaniment", self._notes([self.A, self.B]) + self._notes([self.C, self.D], voice=1), ["0 1 2"] * 2)
+        plan = types.SimpleNamespace(together={"accompaniment": 1.0}, chords=[(0, "")] * 2, parts=[(0, 2, None, "A")], section_onsets={}, section_densities={}, habits={})
+        whole.hold_together(plan, types.SimpleNamespace(bars=self.BARS[:2], meter=4, notes={}), "accompaniment", two, [(0.0, 3.9, 36.0, 0), (4.0, 7.9, 36.0, 0)])
+        self.assertEqual(sorted((n[3], n[2]) for n in two.notes if n[0] >= 4.0), [(0, 60.0), (0, 64.0), (0, 67.0), (1, 62.0), (1, 67.0), (1, 71.0)])   # the bar whole: every voice
+        self.assertEqual(two.figures, ["0 1 2", "0 1 2"])
+
+
 class CounterLineTests(unittest.TestCase):
     """Round 143: the counter-line beside a tune keeps to its token song's own line. Its bar's mask is drawn within the
     song's onsets a bar for the part of the form (it had been the pooled counter_figures word's, whatever the song's

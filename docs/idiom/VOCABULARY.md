@@ -630,6 +630,31 @@ The words are grouped by where the writing draws them, in the order the song is 
   the game's plays 2.8, a quarter of its moves a sixteenth apart
   where the game's has none), and a note drawn outside a span under
   an octave came back in at its other end, a seventh for a step.
+  Since round 144 a chord part's token, and the counter-line's in a
+  song with a tune, carries a twenty-eighth field, how often the part
+  comes back with its lead (`together_field`): of the bars in which
+  its lead (`lead_of`: the bass for a chord part, the tune for the
+  counter-line) plays an earlier bar again note for note, the
+  nearest within eight (`bar_cells`, `bar_back`: a line's bar is the
+  onsets and the pitches of the notes begun in it), and the part
+  plays in both, the percent in which the part's line plays that bar
+  again too, after a `w`: `w57` for Terra's accompaniment, `w60` for
+  its harmony; none under four such bars (TOGETHER_BARS). 36 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens, 1 of its 3 arp tokens and 30 of its 52 counter tokens.
+  The plan keeps it (`together`) and holds each such part to it once
+  the tune and the counter-line are written (`hold_together`),
+  counting as the token counts and the song as it will be played:
+  while the part's share over the whole song is under the song's, a
+  bar in which its lead plays an earlier bar again and the part
+  plays another takes the part's earlier bar whole, every voice with
+  its onsets and lengths, where the plan's chord is the same under
+  both, the bar keeps within the part's own onsets for its part of
+  the form, and it sits a semitone from no more notes over it (under
+  it, for the counter-line) than the bar's own did. A bar on its
+  loop's figure and a bar the line rides the bass in stand. A chord
+  part is then held to its pitch classes on the root (round 142).
+  Why: in the game a bar comes back whole, and the written parts
+  each came back by their own draws, so under a tune's bar played
+  again the band played another bar.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in
