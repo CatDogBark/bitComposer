@@ -315,6 +315,8 @@ class Plan:
     tones_kept: dict = field(default_factory=dict)      # a chord part -> (the share of its bars with an earlier bar on their root that sound
                                                         # such a bar's pitch classes again in the token song, of those the share that sound
                                                         # the bar before's) (round 142)
+    beat: int = 1                                       # 2 where the token's song is counted in double time (round 131): its kit's bars are
+                                                        # the kit tables' counted so (round 145)
     together: dict = field(default_factory=dict)        # a chord part, the counter-line beside a tune -> the share of the bars in which its lead
                                                         # (the bass, the tune) plays an earlier bar again that the part plays again too in
                                                         # the token song (round 144)
@@ -2729,7 +2731,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, beat=token_beat)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -3347,12 +3349,15 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     if R.DRUMS in plan.band and kit_letters:
         kit_value = "".join(x for x in rhythm.LETTERS.values() if x in kit_letters)   # the kit's pieces: the kit figure is drawn from songs with this kit
         kit_classes = plan.extras.get(R.DRUMS, {}).get("kit_classes") or {}     # the slots' strike classes (round 81): a letter's bars from songs that strike
-        limbs = {g: models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in models and set(g) & kit_letters}   # its sample as this one does
-        whole_kit = "drums" in models and (not limbs or (not kit_classes and writer.kit_table_reaches(models["drums"], song, kit_letters, kit_value, plan.habits[R.DRUMS])))
+        kit_models = models                                 # the kit's bar tables: for a song counted in double time (round 131) the tables counted
+        if getattr(plan, "beat", 1) == 2:                   # so, where the pack keeps them (round 145): its bars are its token song's kind of bar
+            kit_models = {**models, **{name[:-len(rhythm.DOUBLE_TABLE)]: t for name, t in models.items() if name.endswith(rhythm.DOUBLE_TABLE)}}
+        limbs = {g: kit_models[name] for g in rhythm.DRUM_GROUPS if (name := "drums-" + "".join(g)) in kit_models and set(g) & kit_letters}   # its sample as this one does
+        whole_kit = "drums" in kit_models and (not limbs or (not kit_classes and writer.kit_table_reaches(kit_models["drums"], song, kit_letters, kit_value, plan.habits[R.DRUMS])))
         # with classes the kit is written from its limbs (round 81): the kit table's bar is one song's, hat and all, and under a rare kit the
         # draw smooths that song's bars with every kit's; a limb's table under the slot's class pools the songs that strike the sample as this one does
         if whole_kit:                                       # the kit as one figure: its bars repeat and vary together, as a kit's do
-            groups = {tuple(rhythm.LETTERS.values()): models["drums"]}
+            groups = {tuple(rhythm.LETTERS.values()): kit_models["drums"]}
         else:                                               # the kit's limbs, each from its own table at its own counted habit (round 75): where the
             groups = limbs                                  # kit table holds no bar this kit can play within its habit's density tier (The Phantom
                                                             # Forest's one-piece kit in 3/4 had backed off to Johnny C. Bad's dense snare bars in
@@ -3405,6 +3410,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                               + (f"; dropped (not in the kit) {dict(dropped)}" if dropped else "")
                                                               + ("; the slots' strike classes: the kit from its limbs' tables under them (round 81)" if kit_classes and limbs else
                                                                  "; the kit table holds no bar this kit plays within its habit's density: the limbs' tables at their own habits (round 75)" if "drums" in models and not whole_kit else "")])
+            if kit_models is not models:                    # a song counted in double time: its kit's bars from the tables counted so (round 145)
+                written[R.DRUMS].log.append("the kit's bars from the kit tables counted in double time, as the balance's song is (round 145)")
             if kit_looped:
                 written[R.DRUMS].log.append(f"the kit's figure again, hit for hit, in {kit_looped} bars where the balance's song's kit loops (round 121)")
             if runs:                                        # the second samples' hits (round 99)

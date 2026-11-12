@@ -2271,6 +2271,9 @@ def half_time(s) -> bool:
     return False
 
 
+DOUBLE_TABLE = "@2"                  # the name of a kit bar table counted in double time ends in this (round 145, packtables.DOUBLE_TIME)
+
+
 def token_song(s):
     """The song as its balance token counts it (round 131): in double time where the reading has it at half its speed
     (half_time, readings.double_time), else as read."""

@@ -16,7 +16,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-from bitcomposer.translate import packtables  # noqa: E402
+from bitcomposer.translate import packtables, rhythm  # noqa: E402
 
 SOURCES = {                               # a conditioning -> the tables whose outcome gives it its value in a written song
     "habit": ["habits", "bass_habits", "drum_habits", "drum_group_habits", "balance"],
@@ -69,6 +69,10 @@ def draw_sites() -> dict:
                 for name in packtables.KEPT:
                     if name.startswith("drums-"):
                         out.setdefault(name, set()).add((f, func))
+    for name in packtables.KEPT:                            # a kit bar table kept in double time (round 145) is drawn where the table as read is
+        base = name[:-len(rhythm.DOUBLE_TABLE)] if name.endswith(rhythm.DOUBLE_TABLE) else None
+        if base in out:
+            out.setdefault(name, set()).update(out[base])
     return out
 
 
