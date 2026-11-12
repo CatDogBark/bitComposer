@@ -615,6 +615,21 @@ The words are grouped by where the writing draws them, in the order the song is 
   motion's walk along it, the tone figure, the profile's hold), so
   under one chord two bars seldom sounded one set of pitch classes,
   and the game's accompaniments do in three such bars of five.
+  Since round 143 the counter-line beside a tune is written to its
+  token's own words where it had been to the pooled ones. Its bar's
+  mask (the `counter_figures` word) is drawn within its line's onsets
+  a bar by the form's letters, the token's twenty-second field
+  (`counter_mask`: half to one and a half times them, and the part of
+  the form's bars so far kept at them within `MASK_SLACK`), the word
+  drawn again on the bar's own stream. Its note is drawn among the
+  notes its span holds (`beside_pitch`'s `span`), the interval and
+  the move weighed as they sound. Its moves of a fourth or more are
+  held to its line's share, the token's eighteenth field. Why: the
+  mask word is pooled over the game and knew nothing of the song's
+  counter-line's pace (the written Locke's ran 4.4 notes a bar where
+  the game's plays 2.8, a quarter of its moves a sixteenth apart
+  where the game's has none), and a note drawn outside a span under
+  an octave came back in at its other end, a seventh for a step.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in

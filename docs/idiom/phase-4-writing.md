@@ -9854,3 +9854,117 @@ written, nor its richness taken from its token song (LIMITS), and
 what changes how a chord part's tones are drawn re-writes the tune,
 so it belongs with the round that re-writes the tune. The standing
 list as at round 114.
+
+### Round 143: the counter-line beside a tune keeps to its token song's own line (2026-11-11, on the owner's word)
+
+**Why.** The owner, on Song Check 104's Locke: "the tune seems to be
+spazzing out some". The notes showed two things that could be it, the
+tune's cut and held notes placed at chance and the counter-line
+running fast with leaps; asked which: "I thought #1 on locke sounded
+fine how it did it for that specific generated song. it didn't sound
+random to me. I think it was the counter-line then running fast and
+jumping around, so yea from 26 on was where it sounded bad." The
+first is not taken up (below). He said go on a list of three; this is
+its first item.
+
+**Found.** *In Locke.* From its second part of the form (0:26) the
+written counter-line, the higher line and doubled an octave under so
+that its lower voice sits in the tune's register, ran bursts of
+sixteenths that leapt up to a seventh: 4.4 notes a bar where it
+plays, 0.26 of its moves a sixteenth apart, 0.35 of them a fourth or
+more. The game's Locke counter-line plays 2.8 notes a bar, no
+sixteenths (long notes, pickups in triplets, runs of eighths by
+step), and leaps a fourth or more in 0.17 of its moves. *Over the
+songs.* The 49 Song Check 100 songs with a counter-line in both: its
+moves a sixteenth or less apart 0.22 of its moves at the median (the
+game's 0.06), a tenth or more over the game's line in 18 songs; its
+moves of a fourth or more 0.22 (0.16), over in 18; a fourth or more
+within an eighth 0.12 (0.04), over in 16. *Why.* A counter-line
+beside a tune is a mask over the tune's bar from the `counter_figures`
+word (which of the tune's onsets it strikes with, and its own), a
+word pooled over the game and asked under the tune's bar: it knew
+nothing of the song's own counter-line's pace. The token has carried
+the line's onsets a bar by the form's letters since round 125 and
+the plan gave them to every line but this one (LIMITS: "the
+counter's beside a tune is not held"). And its note is the voice
+words' draw, an interval to the tune's note weighed by the move it
+makes, then moved by octaves into the line's span
+(`upper.in_register`): a note drawn outside the span sounded another
+interval and made another move than the ones weighed. Locke's span
+is G#4 to E5, under an octave, so it holds each pitch class once and
+a line stepping over its top came back in at its bottom. *Not taken
+up: the tune's cut and held notes.* A tune's note is held or cut as
+the note before it in 0.88 of the game's cases at the median and 0.73
+of the written ones', which is chance at its held share (65 songs; 23
+a tenth or more under their song); Locke's every bar mixes the two
+where one bar in eighteen of the game's does. The owner hears it as
+fine in Locke, and marked Battle Theme, the most scattered by the
+count, better on Song Check 103. Where it could have hurt, the 13
+tunes that hold most notes and cut a few, the written ones are as
+the game's (a cut note alone between two held ones 104 of 133; the
+game's 81 of 143). The bar is musical, not the game's: left.
+
+**Built.** `token_sections` gives the counter-line beside a tune its
+line's onsets a bar (`plan.section_onsets`), as the tune's since
+round 138. `mask_strikes`, `counter_mask`: a bar's mask is the
+`counter_figures` draw where the bar it makes of the tune's strikes
+within half to one and a half times the song's own onsets a bar
+there (`envelope_at_for`'s own envelope) and keeps the part of the
+form's bars so far at them (`MASK_SLACK`: half of them, a note at the
+least, either way); else the word drawn again on the bar's own
+stream (`writer.TRIES` times), else one among the masks the table
+knows that fit, by its probabilities in the bar's context; where no
+mask is within both, the same asked of the envelope alone. The first
+draws are made as before, so a line whose masks all fit is as it
+was. The envelope alone, the first mask to fit taken, ran thin (0.89
+of the game's notes a bar at the median); hence the part of the
+form's running count. With the onsets the plan's test of a bar
+against a part's own (`own_keeps`, round 139) holds for the
+counter-line too: the theme band and the hand-offs put the tune's
+bar into it in 70 bars fewer over the 68 songs. `beside_pitch` and
+`interval_weights` take the voice's `span`: the note is drawn among
+the notes the span holds, the interval and the move weighed as they
+will sound; where the span holds none the words allow, as before
+(the caller moves it an octave in). `counter` takes `move_profile`,
+the token song's counter-line's moves (round 130's field): while the
+line's share of moves of a fourth or more is over its song's line's,
+a note a fourth or more from the last is drawn again, as a clash
+is. No token field is new and the vocabulary is not refit. Tests
+(`CounterLineTests`, four): the plan's reading; a bar's mask at
+seven askings; a note among the span's own, with the tune and alone;
+the far moves held. Suite 562 (1 skip); the vocabulary map is
+unchanged.
+
+**Measured.** The 49 songs, round 142's in brackets, then FFVI's.
+The counter-line's moves a sixteenth or less apart: 0.09 of its
+moves at the median (0.22; 0.06), a tenth or more over the game's
+line in 6 songs (18). Its moves of a fourth or more: 0.13 (0.22;
+0.16), over in none (18); a fourth or more within an eighth 0.04
+(0.12; 0.04), over in none (16). Its notes a bar where it plays
+within a quarter of the game's in 34 songs (21), over five quarters
+of them in 3 (17), under three quarters in 12 (11). Locke: 2.3 notes
+a bar (4.4; 2.8), no move a sixteenth apart (0.26; none), a fourth
+or more in 0.19 of its moves (0.35; 0.17). The writer's own account
+over the 52 songs with a counter-line: 1,007 bars with the song's
+own onsets, every one within them, 467 masks drawn again and 124
+among the table's; 154 of 5,040 notes moved an octave into the span.
+Plans (400 seeds, against round 142): every seed keeps its title,
+token song and band, and the tune's line, the bass and the kit every
+note; the counter-line changes in 309 seeds, the accompaniment in 62
+and the harmony in 7 (a voice that follows it, the theme band, round
+142's test against it), the tune's part in 11 (its second voice,
+where that follows the counter-line). The chord parts are as round
+142 left them (the accompaniment 0.42 on the bass's root, the harmony
+0.53). The chords as heard: 270 of 1,291 changes on a held root (270
+of 1,316). The paired measures: cells sounding as the FFVI song's
+0.962, backing lines within range 375 of 386, kit pieces 175 of 179,
+as they were; the notes a second 11.3 at the median (11.8; 12.4).
+
+**Open.** A bar the mask word draws as a rest stays one (the line
+sounds in 0.76 of the bars at the median; the game's 0.91), and the
+token counts a line's notes a bar, not how close together they fall:
+six songs still run sixteenths a tenth over their song's line. The
+counter-line's thirds and repeated notes are the voice words', not
+its token's. Not heard: for the one listening the owner asked for
+once the list is done. Next on it: the tune's shape, with what is
+left of round 142's item; then Locke's snare march.
