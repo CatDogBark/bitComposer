@@ -116,6 +116,9 @@ def main(argv=None) -> int:
                     named |= set(re.findall(r"\*\*([a-z_]+(?:-[A-Za-z]+)?)\*\*", lead.split(" — ")[0]))
                     lead = None
         kept = set(packtables.KEPT)
+        page_text = open(a.check, encoding="utf-8").read()   # a table kept a second time in double time (round 145) has its base's entry,
+        named |= {n for n in kept if n.endswith(rhythm.DOUBLE_TABLE)   # where the page names it there in code type
+                  and n[:-len(rhythm.DOUBLE_TABLE)] in named and f"`{n}`" in page_text}
         missing, extra = sorted(kept - named), sorted(named - kept - CONCEPTS)
         if missing:
             print("tables with no VOCABULARY entry:", ", ".join(missing))

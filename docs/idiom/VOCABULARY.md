@@ -2016,7 +2016,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   against "sparse" cymbals riding in sixteenths); the caps chopped the
   kit's own bars (a dense kit at 7 hits a bar against FFVI's 13.7) and are
   retired: the kit's pieces say which sounds it has, the kit's bars say
-  how they play.
+  how they play. Since round 145 the table is kept a second time as
+  `drums@2`, each song the reading has at half its speed counted in
+  double time (`packtables.DOUBLE_TIME`, `songs_for`), and a song whose
+  token is counted so (`Plan.beat`) draws its kit's bars from it: the
+  table as read holds such a song's bars at half speed, a march's
+  snare as rolls.
   *`drums`: shape (part, meter, kit, tempo, habit, feel, previous); drawn in compose, drums, samples_for, write.*
 
 - **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
@@ -2028,7 +2033,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   limb's backbone), a single-letter limb's under its class; the class says
   the density, the group's habit drives the recall urn, and the class's
   bars are their own cap (a one-figure class, a rare crash and its rests,
-  stays the chain's floor).
+  stays the chain's floor). Each is kept a second time since round 145
+  for the songs counted in double time, as the kit's table is
+  (`drums-KSt@2`, `drums-h@2`, `drums-c@2`, `drums-o@2`); a table that
+  comes out as the one as read is left out of the fit (FFVI's
+  `drums-o@2`).
   *`drums-KSt`: shape (part, meter, limb1, limb2, limb3, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-h`: shape (part, meter, classes, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-c`: shape (part, meter, classes, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums · `drums-o`: shape (part, meter, classes, tempo, feel, previous); drawn in _plan_once, drums, write, write_drums.*
 
 ## The bass
