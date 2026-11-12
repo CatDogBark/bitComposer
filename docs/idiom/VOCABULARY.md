@@ -552,6 +552,39 @@ The words are grouped by where the writing draws them, in the order the song is 
   part of the form played again sounds the share of its gap it sounds
   in the part it repeats, measured to the note that follows the
   repeat (`copy_repeats`).
+  Since round 141 the melody's and the counter's token carry a
+  twenty-sixth field, how the line sounds its notes by the gap to the
+  next (`tune_lengths_field`, the gap as `tune_gaps` measures it):
+  after an `h`, an entry for the whole line and one for each gap
+  class (`GAP_CLASSES`: under half a beat, half to one, one to two,
+  two to four, four and more), each `held~share~share`: the percent
+  of the notes held (sounding 0.75 of the gap or more), then the
+  median share of its gap a held note sounds and a detached one (to
+  LENGTH_BIN, 0.05; `-` where the line has none of the kind); a class
+  of fewer than LENGTH_NOTES (four) notes is `-`.
+  `h100~0.80~-/-/100~0.80~-/-/100~0.95~-/100~0.95~-` is Terra's tune,
+  every note held; `h41~0.90~0.30/55~0.85~0.35/0~-~0.20/62~0.95~0.30/31~1.00~0.15/-`
+  Gogo's, its eighths all cut to a fifth of the gap; 116 of the 118
+  melody and counter tokens carry one. The plan keeps it
+  (`tune_lengths`, read by `lengths_of`) and the tune's and the
+  counter-line's writers sound a note by it (`tune.own_length`): held
+  at the song's rate for its gap's class (the whole line's where the
+  song has too few notes of the class), drawn on the lengths' own
+  stream and kept within a note of the song's share of the class's
+  notes so far; sounding the song's share for its kind at the class,
+  at the nearest class that has one where the song has none there
+  (the longer of two as near), the whole line's where no class has.
+  The pooled `values` draw is made all the same and the `articulation`
+  and `tune_sounds` words are drawn as before, so no draw moves; they
+  still sound a voice beside a line, a second counter-line and a line
+  whose token carries no field. The render does not raise such a
+  line's notes to its sample's floor (`score_of`). Why: the pooled
+  words give a tune one habit a song and one share for a detached
+  note whatever its gap, and the game's tunes differ song by song and
+  gap by gap: Terra's holds every note, Locke's a quarter of its
+  eighths and half its quarters and every longer note, and a cut note
+  before a beat or more sounds a fifth of the gap at the game's
+  median where the pooled share is two fifths.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in
@@ -2128,7 +2161,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   *`recall_moves`: shape (part, recall, chord); drawn in melody.*
 
 - **values** — a melody note held or detached, by its value and the song's
-  articulation habit. Drawn a note; the tune's note lengths.
+  articulation habit. Drawn a note; the tune's note lengths, until round
+  141 gave a tune's and a counter-line's line their token song's own
+  (the balance token's twenty-sixth field): the draw is still made, and
+  still decides for a voice beside a line and a line without the field.
   *`values`: shape (part, value, habit); drawn in counter, melody, melody_models, write.*
 
 - **contours**, **contour_sizes**, **peaks** — a four-bar phrase's contour

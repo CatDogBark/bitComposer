@@ -354,16 +354,39 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   song's tempo itself only where the draw lands there or no other is
   near. The bars' figures are still drawn by the tempo's class, three
   classes for the whole game.
-- **A tune's short notes are floored, not counted.** Since round 136
-  a tune note sounds at least as long as the note at the fifth
-  percentile of its token song's tune, where its gap leaves room. How
-  many of a tune's notes are short, and which, is still the pooled
-  `tune_sounds` and `values` words': a written tune's notes under 100
-  ms are 0.090 of them where FFVI's are 0.210, and eight written tunes
-  still have a tenth of their notes shorter than their token song's
-  shortest usual note, the notes of a rhythm quicker than the token
-  song's tune plays (a gap under the floor sounds whole). The chord
-  parts' and the bass's notes carry no such floor.
+- **Which of a tune's notes are cut is drawn, not placed.** Since round
+  141 a tune's note is held or detached at its token song's own rate
+  for the gap to the next note (five gap classes), and sounds the
+  song's own share of the gap. Which notes of a class are the cut ones
+  is a draw at that rate: the game cuts the notes its phrasing cuts
+  (the first of a group, the notes before a rest), and where in the
+  bar or the phrase a cut note falls is not counted. A gap class the
+  song's tune plays fewer than four notes of takes the whole line's
+  rate and the nearest class's shares: the game's Kids Run Through
+  the City cuts its two notes before a long gap to 0.6 of it, and the
+  written tune, holding as the rest of that tune does, sounds 0.22
+  of its notes past a bar line where the game's sounds 0.02. And
+  a written tune's rhythm is not its token song's, so the whole
+  line's share differs though each class keeps the song's: the game's
+  Gogo holds 0.40 of its tune's notes, half of its sixteenths and none
+  of its eighths; the written tune on it plays eighths and no
+  sixteenths, and holds 0.24. Song by song the written tune's share
+  of held notes is within a tenth of its token song's tune's in 51 of
+  62 songs. The floor of round 136 stands under it: no note shorter
+  than the song's shortest usual one where its gap leaves room.
+- **Only the tune's line takes its song's note lengths.** A voice
+  beside the tune's or the counter-line's line, and a second
+  counter-line, are still sounded by the pooled `values` and
+  `tune_sounds` words under the pooled `articulation` habit, as is a
+  line whose token song's tune has under sixteen notes (two of the
+  118 melody and counter tokens). A part that doubles or carries the
+  tune's bar takes the notes as the tune sounds them, raised to its
+  own sample's floor in the render. The sample's floor (round 36) is
+  still asked of every voice but the tune's and the counter-line's
+  lines: drawn under the written part's speed class, it can sit well
+  over what the token song plays the sample at (it sat at 160 to 400
+  ms over tunes whose token's shortest usual note is 60 to 140), and
+  whether it does for the chord parts and the bass is not measured.
 - **A tune's note before a rest of a bar or more stops at its bar's
   end.** Since round 140 a tune's note is measured to the next note
   where that starts in its bar or the next, so a note held before a
@@ -371,12 +394,13 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   then rests a whole bar or more the note is still measured to its
   own bar's end, and the game's may ring past it (its Terra's tune
   holds the last note before a long rest six and a half beats, two
-  and a half of them past the bar line). Whether a note is held at
-  all is the pooled words' draw: the notes before a bar's opening
-  rest are carried over the line in 0.72 of the cases at the median
-  (FFVI's 0.75), but song by song the written tune sounds over 0.03
-  more of its notes past a bar line than its token song's tune in 18
-  of 62 songs and over 0.03 fewer in 11. A part that doubles or
+  and a half of them past the bar line). Whether a note is held is
+  the token song's rate for its gap class since round 141: the notes
+  before a bar's opening rest are carried over the line in 0.89 of
+  the cases at the median (FFVI's 0.75), and song by song the written
+  tune sounds over 0.03 more of its notes past a bar line than its
+  token song's tune in 24 of 62 songs and over 0.03 fewer in 8 (its
+  bars open with a rest more often than the game's). A part that doubles or
   carries the tune's bar takes the notes as they sound and a voice's
   note ends at its next (the render): where the part's own next bar
   opens with a rest, its copy rings on with the tune.

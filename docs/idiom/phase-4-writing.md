@@ -9618,3 +9618,113 @@ doubles or carries the tune's bar now takes notes that sound past
 the bar; the render ends them at the voice's next note. Which notes
 are held at all is still the pooled draws' (the next round). The
 standing list as at round 114.
+
+### Round 141: a tune sounds its notes as its token song's tune does (2026-11-11, on the owner's go after Song Check 102)
+
+**Why.** The second cause of the cut notes the owner heard in Song
+Check 102's Terra (round 140's record): the notes drawn short. He
+asked whether it touches other songs; it does, both ways.
+
+**Found.** How long a tune note sounds was three pooled words': the
+`articulation` habit, drawn once a song (it is the token song's
+tune's own habit class in 37 of 62 songs); the `values` draw, a note
+held or detached by its value under the habit; and the `tune_sounds`
+draw, one share of its gap for a held note and one for a detached
+whatever the gap. The game's tunes differ song by song and gap by
+gap. Terra's holds 0.99 of its notes, Celes's 0.97, Kids Run Through
+the City's 0.96; Battle Theme's 0.54, Locke's 0.50, Gogo's 0.40.
+Locke's holds a quarter of its eighths, half its quarters and every
+longer note. A cut note is a stab: before a gap of a beat or more it
+sounds a fifth of the gap at the game's median (quartiles 0.19, 0.21,
+0.45), the written two fifths (0.32, 0.40, 0.50). Over the 62 Song
+Check 100 songs read back with a tune the pooled totals match (of
+the notes a beat or more from the next 0.33 are detached, FFVI's
+0.34), but not the songs: a written tune's share of held notes is
+within a tenth of its token song's tune's in 14 of them, over it in
+25 and under it in 23. The written Terra cut eleven notes by the
+draws (a note of 0.9 beat, then five beats of nothing); the written
+Celes drew a held note's share at 0.4 and cut half its notes; the
+written Locke held 0.83. The chord parts and the bass have taken
+their line's shares by the gap from the token since round 95; the
+tune had not. And the render raised a short note to its sample's
+floor (round 36: the shortest the game plays the sample at, under
+the written part's speed class), which sat at 160 to 400 ms over
+tunes whose token's shortest usual note is 60 to 140: in 18 of 58
+songs a fifth or more of the tune's notes sounded longer than
+written, so a tune written cut read back held (the written Gogo's
+eighth-note stabs of 60 ms sounded 240).
+
+**Built.** `tune_gaps(s, notes)`: a line's notes as (gap, share), the
+gap as the writers measure it (round 140). `tune_lengths_field`: the
+balance token's twenty-sixth field for the melody and the counter,
+after an "h" an entry for the whole line and one for each gap class,
+`held~share~share`: the percent of the notes held, then the median
+share of its gap a held note sounds and a detached one, to 0.05; a
+class of fewer than four notes is left out; 116 of the 118 melody and
+counter tokens carry it. The plan reads it (`lengths_of`,
+`Plan.tune_lengths`, `own_lengths`). `tune.own_length`: a note is held
+at the song's rate for its gap's class (the whole line's where the
+song has too few notes of the class), drawn on a stream of the
+lengths' own and kept within a note of the song's share of the
+class's notes so far; it sounds the song's share for its kind at the
+class, at the nearest class that has one where the song has none
+there (the longer of two as near: a held note stops a little short
+of the next whatever its gap, a cut one is a stab whatever its gap;
+the game's Terra plays eighths and long notes and no quarter, and the
+written Terra's quarters take the long notes' 0.95, not the eighths'
+0.80), the whole line's where no class has. The melody's and the
+counter-line's writers sound their line by it; the pooled `values`
+draw is made all the same and the `articulation` and `tune_sounds`
+words are drawn as before, so no draw moves. `score_of` does not
+raise such a line's notes to its sample's floor. The vocabulary is
+refit (the balance tokens alone change). Tests: the gaps and the
+field; the plan's reading; the rate held within a note at five rates,
+the class's own entry and each fallback; a tune written with every
+note held, and with every note cut, the same notes; the counter-line
+so too; the render sounding such a line as written beside a bass on
+its floor. The writers' and the render's fail with the change
+switched off. Suite 551 (1 skip). The vocabulary map is
+unchanged.
+
+**Measured.** The 62 songs read back (round 140's in brackets, then
+FFVI's). A tune's share of held notes within a tenth of its token
+song's tune's: 51 songs (15), over it in 7 and under it in 4 (28 and
+19); the mean gap 0.064 (0.250). The tune silent over its token
+song's tune's share of its time by more than 0.05 in 4 songs (22),
+under it in 22 (30). Notes cut short before a beat or more over the
+token song's by more than 0.03 in 15 songs (21), under in 10 (21).
+Held by the gap, at the median: under a beat 0.84 (0.95; 0.85), one
+to two beats 0.96 (0.85; 0.92), two beats or more 1.00 (0.76; 0.86).
+A detached note before a beat or more sounds 0.29 of its gap at the
+median (0.40; 0.21). No song has a fifth of its tune's notes longer
+in the render than written (18). The six songs of Song Check 103,
+round 139's in brackets, then the game's: Terra holds 1.00 of its
+tune's notes (0.73; 0.99) and none is cut (19 of 75); Celes 1.00
+(0.51; 0.97), none cut (0.49 of them); Kids Run Through the City 1.00
+(0.54; 0.96), none cut (0.42); Locke 0.47 (0.83; 0.50); Battle Theme
+0.61 (0.83; 0.54); Gogo 0.24 (0.76; 0.40). The paired measures hold:
+cells sounding as the FFVI song's 0.962 (0.963), backing lines within
+range 375 of 386, kit pieces 175 of 179; titles, keys, tempos and forms
+unchanged in all 68. Plans (400 seeds, against round 140):
+every seed keeps its title, token song and band, and the tune's line
+every onset and pitch; its lengths change in 394 seeds. The
+counter-line changes in 309, in onsets or pitches in 102 (beside a
+tune it reads the tune as it sounds); the bass's lengths in 260 and
+the accompaniment's in 178, the harmony's in 13 (the bars of the tune
+they double or carry); a voice beside a line changes pitch in four
+seeds (the melody's second voice in one, the accompaniment's third in
+three). No kit changes; the six seeds on Good Night, a song with no
+tune, are as they were.
+
+**Open.** Which notes of a class are cut is a draw at the song's
+rate; where the game's phrasing cuts is not counted. A class the song
+plays under four notes of takes the whole line's rate (Kids Run
+Through the City: 0.22 of the written tune's notes sound past a bar
+line, the game's 0.02). A written tune's rhythm is not its song's, so
+the whole line can sit off the song's share while each class keeps it
+(Gogo). The voices beside a line and a second counter-line are still
+on the pooled words. The sample's floor still stands for the other
+voices, unexamined. Not heard: a tune of stabs as short as the
+game's (60 ms in the written Gogo) on a hard cut is the game's by the
+count; whether it reads as the game's or as blips is the owner's ear
+(Song Check 103). The standing list as at round 114.
