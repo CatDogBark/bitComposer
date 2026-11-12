@@ -2011,6 +2011,17 @@ def tune_shortest_field(s, role: str, line_notes=None) -> str:
     return f"m{int(round(ms / SHORT_NOTE_MS)) * SHORT_NOTE_MS}"
 
 
+def tune_gap(bars: list, start: float, after: float | None) -> float:
+    """The gap a tune's note is sounded against, in beats, as the tune's and the counter's writers measure it (round 140):
+    to the line's next note (`after`, its start) where that starts in the note's bar or the next, else to its bar's end;
+    0.0 for a note in no bar. `bars`: (start, end) in beats."""
+    k = next((i for i, (a, b) in enumerate(bars) if a - readings_mod.NEAR <= start < b - readings_mod.NEAR), None)
+    if k is None:
+        return 0.0
+    reach = bars[k + 1][1] if k + 1 < len(bars) else bars[k][1]
+    return after - start if after is not None and after < reach - readings_mod.NEAR else bars[k][1] - start
+
+
 TONE_PROFILE_CLASSES = ("root", "third", "fifth", "seventh", "sus", "other")   # a line's chord-tone profile's classes, in the token's order (round 111)
 
 

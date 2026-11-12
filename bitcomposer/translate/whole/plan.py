@@ -2993,11 +2993,32 @@ def _replace_span(part, song: rhythm.Song, role: str, a: float, b: float, copied
                               + [(t, u - t, m, role) for t, u, m, _ in copied], key=lambda n: n[0])
 
 
+def _repeat_last(notes: list, kept: list, bars: list, lo: float, hi: float, shift: float) -> tuple | None:
+    """The last note of a tune's line in a part of the form played again (round 140), as copy_repeats copies it: (its
+    start in the repeat, its pitch, the end it takes there), or None where it stands as copied. The note sounds the share of
+    its gap it sounds in the part it repeats, the gap measured to the note that follows the repeat (rhythm.tune_gap): the copy had
+    kept the length the note has before what follows the first statement, so a note held to a bar line there stopped at it
+    in the repeat too where the next bar opens with a rest (the written Terra's B, a pickup a beat long before three beats
+    of nothing), and one held over the bar line ran into the note that follows the repeat."""
+    line = sorted((x for x in notes if x[3] == 0), key=lambda x: x[0])
+    inside = [x for x in line if lo - rhythm.NEAR <= x[0] < hi - rhythm.NEAR]
+    if not inside:
+        return None
+    last = inside[-1]
+    after_s = next((x[0] for x in line if x[0] > last[0] + rhythm.NEAR), None)
+    after_t = min((x[0] for x in kept if x[3] == 0 and x[0] > last[0] + shift + rhythm.NEAR), default=None)
+    gap_s, gap_t = rhythm.tune_gap(bars, last[0], after_s), rhythm.tune_gap(bars, last[0] + shift, after_t)
+    if gap_s <= rhythm.NEAR or gap_t <= rhythm.NEAR or abs(gap_t - gap_s) <= rhythm.NEAR:
+        return None
+    return last[0] + shift, last[2], last[0] + shift + min(1.0, (last[1] - last[0]) / gap_s) * gap_t
+
+
 def copy_repeats(plan: Plan, song: rhythm.Song, written: dict) -> list:
     """A part of the form that repeats an earlier one plays it note for note in every part written, as a driver replays
     a part (the writers copy their own figures for it already; the notes under them, the second lines and the voicings
     had been written fresh, so the form reader, which finds parts by such repeats, heard one part where the plan had
-    four). Returns a log line a repeat."""
+    four). The tune's and the counter-line's last note of the part sounds against the note that follows the repeat
+    (round 140, _repeat_last). Returns a log line a repeat."""
     log = []
     for i, (bar, n, of, label) in enumerate(plan.parts):
         if of is None:
@@ -3013,6 +3034,11 @@ def copy_repeats(plan: Plan, song: rhythm.Song, written: dict) -> list:
         for role, part in written.items():
             kept = [x for x in part.notes if not inside(x[0], lo_t, hi_t)]
             copied = [(x[0] + shift, x[1] + shift) + tuple(x[2:]) for x in part.notes if inside(x[0], lo_s, hi_s)]
+            last = _repeat_last(part.notes, kept, song.bars, lo_s, hi_s, shift) if role in (R.MELODY, R.COUNTER) else None
+            if last is not None:                            # the tune's last note there, against the note that follows the repeat (round 140)
+                i = next((j for j, x in enumerate(copied) if x[3] == 0 and abs(x[0] - last[0]) < 1e-6 and x[2] == last[1]), None)
+                if i is not None:
+                    copied[i] = (copied[i][0], last[2]) + tuple(copied[i][2:])
             part.notes[:] = sorted(kept + copied, key=lambda x: x[0])
             for k in range(m):
                 if bar + k < len(part.figures) and src_bar + k < len(part.figures):
@@ -3020,6 +3046,10 @@ def copy_repeats(plan: Plan, song: rhythm.Song, written: dict) -> list:
             if role in song.notes:
                 kept = [x for x in song.notes[role] if not inside(x[0], lo_t, hi_t)]
                 copied = [(x[0] + shift,) + tuple(x[1:]) for x in song.notes[role] if inside(x[0], lo_s, hi_s)]
+                if last is not None:
+                    i = next((j for j, x in enumerate(copied) if abs(x[0] - last[0]) < 1e-6 and x[2] == last[1]), None)
+                    if i is not None:
+                        copied[i] = (copied[i][0], last[2] - last[0]) + tuple(copied[i][2:])
                 song.notes[role] = sorted(kept + copied, key=lambda x: x[0])
         log.append(f"{label} (bars {bar}-{bar + m - 1}) plays {plan.parts[of][3]} (bars {src_bar}-{src_bar + m - 1}) again note for note")
     return log

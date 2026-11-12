@@ -813,8 +813,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     its move within a third) and the repeated note takes the song's own
     share. `shortest` (round 136): the token song's tune's shortest usual
     note in beats at the song's tempo; no note sounds shorter where its
-    gap leaves room. Returns [(start, end, midi)], the bars' rhythms and
-    a log."""
+    gap leaves room. A note's gap runs to the next note, a bar's last
+    note's to the next bar's first onset where the tune plays on in it
+    (round 140), so a note held before a bar that opens with a rest
+    sounds over the bar line. Returns [(start, end, midi)], the bars'
+    rhythms and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -1607,14 +1610,21 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     for name, run, rates in (("off the scale", off_run, off_scale), ("a semitone from a sounding part", clash_run, clash_rates)):
         if rates and any(v[1] for v in run.values()):          # the words' shares held (round 93)
             log.append(f"{name}: " + ", ".join(f"{pl} {v[0]}/{v[1]} ({v[0] / v[1]:.2f}; the song's rate {rates[pl]:.2f})" for pl, v in run.items() if v[1]))
-    # the notes, with their lengths from the articulation table
-    notes = []
+    # the notes, with their lengths from the articulation table: the value is the gap to the next note across the bar line (round
+    # 140: a bar's last note runs to the next bar's first onset where the tune plays on in it, as the counter's has since round 29
+    # and the bass's since round 26, and as the values and tune_sounds words count a gap; at a rest bar the bar line stays). The
+    # gap had ended at the bar line: a note before a bar that opens with a rest stopped there, where the game's is held to the
+    # next note (the game's Terra sounds 0.24 of its tune's notes past their bar's end, the written one none)
+    notes, onward = [], 0
     for k in sorted(cells):
         a, b, _ = bars[k]
         cell = cells[k]
+        after = cells.get(k + 1)
+        nxt = bars[k + 1][0] + after.positions[0] if after is not None and after.positions and k + 1 < len(bars) else b
         for i, (p, m) in enumerate(zip(cell.positions, cell.pitches)):
             t = a + p
-            until = a + cell.positions[i + 1] if i + 1 < len(cell.positions) else b
+            until = a + cell.positions[i + 1] if i + 1 < len(cell.positions) else nxt
+            onward += until > b + rhythm.NEAR
             gap = until - t
             if gap <= rhythm.NEAR:
                 continue
@@ -1622,6 +1632,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
             held = models["values"].draw((role, value, articulation), rng) if "values" in models else "held"
             notes.append((t, t + sounded(gap, tune_sounds, held, shortest), float(m)))   # the song's own shares (tune_sounds, round 98), no note
                                                             # under its token song's shortest usual one (round 136)
+    if onward:
+        log.append(f"{onward} bars' last notes measured to the next bar's first onset, past the bar line (round 140)")
     if own_new[0]:                                          # the tune's bars by its part of the form's own onsets (round 138)
         log.append(f"new bars drawn within the balance's song's own onsets for their part of the form (round 138): {own_new[0] - own_new[2]} of {own_new[0]}"
                    + (f", {own_new[1]} among the table's bars that fit" if own_new[1] else "") + "; a bar or a half that comes back and a phrase answered keep within them too")
