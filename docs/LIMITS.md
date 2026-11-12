@@ -448,18 +448,24 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   fuller part of the form, but the chords still come back with the
   return (the intro's one chord for four bars), and what the tune
   brings back is a theme of a bar or two.
-- **Only the token counts a half-speed song in double time.** Since
-  round 131 Locke's and Blackjack's tokens are counted at twice the
-  tempo the reading has them at, so a song written on them is a fast
-  song with a kit a writer can strike. The figure tables, the tune's
-  cells and the tempos word still hold the two songs as read (a slow
-  song, its snare's bars past sixteen strikes left out as rolls), so
-  the march Locke's snare plays is not among the fast songs' kit
-  figures and a song on its token takes its kit bars from the other
-  fast songs, within the strikes the token asks. Counting every table
-  in double time moved 130 of 400 seeds onto another token song (the
-  tempos word is the plan's first draw), so it waits for a Song Check
-  whose seeds are picked again. A steady kit past sixteen strikes a bar
+- **Only the token and its own song's kit count a half-speed song in
+  double time.** Since round 131 Locke's and Blackjack's tokens are
+  counted at twice the tempo the reading has them at, so a song
+  written on them is a fast song with a kit a writer can strike, and
+  since round 145 such a song takes its kit's bars from the kit's bar
+  tables counted the same way (kept a second time: `drums@2` and its
+  limbs'), so the written Locke's snare plays the game's march. Every
+  other table still holds the two songs as read, a slow song: the
+  tune's cells, the bass's figures and the tempos word; and every
+  other song draws its kit from the tables as read, so the other fast
+  songs' kits do not know the march, and the slow songs' still hold
+  the two songs' bars at half speed. The kit's tables themselves
+  counted in double time moved the kit in 23 of the 68 Song Check 100
+  songs and, through the bass that strikes with it, the tune in 9
+  (Battle Theme's among them); every table counted so moved 130 of 400
+  seeds onto another token song (the tempos word is the plan's first
+  draw). The four tables kept twice are 54 KB of the vocabulary's 530.
+  A steady kit past sixteen strikes a bar
   in a song at 85 beats a minute or more (Dancing Mad's fifth part,
   Grand Finale's second) is still capped at sixteen: doubled, the song
   would pass the fastest tempo the game is read at. A written tune on
