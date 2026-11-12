@@ -1552,7 +1552,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   back with the theme. Drawn a return: the theme's chords are copied under
   the return and the bass and accompaniment play their theme bars again
   (`song.copies`). With the *band comes back* switch a return with nothing
-  behind it is drawn again.
+  behind it is drawn again. Since round 134 a bar plays its theme bar
+  again only where that bar is within the token song's own onsets for
+  the part of the form the return falls in (round 125's envelope, which
+  `envelope_at_for` marks `own`; `_free_figures`): elsewhere the bar
+  keeps the figure it was drawn, so no draw moves. Why: since round 124
+  the tune rests where its token song's rests, a theme stated over an
+  intro is stated over the intro's band, and the return put the intro's
+  one-note bars over a part of the form the song plays full (the
+  written Terra's bass and accompaniment struck the first beat and
+  stopped, four bars, twice).
   *`return_band`: shape (part); drawn in _plan_once.*
 
 - **sample_ambitus** — the whole range a song played a sample over, lowest

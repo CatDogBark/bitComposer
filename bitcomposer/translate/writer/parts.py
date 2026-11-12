@@ -181,7 +181,7 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
                   rng: random.Random, hold=(), lock=None, envelope_of=None, within_of=None, lock_share: float = 1.0,
                   energy: list | None = None, extra_values: dict | None = None, floor_outcomes: int | None = None,
                   floor_songs: int | None = None, rest_new: bool = False, habit_at=None, envelope_at=None, envelope_by_bar=None,
-                  first_beat: float | None = None) -> list[str]:
+                  first_beat: float | None = None, log: list | None = None) -> list[str]:
     """The figures written for a part with no original to follow (the
     module, phase 4): bar by bar from the song's own mixture, whose recall
     shares carry the games' rate of repeating and returning, each bar in
@@ -198,7 +198,12 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
     token song's part strikes on the first beat; a new bar is asked the
     first beat while the share of the bars written so far, with this one
     counted off it, runs under the song's, before the bar's other filters
-    are loosened."""
+    are loosened. A part back with the theme (song.copies) plays the
+    theme's bars again; since round 134, where `envelope_at` is the token
+    song's own onsets a bar (its `own` mark, plan.envelope_at_for), a bar
+    whose theme bar is not within them keeps the figure it was drawn: the
+    band's bars under a theme stated over a thin intro had been copied
+    into a part of the form the song plays full."""
     lock = lock or {}
     envelope_of = envelope_of or figures_mod.envelope
     within_of = within_of or figures_mod.within
@@ -267,11 +272,21 @@ def _free_figures(song: rhythm.Song, role: str, model: tables.Cache, manner, own
             if figures[k] != figures_mod.REST:
                 struck_bars += 1
                 on_one += figures_mod.on_first_beat(figures[k])
+    own_at = envelope_at if getattr(envelope_at, "own", False) else None   # the token song's own onsets a bar, where the plan has them (round 125)
+    copied = kept = 0
     for start, length, copy_of in getattr(song, "copies", {}).get(role, []):   # the band back with the theme: the part's own bars again
         for i in range(length):
             k, src = start + i, copy_of + i
             if k < len(figures) and src < len(figures) and own[k] != figures_mod.REST and figures[src] != figures_mod.REST:
+                env = own_at(k) if own_at is not None else None
+                if env is not None and not env[0] <= len(rhythm._tokens(figures[src])) <= env[1]:
+                    kept += 1                               # the theme's bar is not as busy as this part of the form: the bar keeps its own
+                    continue                                # figure (round 134)
                 figures[k] = figures[src]
+                copied += 1
+    if kept and log is not None:
+        log.append(f"back with the theme: {copied} bars play the theme's bars again; {kept} keep their own, the theme's bar not within "
+                   f"the balance's song's onsets for the part of the form (round 134)")
     return figures
 
 
@@ -583,7 +598,7 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
         figures = [f if o != figures_mod.REST else figures_mod.REST for f, o in zip(figures, own)]
     elif free:
         figures = _free_figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock, envelope_of=figures_mod.free_envelope(habit), energy=energy,
-                                lock_share=lock_share, habit_at=habit_at, envelope_at=envelope_at, first_beat=first_beat)
+                                lock_share=lock_share, habit_at=habit_at, envelope_at=envelope_at, first_beat=first_beat, log=log)
         if first_beat is not None and log is not None:      # the line's first beats against its token song's (round 133)
             struck = [f for f in figures if f != figures_mod.REST]
             log.append(f"bass on a bar's first beat as often as the balance's song's {first_beat:.2f} (round 133): "
