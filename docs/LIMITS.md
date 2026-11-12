@@ -427,7 +427,69 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   against 0.35; five to eight notes 0.52 off the beat against 0.51),
   but song by song the tune's share of notes off the beat is within a
   tenth of its token song's tune's in 28 of 59 songs and 0.05 under it
-  at the median: the token carries no grain of its song's tune.
+  at the median: the token carries no grain of its song's tune. Since
+  round 147 it carries the tune's share of notes on the places finer
+  than the half beat (a quarter of the beat, a third, finer), and a
+  tune written in its token song's feel keeps under each; its share on
+  the half beat is still the bar table's.
+- **A tune's places are held only where the song is written in its
+  token song's feel.** A written song's feel is the pooled `feels`
+  word's draw: 21 of the 68 Song Check 100 songs are written in the
+  other feel than their FFVI song's (ten in triple feel on a duple
+  song's token, eleven duple on a triple song's), and the tunes of 124
+  of 400 seeds are not held to their song's places (round 147). In a
+  triple feel the third of the beat is the band's own division and a
+  duple song's tune plays on none; in a duple one a triple song's
+  tune's thirds would sit against a band in sixteenths (a tune on
+  Dancing Mad (part 5)'s token, held so, was given the organ's
+  triplets, one bar seventeen times). The token carries its song's
+  feel since round 147 (`feel=`); the plan does not take it.
+- **A bar moved onto its song's places keeps its notes.** Since round
+  147 the notes of a bar that would put the tune over its song's share
+  of a place are moved onto the nearest rhythm that keeps the places,
+  its pitches as they were: a note that passed between two beats is
+  then heard on one. Of the rhythms as near, the one that brings the
+  fewest notes onto a beat off the chord is taken; over the 68 Song
+  Check 100 songs the tunes' strong-beat notes on the chord go from
+  0.479 to 0.473 (the songs' rates 0.58 at the mean), and the chord
+  reader hears a change of chord over a held bass note in 292 of 1,310
+  changes (0.22) where it heard 277 of 1,298 (0.21; FFVI 0.13), more
+  in eleven songs and fewer in six. A bar moved changes what the bar
+  and half-bar urns hold, so the bars after it are not always the bars
+  they were: in a tune the places change, 0.56 of its bars are the
+  same note for note and 0.66 the same rhythm.
+- **The half beat is not held.** The token's places are those finer
+  than the half beat; a written tune's notes on the half beat are the
+  bar table's. The written Terra's tune plays its half-beat note inside
+  the kit's triplet in 6 of its bars and starts 8 of its 73 held notes
+  on the half beat (the game's Terra: no bar, and one note of 34), and
+  its bass plays straight eighths against the kit's triplet in 28 of
+  its 44 bars, where the game's bass plays the kit's own rhythm in 48
+  of the 71 bars both play in and never two against three. No token
+  carries which part a bass's or a tune's rhythm is struck with.
+- **A bar the reader could not place stays in the bar tables.** The
+  reading counts a song at one tempo. Where a song's band plays a
+  passage at another (the opening of The Wedding Waltz-Duel (part 4),
+  bars 1 to 10: tune, counter-line and bass strike together 0.52 and
+  0.63 of a beat apart), the notes fall between the grid's places and
+  are kept where the grid puts them: `1/4 3/4 5/4 7/4`, a bar no song
+  plays. Since round 147 such a bar does not stand in a tune whose
+  song's tune plays on no quarter of the beat; in another it can,
+  within the song's share. A rule that leaves out the bars a song's
+  whole band strikes off the grid (a fifth of a grid step or more at
+  the mean) takes 58 bars of 18 songs, most of them finer than their
+  song's grid and not at another tempo; it was not built.
+- **The counter-line beside a tune is held to its places by its
+  masks.** Its bar is a mask over the tune's bar; since round 147 a
+  bar off its song's places takes the nearest mask the table knows
+  that keeps them, and where the table knows none the word is drawn
+  again (75 of the 86 such bars over the 68 Song Check 100 songs),
+  which gives the bar other onsets and draws the line's notes after
+  it again: in a counter-line the places change, 0.35 of its bars are
+  the same note for note. The bars the theme band and the hand-offs
+  give the line, and the voice beside it, are not asked: counted on
+  the part as finally written, 18 of 210 held counter-lines are over
+  a share of their song's line's (138 before), by 111 notes of 22,545.
 - **A theme stated over a thin part of the form is stated again in a
   busy one.** Since round 138 the theme comes back only where its bars
   keep within the bars' own onsets; a phrase the letters name the theme
@@ -547,11 +609,12 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   bar again more often where the bass does not (0.24 of such bars; the
   game's 0.13). The chord parts and the counter-line are held to
   their lead since round 144 and the tune to the bass's bars since
-  round 146 (an experiment, below); the bass still comes back by its
+  round 146 (below); the bass still comes back by its
   own draws.
 - **The tune comes back with the bass only where its urn decides the
-  bar, and only as far as its song's count goes.** Round 146 (an
-  experiment that stands alone) has the tune play an earlier bar again
+  bar, and only as far as its song's count goes.** Round 146 (built as
+  an experiment, taken at Song Check 105) has the tune play an earlier
+  bar again
   where the bass does, held to its token song's share of such bars,
   the bars in which the bass brings one back from further off and the
   bars in which it stands on the bar before counted apart. A bar a

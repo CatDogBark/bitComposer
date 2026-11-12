@@ -10255,3 +10255,176 @@ the 68 rise. The bars from further back are at 0.33 against the game's
 of the 68 songs are written on a token without the field. The written
 bass stands on one bar more than the game's, and comes back by its own
 draws still (LIMITS).
+
+### Round 147: a tune keeps to the places in the beat its token song's tune plays on (2026-11-12, asked at Song Check 105)
+
+**Why.** The owner, part way through Song Check 105: "the tune seems
+to go off beat at times... sometimes off beat playing makes sense but
+it sounds off to me. like that 20-40 second in lockes song". Asked
+whether it was real, and then: go.
+
+**Found.** It is in the notes. The written Locke (the page's seed)
+plays every tune note on a beat through its first eighteen bars; from
+bar 19 to its last, 39 of the tune's 50 notes sit a quarter of the
+beat from the beat, the bass and the chords on it. The game's Locke
+tune plays 101 notes and none there. Dev writes the same rhythm: the
+batch laid it bare, the counter-line of rounds 143 and 144 playing
+two of those notes with the tune where it had filled the bars. Bar
+19's rhythm, `1/4 3/4 5/4 7/4`, is one bar of the game: the opening
+of The Wedding Waltz-Duel (part 4), ten bars in which tune,
+counter-line and bass strike together at another tempo than the
+song's (0.52 and 0.63 of a beat apart). The reading counts a song at
+one tempo and keeps those notes where its grid puts them. The bar
+chain is conditioned on the bar before, so the next two bars came
+from the same passage, and the tune's own returns carried the three
+through fourteen bars. The melody's bar table is pooled over the
+game under the bar's density, the feel and the tempo class; since
+round 138 a bar keeps its token song's count of notes, and nothing
+says where in the beat they fall. Over 400 seeds, of the 276 tunes
+written in their token song's feel 133 end over their song's tune's
+share of a place finer than the half beat (a quarter of the beat in
+122, a third in 26), 88 of them by a twentieth of their notes or
+more, and 79 play on a quarter of the beat where their song's tune
+never does. The written Terra: four notes, one bar and the form's
+three repeats of it (`0 3/4 1`, a bar of Fanfare's).
+Three things the count turned up. A written song's feel is the
+pooled `feels` word's draw, not its token song's: 21 of the 68 Song
+Check 100 songs are written in the other feel. The reading's grid is
+the one its song's notes fit best, a half beat or coarser for nine
+songs: on it Dancing Mad (part 2)'s tune plays nothing finer than
+the half beat, and by its notes' times 0.04 of them fall on a
+quarter of the beat and 0.11 on a third or a sixth. And Terra's
+other trouble is not the tune's places (LIMITS: the half beat is
+not held).
+*Tried and not taken.* (1) The places asked of every draw and every
+return, the bar drawn again where it failed: a draw made for the
+places shifts every draw after it, and a changed tune kept 0.35 of
+its bars; one bar of Terra's tune drawn again re-drew the tune from
+there on. On a bar's own stream, the tune's streams and its rhythm
+chain left as they were, 0.42, and the tune after the bar was still
+re-pitched. (2) The share held to the tune's notes so far alone: a
+tune could play on no fine place until it had played twenty notes on
+the beat, and the figure a song opens with came late or never. (3)
+Held whatever the feel: a tune on Dancing Mad (part 5)'s token, a
+triple song whose tune plays a third in 0.46 of its notes and a
+quarter in 0.06, written duple, lost its sixteenths and took the
+organ's triplets over a band in sixteenths, one bar seventeen times;
+a tune on Dark World's token drawn triple lost its thirds. (4) The
+notes moved to the nearest place whatever it is: a sixteenth is
+nearer a third of the beat than the half, and a song whose tune
+plays some thirds had its sixteenths moved onto them. (5) The places
+counted on the reading's grid: a song read on half beats then says
+its tune plays nothing finer. (6) The mis-read bars taken out of the
+tables: the rule that finds them (a bar the whole band strikes a
+fifth of a grid step or more off the grid) takes 58 bars of 18
+songs, most of them finer than their song's grid and at its tempo;
+not built (LIMITS).
+
+**Built.** `rhythm.beat_place` (an onset's place by its time, within
+PLACE_NEAR of it), `FINE_PLACES`, `fine_places`, `tune_places` and
+`tune_places_field`: the melody's and the counter's twenty-ninth
+token field, `p12/0/3`; the token's `feel=` word. `keeps_places`
+(the ceiling: of the line's notes so far, or of the least it will
+play; a bar counted once for each time the form plays it),
+`adds_places`, `held_places` (the song's feel against its token
+song's; the third in a triple feel). `Plan.tune_places`,
+`Plan.token_feel`, `plan.own_places`. In `tune.melody`: `in_places`,
+`written_places` (with the form's repeats still to come),
+`rhythms_of`, `nearest`, `on_places`, and `realize` asks every bar
+it writes but the form's repeat of one. In `plan.write`, the
+counter-line's masks: `counter_mask` takes `placed` and tries the
+nearest mask the table knows before it draws again. Tests
+(`TunePlacesTests`, six): a place by its time; the token's field,
+counted where the notes are played on a song read on half beats, and
+the feel word; the plan's reading and what a song's feel holds; the
+ceiling, the least, the form's repeats, a place not held, no place
+added; the tune written within its song's places, the same notes in
+the same order moved no further than half a beat, a tune within them
+already the tune it was, and a song in another feel not held; the
+counter-line's mask moved, drawn again, and left. Suite 574 (1
+skip). The vocabulary is refit: 115 tables.
+
+**Measured.** Plans (400 seeds, against round 145): every seed keeps
+its title, token song and band; 202 are the same note for note; the
+counter-line changes in 161, the tune in 138, the bass in 65, the
+accompaniment in 62, the harmony in 3. No tune written in another
+feel than its token song's changes (124). Of the 276 held, none ends
+over its song's share of a place (133) and none plays on a place its
+song's tune never plays on (a quarter of the beat 79, a third 22,
+finer 5); 138 change, and in those 0.56 of the bars are the same note
+for note and 0.66 the same rhythm. Counter-lines: 210 of 309 held;
+by their masks none is over; as finally written 18 are (138), by 111
+notes (1,744).
+The 68 Song Check 100 songs: 45 of 65 tunes held; 60 bars' notes
+moved in 24 songs, 16 notes left out in 4, no bar without a rhythm
+that keeps the places; 21 held tunes untouched. Notes on a quarter
+of the beat with no note a quarter of a beat before or after, 89 of
+7,903 (242 of 7,982; FFVI 111 of 8,212); bars with every note so, 2
+(12; 7). Counter-lines: 35 of 52 held; 11 bars' own onsets moved, 75
+bars' masks drawn again.
+The written Locke: 4 bars' notes moved and their returns with them,
+12 of its 32 bars (bar 19 `0 1/2 1 3/2`, bar 20 `0 1 3 7/2`, bar 21
+`1/2 1 3/2 7/2`); no note on a quarter of the beat (39), the same
+118 notes; its counter-line's 16 such notes gone with them, 60 notes
+as before; 5 bars' pitches differ. The written Terra: one bar and
+its three repeats, `0 3/4 1` to `0 1/2 1`, the game's own figure;
+its counter-line the same four bars; no pitch changes. The written
+Dancing Mad (part 2) (Song Check 105's seed 134): 147 of its tune's
+268 notes sat on a quarter of the beat, where its song's tune plays
+0.04; its rhythm changes in 44 of 46 bars.
+Nothing else moved: the tune's bars that are an earlier bar note for
+note 0.26 (0.26), the bar before again 47 of 1,701 (45), its notes a
+bar against its song's 0.92 at the median (0.94), the counter-line's
+0.95 (0.95). Chords as heard and the tunes' strong-beat notes on the
+chord: LIMITS. The paired measures: cells sounding as the FFVI
+song's 0.961 (0.961), backing lines within range 375 of 386, kit
+pieces 175 of 179.
+
+**Open.** A song's feel is still the pooled draw's (LIMITS): the
+token now says its song's, and the plan taking it is a round of its
+own, every part of 21 of the 68 songs written anew. The half beat:
+Terra's bass against its kit's triplet, and its tune's notes inside
+it. The bars the reader could not place. Not heard: Song Check 105's
+part D is for the owner's ear.
+
+### Rounds 146 and 147 together (2026-11-12, merged on the owner's word)
+
+The owner at Song Check 105, the page unmarked: "I think all these
+changes are the right direction. Go ahead and merge everything into
+dev." Rounds 142 to 145 went in as they stood. Rounds 146 and 147
+were each built on round 145, beside each other, and both change the
+tune's writer, its token and the shipped vocabulary; this is the two
+in one tree.
+
+**Put together.** Round 146's field is the tune's twenty-eighth and
+round 147's its twenty-ninth, so the token carries both (`w50/-/38`
+and `p0/0/0` for Locke's tune). The two holds meet in the tune's
+writer: round 146 decides which bar the tune plays (an earlier bar
+again where the bass plays one), and round 147 asks every bar as it
+is written (`realize`), so a bar given with the bass is moved onto
+its song's places like any other. One name clashed: round 146's
+`placed` is a flag in the bar loop, and round 147's helper is
+`in_places`. The vocabulary is refit: 115 tables.
+
+**Measured.** Suite 578 (1 skip): both rounds' tests, round 147's
+writing test asking the two holds of one tune too. Each round does
+in the tree what it did alone. Round 147: of the 276 tunes written
+in their token song's feel none ends over its song's share of a
+place (133 before either round); over the 68 Song Check 100 songs
+56 bars' notes moved in 21 songs, 10 notes left out. Round 146: the
+tune comes back where the bass brings a bar back from further off in
+126 of 377 such bars (0.33; 126 of 378 alone; FFVI 0.48), in 0.43 of
+them in the 34 songs with a count (their songs' 0.47), 55 bars given
+in 19 songs. Plans (400 seeds): against round 145, 155 are the same
+note for note; against round 147 alone 280, which is round 146's own
+count against round 145; against round 146 alone 204 (round 147's
+own, 202). The tune's bars that are the bar before again 80 of 1,701
+(0.05, FFVI's), one bar three times running or more in 8 songs (7);
+chords as heard on a held bass note 289 of 1,317 changes (0.22);
+cells sounding as the FFVI song's 0.960; backing lines within range
+375 of 386; kit pieces 175 of 179.
+
+**Not heard.** The owner heard each round against the batch (Song
+Check 105's parts C and D), not the two together: in a song both
+change, the song in the tree is neither file he heard. 120 of 400
+seeds differ from round 147 alone and 196 from round 146 alone.

@@ -136,6 +136,9 @@ BESIDE_SPAN = 24                      # semitones above its floor a second bass 
 TIER_SLACK = 0.5                      # onsets a bar a tune's running density may sit outside its tier's bounds (tier_bounds)
 TIER_AFTER = 3                        # new rhythms drawn before the running density and grain are held to their words
 GRAIN_SLACK = 0.1                     # how far a tune's running share of onsets off the beat may sit outside its grain's bounds
+PLACE_SLACK = 0.25                    # beats, summed over a bar's notes, a bar moved onto its song's places may move further than the nearest
+                                      # rhythm asks, where that keeps a note it brings onto a beat on the chord (round 147): a note moved
+                                      # onto a beat is heard with the chord, and off the beat it had been a passing note
 
 
 def grain_bounds(grain: str | None) -> tuple[float, float]:
@@ -844,7 +847,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            letters: dict | None = None, theme_body=None, grain: str | None = None, bounds_at=None, tune_sounds: dict | None = None,
            off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None,
            habit_at=None, envelope_at=None, move_profile: dict | None = None, shortest: float | None = None,
-           lengths: dict | None = None, lengths_rng: random.Random | None = None, with_lead: dict | None = None) -> tuple[list, list, list]:
+           lengths: dict | None = None, lengths_rng: random.Random | None = None, with_lead: dict | None = None,
+           places: tuple | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -931,8 +935,27 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     bar again (0.13). The two kinds are held apart because a written
     bass stands on one bar twice as often as the game's, and held to one
     share the tune stood on its bar with it, which the game's tune does
-    in two songs. Returns [(start, end, midi)], the bars' rhythms and a
-    log."""
+    in two songs. `places` (round
+    147, plan.own_places): the share of the token song's tune's onsets
+    on a quarter of the beat, on a third and finer than either
+    (rhythm.FINE_PLACES; None for the third in a song written in triple
+    feel, whose own division of the beat it is; no places at all where
+    the song is written in another feel than its token song's). Each
+    is a ceiling on the written tune over the song (rhythm.keeps_places:
+    of its notes so far, or of the least it will play where that is
+    more; a bar in a part the form plays again counted once for each
+    time). A bar is written as it was before the places, a new bar or
+    one that comes back, and stands where it keeps the tune within
+    them; where it does not, its notes are moved onto the nearest
+    rhythm the table knows that does (on_places: the same notes in the
+    same order; a note left out only where no rhythm of as many onsets
+    keeps them). Nothing is drawn for it, so the bars after it are
+    drawn on the draws they had, and a tune the places leave alone is
+    the tune it was, note for note. The melody's bar table is pooled
+    over the game: a tune on Locke's token, whose tune plays on the
+    beat and the half beat alone, drew a bar one song of the game plays
+    once and sat a quarter of the beat off the band for its second
+    half. Returns [(start, end, midi)], the bars' rhythms and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -1011,6 +1034,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     covered = {k for w in windows for k in w}
     windows += [[k] for k in range(len(bars)) if k not in covered]
     windows.sort()
+    repeats_at = {}                                         # a window's first bar -> the first bars of the windows that play it again (the
+    for r0, src0 in copies.items():                         # form's repeats of its part)
+        repeats_at.setdefault(src0, []).append(r0)
+    window_at = {k: w[0] for w in windows for k in w if w}
     register0 = register                                    # the part's register; `register` is rebound a phrase at a time to its room in the arc
 
     def reg_of(k: int) -> tuple:
@@ -1205,6 +1232,124 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         e = own_onsets(k) if own_onsets is not None else None
         return e is None or e[0] <= n <= e[1]
 
+    least_notes = sum((own_onsets(k) or (1,))[0] if own_onsets is not None else 1 for k in range(len(bars)) if own[k] != figures_mod.REST)   # the least
+                                                            # the tune will play over the song (round 147): each bar it plays its own onsets' least, else a note
+    place_moved = {}                                        # bar -> the notes left out where its notes were moved onto the song's tune's places (round
+    place_none = set()                                      # 147), and the bars no rhythm the table knows keeps within them; for the log
+    fine_memo, known_rhythms = {}, {}
+
+    def fine_of(positions) -> Counter:
+        """A bar's onsets on the places in the beat finer than its half (rhythm.fine_places)."""
+        key_ = tuple(positions)
+        if key_ not in fine_memo:
+            fine_memo[key_] = rhythm.fine_places(key_)
+        return fine_memo[key_]
+
+    def times_from(k: int, before: int) -> int:
+        """How often bar k's onsets are the tune's, as it stands before bar `before`: once, and once more for each part
+        of the form that plays its window again and is not yet written (the repeat plays the bar as it was)."""
+        return 1 + sum(1 for r0 in repeats_at.get(window_at.get(k), ()) if r0 >= before)
+
+    def written_places(before: int) -> tuple:
+        """(the tune's onsets, those of them on each place finer than the half beat) over its bars before bar `before`,
+        each with the form's repeats of it that are still to come (times_from)."""
+        n, fine = 0, Counter()
+        for j, c in cells.items():
+            if j < before:
+                t = times_from(j, before)
+                n += t * len(c.positions)
+                for kind, x in fine_of(c.positions).items():
+                    fine[kind] += t * x
+        return n, fine
+
+    def in_places(k: int, positions, so_far: tuple | None = None) -> bool:
+        """Whether bar k with these onsets keeps the tune within its token song's places in the beat (round 147,
+        rhythm.keeps_places): for each place finer than the half beat the bar plays on (a quarter of the beat, a third,
+        finer), the tune's onsets there over the bars before it, with the bar's, are no more than the song's tune's share
+        of the tune's onsets so far, or of the least it will play over the song where that is more (least_notes); True
+        without the song's places or for a bar on the beat and the half beat alone. A bar in a part of the form that is
+        played again counts once for each time. `so_far`: written_places(k), where the caller has it."""
+        if places is None or not fine_of(positions):
+            return True
+        n, fine = so_far if so_far is not None else written_places(k)
+        return rhythm.keeps_places(places, n, fine, list(positions), least_notes, times_from(k, k))
+
+    def rhythms_of(n: int, meter: int) -> list:
+        """The rhythms of n onsets the table knows in the song's manner, inside a bar of `meter` beats: [(the figure, its
+        onsets)], in the figures' order."""
+        if (n, meter) not in known_rhythms:
+            out = []
+            for f in sorted(manner.known):
+                at = [float(Fraction(t.partition(":")[0])) for t in rhythm._tokens(f)] if f != figures_mod.REST else []
+                if len(at) == n and at[-1] < meter and manner.fits(f):
+                    out.append((f, at))
+            known_rhythms[(n, meter)] = out
+        return known_rhythms[(n, meter)]
+
+    def nearest(at: list, old: list) -> tuple:
+        """(how far, how bent, which notes): a rhythm's onsets `at` taken by the bar's notes at `old` in their order, the
+        last by the last, with the least moving in time (the beats moved, summed); how bent is how far the gaps between
+        the notes taken change (summed: a figure moved whole is not bent); the notes are their indexes in `old`. None
+        where the rhythm has more onsets than the bar has notes."""
+        m, n = len(at), len(old)
+        if m > n:
+            return None
+        if m == n:
+            took = list(range(n))
+        else:
+            best = [[None] * n for _ in range(m)]           # best[j][i]: (cost, the notes) for the rhythm's first j + 1 onsets, the last of them the bar's note i
+            for j in range(m):
+                for i in range(j, n - (m - 1 - j)):
+                    before = min((best[j - 1][h] for h in range(j - 1, i) if best[j - 1][h] is not None), default=None) if j else (0.0, [])
+                    if before is not None:
+                        best[j][i] = (before[0] + abs(at[j] - old[i]), before[1] + [i])
+            took = best[m - 1][n - 1][1]
+        moved = [x - old[i] for x, i in zip(at, took)]
+        return sum(abs(d) for d in moved), sum(abs(y - x) for x, y in zip(moved, moved[1:])), took
+
+    def on_places(k: int, positions: list, pitches: list) -> tuple:
+        """Bar k's notes on the nearest rhythm that keeps the tune within its token song's places in the beat (round 147).
+        Among the rhythms the table knows in the song's manner (rhythms_of) that keep them (in_places) and put no note on
+        a held fine place the bar had fewer on (rhythm.adds_places: a note moves onto the beat or the half beat, or
+        stays), the one its notes reach with the least moving in time (nearest); of those within PLACE_SLACK of the
+        nearest, the one that brings the fewest notes onto a beat off the chord sounding there, then the nearer, then
+        the one that bends the figure less (a bar a quarter of the beat late comes back whole), then the first in the
+        figures' order. A rhythm of as many onsets as the bar has notes where one keeps them, else of the most onsets
+        that does, the notes it has no onset for left out (never the bar's last: the line goes on from where it was),
+        a count within the bar's own onsets (keeps) before one that is not. The bar as it stands where no rhythm does.
+        Returns (the onsets, the pitches). The bar is not drawn again: a draw made for the places shifts every draw
+        after it, and one bar of Terra's tune drawn again re-drew the tune from there on."""
+        n, so_far, a = len(positions), written_places(k), bars[k][0]
+
+        def off_chord(at: list, took: list) -> int:
+            """The notes the rhythm brings onto a beat that are off the chord sounding there."""
+            out = 0
+            for p, i in zip(at, took):
+                here = _chord_in_bar(song, a + p) if abs(p - round(p)) < rhythm.NEAR else None
+                if here is not None and int(round(pitches[i])) % 12 not in {(here[0] + x) % 12 for x in harmony.SHAPES.get(here[1], harmony.SHAPES[""])}:
+                    out += 1
+            return out
+
+        for own_only in (True, False):
+            for m in range(n, 0, -1):
+                if own_only != (m == n or keeps(k, m)):
+                    continue
+                found = []
+                for f, at in rhythms_of(m, meters[k]):
+                    if not rhythm.adds_places(places, positions, at) and in_places(k, at, so_far):
+                        near = nearest(at, positions)
+                        if near is not None:
+                            found.append((round(near[0], 6), round(near[1], 6), at, near[2]))
+                if found:
+                    least = min(x[0] for x in found)
+                    _, _, at, took = min((x for x in found if x[0] <= least + PLACE_SLACK + 1e-9), key=lambda x: (off_chord(x[2], x[3]), x[0], x[1]))
+                    place_moved[k] = n - m
+                    place_none.discard(k)
+                    return list(at), [pitches[i] for i in took]
+        place_none.add(k)
+        place_moved.pop(k, None)
+        return positions, pitches
+
     def new_rhythm(k: int) -> list:
         """A new bar's onsets for a new cell: by the cell-rhythms table's draw
         (rhythm.new_cell_rhythm_units: new to the tune in 77 % of the games'
@@ -1316,9 +1461,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                 b += keys[i] in before
         return n, b
 
-    def realize(k: int, positions: list, pitches: list) -> Cell:
+    def realize(k: int, positions: list, pitches: list, asked: bool = True) -> Cell:
         nonlocal last_time
         a, b, _ = bars[k]
+        if asked and places is not None and positions and len(positions) == len(pitches) and not in_places(k, positions):
+            positions, pitches = on_places(k, positions, pitches)   # off the song's tune's places in the beat (round 147): its notes moved onto them
         if positions:
             last_time = a + positions[-1]
         chord = _chord_in_bar(song, a)
@@ -1572,7 +1719,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         reg_w = register                                    # draw_move read `register` as the phrase is written)
         src0 = copies.get(w[0])
         if src0 is not None and src0 in written_windows and len(written_windows[src0][0]) == len(live):
-            phrase_cells = [realize(k, c.positions, list(c.pitches)) for k, c in zip(live, written_windows[src0][1])]   # the part's tune again
+            phrase_cells = [realize(k, c.positions, list(c.pitches), asked=False) for k, c in zip(live, written_windows[src0][1])]   # the part's tune again
+                                                            # (its bars were asked the song's tune's places with this playing of them counted in: round 147)
             for i, (k, c) in enumerate(zip(live, phrase_cells)):
                 choices[k] = "form"
                 played[c.key] += 1
@@ -1834,6 +1982,13 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     if own_new[0]:                                          # the tune's bars by its part of the form's own onsets (round 138)
         log.append(f"new bars drawn within the balance's song's own onsets for their part of the form (round 138): {own_new[0] - own_new[2]} of {own_new[0]}"
                    + (f", {own_new[1]} among the table's bars that fit" if own_new[1] else "") + "; a bar or a half that comes back and a phrase answered keep within them too")
+    if places is not None:                                  # the tune's places in the beat against its token song's tune's (round 147)
+        n_, fine_ = written_places(len(bars))
+        log.append("notes on a quarter of the beat, a third, finer: "
+                   + ", ".join(f"{fine_[kind]}/{n_} ({fine_[kind] / max(1, n_):.2f}; " + ("the song's feel's own, not held)" if share is None else f"the balance's song's tune {share:.2f})")
+                               for kind, share in zip(rhythm.FINE_PLACES, places))
+                   + f"; {len(place_moved)} bars' notes moved onto them, {sum(place_moved.values())} notes left out"
+                   + (f", {len(place_none)} bars no rhythm keeps within them" if place_none else "") + f"; the least it was to play {least_notes} notes (round 147)")
     if half_kinds:
         c = Counter(kd for ks in half_kinds.values() for kd in ks)
         log.append("halves (half_recall): " + ", ".join(f"{kd} {c[kd]}" for kd in ("same", "earlier", "new", "rest") if c[kd]) + f" over {len(half_kinds)} new bars")

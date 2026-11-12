@@ -665,7 +665,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   half speed, its snare's march left out as rolls, so the written
   Locke took a fast song's bars within the strikes its token asks
   and never its own march.
-  Since round 146 (an experiment that stands alone) the tune's token
+  Since round 146 (built as an experiment, taken at Song Check 105)
+  the tune's token
   carries the twenty-eighth field too, against the bass (`lead_of`:
   the melody's lead, and the counter-line's in a song without one), as
   three numbers (`together_field`, `together`'s `near`, `returns`): of
@@ -698,6 +699,48 @@ The words are grouped by where the writing draws them, in the order the song is 
   bars; under a figure the bass stands on the tune stands too in a few
   songs and never in 8 of the 13 with a count), and a written bass
   stands on one bar more than the game's.
+  Since round 147 the melody's and the counter's token carry a
+  twenty-ninth field, where in the beat the line's notes fall
+  (`tune_places_field`): after a `p`, the percent of its onsets on a
+  quarter of the beat, on a third or a sixth, and finer than either
+  (`FINE_PLACES`; `beat_place`: an onset is on a place within
+  PLACE_NEAR, 0.03 of a beat, of it, counted where it is played and
+  not where the reading's grid puts it; notes struck together are one
+  onset). `p0/0/0` is Locke's tune and Terra's, on the beat and the
+  half beat alone; `p42/3/3` Spinach Rag's; none under sixteen
+  onsets. 65 of the 66 melody tokens carry one and 51 of the 52
+  counter tokens; 35 tunes play on no quarter of the beat and 14 on
+  nothing finer than the half beat. The token also says its song's
+  feel where that is not duple (`feel=triple`, `cells.song_feel`: 14
+  of the 68 songs). The plan keeps both (`tune_places`, `token_feel`)
+  and, where the song is written in its token song's feel, hands the
+  shares to the tune's writer (`own_places`, `held_places`: in a
+  triple feel the third is the feel's own division of the beat and is
+  not held). Each share is a ceiling on the written tune over the
+  song (`keeps_places`: of its notes so far, or of the least it will
+  play where that is more, so a figure its song opens with need not
+  wait; a bar in a part the form plays again counts once for each
+  time). A bar is written as it was, new or come back, and where it
+  would put the tune over a share its notes are moved onto the
+  nearest rhythm the table knows that keeps the places
+  (`tune.on_places`): as many onsets as the bar has notes, the notes
+  in their order, each onto the beat, the half beat or a place it was
+  on (`adds_places`), with the least moving in time; of the rhythms
+  within a quarter of a beat of the nearest (PLACE_SLACK), the one
+  that brings the fewest notes onto a beat off the chord, then the
+  one that bends the figure least. A note is left out only where no
+  rhythm of as many onsets keeps the places, and never the bar's
+  last. The counter-line beside a tune is held through its bar's mask
+  (`counter_mask`'s `placed`): the nearest mask the table knows that
+  keeps the places (the same of the tune's onsets struck with, as
+  many of its own), else the word drawn again on the bar's own
+  stream. No draw is made for a tune's bar, so a tune the places
+  leave alone is the tune it was. Why: the `rhythm` table is pooled
+  over the game, and a bar kept its song's count of notes (round 138)
+  and not where in the beat they fall: of 276 tunes written in their
+  token song's feel, 133 ended over their song's share of a place and
+  79 played on a quarter of the beat where their song's tune never
+  does.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in
@@ -1301,6 +1344,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   own context (the bar's density tier, the feel, the tempo class) gives
   0.88 of the bars of one note on the beat (FFVI 0.90), 0.57 of the
   bars of two (0.53) and 0.34 of the bars of three or four (0.35).
+  Since round 147 the places finer than the half beat are the token
+  song's tune's own (the `balance` entry's twenty-ninth field), in a
+  song written in its feel; the share on the half beat is still the
+  bar table's.
   *`tune_grain`: shape (part, habit); drawn in _plan_once.*
 
 - **feels** — a song's feel, duple or triple (triple where a quarter of its
@@ -1310,6 +1357,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   parts draw bars of one feel. FFVI's bass bars on triplet positions, 18 %
   of them, came only from its compound and shuffle songs; drawn into
   straight songs unconditioned they stumbled against straight drums.
+  Since round 147 the balance token says its song's feel where that is
+  not duple (`feel=triple`). The plan still draws this word, and holds
+  a tune to its token song's places in the beat only where the two
+  agree (`held_places`).
   *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, rhythm, second_figures.*
 
 - **layer_samples** — the samples a layered part's line and second voice
