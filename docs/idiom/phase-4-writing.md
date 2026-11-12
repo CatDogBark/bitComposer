@@ -9301,3 +9301,53 @@ notes are short: written tunes now have fewer short notes than FFVI's
 tenth of their notes under their token song's shortest usual note, by
 a rhythm quicker than the token song's tune. The standing list as at
 round 114.
+
+### Round 137: a written song runs within a tenth of its token song's own tempo (2026-11-11, the third of four items after Song Check 101, on the owner's go)
+
+**Why.** Song Check 101's Edgar and Sabin ran at 125 beats a minute
+where the game's runs at 90, noted on its card as not fixed. The
+token carries its song's tempo class (round 54) and the tempo is one
+of the class's.
+
+**Found.** The classes are slow under 85, medium under 130 and fast:
+each a third of the game's songs, and wide. Of the 59 Song Check 100
+songs on their token song's arrangement, 24 run within a tenth of the
+game's tempo; the median is 0.94 of it, and eleven run under 0.8 or
+over 1.25 times it. Every count by the bar the token carries (a
+part's onsets, the kit's strikes) is then played at another pace than
+the one it was counted at.
+
+**Built.** The reader: the `tempo=` word carries the song's tempo in
+beats a minute beside its class (`tempo=fast:140`; the double-time
+tempo for a half-speed song). The plan: `tempo_near`, one of the
+tempos word's tempos in the token's class within TEMPO_NEAR (a tenth)
+of the song's own, by the word's own shares under the class, the
+song's own tempo kept inside its class where none is so near; drawn
+on an own stream where the plan's tempo, after round 54's draw under
+the class, is not within a tenth. The class does not change, so no
+table's context does and no other draw moves. A first cut carried the
+tempo to the tempos word's five beats a minute; three songs then sat
+a tenth from their song's own by the rounding (The Phantom Train's 54
+read as 55), so the token carries the tempo as read. Tests: the
+word's class and tempo; a plan's tempo among the class's tempos
+within a tenth, any of the class's without the number, the one medium
+tempo near 90; the song's own where the word has none near, kept
+inside its class. Suite 533 (1 skip). The vocabulary map lists
+`tempo_near` under `tempos`.
+
+**Measured.** The 59 songs on their token song's arrangement: within
+a tenth of the game's tempo 59 (24), the median 1.00 of it (0.94),
+none under 0.8 or over 1.25 (eleven); 35 change tempo. Edgar and
+Sabin's 90 (125; the game's 90), Locke's 145 (160; 140 in double
+time), Blackjack's 135 (160; 144). The tune's notes a second against
+the token song's tune's: over one and a half times in 8 songs (10),
+under two thirds in 5 (8). Plans (400 seeds, against round 136): all
+keep their token song; 221 change tempo; the notes of 399 start where
+they did at the pitch they had, and in 176 some sound for another
+length in beats (what is counted in milliseconds: a tune's shortest
+note, round 136). One Song Check 100 song changes its title (the
+title's energy word follows the pace).
+
+**Open.** The tempo is one of the game's tempos near the song's, not
+the song's. The figures are drawn by the tempo's class. The standing
+list as at round 114.

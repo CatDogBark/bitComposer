@@ -49,8 +49,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   *`keys`: shape (part); drawn in _plan_once; conditions cadences, chords, contour_sizes, contours, endings, moves, peaks, phrase_shifts, relations.*
 
 - **tempos** — a song's tempo to five beats a minute. Drawn once; sets the
-  tempo band that conditions the habits and the length tables.
-  *`tempos`: shape (part, tempo); drawn in _plan_once; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, periods, rhythm, second_figures.*
+  tempo band that conditions the habits and the length tables. Since
+  round 54 a tempo outside the token's class is drawn again under it,
+  and since round 137, where the token carries its song's own tempo
+  (`tempo=fast:140`), one not within TEMPO_NEAR of that is drawn again
+  among the class's tempos that are (`tempo_near`: by the word's own
+  shares under the class, an own stream; the song's own tempo, kept
+  inside its class, where the word has none so near). Why: a class is
+  a third of the game's tempos wide, and a band written for 90 beats a
+  minute (Edgar and Sabin's) played at 125.
+  *`tempos`: shape (part, tempo); drawn in _plan_once, tempo_near; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, periods, rhythm, second_figures.*
 
 - **sizes** — how many parts a song's form has. Drawn once; the fallback
   when no `letters` table can give the form whole.

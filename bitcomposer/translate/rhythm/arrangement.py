@@ -2254,7 +2254,8 @@ def balance_units(songs) -> list:
                 tokens.append(f"top={round(top / TOP_LEVEL_BIN) * TOP_LEVEL_BIN:.2f}")   # three, 0.10 with four); drawn apart, four at the top played at 0.68
             if s.loudness is not None:                      # and the song's rendered loudness (round 59): what the written song's master holds
                 tokens.append(f"loud={round(s.loudness / MIX_BIN) * MIX_BIN:.0f}")   # its own to
-            tokens.append(f"tempo={readings_mod.band(s.bpm)}")
+            tokens.append(f"tempo={readings_mod.band(s.bpm)}:{int(round(s.bpm))}")   # and, since round 137, the song's own tempo in beats a
+            # minute (`tempo=fast:140`): the class alone had Edgar and Sabin's band, 90 in the game, written anywhere from 85 to 129
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

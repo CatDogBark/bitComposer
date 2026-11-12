@@ -645,6 +645,24 @@ def hold_loop(plan: "Plan", key: str, notes: list, meter: int = None) -> tuple[l
     return sorted((x for ns in by.values() for x in ns), key=lambda x: x[0]), copied, held
 
 
+TEMPO_NEAR = 0.1                      # a written song's tempo sits within this share of its token song's own (round 137)
+
+
+def tempo_near(models: dict, cls: str | None, own: float, rng: random.Random) -> float:
+    """A tempo for a song whose token song runs at `own` beats a minute (round 137): one of the tempos word's tempos in
+    the token's class within TEMPO_NEAR of it, by the word's own probabilities under the class; the song's own tempo,
+    kept inside the class, where the word has none so near. The class alone (round 54) is a third of the game's tempos
+    wide: a song on Edgar and Sabin's token, 90 beats a minute in the game, was written at 125."""
+    table = render_mod.models_or_empty(models).get("tempos")
+    low, high = (1 - TEMPO_NEAR) * own, (1 + TEMPO_NEAR) * own
+    near = sorted(float(o) for o in (table.vocabulary if table is not None else ()) if o.replace(".", "", 1).isdigit()
+                  and low <= float(o) <= high and (cls is None or rhythm.band(float(o)) == cls))
+    if not near:
+        return rhythm.within_band(own, cls) if cls else own
+    weights = [table.p(str(int(o)) if o == int(o) else str(o), ("song", cls or rhythm.band(o))) for o in near]
+    return rng.choices(near, weights)[0] if sum(weights) > 0 else rng.choice(near)
+
+
 def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, form: list | None = None) -> list:
     """The form: one of the game's forms whole (the letters table: "A B A B
     C", a part returning after another in 29 % of FFVI's songs where a
@@ -2055,6 +2073,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
+    token_tempo = None                                      # the token's song's own tempo, where the token carries it (round 137)
     token_beat = 1                                          # 2 where the token's song is counted in double time (round 131)
     token_loop = None                                       # the part of its form the token's song's loop returns to (round 132)
     for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
@@ -2065,8 +2084,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if role == "beat":                                  # the token's song is counted in double time (round 131), not a part
             token_beat = int(rest) if rest.isdigit() and int(rest) > 0 else 1
             continue
-        if role == "tempo":                                 # the token's song's tempo class (round 54), not a part
-            token_class = rest
+        if role == "tempo":                                 # the token's song's tempo class (round 54) and its own tempo (round 137:
+            token_class, _, own = rest.partition(":")       # `fast:140`), not a part
+            token_tempo = float(own) if own.replace(".", "", 1).isdigit() and float(own) > 0 else None
             continue
         if role == "top":                                   # the token's song's loudest part, of full (round 59), not a part
             token_top = float(rest)
@@ -2293,6 +2313,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             bpm = rhythm.within_band(bpm, token_class)      # (85 under slow, 130 under medium): the class's edge, inside
         tempo = rhythm.band(bpm)
         log.append(f"tempo {was:.0f} BPM is outside the band's class ({token_class}): {bpm:.0f} BPM drawn under it")
+    if token_tempo and not (1 - TEMPO_NEAR) * token_tempo <= bpm <= (1 + TEMPO_NEAR) * token_tempo:   # the band's own pace nearer (round
+        was = bpm                                           # 137): within a tenth of the token song's tempo, one of its class's tempos
+        bpm = tempo_near(models, token_class, token_tempo, random.Random(f"whole:{seed}:tempo near"))   # on an own stream, the draws
+        tempo = rhythm.band(bpm)                            # above standing as draws, so no other draw moves
+        log.append(f"tempo {was:.0f} BPM is not within a tenth of the balance's song's {token_tempo:.0f}: {bpm:.0f} BPM drawn near it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
                                 hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"),   # held as the token's song holds (round 106)
                                 shape_profile=token_shapes,                                        # its qualities the token's song's (round 112)

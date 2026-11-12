@@ -347,6 +347,13 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
   form) keeps the pooled textures and entrances.
+- **A song's tempo is one of the game's, near its token song's.**
+  Since round 137 a written song runs within a tenth of its token
+  song's tempo, at one of the tempos the game's songs of that class
+  run at (the tempos word, to five beats a minute): it is the token
+  song's tempo itself only where the draw lands there or no other is
+  near. The bars' figures are still drawn by the tempo's class, three
+  classes for the whole game.
 - **A tune's short notes are floored, not counted.** Since round 136
   a tune note sounds at least as long as the note at the fifth
   percentile of its token song's tune, where its gap leaves room. How
