@@ -510,52 +510,7 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the chord, and the chord parts' off-chord tones are their token
   song's tier. The harmony's loops (round 128) and a chord's one
   quality (round 127) are the plan's; what the ear gets of them is the
-  writers'. Round 142 put the question part by part. A written
-  song's chord changes its shape on a held root in 0.21 of its
-  changes, the game's in 0.13, and no one part does it: read with
-  any one part left out the share is 0.20 to 0.23 (without the bass
-  0.16, on the plan's root in 0.49 of the bars for 0.70), and it
-  comes down to the game's only where every part, the tune and the
-  counter-line among them, plays again what it played on the chord
-  the bar before (0.11 then; the backing alone 0.17). A bar with an earlier bar on its root within eight
-  sounds one of those bars' pitch classes again in 0.64 of the
-  written bass's such bars (FFVI's 0.70), 0.36 of the
-  accompaniment's (0.60), 0.45 of the harmony's (0.67), 0.25 of
-  the tune's (0.48) and 0.20 of the counter-line's (0.44). The chord
-  parts are held to their token song's share since round 142, as far
-  as a bar of their own rhythm is there to play again (0.39 and
-  0.52 as read back); the tune and the counter-line are not.
-- **A chord part plays an earlier bar again only note for note.**
-  Round 142's hold gives a bar the notes of an earlier bar on its
-  chord where that bar has its rhythm, voice by voice, in the same
-  part of the form and eight bars back at most. FFVI's chord parts
-  keep their pitch classes on a chord across another rhythm as well
-  (of the accompaniments' bars that sound an earlier bar's pitch
-  classes again 0.55 have its rhythm; the written ones' 0.78), and
-  that is not written. A bar on its loop's figure, a bar the line
-  rides the bass in, and a bar that would then sit a semitone from
-  the tune stand: at the hold the accompaniments sound an earlier
-  bar's pitch classes again in 0.45 of such bars where their
-  token songs' share is 0.62 at the mean. The voices written after
-  the hold (those that follow a line by the token's stretches) and
-  the passes after them (the theme in the band, the hand-offs, the
-  form's repeats) change bars it counted, as they changed bars
-  before it: as finally written, on the plan's chords, 0.36 of the
-  accompaniments' such bars (0.30 before the round).
-- **A chord part's richness is the pooled draw.** How many chord
-  tones a chord part holds a span (the voicing table is asked under
-  it) is the `voicing_habits` word's draw, a habit a song: in the
-  Song Check 100 songs' plans it is the token song's part's own habit
-  in 14 of 54 accompaniments and 6 of 16 harmonies, and thirteen
-  accompaniments are thin where the song's is rich (the written Kids
-  Run Through the City's accompaniment, an arpeggio of root, third
-  and fifth in the game, walks a voicing of one tone through a part
-  of the form: one note eight times a bar). Taken from the token
-  (tried in round 142) it re-wrote the tune in 208 of 400 seeds, the
-  tune being written over the chord parts and steered by them, and
-  moved no measure of the round's; it stands until a round can show
-  what it buys. Whatever changes a chord part before the tune is
-  written re-writes the tune.
+  writers'.
 - **A chord's degree is the pooled chain's; only its quality is the
   token song's.** Since round 127 a chord takes the quality its degree
   has in its token song and keeps one quality through the song. Which
