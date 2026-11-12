@@ -546,8 +546,34 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   does the tune does in 0.43 and 0.16: a written tune plays an earlier
   bar again more often where the bass does not (0.24 of such bars; the
   game's 0.13). The chord parts and the counter-line are held to
-  their lead since round 144; the tune and the bass still each come
-  back by their own draws.
+  their lead since round 144 and the tune to the bass's bars since
+  round 146 (an experiment, below); the bass still comes back by its
+  own draws.
+- **The tune comes back with the bass only where its urn decides the
+  bar, and only as far as its song's count goes.** Round 146 (an
+  experiment that stands alone) has the tune play an earlier bar again
+  where the bass does, held to its token song's share of such bars,
+  the bars in which the bass brings one back from further off and the
+  bars in which it stands on the bar before counted apart. A bar a
+  theme, a phrase's relation or a pair decides is not touched, the
+  bar must keep within its own onsets and sit under the same chord,
+  and a song whose bass plays such a bar in under four bars the tune
+  plays in has no count for the kind (32 of FFVI's 66 tune tokens
+  have none for the bars from further back, 53 none for the bar
+  before), so its tune comes back as the urn draws it. Over the Song
+  Check 100 songs the tune plays the bass's bar from further back
+  again in 0.33 of such bars (0.26 before; FFVI's 0.48), in the 34
+  songs with a count in 0.44 against their songs' 0.47, ten of them
+  still more than a tenth under. The bass is the bass as its writer
+  left it: the theme band, the hand-offs and the bass's last pass
+  rewrite bars of it once the tune is written. A bar given moves
+  every draw after it, so a tune given one bar is another tune from
+  there on (the written Kids Run Through the City, given two, plays
+  an earlier bar again in 8 of its 45 bars where it had in 13). The
+  written bass stands on one bar more than the game's (the bar before
+  again in 0.23 of its bars; 0.14), which is the bass's and not
+  touched: the tune is not made to stand with it unless its song's
+  tune does.
 - **A part comes back with its lead a bar at a time, where the chord is
   the same.** Round 144's hold gives a bar the part's earlier bar
   where its lead plays that bar again, the plan's chord is the same

@@ -10129,3 +10129,129 @@ in 10, the bass, the tune, the accompaniment and the counter-line in
 **Open.** The other tables hold the two songs as read (LIMITS). Not
 heard: whether the march carries Locke as the game's does is for the
 listening the owner asked for once the list is done.
+
+### Round 146: the tune comes back with the bass as often as its token song's does (2026-11-11, an experiment that stands alone)
+
+**Why.** The list's second item, its second part: round 144 held the
+chord parts and the counter-line to their lead and left the tune and
+the bass each coming back by their own draws, "as a round that stands
+alone". The tune is what the owner listens to, and a hold on it
+re-writes it, so this is built as its own pull request on top of the
+list's three, to be heard with its own verdict and taken or left.
+
+**Found.** *Where the bass plays an earlier bar again, the tune plays
+that bar again too* in 0.43 of such bars in the game (225 of 529) and
+0.16 in the written songs (117 of 737); where the tune does, the bass
+does in 0.79 and 0.52 (round 144). *It is two things.* The bass's
+earlier bar is the bar right before, a figure it stands on, in 169 of
+the game's such bars, and the tune plays its bar before again in 53 of
+them (0.31): nearly all of it a few songs whose tune is a figure too.
+Of FFVI's 63 songs with a tune over a bass 44 have no such bar, and of
+the 13 with four or more the tune never does in 8 and does in over
+three quarters in 2. The bass's earlier bar is further back, a phrase
+come round, in 360, and the tune plays that bar again in 172 (0.48):
+0.35 two bars back, 0.71 four back, 0.82 eight back. The written songs
+(round 145): 359 bars of the first kind, the tune with it in 17
+(0.05); 379 of the second, in 99 (0.26): 0.08 two bars back, 0.35
+four, 0.70 eight. A written bass stands on one bar more than the
+game's (the bar before again in 0.23 of its bars; 0.14). *Why.* The
+tune's bar is the urn's (the bar before again, an earlier bar, a new
+one) where no theme, phrase relation or pair decides it, and the urn
+knows nothing of the bass.
+
+**Tried and set aside: one share for both kinds.** The first form held
+the tune to one share, the token song's of all the bars in which the
+bass plays an earlier bar again. It measured well in the sum (0.30 of
+such bars; 0.16; the game's 0.43) and wrong in the parts: 92 of its
+221 such bars were the bar right before under a standing bass (0.25 of
+those; the game's 0.31 is a few songs' doing) and the bars from
+further back barely moved (0.34; 0.26). The tune played the bar before
+again in 0.07 of its bars (0.03; the game's 0.05) and one bar three
+times or more running in 11 songs (5; 7); the written Troops March on
+in 10 of its 27 bars where its song's tune never does. A share counted
+over the game's mix of the two kinds was being spent on the written
+songs' mix. Hence the two counts. *And the urn's returns left new.*
+The first form also left one of the urn's own returns new wherever the
+tune's returns were at its song's share, whether a bar had been given
+or not, so a song given no bar was still another tune (the written
+Locke from its second half on and Battle Theme through its last eleven
+bars, to no purpose). It is now one for each bar given: 280 of 400
+seeds are the same note for note where 247 were.
+
+**Built.** `together(lead, part, near=None)`: round 144's count of one
+kind of bar alone, the lead's earlier bar the bar right before or one
+further back. `returns(cells)`: a line's bars with an earlier one
+within TONES_BACK, and those that are an earlier bar note for note.
+`lead_of`: the tune's lead is the bass (the melody's, and the
+counter-line's in a song without a melody). `together_field` for the
+tune: `w48/-/29`, the percent with the bass's bar from further back,
+with the bar before (each `-` under TOGETHER_BARS bars of its kind; no
+field where neither has them), and the percent of the tune's bars that
+are an earlier bar. 42 of FFVI's 66 tune tokens carry the field, 34
+with a share for the bars from further back (none of them in 8, all of
+them in 8) and 13 for the bar before (none in 8); no counter-line's
+does. The plan reads them (`Plan.tune_together`); `tune_lead` gives
+the tune's writer the bass line's bars as they will be played (a part
+of the form played again as the bars it plays, `played_again`) and the
+three shares. `writer.melody` takes `with_lead`: `bar_key` (a cell as
+the token counts a bar), `lead_back` (the bar the bass plays again
+here, where the tune played in it), `together_so_far` (the token's
+count of one kind on the bars written), `returns_so_far`; `again`
+takes `literal` (the cell's own pitches where they sit in the bar's
+register). Where the urn decides a bar: if the bass plays an earlier
+bar again there, the song has a count for the kind, the bar keeps
+within its own onsets (`keeps`) and the plan's chord is the same under
+both, the tune plays that bar again while its share of such bars of
+the kind, this one in, is under its song's; else, where the urn draws
+a return and fewer of its returns have been left new than bars given,
+the return is left a new bar while the tune's bars that are an earlier
+bar are at its song's share. The tune's log says both counts, the bars
+given and the returns left new. The bass, the kit and the chord parts'
+writers are not touched; a tune without the field is written as
+before. Tests (`TuneReturnsTests`, four): the counts, with the two
+kinds apart; the token's field under a bass that stands, a bass of two
+bars, a counter-line that is the tune, and under four bars; the plan's
+reading and `tune_lead`; a written song at five settings (no field;
+both kinds held; the bars from further back alone, the tune not made
+to stand; shares of none, the tune as the urn drew it; a tune over its
+share, no more returns left new than bars given). Suite 572 (1 skip).
+The vocabulary is refit (the balance tokens alone change); the
+vocabulary map is unchanged.
+
+**Measured.** The 68 songs, round 145's in brackets, then FFVI's.
+Where the bass brings a bar back from further off the tune plays that
+bar again too in 0.33 of such bars (0.26; 0.48): 0.18 two bars back
+(0.08; 0.35), 0.39 four (0.35; 0.71), 0.68 eight (0.70; 0.82). In the
+34 songs whose token has the count, 114 of 262 (0.44) against their
+songs' mean 0.47, ten more than a tenth under and seven over. Where
+the bass stands on the bar before, 0.12 (0.05; 0.31): in the 14 songs
+with a count 39 of 164 (0.24; their songs' 0.31). Of all the bars in
+which the bass plays an earlier bar again, 0.23 (0.16; 0.43); where
+the tune plays an earlier bar again the bass plays that bar again too
+in 0.61 (0.52; 0.79), the accompaniment in 0.44 (0.43; 0.68). The
+tune's own returns: an earlier bar note for note in 0.27 of its bars
+(0.26; 0.29), the bar right before in 0.05 (0.03; 0.05); one bar three
+times or more running in 8 songs (5; 7) and four or more in 1 (none;
+4), the written Returners six bars (its song's tune stands twelve). 55
+bars are played again with the bass, in 19 of the 68 songs, and 8 of
+the urn's returns left new. The tune's notes a bar against its song's:
+0.89 at the median (0.94 at round 143), within a quarter in 50 songs
+(51). The chords as heard are where they were: 268 of 1,304 changes on
+a held root (272 of 1,293 at round 144). The paired measures: cells
+sounding as the FFVI song's 0.960 (0.961), backing lines within range
+375 of 386, kit pieces 175 of 179. Plans (400 seeds, against round
+145): every seed keeps its title, token song and band; 280 are the
+same note for note; the tune changes in 120, the counter-line in 101,
+the bass in 76 (the theme band and the hand-offs put the tune's cells
+into it, and its last pass follows), the accompaniment in 54, the
+harmony in 13.
+
+**Open.** It is an experiment: not heard, and for the ear alone, since
+the count it moves is one nobody has complained of. A bar given moves
+every draw after it, so in one song the tune's returns can fall (Kids
+Run Through the City, given two bars: 8 of 45 where it had 13) while
+the 68 rise. The bars from further back are at 0.33 against the game's
+0.48: a theme's, a phrase's and a pair's bars are not touched, and 26
+of the 68 songs are written on a token without the field. The written
+bass stands on one bar more than the game's, and comes back by its own
+draws still (LIMITS).
