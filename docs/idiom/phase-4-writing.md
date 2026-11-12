@@ -9728,3 +9728,129 @@ voices, unexamined. Not heard: a tune of stabs as short as the
 game's (60 ms in the written Gogo) on a hard cut is the game's by the
 count; whether it reads as the game's or as blips is the owner's ear
 (Song Check 103). The standing list as at round 114.
+
+### Round 142: a chord part plays an earlier bar on its chord again as often as its token song's part does (2026-11-11, on the owner's go for the next item)
+
+**Why.** The standing item after Song Check 102: read back by the
+chord reader a written song's chords change their shape on a held
+root twice as often as FFVI's ("chords as heard"), and the plan was
+a test to find which part does it, then a fix. The owner: "go ahead
+and do the next item".
+
+**Found.** The reader (`harmony.chords`) gathers each bar's pitch
+classes, weighted by loudness and part (the bass twice, the chord
+parts one and a half, the tune and the counter-line a half), starts a
+new chord where the bass's root or half the chordal voices' set
+changes, and names each span by the shape that fits best. Over the 68
+Song Check 100 songs: 1,324 changes of chord, 275 of them on a held
+root (0.21; FFVI's 1,259 and 161, 0.13): the third in or out 136
+(FFVI's 90), a sus tone 69 (31), the third's quality 35 (11), a
+seventh in or out 27 (27); 75 of the 275 are the plan's own. A bar is
+heard on the plan's root in 0.70 of the bars and as the plan's chord
+in 0.41. *No one part does it.* Read again with one of the plan's
+parts left out, the changes on a held root are 0.20 to 0.23 of the
+changes whichever upper part is gone, and 0.16 without the bass (the
+root then the plan's in 0.49 of the bars). They are the game's only
+where the whole band holds: with every part playing the bar before's
+notes again under a held chord 0.11, the backing alone 0.17, the
+backing and the counter-line 0.14. *What differs is how often a part
+plays again what it played on the chord.* Of a part's bars with an
+earlier bar on their root within eight, the share sounding one of
+those bars' pitch classes again, by two counts. On the chord
+reader's roots, the songs read back: the bass 0.64 (FFVI's 0.70), the
+accompaniment 0.36 (0.60), the harmony 0.45 (0.67), the tune 0.25
+(0.48), the counter-line 0.20 (0.44). On the bass's root, the songs
+as written: 0.71 (0.73), 0.37 (0.62), 0.49 (0.67), 0.30 (0.48), 0.25
+(0.46). The written chord parts repeat a rhythm on a chord more than
+the game's (0.62 of such bars have an earlier bar's rhythm; FFVI's
+0.52) and its notes less: the tones are drawn a bar at a time (a
+voicing at each bar's first onset, the motion's walk along it, the
+tone figure, the profile's hold). *Tried and not taken.* The voicing
+drawn a chord span, as the voicings word counts it, and not a bar:
+the same set under a held root 0.25 for 0.24, nothing else moved.
+The part's richness habit from the token (LIMITS): the tune
+re-written in 208 of 400 seeds, no measure moved. Neither is in the
+round.
+
+**Built.** `bar_tones(notes, bars)`: a part's pitch classes in each
+bar. `bass_roots(notes, bars)`: the bass's most-sounded pitch class
+in each bar, the chord reader's own first reading of a bar.
+`tones_before`, `tones_kept`: the bars with earlier bars on their
+root within TONES_BACK, how many sound one of those bars' set again
+and how many of those the bar before's. `tones_kept_field`: the
+balance token's twenty-seventh field for a chord part, `c60/47`,
+counted on the bass's roots; 49 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens and 1 of its 3 arp tokens. The plan reads it
+(`Plan.tones_kept`). `hold_chord_tones`, called for each chord part
+once the tune and the counter-line are written and before the voices
+that follow a line by the token's stretches: while the part's share
+over the whole song is under the song's, a bar with earlier bars on
+its root that sounds none of their pitch classes takes voice by
+voice the notes of one of them that is on the plan's same chord in
+its part of the form and has its rhythm (the bar before's while the
+share of kept bars that are the bar before's runs under the song's,
+else a bar further back that sounds another set, so a figure of two
+bars can form); the whole bar or none of it. A bar on its loop's
+figure, a bar the line rides the bass in, and a bar one of whose
+notes would then sit a semitone from the tune or the counter-line
+where its own did not stand as written. The hold sits after the tune
+because the tune is written over the chord parts and steered by
+them: before it, the same hold re-wrote the tune in 217 of 400
+seeds. *The count is the token's own.* The hold first counted by the
+plan's chords in a part of the form, the token by the chord reader's
+roots; bar by bar from the song's start; and with the form's repeats
+as first written, which `copy_repeats` writes over afterwards. By
+that count a part at its song's share read far under it: the written
+Terra's harmony sounds an earlier bar's pitch classes again in 0.74
+of such bars as finally written (its song's 0.73) and read 0.46 by
+the plan's chords, and its line of four bars that comes round (G#,
+B, D#, E under one chord) had its second and fourth bars given the
+first's; over the 68 songs 6 of the 43 parts given bars were at
+their song's share before, as read back.
+So a bar's root is the bass's on both sides, the one reading of a
+root to be had of the game's song and of a song being written; a
+part of the form played again counts with the bars it plays, and is
+left as it is; and the share is the part's over the whole song.
+Tests: the count and the bass's root; the field and its place in
+the token; the plan's reading; a bar played again at five shares,
+one-bar and two-bar figures; the count's own cases (a part at its
+song's share over the whole song, a bass off the plan's root, a part
+of the form played again); the bars that stand (another root,
+another shape, another part of the form, a loop's bar, a riding bar,
+a clash with the tune, another rhythm), voice by voice; a written
+song's tune, counter-line and bass the same with the hold and
+without. The last fails with the hold switched off. Suite 558
+(1 skip). The vocabulary is refit (the balance tokens alone change);
+the vocabulary map is unchanged.
+
+**Measured.** Over the 68 songs the hold gives 75 of the
+accompaniments' bars and 15 of the harmonies' an earlier bar's
+notes (most in Kids Run Through the City, 17 of 47 bars; none in
+34 of 61 songs with a chord part). At the hold the accompaniments
+sound an earlier bar's pitch classes again in 0.48 of such bars
+(their token songs' 0.61 at the mean), the harmonies in 0.58
+(0.64). As finally written, on the bass's root (round 141's in
+brackets, then FFVI's): the accompaniment 0.42 (0.37; 0.62), the
+harmony 0.53 (0.49; 0.67). Of the 58 chord parts with a share,
+14 are within a tenth of their song's (11), at a mean distance
+from it of 0.235 (0.285); of the 28 parts given bars 22 are
+nearer their song's share, 1 farther, and none over it by more than
+a tenth. Read back, on the chord reader's roots: the accompaniment
+0.39 (0.36; 0.60), note for note as an earlier bar 0.25 (0.22;
+0.34); the harmony 0.48 (0.45; 0.67), note for note 0.42 (0.39;
+0.50). The chords as heard are where they were: 270 of 1,316
+changes on a held root (275 of 1,324), bars in their root's commonest
+shape 0.698 (0.698; FFVI's 0.756). The paired measures: cells sounding as the FFVI song's 0.962, backing lines within range 375 of 386, kit pieces 175 of 179, the same note counts and chords in all 68 songs, as they were. Plans
+(400 seeds, against round 141): every seed keeps its title, token
+song and band, and the tune, the bass and the kit every note; the
+accompaniment changes in 130 seeds, the harmony in 30; the
+counter-line in 3 (a voice of it that follows a chord part).
+
+**Open.** The item stands: what the chord reader hears is the whole
+band's, and the larger part of what is left is the tune's and the
+counter-line's (the standing item on the tune's shape: its bars that
+come back). The chord parts are short of their songs' shares still:
+a chord part's pitch classes kept across another rhythm are not
+written, nor its richness taken from its token song (LIMITS), and
+what changes how a chord part's tones are drawn re-writes the tune,
+so it belongs with the round that re-writes the tune. The standing
+list as at round 114.
