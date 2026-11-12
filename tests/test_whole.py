@@ -2458,6 +2458,75 @@ class TuneSectionTests(unittest.TestCase):
             self.assertTrue(all(n == 1 for n in counts), (grain, counts))
 
 
+class BandFollowsTests(unittest.TestCase):
+    """Round 139: the theme band and the hand-offs put the tune's bar into another part's only where the bar then keeps
+    within that part's own onsets for its part of the form (round 125's, half to one and a half times). Since round 138
+    the tune's bars are as thin as its token song's, and a bass doubling a tune's bar of one note stopped for the bar
+    where the game's bass plays six or seven (the written Terra, four bars)."""
+
+    def _song(self):
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        s = rhythm.Song("t", 4, 12, bars, [], notes={}, sid="s", game="g", parts=[(0, 8, None, "A")])
+        tune = [(4.0 * k + x, 4.0 * k + x + 0.9, 60.0 + 2 * i, 0) for k in range(8) for i, x in enumerate((0.0, 1.0, 2.0))]   # three notes a bar
+        bass = [(4.0 * k + 0.5 * i, 4.0 * k + 0.5 * i + 0.4, 36.0, 0) for k in range(8) for i in range(8)]                    # eight a bar
+        s.notes["melody"] = [(a, b - a, m, "melody") for a, b, m, _ in tune]
+        s.notes["bass"] = [(a, b - a, m, "bass") for a, b, m, _ in bass]
+        written = {"melody": whole.Part("melody", list(tune), ["0 1 2"] * 8), "bass": whole.Part("bass", list(bass), ["0 1/2 1 3/2 2 5/2 3 7/2"] * 8)}
+        plays = [True] * 8
+        plan = whole.Plan(1, "g", "t", 0, "major", 120.0, s.parts, 0, ["I"] * 8, [None] * 8, ["bass", "melody"], {}, [], {"melody": plays, "bass": plays},
+                          {"melody": (60, 80), "bass": (30, 45)}, {}, {}, {"melody": {"theme_bars": [0, 1, 2, 3], "letters": {0: "T n"}}}, {}, [])
+        return s, written, plan
+
+    @staticmethod
+    def _per_bar(part):
+        return [len({round(n[0] * 12) for n in part.notes if 4.0 * k - 0.06 <= n[0] < 4.0 * k + 3.94}) for k in range(8)]
+
+    def test_a_part_keeps_its_bar_where_the_tunes_would_not_keep_within_its_own_onsets(self):
+        keeps = whole.own_keeps
+        s, written, plan = self._song()
+        self.assertTrue(keeps(plan, "bass")(0, 1))                                                  # no onsets of its own: any bar keeps
+        plan.section_onsets = {"bass": [8.0] * 4 + [3.0] * 4}
+        self.assertEqual([keeps(plan, "bass")(0, n) for n in (3, 4, 12, 13)], [False, True, True, False])   # half to one and a half times eight
+        self.assertTrue(keeps(plan, "melody")(0, 1))
+        doubling = tables.Table(("part", "place"), "theme doubling", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "bass:-24", {"part": "theme", "place": p}) for i, p in enumerate(("statement", "later", "statement"))])
+        log = whole.double_theme(plan, s, written, {"theme_doubling": doubling}, random.Random(1))
+        self.assertEqual(self._per_bar(written["bass"]), [8] * 4 + [3] * 4)                         # the tune's three notes: not in the bars of eight, in the bars of three
+        self.assertEqual(log[:4], [f"bar {k}: the bass doubles the theme's cell (-24)" for k in range(4, 8)])
+        self.assertEqual(log[4:], ["the tune's cell doubled in 4 bars fewer, the bar not within the part's own onsets for its part of the form (round 139): bass 4"])
+
+    def test_a_theme_phrase_is_carried_where_every_bar_keeps(self):
+        carrier = tables.Table(("part",), "theme carrier", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", "bass", {"part": "carrier"}) for i in range(3)])
+        for own, want in (([8.0] * 8, [8] * 8), ([3.0] * 8, [8] * 4 + [3] * 4), (None, [8] * 4 + [3] * 4)):
+            s, written, plan = self._song()
+            s.parts = plan.parts = [(0, 4, None, "A"), (4, 4, None, "B")]                           # the second part's phrase is not the theme: a part may carry it
+            plan.extras["melody"]["letters"] = {0: "T", 1: "n"}
+            if own:
+                plan.section_onsets = {"bass": own}
+            log = whole.carry_theme(plan, s, written, {"theme_carrier": carrier}, random.Random(1))
+            self.assertEqual(self._per_bar(written["bass"]), want, own)
+            self.assertEqual(len(log), 1, log)
+            self.assertEqual(log[0].startswith("the tune's theme phrase carried in 4 bars fewer"), own == [8.0] * 8, log)
+
+    def test_a_cell_is_taken_up_where_the_bar_keeps(self):
+        handoffs = tables.Table(("part", "habit", "place"), "cell handoffs", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "bass 1", {"part": "melody", "habit": "mixed", "place": p}) for i, p in enumerate(("theme", "other", "theme", "other"))])
+        taken = {}
+        for own in (8.0, 3.0):
+            s, written, plan = self._song()
+            tune = [(4.0 * k + x, 4.0 * k + x + 0.4, 60.0 + 2 * i + k, 0) for k in range(8) for i, x in enumerate((0.0, 0.5))]   # a half-bar cell of two notes a bar, each bar's its own
+            s.notes["melody"] = [(a, b - a, m, "melody") for a, b, m, _ in tune]
+            written["melody"] = whole.Part("melody", list(tune), ["0 1/2"] * 8)
+            plan.section_onsets = {"bass": [own] * 8}
+            log = whole.hand_off_cells(plan, s, written, {"cell_handoffs": handoffs}, random.Random(1))
+            taken[own] = (self._per_bar(written["bass"]), log)
+        self.assertEqual(taken[8.0][0][0], 8)                                                       # the first bar is nobody's to take up
+        self.assertTrue(all(n == 6 for n in taken[8.0][0][1:]), taken[8.0])                         # two for the half's four: six, within four to twelve
+        self.assertTrue(any("takes up the tune's cell" in l for l in taken[8.0][1]) and not any("fewer" in l for l in taken[8.0][1]), taken[8.0][1])
+        self.assertEqual(taken[3.0][0], [8] * 8)                                                    # six is not within two to four: the bass keeps its half
+        self.assertEqual(taken[3.0][1], ["the tune's cell taken up in 7 bars fewer, the bar not within the part's own onsets for its part of the form (round 139): bass 7"])
+
+
 class TokenMotionTests(unittest.TestCase):
     """Round 103: a chord part's line motion and off-chord tier ride the balance token, and the plan takes them."""
 
