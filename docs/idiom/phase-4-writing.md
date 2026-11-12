@@ -9968,3 +9968,100 @@ counter-line's thirds and repeated notes are the voice words', not
 its token's. Not heard: for the one listening the owner asked for
 once the list is done. Next on it: the tune's shape, with what is
 left of round 142's item; then Locke's snare march.
+
+### Round 144: a part comes back with its lead as often as its token song's part does (2026-11-11, the list's second item, first part)
+
+**Why.** The list's second item, the tune's shape with what is left of
+"chords as heard" (round 142: the larger part of what the chord reader
+hears change is the tune's and the counter-line's). The owner had been
+told the tune brings an earlier bar back far less often than the
+game's, 30 % against 48 %: that is round 142's count, a bar's pitch
+classes on the bass's root. This round counted the bars themselves
+first, and the answer is another one.
+
+**Found.** *The lines come back about as often as the game's.* A line
+plays an earlier bar again note for note (its onsets and its pitches,
+eight bars back at most): the written tune in 0.26 of its bars
+(FFVI's 0.29), the bass in 0.46 (0.41), the accompaniment in 0.34
+(0.37), the harmony in 0.50 (0.55); the counter-line in 0.14 (0.28).
+A tune's bar comes back moved, its rhythm and intervals at another
+pitch, in 0.16 (0.10), and a pair of bars as a pair in 0.12 (0.19).
+*They do not come back together.* Where the tune plays an earlier bar
+again, the bass plays that bar again too in 0.79 of such bars in the
+game and 0.52 in the written songs; the counter-line in 0.66 and
+0.44; the accompaniment in 0.68 and 0.40. Where the bass does, the
+accompaniment does in 0.57 and 0.40, the tune in 0.43 and 0.16. The
+written tune plays an earlier bar again more often where the bass
+does not (0.24 of such bars; the game's 0.13). Each writer draws its
+own returns: the tune's urn knows nothing of the bass's bars, the
+chord parts' tones are a bar's, and the counter-line beside a tune
+is drawn onset by onset with no bar of its own to play again. So a
+bar that comes back in one part has other notes under or over it,
+and the chord reader hears another chord on the root.
+
+**Built.** `bar_cells(notes, bars)`: a line's bars as their notes,
+the place in the bar and the pitch of each note begun in it.
+`bar_back`: the nearest earlier bar within TONES_BACK that is the bar
+note for note. `together(lead, part)`: the bars in which the lead
+plays an earlier bar again and the part plays in both, and how many
+of them the part plays that bar again in. `lead_of`: a chord part's
+lead is the bass, the counter-line's the tune. `together_field`: the
+balance token's twenty-eighth field for those parts, `w66`; none
+under TOGETHER_BARS (four) such bars. 36 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens, 1 of its 3 arp tokens and 30 of its 52 counter tokens. The plan reads it
+(`Plan.together`). `played_again`: the bars of a part of the form
+played again and the bars they play. `hold_together`, for the
+counter-line and then each chord part once the tune and the
+counter-line are written, before round 142's hold: counted as the
+token counts and the song as it will be played, the share over the
+whole song; while it is under the song's, a bar in which the lead
+plays an earlier bar again and the part plays another takes the
+part's earlier bar whole, every voice with its onsets and lengths,
+where the plan's chord is the same under both, the bar keeps within
+the part's own onsets for its part of the form (`own_keeps`), and
+the bar sits a semitone from no more notes of the tune and the
+counter-line (for the counter-line: of the parts under it) than its
+own did. A bar on its loop's figure, a bar the line rides the bass
+in and a bar of a part of the form played again stand. The tune and
+the bass are not touched: the tune coming back with the bass
+re-writes the tune, and is kept for a round of its own that can be
+taken or left. Tests (`TogetherTests`, five): the count; the field
+and its place in the token; the plan's reading; a bar that comes
+back with its lead at four shares and three leads; the bars that
+stand, and the bar whole. Suite 567 (1 skip). The vocabulary is
+refit (the balance tokens alone change); the vocabulary map is
+unchanged.
+
+**Measured.** The 68 songs, round 143's in brackets, then FFVI's.
+Where the tune plays an earlier bar again the counter-line plays
+that bar again too in 0.55 of such bars (0.44; 0.66); where the bass
+does the accompaniment does in 0.50 (0.40; 0.57). The hold gives 74
+of the accompaniments' bars, 29 of the harmonies' and 13 of the
+counter-lines' the earlier bar; of the parts with a share, 9 of 36
+accompaniments, 2 of 9 harmonies and 4 of 26 counter-lines are still
+more than a tenth under it (the accompaniments' bars that stood: 34
+in a part of the form played again, 34 on a loop's figure or riding
+the bass, 30 a semitone from a line over them, 24 over another
+chord). The accompaniment plays an earlier bar again note for note
+in 0.37 of its bars (0.34; 0.37), the harmony in 0.53 (0.50; 0.55),
+the counter-line in 0.16 (0.14; 0.28). The chord parts' pitch
+classes on the bass's root (round 142's count): the accompaniment
+0.44 (0.42; 0.62), the harmony 0.60 (0.53; 0.67), 16 of the 58 parts
+with that share within a tenth of it (15). The chords as heard are
+where they were: 272 of 1,293 changes on a held root (270 of 1,291).
+The paired measures: cells sounding as the FFVI song's 0.962,
+backing lines within range 375 of 386, kit pieces 175 of 179, as
+they were. Plans (400 seeds, against round 143): every seed keeps
+its title, token song and band, and the tune, the bass and the kit
+every note; the accompaniment changes in 84 seeds, the counter-line
+in 56, the harmony in 33, the arp in 2.
+
+**Open.** The chord reader's count has not moved in three rounds: it
+reads a written song's counter-line as its accompaniment in 27 of
+the 68 songs and its tune in 19, so what it hears change on a held
+root is in part a line it takes for a chord part; the parts now come
+back together more, and what that does to a song is for the ear. The
+tune and the bass still come back by their own draws (LIMITS): next,
+as a round that stands alone. A part of one note a bar under a bass
+that plays one bar holds its note where its song's does (the written
+Terra's harmony through its first four bars, where it rose a step a
+bar): by the count; not heard.

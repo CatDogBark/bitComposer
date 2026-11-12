@@ -528,7 +528,36 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   the counter-line's (0.46). The chord parts are held to their token
   song's share since round 142, as far as a bar of their own rhythm
   is there to play again (0.42 and 0.53); the tune and the
-  counter-line are not.
+  counter-line are not. Round 144 counted the bars' returns
+  themselves: a line plays an earlier bar again note for note, eight
+  bars back at most, in 0.26 of the written tune's bars (FFVI's 0.29),
+  0.46 of the bass's (0.41), 0.34 of the accompaniment's (0.37) and
+  0.14 of the counter-line's (0.28), so the lines come back about as
+  often as the game's and the counter-line half as often; what differs
+  is that the game's bars come back whole. Where the tune plays an
+  earlier bar again the bass plays that bar again too in 0.79 of such
+  bars in the game and 0.52 in the written songs, and where the bass
+  does the tune does in 0.43 and 0.16: a written tune plays an earlier
+  bar again more often where the bass does not (0.24 of such bars; the
+  game's 0.13). The chord parts and the counter-line are held to
+  their lead since round 144; the tune and the bass still each come
+  back by their own draws.
+- **A part comes back with its lead a bar at a time, where the chord is
+  the same.** Round 144's hold gives a bar the part's earlier bar
+  where its lead plays that bar again, the plan's chord is the same
+  under both and the bar keeps within the part's own onsets; a bar on
+  its loop's figure, a bar the line rides the bass in, a bar of a part
+  of the form played again and a bar that would sit a semitone from
+  more notes over it stand. Of the 36 accompaniments with a share in
+  the Song Check 100 songs 9 are still more than a tenth under it, of
+  the 26 counter-lines 4 and of the 9 harmonies 2. A song whose lead
+  plays an earlier bar again in under four bars the part plays in has
+  no share (21 of FFVI's 57 accompaniment tokens, 22 of its 52 counter
+  tokens), and a part written on its token comes back as it is drawn.
+  A part with one note a bar that moved a bar at a time under a bass
+  that plays one bar holds its note now, as its song's does (the
+  written Terra's harmony through the four bars before the tune
+  enters).
 - **A chord part plays an earlier bar again only note for note.**
   Round 142's hold gives a bar the notes of an earlier bar where that
   bar has its rhythm, voice by voice, on the plan's same chord in the
