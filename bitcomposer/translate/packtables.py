@@ -151,6 +151,16 @@ KEPT = {
     "vibrato": ("rhythm", "vibrato_units", {}, ("part",), False, False, "a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72)"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
+DOUBLE_TIME = ("drums", "drums-KSt", "drums-h", "drums-c", "drums-o")   # the kit's bar tables, kept a second time (round 145) with a song the
+                                      # reading has at half its speed counted in double time, as its balance token has been since round 131
+                                      # (rhythm.token_song): Locke's snare strikes 28 times a bar at 70 beats a minute, bars the tables leave
+                                      # out as rolls under the slow class; at 140 they are a march's sixteenths, fourteen to the bar, a fast
+                                      # song's bars. A song written on such a song's token takes its kit's bars from these (plan.write);
+                                      # every other song's from the tables as read, so its kit stands (the tables themselves counted so
+                                      # moved the kit in 23 of the 68 Song Check 100 songs and, through the bass that strikes with it,
+                                      # the tune in 9)
+KEPT.update({name + rhythm.DOUBLE_TABLE: KEPT[name][:6] + (f"the `{name}` table with a song the reading has at half its speed counted in double time, for a song written on "
+                                                           "such a song's token (round 145)",) for name in DOUBLE_TIME})
 
 
 def fit(name: str, units) -> dict | None:
@@ -172,6 +182,13 @@ def fit(name: str, units) -> dict | None:
             "songs": len({u.song for u in units}), "model": model.to_json()}
 
 
+def songs_for(name: str, songs: list) -> list:
+    """The songs a table is counted on (round 145): for a kit bar table kept in double time (its name ends in
+    rhythm.DOUBLE_TABLE) each as its balance token counts it, in double time where the reading has it at half its speed
+    (rhythm.token_song); for every other table as read."""
+    return [rhythm.token_song(s) for s in songs] if name.endswith(rhythm.DOUBLE_TABLE) else songs
+
+
 def build(db, game: str | None, say=lambda *a: None) -> dict:
     """The tables for one game from its readings (None: every game's songs together, the library's vocabulary):
     {"source": ..., "tables": {name: entry}}."""
@@ -179,9 +196,13 @@ def build(db, game: str | None, say=lambda *a: None) -> dict:
     out = {"source": {"game": game or "library", "songs": len(songs["rhythm"]), "version": VERSION,
                       "votes": VOTES, "discount": DISCOUNT}, "tables": {}}
     for name, (module, builder, kwargs, *_) in KEPT.items():
-        entry = fit(name, getattr(MODULES[module], builder)(songs[module], **kwargs))
+        entry = fit(name, getattr(MODULES[module], builder)(songs_for(name, songs[module]), **kwargs))   # the kit's bars in double time (round 145)
         if entry is None:
             say(f"  {name}: no units, left out")
+            continue
+        base = out["tables"].get(name[:-len(rhythm.DOUBLE_TABLE)]) if name.endswith(rhythm.DOUBLE_TABLE) else None
+        if base is not None and base["model"] == entry["model"]:   # no half-speed song strikes the group: the table as read is the table
+            say(f"  {name}: as the table as read, left out")
             continue
         out["tables"][name] = entry
         say(f"  {name}: {entry['units']} units of {entry['songs']} songs")

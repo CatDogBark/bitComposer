@@ -16,7 +16,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-from bitcomposer.translate import packtables  # noqa: E402
+from bitcomposer.translate import packtables, rhythm  # noqa: E402
 
 SOURCES = {                               # a conditioning -> the tables whose outcome gives it its value in a written song
     "habit": ["habits", "bass_habits", "drum_habits", "drum_group_habits", "balance"],
@@ -69,6 +69,10 @@ def draw_sites() -> dict:
                 for name in packtables.KEPT:
                     if name.startswith("drums-"):
                         out.setdefault(name, set()).add((f, func))
+    for name in packtables.KEPT:                            # a kit bar table kept in double time (round 145) is drawn where the table as read is
+        base = name[:-len(rhythm.DOUBLE_TABLE)] if name.endswith(rhythm.DOUBLE_TABLE) else None
+        if base in out:
+            out.setdefault(name, set()).update(out[base])
     return out
 
 
@@ -112,6 +116,9 @@ def main(argv=None) -> int:
                     named |= set(re.findall(r"\*\*([a-z_]+(?:-[A-Za-z]+)?)\*\*", lead.split(" — ")[0]))
                     lead = None
         kept = set(packtables.KEPT)
+        page_text = open(a.check, encoding="utf-8").read()   # a table kept a second time in double time (round 145) has its base's entry,
+        named |= {n for n in kept if n.endswith(rhythm.DOUBLE_TABLE)   # where the page names it there in code type
+                  and n[:-len(rhythm.DOUBLE_TABLE)] in named and f"`{n}`" in page_text}
         missing, extra = sorted(kept - named), sorted(named - kept - CONCEPTS)
         if missing:
             print("tables with no VOCABULARY entry:", ", ".join(missing))

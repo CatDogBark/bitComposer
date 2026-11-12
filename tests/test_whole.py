@@ -2047,11 +2047,31 @@ class DoubleTimeTests(unittest.TestCase):
         self.assertEqual((field(slow, "tempo"), field(slow, "form")), ("slow:70", "A4B5"))
         self.assertTrue(field(slow, "drums").split(":")[21].startswith("nAS16@100"), slow)
 
+    def test_the_kits_bar_tables_count_it_in_double_time(self):
+        """Round 145: the kit's bar tables count a half-speed song as its token does. As read its bars are rolls, left out of
+        the tables, under the slow class; in double time they are a fast song's bars (Locke's march, fourteen to the bar)."""
+        from bitcomposer.translate import packtables
+        s = self._song()
+        self.assertEqual(packtables.DOUBLE_TIME, ("drums", "drums-KSt", "drums-h", "drums-c", "drums-o"))
+        for name in packtables.DOUBLE_TIME:
+            self.assertEqual(packtables.KEPT[name + "@2"][:6], packtables.KEPT[name][:6])            # the same table, kept a second time
+            self.assertEqual(packtables.songs_for(name + "@2", [s])[0].beat, 2)                     # on the song as its token counts it;
+            self.assertIs(packtables.songs_for(name, [s])[0], s)                                    # the table itself as read, as every other
+        self.assertIs(packtables.songs_for("tempos", [s])[0], s)
+        self.assertIs(packtables.songs_for("drums@2", [self._song(hits=16)])[0].beat, 1)            # a song at its own speed as read in both
+        read, counted = rhythm.drum_units([s]), rhythm.drum_units(packtables.songs_for("drums@2", [s]))
+        self.assertTrue(read and all(rhythm.is_roll(u.outcome, u.values["meter"]) for u in read))   # 24 strikes a bar: every bar a roll, left out
+        self.assertEqual({u.values["tempo"] for u in read}, {"slow"})
+        self.assertTrue(counted and not any(rhythm.is_roll(u.outcome, u.values["meter"]) for u in counted))   # twelve a bar at 140: a fast
+        self.assertEqual({u.values["tempo"] for u in counted}, {"fast"})                            # song's bars
+        self.assertEqual((sum(1 for u in read if u.outcome != "-"), sum(1 for u in counted if u.outcome != "-")), (8, 16))   # a bar two bars
+
     def test_the_plan_lets_its_form_run_to_twice_the_bars(self):
         mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=fast form=A30B30"
         model = lambda t: {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(t, part=rhythm.ARRANGEMENT))}   # noqa: E731
         p = whole.plan(model(token + " beat=2"), 7, "g", max_bars=48)
+        self.assertEqual((p.beat, whole.plan(model(token), 7, "g", max_bars=48).beat), (2, 1))      # the plan keeps the mark: its kit's tables (round 145)
         self.assertEqual((p.bars, [x[3] for x in p.parts]), (60, ["A", "B"]))                       # sixty bars stand where forty-eight were asked
         self.assertIn("the balance's song is counted in double time: its form may run to 96 bars", p.log)
         self.assertNotIn("beat", p.band)

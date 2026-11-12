@@ -10065,3 +10065,67 @@ as a round that stands alone. A part of one note a bar under a bass
 that plays one bar holds its note where its song's does (the written
 Terra's harmony through its first four bars, where it rose a step a
 bar): by the count; not heard.
+
+### Round 145: a song counted in double time takes its kit's bars from the kit tables counted so (2026-11-11, the list's third item)
+
+**Why.** Locke's snare march, standing since round 131 (LIMITS: "the
+march Locke's snare plays is not among the fast songs' kit figures").
+The owner: "I will want lockes snare march in the next batch as
+well."
+
+**Found.** The reading has Locke at 70 beats a minute and Blackjack at
+72, half their speed; since round 131 their balance tokens are counted
+in double time, and a song written on them is a fast song. Every
+other table still counted them as read. As read, 9 of Locke's 16 kit
+bars are left out of the kit's bar tables as rolls (28 strikes a bar)
+and the rest sit under the slow class; in double time they are 32
+bars under the fast class, none a roll, the snare at 12 strikes a
+bar at the median: the march, with its ruff in sixths of a beat
+(`0 1/2 3/4 1 7/6 4/3 3/2 5/3 11/6 2 9/4 5/2 11/4 3 7/2 15/4`).
+A song on Locke's token drew its kit from the other fast songs' bars,
+within the strikes its token asks: 8, 9, 12 and 12 in its first four
+bars, straight sixteenths, where the game's are 9, 8, 16 and 16.
+*Tried and not taken.* The five tables themselves counted in double
+time, for every song: the fast class gains the two songs' bars and
+the slow class loses them, so every fast song's kit and fourteen
+others' were drawn again (23 of the 68 Song Check 100 songs), and
+through the bass, which strikes with the kit, the tune in 9 of them
+(Battle Theme's in 35 of its 124 notes). Every table counted so had
+moved 130 of 400 seeds onto another token song in round 131.
+
+**Built.** `rhythm.DOUBLE_TABLE` ("@2") and `packtables.DOUBLE_TIME`:
+the kit's five bar tables are kept a second time under their name
+and the mark, counted on the songs as their tokens count them
+(`songs_for`, `rhythm.token_song`); one that comes out as the table
+as read is left out (the other sounds': no half-speed song strikes
+one). `Plan.beat`: 2 where the token's song is counted in double
+time. `plan.write` draws the kit of such a song from the tables kept
+in double time, where the pack has them, and says so in the kit's
+log; every other song's from the tables as read. `tools/vocab_map.py`
+lists a table kept in double time under the writers that draw the
+table as read; the vocabulary map is written again with the four
+tables. Test (`DoubleTimeTests`): the tables kept twice and the
+songs each is counted on; a half-speed song's bars rolls under the
+slow class as read and a fast song's bars in double time; the plan's
+mark. Suite 568 (1 skip). The vocabulary is refit: 115 tables (111),
+530 KB (475).
+
+**Measured.** The written Locke (Song Check 104's seed): its snare
+strikes 8, 8, 16, 16, 16, 16, 12 and 12 times in its first part's
+bars (8, 9, 12, 12, 12, 12, 12, 12; the game's 9, 8, 16, 16, 16, 16,
+13, 13), 20 of its 32 bars with the ruff (none); in its second part
+the snare rests seven bars and comes back at 11 a bar (3 to 6 a bar
+through it; the game's thins to one to three for six of its sixteen
+bars). Its bass, which strikes with the kit, changes in 25 of its 59
+notes and its tune in 7 of 118. Blackjack's kit changes in 90 of 451
+hits. Of the 68 songs these two change and no other, in any part.
+Plans (400 seeds, against round 144): every seed keeps its title,
+token song and band; 390 are the same note for note; the kit changes
+in 10, the bass, the tune, the accompaniment and the counter-line in
+5. The paired measures: cells sounding as the FFVI song's 0.961
+(0.962), backing lines within range 375 of 386, kit pieces 175 of
+179.
+
+**Open.** The other tables hold the two songs as read (LIMITS). Not
+heard: whether the march carries Locke as the game's does is for the
+listening the owner asked for once the list is done.
