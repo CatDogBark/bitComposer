@@ -1790,11 +1790,18 @@ def section_onsets_text(song, notes) -> str:
     within NEAR one onset, on the song's grid), and after a "!" its onsets in the part's last bar where that bar is a
     fill or a thinning as the section_fills word reads one (DENSITY_STEP times the median of the part's bars before it,
     or more; its inverse or less, a rest among them; a part of the form of FILL_BARS bars or more with two played before
-    the last); "" for a song whose form the token does not carry (form_field) or a voice that plays in no part of it."""
-    if not form_field(song) or not notes:
+    the last); "" for a voice that plays in no part of it. A song whose form the token does not carry (form_field: one
+    read as a single part) has no letters to say it by, and since round 153 says the one number, "4": the median of
+    the voice's onsets a bar over the bars it plays in, the whole song through. It had said nothing, and a line written
+    on such a token was held to no pace of its song's: a counter-line on Metamorphasis's ran 8.7 notes a bar where the
+    game's plays 3.8."""
+    if not notes:
         return ""
     index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
-    counts = {index[num]: len(struck) for num, _, struck in readings_mod.numbered_bars_of(song, "", notes)}
+    counts = {index[num]: len(struck) for num, _, struck in readings_mod.numbered_bars_of(song, "", notes) if num in index}
+    if not form_field(song):
+        played = [n for n in counts.values() if n]
+        return _halves(statistics.median(played)) if played else ""
     out, seen = [], set()
     for bar, n, of, label in song.parts:
         if of is not None or label in seen:
