@@ -20,7 +20,7 @@ Since 2.0 every song is written the way game soundtracks are put together:
 drawn whole from a vocabulary of counted habits (how the band is balanced,
 how its figures repeat and vary, where the tune comes back), taken from
 the readings of a soundtrack's songs. The vocabulary that ships was
-learned from Final Fantasy VI's 67 songs, as statistics with none of the
+learned from Final Fantasy VI's 68 songs, as statistics with none of the
 game's notes or samples. The songs play on bitComposer's own sound set,
 generic instruments synthesised here, on one of Classic's four styled
 sets, or on a game's own samples. More under [What GENERATE
@@ -31,7 +31,7 @@ into a pack of its samples and, with 40 songs or more, a vocabulary of its
 own to write from ([Packs from your games](#packs-from-your-games)).
 
 The 1.x generator stays as [Classic](#classic), with its own knobs and
-seven sounds, the chip and Genesis palettes among them.
+eight sounds, the chip and Genesis palettes among them.
 
 **[Listen in your browser](https://catdogbark.github.io/bitComposer/)** — the actual modules, played live by libopenmpt in WebAssembly: five songs from the writer, seeds 1 to 5, and one each from six of Classic's sounds.
 
@@ -124,19 +124,24 @@ and WRITE AND PLAY on WRITE, where the two switches and a seed field sit;
 (`--classic` on the command line).
 
 Where the vocabulary comes from, plainly: the shipped one
-(`bitcomposer/vocabularies/default.json.gz`, 377 KB) was fitted on the
-readings of Final Fantasy VI's 67 songs, the game the writing was
+(`bitcomposer/vocabularies/default.json.gz`, 543 KB) was fitted on the
+readings of Final Fantasy VI's 68 songs, the game the writing was
 measured against round by round until it held up by ear
 ([docs/idiom/phase-4-writing.md](docs/idiom/phase-4-writing.md)). It is the statistics of how that
 music is put together, the counts of figures, moves, chord changes and
 balances, and none of the game's samples or notes; a release check
 (`tools/copycheck.py`) probes every four-bar window of hundreds of
 written tunes against the games' phrases and ships nothing that copies
-one. It is as far as the writing has gone; vocabularies fitted on more
-games follow. Importing a game (below) fits that game's own vocabulary
-beside its samples and recounts one over everything you have imported;
-WRITE offers each under WRITTEN FROM once 40 songs stand behind it
-(`--vocabulary pack:NAME`, `--vocabulary library`).
+one. Each written song takes its skeleton from one of those songs, drawn,
+as measured from its reading: its form and bar counts where they fit, its
+tempo within a tenth, which parts play in each section, their levels and
+how busy each line is. None of that song's notes come with it: the notes
+are drawn from the counts over all of them. It is as far as the writing
+has gone; vocabularies fitted on more games follow. Importing a game
+(below) fits that game's own vocabulary beside its samples and recounts
+one over everything you have imported; WRITE offers each under WRITTEN
+FROM once 40 songs stand behind it (`--vocabulary pack:NAME`,
+`--vocabulary library`).
 
 Every word in the vocabulary, what it counts and why it exists, is in
 [the vocabulary](docs/idiom/VOCABULARY.md), and [the vocabulary's
@@ -158,7 +163,10 @@ its part, to hear it, see why it was put there (in how many songs, how
 many notes) and move it; USE ITS SOUNDS plays the next songs on them;
 EXPORT writes the pack as one zip, and ADD A PACK brings an exported pack,
 or a pack file, back. Importing a game again
-starts its pack fresh.
+starts its pack fresh. A game imported under an earlier version is
+written the new way only once it is imported again: the newer reader
+reads its songs again, and its vocabulary is counted with the words an
+older import lacks.
 
 An import also counts the game's own tables into its pack. With 40 songs
 or more behind it the game has a vocabulary of its own: WRITE FROM IT in
@@ -171,7 +179,7 @@ not yet the game's, so none is offered.
 The emulator, `bitcomposer-emu`, is a compiled package of its own with a
 wheel for Linux (x86_64 and aarch64), Windows and macOS, so no toolchain
 is needed. The Windows build carries it. On Linux,
-`pipx install "bitcomposer[import]"` installs both, or the panel's GET THE
+`pipx install "bitcomposer[import]"` installs both, or LIBRARY's GET THE
 EMULATOR adds it to a player already installed, and UPDATE keeps both
 current (`pip install "bitcomposer[import]"` elsewhere). Where no wheel
 matches, it builds from source (Rust; CONTRIBUTING.md has how).
@@ -198,7 +206,9 @@ program, an application of four screens under one header:
 
 - **PLAY**: the song playing, its position, the transport, GENERATE, AUTO
   (the "radio": the next song is written when this one ends), gain with a
-  soft limiter, each channel's level as the band, and the songs in the
+  soft limiter, WIDTH (the stereo width heard: SPEAKERS plays each voice
+  where its song puts it, HEADPHONES pulls the pans toward centre), each
+  channel's level as the band, and the songs in the
   folder with KEEP. Every song plays at one level: the player measures a
   song once and trims it as it plays, so a quiet song and a loud one sit
   side by side (SET → LEVEL turns it off; the files are not changed). Every song the player writes is provisional
@@ -211,8 +221,8 @@ program, an application of four screens under one header:
   switch at the bottom, with its own knobs (sound, tempo, energy, scale,
   form, echo, bass, drums, harmony) and presets.
 - **LIBRARY**: the games you have read. IMPORT reads a game's SPC set
-  into its sounds and, at 40 songs, its own vocabulary; ADD brings in an
-  exported pack; each game can lend its sounds, be written from,
+  into its sounds and, at 40 songs, its own vocabulary; ADD A PACK brings
+  in an exported pack; each game can lend its sounds, be written from,
   be exported, renamed or deleted.
 - **SOUNDS**: a game's samples by part, each heard with a click and moved
   when the reading got it wrong.
@@ -247,10 +257,11 @@ vocabulary. Every run composes a new song from rules and tables of its
 own: a motif-based melody with call-and-response phrasing, voice-led
 harmony, bass, arpeggio and drums, arranged into a form (verse–chorus,
 AABA, rondo, through-composed) with a drawn intro, an energy curve and a
-real ending, titled after what it drew, between 1:15 and 3:30 long. Seven
+real ending, titled after what it drew, between 1:15 and 3:30 long. Eight
 sounds, picked with `--sound`:
 
 - **snes** — sampled-style voices built the way the SNES made sound, through a BRR codec model and the SNES echo.
+- **bit** — bitComposer's own sound set, the one the writer plays on by default: generic instruments synthesised here from descriptions, modelled on no game's bank.
 - **ffvi**, **mana**, **evermore**, **megamanx** — style packs: an instrument set rebuilt from each game's own sound chip (every sample profiled, nothing copied) plus the arrangement habits of its score. Details under [Sounds](#sounds).
 - **genesis** — FM bells, brass, organ and bass.
 - **chip** — square, pulse and triangle waves. Closest to NES and Game Boy.
@@ -264,7 +275,7 @@ A style pack pairs an instrument set with the arrangement habits of the score it
 - `evermore`: every voice modelled on the game's own sample bank: a slow bright string swell, a warm pad, a dark pad, a glass bell, a breathy flute, a reed, an "oo" choir, harp, tinker music box, piano, pluck and kalimba, a textured drone and a wind loop, a bass, and a quiet kit (soft kick, frame drum, brushes, hat, cymbal, wood ping), with slow tempos, sustained harmony, a drone bass, sparse or no drums, long linear forms and the game's sparing 80 ms echo. 
 - `megamanx`: every voice modelled on the game's own sample bank and named by it: a driven, chorused lead guitar, a chugging rhythm guitar on power chords, the overdrive guitar for arps and counter-lines, synth brass, strings, a guitar swell pad, a saw pad, organ, the boomer synth lead, square and bright leads, a hollow wave, a bell synth, an acoustic pluck, the orchestra hit for stabs, slap and synth basses on a riff, and a tight kit, at fast tempos in minor keys with the game's 48 ms slapback echo.
 
-`--sound` picks a palette or a pack in one word; left to chance, the four packs together weigh as much as plain snes.
+`--sound` picks a palette or a pack in one word; left to chance, the four style packs together weigh as much as plain snes, and bit as much as one of them.
 
 - **snes** — sampled-style voices rendered the way the SNES actually made sound: strings, brass, a formant choir, flute, organ, e-piano, bells, plucks and a gated drum kit at 16 kHz with loop points, passed through a BRR codec model for the grain, with the lead, harmony and arp through an echo modelled on the SNES unit's result: fading, darkening repeats on a beat fraction, drawn per song.
 - **genesis** — FM bells, brass, organ and bass.
@@ -272,12 +283,12 @@ A style pack pairs an instrument set with the arrangement habits of the score it
 
 ### What you can steer
 
-With `--classic`, everything defaults to `random`; without it these options are not read.
+With `--classic`, everything defaults to `random` but `--keys` (moving) and `--lead-shift` (the sound's own). Without it, of these a written song reads only `--pack`, `--pack-file`, `--echo off`, `--name`, `--prefix`, `--suffix` and the last line.
 
 ```
---sound   chip|snes|genesis|ffvi|mana|evermore|megamanx  the sound in one word: a palette or a style pack (overrides the two below)
+--sound   chip|snes|genesis|bit|ffvi|mana|evermore|megamanx  the sound in one word: a palette or a style pack (overrides the two below)
 --style   chip|snes|genesis          sound palette
---pack    ffvi|mana|evermore|megamanx|none|random  style pack: an instrument set with the habits of the scores it imitates (a pack implies snes)
+--pack    bit|ffvi|mana|evermore|megamanx|none|random  style pack: an instrument set with the habits of the scores it imitates (a pack implies snes)
 --pack-file PACK.json               a pack as data, with its own voices as WAV files (docs/PACKS.md); overrides --pack and --sound
 --echo    on|off|random              echo (random: 70% of snes songs, never chip or genesis)
 --echo-wet    light|normal|wet|random  how much of the lead, harmony and arp the echo carries
@@ -347,7 +358,7 @@ of ear-checking never caught, and every improvement since has been measured
 before and after. Read it before changing Classic. The writer has its own
 record: [docs/IDIOM.md](docs/IDIOM.md) for the plan, and [docs/idiom/phase-4-writing.md](docs/idiom/phase-4-writing.md)
 for its rounds, each measured against Final Fantasy VI's own songs and
-passed by ear. What the written songs do that can sound odd, and why it
+most passed by ear. What the written songs do that can sound odd, and why it
 stands, is in [docs/LIMITS.md](docs/LIMITS.md).
 
 Tests:

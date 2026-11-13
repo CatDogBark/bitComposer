@@ -32,7 +32,7 @@ Quest's sound driver, in Ogre Battle.
   second.
 - **Envelopes**: the instrument's ADSR at key-on, left alone.
 - **Echo**: none, in any song.
-- **Density**: the densest driver here, 1505 notes in a song's first minute, a note
+- **Density**: the densest driver here, 1509 notes in a song's first minute, a note
   0.11 s.
 
 ## Scores

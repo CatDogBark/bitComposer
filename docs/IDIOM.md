@@ -1,8 +1,9 @@
 # The idiom: the generator learns to write from the readings
 
 Agreed 2026-10-20. `TRANSLATOR.md` carried the translator through its
-stages: the readings (1), a thin pack (2), the PACKS panel (5), and the
-vocabulary counted (4). What those counts said about the generator's own
+stages: the readings (1), a thin pack (2), the PACKS panel (5; the 1.x
+window's, LIBRARY and SOUNDS since 2.0), and the vocabulary counted (4).
+What those counts said about the generator's own
 writing is the reason for this plan, which takes over from stage 3's
 second half (the generator writes voices) and stage 4's (the vocabulary
 the generator draws from). It is laid out in phases, each planned in
@@ -115,8 +116,8 @@ Stage 4's own "what looks wrong", gathered (the detail is there):
   need be named), which voice carries the tune (the voices soloed), and
   what a drum sound is (samples soloed and named kick, snare, hat or other,
   drawn at random across the games and held out from the namer's tuning).
-  The beat (43 songs) and the form (36) are marked already. The marks stay
-  on the owner's machine with the readings; the repository holds the
+  The beat (43 songs) and the form (36) are marked already. The marks are
+  kept outside the repository with the readings; the repository holds the
   scores.
 
 ## The vocabulary's shape
@@ -213,10 +214,10 @@ its exit criteria are the gate to the next.
   fault is in how the tables are drawn from, and that is fixed as a fault
   (the smoothing that mixed every part's registers, the floor's invented
   bars). Where the choice between patching an existing vocabulary beyond
-  what it was counted to say and counting a new one is open, it is put to
-  the owner first and decided together; it is not made in the code
+  what it was counted to say and counting a new one is open, it is held
+  as an open choice and settled by decision; it is not made in the code
   (decided 2026-10-23, after the hook: weighting the urn's "earlier"
   draws toward the opening would have moved the number without naming
   the thing). The rules still standing are listed in
   [idiom/rules-to-words.md](idiom/rules-to-words.md), to be replaced in
-  the owner's order.
+  the order decided.

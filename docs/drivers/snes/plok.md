@@ -37,7 +37,7 @@ studios made them (Software Creations, and DMA Design).
 - **Envelopes**: written by the driver as each note sounds (GAIN, 8.4 writes
   a note), not the instrument's ADSR.
 - **Echo**: none, in any song.
-- **Density**: 1277 notes in a song's first minute, a note 0.14 s.
+- **Density**: 1281 notes in a song's first minute, a note 0.14 s.
 
 ## Scores
 
