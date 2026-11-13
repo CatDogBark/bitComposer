@@ -64,7 +64,7 @@ Kirby Super Star shares the code without the table.
 - **Later games**: A Link to the Past and Yoshi's Island a short echo
   (32 ms at 0.16 to 0.23); Soul Blazer and Terranigma (Quintet's) negative
   feedback (-0.62 to -0.77), Soul Blazer's echo at full volume.
-- No pitch modulation and no noise in any of the 449 songs.
+- No pitch modulation and no noise in any of the 610 songs.
 
 ## Scores
 

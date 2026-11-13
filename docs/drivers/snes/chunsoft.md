@@ -35,7 +35,7 @@ Chunsoft's sound driver, in Dragon Quest V.
 - **Echo**: 80 ms with little feedback (0.09), its sides of opposite signs in
   46 of 50 songs (a widening trick, as Capcom's), through a filter that
   boosts a little (1.03 at DC).
-- **Density**: the sparsest driver here, 167 notes in a song's first minute, a note
+- **Density**: the sparsest driver here, 168 notes in a song's first minute, a note
   0.28 s.
 
 ## Scores

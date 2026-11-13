@@ -1,7 +1,7 @@
 # SPC import: a game's own instruments and habits, translated
 
-Plan, written 2026-10-18; nothing here is built yet. The goal is a pack
-made from a game's real sound files: point the player at a soundtrack's
+Plan, written 2026-10-18; built since, as each section says. The goal is
+a pack made from a game's real sound files: point the player at a soundtrack's
 `.spc` files and get a SOUND that plays the game's own samples, with the
 habits of its score (tempo, registers, how the harmony moves, the drums,
 the echo), measured rather than guessed. In short, a translator from the
@@ -14,8 +14,9 @@ played, on which voice, when. The import is proven ground (every built-in
 pack was made from it, by hand); the emulation is the new and large part.
 
 Out of scope: getting the files. The importer takes `.spc` files as they
-are; finding them, and unpacking `.rsn` archives (RAR), is the user's
-business.
+are; finding them is the user's business. IMPORT unpacks `.rsn`
+archives (RAR), `.rar` and `.7z` itself through the machine's 7-Zip or
+unar (`translate/archives.py`).
 
 ## What an SPC file is
 
@@ -43,8 +44,8 @@ plays the song from its top.
 
 ## What exists already
 
-The research tools behind the four packs (`~/diags/bitcomposer/*-spc/tools`,
-not in the repository) do the import half by hand:
+The research tools behind the four packs (scratch tools, not in the
+repository) do the import half by hand:
 
 - `survey.py` decodes every BRR sample across a set of snapshots,
   de-duplicates by decoded PCM, and profiles each (steady-state harmonics,
@@ -114,7 +115,7 @@ the driver itself is in every snapshot.
   author.
 
 Copies of spc2it and VGMTrans are kept as research material outside the
-repository (`~/diags/bitcomposer/research/`).
+repository.
 
 ### Decided (2026-10-18)
 
@@ -182,7 +183,7 @@ label, voices per role, habits, trims), with the pack's own voices as WAV
 files (tuning, loop, release family, volume). `bitcomposer/packs/packfile.py`
 checks it, registers its voices with the sample registry and the pack in
 `PACKS` (not in the random draw), and `--pack-file` composes with it; the
-player's PACKS panel passes that same option. It carries every habit
+player's LIBRARY screen passes that same option. It carries every habit
 the composer reads (27) and every role.
 
 Changed from the first plan: the built-in packs stay Python. Their
@@ -270,12 +271,12 @@ emulator is written.
 **How it ships.** The emulator is a second, compiled package published
 from this repository, `bitcomposer-emu`, with a wheel per platform built
 when an `emu-v*` tag is pushed (`emu.yml`: Linux x86_64 and aarch64,
-Windows x64, macOS arm64 and x86_64, abi3 so one wheel serves every
-Python) and the sdist for the rest. It is optional, the `import` extra:
-the generator and the player install everywhere, and IMPORT says what is
-missing and how to get it (on a pipx install, the panel's GET THE
-EMULATOR adds it). The Windows build carries it, built from the same
-commit: the executable has no `python -m` to run IMPORT's worker with, so
+Windows x64, macOS as one universal2 wheel for arm64 and x86_64, abi3 so
+one wheel serves every Python) and the sdist for the rest. It is
+optional, the `import` extra: the generator and the player install
+everywhere, and IMPORT says what is missing and how to get it (on a pipx
+install, LIBRARY's GET THE EMULATOR adds it). The Windows build carries
+it, built from the same commit: the executable has no `python -m` to run IMPORT's worker with, so
 started with a private marker it runs the import itself instead of the
 window (`tools/windows/launch_player.py`, `packs/library.py`), and the
 Windows build job checks that on the built executable.
@@ -326,12 +327,13 @@ only difference that libgme stops at the length in the file's tag.
 
 ### 4. The translator
 
-In stages, with what is decided: `TRANSLATOR.md`. Built for 1.2.0: the
-readings (stage 1: beat and bar, each voice's part, key and chords, form,
-kept in a database on the user's machine), a thin first pack from them
-(stage 2) and the player's PACKS panel (stage 5); next, the generator
-writing in voices and the vocabulary made anew from the readings
-(stages 3 and 4).
+In stages, with what is decided: `TRANSLATOR.md`. Built in the 1.2.0
+release candidates: the readings (stage 1: beat and bar, each voice's
+part, key and chords, form, kept in a database on the user's machine), a
+thin first pack from them (stage 2) and the player's PACKS panel (stage
+5; the 1.x window's, LIBRARY and SOUNDS since 2.0); then, shipped in 2.0
+through `IDIOM.md`, which took them over, the generator writing in voices
+and the vocabulary made anew from the readings (stages 3 and 4).
 
 The SNES chip decoder turns the register log into events (the design,
 above), and the shared translator turns events into musical facts, then
@@ -461,8 +463,9 @@ little bass (Spark Mandrill 0.86 against 0.93), which is why the repeats
 are coloured: they then match the original's band levels without adding
 bass. Twenty more games (862 songs, twelve more drivers) found six more of the
 SNES chip's ways that the converter now carries, listed with the driver
-that showed each in `drivers/snes/README.md`; over all 1108 songs scored,
-the median gap is 0.46 dB, 1.00 at the 90th percentile.
+that showed each in `drivers/snes/README.md`; over all 1836 songs of the
+39 games now scored (20 drivers), the median gap is 0.45 dB, 0.93 at the
+90th percentile.
 
 For the SNES chip:
 
@@ -498,11 +501,14 @@ For the SNES chip:
   the roles from the translator with the user's corrections, the habits
   measured over every song. The generator composes new songs with it,
   as with any built-in pack; it is chosen in the player's PACKS panel
-  (below), kept apart from the built-in sounds. Built for 1.2.0 as the
-  translator's thin first pack (`translate/pack.py`): the samples each
-  part plays most, a kit by brightness and ring, and only the habits the
-  readings give straight (tempo, scale family, songs without drums, echo);
-  the user's corrections are the panel's MOVE TO, kept in the pack.
+  (below), kept apart from the built-in sounds. Built in the 1.2.0 release
+  candidates as the translator's thin first pack (`translate/pack.py`):
+  the samples each part plays most, a kit by brightness and ring, and
+  only the habits the readings give straight (tempo, scale family, songs
+  without drums, echo); the user's corrections are the panel's MOVE TO,
+  kept in the pack. Since then the kit is chosen by the drum namer
+  (1.2.0rc2) and an import counts the game's tables into the pack (2.0rc1;
+  `idiom/phase-5-packs.md`, `idiom/phase-6-generator.md`).
 
 ### 6. The player: PACKS
 
@@ -535,9 +541,10 @@ SET (decided 2026-10-18):
 
 Imported packs live in the user's settings folder.
 
-**Built for 1.2.0** (`packs/library.py`, the panel in the player), where
-it differs from the plan above: the packs and the readings live in the
-user's data folder, not the settings folder (decided 2026-10-20); IMPORT
+**Built in the 1.2.0 release candidates** (`packs/library.py`, the panel
+in the player), where it differs from the plan above: the packs and the
+readings live in the user's data folder, not the settings folder
+(decided 2026-10-20); IMPORT
 and ADD sit at the panel's top, IMPORT taking a game's set (a folder, a
 zip, or an .rsn, .rar or .7z unpacked by the machine's 7-Zip or unar),
 its progress shown in the panel, not on a screen over the window; the
@@ -566,8 +573,9 @@ Measured, as everything here is:
   gilyon hardware test passes; then the onsets in its key-on log line up with the onsets in
   the reference player's audio of the same snapshot, within a few ms, for
   every driver in the test set (the four built-in packs' games: three
-  Square titles, whose drivers differ by version, and Capcom's Mega Man X). A reference player is a development
-  tool only (for example ffmpeg built with libgme), never a dependency.
+  Square titles, each on a driver of its own in `drivers/`, and Capcom's
+  Mega Man X). A reference player is a development tool only (for
+  example ffmpeg built with libgme), never a dependency.
 - **Translator:** for FFVI, Secret of Mana and Mega Man X, its notes
   against VGMTrans's MIDI of the same snapshot, note for note (onset,
   pitch, length, which voice); for every game, the one-to-one `.it` against
@@ -590,19 +598,21 @@ Each step is its own branch and pull request, shippable on its own:
    round-trip test.
 2. The SPC reader (built), checked against the research tools.
 3. The emulator (built, 1.1.0; wheels on PyPI and in the Windows build,
-   1.2.0), tested against reference renders. The long one.
+   the 1.2.0 release candidates), tested against reference renders. The
+   long one.
 4. The translator and SPC to IT, which proves 3 (SPC to IT built, 1.1.0;
-   the translator's readings, 1.2.0).
+   the translator's readings, the 1.2.0 release candidates).
 5. The pack from a soundtrack, checked against the built-in packs (a thin
-   first pack, 1.2.0; the vocabulary next, `TRANSLATOR.md` stage 4).
+   first pack, the 1.2.0 release candidates; the vocabulary in 2.0,
+   through `IDIOM.md`, which took over `TRANSLATOR.md` stage 4).
 6. The player's PACKS panel: the list, IMPORT, the role picker, USE
-   (built, 1.2.0).
+   (built, the 1.2.0 release candidates).
 
 ## Risks
 
 - **Emulator accuracy.** Drivers lean on timer behaviour and odd
-  instructions; one wrong flag stalls a song. The test set has four
-  drivers; others will find new faults.
+  instructions; one wrong flag stalls a song. The test set began with
+  four drivers and has 20 now (`drivers/`); others will find new faults.
 - **Packaging a compiled core**: done, see How it ships: wheels from CI
   (`emu.yml`), the Windows build bundling it, and the message where no
   wheel matches. (Speed itself is settled: Rust.)

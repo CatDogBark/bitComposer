@@ -1,5 +1,8 @@
 # bitComposer — Generation Quality Analysis
 
+This page measures and describes the 1.x generator, kept since 2.0 as
+Classic behind `--classic`.
+
 **Started:** 2026-09-04, on commit `548eef1` (last code change 2026-03-11).
 Kept since as the record of every measured pass, through 1.0.0 (§2e,
 2026-10-18).
@@ -26,7 +29,7 @@ Eight songs, default settings, seeds 1–8:
 | `offgrid_pct` | 37.0 | onsets not on a multiple of 4 rows |
 | `motif_reuse_pct` | 18.7 | repeated 4-gram interval sequences in the melody |
 | `distinct_voicings` | **0.9** | distinct chord interval-stacks per song |
-| `harm_static_pct` | **100.0** | harmony voices that never change pitch within a pattern |
+| `harm_static_pct` | **100.0** | harmony voices that never change pitch within a pattern (no longer scored: `voice_motion` replaced it) |
 | `distinct_ioi` | 10.4 | distinct melodic inter-onset intervals |
 | `n_fx` | 2.9 | distinct IT effect commands reaching the file (D, G, H) |
 
@@ -317,7 +320,7 @@ vibrato) under the copy so a stab's echo decays like the stab. Unlike the
 hardware, which echoed everything a voice played, the lead sends only held
 notes (≥ 4 rows) and phrase endings (a rest of ≥ 2 rows follows), about
 70% of lead notes, so fast runs stay dry. The hardware had one on/off bit
-per voice; here each part has its own send (`composer.ECHO_SENDS`): lead
+per voice; here each part has its own send (`echo.ECHO_SENDS`): lead
 at ½, harmony at 0.3 and arp at 0.35 of the part, repeats below 8%
 dropped, drums and bass dry. Returns live on seven channels (lead 2,
 harmony 3, arp 2; `pattern.CH_ECHO_ALL`, 19 channels in all) and the song
@@ -496,10 +499,11 @@ lifted by the commits of 2026-09-04 and the Tier 1 pass in §2c.
 ## 4. Measuring changes
 
 `tools/analyze.py` is self-contained (stdlib only, no dependency on the generator
-itself) and scores a batch of `.it` files on all the metrics in §1:
+itself) and scores a batch of `.it` files on the metrics in §1
+(`voice_motion` in place of `harm_static_pct`):
 
 ```bash
-python3 -m bitcomposer.cli -s 1 -o /tmp/out/s1.it
+python3 -m bitcomposer.cli --classic -s 1 -o /tmp/out/s1.it
 python3 tools/analyze.py '/tmp/out/*.it'          # batch metric table
 python3 tools/analyze.py --grid /tmp/out/s1.it    # tracker-style pattern dump
 ```

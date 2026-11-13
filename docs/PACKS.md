@@ -7,7 +7,10 @@ are code; a **pack file** is the same thing as data, so a
 pack can be added without touching the code. The SPC importer writes
 them from a game's songs: the player's LIBRARY screen (IMPORT), or
 `python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`, a first thin pack
-(`TRANSLATOR.md`, stage 2).
+(`TRANSLATOR.md`, stage 2). A written song, the default, takes only a
+pack's sounds (`translate/whole/render.py`); the tempo, the form, the
+other habits and the trims apply with `--classic`, and the echo habits
+stand in for a written song only where its vocabulary has no echo word.
 
 A pack file is a JSON file, with the pack's own voices as WAV files
 beside it. It is data only: a pack someone sends you cannot run anything.
@@ -87,10 +90,12 @@ README's "Packs from your games").
   A voice name is one of the pack's own `samples`, or a built-in voice
   (any voice the palettes and packs have: `snes_strings`, `ffvi_harp`,
   `gen_lead`, ...).
-- **`habits`**: weighted draws and settings the composer follows. Any
-  habit left out is drawn the way the palette draws it. The list is below.
-- **`trims`**: channel volumes (0 to 64) by part, over the mix: `melody`,
-  `harmony`, `bass`, `arp`, `kick`, `snare`, `hihat`, `tom`, `crash`,
+- **`habits`**: weighted draws and settings the composer follows (Classic,
+  with `--classic`; a written song reads only the echo habits, as above).
+  Any habit left out is drawn the way the palette draws it. The list is
+  below.
+- **`trims`**: channel volumes (0 to 64) by part, over Classic's mix:
+  `melody`, `harmony`, `bass`, `arp`, `kick`, `snare`, `hihat`, `tom`, `crash`,
   `openhat`, `echo.melody`, `echo.harmony`, `echo.arp`.
 - **`samples`**: the pack's own voices, by name (see below).
 
@@ -199,7 +204,8 @@ beside the voices: what the game's songs do, counted from their readings
 kept). Everything else is as in format 1, and a format 1 file still
 loads. The importer's pack is written in format 2 when its tables are
 counted (`python -m bitcomposer.translate.packtables --db READINGS
---game NAME --into pack.json`); the generator's use of them is phase 4's.
+--game NAME --into pack.json`); since 2.0 the writer draws from them
+(`docs/IDIOM.md`, phase 6), as above.
 
 ```json
 "tables": {
