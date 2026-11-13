@@ -148,6 +148,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 154 | 2026-11-13 | a short form is the song's own, played round again | - |
 | 155 | 2026-11-13 | a kit keeps its song's pieces where the song has no form | - |
 | 156 | 2026-11-13 | a harmony's figure of two bars is not written on one chord | - |
+| 157 | 2026-11-13 | a theme's return brings no chords where the tune cannot follow | - |
 
 ## Goal
 

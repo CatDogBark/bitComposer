@@ -85,7 +85,7 @@ def build_parser():
         default="random",
         help="The sound in one word: a palette (chip, snes, genesis) or a style pack "
              "(bit, ffvi, mana, evermore, megamanx). Overrides --style and --pack. "
-             "random: drawn with the packs together weighing as much as plain snes (default)",
+             "random: drawn with the four games' packs together weighing as much as plain snes, bit as one of them (default)",
     )
     parser.add_argument(
         "--style",
