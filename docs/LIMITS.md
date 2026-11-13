@@ -347,7 +347,12 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   sounds as its first statement did, where the game's second A can add
   a voice. And a song whose form is not its token song's (four FFVI
   forms are under the sixteen bars a song is asked, six tokens carry no
-  form) keeps the pooled textures and entrances.
+  form) keeps the pooled textures and entrances. Since round 153 its
+  lines keep to their song's pace all the same: one number for the
+  whole song, so a line is written at its song's median onsets a bar
+  in every part of the form (a song that thins in one part does not),
+  and the kit's pieces, said by the letter alone, still play at their
+  tables' own.
 - **A song's tempo is one of the game's, near its token song's.**
   Since round 137 a written song runs within a tenth of its token
   song's tempo, at one of the tempos the game's songs of that class

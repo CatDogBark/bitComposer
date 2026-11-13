@@ -10834,3 +10834,78 @@ plays (`VOCABULARY.md`, **loudness**).
 each of the nine tokens (The Serpent Trench's without the theme asked)
 and on Terra's and Locke's, passed by ear.
 
+### Round 153: a line keeps its song's pace where the form is not its own (2026-11-13, from a counter-line heard running away)
+
+**Why.** By ear, on a song written on Metamorphasis's token (seed 69204,
+from an imported game's vocabulary): the counter-line's two voices
+heard as horns in a spasm, taking from the song. Investigated first,
+then built on the pick of the first of three candidate words, for
+every line.
+
+**Found.** The written counter-line plays 8.7 notes a bar, in every
+bar, two voices in parallel thirds a triplet apart at 160 BPM; the
+game's plays 3.8, and its tune 6.7 where the written tune plays 5.0.
+The second voice and the sample are the song's own. The pace is not.
+The writers hold a line to its token song's onsets a bar (the bass and
+the chord parts since round 125, the tune since round 138, the
+counter-line beside it since round 143), and the token says them by the
+form's letters. Metamorphasis is read as one part: its token carries no
+form, so it said no onsets, and `counter_mask` kept the pooled draw (a
+line with no own onsets keeps its first). Six of the 68 tokens carry no
+form. The same gap opens where a token has a form the plan does not
+take, one short of the bars asked. Over 400 seeds the plan's form is
+not its token song's in 35, and there, against the pace the token now
+says, the tune ran over one and a half times its song's in 16 songs of
+33, the bass in 13 of 33, the counter-line in 7 of 13, the harmony in
+12 of 18, and the accompaniment under half its song's in 5 of 11.
+
+**Built.** A song with no letters says one number: `section_onsets_text`
+gives, for a song whose form the token does not carry, the median of the
+voice's onsets a bar over the bars it plays in, the whole song through
+(`n3` in a part's twenty-second field, and in a voice beside a line's
+ninth sub-field); `plan.onsets_of` reads it under `WHOLE_SONG`. Where
+the plan's form is not its token song's, `plan.whole_song_onsets` gives
+each line (the bass, the chord parts, the tune, the counter-line beside
+it) its song's onsets a bar in every bar: that one number, or, for a
+token with a form the plan did not take, the median over the song's
+bars of its parts' own (`song_pace`). The writers are untouched: they
+hold a line to it as they hold it to a letter's, within half to one and
+a half times it. Nothing is drawn. The pooled `section_densities` and
+`section_fills` draws are made as before, and a line with a pace reads
+the pace in place of their shifts, as it does on its song's own form.
+The kit is not in it: its pieces' hits a bar are still said by the
+letter alone.
+
+**Measured.** Suite 599 (1 skip). The vocabulary is refit: five balance
+tokens gain the numbers (the sixth with no form has no line that plays),
+the outcomes in their order, no other table. Plans (400 seeds, the
+player's asking), against round 152: a note changes in 33 songs, the 33
+whose plan says the round's line; the other 367 are the same note for
+note, and every seed keeps its token song, title, band, bars and tempo.
+By token song: Overture (part 2) 9, Fanfare 7, Relm 5, Fanatics 4,
+Metamorphasis 4, Shadow 2, The Phantom Train 2. In those 33 every line
+is now within half to one and a half times its song's pace: the
+counter-line in 13 of 13 (the median of written over the song's 0.99;
+1.62 before), the tune in 33 of 33 (1.00; 1.33), the bass in 33 of 33
+(1.00; 1.31), the accompaniment in 11 of 11 (0.85; 0.53), the harmony
+in 18 of 18 (1.00; 1.80). The four songs on Metamorphasis's token:
+their counter-lines play 3.0 notes a bar (8.4 to 11.7 before; the
+token says 3), their tunes 6.5 to 7.1 (4.7 to 8.6; 7). The song first
+heard, written again from its seed on the same import refit with the
+round's code: its counter-line 2.9 notes a bar (8.7), its tune 6.7
+(5.0), its bass 4.9 (5.7), the key, tempo, form and title the same.
+The two earlier tests that write on one generated song's tables (the
+tune's places, round 147; the tune back with the bass, round 146) set
+that one-part song's pace aside, being tests of the writers' own bars.
+
+**Open.** A song on a form not its token song's still takes the pooled
+textures, entrances, loops and fills, and its kit's pieces their tables'
+own hits a bar. The song's pace is one number for the whole song: a
+song that thins in one part of its form is written at its median
+throughout (the tune on Fanatics's token goes from seven notes a bar to
+one, its song's). An imported game's vocabulary counted before this
+round says no such number until the game is imported again.
+
+**Not yet heard.** Seven pairs, one song on each token the round
+changes, are rendered for the ear before the merge.
+
