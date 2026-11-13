@@ -448,10 +448,10 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   in 106 of 962 (the game's 217 of 949, a fifth of the bars or more in
   12 songs), and over the 11 songs the round changes that have a bass
   and a kit the bass strikes 0.53 of its notes with a kit hit at the
-  median where it struck 0.65 (their FFVI songs' 0.77). Round 149
-  holds the bass and the tune
-  to the kit. A vocabulary counted before round 147 says no feel on any
-  token and keeps the pooled draw (`tokens_say_feel`).
+  median where it struck 0.65 (their FFVI songs' 0.77). Round 149 holds
+  the bass and the tune to the kit. A vocabulary counted before round
+  147 says no feel on any token and keeps the pooled draw
+  (`tokens_say_feel`).
 - **A bar moved onto its song's places keeps its notes.** Since round
   147 the notes of a bar that would put the tune over its song's share
   of a place are moved onto the nearest rhythm that keeps the places,
@@ -471,10 +471,47 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   bar table's. The written Terra's tune plays its half-beat note inside
   the kit's triplet in 6 of its bars and starts 8 of its 73 held notes
   on the half beat (the game's Terra: no bar, and one note of 34), and
-  its bass plays straight eighths against the kit's triplet in 28 of
+  its bass played straight eighths against the kit's triplet in 28 of
   its 44 bars, where the game's bass plays the kit's own rhythm in 48
-  of the 71 bars both play in and never two against three. No token
-  carries which part a bass's or a tune's rhythm is struck with.
+  of the 71 bars both play in and never two against three. Since
+  round 149 the token says how often the bass's and the tune's notes
+  are struck with the kit, and the written Terra's bass plays on a
+  snare hit in every note.
+- **The bass and the tune are held to the kit as it is written; the kit
+  is held to nothing.** Round 149 moves a line's notes onto the kit's
+  hits. Where the written kit's bars are not its song's, the lines stand
+  off it: the song on Opening Theme (part 3)'s token plays the kit on a
+  roll's bar, the second half of the bar alone, in about half its bars,
+  where its song's kit plays the bass's figure hit for hit; its bass
+  plays its song's own figure in every bar, no rhythm the bass table
+  knows sits on the roll, and 0.47 of its notes fall with a kit hit (the
+  game's 1.00). Over 400 seeds 200 bars of 50 basses and 120 bars of 39
+  tunes have no rhythm the table knows that brings them nearer.
+- **The passes after the writers are not asked the kit.** The theme
+  band, the hand-offs and the voices that double the tune's cell rewrite
+  bars of the bass and the tune after their writers, and the theme band
+  brings a bar back over another bar of the kit. By the bass writer's
+  own count 197 of the 232 held basses over 400 seeds are at their
+  song's share of notes with a kit hit; as finally written, 167 (69
+  before the round). The kit's own share, its hits struck with a bass
+  note, is reached in 165 (126): a bass that plays fewer notes than its
+  kit strikes is not given more, and no note is left out for it.
+- **A note moved onto a kit hit keeps its pitch, and some are left
+  out.** As for the places (round 147), a tune's note that passed
+  between two beats may be heard on one: over the 59 test tunes on their
+  song's arrangement the strong-beat notes on the chord sit 0.12 under
+  their song's at the median (0.09 before the round, 0.08 before round
+  148). Where no rhythm of as many onsets as the bar has notes puts them
+  on the hits, one of fewer does: 526 bass notes in 87 of 400 songs and
+  459 tune notes in 94, never past the part of the form's own onsets;
+  the bass plays a tenth fewer notes or more in 15 songs (Terra's 296
+  become 258, the game's 5.8 a bar).
+- **A song without a kit has no such word, and the tune is not held to
+  the bass.** 23 of FFVI's 68 songs have no kit, and their written songs
+  are as they were. Over the 63 test songs with a tune and a bass the
+  tune strikes 0.49 of its notes with a bass note at the median (0.48
+  before the round; the game's 0.61) and is 0.20 or more under its own
+  song's in 18 (21).
 - **A bar the reader could not place stays in the bar tables.** The
   reading counts a song at one tempo. Where a song's band plays a
   passage at another (the opening of The Wedding Waltz-Duel (part 4),
