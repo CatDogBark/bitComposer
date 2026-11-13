@@ -58,7 +58,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   inside its class, where the word has none so near). Why: a class is
   a third of the game's tempos wide, and a band written for 90 beats a
   minute (Edgar and Sabin's) played at 125.
-  *`tempos`: shape (part, tempo); drawn in _plan_once, tempo_near; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, periods, rhythm, second_figures.*
+  *`tempos`: shape (part, tempo); drawn in _plan_once, tempo_near; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-KSt@2, drums-c, drums-c@2, drums-h, drums-h@2, drums-o, drums-o@2, drums@2, echo_habits, habits, periods, rhythm, second_figures.*
 
 - **sizes** — how many parts a song's form has. Drawn once; the fallback
   when no `letters` table can give the form whole.
@@ -1451,7 +1451,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   vocabulary whose tokens say no feel (one counted before round 147).
   Drawn apart from the token it had written 120 of 400 seeds in the
   other feel than their token song's.
-  *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, rhythm, second_figures.*
+  *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-KSt@2, drums-c, drums-c@2, drums-h, drums-h@2, drums-o, drums-o@2, drums@2, rhythm, second_figures.*
 
 - **layer_samples** — the samples a layered part's line and second voice
   play, as a pair of the pack's sample names, for every part the plan
@@ -1674,7 +1674,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   on their own stream, and stand for a vocabulary counted before the
   field. Pooled, the word put a level step where its song has none: a
   tune on Fanfare's token, 0.8 and then 2.0.
-  *`section_levels`: shape (part, form); drawn in _plan_once, plan_section_levels.*
+  *`section_levels`: shape (part, form); drawn in plan_section_levels.*
 
 - **section_fills** — what a voice does in a section's last bar against
   the section's bars before, by its part, whether it is the part's line
@@ -1744,7 +1744,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 125 a song whose form is its token song's takes that
   song's own (the balance token's twenty-second field) and does not
   draw this word.
-  *`section_densities`: shape (part, step); drawn in _plan_once, plan_section_densities.*
+  *`section_densities`: shape (part, step); drawn in plan_section_densities.*
 
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
@@ -1772,7 +1772,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 124 a song whose form is its token song's takes that
   song's own entrances (the balance token's twenty-first field); the
   word is drawn all the same and stands for a song whose form is drawn.
-  *`part_entries`: shape (part, habit, form, length); drawn in _plan_once, plan_texture.*
+  *`part_entries`: shape (part, habit, form, length); drawn in plan_texture.*
 
 - **sample_lengths** — the shortest note a song plays a sample at, as a
   class of its tenth-percentile note length in ms (40, 60, 80, 120, 160,
@@ -1905,7 +1905,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   songs hold seven kits, and the table's smoothing had handed a medium
   song a dense kit); the writer's kit is these pieces, a hit on any other
   dropped.
-  *`kit_pieces`: shape (part, habit); drawn in _plan_once; conditions drums.*
+  *`kit_pieces`: shape (part, habit); drawn in _plan_once; conditions drums, drums@2.*
 
 - **phrase_letters** — a part's phrases as letters: the theme head again
   (`T`), an earlier head again (`r`), or new (`n`), by how many phrases the
@@ -2634,7 +2634,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   them, so the slot keeps the key's move where the game struck the sample
   there and stops at the game's nearest rate where it did not; a pair the
   game never struck has no wall.
-  *`kit_rates`: shape (part, piece); read in kit_rate_wall.*
+  *`kit_rates`: shape (part, piece); read in _plan_once, kit_piece_rate, kit_rate_wall.*
 
 - **kit_seconds** — whether a kit letter's hit takes the slot's second
   sample or the slot's own, by the letter and the hit's place in the beat
