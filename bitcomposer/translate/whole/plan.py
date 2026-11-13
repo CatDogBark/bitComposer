@@ -626,7 +626,7 @@ def kit_onsets_of(text: str) -> dict:
     be read."""
     out = {}
     for item in text.split("+"):
-        if not item or not item[0].isalpha():
+        if not item or not (item[0].isalpha() or item[0] == rhythm.WHOLE_KIT):
             return {}
         pieces = {}
         for piece in item[1:].split(","):
@@ -634,7 +634,7 @@ def kit_onsets_of(text: str) -> dict:
             if not m:
                 return {}
             pieces[m.group(1)] = (float(m.group(2)), int(m.group(3)) / 100)
-        out[item[0].upper()] = pieces
+        out[WHOLE_SONG if item[0] == rhythm.WHOLE_KIT else item[0].upper()] = pieces   # a song with no letters (round 155): "*K1@50" -> {WHOLE_SONG: ...}
     return out
 
 
@@ -2661,6 +2661,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     textures, plays = plan_texture(models, parts, band, rng, [] if own_textures else log, defer=(R.DRUMS,), tier=tier)   # are its own: the pooled
     if own_textures:                                        # draw is made all the same (its lines unsaid), so no other draw moves
         textures, plays = token_textures(parts, band, token_spans, log)
+    kit_whole = token_kit_onsets.get(WHOLE_SONG) if R.DRUMS in band and not own_form else None   # a song with no form says its kit's pieces the whole
+    kit_through = bool(kit_whole) and any(share >= KIT_THROUGH for _, share in kit_whole.values())   # song through (round 155): a kit one of whose pieces
+    if kit_through:                                         # plays in three quarters of its song's bars or more plays in every bar, as a piece that
+        textures = [t if R.DRUMS in t.split() else f"{t} {R.DRUMS}".strip() for t in textures]   # plays through a part of the form does there
+        plays = {role: ([True] * len(textures) if role == R.DRUMS else bars) for role, bars in plays.items()}
+        log.append("the kit plays in every bar, as in the balance's song the whole song through (round 155)")
     silent = [r for r in band if not any(plays[r])]
     if silent:
         log.append(f"never in a texture, left out of the band: {silent}")
@@ -2779,7 +2785,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if "tune_sounds" in render_mod.models_or_empty(models):   # the share of its gap a held and a detached note sounds (round 98), own streams
                 extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log))
                                                for kind in rhythm.TUNE_KINDS}
-    if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models) and not own_textures:   # the drums' entrances under the kit's tier (round 59), on an own stream; the token song's own stand (round 124)
+    if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models) and not own_textures and not kit_through:   # the drums' entrances under the kit's tier (round 59), on an own stream; the token song's own stand (round 124)
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted
@@ -2796,6 +2802,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         section_fills = (plan_section_fills(models, parts, band, plays, voices, random.Random(f"whole:{seed}:section fills"), log)   # what each voice does in a
                          if "section_fills" in render_mod.models_or_empty(models) else {})                                        # section's last bar (round 118)
         section_onsets = whole_song_onsets(parts, band, token_onsets, token_form, log)   # a form not the token song's: each line at its song's pace all the same (round 153)
+        if kit_whole:                                       # and the kit's pieces at their song's hits a bar the whole song through (round 155)
+            bounds = kit_piece_bounds(kit_whole)
+            kit_bounds = [bounds] * (parts[-1][0] + parts[-1][1])
+            log.append("kit pieces from the balance's song the whole song through, the form not its own (round 155): "
+                       + (" ".join(f"{letter} {lo}-{hi}" for letter, (lo, hi) in bounds.items() if hi) or "none"))
     for role, kinds in section_fills.items():               # the line's fill rides the density shift its writer reads (habit_at_for, envelope_at_for)
         if any(kinds["line"]):
             shifts = section_densities.setdefault(role, [0] * len(kinds["line"]))
