@@ -2714,6 +2714,14 @@ The words are grouped by where the writing draws them, in the order the song is 
   ear voice by voice, every such song had its tune elsewhere, and every
   heard label was right. Every word counted on the melody (the tune's
   cells, pairs, hooks, levels, sample, habit) counts on the lead.
+  The pass writes into the readings and a game read again loses it:
+  from round 102 to round 151 the tables were counted without it, the
+  nine songs' tune on the reader's label, and round 152 ran it again
+  (the same nine songs, the same voices). `lead.passed` says whether a
+  game's readings have been through the pass, and a vocabulary's source
+  keeps the answer (`"lead": {"heard": 68, "relabelled": 9}` in the
+  shipped one). The counts this page quotes from those rounds for the
+  game's tune, counter-line and accompaniment were made on the label.
 
 - **loudness** (the balance token's `loud=-24`) and **mix_level** — a
   song's rendered loudness: its RMS in dBFS over its first minute through

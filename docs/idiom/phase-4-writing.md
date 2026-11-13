@@ -6843,7 +6843,9 @@ recording; the song's bass reads as a counter beside it). FFVI re-read
 role reader to nine songs the round-90 re-read had missed: Aria de Mezzo
 Carattere, Epitaph, Gau, Shadow, The Magic House, The Phantom Forest, The
 Serpent Trench, Umaro, Under Martial Law, their melodies and counters
-swapping), pack4 refit (110 tables; `pack.json.before-r102`), the
+swapping; corrected at round 152: these are the nine songs of round 64's
+lead pass, and the swap was that pass's relabels lost in the re-read),
+pack4 refit (110 tables; `pack.json.before-r102`), the
 vocabulary shipped, the map regenerated. Tests: the rule's edges (a tom on
 many rates unlooped, a hat with ornaments, under eight hits, a rate holding
 0.7, a span under five), of_notes with the namer's verdict pinned (the
@@ -10746,3 +10748,89 @@ the game's is four, and the tune's doubling voice on The Wedding
 Waltz-Duel (part 4)'s token is still the line again (LIMITS).
 
 **Not heard.** The owner hears the song before the merge.
+
+### Round 152: the lead pass run again, nine tunes back on the voice heard as the tune (2026-11-13, found checking dev for a release; heard before the merge)
+
+**Why.** Round 64's lead pass moved the tune of nine Final Fantasy VI
+songs from the voice the reader labels melody to the voice heard as the
+tune, each voice rendered alone and judged by ear. The pass writes into
+the readings, and a game read again loses what it wrote
+(`translate/lead.py` says so in its first lines). Round 102 read the
+game again and the pass was not run after it, nor after round 105's
+re-read: every vocabulary from round 102's to round 151's counted those
+nine songs' tune from the reader's label. Round 102's record saw it
+("their melodies and counters swapping") and took it for the role
+reader of rounds 89 and 90 reaching songs an earlier re-read had
+missed. It was the relabels going.
+
+**Found.** The pass run on the readings as they are picks the same nine
+songs and the same voices as it did at round 64. Of the game's 68
+songs, 57 keep their label, 2 have no melody, and in nine the lead
+moves:
+
+| Song | The tune is now voice | It was read as | The voice that was the tune |
+|---|---|---|---|
+| Shadow | 0 | an accompaniment, 0.7 dB under the whole | 2 (a counter-line; its two layers accompaniments) |
+| The Phantom Forest | 0 | a counter-line, at the whole's level | 1 (an accompaniment) |
+| Gau | 1 | a counter-line, 2.3 dB under | 4 (an accompaniment) |
+| The Serpent Trench | 0 | a counter-line, 0.9 dB over | 5 (a counter-line; its two layers arpeggios) |
+| Under Martial Law | 3 | an accompaniment, at the whole's level | 1 and 2 (counter-lines) |
+| Aria de Mezzo Carattere | 6 | an accompaniment, 6.8 dB under | 1 (an accompaniment), 2 (a counter-line) |
+| Epitaph | 6 | a counter-line, 0.7 dB under | 0 (a counter-line) |
+| The Magic House | 0 | a counter-line, 0.6 dB over | 5 (an accompaniment) |
+| Umaro | 1 | a counter-line, 3.1 dB under | 2 (an accompaniment) |
+
+**Built.** Nothing in the writer. The pass run on the readings, the
+pack's tables refit, the vocabulary shipped (115 tables). So that a
+vocabulary counted without the pass says so: `lead.passed(db, game)`
+counts the songs whose voices the pass has heard and the songs whose
+tune it moved, `packtables.build` keeps the two numbers in the tables'
+source (`"lead": {"heard": 68, "relabelled": 9}`) and says them, or
+that the pass has not run, as it counts; the shipped vocabulary's test
+asserts them. The performance's test bounded a vibrato's first bend
+strictly after its note's start, which held because no song of its
+seeds drew a word with no onset; seed 6's counter-line now draws one
+the game has (15 cents at 13 Hz from the note's own start), and the
+bound is the note's start.
+
+**Measured.** Suite 597 (1 skip). The vocabulary: 9 of the 68 balance
+tokens change, the nine songs'; 54 tokens have a counter-line (52), 58
+an accompaniment (57), 4 an arpeggio (3); 84 of the 115 tables' counts
+change, and the 31 that do not are the kit's, the bass's bars, the
+chords', the form's, the keys' and the tempos' (`theme_body` and
+`return_band` count 36 units where they counted 50). Plans
+(400 seeds, the player's asking), against dev: a note changes in every
+song, the tune in 400, the bass in 360, the accompaniment in 341, the
+counter-line in 321, the harmony in 72, the arpeggio in 14, and the
+kit in 19 of the 269 songs with one. 379 seeds keep their token song
+and 21 draw another; the title is the same in all 400, the band in
+362, the bars in 379, the tempo in 381. The writer's own account of
+its holds stands where it stood: over the songs that state a share
+beside their token song's, the median of the share less the song's is
+the same to the hundredth before and after for the tune's moves (round
+130), its bars come back (146), its places (147) and its notes with
+the kit (149: 0.05 or more under in 27 of 260 songs, 24 of 244
+before), and within 0.02 for the counter-line's and the chord parts'
+(142 to 147; the five songs with an arpeggio apart).
+On the nine tokens, the same seed before and after: Shadow's tune 507
+notes then 84 with a counter-line beside it, Under Martial Law's 86
+then 28 with a counter-line, Epitaph's 67 then 18, The Magic House's 97
+then 57 with an accompaniment, Aria de Mezzo Carattere's 276 then 450,
+Umaro's 89 then 109, The Phantom Forest's 57 then 71, Gau's 42 then 37.
+
+**Open.** The Serpent Trench is no longer written under the player's
+asking: its tune read from voice 0 has no phrase that can come back,
+the player asks every song for a theme that returns, and the plan is
+drawn again on another token (6 of 400 seeds before, none of 1,400
+now; written without the asking it is a song of 33 bars). The counts
+this record and `VOCABULARY.md` quote for rounds 102 to 151 wherever
+they say the game's tune, counter-line or accompaniment were made with
+the nine songs on the reader's label, and are not counted again here.
+The readings' other pass, the song's rendered loudness (round 59), was
+lost with the lead pass and is not put back: the player levels what it
+plays (`VOCABULARY.md`, **loudness**).
+
+**Heard.** Eleven pairs on the same seeds before the merge, a song on
+each of the nine tokens (The Serpent Trench's without the theme asked)
+and on Terra's and Locke's, passed by ear.
+
