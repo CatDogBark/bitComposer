@@ -161,6 +161,7 @@ class Player:
         self._levels_lock = threading.Lock()
         self._measure_thread = None
         self._measure_stop = threading.Event()
+        self._closed = False           # shut down: nothing is written after it
         self.auto_generate = False
         self.auto_generate_settings = ""
         self._generating = False
@@ -584,11 +585,17 @@ class Player:
     def _measure_folder(self, paths: list[str], stop: threading.Event) -> None:
         for path in paths:
             if stop.is_set():
-                return                         # stopped: whoever stopped it saves, and nothing is written after a shutdown
+                return                         # stopped: whoever stopped it saves
             self.level_of(path)
         if not stop.is_set():
-            with self._levels_lock:
-                self._levels.save()
+            self.schedule(self._save_levels)   # the face's thread writes the file, never this one: a pass that ends as its
+                                               # player's settings folder goes (a second player in one process) writes nothing
+
+    def _save_levels(self) -> None:
+        if self._closed:
+            return
+        with self._levels_lock:
+            self._levels.save()
 
     def _halt_measuring(self) -> None:
         self._measure_stop.set()
@@ -765,6 +772,7 @@ class Player:
     def shutdown(self) -> None:
         self.stop()
         self._halt_measuring()
+        self._closed = True
         with self._lock:
             if self.module:
                 self.module.destroy()
