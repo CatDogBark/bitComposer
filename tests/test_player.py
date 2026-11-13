@@ -186,7 +186,8 @@ class EngineHeadless(unittest.TestCase):
             volume = fh.read(1)[0]
             fh.seek(0x30)
             fh.write(bytes([volume // 2]))
-        before = {f: open(f, "rb").read() for f in (loud, quiet)}
+        from pathlib import Path
+        before = {f: Path(f).read_bytes() for f in (loud, quiet)}
         a, b = leveling.measure(loud), leveling.measure(quiet)
         self.assertAlmostEqual(a - b, 20 * __import__("math").log10(volume / (volume // 2)), delta=0.3)   # the measure hears the 6 dB
         p.scan()
@@ -203,7 +204,7 @@ class EngineHeadless(unittest.TestCase):
         self.assertAlmostEqual(sum(apart) / len(apart), a - b, delta=0.5)            # as written: 6 dB apart
         trim = [leveling._db(x) - leveling._db(y) for x, y in zip(on_loud, off_loud)]
         self.assertAlmostEqual(sum(trim) / len(trim), leveling.TARGET_DB - a, delta=0.3)   # the trim is the gain heard
-        self.assertEqual({f: open(f, "rb").read() for f in (loud, quiet)}, before)   # no file changed
+        self.assertEqual({f: Path(f).read_bytes() for f in (loud, quiet)}, before)   # no file changed
         p.set_level(True)
         self.assertAlmostEqual(p.level_trim(), leveling.TARGET_DB - b, delta=0.01)   # on again, on the loaded song at once
         # the setting and the levels survive a restart: a second player measures nothing it has measured
