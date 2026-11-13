@@ -1248,6 +1248,67 @@ def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng:
     return out
 
 
+def section_levels_of(text: str) -> list:
+    """A part's level in each part of its song's form, read from the balance token (round 150, arrangement.section_levels_field):
+    "vA1.0+B0.4+C-" -> [("A", 1.0), ("B", 0.4), ("C", None)], the form's own parts in its order, None where the song's part
+    has no count; [] where it cannot be read."""
+    if not text.startswith("v"):
+        return []
+    out = []
+    for item in text[1:].split("+"):
+        m = re.fullmatch(r"([A-Za-z])(\d\.\d|-)", item)
+        if not m:
+            return []
+        out.append((m.group(1).upper(), None if m.group(2) == "-" else float(m.group(2))))
+    return out
+
+
+def tokens_say_levels(balance) -> bool:
+    """Whether a vocabulary's balance tokens say their songs' parts' levels by section (round 150): one of them at least
+    carries the field (arrangement.section_levels_field), so a part whose token carries none has no section of its own
+    to step in. False for a table counted before the word, whose songs keep the pooled section_levels draws. `balance`:
+    the vocabulary's balance table, or None."""
+    table = getattr(balance, "table", balance)
+    return table is not None and any(SECTION_LEVELS_FIELD.search(outcome) for votes in table.votes.values() for outcome in votes)
+
+
+SECTION_LEVELS_FIELD = re.compile(r":v[A-Za-z](?:\d\.\d|-)(?:\+[A-Za-z](?:\d\.\d|-))*(?= |$)")   # a part's token ending in its section levels field
+
+
+def own_section_levels(drawn: dict, token: dict, parts: list, plays: dict, own_form: bool, log: list) -> dict:
+    """Each part's level a bar as its token song's part has it by section (round 150), over plan_section_levels' draws
+    (`drawn`), for a vocabulary whose tokens say it (tokens_say_levels). `token`: a part -> [(the form's letter, its
+    level there over its level in the song, or None)] for the token song's own parts of the form (section_levels_of).
+    Where the form's letters are the token song's (`own_form`) a part of the form takes its letter's level, 1.0 where
+    the song's part has no count there. Everywhere else the part holds its level, 1.0: in a form that is not the token
+    song's (one drawn because the song's is short of the bars asked) no section is a section of its song, and a part
+    the token says nothing of has none of its own to step in. A repeated part copies its source's. The pooled
+    section_levels word draws a section's level by the part and its place in the form: a tune on Fanfare's token,
+    which holds one level through its song, drew 0.8 and then 2.0 and played a four-bar section 8 dB over the rest.
+    Returns the levels; logs what it took against the draw."""
+    out = {role: list(levels) for role, levels in drawn.items()}
+    said = []
+    for role in out:
+        by_letter = dict(token.get(role) or ()) if own_form else {}
+        for bar, n, of, letter in parts:
+            if of is not None:
+                src = parts[of][0]
+                out[role][bar:bar + n] = out[role][src:src + n]
+                continue
+            if not any(plays[role][bar:bar + n]):
+                continue
+            level = by_letter.get(letter)
+            level = 1.0 if level is None else level
+            was = out[role][bar]
+            out[role][bar:bar + n] = [level] * n
+            if abs(level - was) > 1e-9:
+                said.append(f"{role} {level:.1f} in {letter} (the draw {was:.1f})")
+    if said:
+        log.append("levels by section from the balance (round 150)" + ("" if own_form else ", the form not the balance's song's and every part at its own level")
+                   + ": " + "; ".join(said))
+    return out
+
+
 def plan_section_densities(models: dict, parts: list, band: list, plays: dict, section_levels: dict, rng: random.Random, log: list) -> dict:
     """Each pitched part's density tier shift a bar but the counter's (section_densities, round 101): drawn a part an own section it plays in,
     by the part and the step the section's level makes (level_step of the section_levels draw, "same" without one): "d+"
@@ -2224,6 +2285,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_tune_together = {}                                # the tune's with the bass, and how often its bars come back at all (round 146)
     token_places = {}                                       # where in the beat a tune's notes fall in the token song (round 147)
     token_with_kit = {}                                     # how often the bass's and the tune's notes are struck with the kit there (round 149)
+    token_section_levels = {}                               # a part's level in each part of the token song's form, by its letters (round 150)
     token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
     token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
     token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
@@ -2461,6 +2523,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 token_with_kit[role] = tuple(int(x) / 100 for x in fields[29][1:].split("/"))   # notes are struck with the kit (round 149): `x100/84`, `x91`
                 log.append(f"the {role} strikes {token_with_kit[role][0]:.2f} of its notes with a kit hit in the balance's song"
                            + (f", and {token_with_kit[role][1]:.2f} of the kit's hits carry a bass note" if role == R.BASS else "") + " (round 149)")
+            if len(fields) > 30 and role != R.DRUMS and section_levels_of(fields[30]):   # its level in each part of the form over its level in
+                token_section_levels[role] = section_levels_of(fields[30])   # the song (round 150): `vA1.0+B0.4`
             if len(fields) > 21 and fields[21].startswith("n"):   # how busy it is in each (round 125): the line's onsets a bar `nA6+B2!1`,
                 if role == R.DRUMS:                         # the kit's pieces' hits a bar `nAS28.5@100,c1@50`
                     token_kit_onsets = kit_onsets_of(fields[21][1:])
@@ -2647,6 +2711,8 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted
+    if section_levels and tokens_say_levels(models.get("balance")):   # each part's level by section as its token song's part's (round 150): the
+        section_levels = own_section_levels(section_levels, token_section_levels, parts, plays, own_form, log)   # pooled draws above are made all the same
     voices = allot(band, counts, len(token_kit_channels) or 2)   # the kit on its song's channels (round 87), two without the field
     own_density = own_form and bool(token_onsets or token_kit_onsets)   # how busy each part is in each part of the form: the token song's own
     section_onsets, kit_bounds = {}, []                     # (round 125), where the form's letters are its own

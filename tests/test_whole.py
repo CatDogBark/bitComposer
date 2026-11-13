@@ -3092,6 +3092,71 @@ class FeelFromTheTokenTests(unittest.TestCase):
             self.assertEqual(getattr(drawn, name), getattr(taken, name), name)
 
 
+class OwnSectionLevelsTests(unittest.TestCase):
+    """Round 150: a part's level in each part of the form rides its token (`vA1.0+B0.4`: its median note level there over
+    its median in the song, by the form's letters), and the plan takes it where the form's letters are the token
+    song's; anywhere else a part holds its level. The section_levels word is pooled over the game by the part and the
+    section's place: a tune on Fanfare's token, which holds one level through its song, drew 0.8 and then 2.0 and
+    played a four-bar section 8 dB over the rest."""
+
+    def _song(self, levels):
+        """Twelve bars in three parts of four, a bass note a beat; `levels`: the bass's level in each part."""
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(12)]
+        bass = [(float(i), 0.9, 36.0, "b") for i in range(48)]
+        tune = [(float(i), 0.9, 72.0, "m") for i in range(0, 48, 2)]
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 48.0, 0, "", 1.0)], notes={"bass": bass, "melody": tune}, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(12)), parts=[(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, None, "C")], tonic=0, mode="major")
+        s.voice_notes = {0: ("bass", bass), 1: ("melody", tune)}
+        s.voice_levels = {0: 0.5, 1: 0.4}; s.levels = {"bass": 0.5, "melody": 0.4}
+        s.note_levels = {"bass": [(float(i), levels[i // 16]) for i in range(48)], "melody": [(float(i), 0.4) for i in range(0, 48, 2)]}
+        return s
+
+    def test_the_token_carries_a_parts_level_by_section(self):
+        s = self._song((0.2, 0.5, 0.5))
+        self.assertEqual(rhythm.section_level_ratios(s, "bass"), [(0, "0.4"), (1, "1.0"), (2, "1.0")])   # over the song's median, in tenths
+        self.assertEqual(rhythm.section_levels_field(s, "bass"), "vA0.4+B1.0+C1.0")
+        self.assertEqual(rhythm.section_levels_field(s, "melody"), "vA1.0+B1.0+C1.0")                  # a part that holds its level says so
+        self.assertEqual([(u.values["part"], u.values["form"], u.outcome) for u in rhythm.section_level_units([s]) if u.values["part"] == "bass"],
+                         [("bass", "first", "0.4"), ("bass", "middle", "1.0"), ("bass", "last", "1.0")])   # the pooled word counts the same
+        s.note_levels["melody"] = [(t, lv) for t, lv in s.note_levels["melody"] if t >= 16.0 or t < 4.0]   # two notes of the tune in A: no count there
+        self.assertEqual(rhythm.section_levels_field(s, "melody"), "vA-+B1.0+C1.0")
+        self.assertEqual(rhythm.section_levels_field(s, "drums"), "")
+        unit = rhythm.balance_units([self._song((0.2, 0.5, 0.5))])[0].outcome.split()
+        self.assertEqual(next(f for f in unit if f.startswith("bass=")).split("=", 1)[1].split(":")[30], "vA0.4+B1.0+C1.0")   # the thirty-first field
+
+    def test_the_plan_reads_it(self):
+        self.assertEqual(whole.section_levels_of("vA1.0+B0.4+C-"), [("A", 1.0), ("B", 0.4), ("C", None)])
+        for text in ("", "A1.0+B0.4", "vA1+B0.4", "vA1.0,B0.4", "v", "vA1.0+", "x100/84"):
+            self.assertEqual(whole.section_levels_of(text), [], text)
+        mk = lambda outcome: tables.Table(("part",), "balance", votes=tables.SHARES).fit([tables.Unit(f"s{i}", "g", outcome, {"part": rhythm.ARRANGEMENT}) for i in range(3)])   # noqa: E731
+        fields = [""] * 31
+        fields[:5] = ["half", "36-44", "0.9", "1", "1.0"]; fields[30] = "vA0.4+B1.0"
+        self.assertTrue(whole.tokens_say_levels(mk("bass=" + ":".join(fields) + " melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium")))
+        self.assertFalse(whole.tokens_say_levels(mk("bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium")))   # counted before the word
+        self.assertFalse(whole.tokens_say_levels(None))
+
+    def test_a_part_takes_its_token_songs_levels_by_the_forms_letters(self):
+        parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 1, "B"), (12, 4, None, "C")]
+        plays = {"bass": [True] * 16, "melody": [False] * 4 + [True] * 12, "counter": [True] * 16}
+        drawn = {"bass": [1.0] * 16, "melody": [0.8] * 4 + [2.0] * 8 + [1.0] * 4, "counter": [1.5] * 16}
+        token = {"bass": [("A", 0.4), ("B", 1.0), ("C", None)], "melody": [("A", None), ("B", 1.0), ("C", 1.2)]}
+        log = []
+        got = whole.own_section_levels(drawn, token, parts, plays, True, log)
+        self.assertEqual(got["bass"], [0.4] * 4 + [1.0] * 12)                                          # its song's level in A; no count in C: its own level
+        self.assertEqual(got["melody"], [0.8] * 4 + [1.0] * 8 + [1.2] * 4)                             # the section it rests in is left; B and its repeat; C
+        self.assertEqual(got["counter"], [1.0] * 16)                                                   # a part the token says nothing of holds its level
+        self.assertEqual(drawn["melody"][4], 2.0)                                                      # the draws are not written over
+        self.assertEqual(log, ["levels by section from the balance (round 150): bass 0.4 in A (the draw 1.0); melody 1.0 in B (the draw 2.0); melody 1.2 in C (the draw 1.0); "
+                               "counter 1.0 in A (the draw 1.5); counter 1.0 in B (the draw 1.5); counter 1.0 in C (the draw 1.5)"])
+        log = []
+        other = whole.own_section_levels(drawn, token, parts, plays, False, log)                        # a form that is not the token song's: no section
+        self.assertEqual((other["bass"], other["melody"][4:], other["counter"]), ([1.0] * 16, [1.0] * 12, [1.0] * 16))   # is a section of its song
+        self.assertIn("the form not the balance's song's and every part at its own level", log[0])
+        same = whole.own_section_levels({"bass": [0.4] * 4 + [1.0] * 12}, token, parts, plays, True, log := [])
+        self.assertEqual(log, [])                                                                       # the draw was the song's already: nothing said
+
+
 class WithTheKitTests(unittest.TestCase):
     """Round 149: how often a part's notes are struck with the kit rides its token (`x100/84` for the bass: the percent of
     its line's onsets struck with a kit hit, and of the kit's hits struck with a bass note, over the bars both strike
