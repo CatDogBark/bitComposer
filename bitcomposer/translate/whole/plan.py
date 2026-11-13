@@ -4048,25 +4048,69 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
     return written
 
 
+def doubling_own_of(text: str) -> tuple:
+    """What a doubling voice does of its own, read from the layer word's words after its interval (round 151,
+    arrangement.doubling_own): "doubling +0 sounds 0.10 between -5 0.50" -> (0.1, (-5, 0.5)): the share of the line's
+    note its note sounds (None: the line's length), and the interval and the place in the line's gap of a note between
+    the line's (None: none)."""
+    words = (text or "").split()
+    sounds = between = None
+    for i, w in enumerate(words):
+        try:
+            if w == "sounds" and i + 1 < len(words):
+                sounds = float(words[i + 1])
+            elif w == "between" and i + 2 < len(words):
+                between = (int(words[i + 1]), float(words[i + 2]))
+        except ValueError:
+            pass
+    if sounds is not None and not 0 < sounds <= 1:
+        sounds = None
+    if between is not None and not 0 < between[1] < 1:
+        between = None
+    return sounds, between
+
+
 def double_bass(plan: Plan, song: rhythm.Song, written: dict) -> list:
     """A bass's second voice that doubles its line (round 126): the line as finally played, again on the second voice at
     the layer word's interval (in the scale; a unison or an octave the line's notes exactly, `diatonic`). Two of FFVI's
     fifteen two-voice basses are one line on two samples (Returners, Overture part 3), and the bass writer wrote a second
     voice only where the word was a line of its own, so a doubling left the second channel silent (seven of Song Check
     100's songs, the layers word's pooled draw). Written last, after the theme band, the form's repeats and the bass's
-    last pass have moved the line, so the double stays the line's. Returns a log line."""
+    last pass have moved the line, so the double stays the line's. Since round 151 the double does what the token song's
+    does of its own (doubling_own_of): its notes sound the song's share of the line's notes they are struck with, and
+    in the line's gaps as long as its usual one (the median) or longer it strikes a note between, at the song's
+    interval from the line's note and at the song's place in the gap, as long as its other notes there. Overture (part
+    3)'s double is a pulse over its line's held note, a tenth as long and a fourth below at the half of the gap; written
+    as the line again, both voices held one note through the song's first thirty seconds. Returns a log line."""
     layer = layer_of(plan.extras.get(R.BASS))
     if plan.voices.get(R.BASS, 1) < 2 or layer[0] != "doubling" or R.BASS not in written:
         return []
     part = written[R.BASS]
-    line = [n for n in part.notes if n[3] == 0]
+    line = sorted(n for n in part.notes if n[3] == 0)
     if not line:
         return []
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
     double = diatonic(line, layer[1], scale, 1)
+    sounds, between = doubling_own_of((plan.extras.get(R.BASS) or {}).get("layer", ""))
+    said = ""
+    if sounds is not None:
+        double = [(a, a + (b - a) * sounds, m, v) for a, b, m, v in double]
+        said += f", each sounding {sounds:.2f} of the line's note"
+    if between is not None:
+        interval, place = between
+        gaps = [y[0] - x[0] for x, y in zip(line, line[1:])]
+        usual = statistics.median(gaps) if gaps else 0.0
+        extra = []
+        for x, y, d in zip(line, line[1:], double):
+            gap = y[0] - x[0]
+            if gap >= usual - rhythm.NEAR and gap > rhythm.NEAR:
+                start = x[0] + place * gap
+                extra.append((start, min(start + (d[1] - d[0]), y[0]), float(int(round(d[2])) + interval), 1))
+        double += extra
+        said += f", and {len(extra)} notes between the line's at {interval:+d} semitones, {place:.2f} of the gap"
     part.notes[:] = sorted(line + double, key=lambda n: (n[0], n[3]))
     song.notes[R.BASS] = [(n[0], n[1] - n[0], n[2], R.BASS) for n in part.notes]
-    return [f"voice 2 doubles the line at {layer[1]:+d} semitones, the line as finally played: {len(double)} notes (round 126)"]
+    return [f"voice 2 doubles the line at {layer[1]:+d} semitones, the line as finally played: {len(line)} notes" + said + " (round 126" + ("; round 151)" if said else ")")]
 
 
 STEP_MARGIN = 0.05                    # how far over its share of the token song's step profile a line's move class may run before the
