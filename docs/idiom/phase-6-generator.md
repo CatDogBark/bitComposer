@@ -283,6 +283,35 @@ imported through the window's own `import_from`, the stages watched on
   game's name, noise now that the window keeps your games under their own
   heading; it is the game's name alone.
 
+## The import's stages counted, the lead pass on every core (2026-11-13)
+
+The smoke test's eleven minutes were the lead pass rendering one song at
+a time, with LIBRARY's bar full from the end of the reading: the import
+looked done for most of its length. Two changes, neither to what an
+import makes.
+
+- **Each stage counts its own songs.** The worker's progress file starts
+  `progress DONE TOTAL` from nothing again after each `stage WORDS` line
+  (`pack.STAGES`: unpacking the set, reading the songs, hearing which
+  voice leads, counting the game's vocabulary, counting the library's),
+  the lead pass counting its songs as the reading does. LIBRARY shows
+  the step of five, the stage's words and its own count and bar; a stage
+  with nothing to count steps the bar by the second.
+- **The lead pass renders in a pool.** The songs' voices are rendered in
+  as many processes as the reading uses (all the cores but one) and each
+  song is decided and stored in the readings' order as its render comes
+  back, so the readings do not depend on how many render at once.
+- **Measured** on Final Fantasy VI's 82 files, one import with the code
+  before and one after, each into an empty data folder: the features and
+  voices rows of the readings, the pack file, its `translator.json` and
+  the worker's log are identical (68 songs heard, the melody label moved
+  in 9). On a 16-thread desktop the import took 280 s before (reading 24
+  s, the lead pass 238 s, the two vocabularies 8 s and 10 s) and 78 s
+  after (the lead pass 34 s). On an 8-core laptop it took 3 min 38 s
+  after (reading 66 s, the lead pass 106 s, the vocabularies 21 s and 26
+  s), where an import through the window the evening before had taken
+  about twelve and a half minutes.
+
 ## Exit criteria
 
 - GENERATE on a fresh install writes a song from the shipped FFVI
