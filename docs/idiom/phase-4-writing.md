@@ -10972,3 +10972,60 @@ plays in some bars of a part of the form may rest through it.
 the four tokens: passed by ear. On Fanatics's the chant was heard holding
 one note through its second part, which round 156 takes up.
 
+### Round 155: a kit keeps its song's pieces where the song has no form (2026-11-13, asked with round 154)
+
+**Why.** Round 153 left the kit out: its pieces' hits a bar were said
+by the form's letters alone, and a song read as one part said none.
+Round 154 brought the four short forms' kits in by the letter. This is
+the rest: the songs with no form.
+
+**Found.** Six tokens carry no form and four of their songs have a
+kit: Metamorphasis (a cymbal once a bar in 21 of its 22 bars),
+Overture (part 2) (an open hat twice a bar in 8 of 10), Quiet Beach
+(once a bar in 11 of 12) and "??" (five pieces, none in half its
+bars). Written on those tokens a kit struck at its tables' own rate in
+whatever bars the pooled textures and the drums' entrances gave it:
+over 400 seeds the three songs on Metamorphasis's had a kit in 4 bars
+of 28, in 4 of 20, and none at all (never in a texture, it was left
+out of the band), and the nine on Overture (part 2)'s in from none of
+their bars to all.
+
+**Built.** `rhythm.kit_onsets_field` says a song with no form's pieces
+the whole song through, under `*` for the letter (`n*c1@95`: the
+cymbal one hit a bar at the median of the bars it plays, in 95 in a
+hundred of the song's bars); `plan.kit_onsets_of` reads it under
+`WHOLE_SONG`. Where the plan's form is not its token song's the kit's
+pieces take those bounds in every bar (`kit_piece_bounds`, as a part of
+the form's: a piece that plays through keeps within half to one and a
+half times its hits, one in some bars from none to that many, a rare
+one a hit at most). And a kit one of whose pieces plays in three
+quarters of its song's bars or more (`KIT_THROUGH`, the bound's own
+line for playing through) plays in every bar: the drums are put into
+every bar's texture after the pooled texture draw and their pooled
+entrances are not taken, as on a token song's own textures. Nothing is
+drawn that was not; the entrances' stream is its own.
+
+**Measured.** Suite 600 (1 skip). The vocabulary is refit: four balance
+tokens gain the word (the four kits above), the outcomes in their
+order, no other table. Plans (400 seeds, the player's asking), against
+round 154: the plan says the round's lines in 12 songs (Overture (part
+2) 9, Metamorphasis 3) and a note changes in 13, the kit in all 13 and
+the bass and the tune, held to the kit's hits since round 149, in 5;
+the other 387 are the same note for note. One seed draws another token
+song: a kit kept in the band draws its own words, and the plan drawn
+again for the theme asked lands elsewhere. In the 12 the kit plays in
+every bar: the three on Metamorphasis's token one hit a bar (the
+game's one), the nine on Overture (part 2)'s two (its two), where the
+kit had played in 4 of 28 bars, 4 of 20 and none, and in from 0 of 28
+to 22 of 22.
+
+**Open.** The kit plays in every bar where its song's plays in nearly
+every bar: the bar or two the game rests it are not carried. The
+pieces' bounds are one for the whole song. A song with no form still
+takes the pooled textures and entrances for its other parts. And
+Metamorphasis's own main drum voice, read as a roll and filed apart,
+is not in its kit at all.
+
+**Heard.** Two pairs on the same seeds before the merge, a song on
+Metamorphasis's token and one on Overture (part 2)'s: passed by ear.
+

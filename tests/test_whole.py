@@ -1762,7 +1762,8 @@ class TokenSectionTests(unittest.TestCase):
         self.assertEqual(rhythm.section_onsets_field(s, bass), "n3")                                # and the line says its onsets a bar the whole song through
         self.assertEqual(rhythm.section_onsets_field(s, tune), "n4")                                # (round 153): the median over the bars it plays in
         self.assertEqual(rhythm.section_onsets_field(s, []), "")
-        self.assertEqual(rhythm.kit_onsets_field(s), "")                                            # the kit's pieces still say nothing without letters
+        self.assertEqual(rhythm.kit_onsets_field(s), "n*K4@75,S8@50")                               # and the kit its pieces' (round 155), under "*" for the letter:
+                                                                                                    # the kick four a bar in six bars of eight, the snare eight in four
 
     def test_the_fields_are_read(self):
         self.assertEqual(whole.onsets_of("A6+B2!1+C4.5!7"), {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)})
@@ -1771,6 +1772,8 @@ class TokenSectionTests(unittest.TestCase):
         self.assertEqual(whole.onsets_of("3.5"), {whole.WHOLE_SONG: (3.5, None)}); self.assertEqual(whole.onsets_of("0"), {})
         self.assertEqual(whole.kit_onsets_of("AS28.5@100,c1@50+BS20@75"), {"A": {"S": (28.5, 1.0), "c": (1.0, 0.5)}, "B": {"S": (20.0, 0.75)}})
         self.assertEqual(whole.kit_onsets_of("AS28"), {})
+        self.assertEqual(whole.kit_onsets_of("*K1@50,S8@100"), {whole.WHOLE_SONG: {"K": (1.0, 0.5), "S": (8.0, 1.0)}})   # a song with no letters (round 155)
+        self.assertEqual(whole.kit_onsets_of("*"), {})
         b = whole.kit_piece_bounds({"S": (28.5, 1.0), "c": (1.0, 0.5), "K": (4.0, 0.1)})
         self.assertEqual(b["S"], (8, 24))                                                           # played through: half to one and a half of sixteen, the writers' most
         self.assertEqual(b["c"], (0, 1)); self.assertEqual(b["K"], (0, 1)); self.assertEqual(b["h"], (0, 0))   # in some bars; rarely; never
@@ -3019,6 +3022,29 @@ class CounterLineTests(unittest.TestCase):
         self.assertEqual(whole.song_pace({"A": (2.0, None), "B": (6.0, 1)}, [("A", 4), ("B", 4), ("A", 4)]), 2.0)   # eight bars of A's two, four of B's six
         self.assertEqual(whole.song_pace({"B": (6.0, None)}, [("A", 4), ("B", 4)]), 6.0)            # a part of the form the line rests through is left out
         self.assertIsNone(whole.song_pace({"A": (2.0, None)}, None)); self.assertIsNone(whole.song_pace(None, [("A", 4)])); self.assertIsNone(whole.song_pace({}, []))
+
+    def test_a_kit_keeps_its_songs_pieces_where_the_song_has_no_form(self):
+        """Round 155: a token with no form says its kit's pieces the whole song through, and the plan, on whatever form
+        it draws, bounds every bar's pieces by them; a kit one of whose pieces plays in three quarters of its song's
+        bars or more plays in every bar."""
+        def plan(kit):
+            band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 21: "n5"}),
+                    self._token("drums", {4: "0.5", 21: kit}),
+                    self._token("melody", {0: "half", 1: "60-72", 2: "0.9", 3: "1", 4: "0.8", 8: "medium+varied", 21: "n6"})]
+            mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+            return whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(" ".join(band) + " top=0.30 tempo=medium", part=rhythm.ARRANGEMENT))}, 7, "g")
+        p = plan("n*K1@50,S8@100")
+        bars = p.parts[-1][0] + p.parts[-1][1]
+        self.assertEqual(len(p.kit_bounds), bars)
+        self.assertTrue(all(b == p.kit_bounds[0] for b in p.kit_bounds))                            # one bound, every bar
+        self.assertEqual((p.kit_bounds[0]["S"], p.kit_bounds[0]["K"], p.kit_bounds[0]["h"]), ((4, 12), (0, 1), (0, 0)))   # through; in some bars; never
+        self.assertEqual(p.plays["drums"], [True] * bars)                                           # the snare plays through its song: the kit in every bar
+        said = [l for l in p.log if "(round 155)" in l]
+        self.assertEqual(len(said), 2); self.assertIn("K 0-1 S 4-12", said[1])
+        q = plan("n*K1@50,S2@30")                                                                   # no piece plays through: the bounds, and the textures as drawn
+        self.assertEqual((q.kit_bounds[0]["K"], q.kit_bounds[0]["S"]), ((0, 1), (0, 3)))
+        self.assertEqual(len([l for l in q.log if "(round 155)" in l]), 1)
+        self.assertEqual(plan("").kit_bounds, [])                                                   # a token that says nothing: as it was
 
     def test_the_plan_takes_the_counter_lines_onsets_by_section(self):
         band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 20: "eA+B", 21: "nA4+B2"}),
