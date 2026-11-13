@@ -842,17 +842,16 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   it is a song of 33 bars. What would change it: the player asking a
   song for a returning theme only where its token song's tune returns.
 
-- **A theme's return brings its chords over the part's own** (noted at
-  round 156; the player's asking). Asked for a theme that returns with
-  the band, the plan copies the theme's four bars of chords over the
-  bars the theme returns in. Where those bars lie in a part of the
-  form with its own harmony (a figure the token song loops, 239 of the
-  409 such returns over 400 seeds) the part's harmony gives way for
-  them, and where the tune, the bass and the accompaniment cannot
-  follow the theme there (their pace in the part is not the theme's:
-  86 of the 409) the chords are all that comes back. The song on
-  Fanatics's token holds one chord through its second part so: 22 of
-  the 173 figures of two bars or more are on one root for it. What
-  would change it: a return that leaves a part's own harmony standing,
-  or one that brings no chords where the tune cannot come.
-
+- **A theme's return the tune can follow brings its chords over the
+  part's own** (rounds 156 and 157; the player's asking). Asked for a
+  theme that returns with the band, the plan copies the theme's four
+  bars of chords over the bars the theme returns in. Since round 157
+  it does so only where the tune can play the theme there (its onsets
+  a bar where the theme is stated within half to one and a half times
+  its onsets a bar where it returns): 310 returns over 400 seeds, 177
+  of them into a part of the form whose harmony the token song loops,
+  and there the part's own harmony gives way for those bars. 11 of the
+  173 figures of two bars or more are on one root for it. The test is
+  the tune's pace alone, not whether the theme's chords suit the part.
+  What would change it: a return that leaves a looping part's harmony
+  standing whatever the tune does.

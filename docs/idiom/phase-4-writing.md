@@ -11089,3 +11089,62 @@ with a song written both ways.
 The song on Fanatics's token written with its theme's return bringing no
 chords was heard as the better; that is not built here.
 
+### Round 157: a theme's return brings no chords where the tune cannot follow (2026-11-13, left open by round 156; heard as a song written both ways)
+
+**Why.** Round 156 left 22 figures of two bars or more on one root,
+every one under a theme's return that brings its chords back, the song
+on Fanatics's token among them: its second part still held one chord,
+and its chant one note. Written with that return bringing no chords
+the song was heard as the better, and the rule was built.
+
+**Found.** Asked for a theme that returns with the band, the plan
+copies the theme's four bars of chords over the bars the theme returns
+in, as it is planned, before a writer is asked. The writers then bring
+a bar back only where it keeps within their part of the form's own
+onsets a bar: the tune since round 138, the bass and the chord parts
+since round 134. Where the theme cannot come back by that test, the
+chords are all that came. On Fanatics's token the theme is four bars
+at eight notes a bar on one chord; it returns at the second part's
+first bar, where the tune holds a note a bar, and the one chord lay
+over the two the part turns about. Over 400 seeds 409 returns brought
+their chords.
+
+**Built.** `plan.theme_fits(tune_onsets, theme_bar, return_bar)`: the
+tune's own onsets a bar where the theme is stated, within the envelope
+its writer holds a bar to where the theme returns (half to one and a
+half times the tune's onsets a bar there); true where the plan has no
+such onsets for either bar. In `_plan_once` a return that would bring
+chords is asked it first: where the theme does not fit, the return
+brings no chords and the part of the form keeps its own, and the plan
+says so. What else the return was drawn to bring (the bass, the
+accompaniment) is left to their writers, as before. Nothing is drawn
+that was not.
+
+**Measured.** Suite 607 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 156: 99 of the 409
+returns bring no chords now, in 87 songs; a note changes in 84 (the
+tune in 84, the bass in 74, the counter-line in 70, the accompaniment
+in 67, the harmony in 26) and the other 316 are the same note for
+note; every seed keeps its token song, title, band, bars and tempo.
+By token song: Last Dungeon 9, Searching for Friends 6, The Magic
+House 6, and five each on Aria de Mezzo Carattere's, Celes's, Save
+Them!'s, Fanatics's, Coin Song's, Dancing Mad (part 1)'s and The
+Prelude's. The figures of two bars or more on one root: 11 of 173
+(22), each under a return whose theme the tune can play there. The
+chord changes at 0.43 of a song's bar lines at the median (0.45: a
+theme's chords had changed a part's now and then; the token songs'
+0.61). The song on Fanatics's token (seed 84): its second part turns
+C#5 and A5 about, the chant C#4 and A4 and the bass C#2 and A1 with
+them.
+
+**Open.** A return the tune can follow still brings the theme's
+chords over the part's own harmony (310 returns, 177 of them into a
+part whose harmony the token song loops). The test is the tune's
+pace alone: a theme that fits by its onsets a bar and not by its
+part's chords comes back all the same. Eight songs of 400 are on one
+chord throughout, none of them by a return.
+
+**Heard.** The song on Fanatics's token written both ways, before the
+round was built: the better without the chords. Six pairs on the same
+seeds before the merge: passed by ear.
+
