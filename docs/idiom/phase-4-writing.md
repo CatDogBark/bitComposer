@@ -30,7 +30,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 29 | 2026-10-24 | the counter-line beside the tune | 23 |
 | 30 | 2026-10-24 | the counter's sample as a pair word | 24 |
 | 31 | 2026-10-24 | the counter's level under the tune's share | 24, 25 |
-| 32 | 2026-10-24 | the voice beside a line kept where the game plays its sample | 26 |
+| 32a | 2026-10-24 | the voice beside a line kept where the game plays its sample | 26 |
 | 32 | 2026-10-24 | the band's levels as one unit on the balance token | 26 |
 | 33 | 2026-10-25 | the second voices' levels with the band's on the balance token | 26, 27 |
 | 34 | 2026-10-27 | the sample before the notes | 28 |
@@ -67,6 +67,87 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
 | 74 | 2026-10-31 | a kit piece on a tonal sample leaves the pack's own drum in its slot | 62 |
 | 75 | 2026-10-31 | the kit token's struck note; the kit at its habit's density (the limbs' tables); the tempo redraw inside its class | 63 |
+| 76 | 2026-11-06 | a voice beside a counter that follows the tune | 64 |
+| 77 | 2026-11-06 | the role reader's drum clause holds its notes like a drum, and a kit piece's hold | 64 |
+| 78 | 2026-11-06 | a percussion piece at the rate the game struck it | 64 |
+| 79 | 2026-11-06 | the struck note as a degree of the key | 65 |
+| 80 | 2026-11-06 | the kit slot's sample is the one the kit leans on | 65 |
+| 81 | 2026-11-06 | the slot's figure | 66 |
+| 82 | 2026-11-06 | the kit's echo rides the token | 66 |
+| 83 | 2026-11-06 | a tune on the drum channel is a part | 66 |
+| 84 | 2026-11-06 | the pans ride the balance token | 67 |
+| 85 | 2026-11-06 | a voice in two places | 68 |
+| 86 | 2026-11-06 | the token song's own range for its own sample | 69 |
+| 87 | 2026-11-06 | the kit's channels ride the balance token | 70 |
+| 88 | 2026-11-06 | a tuned slot's rate stays inside the game's rates | 71 |
+| 89 | 2026-11-06 | a channel's second instrument is a voice of its own, and a pad is no kit | 72 |
+| 90 | 2026-11-07 | a voice's stretches | 73 |
+| 91 | 2026-11-07 | the line's instrument by stretch | 74 |
+| 92 | 2026-11-07 | a register a bar, and a voice beside a line's instrument by stretch | 75 |
+| 93 | 2026-11-07 | off the scale and clashes as counted words | 76 |
+| 94 | 2026-11-07 | the clashes word by the write order | 77 |
+| 95 | 2026-11-07 | a voice beside a line written where the game plays its sample, and a line's note lengths its song's own | 78 |
+| 96 | 2026-11-07 | a chord part's line leaves the chord as the game's does, the counter's chord tones, a mark's nearest tone, a stretch's own edge | 79 |
+| 97 | 2026-11-07 | a parallel voice lands where the game's does | 80 |
+| 98 | 2026-11-07 | the small words | 81 |
+| 99 | 2026-11-07 | a kit slot's second sample | 82 |
+| 100 | 2026-11-08 | a recalled tune cell lands where the game's does | 83 |
+| 101 | 2026-11-08 | a section's density by the step its level makes | 84 |
+| 102 | 2026-11-08 | a looped drum-named sample struck across the chords is an instrument | 85 |
+| 103 | 2026-11-08 | a chord part's line motion and off-chord tier ride the balance token | 86 |
+| 104 | 2026-11-08 | a stretch's range is its own sample's notes' ambitus | 87 |
+| 105 | 2026-11-08 | each section's bar from its kit | 89 |
+| 106 | 2026-11-08 | the riff as the token song's own | 89 |
+| 107 | 2026-11-08 | a voice struck with another | 90 |
+| 108 | 2026-11-09 | a struck voice's share, lengths and longest note are the token song's | 91 |
+| 109 | 2026-11-09 | the struck stretches counted into the interval word; an off-chord landing from the nominal placing | 92 |
+| 110 | 2026-11-09 | a nominal one song plays keeps that song's chain | 93 |
+| 111 | 2026-11-09 | a backing line's chord-tone profile is the token song's | 94 |
+| 112 | 2026-11-09 | the song's chord-shape profile is the token song's | 95 |
+| 113 | 2026-11-09 | the form is the token song's | 96 |
+| 114 | 2026-11-09 | the bass line's pitch continuity is the token song's | 96 |
+| 115 | 2026-11-09 | a struck voice's sounding share is the token song's | 97, 98 |
+| 116 | 2026-11-09 | a struck voice's cell repetition is the token song's | 97, 98 |
+| 117 | 2026-11-09 | a backing line's step profile is the token song's | 97, 98 |
+| 118 | 2026-11-09 | the flourish at a section's end, a section_fills word | 97, 98 |
+| 119 | 2026-11-09 | a kit voice carries its tonal reading, and a pitched part is tuned by it | 98 |
+| 120 | 2026-11-09 | no voice over what the SNES chip can play of its sample | - |
+| 121 | 2026-11-09 | a backing voice loops where the token song's does | 99 |
+| 122 | 2026-11-09 | what a voice beside a line does is read part by part of the form | 99 |
+| 123 | 2026-11-09 | a chord part's line doubles the bass where the token song's does | 99 |
+| 124 | 2026-11-10 | the parts that sound in each part of the form are the token song's | 101 |
+| 125 | 2026-11-10 | how busy each part is in each part of the form is the token song's | 101 |
+| 126 | 2026-11-10 | the bass's second voice does what the token song's does | 101 |
+| 127 | 2026-11-10 | a chord takes the quality its degree has in the token song, and keeps it | 101 |
+| 128 | 2026-11-10 | the harmony's loops are read by their roots | 101 |
+| 129 | 2026-11-10 | the bass strikes a bar's first beat on the chord's root as often as the token song's does | 101 |
+| 130 | 2026-11-10 | a tune moves as its token song's tune does | 101 |
+| 131 | 2026-11-10 | a song read at half its speed is counted in double time | 101 |
+| 132 | 2026-11-10 | a song loops where its token song loops | 101 |
+| 133 | 2026-11-10 | the bass strikes a bar's first beat as often as the token song's does | 101 |
+| 134 | 2026-11-11 | a part back with the theme keeps within its part of the form's own onsets | 102 |
+| 135 | 2026-11-11 | a chord part strikes a bar's first beat as often as the token song's does | 102 |
+| 136 | 2026-11-11 | a tune's note sounds no shorter than its token song's tune's shortest usual note | 102 |
+| 137 | 2026-11-11 | a written song runs within a tenth of its token song's own tempo | 102 |
+| 138 | 2026-11-11 | a tune keeps within its token song's notes a bar by the part of the form | 102 |
+| 139 | 2026-11-11 | a part plays the tune's bar only where its own bar keeps within its own onsets | 102 |
+| 140 | 2026-11-11 | a tune's note is measured to the next note across the bar line | 103 |
+| 141 | 2026-11-11 | a tune sounds its notes as its token song's tune does | 103 |
+| 142 | 2026-11-11 | a chord part plays an earlier bar on its chord again as often as its token song's part does | 105 |
+| 143 | 2026-11-11 | the counter-line beside a tune keeps to its token song's own line | 105 |
+| 144 | 2026-11-11 | a part comes back with its lead as often as its token song's part does | 105 |
+| 145 | 2026-11-11 | a song counted in double time takes its kit's bars from the kit tables counted so | 105 |
+| 146 | 2026-11-11 | the tune comes back with the bass as often as its token song's does | 105 |
+| 147 | 2026-11-12 | a tune keeps to the places in the beat its token song's tune plays on | 105 |
+| 148 | 2026-11-12 | a song is written in its token song's feel | - |
+| 149 | 2026-11-12 | the bass and the tune strike with the kit as often as their token song's | - |
+| 150 | 2026-11-12 | a part's level changes by section only where its token song's does | - |
+| 151 | 2026-11-12 | a bass's doubling voice does what its token song's does of its own | - |
+| 152 | 2026-11-13 | the lead pass run again, nine tunes back on the voice heard as the tune | - |
+| 153 | 2026-11-13 | a line keeps its song's pace where the form is not its own | - |
+| 154 | 2026-11-13 | a short form is the song's own, played round again | - |
+| 155 | 2026-11-13 | a kit keeps its song's pieces where the song has no form | - |
+| 156 | 2026-11-13 | a harmony's figure of two bars is not written on one chord | - |
 
 ## Goal
 
