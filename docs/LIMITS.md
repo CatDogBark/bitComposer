@@ -315,8 +315,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   song whose form is not its token song's keeps the pooled draw.
 - **A loop is the token song's or none.** Since round 121 a backing
   voice plays its figure again where its token song's voice loops, by
-  the form's letters; where the plan keeps its own form (a token form
-  short of the bars asked, 14 of 400 seeds) no loop is taken, and a
+  the form's letters; a token form short of the bars asked is played
+  round again since round 154 and its loops are taken with it, and a
   pack whose token carries no form has none. The figure is the first bar the
   voice plays on it, as the writers wrote it: a bar drawn note by note,
   not a riff built as one. A bar the token song has off its figure (a
@@ -345,9 +345,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   carried: the kit's figures rest single bars at their tables' rate, a
   pitched part's writer plays through. A part of the form that returns
   sounds as its first statement did, where the game's second A can add
-  a voice. And a song whose form is not its token song's (four FFVI
-  forms are under the sixteen bars a song is asked, six tokens carry no
-  form) keeps the pooled textures and entrances. Since round 153 its
+  a voice. A form under the sixteen bars a song is asked (four of
+  FFVI's) is played round again from its loop's part since round 154,
+  the part that comes round its first statement note for note; under
+  the player's asking for a theme that returns, Shadow's own form
+  gives the tune no phrase to come back in and the plan is drawn again
+  on another token (1 seed of 400 where 3 were). And a song whose form
+  is not its token song's (six tokens carry no form) keeps the pooled
+  textures and entrances. Since round 153 its
   lines keep to their song's pace all the same: one number for the
   whole song, so a line is written at its song's median onsets a bar
   in every part of the form (a song that thins in one part does not),
@@ -529,8 +534,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
 - **A part's level steps only by its own song's sections.** Since round
   150 a part's level in a part of the form is its token song's part's
   there, where the form's letters are the song's. In a form that is not
-  the song's (one drawn because the song's is short of the bars asked:
-  35 of 400 seeds) every part holds one level through, and so does a
+  the song's (a token that carries no form: 17 of 400 seeds since
+  round 154 plays a short form round again) every part holds one level
+  through, and so does a
   part the token has no count for. The token's level is the section's
   median over the song's: a swell inside a section, and a part that
   enters loud and settles, are not in it.

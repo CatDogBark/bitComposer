@@ -10910,3 +10910,63 @@ round says no such number until the game is imported again.
 round changes, before the merge: better by ear, the pace on Fanatics's
 and Overture (part 2)'s tokens their songs'.
 
+### Round 154: a short form is the song's own, played round again (2026-11-13, asked after round 153's songs)
+
+**Why.** Round 153 gave a line one pace for the whole song where the
+plan's form is not its token song's. Asked how a song could keep its
+pace by the part of the form there, and its kit with it: for the four
+songs with a form under the sixteen bars a song is asked, the token
+already says all of it by the form's letters, and the plan dropped the
+form for being short.
+
+**Found.** Fanfare (A2B8, ten bars), Fanatics (A4B4B4, twelve), Shadow
+(A2B12, fourteen) and The Phantom Train (A3B4B4C4, fifteen). In
+Fanatics's first four bars the bass and the chant strike eight a bar,
+the accompaniment three and the kit eight; from the fifth the bass and
+the chant hold one note a bar, the accompaniment strikes eight and the
+kit sixteen. At one pace it was written as its second part throughout.
+The game loops each of the four.
+
+**Built.** `plan.round_again(form, loop_part, least)`: a token song's
+form short of the bars asked, with its parts from the loop's part on
+(the token's `loop=`; the first where none is read) added whole until
+the bars reach the ask, a letter's bars its first statement's; no
+further than the twelve parts a song may have, and a form that still
+falls short leaves the draw standing as before. `_plan_once` takes the
+longer form as the token song's own (`own_letters`): the parts that
+play in each part of the form, each line's onsets a bar, the kit's
+pieces, the loops and the levels are then the song's by the letter, as
+on any own form, and a part that comes round again is its first
+statement (`copy_repeats`). The written song's loop goes back to the
+token song's loop's part. Nothing is drawn that was not: the form's
+stream is read as it was.
+
+**Measured.** Suite 599 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 153: the plan says the
+round's line in 20 songs (Fanfare 9, Fanatics 6, The Phantom Train 4,
+Shadow 1); a note changes in 22 and the other 378 are the same note for
+note. Three seeds draw another token song, the plan drawn again for the
+theme asked: two of the three that were on Shadow's (its own form gives
+the tune no phrase to come back in under the asking), and one that was
+drawn again off Fanfare's before and now stays on it. By the part of
+the form over the 20 songs: each line's notes a bar over its song's for
+that letter, 109 parts of the form, the median 0.91 and every one
+within half to one and a half times it; the kit's hits a bar over the
+game's kit's there, 44 parts of the form, the median 0.91, 38 within
+half to one and a half times it and 6 under (The Phantom Train's A,
+where the game's hat runs thirteen a bar and the written kit rests: a
+piece the song plays in some bars may rest). The song on Fanatics's
+token (seed 84): A at bass 5, chant 4, accompaniment 3, kit 8.5; B at
+bass 1, chant 1, accompaniment 8, kit 9 (the game's 8, 8, 3, 12 and 1,
+1, 8, 18). The song on Shadow's (seed 11): its kit 17.5 hits a bar in B
+where the game's plays 21 and the written song played 7 throughout.
+
+**Open.** A part of the form that comes round again is its first
+statement note for note, where the game's second time can differ. A
+song of ten bars is eighteen as written, and the player's loop plays
+its second part again after that. Shadow is drawn less under the
+player's asking (1 seed of 400 where 3 were). The kit's piece that
+plays in some bars of a part of the form may rest through it.
+
+**Not yet heard.** With round 155's songs, before the merge.
+
