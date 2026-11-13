@@ -10906,6 +10906,7 @@ throughout (the tune on Fanatics's token goes from seven notes a bar to
 one, its song's). An imported game's vocabulary counted before this
 round says no such number until the game is imported again.
 
-**Not yet heard.** Seven pairs, one song on each token the round
-changes, are rendered for the ear before the merge.
+**Heard.** Seven pairs on the same seeds, one song on each token the
+round changes, before the merge: better by ear, the pace on Fanatics's
+and Overture (part 2)'s tokens their songs'.
 
