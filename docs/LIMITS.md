@@ -432,18 +432,26 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   than the half beat (a quarter of the beat, a third, finer), and a
   tune written in its token song's feel keeps under each; its share on
   the half beat is still the bar table's.
-- **A tune's places are held only where the song is written in its
-  token song's feel.** A written song's feel is the pooled `feels`
-  word's draw: 21 of the 68 Song Check 100 songs are written in the
-  other feel than their FFVI song's (ten in triple feel on a duple
-  song's token, eleven duple on a triple song's), and the tunes of 124
-  of 400 seeds are not held to their song's places (round 147). In a
-  triple feel the third of the beat is the band's own division and a
-  duple song's tune plays on none; in a duple one a triple song's
-  tune's thirds would sit against a band in sixteenths (a tune on
-  Dancing Mad (part 5)'s token, held so, was given the organ's
-  triplets, one bar seventeen times). The token carries its song's
-  feel since round 147 (`feel=`); the plan does not take it.
+- **A song is written in its token song's feel; its parts' bars are
+  still each drawn on their own.** Until round 148 a written song's feel
+  was the pooled `feels` word's draw: 21 of the 68 Song Check 100 songs
+  and 120 of 400 seeds were written in the other feel than their FFVI
+  song's (ten test songs in triple feel on a duple song's token, eleven
+  duple on a triple song's), their tunes not held to their song's places
+  (round 147) and their kits drawing none of their song's bars. Since
+  round 148 the plan takes the feel the token says (`feel=`), and every
+  tune is held to its song's places. The figure tables are drawn by the
+  feel a part at a time: a triple song's bass and its kit each draw a
+  triple song's bars, and which bar of one sits over which bar of the
+  other no word says. Over the 68 songs the bass plays two against the
+  kit's three, or three against its two, in 144 of 965 bars where it did
+  in 106 of 962 (the game's 217 of 949, a fifth of the bars or more in
+  12 songs), and over the 11 songs the round changes that have a bass
+  and a kit the bass strikes 0.53 of its notes with a kit hit at the
+  median where it struck 0.65 (their FFVI songs' 0.77). Round 149
+  holds the bass and the tune
+  to the kit. A vocabulary counted before round 147 says no feel on any
+  token and keeps the pooled draw (`tokens_say_feel`).
 - **A bar moved onto its song's places keeps its notes.** Since round
   147 the notes of a bar that would put the tune over its song's share
   of a place are moved onto the nearest rhythm that keeps the places,

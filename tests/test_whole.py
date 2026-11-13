@@ -3045,6 +3045,53 @@ class CounterLineTests(unittest.TestCase):
         self.assertGreater(far(some), far(held))                                                    # a song's line that does: as far as its share
 
 
+class FeelFromTheTokenTests(unittest.TestCase):
+    """Round 148: a song is written in its token song's feel. The token has said its song's feel since round 147 (`feel=`,
+    where it is not duple) and the plan had drawn the song's feel from the pooled `feels` word all the same: 21 of the 68
+    test songs were written in the other feel than their FFVI song's, a song on Terra's token in twos under a snare that
+    played none of Terra's march. The pooled draw is still made, so no other draw moves, and a vocabulary whose tokens
+    do not say their songs' feel keeps it."""
+
+    def _models(self, tokens, drawn):
+        mk = lambda outcome, i, **vals: tables.Unit(f"s{i}", "g", outcome, vals)   # noqa: E731
+        return {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit([mk(t, i, part=rhythm.ARRANGEMENT) for i, t in enumerate(tokens)]),
+                "feels": tables.Table(("part",), "feels", votes=tables.SHARES).fit([mk(drawn, i, part="song") for i in range(3)])}
+
+    TOKEN = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7 top=0.30 tempo=medium"
+
+    def test_whether_a_vocabularys_tokens_say_the_feel(self):
+        says = whole.tokens_say_feel
+        self.assertFalse(says(None))                                                                    # no balance table
+        self.assertFalse(says(self._models([self.TOKEN], "duple")["balance"]))                          # counted before the word: no token says
+        self.assertTrue(says(self._models([self.TOKEN, self.TOKEN + " feel=triple"], "duple")["balance"]))   # one song says it is not duple
+
+    def test_a_song_is_written_in_its_token_songs_feel(self):
+        triple = whole.plan(self._models([self.TOKEN + " feel=triple"] * 3, "duple"), 7, "g")           # the pooled word draws duple; the token's song is triple
+        self.assertEqual((triple.token_feel, triple.feel), ("triple", "triple"))
+        self.assertIn("the song's feel from the balance (round 148): triple (the draw duple)", triple.log)
+        mixed = [self.TOKEN + " feel=triple"] * 3 + [self.TOKEN.replace("64-84", "60-80")] * 3          # a table that says the feel: a token without the
+        duples = [p for p in (whole.plan(self._models(mixed, "triple"), seed, "g") for seed in range(1, 13)) if p.token_feel == "duple"]   # word is a duple song's
+        self.assertTrue(duples)
+        for p in duples:
+            self.assertEqual(p.feel, "duple")
+            self.assertIn("the song's feel from the balance (round 148): duple (the draw triple)", p.log)
+        same = whole.plan(self._models([self.TOKEN + " feel=triple"] * 3, "triple"), 7, "g")            # the draw is the token song's feel already:
+        self.assertEqual(same.feel, "triple")                                                           # nothing taken, nothing said
+        self.assertFalse(any("(round 148)" in line for line in same.log))
+
+    def test_a_table_counted_before_the_word_keeps_the_draw(self):
+        old = whole.plan(self._models([self.TOKEN] * 3, "triple"), 7, "g")                              # no token says its song's feel: the tokens
+        self.assertEqual((old.token_feel, old.feel), ("duple", "triple"))                               # are silent, not duple, and the pooled draw stands
+        self.assertFalse(any("(round 148)" in line for line in old.log))
+
+    def test_no_other_draw_moves(self):
+        drawn = whole.plan(self._models([self.TOKEN] * 3, "duple"), 7, "g")                             # the same token but for the word, the same seed:
+        taken = whole.plan(self._models([self.TOKEN + " feel=triple"] * 3, "duple"), 7, "g")            # the pooled draw is made all the same
+        self.assertEqual((drawn.feel, taken.feel), ("duple", "triple"))
+        for name in ("tonic", "mode", "bpm", "parts", "band", "weights", "registers", "voices"):
+            self.assertEqual(getattr(drawn, name), getattr(taken, name), name)
+
+
 class TunePlacesTests(unittest.TestCase):
     """Round 147: where in the beat a tune's notes fall rides its token (`p12/0/3`: the percent of its line's onsets on a
     quarter of the beat, on a third and finer than either), with the song's feel where it is not duple (`feel=triple`),
@@ -3111,12 +3158,12 @@ class TunePlacesTests(unittest.TestCase):
         self.assertIn("the melody plays 0.12 of its notes on a quarter of the beat in the balance's song, 0.40 on a third, 0.03 finer (round 147)", p.log)
         p.feel = "triple"                                                                               # written in the other feel than its token song's:
         self.assertIsNone(whole.own_places(p, "melody"))                                                # the places are its song's feel's, and not held
-        p = plan(token + " feel=triple")
-        self.assertEqual((p.token_feel, p.feel), ("triple", "duple"))
-        self.assertIsNone(whole.own_places(p, "melody"))
-        self.assertIn("the balance's song is in triple feel and the song in duple: its tune's places in the beat are not held (round 147)", p.log)
-        p.feel = "triple"                                                                               # a triple song on a triple song's token: the third is the
-        self.assertEqual(whole.own_places(p, "melody"), (0.12, None, 0.03))                             # feel's own division of the beat, and not held
+        p = plan(token + " feel=triple")                                                                # the token says its song's feel: the song is
+        self.assertEqual((p.token_feel, p.feel), ("triple", "triple"))                                  # written in it (round 148)
+        self.assertEqual(whole.own_places(p, "melody"), (0.12, None, 0.03))                             # a triple song on a triple song's token: the third is the
+        self.assertFalse(any("places in the beat are not held" in line for line in p.log))             # feel's own division of the beat, and not held
+        p.feel = "duple"                                                                                # written in the other feel than its token song's
+        self.assertIsNone(whole.own_places(p, "melody"))                                                # (a table whose tokens do not say the feel): not held
         for text in ("p12/40", "p12/40/x", "12/40/3", "p12/40/3/1"):                                   # not the field's: no places
             fields[28] = text
             self.assertEqual(plan("bass=half:36-44:0.9:1:1.0 melody=" + ":".join(fields) + " top=0.30 tempo=medium").tune_places, {}, text)

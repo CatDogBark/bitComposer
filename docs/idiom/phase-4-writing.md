@@ -10428,3 +10428,89 @@ cells sounding as the FFVI song's 0.960; backing lines within range
 Check 105's parts C and D), not the two together: in a song both
 change, the song in the tree is neither file he heard. 120 of 400
 seeds differ from round 147 alone and 196 from round 146 alone.
+
+### Round 148: a song is written in its token song's feel (2026-11-12, asked on ten new songs)
+
+**Why.** The owner, on ten new songs dev wrote after rounds 142 to 147
+(seeds no page had used, one FFVI song each), of the one on Terra's
+token: "the bassline in Terra sounds off ... kinda clashing with the
+song pretty hard", and then: "Bass is definitely not with the drums but
+it seems off from the tune as well ... it sounds so out of sync all
+together", through the whole song and at no one place, the notes fine
+and the bass fine alone. He asked for the work in one batch and merged:
+this round and round 149.
+
+**Found.** The song (seed 1178, its theme asked back with the band) is
+written in duple feel on Terra's token, a triple song. Its kit, a snare
+alone as Terra's is, drew the duple songs' bars and none of Terra's: it
+strikes the bar's first beat in 20 of its 44 bars, the second in 40, the
+third in 4 and the fourth in 24, where the game's Terra strikes all four
+in all 74. Of the bass's notes 0.52 fall with a snare hit and of the
+tune's 0.52 (the game's 1.00 and 0.91): nothing in the song states the
+beat the other parts play on. The test song on the same token (seed 29,
+Song Check 100's) was drawn triple and plays the march on every beat of
+its 44 bars; its trouble is the bass's own (round 149). The token has
+said its song's feel since round 147 (`feel=`), and the plan drew the
+pooled `feels` word beside it: 120 of 400 seeds are written in the other
+feel than their token song's, and 21 of the 68 test songs, five of the
+ten the owner heard.
+*Looked at and not the cause.* The tune's sound. In the song's render,
+each channel alone, a tune note is silent for about 30 ms after its
+written time and at half its level at 45 ms, the bass's and the snare's
+within 3 ms. It is the sample's own start: the game's Terra, each SNES
+chip voice alone off the emulator and timed from the key-on, plays the
+same sample silent for 30 ms and at half level at 54 ms, and keys the
+tune and the snare at the same instant (84 of the tune's 93 key-ons fall
+within 40 ms of a snare's, the gap 0.0 ms at the median and at the
+quartiles). Over the ten songs no tune, bass or accompaniment sounds
+later after its written time than the game's part on the same sample
+after its key-on (38 parts measured on both sides). What the owner hears
+is where the notes are written.
+
+**Built.** The plan writes a song in its token song's feel: `_plan_once`
+takes `token_feel` in place of the `feels` draw where the vocabulary's
+tokens say their songs' feel (`tokens_say_feel`: one of the balance
+table's outcomes at least carries the word; a song that is not duple
+says so, so in such a vocabulary a token without it is a duple song's).
+The draw is still made, on the plan's stream, so no other draw moves,
+and it stands for a vocabulary counted before the word. The plan says so
+in its log where the two differ ("the song's feel from the balance
+(round 148): triple (the draw duple)"). Every figure table is drawn by
+the feel, so the song's kit, bass, chord parts and tune are then drawn
+among its song's feel's bars; round 147's places are held in every song,
+the feels agreeing.
+
+**Measured.** Suite 582 (1 skip). Plans (400 seeds, the player's
+asking), against dev: the feel is taken from the token in 120 seeds, 59
+to triple and 61 to duple, and those are the 120 with a note changed;
+the other 280 are the same note for note and their plan logs the same;
+all 400 keep their token song, title and band, and all are written in
+their token song's feel (74 triple, 326 duple). The 68 Song Check 100
+songs: 68 in their song's feel (47 before). The tune's places (round
+147's account): 65 of the 65 tunes are held (45), none over its song's
+share of a place at the end, 89 bars' notes moved in 30 songs and 24
+notes left out in 4 (56 in 21, 10 in 2); the counter-line 51 of 52 (35).
+The tune's bars within their part of the form's own onsets: 1,648 of
+1,648. The song on Terra's token: triple, its kit on all four beats in
+all 44 bars; the tune strikes with a kit hit in 0.98 of its notes (0.52)
+and the bass in 0.74 (0.52), still in straight eighths in 20 bars. Over
+the 68 songs, the medians of the songs that have the parts (the game's):
+the bass's notes with a kit hit 0.72 (dev 0.79; 0.83), the tune's 0.70
+(0.74; 0.82); in the 11 changed songs with a bass and a kit the bass's
+0.53 (0.65; their songs' 0.77), and in the 13 with a kit the kit's bars
+with a hit on the first beat 0.75 (1.00; 0.83). Two against three, one
+part on a third of a beat where another plays its half or quarter: the
+bass against the kit in 144 of 965 bars (106 of 962; the game's 217 of
+949), the tune against the bass in 95 of 1,609 (50; the game's 90 of
+1,411), the accompaniment against the kit in 121 of 832 (60 of 830; the
+game's 256 of 771). The tune's strong-beat notes on the chord sit 0.09
+under their song's at the median (0.08).
+
+**Open.** A song's parts are each drawn among the feel's bars, a part at
+a time: which bar of the bass sits over which bar of the kit no word
+says, and in the songs the round changes they agree less than they did
+(the bass's notes with a kit hit 0.53 from 0.65). Round 149 counts it. A
+vocabulary whose tokens say no feel keeps the pooled draw (LIMITS).
+
+**Not heard.** The round was built with round 149 and merged with it on
+the owner's word; he heard neither before the merge.

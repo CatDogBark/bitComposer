@@ -257,7 +257,8 @@ class Plan:
     extras: dict                      # an upper part -> {richness, motion}; the melody -> {articulation, echo, steps, repeats}
     voices: dict                      # a part -> how many voices it gets
     log: list = field(default_factory=list)
-    feel: str = "duple"               # the song's feel (rhythm.song_feel), drawn once: every figure table is drawn by it
+    feel: str = "duple"               # the song's feel (rhythm.song_feel): every figure table is drawn by it. Its token song's where the
+                                      # vocabulary's tokens say their songs' feel (round 148), else the pooled `feels` word's draw
     gap_sounds: dict = field(default_factory=dict)    # a chord part or the bass -> {only/line/second: {gap class: the share a note sounds}}
     token_gap_shares: dict = field(default_factory=dict)   # a chord part or the bass -> {gap class: the token song's line's share, or None} (round 95):
                                       # the song's own note lengths for the part's only or line voice, kept over the gap_sounds draws
@@ -404,6 +405,15 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
         return default
     t = t.table if hasattr(t, "table") else t
     return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS, floor_songs=floor_songs)
+
+
+def tokens_say_feel(balance) -> bool:
+    """Whether a vocabulary's balance tokens say their songs' feel (round 148): one of them at least carries the `feel=`
+    word (rhythm.balance_units, round 147: a song that is not in duple feel says so, so a token without the word is a
+    duple song's). False for a table counted before the word: its tokens say nothing of the feel, and a song planned
+    from it keeps the pooled `feels` draw. `balance`: the vocabulary's balance table, or None."""
+    table = getattr(balance, "table", balance)
+    return table is not None and any(" feel=" in outcome for votes in table.votes.values() for outcome in votes)
 
 
 def mask_strikes(tune_pat: str, mask: str) -> int:
@@ -2656,6 +2666,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             extras.setdefault(role, {})["layers"] = layers
             extras[role]["layer"] = layers[0]
     feel = _draw(models, "feels", ("song",), rng, log) if "feels" in models else "duple"
+    if tokens_say_feel(models.get("balance")) and feel != token_feel:   # the song is written in its token song's feel (round 148): the pooled
+        log.append(f"the song's feel from the balance (round 148): {token_feel} (the draw {feel})")   # draw above is made all the same, so no
+        feel = token_feel                                   # other draw moves; a vocabulary whose tokens do not say their songs' feel keeps the draw
     if token_places and feel != token_feel:                 # a tune's places in the beat are its song's feel's (round 147)
         log.append(f"the balance's song is in {token_feel} feel and the song in {feel}: its tune's places in the beat are not held (round 147)")
     if "periods" in models:                                 # the riff under the tune: a backing part's period inside a part of the form, and the bars it holds
