@@ -11085,5 +11085,7 @@ one and a half times the theme's part's. What a return may bring over
 a part's own harmony is the player's asking, and is put to the ear
 with a song written both ways.
 
-**Not yet heard.** Six pairs on the same seeds, before the merge.
+**Heard.** Six pairs on the same seeds before the merge: passed by ear.
+The song on Fanatics's token written with its theme's return bringing no
+chords was heard as the better; that is not built here.
 
