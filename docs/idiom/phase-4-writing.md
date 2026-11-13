@@ -11026,5 +11026,6 @@ takes the pooled textures and entrances for its other parts. And
 Metamorphasis's own main drum voice, read as a roll and filed apart,
 is not in its kit at all.
 
-**Not yet heard.** With round 154's songs, before the merge.
+**Heard.** Two pairs on the same seeds before the merge, a song on
+Metamorphasis's token and one on Overture (part 2)'s: passed by ear.
 
