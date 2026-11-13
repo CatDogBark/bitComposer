@@ -744,6 +744,49 @@ The words are grouped by where the writing draws them, in the order the song is 
   token song's feel, 133 ended over their song's share of a place and
   79 played on a quarter of the beat where their song's tune never
   does.
+  Since round 149 the bass's and the melody's token carry a thirtieth
+  field, how often the line's notes are struck with the kit
+  (`with_kit_field`): after an `x`, the percent of the line's onsets
+  struck with a kit hit, over the bars the line and the kit both strike
+  in (`with_kit`: a bar the kit rests in says nothing; notes struck
+  together are one onset, of the line and of the kit, within NEAR of
+  each other as the readings count them), and for the bass after a `/`
+  the percent of the kit's hits in those bars struck with a bass note.
+  `x100/88` is Terra's bass, on the snare's march hit for hit, and `x91`
+  its tune; `x3/11` Cyan's bass; none for a song without a kit or under
+  sixteen onsets in such bars. 39 of the basses' tokens carry one and 41
+  of the tunes'; the bass strikes 0.83 of its notes with a kit hit at
+  the median and every one in 12 songs, and the kit's hits carry a bass
+  note in 0.35. The plan keeps them (`with_kit`) and the two writers
+  hold their lines to them with no draw. The bass (`writer.on_the_kit`,
+  on its figures before they are pitched, so the marks ride their notes
+  and each is pitched on the chord where it now falls): counted over the
+  song as it will be played (`played_as`: a written bar for every bar
+  the loop's figure and the form's repeats will copy it to; `kit_hits`:
+  the kit's positions a bar, a repeat's bars as the bars they play), the
+  bars written on one figure over the same hits one case. A line within
+  both shares stands. Under either, the cases are taken from the one
+  furthest off the kit until the song has both shares: a case's notes
+  are moved, in their order, the first beat's note kept, onto the
+  nearest rhythm the bass table knows (`taken_by`: the least moving in
+  time, then the least bent) that puts the case itself at both shares,
+  of as many onsets as the bar has notes before fewer, never of a count
+  outside the part of the form's own onsets; then one that puts it at
+  the bass's own share; then the rhythm of the bar's own count with the
+  most notes on the hits. The tune (`writer.melody`): its notes off the
+  kit's hits are held as a place in the beat is, no more of them than
+  the song's tune's share off them (1 less the field) of its notes so
+  far in the kit's bars or of the least it will play there; a bar over
+  is moved by `on_places` onto the nearest rhythm that keeps the places
+  and the share with the kit, a count within the bar's own onsets, else
+  the nearest of its own count with fewer notes off the hits, and a bar
+  moved for its places takes a rhythm that keeps the kit's share where
+  one does. Why: the `bass`, `rhythm` and `drums` tables are each drawn
+  under the habit, the tempo class and the feel, and which bar of one
+  sits over which bar of another no word said but `bass_locks`, which
+  counts the kit's accents and is silent on a kit of one piece: the
+  written song on Terra's token played the bass in straight eighths
+  against the march's triplet, 0.67 of its notes with a snare hit.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in
@@ -1444,6 +1487,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   0.58 of bars, none in 0.16), and the bass keeps its density from bar to
   bar (0.59 of FFVI's bar pairs within one strike under the walking habit,
   0.18 jumping four or more); neither is counted yet.
+  Since round 149 the bass's own share of notes struck with a kit hit,
+  any piece, rides its token (the `balance` entry's thirtieth field) and
+  is held after this lock, on the figures it gave.
   *`bass_locks`: shape (part); drawn in _plan_once.*
 
 - **levels** — a part's level as a share of the song's loudest part's, in

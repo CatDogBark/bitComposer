@@ -10514,3 +10514,119 @@ vocabulary whose tokens say no feel keeps the pooled draw (LIMITS).
 
 **Not heard.** The round was built with round 149 and merged with it on
 the owner's word; he heard neither before the merge.
+
+### Round 149: the bass and the tune strike with the kit as often as their token song's (2026-11-12, asked on ten new songs)
+
+**Why.** Round 148's: the owner on the song on Terra's token, "Bass is
+definitely not with the drums but it seems off from the tune as well ...
+it sounds so out of sync all together". Asked whether to stretch the
+bass's lock or to count a new word: "count a new word sounds like the
+better direction". Built with round 148 as one batch.
+
+**Found.** The game's Terra: the snare strikes all four beats of every
+bar, with a triplet inside the second beat or the fourth, and the bass
+plays that march hit for hit on one pitch a bar. The bass's two
+commonest bars are the snare's two (24 bars each; the snare's 26 and 27
+of 74); every bass note falls with a snare hit, 0.88 of the snare's hits
+carry a bass note and 0.91 of the tune's notes fall with a hit. The test
+song on its token (seed 29, drawn triple) has the march in its kit and a
+bass in straight eighths in 32 of its 44 bars: 0.67 of the bass's notes
+fall with a hit, two against the kit's three in 28 bars, and 0.79 of the
+tune's. Its bass's log reads "on the kit's accents in 0 bars": the one
+word between the bass and the kit, `bass_locks` (round 28), counts the
+kit's accents, two pieces struck together, and a snare alone has none
+(17 of FFVI's 45 kits with a bass never stack two pieces). The bass's
+bars, the tune's and the kit's are each drawn from their own tables
+under the habit, the tempo class and the feel, and nothing says which
+bar of one sits over which bar of another. Counted over the 68 test
+songs after round 148, in the bars both strike in: the bass strikes 0.72
+of its notes with a kit hit at the median where the game's does 0.83,
+and is 0.20 or more under its own song's in 10 of the 37 songs with
+both; the tune 0.70 against 0.82, in 9 of 39. The game's bass is with
+the kit in every note in twelve songs (Terra, Shadow, Opening Theme
+(part 3), Troops March on, Searching for Friends, Grand Finale (part 2),
+Blackjack and five more); the songs written on their tokens stood at
+0.47 to 1.00, seven under 0.85. Two against three is not the count to
+hold: the game plays the bass against the kit so in 217 of 949 bars,
+more than the written songs (144 of 965), a fifth of the bars or more in
+12 of its songs.
+*Tried and not taken.* (1) The share held bar by bar in the song's
+order, as a place in the beat is: the first bars were asked every note
+on a hit whatever the song's share (six notes of eight are under 0.83),
+and a song whose bass was within its share over the whole was moved all
+the same; over 400 seeds 171 songs changed and 1,059 bars were moved,
+against 166 and 1,026 with the share taken over the song and the bars
+furthest off the kit first, which is also where the two parts disagree
+most. (2) A rhythm of a count outside the part of the form's own onsets:
+19 of the tunes' 1,648 bars fell outside them, four or more in one song;
+with the count kept within them, none. (3) Notes left out to bring more
+of the kit's hits a bass note: a bass that plays fewer notes than its
+kit strikes would be thinned to chase a share it cannot reach.
+
+**Built.** A thirtieth field on the bass's and the melody's token
+(`rhythm.with_kit_field`): `x100/88` for Terra's bass, the percent of
+its line's onsets struck with a kit hit and of the kit's hits struck
+with a bass note, over the bars both strike in; `x91` for its tune. 39
+basses' tokens carry one and 41 tunes'. The plan keeps it (`with_kit`).
+The bass is held on its figures before they are pitched
+(`writer.on_the_kit`), so a note moved takes its pitch from the chord
+where it falls: counted over the song as it will be played (`played_as`,
+`kit_hits`), the bars on one figure over the same hits one case; a line
+within both shares stands, and under either the cases furthest off the
+kit are moved first, the notes in their order onto the nearest rhythm
+the bass table knows that puts the case at the shares, the first beat's
+note kept. The tune's notes off the kit's hits are held in its writer as
+a place in the beat is (`with_the_kit`), and `on_places` takes a rhythm
+that keeps the places and the share with the kit. No draw is made for
+either (VOCABULARY, the `balance` entry).
+
+**Measured.** Suite 588 (1 skip). The vocabulary is refit: 115 tables,
+the balance table alone changed, its outcomes in the order they stood
+in. Plans (400 seeds, the player's asking), against round 148: 210 songs
+have a note changed and 190 are the same note for note; all 400 keep
+their token song, title and band. The bass is held in 232 songs: bars
+moved in 167 (1,024 bars), 526 notes left out in 87, 200 bars of 50
+songs with no rhythm the table knows that brings them nearer; as finally
+written 167 are at their song's share of notes with a kit hit (69
+before) and 165 at the kit's (126), the median share 0.85 (0.72; the
+tokens' 0.83). The tune is held in 244: bars moved in 165 (835 bars),
+459 notes left out in 94, 120 bars of 39 songs with none; 206 are at
+their song's share (84), the median 0.83 (0.70; the tokens' 0.82).
+Against dev, the two rounds together: 247 songs changed, 153 the same.
+The 68 test songs, medians of the songs with the parts (round 148, dev;
+the game's): the bass's notes with a kit hit 0.87 (0.72, 0.79; 0.83),
+0.20 or more under its own song's in 1 of 37 songs (10, 8); the kit's
+hits with a bass note 0.48 (0.42, 0.44; 0.54), in 7 (11, 11); the tune's
+notes with a kit hit 0.84 (0.70, 0.74; 0.82), in 1 of 39 (9, 10); the
+tune's with a bass note 0.49 (0.48, 0.48; 0.61), in 18 of 63 (21, 21).
+Of the twelve songs whose game bass is with the kit in every note eleven
+stand at 0.95 to 1.00; Opening Theme (part 3) at 0.47 (LIMITS). The test
+Terra: the bass on a snare hit in 258 of 258 notes (198 of 296) and on
+0.85 of the snare's hits (0.66), in straight eighths in the 8 bars the
+kit plays them (32); the tune in 81 of 87 (69). The song the owner heard
+(seed 1178): the bass in 254 of 254 (190 of 256 after round 148, 136 of
+264 at dev), the tune in 93 of 97. Two against three: the bass against
+the kit in 103 of 965 bars (144 after round 148, 106 at dev; the game's
+217 of 949), the tune against the bass in 80 of 1,609 (95, 50; 90 of
+1,411). The tune's places: 65 of 65 held, none over its song's share at
+the end, 84 bars moved in 29 songs; its bars within their part of the
+form's own onsets 1,648 of 1,648; its notes a bar over its song's 0.93
+at the median (dev 0.89). The tune's strong-beat notes on the chord 0.12
+under their song's at the median (0.09 after round 148, 0.08 at dev), 23
+of 59 within a tenth (28, 30). Chords as heard on a held bass note 285
+of 1,328 changes (0.21; dev 289 of 1,317); the bass's strikes a bar 4.46
+(4.52; FFVI's 4.39); cells sounding as the FFVI song's 0.960, the least
+song 0.77 (0.84); backing lines within range 375 of 386; kit pieces 175
+of 179.
+
+**Open.** The kit is held to nothing: where its bars are not its song's
+the lines stand off it (Opening Theme (part 3), the kit on a roll's bar
+in about half its bars). The passes after the writers are not asked (197
+basses at their share by the writer's count, 167 as finally written). A
+note moved keeps its pitch, and the tune's strong beats are on the chord
+less often. A song without a kit has no such word, and the tune is not
+held to the bass (0.49 against the game's 0.61). All in LIMITS.
+
+**Not heard.** Built with round 148 and merged with it on the owner's
+word; he heard neither before the merge. 247 of 400 seeds are not the
+songs dev wrote.
