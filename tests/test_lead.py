@@ -36,6 +36,23 @@ class LeadTests(unittest.TestCase):
         self.assertEqual(lead.lead_of(v)[1], "nothing heard")                               # nothing but the bass within the window: the label stands
         self.assertEqual(lead.lead_of({3: v[3]}), (None, "no melody"))
 
+    def test_whether_the_pass_has_run_on_a_games_readings(self):
+        """The tables' source keeps what `passed` says: a game read again has no voice heard and no tune moved, and its
+        tables count the reader's label (rounds 102 to 151 were counted so, the pass not run after the re-read)."""
+        import sqlite3
+        db = sqlite3.connect(":memory:")
+        db.execute("CREATE TABLE songs (id INTEGER PRIMARY KEY, game TEXT)")
+        db.execute("CREATE TABLE features (song INTEGER, source TEXT, name TEXT, value REAL)")
+        db.executemany("INSERT INTO songs VALUES (?, ?)", [(1, "a"), (2, "a"), (3, "a"), (4, "b")])
+        self.assertEqual(lead.passed(db, "a"), {"heard": 0, "relabelled": 0})
+        db.executemany("INSERT INTO features VALUES (?, ?, ?, ?)",
+                       [(1, "render", "voice_lufs_0", -20.0), (1, "render", "voice_lufs_3", -31.0), (2, "render", "voice_lufs_1", -18.0),
+                        (2, "lead", "was_melody", 1.0), (2, "lead", "now_melody", 4.0), (3, "echo", "delay", 5.0),
+                        (4, "render", "voice_lufs_0", -9.0), (4, "lead", "now_melody", 2.0)])
+        self.assertEqual(lead.passed(db, "a"), {"heard": 2, "relabelled": 1})                # a song counts once, whatever its voices
+        self.assertEqual(lead.passed(db, "b"), {"heard": 1, "relabelled": 1})
+        self.assertEqual(lead.passed(db), {"heard": 3, "relabelled": 2})                     # every game's: the library's
+
     def test_the_features_the_rule_reads(self):
         f = lead.features_of([(0.0, 1.0, 60.0, "a"), (1.0, 1.0, 64.0, "a"), (2.0, 1.0, 67.0, "a"), (3.0, 1.0, 72.0, "a")], 8)
         self.assertAlmostEqual(f["pc"], 1.5, places=6); self.assertEqual(f["presence"], 0.5); self.assertEqual(f["median"], 65.5)

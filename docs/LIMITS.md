@@ -315,8 +315,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   song whose form is not its token song's keeps the pooled draw.
 - **A loop is the token song's or none.** Since round 121 a backing
   voice plays its figure again where its token song's voice loops, by
-  the form's letters; where the plan keeps its own form (a token form
-  short of the bars asked, 14 of 400 seeds) no loop is taken, and a
+  the form's letters; a token form short of the bars asked is played
+  round again since round 154 and its loops are taken with it, and a
   pack whose token carries no form has none. The figure is the first bar the
   voice plays on it, as the writers wrote it: a bar drawn note by note,
   not a riff built as one. A bar the token song has off its figure (a
@@ -345,9 +345,20 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   carried: the kit's figures rest single bars at their tables' rate, a
   pitched part's writer plays through. A part of the form that returns
   sounds as its first statement did, where the game's second A can add
-  a voice. And a song whose form is not its token song's (four FFVI
-  forms are under the sixteen bars a song is asked, six tokens carry no
-  form) keeps the pooled textures and entrances.
+  a voice. A form under the sixteen bars a song is asked (four of
+  FFVI's) is played round again from its loop's part since round 154,
+  the part that comes round its first statement note for note; under
+  the player's asking for a theme that returns, Shadow's own form
+  gives the tune no phrase to come back in and the plan is drawn again
+  on another token (1 seed of 400 where 3 were). And a song whose form
+  is not its token song's (six tokens carry no form) keeps the pooled
+  textures and entrances. Since round 153 its
+  lines keep to their song's pace all the same: one number for the
+  whole song, so a line is written at its song's median onsets a bar
+  in every part of the form (a song that thins in one part does not).
+  Since round 155 its kit's pieces keep to their song's hits a bar the
+  same way, and a kit that plays through its song plays in every bar:
+  the bar or two the game rests it are not carried.
 - **A song's tempo is one of the game's, near its token song's.**
   Since round 137 a written song runs within a tenth of its token
   song's tempo, at one of the tempos the game's songs of that class
@@ -524,8 +535,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
 - **A part's level steps only by its own song's sections.** Since round
   150 a part's level in a part of the form is its token song's part's
   there, where the form's letters are the song's. In a form that is not
-  the song's (one drawn because the song's is short of the bars asked:
-  35 of 400 seeds) every part holds one level through, and so does a
+  the song's (a token that carries no form: 17 of 400 seeds since
+  round 154 plays a short form round again) every part holds one level
+  through, and so does a
   part the token has no count for. The token's level is the section's
   median over the song's: a swell inside a section, and a part that
   enters loud and settles, are not in it.
@@ -799,3 +811,48 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   bar's fill; and a kit piece the song plays in under three bars in
   four of a part of the form plays by its figures' own chain inside its
   bounds.
+
+- **A written song is not as loud as its game song, and the player
+  plays every song at one level** (a product choice, 2026-11-13). The
+  balance token once carried its song's rendered loudness and the
+  writer held a song's master volume to it (round 59). The shipped
+  vocabulary has carried no such word since round 103, and it is not
+  put back: measured from rendered songs, the hold's estimate of a
+  song's level is several dB out for some songs (on Final Fantasy VI's
+  sounds 13 of 150 songs sit more than 5 dB from their token song's
+  loudness with it, 3 without). So a file plays at the level its
+  parts' own levels give it: over 150 seeds on the player's own sounds
+  from -30.3 to -19.7 dBFS, 1.6 dB from its token song's at the median.
+  The player levels what it plays, at playback, to the middle of
+  Final Fantasy VI's songs (`bitcomposer/player/level.py`, SET →
+  LEVEL), so in the player Fanatics and The Mines of Narshe, 7 dB
+  apart in the game, play alike; a file opened in another player
+  plays as written. What would change it: a song's level measured
+  from its own render at writing time, which the generator, having no
+  renderer of its own, cannot do; or an estimate that meets the
+  render.
+
+- **The Serpent Trench is not written by the player** (round 152; the
+  game's own way, met by a product choice). Its tune, read from the
+  voice heard as the tune, has no phrase that can come back, the
+  player asks every song for a theme that returns, and a plan whose
+  tune has nowhere to come back is drawn again, on another token: 6 of
+  400 seeds were written on it before round 152, none of 1,400 since.
+  Written without the asking (the command line's `--no-carry-theme`)
+  it is a song of 33 bars. What would change it: the player asking a
+  song for a returning theme only where its token song's tune returns.
+
+- **A theme's return brings its chords over the part's own** (noted at
+  round 156; the player's asking). Asked for a theme that returns with
+  the band, the plan copies the theme's four bars of chords over the
+  bars the theme returns in. Where those bars lie in a part of the
+  form with its own harmony (a figure the token song loops, 239 of the
+  409 such returns over 400 seeds) the part's harmony gives way for
+  them, and where the tune, the bass and the accompaniment cannot
+  follow the theme there (their pace in the part is not the theme's:
+  86 of the 409) the chords are all that comes back. The song on
+  Fanatics's token holds one chord through its second part so: 22 of
+  the 173 figures of two bars or more are on one root for it. What
+  would change it: a return that leaves a part's own harmony standing,
+  or one that brings no chords where the tune cannot come.
+

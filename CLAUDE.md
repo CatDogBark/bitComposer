@@ -56,6 +56,7 @@ Read CONTRIBUTING.md first: it covers the tests, the analyzer tables, the byte-i
 ### Tables and the shipped vocabulary
 
 - A change to how a table is counted (`translate/packtables.py`, `KEPT`) reaches the songs only after the pack's tables are refit (`python -m bitcomposer.translate.packtables --db READINGS --game GAME --into PACK.json`) and the shipped vocabulary is written again from the refit pack. Rendering on an unrefit pack measures the old tables.
+- A game read again loses what the lead pass wrote into its readings (which voice carries the tune, round 64): run `python -m bitcomposer.translate.lead GAME SPC_FOLDER --db READINGS` after every re-read and before the tables are counted. `packtables` says as it counts whether the pass has run, the tables' source keeps it (`"lead": {"heard", "relabelled"}`), and the shipped vocabulary's test in `tests/test_written.py` asserts it; rounds 102 to 151 were counted without it.
 - A change that refits the counted tables commits `bitcomposer/vocabularies/default.json.gz` on its branch before the pull request; verify with `git log -3 -- bitcomposer/vocabularies/default.json.gz`.
 - A fixed-seed test against the shipped vocabulary asserts the table's own values, never a bound that one draw happened to meet. Run the full local suite after the shipped vocabulary is in place.
 - The band-levels test in `tests/test_whole.py` iterates every balance token, so a new song-level token field must be filtered out there (as `shapes=`, `quals=`, `form=` and `cycle=` are).

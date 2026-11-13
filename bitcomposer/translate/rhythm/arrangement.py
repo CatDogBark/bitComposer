@@ -1790,11 +1790,18 @@ def section_onsets_text(song, notes) -> str:
     within NEAR one onset, on the song's grid), and after a "!" its onsets in the part's last bar where that bar is a
     fill or a thinning as the section_fills word reads one (DENSITY_STEP times the median of the part's bars before it,
     or more; its inverse or less, a rest among them; a part of the form of FILL_BARS bars or more with two played before
-    the last); "" for a song whose form the token does not carry (form_field) or a voice that plays in no part of it."""
-    if not form_field(song) or not notes:
+    the last); "" for a voice that plays in no part of it. A song whose form the token does not carry (form_field: one
+    read as a single part) has no letters to say it by, and since round 153 says the one number, "4": the median of
+    the voice's onsets a bar over the bars it plays in, the whole song through. It had said nothing, and a line written
+    on such a token was held to no pace of its song's: a counter-line on Metamorphasis's ran 8.7 notes a bar where the
+    game's plays 3.8."""
+    if not notes:
         return ""
     index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
-    counts = {index[num]: len(struck) for num, _, struck in readings_mod.numbered_bars_of(song, "", notes)}
+    counts = {index[num]: len(struck) for num, _, struck in readings_mod.numbered_bars_of(song, "", notes) if num in index}
+    if not form_field(song):
+        played = [n for n in counts.values() if n]
+        return _halves(statistics.median(played)) if played else ""
     out, seen = [], set()
     for bar, n, of, label in song.parts:
         if of is not None or label in seen:
@@ -1821,27 +1828,34 @@ def section_onsets_field(song, notes) -> str:
     return "n" + text if text else ""
 
 
+WHOLE_KIT = "*"                      # kit_onsets_field's letter for a song with no form: the whole song through (round 155)
+
+
 def kit_onsets_field(song) -> str:
     """The kit's twenty-second token field (round 125): each piece's hits a bar by the form's letters, "nAS28.5@100,c1@50+
     BS20@75": in A the snare 28.5 hits a bar at the median of the bars it plays, in every bar; the cymbal one, in half
     the bars; a piece by its letter (LETTERS), as the kit's figures name it, the share of the part's bars it plays in in
-    hundredths; "" for a song whose form the token does not carry or a kit that plays in no part of it. The kit's habit
+    hundredths; "" for a kit that plays in no part of it. A song whose form the token does not carry (one read as a
+    single part) says its pieces the whole song through since round 155, under "*" for the letter ("n*c1@95"): it had
+    said nothing, and a kit written on such a token struck at its tables' own rate in whatever bars the pooled
+    textures gave it (Metamorphasis's cymbal, once a bar through the song, was written in a few bars or none). The kit's habit
     and each slot's strike class (round 81) say how a piece plays over the song; which parts of the form it plays in, and
     how hard, they did not: the written Locke's snare ran through A and stopped for seven bars of B."""
-    if not form_field(song) or not song.notes.get(R.DRUMS):
+    if not song.notes.get(R.DRUMS):
         return ""
     index = {num: k for k, num in enumerate(getattr(song, "numbers", None) or range(len(song.bars)))}
     hits = {}
     for num, _, _, struck in readings_mod.all_bars_of(song, R.DRUMS):
-        if struck:
+        if struck and num in index:
             hits[index[num]] = Counter(t.partition(":")[2] for t in readings_mod._tokens(readings_mod.drum_figure(struck, song)))
     order = list(readings_mod.LETTERS.values())
     out, seen = [], set()
-    for bar, n, of, label in song.parts:
+    whole = [(0, len(song.bars), None, WHOLE_KIT)]         # a song read as one part (round 155): its pieces the whole song through
+    for bar, n, of, label in (song.parts if form_field(song) else whole):
         if of is not None or label in seen:
             continue
         seen.add(label)
-        idx = [index[num] for num in range(bar, bar + n) if num in index]
+        idx = ([index[num] for num in range(bar, bar + n) if num in index] if label != WHOLE_KIT else list(range(len(song.bars))))
         pieces = []
         for letter in sorted({x for k in idx for x in hits.get(k, ())}, key=lambda x: order.index(x) if x in order else len(order)):
             played = [hits[k][letter] for k in idx if hits.get(k, {}).get(letter)]

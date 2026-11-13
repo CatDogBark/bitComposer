@@ -15,7 +15,9 @@ counter already. The rule matched 12 of the owner's 14 picks and relabels 9 FFVI
 This pass renders each tonal voice of each song alone (the emulator and ffmpeg's libopenmpt needed), keeps every voice's
 loudness as a readings feature (source "render", name "voice_lufs_<voice>"), and rewrites the voices' roles in the
 readings; the roles it changed are kept too (source "lead", name "was_melody" / "now_melody"), so the pass is repeatable
-and reversible. A song read again by a newer translator loses the relabel: run the pass again after a re-read.
+and reversible. A song read again by a newer translator loses the relabel: run the pass again after a re-read, before
+the tables are counted. `passed` says whether a game's readings have been through it, and the tables' source keeps the
+answer (packtables.build), so a vocabulary counted without the pass says so.
 """
 import argparse
 import glob
@@ -212,6 +214,18 @@ def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bo
         if not keep:
             shutil.rmtree(work, ignore_errors=True)
     return result
+
+
+def passed(db, game: str | None = None) -> dict:
+    """Whether the pass has run on a game's readings as they are now (None: every game's): {"heard": the songs with a
+    voice's loudness kept, "relabelled": the songs whose lead it moved}. Nothing heard: the pass has not run, or the
+    game was read again since, and every song's tune is the reader's label."""
+    game_is = " AND s.game = ?" if game else ""
+    args = (game,) if game else ()
+    def count(source: str, name: str) -> int:
+        return db.execute("SELECT COUNT(DISTINCT f.song) FROM features f JOIN songs s ON s.id = f.song "
+                          f"WHERE f.source = ? AND f.name LIKE ?{game_is}", (source, name) + args).fetchone()[0]
+    return {"heard": count("render", "voice_lufs_%"), "relabelled": count("lead", "now_melody")}
 
 
 def main(argv=None) -> int:

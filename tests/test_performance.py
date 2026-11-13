@@ -66,7 +66,7 @@ class PerformanceTests(unittest.TestCase):
                     self.assertGreaterEqual(n.end - n.start, performance.VIBRATO_HOLD)
                     for _, p in n.bends:
                         self.assertLessEqual(abs(1200 * math.log2(p / n.pitch)), 100.0)   # within a semitone (the word's depth, round 72)
-                    self.assertGreater(n.bends[0][0], n.start)
+                    self.assertGreaterEqual(n.bends[0][0], n.start)   # a word's onset can be the note's own start (a game voice that bends from its first row)
                     self.assertLess(n.bends[-1][0], n.end)
             self.assertIn("performance:", score.message[4])
         self.assertGreater(len(echoes), 0)

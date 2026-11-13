@@ -529,6 +529,7 @@ def form_of(text: str) -> list | None:
 
 
 LOOP_CHORDS = "cycle"                 # the harmony's key among a plan's loops (round 121): the balance token's `cycle=` word
+FIGURE_TRIES = 20                     # draws for a figure's other chord where the chain drew its part on one root (round 156)
 
 
 def loops_of(text: str) -> dict:
@@ -599,10 +600,17 @@ def token_textures(parts: list, band: list, spans: dict, log: list) -> tuple[lis
     return textures, plays
 
 
+WHOLE_SONG = ""                       # onsets_of's key for a song with no letters: its onsets a bar the whole song through (round 153)
+
+
 def onsets_of(text: str) -> dict:
     """A voice's onsets a bar by the form's letters, read from the balance token (round 125, arrangement.section_onsets_text):
     "A6+B2!1+C4.5!7" -> {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)}, by the letter the median of its onsets a bar there
-    and its onsets in the part's last bar where that is a fill or a thinning; {} where it cannot be read."""
+    and its onsets in the part's last bar where that is a fill or a thinning; a song with no letters says one number
+    (round 153), "4" -> {WHOLE_SONG: (4.0, None)}; {} where it cannot be read."""
+    whole = re.fullmatch(r"\d+(?:\.\d)?", text)
+    if whole:
+        return {WHOLE_SONG: (float(text), None)} if float(text) > 0 else {}
     out = {}
     for item in text.split("+"):
         m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)(?:!(\d+))?", item)
@@ -619,7 +627,7 @@ def kit_onsets_of(text: str) -> dict:
     be read."""
     out = {}
     for item in text.split("+"):
-        if not item or not item[0].isalpha():
+        if not item or not (item[0].isalpha() or item[0] == rhythm.WHOLE_KIT):
             return {}
         pieces = {}
         for piece in item[1:].split(","):
@@ -627,7 +635,7 @@ def kit_onsets_of(text: str) -> dict:
             if not m:
                 return {}
             pieces[m.group(1)] = (float(m.group(2)), int(m.group(3)) / 100)
-        out[item[0].upper()] = pieces
+        out[WHOLE_SONG if item[0] == rhythm.WHOLE_KIT else item[0].upper()] = pieces   # a song with no letters (round 155): "*K1@50" -> {WHOLE_SONG: ...}
     return out
 
 
@@ -653,6 +661,43 @@ def kit_piece_bounds(stats: dict | None) -> dict:
         n = min(cap, got[0])
         least, most = min(KIT_FLOOR_CAP, max(1, math.ceil(low * n))), max(1, math.floor(high * n))
         out[letter] = (least, most) if got[1] >= KIT_THROUGH else (0, most) if got[1] >= KIT_SOME else (0, 1)
+    return out
+
+
+def song_pace(by_letter: dict | None, form: list | None) -> float | None:
+    """A line's onsets a bar over the whole of its token song (round 153): the one number a song with no letters says
+    (WHOLE_SONG), else the median over the song's bars of its part of the form's own (`form`: the token's, [(letter,
+    bars)]; a part of the form the line rests through has none and is left out); None where the token says neither."""
+    if not by_letter:
+        return None
+    if WHOLE_SONG in by_letter:
+        return by_letter[WHOLE_SONG][0]
+    bars = [by_letter[letter][0] for letter, n in (form or ()) if letter in by_letter for _ in range(int(n))]
+    return float(statistics.median(bars)) if bars else None
+
+
+def whole_song_onsets(parts: list, band: list, onsets: dict, form: list | None, log: list) -> dict:
+    """Each line's onsets a bar where the plan's form is not its token song's (round 153): {a part: [its token song's
+    line's onsets a bar over the whole song (song_pace), every bar]}, in token_sections' shape, for the lines it
+    gives them (the bass, the chord parts, the tune, the counter-line beside it). Where the form's letters are the
+    token song's a line keeps to its song's onsets a bar by the letter (rounds 125, 138 and 143); where they are not
+    (a token that carries no form, its song read as one part; a form short of the bars asked) it had been held to
+    nothing of its song's, and its bars came off the pooled tables at whatever pace they drew. The song's pace is known
+    all the same, and the writers hold a line to it as they do to a letter's: within half to one and a half times it
+    (envelope_at_for's own envelope). Nothing is drawn; the section_densities and section_fills draws stand as they
+    were made, and a line with a pace reads the pace instead of their shifts, as it does on its song's own form."""
+    total = parts[-1][0] + parts[-1][1]
+    tune_role = R.MELODY if R.MELODY in band else R.COUNTER
+    out, said = {}, []
+    for role in band:
+        if role not in rhythm.UPPER + (R.BASS, tune_role, R.COUNTER):
+            continue
+        pace = song_pace(onsets.get(role), form)
+        if pace:
+            out[role] = [pace] * total
+            said.append(f"{role} {pace:g}")
+    if said:
+        log.append("onsets a bar from the balance's song the whole song through, the form not its own (round 153): " + "; ".join(said))
     return out
 
 
@@ -785,6 +830,25 @@ def tempo_near(models: dict, cls: str | None, own: float, rng: random.Random) ->
         return rhythm.within_band(own, cls) if cls else own
     weights = [table.p(str(int(o)) if o == int(o) else str(o), ("song", cls or rhythm.band(o))) for o in near]
     return rng.choices(near, weights)[0] if sum(weights) > 0 else rng.choice(near)
+
+
+def round_again(form: list, loop_part: int | None, least: int) -> list:
+    """A token song's form short of the bars asked, played round again from its loop's part until it is as long (round
+    154): [(letter, bars)] with the form's parts from `loop_part` on (the token's `loop=`; the first where the song has
+    none read) added whole until the bars reach `least`, a letter's bars its first statement's as plan_form counts
+    them; the form as it is where it is long enough, or where MAX_PARTS parts would not reach. The game loops such a
+    song; the plan had dropped its form for a pooled one, and with it everything the token says by the form's letters
+    (which parts play where, how busy each is, the kit's pieces, the loops, the levels): Fanatics's four bars of bass
+    and chant at eight a bar before both hold a note a bar were written at one pace throughout."""
+    start = loop_part if loop_part is not None and 0 <= loop_part < len(form) else 0
+    sizes = {}
+    for letter, n in form:
+        sizes.setdefault(letter, n)
+    bars = lambda parts: sum(max(1, int(sizes[letter])) for letter, _ in parts)   # noqa: E731
+    out = list(form)
+    while bars(out) < least and len(out) + len(form) - start <= MAX_PARTS:
+        out += form[start:]
+    return out
 
 
 def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, form: list | None = None) -> list:
@@ -1033,7 +1097,7 @@ def hold_chord_shapes(names: list, drawn: list, parts: list, tonic: int, mode: s
 
 def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list,
                 hold_share: float | None = None, hold_rng: random.Random | None = None, shape_profile: dict | None = None,
-                cycle: dict | None = None, degree_shapes: dict | None = None) -> tuple[list, list]:
+                cycle: dict | None = None, degree_shapes: dict | None = None, figure_rng: random.Random | None = None) -> tuple[list, list]:
     """A chord a bar, as numerals and as (root, shape): drawn bar by bar
     from the chord mixture (a new part starts the chain's context over,
     the song's urn going on), the loop's first bar from the loops table, a
@@ -1046,7 +1110,15 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     other draw moves), a bar on the figure of a part of the form the loops
     name takes the chord of the first bar at its place of the figure, a bar
     off it keeps its own draw, and a part that repeats one takes its chords
-    again."""
+    again. A figure of two bars or more whose bars the chain drew on one
+    root is not that figure (round 156: the song's harmony loops on two
+    bars because they differ; on one chord it would loop on one): before
+    the bars are copied, a later bar of it takes the first chord on
+    another root the chain drew in the part, at that chord's own place in
+    the figure (the last, where it was drawn at the first), or, where the
+    chain drew the whole part on one root, a chord drawn anew on
+    `figure_rng`. Fanatics's two chords turn about were written as one
+    chord for the song, its chant holding one note through."""
     total = parts[-1][0] + parts[-1][1]
     home = "I" if mode == "major" else "i"
     names = [None] * total
@@ -1100,6 +1172,37 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     if one_shape:                                           # a chord's quality its degree's in the token song, and one through the song (round
         shape_counts = Counter(ch[1] for ch in (chord_of(x, tonic, mode) for x in names if x) if ch is not None)   # 127), once the chain is
                                                             # drawn: its draws, its holds and its shapes stand, so no other draw moves
+    root_of = lambda x: (chord_of(x, tonic, mode) or (None,))[0]   # noqa: E731
+    turned = 0                                              # a figure of two bars or more drawn on one root takes another chord for a later
+    for bar, n, lag, off in looped_parts([p for p in parts if p[2] is None], cycle):   # bar (round 156), before its bars are copied
+        figure = {}
+        for k in range(bar, bar + n):
+            if k not in off and names[k] is not None:
+                figure.setdefault((k - bar) % lag, k)
+        if lag < 2 or len(figure) < 2 or len({root_of(names[k]) for k in figure.values()}) != 1:
+            continue
+        home = root_of(names[figure[min(figure)]])
+        other = next((k for k in range(bar, bar + n) if names[k] is not None and root_of(names[k]) not in (None, home)), None)
+        if other is not None:                               # the first chord on another root the chain drew in the part, at its own place
+            name, place = names[other], (other - bar) % lag
+        elif cache is not None and figure_rng is not None:  # the part drawn on one root whole: a chord anew, on the figures' own stream
+            first = names[figure[min(figure)]]
+            unit = tables.Unit("", "", "", {"part": R.HARMONY, "mode": mode, "previous": first})
+            name = None
+            for _ in range(FIGURE_TRIES):                   # the chord word may hold or recall the same chord: asked until it gives another root
+                got = cache.draw(unit, first, played, figure_rng, keep=lambda o: o != rhythm.NO_CHORD and root_of(o) not in (None, home))
+                if got and got != rhythm.NO_CHORD and root_of(got) not in (None, home):
+                    name = got
+                    break
+            place = max(figure)
+        else:
+            name, place = None, None
+        if name is None:
+            continue
+        if place not in figure or place == min(figure):
+            place = max(figure)                             # drawn at the figure's first place (a later turn's): the figure's last bar takes it
+        names[figure[place]] = name
+        turned += 1
     looped = 0                                              # the harmony's loops (round 121), on the bars as drawn: a bar on the figure takes
     for bar, n, lag, off in looped_parts([p for p in parts if p[2] is None], cycle):   # the chord of the first bar at its place of it, whole
         figure = {}
@@ -1118,6 +1221,8 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
         held_now = sum(1 for bar, n, of, _ in parts if of is None for k in range(bar + 1, bar + n) if names[k] == names[k - 1])
         lines = sum(n - 1 for _, n, of, _ in parts if of is None)
         log.append(f"the balance's song's harmony loops (round 121): {looped} bars take their figure's chord; {held_now} of {lines} bar lines inside the parts hold their chord now")
+    if turned:
+        log.append(f"{turned} of the harmony's figures of two bars or more, drawn on one root, take another chord for a later bar (round 156)")
     log.append("chords " + " ".join(names))
     if hold_share is not None:
         log.append(f"chords held at the balance's song's share {hold_share:.2f}: {held_lines} of {bar_lines} bar lines inside the parts")
@@ -2532,6 +2637,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_onsets[role] = onsets_of(fields[21][1:])
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
+    own_letters = [l for l, _ in token_form or ()]          # the token song's form's letters, as the plan will play them (round 154: a short form round again)
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
         drawn_form = " ".join(f"{p[3]}{p[1]}" for p in parts)   # balance is read (the form's own draw above stands, so no other draw moves); a
         form_log = []                                           # form past the bars asked is cut as any; the loop's part drawn again for it
@@ -2540,14 +2646,22 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             log.append(f"the balance's song is counted in double time: its form may run to {own_max} bars")
         taken = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, own_max, form=token_form)
         taken_bars = taken[-1][0] + taken[-1][1]
-        if min_bars is not None and taken_bars < min_bars:     # a token form short of the bars asked (4 of FFVI's 62): the draw stands
+        if min_bars is not None and taken_bars < min_bars:     # a token form short of the bars asked (4 of FFVI's 62): played round again
+            again = round_again(token_form, token_loop, min_bars)   # from its loop's part until it is as long (round 154), as the game loops it
+            short_log = []
+            longer = plan_form(models, random.Random(f"whole:{seed}:form"), short_log, own_max, form=again) if again != token_form else taken
+            if longer[-1][0] + longer[-1][1] >= min_bars:
+                log.append(f"the balance's song's form {''.join(f'{l}{n}' for l, n in token_form)} is {taken_bars} bars, short of the {min_bars} asked: "
+                           f"played round again from part {(token_loop or 0) + 1} (round 154)")
+                taken, taken_bars, form_log, own_letters = longer, longer[-1][0] + longer[-1][1], short_log, [l for l, _ in again]
+        if min_bars is not None and taken_bars < min_bars:     # still short (a form past the parts a song may have): the draw stands
             log.append(f"the balance's song's form {''.join(f'{l}{n}' for l, n in token_form)} is {taken_bars} bars, short of the {min_bars} asked: "
                        f"the draw {drawn_form} stands")
         else:
             parts = taken
             log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
             loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
-    own_form = bool(token_form) and [p[3] for p in parts] == [l for l, _ in token_form][:len(parts)]   # the form's letters are the token song's
+    own_form = bool(token_form) and [p[3] for p in parts] == own_letters[:len(parts)]   # the form's letters are the token song's
     own_loop = parts[token_loop][0] if own_form and token_loop is not None and token_loop < len(parts) else None   # the token song's loop's part (round 132)
     loops = {}                                              # the loops (round 121): the token song's, where the form's letters are its own
     if token_loops and own_form:
@@ -2576,6 +2690,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append(f"tempo {was:.0f} BPM is not within a tenth of the balance's song's {token_tempo:.0f}: {bpm:.0f} BPM drawn near it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
                                 hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"),   # held as the token's song holds (round 106)
+                                figure_rng=random.Random(f"{seed}:chords:figures"),               # a figure drawn on one root (round 156), an own stream
                                 shape_profile=token_shapes,                                        # its qualities the token's song's (round 112)
                                 degree_shapes=token_quals,                                         # each on the degree the song has it on (round 127)
                                 cycle=loops.get(LOOP_CHORDS))                                      # its harmony's loops (round 121)
@@ -2589,6 +2704,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     textures, plays = plan_texture(models, parts, band, rng, [] if own_textures else log, defer=(R.DRUMS,), tier=tier)   # are its own: the pooled
     if own_textures:                                        # draw is made all the same (its lines unsaid), so no other draw moves
         textures, plays = token_textures(parts, band, token_spans, log)
+    kit_whole = token_kit_onsets.get(WHOLE_SONG) if R.DRUMS in band and not own_form else None   # a song with no form says its kit's pieces the whole
+    kit_through = bool(kit_whole) and any(share >= KIT_THROUGH for _, share in kit_whole.values())   # song through (round 155): a kit one of whose pieces
+    if kit_through:                                         # plays in three quarters of its song's bars or more plays in every bar, as a piece that
+        textures = [t if R.DRUMS in t.split() else f"{t} {R.DRUMS}".strip() for t in textures]   # plays through a part of the form does there
+        plays = {role: ([True] * len(textures) if role == R.DRUMS else bars) for role, bars in plays.items()}
+        log.append("the kit plays in every bar, as in the balance's song the whole song through (round 155)")
     silent = [r for r in band if not any(plays[r])]
     if silent:
         log.append(f"never in a texture, left out of the band: {silent}")
@@ -2707,7 +2828,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             if "tune_sounds" in render_mod.models_or_empty(models):   # the share of its gap a held and a detached note sounds (round 98), own streams
                 extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log))
                                                for kind in rhythm.TUNE_KINDS}
-    if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models) and not own_textures:   # the drums' entrances under the kit's tier (round 59), on an own stream; the token song's own stand (round 124)
+    if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models) and not own_textures and not kit_through:   # the drums' entrances under the kit's tier (round 59), on an own stream; the token song's own stand (round 124)
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
     section_levels = (plan_section_levels(models, parts, band, plays, random.Random(f"whole:{seed}:levels"), log)   # an own stream: drawn on the
                       if "section_levels" in render_mod.models_or_empty(models) else {})                                  # plan's, every later draw had shifted
@@ -2723,6 +2844,12 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                              if "section_densities" in render_mod.models_or_empty(models) else {})   # a section's density tier by the step its level makes (round 101)
         section_fills = (plan_section_fills(models, parts, band, plays, voices, random.Random(f"whole:{seed}:section fills"), log)   # what each voice does in a
                          if "section_fills" in render_mod.models_or_empty(models) else {})                                        # section's last bar (round 118)
+        section_onsets = whole_song_onsets(parts, band, token_onsets, token_form, log)   # a form not the token song's: each line at its song's pace all the same (round 153)
+        if kit_whole:                                       # and the kit's pieces at their song's hits a bar the whole song through (round 155)
+            bounds = kit_piece_bounds(kit_whole)
+            kit_bounds = [bounds] * (parts[-1][0] + parts[-1][1])
+            log.append("kit pieces from the balance's song the whole song through, the form not its own (round 155): "
+                       + (" ".join(f"{letter} {lo}-{hi}" for letter, (lo, hi) in bounds.items() if hi) or "none"))
     for role, kinds in section_fills.items():               # the line's fill rides the density shift its writer reads (habit_at_for, envelope_at_for)
         if any(kinds["line"]):
             shifts = section_densities.setdefault(role, [0] * len(kinds["line"]))

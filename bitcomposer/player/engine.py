@@ -22,12 +22,14 @@ import threading
 import time
 from pathlib import Path
 
+from . import level as leveling
 from .openmpt import Module, SAMPLE_RATE, LibraryMissing
 from .audio import make_output, OutputUnavailable, CHANNELS, LATENCY_MS
 
 EXTENSIONS = {".mod", ".xm", ".it", ".s3m", ".mptm"}
 FRAMES_PER_BUFFER = 2048
 VOLUME_MAX = 3.0
+MEASURE_JOIN = 2.0                 # seconds a shutdown waits for the song being measured in the background
 _LIMIT_KNEE = 20000.0
 _LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 
@@ -75,6 +77,11 @@ def state_file() -> Path:
         return base / "bitComposer" / "player.json"
     base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     return base / "bitcomposer" / "player.json"
+
+
+def levels_file() -> Path:
+    """The levels measured so far (level.Levels), beside the settings."""
+    return state_file().with_name("levels.json")
 
 
 def _soft_limit(y: float) -> int:
@@ -148,6 +155,13 @@ class Player:
         self.status = "Stopped"
         self.volume = 1.0
         self.width = 1.0               # the stereo width heard: 1.0 the pans as written, less pulled toward centre (WIDTH)
+        self.level_on = True           # every song played at one common level (LEVEL; level.py)
+        self._level_gain = 1.0         # the loaded song's trim to that level, a gain beside the volume
+        self._level_db = None          # and the level it was measured at (None: not measured, or silent)
+        self._levels_lock = threading.Lock()
+        self._measure_thread = None
+        self._measure_stop = threading.Event()
+        self._closed = False           # shut down: nothing is written after it
         self.auto_generate = False
         self.auto_generate_settings = ""
         self._generating = False
@@ -173,6 +187,8 @@ class Player:
             self.width = max(0.0, min(1.0, float(saved.get("width", 1.0))))
         except (TypeError, ValueError):
             pass
+        self.level_on = bool(saved.get("level", True))
+        self._levels = leveling.Levels(levels_file())
         self.shuffle = bool(saved.get("shuffle", False))
         self.auto_generate = bool(saved.get("auto_generate", False))
         self.auto_generate_settings = str(saved.get("auto_generate_settings", ""))
@@ -199,7 +215,8 @@ class Player:
             p.parent.mkdir(parents=True, exist_ok=True)
             tmp = str(p) + ".tmp"
             with open(tmp, "w") as fh:
-                json.dump({"volume": round(self.volume, 3), "width": round(self.width, 3), "shuffle": self.shuffle,
+                json.dump({"volume": round(self.volume, 3), "width": round(self.width, 3), "level": self.level_on,
+                           "shuffle": self.shuffle,
                            "auto_generate": self.auto_generate,
                            "auto_generate_settings": self.auto_generate_settings,
                            "check_updates": self.check_updates,
@@ -228,10 +245,12 @@ class Player:
         elif self.current_index >= len(files):
             self.current_index = -1
         self._prune_autogen()
+        self._measure_ahead()
         self._changed()
 
     def set_music_dir(self, path: Path) -> None:
         self.stop()
+        self._halt_measuring()
         with self._lock:
             if self.module:
                 self.module.destroy()
@@ -307,6 +326,8 @@ class Player:
         self.playlist[index] = new_path
         if path in self._title_cache:
             self._title_cache[new_path] = self._title_cache.pop(path)
+        with self._levels_lock:
+            self._levels.moved(path, new_path)
         with self._lock:
             if self.module and self.module.filepath == path:
                 self.module.filepath = new_path
@@ -346,12 +367,15 @@ class Player:
             self.on_log(f"[ERROR] {e}")
             return False
         new.set_stereo_separation(round(self.width * 100))   # the width the listener set, on every module loaded
+        level = self.level_of(path) if self.level_on else None
         with self._lock:
             if self.module:
                 self.module.destroy()
             self.module = new
             self.current_index = index
             self._live_mix = {}
+            self._level_db = level
+            self._level_gain = leveling.gain_for(level) if self.level_on else 1.0
         self._changed()
         return True
 
@@ -403,8 +427,9 @@ class Player:
                 self.schedule(self._on_track_ended)
                 break
             raw = bytes(self._buf)[:frames * CHANNELS * 2]
-            if self.volume != 1.0:
-                raw = _apply_gain(raw, frames * CHANNELS, self.volume)
+            gain = self.volume * self._level_gain            # the listener's GAIN over the song's trim to the common level
+            if gain != 1.0:
+                raw = _apply_gain(raw, frames * CHANNELS, gain)
             if not self._out.write(raw):
                 if not self._stop_event.is_set():
                     self.schedule(self._on_track_ended)
@@ -511,6 +536,75 @@ class Player:
         self.volume = max(0.0, min(VOLUME_MAX, float(vol)))
         self.persist()
 
+    # ── the common level ──
+    def level_of(self, path: str) -> float | None:
+        """The song's level in dBFS (level.measure), measured once a file and kept. The measuring is done outside the
+        lock, so the song playing, a song just composed and the folder's other songs can be measured side by side."""
+        with self._levels_lock:
+            known, level = self._levels.cached(path)
+        if known:
+            return level
+        level = leveling.measure(path)
+        with self._levels_lock:
+            self._levels.put(path, level)
+        return level
+
+    def set_level(self, on: bool) -> None:
+        """LEVEL: every song played at one common level, or each as it was written. The trim is a gain at playback
+        beside the volume, on the playing song at once and on every song loaded after; no file is changed."""
+        self.level_on = bool(on)
+        path = self.module.filepath if self.module else None
+        level = self.level_of(path) if self.level_on and path else None
+        with self._lock:
+            self._level_db = level
+            self._level_gain = leveling.gain_for(level) if self.level_on else 1.0
+        self.persist()
+        if self.level_on:
+            self._measure_ahead()
+        self._changed()
+
+    def level_trim(self) -> float | None:
+        """The loaded song's trim in dB (under zero: turned down), or None where the level is off or it has none."""
+        if not self.level_on or self._level_db is None or self.module is None:
+            return None
+        return 20.0 * math.log10(self._level_gain)
+
+    def _measure_ahead(self) -> None:
+        """The folder's songs not measured yet, measured in the background so that the first play of each does not
+        wait for it. One pass at a time; a song it has not reached is measured when it loads."""
+        if not self.level_on or (self._measure_thread and self._measure_thread.is_alive()):
+            return
+        with self._levels_lock:
+            todo = [f for f in self.playlist if not self._levels.cached(f)[0]]
+        if not todo:
+            return
+        self._measure_stop.clear()
+        self._measure_thread = threading.Thread(target=self._measure_folder, args=(todo, self._measure_stop), daemon=True)
+        self._measure_thread.start()
+
+    def _measure_folder(self, paths: list[str], stop: threading.Event) -> None:
+        for path in paths:
+            if stop.is_set():
+                return                         # stopped: whoever stopped it saves
+            self.level_of(path)
+        if not stop.is_set():
+            self.schedule(self._save_levels)   # the face's thread writes the file, never this one: a pass that ends as its
+                                               # player's settings folder goes (a second player in one process) writes nothing
+
+    def _save_levels(self) -> None:
+        if self._closed:
+            return
+        with self._levels_lock:
+            self._levels.save()
+
+    def _halt_measuring(self) -> None:
+        self._measure_stop.set()
+        if self._measure_thread:
+            self._measure_thread.join(timeout=MEASURE_JOIN)   # a measure still running is left to end; it saves nothing
+            self._measure_thread = None
+        with self._levels_lock:
+            self._levels.save()
+
     # ── mixer ──
     def _reapply_mix(self) -> None:
         if self.module:
@@ -549,6 +643,8 @@ class Player:
             path = self.module.filepath
         try:
             write_channel_volumes(path, vols)
+            with self._levels_lock:
+                self._levels.forget(path)      # the file keeps its time and its size: a new mix is a new level
             return True
         except (OSError, ValueError) as e:
             self.on_log(f"[MIX] {e}")
@@ -602,6 +698,8 @@ class Player:
             self.last_error = f"generation failed: {e}"
         if path is None:
             self.on_log(f"[AUTOGEN] {self.last_error}")
+        elif self.level_on:
+            self.level_of(str(path))           # measured here, in the composing thread, so the song plays without a wait
         self.schedule(lambda: self._generated(path, play, on_done))
 
     def _generated(self, path, play: bool, on_done) -> None:
@@ -673,6 +771,8 @@ class Player:
 
     def shutdown(self) -> None:
         self.stop()
+        self._halt_measuring()
+        self._closed = True
         with self._lock:
             if self.module:
                 self.module.destroy()

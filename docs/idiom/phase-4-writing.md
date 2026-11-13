@@ -6843,7 +6843,9 @@ recording; the song's bass reads as a counter beside it). FFVI re-read
 role reader to nine songs the round-90 re-read had missed: Aria de Mezzo
 Carattere, Epitaph, Gau, Shadow, The Magic House, The Phantom Forest, The
 Serpent Trench, Umaro, Under Martial Law, their melodies and counters
-swapping), pack4 refit (110 tables; `pack.json.before-r102`), the
+swapping; corrected at round 152: these are the nine songs of round 64's
+lead pass, and the swap was that pass's relabels lost in the re-read),
+pack4 refit (110 tables; `pack.json.before-r102`), the
 vocabulary shipped, the map regenerated. Tests: the rule's edges (a tom on
 many rates unlooped, a hat with ornaments, under eight hits, a rate holding
 0.7, a span under five), of_notes with the namer's verdict pinned (the
@@ -10746,3 +10748,344 @@ the game's is four, and the tune's doubling voice on The Wedding
 Waltz-Duel (part 4)'s token is still the line again (LIMITS).
 
 **Not heard.** The owner hears the song before the merge.
+
+### Round 152: the lead pass run again, nine tunes back on the voice heard as the tune (2026-11-13, found checking dev for a release; heard before the merge)
+
+**Why.** Round 64's lead pass moved the tune of nine Final Fantasy VI
+songs from the voice the reader labels melody to the voice heard as the
+tune, each voice rendered alone and judged by ear. The pass writes into
+the readings, and a game read again loses what it wrote
+(`translate/lead.py` says so in its first lines). Round 102 read the
+game again and the pass was not run after it, nor after round 105's
+re-read: every vocabulary from round 102's to round 151's counted those
+nine songs' tune from the reader's label. Round 102's record saw it
+("their melodies and counters swapping") and took it for the role
+reader of rounds 89 and 90 reaching songs an earlier re-read had
+missed. It was the relabels going.
+
+**Found.** The pass run on the readings as they are picks the same nine
+songs and the same voices as it did at round 64. Of the game's 68
+songs, 57 keep their label, 2 have no melody, and in nine the lead
+moves:
+
+| Song | The tune is now voice | It was read as | The voice that was the tune |
+|---|---|---|---|
+| Shadow | 0 | an accompaniment, 0.7 dB under the whole | 2 (a counter-line; its two layers accompaniments) |
+| The Phantom Forest | 0 | a counter-line, at the whole's level | 1 (an accompaniment) |
+| Gau | 1 | a counter-line, 2.3 dB under | 4 (an accompaniment) |
+| The Serpent Trench | 0 | a counter-line, 0.9 dB over | 5 (a counter-line; its two layers arpeggios) |
+| Under Martial Law | 3 | an accompaniment, at the whole's level | 1 and 2 (counter-lines) |
+| Aria de Mezzo Carattere | 6 | an accompaniment, 6.8 dB under | 1 (an accompaniment), 2 (a counter-line) |
+| Epitaph | 6 | a counter-line, 0.7 dB under | 0 (a counter-line) |
+| The Magic House | 0 | a counter-line, 0.6 dB over | 5 (an accompaniment) |
+| Umaro | 1 | a counter-line, 3.1 dB under | 2 (an accompaniment) |
+
+**Built.** Nothing in the writer. The pass run on the readings, the
+pack's tables refit, the vocabulary shipped (115 tables). So that a
+vocabulary counted without the pass says so: `lead.passed(db, game)`
+counts the songs whose voices the pass has heard and the songs whose
+tune it moved, `packtables.build` keeps the two numbers in the tables'
+source (`"lead": {"heard": 68, "relabelled": 9}`) and says them, or
+that the pass has not run, as it counts; the shipped vocabulary's test
+asserts them. The performance's test bounded a vibrato's first bend
+strictly after its note's start, which held because no song of its
+seeds drew a word with no onset; seed 6's counter-line now draws one
+the game has (15 cents at 13 Hz from the note's own start), and the
+bound is the note's start.
+
+**Measured.** Suite 597 (1 skip). The vocabulary: 9 of the 68 balance
+tokens change, the nine songs'; 54 tokens have a counter-line (52), 58
+an accompaniment (57), 4 an arpeggio (3); 84 of the 115 tables' counts
+change, and the 31 that do not are the kit's, the bass's bars, the
+chords', the form's, the keys' and the tempos' (`theme_body` and
+`return_band` count 36 units where they counted 50). Plans
+(400 seeds, the player's asking), against dev: a note changes in every
+song, the tune in 400, the bass in 360, the accompaniment in 341, the
+counter-line in 321, the harmony in 72, the arpeggio in 14, and the
+kit in 19 of the 269 songs with one. 379 seeds keep their token song
+and 21 draw another; the title is the same in all 400, the band in
+362, the bars in 379, the tempo in 381. The writer's own account of
+its holds stands where it stood: over the songs that state a share
+beside their token song's, the median of the share less the song's is
+the same to the hundredth before and after for the tune's moves (round
+130), its bars come back (146), its places (147) and its notes with
+the kit (149: 0.05 or more under in 27 of 260 songs, 24 of 244
+before), and within 0.02 for the counter-line's and the chord parts'
+(142 to 147; the five songs with an arpeggio apart).
+On the nine tokens, the same seed before and after: Shadow's tune 507
+notes then 84 with a counter-line beside it, Under Martial Law's 86
+then 28 with a counter-line, Epitaph's 67 then 18, The Magic House's 97
+then 57 with an accompaniment, Aria de Mezzo Carattere's 276 then 450,
+Umaro's 89 then 109, The Phantom Forest's 57 then 71, Gau's 42 then 37.
+
+**Open.** The Serpent Trench is no longer written under the player's
+asking: its tune read from voice 0 has no phrase that can come back,
+the player asks every song for a theme that returns, and the plan is
+drawn again on another token (6 of 400 seeds before, none of 1,400
+now; written without the asking it is a song of 33 bars). The counts
+this record and `VOCABULARY.md` quote for rounds 102 to 151 wherever
+they say the game's tune, counter-line or accompaniment were made with
+the nine songs on the reader's label, and are not counted again here.
+The readings' other pass, the song's rendered loudness (round 59), was
+lost with the lead pass and is not put back: the player levels what it
+plays (`VOCABULARY.md`, **loudness**).
+
+**Heard.** Eleven pairs on the same seeds before the merge, a song on
+each of the nine tokens (The Serpent Trench's without the theme asked)
+and on Terra's and Locke's, passed by ear.
+
+### Round 153: a line keeps its song's pace where the form is not its own (2026-11-13, from a counter-line heard running away)
+
+**Why.** By ear, on a song written on Metamorphasis's token (seed 69204,
+from an imported game's vocabulary): the counter-line's two voices
+heard as horns in a spasm, taking from the song. Investigated first,
+then built on the pick of the first of three candidate words, for
+every line.
+
+**Found.** The written counter-line plays 8.7 notes a bar, in every
+bar, two voices in parallel thirds a triplet apart at 160 BPM; the
+game's plays 3.8, and its tune 6.7 where the written tune plays 5.0.
+The second voice and the sample are the song's own. The pace is not.
+The writers hold a line to its token song's onsets a bar (the bass and
+the chord parts since round 125, the tune since round 138, the
+counter-line beside it since round 143), and the token says them by the
+form's letters. Metamorphasis is read as one part: its token carries no
+form, so it said no onsets, and `counter_mask` kept the pooled draw (a
+line with no own onsets keeps its first). Six of the 68 tokens carry no
+form. The same gap opens where a token has a form the plan does not
+take, one short of the bars asked. Over 400 seeds the plan's form is
+not its token song's in 35, and there, against the pace the token now
+says, the tune ran over one and a half times its song's in 16 songs of
+33, the bass in 13 of 33, the counter-line in 7 of 13, the harmony in
+12 of 18, and the accompaniment under half its song's in 5 of 11.
+
+**Built.** A song with no letters says one number: `section_onsets_text`
+gives, for a song whose form the token does not carry, the median of the
+voice's onsets a bar over the bars it plays in, the whole song through
+(`n3` in a part's twenty-second field, and in a voice beside a line's
+ninth sub-field); `plan.onsets_of` reads it under `WHOLE_SONG`. Where
+the plan's form is not its token song's, `plan.whole_song_onsets` gives
+each line (the bass, the chord parts, the tune, the counter-line beside
+it) its song's onsets a bar in every bar: that one number, or, for a
+token with a form the plan did not take, the median over the song's
+bars of its parts' own (`song_pace`). The writers are untouched: they
+hold a line to it as they hold it to a letter's, within half to one and
+a half times it. Nothing is drawn. The pooled `section_densities` and
+`section_fills` draws are made as before, and a line with a pace reads
+the pace in place of their shifts, as it does on its song's own form.
+The kit is not in it: its pieces' hits a bar are still said by the
+letter alone.
+
+**Measured.** Suite 599 (1 skip). The vocabulary is refit: five balance
+tokens gain the numbers (the sixth with no form has no line that plays),
+the outcomes in their order, no other table. Plans (400 seeds, the
+player's asking), against round 152: a note changes in 33 songs, the 33
+whose plan says the round's line; the other 367 are the same note for
+note, and every seed keeps its token song, title, band, bars and tempo.
+By token song: Overture (part 2) 9, Fanfare 7, Relm 5, Fanatics 4,
+Metamorphasis 4, Shadow 2, The Phantom Train 2. In those 33 every line
+is now within half to one and a half times its song's pace: the
+counter-line in 13 of 13 (the median of written over the song's 0.99;
+1.62 before), the tune in 33 of 33 (1.00; 1.33), the bass in 33 of 33
+(1.00; 1.31), the accompaniment in 11 of 11 (0.85; 0.53), the harmony
+in 18 of 18 (1.00; 1.80). The four songs on Metamorphasis's token:
+their counter-lines play 3.0 notes a bar (8.4 to 11.7 before; the
+token says 3), their tunes 6.5 to 7.1 (4.7 to 8.6; 7). The song first
+heard, written again from its seed on the same import refit with the
+round's code: its counter-line 2.9 notes a bar (8.7), its tune 6.7
+(5.0), its bass 4.9 (5.7), the key, tempo, form and title the same.
+The two earlier tests that write on one generated song's tables (the
+tune's places, round 147; the tune back with the bass, round 146) set
+that one-part song's pace aside, being tests of the writers' own bars.
+
+**Open.** A song on a form not its token song's still takes the pooled
+textures, entrances, loops and fills, and its kit's pieces their tables'
+own hits a bar. The song's pace is one number for the whole song: a
+song that thins in one part of its form is written at its median
+throughout (the tune on Fanatics's token goes from seven notes a bar to
+one, its song's). An imported game's vocabulary counted before this
+round says no such number until the game is imported again.
+
+**Heard.** Seven pairs on the same seeds, one song on each token the
+round changes, before the merge: better by ear, the pace on Fanatics's
+and Overture (part 2)'s tokens their songs'.
+
+### Round 154: a short form is the song's own, played round again (2026-11-13, asked after round 153's songs)
+
+**Why.** Round 153 gave a line one pace for the whole song where the
+plan's form is not its token song's. Asked how a song could keep its
+pace by the part of the form there, and its kit with it: for the four
+songs with a form under the sixteen bars a song is asked, the token
+already says all of it by the form's letters, and the plan dropped the
+form for being short.
+
+**Found.** Fanfare (A2B8, ten bars), Fanatics (A4B4B4, twelve), Shadow
+(A2B12, fourteen) and The Phantom Train (A3B4B4C4, fifteen). In
+Fanatics's first four bars the bass and the chant strike eight a bar,
+the accompaniment three and the kit eight; from the fifth the bass and
+the chant hold one note a bar, the accompaniment strikes eight and the
+kit sixteen. At one pace it was written as its second part throughout.
+The game loops each of the four.
+
+**Built.** `plan.round_again(form, loop_part, least)`: a token song's
+form short of the bars asked, with its parts from the loop's part on
+(the token's `loop=`; the first where none is read) added whole until
+the bars reach the ask, a letter's bars its first statement's; no
+further than the twelve parts a song may have, and a form that still
+falls short leaves the draw standing as before. `_plan_once` takes the
+longer form as the token song's own (`own_letters`): the parts that
+play in each part of the form, each line's onsets a bar, the kit's
+pieces, the loops and the levels are then the song's by the letter, as
+on any own form, and a part that comes round again is its first
+statement (`copy_repeats`). The written song's loop goes back to the
+token song's loop's part. Nothing is drawn that was not: the form's
+stream is read as it was.
+
+**Measured.** Suite 599 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 153: the plan says the
+round's line in 20 songs (Fanfare 9, Fanatics 6, The Phantom Train 4,
+Shadow 1); a note changes in 22 and the other 378 are the same note for
+note. Three seeds draw another token song, the plan drawn again for the
+theme asked: two of the three that were on Shadow's (its own form gives
+the tune no phrase to come back in under the asking), and one that was
+drawn again off Fanfare's before and now stays on it. By the part of
+the form over the 20 songs: each line's notes a bar over its song's for
+that letter, 109 parts of the form, the median 0.91 and every one
+within half to one and a half times it; the kit's hits a bar over the
+game's kit's there, 44 parts of the form, the median 0.91, 38 within
+half to one and a half times it and 6 under (The Phantom Train's A,
+where the game's hat runs thirteen a bar and the written kit rests: a
+piece the song plays in some bars may rest). The song on Fanatics's
+token (seed 84): A at bass 5, chant 4, accompaniment 3, kit 8.5; B at
+bass 1, chant 1, accompaniment 8, kit 9 (the game's 8, 8, 3, 12 and 1,
+1, 8, 18). The song on Shadow's (seed 11): its kit 17.5 hits a bar in B
+where the game's plays 21 and the written song played 7 throughout.
+
+**Open.** A part of the form that comes round again is its first
+statement note for note, where the game's second time can differ. A
+song of ten bars is eighteen as written, and the player's loop plays
+its second part again after that. Shadow is drawn less under the
+player's asking (1 seed of 400 where 3 were). The kit's piece that
+plays in some bars of a part of the form may rest through it.
+
+**Heard.** Four pairs on the same seeds before the merge, a song on each of
+the four tokens: passed by ear. On Fanatics's the chant was heard holding
+one note through its second part, which round 156 takes up.
+
+### Round 155: a kit keeps its song's pieces where the song has no form (2026-11-13, asked with round 154)
+
+**Why.** Round 153 left the kit out: its pieces' hits a bar were said
+by the form's letters alone, and a song read as one part said none.
+Round 154 brought the four short forms' kits in by the letter. This is
+the rest: the songs with no form.
+
+**Found.** Six tokens carry no form and four of their songs have a
+kit: Metamorphasis (a cymbal once a bar in 21 of its 22 bars),
+Overture (part 2) (an open hat twice a bar in 8 of 10), Quiet Beach
+(once a bar in 11 of 12) and "??" (five pieces, none in half its
+bars). Written on those tokens a kit struck at its tables' own rate in
+whatever bars the pooled textures and the drums' entrances gave it:
+over 400 seeds the three songs on Metamorphasis's had a kit in 4 bars
+of 28, in 4 of 20, and none at all (never in a texture, it was left
+out of the band), and the nine on Overture (part 2)'s in from none of
+their bars to all.
+
+**Built.** `rhythm.kit_onsets_field` says a song with no form's pieces
+the whole song through, under `*` for the letter (`n*c1@95`: the
+cymbal one hit a bar at the median of the bars it plays, in 95 in a
+hundred of the song's bars); `plan.kit_onsets_of` reads it under
+`WHOLE_SONG`. Where the plan's form is not its token song's the kit's
+pieces take those bounds in every bar (`kit_piece_bounds`, as a part of
+the form's: a piece that plays through keeps within half to one and a
+half times its hits, one in some bars from none to that many, a rare
+one a hit at most). And a kit one of whose pieces plays in three
+quarters of its song's bars or more (`KIT_THROUGH`, the bound's own
+line for playing through) plays in every bar: the drums are put into
+every bar's texture after the pooled texture draw and their pooled
+entrances are not taken, as on a token song's own textures. Nothing is
+drawn that was not; the entrances' stream is its own.
+
+**Measured.** Suite 600 (1 skip). The vocabulary is refit: four balance
+tokens gain the word (the four kits above), the outcomes in their
+order, no other table. Plans (400 seeds, the player's asking), against
+round 154: the plan says the round's lines in 12 songs (Overture (part
+2) 9, Metamorphasis 3) and a note changes in 13, the kit in all 13 and
+the bass and the tune, held to the kit's hits since round 149, in 5;
+the other 387 are the same note for note. One seed draws another token
+song: a kit kept in the band draws its own words, and the plan drawn
+again for the theme asked lands elsewhere. In the 12 the kit plays in
+every bar: the three on Metamorphasis's token one hit a bar (the
+game's one), the nine on Overture (part 2)'s two (its two), where the
+kit had played in 4 of 28 bars, 4 of 20 and none, and in from 0 of 28
+to 22 of 22.
+
+**Open.** The kit plays in every bar where its song's plays in nearly
+every bar: the bar or two the game rests it are not carried. The
+pieces' bounds are one for the whole song. A song with no form still
+takes the pooled textures and entrances for its other parts. And
+Metamorphasis's own main drum voice, read as a roll and filed apart,
+is not in its kit at all.
+
+**Heard.** Two pairs on the same seeds before the merge, a song on
+Metamorphasis's token and one on Overture (part 2)'s: passed by ear.
+
+### Round 156: a harmony's figure of two bars is not written on one chord (2026-11-13, from a chant heard holding one note)
+
+**Why.** By ear, on the song on Fanatics's token after round 154 (seed
+84): the chant holds one note through, and a long sustained sound is
+all there is. Investigated first; built on the pick of the first of
+three candidates.
+
+**Found.** That song is on one chord for its 24 bars. The game's
+second part turns two chords about, a bar each (G#5, F#5), and its
+chant, its bass and its low voice move with them; the token says so
+(`cycle=A1~100+B2~100`: the harmony's figure one bar long in A, two in
+B). Round 121's step copies a figure's first bars across the part, and
+the chain had drawn the figure's two bars alike (I5 I5 I5 VI5 for the
+part): a figure of two bars on one chord, the part on one chord, and
+the chord the chain drew later in it written over. A drawing fault:
+the song's harmony loops on two bars because they differ, and on one
+chord it would loop on one. Over 400 seeds 173 parts of the form, in
+132 songs, have a figure of two bars or more, and 71 of them, in 60
+songs, were written on one root; in 45 of the 71 by the chain's draw
+alone.
+
+**Built.** In `plan_chords`, before the figure's bars are copied: a
+figure of two bars or more whose bars (the first on the figure at each
+place of it) are on one root takes, for a later bar, the first chord on
+another root the chain drew in the part, at that chord's own place in
+the figure (the last, where it was drawn at the first); where the
+chain drew the part on one root whole, a chord asked of the chord word
+on a stream of its own (`figure_rng`, `FIGURE_TRIES`) until it gives
+another root. The chain's draws, its holds and its shapes stand, so no
+other draw moves.
+
+**Measured.** Suite 601 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 155: the plan says the
+round's line in 55 songs, 67 figures in all; a note changes in 50 (the
+tune in 47, the bass in 46, the accompaniment in 41, the counter-line
+in 27, the harmony in 10) and the other 350 are the same note for
+note; every seed keeps its token song, title, band, bars and tempo. Of
+the 173 figures, 22 are on one root now, in 22 songs, where 71 were:
+none by the chain's draw. The chord changes at 0.45 of a song's bar
+lines at the median (0.39; the token songs' 0.61), and 8 songs are on
+one chord throughout (10).
+
+**Open.** The 22 figures still on one root are every one under a
+theme's return that comes back with its chords: the plan copies the
+theme's four bars of chords over the bars it returns in, whatever the
+part's own harmony there. The song on Fanatics's token is one of them
+and is note for note what it was: its theme, four bars on one chord,
+returns at the second part's first bar, where the tune, the bass and
+the accompaniment cannot follow it (their pace there is not the
+theme's), and only the chords come back. Over the 400 seeds 409
+returns bring their chords, 239 of them into a part whose harmony the
+token song loops, and 86 where the tune's own pace is outside half to
+one and a half times the theme's part's. What a return may bring over
+a part's own harmony is the player's asking, and is put to the ear
+with a song written both ways.
+
+**Heard.** Six pairs on the same seeds before the merge: passed by ear.
+The song on Fanatics's token written with its theme's return bringing no
+chords was heard as the better; that is not built here.
+

@@ -14,6 +14,7 @@ try:
 except ImportError:          # discover -s tests imports the modules top-level
     from support import compose_and_save
 from bitcomposer.player import engine
+from bitcomposer.player import level as leveling
 from bitcomposer.player.openmpt import LibraryMissing, lib
 
 
@@ -144,6 +145,145 @@ class EngineHeadless(unittest.TestCase):
         before = os.stat(older).st_mtime_ns
         engine.write_channel_volumes(older, [5] * 19)                # APPLY TO TRACK
         self.assertEqual(os.stat(older).st_mtime_ns, before)
+
+    def heard(self, index, seconds=4.0):
+        """What reaches the output when the player plays a song: its first `seconds` as blocks' mean squares (the
+        level's own blocks), taken at the device, after the gain."""
+        p, got = self.p, bytearray()
+        want = int(seconds * engine.SAMPLE_RATE) * engine.CHANNELS * 2
+
+        class Tap:
+            def open(self): pass
+            def close(self): pass
+            def write(self, data):
+                got.extend(data)
+                return len(got) < want
+
+        with unittest.mock.patch.object(engine, "make_output", lambda rate, kind: Tap()):
+            p.play(index)
+            end = time.time() + 30
+            while len(got) < want and time.time() < end:
+                time.sleep(0.02)
+            p.stop()
+        self.assertGreaterEqual(len(got), want)
+        import array
+        frames = int(leveling.BLOCK_SECONDS * engine.SAMPLE_RATE) * engine.CHANNELS
+        samples = array.array("h")
+        samples.frombytes(bytes(got[:want]))
+        return [leveling._square_sum(samples[i:i + frames]) / frames for i in range(0, len(samples) - frames + 1, frames)]
+
+    def test_every_song_plays_at_one_level(self):
+        """LEVEL: a song is measured once and trimmed at playback to the common level, the file untouched. Two files of
+        one song, the second at half the volume (the IT header's global volume), leave the player the same; with the
+        level off they leave it 6 dB apart, as written."""
+        import json
+        import shutil
+        p = self.p
+        loud, quiet = os.path.join(self.music, "Kept.it"), os.path.join(self.music, "Quiet.it")
+        shutil.copyfile(loud, quiet)
+        with open(quiet, "r+b") as fh:
+            fh.seek(0x30)
+            volume = fh.read(1)[0]
+            fh.seek(0x30)
+            fh.write(bytes([volume // 2]))
+        from pathlib import Path
+        before = {f: Path(f).read_bytes() for f in (loud, quiet)}
+        a, b = leveling.measure(loud), leveling.measure(quiet)
+        self.assertAlmostEqual(a - b, 20 * __import__("math").log10(volume / (volume // 2)), delta=0.3)   # the measure hears the 6 dB
+        p.scan()
+        i, j = p.playlist.index(loud), p.playlist.index(quiet)
+        self.assertTrue(p.level_on)                                  # on unless turned off
+        on_loud, on_quiet = self.heard(i), self.heard(j)
+        self.assertAlmostEqual(p.level_trim(), leveling.TARGET_DB - b, delta=0.01)   # the song loaded last: the quiet one's trim
+        for x, y in zip(on_loud, on_quiet):                          # block for block the same level at the device
+            self.assertAlmostEqual(leveling._db(x), leveling._db(y), delta=0.5)
+        p.set_level(False)
+        self.assertIsNone(p.level_trim())
+        off_loud, off_quiet = self.heard(i), self.heard(j)
+        apart = [leveling._db(x) - leveling._db(y) for x, y in zip(off_loud, off_quiet)]
+        self.assertAlmostEqual(sum(apart) / len(apart), a - b, delta=0.5)            # as written: 6 dB apart
+        trim = [leveling._db(x) - leveling._db(y) for x, y in zip(on_loud, off_loud)]
+        self.assertAlmostEqual(sum(trim) / len(trim), leveling.TARGET_DB - a, delta=0.3)   # the trim is the gain heard
+        self.assertEqual({f: Path(f).read_bytes() for f in (loud, quiet)}, before)   # no file changed
+        p.set_level(True)
+        self.assertAlmostEqual(p.level_trim(), leveling.TARGET_DB - b, delta=0.01)   # on again, on the loaded song at once
+        # the setting and the levels survive a restart: a second player measures nothing it has measured
+        p.shutdown()
+        with open(engine.state_file()) as fh:
+            self.assertTrue(json.load(fh)["level"])
+        with open(engine.levels_file()) as fh:
+            self.assertEqual(set(json.load(fh)), set(p.playlist))
+        calls = []
+        with unittest.mock.patch.object(leveling, "measure", lambda path, *a: calls.append(path) or -20.0):
+            again = engine.Player(music_dir=self.music, schedule=self.q.put, output_kind="null")
+            again.on_log = lambda *_: None
+            again.scan()
+            self.assertAlmostEqual(again.level_of(quiet), b, places=3)   # the kept level; two measures of a file differ in the seventh place (libopenmpt dithers)
+            self.assertEqual(calls, [])
+            os.utime(quiet, (time.time() + 5, time.time() + 5))      # a file changed since is measured again
+            self.assertEqual(again.level_of(quiet), -20.0)
+            self.assertEqual(calls, [quiet])
+            again._load(again.playlist.index(loud))
+            self.assertTrue(again.apply_mix_to_file())               # a new mix keeps the file's time and size: measured again
+            self.assertEqual(again.level_of(loud), -20.0)
+            again.shutdown()
+
+    def test_a_measure_cut_short_by_a_shutdown_writes_nothing_after_it(self):
+        """The folder's songs are measured in the background. A shutdown does not wait for a long measure, and the
+        pass, ended, saves nothing: the settings folder may be gone by then (a test's, or an uninstall's)."""
+        import threading
+        p, gate, started = self.p, threading.Event(), threading.Event()
+
+        def slow(path, *a):
+            started.set()
+            gate.wait(10)
+            return -20.0
+        with unittest.mock.patch.object(leveling, "measure", slow), unittest.mock.patch.object(engine, "MEASURE_JOIN", 0.05):
+            p.scan()
+            self.assertTrue(started.wait(5))
+            thread = p._measure_thread
+            p.shutdown()                                   # gives up on the measure still running
+            self.assertTrue(thread.is_alive())
+            if os.path.exists(engine.levels_file()):
+                os.remove(engine.levels_file())
+            gate.set()
+            thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertFalse(os.path.exists(engine.levels_file()))
+
+    def test_the_background_measure_leaves_the_saving_to_the_face(self):
+        """The folder's pass, ended, asks the face's thread to save and writes nothing by its own: a second player in
+        one process whose settings folder is taken away under it (a test's, shut down after its folder goes) left a
+        file behind in it. A save asked for and reached after the shutdown is not made."""
+        p = self.p
+        p.scan()
+        p._measure_thread.join(30)
+        self.assertFalse(p._measure_thread.is_alive())
+        self.assertFalse(os.path.exists(engine.levels_file()))       # measured, and nothing written yet
+        asked = []
+        while not self.q.empty():
+            asked.append(self.q.get())
+        self.assertIn(p._save_levels, asked)                         # the save handed to the face
+        p._save_levels()
+        self.assertTrue(os.path.exists(engine.levels_file()))        # the face's thread writes it
+        p.shutdown()
+        os.remove(engine.levels_file())
+        p._save_levels()                                             # one that arrives after the shutdown
+        self.assertFalse(os.path.exists(engine.levels_file()))
+
+    def test_the_level_s_gates_and_trim(self):
+        full = leveling.FULL_SCALE
+        self.assertIsNone(leveling.gated([]))
+        self.assertIsNone(leveling.gated([0.0, full * 1e-9]))                        # nothing over the absolute gate
+        self.assertAlmostEqual(leveling.gated([full / 100] * 5), -20.0, places=6)
+        self.assertAlmostEqual(leveling.gated([full / 100] * 5 + [0.0] * 20), -20.0, places=6)          # a rest is not counted
+        self.assertAlmostEqual(leveling.gated([full / 100] * 5 + [full / 100000] * 20), -20.0, places=6)   # nor a tail 30 dB under
+        self.assertLess(leveling.gated([full / 100] * 5 + [full / 400] * 5), -20.0)                      # a passage 6 dB under is
+        self.assertEqual(leveling.gain_for(None), 1.0)
+        self.assertAlmostEqual(leveling.gain_for(leveling.TARGET_DB), 1.0)
+        self.assertAlmostEqual(leveling.gain_for(leveling.TARGET_DB + 6.0), 10 ** (-6 / 20))
+        self.assertAlmostEqual(leveling.gain_for(-90.0), 10 ** (leveling.MAX_TRIM_DB / 20))              # near silence is not made a song
+        self.assertIsNone(leveling.measure(os.path.join(self.music, "no such file.it")))
 
     def test_message_parsing_and_header_write(self):
         info = engine.parse_message("Title\r\nC major - 120 BPM\r\nvoices: melody=a,harmony=b\r\ndrew: sound=chip,form=aaba\r\nlayout: melody,harmony,echo.melody\r\n")
@@ -433,6 +573,16 @@ class WindowHeadless(unittest.TestCase):
         self.assertFalse(b.checkUpdates)
         with open(state_file()) as fh:
             self.assertFalse(json.load(fh)["check_updates"])
+        # LEVEL: on unless turned off, the loaded song's trim in the state, and the switch saved
+        self.assertTrue(b.state["level"])
+        self.assertIsInstance(b.state["levelTrim"], float)
+        b.setLevel(False)
+        self.assertFalse(b.state["level"])
+        self.assertIsNone(b.state["levelTrim"])
+        with open(state_file()) as fh:
+            self.assertFalse(json.load(fh)["level"])
+        b.setLevel(True)
+        self.assertTrue(b.state["level"])
 
     def test_window_loads_and_fits(self):
         from pathlib import Path
