@@ -599,10 +599,17 @@ def token_textures(parts: list, band: list, spans: dict, log: list) -> tuple[lis
     return textures, plays
 
 
+WHOLE_SONG = ""                       # onsets_of's key for a song with no letters: its onsets a bar the whole song through (round 153)
+
+
 def onsets_of(text: str) -> dict:
     """A voice's onsets a bar by the form's letters, read from the balance token (round 125, arrangement.section_onsets_text):
     "A6+B2!1+C4.5!7" -> {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)}, by the letter the median of its onsets a bar there
-    and its onsets in the part's last bar where that is a fill or a thinning; {} where it cannot be read."""
+    and its onsets in the part's last bar where that is a fill or a thinning; a song with no letters says one number
+    (round 153), "4" -> {WHOLE_SONG: (4.0, None)}; {} where it cannot be read."""
+    whole = re.fullmatch(r"\d+(?:\.\d)?", text)
+    if whole:
+        return {WHOLE_SONG: (float(text), None)} if float(text) > 0 else {}
     out = {}
     for item in text.split("+"):
         m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)(?:!(\d+))?", item)
@@ -653,6 +660,43 @@ def kit_piece_bounds(stats: dict | None) -> dict:
         n = min(cap, got[0])
         least, most = min(KIT_FLOOR_CAP, max(1, math.ceil(low * n))), max(1, math.floor(high * n))
         out[letter] = (least, most) if got[1] >= KIT_THROUGH else (0, most) if got[1] >= KIT_SOME else (0, 1)
+    return out
+
+
+def song_pace(by_letter: dict | None, form: list | None) -> float | None:
+    """A line's onsets a bar over the whole of its token song (round 153): the one number a song with no letters says
+    (WHOLE_SONG), else the median over the song's bars of its part of the form's own (`form`: the token's, [(letter,
+    bars)]; a part of the form the line rests through has none and is left out); None where the token says neither."""
+    if not by_letter:
+        return None
+    if WHOLE_SONG in by_letter:
+        return by_letter[WHOLE_SONG][0]
+    bars = [by_letter[letter][0] for letter, n in (form or ()) if letter in by_letter for _ in range(int(n))]
+    return float(statistics.median(bars)) if bars else None
+
+
+def whole_song_onsets(parts: list, band: list, onsets: dict, form: list | None, log: list) -> dict:
+    """Each line's onsets a bar where the plan's form is not its token song's (round 153): {a part: [its token song's
+    line's onsets a bar over the whole song (song_pace), every bar]}, in token_sections' shape, for the lines it
+    gives them (the bass, the chord parts, the tune, the counter-line beside it). Where the form's letters are the
+    token song's a line keeps to its song's onsets a bar by the letter (rounds 125, 138 and 143); where they are not
+    (a token that carries no form, its song read as one part; a form short of the bars asked) it had been held to
+    nothing of its song's, and its bars came off the pooled tables at whatever pace they drew. The song's pace is known
+    all the same, and the writers hold a line to it as they do to a letter's: within half to one and a half times it
+    (envelope_at_for's own envelope). Nothing is drawn; the section_densities and section_fills draws stand as they
+    were made, and a line with a pace reads the pace instead of their shifts, as it does on its song's own form."""
+    total = parts[-1][0] + parts[-1][1]
+    tune_role = R.MELODY if R.MELODY in band else R.COUNTER
+    out, said = {}, []
+    for role in band:
+        if role not in rhythm.UPPER + (R.BASS, tune_role, R.COUNTER):
+            continue
+        pace = song_pace(onsets.get(role), form)
+        if pace:
+            out[role] = [pace] * total
+            said.append(f"{role} {pace:g}")
+    if said:
+        log.append("onsets a bar from the balance's song the whole song through, the form not its own (round 153): " + "; ".join(said))
     return out
 
 
@@ -2723,6 +2767,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                              if "section_densities" in render_mod.models_or_empty(models) else {})   # a section's density tier by the step its level makes (round 101)
         section_fills = (plan_section_fills(models, parts, band, plays, voices, random.Random(f"whole:{seed}:section fills"), log)   # what each voice does in a
                          if "section_fills" in render_mod.models_or_empty(models) else {})                                        # section's last bar (round 118)
+        section_onsets = whole_song_onsets(parts, band, token_onsets, token_form, log)   # a form not the token song's: each line at its song's pace all the same (round 153)
     for role, kinds in section_fills.items():               # the line's fill rides the density shift its writer reads (habit_at_for, envelope_at_for)
         if any(kinds["line"]):
             shifts = section_densities.setdefault(role, [0] * len(kinds["line"]))

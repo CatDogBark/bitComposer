@@ -1743,12 +1743,17 @@ class TokenSectionTests(unittest.TestCase):
         self.assertEqual(rhythm.section_onsets_field(s, tune), "nA4+B4")
         self.assertEqual(rhythm.section_onsets_field(s, []), "")
         self.assertEqual(rhythm.kit_onsets_field(s), "nAK1@50,S8@100+BK4@100")                      # each piece's hits a bar and the share of the bars it plays
-        s.parts = [(0, 8, None, "A")]
-        self.assertEqual(rhythm.section_onsets_field(s, bass), ""); self.assertEqual(rhythm.kit_onsets_field(s), "")   # a form the token does not carry
+        s.parts = [(0, 8, None, "A")]                                                               # a song read as one part: no form for the token to carry,
+        self.assertEqual(rhythm.section_onsets_field(s, bass), "n3")                                # and the line says its onsets a bar the whole song through
+        self.assertEqual(rhythm.section_onsets_field(s, tune), "n4")                                # (round 153): the median over the bars it plays in
+        self.assertEqual(rhythm.section_onsets_field(s, []), "")
+        self.assertEqual(rhythm.kit_onsets_field(s), "")                                            # the kit's pieces still say nothing without letters
 
     def test_the_fields_are_read(self):
         self.assertEqual(whole.onsets_of("A6+B2!1+C4.5!7"), {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)})
         self.assertEqual(whole.onsets_of("A6+B"), {}); self.assertEqual(whole.onsets_of("A0"), {})
+        self.assertEqual(whole.onsets_of("4"), {whole.WHOLE_SONG: (4.0, None)})                     # a song with no letters: one number (round 153)
+        self.assertEqual(whole.onsets_of("3.5"), {whole.WHOLE_SONG: (3.5, None)}); self.assertEqual(whole.onsets_of("0"), {})
         self.assertEqual(whole.kit_onsets_of("AS28.5@100,c1@50+BS20@75"), {"A": {"S": (28.5, 1.0), "c": (1.0, 0.5)}, "B": {"S": (20.0, 0.75)}})
         self.assertEqual(whole.kit_onsets_of("AS28"), {})
         b = whole.kit_piece_bounds({"S": (28.5, 1.0), "c": (1.0, 0.5), "K": (4.0, 0.1)})
@@ -2926,6 +2931,7 @@ class TuneReturnsTests(unittest.TestCase):
 
         def written(own):
             p = whole.plan(models, 1, "g", max_bars=16)
+            p.section_onsets = {}                                                                   # the one-part test song's pace apart (round 153): the returns on the lines' own bars
             p.tune_together = {R.MELODY: own} if own else {}
             sg = whole.song_of(p)
             w = whole.write(p, sg, models, 1)
@@ -2979,6 +2985,25 @@ class CounterLineTests(unittest.TestCase):
         for i, v in fields.items():
             out[i] = v
         return f"{role}=" + ":".join(out)
+
+    def test_a_line_keeps_its_songs_pace_where_the_form_is_not_its_own(self):
+        """Round 153: a token with no form (its song read as one part) says each line's onsets a bar the whole song
+        through, and the plan, on whatever form it draws, gives every bar of every line that pace; the writers hold a
+        line to it as to a letter's. A token with a form the plan does not take gives the median over its song's bars."""
+        band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 21: "n5"}),
+                self._token("melody", {0: "half", 1: "60-72", 2: "0.9", 3: "1", 4: "0.8", 8: "medium+varied", 21: "n6.5"}),
+                self._token("counter", {0: "half", 1: "64-76", 2: "0.9", 3: "1", 4: "0.6", 8: "medium+varied", 21: "n3"})]
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        p = whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(" ".join(band) + " top=0.30 tempo=medium", part=rhythm.ARRANGEMENT))}, 7, "g")
+        bars = p.parts[-1][0] + p.parts[-1][1]
+        self.assertEqual(p.section_onsets, {"bass": [5.0] * bars, "melody": [6.5] * bars, "counter": [3.0] * bars})
+        env = whole.envelope_at_for(p, "counter")
+        self.assertTrue(env.own); self.assertEqual([env(0), env(bars - 1)], [(2, 4), (2, 4)])       # within the writers' TIGHT of the song's three
+        self.assertIn("bass 5; melody 6.5; counter 3", " ".join(l for l in p.log if "(round 153)" in l))
+        self.assertEqual(whole.song_pace({whole.WHOLE_SONG: (3.0, None)}, None), 3.0)
+        self.assertEqual(whole.song_pace({"A": (2.0, None), "B": (6.0, 1)}, [("A", 4), ("B", 4), ("A", 4)]), 2.0)   # eight bars of A's two, four of B's six
+        self.assertEqual(whole.song_pace({"B": (6.0, None)}, [("A", 4), ("B", 4)]), 6.0)            # a part of the form the line rests through is left out
+        self.assertIsNone(whole.song_pace({"A": (2.0, None)}, None)); self.assertIsNone(whole.song_pace(None, [("A", 4)])); self.assertIsNone(whole.song_pace({}, []))
 
     def test_the_plan_takes_the_counter_lines_onsets_by_section(self):
         band = [self._token("bass", {0: "half", 1: "36-44", 2: "0.9", 3: "1", 4: "1.0", 8: "medium+walking+no-octaves", 20: "eA+B", 21: "nA4+B2"}),
@@ -3509,6 +3534,7 @@ class TunePlacesTests(unittest.TestCase):
 
         def line(seed, places, token_feel="duple", together=None):
             p = whole.plan(models, seed, "g", max_bars=16)
+            p.section_onsets = {}                                                                   # the one-part test song's pace apart (round 153): the places on the tune's own bars
             p.plays[R.MELODY] = [True] * p.bars
             p.tune_places, p.token_feel = ({R.MELODY: places} if places else {}), token_feel
             p.tune_together = {R.MELODY: together} if together else {}                             # the places alone, unless the tune is brought back with the bass too
