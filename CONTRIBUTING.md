@@ -91,7 +91,7 @@ the signing environment, and only those release tags the PyPI one.
 | `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
 | `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
 | `bitcomposer/cli.py` | the command line; its parser is also the player's list of compose settings |
-| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP, voice previews), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`; the LIBRARY and SOUNDS screens are in them), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check, CANDIDATES, UPDATE and GET THE EMULATOR) |
+| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP, voice previews), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`; the LIBRARY and SOUNDS screens are in them), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `level.py` (the one level every song plays at, measured from its audio), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check, CANDIDATES, UPDATE and GET THE EMULATOR) |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
 | `tools/spc_check.py` | measures SPC-to-IT conversions against the emulator, voice by voice; sweeps a folder of SPC files and reports by music driver |
 | `tools/make_logo.py` | writes the README logo from the icon and the bundled font |

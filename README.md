@@ -199,7 +199,9 @@ program, an application of four screens under one header:
 - **PLAY**: the song playing, its position, the transport, GENERATE, AUTO
   (the "radio": the next song is written when this one ends), gain with a
   soft limiter, each channel's level as the band, and the songs in the
-  folder with KEEP. Every song the player writes is provisional
+  folder with KEEP. Every song plays at one level: the player measures a
+  song once and trims it as it plays, so a quiet song and a loud one sit
+  side by side (SET → LEVEL turns it off; the files are not changed). Every song the player writes is provisional
   (`(auto) <Title>.it`, so a file browser sorts them together) and pruned
   after ten unless kept.
 - **WRITE**: what the next song is written from (the vocabulary that
@@ -216,8 +218,9 @@ program, an application of four screens under one header:
   when the reading got it wrong.
 
 MIX (a live mixer per channel, with the kit and the echo as buses, and
-APPLY to write the mix into the file) and SET (start at login, update
-checks, release candidates) open as panels over the screen. The look is
+APPLY to write the mix into the file) and SET (one level for every song,
+start at login, update checks, release candidates) open as panels over
+the screen. The look is
 the SNES era's own pixels, as styling only: the controls are ordinary
 controls, the text is text, nothing sits on a fixed grid. The window
 opens no taller than the screen it lands on (scrolling on a small or
