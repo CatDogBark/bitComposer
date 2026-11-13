@@ -1459,6 +1459,33 @@ class TokenLoopTests(unittest.TestCase):
         same, _ = whole.plan_chords({"chords": Chain()}, parts, 0, 0, "major", random.Random(5), [], cycle={"C": (1, 1.0, ())})
         self.assertEqual(same, free)                                                               # a loop on a letter the form lacks: nothing
 
+    def test_a_figure_of_two_bars_is_not_written_on_one_chord(self):
+        """Round 156: the token song's harmony loops on two bars because the two differ. Where the chain drew the
+        figure's bars on one root, a later bar of it takes the first chord on another root the chain drew in the part
+        (at that chord's own place in the figure), and one drawn anew where the part was drawn on one root whole; a
+        figure the chain drew on two roots, and a figure of one bar, stand as they were."""
+        class Told:                                                                                # a chord word that says what it is told, bar by bar
+            def __init__(self, bars, anew="V"):
+                self.bars, self.anew, self.asked = list(bars), anew, 0
+            def draw(self, unit, previous, played, rng, keep=None):
+                if self.asked < len(self.bars):
+                    self.asked += 1
+                    return self.bars[self.asked - 1]
+                return self.anew                                                                   # past the song's bars: the figure's own draw
+        parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 1, "B")]
+        loops = {"A": (1, 1.0, ()), "B": (2, 1.0, ())}
+        plan = lambda bars, **kw: whole.plan_chords({"chords": Told(bars)}, parts, 0, 0, "major", random.Random(5), kw.pop("log", []), cycle=loops, **kw)[0]   # noqa: E731
+        log = []
+        names = plan(["I", "I", "V", "vi", "I", "I", "I", "vi"], log=log)
+        self.assertEqual(names[:4], ["I"] * 4)                                                     # a one-bar figure is one chord: A as it was
+        self.assertEqual(names[4:8], ["I", "vi", "I", "vi"])                                       # B drawn I I I vi: the vi, drawn at the figure's second place, is its second bar
+        self.assertEqual(names[8:], names[4:8])                                                    # and the part come round again takes it
+        self.assertTrue(any("1 of the harmony's figures of two bars or more, drawn on one root, take another chord for a later bar (round 156)" in l for l in log), log)
+        self.assertEqual(plan(["I", "I", "V", "vi", "I", "I", "IV", "I"])[4:8], ["I", "IV", "I", "IV"])   # the other chord drawn at the first place: the figure's last bar takes it
+        self.assertEqual(plan(["I", "I", "V", "vi", "I", "ii", "I", "I"])[4:8], ["I", "ii", "I", "ii"])   # a figure drawn on two roots stands
+        self.assertEqual(plan(["I", "I", "V", "vi", "I", "I", "I", "I"])[4:8], ["I"] * 4)          # the part on one root whole and no stream to draw on: as it was
+        self.assertEqual(plan(["I", "I", "V", "vi", "I", "I", "I", "I"], figure_rng=random.Random(1))[4:8], ["I", "V", "I", "V"])   # drawn anew, on the figures' own stream
+
     def test_a_bar_on_the_figure_is_the_figure_again(self):
         from types import SimpleNamespace
         plan = SimpleNamespace(parts=[(0, 2, None, "A"), (2, 8, None, "B"), (10, 8, 1, "B")],

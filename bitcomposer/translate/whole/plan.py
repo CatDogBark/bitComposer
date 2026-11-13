@@ -529,6 +529,7 @@ def form_of(text: str) -> list | None:
 
 
 LOOP_CHORDS = "cycle"                 # the harmony's key among a plan's loops (round 121): the balance token's `cycle=` word
+FIGURE_TRIES = 20                     # draws for a figure's other chord where the chain drew its part on one root (round 156)
 
 
 def loops_of(text: str) -> dict:
@@ -1096,7 +1097,7 @@ def hold_chord_shapes(names: list, drawn: list, parts: list, tonic: int, mode: s
 
 def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str, rng: random.Random, log: list,
                 hold_share: float | None = None, hold_rng: random.Random | None = None, shape_profile: dict | None = None,
-                cycle: dict | None = None, degree_shapes: dict | None = None) -> tuple[list, list]:
+                cycle: dict | None = None, degree_shapes: dict | None = None, figure_rng: random.Random | None = None) -> tuple[list, list]:
     """A chord a bar, as numerals and as (root, shape): drawn bar by bar
     from the chord mixture (a new part starts the chain's context over,
     the song's urn going on), the loop's first bar from the loops table, a
@@ -1109,7 +1110,15 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     other draw moves), a bar on the figure of a part of the form the loops
     name takes the chord of the first bar at its place of the figure, a bar
     off it keeps its own draw, and a part that repeats one takes its chords
-    again."""
+    again. A figure of two bars or more whose bars the chain drew on one
+    root is not that figure (round 156: the song's harmony loops on two
+    bars because they differ; on one chord it would loop on one): before
+    the bars are copied, a later bar of it takes the first chord on
+    another root the chain drew in the part, at that chord's own place in
+    the figure (the last, where it was drawn at the first), or, where the
+    chain drew the whole part on one root, a chord drawn anew on
+    `figure_rng`. Fanatics's two chords turn about were written as one
+    chord for the song, its chant holding one note through."""
     total = parts[-1][0] + parts[-1][1]
     home = "I" if mode == "major" else "i"
     names = [None] * total
@@ -1163,6 +1172,37 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
     if one_shape:                                           # a chord's quality its degree's in the token song, and one through the song (round
         shape_counts = Counter(ch[1] for ch in (chord_of(x, tonic, mode) for x in names if x) if ch is not None)   # 127), once the chain is
                                                             # drawn: its draws, its holds and its shapes stand, so no other draw moves
+    root_of = lambda x: (chord_of(x, tonic, mode) or (None,))[0]   # noqa: E731
+    turned = 0                                              # a figure of two bars or more drawn on one root takes another chord for a later
+    for bar, n, lag, off in looped_parts([p for p in parts if p[2] is None], cycle):   # bar (round 156), before its bars are copied
+        figure = {}
+        for k in range(bar, bar + n):
+            if k not in off and names[k] is not None:
+                figure.setdefault((k - bar) % lag, k)
+        if lag < 2 or len(figure) < 2 or len({root_of(names[k]) for k in figure.values()}) != 1:
+            continue
+        home = root_of(names[figure[min(figure)]])
+        other = next((k for k in range(bar, bar + n) if names[k] is not None and root_of(names[k]) not in (None, home)), None)
+        if other is not None:                               # the first chord on another root the chain drew in the part, at its own place
+            name, place = names[other], (other - bar) % lag
+        elif cache is not None and figure_rng is not None:  # the part drawn on one root whole: a chord anew, on the figures' own stream
+            first = names[figure[min(figure)]]
+            unit = tables.Unit("", "", "", {"part": R.HARMONY, "mode": mode, "previous": first})
+            name = None
+            for _ in range(FIGURE_TRIES):                   # the chord word may hold or recall the same chord: asked until it gives another root
+                got = cache.draw(unit, first, played, figure_rng, keep=lambda o: o != rhythm.NO_CHORD and root_of(o) not in (None, home))
+                if got and got != rhythm.NO_CHORD and root_of(got) not in (None, home):
+                    name = got
+                    break
+            place = max(figure)
+        else:
+            name, place = None, None
+        if name is None:
+            continue
+        if place not in figure or place == min(figure):
+            place = max(figure)                             # drawn at the figure's first place (a later turn's): the figure's last bar takes it
+        names[figure[place]] = name
+        turned += 1
     looped = 0                                              # the harmony's loops (round 121), on the bars as drawn: a bar on the figure takes
     for bar, n, lag, off in looped_parts([p for p in parts if p[2] is None], cycle):   # the chord of the first bar at its place of it, whole
         figure = {}
@@ -1181,6 +1221,8 @@ def plan_chords(models: dict, parts: list, loop_bar: int, tonic: int, mode: str,
         held_now = sum(1 for bar, n, of, _ in parts if of is None for k in range(bar + 1, bar + n) if names[k] == names[k - 1])
         lines = sum(n - 1 for _, n, of, _ in parts if of is None)
         log.append(f"the balance's song's harmony loops (round 121): {looped} bars take their figure's chord; {held_now} of {lines} bar lines inside the parts hold their chord now")
+    if turned:
+        log.append(f"{turned} of the harmony's figures of two bars or more, drawn on one root, take another chord for a later bar (round 156)")
     log.append("chords " + " ".join(names))
     if hold_share is not None:
         log.append(f"chords held at the balance's song's share {hold_share:.2f}: {held_lines} of {bar_lines} bar lines inside the parts")
@@ -2648,6 +2690,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         log.append(f"tempo {was:.0f} BPM is not within a tenth of the balance's song's {token_tempo:.0f}: {bpm:.0f} BPM drawn near it")
     names, chords = plan_chords(models, parts, loop_bar, tonic, mode, rng, log,
                                 hold_share=token_holds, hold_rng=random.Random(f"{seed}:chords:holds"),   # held as the token's song holds (round 106)
+                                figure_rng=random.Random(f"{seed}:chords:figures"),               # a figure drawn on one root (round 156), an own stream
                                 shape_profile=token_shapes,                                        # its qualities the token's song's (round 112)
                                 degree_shapes=token_quals,                                         # each on the degree the song has it on (round 127)
                                 cycle=loops.get(LOOP_CHORDS))                                      # its harmony's loops (round 121)
