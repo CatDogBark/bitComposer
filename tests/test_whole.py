@@ -3092,6 +3092,184 @@ class FeelFromTheTokenTests(unittest.TestCase):
             self.assertEqual(getattr(drawn, name), getattr(taken, name), name)
 
 
+class WithTheKitTests(unittest.TestCase):
+    """Round 149: how often a part's notes are struck with the kit rides its token (`x100/84` for the bass: the percent of
+    its line's onsets struck with a kit hit, and of the kit's hits struck with a bass note, over the bars both strike
+    in; `x91` for the tune), and the bass's and the tune's writers hold the written lines to them. The bass's bars, the
+    tune's and the kit's were each drawn from their own tables: the game's Terra plays its bass on the snare's march hit
+    for hit, and a song written on its token played the bass in straight eighths against the march's triplet."""
+
+    def _song(self, bass=(), tune=(), kit=(), bars=8):
+        from bitcomposer.translate.vocab import Span
+        spans = [(4.0 * k, 4.0 * k + 4.0) for k in range(bars)]
+        notes = {k: list(v) for k, v in (("bass", bass), ("melody", tune), ("drums", kit)) if v}
+        s = rhythm.Song("t", 4, 12, spans, [Span(0.0, 4.0 * bars, 0, "", 1.0)], notes=notes, bpm=120.0, sid="s", game="g",
+                        numbers=list(range(bars)), parts=[(0, bars // 2, None, "A"), (bars // 2, bars - bars // 2, None, "B")], tonic=0, mode="major")
+        s.voice_notes = {i: (role, ns) for i, (role, ns) in enumerate(notes.items())}
+        s.voice_levels = {i: 0.5 for i in s.voice_notes}; s.levels = {role: 0.5 for role in notes}
+        return s
+
+    def _line(self, places, pitch=36.0, bars=range(8)):
+        return [(4.0 * k + x, 0.2, pitch, "x") for k in bars for x in places]
+
+    def _kit(self, places, bars=range(8)):
+        return [(4.0 * k + x, 0.1, float("nan"), "sn") for k in bars for x in places]
+
+    def test_the_token_carries_how_often_a_part_strikes_with_the_kit(self):
+        march = (0.0, 1.0, 4 / 3, 5 / 3, 2.0, 3.0, 3.5)
+        s = self._song(bass=self._line(march), tune=self._line((0.0, 2.0, 2.5), 72.0), kit=self._kit(march))
+        self.assertEqual(rhythm.with_kit(s, s.notes["bass"]), (56, 56, 56, 56))                        # the bass on the kit's march hit for hit
+        self.assertEqual(rhythm.with_kit_field(s, "bass"), "x100/100")
+        self.assertEqual(rhythm.with_kit(s, s.notes["melody"]), (24, 16, 56, 16))                      # the tune: two of its three notes a bar on a hit
+        self.assertEqual(rhythm.with_kit_field(s, "melody"), "x67")                                    # the tune's token says its own share alone
+        straight = self._song(bass=self._line([i / 2 for i in range(8)]), kit=self._kit(march))        # straight eighths against the march:
+        self.assertEqual(rhythm.with_kit_field(straight, "bass"), "x62/71")                            # five of eight on a hit, five of the seven hits struck
+        near = self._song(bass=self._line((0.02, 1.03, 2.0, 3.04)), kit=self._kit((0.0, 1.0, 2.0, 3.0)))   # as the readings count two notes one onset
+        self.assertEqual(rhythm.with_kit_field(near, "bass"), "x100/100")
+        rests = self._song(bass=self._line((0.0, 1.5, 2.0, 3.5)), kit=self._kit((0.0, 2.0), bars=range(4)))   # the kit rests in half the bars:
+        self.assertEqual(rhythm.with_kit(rests, rests.notes["bass"]), (16, 8, 8, 8))                   # they say nothing of how the bass sits on it
+        self.assertEqual(rhythm.with_kit_field(rests, "bass"), "x50/100")
+        self.assertEqual(rhythm.with_kit_field(self._song(bass=self._line((0.0, 2.0)), tune=self._line((0.0,), 72.0)), "bass"), "")   # no kit: no field
+        self.assertEqual(rhythm.with_kit_field(self._song(bass=self._line((0.0,)), kit=self._kit(march)), "bass"), "")   # under sixteen onsets: none
+        self.assertEqual(rhythm.with_kit_field(s, "accompaniment"), "")                                # the bass's and the tune's alone
+        unit = rhythm.balance_units([s])[0].outcome.split()
+        field = lambda role: next(f for f in unit if f.startswith(role + "=")).split("=", 1)[1].split(":")   # noqa: E731
+        self.assertEqual((field("bass")[29], field("melody")[29]), ("x100/100", "x67"))                # the thirtieth field
+        self.assertLess(len(next(f for f in unit if f.startswith("drums=")).split(":")), 30)            # the kit's own token is as it was
+
+    def test_the_plan_takes_it(self):
+        fields = [""] * 30
+        fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[29] = "x91"
+        low = [""] * 30
+        low[:8] = ["half", "36-44", "0.9", "1", "1.0", "", "", "sbass"]; low[29] = "x100/84"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        plan = lambda token: whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")   # noqa: E731
+        token = lambda bass, tune: "bass=" + ":".join(bass) + " drums=::::0.8 melody=" + ":".join(tune) + " top=0.30 tempo=medium"   # noqa: E731
+        p = plan(token(low, fields))
+        self.assertEqual(p.with_kit, {"bass": (1.0, 0.84), "melody": (0.91,)})
+        self.assertIn("the bass strikes 1.00 of its notes with a kit hit in the balance's song, and 0.84 of the kit's hits carry a bass note (round 149)", p.log)
+        self.assertIn("the melody strikes 0.91 of its notes with a kit hit in the balance's song (round 149)", p.log)
+        self.assertEqual(plan(token(low[:29], fields[:29])).with_kit, {})                              # a token counted before the word
+        for bass, tune in (("x100", "x91/3"), ("100/84", "91"), ("x1.0/0.84", "xx"), ("x100/84/2", "x")):   # not the field's: no shares
+            low[29], fields[29] = bass, tune
+            self.assertEqual(plan(token(low, fields)).with_kit, {}, (bass, tune))
+
+    def test_a_rhythm_taken_by_a_bars_notes(self):
+        F = Fraction
+        eighths = [F(i, 2) for i in range(8)]
+        march = (F(0), F(1), F(4, 3), F(5, 3), F(2), F(3), F(7, 2))
+        far, bent, took = writer.taken_by(march, eighths)                                              # eight notes, seven places: one is left out,
+        self.assertEqual(len(took), 7)                                                                 # the rest in their order with the least moving
+        self.assertEqual(took, sorted(took))
+        self.assertEqual(took[0], 0)                                                                   # the first beat's note stays the first
+        self.assertAlmostEqual(far, sum(abs(float(p) - float(eighths[i])) for p, i in zip(march, took)))
+        self.assertEqual(writer.taken_by(tuple(eighths), eighths), (0.0, 0.0, list(range(8))))         # its own rhythm: nothing moves
+        self.assertEqual(writer.taken_by((F(1), F(2), F(3)), [F(1, 2), F(3, 2), F(5, 2)])[:2], (1.5, 0.0))   # a figure moved whole is not bent
+        self.assertIsNone(writer.taken_by(march, eighths[:4]))                                         # more places than notes
+        self.assertEqual(writer.taken_by((F(0), F(3)), [F(0), F(1, 2), F(3)])[2], [0, 2])              # the note nearest each place
+
+    def _held(self, figures, kit, shares, known, **kw):
+        from bitcomposer.translate.writer import figures as figures_mod
+        log = []
+        out = writer.on_the_kit(list(figures), [4] * len(figures), kit, shares, figures_mod.FreeManner(set(known), division=12), log=log, **kw)
+        return out, log
+
+    def test_a_bass_under_its_songs_share_moves_onto_the_kits_hits(self):
+        F = Fraction
+        march = frozenset({F(0), F(1), F(4, 3), F(5, 3), F(2), F(3), F(7, 2)})
+        eighths = "0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:R 7/2:+"
+        own = "0:R 1:R 4/3:R 5/3:R 2:R 3:R 7/2:R"                                                     # the march, as the table's own bass plays it
+        known = {eighths, own, "0:R 1:R 2:R 3:R", "0:R 2:R"}
+        kit = {k: march for k in range(4)}
+        out, log = self._held([eighths] * 4, kit, (1.0, 0.8), known)                                   # every note on a hit asked: the bar's notes onto the
+        self.assertEqual(out, ["0:R 1:R 4/3:R 5/3:5 2:R 3:R 7/2:+"] * 4)                               # march, a rhythm of the most onsets that does, the
+        self.assertRegex(log[0], r"\(round 149\): 28 of 28 notes \(1\.00\), 28 of 28 hits \(1\.00\); 4 bars' notes moved onto the kit's hits, 4 notes left out$")   # marks in their order
+        same, log = self._held([own] * 4, kit, (1.0, 0.8), known)                                      # a line within its song's shares is the line it was
+        self.assertEqual(same, [own] * 4)
+        self.assertIn("; 0 bars' notes moved onto the kit's hits, 0 notes left out", log[0])
+        loose, log = self._held([eighths] * 4, kit, (0.6, 0.5), known)                                 # five of eight on a hit already, five of seven hits:
+        self.assertEqual(loose, [eighths] * 4)                                                         # within a song's shares that ask no more
+        mixed = [eighths, own, eighths, own]                                                           # half the bars off: the song under 0.9 by them alone,
+        out, log = self._held(mixed, kit, (0.9, 0.5), known)                                           # and the bars on one figure over the same hits moved
+        self.assertEqual(out, ["0:R 1:R 4/3:R 5/3:5 2:R 3:R 7/2:+", own] * 2)                          # together: a riff stays a riff
+        thin, log = self._held(["0:R 2:R"] * 4, kit, (1.0, 0.9), known)                                # every note on a hit, two of the kit's seven struck:
+        self.assertEqual(thin, ["0:R 2:R"] * 4)                                                        # no rhythm of two onsets strikes more, and none is added
+        rest, log = self._held([eighths] * 4, {}, (1.0, 0.8), known)                                   # the kit rests: nothing to hold to
+        self.assertEqual((rest, log), ([eighths] * 4, []))
+        half = {0: march, 1: march}                                                                    # the kit in the first two bars alone: the bars it
+        out, _ = self._held([eighths] * 4, half, (1.0, 0.8), known)                                    # rests in stand
+        self.assertEqual(out, ["0:R 1:R 4/3:R 5/3:5 2:R 3:R 7/2:+"] * 2 + [eighths] * 2)
+        late = "1/2:R 1:R 3/2:R 2:R"                                                                   # a bar that does not strike the first beat is not
+        out, _ = self._held([late] * 4, kit, (1.0, 0.0), known | {late})                               # given it; one that does keeps it
+        self.assertEqual(out, ["0:R 1:R 2:R 3:R"] * 4)
+        out, _ = self._held(["0:R 1/2:R 3/2:R 5/2:R"] * 4, {k: frozenset({F(1), F(2), F(3)}) for k in range(4)}, (0.7, 0.0), known | {"0:R 1/2:R 3/2:R 5/2:R", "1:R 2:R 3:R 7/2:R", "0:R 1:R 2:R 3:R"})
+        self.assertEqual(out, ["0:R 1:R 2:R 3:R"] * 4)                                                 # the first beat's note stays there, off the kit's hits
+        played = lambda playing: [0, 0, 0, 0]                                                          # every bar will play the first bar's notes: # noqa: E731
+        out, log = self._held([eighths, own, own, own], kit, (1.0, 0.8), known, played_as=played)      # it is counted for all four
+        self.assertEqual(out[0], "0:R 1:R 4/3:R 5/3:5 2:R 3:R 7/2:+")
+        self.assertIn("28 of 28 notes", log[0])
+        locked = {k: ({F(1, 2)}, set()) for k in range(4)}                                             # a figure that strikes the kit's accent keeps it:
+        out, log = self._held([eighths] * 4, kit, (1.0, 0.8), known, lock=locked)                      # no rhythm on the march does, so the bars stand
+        self.assertEqual(out, [eighths] * 4)
+        self.assertIn("4 bars no rhythm the table knows brings nearer", log[0])
+
+    def test_what_a_bar_will_be_played_as(self):
+        from types import SimpleNamespace
+        parts = [(0, 4, None, "A"), (4, 4, None, "B"), (8, 4, 1, "B")]                                 # the third part plays the second again
+        plan = SimpleNamespace(parts=parts, loops={"bass": {"B": (2, 100, [])}}, chords=[None] * 12)
+        song = SimpleNamespace(bars=[(4.0 * k, 4.0 * k + 4.0) for k in range(12)], division=12,
+                               notes={"drums": [(4.0 * k + x, 0.1, float("nan"), "sn") for k in range(8) for x in ((0.0, 2.0) if k % 2 else (0.0, 1.0, 2.0, 3.0))]})
+        self.assertEqual(whole.played_as(plan, song, "bass", [True] * 12), [0, 1, 2, 3, 4, 5, 4, 5, 4, 5, 4, 5])   # the loop's two bars through B, and the repeat as B
+        self.assertEqual(whole.played_as(plan, song, "bass", [True] * 6 + [False] + [True] * 5), [0, 1, 2, 3, 4, 5, 6, 5, 4, 5, 6, 5])   # a bar it rests in is on no figure
+        self.assertEqual(whole.played_as(SimpleNamespace(parts=parts, loops={}, chords=[None] * 12), song, "bass", [True] * 12), [0, 1, 2, 3, 4, 5, 6, 7, 4, 5, 6, 7])
+        hits = whole.kit_hits(plan, song)
+        self.assertEqual(hits[0], frozenset({Fraction(0), Fraction(1), Fraction(2), Fraction(3)}))
+        self.assertEqual(hits[1], frozenset({Fraction(0), Fraction(2)}))
+        self.assertEqual([hits[k] for k in range(8, 12)], [hits[k] for k in range(4, 8)])               # the repeat's bars as the bars they play
+
+    def test_the_written_bass_and_tune_are_held(self):
+        import importlib
+        from unittest import mock
+        from bitcomposer.composer import compose_song
+        from bitcomposer.translate import harness, packtables
+        song = compose_song(seed=9, pack="ffvi")
+        ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
+        models = packtables.read(packtables.build(ctx.db, "test"))
+        beats = frozenset(Fraction(b) for b in range(4))
+        on_beats = lambda plan, song: {k: beats for k in range(len(song.bars))}   # noqa: E731  a kit that strikes the four beats of every bar
+
+        def lines(seed, shares):
+            p = whole.plan(models, seed, "g", max_bars=16)
+            p.plays[R.MELODY] = [True] * p.bars
+            p.with_kit = dict(shares)
+            p.tune_places, p.tune_together = {}, {}                                                 # the kit's share alone
+            s = whole.song_of(p)
+            with mock.patch.object(importlib.import_module("bitcomposer.translate.whole.plan"), "kit_hits", on_beats):
+                got = whole.write(p, s, models, seed)
+            out = {}
+            for role in (R.BASS, R.MELODY):
+                notes = sorted(n for n in got[role].notes if n[3] == 0)
+                off = sum(1 for a, _, _, _ in notes if rhythm.position(a - 4.0 * int((a + rhythm.NEAR) // 4), 12) not in beats)
+                out[role] = ([(a, m) for a, _, m, _ in notes], off, [l for l in got[role].log if "(round 149)" in l])
+            return out
+
+        free = lines(1, {})
+        self.assertEqual((free[R.BASS][2], free[R.MELODY][2]), ([], []))                               # no share: nothing held, nothing said
+        self.assertTrue(free[R.BASS][1] and free[R.MELODY][1], (free[R.BASS][1], free[R.MELODY][1]))   # the lines as drawn: notes off the kit's hits
+        asked = lines(1, {R.BASS: (0.0, 0.0), R.MELODY: (0.0,)})                                       # a song whose lines are never with the kit: within
+        self.assertEqual((asked[R.BASS][0], asked[R.MELODY][0]), (free[R.BASS][0], free[R.MELODY][0]))   # its shares already, the lines they were, note
+        self.assertIn("; 0 bars' notes moved onto the kit's hits, 0 notes left out", asked[R.BASS][2][0])   # for note
+        self.assertRegex(asked[R.MELODY][2][0], r"; 0 bars' notes moved onto the kit's hits, 0 notes left out \(round 149\)$")
+        held = lines(1, {R.BASS: (1.0, 0.0), R.MELODY: (1.0,)})                                        # every note on a hit asked
+        for role in (R.BASS, R.MELODY):
+            notes, off, log = held[role]
+            self.assertLess(off, free[role][1], (role, off, free[role][1], log))                      # fewer notes off the kit's hits than the line as drawn
+            self.assertRegex(log[0], r"; [1-9]\d* bars' notes moved onto the kit's hits, ")
+        self.assertRegex(held[R.BASS][2][0], r"\(round 149\): (\d+) of \1 notes \(1\.00\)")                # the bass's figures: every note on a hit
+        tune_only = lines(1, {R.MELODY: (1.0,)})                                                       # the tune's share alone: the bass is the bass as drawn
+        self.assertEqual(tune_only[R.BASS][0], free[R.BASS][0])
+
+
 class TunePlacesTests(unittest.TestCase):
     """Round 147: where in the beat a tune's notes fall rides its token (`p12/0/3`: the percent of its line's onsets on a
     quarter of the beat, on a third and finer than either), with the song's feel where it is not duple (`feel=triple`),

@@ -552,13 +552,167 @@ def plays_as_own(plays, bars: list) -> list:
     return ["0" if (k < len(plays) and plays[k]) else figures_mod.REST for k in range(len(bars))]
 
 
+def taken_by(rhythm_at: tuple, old: list) -> tuple | None:
+    """(how far, how bent, which notes): a rhythm's onsets taken by a bar's notes at `old` in their order with the least
+    moving in time (the beats moved, summed); how bent is how far the gaps between the notes taken change (summed: a
+    figure moved whole is not bent); the notes are their indexes in `old`. The bar's first note stays its first where
+    the rhythm strikes where it struck (the root on the first beat is the bar's own). None where the rhythm has more
+    onsets than the bar has notes."""
+    m, n = len(rhythm_at), len(old)
+    if m > n:
+        return None
+    best = [[None] * n for _ in range(m)]                   # best[j][i]: (the beats moved, the notes) for the rhythm's first j + 1 onsets, the last of them by note i
+    for j in range(m):
+        for i in range(j, n - (m - 1 - j)):
+            if j == 0:
+                before = None if i and rhythm_at[0] == old[0] else (Fraction(0), [])
+            else:
+                before = min((best[j - 1][h] for h in range(j - 1, i) if best[j - 1][h] is not None), key=lambda x: x[0], default=None)
+            if before is not None:
+                best[j][i] = (before[0] + abs(Fraction(rhythm_at[j]) - Fraction(old[i])), before[1] + [i])   # in whole fractions: a tie is a tie, and
+    last = min((x for x in best[m - 1] if x is not None), key=lambda x: x[0], default=None)                  # the earlier notes take it
+    if last is None:
+        return None
+    moved = [Fraction(x) - Fraction(old[i]) for x, i in zip(rhythm_at, last[1])]
+    return round(float(sum(abs(d) for d in moved)), 6), round(float(sum(abs(y - x) for x, y in zip(moved, moved[1:]))), 6), last[1]
+
+
+def on_the_kit(figures: list, meters: list, kit: dict, shares: tuple, manner, played_as=None, lock=None, lock_share: float = 1.0,
+               keeps=None, log: list | None = None) -> list:
+    """The line's bars held to its token song's shares with the kit (round 149; rhythm.with_kit_field counts them): the
+    share of the line's onsets struck with a kit hit and of the kit's hits struck with a note of the line (`shares`),
+    over the bars both strike in. `kit`: bar -> the positions the kit strikes as the song will play it, a bar it rests
+    in left out. Counted as the token counts and the song as it will be played, over the whole song: a written bar
+    counts for every bar that will play its notes (`played_as`: given which bars the line plays in, each bar -> the
+    written bar whose notes it will hold, once the loop's figure and the form's repeats have copied them; each its own
+    without it), and the bars written on one figure over the same hits are one case, moved together or left together,
+    so a riff stays a riff. A line within both shares over the song is the line it was, figure for figure. Under either,
+    its cases are taken from the one furthest off the kit (the least of its notes on a hit, then the fewest of the
+    kit's hits struck; the earliest first) until the song has both shares or no case is left: a case's notes are moved,
+    in their order, the first beat's note kept there, onto the nearest rhythm the table knows in the manner (taken_by:
+    the least moving in time, then the least bent, then the first in the figures' order) that puts the case itself at
+    both shares, one of as many onsets as the bar has notes before one of fewer (the notes it has no onset for left
+    out), never of a count outside the part's own onsets for the part of the form (`keeps`: the kit thins no bar past
+    what its song plays there); then, where the line's own share is what the song is short of, one that puts the case
+    at that alone; and where none does, the rhythm of the bar's own count with the most notes on the kit's hits, if
+    more than the bar has. No note is left out for the kit's share's sake: a bass that plays fewer notes than its kit
+    strikes is not thinned to strike with more of them. A rhythm must strike the kit's accents the bar's figure struck (`lock`). Nothing is drawn: a bar drawn
+    again puts every later bar in another context. The marks ride their notes onto the new places, so the writer
+    pitches each on the chord sounding where it now falls. Returns the figures."""
+    floor_notes, floor_hits = shares
+    lock = lock or {}
+    playing = [f != figures_mod.REST for f in figures]
+    final = played_as(playing) if played_as is not None else list(range(len(figures)))
+    played = {}                                             # a written bar -> the bars that will play its notes
+    for c, j in enumerate(final):
+        if j is not None and 0 <= j < len(figures) and playing[j]:
+            played.setdefault(j, []).append(c)
+    cases = {}                                              # (a figure, the kit's hits under it) -> the bars written so, in the song's order
+    for j in sorted(played):
+        cases.setdefault((figures[j], kit.get(j)), []).append(j)
+    known = {}
+
+    def rhythms(m: int, meter: int) -> list:
+        """The rhythms of m onsets the table knows in the manner, inside a bar of `meter` beats, in the figures' order."""
+        if not known:
+            seen = set()
+            for f in sorted(manner.known):
+                if f == figures_mod.REST or not manner.fits(f):
+                    continue
+                at = tuple(Fraction(t.partition(":")[0]) for t in rhythm._tokens(f))
+                if at not in seen:
+                    seen.add(at)
+                    known.setdefault(len(at), []).append(at)
+        return [at for at in known.get(m, ()) if at[-1] < meter]
+
+    def struck(at, must) -> bool:
+        """Whether a rhythm strikes the accents a locked figure must (locked, on the onsets alone)."""
+        if not must:
+            return True
+        return len(must[0] & set(at)) >= lock_share * len(must[0]) - 1e-9 and not any(math.floor(p) in must[1] for p in at)
+
+    def tally(ps, where) -> tuple:
+        """(the onsets, those on a kit hit, the kit's hits, those struck with an onset) over the bars a case is played in."""
+        mine = set(ps)
+        return len(ps) * len(where), sum(len(mine & hit) for hit in where), sum(len(hit) for hit in where), sum(len(hit & mine) for hit in where)
+
+    todo = []
+    for (figure, _), js in cases.items():
+        where = [kit[c] for j in js for c in played[j] if kit.get(c)]
+        if where:
+            tokens = [(Fraction(t.partition(":")[0]), t.partition(":")[2]) for t in rhythm._tokens(figure)]
+            at = tuple(p for p, _ in tokens)
+            todo.append({"js": js, "where": where, "tokens": tokens, "at": at, "tally": tally(at, where)})
+    n, on, hits, met = (sum(c["tally"][i] for c in todo) for i in range(4))
+    out = list(figures)
+    moved = left = none = 0
+    short = lambda: (on < floor_notes * n - 1e-9, met < floor_hits * hits - 1e-9)   # noqa: E731  the song under its line's share, under the kit's
+    at_notes = lambda t: t[1] >= floor_notes * t[0] - 1e-9   # noqa: E731
+    at_hits = lambda t: t[3] >= floor_hits * t[2] - 1e-9    # noqa: E731
+    for case in sorted(todo, key=lambda c: (c["tally"][1] / c["tally"][0], c["tally"][3] / c["tally"][2], c["js"][0])):
+        want_notes, want_hits = short()
+        if not (want_notes or want_hits):
+            break
+        js, where, tokens, at, mine = (case[x] for x in ("js", "where", "tokens", "at", "tally"))
+        if mine[1] == mine[0] or ((not want_notes or at_notes(mine)) and (not want_hits or at_hits(mine))):
+            continue                                        # every note on a hit already, or the case is not what the song is short by
+        locked_at = [lock.get(j) for j in js if struck(at, lock.get(j))]
+        fits = lambda cand: (cand[0] == 0 or at[0] != 0) and all(struck(cand, must) for must in locked_at)   # noqa: E731
+        meter = min(meters[j] for j in js)
+        own = [m for m in range(len(at), 0, -1) if m == len(at) or keeps is None or all(keeps(j, m) for j in js)]   # the counts within the part's own onsets
+        tries = [(lambda t: at_notes(t) and at_hits(t), own if want_notes else [len(at)])]
+        if want_notes:
+            tries.append((at_notes, own))
+        choice = None
+        for good, ms in tries:
+            for m in ms:
+                found = []
+                for i, cand in enumerate(rhythms(m, meter)):
+                    t = tally(cand, where)
+                    if fits(cand) and good(t) and t[1] >= mine[1]:
+                        near = taken_by(cand, at)
+                        if near is not None:
+                            found.append((near[0], near[1], i, cand, near[2]))
+                if found:
+                    choice = min(found)[3:]
+                    break
+            if choice is not None:
+                break
+        if choice is None:                                  # no rhythm the table knows puts the case at the share: the nearest of the bar's own
+            found = []                                      # count with the most notes on the kit's hits, if more than the bar has
+            for i, cand in enumerate(rhythms(len(at), meter)):
+                t = tally(cand, where)
+                if fits(cand) and t[1] > mine[1]:
+                    near = taken_by(cand, at)
+                    if near is not None:
+                        found.append((-t[1], near[0], near[1], i, cand, near[2]))
+            if found:
+                choice = min(found)[4:]
+        if choice is None or choice[0] == at:
+            none += len(js) if choice is None else 0
+            continue
+        cand, took = choice
+        again = " ".join(f"{p}:{tokens[i][1]}" for p, i in zip(cand, took))
+        for j in js:
+            out[j] = again
+        new = tally(cand, where)
+        n, on, hits, met = n + new[0] - mine[0], on + new[1] - mine[1], hits + new[2] - mine[2], met + new[3] - mine[3]
+        moved, left = moved + len(js), left + (len(at) - len(cand)) * len(js)
+    if log is not None and n and hits:
+        log.append(f"bass struck with the kit as often as the balance's song's, {floor_notes:.2f} of its notes and {floor_hits:.2f} of the kit's hits (round 149): "
+                   f"{on} of {n} notes ({on / n:.2f}), {met} of {hits} hits ({met / hits:.2f}); {moved} bars' notes moved onto the kit's hits, {left} notes left out"
+                   + (f", {none} bars no rhythm the table knows brings nearer" if none else ""))
+    return out
+
+
 def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str | None = None,
          key: tuple | None = None, hold=(), lock=None, free: bool = False, energy: list | None = None,
          plays: list | None = None, register: int | None = None, sounds=None,
          figures: list | None = None, shared: dict | None = None, kind: str | None = None,
          models: dict | None = None, lock_share: float = 1.0, ceiling: int | None = None, bounds_at=None, habit_at=None,
          envelope_at=None, tone_profile: dict | None = None, continuity: float | None = None, log: list | None = None,
-         downbeat: float | None = None, first_beat: float | None = None) -> tuple[list[tuple[float, float, float]], list[str]]:
+         downbeat: float | None = None, first_beat: float | None = None, kit: dict | None = None, with_kit: tuple | None = None,
+         played_as=None, keeps=None) -> tuple[list[tuple[float, float, float]], list[str]]:
     """The bass written for the song: its notes (start, end in beats, midi)
     and the figures drawn, one a bar; the bars in `hold` (indices among the
     song's bars) keep the song's own figure; `lock` maps a bar's index to
@@ -573,7 +727,11 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
     for the line (round 111, profile_tone), held on the line's marks. `continuity`: the token song's share of bar lines the bass
     keeps its pitch class across (round 114): while the line's share runs under it, with the bar line counted, the bar is
     realized on the bar before's main pitch class, the figure's marks from it as from a root and the fewest notes moved onto
-    it until it is the bar's main pitch class (the riff's pedal under a changing chord)."""
+    it until it is the bar's main pitch class (the riff's pedal under a changing chord). `with_kit`: the token song's
+    shares of the bass line's onsets struck with a kit hit and of the kit's hits struck with a bass note (round 149), with
+    `kit` the positions the kit strikes a bar as the song will play it, `played_as` the bars that will play each written
+    bar and `keeps` the part's own onsets a bar: a free-written line's figures are held to them before they are pitched
+    (on_the_kit)."""
     lock = lock or {}
     own = song.notes.get(R.BASS, [])
     if habit is None:
@@ -603,6 +761,8 @@ def bass(song: rhythm.Song, model: tables.Cache, rng: random.Random, habit: str 
             struck = [f for f in figures if f != figures_mod.REST]
             log.append(f"bass on a bar's first beat as often as the balance's song's {first_beat:.2f} (round 133): "
                        f"{sum(1 for f in struck if figures_mod.on_first_beat(f))} of {len(struck)} bars")
+        if with_kit is not None and kit:                    # the line's notes struck with the kit as often as its token song's (round 149)
+            figures = on_the_kit(figures, [max(1, round(b - a)) for a, b, _ in bars], kit, with_kit, manner, played_as, lock, lock_share, keeps, log)
     else:
         figures = _figures(song, R.BASS, model, manner, own, bars, habit, rng, hold, lock,
                            chord_at=chord_at, reuse=figures_mod.REUSE.get(words[1] if len(words) > 1 else "", 0.5), habit_at=habit_at)

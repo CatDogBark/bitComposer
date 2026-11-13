@@ -2172,6 +2172,55 @@ def held_places(shares, feel: str, song_feel: str):
     return tuple(None if kind == FEEL_PLACE.get(feel) else share for kind, share in zip(FINE_PLACES, shares))
 
 
+KIT_PARTS = (R.BASS, R.MELODY)       # the parts whose token says how often their notes are struck with the kit (round 149)
+
+
+def struck_with(onsets, others) -> int:
+    """How many of `onsets` (times in beats) fall within readings.NEAR of one of `others`: struck together, as the readings
+    count two notes one onset."""
+    return sum(1 for t in onsets if any(abs(t - x) < readings_mod.NEAR for x in others))
+
+
+def with_kit(s, notes) -> tuple:
+    """(a line's onsets, those of them struck with a kit hit, the kit's hits, those of them struck with an onset of the
+    line), over the song's bars of its meter (as the bar tables take them: readings.numbered_bars_of) in which the line
+    and the kit both strike: a bar the kit rests in says nothing of how the line sits on it. Notes struck together are
+    one onset, of the line and of the kit (readings.onsets: a kick and a hat at once are one hit)."""
+    n = on = hits = met = 0
+    kit = s.notes.get(R.DRUMS) or []
+    numbers = s.numbers or range(len(s.bars))
+    for _, (a, b) in zip(numbers, s.bars):
+        if round(b - a) != s.meter:
+            continue
+        mine = [t for t, _ in readings_mod.onsets([x for x in notes if x[2] == x[2]], a, b)]
+        theirs = [t for t, _ in readings_mod.onsets(kit, a, b)]
+        if not mine or not theirs:
+            continue
+        n, on, hits, met = n + len(mine), on + struck_with(mine, theirs), hits + len(theirs), met + struck_with(theirs, mine)
+    return n, on, hits, met
+
+
+def with_kit_field(s, role: str, line_notes=None) -> str:
+    """The balance token's thirtieth field for the bass and the melody (round 149): how often the line's notes are struck
+    with the kit. After an "x", the percent of the line's onsets struck with a kit hit, over the bars both strike in
+    (with_kit), and for the bass after a "/" the percent of the kit's hits in those bars struck with a bass note:
+    "x100/84" for Terra's bass, which plays the snare's march hit for hit, "x91" for its tune; "" for a song without a
+    kit and under WORD_NOTES onsets in such bars. The bass's bars are the bass table's and the tune's the melody's, each
+    drawn under its habit, the tempo class and the feel, and the kit's its own tables': what one part's bar had to do
+    with the kit's in the same bar no word said but the bass's lock (bass_locks), which counts the kit's accents, two
+    pieces struck together, and a kit of one piece has none. Of the 39 FFVI songs whose bass carries the field the
+    bass strikes 0.83 of its notes with a kit hit at the median and every one of them in twelve (0.98 or more: Terra,
+    Shadow, Opening Theme's third part, Troops March on among them); the songs written on those twelve's tokens stood
+    at 0.47 to 1.00, seven of them under 0.85 (Terra's 0.67, its bass in straight eighths against the march's
+    triplet), and the written median over the test songs with a bass and a kit was 0.72."""
+    if role not in KIT_PARTS or R.DRUMS not in s.notes:
+        return ""
+    n, on, hits, met = with_kit(s, line_notes if line_notes is not None else s.notes.get(role, []))
+    if n < WORD_NOTES or not hits:
+        return ""
+    return f"x{int(round(100 * on / n))}" + (f"/{int(round(100 * met / hits))}" if role == R.BASS else "")
+
+
 TONES_BACK = 8                       # bars back a chord part's last bar on a chord is looked for (round 142)
 TONES_SHARE = 0.15                   # a pitch class sounding this share of the part's beats in a bar is in the bar's set (the chord reader's
                                      # own share for the chordal voices' set, harmony.SET_SHARE)
@@ -2559,7 +2608,8 @@ def balance_units(songs) -> list:
                       tones_kept_field(s, role) if role in readings_mod.UPPER else "",   # and how often a chord part sounds a chord's tones again (round 142)
                       together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER, R.MELODY) else "",   # and how often it comes back with its lead
                                                              # (round 144; the tune with the bass, round 146)
-                      tune_places_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else ""]   # and where in the beat a tune's notes fall (round 147)
+                      tune_places_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and where in the beat a tune's notes fall (round 147)
+                      with_kit_field(s, role, line_notes) if role in KIT_PARTS else ""]   # and how often its notes are struck with the kit (round 149)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))

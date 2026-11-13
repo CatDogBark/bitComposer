@@ -139,6 +139,7 @@ GRAIN_SLACK = 0.1                     # how far a tune's running share of onsets
 PLACE_SLACK = 0.25                    # beats, summed over a bar's notes, a bar moved onto its song's places may move further than the nearest
                                       # rhythm asks, where that keeps a note it brings onto a beat on the chord (round 147): a note moved
                                       # onto a beat is heard with the chord, and off the beat it had been a passing note
+KIT_NEAR = 0.01                       # beats a written onset may sit from a kit hit and be struck with it (round 149): both are on the song's grid
 
 
 def grain_bounds(grain: str | None) -> tuple[float, float]:
@@ -848,7 +849,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
            off_scale: dict | None = None, clash_rates: dict | None = None, recall_moves=None, moves_rng: random.Random | None = None,
            habit_at=None, envelope_at=None, move_profile: dict | None = None, shortest: float | None = None,
            lengths: dict | None = None, lengths_rng: random.Random | None = None, with_lead: dict | None = None,
-           places: tuple | None = None) -> tuple[list, list, list]:
+           places: tuple | None = None, kit: dict | None = None, with_kit: float | None = None) -> tuple[list, list, list]:
     """The melody written for the song (the module): bar by bar through the
     urn, as the bass and drums are. A bar's cell is its rhythm and its
     intervals; the urn keeps the bar before's cell, returns to an earlier
@@ -955,7 +956,20 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     over the game: a tune on Locke's token, whose tune plays on the
     beat and the half beat alone, drew a bar one song of the game plays
     once and sat a quarter of the beat off the band for its second
-    half. Returns [(start, end, midi)], the bars' rhythms and a log."""
+    half. `with_kit` (round 149, Plan.with_kit): the share of the token
+    song's tune's onsets struck with a kit hit, over the bars both
+    strike in, with `kit` the positions the kit strikes a bar as the
+    song will play it. The notes off the kit's hits are held as a
+    place is: no more of them, over the tune so far or the least it
+    will play in the kit's bars, than the song's tune's share off them.
+    A bar that would put the tune over is moved, as for the places,
+    onto the nearest rhythm the table knows that keeps the places and
+    the share with the kit (on_places), else onto the nearest of its
+    own count with fewer notes off the kit's hits; a bar moved for
+    its places takes a rhythm that keeps the share with the kit
+    where one does. The tune's bars were drawn with no word of the
+    kit under them. Returns [(start, end, midi)], the bars' rhythms
+    and a log."""
     tonic, mode = key if key else (0, "major")
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]}
     bars = [(a, b, struck) for _, a, b, struck in rhythm.all_bars_of(song, role)]
@@ -1274,6 +1288,41 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         n, fine = so_far if so_far is not None else written_places(k)
         return rhythm.keeps_places(places, n, fine, list(positions), least_notes, times_from(k, k))
 
+    kit = kit if with_kit is not None and kit else None     # bar -> the positions the kit strikes, where the token says the tune's share with it (round 149)
+    least_kit = sum((own_onsets(k) or (1,))[0] if own_onsets is not None else 1 for k in range(len(bars)) if own[k] != figures_mod.REST and kit and kit.get(k))
+    kit_moved = {}                                          # bar -> the notes left out where its notes were moved onto the kit's hits (round 149), and the
+    kit_none = set()                                        # bars no rhythm the table knows brings onto them; for the log
+
+    def off_hits(k: int, positions) -> int:
+        """Bar k's onsets off the kit's hits (round 149); none in a bar the kit rests in."""
+        hit = kit.get(k) if kit is not None else None
+        return sum(1 for p in positions if not any(abs(float(h) - float(p)) < KIT_NEAR for h in hit)) if hit else 0
+
+    def kit_written(before: int) -> tuple:
+        """(the tune's onsets, those of them off the kit's hits) over its bars before bar `before` that the kit strikes in,
+        each with the form's repeats of it that are still to come (times_from)."""
+        n = off = 0
+        for j, c in cells.items():
+            if j < before and kit.get(j):
+                t = times_from(j, before)
+                n, off = n + t * len(c.positions), off + t * off_hits(j, c.positions)
+        return n, off
+
+    def with_the_kit(k: int, positions, so_far: tuple | None = None) -> bool:
+        """Whether bar k with these onsets keeps the tune with the kit as often as its token song's tune (round 149): its
+        onsets off the kit's hits over the bars before it, with the bar's, are no more than the song's tune's share off
+        them (1 - with_kit) of its onsets so far in the kit's bars, or of the least it will play in them where that is
+        more (least_kit), as a place in the beat is held (in_places). True without the song's share, in a bar the kit
+        rests in and for a bar with every onset on a hit. `so_far`: kit_written(k), where the caller has it."""
+        if kit is None or not kit.get(k):
+            return True
+        mine = off_hits(k, positions)
+        if not mine:
+            return True
+        n, off = so_far if so_far is not None else kit_written(k)
+        t = times_from(k, k)
+        return off + t * mine <= (1 - with_kit) * max(n + t * len(positions), least_kit) + 1e-9
+
     def rhythms_of(n: int, meter: int) -> list:
         """The rhythms of n onsets the table knows in the song's manner, inside a bar of `meter` beats: [(the figure, its
         onsets)], in the figures' order."""
@@ -1307,7 +1356,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         moved = [x - old[i] for x, i in zip(at, took)]
         return sum(abs(d) for d in moved), sum(abs(y - x) for x, y in zip(moved, moved[1:])), took
 
-    def on_places(k: int, positions: list, pitches: list) -> tuple:
+    def on_places(k: int, positions: list, pitches: list, for_kit: bool = False) -> tuple:
         """Bar k's notes on the nearest rhythm that keeps the tune within its token song's places in the beat (round 147).
         Among the rhythms the table knows in the song's manner (rhythms_of) that keep them (in_places) and put no note on
         a held fine place the bar had fewer on (rhythm.adds_places: a note moves onto the beat or the half beat, or
@@ -1318,8 +1367,14 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         that does, the notes it has no onset for left out (never the bar's last: the line goes on from where it was),
         a count within the bar's own onsets (keeps) before one that is not. The bar as it stands where no rhythm does.
         Returns (the onsets, the pitches). The bar is not drawn again: a draw made for the places shifts every draw
-        after it, and one bar of Terra's tune drawn again re-drew the tune from there on."""
+        after it, and one bar of Terra's tune drawn again re-drew the tune from there on. Since round 149 a rhythm that
+        also keeps the tune with the kit as often as its token song's (with_the_kit) is taken before one that keeps the
+        places alone; `for_kit`: the bar is within its places and off the kit's share, and is moved for that alone, onto
+        such a rhythm, else onto the nearest of its own count that keeps the places with fewer notes off the kit's hits.
+        A rhythm taken for the kit's share is of a count within the bar's own onsets: the kit puts no bar outside them."""
         n, so_far, a = len(positions), written_places(k), bars[k][0]
+        kit_far = kit_written(k) if kit is not None else None
+        fine = lambda at: places is None or (not rhythm.adds_places(places, positions, at) and in_places(k, at, so_far))   # noqa: E731
 
         def off_chord(at: list, took: list) -> int:
             """The notes the rhythm brings onto a beat that are off the chord sounding there."""
@@ -1330,22 +1385,42 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                     out += 1
             return out
 
-        for own_only in (True, False):
-            for m in range(n, 0, -1):
+        passes = ([(True, True)] if for_kit or (kit is not None and kit.get(k)) else []) + ([] if for_kit else [(False, True), (False, False)])
+        for both, own_only in passes:                       # with the kit too, a count within the bar's own onsets (round 149: the kit takes no
+            for m in range(n, 0, -1):                       # bar outside them); then the places alone, as before it
                 if own_only != (m == n or keeps(k, m)):
                     continue
                 found = []
                 for f, at in rhythms_of(m, meters[k]):
-                    if not rhythm.adds_places(places, positions, at) and in_places(k, at, so_far):
+                    if fine(at) and (not both or with_the_kit(k, at, kit_far)):
                         near = nearest(at, positions)
                         if near is not None:
                             found.append((round(near[0], 6), round(near[1], 6), at, near[2]))
                 if found:
                     least = min(x[0] for x in found)
                     _, _, at, took = min((x for x in found if x[0] <= least + PLACE_SLACK + 1e-9), key=lambda x: (off_chord(x[2], x[3]), x[0], x[1]))
-                    place_moved[k] = n - m
-                    place_none.discard(k)
+                    if for_kit:
+                        kit_moved[k] = n - m
+                        kit_none.discard(k)
+                    else:
+                        place_moved[k] = n - m
+                        place_none.discard(k)
                     return list(at), [pitches[i] for i in took]
+        if for_kit:                                         # no rhythm the table knows keeps the share with the kit: the nearest of the bar's own
+            mine, found = off_hits(k, positions), []        # count that keeps the places with fewer notes off the kit's hits
+            for f, at in rhythms_of(n, meters[k]):
+                if fine(at) and off_hits(k, at) < mine:
+                    near = nearest(at, positions)
+                    if near is not None:
+                        found.append((off_hits(k, at), off_chord(at, near[2]), round(near[0], 6), round(near[1], 6), at, near[2]))
+            if found:
+                _, _, _, _, at, took = min(found, key=lambda x: x[:4])   # the fewest off the hits, then off the chord on a beat, then the nearest
+                kit_moved[k] = 0
+                kit_none.discard(k)
+                return list(at), [pitches[i] for i in took]
+            kit_none.add(k)
+            kit_moved.pop(k, None)
+            return positions, pitches
         place_none.add(k)
         place_moved.pop(k, None)
         return positions, pitches
@@ -1466,6 +1541,8 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
         a, b, _ = bars[k]
         if asked and places is not None and positions and len(positions) == len(pitches) and not in_places(k, positions):
             positions, pitches = on_places(k, positions, pitches)   # off the song's tune's places in the beat (round 147): its notes moved onto them
+        elif asked and kit is not None and positions and len(positions) == len(pitches) and not with_the_kit(k, positions):
+            positions, pitches = on_places(k, positions, pitches, for_kit=True)   # off the kit's hits oftener than the song's tune (round 149): onto them
         if positions:
             last_time = a + positions[-1]
         chord = _chord_in_bar(song, a)
@@ -1989,6 +2066,11 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                                for kind, share in zip(rhythm.FINE_PLACES, places))
                    + f"; {len(place_moved)} bars' notes moved onto them, {sum(place_moved.values())} notes left out"
                    + (f", {len(place_none)} bars no rhythm keeps within them" if place_none else "") + f"; the least it was to play {least_notes} notes (round 147)")
+    if kit is not None:                                     # the tune's notes with the kit against its token song's tune's (round 149)
+        n_, off_ = kit_written(len(bars))
+        if n_:
+            log.append(f"notes struck with the kit: {n_ - off_}/{n_} ({(n_ - off_) / n_:.2f}; the balance's song's tune {with_kit:.2f}); {len(kit_moved)} bars' notes moved onto "
+                       f"the kit's hits, {sum(kit_moved.values())} notes left out" + (f", {len(kit_none)} bars no rhythm brings onto them" if kit_none else "") + " (round 149)")
     if half_kinds:
         c = Counter(kd for ks in half_kinds.values() for kd in ks)
         log.append("halves (half_recall): " + ", ".join(f"{kd} {c[kd]}" for kd in ("same", "earlier", "new", "rest") if c[kd]) + f" over {len(half_kinds)} new bars")
