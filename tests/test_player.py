@@ -522,6 +522,71 @@ class WindowHeadless(unittest.TestCase):
         win.close()
         del eng
 
+    def test_an_import_shows_each_stage_with_its_own_count(self):
+        """LIBRARY while an import runs: which step of the import the worker
+        is at, and the bar and the count for that stage's songs alone, from
+        nothing again as the next stage begins."""
+        from pathlib import Path
+        from PySide6.QtCore import QObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        import bitcomposer.player as pkg
+        from bitcomposer.translate import pack
+        b = self.b
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        eng.rootContext().setContextProperty("backend", b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        win.show()
+        win.setProperty("showPacks", True)
+        b._import_state = dict(b._import_state, busy=True, name="test_quest_spc")   # as import_from leaves it, with no worker
+        b.packsChanged.emit()
+        self.pump(0.3)
+        bar, count, words = (win.findChild(QObject, name) for name in ("importBar", "importCount", "importStage"))
+        self.assertTrue(bar.property("visible"))
+
+        def shown():
+            self.pump(0.1)
+            said = words.property("text")
+            return b.importState["bar"], count.property("text"), said.split("…")[0] if "…" in said else ""
+        self.assertEqual(shown(), (-1.0, "", ""))                                # before the worker's first word
+        b._import_stage(pack.UNPACKING)
+        self.assertEqual(shown(), (-1.0, "", "step 1 of 5: unpacking the set"))
+        b._import_stage(pack.READING)
+        b._import_progress(0, 82)
+        self.assertEqual((shown()[1], bar.property("on")), ("0 of 82 songs", 0))
+        b._import_progress(41, 82)
+        self.assertEqual(shown(), (0.5, "41 of 82 songs", "step 2 of 5: reading the songs"))
+        self.assertEqual(bar.property("on"), 20)
+        b._import_progress(82, 82)
+        self.assertEqual((shown()[1], bar.property("on")), ("82 of 82 songs", 40))
+        b._import_stage(pack.HEARING)                                            # the lead pass: the bar and the count are its own
+        self.assertEqual(shown(), (-1.0, "", "step 3 of 5: hearing which voice leads"))
+        self.assertEqual((b.importState["done"], b.importState["total"]), (0, 0))
+        b._import_progress(0, 67)
+        self.assertEqual((shown()[1], bar.property("on")), ("0 of 67 songs", 0))
+        b._import_progress(17, 67)
+        self.assertEqual((shown()[1], bar.property("on")), ("17 of 67 songs", 10))
+        b._import_progress(67, 67)
+        self.assertEqual((shown()[1], bar.property("on")), ("67 of 67 songs", 40))
+        b._import_stage(pack.COUNTING_GAME)                                      # nothing to count: the bar steps by the second
+        self.assertEqual(shown(), (-1.0, "", "step 4 of 5: counting the game's vocabulary"))
+        self.assertLess(bar.property("on"), 40)
+        self.assertTrue(self.pump(10, lambda: bar.property("on") > 0))
+        b._import_stage(pack.COUNTING_LIBRARY)
+        self.assertEqual(shown(), (-1.0, "", "step 5 of 5: counting the library's vocabulary"))
+        b._import_stage("something a newer worker says")                         # a stage this player does not know: no step
+        self.assertEqual(shown(), (-1.0, "", "something a newer worker says"))
+        b._import_state = dict(b._import_state, busy=False)
+        b.packsChanged.emit()
+        self.pump(0.2)
+        self.assertFalse(bar.property("visible"))
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
     def test_minimized_start_stays_in_the_tray(self):
         """--minimized (start at login): no window until asked for; shown
         later, it sizes itself as a normal start does."""

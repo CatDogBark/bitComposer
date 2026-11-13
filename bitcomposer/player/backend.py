@@ -103,7 +103,8 @@ class Backend(QObject):
         # waiting for "replace?", and where voice previews are written.
         self._packs = []
         self._import = None
-        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": "", "stage": ""}
+        # "bar": how far the import's stage is through its songs, 0..1, or -1 while it has nothing to count
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": "", "stage": "", "step": 0, "steps": 0, "bar": -1.0}
         self._levels = []
         self._pending_add = ""
         self._pending_name = ""
@@ -603,23 +604,28 @@ class Backend(QObject):
             self._set_notice(str(e))
             return
         self._import = job
-        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": "", "stage": ""}
+        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": "", "stage": "", "step": 0, "steps": 0, "bar": -1.0}
         self._set_notice(f"importing {Path(source).name}…")
         self.packsChanged.emit()
 
     def _import_progress(self, done, total):
-        self._import_state = dict(self._import_state, done=done, total=total)
+        self._import_state = dict(self._import_state, done=done, total=total, bar=done / total if total else -1.0)
         self.packsChanged.emit()
 
     def _import_stage(self, text):
-        self._import_state = dict(self._import_state, stage=text)
+        # Each stage has the bar to itself: nothing to count until the
+        # stage says its first progress, and some stages never do.
+        from ..translate.pack import STAGES
+        step = STAGES.index(text) + 1 if text in STAGES else 0
+        self._import_state = dict(self._import_state, stage=text, step=step, steps=len(STAGES) if step else 0,
+                                  done=0, total=0, bar=-1.0)
         self.packsChanged.emit()
 
     def _import_done(self, name, error):
         job, self._import = self._import, None
-        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or "", "stage": ""}
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or "", "stage": "", "step": 0, "steps": 0, "bar": -1.0}
         if name:
-            self._set_notice(f"imported {name}: {job.done} songs read")
+            self._set_notice(f"imported {name}: {job.songs} songs read")
         else:
             self._set_notice(f"import stopped: {error}")
         self._load_packs()

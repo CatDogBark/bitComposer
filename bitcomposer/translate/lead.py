@@ -1,6 +1,6 @@
 """The lead by salience (round 64): which voice carries the tune, read from each voice rendered alone.
 
-    python -m bitcomposer.translate.lead GAME SPC_FOLDER [--db PATH] [--window 9] [--dry-run] [--out DIR]
+    python -m bitcomposer.translate.lead GAME SPC_FOLDER [--db PATH] [--window 9] [--dry-run] [--out DIR] [--workers N]
 
 The readings pick a song's melody by variety and stepwise motion, with a voice's raw volume as the only loudness test (a
 quarter of the loudest voice's, under a square root in the score). A buried voice with a wide line wins over an audible
@@ -24,10 +24,12 @@ import json
 import math
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import tempfile
 from collections import Counter
+from multiprocessing import Pool
 
 from . import rhythm, store
 from . import roles as R
@@ -94,48 +96,80 @@ def relabel_plan(voices: dict, lead: int) -> dict:
     return plan
 
 
-def render_voices(spc_path: str, song, out_dir: str, seconds: float = SECONDS) -> dict:
-    """Each tonal voice of the song rendered alone from its SPC: {voice: lufs}; the whole under "whole"."""
+def render_voices(spc_path: str, song, out_dir: str, seconds: float = SECONDS, keep: bool = True) -> dict:
+    """Each tonal voice of the song rendered alone from its SPC: {voice: lufs}; the whole under "whole". The renders
+    stay in `out_dir` when `keep`, else each is removed as soon as it is measured."""
     from .. import spc
     from ..spc import convert
     snap = spc.read(spc_path)
     score = convert.score_of(snap, seconds=seconds + 10.0, fade=0.0)
-    out = {}
-    whole = os.path.join(out_dir, f"{song.sid}.it")
-    convert.render(score, whole)
-    out["whole"] = lufs(whole, seconds)
+
+    def measured(part, path):
+        try:
+            convert.render(part, path)
+            return lufs(path, seconds)
+        finally:
+            if not keep and os.path.exists(path):
+                os.remove(path)
+
+    out = {"whole": measured(score, os.path.join(out_dir, f"{song.sid}.it"))}
     for v, (role, ns) in song.voice_notes.items():
         if role in (R.DRUMS, R.DOUBLE) or not ns:
             continue
         notes = [n for n in score.notes if n.voice == v]
         if not notes:
             continue
-        part = convert.Score(**{**score.__dict__, "notes": notes})
-        path = os.path.join(out_dir, f"{song.sid}-v{v}.it")
-        convert.render(part, path)
-        out[v] = lufs(path, seconds)
+        out[v] = measured(convert.Score(**{**score.__dict__, "notes": notes}), os.path.join(out_dir, f"{song.sid}-v{v}.it"))
     return out
 
 
-def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bool = False, out_dir: str | None = None, say=print) -> dict:
-    """The pass over a game's songs: render, decide, store. Returns {sid: (title, why, plan)}."""
+class _Voices:
+    """What render_voices asks of a song, small enough to hand to another process: its id, and each voice's role and
+    whether it has notes."""
+
+    def __init__(self, song):
+        self.sid = song.sid
+        self.voice_notes = {v: (role, bool(ns)) for v, (role, ns) in song.voice_notes.items()}
+
+
+def _render(job):
+    """One song's voices rendered in a process of the pool: ("ok", {voice: lufs}), or ("error", why) for a song the
+    converter cannot score."""
+    spc_path, voices, out_dir, keep = job
+    try:
+        return "ok", render_voices(spc_path, voices, out_dir, keep=keep)
+    except Exception as e:                                  # noqa: BLE001  said by run(), in the song's turn
+        return "error", str(e)
+
+
+def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bool = False, out_dir: str | None = None, say=print,
+        progress=None, workers: int | None = None) -> dict:
+    """The pass over a game's songs: render, decide, store. Returns {sid: (title, why, plan)}. The songs are rendered
+    `workers` at a time (default: all the machine's cores but one), each in a process of its own, and decided and
+    stored here in the readings' order, so the pass gives the same readings on any number of them.
+    progress(done, total) after each song."""
     songs, _ = rhythm.load(db, game)
     files = {r[0]: r[1] for r in db.execute("SELECT id, file FROM songs WHERE game = ?", (game,)).fetchall()}
     result = {}
     keep = out_dir is not None
     work = out_dir or tempfile.mkdtemp(prefix="bitcomposer-lead-")
     os.makedirs(work, exist_ok=True)
+    jobs = []                                               # a song's render, or None without its SPC file
     for s in songs:
         f = files.get(s.sid)
         found = glob.glob(os.path.join(spc_folder, "**", os.path.basename(f or "")), recursive=True) if f else []
-        if not found:
+        jobs.append((found[0], _Voices(s), work, keep) if found else None)
+    todo = [j for j in jobs if j]
+    count = min(workers or max(1, (os.cpu_count() or 2) - 1), len(todo))
+
+    def settle(s, outcome):
+        if outcome is None:
             say(f"  {s.title}: no SPC file under {spc_folder}")
-            continue
-        try:
-            rendered = render_voices(found[0], s, work)
-        except Exception as e:                              # noqa: BLE001  a song the converter cannot score is left as read
-            say(f"  {s.title}: not rendered ({e})")
-            continue
+            return
+        if outcome[0] == "error":                           # a song the converter cannot score is left as read
+            say(f"  {s.title}: not rendered ({outcome[1]})")
+            return
+        rendered = outcome[1]
         nbeats = int(s.bars[-1][1] - s.bars[0][0]) if s.bars else 1
         voices = {}
         evidence = {voice: ev for voice, _, _, ev in s.voices}
@@ -148,7 +182,7 @@ def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bo
         result[s.sid] = (s.title, why, plan)
         say(f"  {s.title}: {why}" + (f"; voice {lead} ({voices[lead]['role']}, {voices[lead]['lufs'] - rendered['whole']:+.1f} dB) leads: " + ", ".join(f"v{v} -> {r}" for v, r in plan.items()) if plan else ""))
         if dry_run:
-            continue
+            return
         for v, l in rendered.items():
             if v != "whole" and l is not None:
                 db.execute("INSERT OR REPLACE INTO features VALUES (?,?,?,?)", (s.sid, "render", f"voice_lufs_{v}", l))
@@ -161,9 +195,22 @@ def run(db, game: str, spc_folder: str, window: float = LEAD_WINDOW, dry_run: bo
                 if voices.get(v, {}).get("of") == mel:          # a layer of the old tune follows no voice now
                     db.execute("UPDATE voices SET [of] = NULL WHERE song = ? AND voice = ?", (s.sid, v))
         db.commit()
+
+    if progress:
+        progress(0, len(songs))
+    pool = Pool(count) if count > 1 else None
+    try:
+        rendered = pool.imap(_render, todo) if pool else map(_render, todo)     # in the songs' order either way
+        for i, (s, job) in enumerate(zip(songs, jobs)):
+            settle(s, next(rendered) if job else None)
+            if progress:
+                progress(i + 1, len(songs))
+    finally:
+        if pool:
+            pool.terminate()
+            pool.join()
         if not keep:
-            for p in glob.glob(os.path.join(work, f"{s.sid}*.it")):
-                os.remove(p)
+            shutil.rmtree(work, ignore_errors=True)
     return result
 
 
@@ -175,9 +222,10 @@ def main(argv=None) -> int:
     ap.add_argument("--window", type=float, default=LEAD_WINDOW)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--out", help="keep the renders here")
+    ap.add_argument("--workers", type=int, help="songs rendered at a time (default: all the cores but one)")
     a = ap.parse_args(argv)
     db = store.connect(a.db) if a.db else store.connect()
-    result = run(db, a.game, a.spc_folder, a.window, a.dry_run, a.out)
+    result = run(db, a.game, a.spc_folder, a.window, a.dry_run, a.out, workers=a.workers)
     kinds = Counter(why for _, why, _ in result.values())
     print(f"{len(result)} songs: {dict(kinds)}")
     return 0

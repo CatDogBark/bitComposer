@@ -139,6 +139,7 @@ class Library(unittest.TestCase):
         self.addCleanup(setattr, library, "can_import", original)
         job.start()
         self.assertTrue(finished.wait(20))
+        self.job = job
         return done
 
     def test_an_import_made_anew_replaces_the_pack(self):
@@ -153,6 +154,22 @@ class Library(unittest.TestCase):
         self.assertEqual(done, [("stage", "reading the songs"), (1, 2), (2, 2), ("stage", "hearing which voice leads"), ("test_quest", None)])
         self.assertEqual(library.listing()[0]["parts"]["lead"], ["flute", "oboe"])   # fresh: the move is gone
         self.assertFalse(any(p.name.startswith(".") for p in library.packs_dir().iterdir()))   # nothing left over
+
+    def test_each_stage_of_an_import_counts_its_own_songs(self):
+        # the reading counts two songs, the lead pass three of its own (the readings held one of the game's already)
+        lines = ("stage unpacking the set", "stage reading the songs", "progress 0 2", "progress 1 2", "progress 2 2",
+                 "stage hearing which voice leads", "progress 0 3", "progress 1 3", "progress 3 3", "stage counting the game's vocabulary")
+        done = self.run_import(
+            "import shutil, sys\n"
+            f"open(sys.argv[2], 'a').write({chr(10).join(lines) + chr(10)!r})\n"
+            f"shutil.copytree({str(self.src)!r}, sys.argv[1])")
+        self.assertEqual(done[:-1], [("stage", "unpacking the set"), ("stage", "reading the songs"), (0, 2), (1, 2), (2, 2),
+                                     ("stage", "hearing which voice leads"), (0, 3), (1, 3), (3, 3),
+                                     ("stage", "counting the game's vocabulary")])
+        self.assertEqual(self.job.songs, 2)                          # the songs read, whatever the later stages counted
+        self.assertEqual((self.job.done, self.job.total), (0, 0))    # the last stage counted none
+        from bitcomposer.translate import pack
+        self.assertEqual([line[6:] for line in lines if line.startswith("stage ")], [s for s in pack.STAGES if s != pack.COUNTING_LIBRARY])
 
     def test_an_import_that_stops_says_why(self):
         done = self.run_import("import sys; open(sys.argv[2], 'a').write('progress 1 9\\nerror no wheel here\\n'); "
