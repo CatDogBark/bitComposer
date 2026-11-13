@@ -799,3 +799,23 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   bar's fill; and a kit piece the song plays in under three bars in
   four of a part of the form plays by its figures' own chain inside its
   bounds.
+
+- **A written song is not as loud as its game song, and the player
+  plays every song at one level** (a product choice, 2026-11-13). The
+  balance token once carried its song's rendered loudness and the
+  writer held a song's master volume to it (round 59). The shipped
+  vocabulary has carried no such word since round 103, and it is not
+  put back: measured from rendered songs, the hold's estimate of a
+  song's level is several dB out for some songs (on Final Fantasy VI's
+  sounds 13 of 150 songs sit more than 5 dB from their token song's
+  loudness with it, 3 without). So a file plays at the level its
+  parts' own levels give it: over 150 seeds on the player's own sounds
+  from -30.3 to -19.7 dBFS, 1.6 dB from its token song's at the median.
+  The player levels what it plays, at playback, to the middle of
+  Final Fantasy VI's songs (`bitcomposer/player/level.py`, SET →
+  LEVEL), so in the player Fanatics and The Mines of Narshe, 7 dB
+  apart in the game, play alike; a file opened in another player
+  plays as written. What would change it: a song's level measured
+  from its own render at writing time, which the generator, having no
+  renderer of its own, cannot do; or an estimate that meets the
+  render.

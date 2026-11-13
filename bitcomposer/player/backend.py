@@ -140,7 +140,8 @@ class Backend(QObject):
         m = p.metadata()
         st = {
             "status": p.status, "shuffle": p.shuffle, "autoGenerate": p.auto_generate,
-            "volume": p.volume, "width": p.width, "currentIndex": p.current_index, "generating": p._generating,
+            "volume": p.volume, "width": p.width, "level": p.level_on, "levelTrim": p.level_trim(),
+            "currentIndex": p.current_index, "generating": p._generating,
             "musicDir": str(p.music_dir), "shortDir": _short(p.music_dir),
         }
         if m:
@@ -408,6 +409,13 @@ class Backend(QObject):
     @Slot(float)
     def setWidth(self, width):
         self.player.set_width(width)
+        self._refresh()
+
+    @Slot(bool)
+    def setLevel(self, on):
+        """SET > LEVEL: every song played at one common level (player/level.py), or each as it was written."""
+        self.player.set_level(on)
+        self._set_notice("plays every song at one level" if on else "plays each song at the level it was written at")
         self._refresh()
 
     @Slot(int)

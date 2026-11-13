@@ -33,7 +33,7 @@ The words are grouped by where the writing draws them, in the order the song is 
 - **context, backoff, floor** — a draw names the values it has; the table answers from the most specific context with enough songs behind it and backs off toward the part (Witten-Bell), never below its floor level (`floor_k`).
 - **habit** — a song's way with a part, drawn once a song: a density tier (sparse, medium, dense) and a manner (varied, mixed, repeating; the bass's tones and octaves). Most figure tables are conditioned on it.
 - **tier** — the density third of a habit; some words (the drums' entrances, the tune's grain) are conditioned on the tier alone.
-- **token** — the balance word's outcome: one game song's whole band in one string, each part's weight, register, sounded share, voices, level, the voices beside its line, kind, sample and habit, then the top level, the loudness and the tempo class. A written song rides one token.
+- **token** — the balance word's outcome: one game song's whole band in one string, each part's weight, register, sounded share, voices, level, the voices beside its line, kind, sample and habit, then the top level, the loudness (where the readings measured it; the shipped vocabulary's tokens carry none, see **loudness**) and the tempo class. A written song rides one token.
 - **chain, previous** — a figure table conditioned on the bar before's outcome; the writer's bars form a chain through the game's.
 - **mixture, urn** — a figure table drawn once a bar with the song's own bars so far: the same as the bar before, an earlier bar, or new, at the game's rates.
 - **mask** — a second voice's or the counter's bar as which of the line's onsets it strikes with and which are its own (`second_figures`, `counter_figures`).
@@ -2755,3 +2755,26 @@ The words are grouped by where the writing draws them, in the order the song is 
   sample's (a struck accompaniment sample's attack 3.4 dB over its body
   and a slow lead's 3.1 under had put a backing over the tune the counts
   said was on top).
+  **Where it stands (2026-11-13): the shipped vocabulary's tokens carry
+  no `loud=`, and the hold does not run.** The measure is not the
+  reader's: a pass apart renders each converted song and stores its
+  loudness in the readings, and a game read again loses it. Round 102
+  read Final Fantasy VI again and the pass was not run after it, so
+  since round 103's refit none of the 68 tokens has the word (67 of 68
+  had it before), a plan's loudness is empty and a written song's master
+  stays full. It is left so. Rendered and measured over 150 seeds on
+  Final Fantasy VI's sounds, songs written without the hold sit 1.3 dB
+  from their token song's loudness at the median, 3 of them more than
+  5 dB off (the parts' levels, the top level and the sections' levels
+  are the token song's own, which is most of what the hold was for);
+  with the word put back the median is 1.4 dB and 13 are more than 5 dB
+  off, nearly all under: the estimate plus the bridge misses a song's
+  render by several dB for some songs. On the player's own sounds the
+  hold does better (0.9 dB at the median and 5 songs, against 1.6 and
+  11). And a player wants something else of a song's level than the
+  game does: the game's songs span fifteen decibels by design, and the
+  player plays every song at one level, measured from the audio at
+  playback (`bitcomposer/player/level.py`), with no file and no word
+  changed. The code that counts the word (`arrangement.balance_units`)
+  and the hold (`whole.master_of`) stand for a vocabulary whose
+  readings carry the measure.

@@ -153,6 +153,14 @@ ApplicationWindow {
     }
     property real volumeGain: backend.state.volume !== undefined ? backend.state.volume : 1.0
     property real stereoWidth: backend.state.width !== undefined ? backend.state.width : 1.0   // WIDTH: 1.0 the pans as written
+    property bool levelOn: backend.state.level !== undefined ? backend.state.level : true      // LEVEL: every song at one common level
+    // The loaded song's trim to that level, in words; empty where the level is off or the song has none.
+    readonly property string levelTrimText: {
+        var t = backend.state.levelTrim
+        if (t === undefined || t === null) return ""
+        if (Math.abs(t) < 0.05) return "  This song: left as it is."
+        return "  This song: turned " + (t < 0 ? "down " : "up ") + Math.abs(t).toFixed(1) + " dB."
+    }
     readonly property var levels: backend.levels                   // each channel's level while playing (about 0 to 1), else []
     readonly property bool liveLevels: playbackStatus === "Playing" && levels.length > 0
     function meterCells(ch, cells) {                               // live while playing, the channel's set volume otherwise
@@ -913,6 +921,19 @@ ApplicationWindow {
                         width: parent.width
                         spacing: Math.round(10 * root.ui)
                         Heading { text: "SET: THE PLAYER"; aside: "Ctrl +/- zooms the window, Ctrl 0 resets, Ctrl 1-4 pick a screen" }
+                        // Level: the songs in a folder do not sit at one level (a written song's parts take theirs from its
+                        // token's game song, and the game's own songs span fifteen decibels), so the player measures each
+                        // song once and trims it at playback, beside GAIN; no file is changed (player/level.py).
+                        OptionRow {
+                            objectName: "levelRow"
+                            label: "LEVEL"; options: ["on", "off"]; value: root.levelOn ? "on" : "off"
+                            onPicked: function(c) { if ((c === "on") !== root.levelOn) backend.setLevel(c === "on") }
+                        }
+                        Body {
+                            objectName: "levelBody"
+                            text: (root.levelOn ? "Every song plays at one level, so a quiet song and a loud one sit side by side; GAIN sets how loud that is. The files are not changed."
+                                                : "Each song plays at the level it was written at.") + root.levelTrimText
+                        }
                         OptionRow {
                             visible: backend.autostartSupported
                             label: "LOGIN"; options: ["on", "off"]; value: backend.autostart ? "on" : "off"
