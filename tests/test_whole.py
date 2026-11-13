@@ -1158,14 +1158,29 @@ class TokenFormTests(unittest.TestCase):
         parts = whole.plan_form({}, random.Random(1), [], form=[("A", 2), ("B", 15), ("C", 5), ("B", 2)])
         self.assertEqual([p[1] for p in parts], [2, 15, 5, 15])                                          # a part read returning with other bars plays whole, at its first statement's
 
-    def test_a_token_form_short_of_the_bars_asked_leaves_the_draw(self):
+    def test_a_token_form_short_of_the_bars_asked_is_played_round_again(self):
+        """Round 154: a token song's form short of the bars asked is its form all the same, played round again from its
+        loop's part until it is as long, as the game loops it; the plan had kept its own draw, and with it nothing the
+        token says by the form's letters."""
         mk = lambda name, outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
-        token = "melody=main:64-84:0.9:1:0.7:::slead accompaniment=half:60-72:0.8:1:0.6:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium form=A2B12"
-        bal = {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", token, part=rhythm.ARRANGEMENT))}
-        p = whole.plan(bal, 7, "g", min_bars=16)
+        band = "melody=main:64-84:0.9:1:0.7:::slead accompaniment=half:60-72:0.8:1:0.6:::sstr bass=half:36-44:0.9:1:1.0:::sbass top=0.30 tempo=medium "
+        table = lambda words: {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk("balance", band + words, part=rhythm.ARRANGEMENT))}   # noqa: E731
+        p = whole.plan(table("form=A2B12"), 7, "g", min_bars=16)
+        self.assertEqual([(q[3], q[1], q[2]) for q in p.parts], [("A", 2, None), ("B", 12, None), ("A", 2, 0), ("B", 12, 1)])   # no loop read: from its first part
+        self.assertTrue(any("short of the 16 asked: played round again from part 1 (round 154)" in l for l in p.log), p.log)
+        p = whole.plan(table("form=A2B12 loop=1"), 7, "g", min_bars=16)
+        self.assertEqual([(q[3], q[1], q[2]) for q in p.parts], [("A", 2, None), ("B", 12, None), ("B", 12, 1)])   # from the part its loop returns to
+        self.assertTrue(any("played round again from part 2 (round 154)" in l for l in p.log), p.log)
+        self.assertEqual(p.loop_bar, 2)                                                            # and the written song's loop goes back to it
+        self.assertEqual([(q[3], q[1]) for q in whole.plan(table("form=A2B12"), 7, "g").parts], [("A", 2), ("B", 12)])   # without a minimum the token's form as it is
+        p = whole.plan(table("form=A1B1"), 7, "g", min_bars=16)                                    # twelve parts a song may have: twelve bars, still short
         self.assertEqual([q[3] for q in p.parts], ["A", "B", "C"])                                 # the draw stands (the defaults' three parts)
         self.assertTrue(any("short of the 16 asked: the draw" in l for l in p.log), p.log)
-        self.assertEqual([(q[3], q[1]) for q in whole.plan(bal, 7, "g").parts], [("A", 2), ("B", 12)])   # without a minimum the token's form is taken
+        self.assertEqual(whole.round_again([("A", 2), ("B", 8)], 1, 16), [("A", 2), ("B", 8), ("B", 8)])
+        self.assertEqual(whole.round_again([("A", 4), ("B", 4), ("B", 4)], 0, 16), [("A", 4), ("B", 4), ("B", 4)] * 2)
+        self.assertEqual(whole.round_again([("A", 8), ("B", 8)], 0, 16), [("A", 8), ("B", 8)])     # long enough: as it is
+        self.assertEqual(whole.round_again([("A", 2), ("B", 15), ("B", 2)], None, 40), [("A", 2), ("B", 15), ("B", 2)] * 2)   # a letter's bars its first statement's: 32, then 64
+        self.assertEqual(len(whole.round_again([("A", 1)], None, 16)), whole.MAX_PARTS)            # no further than the parts a song may have
 
 
 class SectionFillTests(unittest.TestCase):
@@ -1421,9 +1436,9 @@ class TokenLoopTests(unittest.TestCase):
         self.assertIn("bass's line B every 2 bars on 1.00", line)
         self.assertIn("the harmony B every bar on 0.88 but bar 8", line)
         self.assertEqual(len(set(p.chords[2:9])), 1)                                               # B's chord through its bars on the figure
-        q = whole.plan(bal, 7, "g", min_bars=16)                                                   # the token's form short of the bars asked: the draw's
-        self.assertEqual(q.loops, {})                                                              # letters are not the song's, and no loop is taken
-        self.assertTrue(any("none taken, the form is not its own" in l for l in q.log), q.log)
+        q = whole.plan(bal, 7, "g", min_bars=16)                                                   # the token's form short of the bars asked: played round
+        self.assertEqual([(x[3], x[1]) for x in q.parts], [("A", 2), ("B", 8), ("A", 2), ("B", 8)])   # again (round 154), its letters the song's,
+        self.assertEqual(q.loops, p.loops)                                                         # and the loops taken with them
 
     def test_the_harmony_loops(self):
         class Chain:                                                                               # a chord word that never holds

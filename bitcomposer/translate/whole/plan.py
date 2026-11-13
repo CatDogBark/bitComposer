@@ -831,6 +831,25 @@ def tempo_near(models: dict, cls: str | None, own: float, rng: random.Random) ->
     return rng.choices(near, weights)[0] if sum(weights) > 0 else rng.choice(near)
 
 
+def round_again(form: list, loop_part: int | None, least: int) -> list:
+    """A token song's form short of the bars asked, played round again from its loop's part until it is as long (round
+    154): [(letter, bars)] with the form's parts from `loop_part` on (the token's `loop=`; the first where the song has
+    none read) added whole until the bars reach `least`, a letter's bars its first statement's as plan_form counts
+    them; the form as it is where it is long enough, or where MAX_PARTS parts would not reach. The game loops such a
+    song; the plan had dropped its form for a pooled one, and with it everything the token says by the form's letters
+    (which parts play where, how busy each is, the kit's pieces, the loops, the levels): Fanatics's four bars of bass
+    and chant at eight a bar before both hold a note a bar were written at one pace throughout."""
+    start = loop_part if loop_part is not None and 0 <= loop_part < len(form) else 0
+    sizes = {}
+    for letter, n in form:
+        sizes.setdefault(letter, n)
+    bars = lambda parts: sum(max(1, int(sizes[letter])) for letter, _ in parts)   # noqa: E731
+    out = list(form)
+    while bars(out) < least and len(out) + len(form) - start <= MAX_PARTS:
+        out += form[start:]
+    return out
+
+
 def plan_form(models: dict, rng: random.Random, log: list, max_bars: int | None = None, form: list | None = None) -> list:
     """The form: one of the game's forms whole (the letters table: "A B A B
     C", a part returning after another in 29 % of FFVI's songs where a
@@ -2576,6 +2595,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     token_onsets[role] = onsets_of(fields[21][1:])
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
+    own_letters = [l for l, _ in token_form or ()]          # the token song's form's letters, as the plan will play them (round 154: a short form round again)
     if token_form and [(p[3], p[1]) for p in parts] != token_form:   # the token song's form (round 113): its letters and their bars, after the
         drawn_form = " ".join(f"{p[3]}{p[1]}" for p in parts)   # balance is read (the form's own draw above stands, so no other draw moves); a
         form_log = []                                           # form past the bars asked is cut as any; the loop's part drawn again for it
@@ -2584,14 +2604,22 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             log.append(f"the balance's song is counted in double time: its form may run to {own_max} bars")
         taken = plan_form(models, random.Random(f"whole:{seed}:form"), form_log, own_max, form=token_form)
         taken_bars = taken[-1][0] + taken[-1][1]
-        if min_bars is not None and taken_bars < min_bars:     # a token form short of the bars asked (4 of FFVI's 62): the draw stands
+        if min_bars is not None and taken_bars < min_bars:     # a token form short of the bars asked (4 of FFVI's 62): played round again
+            again = round_again(token_form, token_loop, min_bars)   # from its loop's part until it is as long (round 154), as the game loops it
+            short_log = []
+            longer = plan_form(models, random.Random(f"whole:{seed}:form"), short_log, own_max, form=again) if again != token_form else taken
+            if longer[-1][0] + longer[-1][1] >= min_bars:
+                log.append(f"the balance's song's form {''.join(f'{l}{n}' for l, n in token_form)} is {taken_bars} bars, short of the {min_bars} asked: "
+                           f"played round again from part {(token_loop or 0) + 1} (round 154)")
+                taken, taken_bars, form_log, own_letters = longer, longer[-1][0] + longer[-1][1], short_log, [l for l, _ in again]
+        if min_bars is not None and taken_bars < min_bars:     # still short (a form past the parts a song may have): the draw stands
             log.append(f"the balance's song's form {''.join(f'{l}{n}' for l, n in token_form)} is {taken_bars} bars, short of the {min_bars} asked: "
                        f"the draw {drawn_form} stands")
         else:
             parts = taken
             log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
             loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
-    own_form = bool(token_form) and [p[3] for p in parts] == [l for l, _ in token_form][:len(parts)]   # the form's letters are the token song's
+    own_form = bool(token_form) and [p[3] for p in parts] == own_letters[:len(parts)]   # the form's letters are the token song's
     own_loop = parts[token_loop][0] if own_form and token_loop is not None and token_loop < len(parts) else None   # the token song's loop's part (round 132)
     loops = {}                                              # the loops (round 121): the token song's, where the form's letters are its own
     if token_loops and own_form:
