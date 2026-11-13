@@ -251,6 +251,26 @@ class EngineHeadless(unittest.TestCase):
         self.assertFalse(thread.is_alive())
         self.assertFalse(os.path.exists(engine.levels_file()))
 
+    def test_the_background_measure_leaves_the_saving_to_the_face(self):
+        """The folder's pass, ended, asks the face's thread to save and writes nothing by its own: a second player in
+        one process whose settings folder is taken away under it (a test's, shut down after its folder goes) left a
+        file behind in it. A save asked for and reached after the shutdown is not made."""
+        p = self.p
+        p.scan()
+        p._measure_thread.join(30)
+        self.assertFalse(p._measure_thread.is_alive())
+        self.assertFalse(os.path.exists(engine.levels_file()))       # measured, and nothing written yet
+        asked = []
+        while not self.q.empty():
+            asked.append(self.q.get())
+        self.assertIn(p._save_levels, asked)                         # the save handed to the face
+        p._save_levels()
+        self.assertTrue(os.path.exists(engine.levels_file()))        # the face's thread writes it
+        p.shutdown()
+        os.remove(engine.levels_file())
+        p._save_levels()                                             # one that arrives after the shutdown
+        self.assertFalse(os.path.exists(engine.levels_file()))
+
     def test_the_level_s_gates_and_trim(self):
         full = leveling.FULL_SCALE
         self.assertIsNone(leveling.gated([]))
