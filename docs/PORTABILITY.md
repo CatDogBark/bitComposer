@@ -8,12 +8,12 @@ Windows. The KDE Plasma widget and its D-Bus daemon that came before it lived
 in a `companion/` folder; the player does everything they did (the media keys
 through MPRIS, start at login in the tray), and they were removed in 1.0.0rc3.
 
-Generated music deliberately stays out of the repo, in `~/Music/bitComposer`
-(override with `$BITCOMPOSER_MUSIC_DIR`; an older `~/Music/Chiptune` folder is
-still used while it exists). The idea of defaulting CLI output to
-`<repo>/output/` was considered and dropped; the CLI writes to the working
-directory unless told otherwise, and the helper scripts pass the music dir
-explicitly.
+Generated music deliberately stays out of the repo, in a `bitComposer` folder
+in the user's Music folder: `~/Music/bitComposer` unless the desktop keeps
+Music elsewhere (override with `$BITCOMPOSER_MUSIC_DIR`, or choose another
+folder in the player). The idea of defaulting CLI output to `<repo>/output/`
+was considered and dropped; the CLI writes to the working directory unless
+told otherwise, and the player passes the music dir explicitly.
 
 A developer runs the player from the checkout (`python -m bitcomposer.player`,
 or `pipx install --editable .`); generation then follows whichever branch is
