@@ -11029,3 +11029,63 @@ is not in its kit at all.
 **Heard.** Two pairs on the same seeds before the merge, a song on
 Metamorphasis's token and one on Overture (part 2)'s: passed by ear.
 
+### Round 156: a harmony's figure of two bars is not written on one chord (2026-11-13, from a chant heard holding one note)
+
+**Why.** By ear, on the song on Fanatics's token after round 154 (seed
+84): the chant holds one note through, and a long sustained sound is
+all there is. Investigated first; built on the pick of the first of
+three candidates.
+
+**Found.** That song is on one chord for its 24 bars. The game's
+second part turns two chords about, a bar each (G#5, F#5), and its
+chant, its bass and its low voice move with them; the token says so
+(`cycle=A1~100+B2~100`: the harmony's figure one bar long in A, two in
+B). Round 121's step copies a figure's first bars across the part, and
+the chain had drawn the figure's two bars alike (I5 I5 I5 VI5 for the
+part): a figure of two bars on one chord, the part on one chord, and
+the chord the chain drew later in it written over. A drawing fault:
+the song's harmony loops on two bars because they differ, and on one
+chord it would loop on one. Over 400 seeds 173 parts of the form, in
+132 songs, have a figure of two bars or more, and 71 of them, in 60
+songs, were written on one root; in 45 of the 71 by the chain's draw
+alone.
+
+**Built.** In `plan_chords`, before the figure's bars are copied: a
+figure of two bars or more whose bars (the first on the figure at each
+place of it) are on one root takes, for a later bar, the first chord on
+another root the chain drew in the part, at that chord's own place in
+the figure (the last, where it was drawn at the first); where the
+chain drew the part on one root whole, a chord asked of the chord word
+on a stream of its own (`figure_rng`, `FIGURE_TRIES`) until it gives
+another root. The chain's draws, its holds and its shapes stand, so no
+other draw moves.
+
+**Measured.** Suite 601 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 155: the plan says the
+round's line in 55 songs, 67 figures in all; a note changes in 50 (the
+tune in 47, the bass in 46, the accompaniment in 41, the counter-line
+in 27, the harmony in 10) and the other 350 are the same note for
+note; every seed keeps its token song, title, band, bars and tempo. Of
+the 173 figures, 22 are on one root now, in 22 songs, where 71 were:
+none by the chain's draw. The chord changes at 0.45 of a song's bar
+lines at the median (0.39; the token songs' 0.61), and 8 songs are on
+one chord throughout (10).
+
+**Open.** The 22 figures still on one root are every one under a
+theme's return that comes back with its chords: the plan copies the
+theme's four bars of chords over the bars it returns in, whatever the
+part's own harmony there. The song on Fanatics's token is one of them
+and is note for note what it was: its theme, four bars on one chord,
+returns at the second part's first bar, where the tune, the bass and
+the accompaniment cannot follow it (their pace there is not the
+theme's), and only the chords come back. Over the 400 seeds 409
+returns bring their chords, 239 of them into a part whose harmony the
+token song loops, and 86 where the tune's own pace is outside half to
+one and a half times the theme's part's. What a return may bring over
+a part's own harmony is the player's asking, and is put to the ear
+with a song written both ways.
+
+**Heard.** Six pairs on the same seeds before the merge: passed by ear.
+The song on Fanatics's token written with its theme's return bringing no
+chords was heard as the better; that is not built here.
+
