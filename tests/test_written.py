@@ -21,6 +21,7 @@ class ShippedVocabularyTests(unittest.TestCase):
         src = vocabularies.source("default")
         self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 68))   # 68 since round 77: Quiet Beach's pad read as a part, not a drum
         self.assertIn("Final Fantasy VI", src["fitted_on"])
+        self.assertEqual(src["lead"], {"heard": 68, "relabelled": 9})   # counted on readings the lead pass has heard (round 152): nine tunes on the voice heard as the tune
         models = vocabularies.load("default")
         for name in ("rhythm", "balance", "habits", "moves", "voice_intervals", "tune_grain"):
             self.assertIn(name, models)

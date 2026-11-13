@@ -192,9 +192,13 @@ def songs_for(name: str, songs: list) -> list:
 def build(db, game: str | None, say=lambda *a: None) -> dict:
     """The tables for one game from its readings (None: every game's songs together, the library's vocabulary):
     {"source": ..., "tables": {name: entry}}."""
+    from . import lead
     songs = {"rhythm": rhythm.load(db, game)[0], "phrases": phrases.load(db, game)[0]}
+    heard = lead.passed(db, game)                           # the tune's voice by ear (round 64): a game read again loses it, and its tables count the label
     out = {"source": {"game": game or "library", "songs": len(songs["rhythm"]), "version": VERSION,
-                      "votes": VOTES, "discount": DISCOUNT}, "tables": {}}
+                      "votes": VOTES, "discount": DISCOUNT, "lead": heard}, "tables": {}}
+    say(f"  the lead pass: {heard['heard']} songs heard voice by voice, {heard['relabelled']} with the tune moved" if heard["heard"]
+        else "  the lead pass has not run on these readings: every tune is the reader's label (python -m bitcomposer.translate.lead)")
     for name, (module, builder, kwargs, *_) in KEPT.items():
         entry = fit(name, getattr(MODULES[module], builder)(songs_for(name, songs[module]), **kwargs))   # the kit's bars in double time (round 145)
         if entry is None:
