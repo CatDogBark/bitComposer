@@ -712,9 +712,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   counter tokens; 35 tunes play on no quarter of the beat and 14 on
   nothing finer than the half beat. The token also says its song's
   feel where that is not duple (`feel=triple`, `cells.song_feel`: 14
-  of the 68 songs). The plan keeps both (`tune_places`, `token_feel`)
-  and, where the song is written in its token song's feel, hands the
-  shares to the tune's writer (`own_places`, `held_places`: in a
+  of the 68 songs). The plan keeps both (`tune_places`, `token_feel`),
+  writes the song in its token song's feel (round 148; the pooled
+  `feels` draw before it, which put 120 of 400 seeds in the other)
+  and hands the shares to the tune's writer (`own_places`,
+  `held_places`: for a song in its token song's feel, as every song
+  on a vocabulary that says the feel now is; in a
   triple feel the third is the feel's own division of the beat and is
   not held). Each share is a ceiling on the written tune over the
   song (`keeps_places`: of its notes so far, or of the least it will
@@ -1358,9 +1361,14 @@ The words are grouped by where the writing draws them, in the order the song is 
   of them, came only from its compound and shuffle songs; drawn into
   straight songs unconditioned they stumbled against straight drums.
   Since round 147 the balance token says its song's feel where that is
-  not duple (`feel=triple`). The plan still draws this word, and holds
-  a tune to its token song's places in the beat only where the two
-  agree (`held_places`).
+  not duple (`feel=triple`), and since round 148 the plan takes it: a
+  song is written in its token song's feel (`tokens_say_feel`: where one
+  token of the vocabulary at least says a feel, so a token without the
+  word is a duple song's). This word is still drawn, on the plan's
+  stream, so that no other draw moves, and its draw stands only for a
+  vocabulary whose tokens say no feel (one counted before round 147).
+  Drawn apart from the token it had written 120 of 400 seeds in the
+  other feel than their token song's.
   *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, rhythm, second_figures.*
 
 - **layer_samples** — the samples a layered part's line and second voice
