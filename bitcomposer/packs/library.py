@@ -302,14 +302,17 @@ def run_worker(args: list[str]) -> int:
 
 class Import:
     """A game's SPC files (a folder of them, a zip, an .rsn, .rar or .7z)
-    made into a pack in a process of its own (it is the emulator's work, a
-    minute or so for a whole soundtrack), the pack made anew in its place
-    when it is done.
+    made into a pack in a process of its own (it is the emulator's work,
+    minutes for a whole soundtrack), the pack made anew in its place when
+    it is done.
 
     The worker says how far it is, and why it stopped, in a file beside the
     pack being made (its --progress), not on its stdout: the Windows build
-    is a windowed program, which may have none. on_progress(done, total)
-    on_stage(words) and on_done(name, error) are called from the following thread."""
+    is a windowed program, which may have none. on_stage(words) as each
+    stage begins, on_progress(done, total) after each song of the stage (a
+    stage counts its own songs: `done` and `total` start again with it, and
+    `songs` keeps how many the first one read) and on_done(name, error) are
+    called from the following thread."""
 
     def __init__(self, source, name: str | None = None, on_progress=None, on_done=None, on_stage=None):
         from ..translate.archives import is_archive
@@ -323,8 +326,10 @@ class Import:
         self.on_progress = on_progress or (lambda done, total: None)
         self.on_done = on_done or (lambda name, error: None)
         self.on_stage = on_stage or (lambda words: None)
-        self.done = self.total = 0
+        self.done = self.total = 0                          # the songs of the stage the worker is at
+        self.songs = 0                                      # the songs read: the first stage's that counted any
         self.doing = ""                                     # the stage the worker says it is at
+        self._reading = None                                # that first stage
         self.proc = None
         self._cancelled = False
 
@@ -352,8 +357,9 @@ class Import:
                                "--progress", str(self.progress), str(self.source)])
 
     def _read_progress(self, seen: int) -> tuple[int, str]:
-        """Lines added to the progress file since `seen` characters: the songs
-        read are passed on; the last error line, if any, is returned."""
+        """Lines added to the progress file since `seen` characters: the
+        stages and their songs are passed on; the last error line, if any,
+        is returned."""
         try:
             text = self.progress.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -364,9 +370,12 @@ class Import:
             words = line.split()
             if len(words) == 3 and words[0] == "progress" and words[1].isdigit() and words[2].isdigit():
                 self.done, self.total = int(words[1]), int(words[2])
+                if self._reading in (None, self.doing):
+                    self._reading, self.songs = self.doing, self.done
                 self.on_progress(self.done, self.total)
             elif line.startswith("stage "):
                 self.doing = line[6:]
+                self.done = self.total = 0
                 self.on_stage(self.doing)
             elif line.startswith("error "):
                 error = line[6:]

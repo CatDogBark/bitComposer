@@ -182,6 +182,14 @@ ApplicationWindow {
     property string packConfirm: ""
     property string packRenaming: ""
     readonly property bool importBusy: !!backend.importState.busy
+    // An import's stage with nothing to count (unpacking, the vocabularies):
+    // its bar steps a cell a second, as an update's does.
+    property int _impElapsed: 0
+    Timer {
+        interval: 1000; repeat: true; running: root.importBusy && !(backend.importState.bar >= 0)
+        onRunningChanged: root._impElapsed = 0
+        onTriggered: root._impElapsed += 1
+    }
     readonly property bool gettingEmulator: backend.updatePurpose === "emulator"
     readonly property var builtinSounds: ["random", "chip", "genesis", "snes", "bit", "ffvi", "mana", "evermore", "megamanx"]   // Classic's
     readonly property var snesSets: ["bit", "ffvi", "mana", "evermore", "megamanx"]
@@ -1547,7 +1555,7 @@ ApplicationWindow {
                                 PButton { text: "IMPORT"; hot: backend.canImport && !root.importBusy; enabledLook: backend.canImport && !root.importBusy; onClicked: if (backend.canImport && !root.importBusy) backend.importGame() }
                                 PButton { text: "ADD A PACK"; onClicked: backend.addPack() }
                             }
-                            Body { text: "IMPORT takes a game's SPC set: a folder of .spc files, a zip, or an .rsn, .rar or .7z. Each song runs through the SNES sound hardware's emulator and is read as music; then the game's vocabulary is counted beside its sounds, and the library's over everything you have read. About six minutes for a whole soundtrack; nothing leaves this machine. ADD brings in a pack someone exported." }
+                            Body { text: "IMPORT takes a game's SPC set: a folder of .spc files, a zip, or an .rsn, .rar or .7z. Each song runs through the SNES sound hardware's emulator and is read as music; then the game's vocabulary is counted beside its sounds, and the library's over everything you have read. A few minutes for a whole soundtrack; nothing leaves this machine. ADD brings in a pack someone exported." }
                             RowLayout {
                                 visible: !backend.canImport
                                 Layout.fillWidth: true
@@ -1562,7 +1570,7 @@ ApplicationWindow {
                                 }
                                 PButton { objectName: "getEmulator"; visible: backend.updateKind === "pipx"; text: "GET THE EMULATOR"; hot: !backend.updating; enabledLook: !backend.updating; onClicked: backend.getEmulator() }
                             }
-                            // An import running: the songs read so far.
+                            // An import running: which stage it is at, and that stage's songs so far.
                             ColumnLayout {
                                 visible: root.importBusy
                                 Layout.fillWidth: true
@@ -1572,11 +1580,11 @@ ApplicationWindow {
                                     spacing: Math.round(10 * root.ui)
                                     PxLabel { text: "READING " + String(backend.importState.name || "").toUpperCase(); color: root.accentPink }
                                     Item { Layout.fillWidth: true }
-                                    Text { text: backend.importState.total ? backend.importState.done + " of " + backend.importState.total + " songs" : "unpacking the set…"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
+                                    Text { objectName: "importCount"; text: backend.importState.total ? backend.importState.done + " of " + backend.importState.total + " songs" : ""; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
                                     PButton { small: true; text: "STOP"; onClicked: backend.cancelImport() }
                                 }
-                                Meter { Layout.fillWidth: true; cells: 40; cellW: Math.max(4, Math.floor((width - 78) / 40)); on: backend.importState.total ? Math.round(40 * backend.importState.done / backend.importState.total) : 0 }
-                                Body { color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.stage ? backend.importState.stage + "…  " : "") + (backend.importState.stage && backend.importState.stage.indexOf("reading") < 0 ? "a few minutes on a whole soundtrack" : "the songs read so far stay read if you stop") }
+                                Meter { objectName: "importBar"; Layout.fillWidth: true; cells: 40; cellW: Math.max(4, Math.floor((width - 78) / 40)); on: backend.importState.bar >= 0 ? Math.round(40 * Math.min(1, backend.importState.bar)) : (root._impElapsed % 40) }
+                                Body { objectName: "importStage"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.step ? "step " + backend.importState.step + " of " + backend.importState.steps + ": " : "") + (backend.importState.stage ? backend.importState.stage + "…  " : "") + (backend.importState.stage && backend.importState.stage.indexOf("reading") < 0 ? "a few minutes on a whole soundtrack" : "the songs read so far stay read if you stop") }
                             }
                             RowLayout {
                                 visible: !!backend.importState.pendingAdd

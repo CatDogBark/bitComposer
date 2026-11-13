@@ -108,8 +108,9 @@ def main(argv=None) -> int:
                     "(pack.json and its samples; see docs/TRANSLATOR.md, stage 2); play it with bitcomposer --pack-file")
     ap.add_argument("--name", help="with --pack: the pack's name (default: from the folder's)")
     ap.add_argument("--progress", metavar="FILE",
-                    help="with --pack: add a line 'progress DONE TOTAL' to FILE after each song, 'stage WORDS' "
-                         "as each stage begins, and 'error WHY' if it stops (the player's LIBRARY screen reads it)")
+                    help="with --pack: add a line 'stage WORDS' to FILE as each stage begins, 'progress DONE TOTAL' "
+                         "after each song of a stage that counts them (from nothing again in each), and 'error WHY' "
+                         "if it stops (the player's LIBRARY screen reads it)")
     args = ap.parse_args(argv)
     if args.pack:
         from ..translate import pack
