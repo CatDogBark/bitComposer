@@ -355,9 +355,10 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   textures and entrances. Since round 153 its
   lines keep to their song's pace all the same: one number for the
   whole song, so a line is written at its song's median onsets a bar
-  in every part of the form (a song that thins in one part does not),
-  and the kit's pieces, said by the letter alone, still play at their
-  tables' own.
+  in every part of the form (a song that thins in one part does not).
+  Since round 155 its kit's pieces keep to their song's hits a bar the
+  same way, and a kit that plays through its song plays in every bar:
+  the bar or two the game rests it are not carried.
 - **A song's tempo is one of the game's, near its token song's.**
   Since round 137 a written song runs within a tenth of its token
   song's tempo, at one of the tempos the game's songs of that class

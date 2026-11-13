@@ -302,7 +302,10 @@ The words are grouped by where the writing draws them, in the order the song is 
   the median over the bars the line plays in the whole song through,
   and where the plan's form is not its token song's every bar of a
   line takes its song's pace, that number or the median over the
-  song's bars of its parts' own: `plan.whole_song_onsets`); each voice beside a
+  song's bars of its parts' own: `plan.whole_song_onsets`; and since
+  round 155 such a song's kit says its pieces the whole song through
+  under `*` for the letter, `n*c1@95`, the bounds every bar's and a kit
+  that plays through its song in every bar); each voice beside a
   line carries the same as a ninth sub-field; and the kit's token
   carries each piece's hits a bar with the share of the part's bars it
   plays in (`kit_onsets_field`: `nAS28.5@100,c1@50+BS20@75`). FFVI: 129
