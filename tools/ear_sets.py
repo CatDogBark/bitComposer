@@ -1,6 +1,6 @@
 """Audio for the ear pages of phase 1 (docs/idiom/phase-1-readers.md): songs rendered from the
 emulator's own output, once through, as Opus files the pages play, with a manifest the pages are
-built from. A developer tool for the machine that holds the games; the files go to the listener.
+built from. A developer tool for the machine that holds the games; the files go to the ear pages.
 
     python tools/ear_sets.py chords SPC_ROOT READINGS.db OUT_DIR
         the Chord Change Check: the twelve songs below, the full mix once through (to the loop's

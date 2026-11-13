@@ -87,7 +87,7 @@ class Backend(QObject):
         self._upd_log = []
         self._upd_progress = -1.0           # 0..1, or -1 while it cannot be known
         # What the update screen is doing: "" (an update to a newer release)
-        # or "emulator" (PACKS' GET THE EMULATOR: this version again, with
+        # or "emulator" (LIBRARY's GET THE EMULATOR: this version again, with
         # the import extra), and the release-like record it runs.
         self._purpose = ""
         self._emu_release = None

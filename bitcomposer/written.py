@@ -47,7 +47,7 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
     """One song from a vocabulary (shipped, the library's, or an imported pack's): {"score", "title", "seed", "sounds",
     "vocabulary", "info", "plan"}; the score renders through the SNES back end (`spc.convert.render`). The sounds: the
     built-in set `pack` names, the imported pack `pack_file` names, else an imported pack's own samples for its own
-    vocabulary, else one of the SNES sets the seed draws. A seed names one song; without one, a seed is drawn. The
+    vocabulary, else bitComposer's own (`bit`). A seed names one song; without one, a seed is drawn. The
     `performance` is the player's unless given (Performance.none() is the writer bare); `carry_theme` and
     `band_returns` override its two switches where not None."""
     seed = random.randrange(1, 1_000_000) if seed is None else int(seed)

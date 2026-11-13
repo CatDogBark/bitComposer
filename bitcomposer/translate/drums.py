@@ -39,8 +39,8 @@ another sound (a block, a cowbell, a wood ping, an orchestra hit).
 
 How the game plays a sample no longer decides anything. On the drum check
 (docs/idiom/phase-1-readers.md, forty samples named by ear, four set aside)
-the play agreed with the listener on 43 % of the kicks, snares and hats
-he named, the sound alone on 64 % under the earlier rule and 86 % under
+the play agreed with the ear on 43 % of the kicks, snares and hats
+named, the sound alone on 64 % under the earlier rule and 86 % under
 this one; a third of the samples drawn as drums were bells, whistles,
 alarms and electronic noises, which the earlier rule called hats.
 

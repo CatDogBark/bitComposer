@@ -14,7 +14,7 @@ from bitcomposer.translate import whole
 class ShippedVocabularyTests(unittest.TestCase):
     def test_the_player_ships_a_default_vocabulary(self):
         """The shipped vocabulary is a format 2 pack's tables, fitted on a game's readings (its source says which): statistics,
-        no samples, and no game's name in front of the listener."""
+        no samples, and no game's name in front of the user."""
         self.assertIn("default", vocabularies.names())
         self.assertEqual(vocabularies.DEFAULT, "default")
         self.assertEqual(vocabularies.label("default"), "bitComposer")
@@ -86,7 +86,7 @@ class WrittenSongTests(unittest.TestCase):
         self.assertEqual(out["info"]["vocabulary"], "bitComposer")
         self.assertIn("melody", out["info"]["band"])
         self.assertTrue(any(l.startswith("Written by bitComposer on the mana sounds") for l in out["score"].message))
-        self.assertFalse(any("Fantasy" in l for l in out["score"].message))   # no game's name in front of the listener
+        self.assertFalse(any("Fantasy" in l for l in out["score"].message))   # no game's name in front of the user
         self.assertTrue(any(l.startswith("layout: ") and "melody" in l for l in out["score"].message))
 
     def test_random_sounds_are_one_of_the_snes_sets_and_the_seed_picks_them(self):

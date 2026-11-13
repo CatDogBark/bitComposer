@@ -1,4 +1,4 @@
-"""The packs on this machine, for the player's PACKS panel: imported from a
+"""The packs on this machine, for the player's LIBRARY screen: imported from a
 game's SPC files (the translator's thin pack, docs/TRANSLATOR.md), or added
 from a pack folder or an exported pack. Each is a folder of its own in the
 user's data folder, named as the pack: pack.json, its WAVs and, for an

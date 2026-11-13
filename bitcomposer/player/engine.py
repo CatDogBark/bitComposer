@@ -366,7 +366,7 @@ class Player:
             self.last_error = str(e)
             self.on_log(f"[ERROR] {e}")
             return False
-        new.set_stereo_separation(round(self.width * 100))   # the width the listener set, on every module loaded
+        new.set_stereo_separation(round(self.width * 100))   # the width the user set, on every module loaded
         level = self.level_of(path) if self.level_on else None
         with self._lock:
             if self.module:
@@ -427,7 +427,7 @@ class Player:
                 self.schedule(self._on_track_ended)
                 break
             raw = bytes(self._buf)[:frames * CHANNELS * 2]
-            gain = self.volume * self._level_gain            # the listener's GAIN over the song's trim to the common level
+            gain = self.volume * self._level_gain            # the user's GAIN over the song's trim to the common level
             if gain != 1.0:
                 raw = _apply_gain(raw, frames * CHANNELS, gain)
             if not self._out.write(raw):

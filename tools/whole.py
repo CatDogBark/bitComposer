@@ -15,9 +15,11 @@ import os
 import statistics
 import sys
 
-from bitcomposer.packs import PACKS, packfile
-from bitcomposer.spc import convert
-from bitcomposer.translate import harness, packtables, rhythm, store, whole
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(HERE))
+from bitcomposer.packs import PACKS, packfile  # noqa: E402
+from bitcomposer.spc import convert  # noqa: E402
+from bitcomposer.translate import harness, packtables, rhythm, store, whole  # noqa: E402
 
 
 def seeds_of(text: str) -> list[int]:

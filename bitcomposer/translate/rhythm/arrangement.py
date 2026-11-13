@@ -2726,7 +2726,7 @@ def echo_units(songs) -> list:
     volume is 0.20 of full in 70 of 82 songs, its delay 80 ms in every one, its feedback 0.78 at the median, and the
     tune sends in 74 of 75 songs, the counter in 55 of 58, the accompaniment in 56 of 69, the bass in 45 of 72, the
     drums in 17 of 52 (round 69); the written songs had sent every upper part at 0.4 (6 dB wetter) with a 48-144 ms
-    delay, which the owner heard as vibrato and blur (Song Check 54's Whole 166). The sends ride the word so the song's
+    delay, heard as vibrato and blur (Song Check 54's Whole 166). The sends ride the word so the song's
     joint holds; a written part named in neither list (the word's song lacked it) keeps the writer's old rule."""
     return [tables.Unit(s.sid, s.game, echo_outcome(s), {"part": ECHO_PART}) for s in songs if s.echo is not None]
 
@@ -2882,7 +2882,7 @@ def kit_rate_units(songs) -> list:
     with the written key, by up to a tritone, and over FFVI's tuned slots and the twelve keys a written song can land in
     the moved rate fell outside the rates the game ever struck the sample at as that piece in 77 of 132 cases. Fanfare's
     pitched snare, struck at -4 there and -4 to +3 wherever FFVI uses it as a snare, had been moved to -10 for a song in
-    C# minor, where its 220 Hz tone fell to B2 and rang twice as long: a guitar, the owner heard (Song Check 70)."""
+    C# minor, where its 220 Hz tone fell to B2 and rang twice as long: heard as a guitar (Song Check 70)."""
     out = []
     for s in songs:
         for key, rate in (getattr(s, "kit_rates", None) or {}).items():
