@@ -928,7 +928,7 @@ def games_report(table: list[Game], shuffles: int = 200) -> str:
     return "\n".join(out)
 
 
-# --- the owner's ears ---
+# --- the marks by ear ---
 
 def marked(path: str) -> dict:
     """The parts marked by ear (heard-form.json): (file name, level) ->

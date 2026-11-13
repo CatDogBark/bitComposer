@@ -1,4 +1,4 @@
-"""The packs on this machine (the player's PACKS panel): add, move, rename,
+"""The packs on this machine (the player's LIBRARY screen): add, move, rename,
 export, delete, import. Run with: python3 -m unittest discover -s tests"""
 import json
 import math

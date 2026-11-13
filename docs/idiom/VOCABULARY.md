@@ -18,12 +18,12 @@ This file lists every table a pack keeps (`packtables.KEPT`), what its unit is, 
 the writers do with what it says. The rule of evidence (`../IDIOM.md`): a
 writer is never patched past what its vocabulary says; a missing thing is
 a new table here, and a table that exists but misleads is fixed as a
-drawing fault. The numbers quoted are Final Fantasy VI's (67 songs) unless
+drawing fault. The numbers quoted are Final Fantasy VI's (68 songs) unless
 said otherwise. Counting code: `translate/rhythm/` and
 `translate/phrases.py`; the plan: `translate/whole/`; the parts:
 `translate/writer/`.
 
-The words are grouped by where the writing draws them, in the order the song is written: the plan's one-draw-a-song words, the figure tables the parts' writers share, then the drums, the bass, the upper parts, the tune, the counter-line and the render; last, the words counted for the measures and never drawn. Under each word a line from the code gives its shape, the function that draws it and the tables it conditions (`tools/vocab_map.py`; the map page draws the same as a graph).
+The words are grouped by where the writing draws them, in the order the song is written: the plan's one-draw-a-song words, the figure tables the parts' writers share, then the drums, the bass, the upper parts, the tune and the render; last, the words counted for the measures and never drawn. Under each word a line from the code gives its shape, the function that draws it and the tables it conditions (`tools/vocab_map.py`; the map page draws the same as a graph).
 
 ## Terms
 
@@ -46,7 +46,7 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **keys** — a song's key (tonic and mode). Drawn once; the plan's key,
   which the chords are spelled in and the tune's scale comes from.
-  *`keys`: shape (part); drawn in _plan_once; conditions cadences, chords, contour_sizes, contours, endings, moves, peaks, phrase_shifts, relations.*
+  *`keys`: shape (part); drawn in _plan_once; conditions cadences, chords, contour_sizes, contours, endings, moves, off_scale, peaks, phrase_shifts, relations.*
 
 - **tempos** — a song's tempo to five beats a minute. Drawn once; sets the
   tempo band that conditions the habits and the length tables. Since
@@ -58,7 +58,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   inside its class, where the word has none so near). Why: a class is
   a third of the game's tempos wide, and a band written for 90 beats a
   minute (Edgar and Sabin's) played at 125.
-  *`tempos`: shape (part, tempo); drawn in _plan_once, tempo_near; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, periods, rhythm, second_figures.*
+  *`tempos`: shape (part, tempo); drawn in _plan_once, tempo_near; conditions bass, bass_habits, counter_figures, drums, drums-KSt, drums-KSt@2, drums-c, drums-c@2, drums-h, drums-h@2, drums-o, drums-o@2, drums@2, echo_habits, habits, periods, rhythm, second_figures.*
 
 - **sizes** — how many parts a song's form has. Drawn once; the fallback
   when no `letters` table can give the form whole.
@@ -247,9 +247,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   stream, a repeated part as its source. Why: on Battle Theme's token
   the written bass and guitar shared a pitch class at 0.29 of their
   common onsets against the game's 0.69, the bass kept its main pitch
-  class from bar to bar 0.25 against 0.74, and the owner heard every
-  song on the token as a band whose players did not listen to each
-  other.
+  class from bar to bar 0.25 against 0.74, and every song on the token
+  was heard as a band whose players did not listen to each other.
   Since round 123 a chord part's token carries a twentieth field, where
   its line doubles the bass or runs parallel to it, stretch by stretch
   (`line_company_field`: the line voice's relation word, read by the
@@ -257,7 +256,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   as its own; `rdb+12x2>ox8>db+12x9>ox8>pb+12` for Battle Theme's
   guitar: the bass an octave up through A, its own riff through B, the
   bass again through C, the riff, and parallel to the bass an octave up
-  to the end; six FFVI chord parts carry one). With it
+  to the end; seven FFVI chord parts carry one). With it
   `plan.ride_the_bass` draws no parts: the line rides in the bars of the
   word's stretches on the bass and nowhere else, and plays the bass's
   notes at the stretch's semitones, moved by octaves only where that
@@ -278,8 +277,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   bars; a letter left out is a part of the form it rests through; a
   part sounds in a bar as the texture words count it, and its span runs
   from the first bar it sounds in to the last). 62 FFVI tokens carry it,
-  the songs whose form the token carries: of 1058 cases of a part in a
-  part of the form, 835 are whole, 120 enter late or leave early and 103
+  the songs whose form the token carries: of 1076 cases of a part in a
+  part of the form, 839 are whole, 129 enter late or leave early and 108
   rest through it. Where the plan's form is the token song's
   (`own_form`: the letters, as the loops ask) `whole.token_textures`
   sets the textures and every part's bars from the spans, a part of the
@@ -308,12 +307,13 @@ The words are grouped by where the writing draws them, in the order the song is 
   that plays through its song in every bar); each voice beside a
   line carries the same as a ninth sub-field; and the kit's token
   carries each piece's hits a bar with the share of the part's bars it
-  plays in (`kit_onsets_field`: `nAS28.5@100,c1@50+BS20@75`). FFVI: 129
-  backing lines carry theirs over 422 parts of the form, 155 with a
-  last bar of its own; of the 118 with two parts of the form or more,
-  the busiest part is 1.5 times the sparsest at the median and at 1.5
-  times or more in 66; 40 kits carry their pieces, 210 cases of a piece
-  played through a part of the form, 52 in some of its bars, 13 rarely.
+  plays in (`kit_onsets_field`: `nAS28.5@100,c1@50+BS20@75`). FFVI: 139
+  backing lines carry theirs, 131 over 434 parts of the form, 155 with a
+  last bar of its own, and 8 as one number; of the 120 with two parts of
+  the form or more, the busiest part is 1.6 times the sparsest at the
+  median and at 1.5 times or more in 69; 44 kits carry their pieces, 4
+  the whole song through; 209 cases of a piece played through a part of
+  the form, 53 in some of its bars, 13 rarely.
   Where the plan's form is the token song's, `whole.token_sections`
   sets `plan.section_onsets` (a backing part's line: the bass, a chord
   part) and `plan.kit_bounds`, and the writers take them through
@@ -377,8 +377,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   line's chord-tone profile (`line_tone_profile`: `t46/2/8/31/2/11` for
   Battle Theme's guitar, `t33/8/17/19/3/20` for its bass, the share of the
   line's notes on the chord's root, third, fifth, seventh and sus and off
-  the chord, in hundredths; FFVI: 56 accompaniments, 58 basses, 10
-  harmonies and 2 arps carry one). The chord-part writer and the bass
+  the chord, in hundredths; FFVI: 57 accompaniments, 58 basses, 10
+  harmonies and 3 arps carry one). The chord-part writer and the bass
   writer hold the line's chord tones to it (`parts.profile_tone`): a
   chord-tone onset whose class, with the note counted, runs over its share
   by PROFILE_MARGIN takes the chord's own tone most under its share
@@ -433,9 +433,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   Battle Theme's major seventh sat on the written tonic.
   Since round 128 the harmony's loops (`cycle=`, round 121) are read by
   the bars' roots: `chord_bar_keys` gives a bar the root of the chord at
-  each of its beats, without the shape. 55 FFVI tokens carry a cycle
-  where 48 did, over 140 parts of the form where it was 114 (a one-bar
-  harmony in 110, two bars in 23, four in 7). Why: with the shape in
+  each of its beats, without the shape. 56 FFVI tokens carry a cycle
+  where 48 did, over 141 parts of the form where it was 114 (a one-bar
+  harmony in 111, two bars in 22, four in 8). Why: with the shape in
   the key a bar on the figure's root read as off the figure wherever
   the reader heard its quality another way, a triad one bar and its
   fifth alone the next; and since round 127 a written chord keeps one
@@ -474,8 +474,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   first beat within them, then played again where the song's bass
   loops (round 121), put a whole part of the form off the first beat.
   Since round 135 the chord parts carry the same field (`first_beat_field`,
-  the bass's reader for any backing part: 55 FFVI accompaniments, 0.83
-  at the median and twelve under a half; 14 harmonies, 0.99; 2
+  the bass's reader for any backing part: 56 FFVI accompaniments, 0.86
+  at the median and twelve under a half; 14 harmonies, 0.99; 3
   arpeggios) and `writer.upper` asks its line's new bars the same way
   (`first_beat`); the plan keeps a share a part (`first_beats`). Why:
   the chord parts' bars are drawn as the bass's were, within their
@@ -485,7 +485,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 113 the token carries the song's form as a song-level
   `form=` field (`form_field`: the parts' letters in order, a returning
   part by the letter it returns to; `form=ABCBD` for Battle Theme, a two-
-  bar A, B, C, B again, D; 67 of 68 FFVI tokens carry one), and the plan
+  bar A, B, C, B again, D; 62 of 68 FFVI tokens carry one), and the plan
   rebuilds its form from them once the balance is read: the form's own
   draw stands, so no other draw moves; each part takes the token's bars (a
   returning part its first statement's, played whole), a form past the
@@ -517,9 +517,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   profile in the same field, of four classes (`tune_step_profile`:
   `j11/58/19/12`, the share of the line's moves that repeat the note,
   step within a whole tone, move a third, or go a fourth or more,
-  TUNE_MOVES; 65 FFVI melodies carry one, 0.12, 0.56, 0.15 and 0.10 at
+  TUNE_MOVES; 64 FFVI melodies carry one, 0.12, 0.56, 0.15 and 0.10 at
   the median, Locke's 0.44 repeated notes and 0.05 far, The Decisive
-  Battle's 0.32 far; 50 counters). The tune writer keeps the written
+  Battle's 0.32 far; 53 counters). The tune writer keeps the written
   tune to it as it writes (`writer.melody`, `move_profile`): a drawn
   move (`draw_move`) is of no class the tune, its recalled bars counted,
   is over its share of (`third_over`, `far_over`), where a move of
@@ -540,7 +540,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   (`tune_shortest_field`: how long the note at the fifth percentile of
   its notes sounds, SHORT_NOTE, in milliseconds to the nearest ten:
   `m150`; 65 FFVI melodies carry one, 120 ms at the median, seventeen
-  under 80 ms and 27 at 150 ms or more; 51 counters, 130 ms). The plan
+  under 80 ms and 28 at 150 ms or more; 53 counters, 130 ms). The plan
   keeps it (`tune_shortest`) and hands the writers its length in beats
   at the song's tempo (`shortest_beats`); a tune note then sounds its
   gap's share (`tune_sounds`, round 98) or the song's shortest usual
@@ -572,7 +572,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   of fewer than LENGTH_NOTES (four) notes is `-`.
   `h100~0.80~-/-/100~0.80~-/-/100~0.95~-/100~0.95~-` is Terra's tune,
   every note held; `h41~0.90~0.30/55~0.85~0.35/0~-~0.20/62~0.95~0.30/31~1.00~0.15/-`
-  Gogo's, its eighths all cut to a fifth of the gap; 116 of the 118
+  Gogo's, its eighths all cut to a fifth of the gap; 118 of the 120
   melody and counter tokens carry one. The plan keeps it
   (`tune_lengths`, read by `lengths_of`) and the tune's and the
   counter-line's writers sound a note by it (`tune.own_length`): held
@@ -605,7 +605,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   percent that sound the bar before's (the rest match a bar further
   back: a figure of two bars or more), after a `c`: `c75/82` for
   Terra's accompaniment, `c60/25` for Locke's; none under eight such
-  bars. 49 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens and 1 of its 3 arp tokens. The plan keeps it (`tones_kept`) and holds each
+  bars. 50 of FFVI's 58 accompaniment tokens carry one, 10 of its 16 harmony tokens and 2 of its 4 arp tokens. The plan keeps it (`tones_kept`) and holds each
   chord part to it once the tune and the counter-line are written
   (`hold_chord_tones`), counting as the token counts and the song as
   it will be played (a part of the form played again counts with the
@@ -647,7 +647,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   onsets and the pitches of the notes begun in it), and the part
   plays in both, the percent in which the part's line plays that bar
   again too, after a `w`: `w57` for Terra's accompaniment, `w60` for
-  its harmony; none under four such bars (TOGETHER_BARS). 36 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens, 1 of its 3 arp tokens and 30 of its 52 counter tokens.
+  its harmony; none under four such bars (TOGETHER_BARS). 37 of FFVI's 58 accompaniment tokens carry one, 10 of its 16 harmony tokens, 2 of its 4 arp tokens and 30 of its 54 counter tokens.
   The plan keeps it (`together`) and holds each such part to it once
   the tune and the counter-line are written (`hold_together`),
   counting as the token counts and the song as it will be played:
@@ -685,9 +685,9 @@ The words are grouped by where the writing draws them, in the order the song is 
   before (a figure the bass stands on), each `-` under four such bars
   (TOGETHER_BARS); and the percent of the tune's bars with an earlier
   one within eight that are an earlier bar note for note: `w47/-/40`
-  for Terra's tune. 42 of FFVI's 66 tune tokens carry the field, 34
-  with a share for the bars from further back (none of them in 8, all
-  of them in 8) and 13 for the bar before (none in 8); no
+  for Terra's tune. 39 of FFVI's 66 tune tokens carry the field, 32
+  with a share for the bars from further back (none of them in 9, all
+  of them in 6) and 12 for the bar before (none in 8); no
   counter-line's does. The plan keeps them (`tune_together`) and gives
   the tune's writer the bass's bars as they will be played
   (`tune_lead`; `writer.melody`'s `with_lead`). Where the tune's urn
@@ -705,7 +705,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   the two kinds are counted apart because they are two things in the
   game (a phrase that comes round brings the tune with it in half its
   bars; under a figure the bass stands on the tune stands too in a few
-  songs and never in 8 of the 13 with a count), and a written bass
+  songs and never in 8 of the 12 with a count), and a written bass
   stands on one bar more than the game's.
   Since round 147 the melody's and the counter's token carry a
   twenty-ninth field, where in the beat the line's notes fall
@@ -716,8 +716,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   not where the reading's grid puts it; notes struck together are one
   onset). `p0/0/0` is Locke's tune and Terra's, on the beat and the
   half beat alone; `p42/3/3` Spinach Rag's; none under sixteen
-  onsets. 65 of the 66 melody tokens carry one and 51 of the 52
-  counter tokens; 35 tunes play on no quarter of the beat and 14 on
+  onsets. 65 of the 66 melody tokens carry one and 53 of the 54
+  counter tokens; 35 tunes play on no quarter of the beat and 15 on
   nothing finer than the half beat. The token also says its song's
   feel where that is not duple (`feel=triple`, `cells.song_feel`: 14
   of the 68 songs). The plan keeps both (`tune_places`, `token_feel`),
@@ -803,7 +803,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   `section_level_ratios`), or `-` where the part has no count there.
   `vA1.0+B0.4` is Fanfare's bass and `vA1.0+B1.0` its tune; none for a
   song whose form the token does not carry. 62 tunes' tokens carry one,
-  58 basses', 54 accompaniments', 49 counter-lines'. The plan reads it
+  58 basses', 55 accompaniments', 51 counter-lines'. The plan reads it
   (`section_levels_of`) and, in a vocabulary whose tokens say it
   (`tokens_say_levels`), gives each part its levels by section
   (`own_section_levels`): where the form's letters are the token song's,
@@ -1055,8 +1055,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   times the tune in 13 and never above 1.21; its 7 counters louder than
   the tune are, bar one, on another sample. The table's 66 outcomes keep
   their order and votes with the field stripped, so every balance draw
-  lands where it did; 17 tokens say same, 34 other (the Dancing Mad pair
-  share one).
+  lands where it did; 17 tokens said same, 34 other (the Dancing Mad pair
+  shared one); the shipped tokens say same in 9, other in 45.
   Since round 84 (2026-11-06) a pitched part's token carries its voices'
   pans as a tenth field (`rhythm.pan_field`: the line voice's median
   right-side share, then each voice beyond the line's in the sixth field's
@@ -1168,7 +1168,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   beat, half to one, one to two, two to four, a bar or more; `-` where
   the class has fewer than two notes), which the plan keeps for the part's
   only and line voices over the `gap_sounds` draws.
-  *`balance`: shape (part); drawn in ?, _plan_once; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
+  *`balance`: shape (part); drawn in _plan_once, kit_piece_hold; conditions bass, bass_habits, cell_handoffs, changes, counter_figures, counter_pairs, counter_shares, drum_group_habits, drums, drums-KSt, drums-KSt@2, drums-c, drums-c@2, drums-h, drums-h@2, drums-o, drums-o@2, drums@2, echo_habits, habits, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, parts, periods, recall_continues, recall_sources, relations, rhythm, second_figures, tempos, tune_grain, values, voice_intervals, voice_moves, voices, voicings.*
   Since round 103 a chord part's token carries two more fields, its
   line's own motion class and its own off-chord tier
   (`rhythm.line_motion`, `rhythm.line_tone_tier`: the line alone, by the
@@ -1185,7 +1185,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   pooled tables once a part, so Battle Theme's token, whose riff moves on
   0.37 of its strikes and rarely leaves the chord, was written
   arpeggiated and decorated on seed 150 (The Terminal of Glass, "spastic
-  and clashing" to the owner on Song Check 85) while every other field
+  and clashing" by ear on Song Check 85) while every other field
   of its accompaniment was Battle Theme's own. Over seeds 1-60, 62 of 67
   chord parts took both fields; the accompaniment's motions went from
   33 arpeggiated, 9 mixed, 5 block as drawn to 28, 13, 8 as used (FFVI
@@ -1210,19 +1210,19 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **sounds** — the share of its gap a part's note sounds. Drawn once a part;
   the writers' note lengths.
-  *`sounds`: shape (part); drawn in _plan_once.*
+  *`sounds`: shape (part); drawn in _plan_once, struck_with.*
 
 - **habits** — a part's density and repetition habit (sparse / medium /
   dense × repeating / mixed / varied), by the tempo band and the part's
   weight. Drawn once a part; conditions the figure tables (`rhythm`,
   `drums`) so a dense part draws dense bars.
-  *`habits`: shape (part, tempo, weight); drawn in _plan_once, compose, game_habits, habit_near, melody_models, write_melody, write_upper; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
+  *`habits`: shape (part, tempo, weight); drawn in _plan_once, compose, game_habits, habit_near, melody_models, write_melody, write_upper; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums@2, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
 
 - **bass_habits**, **drum_habits**, **drum_group_habits** — the bass's
   habit (density, tones, octaves); the kit's density habit; each drum
   group's own habit given its backbone slot's strike class (round 81) and
   the kit's. Drawn once; condition `bass`, `drums` and the group figures.
-  *`bass_habits`: shape (part, tempo, weight); drawn in _plan_once, write, write_bass; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_habits`: shape (part); drawn in _plan_once; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_group_habits`: shape (part, classes, habit); drawn in _plan_once; conditions bass, cell_handoffs, changes, drums, drums-KSt, drums-c, drums-h, drums-o, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
+  *`bass_habits`: shape (part, tempo, weight); drawn in _plan_once, write, write_bass; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums@2, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_habits`: shape (part); drawn in _plan_once; conditions bass, cell_handoffs, changes, drum_group_habits, drums, drums@2, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings · `drum_group_habits`: shape (part, classes, habit); drawn in _plan_once; conditions bass, cell_handoffs, changes, drums, drums@2, half_recall, kit_pieces, lengths, melody_recall, moves, pair_bar_recall, pair_recall, part_entries, part_speeds, part_textures, recall_continues, recall_sources, relations, rhythm, tune_grain, values, voicings.*
 
 - **voicing_habits**, **motions** — an upper part's richness (thin, full,
   rich) and how it moves through its tones (block, mixed, arpeggiated).
@@ -1232,7 +1232,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   own motion class (the token's twelfth field, `rhythm.line_motion`)
   takes it in place of the draw for the line's walk; the voices beside
   the line keep the draw, and a part without the field draws as before.
-  *`voicing_habits`: shape (part); drawn in _plan_once, write_upper; conditions voicings, widths · `motions`: shape (part); drawn in _plan_once, write_upper.*
+  *`voicing_habits`: shape (part); drawn in _plan_once, write_upper; conditions tone_degrees, voicings, widths · `motions`: shape (part); drawn in _plan_once, write_upper.*
 
 - **layers** — what each voice of a part beside its line does, by its rank
   (the busiest first): doubling at an interval, alternating, or apart (how
@@ -1363,7 +1363,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   line stays at 0.06 to 0.08 (its voice words put it on scale steps from
   the tune's note; only a counter written as a line of its own holds the
   draw), and the voices beside the tune stay on the scale (LIMITS).
-  *`off_scale`: shape (part, mode, place); drawn in _plan_once; conditions nothing.*
+  *`off_scale`: shape (part, mode, place); drawn in _plan_once, write; conditions nothing.*
 
 - **clashes** — a part's share of onsets that fall under a sounding
   note of a part written before it and sit a semitone (one or eleven, mod
@@ -1399,7 +1399,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   lines: a parallel at a third follows its line into the band's semitones
   with no word of its own, and an apart voice in a dense band finds no
   clear tone in VOICE_TRIES draws (LIMITS).
-  *`clashes`: shape (part, place); drawn in _plan_once; conditions nothing.*
+  *`clashes`: shape (part, place); drawn in _plan_once, late_stretch_notes, write; conditions nothing.*
 
 - **tune_grain** — the tune's grain, since round 66: the share of its
   onsets off the beat as a class (`rhythm.GRAINS`: on-beat under 0.25,
@@ -1451,7 +1451,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   vocabulary whose tokens say no feel (one counted before round 147).
   Drawn apart from the token it had written 120 of 400 seeds in the
   other feel than their token song's.
-  *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-c, drums-h, drums-o, rhythm, second_figures.*
+  *`feels`: shape (part); drawn in _plan_once; conditions bass, counter_figures, drums, drums-KSt, drums-KSt@2, drums-c, drums-c@2, drums-h, drums-h@2, drums-o, drums-o@2, drums@2, rhythm, second_figures.*
 
 - **layer_samples** — the samples a layered part's line and second voice
   play, as a pair of the pack's sample names, for every part the plan
@@ -1674,7 +1674,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   on their own stream, and stand for a vocabulary counted before the
   field. Pooled, the word put a level step where its song has none: a
   tune on Fanfare's token, 0.8 and then 2.0.
-  *`section_levels`: shape (part, form); drawn in _plan_once, plan_section_levels.*
+  *`section_levels`: shape (part, form); drawn in plan_section_levels.*
 
 - **section_fills** — what a voice does in a section's last bar against
   the section's bars before, by its part, whether it is the part's line
@@ -1697,6 +1697,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 125 a song whose form is its token song's takes that
   song's own (the balance token's twenty-second field) and does not
   draw this word.
+  *`section_fills`: shape (part, voice, place); drawn in plan_section_fills.*
 - **section_densities** — a part's density tier in each own section of
   the form against its song density, by the part and the step the
   section's level makes, round 101: `d+` where the part's notes a bar in
@@ -1705,7 +1706,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   section's level (section_levels) is 1.5 or over, `down` at 0.67 or
   under, `same` between (`rhythm.DENSITY_STEP`, `level_step`). Why: Song
   Check 82's Inner River Crossing doubled its accompaniment for its last
-  part on the same figure, a bare volume move the owner heard as strange.
+  part on the same figure, a bare volume move heard as strange.
   The level step came from The Mines of Narshe, whose accompaniment doubles
   in its last section while going from 2 notes a bar to nearly 8 and up an
   octave; counted over all of FFVI's 803 part-sections, a level step up
@@ -1743,7 +1744,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 125 a song whose form is its token song's takes that
   song's own (the balance token's twenty-second field) and does not
   draw this word.
-  *`section_densities`: shape (part, step); drawn in _plan_once, plan_section_densities.*
+  *`section_densities`: shape (part, step); drawn in plan_section_densities.*
 
 - **part_entries** — where inside a section a part present in it enters
   and leaves: `whole` (its first bar to its last), `enters:k` (its first
@@ -1771,7 +1772,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 124 a song whose form is its token song's takes that
   song's own entrances (the balance token's twenty-first field); the
   word is drawn all the same and stands for a song whose form is drawn.
-  *`part_entries`: shape (part, habit, form, length); drawn in _plan_once, plan_texture.*
+  *`part_entries`: shape (part, habit, form, length); drawn in plan_texture.*
 
 - **sample_lengths** — the shortest note a song plays a sample at, as a
   class of its tenth-percentile note length in ms (40, 60, 80, 120, 160,
@@ -1834,7 +1835,7 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **form** — a part of the form as new, again or back, by its index. The
   fallback chain when no `letters` table exists.
-  *`form`: shape (part, meter, index); drawn in plan_form; conditions part_entries, part_textures, phrase_letters, section_levels.*
+  *`form`: shape (part, meter, index); drawn in plan_form, plan_loop; conditions part_entries, part_textures, phrase_letters, section_levels.*
 
 - **lengths** — a part's length in bars, by the meter and the song's length
   habit. Drawn a part; a repeated part is as long as the part it repeats.
@@ -1904,7 +1905,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   songs hold seven kits, and the table's smoothing had handed a medium
   song a dense kit); the writer's kit is these pieces, a hit on any other
   dropped.
-  *`kit_pieces`: shape (part, habit); drawn in _plan_once; conditions drums.*
+  *`kit_pieces`: shape (part, habit); drawn in _plan_once; conditions drums, drums@2.*
 
 - **phrase_letters** — a part's phrases as letters: the theme head again
   (`T`), an earlier head again (`r`), or new (`n`), by how many phrases the
@@ -2430,7 +2431,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   share the tune is over (0.17 to 0.16 of phrase ends a semitone from the
   band, FFVI 0.06: the ending degree is the key's, not the cadence
   chord's, a limit).
-  *`recall_moves`: shape (part, recall, chord); drawn in melody.*
+  *`recall_moves`: shape (part, recall, chord); drawn in write.*
 
 - **values** — a melody note held or detached, by its value and the song's
   articulation habit. Drawn a note; the tune's note lengths, until round
@@ -2540,7 +2541,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   density over `score.ECHO_WET`, which had sent 0.24 to 0.6 of full; the
   sound set's habits stand where a vocabulary has no echo word, and the
   song's message says which.
-  *`echo`: shape (part); drawn in echo_word.*
+  *`echo`: shape (part); drawn in _plan_once, compose, echo_of, echo_word, hand_off_cells, write_melody.*
 
 - **attacks** — whether a part's line plays a struck sample or a
   sustaining one, since round 73 (2026-10-31): `struck` where the sample's
@@ -2592,7 +2593,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   of the pack's other tonal samples when the pool reaches nowhere near the
   top; never a random one (`whole.best_sample`). FFVI plays a sample more
   than an octave above its recording in 0 to 2 % of notes; the written
-  songs had in 8 to 10 %, the shrillness the owner heard: the old fit had
+  songs had in 8 to 10 %, the shrillness heard by ear: the old fit had
   asked only that the register's centre lie near the range, and by the
   pack's prefixed names it had found no range at all. Since round 34 the sample comes before the
   notes: `whole.samples_for` runs before the writing, fitted for speed to
@@ -2611,7 +2612,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   voices only: the bass line still wrote 24 % of its notes past its
   sample's widest band, the melody 2 %; Whole 02's counter at 84 on a
   sample one song plays to 88 and eleven to 80 or under was its blip).
-  The edge the owner kept in round 32a stays in kind: a draw past the
+  The edge kept in round 32a stays in kind: a draw past the
   bound folds by octaves into it (`writer.in_register`).
   *`ranges`: shape (part, role); drawn in samples_for.*
 
@@ -2633,7 +2634,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   them, so the slot keeps the key's move where the game struck the sample
   there and stops at the game's nearest rate where it did not; a pair the
   game never struck has no wall.
-  *`kit_rates`: shape (part, piece); read in kit_rate_wall.*
+  *`kit_rates`: shape (part, piece); read in _plan_once, kit_piece_rate, kit_rate_wall.*
 
 - **kit_seconds** — whether a kit letter's hit takes the slot's second
   sample or the slot's own, by the letter and the hit's place in the beat
@@ -2661,7 +2662,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   the guitar's chugging. The written kit had played the slot's one sample
   on every hit (round 80's pick of the loudest), so a third of kit songs
   lost the open-hat lift.
-  *`kit_seconds`: shape (part, place); drawn in kit_second_pick, write.*
+  *`kit_seconds`: shape (part, place); drawn in _plan_once, kit_second, kit_second_pick, write.*
 
 - **part_samples** — the sample a part's line plays (the melody, bass,
   accompaniment, harmony, arp; the counter's is `counter_samples` and
@@ -2718,8 +2719,8 @@ The words are grouped by where the writing draws them, in the order the song is 
   the old one a counter-line (an accompaniment where a counter exists).
   Why: the reader picks the melody by variety with a quarter of the
   loudest raw volume as its only loudness test, and in one FFVI song of
-  seven that voice sits 9 dB or more under the whole; put to the owner's
-  ear voice by voice, every such song had its tune elsewhere, and every
+  seven that voice sits 9 dB or more under the whole; checked by ear
+  voice by voice, every such song had its tune elsewhere, and every
   heard label was right. Every word counted on the melody (the tune's
   cells, pairs, hooks, levels, sample, habit) counts on the lead.
   The pass writes into the readings and a game read again loses it:

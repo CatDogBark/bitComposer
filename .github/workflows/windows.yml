@@ -107,7 +107,7 @@ jobs:
           dist\bitComposer\bitcomposer-cli.exe --version
       # Code signing (Azure Artifact Signing, the certificate in the name of
       # Enlightened Solutions LLC): release builds only, that is tags and
-      # runs started by hand; pushes and pull requests build unsigned. With
+      # runs started by hand; pull requests build unsigned. With
       # the environment not set up yet, every build is unsigned and says so.
       - name: Signing for this build?
         id: sign
@@ -212,11 +212,11 @@ jobs:
                                 live mixer, keep or prune, settings for what it composes. Needs nothing else.
                                 Closing the window leaves it playing in the tray; quit from the tray menu.
                                 Ctrl + and Ctrl - zoom the window, Ctrl 0 resets.
-          bitcomposer-cli.exe   the command line, e.g.  bitcomposer-cli -n 10 --sound megamanx -d "%USERPROFILE%\Music\bitComposer"
+          bitcomposer-cli.exe   the command line, e.g.  bitcomposer-cli -n 10 --classic --sound megamanx -d "%USERPROFILE%\Music\bitComposer"
 
           Songs are Impulse Tracker (.it) files and play in any tracker player as well (XMPlay, OpenMPT).
 
-          Style packs: ffvi, mana, evermore, megamanx. Leave the pack on "random" and half the SNES songs draw one.
+          Classic's style packs (--classic): ffvi, mana, evermore, megamanx. Leave the pack on "random" and half of Classic's SNES songs draw one.
           Windows SmartScreen may warn because the executables are not code-signed; "More info" then "Run anyway".
           "@ | Set-Content -Path pkg/README-WINDOWS.txt
           Copy-Item pkg/README-WINDOWS.txt dist/bitComposer/

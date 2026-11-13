@@ -7,7 +7,7 @@ Read CONTRIBUTING.md first: it covers the tests, the analyzer tables, the byte-i
 ## Branches, CI and pull requests
 
 - `main` holds released code and nothing else. Work goes into `dev` through pull requests, one topic each, and `dev` merges into `main` for a release (CONTRIBUTING.md, Branches).
-- CI as the workflows define it: `ci.yml` (the unit tests on Python 3.10 to 3.14, plus the vocabulary-map check) runs on every pull request into `dev` and into `main`, and on pushes to `main`. The Windows build (`windows.yml`) runs only on pull requests into `main` and on `v*` tags.
+- CI as the workflows define it: `ci.yml` (the unit tests on Python 3.10 to 3.14, plus the vocabulary-map check) runs on every pull request into `dev` and into `main`, and on pushes to `main`. The Windows build (`windows.yml`) runs only on pull requests into `main`, on `v*` tags, or by hand.
 - Before calling a pull request ready, run the whole suite locally with the player's dependencies (Qt offscreen; a skip is not a pass), plus CONTRIBUTING.md's byte-identical check when generator code changed. For a change that could break Windows, start `windows.yml` by hand on the branch (`gh workflow run windows.yml --ref <branch>`), since pull requests into `dev` don't run it.
 - Generator changes are judged by measured metrics (`tools/analyze.py` tables before and after, as CONTRIBUTING.md describes), never by ear alone.
 - A generator refactor must leave every song byte-identical: CONTRIBUTING.md's two loops (Classic on every `--sound`, then written songs, over fixed seeds) and a sha256 diff. Without `--classic` the CLI writes a written song and does not read `--sound`.

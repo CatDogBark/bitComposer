@@ -84,8 +84,8 @@ def build_parser():
         choices=["chip", "snes", "genesis", "bit", "ffvi", "mana", "evermore", "megamanx", "random"],
         default="random",
         help="The sound in one word: a palette (chip, snes, genesis) or a style pack "
-             "(ffvi, mana, evermore, megamanx). Overrides --style and --pack. "
-             "random: drawn with the packs together weighing as much as plain snes (default)",
+             "(bit, ffvi, mana, evermore, megamanx). Overrides --style and --pack. "
+             "random: drawn with the four games' packs together weighing as much as plain snes, bit as one of them (default)",
     )
     parser.add_argument(
         "--style",
@@ -169,7 +169,8 @@ def build_parser():
         "--pack",
         choices=["bit", "ffvi", "mana", "evermore", "megamanx", "none", "random"],
         default="random",
-        help="Style pack: an instrument set with the habits of the scores it imitates (random: half of snes songs)",
+        help="Style pack: an instrument set with the habits of the scores it imitates "
+             "(random: bitComposer's own set; with --classic, half of snes songs)",
     )
     parser.add_argument(
         "--pack-file",

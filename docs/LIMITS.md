@@ -10,21 +10,21 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   2026-11-06, Song Check 70). The balance token brings one FFVI song's
   band as one unit, its instruments, levels, pans, channels and kit, and
   the notes come from the pooled tables. FFVI's kits are idiosyncratic:
-  16 of its 47 are a single lone piece, and several hinge on one odd
-  sample (The Mines of Narshe's dull footstep burst on every beat, Cyan's
-  sizzle, Wild West's blip; the Battle Theme's "pitched rattle" was the
-  game's guitar, read as an instrument since round 102). Under its
-  own music each belongs; under a tune, counter and pad from the pool the
-  same kit can read as clapping or as a bell. The Endless Valley's kit is
-  The Mines of Narshe's, the same sample, rate, level, pan and figure,
-  heard beside the game's own rendering by the owner: the sounds are the
-  game's. Where the realization went further than the game ever did, it
-  was a fault and was fixed (round 88: a tuned slot moved an octave past
-  the game's rates). Expect roughly a third of written songs to carry a
-  one-piece kit, as a third of FFVI's songs do. What could change it: a
-  count of how a kit's character relates to the rest of its band in FFVI
-  (whether a lone-thud kit ever sits under a melody-led song); if it
-  never does, a word is in that.
+  12 of the 44 its tokens name are a single lone piece, and several
+  hinge on one odd sample (The Mines of Narshe's dull footstep burst on
+  every beat, Cyan's sizzle, Wild West's blip; the Battle Theme's
+  "pitched rattle" was the game's guitar, read as an instrument since
+  round 102). Under its own music each belongs; under a tune, counter
+  and pad from the pool the same kit can read as clapping or as a bell.
+  The Endless Valley's kit is The Mines of Narshe's, the same sample,
+  rate, level, pan and figure, heard beside the game's own rendering:
+  the sounds are the game's. Where the realization went further than the
+  game ever did, it was a fault and was fixed (round 88: a tuned slot
+  moved an octave past the game's rates). Expect roughly one written
+  song with a kit in four to carry a one-piece kit, as 12 of FFVI's 44
+  do. What could change it: a count of how a kit's character relates to
+  the rest of its band in FFVI (whether a lone-thud kit ever sits under
+  a melody-led song); if it never does, a word is in that.
 - **Every song is in 4/4.** The form and texture tables were counted at
   one meter; FFVI's four 3/4 songs lend no bars (round 81). A meter word
   is the first audit's rule #8, standing.
@@ -453,15 +453,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   round 148 the plan takes the feel the token says (`feel=`), and every
   tune is held to its song's places. The figure tables are drawn by the
   feel a part at a time: a triple song's bass and its kit each draw a
-  triple song's bars, and which bar of one sits over which bar of the
-  other no word says. Over the 68 songs the bass plays two against the
-  kit's three, or three against its two, in 144 of 965 bars where it did
-  in 106 of 962 (the game's 217 of 949, a fifth of the bars or more in
-  12 songs), and over the 11 songs the round changes that have a bass
-  and a kit the bass strikes 0.53 of its notes with a kit hit at the
-  median where it struck 0.65 (their FFVI songs' 0.77). Round 149 holds
-  the bass and the tune to the kit. A vocabulary counted before round
-  147 says no feel on any token and keeps the pooled draw
+  triple song's bars. Since round 149 the bass's and the tune's notes
+  strike with the kit as often as their token song's (`with_kit`); which
+  bar of a chord part sits over which bar of the kit no word says. Over
+  the 68 songs the bass plays two against the kit's three, or three
+  against its two, in 103 of 965 bars (144 after round 148, 106 before
+  it; the game's 217 of 949, a fifth of the bars or more in 12 songs),
+  and strikes 0.87 of its notes with a kit hit at the median (0.72 after
+  round 148; the game's 0.83). A vocabulary counted before round 147
+  says no feel on any token and keeps the pooled draw
   (`tokens_say_feel`).
 - **A bar moved onto its song's places keeps its notes.** Since round
   147 the notes of a bar that would put the tune over its song's share
@@ -469,13 +469,13 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   its pitches as they were: a note that passed between two beats is
   then heard on one. Of the rhythms as near, the one that brings the
   fewest notes onto a beat off the chord is taken; over the 68 Song
-  Check 100 songs the tunes' strong-beat notes on the chord go from
-  0.479 to 0.473 (the songs' rates 0.58 at the mean), and the chord
-  reader hears a change of chord over a held bass note in 292 of 1,310
-  changes (0.22) where it heard 277 of 1,298 (0.21; FFVI 0.13), more
-  in eleven songs and fewer in six. A bar moved changes what the bar
-  and half-bar urns hold, so the bars after it are not always the bars
-  they were: in a tune the places change, 0.56 of its bars are the
+  Check 100 songs (at round 147) the tunes' strong-beat notes on the
+  chord go from 0.479 to 0.473 (the songs' rates 0.58 at the mean), and
+  the chord reader hears a change of chord over a held bass note in 292
+  of 1,310 changes (0.22) where it heard 277 of 1,298 (0.21; FFVI 0.13),
+  more in eleven songs and fewer in six. A bar moved changes what the
+  bar and half-bar urns hold, so the bars after it are not always the
+  bars they were: in a tune the places change, 0.56 of its bars are the
   same note for note and 0.66 the same rhythm.
 - **The half beat is not held.** The token's places are those finer
   than the half beat; a written tune's notes on the half beat are the
@@ -557,13 +557,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   masks.** Its bar is a mask over the tune's bar; since round 147 a
   bar off its song's places takes the nearest mask the table knows
   that keeps them, and where the table knows none the word is drawn
-  again (75 of the 86 such bars over the 68 Song Check 100 songs),
-  which gives the bar other onsets and draws the line's notes after
-  it again: in a counter-line the places change, 0.35 of its bars are
-  the same note for note. The bars the theme band and the hand-offs
-  give the line, and the voice beside it, are not asked: counted on
-  the part as finally written, 18 of 210 held counter-lines are over
-  a share of their song's line's (138 before), by 111 notes of 22,545.
+  again (75 of the 86 such bars over the 68 Song Check 100 songs, at
+  round 147), which gives the bar other onsets and draws the line's
+  notes after it again: in a counter-line the places change, 0.35 of its
+  bars are the same note for note. The bars the theme band and the
+  hand-offs give the line, and the voice beside it, are not asked:
+  counted on the part as finally written (at round 147), 18 of 210 held
+  counter-lines are over a share of their song's line's (138 before), by
+  111 notes of 22,545.
 - **A theme stated over a thin part of the form is stated again in a
   busy one.** Since round 138 the theme comes back only where its bars
   keep within the bars' own onsets; a phrase the letters name the theme
@@ -773,7 +774,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   what the profile's hold gave them, within their third.
 - **A bass has two voices at most, and the other parts' voices still
   draw their layer word.** Since round 126 a bass's second voice does
-  what its token song's does (a line of its own, or the line again). A
+  what its token song's does (a line of its own, or the line again, and
+  since round 151 a double strikes its song's notes of its own). A
   third bass voice is not written (Dancing Mad's two readings have
   one), a bass whose two voices alternate keeps the pooled draw
   (Fanfare's), and the second voice's busyness comes from the mask word

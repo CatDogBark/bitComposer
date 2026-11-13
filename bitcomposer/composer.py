@@ -43,11 +43,11 @@ STYLES = ["chip", "snes", "genesis"]
 # Chance that a snes song draws a style pack (packs.PACKS) when --pack random.
 PACK_CHANCE = 0.5
 
-# One axis for the listener: a sound is a palette or a pack (a pack is a snes
+# One axis for the user: a sound is a palette or a pack (a pack is a snes
 # palette narrowed to one score). The player and --sound pick
 # from this list; --style and --pack remain as the two halves of it. When
 # everything is left to chance the song draws a sound by these weights: the
-# four packs together carry as much as plain snes.
+# four games' packs together carry as much as plain snes, bit as much as one of them.
 SOUNDS = [*STYLES, *PACK_NAMES]
 SOUND_WEIGHTS = {"chip": 2, "genesis": 4, "snes": 4, **{p: 1 for p in PACK_NAMES}}
 

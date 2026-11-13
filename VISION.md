@@ -32,12 +32,12 @@ outside it, and the measurement tells which.
 
 Classic game audio → hardware emulation → IT reconstruction → musical
 analysis → generation resources → original IT compositions → the
-listener's keeps → analysis of what was kept → refinement ↻
+songs kept by ear → analysis of what was kept → refinement ↻
 
-The listener closes the loop. Every song the player makes is provisional
+Listening closes the loop. Every song the player makes is provisional
 until someone keeps it, and only kept songs feed back into refinement: a
 generator tuned on everything it makes would drift toward what it already
-does. Measurement says where a song sits; the listener says whether it is
+does. Measurement says where a song sits; the ear says whether it is
 worth keeping.
 
 The goal is not to imitate existing songs or to prescribe what a song must
@@ -49,10 +49,10 @@ relationships working together.
 
 - **Now:** the writer, which writes every song from a vocabulary counted
   from a soundtrack's readings (the one that ships, from Final Fantasy VI's
-  67 songs), on bitComposer's own sound set or a game's own samples; the
+  68 songs), on bitComposer's own sound set or a game's own samples; the
   importer, which reads a game's SPC set into a pack of its samples and,
   at 40 songs, a vocabulary of its own; Classic, the 1.x generator, with
-  its seven sounds; the player, with KEEP; the SNES emulator, with its
+  its eight sounds; the player, with KEEP; the SNES emulator, with its
   sound CPU passing all 254,000 SingleStepTests cases and its sound chip
   checked against a reference player, by measurement and by ear; SPC to IT.
 - **Next:** vocabularies fitted on more games; the Sega Genesis, through

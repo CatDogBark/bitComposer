@@ -45,9 +45,12 @@ the signing environment, and only those release tags the PyPI one.
    longest test rather than all of them added up.
 
    The generator's tests need nothing. The player's (`tests/test_player.py`)
-   skip without what CI installs: PySide6-Essentials and jeepney
-   (`pip install PySide6-Essentials jeepney`), libopenmpt (`libopenmpt0` on
-   Debian and Ubuntu) and `dbus-daemon`. A skip is not a pass: have them
+   skip without what CI installs: the package itself (`pip install .`, or
+   `pip install -e .`), which brings PySide6-Essentials and jeepney with
+   `pyproject.toml`'s pins (no PySide6 6.12 on Python 3.10 and 3.11) and
+   puts `bitcomposer-player` on the PATH for the one test that launches it
+   (`SecondLaunch`); libopenmpt (`libopenmpt0` on Debian and Ubuntu); and
+   `dbus-daemon`. A skip is not a pass: have them
    before touching `bitcomposer/player/`. The window's tests run Qt
    offscreen, so no display is needed.
 
@@ -85,6 +88,8 @@ the signing environment, and only those release tags the PyPI one.
 | `emu/` | the SNES sound CPU and SNES chip emulator, in Rust (a second package, `bitcomposer-emu`); see Building the emulator |
 | `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); running the driver (`emulate.py`, needs `bitcomposer-emu`), its writes as notes (`notes.py`), sample pitch (`tuning.py`), SPC to IT (`convert.py` decides, in stages, how IT carries a song; `snes_chip.py` is the SNES chip's sound from a note's registers; `it_song.py` writes the IT song on a row grid and knows nothing of the SNES); `python -m bitcomposer.spc` |
 | `bitcomposer/translate/` | the translator (`docs/TRANSLATOR.md`): a song's played notes read as music (`events.py` the notes, `beat.py` beat and bar, `roles.py` each voice's part, `harmony.py` key and chords, `form.py` its parts and loop, `reading.py` all of it), kept in a database on the user's machine (`store.py`); `measures.py` the yardsticks shared by a soundtrack and the generator's songs; `pack.py` a thin pack from a game's songs; `archives.py` a game's SPC files from a folder, a zip or a set 7-Zip or unar unpacks; `python -m bitcomposer.translate` |
+| `bitcomposer/written.py`, `performance.py`, `score.py`, `vocabularies/` | what the CLI and the player write by default since 2.0 (without `--classic`): `written.py` a song from a vocabulary on a sound set (`compose_written`), rendered through `spc/convert.py`; `performance.py` the player's performance of it (the theme asked for, the echo, the vibrato, the loop twice), kept out of the writer; `score.py` a Classic song as a score of voices for that back end (`--score`); `vocabularies/` the shipped vocabulary (`default.json.gz`) beside the library's and each imported game's |
+| `bitcomposer/translate/` (the writer) | the whole-song writer: `whole/` the plan (`plan.py`, every draw from the tables) and the render (`render.py`); `writer/` each part's line bar by bar; `rhythm/` the counted words and the balance token's fields; `harness.py` a part written into a real song in place of its own; `tables.py` outcomes counted under a context; `packtables.py` the tables a pack carries (`KEPT`); `lead.py` the lead pass (which voice carries the tune) |
 | `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`); `library.py` the packs on this machine, for the player's LIBRARY and SOUNDS screens (import in a worker process, add, export, move a voice, previews) |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
 | `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
@@ -165,8 +170,8 @@ emulator unless `NEEDS` moved). The version lives in `emu/Cargo.toml` and
 2. Tag and push the tag, from `main` once the change is there:
 
    ```bash
-   git tag -a emu-v0.3.2 -m "emulator 0.3.2: one line on what it is"
-   git push origin emu-v0.3.2
+   git tag -a emu-vX.Y.Z -m "emulator X.Y.Z: one line on what it is"
+   git push origin emu-vX.Y.Z
    ```
 
    `emu.yml` runs the Rust tests with the whole instruction suite (fetched
@@ -178,7 +183,7 @@ emulator unless `NEEDS` moved). The version lives in `emu/Cargo.toml` and
    for this workflow file). Pull requests into `main` that touch `emu/`
    build and test the same way and publish nothing, as does a run started
    by hand (`gh workflow run emu.yml --ref <branch>`).
-3. Check: `pip install bitcomposer-emu==0.3.2` in a fresh venv, and
+3. Check: `pip install bitcomposer-emu==X.Y.Z` in a fresh venv, and
    `python -m bitcomposer.spc --to-it song.it game.spc` runs on it.
 
 Where no wheel matches (another architecture, a free-threaded Python,
@@ -262,10 +267,10 @@ it from there and the publish workflow refuses a tag that does not match it.
    main's `docs`) plays the songs in `docs/tracks/`, listed in
    `tracks.json` in two sections: the writer's (`"generator": "writer"`,
    seeds 1 to 5 on the bit set) and Classic's (`"generator": "classic"`,
-   one per sound). When a generator's sound changed, write its section
-   again after step 2 (a Classic song's message names the version that
-   wrote it; a written song's does not): each entry's `command` writes
-   it, with `-o` and `-v` added, e.g.
+   one each for six of its sounds). When a generator's sound changed,
+   write its section again after step 2 (a Classic song's message names
+   the version that wrote it; a written song's does not): each entry's
+   `command` writes it, with `-o` and `-v` added, e.g.
    `python3 -m bitcomposer.cli -s 1 -o "docs/tracks/The Starlit Arcade.it" -v`
    or `python3 -m bitcomposer.cli --classic --sound megamanx -s 24 -o "docs/tracks/Grotto Charge.it" -v`
    (without `--classic` a command writes a written song). Bring the entry

@@ -32,8 +32,8 @@ Each reader is judged by the source that shares nothing with it.
 The emulator's audio arbitrates when the independent decode and the
 readings disagree about a note: the audio has it or it does not. The ear
 arbitrates the felt beat: a composer who wrote at double tempo wrote a
-beat the listener does not clap, and both readings are kept with a note
-that says so.
+beat not clapped by ear, and both readings are kept with a note that
+says so.
 
 ### The independent decode
 
@@ -94,20 +94,20 @@ SPC sets: the readings are driver-agnostic, and a game need not join
      independent decode reads and games it does not; songs the chord
      reader changes chord in most and least; songs read as modal and as
      plainly major or minor; slow and fast; two whose beat is already
-     marked. The listener taps when the harmony changes; no chord is named.
+     marked. A tap marks each change of harmony; no chord is named.
      Six of the twelve are the development set, on which the counting
      level (the beat, the half bar, the bar, or the root-motion rule below)
      is chosen; the other six are held out and give the score. A tap and a
      read change match within half a beat, the taps shifted by the
-     listener's reaction (0.12 s, as the Form Check page found). Scored:
+     reaction time (0.12 s, as the Form Check page found). Scored:
      precision, recall, and the rate ratio (read changes a bar over tapped
      changes a bar).
    - *Tune Check.* Ten songs where the melody voice rests in a third of its
      bars or more (the readings name fourteen in FFVI alone) and others
      from games where a counter-line is read. The full song plays; a
      button per voice (each with a solo to hear it by, named by number, the
-     reader's guess hidden until the marks are saved); the listener holds
-     the voice carrying the tune, switching as it passes, and "none" where
+     reader's guess hidden until the marks are saved), held down for the
+     voice carrying the tune, switching as it passes, and "none" where
      no tune plays. Scored per bar: the reader's tune voice against the
      marked one, over bars where a tune is marked.
    - *Drum Name Check.* Forty drum samples drawn at random over the 39
@@ -155,7 +155,7 @@ SPC sets: the readings are driver-agnostic, and a game need not join
    the shared-vocabulary hypothesis kept or dropped on the new table.
 
 Steps 1 to 3 run unattended and in parallel once the machine has the build
-tools; step 4 needs the listener for about an hour, its pages and scoring
+tools; step 4 needs about an hour of listening, its pages and scoring
 written first; step 5 waits on 2 to 4; step 6 on 5.
 
 ## Where it stands
@@ -226,7 +226,7 @@ songs); the beat grid where the jump falls (step 3's finding); the
 swung grid; a convention for the compound-against-simple level, where the
 written tempo says what the composer counted. The tuning and the decoder
 need nothing. The MIDIs and the comparison stay on the machine with the
-readings; the tools are in `tools/` (on the phase's branch until its PR).
+readings; the tools are in `tools/`.
 
 **Step 3 (2026-10-21): the bar phase, from the composers' jumps.**
 `tools/bar_phase_check.py` scores where each composer's loop jump falls
@@ -238,8 +238,8 @@ half bar off in 20 % and 16 %. A first fix, the bar from where the bass
 lands on a new pitch class, gained on the development half alone (63 %;
 held-out 67 %, 26 songs fixed and 22 broken) and was withdrawn. The data
 was then asked which beat-level signs sit on the downbeat at all
-(`~/diags/bitcomposer/idiom/downbeat_features.py` and `downbeat_combo.py`,
-on Ragnarok beside the readings): over the 580 songs in 4/4 whose jump
+(`downbeat_features.py` and `downbeat_combo.py`, scratch tools, not in
+the repository): over the 580 songs in 4/4 whose jump
 lands on a read beat, accents by level put 30 % of their mass on the
 composer's beat (chance 25 %), the bass's onsets 34 %, its pitch-class
 changes 41 %, the chord reader's changes 36 %, a note held two beats or
@@ -258,8 +258,8 @@ on the line alone 53 to 59 % held-out; 102 held-out songs fixed, 46
 broken; every game gains but two (Mega Man X 62 to 38 % on 13 songs,
 DKC3 56 to 50 % on 18); the 41 tapped beats unchanged (40 right). The
 jumps that land a beat *before* the read line grew (78 to 100 held-out):
-a loop that starts on a pickup, or a repeat found a beat late; only a
-listener's downbeats can tell them apart, so a short tap round (the one,
+a loop that starts on a pickup, or a repeat found a beat late; only
+downbeats marked by ear can tell them apart, so a short tap round (the one,
 on the chord and tune sets' songs, about fifteen minutes) is proposed
 before the pickup is scored either way.
 
@@ -286,12 +286,12 @@ read change F1 0.70 (the reader changes twice a bar, 1.96 against the
 1.00 heard). Kefka (marked "hard", from the harmony voices alone): 13
 marks over 59 s, mostly one every two bars; the reader makes 3.6
 changes for each heard, F1 0.43 over every change and 0.52 on bar lines
-(`~/diags/bitcomposer/idiom/chord_score.py`).
+(`chord_score.py`, a scratch tool, not in the repository).
 
-**Step 4 (2026-10-21): the chord changes, against the listener's marks.**
-All twelve songs are marked (the page's collection `chordtaps1`, kept as
-`~/diags/bitcomposer/idiom/chords/heard-chords.json` on both machines
-with `chord_review.py`, `chord_score.py` and `chord_eval.py` beside it):
+**Step 4 (2026-10-21): the chord changes, against the ear's marks.**
+All twelve songs are marked (the page's collection `chordtaps1`, kept
+outside the repository with the scratch tools `chord_review.py`,
+`chord_score.py` and `chord_eval.py`):
 Kefka twice, the second pass counting, marked "hard"; three songs with
 no change heard at all (Underground Castle, Harid's Theme, Welcome to
 Your Sanctuary: "the same chord with things happening on top"). Against
@@ -299,8 +299,8 @@ the notes themselves (the bass's most-sounded pitch class a bar and the
 chordal voices' pitch set, `note_changes.py`), the marks are confirmed
 in eight songs (F1 0.89 to 1.00), half caught in the one fast song
 (Gourmet Race, 169 BPM, a change every bar or two: the limit of tapping
-at speed), and differ in Harid's Theme and Hall of Collosia, where the
-listener hears a stable ground under moving lines, and in Kefka, where
+at speed), and differ in Harid's Theme and Hall of Collosia, where a
+stable ground is heard under moving lines, and in Kefka, where
 the marks fall half a bar from the read bar lines. The taps run 0.25 s
 late with a 0.17 s spread on Hyrule Field and about 0.4 s late on slow
 songs with soft attacks, so a mark is moved 0.25 s earlier and matched
@@ -336,10 +336,10 @@ motion over a static bass (Harid, Collosia), Kefka's half-bar offset
 counting level for fast songs, and the role reader finding no bass in
 Collosia or Still of the Night.
 
-**Step 5 (2026-10-22): the tune's carrier, against the listener's marks.**
-All ten songs are marked (the page's collection `tunemarks1`, kept as
-`~/diags/bitcomposer/idiom/tune/heard-tunes.json` with `tune_check_db.py`,
-`tune_rules.py` and `voice_features.py` beside it). Two have no tune at
+**Step 5 (2026-10-22): the tune's carrier, against the ear's marks.**
+All ten songs are marked (the page's collection `tunemarks1`, kept
+outside the repository with the scratch tools `tune_check_db.py`,
+`tune_rules.py` and `voice_features.py`). Two have no tune at
 all: Jungle (drums, bass and noises where a tune would be) and Toughness
 (a distorted layer that the rip set's own "Noiseless" variant removes;
 our render matches Game Music Emu's within 2 dB in every band, so it is
@@ -352,8 +352,8 @@ lead two bars in four); one has its tune in the bass for its first 24 s
 20 % of the bars a carrier was marked in: three times it had chosen a
 voice with a handful of notes in the whole song (Super Mario World's
 Overworld, Escargo Express, Celes's intro voice), elsewhere a quiet high
-line under a louder one, and once the louder twin of an echo pair the
-listener named by the quieter (Gang-Plank Galleon's voice 6 repeats voice
+line under a louder one, and once the louder twin of an echo pair
+marked by the quieter (Gang-Plank Galleon's voice 6 repeats voice
 2's every note 150 to 200 ms later at a third of its level, missed by an
 echo rule asking for one delay to 4 ms). Changes, in `roles.py`: a melody
 candidate must have a note on a quarter of the song's beats, at a quarter
@@ -381,23 +381,23 @@ or meter. Open: a carrier that varies in time (the plan's composite
 line), the harmonized second voice as a role of its own, the tune in the
 bass, and the beat's dependence on which voices it is read from.
 
-**Step 6 (2026-10-22): the drum names, against the listener's.** All
-forty sounds named (the page's collection `drumnames1`, kept as
-`~/diags/bitcomposer/idiom/drums/heard-drums.json` with `drum_score.py`
-and `drum_namer.py` beside it); four set aside where the voice plays
-several drums in the clip and the listener named the clip as a whole
+**Step 6 (2026-10-22): the drum names, against the ear's.** All
+forty sounds named (the page's collection `drumnames1`, kept outside the
+repository with the scratch tools `drum_score.py` and `drum_namer.py`);
+four set aside where the voice plays
+several drums in the clip and the clip was named as a whole
 (Boss Battle, Cotton Island, Final Battle, Stage 9), a flaw of the page,
 which marked the sample's own hits but asked about "the sound". Of the
-thirty-six, he named a kick, snare or hat in fourteen, a tom in four, a
+thirty-six, a kick, snare or hat was named in fourteen, a tom in four, a
 cymbal in three, and "something else" in fifteen, with notes: bells, a
 whistle, a horn, an alarm, a shaker, a washboard, a cowbell, electronic
 noises, and one silence (the Noiseless Toughness rip mutes the voice; the
 sample is one empty block). So a third of the samples drawn as drums are
 no drums: the drum role takes any voice playing one or two pitches a
 sample, sound effects and one-note instruments with it. The namer as it
-was agreed with his kicks, snares and hats in 64 % by the sound and 43 %
+was agreed with the kicks, snares and hats in 64 % by the sound and 43 %
 by how the sample is played; it refused snares with a little pitch
-(three), had no tom and no cymbal, and called nine of his non-drums hats.
+(three), had no tom and no cymbal, and called nine of the non-drums hats.
 The rule is rewritten (`drums.name`, the play no longer consulted): a low
 sound is a kick, a tom (centroid under 500 Hz, ringing past a thud) or a
 deep snare; noise with a body a snare, or a rim when over within 50 ms;
@@ -405,10 +405,10 @@ bodiless noise a closed hat, a gated snare when dark, an open hat or a
 cymbal by its ring; a plainly pitched tone held or looped no drum
 ("none"); a pitched tone with a body a snare. Against the generator's own
 kits, whose names are known: 50 of 51 (the chip crash, a bright 0.18 s
-burst, reads as a hat). Against the ear: **his kicks, snares and hats
+burst, reads as a hat). Against the ear: **the kicks, snares and hats
 agreed in 12 of 14 (86 %)**, the four toms all, one cymbal of three (the
 other two are bright bursts ringing under a quarter second, hats by
-every measure), and of his fifteen non-drums the namer says other or
+every measure), and of the fifteen non-drums the namer says other or
 none for six, hat for five, snare for two, tom for one; over all
 thirty-six classes agree in 22 (61 %). The 85 % criterion is met on the
 set the rule was built from, so a second draw is needed before it
@@ -464,8 +464,8 @@ sixty songs the development half and the second the held-out:
 - **The drums:** the kit's presets named by their sound, 50 of 51.
 
 **The loop reader (2026-10-22).** Against the written loops of the
-independent decode, over the 1040 songs with a read grid
-(`~/diags/bitcomposer/idiom/loop_eval.py`): the same length in 70 %, 44
+independent decode, over the 1040 songs with a read grid (`loop_eval.py`,
+a scratch tool, not in the repository): the same length in 70 %, 44
 songs two bars short, 22 missed outright. Two bars short (Snowman's Town,
 Lostside Marshes): a short run at a lag two bars under the loop's chained
 onto the loop's own full run and won the tie as the shorter lag; the
@@ -520,7 +520,7 @@ A tolerance missed is not a reason to lower it: the miss is recorded and
 the reader fixed, or the plan says why the reader cannot be fixed yet and
 what that costs the tables that depend on it.
 
-## What the listener is asked for
+## What the ear is asked for
 
 About an hour, in three sittings if preferred: the chord-change taps
 (twelve songs, each once through), the tune marks (ten songs), the drum
@@ -538,7 +538,7 @@ pages did. Nothing else in the phase needs an ear.
 - A key check by ear, since the scale reader moved half the collection's
   keys on the generator's evidence alone (step 3).
 - The form's level: the reader's 4- and 8-bar parts against the sections
-  the generator planned and the listener marked.
+  the generator planned and those marked by ear.
 - What to do with the 222 songs the beat reader follows loosely: scored
   separately, since a loose grid rounds nothing.
 - How much of the drum namer's rule survives the forty.
