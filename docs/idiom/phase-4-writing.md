@@ -10968,7 +10968,9 @@ its second part again after that. Shadow is drawn less under the
 player's asking (1 seed of 400 where 3 were). The kit's piece that
 plays in some bars of a part of the form may rest through it.
 
-**Not yet heard.** With round 155's songs, before the merge.
+**Heard.** Four pairs on the same seeds before the merge, a song on each of
+the four tokens: passed by ear. On Fanatics's the chant was heard holding
+one note through its second part, which round 156 takes up.
 
 ### Round 155: a kit keeps its song's pieces where the song has no form (2026-11-13, asked with round 154)
 
@@ -11024,7 +11026,8 @@ takes the pooled textures and entrances for its other parts. And
 Metamorphasis's own main drum voice, read as a roll and filed apart,
 is not in its kit at all.
 
-**Not yet heard.** With round 154's songs, before the merge.
+**Heard.** Two pairs on the same seeds before the merge, a song on
+Metamorphasis's token and one on Overture (part 2)'s: passed by ear.
 
 ### Round 156: a harmony's figure of two bars is not written on one chord (2026-11-13, from a chant heard holding one note)
 
