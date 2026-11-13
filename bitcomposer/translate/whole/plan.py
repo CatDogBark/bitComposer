@@ -701,6 +701,25 @@ def whole_song_onsets(parts: list, band: list, onsets: dict, form: list | None, 
     return out
 
 
+def theme_fits(tune_onsets: list | None, theme_bar: int, return_bar: int) -> bool:
+    """Whether the tune can play its theme again at a return (round 157): the theme's own onsets a bar (the token song's
+    for the tune where the theme is stated, `tune_onsets`: plan.section_onsets' list for the melody) within the
+    envelope its writer holds a bar to where the theme returns (envelope_at_for's own: half to one and a half times
+    the song's onsets a bar there). True where the plan has no such onsets for either bar: nothing says the theme
+    cannot come. The tune's writer brings a bar back only where it keeps within that envelope (round 138), and the
+    bass's and the chord parts' the same (round 134); the plan, asked for a theme that returns with the band, copied
+    the theme's chords over the return's bars before any of them was asked. On Fanatics's token the theme, four bars
+    at eight notes a bar on one chord, returns where the tune holds a note a bar: nothing came back but the chord,
+    over the two the part of the form turns about."""
+    if not tune_onsets or not (0 <= theme_bar < len(tune_onsets)) or not (0 <= return_bar < len(tune_onsets)):
+        return True
+    stated, there = tune_onsets[theme_bar], tune_onsets[return_bar]
+    if not stated or not there:
+        return True
+    low, high = writer.TIGHT
+    return max(1, math.ceil(low * there)) <= stated <= max(1, math.floor(high * there))
+
+
 def token_sections(parts: list, band: list, plays: dict, voices: dict, onsets: dict, kit_onsets: dict, layer_onsets: dict, log: list) -> tuple[dict, list, dict, dict]:
     """How busy each part is in each part of the form, as the token song has it (round 125), where the form's letters are
     its own. Returns ({a backing part: [its line's onsets a bar, or None, a bar]}, [the kit's pieces' bounds a bar
@@ -2970,10 +2989,18 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         if theme_bars is not None:
             extras[R.MELODY]["theme_bars"] = theme_bars
             extras[R.MELODY]["returns"] = returns
+            kept = []                                       # a return's bars the tune cannot play the theme in (round 157)
             for r in returns:
                 if "chords" in r["with"]:
+                    if not theme_fits(section_onsets.get(R.MELODY), theme_bars[0], r["bars"][0]):
+                        r["with"] = [x for x in r["with"] if x in band]   # the band's parts alone: the theme's chords would be all that
+                        kept.append(r["bars"][0])                         # came back, and the part of the form keeps its own
+                        continue
                     for a, b in zip(theme_bars, r["bars"]):
                         names[b], chords[b] = names[a], chords[a]
+            if kept:
+                log.append("the theme's return at bar " + ", ".join(str(b) for b in kept) + " brings no chords: the tune's own onsets a bar there "
+                           "are not the theme's, and the part of the form keeps its harmony (round 157)")
             if returns:
                 log.append("theme at bars " + "-".join(str(theme_bars[0]) + "" if len(theme_bars) == 1 else [str(theme_bars[0]), str(theme_bars[-1])]) + "; returns "
                            + ", ".join(f"bar {r['bars'][0]} with {' + '.join(r['with']) or 'the tune alone'}" for r in returns))

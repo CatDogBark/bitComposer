@@ -3031,6 +3031,34 @@ class CounterLineTests(unittest.TestCase):
             out[i] = v
         return f"{role}=" + ":".join(out)
 
+    def test_a_themes_return_brings_no_chords_where_the_tune_cannot_follow(self):
+        """Round 157: asked for a theme that returns with the band, the plan copied the theme's chords over the bars it
+        returns in before any writer was asked whether the theme can come back there. Where the tune's own onsets a bar
+        in the return's part of the form are not the theme's (the theme's outside half to one and a half times them),
+        the tune's writer brings no bar back, and the chords are not copied either."""
+        self.assertFalse(whole.theme_fits([8, 8, 8, 8, 1, 1, 1, 1], 0, 4))                          # eight a bar into a part at one a bar (within 1 to 1)
+        self.assertFalse(whole.theme_fits([2, 2, 5, 5], 0, 2))                                      # two into five (within 3 to 7)
+        self.assertTrue(whole.theme_fits([4, 4, 3, 3], 0, 2))                                       # four into three (within 2 to 4)
+        self.assertTrue(whole.theme_fits([6, 6, 6, 6], 0, 2))                                       # one pace through the song
+        self.assertTrue(whole.theme_fits(None, 0, 4)); self.assertTrue(whole.theme_fits([4, None], 0, 1))   # nothing said of a bar: nothing says it cannot
+        self.assertTrue(whole.theme_fits([4, 4], 0, 9))
+        from bitcomposer import vocabularies
+        models, refused = vocabularies.load("default"), 0
+        for seed in range(1, 41):                                                                   # on the shipped vocabulary: no return brings chords it
+            p = whole.plan(models, seed, "g", max_bars=48, min_bars=16, themed=True, band_returns=True)   # could not bring a tune to, and the plan says
+            mel = p.extras.get("melody") or {}                                                      # each one it left
+            theme, returns = mel.get("theme_bars"), mel.get("returns") or []
+            pace = p.section_onsets.get("melody")
+            said = [l for l in p.log if "(round 157)" in l]
+            kept = [r for r in returns if "chords" not in r["with"] and not whole.theme_fits(pace, theme[0], r["bars"][0])]
+            for r in returns:
+                if "chords" in r["with"]:
+                    self.assertTrue(whole.theme_fits(pace, theme[0], r["bars"][0]), (seed, r))
+                    self.assertEqual([p.chords[b] for b in r["bars"]], [p.chords[a] for a in theme[:len(r["bars"])]], (seed, r))
+            self.assertEqual(bool(said), any(str(r["bars"][0]) in said[0].split(" brings ")[0] for r in kept) if said else False, (seed, said))
+            refused += len(said)
+        self.assertGreater(refused, 0)                                                              # and some of the forty have one
+
     def test_a_line_keeps_its_songs_pace_where_the_form_is_not_its_own(self):
         """Round 153: a token with no form (its song read as one part) says each line's onsets a bar the whole song
         through, and the plan, on whatever form it draws, gives every bar of every line that pace; the writers hold a
