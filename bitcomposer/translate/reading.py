@@ -141,7 +141,7 @@ def echo_of_notes(notes, sample_keys: dict | None = None) -> dict:
     readings key notes by; the source number itself without), as the game toggles a channel's echo note by note (Wild
     West's channel 4 holds its hat dry and its pitched blip wet)}; the three zero where no note sends. FFVI's echo volume is 0.20 of full in 70 of its 82 songs (round 69: quartiles 0.20..0.20), its
     delay 80 ms in every one, its feedback 0.78 at the median (0.55..0.78); the written songs sent at score.ECHO_WET
-    0.4 with a "slap" delay of 48-144 ms, 6 dB wetter than the game ever plays on every sending voice, which the owner
+    0.4 with a "slap" delay of 48-144 ms, 6 dB wetter than the game ever plays on every sending voice, which was
     heard as vibrato and blur."""
     import statistics
     from collections import Counter

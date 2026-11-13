@@ -791,7 +791,7 @@ class WindowHeadless(unittest.TestCase):
             self.assertFalse(json.load(fh)["prereleases"])
 
     def test_get_the_emulator(self):
-        """PACKS' GET THE EMULATOR, on a pipx install: the update screen,
+        """LIBRARY's GET THE EMULATOR, on a pipx install: the update screen,
         worded for it, asks first; GET IT runs pipx with the import extra at
         this very version; a failure says why it may have failed and leaves
         the player as it was; CLOSE goes back to a plain update screen."""

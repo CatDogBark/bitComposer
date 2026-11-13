@@ -415,7 +415,7 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
 def why(g: Gathered, data: dict) -> dict:
     """Why each of the pack's samples is where it is: the parts the readings
     found it playing, in how many songs and how many notes, most first.
-    {voice: [[part, songs, notes], ...]}; the player's PACKS panel shows it."""
+    {voice: [[part, songs, notes], ...]}; the player's SOUNDS screen shows it."""
     key_of = {voice_of(k): k for k in g.where}
     out = {}
     for v in data["samples"]:

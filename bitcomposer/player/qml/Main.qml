@@ -10,7 +10,7 @@
     sentence or a number, the pink bit as the one accent (and the family's
     mark in the tile), green only for ready and playing. Nothing sits on a
     fixed grid: the layout is fluid, the text is real text, the controls are
-    real controls. Styling only, as the owner asked.
+    real controls. Styling only, by decision.
 
     The plumbing is the 1.x window's: `backend` (bitcomposer/player/app.py)
     wraps the engine in-process, state is pushed, the compose settings
@@ -1707,7 +1707,7 @@ ApplicationWindow {
                         value: root.packOpen
                         onPicked: function(c) { root.packOpen = c; root.packVoice = ""; root.packConfirm = ""; root.packRenaming = "" }
                     }
-                    Body { visible: root.packNames.length === 0; text: "No games read yet. The built-in sets (FFVI, Mana, Evermore, Mega Man X) are code and cannot be edited; a game you read under LIBRARY shows its samples here, by part, to hear and to move." }
+                    Body { visible: root.packNames.length === 0; text: "No games read yet. The built-in sets (bitComposer's own, FFVI, Mana, Evermore, Mega Man X) are code and cannot be edited; a game you read under LIBRARY shows its samples here, by part, to hear and to move." }
                     Body { visible: root.packNames.length > 0 && !parent.pack; text: "Pick a game above. Each sample sits where the game played it most; move one when the reading got it wrong. A written song takes its samples from here by part." }
 
                     Panel {

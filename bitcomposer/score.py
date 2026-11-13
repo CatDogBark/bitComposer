@@ -51,7 +51,7 @@ class _Pcm:
         # into the tail after it). The SNES chip has one loop and a key-off ends the note, so with `sustain` that loop
         # is the chip's: the written path asks for it. Read through the plain loop flag alone, every sustaining voice
         # had gone out as a one-shot, a 48 ms square under the tune, pads that plucked, in every written render since
-        # this bridge, the imports' too (2026-10-30). Classic's songs keep their one-shots as they are (the owner's call).
+        # this bridge, the imports' too (2026-10-30). Classic's songs keep their one-shots as they are (a product choice).
         loop = (s.loop_start, s.loop_end) if s.loop else (s.sus_loop_start, s.sus_loop_end) if sustain and getattr(s, "sus_loop", False) else None
         if loop and (loop[1] or 0) > (loop[0] or 0):
             self.loop_start, self.loop_end = int(loop[0] or 0), int(loop[1])

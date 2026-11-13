@@ -4,13 +4,13 @@
 
 The readings pick a song's melody by variety and stepwise motion, with a voice's raw volume as the only loudness test (a
 quarter of the loudest voice's, under a square root in the score). A buried voice with a wide line wins over an audible
-one: in FFVI the labelled melody sits 9 dB or more under the whole in one song of seven, and the owner, hearing each voice
-alone (the FFVI Lead Check, 2026-10-29), named another voice the tune in every one of those and agreed with the label in
+one: in FFVI the labelled melody sits 9 dB or more under the whole in one song of seven, and the FFVI Lead Check
+(2026-10-29), each voice heard alone, named another voice the tune in every one of those and agreed with the label in
 every song where the melody was within 8 dB. So the lead is the labelled melody where it is heard, within LEAD_WINDOW
 dB of the loudest tonal voice as each renders alone (K-weighted loudness over the first minute, the Song Check method),
 else the most varied heard voice (pitch-class entropy, then loudness) among those that are present, not a bass and below
 the tune's ceiling. The voice that was the melody becomes a counter-line, or an accompaniment where the song has a
-counter already. The rule matched 12 of the owner's 14 picks and relabels 9 FFVI songs of 66.
+counter already. The rule matched 12 of the Lead Check's 14 picks and relabels 9 FFVI songs of 66.
 
 This pass renders each tonal voice of each song alone (the emulator and ffmpeg's libopenmpt needed), keeps every voice's
 loudness as a readings feature (source "render", name "voice_lufs_<voice>"), and rewrites the voices' roles in the

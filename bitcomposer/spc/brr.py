@@ -9,10 +9,10 @@ the 15-bit range wraps, which the hardware does and a few samples rely on),
 and played doubled, as 16-bit. The filter arithmetic is the hardware's
 (blargg's snes_spc, Nocash's fullsnes), integer for integer.
 
-The research decoder the built-in packs were profiled with
-(~/diags/bitcomposer/mmx/tools/spcinfo.py) did the same filters at half
-scale without the 15-bit wrap: the two agree to the sample, times two,
-wherever a sample stays in range.
+The research decoder the built-in packs were profiled with (spcinfo.py, a
+scratch tool, not in the repository) did the same filters at half scale
+without the 15-bit wrap: the two agree to the sample, times two, wherever a
+sample stays in range.
 
 A looped sample jumps from its end block to its loop address and carries
 the filter state across. A loop whose first block predicts from the

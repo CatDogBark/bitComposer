@@ -4,7 +4,7 @@ A chord lasts bars, and a listener hears it change where the ground moves:
 the bass settles on another root, or the chordal voices sound another set
 of pitch classes. On the chord check (twelve songs, docs/idiom/phase-1-
 readers.md) a reader that relabelled every beat made 1.4 to 39 times the
-changes the listener marked, flipping on each note of an arpeggio, each
+changes marked by ear, flipping on each note of an arpeggio, each
 step of a bass figure, and each time the texture thinned or filled; the
 bass's most-sounded pitch class in the bar and the chordal voices' pitch
 set, compared bar to bar, matched the marks on most songs. So: each bar's

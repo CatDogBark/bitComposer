@@ -22,7 +22,7 @@ song played earlier, or a new one under the part, the meter, the habit
 and the figure before, in that order, so a figure never seen after this
 one backs off to the habit's own inventory, not the pooled one). A new
 figure must be a bar some song played (the floor serves the likelihood,
-not the writer: its invented bars were the runs the listener heard in
+not the writer: its invented bars were the runs heard by ear in
 Terra) and must be in the song's own manner, read from its bass (Manner),
 and within the song's own bar (envelope): striking between TIGHT times
 as often as the song's bass does in that bar, and the downbeat where
@@ -31,9 +31,9 @@ license a one-note bar where its line starts walking, and its busiest
 bar license sixteenths everywhere; density is the arrangement's, bar by
 bar, like the rests and the volume); placed only on positions in the bar
 the song's bass strikes in RARE of its strikes or more (its feel: Terra
-strikes quarters and triplets, so a sixteenth pickup was the listener's
+strikes quarters and triplets, so a sixteenth pickup was heard as
 "burst"; The Decisive Battle's riff strikes the and-a before beats one
-and three and never the and of two, so straight eighths were his "free
+and three and never the and of two, so straight eighths were heard as "free
 spirited"); and in the song's tones as much as its rhythm: no
 octave-up roots where the song plays none, as many different tones in a
 bar as the song's own bars have (Terra's one, Locke's one to four), the
@@ -48,7 +48,7 @@ before too, since the song's mixture would otherwise bring one figure
 back again and again.
 
 A bass holds its figures over spans and changes with the music, which a
-bar drawn at a time cannot do (the listener: "no section awareness, no
+bar drawn at a time cannot do (by ear: "no section awareness, no
 throughline"). Over the readings' 1,324 basses, 63 % of the bars sit in a
 span repeating a rhythm with a period of one, two or four bars (spans of
 6.6 bars on average), and a new span's rhythm is one an earlier span had
