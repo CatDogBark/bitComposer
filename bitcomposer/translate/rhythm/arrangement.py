@@ -822,12 +822,24 @@ def layer_tokens(song: readings_mod.Song, role: str) -> list | None:
                 struck.get(v, ""),                          # and how it strikes where it is struck with another (round 108: _struck_text)
                 loop_field(song, voices[v]) if role in cells_mod.BACKING else "",   # and its loops by the form's letters (round 121)
                 section_onsets_field(song, voices[v]),      # and its onsets a bar by them (round 125)
-                "v" + (layer_word(voices[line], voices[v]) or "").replace(" ", "_") if role == R.BASS and layer_word(voices[line], voices[v]) else ""]   # and, a
-                                                            # bass's, what it does beside the line, the layers word's own outcome (round 126)
+                bass_layer_text(voices[line], voices[v]) if role == R.BASS else ""]   # and, a bass's, what it does beside the line, the layers
+                                                            # word's own outcome (round 126), and what a doubling does of its own (round 151)
         while subs and not subs[-1]:                        # a sub-field a voice lacks is left off the end
             subs.pop()
         out.append("@".join(subs))
     return out
+
+
+def bass_layer_text(line: list, other: list) -> str:
+    """A bass's voice beside its line as the tenth sub-field of the token's sixth field: "v" and the layers word's
+    outcome for it (layer_word, round 126), with what a doubling voice does of its own after it (doubling_own, round
+    151), the spaces as "_": "vapart_+0_denser", "vdoubling_+0", "vdoubling_+0_sounds_0.10_between_-5_0.50"; "" where
+    the word cannot be read."""
+    word = layer_word(line, other)
+    if not word:
+        return ""
+    own = doubling_own(line, other) if word.startswith("doubling") else ""
+    return "v" + (word + (" " + own if own else "")).replace(" ", "_")
 
 
 RELATION_LETTERS = {R.MELODY: "m", R.COUNTER: "c", R.ACCOMP: "a", R.HARMONY: "h", R.ARP: "r", R.BASS: "b"}   # a relation's target part
@@ -3176,6 +3188,49 @@ def layer_units(songs) -> list:
                 if outcome is not None:
                     out.append(tables.Unit(s.sid, s.game, outcome, {"part": role, "rank": str(min(rank, 4))}))
     return out
+
+
+DOUBLE_NOTES = 8                     # notes a doubling voice needs, struck with the line or alone, for a word of how it does (round 151)
+DOUBLE_SHORT = 0.75                  # a doubling voice's notes at this share of the line's or under are shorter than the line's
+DOUBLE_ALONE = 0.25                  # of its onsets struck where the line strikes none: this share or more are notes of its own
+
+
+def doubling_own(line: list, other: list) -> str:
+    """What a voice that doubles its line does of its own (round 151), as words after the layers word in a bass's token
+    (layer_tokens): "sounds 0.10" where its notes are shorter than the line's notes they are struck with, the median of
+    its length over the line's (DOUBLE_SHORT or under, over DOUBLE_NOTES such notes); "between -5 0.50" where
+    DOUBLE_ALONE of its onsets or more fall where the line strikes none, the commonest interval in semitones from the
+    line's note before and the commonest place in the line's gap, as a share of the gap (DOUBLE_NOTES such notes or
+    more); "" for a voice that is the line again and no more. The layers word calls a voice a doubling where it
+    plays the line's pitch at the line's onsets: Overture (part 3)'s second bass voice strikes all 77 of its line's
+    notes with it, a tenth as long, and 48 notes between them a fourth below, at the half of the line's two-beat gaps,
+    a pulse over a held note. Written as the line again it was the held note twice."""
+    near = readings_mod.NEAR
+    mine = sorted(n for n in line if n[2] == n[2])
+    theirs = sorted(n for n in other if n[2] == n[2])
+    if not mine or not theirs:
+        return ""
+    starts = [n[0] for n in mine]
+    ratios, alone = [], Counter()
+    for n in theirs:
+        i = max((k for k, t in enumerate(starts) if t <= n[0] + near), default=None)
+        if i is None:
+            continue
+        if abs(n[0] - starts[i]) < near:
+            if mine[i][1] > 0:
+                ratios.append(n[1] / mine[i][1])
+        elif i + 1 < len(starts) and starts[i + 1] - starts[i] > near:
+            place = round((n[0] - starts[i]) / (starts[i + 1] - starts[i]) * 4) / 4
+            if 0 < place < 1:
+                alone[(int(round(n[2] - mine[i][2])), place)] += 1
+    words = []
+    if len(ratios) >= DOUBLE_NOTES and statistics.median(ratios) <= DOUBLE_SHORT:
+        words.append(f"sounds {max(0.05, statistics.median(ratios)):.2f}")
+    if alone and sum(alone.values()) >= DOUBLE_ALONE * len(theirs):
+        (interval, place), n = alone.most_common(1)[0]
+        if n >= DOUBLE_NOTES:
+            words.append(f"between {interval:+d} {place:.2f}")
+    return " ".join(words)
 
 
 def layer_word(line: list, other: list) -> str | None:

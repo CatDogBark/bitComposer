@@ -3092,6 +3092,66 @@ class FeelFromTheTokenTests(unittest.TestCase):
             self.assertEqual(getattr(drawn, name), getattr(taken, name), name)
 
 
+class BassDoublePulseTests(unittest.TestCase):
+    """Round 151: what a bass's doubling voice does of its own rides its token after the layers word ("doubling +0 sounds
+    0.10 between -5 0.50": its notes a tenth as long as the line's, and a note a fourth below at the half of the line's
+    gap), and the double is written so. Overture (part 3)'s second bass voice is a pulse over its line's held note;
+    written as the line again, both voices held one note through the song's first thirty seconds."""
+
+    def _voices(self, short=0.2, between=True, bars=8):
+        line = [(2.0 * i, 1.94, 35.0, "a") for i in range(2 * bars)]                                   # a note held two beats
+        other = [(2.0 * i, short, 35.0, "b") for i in range(2 * bars)]                                 # the same pitch at its onsets,
+        if between:
+            other += [(2.0 * i + 1.0, short, 30.0, "b") for i in range(2 * bars - 1)]                  # and a fourth below between them
+        return line, sorted(other)
+
+    def test_what_a_doubling_voice_does_of_its_own(self):
+        line, other = self._voices()
+        import importlib
+        from unittest import mock
+        self.assertEqual(rhythm.doubling_own(line, other), "sounds 0.10 between -5 0.50")
+        with mock.patch.object(importlib.import_module("bitcomposer.translate.rhythm.arrangement"), "layer_word", return_value="doubling +0"):
+            self.assertEqual(rhythm.bass_layer_text(line, other), "vdoubling_+0_sounds_0.10_between_-5_0.50")   # after the layers word's own outcome
+        with mock.patch.object(importlib.import_module("bitcomposer.translate.rhythm.arrangement"), "layer_word", return_value="apart +0 denser"):
+            self.assertEqual(rhythm.bass_layer_text(line, other), "vapart_+0_denser")                  # a line of its own takes no such words
+        self.assertEqual(rhythm.doubling_own(line, [(a, d, m, "b") for a, d, m, _ in line]), "")       # the line again and no more
+        self.assertEqual(rhythm.bass_layer_text(line, [(a, d, m, "b") for a, d, m, _ in line]), "vdoubling_+0")
+        self.assertEqual(rhythm.doubling_own(*self._voices(between=False)), "sounds 0.10")             # short notes, none between
+        self.assertEqual(rhythm.doubling_own(*self._voices(short=1.94)), "between -5 0.50")            # notes between, as long as the line's
+        self.assertEqual(rhythm.doubling_own(*self._voices(bars=3)), "")                               # under eight notes of a kind: no word
+        few = self._voices(between=False)[1] + [(1.0, 0.2, 30.0, "b"), (5.0, 0.2, 30.0, "b")]          # two notes of its own in eighteen:
+        self.assertEqual(rhythm.doubling_own(self._voices()[0], sorted(few)), "sounds 0.10")           # under a quarter, not a habit
+
+    def test_the_plan_reads_it(self):
+        self.assertEqual(whole.doubling_own_of("doubling +0 sounds 0.10 between -5 0.50"), (0.1, (-5, 0.5)))
+        self.assertEqual(whole.doubling_own_of("doubling +0"), (None, None))
+        self.assertEqual(whole.doubling_own_of("doubling +12 between +7 0.25"), (None, (7, 0.25)))
+        for text in ("doubling +0 sounds x between -5", "doubling +0 sounds 0 between -5 1.00", "apart +0 denser", ""):
+            self.assertEqual(whole.doubling_own_of(text), (None, None), text)
+        self.assertEqual(whole.layer_of({"layer": "doubling +0 sounds 0.10 between -5 0.50"}), ("doubling", 0))   # the word's kind and interval as before
+
+    def _written(self, layer):
+        from types import SimpleNamespace
+        line = [(4.0 * k, 4.0 * k + 4.0, 43.0, 0) for k in range(4)] + [(16.0, 17.0, 43.0, 0), (17.0, 18.0, 45.0, 0)]   # four held bars, two short notes
+        part = whole.Part(R.BASS, list(line), [], [])
+        plan = SimpleNamespace(extras={R.BASS: {"layer": layer}}, voices={R.BASS: 2}, tonic=7, mode="minor")
+        song = SimpleNamespace(notes={})
+        log = whole.double_bass(plan, song, {R.BASS: part})
+        return line, sorted(n for n in part.notes if n[3] == 1), log, song
+
+    def test_the_double_is_written_as_its_song_plays_it(self):
+        line, double, log, song = self._written("doubling +0")                                         # no words of its own: the line again, as before
+        self.assertEqual(double, [(a, b, m, 1) for a, b, m, _ in line])
+        self.assertEqual(log, ["voice 2 doubles the line at +0 semitones, the line as finally played: 6 notes (round 126)"])
+        line, double, log, song = self._written("doubling +0 sounds 0.10 between -5 0.50")
+        with_line = [n for n in double if any(abs(n[0] - x[0]) < 1e-9 for x in line)]
+        between = [n for n in double if n not in with_line]
+        self.assertEqual([(n[0], round(n[1] - n[0], 2), n[2]) for n in with_line], [(a, round(0.1 * (b - a), 2), m) for a, b, m, _ in line])   # a tenth as long
+        self.assertEqual([(n[0], round(n[1] - n[0], 2), n[2]) for n in between], [(4.0 * k + 2.0, 0.4, 38.0) for k in range(4)])   # the half of each usual gap, a fourth below;
+        self.assertIn("each sounding 0.10 of the line's note, and 4 notes between the line's at -5 semitones, 0.50 of the gap (round 126; round 151)", log[0])   # none in the short gap
+        self.assertEqual(len(song.notes[R.BASS]), 6 + 6 + 4)
+
+
 class OwnSectionLevelsTests(unittest.TestCase):
     """Round 150: a part's level in each part of the form rides its token (`vA1.0+B0.4`: its median note level there over
     its median in the song, by the form's letters), and the plan takes it where the form's letters are the token

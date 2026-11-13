@@ -1273,6 +1273,19 @@ The words are grouped by where the writing draws them, in the order the song is 
   Since round 126 a bass's voice takes its token song's own word (the
   balance token's sixth field, a tenth sub-field); the draw is made
   all the same.
+  Since round 151 a bass's doubling voice's token says after the word
+  what the voice does of its own (`doubling_own`): `sounds 0.10`, the
+  median of its notes' lengths over the line's notes they are struck
+  with, where that is three quarters or under; `between -5 0.50`, the
+  commonest interval from the line's note and place in the line's gap of
+  its notes struck where the line strikes none, where they are a quarter
+  of its onsets or more (eight notes of a kind at the least).
+  `double_bass` writes the double so: each note the share of its line's
+  note, and in the line's gaps as long as its usual one (the median) or
+  longer a note between, at the interval and the place, as long as the
+  double's note there. Overture (part 3)'s is the one such bass (a tenth
+  as long, a fourth below at the half of the gap). This word's own
+  outcome is as it was, and no other part's doubling is asked.
   *`layers`: shape (part, rank); drawn in _plan_once, layers_of; conditions second_figures, voice_intervals, voice_moves.*
 
 - **articulation**, **step_habits**, **repeat_habits**, **echo_habits**,
