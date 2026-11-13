@@ -709,6 +709,7 @@ class WindowHeadless(unittest.TestCase):
         self.assertEqual((shown()[1], bar.property("on")), ("0 of 82 songs", 0))
         b._import_progress(41, 82)
         self.assertEqual(shown(), (0.5, "41 of 82 songs", "step 2 of 5: reading the songs"))
+        self.assertIn("if you stop, the next import starts from the first song again", words.property("text"))   # a stopped import keeps no song
         self.assertEqual(bar.property("on"), 20)
         b._import_progress(82, 82)
         self.assertEqual((shown()[1], bar.property("on")), ("82 of 82 songs", 40))

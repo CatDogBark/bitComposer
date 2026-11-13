@@ -1584,7 +1584,7 @@ ApplicationWindow {
                                     PButton { small: true; text: "STOP"; onClicked: backend.cancelImport() }
                                 }
                                 Meter { objectName: "importBar"; Layout.fillWidth: true; cells: 40; cellW: Math.max(4, Math.floor((width - 78) / 40)); on: backend.importState.bar >= 0 ? Math.round(40 * Math.min(1, backend.importState.bar)) : (root._impElapsed % 40) }
-                                Body { objectName: "importStage"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.step ? "step " + backend.importState.step + " of " + backend.importState.steps + ": " : "") + (backend.importState.stage ? backend.importState.stage + "…  " : "") + (backend.importState.stage && backend.importState.stage.indexOf("reading") < 0 ? "a few minutes on a whole soundtrack" : "the songs read so far stay read if you stop") }
+                                Body { objectName: "importStage"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.step ? "step " + backend.importState.step + " of " + backend.importState.steps + ": " : "") + (backend.importState.stage ? backend.importState.stage + "…  " : "") + "a few minutes on a whole soundtrack; if you stop, the next import starts from the first song again" }
                             }
                             RowLayout {
                                 visible: !!backend.importState.pendingAdd
