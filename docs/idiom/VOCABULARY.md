@@ -787,6 +787,24 @@ The words are grouped by where the writing draws them, in the order the song is 
   counts the kit's accents and is silent on a kit of one piece: the
   written song on Terra's token played the bass in straight eighths
   against the march's triplet, 0.67 of its notes with a snare hit.
+  Since round 150 every pitched part's token carries a thirty-first
+  field, its level in each part of the form (`section_levels_field`):
+  after a `v`, the form's own parts in its order, each with the part's
+  median note level there over its median in the song, in tenths within
+  0.3 and 2.0 (the `section_levels` word's own count,
+  `section_level_ratios`), or `-` where the part has no count there.
+  `vA1.0+B0.4` is Fanfare's bass and `vA1.0+B1.0` its tune; none for a
+  song whose form the token does not carry. 62 tunes' tokens carry one,
+  58 basses', 54 accompaniments', 49 counter-lines'. The plan reads it
+  (`section_levels_of`) and, in a vocabulary whose tokens say it
+  (`tokens_say_levels`), gives each part its levels by section
+  (`own_section_levels`): where the form's letters are the token song's,
+  a part of the form takes its letter's level, 1.0 where the song's part
+  has no count; in a form that is not the song's, and for a part the
+  token says nothing of, the part holds its level, since no section
+  there is a section of its song. Why: the `section_levels` word is
+  drawn by the part and the section's place in the form, pooled over the
+  game, so a level step fell where the song has none.
   Since round 131 a song the reading has at half its speed is counted
   for its token in double time (`token_song`): `half_time` says which
   (a song in the slow tempo class one of whose kit voices plays in
@@ -1629,6 +1647,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   (the accompaniment over in 0.15 of middle sections); the written parts
   had played one level all song. After, over seeds 1-45, 40 plans move a
   part in some section, with the parts' sections at 1.0 in 0.77 to 0.86.
+  Since round 150 a part's level by section rides its token (the
+  `balance` entry's thirty-first field) and the plan takes it in place
+  of this word's draws (`own_section_levels`); the draws are still made,
+  on their own stream, and stand for a vocabulary counted before the
+  field. Pooled, the word put a level step where its song has none: a
+  tune on Fanfare's token, 0.8 and then 2.0.
   *`section_levels`: shape (part, form); drawn in _plan_once, plan_section_levels.*
 
 - **section_fills** — what a voice does in a section's last bar against

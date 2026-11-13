@@ -10630,3 +10630,64 @@ held to the bass (0.49 against the game's 0.61). All in LIMITS.
 **Not heard.** Built with round 148 and merged with it on the owner's
 word; he heard neither before the merge. 247 of 400 seeds are not the
 songs dev wrote.
+
+### Round 150: a part's level changes by section only where its token song's does (2026-11-12, asked on the songs after rounds 148 and 149)
+
+**Why.** The owner, on the songs written after rounds 148 and 149, of
+the one on Fanfare's token: "how come fanfare increases in volume at 21
+seconds and then drops back down in the melody, that seems kinda odd",
+and then: "thats my only real complain out of all the song, its a deal
+breaker on that song I think we should go ahead and fix it".
+
+**Found.** It is the `section_levels` word (round 48), and dev wrote the
+same before the two rounds. The song (seed 1009) has a form of its own,
+A12 B4 C20, its token song's (A2 B8) being short of the bars asked. The
+word drew the tune 0.8 of its level in A and 2.0 in B, the top of its
+range; the tune rests in B's first bar, so it plays from 21.5 s to 26.5
+s at 2.5 times the level before it, 8 dB by the render, and falls back
+in C. The game's Fanfare tune sits at 1.0 in both its sections. The word
+is counted by the part and the section's place in the form and drawn
+pooled over the game: 0.72 of the tune's sections at 1.0 over 400 seeds,
+as the game's, but which song's section steps the draw does not know. In
+the game a tune's section sits at 1.5 times its level or more in 2 of
+207 (Grand Finale (part 2), Setzer); written, in 18 sections of 17 songs
+of 400. Every other word of a part's place in its song has moved to the
+token since round 113 (the form, the spans, the onsets by section, the
+loops); the levels by section had not.
+
+**Built.** A thirty-first field on every pitched part's token
+(`rhythm.section_levels_field`): the form's own parts in its order, each
+with the part's level there over its level in the song, `vA1.0+B0.4`, by
+the word's own count (`section_level_ratios`, which the pooled units are
+now made from). The plan reads it and, in a vocabulary whose tokens say
+it (`tokens_say_levels`), sets each part's levels by section after the
+pooled draws, which are still made on their own stream
+(`own_section_levels`): by the form's letters where they are the token
+song's; one level through in a form that is not, and for a part the
+token says nothing of.
+*Tried and not taken.* In a form not the song's, the token song's levels
+by the section's place (the first part the first's, the last the
+last's): a song on Fanfare's token then played its bass at 0.4 of its
+level through its last twenty bars, the level of the game's eight, a
+step with no section of the song under it, which is what was heard.
+
+**Measured.** Suite 591 (1 skip). The vocabulary is refit: 115
+tables, the balance table alone changed, its outcomes in the order they
+stood in. Plans (400 seeds), against dev: a level by section changes in
+391 songs, by the form's letters in 356 and held through in 35 whose
+form is not their song's; a note changes in 4, all among those 35 (the
+section's density tier is drawn by its level's step); all 400 keep their
+token song and title. Sections off the part's level, of those it plays
+in: the tune's 368 of 1,672 (463), the bass's 204 of 1,638 (311), the
+accompaniment's 417 of 1,435 (449), the counter-line's 439 of 1,192
+(419). At 1.5 times or more: the tune's 11 sections in 11 songs (18 in
+17), the counter-line's 105 in 26 songs (60 in 43), no bass's; any
+part's in 74 songs (94). The song on Fanfare's token: the tune at one
+level through (the score's volumes 8 and 15 to 9 and 17 across the song,
+where B's were 18 and 34).
+
+**Open.** The token's level is a section's median: what moves inside a
+section is not in it (LIMITS).
+
+**Not heard.** The owner hears the song on Fanfare's token before the
+merge.

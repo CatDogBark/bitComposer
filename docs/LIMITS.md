@@ -512,6 +512,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   tune strikes 0.49 of its notes with a bass note at the median (0.48
   before the round; the game's 0.61) and is 0.20 or more under its own
   song's in 18 (21).
+- **A part's level steps only by its own song's sections.** Since round
+  150 a part's level in a part of the form is its token song's part's
+  there, where the form's letters are the song's. In a form that is not
+  the song's (one drawn because the song's is short of the bars asked:
+  35 of 400 seeds) every part holds one level through, and so does a
+  part the token has no count for. The token's level is the section's
+  median over the song's: a swell inside a section, and a part that
+  enters loud and settles, are not in it.
 - **A bar the reader could not place stays in the bar tables.** The
   reading counts a song at one tempo. Where a song's band plays a
   passage at another (the opening of The Wedding Waltz-Duel (part 4),
