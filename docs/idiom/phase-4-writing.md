@@ -10968,5 +10968,7 @@ its second part again after that. Shadow is drawn less under the
 player's asking (1 seed of 400 where 3 were). The kit's piece that
 plays in some bars of a part of the form may rest through it.
 
-**Not yet heard.** With round 155's songs, before the merge.
+**Heard.** Four pairs on the same seeds before the merge, a song on each of
+the four tokens: passed by ear. On Fanatics's the chant was heard holding
+one note through its second part, which round 156 takes up.
 
