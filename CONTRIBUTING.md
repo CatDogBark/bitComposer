@@ -9,13 +9,14 @@ measurement rather than by ear alone.
 `main` holds released code and nothing else. Work goes into `dev` through
 pull requests, one topic each; `dev` merges into `main` for a release.
 
-Pull requests into `dev` run no checks on GitHub (the Windows build alone
-takes ten minutes); the tests below, run locally with the player's
-dependencies, are the check. Pull requests into `main` run everything: the
-tests on every supported Python and the Windows build. Either workflow can
-also be started by hand on any branch (`gh workflow run ci.yml --ref
-<branch>`, or `windows.yml`) when a change could break Windows or an older
-Python.
+Pull requests into `dev` run the tests on GitHub on every supported Python
+(`ci.yml`), but not the Windows build, which alone takes ten minutes. Run
+the tests below locally first, with the player's dependencies. Pull
+requests into `main` run everything: the tests and the Windows build. A
+pull request stacked on another feature branch runs neither. Either
+workflow can also be started by hand on any branch (`gh workflow run ci.yml
+--ref <branch>`, or `windows.yml`): for a stacked pull request, or when a
+change could break Windows.
 
 ## Issues and pull requests
 
@@ -27,8 +28,8 @@ Pull requests come from collaborators. To work on something, open an issue
 about it first; the maintainer invites contributors as collaborators.
 Collaborators push branches of their own and open pull requests into `dev`;
 only the maintainer merges into `dev` and `main` and makes release tags
-(`v*`), and only `main` and those tags can reach the signing and PyPI
-environments.
+(`v*`, and `emu-v*` for the emulator). Only `main` and `v*` tags can reach
+the signing environment, and only those release tags the PyPI one.
 
 ## Before you open a pull request
 
@@ -51,10 +52,12 @@ environments.
    offscreen, so no display is needed.
 
 2. If you touched anything in `bitcomposer/`, generate a fixed batch before
-   and after your change and paste both analyzer tables in the PR:
+   and after your change and paste both analyzer tables in the PR. The
+   analyzer reads Classic's channel layout, so the batch is Classic's
+   (without `--classic` the command line writes from the vocabulary):
 
    ```bash
-   for s in $(seq 1 12); do python3 -m bitcomposer.cli -s $s -d /tmp/before; done
+   for s in $(seq 1 12); do python3 -m bitcomposer.cli --classic -s $s -d /tmp/before; done
    python3 tools/analyze.py '/tmp/before/*.it'
    ```
 
@@ -82,18 +85,18 @@ environments.
 | `emu/` | the SNES sound CPU and SNES chip emulator, in Rust (a second package, `bitcomposer-emu`); see Building the emulator |
 | `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); running the driver (`emulate.py`, needs `bitcomposer-emu`), its writes as notes (`notes.py`), sample pitch (`tuning.py`), SPC to IT (`convert.py` decides, in stages, how IT carries a song; `snes_chip.py` is the SNES chip's sound from a note's registers; `it_song.py` writes the IT song on a row grid and knows nothing of the SNES); `python -m bitcomposer.spc` |
 | `bitcomposer/translate/` | the translator (`docs/TRANSLATOR.md`): a song's played notes read as music (`events.py` the notes, `beat.py` beat and bar, `roles.py` each voice's part, `harmony.py` key and chords, `form.py` its parts and loop, `reading.py` all of it), kept in a database on the user's machine (`store.py`); `measures.py` the yardsticks shared by a soundtrack and the generator's songs; `pack.py` a thin pack from a game's songs; `archives.py` a game's SPC files from a folder, a zip or a set 7-Zip or unar unpacks; `python -m bitcomposer.translate` |
-| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`); `library.py` the packs on this machine, for the player's PACKS panel (import in a worker process, add, export, move a voice, previews) |
+| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`); `library.py` the packs on this machine, for the player's LIBRARY and SOUNDS screens (import in a worker process, add, export, move a voice, previews) |
 | `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
 | `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
 | `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
 | `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
 | `bitcomposer/cli.py` | the command line; its parser is also the player's list of compose settings |
-| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP, voice previews), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`; the PACKS panel is in them), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check, CANDIDATES, UPDATE and GET THE EMULATOR) |
+| `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP, voice previews), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`; the LIBRARY and SOUNDS screens are in them), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check, CANDIDATES, UPDATE and GET THE EMULATOR) |
 | `tools/analyze.py` | measures written files (the regression harness behind the tests) |
 | `tools/spc_check.py` | measures SPC-to-IT conversions against the emulator, voice by voice; sweeps a folder of SPC files and reports by music driver |
 | `tools/make_logo.py` | writes the README logo from the icon and the bundled font |
 | `tools/windows/` | the Windows build: PyInstaller launchers (`launch_player.py` is also IMPORT's worker, started with `library.WORKER`), the icon and version-details makers, the Inno Setup installer and its privacy page |
-| `docs/` | ANALYSIS, ROADMAP, PORTABILITY, PACKS (the pack file format), SPC-IMPORT (the plan), TRANSLATOR (its stages); the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
+| `docs/` | ANALYSIS, ROADMAP, PORTABILITY, PACKS (the pack file format), SPC-IMPORT (the plan), TRANSLATOR (its stages), IDIOM (the writer, in phases; `idiom/` holds their records and the vocabulary), LIMITS (the written songs' known limits), `drivers/` (the games the converter was tested on, by music driver); `images/` (the logo, the icon and the player's picture); the listening page (`index.html`, `tracks/`, `player/`), served by GitHub Pages |
 | `tests/` | one module per area, sharing `support.py` |
 
 A pack can also be a pack file, with no code at all (`docs/PACKS.md`). A habit or role the
@@ -103,18 +106,21 @@ the round-trip test in `tests/test_packfile.py` fails until it is.
 Adding a built-in pack: its module in `bitcomposer/packs/`, registered in
 `packs/__init__.py` (the import, `_MODULES` and `PACKS`); its name in the
 CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's
-`builtinSounds` list in `bitcomposer/player/qml/Main.qml` (the SOUND row:
-the built-in sounds, then the packs on this machine), where the mixer's voice labels
-also drop each pack's voice-name prefix (`ffvi_`, `mmx_`, ...) by one
-pattern near the top of the file. The random sound draw picks a new pack
-up by itself.
+`builtinSounds` list in `bitcomposer/player/qml/Main.qml` (Classic's SOUND
+row; the packs on this machine have a row of their own, YOUR GAMES), where
+the mixer's voice labels also drop each pack's voice-name prefix (`ffvi_`,
+`mmx_`, ...) by one pattern near the top of the file. The random sound
+draw picks a new pack up by itself.
 
-The byte-identical check, on one version (the song message records it),
-before and after the change:
+The byte-identical check, on one version (a Classic song's message
+records it), before and after the change: Classic on every sound, then
+written songs (without `--classic` the command line writes from the
+vocabulary and does not read `--sound`):
 
 ```bash
 mkdir -p /tmp/before
-for sound in chip snes genesis ffvi mana evermore megamanx; do for s in $(seq 1 10); do python3 -m bitcomposer.cli --sound $sound -s $s -o /tmp/before/$sound-$s.it; done; done
+for sound in chip snes genesis bit ffvi mana evermore megamanx; do for s in $(seq 1 10); do python3 -m bitcomposer.cli --classic --sound $sound -s $s -o /tmp/before/$sound-$s.it; done; done
+for s in $(seq 1 10); do python3 -m bitcomposer.cli -s $s -o /tmp/before/written-$s.it; done
 ```
 
 then the same into `/tmp/after`, and compare:
@@ -123,8 +129,10 @@ then the same into `/tmp/after`, and compare:
 diff <(cd /tmp/before && sha256sum *.it) <(cd /tmp/after && sha256sum *.it)
 ```
 
-No output means no song changed. Add the options your change touches
-(`--keys home`, `--form aaba`, `--lead-shift -3`, ...) to the loop.
+No output means no song changed. Add the options your change touches to
+the loops: Classic's (`--keys home`, `--form aaba`, `--lead-shift -3`,
+...) to the first, the writer's (`--pack ffvi`, `--no-carry-theme`,
+`--bare`, ...) to the second.
 
 ## Building the emulator
 
@@ -163,8 +171,9 @@ emulator unless `NEEDS` moved). The version lives in `emu/Cargo.toml` and
 
    `emu.yml` runs the Rust tests with the whole instruction suite (fetched
    from SingleStepTests), builds a wheel for Linux x86_64 and aarch64,
-   Windows x64, macOS arm64 and x86_64, and the sdist, runs the SPC tests
-   against each wheel, and uploads them all through trusted publishing
+   Windows x64 and macOS (one universal2 wheel for arm64 and x86_64), and
+   the sdist, runs the SPC tests against each wheel, and uploads them all
+   through trusted publishing
    (the `pypi` environment, the pending publisher registered on pypi.org
    for this workflow file). Pull requests into `main` that touch `emu/`
    build and test the same way and publish nothing, as does a run started
@@ -295,7 +304,7 @@ it from there and the publish workflow refuses a tag that does not match it.
    release page carries `bitComposer-windows.zip` and `bitComposer-setup.exe`.
 8. Start a player on the previous release (pipx on Linux, the installed
    one on Windows): it should offer UPDATE to the new version and come
-   back on it. On a pipx install without the emulator, PACKS' GET THE
+   back on it. On a pipx install without the emulator, LIBRARY's GET THE
    EMULATOR should add it and come back with IMPORT ready.
 
 The update path can be tried before any tag: `--try-update` makes the

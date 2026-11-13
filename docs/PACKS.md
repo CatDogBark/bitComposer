@@ -1,8 +1,9 @@
 # Pack files
 
 A pack is a sound for the generator: a palette (the chip it imitates),
-voices for each part, and the habits of the scores it follows. The four
-built-in packs are code; a **pack file** is the same thing as data, so a
+voices for each part, and the habits of the scores it follows. The five
+built-in packs (`bit`, bitComposer's own, and Classic's four styled sets)
+are code; a **pack file** is the same thing as data, so a
 pack can be added without touching the code. The SPC importer writes
 them from a game's songs: the player's LIBRARY screen (IMPORT), or
 `python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`, a first thin pack
@@ -21,16 +22,17 @@ a random sound, only used when named.
 
 In the player, LIBRARY keeps the packs on this machine, each a folder in the
 user's data folder (`~/.local/share/bitcomposer/packs`, or under
-`BITCOMPOSER_DATA_DIR`): ADD brings one in from its pack file or from an
-exported pack (one zip file of its folder, which EXPORT writes), and USE
-puts it in SOUND.
+`BITCOMPOSER_DATA_DIR`): ADD A PACK brings one in from its pack file or
+from an exported pack (one zip file of its folder, which EXPORT writes),
+and USE ITS SOUNDS plays the next songs on it (WRITE shows it under YOUR
+GAMES).
 
 Since 2.0rc1 an import also counts the game's tables into its pack file
 (the second format, `bitcomposer_pack: 2`, with `tables` beside the voices:
 `translate/packtables.py`) and keeps the songs' readings in the data
 folder's `readings.db`, so the pack is a vocabulary the writer draws from
 as well as a set of sounds (`bitcomposer --vocabulary pack:NAME`; the
-README's "Written from a game's vocabulary").
+README's "Packs from your games").
 
 ## An example
 
@@ -125,6 +127,15 @@ frames).
   builder writes it for a kit sample the game plays as a pitched part;
   `tools/pack_tonal.py` adds it to a pack already built.
 - **`volume`**: the default note volume, 1 to 64. Defaults to 60.
+- **`envelope`**: the SNES chip envelope the game plays the sample with,
+  as the chip's own register bytes (0 to 255): `{"adsr": [ADSR1, ADSR2]}`
+  or `{"gain": GAIN}`, one of the two. A written song plays the voice's
+  notes with it, and the voice's `tonal` reading takes it too; without
+  one they play flat at full level. Classic does not use it. The pack
+  builder writes the envelope the game plays the sample with most.
+- **`piece`**: on a kit voice, the drum the pack builder's namer took it
+  for (`kick`, `snare`, `hat`, `tom`, `cymbal`). A record only: the
+  reader accepts it and nothing reads it.
 
 Tonal voices are evened out the way the built-in ones are: a sustaining
 voice by its loop, so like voices sit at like levels. A voice whose loop
@@ -192,10 +203,10 @@ counted (`python -m bitcomposer.translate.packtables --db READINGS
 
 ```json
 "tables": {
-  "source": {"game": "Final Fantasy VI", "songs": 82, "version": 1, "votes": "shares", "discount": 0.75},
+  "source": {"game": "Final Fantasy VI", "songs": 82, "version": 1, "votes": "shares", "discount": null},
   "tables": {
     "bass": {"what": "the bass's bar as a figure: positions with chord-tone marks",
-             "shape": ["part", "meter", "habit", "previous"], "mixture": true,
+             "shape": ["part", "meter", "tempo", "habit", "feel", "previous"], "mixture": true,
              "units": 4210, "songs": 71,
              "model": {"table": {"conditionings": [...], "vocabulary": [...], "contexts": [...], "floor": {...}},
                        "recall": {...}}},
@@ -207,12 +218,12 @@ counted (`python -m bitcomposer.translate.packtables --db READINGS
 
 - **`source`**: the game, how many of its songs were read, the tables'
   layout version, and how they were counted (share votes, the discount).
-- **`tables`**: by name (`rhythm`, `values`, `habits`, `bass`,
-  `bass_habits`, `drums-KSt`, `drums-h`, `drums-c`, `drums-o`,
-  `drum_habits`, `voicings`, `widths`, `chords`, `changes`, `cadences`,
-  `loops`, `form`, `lengths`, `contours`, `peaks`, `endings`,
-  `relations`, `texture`, `presence`, `parts`, `voices`, `doubles`,
-  `layers`; a table with nothing to count is left out). Each says what it
+- **`tables`**: by name, the tables `translate/packtables.py` keeps
+  (`KEPT`: `rhythm`, `bass`, `chords`, `balance`, `echo` and the rest;
+  `docs/idiom/VOCABULARY.md` names and explains every one, and CI checks
+  that it does), among them the kit's bar tables a second time with `@2`
+  after the name, counted in double time (`drums@2`, `drums-KSt@2`, ...);
+  a table with nothing to count is left out. Each says what it
   is (`what`), its conditionings in order (`shape`), whether it is drawn
   as the song's own mixture (`mixture`: the model then holds the `table`
   and the `recall` shares), how much it was counted from (`units`,
