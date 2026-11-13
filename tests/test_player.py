@@ -228,6 +228,29 @@ class EngineHeadless(unittest.TestCase):
             self.assertEqual(again.level_of(loud), -20.0)
             again.shutdown()
 
+    def test_a_measure_cut_short_by_a_shutdown_writes_nothing_after_it(self):
+        """The folder's songs are measured in the background. A shutdown does not wait for a long measure, and the
+        pass, ended, saves nothing: the settings folder may be gone by then (a test's, or an uninstall's)."""
+        import threading
+        p, gate, started = self.p, threading.Event(), threading.Event()
+
+        def slow(path, *a):
+            started.set()
+            gate.wait(10)
+            return -20.0
+        with unittest.mock.patch.object(leveling, "measure", slow), unittest.mock.patch.object(engine, "MEASURE_JOIN", 0.05):
+            p.scan()
+            self.assertTrue(started.wait(5))
+            thread = p._measure_thread
+            p.shutdown()                                   # gives up on the measure still running
+            self.assertTrue(thread.is_alive())
+            if os.path.exists(engine.levels_file()):
+                os.remove(engine.levels_file())
+            gate.set()
+            thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertFalse(os.path.exists(engine.levels_file()))
+
     def test_the_level_s_gates_and_trim(self):
         full = leveling.FULL_SCALE
         self.assertIsNone(leveling.gated([]))

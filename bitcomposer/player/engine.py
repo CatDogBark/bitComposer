@@ -29,6 +29,7 @@ from .audio import make_output, OutputUnavailable, CHANNELS, LATENCY_MS
 EXTENSIONS = {".mod", ".xm", ".it", ".s3m", ".mptm"}
 FRAMES_PER_BUFFER = 2048
 VOLUME_MAX = 3.0
+MEASURE_JOIN = 2.0                 # seconds a shutdown waits for the song being measured in the background
 _LIMIT_KNEE = 20000.0
 _LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 
@@ -583,15 +584,16 @@ class Player:
     def _measure_folder(self, paths: list[str], stop: threading.Event) -> None:
         for path in paths:
             if stop.is_set():
-                break
+                return                         # stopped: whoever stopped it saves, and nothing is written after a shutdown
             self.level_of(path)
-        with self._levels_lock:
-            self._levels.save()
+        if not stop.is_set():
+            with self._levels_lock:
+                self._levels.save()
 
     def _halt_measuring(self) -> None:
         self._measure_stop.set()
         if self._measure_thread:
-            self._measure_thread.join(timeout=2.0)
+            self._measure_thread.join(timeout=MEASURE_JOIN)   # a measure still running is left to end; it saves nothing
             self._measure_thread = None
         with self._levels_lock:
             self._levels.save()
