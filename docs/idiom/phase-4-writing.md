@@ -10691,3 +10691,58 @@ section is not in it (LIMITS).
 
 **Not heard.** The owner hears the song on Fanfare's token before the
 merge.
+
+### Round 151: a bass's doubling voice does what its token song's does of its own (2026-11-12, asked on the level-fix songs)
+
+**Why.** The owner, on the songs of round 150, asked whether Overture
+(part 3) is meant to hold one note for over twenty seconds at its start;
+told that the game pulses a second bass voice over the held note: "maybe
+its the pulse part lacking that makes it sound less musical than it
+should", and, the survey showing the fix would touch no other song: go.
+
+**Found.** The written song (seed 1006) holds G2 on both bass voices,
+unbroken, through its A, 29.7 s: fourteen whole-bar notes on the line
+and the same fourteen on the second voice. The game's line (voice 7)
+holds B1, 77 notes of two beats; its second voice strikes all 77 with it
+at the same pitch, 0.2 of a beat long, and 48 notes between them a
+fourth below, at the half of the line's two-beat gaps: root and fifth, a
+pulse a beat apart over the held note. The layers word calls a voice a
+doubling where it plays the line's pitch at the line's onsets
+(`harness.relation`), and since round 126 `double_bass` writes a bass's
+doubling as the line as finally played, again. Over the game's 153
+voices beside a line, 52 are called a doubling; 2 strike a quarter of
+their onsets or more where the line strikes none, this bass (49 of 125)
+and The Wedding Waltz-Duel (part 4)'s tune (42 of 167).
+
+**Built.** `rhythm.doubling_own(line, other)`: for a doubling voice,
+"sounds 0.10" (the median of its notes' lengths over the line's notes
+they are struck with, at three quarters or under) and "between -5 0.50"
+(its notes struck alone, a quarter of its onsets or more: the commonest
+interval from the line's note before and place in the line's gap). A
+bass's voice's tenth sub-field carries them after the layers word
+(`bass_layer_text`: `vdoubling_+0_sounds_0.10_between_-5_0.50`); the
+layers word's units and its outcome are untouched, so no pooled draw
+moves. The plan's layer word keeps the words, `layer_of` reads its kind
+and interval as before, and `double_bass` reads the rest
+(`doubling_own_of`): each note of the double sounds the share of its
+line's note, and in the line's gaps as long as its usual one (the
+median) or longer a note is struck at the place, at the interval, as
+long as the double's note there. The double is still written last, on
+the line as finally played.
+
+**Measured.** Suite 594 (1 skip). The vocabulary is refit: one balance
+token changes (Overture (part 3)'s; Returners' double has no words of
+its own), the outcomes in their order, no other table. Plans (400
+seeds), against dev: a note changes in 6 songs, the six on that token,
+in the bass alone; every other song is the same note for note, the
+levels by section the same in all 400, and every seed keeps its token
+song and title. The song on Overture (part 3)'s token: the second voice
+strikes the line's 50 notes with it, each a tenth as long as its line's
+note (0.4 of a beat under a whole-bar note), and 27 notes between at the
+half of the bar, a fourth below; the line is as it was.
+
+**Open.** The pulse is at the written line's pace, two notes a bar where
+the game's is four, and the tune's doubling voice on The Wedding
+Waltz-Duel (part 4)'s token is still the line again (LIMITS).
+
+**Not heard.** The owner hears the song before the merge.

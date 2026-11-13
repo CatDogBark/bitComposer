@@ -512,6 +512,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   tune strikes 0.49 of its notes with a bass note at the median (0.48
   before the round; the game's 0.61) and is 0.20 or more under its own
   song's in 18 (21).
+- **A doubling voice's own notes are written for the bass alone, at the
+  written line's pace.** Since round 151 a bass's double plays its
+  song's short notes and the note between the line's. The tune's
+  doubling voice on The Wedding Waltz-Duel (part 4)'s token, the game's
+  other doubling with notes of its own (42 of its 167 onsets), is still
+  the line again. The between note falls at its place in the written
+  line's gap: the song on Overture (part 3)'s token strikes its bass
+  line once a bar where the game's strikes it twice, so its pulse is two
+  notes a bar where the game's is four.
 - **A part's level steps only by its own song's sections.** Since round
   150 a part's level in a part of the form is its token song's part's
   there, where the form's letters are the song's. In a form that is not
