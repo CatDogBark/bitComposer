@@ -11145,6 +11145,6 @@ part's chords comes back all the same. Eight songs of 400 are on one
 chord throughout, none of them by a return.
 
 **Heard.** The song on Fanatics's token written both ways, before the
-round was built: the better without the chords. Five more pairs on
-the same seeds are rendered for the ear before the merge.
+round was built: the better without the chords. Six pairs on the same
+seeds before the merge: passed by ear.
 
