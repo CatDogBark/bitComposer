@@ -71,9 +71,9 @@ reference.
 What phases 1 and 2 changed about this phase: the readers are measured, so
 the line between the tables that can be counted now and the ones that
 wait is known; the substitution harness exists, so a table can be heard
-in a real song before anything is built on it; and the listener has said
+in a real song before anything is built on it; and phase 2's listen found
 that whole generated songs of the old generator are too much to project
-the aim onto, so his ear is spent on one voice in a real song at a time.
+the aim onto, so the ear is spent on one voice in a real song at a time.
 
 ### Two things first
 
@@ -84,7 +84,7 @@ the aim onto, so his ear is spent on one voice in a real song at a time.
   17 of 60). The sample is named once when a reading names its samples,
   from its PCM, and the name kept on the sample the readers see.
 - **One readings database.** The 39 games read again with the readers as
-  phase 1 leaves them (and the namer above), on Ragnarok, the database
+  phase 1 leaves them (and the namer above), the database
   every table reads from; the product's own database is rebuilt the same
   way when the pack is written.
 
@@ -103,7 +103,7 @@ table against one a game, the per-game table backing off to the shared.
 The shape that predicts the unseen songs best is kept and the numbers
 recorded here. Drawing from a table with a seed returns from the whole
 distribution, never the mode, so what the writer plays stays as varied
-as the games (the listener's standing worry), and the between-song spread
+as the games (a standing worry), and the between-song spread
 of what is drawn is measured beside the fit.
 
 ### The tables, in the order of least to most dependence on the readers
@@ -129,7 +129,7 @@ of what is drawn is measured beside the fit.
    habit per game. **Acceptance by ear:** a bass written from the FFVI
    table into Terra and two or three other FFVI songs, in place of theirs,
    heard against the originals; Terra with the old generator's bass was
-   the listener's "awful", so this is the first test the new music takes.
+   heard as "awful", so this is the first test the new music takes.
 3. **Drum figures by piece.** The unit is the bar's figure, each piece's
    positions, the pieces named by their sound. Conditionings: meter and
    tempo band; the song's density tier (hits a bar); the kit the song has
@@ -166,15 +166,15 @@ writes the idiom and never a tune.
 
 A Substitution Check page: a song plays, and each of its voices can be
 switched between the original and the substituted rendering while it
-plays, several songs on one page, so the listener compares one voice at
-a time inside the real music (his suggestion). Each voice's two versions
+plays, several songs on one page, so one voice is compared at
+a time inside the real music. Each voice's two versions
 are rendered as separate audio stems, aligned, and the page mixes them.
 Built when the bass table has a writer to hear.
 
 ### Exit criteria
 
 The outline's four, and: the bass and the drums written from their tables
-pass the listener's ear in substitution (not mistaken for the generator's
+pass the ear in substitution (not mistaken for the generator's
 old parts; "belongs" or "nearly"), and the key check by ear is done before
 the harmony tables count.
 
@@ -224,9 +224,9 @@ beat still read at half the tempo in 57 (phase 2's finding, untouched).
 
 ### One readings database (2026-10-21)
 
-All 39 games read again on Ragnarok with the readers as above:
-`~/diags/bitcomposer/idiom/phase3/readings.db`, 1,836 songs, translator
-version 8, notes cache key 5b1140535b27. Every table below counts from it.
+All 39 games read again with the readers as above, kept outside the
+repository: 1,836 songs, translator version 8, notes cache key
+5b1140535b27. Every table below counts from it.
 
 ### The framework (2026-10-21)
 
@@ -407,13 +407,13 @@ intros and rest bars weigh most (the habit now comes before the previous
 bar, so the backoff lands in the habit's own inventory); and the song's
 own rests are kept, a playing bar never drawing a rest (which bars the
 bass plays is the arrangement table's question). A new figure must sit
-on the song's own grid. A fourth lesson came from the listener's first
-minute with the page: the written voice took its volume and envelope
+on the song's own grid. A fourth lesson came from the first minute of
+listening to the page: the written voice took its volume and envelope
 from the voice's first note, and Terra fades its bass in, so the written
 line played 23 dB under the original and read as no bass at all; the
 voice's usual settings (its most common sample, volume, envelope and
 echo) are taken now, and the written stems measure within half a decibel
-of the originals. The listener's second minute: Terra's written bass
+of the originals. The second minute: Terra's written bass
 "holds and then spazzes out" from 25 s on, rapid runs with thirds and
 passing tones, and plays over the intro the song's own bass only fades
 into. Every run was a bar no song ever played, invented by the cell
@@ -426,8 +426,8 @@ own median a bar or its busiest bar, and each written note takes the
 volume of the song's own nearest bass note, so a fade-in stays a
 fade-in. Terra's bass came back as ten figures, all roots: quarter
 roots, eighth roots, a root on the one, a root with its pickup.
-**The goal, restated for the listener:** not Terra's line, a bass that
-could belong in Terra. His third minute: "nearly there", one "burst then
+**The goal, restated:** not Terra's line, a bass that
+could belong in Terra. The third minute: "nearly there", one "burst then
 pause skip" at 32 s: a bar with a sixteenth pickup (11/4) in a bass that
 moves in quarters and triplets, then a bar with one note on beat two in a
 bass that strikes every downbeat. Both are bars other songs play; neither
@@ -442,7 +442,7 @@ These three are what the generator's bass habit should carry beside
 density and tones: a feel and a downbeat loyalty, drawn once a song
 (phase 4).
 
-His fourth round: "the bass has no section awareness, it does whatever
+The fourth round: "the bass has no section awareness, it does whatever
 it wants through the four beats in each part with no real throughline,
 free-forming while fitting each bar in isolation." That is the model: a
 bar drawn at a time, the song's mixture remembering which figures but
@@ -466,7 +466,7 @@ root figure, nineteen of a root-third-fifth, the rests kept. For the
 generator (phase 4) the spans come from the form reader's sections and a
 table of periods and span lengths by habit, not from the song itself.
 
-**Terra belongs** (the listener, 2026-10-22, the fifth version). His
+**Terra belongs** (by ear, 2026-10-22, the fifth version). On
 Locke: "crowding out the rest of the song, jumping around, covering the
 melody; the voice sounds right." Measured: Locke's own bass strikes 5 a
 bar (mean 6.9), the written 8 (mean 9.6), seven of its last eight bars
@@ -581,7 +581,7 @@ takes a note that would cut a ringing one); apart is two parts, the
 arrangement table's and the role reader's question, and the known
 limitation of the substitution harness and the writer until then.
 
-**Built (2026-10-22, the listener's go):** the layer code is gone from
+**Built (2026-10-22, on the go-ahead):** the layer code is gone from
 `tools/table_bass.py`; a second bass voice is read as doubling,
 alternating or apart (`relation`, by the shares above: DOUBLING 0.6,
 ALTERNATING 0.6 with under NOT_BOTH 0.3 together) and the written line
@@ -595,12 +595,12 @@ the arrangement item's case: **off the Substitution Check**, with Celes
 (three bass notes in its first minute). In their place two single-voice
 FFVI basses with real lines: Searching for Friends (medium walking, 41
 bars) and Johnny C. Bad (dense walking, 33 bars), beside Terra and The
-Decisive Battle. The page and `~/Music/bitComposer-dev/Table bass/` hold
+Decisive Battle. The page and the dev player's folder hold
 those four. **Known limitation:** a song with a second bass-register
 part under the bass role (93 of 1,314 songs) keeps that part as it is
 while the line is rewritten; the arrangement item owns it.
 
-The Decisive Battle, the listener: "walking all over, doesn't conform
+The Decisive Battle, by ear: "walking all over, doesn't conform
 to the structure of the piece, free spirited; it recognizes the walking
 style, it just doesn't know how to construct one." Its own bass is not a
 walk: a syncopated riff (strikes at the and-a before beats one and
@@ -624,9 +624,9 @@ tones, just over the thresholds), its realization smoother; whether the
 rhythm vocabulary must weigh the song's frequent positions, not only
 its struck ones, waits on the ear.
 
-**The Decisive Battle: "nearly"** (the listener, "a not very good
+**The Decisive Battle: "nearly"** (by ear, "a not very good
 nearly, but that will happen with generation and I am fine with it; we
-aren't trying to generate bangers every time"). His one note: the song
+aren't trying to generate bangers every time"). The one note: the song
 makes a moment at 18 s where everything drops out and regears, and the
 bass "blasts through it, deaf to the rest of the music." In the stems,
 the rest of the song drops 20 dB at 18.5 s for two seconds; the original
@@ -647,7 +647,7 @@ figure in them, air included (`writer.bass(hold=...)`). For the
 generator: the arrangement table carries breaks (where, how long) and
 what the bass does in them, per game, from the shares above.
 
-**Searching for Friends belongs** (the listener, 2026-10-22). Johnny C.
+**Searching for Friends belongs** (by ear, 2026-10-22). Johnny C.
 Bad: "so close, then blows at 29 s when the bass cuts out in the
 original and the written clashes with the section." The stems: the
 written bass was silent from 23.6 to 30 s while the original walked,
@@ -702,7 +702,7 @@ these **known issues**, each the arrangement item's or a reader's:
   often (The Decisive Battle's straight eighths passed); weighting by
   frequency waits on the ear.
 
-**Johnny C. Bad nearly** (the listener, 2026-10-22: "much better, I can
+**Johnny C. Bad nearly** (by ear, 2026-10-22: "much better, I can
 see it as more of a written choice"). The bass item closes at two
 belongs and two nearlies.
 
@@ -742,7 +742,7 @@ on one voice can lose a hit where the written line strikes both at once
 (The Decisive Battle: 19 of 588); the hat's inventory is dominated by
 straight eighths and sixteenths.
 
-Terra's drums, the listener: "nearly; is the snare cutting out short a
+Terra's drums, by ear: "nearly; is the snare cutting out short a
 style choice or a bug, and it isn't aware of the intro as the written
 bass is." Measured: Terra's snare fades in with its bass (its first hits
 at 6 of 127; the original drum stem rising from −53 to −41 dB over six
@@ -762,7 +762,7 @@ song's own has six). The written drum stem now fades in with the
 original (−56, −48, −42 dB over the first three pairs of bars against
 −53, −46, −41).
 
-**The Decisive Battle's drums belong** (the listener, 2026-10-22). His
+**The Decisive Battle's drums belong** (by ear, 2026-10-22). The
 one suspicion: both written parts cut out at 54 s. Not a choice and not
 a patch: the readings count a song once through to its loop, the
 writers write those bars, and The Decisive Battle loops back to its
@@ -773,7 +773,7 @@ written notes as the song does, shifted by the loop's length from the
 bar it loops back to, to the render's end (`harness.looped`); the stems
 carry on past 54.6 s within a decibel or two of the originals.
 
-**Terra's drums belong** (the listener, 2026-10-22). Searching for
+**Terra's drums belong** (by ear, 2026-10-22). Searching for
 Friends: "all closed hi-hat; the original has open hi-hat too: a choice
 or a bug?" A bug in the harness: its hat voice strikes two samples the
 namer both calls hat, a long one (the open hat, 329 hits, on beats one,
@@ -784,7 +784,7 @@ song uses most at its position in the bar, the piece's usual where the
 song never strikes that position (`choice` in `write_drums`); The
 Decisive Battle's hat and snare (two samples each) choose the same way.
 
-**Searching for Friends' drums belong** (the listener, 2026-10-22).
+**Searching for Friends' drums belong** (by ear, 2026-10-22).
 Johnny C. Bad's drums, nearly: "at 29 s the song calls on the drums for
 a fill and ours just keep doing their thing." The stems agree in level
 and density; what differs is the kind of bar. Johnny's stop-time leaves
@@ -802,7 +802,7 @@ on the detection `locks` already had): Johnny's drums answer in bars 0
 and 13 to 19. For the generator, the arrangement table's row: what a
 part does when the band stops (fill, hit, keep time, rest), per game.
 
-**The bass and drum items close (2026-10-22).** The listener's verdicts
+**The bass and drum items close (2026-10-22).** The verdicts by ear
 on the Substitution Check, read back from its store: Terra, The Decisive
 Battle, Searching for Friends and Johnny C. Bad, bass and drums, all
 eight **belong** ("Johnny C. Bad: the writing basically nails it now; I
@@ -846,10 +846,10 @@ are phase 4's, when the generator voices its own chords.
 The gate before the harmony tables: a dozen songs with the tonic named
 by ear, the scale reader scored on them. The Key Check page: twelve
 30-second excerpts looping, a row of twelve keys to hold against the
-music (a soft two-octave tone), the listener marking the key that
+music (a soft two-octave tone), the ear marking the key that
 feels like home and whether the song feels bright or dark; the answers
 in the page's store (`keys/kNN`), the reader's tonic and mode off the
-page (`~/diags/bitcomposer/idiom/phase3/set.json`, on both machines).
+page (`set.json`, kept outside the repository).
 The songs, across games, six from each half, the reader's fit 0.6 or
 better, none of the substitution set: The Fierce Battle, Unkai, Misty
 Menace, Autumn Sky / Womanheart, Jojo, Sailing, Few Paths Forbidden,
@@ -889,7 +889,7 @@ bass sits on C# at concert pitch (69.1 and 139.1 Hz), so that one is the
 ear's miss. **Second round:** the Tonic Duel page (the same clips, two
 tones a song in a shuffled order, the reader's tonic and the ear's,
 names off the page; `duel-map.json` beside `set.json` holds which is
-which), the listener choosing which sounds like home; eleven songs, The
+which), the ear choosing which sounds like home; eleven songs, The
 Little Sprite left out where the two agree.
 
 **The duel (2026-10-22, the second round).** The test turned out to need
@@ -897,7 +897,7 @@ the ending, not the fit: a tone that fits while the music plays is
 consonant, and the fifth is as consonant as home, which is where the
 first round's fifths came from. The page got a Stop on A / Stop on B
 button a song: the song cuts out, the tone rings alone for two seconds,
-and the listener picks the stop that sounded like the end. The picks,
+and the ear picks the stop that sounded like the end. The picks,
 with what the readings say the song leans on (`duel_evidence.py`: the
 bass's pitch-class time, the chord reader's roots by time, the roots at
 four-bar phrase starts and ends through the loop, Krumhansl-Kessler
@@ -1216,7 +1216,7 @@ table; the importer, export and add carry it as data; a format 1 file
 loads as before.
 
 **The FFVI pack in it.** The importer's thin pack from the 82 SPC files
-(`python -m bitcomposer.spc --pack`, 24 s on Ragnarok: 22 samples, a
+(`python -m bitcomposer.spc --pack`, 24 s: 22 samples, a
 kit of kick, hat and snare), then `packtables --into` from the readings:
 28 tables of 67 songs (the free-time and silent ones out), 2.9 MB of
 JSON (the rhythm table's 1,183 bar patterns under 2,289 contexts, the
@@ -1226,14 +1226,13 @@ BarCells; Terra's own bass bars score −2.53 bits a bar under the pack's
 bass mixture (a sanity check, the song being in the pack, not a
 measure); the pack composes a song through the 1.x generator unchanged
 (`bitcomposer --pack-file ... -s 7`), the tables riding along unread
-until phase 4. On Ragnarok at `~/diags/bitcomposer/idiom/phase3/pack2/ffvi/`.
+until phase 4. The pack is kept outside the repository.
 
 **The reference set.** `translate/reference.py` writes every four-bar
 phrase with a tune (phrases.py's windows and tunes) as its rhythm (onsets
 in twelfths of a beat from the phrase's start) and its intervals
 (semitone steps), with the song, game and bar: 8,691 phrases of 1,366
-songs, 2 MB, at `~/diags/bitcomposer/idiom/phase3/reference/phrases-4bar.json`
-on both machines, never in the repository. `reference.Index` looks a
+songs, 2 MB, never in the repository. `reference.Index` looks a
 phrase up by rhythm and intervals together, or by either alone, for
 phase 4's tune-copy check. In the set itself 7,175 of the 8,691 are
 distinct; 964 keys are shared by two phrases or more, 137 of them across
@@ -1254,10 +1253,10 @@ tell: shared everywhere but the voices a song, the drums' presence and
 the articulation habit); a format 2 pack written from a game and read
 back, format 1 still read (above); the tables printed and read as the
 music does to an ear that knows it (each table's shares are printed in
-this record and in the diagnostics' `*-dist.log`; the reading is the
-listener's, and the one criterion that is his rather than the numbers');
+this record and in the diagnostics' `*-dist.log`; the reading is by
+ear, and the one criterion that is the ear's rather than the numbers');
 and the two added: the bass and the drums written from their tables
-passed the listener's ear in substitution (eight of eight "belongs" on
+passed the ear in substitution (eight of eight "belongs" on
 the Substitution Check), and the key check by ear was done before the
 harmony tables counted, and set their gate.
 Left open for phase 4: the voicings, harmony, form, phrase and
@@ -1268,14 +1267,15 @@ endings off the read scale (18 %) are a caveat for the melody tables.
 
 Written for Terra (habit medium roots, 74 bars),
 Locke (dense walking), Celes (sparse roots) and The Decisive Battle
-(medium walking), seed 1, beside the originals, in the player's folder
-(`~/Music/bitComposer-dev/Table bass/`): the readers read the written
+(medium walking), seed 1, beside the originals, in the player's folder:
+the readers read the written
 voice as the bass in all four, the key unchanged in three (Celes, three
 notes in a minute, moved to its relative major). The Substitution Check
 page (the plan's listening instrument, first form) holds the same four:
 three stems a song (the rest without the bass, the bass as the song plays
 it, the bass as written; the converter's modules rendered through
-libopenmpt on Ragnarok) play in sync and a switch moves between Original,
+libopenmpt) play in sync and a switch moves between Original,
 Written and None while the song plays; a verdict (belongs / nearly /
 doesn't belong) and a note a song are kept in the page's store.
-**Awaiting the ear** on all four.
+**Awaiting the ear** on all four. The verdicts are recorded above: Locke
+and Celes left the check, and all eight parts heard on it belong.
