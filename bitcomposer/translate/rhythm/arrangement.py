@@ -383,25 +383,61 @@ def section_level_units(songs) -> list:
     for s in songs:
         if not s.notes or not s.parts or not s.note_levels:
             continue
-        index = {num: k for k, num in enumerate(s.numbers)}
         n_parts = len(s.parts)
-        for role, pairs in s.note_levels.items():
-            if role == R.DRUMS or len(pairs) < 16:
-                continue
-            med = statistics.median(lv for _, lv in pairs)
-            if med <= 0:
-                continue
-            for i, bar, n in chords_mod._own_parts(s):
-                ks = [index[num] for num in range(bar, bar + n) if num in index]
-                if not ks:
-                    continue
-                a, b = s.bars[ks[0]][0], s.bars[ks[-1]][1]
-                mine = [lv for st, lv in pairs if a - readings_mod.NEAR <= st < b - readings_mod.NEAR]
-                if len(mine) < 4:
-                    continue
-                ratio = min(LEVEL_RATIO_CAP[1], max(LEVEL_RATIO_CAP[0], statistics.median(mine) / med))
-                out.append(tables.Unit(s.sid, s.game, f"{round(ratio, 1):.1f}", {"part": role, "form": form_place_of(i, n_parts)}))
+        for role in s.note_levels:
+            for i, ratio in section_level_ratios(s, role):
+                out.append(tables.Unit(s.sid, s.game, ratio, {"part": role, "form": form_place_of(i, n_parts)}))
     return out
+
+
+def section_level_ratios(s, role: str) -> list:
+    """A pitched part's level in each own section of its song's form over its level in the song, as section_level_units
+    counts it: [(the part of the form's index, the ratio in tenths as text)], the median note level in the section over
+    the part's median in the whole song, within LEVEL_RATIO_CAP; a section with under four of its notes is left out, and
+    a part with under sixteen notes or no level has none."""
+    pairs = (s.note_levels or {}).get(role) or []
+    if role == R.DRUMS or len(pairs) < 16 or not s.parts:
+        return []
+    med = statistics.median(lv for _, lv in pairs)
+    if med <= 0:
+        return []
+    index = {num: k for k, num in enumerate(s.numbers)}
+    out = []
+    for i, bar, n in chords_mod._own_parts(s):
+        ks = [index[num] for num in range(bar, bar + n) if num in index]
+        if not ks:
+            continue
+        a, b = s.bars[ks[0]][0], s.bars[ks[-1]][1]
+        mine = [lv for st, lv in pairs if a - readings_mod.NEAR <= st < b - readings_mod.NEAR]
+        if len(mine) < 4:
+            continue
+        ratio = min(LEVEL_RATIO_CAP[1], max(LEVEL_RATIO_CAP[0], statistics.median(mine) / med))
+        out.append((i, f"{round(ratio, 1):.1f}"))
+    return out
+
+
+def section_levels_field(s, role: str) -> str:
+    """The balance token's thirty-first field for a pitched part (round 150): its level in each part of the form over its
+    level in the song, by the form's letters. After a "v", each own part of the form in the form's order with the
+    part's ratio there in tenths (section_level_ratios, the section_levels word's own count), "-" where it has no count
+    there (it rests, or strikes under four notes): "vA1.0+B0.4" for Fanfare's bass, "vA1.0+B1.0" for its tune; "" for a
+    song whose form the token does not carry (form_field) and for a part with no count in any. The section_levels word
+    is pooled over the game by the part and the section's place in the form: a tune written on Fanfare's token, whose
+    tune holds one level through, drew 0.8 of its level for its first section and 2.0 for a four-bar second one, and
+    played five seconds 8 dB over the rest. A tune's section sits at 1.5 times its level or more in 2 of the game's
+    207 (Grand Finale's second part, Setzer), and the pooled draw put one there in 17 of 400 written songs."""
+    if not form_field(s):
+        return ""
+    got = dict(section_level_ratios(s, role))
+    if not got:
+        return ""
+    out, seen = [], set()
+    for i, (bar, n, of, label) in enumerate(s.parts):
+        if of is not None or label in seen:
+            continue
+        seen.add(label)
+        out.append(f"{label}{got.get(i, '-')}")
+    return "v" + "+".join(out)
 
 
 NO_TIER = "-"                         # the entrance word's habit value for a part whose density tier it does not read (every part but the drums)
@@ -2609,7 +2645,8 @@ def balance_units(songs) -> list:
                       together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER, R.MELODY) else "",   # and how often it comes back with its lead
                                                              # (round 144; the tune with the bass, round 146)
                       tune_places_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and where in the beat a tune's notes fall (round 147)
-                      with_kit_field(s, role, line_notes) if role in KIT_PARTS else ""]   # and how often its notes are struck with the kit (round 149)
+                      with_kit_field(s, role, line_notes) if role in KIT_PARTS else "",   # and how often its notes are struck with the kit (round 149)
+                      section_levels_field(s, role)]          # and its level in each part of the form (round 150)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
                 fields.pop()
             tokens.append(f"{role}=" + ":".join(fields))
