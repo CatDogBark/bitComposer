@@ -819,3 +819,14 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   from its own render at writing time, which the generator, having no
   renderer of its own, cannot do; or an estimate that meets the
   render.
+
+- **The Serpent Trench is not written by the player** (round 152; the
+  game's own way, met by a product choice). Its tune, read from the
+  voice heard as the tune, has no phrase that can come back, the
+  player asks every song for a theme that returns, and a plan whose
+  tune has nowhere to come back is drawn again, on another token: 6 of
+  400 seeds were written on it before round 152, none of 1,400 since.
+  Written without the asking (the command line's `--no-carry-theme`)
+  it is a song of 33 bars. What would change it: the player asking a
+  song for a returning theme only where its token song's tune returns.
+
