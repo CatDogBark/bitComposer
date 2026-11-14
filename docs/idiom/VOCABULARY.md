@@ -1248,6 +1248,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   reads it (`voice_rubs_of`, `plan.voice_rubs`) whatever its form, and
   `hear_own_voices` leaves a voice that share of its semitones with its
   own part.
+  Since round 167 a `keeps=` word comes last for a song with a voice
+  beside a chord part's line that has sixteen strikes or more to count
+  (`voice_keeps_field`): the part's letter and the voice's number, `~`
+  and, of the voice's strikes at a strike of the line where the line's
+  pitch is the one it had at the voice's strike before, the share in
+  hundredths on which the voice plays its own note again
+  (`a2~100,a3~13` for The Day After's accompaniment). 23 of the 68
+  tokens carry it. The plan reads it (`plan.voice_keeps`) whatever its
+  form, and `hold_with_line` holds the voice to it; a voice it says
+  nothing of draws its share from the `voice_keeps` table.
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
@@ -2402,6 +2412,21 @@ The words are grouped by where the writing draws them, in the order the song is 
   song nominals (11, -16, -14, 22, -22, -12, -10, 17 and 21 in scale
   steps).
   *`parallel_intervals`: shape (interval, tone, part, previous); drawn in parallel.*
+- **voice_keeps** — how often a voice beside a chord part's line keeps
+  its note where the line keeps its own, by whether the voice plays its
+  line's sample (round 167). A unit is a voice with sixteen strikes or
+  more at a strike of its line where the line's pitch is the one it had
+  at the voice's strike before; its outcome the share of those on which
+  the voice plays its own note again, to a twentieth. FFVI has 31: the
+  twelve on their line's sample at 0.80 or more (nine at 1.00), the
+  nineteen on another from 0.03 to 1.00. A song's own voices' shares
+  ride its balance token (`keeps=`); this table is drawn, once a voice
+  on a stream of its own, only for a written voice whose token voice
+  has too few such strikes for a share (a jingle's voices, a voice
+  under a line that keeps no note): 145 of 231 written voices on their
+  line's sample over 400 seeds. Until round 167 a voice on its line's
+  sample was held to a hand share of 1.0 and no other voice was held.
+  *`voice_keeps`: shape (sample); drawn in settle_chord_parts; conditions nothing.*
 
 ## The upper parts (accompaniment, harmony, arp)
 

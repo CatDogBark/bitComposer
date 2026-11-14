@@ -158,6 +158,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 164 | 2026-11-14 | a voice beside a line keeps its token voice's pace in the bars that are its own | - |
 | 165 | 2026-11-14 | a voice keeps its token voice's share of semitones with its own part | - |
 | 166 | 2026-11-14 | a voice thinned to its token voice's pace keeps the notes at that voice's places | - |
+| 167 | 2026-11-14 | a voice keeps its note with its line as often as its token voice does | - |
 
 ## Goal
 
@@ -11829,4 +11830,74 @@ under its token's pace is still left, and one that plays where its
 token voice rests still plays.
 
 **Heard.** Not yet: it waits for the ear with rounds 165, 167 and
+168.
+
+### Round 167: a voice keeps its note with its line as often as its token voice does (2026-11-14, a rule of round 160's made a word)
+
+**Why.** The third of the four (round 165's Why). Round 160 made a
+voice on its line's own sample take its note again wherever the
+line kept its own: a hand share of 1.0, less a margin, by FFVI's
+0.97 for such voices, and a test by the sample that left every
+other voice as drawn.
+
+**Found.** Counted on FFVI's songs, voice by voice: of a voice's
+strikes at a strike of the line where the line's pitch is the one
+it had at the voice's strike before, the share on which the voice
+plays its own note again. 31 voices have sixteen such strikes or
+more: 0.95 at the median, eight under a half (0.03 for a voice of
+The Phantom Forest, 0.13 for The Day After's plucked voice over its
+tremolo, 0.21 for two of Battle Theme's). The sample does tell: the
+twelve voices on their line's sample keep their note on 0.80 or
+more, the nineteen on another run from 0.03 to 1.00. So the test by
+the sample read something true, and missed the voices on another
+sample that hold (four at 1.00) as well as how often each does.
+A token voice with too few such strikes has no share: 145 of the
+231 written voices on their line's sample over 400 seeds are on
+such a token voice (a jingle's, a voice under a line that keeps no
+note), in 73 songs.
+
+**Built.** A new word, twice: by song on the token, and pooled.
+The balance token says, after every other word, `keeps=`: for each
+voice beside a chord part's line with sixteen such strikes or more,
+the part's letter, the voice's number and the share in hundredths
+(`arrangement.voice_keeps_field`; `keeps=a2~100,a3~13` for The Day
+After's accompaniment). The same shares to a twentieth, by whether
+the voice plays its line's sample, are a table, `voice_keeps`
+(`voice_keep_units`): a written voice whose token gives it no share
+draws one there, on a stream of its own, among the voices on their
+line's sample or among the others as it is itself. `hold_with_line`
+holds every voice with a share to it, by the same count as before:
+the voice takes its note again while its share of such strikes, the
+strike counted, is within its word's. A voice over its share is not
+made to move. `SAMPLE_KEEPS` is gone. The turns' layout (round 160)
+still takes the voices on the line's sample with the line.
+
+**Measured.** Suite 631 tests, OK. The vocabulary: 116 tables for 115,
+the new one `voice_keeps`; of the rest the balance table alone
+differs, 204 outcomes in the same order, each the same but for the
+new word and in its place; 23 of the 68 tokens carry `keeps=`. Over
+400 seeds (1000 to 1399, the player's asking), against round 166:
+a note changes in 190 songs, 5 notes at the median and 164 at the
+most, every one the pitch of a voice beside a chord part's line
+(3,323 the accompaniment's, 381 the arp's, 39 the harmony's); the
+other 210 are the same note for note, and in every song the lines,
+the tune, the counter-line, the bass and the kit are. Of all such
+strikes the written voices keep their note on 0.82 (0.73 before;
+FFVI 0.83). Voice by voice (301 written, 31 of FFVI's): the median
+0.85 (0.57 before, FFVI 0.95); under a half 0.25 of them (0.45
+before, FFVI 0.26); 0.9 or more 0.44 (0.27, FFVI 0.61). The songs
+heard before: the one on Good Night's token (seed 1016) differs by
+20 notes, on Johnny C. Bad's (seed 1234) by 5, on The Day After's
+(seed 1044) by 24; on Dancing Mad (part 2)'s (seed 1305) by none.
+
+**Open.** A voice over its token's share is left there: the plucked
+voice that moves over a held tremolo in the game is not made to
+move in the writing. A pooled share is another song's voice's: a
+voice whose token says nothing may be held where its own would not
+be. The note a voice takes again is the one it had, whatever the
+chord has become under a line that kept its note across the bar
+line. The hold still runs after the tune is written; the landing
+kept where it is drawn, in `parallel`, would carry it.
+
+**Heard.** Not yet: it waits for the ear with rounds 165, 166 and
 168.

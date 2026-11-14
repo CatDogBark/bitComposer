@@ -345,6 +345,8 @@ class Plan:
     layer_onsets: dict = field(default_factory=dict)    # a layered part -> {a voice beside its line: {the form's letter, or WHOLE_SONG: (its token
                                       # voice's onsets a bar there, those of the part's last bar or None)}} (round 164: the ninth sub-field of the
                                       # voice's token entry, round 125's, kept for keep_voice_pace; by the letters only where the form is the token's)
+    voice_keeps: dict = field(default_factory=dict)     # a chord part -> {a voice beside its line: the share of its token voice's strikes, where
+                                      # the line keeps its note, on which the voice keeps its own} (round 167: the `keeps=` word, voice_rubs_of)
     voice_rubs: dict = field(default_factory=dict)      # a chord part -> {a voice beside its line: the share of its token voice's notes that sit a
                                       # semitone from a voice of its own part before it} (round 165: the `rubs=` word, voice_rubs_of)
     voice_places: dict = field(default_factory=dict)    # a chord part -> {a voice beside its line: {the form's letter, or WHOLE_SONG: the places
@@ -1827,7 +1829,9 @@ def voice_rubs_of(text: str) -> dict:
     """The balance token's `rubs=` word (round 165, arrangement.voice_rubs_field) read: "a2~25,a3~0" -> {the
     accompaniment: {1: 0.25, 2: 0.0}}: for a chord part's voice beside its line (the part's relation letter and the
     voice's number, the line 1; here by the writer's index, the line 0), the share of its token voice's notes that sit
-    a semitone from a voice of its own part before it. A voice that cannot be read is left out."""
+    a semitone from a voice of its own part before it. A voice that cannot be read is left out. The `keeps=` word
+    (round 167, arrangement.voice_keeps_field) is written the same way and read here too: the share of a voice's
+    strikes, where the line keeps its note, on which the voice keeps its own."""
     out = {}
     for entry in (text or "").split(","):
         who, _, share = entry.partition("~")
@@ -2549,6 +2553,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_turns = {}                                        # where a block line's note changes in the token song, bar by bar (round 160)
     token_pulse = {}                                        # a moving line by its place in the beat in the token song (round 161)
     token_rubs = {}                                         # how often a voice sits a semitone from its own part in the token song (round 165)
+    token_keeps = {}                                        # how often a voice keeps its note where its line keeps its own (round 167)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
@@ -2560,6 +2565,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         role, _, rest = token.partition("=")
         if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
             token_loop = int(rest) if rest.isdigit() else None
+            continue
+        if role == "keeps":                                 # how often the token's song's voices keep their note with their line (round 167)
+            token_keeps = voice_rubs_of(rest)
             continue
         if role == "rubs":                                  # how often the token's song's voices sit a semitone from their own part (round 165)
             token_rubs = voice_rubs_of(rest)
@@ -3190,7 +3198,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_pulse=token_pulse, voice_rubs=token_rubs, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -4348,7 +4356,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
         written[R.BASS].log += double_bass(plan, song, written)   # a second voice that doubles the line: the line as finally played, again (round 126)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
-    if settle_chord_parts(plan, song, written, seed):       # a chord part's line and its voices, once every part is written (rounds 158 to 166)
+    if settle_chord_parts(plan, song, written, seed, models):   # a chord part's line and its voices, once every part is written (rounds 158 to 167)
         hold_under_ceilings(plan, song, written)           # and what that moved, under the ceilings again
     return written
 
@@ -4384,8 +4392,6 @@ def _repeats_follow(plan: Plan, old: list, new: list, meter: int) -> int:
 
 TURNS_STREAM = "accpatch:D3"          # the turns' stream (with the seed and the part): the one the round was heard on, as a pass over written
                                       # songs before it was built; another name deals other bars to each turn
-SAMPLE_KEEPS = 1.0                    # a voice on its line's sample keeps its note where the line keeps its own: FFVI's keep it on 0.97 of such
-                                      # strikes (twelve voices in eleven songs, 0.80 at the least); held as a share is, within STRUCK_MARGIN
 
 
 def _bar_places(notes: list, v: int, meter: int) -> dict:
@@ -4595,14 +4601,16 @@ def lay_turns(plan: Plan, meter: int, role: str, notes: list, seed: int, same: l
                  + (f", {with_it} of the voices' on its sample with them" if with_it else "") + (f"; {again} notes of the form's repeats with them" if again else ""))
 
 
-def hold_with_line(plan: Plan, meter: int, notes: list, v: int, leave: set | None = None) -> tuple:
-    """A voice on its line's own sample keeps its note where the line keeps its own (round 160). A voice that runs
+def hold_with_line(plan: Plan, meter: int, notes: list, v: int, leave: set | None = None, share: float = 0.0) -> tuple:
+    """A voice keeps its note where the line keeps its own, as often as its token voice does (rounds 160 and 167). A voice that runs
     parallel to its line has each note's landing drawn anew (`parallel`: by the line's tone against the chord and the
     landing before), so under a line that repeats its note the voice flickered between chord tones: where the line
     repeated its pitch a voice beside it repeated its own on 0.51 of its strikes, FFVI's on 0.83, and FFVI's voices on
     the line's own sample, an instrument struck as a chord, on 0.97. Here, in time order, where the line's note at
     the voice's strike is the one it had at the voice's strike before, the voice takes its own note of that strike
-    again, while the share of such strikes kept so far, this one counted, is under SAMPLE_KEEPS by STRUCK_MARGIN.
+    again, while the share of such strikes kept so far, this one counted, is within `share`: its token voice's (the
+    `keeps=` word, round 167; until then a hand share of 1.0 less a margin, for the voices on the line's own sample and
+    no other). A voice over its token's share is not made to move.
     Strikes with no line note at them are not counted, nor the bars where the voice follows another part's line
     (`leave`). A part of the form that repeats another still does. Returns (the notes, a log line or "")."""
     old, new = list(notes), list(notes)
@@ -4615,7 +4623,7 @@ def hold_with_line(plan: Plan, meter: int, notes: list, v: int, leave: set | Non
         if not line or abs(line[at][0] - t) > NEAR:
             continue
         if before is not None and before[0] == line[at][1]:
-            if m != before[1] and (kept + 1) / (seen + 1) < SAMPLE_KEEPS - STRUCK_MARGIN + 1e-9 and not (leave and int((t + NEAR) // meter) in leave):
+            if m != before[1] and (kept + 1) / (seen + 1) <= share + 1e-9 and not (leave and int((t + NEAR) // meter) in leave):
                 m = before[1]
                 new[i] = old[i][:2] + (float(m),) + tuple(old[i][3:])
                 moved += 1
@@ -4625,8 +4633,8 @@ def hold_with_line(plan: Plan, meter: int, notes: list, v: int, leave: set | Non
     if not moved:
         return notes, ""
     again = _repeats_follow(plan, old, new, meter)
-    return new, (f"voice {v + 1}, on the line's sample, keeps its note where the line keeps its own (round 160): {moved} notes moved, {kept} of {seen} "
-                 f"such strikes kept" + (f"; {again} notes of the form's repeats with them" if again else ""))
+    return new, (f"voice {v + 1} keeps its note where the line keeps its own (round 160), to its token voice's share (round 167: {share:.2f}): "
+                 f"{moved} notes moved, {kept} of {seen} such strikes kept" + (f"; {again} notes of the form's repeats with them" if again else ""))
 
 
 STRUCK_OVER = 0.15                    # a struck voice left this far over its token's share once its masks are drawn, with a bar no mask thinned
@@ -4822,13 +4830,14 @@ def hear_own_voices(plan: Plan, meter: int, notes: list, others: list, leave: di
                  + (f"; {again} notes of the form's repeats with them" if again else "") + said)
 
 
-def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict, seed: int = 0) -> bool:
+def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict, seed: int = 0, models: dict | None = None) -> bool:
     """The chord parts' voices settled once every part is written: after the tune and the counter-line, so they stand as
     they were written over the parts (a chord part changed before the tune is written re-writes the tune). Round 161:
     a moving line is held to its token song's line by its place in the beat, the pedal off the pulse and the steps on
     it (hold_pulse). Round 160:
-    a block line's note changes where its token song's does (lay_turns), and a voice on the line's own sample keeps
-    its note where the line keeps its own (hold_with_line). Round 159: a voice struck with another that no mask could
+    a block line's note changes where its token song's does (lay_turns), and a voice keeps its note where the line
+    keeps its own (hold_with_line), since round 167 as often as its token voice does (the `keeps=` word), or by a
+    draw from the pooled `voice_keeps` word where the token gives the voice no share (`models`). Round 159: a voice struck with another that no mask could
     thin strikes where its token voice does (strike_where_token_does). Round 164: a voice beside the line keeps within
     its token voice's notes a bar in the bars that are its own (keep_voice_pace).
     Round 158: a voice beside the line hears its own part's voices (hear_own_voices), and since round 165 keeps its
@@ -4848,10 +4857,18 @@ def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict, seed: int =
         notes, line = lay_turns(plan, song.meter, role, notes, seed, same, follows)   # round 160: the line first, and the voices on its sample
         if line:
             part.log.append(line)
-        for v in same:
-            notes, line = hold_with_line(plan, song.meter, notes, v, follows[v])
-            if line:
-                part.log.append(line)
+        keeps = dict(plan.voice_keeps.get(role) or {})      # round 167: every voice by its token voice's share, and a voice the
+        if models and "voice_keeps" in models:              # token gives none by a draw from the pooled word, on its own stream
+            for v in sorted({n[3] for n in notes} - {0} - set(keeps)):
+                keeps[v] = float(_draw(models, "voice_keeps", (rhythm.KEEP_SAMPLES[0 if v in same else 1],), random.Random(f"whole:{seed}:voice_keeps:{role}:{v}")))
+                among = "the line's sample" if v in same else "another sample"
+                part.log.append(f"voice {v + 1}: the token gives no share of notes kept with the line; drawn from the voices on "
+                                f"{among} (round 167): {keeps[v]:.2f}")
+        for v, share in sorted(keeps.items()):
+            if any(n[3] == v for n in notes):
+                notes, line = hold_with_line(plan, song.meter, notes, v, follows.get(v) or follows_another_part(plan, role, v, len(song.bars)), share)
+                if line:
+                    part.log.append(line)
         notes, line = strike_where_token_does(plan, song.meter, role, notes)   # round 159: before the voices hear each other
         if line:
             part.log.append(line)

@@ -1919,6 +1919,66 @@ def voice_rubs_field(song) -> str:
     return ",".join(out)
 
 
+KEEP_BIN = 0.05                      # the voice_keeps word's grain (round 167)
+KEEP_SAMPLES = ("line", "other")     # its conditioning: a voice on its line's own sample, or on another
+
+
+def voice_keep_shares(song, role: str) -> list:
+    """For each voice beside a chord part's line with WORD_NOTES strikes or more to count, (its number among the
+    part's voices: the line 1, the voices beside it in layer_tokens' order from 2; the share; whether it plays the
+    line's sample): of the voice's strikes at a strike of the line where the line's pitch is the one it had at the
+    voice's strike before (the last one at a strike of the line), the share on which the voice plays its own note of
+    that strike again. The sample is the one the voice plays most, as its layer token names it, against the line's
+    (part_sample_id)."""
+    voices = cells_mod.part_voices(song, role)
+    line_v = cells_mod.line_voice(voices, role, song)
+    line = sorted((n[0], int(round(n[2]))) for n in voices[line_v] if not math.isnan(n[2]))
+    out = []
+    for rank, v in enumerate(sorted((v for v in voices if v != line_v), key=lambda v: (-len(voices[v]), v)), start=2):
+        at, before, kept, seen = 0, None, 0, 0
+        for t, m in sorted((n[0], int(round(n[2]))) for n in voices[v] if not math.isnan(n[2])):
+            while at + 1 < len(line) and line[at + 1][0] <= t + readings_mod.NEAR:
+                at += 1
+            if not line or abs(line[at][0] - t) > readings_mod.NEAR:
+                continue
+            if before is not None and before[0] == line[at][1]:
+                seen += 1
+                kept += m == before[1]
+            before = (line[at][1], m)
+        if seen >= WORD_NOTES:
+            keys = Counter(n[3] for n in voices[v] if isinstance(n[3], str))
+            key = keys.most_common(1)[0][0] if keys else ""
+            sid = ("s" + key[:10] if len(key) >= 10 else key) if key else ""
+            out.append((rank, kept / seen, bool(sid) and sid == part_sample_id(song, role)))
+    return out
+
+
+def voice_keeps_field(song) -> str:
+    """How often each voice beside a chord part's line keeps its note where the line keeps its own, as the balance
+    token carries it (round 167, `keeps=`, after every other word): for each such voice with WORD_NOTES strikes or
+    more to count (voice_keep_shares), the part's letter (RELATION_LETTERS) and the voice's number, "~" and the share
+    in hundredths; the voices joined by ",": "a2~100,a3~13" for The Day After's accompaniment, a voice of the
+    tremolo's own instrument that holds with it and a plucked voice that moves over it. "" for a song with no such
+    voice. Round 160 held a voice on its line's own sample to every such strike (a hand share, 1.0, by FFVI's 0.97
+    for those voices) and no other voice at all; FFVI's 31 such voices run from 0.03 to 1.00, 0.95 at the median."""
+    return ",".join(f"{RELATION_LETTERS[role]}{rank}~{round(share * 100)}" for role in sorted(song.notes)
+                    if role in readings_mod.UPPER and role in RELATION_LETTERS and voice_level_shares(song, role) is not None
+                    for rank, share, _ in voice_keep_shares(song, role))
+
+
+def voice_keep_units(songs) -> list:
+    """Each voice beside a chord part's line with a keep share (voice_keep_shares) as a unit (round 167): its outcome
+    the share to KEEP_BIN, its value whether the voice plays its line's sample (KEEP_SAMPLES). A song's own voices'
+    shares ride its balance token (`keeps=`); a written voice whose token voice has too few such strikes for one
+    (a jingle's, a voice under a line that never keeps a note) draws its share here, by its sample: FFVI's twelve
+    voices on their line's sample keep their note on 0.80 of such strikes or more, its nineteen on another from 0.03
+    to 1.00, 0.56 at the median."""
+    return [tables.Unit(s.sid, s.game, f"{round(share / KEEP_BIN) * KEEP_BIN:.2f}", {"sample": KEEP_SAMPLES[0 if same else 1]})
+            for s in songs for role in sorted(s.notes)
+            if role in readings_mod.UPPER and role in RELATION_LETTERS and voice_level_shares(s, role) is not None
+            for _, share, same in voice_keep_shares(s, role)]
+
+
 def loop_part_field(s) -> str:
     """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
     the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
@@ -2897,6 +2957,8 @@ def balance_units(songs) -> list:
             tokens.append(f"pulse={line_pulse_field(s)}")
         if voice_rubs_field(s):                              # and how often a voice sits a semitone from its own part (round 165)
             tokens.append(f"rubs={voice_rubs_field(s)}")
+        if voice_keeps_field(s):                             # and how often a voice keeps its note where its line keeps its own (round 167)
+            tokens.append(f"keeps={voice_keeps_field(s)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

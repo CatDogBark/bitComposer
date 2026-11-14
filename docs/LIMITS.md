@@ -293,15 +293,20 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   one off the key now lasts half a bar. Mixed and arpeggiated lines have
   no such word. The turns' places counted by the chord's change in the
   bar would carry it.
-- **Only a voice on its line's own sample holds with the line.** Since
-  round 160 such a voice takes its note again where the line's note is
-  the one it had (FFVI's do on 0.97 of such strikes). Counting every
-  voice beside a line, FFVI's repeat their note on 0.83 of the strikes
-  where the line repeats its own and the written ones on 0.74 (0.47
-  before): a voice on another sample that the game holds with its line
-  still has each landing drawn anew. The hold runs after the tune is
-  written, as rounds 158 and 159 do; the landing kept where it is drawn,
-  in `parallel`, would carry both.
+- **A voice holds with its line by a share, raised and never lowered,
+  after the tune.** Since round 160 a voice takes its note again where
+  the line's note is the one it had; since round 167 as often as its
+  token voice does (the `keeps=` word), and a voice its token gives no
+  share by a draw from the pooled `voice_keeps` word, by whether it
+  plays its line's sample. The written voices keep their note on 0.82
+  of such strikes (FFVI 0.83; 0.47 before round 160). A voice over its
+  share is left there: one that moves over a held line in the game (a
+  plucked voice over a tremolo, 0.13) is not made to move. A pooled
+  share is another song's voice's. The turns' layout (round 160) still
+  takes the voices on the line's sample with the line, a test by the
+  sample. The hold runs after the tune is written, as rounds 158 and
+  159 do; the landing kept where it is drawn, in `parallel`, would
+  carry it.
 - **A moving line is held to its song's pedal and its steps on the
   pulse, by share and after the tune.** Since round 161 a chord part's
   moving line with its token's `pulse=` word is held to the share of its
