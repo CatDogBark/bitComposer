@@ -1739,6 +1739,57 @@ def form_field(s) -> str:
     return "".join(f"{p[3]}{int(p[1])}" for p in parts)
 
 
+PLACE_GRID = 12                      # a note's place in its bar as the `struck=` word says it: twelfths of a beat (round 159)
+
+
+def struck_places_field(song) -> str:
+    """Where in the bar a voice struck with another strikes, by the form's letters, as the balance token carries it
+    (round 159, `struck=`, after every other word so that no token's place among the balance word's outcomes moves):
+    for each chord part's voice beside its line that has struck facts (_relations, round 108), the part's letter
+    (RELATION_LETTERS) and the voice's number among the part's voices (the line 1, the voices beside it in layer_tokens'
+    order from 2), "~" and its median note length in hundredths of a beat, ":" and for each letter of the form the
+    places its notes fall at in its usual bar of the first part with that letter (the part that is not a repeat, where
+    there is one; the bar most of the part's bars are, the earliest of equals), in PLACE_GRID twelfths of a beat from
+    the bar's start and joined by ".", "-" where it rests; the letters joined by "+", the voices by ",":
+    "a3~45:A-+B0.6.18.24.30.36.42+C0.6.18.24.30.36.42" for The Day After's plucked voice, which rests through A and
+    strikes seven times a bar after it, on the first beat and the half beats but the one after it, each note 0.45 of
+    a beat. "" for a song with no form carried or no such voice. The struck facts say what share of the followed
+    voice's onsets the voice strikes, and the writer holds a drawn mask toward it (round 108); under a voice that
+    strikes 24 times a bar the mask word has one mask, every strike, and the plucked voice was written on all 24."""
+    if not form_field(song):
+        return ""
+    _, struck, _ = _relations(song)
+    first = {}
+    for bar, n, of, label in song.parts:
+        if label not in first or (of is None and first[label][2] is not None):
+            first[label] = (bar, n, of)
+    out = []
+    for role in sorted(song.notes):
+        if role not in readings_mod.UPPER or role not in RELATION_LETTERS or voice_level_shares(song, role) is None:
+            continue
+        voices = cells_mod.part_voices(song, role)
+        line = cells_mod.line_voice(voices, role, song)
+        others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+        for rank, v in enumerate(others, start=2):
+            notes = sorted(n for n in voices[v] if not math.isnan(n[2]))
+            if not struck.get(v) or not notes:
+                continue
+            lengths = sorted(n[1] for n in notes)
+            words = []
+            for label, (bar, n, _) in first.items():
+                bars = []
+                for k in range(bar, min(bar + n, len(song.bars))):
+                    a, b = song.bars[k]
+                    at = [round((x[0] - a) * PLACE_GRID) for x in notes if a - readings_mod.NEAR <= x[0] < b - readings_mod.NEAR]
+                    bars.append(".".join(str(x) for x in at) or "-")
+                if bars:
+                    usual = Counter(bars)
+                    words.append(label + max(bars, key=lambda x: (usual[x], -bars.index(x))))   # its usual bar there, the earliest of equals
+            if words:
+                out.append(f"{RELATION_LETTERS[role]}{rank}~{round(lengths[len(lengths) // 2] * 100)}:" + "+".join(words))
+    return ",".join(out)
+
+
 def loop_part_field(s) -> str:
     """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
     the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
@@ -2709,6 +2760,8 @@ def balance_units(songs) -> list:
                 tokens.append(f"loud={round(s.loudness / MIX_BIN) * MIX_BIN:.0f}")   # its own to
             tokens.append(f"tempo={readings_mod.band(s.bpm)}:{int(round(s.bpm))}")   # and, since round 137, the song's own tempo in beats a
             # minute (`tempo=fast:140`): the class alone had Edgar and Sabin's band, 90 in the game, written anywhere from 85 to 129
+        if struck_places_field(s):                           # where a voice struck with another strikes, by the form's letters (round 159):
+            tokens.append(f"struck={struck_places_field(s)}")   # after every other word, so no token's place among the outcomes moves
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

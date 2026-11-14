@@ -150,6 +150,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 156 | 2026-11-13 | a harmony's figure of two bars is not written on one chord | - |
 | 157 | 2026-11-13 | a theme's return brings no chords where the tune cannot follow | - |
 | 158 | 2026-11-13 | a voice beside a chord part's line hears its own part's voices | - |
+| 159 | 2026-11-13 | a struck voice no mask could thin strikes where its token voice does | - |
 
 ## Goal
 
@@ -11289,3 +11290,69 @@ The round writes the first three note for note as they were heard.
 In the fourth it moves 14 notes where the pass heard moved 32: the
 other 18 are a voice's where it runs parallel to the tune, left since
 as that line's own.
+
+### Round 159: a struck voice no mask could thin strikes where its token voice does (2026-11-13, from an accompaniment heard as rapid fire)
+
+**Why.** By ear, on the song on The Day After's token (seed 1044): the
+accompaniment is rapid fire, and nothing like its game song's.
+Investigated first; built with round 160 after the song was heard
+written both ways.
+
+**Found.** The game's accompaniment is a tremolo, two voices a third
+apart that strike 24 times a bar each on one pitch, and from its
+ninth bar a plucked voice of seven notes a bar (140 notes in 20
+bars). The written song's plucked voice plays 672 notes, 24 in every
+one of its 28 bars. Its token has what it needs: the voice is struck
+with the tremolo's second voice on 0.29 of that voice's onsets (round
+108), and its onsets a bar by the form's letters say none in A (round
+125). `struck_with` holds the share by drawing the bar's
+`second_figures` mask again, and under a bar of 24 strikes the word
+has one mask, every strike (225 of 225 draws in this song): the voice
+struck 618 of the 627 onsets it followed. A drawing fault: the word
+and its share exist, and the hold has nothing to draw. Over 400 seeds
+it is this token's nine songs, three of the five on The Phantom
+Forest's and one on Johnny C. Bad's; every other struck voice is
+within 0.15 of its token's share.
+
+**Built.** The balance token says where a struck voice strikes, as its
+last word, so that no token's place among the balance word's outcomes
+moves (`rhythm.struck_places_field`, `struck=`): for each chord part's
+voice with struck facts, the part's letter and the voice's number, its
+median note length in hundredths of a beat, and its usual bar's
+places in each part of the form by the form's letters, in twelfths of
+a beat, `-` where it rests (`a3~45:A-+B0.6.18.24.30.36.42+...` for
+this voice). The plan reads it (`struck_places_of`) and keeps it only
+where its form is the token song's. `write` keeps what each struck
+voice struck and what its masks thinned, and
+`plan.strike_where_token_does`, in `settle_chord_parts` once every
+part is written and before round 158's pass, takes a voice left 0.15
+or more over its token's share (`STRUCK_OVER`): in each bar the note
+nearest each of the token voice's places, within a twelfth of a beat,
+is kept and the voice's other notes are taken out; in a part it rests
+in, every note. A note kept sounds the token voice's median length,
+or 0.9 of the gap to the voice's next note, the shorter. Nothing is
+drawn.
+
+**Measured.** Suite 613 (1 skip). The vocabulary is refit: 115 tables as
+before, the balance word alone changed, each of its outcomes what it
+was but for the new word and in the place it had; 22 of the 68 tokens
+carry the word. Over 400 seeds (1000 to 1399, the player's asking),
+against round 158: a note changes in 13 songs, every one in the
+accompaniment (4,305 notes taken out, 850 notes' lengths, and 177
+pitches where round 158's pass meets other notes than it did); the
+other 387 are the same note for note and every seed keeps its token
+song. Seed 1044: the plucked voice's 672 notes are 140, the game's
+count, seven a bar from bar 9.
+
+**Open.** The places are the token voice's usual bar in each part of
+the form, so every bar of a part is struck alike. A form that is not
+the token song's has no letters to go by, and such a voice is left as
+written. The 0.15 is how far over its share a voice must be before it
+is taken for one no mask could thin, not a counted word; the mask word
+still has no mask that thins a bar of 24 strikes. The notes kept keep
+the pitches they were drawn with, one by one, where the game's voice
+plays a figure.
+
+**Heard.** Before the round was built, as a pass over the written
+song together with rounds 158's and 160's, on the song on The Day
+After's token written both ways: passed by ear.

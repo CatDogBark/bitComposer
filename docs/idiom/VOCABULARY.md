@@ -1191,6 +1191,21 @@ The words are grouped by where the writing draws them, in the order the song is 
   33 arpeggiated, 9 mixed, 5 block as drawn to 28, 13, 8 as used (FFVI
   29, 18, 9), and every one of 400 seeds kept its token song (the fields
   sit last in the token, so the table's order held).
+  Since round 159 the token ends with a `struck=` word where the song
+  has a form and a chord part's voice with struck facts
+  (`struck_places_field`): the part's letter and the voice's number
+  (the line 1), `~` and the voice's median note length in hundredths of
+  a beat, `:` and for each letter of the form the places its notes fall
+  at in its usual bar of that part, in twelfths of a beat from the bar's
+  start, `-` where it rests (`a3~45:A-+B0.6.18.24.30.36.42+C...` for
+  The Day After's plucked voice: none in A, seven notes a bar after
+  it). 22 of the 68 tokens carry it. The plan reads it
+  (`struck_places_of`) and keeps it where its form is the token song's;
+  `strike_where_token_does` uses it for a struck voice left 0.15 or more
+  over its token's share once its masks are drawn, which keeps its notes
+  at those places and no others. The word sits after every other, so
+  each token keeps its place among the outcomes and every seed its token
+  song.
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice

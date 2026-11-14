@@ -342,6 +342,9 @@ class Plan:
                                       # LOOP_CHORDS for the harmony) -> {the form's letter: (the figure's bars, the share of the voice's bars on it,
                                       # the bars off it counted from the part's first)} where the token song's voice loops (round 121); only where
                                       # the form is the token song's
+    struck_places: dict = field(default_factory=dict)   # a chord part -> {a voice beside its line: (its median note length in beats, {the form's
+                                      # letter: the places it strikes at in its usual bar there, in twelfths of a beat; [] where it rests})}
+                                      # (round 159: the balance token's `struck=` word, struck_places_of), only where the form is the token song's
     layer_struck: dict = field(default_factory=dict)    # a layered part -> each voice beyond the line's struck facts where it is struck with
                                                       # another (round 108: the seventh sub-field, struck_values_of), or None
     layer_stretches: dict = field(default_factory=dict)  # a layered part -> each voice beyond the line's instrument by stretch (the sixth field's sixth
@@ -1785,6 +1788,27 @@ def struck_values_of(text: str) -> dict | None:
     return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None, "sounding": sounding, "cell": cell}
 
 
+def struck_places_of(text: str) -> dict:
+    """The balance token's `struck=` word (round 159, arrangement.struck_places_field) read: "a3~45:A-+B0.6.18.24" ->
+    {the accompaniment: {2: (0.45, {"A": [], "B": [0, 6, 18, 24]})}}: a chord part's voice beside its line (the part's
+    relation letter and the voice's number, the line 1; here by the writer's index, the line 0), its median note length
+    in beats, and for each letter of the token song's form the places it strikes at in its usual bar there, in twelfths
+    of a beat from the bar's start, none where it rests. A voice that cannot be read is left out."""
+    out = {}
+    for entry in (text or "").split(","):
+        head, _, body = entry.partition(":")
+        who, _, length = head.partition("~")
+        role = RELATION_PARTS.get(who[:1])
+        try:
+            v, beats = int(who[1:]) - 1, int(length) / 100
+            letters = {w[:1]: ([] if w[1:] == "-" else [int(x) for x in w[1:].split(".")]) for w in body.split("+") if w}
+        except ValueError:
+            continue
+        if role and v > 0 and beats > 0 and letters and all(k.isalpha() for k in letters):
+            out.setdefault(role, {})[v] = (beats, letters)
+    return out
+
+
 def step_profile_of(text: str) -> dict | None:
     """The balance token's step profile field (round 117, arrangement.line_step_profile) read: "j63/24/13" -> {"same": 0.63,
     "step": 0.24, "leap": 0.13}; None where it cannot be read."""
@@ -2420,6 +2444,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                                             # bass, the song's chord-hold share (round 106): the riff as the song's own
     token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
     token_layer_struck = {}                                 # how each voice struck with another strikes (round 108)
+    token_struck_places = {}                                # and where in the bar it does, by the form's letters (round 159)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
@@ -2431,6 +2456,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         role, _, rest = token.partition("=")
         if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
             token_loop = int(rest) if rest.isdigit() else None
+            continue
+        if role == "struck":                                # where the token's song's struck voices strike (round 159), not a part
+            token_struck_places = struck_places_of(rest)
             continue
         if role == "beat":                                  # the token's song is counted in double time (round 131), not a part
             token_beat = int(rest) if rest.isdigit() and int(rest) > 0 else 1
@@ -3048,7 +3076,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -3957,6 +3985,10 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                             fills=(plan.section_fills.get(role) or {}).get("beside"))   # a fill at a section's end (round 118)
                         for k, f in figs.items():
                             figures_v[k] = f
+                        if sv is not None:                  # what it struck and what was thinned, against its token's share: for the
+                            got = plan.extras[role].setdefault("struck_counts", {}).setdefault(v, [0, 0, sv["share"]])   # places (round 159)
+                            got[0] += len(struck)
+                            got[1] += thinned
                     elif kind_w == "double":
                         struck, thinned = diatonic([(x[0], x[1], x[2], v) for x in in_span], semi_w, scale, v), 0
                     else:
@@ -4199,7 +4231,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
         written[R.BASS].log += double_bass(plan, song, written)   # a second voice that doubles the line: the line as finally played, again (round 126)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
-    if settle_chord_parts(plan, song, written):             # a chord part's voices beside its line, once every part is written (round 158)
+    if settle_chord_parts(plan, song, written):             # a chord part's voices beside its line, once every part is written (rounds 158, 159)
         hold_under_ceilings(plan, song, written)           # and what that moved, under the ceilings again
     return written
 
@@ -4231,6 +4263,55 @@ def _repeats_follow(plan: Plan, old: list, new: list, meter: int) -> int:
                 new[i] = new[i][:2] + (new[j][2],) + tuple(new[i][3:])
                 done += 1
     return done
+
+
+STRUCK_OVER = 0.15                    # a struck voice left this far over its token's share once its masks are drawn had no mask to thin it
+STRUCK_GAP = 0.9                      # and a note it keeps sounds this share of the gap to its next at the most
+
+
+def strike_where_token_does(plan: Plan, meter: int, role: str, notes: list) -> tuple:
+    """A voice struck with another strikes where its token voice does, where no mask could thin it (round 159). The
+    struck facts say what share of the followed voice's onsets the voice strikes (round 108), and struck_with holds a
+    drawn second_figures mask toward it: under the share a bar strikes every followed onset, over it a mask that thins
+    nothing is drawn again. Where the word has no mask that thins the bar the hold has nothing to draw: under The Day
+    After's tremolo, 24 strikes a bar, the word's one mask is every strike, and the plucked voice that plays seven
+    notes a bar in the game, and rests through the first eight bars, was written on all 24 in every bar (0.93 of the
+    followed onsets against the token's 0.29). Here, once every part is written, a voice whose strikes over the
+    followed onsets (extras["struck_counts"], kept as struck_with wrote it) are STRUCK_OVER or more over its token's
+    share strikes at its token voice's places (`plan.struck_places`, the `struck=` word: its usual bar in each part of
+    the form by the form's letters, carried only where the form is the token song's): in each bar the note nearest
+    each place, within a twelfth of a beat, is kept and the voice's other notes are taken out; in a part it rests in,
+    every note. A note kept sounds the token voice's median length, or STRUCK_GAP of the gap to the voice's next note,
+    the shorter. A part of the form whose letter the word does not have is left. Returns (the notes, a log line or "")."""
+    out, lines = list(notes), []
+    counts = (plan.extras.get(role) or {}).get("struck_counts") or {}
+    for v, (length, by_letter) in sorted((plan.struck_places.get(role) or {}).items()):
+        struck, thinned, share = counts.get(v) or (0, 0, None)
+        if share is None or not struck or struck / (struck + thinned) <= share + STRUCK_OVER:
+            continue
+        keep, rested = set(), 0
+        for bar, n_bars, _, letter in plan.parts:
+            places = by_letter.get(letter)
+            if places is None:
+                keep |= {i for i, x in enumerate(out) if x[3] == v and bar * meter - NEAR <= x[0] < (bar + n_bars) * meter - NEAR}
+                continue
+            for k in range(bar, bar + n_bars):
+                row = [(round((x[0] - k * meter) * 12), i) for i, x in enumerate(out) if x[3] == v and k * meter - NEAR <= x[0] < (k + 1) * meter - NEAR]
+                rested += bool(row) and not places
+                for place in places:
+                    near = min(row, key=lambda r: abs(r[0] - place), default=None)
+                    if near is not None and abs(near[0] - place) <= 1:
+                        keep.add(near[1])
+        before = sum(1 for x in out if x[3] == v)
+        out = [x for i, x in enumerate(out) if x[3] != v or i in keep]
+        own = [i for i, x in enumerate(out) if x[3] == v]
+        for i, j in zip(own, own[1:] + [None]):
+            gap = (out[j][0] - out[i][0]) if j is not None else 1.0
+            out[i] = (out[i][0], out[i][0] + min(length, STRUCK_GAP * gap)) + tuple(out[i][2:])
+        lines.append(f"voice {v + 1} strikes where its token voice does (round 159): it struck {struck / (struck + thinned):.2f} of the followed onsets "
+                     f"against the token's {share:.2f} and no mask thins them; {before - len(own)} of its {before} notes taken out, {rested} bars rested, "
+                     f"its notes {length:.2f} beats at the most")
+    return (out, "; ".join(lines)) if lines else (notes, "")
 
 
 def follows_another_part(plan: Plan, role: str, v: int, bars: int) -> set:
@@ -4296,14 +4377,18 @@ def hear_own_voices(plan: Plan, meter: int, notes: list, others: list, leave: di
 
 def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict) -> bool:
     """The chord parts' voices settled once every part is written: after the tune and the counter-line, so they stand as
-    they were written over the parts (a chord part changed before the tune is written re-writes the tune). Round 158:
-    a voice beside the line hears its own part's voices (hear_own_voices). Returns whether a note moved."""
+    they were written over the parts (a chord part changed before the tune is written re-writes the tune). Round 159:
+    a voice struck with another that no mask could thin strikes where its token voice does (strike_where_token_does).
+    Round 158: a voice beside the line hears its own part's voices (hear_own_voices). Returns whether a note changed."""
     any_moved = False
     for role in rhythm.UPPER:
         part = written.get(role)
         if part is None or not part.notes:
             continue
         notes = list(part.notes)
+        notes, line = strike_where_token_does(plan, song.meter, role, notes)   # round 159: before the voices hear each other
+        if line:
+            part.log.append(line)
         if len({n[3] for n in notes}) > 1:
             others = [n for r, p in written.items() if r != role and r != R.DRUMS for n in p.notes]
             leave = {v: follows_another_part(plan, role, v, len(song.bars)) for v in sorted({n[3] for n in notes})[1:]}
