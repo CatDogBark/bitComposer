@@ -6266,7 +6266,7 @@ class ChordPartVoicesTests(unittest.TestCase):
         from types import SimpleNamespace
         half = [k * 0.5 for k in range(8)]                                                          # the voice on every half beat of two bars
         notes = sorted([(0.0, 4.0, 60.0, 0), (4.0, 8.0, 62.0, 0)] + [(b * 4 + t, b * 4 + t + 0.2, 55.0, 2) for b in (0, 1) for t in half])
-        plan = SimpleNamespace(parts=[(0, 1, None, "A"), (1, 1, None, "B")], extras={R.ACCOMP: {"struck_counts": {2: [16, 0, 0.29]}}},
+        plan = SimpleNamespace(parts=[(0, 1, None, "A"), (1, 1, None, "B")], extras={R.ACCOMP: {"struck_counts": {2: [16, 0, 0.29]}, "struck_bars": {2: [[0, 1], [0, 1]]}}},
                                struck_places={R.ACCOMP: {2: (0.6, {"A": [], "B": [0, 6, 18]})}})
         out, line = whole.strike_where_token_does(plan, 4, R.ACCOMP, notes)
         voice = [n for n in out if n[3] == 2]
@@ -6275,6 +6275,11 @@ class ChordPartVoicesTests(unittest.TestCase):
         self.assertIn("(round 159)", line); self.assertIn("13 of its 16 notes taken out, 1 bars rested", line)   # or 0.9 of the gap to its next
         plan.extras[R.ACCOMP]["struck_counts"][2] = [16, 30, 0.29]                                 # 0.35 of the followed onsets against 0.29: its masks
         self.assertEqual(whole.strike_where_token_does(plan, 4, R.ACCOMP, notes), (notes, ""))     # thinned it, and it is left as written
+        plan.extras[R.ACCOMP]["struck_counts"][2] = [16, 6, 0.29]                                  # round 162: well over its share (0.73), and its masks
+        plan.extras[R.ACCOMP]["struck_bars"][2] = [[0, 1], []]                                      # thinned every bar they were asked in: the masks' own
+        self.assertEqual(whole.strike_where_token_does(plan, 4, R.ACCOMP, notes), (notes, ""))     # drift, not a voice no mask could thin: left as written
+        plan.extras[R.ACCOMP]["struck_bars"][2] = [[0, 1], [1]]                                     # one bar the hold's draws ran out in: taken
+        self.assertIn("no mask thinned 1 of the 2 bars asked (round 162)", whole.strike_where_token_does(plan, 4, R.ACCOMP, notes)[1])
         plan.extras[R.ACCOMP]["struck_counts"][2] = [16, 0, 0.29]
         plan.struck_places = {R.ACCOMP: {2: (0.6, {"B": [0]})}}                                    # a part whose letter the word does not have is left
         out, _ = whole.strike_where_token_does(plan, 4, R.ACCOMP, notes)
