@@ -6154,3 +6154,73 @@ class TonalKitPieceTests(unittest.TestCase):
         for seed in range(1, 20):
             self.assertEqual(rhythm.band(whole.plan({"balance": balance, "tempos": edges}, seed, "g").bpm), "medium", seed)
             self.assertEqual(rhythm.band(whole.plan({"balance": slow, "tempos": edges}, seed, "g").bpm), "slow", seed)
+
+
+class ChordPartVoicesTests(unittest.TestCase):
+    """The chord parts' voices settled once every part is written (whole.settle_chord_parts)."""
+
+    @staticmethod
+    def a_plan(chords, parts=None, tonic=0, mode="major"):
+        from types import SimpleNamespace
+        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={})
+
+    def test_a_voice_beside_the_line_hears_its_own_part(self):
+        """Round 158: a voice beside a chord part's line is placed against the chord and the line, and its clashes word
+        counts it against the parts written before its part: two voices a third over one line landed on the major
+        third and the minor at once. Once every part is written a note a semitone from a lower-numbered voice of its
+        own part moves to the nearest pitch that is not, a tone of the chord first; the line is never moved."""
+        plan = self.a_plan([(0, ""), (0, "")])                                                     # two bars of C major, in C
+        notes = [(0.0, 2.0, 60.0, 0), (0.0, 2.0, 64.0, 1), (0.0, 2.0, 63.0, 2),                     # E over the line and E flat beside it
+                 (4.0, 6.0, 64.0, 0), (4.0, 6.0, 67.0, 1), (4.0, 6.0, 72.0, 2)]                     # a bar with no semitone in it
+        out, line = whole.hear_own_voices(plan, 4, notes, [])
+        self.assertEqual([n[2] for n in out], [60.0, 64.0, 67.0, 64.0, 67.0, 72.0])               # the E flat to the chord's G: its E and its C are
+        self.assertIn("(round 158): 1 notes moved, 1 to a tone of the chord", line)               # nearer, and are the part's own notes already
+        self.assertEqual([n[:2] + n[3:] for n in out], [n[:2] + n[3:] for n in notes])            # nothing but a pitch changes
+        same, quiet = whole.hear_own_voices(plan, 4, notes[3:], [])
+        self.assertEqual((same, quiet), (notes[3:], ""))                                           # a part with no semitone in it is left as it is
+        out, _ = whole.hear_own_voices(plan, 4, [(0.0, 1.0, 61.0, 0), (0.0, 1.0, 60.0, 1)], [])    # the line is heard whatever it plays, and stays:
+        self.assertEqual([n[2] for n in out], [61.0, 64.0])                                        # a C under its C sharp goes to the E, four over
+        out, _ = whole.hear_own_voices(plan, 4, [(0.0, 1.0, 62.0, 0), (0.0, 1.0, 63.0, 1)], [(0.0, 1.0, 53.0, 3)])   # another part's F sounds:
+        self.assertEqual(out[1][2], 60.0)                                                          # the C, three under, before the E a semitone from it
+        held = [(0.0, 1.0, 60.0, 0), (1.0, 2.0, 62.0, 0), (0.0, 2.0, 61.0, 1)]                      # a C sharp held over the line's C and then its D
+        out, _ = whole.hear_own_voices(plan, 4, held, [])
+        self.assertEqual(out[2][2], 64.0)                                                          # hears both: the E, clear of the two
+
+    def test_a_repeated_part_of_the_form_still_repeats(self):
+        """Round 158: a part of the form that played an earlier part again note for note plays the moved notes too."""
+        plan = self.a_plan([(0, "")] * 4, parts=[(0, 2, None, "A"), (2, 2, 0, "A")])
+        bar = [(0.0, 2.0, 60.0, 0), (0.0, 2.0, 64.0, 1), (0.0, 2.0, 63.0, 2)]
+        notes = bar + [(a + 8.0, b + 8.0, m, v) for a, b, m, v in bar]
+        out, line = whole.hear_own_voices(plan, 4, notes, [])
+        self.assertEqual([n[2] for n in out[:3]], [n[2] for n in out[3:]])
+        self.assertEqual(out[2][2], 67.0)
+
+    def test_the_chord_parts_are_settled_after_every_part_is_written(self):
+        """Round 158: the pass runs over each chord part with two voices or more, puts its notes back in the part and
+        in the song the writers read, and says whether a note moved; a part of one voice is not looked at."""
+        from types import SimpleNamespace
+        plan = self.a_plan([(0, "")])
+        acc = whole.Part(R.ACCOMP, [(0.0, 2.0, 60.0, 0), (0.0, 2.0, 64.0, 1), (0.0, 2.0, 63.0, 2)], ["-"])
+        arp = whole.Part(R.ARP, [(0.0, 1.0, 61.0, 0)], ["-"])
+        song = SimpleNamespace(meter=4, bars=[(0.0, 4.0)], notes={R.ACCOMP: [], R.ARP: [(0.0, 1.0, 61.0, R.ARP)]})
+        written = {R.ACCOMP: acc, R.ARP: arp}
+        self.assertTrue(whole.settle_chord_parts(plan, song, written))
+        self.assertEqual([n[2] for n in acc.notes], [60.0, 64.0, 67.0])
+        self.assertEqual(song.notes[R.ACCOMP], [(0.0, 2.0, 60.0, R.ACCOMP), (0.0, 2.0, 64.0, R.ACCOMP), (0.0, 2.0, 67.0, R.ACCOMP)])
+        self.assertIn("(round 158)", acc.log[-1])
+        self.assertEqual((arp.notes, arp.log), ([(0.0, 1.0, 61.0, 0)], []))
+        self.assertFalse(whole.settle_chord_parts(plan, song, written))                            # nothing left to move: nothing moves
+
+    def test_a_voice_that_follows_another_parts_line_is_left_there(self):
+        """Round 158: in the bars where a voice doubles another part's line or runs parallel to it (the token's relation
+        word, round 90) its notes are that line's again: the pass leaves them, and moves the voice in its own bars."""
+        plan = self.a_plan([(0, "")] * 2)
+        plan.layer_relations = {R.ACCOMP: ["dm-12x1>o"]}                                           # doubles the tune in bar 1, its own after
+        self.assertEqual(whole.follows_another_part(plan, R.ACCOMP, 1, 2), {0})
+        self.assertEqual(whole.follows_another_part(plan, R.ACCOMP, 2, 2), set())                  # a voice with no word follows nothing
+        plan.layer_relations = {R.ACCOMP: ["pa-3"]}                                                # parallel to its own part's line: the part's own
+        self.assertEqual(whole.follows_another_part(plan, R.ACCOMP, 1, 2), set())
+        notes = [(0.0, 2.0, 60.0, 0), (0.0, 2.0, 61.0, 1), (4.0, 6.0, 60.0, 0), (4.0, 6.0, 61.0, 1)]
+        out, line = whole.hear_own_voices(plan, 4, notes, [], {1: {0}})
+        self.assertEqual([n[2] for n in out], [60.0, 61.0, 60.0, 64.0])
+        self.assertIn("1 notes moved", line)

@@ -4199,7 +4199,122 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
         written[R.BASS].log += double_bass(plan, song, written)   # a second voice that doubles the line: the line as finally played, again (round 126)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
+    if settle_chord_parts(plan, song, written):             # a chord part's voices beside its line, once every part is written (round 158)
+        hold_under_ceilings(plan, song, written)           # and what that moved, under the ceilings again
     return written
+
+
+HEAR_REACH = 6                        # semitones either way a voice's note may move off a semitone with its own part (a tritone)
+
+
+def _on_chord(plan: Plan, bar: int, midi: int) -> bool:
+    """Whether a pitch is a tone of the plan's chord in a bar; False in a bar without one."""
+    c = plan.chords[bar] if 0 <= bar < len(plan.chords) else None
+    return c is not None and c[0] is not None and vocab.tone_of(int(round(midi)) % 12, c[0], c[1]) != "other"
+
+
+def _repeats_follow(plan: Plan, old: list, new: list, meter: int) -> int:
+    """A part of the form that played an earlier part again note for note plays that part's moved notes too: where a
+    note of `old` in a repeating part had the pitch of the note at the same place and voice of the part it repeats,
+    its place in `new` takes that note's new pitch. Returns the notes set."""
+    index = {(round(n[0], 3), n[3]): i for i, n in enumerate(old)}
+    done = 0
+    for bar, n_bars, of, _ in plan.parts:
+        if of is None:
+            continue
+        shift = (bar - plan.parts[of][0]) * meter
+        for i, n in enumerate(old):
+            if not (bar * meter - NEAR <= n[0] < (bar + n_bars) * meter - NEAR):
+                continue
+            j = index.get((round(n[0] - shift, 3), n[3]))
+            if j is not None and int(round(old[j][2])) == int(round(n[2])) and new[i][2] != new[j][2]:
+                new[i] = new[i][:2] + (new[j][2],) + tuple(new[i][3:])
+                done += 1
+    return done
+
+
+def follows_another_part(plan: Plan, role: str, v: int, bars: int) -> set:
+    """The bars in which a part's voice `v` doubles another part's line or runs parallel to it by its token's relation
+    word (round 90): there its notes are that line's again, and are not the part's own to move."""
+    word = relation_word(plan, role, v)
+    return {k for kind, target, _, a, b in (stretch_spans(relation_stretches(word), bars) if word else [])
+            if kind in ("double", "parallel") and isinstance(target, str) and target != role for k in range(a, b)}
+
+
+def hear_own_voices(plan: Plan, meter: int, notes: list, others: list, leave: dict | None = None) -> tuple:
+    """A chord part's voices beside its line hear the part's other voices (round 158). The line and each voice beside it
+    are placed against the chord and the line (`parallel`, the voice words), and a voice's clashes word counts it
+    against the parts written before its part, never against its own part's voices: two voices a third over one line
+    landed on the major third and the minor at once, and the more voices a part had the more it clashed with itself
+    (over 400 songs a semitone sounded between two voices of the accompaniment at 0.06 of its onsets with two voices,
+    0.15 with three, 0.22 with four, 0.41 with five; FFVI's own accompaniments 0.01 at the median, 0.22 at the most).
+    Here, once every part is written, the voices are taken in order, the line never moved: a note a semitone by pitch
+    class from a note that a lower-numbered voice of its part sounds while it sounds (at its onset alone where no
+    pitch clears the whole of it) moves to the nearest pitch within HEAR_REACH that is not, a tone of the bar's chord
+    before a tone of the key's scale before any other; among those one not a semitone from another part's note at its
+    onset, then one that is not a unison with its own part, then the nearer, then the lower. A note with no such pitch
+    stays, and a part of the form that repeats another still does (_repeats_follow). A voice's notes in the bars where
+    it doubles another part's line or runs parallel to it (`leave`: voice -> those bars, follows_another_part) are that
+    line's and are left; the voices after it hear them all the same. `notes`: the part's, (start, end, midi, voice);
+    `others`: the other pitched parts' notes. Returns (the notes, a log line or "")."""
+    old, new = list(notes), list(notes)
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    pc = lambda m: int(round(m)) % 12                       # noqa: E731
+    moved, stuck, tiers = 0, 0, [0, 0, 0]
+    for v in sorted({n[3] for n in old})[1:]:
+        for i in sorted((i for i, n in enumerate(old) if n[3] == v), key=lambda i: old[i][0]):
+            a, b, m = new[i][0], new[i][1], int(round(new[i][2]))
+            if leave and int((a + NEAR) // meter) in leave.get(v, ()):
+                continue                                    # another part's line again here: not this part's to move
+            over = {pc(x[2]) for x in new if x[3] < v and x[0] < b - NEAR and x[1] > a + NEAR}
+            if not any((m - q) % 12 in writer.CLASH for q in over):
+                continue
+            at_on = [x for x in new if x[3] < v and x[0] <= a + NEAR and x[1] > a + NEAR]
+            own = {int(round(x[2])) for x in at_on}
+            other = {pc(x[2]) for x in others if x[0] <= a + NEAR and x[1] > a + NEAR}
+            k = int((a + NEAR) // meter)
+            best = None
+            for held in (over, {pc(x[2]) for x in at_on}):
+                free = [m + d for step in range(1, HEAR_REACH + 1) for d in (-step, step) if not any((m + d - q) % 12 in writer.CLASH for q in held)]
+                if free:
+                    best = min(free, key=lambda c: (0 if _on_chord(plan, k, c) else 1 if c % 12 in scale else 2,
+                                                    any((c - q) % 12 in writer.CLASH for q in other), c in own, abs(c - m), c))
+                    break
+            if best is None:
+                stuck += 1
+                continue
+            tiers[0 if _on_chord(plan, k, best) else 1 if best % 12 in scale else 2] += 1
+            new[i] = new[i][:2] + (float(best),) + tuple(new[i][3:])
+            moved += 1
+    if not moved:
+        return notes, ""
+    again = _repeats_follow(plan, old, new, meter)
+    return new, (f"voices beside the line off a semitone with their own part (round 158): {moved} notes moved, {tiers[0]} to a tone of the chord, "
+                 f"{tiers[1]} to a tone of the scale, {tiers[2]} to another" + (f"; {stuck} with no pitch free left" if stuck else "")
+                 + (f"; {again} notes of the form's repeats with them" if again else ""))
+
+
+def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict) -> bool:
+    """The chord parts' voices settled once every part is written: after the tune and the counter-line, so they stand as
+    they were written over the parts (a chord part changed before the tune is written re-writes the tune). Round 158:
+    a voice beside the line hears its own part's voices (hear_own_voices). Returns whether a note moved."""
+    any_moved = False
+    for role in rhythm.UPPER:
+        part = written.get(role)
+        if part is None or not part.notes:
+            continue
+        notes = list(part.notes)
+        if len({n[3] for n in notes}) > 1:
+            others = [n for r, p in written.items() if r != role and r != R.DRUMS for n in p.notes]
+            leave = {v: follows_another_part(plan, role, v, len(song.bars)) for v in sorted({n[3] for n in notes})[1:]}
+            notes, line = hear_own_voices(plan, song.meter, notes, others, leave)
+            if line:
+                part.log.append(line)
+        if notes != part.notes:
+            part.notes[:] = notes
+            song.notes[role] = sorted([(a, b - a, m, role) for a, b, m, *_ in notes], key=lambda x: x[0])
+            any_moved = True
+    return any_moved
 
 
 def doubling_own_of(text: str) -> tuple:

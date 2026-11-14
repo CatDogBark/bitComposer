@@ -452,6 +452,22 @@ and the hit-or-miss part. Two steps, in order.
   and saving each import's readings in the database waited for it
   (decided 2026-10-20); since 2.0 the writer is the default on the
   built-in sound sets too, and an import keeps its readings.
+- **A channel's second instrument, as a word (asked for 2026-11-13).**
+  Where a bass or chord channel plays a second instrument in a register
+  of its own the reader makes a voice of it (round 89) and the readings
+  keep that voice beside the counts, not in them, so nothing of it is
+  written: 27 of Final Fantasy VI's 68 songs have one or more today
+  (Wild West 0.30 of its pitched notes, Kefka 0.17, Mog 0.12). The Day
+  After's second channel plays a broken chord in eighth notes through
+  the first eight bars on one instrument and a plucked figure from bar 9
+  on another; a song written on its token has the figure and no word of
+  the broken chord, which in the game's opening is 4.4 dB over the
+  tremolo beside it. What it needs: the instrument by stretch for a
+  voice beside a line (a line's own has been written since round 91),
+  or a part of its own for the second instrument where the eight voices
+  allow one, and a count of what the second instrument plays in its
+  bars. `docs/LIMITS.md`, "A channel's second instrument is not
+  written".
 - **The generator writes IT instruments (a later version, with a listening
   review; decided 2026-10-18).** Classic's songs are sample mode (a
   written song renders through `spc/convert.py`, with instruments and
