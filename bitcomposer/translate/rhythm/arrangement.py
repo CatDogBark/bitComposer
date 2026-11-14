@@ -1881,6 +1881,36 @@ def line_pulse_field(song) -> str:
     return ",".join(out)
 
 
+def voice_rubs_field(song) -> str:
+    """How often each voice beside a chord part's line sits a semitone from its own part, as the balance token carries
+    it (round 165, `rubs=`, after every other word): for each chord part's voice beside its line with WORD_NOTES
+    pitched notes or more, the part's letter (RELATION_LETTERS) and the voice's number among the part's voices (the
+    line 1, the voices beside it in layer_tokens' order from 2), "~" and the share of its notes, in hundredths, that
+    sound a semitone by pitch class (1 or 11 mod 12) from a note that the line or a voice numbered before it sounds
+    while they sound; the voices joined by ",": "a2~25,a3~4,a4~15" for Slam Shuffle's accompaniment. "" for a song with
+    no such voice. The clashes word counts a part against the parts written before it (round 94) and nothing counted
+    a part against itself: the written voices sat a semitone from their own part at up to 0.41 of the part's onsets,
+    and round 158 moved every such note off, where half of FFVI's 64 such voices have one or more and 14 have them
+    on a tenth of their notes or more (a guitar under a piano on 0.25 of its notes, a blues)."""
+    out = []
+    for role in sorted(song.notes):
+        if role not in readings_mod.UPPER or role not in RELATION_LETTERS or voice_level_shares(song, role) is None:
+            continue
+        voices = cells_mod.part_voices(song, role)
+        line = cells_mod.line_voice(voices, role, song)
+        order = [line] + sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
+        pitched = {v: [(n[0], n[0] + n[1], int(round(n[2]))) for n in voices[v] if not math.isnan(n[2])] for v in order}
+        for rank, v in enumerate(order[1:], start=2):
+            mine = pitched[v]
+            if len(mine) < WORD_NOTES:
+                continue
+            heard = [x for u in order[:rank - 1] for x in pitched[u]]
+            rubs = sum(1 for a, b, m in mine
+                       if any(x[0] < b - readings_mod.NEAR and x[1] > a + readings_mod.NEAR and (m - x[2]) % 12 in (1, 11) for x in heard))
+            out.append(f"{RELATION_LETTERS[role]}{rank}~{round(rubs / len(mine) * 100)}")
+    return ",".join(out)
+
+
 def loop_part_field(s) -> str:
     """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
     the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
@@ -2857,6 +2887,8 @@ def balance_units(songs) -> list:
             tokens.append(f"turns={line_turns_field(s)}")
         if line_pulse_field(s):                              # and a moving line by its place in the beat: its pedal, its steps on the pulse (round 161)
             tokens.append(f"pulse={line_pulse_field(s)}")
+        if voice_rubs_field(s):                              # and how often a voice sits a semitone from its own part (round 165)
+            tokens.append(f"rubs={voice_rubs_field(s)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

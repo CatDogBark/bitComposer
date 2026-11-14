@@ -169,23 +169,23 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   in a dense band finds no clear tone within VOICE_TRIES draws. A
   placement for returning cells that looks at the band would carry it
   further.
-- **A chord part's voices are held off each other's semitones
-  altogether.** Since round 158 a voice beside a chord part's line that
-  sounds a semitone from a lower-numbered voice of its own part is moved
-  to the nearest tone that does not, a tone of the chord first, once
-  every part is written. FFVI's own accompaniments sound such a semitone
-  at 0.01 of their onsets at the median and up to 0.22 (Slam Shuffle);
-  the written ones are held to none, so a song on a token whose game
-  song has them loses them, and a part of four or five voices is plainer
-  than it was (4,291 of 4,327 moved notes over 400 seeds went to a chord
-  tone). A voice that doubles another part's line or runs parallel to
-  it is left there; since round 163 the part's other voices hear its
-  notes and stand clear of them, but the line never moves, so a
-  semitone between the line and such a voice stands. The pass runs after the tune is written, so the tune's own
-  clashes share was drawn against the voices as they stood before it.
-  A count of a part's own semitones by song, held as the clashes word
-  is, would carry it; so would the voices hearing each other as they
-  are drawn.
+- **A voice's semitones with its own part are a share, kept by a pass
+  after the tune.** Since round 158 a voice beside a chord part's line
+  that sounds a semitone from a lower-numbered voice of its own part is
+  moved to the nearest tone that does not, a tone of the chord first,
+  once every part is written; since round 165 it keeps its token
+  voice's share of such notes (the `rubs=` word: none for half of
+  FFVI's voices, a quarter of the notes for a few), in the order they
+  come. Which notes stay is that order, not the ones the game's voice
+  leans on, and a note that stays is one the writer fell into. A voice
+  with under sixteen notes in the game has no share and keeps none
+  (Good Night's five). A voice that doubles another part's line or runs
+  parallel to it is left there; since round 163 the part's other voices
+  hear its notes and stand clear of them, but the line never moves, so
+  a semitone between the line and such a voice stands. The pass runs
+  after the tune is written, so the tune's own clashes share was drawn
+  against the voices as they stood before it. The voices hearing each
+  other as they are drawn would carry it.
 - **The counter is more diatonic than FFVI's.** A counter by the voice
   words takes scale steps from the tune's note, so it leaves the scale
   only where the tune does: 0.06 to 0.08 of its line's notes against

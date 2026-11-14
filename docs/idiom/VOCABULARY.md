@@ -1230,6 +1230,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   moves). 35 of the 68 tokens carry it. The plan reads it
   (`line_pulse_of`, `plan.line_pulse`) and `hold_pulse` holds the
   written line to it; a line with turns is laid out by those instead.
+  Since round 165 a `rubs=` word comes after it for a song with a voice
+  beside a chord part's line of sixteen pitched notes or more
+  (`voice_rubs_field`): the part's letter and the voice's number (the
+  line 1), `~` and the share of the voice's notes, in hundredths, that
+  sound a semitone by pitch class from a note the line or a voice
+  numbered before it sounds meanwhile (`a2~25,a3~4,a4~15` for Slam
+  Shuffle's accompaniment). 39 of the 68 tokens carry it. The plan
+  reads it (`voice_rubs_of`, `plan.voice_rubs`) whatever its form, and
+  `hear_own_voices` leaves a voice that share of its semitones with its
+  own part.
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
