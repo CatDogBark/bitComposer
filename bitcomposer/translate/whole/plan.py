@@ -1584,8 +1584,8 @@ def own_lengths(plan, role: str) -> dict | None:
 
 def own_places(plan, role: str) -> tuple | None:
     """Where in the beat the token song's tune plays (round 147, Plan.tune_places: its share of onsets on a quarter of the
-    beat, on a third, finer), as the plan's feel holds them (rhythm.held_places: the third is not held in a triple
-    feel), for the tune's and the counter-line's writers; None where the token carries none or the song is written in
+    beat, on a third, finer, and since round 169 on the half beat), as the plan's feel holds them (rhythm.held_places:
+    the third is not held in a triple feel, the half beat in a duple one), for the tune's and the counter-line's writers; None where the token carries none or the song is written in
     another feel than its token song's."""
     return rhythm.held_places((getattr(plan, "tune_places", None) or {}).get(role) or None, plan.feel, getattr(plan, "token_feel", rhythm.FEELS[0]))
 
@@ -2809,10 +2809,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 said = lambda x: "by no count (under four such bars)" if x is None else f"in {x:.2f} of such bars"   # noqa: E731    # and how often
                 log.append(f"the {role} plays an earlier bar again where the bass plays one from further back again {said(far)} in the balance's song, "   # at all (round
                            f"where it plays the bar before again {said(near)}, and an earlier bar again in {overall:.2f} of its bars (round 146)")   # 146): `w48/-/29`
-            if len(fields) > 28 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"p\d+/\d+/\d+", fields[28]):   # where in the beat a tune's
-                token_places[role] = tuple(int(x) / 100 for x in fields[28][1:].split("/"))   # notes fall (round 147): `p12/0/3`
-                log.append(f"the {role} plays {token_places[role][0]:.2f} of its notes on a quarter of the beat in the balance's song, {token_places[role][1]:.2f} on a third, "
-                           f"{token_places[role][2]:.2f} finer (round 147)")
+            if len(fields) > 28 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"p\d+/\d+/\d+(/\d+)?", fields[28]):   # where in the beat a tune's
+                token_places[role] = tuple(int(x) / 100 for x in fields[28][1:].split("/"))   # notes fall (round 147): `p12/0/3`, and since round 169
+                log.append(f"the {role} plays {token_places[role][0]:.2f} of its notes on a quarter of the beat in the balance's song, {token_places[role][1]:.2f} on a third, "   # the half
+                           f"{token_places[role][2]:.2f} finer (round 147)"                                                                                                   # beat: `p12/0/3/20`
+                           + (f", {token_places[role][3]:.2f} on the half beat (round 169)" if len(token_places[role]) > 3 else ""))
             if len(fields) > 29 and re.fullmatch(r"x\d+/\d+" if role == R.BASS else r"x\d+", fields[29]) and role in rhythm.KIT_PARTS:   # how often its
                 token_with_kit[role] = tuple(int(x) / 100 for x in fields[29][1:].split("/"))   # notes are struck with the kit (round 149): `x100/84`, `x91`
                 log.append(f"the {role} strikes {token_with_kit[role][0]:.2f} of its notes with a kit hit in the balance's song"
@@ -4259,7 +4260,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             plog.append(f"bars' masks within the balance's song's own onsets for their part of the form (round 143): {sum(mask_said.values()) - mask_said['none']} of {sum(mask_said.values())}"
                         + f"; {mask_said['again']} drawn again, {mask_said['among']} among the table's masks that fit, {mask_said['none']} no mask fits")
         if beside and places_c is not None:                 # and its places in the beat against its token song's line's (round 147)
-            plog.append("notes on a quarter of the beat, a third, finer, by the bars' masks: "
+            plog.append("notes on a quarter of the beat, a third, finer, the half beat, by the bars' masks: "
                         + ", ".join(f"{line_fine[kind]}/{line_n} ({line_fine[kind] / max(1, line_n):.2f}; " + ("the song's feel's own, not held)" if share is None else f"the balance's song's line {share:.2f})")
                                     for kind, share in zip(rhythm.FINE_PLACES, places_c))
                         + f"; {place_said['moved']} bars' own onsets moved onto them, {place_said['again']} bars' masks drawn again for them"
