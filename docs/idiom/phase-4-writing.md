@@ -151,6 +151,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 157 | 2026-11-13 | a theme's return brings no chords where the tune cannot follow | - |
 | 158 | 2026-11-13 | a voice beside a chord part's line hears its own part's voices | - |
 | 159 | 2026-11-13 | a struck voice no mask could thin strikes where its token voice does | - |
+| 160 | 2026-11-13 | a block line's note changes where its token song's does, and a voice on its sample holds with it | - |
 
 ## Goal
 
@@ -11356,3 +11357,85 @@ plays a figure.
 **Heard.** Before the round was built, as a pass over the written
 song together with rounds 158's and 160's, on the song on The Day
 After's token written both ways: passed by ear.
+
+### Round 160: a block line's note changes where its token song's does, and a voice on its sample holds with it (2026-11-13, with round 159)
+
+**Why.** The same song as round 159, by ear: the accompaniment is
+rapid fire. With the plucked voice at its seven notes a bar the
+tremolo was still not one.
+
+**Found.** Two things, each counted on the game. The line: the
+tremolo's upper voice stays on a pitch six strikes at the median
+(nine at the mean) and its note changes on the first or the third
+beat half the time; the written line stayed three strikes and turned
+between beats on 0.76 of its turns. Its step profile is held (round
+117: the note again on 0.84 of its moves against the song's 0.89),
+but as a share over the line, so the changes fell wherever the share
+let them, and no word says where a line's note changes. The voice
+beside it: the tremolo's second voice keeps its note on every strike
+where the upper one keeps its own (513 of 513); the written one kept
+it on 0.67. `parallel` draws each note's landing anew, by the line's
+tone against the chord and the landing before, so under a repeated
+line note the voice flickers between chord tones: a drawing fault.
+It is general. Over 400 seeds, where a line repeats its pitch a voice
+beside it repeats its own on 0.47 of its strikes; FFVI's on 0.83, and
+FFVI's voices on their line's own sample, an instrument struck as a
+chord, on 0.97 (twelve voices in eleven songs, 0.80 at the least).
+
+**Built.** A new word and a hold, both in `settle_chord_parts` once
+every part is written, before rounds 159's and 158's passes. The
+word: the balance token says, after every other word, where a block
+line's note changes, bar by bar (`rhythm.line_turns_field`, `turns=`:
+for a chord part whose line's pitch differs from the strike before's
+on under a third of its strikes, the motion word's block, the places
+of its turns in each bar in twelfths of a beat, `-` for a bar on one
+note; `a24/-/24/-/...` for the tremolo). `plan.lay_turns` lays each
+bar of such a line out between the places of one of the token song's
+bars, drawn on a stream of its own: the bar keeps as many of its
+written pitches as the places make stretches, those on the bar's
+chord before the ones it struck most, in the order written. The
+hold: `plan.hold_with_line`, for a voice whose token sample is its
+line's own. Where the line's note at the voice's strike is the one it
+had at the voice's strike before, the voice takes its own note of
+that strike again, held as a share is (`SAMPLE_KEEPS`, within
+`STRUCK_MARGIN`); in a bar the turns laid out, the voice is laid out
+with the line, taking for each stretch a note it had under that line
+pitch in the bar as written. A voice is left where it follows another
+part's line, and a part of the form that repeats another still does.
+
+**Measured.** Suite 617 (1 skip). The vocabulary is refit: 115 tables,
+the balance word alone changed, each outcome what it was but for the
+new word and in its place; 12 of the 68 tokens carry `turns=`. Over
+400 seeds (1000 to 1399, the player's asking), against round 159: a
+note changes in 153 songs, 17 notes at the median and 729 at the
+most, every one a pitch in a chord part (5,606 of the
+accompaniment's voices beside the line and 2,955 of its line, 1,821
+and 657 of the arp's, 75 of the harmony's voices); the other 247 are
+the same note for note, and the tune, the counter-line, the bass and
+the kit are in every song. The 49 lines laid out, on ten tokens, stay
+on a pitch 8 strikes at the median of their medians where they stayed
+3, and turn on the first or the third beat on 0.78 of their turns
+where they did on 0.39. Where a line repeats its pitch a voice beside
+it repeats its own on 0.74 of its strikes, every voice counted
+whatever its sample, where it did on 0.47. Seed 1044: the line stays
+14 strikes (3), turns on the first or third beat on 0.56 (0.19), and
+the second voice keeps its note on 600 of 602 such strikes (361 of
+535).
+
+**Open.** The turns are drawn from the token song's bars at random,
+so a bar's turns are one of that song's bars' and not the bar's own
+harmony's; the written tremolo holds longer than the game's (14
+strikes against 6), since a bar keeps no more pitches than it was
+written with. A held note is whatever the writer drew: where it drew
+one off the key it now lasts half a bar. The turns' stream keeps the
+name it was heard under. The hold is for a voice on the line's own
+sample; a voice on another sample that the game holds with its line
+is as it was. Rounds 158 to 160 are passes over the written parts,
+after the tune: the tune was drawn against the chord parts as they
+stood before them.
+
+**Heard.** Before the round was built, as a pass over the written
+parts with rounds 158's and 159's, on the song on The Day After's
+token and, without round 158's, on the song on Strago's, each written
+both ways: passed by ear. The three rounds together write both songs
+note for note as they were heard.
