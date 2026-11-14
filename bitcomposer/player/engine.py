@@ -133,6 +133,46 @@ def parse_message(message: str) -> dict:
     return out
 
 
+_TEMPO = re.compile(r"^\d+ BPM$")
+_SAID_OF_EVERY_SONG = (": the band, the figures, the tune and its",
+                       "balance drawn from a vocabulary of counted habits, none of any song's notes.")
+DETAIL_LINES = 6                       # a module's message can run to pages: this many of its lines at most
+
+
+def song_card(lines: list[str], title: str, drew: dict) -> tuple[list[str], list[str]]:
+    """What the window says of a song, from its message's lines (parse_message's "lines"): (the facts beside the
+    title, the details kept behind MORE). The facts are a bitComposer song's key, tempo and form, or a converted
+    song's game and composer; any other module has none. The details are the message's other lines, less what a
+    written song's message says of every written song alike."""
+    if not lines:
+        return [], []
+    head = [p.strip() for p in lines[0].split(" - ")]
+    rest = lines[1:]
+    tempo = next((i for i, p in enumerate(head) if _TEMPO.match(p)), 0)
+    if tempo:                                              # written: "Title - C# major - 120 BPM - form A B C B D"
+        facts = head[tempo - 1:]
+    elif len(head) > 1 and title.strip() and head[0][:25].strip() == title.strip()[:25].strip():
+        facts = head[1:]                                   # converted: "Title - Game - Composer" (a module's name holds 25 letters)
+    elif rest and any(_TEMPO.match(p.strip()) for p in rest[0].split(" - ")):
+        facts = [p.strip() for p in rest[0].split(" - ")]  # Classic: the title alone, then "G harmonic minor - 106 BPM"
+        if drew.get("form"):
+            facts.append(f"{drew['form']} form")
+        rest = rest[1:]
+    else:
+        facts = []
+        rest = lines if len(head) == 1 and lines[0].strip() != title.strip() else rest
+    details = []
+    for line in rest:
+        if line == _SAID_OF_EVERY_SONG[1]:
+            continue
+        if line.endswith(_SAID_OF_EVERY_SONG[0]):
+            line = line[:-len(_SAID_OF_EVERY_SONG[0])]
+        if line.startswith("performance: "):
+            line = line[len("performance: "):]
+        details.append(line)
+    return facts, details[:DETAIL_LINES]
+
+
 def band_parts(layout: list[str], channels: int, echo_of: dict[int, int], master: int | None) -> list[int]:
     """The channels THE BAND's M and S act on: the named ones that are a part's, not an echo's nor the master volume's."""
     return [c for c, role in enumerate(layout[:channels]) if not role.startswith("echo.") and c not in echo_of and c != master]
@@ -748,7 +788,9 @@ class Player:
             info = parse_message(self.module.message)
             n = self.module.num_channels
             layout = self._channels(info)[0]
-            return {"title": self.module.title, "artist": self.module.artist, "type": self.module.type_name,
+            facts, details = song_card(info["lines"], self.module.title, info["drew"])
+            return {"facts": facts, "details": details,
+                    "title": self.module.title, "artist": self.module.artist, "type": self.module.type_name,
                     "duration": self.module.duration, "position": self.module.position,
                     "channels": n, "patterns": self.module.num_patterns,
                     "file": os.path.basename(self.module.filepath), "layout": layout,

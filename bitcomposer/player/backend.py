@@ -154,6 +154,8 @@ class Backend(QObject):
                 # The widget's line: key and tempo, sound and form, the voices.
                 "message": "  /  ".join(m["blurb"].split("  /  ")[:3]) if m["blurb"] else "",
                 "voices": m["voices"], "drew": m["drew"], "layout": m["layout"], "autogen": m["autogen"],
+                # The deck's line beside the title (key, tempo, form) and what MORE opens.
+                "facts": m["facts"], "details": m["details"],
             })
         old_title = self._state.get("title", "")
         self._state = st

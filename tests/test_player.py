@@ -385,6 +385,31 @@ class EngineHeadless(unittest.TestCase):
         self.assertEqual(info["master"], 7)
         self.assertEqual(info["lines"], ["T", "rows at 100 a second; 9 notes"])
 
+    def test_what_the_deck_says_of_a_song(self):
+        """engine.song_card: the facts beside the title and the details behind MORE, from each kind of message."""
+        card = lambda message, title: engine.song_card(engine.parse_message(message)["lines"], title, engine.parse_message(message)["drew"])   # noqa: E731
+        written = ("Winding Valley - E minor - 70 BPM - form A B C\rlayout: bass, melody\r"
+                   "Written by bitComposer on its own sounds (seed 3; docs/IDIOM.md): the band, the figures, the tune and its\r"
+                   "balance drawn from a vocabulary of counted habits, none of any song's notes.\r"
+                   "performance: the theme returns with the band, the loop twice\rrows at 100 a second; 1286 notes\r"
+                   "echo channels: 2=3-4\rmaster channel: 5")
+        self.assertEqual(card(written, "Winding Valley"),
+                         (["E minor", "70 BPM", "form A B C"],
+                          ["Written by bitComposer on its own sounds (seed 3; docs/IDIOM.md)",       # less what every written song's message says
+                           "the theme returns with the band, the loop twice", "rows at 100 a second; 1286 notes"]))
+        self.assertEqual(card(written, "A title given since")[0], ["E minor", "70 BPM", "form A B C"])   # the tempo finds the facts, not the title
+        classic = ("The Canyon of Tides\rG harmonic minor - 106 BPM\rchip - standard form\rsquare_lead / triangle_bass\r"
+                   "seed 1 - bitcomposer 2.0.0\rdrew: sound=chip,form=standard\rlayout: melody,bass")
+        self.assertEqual(card(classic, "The Canyon of Tides"),
+                         (["G harmonic minor", "106 BPM", "standard form"],
+                          ["chip - standard form", "square_lead / triangle_bass", "seed 1 - bitcomposer 2.0.0"]))
+        converted = "Terra - Final Fantasy VI - Nobuo Uematsu\rConverted from an SPC snapshot by bitComposer\rrows on the driver's clock, 62.50 Hz"
+        self.assertEqual(card(converted, "Terra"),
+                         (["Final Fantasy VI", "Nobuo Uematsu"], ["Converted from an SPC snapshot by bitComposer", "rows on the driver's clock, 62.50 Hz"]))
+        other = "\r".join(f"line {i}" for i in range(20))            # any other module: no facts, the message's first lines
+        self.assertEqual(card(other, "Some Module"), ([], [f"line {i}" for i in range(engine.DETAIL_LINES)]))
+        self.assertEqual(card("", "Untitled"), ([], []))
+
     def test_message_parsing_and_header_write(self):
         info = engine.parse_message("Title\r\nC major - 120 BPM\r\nvoices: melody=a,harmony=b\r\ndrew: sound=chip,form=aaba\r\nlayout: melody,harmony,echo.melody\r\n")
         self.assertEqual(info["layout"], ["melody", "harmony", "echo.melody"])
@@ -765,6 +790,92 @@ class WindowHeadless(unittest.TestCase):
         self.b.playIndex(0)                                   # the next song starts with every part heard
         self.assertTrue(self.pump(3, lambda: not self.b.mutedChannels))
         self.assertFalse(lit("bandMuteKit"))
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
+    def test_the_deck_folds_and_the_songs_take_the_room(self):
+        """PLAY's top is one panel, the deck: the title with the song's key, tempo and form, the position between the
+        transport and GENERATE, the rest of the message behind MORE. THE BAND and GAIN & WIDTH fold to their headings,
+        remembered, and the song list takes what the window has left, so the page itself does not scroll."""
+        import json
+        import shutil
+        from pathlib import Path
+        from PySide6.QtCore import QMetaObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        for i in range(30):
+            shutil.copy(os.path.join(self.music, "Kept.it"), os.path.join(self.music, f"Copy {i:02d}.it"))
+        self.b.rescan()
+        self.assertTrue(self.pump(2, lambda: len(self.b.playlist) == 32))
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1920, 1000)
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        self.b.playIndex(0)
+        win.show()
+        self.assertTrue(self.pump(3, lambda: win.property("_sized")))
+        self.pump(0.5)
+
+        def find(name, item=None):
+            item = item or win.contentItem()
+            if item.objectName() == name:
+                return item
+            for kid in item.childItems():
+                got = find(name, kid)
+                if got is not None:
+                    return got
+            return None
+
+        def signal(name, what):
+            QMetaObject.invokeMethod(find(name), what)
+            self.pump(0.3)
+
+        flick, songs = find("scroll"), find("songList")
+        fits = lambda: flick.property("contentHeight") <= flick.height() + 1     # noqa: E731
+        row = songs.property("rowH")
+        # the deck: one panel, the facts beside the title, the position in the transport's row
+        self.assertLess(find("deck").height(), 120)
+        self.assertEqual(find("deckTitle").property("text"), self.b.state["title"])
+        self.assertIn(" BPM  ·  ", find("deckFacts").property("text"))
+        self.assertTrue(find("deckPosition").property("visible"))
+        self.assertFalse(find("deckDetails").property("visible"))
+        signal("deckMore", "clicked")
+        self.assertTrue(find("deckDetails").property("visible"))
+        signal("deckMore", "clicked")
+        # the list: more songs than fit, so it takes what is left and the page stays put
+        self.assertTrue(fits())
+        before = songs.height()
+        self.assertGreaterEqual(before, 4 * row)
+        self.assertLess(before, songs.property("contentHeight"))
+        # THE BAND folded: its rows go, its heading says what it holds and what is silenced out of sight, the list grows
+        signal("bandMute0", "clicked")
+        signal("bandHeading", "toggled")
+        self.assertFalse(win.property("bandOpen"))
+        self.assertIsNone(find("bandMute0"))
+        self.assertEqual(find("bandHeading").property("aside"), "7 parts · 1 muted")
+        self.assertTrue(self.b.player.module.channel_muted(0))
+        self.assertGreater(songs.height(), before + 4 * row)
+        self.assertTrue(fits())
+        folded = songs.height()
+        signal("soundHeading", "toggled")
+        self.assertEqual(find("soundHeading").property("aside"), "gain 100% · width 100%")
+        self.assertGreater(songs.height(), folded + 2 * row)
+        self.assertTrue(fits())
+        saved = json.loads(self.b.loadUi())                   # remembered for the next start
+        self.assertEqual((saved["bandOpen"], saved["soundOpen"], saved["showDetails"]), (False, False, False))
+        signal("bandHeading", "toggled")
+        self.assertIsNotNone(find("bandMute0"))
+        self.assertTrue(find("bandMute0").property("on"))
+        # a narrow window: the position goes over the buttons
+        win.setWidth(440)
+        self.pump(0.4)
+        self.assertFalse(find("deckPosition").property("visible"))
         self.assertEqual(warnings, [])
         win.close()
         del eng
