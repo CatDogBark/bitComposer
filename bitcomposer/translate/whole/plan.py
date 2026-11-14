@@ -4646,21 +4646,26 @@ def hear_own_voices(plan: Plan, meter: int, notes: list, others: list, leave: di
     onset, then one that is not a unison with its own part, then the nearer, then the lower. A note with no such pitch
     stays, and a part of the form that repeats another still does (_repeats_follow). A voice's notes in the bars where
     it doubles another part's line or runs parallel to it (`leave`: voice -> those bars, follows_another_part) are that
-    line's and are left; the voices after it hear them all the same. `notes`: the part's, (start, end, midi, voice);
+    line's and are left; the voices after it hear them all the same, and since round 163 the voices before it do too:
+    a note left where it stands is heard by every other voice of the part, whatever its number (a piano's lower voice
+    sat a semitone from the voice under it, which follows the tune and is left, and nothing moved either). `notes`: the part's, (start, end, midi, voice);
     `others`: the other pitched parts' notes. Returns (the notes, a log line or "")."""
     old, new = list(notes), list(notes)
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
     pc = lambda m: int(round(m)) % 12                       # noqa: E731
+    # what a voice hears of its part: the voices before it, settled already, and (round 163) a later voice's notes in the bars
+    # where that voice is left, another part's line again: they will not move, so it is for this voice to stand clear of them
+    heard = lambda x, v: x[3] < v or (x[3] > v and bool(leave) and int((x[0] + NEAR) // meter) in leave.get(x[3], ()))   # noqa: E731
     moved, stuck, tiers = 0, 0, [0, 0, 0]
     for v in sorted({n[3] for n in old})[1:]:
         for i in sorted((i for i, n in enumerate(old) if n[3] == v), key=lambda i: old[i][0]):
             a, b, m = new[i][0], new[i][1], int(round(new[i][2]))
             if leave and int((a + NEAR) // meter) in leave.get(v, ()):
                 continue                                    # another part's line again here: not this part's to move
-            over = {pc(x[2]) for x in new if x[3] < v and x[0] < b - NEAR and x[1] > a + NEAR}
+            over = {pc(x[2]) for x in new if heard(x, v) and x[0] < b - NEAR and x[1] > a + NEAR}
             if not any((m - q) % 12 in writer.CLASH for q in over):
                 continue
-            at_on = [x for x in new if x[3] < v and x[0] <= a + NEAR and x[1] > a + NEAR]
+            at_on = [x for x in new if heard(x, v) and x[0] <= a + NEAR and x[1] > a + NEAR]
             own = {int(round(x[2])) for x in at_on}
             other = {pc(x[2]) for x in others if x[0] <= a + NEAR and x[1] > a + NEAR}
             k = int((a + NEAR) // meter)

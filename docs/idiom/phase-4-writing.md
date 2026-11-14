@@ -154,6 +154,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 160 | 2026-11-13 | a block line's note changes where its token song's does, and a voice on its sample holds with it | - |
 | 161 | 2026-11-14 | a moving chord line is held to its token song's line by its place in the beat | - |
 | 162 | 2026-11-14 | a struck voice is taken for one no mask could thin only where a mask ran out | - |
+| 163 | 2026-11-14 | a note left where it follows another part is heard by every voice of its part | - |
 
 ## Goal
 
@@ -11574,3 +11575,49 @@ left over its share by its masks' drift (0.60 to 0.67 against 0.43
 and 0.44) is not held nearer it.
 
 **Heard.** With round 163.
+
+### Round 163: a note left where it follows another part is heard by every voice of its part (2026-11-14, a fault in round 158's pass)
+
+**Why.** The same listening as round 162: on the song on Johnny C.
+Bad's token (seed 1234) the voices beside the piano's line clash.
+
+**Found.** The accompaniment's third voice follows the tune there (its
+token's word: parallel to the melody), so round 158's pass leaves it.
+The pass takes a part's voices in order and each hears the voices
+before it: the second voice, the piano's lower one, never heard the
+third, and the third is not moved, so a semitone between them stood.
+On dev there was none in this song; round 161 moved the second voice
+with its line, and on its branch the two sat a semitone apart at 0.08
+of their meetings. A fault in the pass: a note that will not move is
+for every other voice of its part to stand clear of, whatever its
+number.
+
+**Built.** In `hear_own_voices` a voice hears, beside the voices
+before it, a later voice's notes in the bars where that voice is left
+(`leave`). Nothing else changes.
+
+**Measured.** Suite 626 (1 skip). The vocabulary is as it was. Over
+400 seeds (1000 to 1399, the player's asking), against round 162: a
+note changes in 28 songs (11 on Last Dungeon's token, 7 on Johnny C.
+Bad's, 5 on The Phantom Forest's, 4 on Cyan's, 1 on Terra's), 8 notes
+at the median and 26 at the most, every one the pitch of a voice
+beside the accompaniment's line; the other 372 are the same note for
+note. The onsets with a semitone between two voices of a chord part
+(notes whose tails meet for less than 0.06 of a beat not counted) go
+from 903 to 715 of 43,016. Seed 1234: the second voice against the
+third, a semitone at 0.08 of their meetings before and at none now.
+
+**Open.** The line is never moved, so a semitone between the line and
+a voice left where it follows another part stands (seed 1234: 12 of
+its 216 onsets with two voices or more). The pass asks semitones
+alone: in that song the second voice is a whole tone from the line at
+0.16 of their meetings and from the third at 0.19. And the second
+voice is not yet the game's: it lands on the chord, a third or a sixth
+from the line at 0.52 of their meetings where the game's lower piano
+voice is at 0.71, the line's note on the beat again a sixth lower; and
+it strikes 0.60 of the line's onsets against its token's 0.44, six to
+sixteen notes a bar where the game's plays six.
+
+**Heard.** One pair on the same seed is rendered for the ear before
+the merge: the song on Johnny C. Bad's token (seed 1234) as round 161
+wrote it and with rounds 162 and 163.
