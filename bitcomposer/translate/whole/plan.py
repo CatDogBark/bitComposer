@@ -4861,8 +4861,9 @@ def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict, seed: int =
         if models and "voice_keeps" in models:              # token gives none by a draw from the pooled word, on its own stream
             for v in sorted({n[3] for n in notes} - {0} - set(keeps)):
                 keeps[v] = float(_draw(models, "voice_keeps", (rhythm.KEEP_SAMPLES[0 if v in same else 1],), random.Random(f"whole:{seed}:voice_keeps:{role}:{v}")))
+                among = "the line's sample" if v in same else "another sample"
                 part.log.append(f"voice {v + 1}: the token gives no share of notes kept with the line; drawn from the voices on "
-                                f"{'the line\'s sample' if v in same else 'another sample'} (round 167): {keeps[v]:.2f}")
+                                f"{among} (round 167): {keeps[v]:.2f}")
         for v, share in sorted(keeps.items()):
             if any(n[3] == v for n in notes):
                 notes, line = hold_with_line(plan, song.meter, notes, v, follows.get(v) or follows_another_part(plan, role, v, len(song.bars)), share)
