@@ -1935,6 +1935,7 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
     synth's 15 notes into C against its 8 a bar), -1 a thinning (the bar's first onset alone). Returns the notes, the onsets
     thinned away and {bar: the bar's figure}."""
     kept, thinned, figs, filled = [], 0, {}, 0
+    asked, unthinned = [], []                               # the bars the share was asked of a mask in, and those where no mask thinned (round 162)
     struck_n = followed_n = 0                               # the followed onsets struck so far, and seen so far (round 108)
     target = struck["share"] if struck else None
     for k in range(at, min(end, len(song.bars))):
@@ -1955,6 +1956,9 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
                         break
                     g = rhythm.apply_mask(f, mask_draw(f))
                     n_g = _mask_count(g)
+                if n_g >= len(in_bar) and (struck_n + n_g) / (followed_n + len(in_bar)) > target + STRUCK_MARGIN:
+                    unthinned.append(k)                     # every draw struck every onset: the word has no mask that thins this bar (round 162)
+            asked.append(k)
         followed_n += len(in_bar)
         if g in ("", writer.REST):
             thinned += len(in_bar)
@@ -2018,7 +2022,7 @@ def struck_with(ref: list, at: int, end: int, semi: int, song, role: str, v: int
         out.append((a, a + length, m, vv))
     if stats is not None:
         stats.update(sounded=sounded, played=sum(song.bars[i][1] - song.bars[i][0] for i in bars_seen), shortened=shortened,
-                     repeats=repeats, comparable=comparable, filled=filled)
+                     repeats=repeats, comparable=comparable, filled=filled, asked=asked, unthinned=unthinned)
     return out, thinned, figs
 
 
@@ -4040,6 +4044,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                             got = plan.extras[role].setdefault("struck_counts", {}).setdefault(v, [0, 0, sv["share"]])   # places (round 159)
                             got[0] += len(struck)
                             got[1] += thinned
+                            bars_w = plan.extras[role].setdefault("struck_bars", {}).setdefault(v, [[], []])   # and the bars the share was asked
+                            bars_w[0] += stats_w.get("asked", [])                                                # in, and those no mask thinned (round 162)
+                            bars_w[1] += stats_w.get("unthinned", [])
                     elif kind_w == "double":
                         struck, thinned = diatonic([(x[0], x[1], x[2], v) for x in in_span], semi_w, scale, v), 0
                     else:
@@ -4563,7 +4570,7 @@ def hold_with_line(plan: Plan, meter: int, notes: list, v: int, leave: set | Non
                  f"such strikes kept" + (f"; {again} notes of the form's repeats with them" if again else ""))
 
 
-STRUCK_OVER = 0.15                    # a struck voice left this far over its token's share once its masks are drawn had no mask to thin it
+STRUCK_OVER = 0.15                    # a struck voice left this far over its token's share once its masks are drawn, with a bar no mask thinned
 STRUCK_GAP = 0.9                      # and a note it keeps sounds this share of the gap to its next at the most
 
 
@@ -4576,7 +4583,10 @@ def strike_where_token_does(plan: Plan, meter: int, role: str, notes: list) -> t
     notes a bar in the game, and rests through the first eight bars, was written on all 24 in every bar (0.93 of the
     followed onsets against the token's 0.29). Here, once every part is written, a voice whose strikes over the
     followed onsets (extras["struck_counts"], kept as struck_with wrote it) are STRUCK_OVER or more over its token's
-    share strikes at its token voice's places (`plan.struck_places`, the `struck=` word: its usual bar in each part of
+    share, and that the hold could not thin in a bar or more (extras["struck_bars"]: a bar in which every draw of the
+    mask struck every followed onset; round 162: a voice over the margin whose masks thinned every bar asked is the
+    masks' own drift, and was taken for this, 233 of 303 notes of a piano's lower voice taken out),
+    strikes at its token voice's places (`plan.struck_places`, the `struck=` word: its usual bar in each part of
     the form by the form's letters, carried only where the form is the token song's): in each bar the note nearest
     each place, within a twelfth of a beat, is kept and the voice's other notes are taken out; in a part it rests in,
     every note. A note kept sounds the token voice's median length, or STRUCK_GAP of the gap to the voice's next note,
@@ -4585,8 +4595,9 @@ def strike_where_token_does(plan: Plan, meter: int, role: str, notes: list) -> t
     counts = (plan.extras.get(role) or {}).get("struck_counts") or {}
     for v, (length, by_letter) in sorted((plan.struck_places.get(role) or {}).items()):
         struck, thinned, share = counts.get(v) or (0, 0, None)
-        if share is None or not struck or struck / (struck + thinned) <= share + STRUCK_OVER:
-            continue
+        asked, unthinned = ((plan.extras.get(role) or {}).get("struck_bars") or {}).get(v) or ((), ())
+        if share is None or not struck or struck / (struck + thinned) <= share + STRUCK_OVER or not unthinned:
+            continue                                        # within its share, or over it with masks that thinned every bar asked (round 162)
         keep, rested = set(), 0
         for bar, n_bars, _, letter in plan.parts:
             places = by_letter.get(letter)
@@ -4607,7 +4618,8 @@ def strike_where_token_does(plan: Plan, meter: int, role: str, notes: list) -> t
             gap = (out[j][0] - out[i][0]) if j is not None else 1.0
             out[i] = (out[i][0], out[i][0] + min(length, STRUCK_GAP * gap)) + tuple(out[i][2:])
         lines.append(f"voice {v + 1} strikes where its token voice does (round 159): it struck {struck / (struck + thinned):.2f} of the followed onsets "
-                     f"against the token's {share:.2f} and no mask thins them; {before - len(own)} of its {before} notes taken out, {rested} bars rested, "
+                     f"against the token's {share:.2f} and no mask thinned {len(set(unthinned))} of the {len(set(asked))} bars asked (round 162); "
+                     f"{before - len(own)} of its {before} notes taken out, {rested} bars rested, "
                      f"its notes {length:.2f} beats at the most")
     return (out, "; ".join(lines)) if lines else (notes, "")
 
