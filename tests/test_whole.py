@@ -4541,7 +4541,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(tokens[-1], "tempo=medium:120")                                            # the song's tempo class rides last (round 54), its own tempo with it (round 137)
         self.assertTrue(tokens[-2].startswith("top="), tokens)                                      # the loudest part's level before it (round 59; loud= where measured)
         tokens = [t for t in tokens if not t.startswith(("tempo=", "top=", "loud=", "key="))]
-        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "quals=", "form=", "cycle=", "struck=", "turns=", "pulse="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes=, quals= and form= fields aside, rounds 112, 127 and 113)
+        self.assertEqual([t.split(":")[4] if t.count(":") > 4 else t.split(":")[-1] for t in tokens if not t.startswith(("shapes=", "quals=", "form=", "cycle=", "struck=", "turns=", "pulse=", "rubs="))], ["1.0", "0.5", "0.8"])   # bass, drums, melody: shares of the loudest (the song-level shapes=, quals= and form= fields aside, rounds 112, 127 and 113)
         self.assertTrue(tokens[0].startswith("bass=") and tokens[0].count(":") >= 8 and tokens[0].split(":")[4] == "1.0", tokens)   # weight:register:sounded share:voices:level:::sample:habit (a period field after, round 106)
         self.assertTrue(tokens[1].startswith("drums=:::Kc:0.5:::") and tokens[1].split(":")[8].endswith("+mixed") and tokens[1].split(":")[7].startswith("K="), tokens)   # level, kit, habit                             # the drums keep a level, then their habit (round 62)
         s.levels = {}
@@ -5005,7 +5005,7 @@ class NewTablesTests(unittest.TestCase):
         self.assertEqual(rhythm.voice_level_shares(s, "accompaniment"), ["1.3", "2.5"])           # the busiest first; uncapped since round 51 (the cap 4.0)
         self.assertIsNone(rhythm.voice_level_shares(s, "bass"))                                      # one voice
         self.assertEqual([u.outcome for u in rhythm.layer_level_units([s])], ["1.3"])               # the word's own unit is the first share
-        tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith(("tempo=", "top=", "loud=", "struck=", "turns=", "pulse="))]
+        tokens = [t for t in rhythm.balance_units([s])[0].outcome.split() if not t.startswith(("tempo=", "top=", "loud=", "struck=", "turns=", "pulse=", "rubs="))]
         self.assertTrue(tokens[0].startswith("accompaniment=") and ":3:0.8:1.3@" in tokens[0] and "/2.5@" in tokens[0], tokens)   # each voice beyond the line: level@sample@note share (round 65)
         self.assertTrue(tokens[1].startswith("bass=") and tokens[1].split(":")[5] == "", tokens)     # one voice: no layer field
         self.assertTrue(tokens[2].startswith("drums=:::Kc:0.5:::"), tokens)   # the kit's channel (round 87)
@@ -6159,10 +6159,13 @@ class TonalKitPieceTests(unittest.TestCase):
 class ChordPartVoicesTests(unittest.TestCase):
     """The chord parts' voices settled once every part is written (whole.settle_chord_parts)."""
 
+    LATER = ("struck=", "turns=", "pulse=", "rubs=")       # the words rounds 159 to 165 put after every other word, in their order
+
     @staticmethod
     def a_plan(chords, parts=None, tonic=0, mode="major"):
         from types import SimpleNamespace
-        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={}, extras={}, struck_places={}, line_turns={}, line_pulse={}, layer_onsets={}, layer_samples={}, token_samples={})
+        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={}, extras={}, struck_places={}, line_turns={}, line_pulse={}, voice_rubs={}, layer_onsets={}, layer_samples={},
+                               token_samples={})
 
     def test_a_voice_beside_the_line_hears_its_own_part(self):
         """Round 158: a voice beside a chord part's line is placed against the chord and the line, and its clashes word
@@ -6231,6 +6234,64 @@ class ChordPartVoicesTests(unittest.TestCase):
         out, _ = whole.hear_own_voices(plan, 4, trio, [], {})                                      # voice 3 the part's own: it is the one to move
         self.assertEqual([n[2] for n in out], [60.0, 64.0, 67.0])
 
+    def test_the_token_says_how_often_a_voice_sits_a_semitone_from_its_part(self):
+        """Round 165: after every other word the balance token says, for each voice beside a chord part's line, the share
+        of its notes that sound a semitone from the line or a voice numbered before it (`rubs=`), and the plan keeps it
+        whatever its form: a share over the song, not a place in it."""
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(4)]
+        line = [(t / 2, 0.5, 60.0, "g") for t in range(32)]                                        # a C a half beat: the busiest voice, the line
+        second = [(float(t), 1.0, 64.0 if t % 4 else 61.0, "g") for t in range(16)]                # an E over it, a C sharp on each first beat
+        third = [(float(t), 1.0, 67.0 if t % 2 else 65.0, "g") for t in range(16)]                 # a G, an F on every other beat: a semitone
+        def song(*voices):                                                                         # from the second voice's E, not its C sharp
+            s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 16.0, 0, "", 1.0)], notes={"accompaniment": sorted(n for v in voices for n in v)}, sid="s", game="g",
+                            numbers=list(range(4)), parts=[(0, 4, None, "A")], tonic=0, mode="major")
+            s.voice_notes = {i: ("accompaniment", v) for i, v in enumerate(voices)}; s.voice_levels = {i: 0.3 for i in range(len(voices))}
+            s.levels = {"accompaniment": 0.3}
+            return s
+        s = song(line, second, third)
+        self.assertEqual(rhythm.voice_rubs_field(s), "a2~25,a3~25")                                # 4 of 16 against the line; 4 of 16 against the E
+        self.assertEqual(rhythm.balance_units([s])[0].outcome.split()[-1], "rubs=a2~25,a3~25")     # after every other word
+        self.assertEqual(rhythm.voice_rubs_field(song(line, second[:15], third)), "a2~0")          # the G and F the busier now, numbered first and
+        self.assertEqual(rhythm.voice_rubs_field(song(line)), "")                                  # clear of the line; the other too few notes for a
+                                                                                                   # share. A part of one voice: no word
+        self.assertEqual(whole.voice_rubs_of("a2~25,a3~0,h2~7"), {R.ACCOMP: {1: 0.25, 2: 0.0}, R.HARMONY: {1: 0.07}})
+        for bad in ("a1~5", "a2~x", "z2~5", "a2~120", "a2"):
+            self.assertEqual(whole.voice_rubs_of(bad), {}, bad)                                    # the line itself, no number, no part, no share
+        token = "accompaniment=main:56-68:0.8:3:0.7:1.0/1.0 bass=half:28-40:0.9:1:1.0 melody=half:64-84:0.9:1:0.8 tempo=slow"
+        mk = lambda t: {"balance": tables.Table(("part",), "balance").fit([tables.Unit("s", "g", t, {"part": rhythm.ARRANGEMENT})])}   # noqa: E731
+        p = whole.plan(mk(token + " rubs=a2~25,a3~0"), 7, "g")
+        self.assertEqual(p.voice_rubs, {R.ACCOMP: {1: 0.25, 2: 0.0}})
+        self.assertNotIn("rubs", p.band)
+        self.assertEqual(whole.plan(mk(token), 7, "g").voice_rubs, {})
+        from bitcomposer import vocabularies
+        balance = vocabularies.load("default")["balance"]
+        outcomes = {o for votes in getattr(balance, "table", balance).votes.values() for o in votes}
+        said = [o for o in outcomes if " rubs=" in o]
+        self.assertEqual(len(said), 39)                                                            # 39 of the 68 songs have such a voice
+        for o in said:
+            tail = [w for w in o.split() if w.startswith(self.LATER[3:])]
+            self.assertEqual(o.split()[-len(tail):], tail, o[-60:])                                # the last word: no token's place moved
+            self.assertTrue(whole.voice_rubs_of(tail[0][5:]), o[-60:])
+        self.assertIn("rubs=a2~25,a3~4,a4~15", {w for o in said for w in o.split()})               # a rag's accompaniment
+
+    def test_a_voice_keeps_its_token_voices_share_of_semitones_with_its_part(self):
+        """Round 165: round 158 moved every note a semitone from its own part. With the token's share a voice keeps that
+        share of them, in time order: a note stays where the share so far, itself counted, is within the token's."""
+        plan = self.a_plan([(0, "")] * 4)                                                          # four bars of C major
+        notes = [(float(t), t + 1.0, 60.0, 0) for t in range(16)] + [(float(t), t + 1.0, 61.0, 1) for t in range(16)]   # a C sharp on every C
+        out, line = whole.hear_own_voices(plan, 4, notes, [])
+        self.assertEqual({n[2] for n in out if n[3] == 1}, {64.0})                                 # no word: every one moves, as before
+        out, line = whole.hear_own_voices(plan, 4, notes, [], None, {1: 0.25})
+        kept = [n[0] for n in out if n[3] == 1 and n[2] == 61.0]
+        self.assertEqual(kept, [3.0, 7.0, 11.0, 15.0])                                             # one in four, as the share comes free
+        self.assertIn("(round 165): voice 2 4 (the token's 0.25)", line)
+        out, line = whole.hear_own_voices(plan, 4, notes, [], None, {1: 1.0})
+        self.assertEqual(out, notes)                                                               # the token voice sat on them all: all stay
+        self.assertIn("none moved", line)
+        out, _ = whole.hear_own_voices(plan, 4, notes, [], None, {2: 0.5})                         # another voice's share is not this one's
+        self.assertEqual({n[2] for n in out if n[3] == 1}, {64.0})
+
     def test_the_token_says_where_a_struck_voice_strikes_and_the_plan_reads_it(self):
         """Round 159: after every other word the balance token says where in the bar a voice struck with another strikes,
         by the form's letters (`struck=`): the part's letter and the voice's number, its median note length in hundredths
@@ -6257,7 +6318,7 @@ class ChordPartVoicesTests(unittest.TestCase):
         said = [o for o in outcomes if " struck=" in o]
         self.assertEqual(len(said), 22)                                                            # 22 of the 68 songs have such a voice and a form
         for o in said:
-            last = [w.partition("=")[0] for w in o.split() if w.startswith(("struck=", "turns=", "pulse="))]   # after every word but the later rounds': no
+            last = [w.partition("=")[0] for w in o.split() if w.startswith(self.LATER)]             # after every word but the later rounds': no
             self.assertEqual([w.partition("=")[0] for w in o.split()[-len(last):]], last, o[-80:])   # token's place among the outcomes moved
             self.assertEqual(last[0], "struck")
             self.assertTrue(whole.struck_places_of(next(w for w in o.split() if w.startswith("struck="))[7:]), o[-80:])
@@ -6312,7 +6373,7 @@ class ChordPartVoicesTests(unittest.TestCase):
         said = [o for o in outcomes if " turns=" in o]
         self.assertEqual(len(said), 12)                                                            # twelve of the 68 songs have a block line
         for o in said:
-            tail = [w for w in o.split() if w.startswith(("turns=", "pulse="))]                    # the last word, but for round 161's `pulse=`
+            tail = [w for w in o.split() if w.startswith(self.LATER[1:])]                          # the last word, but for the later rounds'
             self.assertEqual(o.split()[-len(tail):], tail, o[-60:])
             turns = whole.line_turns_of(tail[0][6:])
             self.assertTrue(turns and all(all(0 < x < 48 for x in bar) for bars in turns.values() for bar in bars), o[-60:])
@@ -6411,9 +6472,10 @@ class ChordPartVoicesTests(unittest.TestCase):
         said = [o for o in outcomes if " pulse=" in o]
         self.assertEqual(len(said), 35)                                                            # 35 of the 68 songs have a moving line with a pulse
         for o in said:
-            self.assertTrue(o.split()[-1].startswith("pulse="), o[-60:])                           # the last word: no token's place moved
-            self.assertTrue(whole.line_pulse_of(o.split()[-1][6:]), o[-60:])
-        self.assertIn("pulse=a6~73~70~26/68/7", {o.split()[-1] for o in said})                     # a boogie piano: a pedal under a stepping line
+            tail = [w for w in o.split() if w.startswith(self.LATER[2:])]                          # the last word, but for the later rounds':
+            self.assertEqual(o.split()[-len(tail):], tail, o[-60:])                                # no token's place moved
+            self.assertTrue(whole.line_pulse_of(tail[0][6:]), o[-60:])
+        self.assertIn("pulse=a6~73~70~26/68/7", {w for o in said for w in o.split()})              # a boogie piano: a pedal under a stepping line
 
     def test_a_moving_line_is_held_to_its_token_songs_line_by_place(self):
         """Round 161: a line with its token's pulse is taken as its two lines. Its notes on the pulse are held to the

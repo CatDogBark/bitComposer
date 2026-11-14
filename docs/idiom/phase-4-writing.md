@@ -156,6 +156,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 162 | 2026-11-14 | a struck voice is taken for one no mask could thin only where a mask ran out | - |
 | 163 | 2026-11-14 | a note left where it follows another part is heard by every voice of its part | - |
 | 164 | 2026-11-14 | a voice beside a line keeps its token voice's pace in the bars that are its own | - |
+| 165 | 2026-11-14 | a voice keeps its token voice's share of semitones with its own part | - |
 
 ## Goal
 
@@ -11693,3 +11694,63 @@ line keeps that line's pace, whatever its token's.
 token (seed 1234) and one on Dancing Mad (part 2)'s (seed 1305), each
 as round 163 wrote it and with this round: passed by ear, the second
 as the better for it.
+
+### Round 165: a voice keeps its token voice's share of semitones with its own part (2026-11-14, a rule of round 158's made a word)
+
+**Why.** Asked for: rounds 158 to 164 were gone over for what in
+them decides a note with no count behind it, and this is the first
+of four taken up, in the order agreed. Round 158's pass is a filter:
+no voice of a chord part sounds a semitone from a voice of its own
+part, ever. Its record said so under Open.
+
+**Found.** Counted on FFVI's own songs, voice by voice: of 79 voices
+beside a chord part's line, 64 have sixteen pitched notes or more.
+The share of such a voice's notes that sound a semitone from the
+line or a voice numbered before it is none in 32 of them, 0.05 or
+more in 21 and 0.10 or more in 14: 0.25 for Slam Shuffle's second
+voice and for the guitar's low voice under Johnny C. Bad's piano,
+0.22 on Mt. Koltz, 0.12 for The Day After's plucked voice. It is a
+song's own: a rag and a blues have them, a march has none. The
+written voices, every such note moved: none in 0.82 of 446 voices,
+0.10 or more in 0.06.
+
+**Built.** A new word, by song. The balance token says, after every
+other word, `rubs=`: for each voice beside a chord part's line with
+sixteen pitched notes or more, the part's letter, the voice's
+number and the share in hundredths (`arrangement.voice_rubs_field`;
+`rubs=a2~25,a3~4,a4~15` for Slam Shuffle's accompaniment). The plan
+reads it whatever its form (`voice_rubs_of`, `plan.voice_rubs`).
+`hear_own_voices` takes a voice's notes in time order as before, and
+a note that sits a semitone from its part now stays where the
+voice's share of such notes so far, itself counted, is within its
+token voice's; where it would be over, the note moves as round 158
+moved it. A voice the token says nothing of (under sixteen notes in
+the game) keeps none. Nothing else is touched and no draw is made.
+
+**Measured.** Suite 629 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order, each the same but for
+the new word and in its place; 39 of the 68 tokens carry `rubs=`.
+Over 400 seeds (1000 to 1399, the player's asking), against round
+164: a note changes in 93 songs, 4 notes at the median and 61 at
+the most, every one the pitch of a voice beside a chord part's line
+(1,050 the accompaniment's, 2 the harmony's); the other 307 are the
+same note for note, and in every song the lines, the tune, the
+counter-line, the bass and the kit are. The songs that change are
+the ones on tokens whose game song has such notes: all nine on Slam
+Shuffle's (64 notes at the most), all eight on Mt. Koltz's (55), all
+nine on The Day After's (16). Written voices with none: 0.82 before,
+0.61 now (FFVI 0.50); with 0.10 or more: 0.06 and 0.15 (FFVI 0.22).
+The song on Good Night's token (seed 1016) is the same note for
+note: the jingle's voices are under sixteen notes each and have no
+word. The song on Johnny C. Bad's (seed 1234) differs by one note,
+the one on The Day After's (seed 1044) by 14.
+
+**Open.** Which notes stay is the order they come in: the first
+that the share lets through, not the ones the game song's voice
+leans on. A note that stays was drawn against the chord and the
+line, so it is a semitone the writer fell into, where the game's is
+a blue note meant. The share is by the voice's number, so a part
+written with fewer voices than its token's drops the later ones'
+shares. The pass still runs after the tune is written.
+
+**Heard.** Not yet: it waits for the ear with rounds 166 to 168.
