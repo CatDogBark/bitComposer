@@ -169,6 +169,21 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   in a dense band finds no clear tone within VOICE_TRIES draws. A
   placement for returning cells that looks at the band would carry it
   further.
+- **A chord part's voices are held off each other's semitones
+  altogether.** Since round 158 a voice beside a chord part's line that
+  sounds a semitone from a lower-numbered voice of its own part is moved
+  to the nearest tone that does not, a tone of the chord first, once
+  every part is written. FFVI's own accompaniments sound such a semitone
+  at 0.01 of their onsets at the median and up to 0.22 (Slam Shuffle);
+  the written ones are held to none, so a song on a token whose game
+  song has them loses them, and a part of four or five voices is plainer
+  than it was (4,291 of 4,327 moved notes over 400 seeds went to a chord
+  tone). A voice that doubles another part's line or runs parallel to
+  it is left there, semitones and all. The pass runs after the tune is written, so the tune's own
+  clashes share was drawn against the voices as they stood before it.
+  A count of a part's own semitones by song, held as the clashes word
+  is, would carry it; so would the voices hearing each other as they
+  are drawn.
 - **The counter is more diatonic than FFVI's.** A counter by the voice
   words takes scale steps from the tune's note, so it leaves the scale
   only where the tune does: 0.06 to 0.08 of its line's notes against

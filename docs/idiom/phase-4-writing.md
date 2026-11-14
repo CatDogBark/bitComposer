@@ -149,6 +149,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 155 | 2026-11-13 | a kit keeps its song's pieces where the song has no form | - |
 | 156 | 2026-11-13 | a harmony's figure of two bars is not written on one chord | - |
 | 157 | 2026-11-13 | a theme's return brings no chords where the tune cannot follow | - |
+| 158 | 2026-11-13 | a voice beside a chord part's line hears its own part's voices | - |
 
 ## Goal
 
@@ -11207,3 +11208,84 @@ chord throughout, none of them by a return.
 round was built: the better without the chords. Six pairs on the same
 seeds before the merge: passed by ear.
 
+### Round 158: a voice beside a chord part's line hears its own part's voices (2026-11-13, from an accompaniment heard clashing with itself)
+
+**Why.** By ear, on the song on Good Night's token (seed 1016): the
+notes of the accompaniment clash, and the song is hard to listen to.
+Investigated first; built on the pick of the second of three
+candidates, after four songs were heard written both ways.
+
+**Found.** The game's Good Night is a jingle of two bars, 26 notes in
+eight voices, and the reader files its harmony as an accompaniment of
+five voices. In the written song a semitone sounds between two voices
+of the accompaniment at 92 of the 169 onsets where two or more of
+them sound. Each voice beside a line is placed against the chord and
+the line (`parallel`, the voice words), and the `clashes` word holds
+it against the parts written before its part (round 94), never
+against its own part's voices: two doubling voices a third over one
+line land on the major third and the minor at once (bar 2: a G major
+chord in three voices, B flat in the other two). It grows with the
+voices. Over 400 seeds (1000 to 1399, the player's asking) the share
+of an accompaniment's onsets with a semitone between two of its
+voices is 0.06 at the median with two voices (99 songs), 0.15 with
+three (86), 0.22 with four (34) and 0.41 with five (7, every one on
+Good Night's token); FFVI's own accompaniments are at 0.01 at the
+median and 0.22 at the most (Slam Shuffle). A drawing fault: the
+clashes word exists and is not held where a part's voices meet each
+other.
+
+**Built.** `plan.hear_own_voices`, called by `settle_chord_parts` at
+the end of `write`, once every part is written: a chord part changed
+before the tune is written re-writes the tune, so the tune, the
+counter-line, the bass and the kit stand as they were. A part's
+voices are taken in order and the line is never moved. A note a
+semitone by pitch class from a note that a lower-numbered voice of
+its part sounds while it sounds moves to the nearest pitch within a
+tritone (`HEAR_REACH`) that is not: a tone of the bar's chord before
+a tone of the key's scale before any other; among those one not a
+semitone from another part's note at its onset, then one that is not
+a unison with its own part, then the nearer, then the lower. Where no
+pitch clears the whole of a held note, the notes at its onset alone
+are asked. A voice's notes in the bars where it doubles another
+part's line or runs parallel to it (the token's relation word, round
+90; `follows_another_part`) are that line's again and are left. A
+part of the form that repeats another still does. What the pass moved
+is put under the SNES chip's ceilings again (round 120). No draw is
+made, so no other note moves.
+
+**Measured.** Suite 611 (1 skip). The vocabulary is as it was. Over
+the 400 seeds, against round 157: a note changes in 229 songs, 9
+notes at the median and 130 at the most, every one the pitch of a
+voice beside a chord part's line (4,064 the accompaniment's, 184 the
+arp's, 97 the harmony's); the other 171 are the same note for note,
+and in every song the lines, the tune, the counter-line, the bass and
+the kit are. Of 4,327 notes moved, 4,291 went to a tone of the chord
+and 36 to a tone of the scale; none was left. Accompaniments with a
+semitone between two of their voices at a quarter of their onsets or
+more: 22 before, none now (226 with two voices or more; notes whose
+tails meet for less than 0.06 of a beat not counted); the median 0.11
+before and 0.00 now, the highest 0.51 and 0.22, in a voice that
+follows the tune. The song on Good
+Night's token: 92 of 169 onsets before, 3 now (108 of the
+accompaniment's 634 notes moved, 6 of the arp's 210).
+
+**Open.** The share is held to nothing, where FFVI's own
+accompaniments run to 0.22: a song on Slam Shuffle's token loses the
+semitones its game song has. A count of a part's own semitones by
+song, held as the clashes word is, would say how many a song keeps.
+A moved note goes to a chord tone, so a part with many voices is
+plainer than it was. The semitones between parts are as they were
+(the song on Good Night's token: a semitone sounding at 0.60 of all
+its onsets before, 0.37 now, the accompaniment against the arp and
+the tune), and its line still leaves the chord on a third of its
+onsets: the jingle changes chord on every note and the reader gives a
+bar one chord, so the song's tier is "many". A token song of two bars
+is still written from.
+
+**Heard.** Before the round was built, as a pass over the written
+parts, on the songs on Good Night's, Dark World's, The Day After's
+and Johnny C. Bad's tokens, each written both ways: passed by ear.
+The round writes the first three note for note as they were heard.
+In the fourth it moves 14 notes where the pass heard moved 32: the
+other 18 are a voice's where it runs parallel to the tune, left since
+as that line's own.
