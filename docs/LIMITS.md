@@ -549,6 +549,21 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   feel the half beat is the feel's own and its share is still the bar
   table's. Each share is a ceiling: a tune under its song's is left
   there.
+- **The bass is held to one place, in one feel.** Since round 170 the
+  bass's token says where in the beat its notes fall, as the tunes' do,
+  and a song written in triple feel on a triple song's token holds its
+  bass to its song's share of notes on the half beat (a shuffle's bass
+  had been given straight eighths). Its shares on a quarter of the
+  beat, a third and finer are on the token and not held, and a duple
+  song's bass is held to none. The hold moves the bars written on one
+  figure together or not at all, so a bass can land under its song's
+  share, and a moved bar is the bar it was on other places, not a bar
+  drawn in the song's manner. The accompaniment's line has no such
+  word: 5 of 65 songs on a triple song's token have it 0.15 or more
+  over its song's share on the half beat. A tune's field is counted
+  where its notes are played, a bass's with its line's lag taken off:
+  three of FFVI's tunes' fields read "finer" for a line played a hair
+  off its places throughout (Fanatics, Under Martial Law).
 - **A song is written in its token song's feel; its parts' bars are
   still each drawn on their own.** Until round 148 a written song's feel
   was the pooled `feels` word's draw: 21 of the 68 Song Check 100 songs

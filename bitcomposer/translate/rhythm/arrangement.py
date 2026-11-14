@@ -2400,16 +2400,34 @@ def fine_places(offsets) -> Counter:
     return Counter(x for x in (beat_place(float(p)) for p in offsets) if x is not None)
 
 
-def tune_places(s, notes) -> tuple:
+def line_lag(s, notes) -> float:
+    """How far a line is played behind its places in the beat (round 170): the median, over its onsets in the song's
+    bars of its meter, of the onset's distance from the nearest of BEAT_PLACES, in beats, signed; 0.0 without onsets.
+    A line played a hair late or early throughout (New Continent's bass, 0.05 of a beat early on every note) sits
+    within PLACE_NEAR of no place, and its places field read "finer" for every note: half its notes are on the half
+    beat."""
+    devs = []
+    numbers = s.numbers or range(len(s.bars))
+    for _, (a, b) in zip(numbers, s.bars):
+        if round(b - a) != s.meter:
+            continue
+        for t, _ in readings_mod.onsets(notes, a, b):
+            f = (t - a) - math.floor(t - a)
+            devs.append(f - float(min(BEAT_PLACES, key=lambda x: abs(f - float(x[0])))[0]))
+    return statistics.median(devs) if devs else 0.0
+
+
+def tune_places(s, notes, lag: float = 0.0) -> tuple:
     """(a line's onsets, those of them on each place finer than the half beat) over the song's bars of its meter (as the
     bar tables take them: readings.numbered_bars_of), notes struck together one onset (readings.onsets), each onset
-    where it is played (fine_places), not where the reading's grid puts it."""
+    where it is played (fine_places), not where the reading's grid puts it. `lag`: beats the line is played behind
+    its places (line_lag, round 170: the bass's field takes it off; the tunes' fields are as round 147 counted them)."""
     n, fine = 0, Counter()
     numbers = s.numbers or range(len(s.bars))
     for _, (a, b) in zip(numbers, s.bars):
         if round(b - a) != s.meter:
             continue
-        on = [t - a for t, _ in readings_mod.onsets(notes, a, b)]
+        on = [t - a - lag for t, _ in readings_mod.onsets(notes, a, b)]
         n += len(on)
         fine.update(fine_places(on))
     return n, fine
@@ -2429,7 +2447,7 @@ def tune_places_field(s, role: str, line_notes=None) -> str:
     FFVI's fourteen play no note of their tune on the half beat where seven play 0.15 of them or more there, so a
     shuffle's tune was given straight eighths over a swung band."""
     notes = line_notes if line_notes is not None else s.notes.get(role, [])
-    n, fine = tune_places(s, notes)
+    n, fine = tune_places(s, notes, line_lag(s, notes) if role == R.BASS else 0.0)   # the bass's with its lag off (round 170)
     if n < WORD_NOTES:
         return ""
     return "p" + "/".join(str(int(round(100 * fine[k] / n))) for k in FINE_PLACES)
@@ -2467,6 +2485,8 @@ def adds_places(shares, old, new) -> bool:
     return any(now[kind] > was[kind] for kind, share in zip(FINE_PLACES, shares) if share is not None and kind != FINE_PLACES[-1])
 
 
+PLACE_PARTS = (R.MELODY, R.COUNTER, R.BASS)   # the parts whose token says where in the beat their line's notes fall: the two tunes (round 147), the
+                                     # bass (round 170: in a shuffle its game song's bass plays no note on the half beat, and the written one a third)
 FEEL_PLACE = {"triple": "triplet", "duple": "half"}   # a feel (cells.FEELS) -> the place that is its own division of the beat, and is not
                                      # held: a song in triple feel plays its off-beats on a third, a duple one on the half (round 147; the
                                      # half beat a place of the word since round 169, so held in a triple feel alone)
@@ -2922,7 +2942,7 @@ def balance_units(songs) -> list:
                       tones_kept_field(s, role) if role in readings_mod.UPPER else "",   # and how often a chord part sounds a chord's tones again (round 142)
                       together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER, R.MELODY) else "",   # and how often it comes back with its lead
                                                              # (round 144; the tune with the bass, round 146)
-                      tune_places_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and where in the beat a tune's notes fall (round 147)
+                      tune_places_field(s, role, line_notes) if role in PLACE_PARTS else "",   # and where in the beat a tune's notes fall (round 147), the bass's (round 170)
                       with_kit_field(s, role, line_notes) if role in KIT_PARTS else "",   # and how often its notes are struck with the kit (round 149)
                       section_levels_field(s, role)]          # and its level in each part of the form (round 150)
             while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty

@@ -3571,6 +3571,60 @@ class TunePlacesTests(unittest.TestCase):
         swung = [(4.0 * k + b + x, 0.2, 48.0, "b") for k in range(8) for b in range(4) for x in (1 / 3, 2 / 3)]
         self.assertIn("feel=triple", rhythm.balance_units([self._song(on_beat, swung)])[0].outcome.split())   # a song two thirds on the triplet
 
+    def test_the_bass_is_held_to_its_songs_share_on_the_half_beat(self):
+        """Round 170: the bass's token carries the places field too, counted with the line's own lag taken off, and in a
+        song written in triple feel on a triple song's token the bass's figures are held to its song's bass's share of
+        notes on the half beat before they are pitched: a shuffle's bass had been given straight eighths."""
+        from bitcomposer.translate.writer import figures as figures_mod
+        F = Fraction
+        s = self._song(self._tune({}))
+        token = next(f for f in rhythm.balance_units([s])[0].outcome.split() if f.startswith("bass=")).split("=", 1)[1].split(":")
+        self.assertEqual(token[28], "p0/0/0/0")                                                        # sixteen notes on the beat
+        early = [(4.0 * k + x - 0.05, 0.4, 36.0, "b") for k in range(8) for x in (0.0, 1.5, 2.0, 3.5)]   # a bass a twentieth of a beat early on
+        late = self._song(self._tune({}))                                                              # every note: on no place as it is played,
+        late.notes["bass"] = early; late.voice_notes[0] = ("bass", early)                              # half its notes on the half beat
+        self.assertAlmostEqual(rhythm.line_lag(late, early), -0.05)
+        self.assertEqual(rhythm.tune_places_field(late, "bass"), "p0/0/0/50")
+        self.assertEqual(rhythm.tune_places_field(late, "melody", early), "p0/0/100/0")                # a tune's field is as round 147 counted it
+        self.assertEqual(rhythm.line_lag(s, []), 0.0)
+        fields = [""] * 29
+        fields[:5] = ["half", "36-44", "0.9", "1", "1.0"]; fields[28] = "p10/30/0/5"
+        mk = lambda outcome, **vals: [tables.Unit(f"s{i}", "g", outcome, vals) for i in range(3)]   # noqa: E731
+        plan = lambda token: whole.plan({"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(mk(token, part=rhythm.ARRANGEMENT))}, 7, "g")   # noqa: E731
+        text = "bass=" + ":".join(fields) + " melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium"
+        self.assertIsNone(whole.bass_places(plan(text)))                                               # a duple song: the half beat is its own
+        self.assertEqual(whole.bass_places(plan(text + " feel=triple")), (None, None, None, 0.05))     # a triple one: the half beat alone is held
+        fields[28] = "p10/30/0"
+        self.assertIsNone(whole.bass_places(plan("bass=" + ":".join(fields) + " melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium feel=triple")))
+        straight = "0:R 1/2:R 1:R 3/2:5 2:R 5/2:R 3:R 7/2:+"
+        swung = "0:R 2/3:R 1:R 5/3:R 2:R 8/3:R 3:R 11/3:R"
+        beats = "0:R 1:R 2:R 3:R"
+        manner = figures_mod.FreeManner({straight, swung, beats, "0:R 2:R"}, division=12)
+        held = lambda figures, places, **kw: writer.on_the_places(list(figures), [4] * len(figures), places, manner, **kw)   # noqa: E731
+        log = []
+        out = held([straight] * 4, (None, None, None, 0.0), log=log)                                   # a shuffle whose bass plays none there: each
+        self.assertEqual(out, ["0:R 2/3:R 1:R 5/3:5 2:R 8/3:R 3:R 11/3:+"] * 4)                        # half-beat note onto the third after it, its mark
+        self.assertRegex(log[0], r"the half beat \(0\.00\): 0 of 32 \(0\.00; 16 as drawn\) \(round 170\); 4 bars' notes moved onto other places, 0 notes left out$")   # with it
+        self.assertEqual(held([straight] * 4, (None, None, None, 0.5)), [straight] * 4)                # within its song's share: the line it was
+        self.assertEqual(held([straight] * 4, (0.0, None, 0.0, None)), [straight] * 4)                 # the half beat not held: left
+        mixed = [straight, beats, beats, straight, "0:R 1/2:R 2:R 3:R"]                                # nine of seventeen on the half beat, a quarter asked:
+        out = held(mixed, (None, None, None, 0.25))                                                    # the bar played once goes first, and the riff
+        self.assertEqual(out[4], "0:R 2/3:R 2:R 3:R" if "0:R 2/3:R 2:R 3:R" in manner.known else out[4])
+        self.assertEqual(sum(f == straight for f in out), 0)                                           # after it: still over with the one bar moved
+        one = held([straight, beats, beats, beats, beats, beats, beats], (None, None, None, 0.2))      # four of thirty-two: within a fifth, left
+        self.assertEqual(one[0], straight)
+        fewer = held([straight] * 4, (None, None, None, 0.0), keeps=lambda j, m: m == 4)              # no swung rhythm known? there is one of eight:
+        self.assertEqual(fewer, ["0:R 2/3:R 1:R 5/3:5 2:R 8/3:R 3:R 11/3:+"] * 4)                      # as many notes before fewer
+        none = writer.on_the_places([straight] * 4, [4] * 4, (None, None, None, 0.0), figures_mod.FreeManner({straight}, division=12), log=log)
+        self.assertEqual(none, [straight] * 4)                                                         # no rhythm the table knows keeps it: as drawn
+        self.assertIn("4 bars no rhythm the table knows keeps within it", log[-1])
+        march = frozenset({F(0), F(1, 2), F(1), F(3, 2), F(2), F(5, 2), F(3), F(7, 2)})                # the kit's hold after it (round 149) puts no more
+        kit = {k: march for k in range(4)}                                                             # notes on a held place than the share allows
+        moved = writer.on_the_kit([swung] * 4, [4] * 4, kit, (1.0, 0.8), manner, places=(None, None, None, 0.0))
+        self.assertEqual(moved, [beats] * 4)                                                           # the beats' notes, which the kit strikes; not the
+        free = writer.on_the_kit([swung] * 4, [4] * 4, kit, (1.0, 0.8), manner)                        # half beat; without the places: onto the kit's hits
+        self.assertEqual(free, ["0:R 1/2:R 1:R 3/2:R 2:R 5/2:R 3:R 7/2:R"] * 4)
+
     def test_the_plan_takes_it(self):
         fields = [""] * 29
         fields[:8] = ["main", "64-84", "0.9", "1", "0.7", "", "", "slead"]; fields[28] = "p12/40/3"
