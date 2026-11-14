@@ -1206,6 +1206,14 @@ The words are grouped by where the writing draws them, in the order the song is 
   at those places and no others. The word sits after every other, so
   each token keeps its place among the outcomes and every seed its token
   song.
+  Since round 166 the word says every voice beside a chord part's line,
+  struck with another or not (43 of the 68 tokens); where a voice's
+  usual bar in a part is a rest and it plays in some bar there, `/` and
+  the bar most of those are follow the `-` (`A-/0.24`); and a song with
+  no form says one bar with no letter, the bar the voice plays the song
+  through (`a2~30:0.24`). `voice_places_of` reads the places a voice
+  plays at (`plan.voice_places`), and `keep_voice_pace` keeps the notes
+  nearest them in a bar it thins.
   Since round 160 a `turns=` word follows it for a song with a block
   line (`line_turns_field`): the part's letter and, for each bar in
   which the line strikes twice or more, in the song's order, the places

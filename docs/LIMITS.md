@@ -222,14 +222,18 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   that is its own (a stretch of its own, or a voice with no relation
   word) with more notes than one and a half times its token voice's
   onsets a bar for the part of the form has its notes off the bar's
-  strongest places taken out. Nothing is put in: a voice under half its
+  strongest places taken out; since round 166 the notes kept are the
+  ones nearest the places its token voice plays at in its bar there
+  (the `struck=` word, which says every voice beside a line since that
+  round). Nothing is put in: a voice under half its
   token's onsets a bar is left (280 of 1,480 parts of the form over 400
   seeds). A voice still plays where its token voice rests (189 of 267
   such parts, four notes a bar at the median): the word says the parts
-  it plays in and no hold rests it. Which notes stay is by the bar's
-  places, not by the voice's figure, and a bar in which the voice
-  follows a line keeps that line's pace. The pace held where the voice
-  is written, with its rests, would carry the rest.
+  it plays in and no hold rests it. The notes that stay are near the
+  token voice's places, not on them (they were drawn at the line's
+  pace) and keep the pitches they were drawn with, and a bar in which
+  the voice follows a line keeps that line's pace. The pace held where
+  the voice is written, with its rests, would carry the rest.
 - **A struck voice takes its token voice's places only where no mask
   could thin it.** Since round 159 a voice struck with another that is
   left 0.15 or more over its token's share of the followed onsets, and
@@ -239,7 +243,10 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   places in each part of the form, and rests where that voice rests
   (the `struck=` word). Every bar of a part is then struck alike; a form
   that is not the token song's has no letters to go by and the voice is
-  left as written; the 0.15 is a margin, not a counted word; and the
+  left as written; the 0.15 is a margin, not a counted word (gone over
+  in round 166: ten of 160 struck voices over 400 seeds are taken, nine
+  on one token, and a test with no margin belongs where the mask is
+  drawn, before the tune); and the
   notes kept keep the pitches they were drawn with one by one, where the
   game's voice plays a figure. A struck voice within its share is held
   by its masks as before, and one over it by the masks' own drift

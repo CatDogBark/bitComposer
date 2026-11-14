@@ -157,6 +157,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 163 | 2026-11-14 | a note left where it follows another part is heard by every voice of its part | - |
 | 164 | 2026-11-14 | a voice beside a line keeps its token voice's pace in the bars that are its own | - |
 | 165 | 2026-11-14 | a voice keeps its token voice's share of semitones with its own part | - |
+| 166 | 2026-11-14 | a voice thinned to its token voice's pace keeps the notes at that voice's places | - |
 
 ## Goal
 
@@ -11754,3 +11755,78 @@ written with fewer voices than its token's drops the later ones'
 shares. The pass still runs after the tune is written.
 
 **Heard.** Not yet: it waits for the ear with rounds 166 to 168.
+
+### Round 166: a voice thinned to its token voice's pace keeps the notes at that voice's places (2026-11-14, a rule of round 164's made a word)
+
+**Why.** The second of the four (round 165's Why). Round 164 holds
+a voice beside a line, in the bars that are its own, to its token
+voice's notes a bar, a counted word (round 125). Which notes it kept
+was a hand order: the first beat, the bar's middle beat, the other
+beats, the half beats. Round 159's test for a struck voice no mask
+could thin (a margin of 0.15) and its cap on a kept note's length
+(0.9 of the gap to the next) were looked at with it.
+
+**Found.** The token already says where a voice plays in its bar,
+by the form's letters, for the voices struck with another (the
+`struck=` word, round 159): 22 tokens. The voices that are their own
+had no such word. Counted on FFVI's songs, a voice's usual bar in a
+part of the form is a rest while the voice plays in some bar of it
+in 44 cases (18 of them struck voices): a voice of fills. The word's
+"-" there says nothing of the bar it does play.
+The margin was gone over on the 400 seeds: 160 struck voices, ten
+taken by the test, nine of them on The Day After's token. In seven
+of the ten no mask thinned 21 to 28 of the 28 bars asked; in two
+(seeds 1155, 1314) 12 of 28, the other bars thinned a little by
+masks that leave the voice at 0.79 and 0.82 of the followed onsets
+against the token's 0.29. Another 29 voices have one to six bars no
+mask thinned and sit within their share, the hold having made it up
+in the bars after. So the test cannot go bar by bar after the fact
+(the share was already held around those bars), and a test with no
+margin belongs where the mask is drawn, before the tune: it stays
+as it is this round.
+
+**Built.** The word says more, the hold reads it, one number goes.
+`arrangement.struck_places_field` says every voice beside a chord
+part's line, struck with another or not; where a voice's usual bar
+in a part is a rest and it plays in some bar there, the bar most of
+those are follows a `/` (`A-/0.24`); a song with no form says one
+bar with no letter, the bar the voice plays the song through.
+`plan.voice_places_of` reads the places a voice plays at
+(`plan.voice_places`, by the letters where the form is the token
+song's, the no-letter bar either way); `struck_places_of` reads the
+usual bar as before, so a struck voice still rests where its token
+voice mostly does. `keep_voice_pace` keeps, of a bar over its
+token's pace, the notes nearest those places, the earlier of equals,
+as many as before. A part of the form the token gives no places for
+is left. `STRUCK_GAP` is gone: a kept note of round 159's sounds its
+token voice's median length or to the voice's next note, the
+shorter, a voice playing one note at a time.
+
+**Measured.** Suite 630 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order, each the same but for
+the word; 43 of the 68 tokens carry `struck=` (22 before), 23 with
+a `/` bar, three with no letter. Over 400 seeds (1000 to 1399, the
+player's asking), against round 165: the hold thins the same 974
+bars in the same 143 songs, none left for want of places; in 109 of
+them other notes stay (901 of the accompaniment's and 116 of the
+arp's, and 14 pitches the voices' hearing moved after), 10 notes at
+the median and 150 at the most; the other 291 songs are the same
+note for note, and in every song the lines, the tune, the
+counter-line, the bass and the kit are. No note's length changed:
+the cap had not bitten on these seeds. The song on Johnny C. Bad's
+token (seed 1234): the guitar's low voice, one note a bar through
+the fifteen bars the piano is out, now plays it on the third beat,
+where the game's does (`D24`), and round 164 had kept the first
+beat's. The song on The Day After's (seed 1044) is the same note
+for note.
+
+**Open.** The struck test's margin (0.15) and its being after the
+tune stand; so does a struck bar's being its part's usual bar
+alike. A voice's kept notes sit near its token voice's places, not
+on them: the notes were drawn at the line's pace, and the nearest
+may be a half beat off. The pitches are the ones drawn. A voice
+under its token's pace is still left, and one that plays where its
+token voice rests still plays.
+
+**Heard.** Not yet: it waits for the ear with rounds 165, 167 and
+168.
