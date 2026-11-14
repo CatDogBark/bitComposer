@@ -355,6 +355,7 @@ class Plan:
     line_pulse: dict = field(default_factory=dict)      # a chord part -> its token song's moving line by its place in the beat: (the pulse's grid
                                       # in twelfths of a beat, the pedal's share, the pedal's carry, the on-pulse step profile; None for one the
                                       # token does not say) (round 161: the `pulse=` word, line_pulse_of)
+    line_turn_moves: dict = field(default_factory=dict)   # a chord part -> the same bars with the move made at each place, in semitones (round 168)
     line_turns: dict = field(default_factory=dict)      # a chord part -> its token song's block line's turns: for each bar of that song, the
                                       # places at which the line's note changes, in twelfths of a beat (round 160: the `turns=` word, line_turns_of)
     struck_places: dict = field(default_factory=dict)   # a chord part -> {a voice beside its line: (its median note length in beats, {the form's
@@ -1896,14 +1897,27 @@ def line_pulse_of(text: str) -> dict:
 def line_turns_of(text: str) -> dict:
     """The balance token's `turns=` word (round 160, arrangement.line_turns_field) read: "a-/24/12.42" -> {the
     accompaniment: [[], [24], [12, 42]]}: for a chord part's block line, bar by bar in the token song's order, the
-    places at which its note changes, in twelfths of a beat from the bar's start. A part that cannot be read is left out."""
+    places at which its note changes, in twelfths of a beat from the bar's start. Since round 168 a place carries the
+    move made there ("24+3": line_turn_moves_of reads those); here the places alone. A part that cannot be read is
+    left out."""
+    return {role: [[place for place, _ in bar] for bar in bars] for role, bars in line_turn_moves_of(text).items()}
+
+
+def line_turn_moves_of(text: str) -> dict:
+    """The balance token's `turns=` word with its moves (round 168): "a-/24+3/12-2.42+2" -> {the accompaniment: [[],
+    [(24, 3)], [(12, -2), (42, 2)]]}: for a chord part's block line, bar by bar in the token song's order, the places
+    at which its note changes and the move it makes there in semitones; None for a place with no move said (a
+    vocabulary counted before the round: "24"). A part that cannot be read is left out."""
     out = {}
     for entry in (text or "").split(","):
         role = RELATION_PARTS.get(entry[:1])
-        try:
-            bars = [[] if w == "-" else [int(x) for x in w.split(".")] for w in entry[1:].split("/")] if entry[1:] else []
-        except ValueError:
-            continue
+        bars = []
+        for w in (entry[1:].split("/") if entry[1:] else []):
+            got = [re.fullmatch(r"(\d+)([+-]\d+)?", x) for x in w.split(".")] if w != "-" else []
+            if not all(got):
+                bars = []
+                break
+            bars.append([(int(m.group(1)), int(m.group(2)) if m.group(2) else None) for m in got])
         if role and bars:
             out[role] = bars
     return out
@@ -2551,6 +2565,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_struck_places = {}                                # and where in the bar it does, by the form's letters (round 159)
     token_voice_places = {}                                 # where each voice beside a line plays in its bar, by the form's letters (round 166)
     token_turns = {}                                        # where a block line's note changes in the token song, bar by bar (round 160)
+    token_turn_moves = {}                                   # and the move it makes there (round 168)
     token_pulse = {}                                        # a moving line by its place in the beat in the token song (round 161)
     token_rubs = {}                                         # how often a voice sits a semitone from its own part in the token song (round 165)
     token_keeps = {}                                        # how often a voice keeps its note where its line keeps its own (round 167)
@@ -2577,6 +2592,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             continue
         if role == "turns":                                 # where the token's song's block lines turn (round 160), not a part
             token_turns = line_turns_of(rest)
+            token_turn_moves = line_turn_moves_of(rest)
             continue
         if role == "struck":                                # where the token's song's struck voices strike (round 159), not a part
             token_struck_places = struck_places_of(rest)
@@ -3198,7 +3214,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -4356,7 +4372,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
         written[R.BASS].log += double_bass(plan, song, written)   # a second voice that doubles the line: the line as finally played, again (round 126)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
-    if settle_chord_parts(plan, song, written, seed, models):   # a chord part's line and its voices, once every part is written (rounds 158 to 167)
+    if settle_chord_parts(plan, song, written, seed, models):   # a chord part's line and its voices, once every part is written (rounds 158 to 168)
         hold_under_ceilings(plan, song, written)           # and what that moved, under the ceilings again
     return written
 
@@ -4550,15 +4566,27 @@ def lay_turns(plan: Plan, meter: int, role: str, notes: list, seed: int, same: l
     strikes at the median and turned between beats on three turns in four, where the game's stays six and turns on the
     first or the third beat on half. Here each bar of a line with the token's turns (`plan.line_turns`, the `turns=`
     word) draws the places of one of the token song's bars, on a stream of its own (TURNS_STREAM), and is laid out
-    between them: it keeps as many of its written pitches as the places make stretches, those on the bar's chord
-    before the ones it struck most, in the order they were written, and each note takes the pitch of the stretch it
-    falls in. A voice beside the line on the line's own sample (`same`) is laid out with it: for each stretch, a note
+    between them, each note taking the pitch of the stretch it falls in. Since round 168 the pitches go by the token
+    bar's moves (`plan.line_turn_moves`): the first stretch keeps the note the bar was written to open on, and at each
+    turn the line goes to the one of the bar's other written pitches whose distance from the note it is on is
+    nearest the move the token song's line makes there, the earlier written of equals; a bar written on one pitch
+    holds it, and so does a bar that draws a token bar with no turn: the note it opens on. A stretch may sit on a
+    note off the bar's chord while the line's share of strikes off the chord, the stretch's counted, is within its
+    token line's (the tone profile's "other", round 111, which the line was drawn to and the layout would undo: a
+    passing note struck once in the bar as written is held half a bar); over it, the stretch takes the nearest of the
+    bar's pitches that are on the chord, the opening the first of them written. Until then (and still for a vocabulary whose turns carry no moves) a bar kept as many of its written
+    pitches as the places make stretches, those on the bar's chord before the ones it struck most, in the order they
+    were written: an order set by hand. A voice beside the line on the line's own sample (`same`) is laid out with it: for each stretch, a note
     it had under that line pitch in the bar as written (one on the chord first, then on the scale, then the one it
     had most), held through the stretch; not in the bars where it follows another part's line (`leave`). A part of
     the form that repeats another still does. Returns (the notes, a log line or "")."""
     turns = plan.line_turns.get(role)
     if not turns:
         return notes, ""
+    bars_moves = (getattr(plan, "line_turn_moves", None) or {}).get(role) or [[(place, None) for place in bar] for bar in turns]
+    with_moves = all(move is not None for bar in bars_moves for _, move in bar)   # a vocabulary counted before round 168 says places alone
+    other = ((getattr(plan, "tone_profiles", None) or {}).get(role) or {}).get("other")   # the token line's share of notes off the chord (round 111)
+    counted = off_chord = 0                                 # the line's strikes laid out so far in bars with a chord, and those off it
     old, new = list(notes), list(notes)
     rng = random.Random(f"{TURNS_STREAM}:{seed}:{role}")
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
@@ -4570,8 +4598,32 @@ def lay_turns(plan: Plan, meter: int, role: str, notes: list, seed: int, same: l
         count, first = Counter(pitches), {}
         for j, m in enumerate(pitches):
             first.setdefault(m, j)
-        starts = [0] + sorted(rng.choice(turns))
-        keep = sorted(sorted(count, key=lambda m: (not _on_chord(plan, k, m), -count[m], first[m]))[:len(starts)], key=lambda m: first[m])
+        drawn = sorted(rng.choice(bars_moves))                 # one of the token song's bars: its turns' places and the moves made there
+        starts = [0] + [place for place, _ in drawn]
+        if with_moves:                                      # round 168: by the token bar's moves, from the note the bar opens on
+            chorded = 0 <= k < len(plan.chords) and plan.chords[k] is not None and plan.chords[k][0] is not None
+            sizes = Counter(max((j for j, s0 in enumerate(starts) if s0 <= at + 0.5), default=0) for at, _ in row)   # the strikes of each stretch
+
+            def admit(m, n, done, off):                     # may a stretch of n strikes sit on m: on the chord, or within the token
+                return (other is None or not chorded or not n or _on_chord(plan, k, m)   # noqa: B023  line's share of notes off it (its tone
+                        or (off + n) / (done + n) <= other + 1e-9)                         # profile, round 111), the stretch counted
+            done, off = counted, off_chord
+            opening = pitches[0] if admit(pitches[0], sizes[0], done, off) else next((m for m in first if _on_chord(plan, k, m)), pitches[0])
+            keep = [opening]
+            done, off = done + sizes[0], off + sizes[0] * (not _on_chord(plan, k, opening))
+            for j, (_, move) in enumerate(drawn, start=1):
+                others = [m for m in first if m != keep[-1]]
+                if not others:
+                    break
+                within = [m for m in others if admit(m, sizes[j], done, off)] or others
+                keep.append(min(within, key=lambda m: (abs(m - keep[-1] - move), first[m])))   # noqa: B023
+                done, off = done + sizes[j], off + sizes[j] * (not _on_chord(plan, k, keep[-1]))
+            if len(keep) == 1:                              # a bar on one pitch: every strike of it
+                done, off = counted + len(row), off_chord + len(row) * (not _on_chord(plan, k, opening))
+            if chorded and other is not None:
+                counted, off_chord = done, off
+        else:                                               # no moves said: the bar's pitches by the hand order of round 160
+            keep = sorted(sorted(count, key=lambda m: (not _on_chord(plan, k, m), -count[m], first[m]))[:len(starts)], key=lambda m: first[m])
         starts = starts[:len(keep)]
         stretch = lambda at: max(j for j, s0 in enumerate(starts) if s0 <= at + 0.5) if at + 0.5 >= starts[0] else 0   # noqa: E731,B023
         for at, i in row:

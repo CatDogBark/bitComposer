@@ -279,20 +279,27 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   line keeps from one chord to the next is not yet a word. FFVI's block
   accompaniment lines repeat the note on 0.89 of their moves at the
   median (mixed 0.50, arpeggiated 0.05); the written lines repeat on
-  0.44, 0.36 and 0.26 over seeds 1-60, so a riff that pecks one tone in
-  the game still wanders in the writing.
+  0.44, 0.36 and 0.26 over seeds 1-60 (round 103's count, not made
+  again), so a riff that pecks one tone in the game still wandered in
+  the writing. Since rounds 160 and 161 a block line with its token's
+  `turns=` word and a moving line with its `pulse=` word are held after
+  the tune is written (the two entries below); a line whose token has
+  neither is as this entry says.
 - **A block line turns where one of its song's bars does, not where its
   own harmony does.** Since round 160 a block line with its token's
   `turns=` word is laid out, bar by bar, between the places of one of
-  the token song's bars drawn at random, keeping the bar's own written
-  pitches, the chord's first. The places are the song's, the bar they
-  land in is not: a bar's turns are not its chord's. A bar keeps no more
-  pitches than it was written with, so the written line holds longer
-  than the game's (on The Day After's token 14 strikes at the median
-  against the game's 6), and a held note is whatever the writer drew:
-  one off the key now lasts half a bar. Mixed and arpeggiated lines have
-  no such word. The turns' places counted by the chord's change in the
-  bar would carry it.
+  the token song's bars drawn at random; since round 168 it opens on
+  the note the bar was written to open on and turns by the move the
+  token bar makes at each place, to the nearest of the bar's own
+  written pitches, off the chord only within the token line's share of
+  notes off it. The places and the moves are the song's, the bar they
+  land in is not: a bar's turns are not its chord's. The pitch turned
+  to is one the bar was written with, so a move it has no pitch for
+  becomes the nearest it has; what the line does over the bar line is
+  not said; the voices on the line's sample are laid out with it by a
+  hand order still (a note they had under that line pitch, the chord's
+  first). Mixed and arpeggiated lines have no such word. The turns'
+  places counted by the chord's change in the bar would carry it.
 - **A voice holds with its line by a share, raised and never lowered,
   after the tune.** Since round 160 a voice takes its note again where
   the line's note is the one it had; since round 167 as often as its

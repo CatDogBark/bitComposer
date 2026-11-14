@@ -1224,6 +1224,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   (`line_turns_of`, `plan.line_turns`) whatever its form, and `lay_turns`
   lays each bar of the written line out between the places of one of
   those bars, drawn on a stream of its own (`TURNS_STREAM`).
+  Since round 168 each place carries the move the line makes there, in
+  semitones with its sign (`24+3.42-3`: up a minor third at the third
+  beat and back at the half after the fourth). `line_turn_moves_of`
+  reads them (`plan.line_turn_moves`), and `lay_turns` takes a bar from
+  the note it opens on to the one of its written pitches nearest each
+  move, off the chord only within the line's tone profile's share.
   Since round 161 a `pulse=` word comes last for a song with a moving
   chord line that has a pulse (`line_pulse_field`): the part's letter
   and the pulse's grid in twelfths of a beat (12 the beat, 6 its half:

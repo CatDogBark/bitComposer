@@ -1808,7 +1808,11 @@ def line_turns_field(song) -> str:
     first two bars, turns at the third beat of the next, and so on. "" for a song with no block line. The line's step
     profile says how often it repeats its note (round 117) and nothing of where it does not: The Day After's tremolo
     stays on a pitch six strikes at the median and turns on the first or the third beat half the time, and a line
-    written to the same share of repeats turned after three strikes, anywhere in the beat."""
+    written to the same share of repeats turned after three strikes, anywhere in the beat. Since round 168 each place
+    carries the move the line makes there, in semitones with its sign ("24+3.42-3": up a minor third at the third beat
+    and back at the half after the fourth): which of its notes a written bar turned to was a hand order until then
+    (a tone of the chord first, then the note the bar struck most). FFVI's 119 such turns are a whole tone or a
+    semitone in 72, a third in 35."""
     out = []
     for role in sorted(song.notes):
         if role not in readings_mod.UPPER or role not in RELATION_LETTERS or line_motion(song, role) != readings_mod.MOTIONS[0][1]:
@@ -1818,7 +1822,7 @@ def line_turns_field(song) -> str:
         for a, b in song.bars:
             ns = [x for x in line if a - readings_mod.NEAR <= x[0] < b - readings_mod.NEAR]
             if len(ns) >= 2:
-                bars.append(".".join(str(round((y[0] - a) * PLACE_GRID)) for x, y in zip(ns, ns[1:]) if y[1] != x[1]) or "-")
+                bars.append(".".join(f"{round((y[0] - a) * PLACE_GRID)}{y[1] - x[1]:+d}" for x, y in zip(ns, ns[1:]) if y[1] != x[1]) or "-")
         if bars:
             out.append(RELATION_LETTERS[role] + "/".join(bars))
     return ",".join(out)

@@ -159,6 +159,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 165 | 2026-11-14 | a voice keeps its token voice's share of semitones with its own part | - |
 | 166 | 2026-11-14 | a voice thinned to its token voice's pace keeps the notes at that voice's places | - |
 | 167 | 2026-11-14 | a voice keeps its note with its line as often as its token voice does | - |
+| 168 | 2026-11-14 | a block line turns by the move its token song's line makes there | - |
 
 ## Goal
 
@@ -11901,3 +11902,77 @@ kept where it is drawn, in `parallel`, would carry it.
 
 **Heard.** Not yet: it waits for the ear with rounds 165, 166 and
 168.
+
+### Round 168: a block line turns by the move its token song's line makes there (2026-11-14, a rule of round 160's made a word)
+
+**Why.** The last of the four (round 165's Why). Round 160 lays a
+block line's bar out between the places of one of its token song's
+bars, and which of the bar's written pitches it kept there was a
+hand order: a tone of the chord first, then the note the bar struck
+most, then the one written first.
+
+**Found.** The word said where the line's note changes and not what
+it changes by. FFVI's twelve block lines turn 119 times in 277
+bars: 72 of the turns are a whole tone or a semitone and 35 a
+third. The written lines, by the hand order: 0.40
+a tone or less, 0.20 a third, and 0.27 turns a bar where the game's
+have 0.43, since a bar kept only as many pitches as it had been
+written with distinct, each once. The first cut went by the moves
+alone, the bar opening on the note it was written to open on: the
+lines' strikes on their bar's chord fell from 0.80 to 0.64, where
+FFVI's block lines are on it on 0.75, a passing note struck once in
+the bar as written held half a bar. The line's share of notes off
+its chord is a word already, by song (the tone profile, round 111),
+which the line is drawn to and the layout undid.
+
+**Built.** The word says more and two words are held, no order of
+the hand. `arrangement.line_turns_field` writes each place with the
+move made there, in semitones with its sign (`24+3`);
+`plan.line_turn_moves_of` reads them (`plan.line_turn_moves`),
+`line_turns_of` the places as before. In `lay_turns` a bar drawing
+a token bar opens on the note it was written to open on and at each
+turn goes to the one of its other written pitches whose distance
+from the note it is on is nearest the token bar's move there, the
+earlier written of equals; a pitch may come again later in the bar;
+a bar on one pitch, or one that draws a bar with no turn, holds its
+opening note. A stretch sits on a note off the bar's chord only
+while the line's share of strikes off the chord, the stretch's
+counted, is within the token line's (the tone profile's "other");
+over it, the stretch takes the nearest of the bar's pitches on the
+chord, the opening the first of them written. The bar drawn for
+each written bar is the one round 160 drew: the same stream, the
+same places. A vocabulary whose turns carry no moves is laid out by
+round 160's order.
+
+**Measured.** Suite 632 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order, each the same but for
+the word; the twelve tokens with `turns=` carry the moves. Over 400
+seeds (1000 to 1399, the player's asking), against round 167: a
+note changes in 33 songs, 64 notes at the median and 571 at the
+most, the pitches of a chord part's line and of the voices laid out
+with it (2,465 and 2,040 the accompaniment's, 562 and 497 the
+arp's); the other 367 are the same note for note, and in every song
+the tune, the counter-line, the bass and the kit are. The 54 block
+lines: turns a bar 0.40 (0.27 before, the tokens' 0.43); moves of a
+tone or less 0.54 (0.40, FFVI 0.61), of a third 0.23 (0.20, FFVI
+0.29); strikes on the chord 0.77 (0.80, FFVI 0.75) and on the key's
+scale 0.81 (0.81, FFVI 0.91); strikes on one pitch 6 at the median
+of the lines' medians (7). On The Day After's token (nine songs) a
+pitch is held 6 strikes at the median (9 before, the game's 6) and
+the line turns 1.44 times a bar (1.01); on Strago's (six) 2.5
+strikes (5) and 0.90 turns a bar (0.45). The song on The Day
+After's token heard before (seed 1044) differs by 351 of its
+accompaniment's 1,436 notes, the one on Strago's (seed 1019) by 96
+of 238.
+
+**Open.** The pitch a turn goes to is one the bar was written with,
+so a move the bar has no pitch for becomes the nearest it has. The
+opening note is the written one, and what the line does over the
+bar line is not said. The voices on the line's sample are laid out
+with it by round 160's order still (a note they had under that line
+pitch, the chord's first): a hand order, the next to count. A
+written line is off its key's scale more than the game's (0.81
+against 0.91), as it was. The places are the song's and the bar
+they land in is not.
+
+**Heard.** Not yet: it waits for the ear with rounds 165 to 167.
