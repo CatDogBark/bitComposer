@@ -108,6 +108,10 @@ def _bind(L):
     L.openmpt_module_get_current_channel_vu_mono.argtypes = [_VP, ctypes.c_int32]
     L.openmpt_module_get_num_patterns.restype = ctypes.c_int32
     L.openmpt_module_get_num_patterns.argtypes = [_VP]
+    L.openmpt_module_get_pattern_num_rows.restype = ctypes.c_int32
+    L.openmpt_module_get_pattern_num_rows.argtypes = [_VP, ctypes.c_int32]
+    L.openmpt_module_get_pattern_row_channel_command.restype = ctypes.c_uint8
+    L.openmpt_module_get_pattern_row_channel_command.argtypes = [_VP, ctypes.c_int32, ctypes.c_int32, ctypes.c_int32, ctypes.c_int]
     L.openmpt_module_set_repeat_count.restype = ctypes.c_int32
     L.openmpt_module_set_repeat_count.argtypes = [_VP, ctypes.c_int32]
     L.openmpt_module_set_render_param.restype = ctypes.c_int32
@@ -120,6 +124,7 @@ def _bind(L):
     L.openmpt_free_string.argtypes = [_VP]
 
 
+COMMAND_NOTE = 0                      # libopenmpt's pattern cell commands: the note
 RENDER_STEREOSEPARATION_PERCENT = 2   # libopenmpt's render parameter: the mixer's stereo separation, 100 the module's pans as written
 
 
@@ -207,6 +212,27 @@ class Module:
         if not self._iface or not (0 <= ch < self.num_channels):
             return False
         return self._iface.set_channel_volume(self._ext, ch, max(0, min(64, vol)) / 64.0) == 1
+
+    def channel_has_notes(self, ch: int) -> bool:
+        """Whether any pattern holds a note on the channel. One without plays no sound, only its effects (a converted
+        module's master volume channel)."""
+        L = lib()
+        for pattern in range(self.num_patterns):
+            for row in range(L.openmpt_module_get_pattern_num_rows(self._mod, pattern)):
+                if L.openmpt_module_get_pattern_row_channel_command(self._mod, pattern, row, ch, COMMAND_NOTE):
+                    return True
+        return False
+
+    def channel_muted(self, ch: int) -> bool:
+        if not self._iface or not (0 <= ch < self.num_channels):
+            return False
+        return self._iface.get_channel_mute_status(self._ext, ch) == 1
+
+    def set_channel_muted(self, ch: int, muted: bool) -> bool:
+        """Silence a channel or let it sound again; its notes go on being played, unheard."""
+        if not self._iface or not (0 <= ch < self.num_channels):
+            return False
+        return self._iface.set_channel_mute_status(self._ext, ch, 1 if muted else 0) == 1
 
     def set_stereo_separation(self, percent: int) -> bool:
         """The mixer's stereo separation: 100 plays each note's pan as the module has it, less pulls every pan toward
