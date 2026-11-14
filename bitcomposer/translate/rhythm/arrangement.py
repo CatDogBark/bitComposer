@@ -1816,6 +1816,71 @@ def line_turns_field(song) -> str:
     return ",".join(out)
 
 
+PULSE_GRIDS = (PLACE_GRID, PLACE_GRID // 2)   # the grids a line's pulse is asked on, the coarser first: the beat, its half (round 161)
+PULSE_SHARE = 1 / 3                  # a line has a pulse on a grid where this share of its notes or more fall on it and this share or more off it
+
+
+def line_pulse(song, role: str) -> tuple | None:
+    """A moving chord line by its place in the beat (round 161): (the pulse's grid in PLACE_GRID twelfths of a beat, the
+    pedal's share, the pedal's carry, the on-pulse step profile), each of the last three None where the line has too few
+    notes for it; None for a line with no pulse. The pulse is the coarsest of PULSE_GRIDS on which PULSE_SHARE of the
+    line's notes or more fall and PULSE_SHARE or more do not: a line of two kinds of note in turn. The pedal's share:
+    of the notes off the pulse, in the bars that have two or more, those on the bar's commonest such pitch (WORD_NOTES
+    notes or more). Its carry: of those bars with such a bar before them, the ones whose commonest off-pulse pitch is
+    the bar before's (CONTINUITY_BARS pairs or more). The profile: the moves from one on-pulse note to the next, in
+    time order, by step_class (WORD_NOTES moves or more). A block line has its turns instead (line_turns_field)."""
+    if line_motion(song, role) in ("", readings_mod.MOTIONS[0][1]):
+        return None
+    line = sorted((n[0], int(round(n[2]))) for n in cells_mod.tune_line(song, role) if not math.isnan(n[2]))
+    rows = [[(round((x[0] - a) * PLACE_GRID), x[1]) for x in line if a - readings_mod.NEAR <= x[0] < b - readings_mod.NEAR] for a, b in song.bars]
+    total = sum(len(r) for r in rows)
+    grid = next((g for g in PULSE_GRIDS if total and PULSE_SHARE * total <= sum(1 for r in rows for at, _ in r if at % g == 0) <= (1 - PULSE_SHARE) * total), None)
+    if grid is None or total < 2 * WORD_NOTES:
+        return None
+    on_pedal = off = carried = pairs = 0
+    before = None
+    for r in rows:
+        offs = [m for at, m in r if at % grid]
+        if len(offs) < 2:
+            before = None
+            continue
+        pitch, n = Counter(offs).most_common(1)[0]
+        pitch = min(m for m in offs if offs.count(m) == n)   # the lowest of equals
+        on_pedal, off = on_pedal + n, off + len(offs)
+        if before is not None:
+            pairs, carried = pairs + 1, carried + (pitch == before)
+        before = pitch
+    ons = [m for r in rows for at, m in r if at % grid == 0]
+    moves = Counter(step_class(b - a) for a, b in zip(ons, ons[1:]))
+    n_moves = sum(moves.values())
+    return (grid, on_pedal / off if off >= WORD_NOTES else None, carried / pairs if pairs >= CONTINUITY_BARS else None,
+            {k: moves[k] / n_moves for k in STEP_CLASSES} if n_moves >= WORD_NOTES else None)
+
+
+def line_pulse_field(song) -> str:
+    """A moving chord line by its place in the beat, as the balance token carries it (round 161, `pulse=`, after every
+    other word): for each chord part with a pulse (line_pulse), the part's letter (RELATION_LETTERS) and the pulse's
+    grid in twelfths of a beat (12 the beat, 6 its half), then, "~" between them and "-" for one the line has too few
+    notes for, the pedal's share and its carry in hundredths and the on-pulse step profile as the step profile is
+    written ("26/68/7": same, step, leap); the parts joined by ",". "a6~73~60~26/68/7" for Johnny C. Bad's piano: its
+    notes on the beat and its half step up and back (0.68 of their moves a step, 0.07 a leap), and 0.73 of its notes
+    between them are one note, the same one as the bar before in 0.60 of its bars. The step profile (round 117) counts
+    every move in order, and of that line it says a leap on 0.65 of its moves: a pedal under a stepping line reads as
+    leaping, and a line written to it leaped wherever it went."""
+    out = []
+    for role in sorted(song.notes):
+        if role not in readings_mod.UPPER or role not in RELATION_LETTERS:
+            continue
+        got = line_pulse(song, role)
+        if got is None or all(x is None for x in got[1:]):
+            continue
+        grid, pedal, carry, profile = got
+        hundredths = lambda x: "-" if x is None else str(round(x * 100))   # noqa: E731
+        out.append(f"{RELATION_LETTERS[role]}{grid}~{hundredths(pedal)}~{hundredths(carry)}~"
+                   + ("-" if profile is None else "/".join(str(round(profile[k] * 100)) for k in STEP_CLASSES)))
+    return ",".join(out)
+
+
 def loop_part_field(s) -> str:
     """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
     the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
@@ -2790,6 +2855,8 @@ def balance_units(songs) -> list:
             tokens.append(f"struck={struck_places_field(s)}")   # after every other word, so no token's place among the outcomes moves
         if line_turns_field(s):                              # and where a block line's note changes, bar by bar (round 160)
             tokens.append(f"turns={line_turns_field(s)}")
+        if line_pulse_field(s):                              # and a moving line by its place in the beat: its pedal, its steps on the pulse (round 161)
+            tokens.append(f"pulse={line_pulse_field(s)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
