@@ -89,6 +89,19 @@ class WrittenSongTests(unittest.TestCase):
         self.assertFalse(any("Fantasy" in l for l in out["score"].message))   # no game's name in front of the user
         self.assertTrue(any(l.startswith("layout: ") and "melody" in l for l in out["score"].message))
 
+    def test_a_written_song_names_its_echo_and_master_channels(self):
+        """The module's message says which channels are each sending voice's echo repeats and which is the master
+        volume's (counted from 1), so a player can silence a voice with its echo and leave the master playing."""
+        out = written.compose_written(seed=5)
+        with tempfile.TemporaryDirectory() as d:
+            song = convert.render(out["score"], os.path.join(d, "s.it"))
+        echoes, channels = song["info"]["echo_channels"], song["info"]["channels"]
+        self.assertTrue(echoes)                                # this seed's band sends to the echo
+        lines = song["message"].split("\r")
+        said = ", ".join(f"{v + 1}={chs[0] + 1}-{chs[-1] + 1}" for v, chs in sorted(echoes.items()))
+        self.assertEqual(lines[-2:], [f"echo channels: {said}", f"master channel: {channels}"])
+        self.assertEqual(max(max(chs) for chs in echoes.values()), channels - 2)   # the repeats end where the master begins
+
     def test_random_sounds_are_one_of_the_snes_sets_and_the_seed_picks_them(self):
         import random
         for pack in (None, "random", "none"):
