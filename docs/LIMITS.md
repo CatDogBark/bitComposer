@@ -217,16 +217,18 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   in the word would carry it; measured in round 98 and left.
 - **A struck voice takes its token voice's places only where no mask
   could thin it.** Since round 159 a voice struck with another that is
-  left 0.15 or more over its token's share of the followed onsets (the
-  mask word had no mask that thins the bar: a plucked voice under a
-  tremolo of 24 strikes a bar) strikes at its token voice's usual bar's
+  left 0.15 or more over its token's share of the followed onsets, and
+  (round 162) that no mask thinned in a bar or more (the mask word had
+  no mask that thins the bar: a plucked voice under a tremolo of 24
+  strikes a bar), strikes at its token voice's usual bar's
   places in each part of the form, and rests where that voice rests
   (the `struck=` word). Every bar of a part is then struck alike; a form
   that is not the token song's has no letters to go by and the voice is
   left as written; the 0.15 is a margin, not a counted word; and the
   notes kept keep the pitches they were drawn with one by one, where the
   game's voice plays a figure. A struck voice within its share is held
-  by its masks as before. The masks of a voice struck with a sibling
+  by its masks as before, and one over it by the masks' own drift
+  (0.60 to 0.67 against 0.43) is left there. The masks of a voice struck with a sibling
   counted in the mask word would carry it where it is drawn.
 - **The chord parts' spread is the token's.** The `widths` word is counted,
   not drawn: a written part's line is one voice, and its spread per chord

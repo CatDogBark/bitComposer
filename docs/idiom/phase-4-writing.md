@@ -153,6 +153,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 159 | 2026-11-13 | a struck voice no mask could thin strikes where its token voice does | - |
 | 160 | 2026-11-13 | a block line's note changes where its token song's does, and a voice on its sample holds with it | - |
 | 161 | 2026-11-14 | a moving chord line is held to its token song's line by its place in the beat | - |
+| 162 | 2026-11-14 | a struck voice is taken for one no mask could thin only where a mask ran out | - |
 
 ## Goal
 
@@ -11531,3 +11532,45 @@ onsets a bar. A run and a fall into a beat have no word. Like rounds
 before the merge: the song on Johnny C. Bad's token that was heard
 (seed 1018), another on it that keeps the game's pace (seed 1234), and
 one on Battle Theme's (seed 1335).
+
+### Round 162: a struck voice is taken for one no mask could thin only where a mask ran out (2026-11-14, a fault in round 159's test)
+
+**Why.** By ear, on a song on Johnny C. Bad's token (seed 1234) with
+round 161 in: the piano's line passes, and the voices beside it are
+off and clash. Investigated first; this round and the next are the
+two faults found.
+
+**Found.** The piano's lower voice plays six notes a bar in the game,
+under the top's notes on the beat. In the written song it played two
+to four, 70 notes in all, at places the line did not keep. Round 159
+had taken it for a voice no mask could thin: it struck 0.60 of the
+line's onsets against its token's 0.44, a hundredth over that round's
+margin of 0.15, after its masks had thinned 180 of the 448 onsets it
+followed, in every one of the 34 bars they were asked in; 233 of its
+303 notes were taken out and the rest left at its token voice's
+places. The margin was the whole test. Over 400 seeds it took 13
+voices: The Day After's nine, where no mask thinned 12 to 28 of the
+28 bars; one on The Phantom Forest's token with 29 such bars of 35;
+and three whose masks thinned every bar asked, two on The Phantom
+Forest's token and this one, over their share by the masks' own drift.
+
+**Built.** `struck_with` keeps the bars in which it asked the share of
+a mask and those in which every draw of the mask struck every followed
+onset (`stats["asked"]`, `["unthinned"]`; `write` puts them in
+`extras[part]["struck_bars"]`). `strike_where_token_does` takes a
+voice that is over the margin and has one such bar or more, and its
+log says how many. Nothing else changes: the nine and the one are
+taken as they were.
+
+**Measured.** Suite 626 (1 skip). The vocabulary is as it was. Over
+the 400 seeds, against round 161: a note changes in three songs
+(seeds 1162 and 1175 on The Phantom Forest's token, 1234 on Johnny C.
+Bad's), whose struck voices have their 445 notes back; the other 397
+are the same note for note. Seed 1234: the voice plays 303 notes
+where it played 70.
+
+**Open.** The margin stands beside the cause, as a margin. A voice
+left over its share by its masks' drift (0.60 to 0.67 against 0.43
+and 0.44) is not held nearer it.
+
+**Heard.** With round 163.
