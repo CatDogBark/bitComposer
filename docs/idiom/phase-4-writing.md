@@ -11530,10 +11530,12 @@ writers hold a bar within half to one and a half times its song's
 onsets a bar. A run and a fall into a beat have no word. Like rounds
 158 to 160 the hold runs after the tune is written.
 
-**Heard.** Three pairs on the same seeds are rendered for the ear
-before the merge: the song on Johnny C. Bad's token that was heard
-(seed 1018), another on it that keeps the game's pace (seed 1234), and
-one on Battle Theme's (seed 1335).
+**Heard.** Three pairs on the same seeds were rendered: the song on
+Johnny C. Bad's token that was heard (seed 1018), another on it that
+keeps the game's pace (seed 1234), and one on Battle Theme's (seed
+1335). On seed 1234 the piano's line passed by ear; the voices beside
+it did not, which rounds 162 to 164 took up. No word was given on the
+other two pairs.
 
 ### Round 162: a struck voice is taken for one no mask could thin only where a mask ran out (2026-11-14, a fault in round 159's test)
 
@@ -11575,7 +11577,7 @@ where it played 70.
 left over its share by its masks' drift (0.60 to 0.67 against 0.43
 and 0.44) is not held nearer it.
 
-**Heard.** With round 163.
+**Heard.** With rounds 163 and 164, on seed 1234: passed by ear.
 
 ### Round 163: a note left where it follows another part is heard by every voice of its part (2026-11-14, a fault in round 158's pass)
 
@@ -11619,9 +11621,10 @@ voice is at 0.71, the line's note on the beat again a sixth lower; and
 it strikes 0.60 of the line's onsets against its token's 0.44, six to
 sixteen notes a bar where the game's plays six.
 
-**Heard.** One pair on the same seed is rendered for the ear before
-the merge: the song on Johnny C. Bad's token (seed 1234) as round 161
-wrote it and with rounds 162 and 163.
+**Heard.** One pair on the same seed, the song on Johnny C. Bad's
+token (seed 1234) as round 161 wrote it and with rounds 162 and 163:
+the third voice still did too much on its runs, which round 164 took
+up; with it, passed by ear.
 
 ### Round 164: a voice beside a line keeps its token voice's pace in the bars that are its own (2026-11-14, from a voice heard doing too much on its runs)
 
@@ -11686,7 +11689,7 @@ through D): a rest has no hold. Which notes stay is by the bar's
 places, not by the voice's figure. A bar in which a voice follows a
 line keeps that line's pace, whatever its token's.
 
-**Heard.** Two pairs on the same seeds are rendered for the ear
-before the merge: the song on Johnny C. Bad's token (seed 1234) and
-one on Dancing Mad (part 2)'s (seed 1305), each as round 163 wrote it
-and with this round.
+**Heard.** Two pairs on the same seeds, the song on Johnny C. Bad's
+token (seed 1234) and one on Dancing Mad (part 2)'s (seed 1305), each
+as round 163 wrote it and with this round: passed by ear, the second
+as the better for it.
