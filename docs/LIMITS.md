@@ -179,7 +179,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   song has them loses them, and a part of four or five voices is plainer
   than it was (4,291 of 4,327 moved notes over 400 seeds went to a chord
   tone). A voice that doubles another part's line or runs parallel to
-  it is left there, semitones and all. The pass runs after the tune is written, so the tune's own
+  it is left there; since round 163 the part's other voices hear its
+  notes and stand clear of them, but the line never moves, so a
+  semitone between the line and such a voice stands. The pass runs after the tune is written, so the tune's own
   clashes share was drawn against the voices as they stood before it.
   A count of a part's own semitones by song, held as the clashes word
   is, would carry it; so would the voices hearing each other as they
