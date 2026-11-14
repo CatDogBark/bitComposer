@@ -1790,6 +1790,32 @@ def struck_places_field(song) -> str:
     return ",".join(out)
 
 
+def line_turns_field(song) -> str:
+    """Where in the bar a block line's note changes, bar by bar, as the balance token carries it (round 160, `turns=`,
+    after every other word, as `struck=` is): for each chord part whose line is a block line (line_motion: its pitch
+    differs from the strike before's on under a third of its strikes), the part's letter (RELATION_LETTERS) and, for
+    each bar in which the line strikes twice or more, in the song's order, the places at which a note of it differs
+    from the note before it in the bar, in PLACE_GRID twelfths of a beat from the bar's start and joined by ".", "-"
+    for a bar on one note; the bars joined by "/", the parts by ",": "a-/-/24/42/12.42" for a line that holds its
+    first two bars, turns at the third beat of the next, and so on. "" for a song with no block line. The line's step
+    profile says how often it repeats its note (round 117) and nothing of where it does not: The Day After's tremolo
+    stays on a pitch six strikes at the median and turns on the first or the third beat half the time, and a line
+    written to the same share of repeats turned after three strikes, anywhere in the beat."""
+    out = []
+    for role in sorted(song.notes):
+        if role not in readings_mod.UPPER or role not in RELATION_LETTERS or line_motion(song, role) != readings_mod.MOTIONS[0][1]:
+            continue
+        line = sorted((n[0], int(round(n[2]))) for n in cells_mod.tune_line(song, role) if not math.isnan(n[2]))
+        bars = []
+        for a, b in song.bars:
+            ns = [x for x in line if a - readings_mod.NEAR <= x[0] < b - readings_mod.NEAR]
+            if len(ns) >= 2:
+                bars.append(".".join(str(round((y[0] - a) * PLACE_GRID)) for x, y in zip(ns, ns[1:]) if y[1] != x[1]) or "-")
+        if bars:
+            out.append(RELATION_LETTERS[role] + "/".join(bars))
+    return ",".join(out)
+
+
 def loop_part_field(s) -> str:
     """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
     the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
@@ -2762,6 +2788,8 @@ def balance_units(songs) -> list:
             # minute (`tempo=fast:140`): the class alone had Edgar and Sabin's band, 90 in the game, written anywhere from 85 to 129
         if struck_places_field(s):                           # where a voice struck with another strikes, by the form's letters (round 159):
             tokens.append(f"struck={struck_places_field(s)}")   # after every other word, so no token's place among the outcomes moves
+        if line_turns_field(s):                              # and where a block line's note changes, bar by bar (round 160)
+            tokens.append(f"turns={line_turns_field(s)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

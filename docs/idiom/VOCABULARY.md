@@ -1206,6 +1206,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   at those places and no others. The word sits after every other, so
   each token keeps its place among the outcomes and every seed its token
   song.
+  Since round 160 a `turns=` word follows it for a song with a block
+  line (`line_turns_field`): the part's letter and, for each bar in
+  which the line strikes twice or more, in the song's order, the places
+  at which its note differs from the note before it in the bar, in
+  twelfths of a beat, `-` for a bar on one note (`a24/-/24/-/...` for The
+  Day After's tremolo: the third beat of every other bar through its
+  opening). 12 of the 68 tokens carry it. The plan reads it
+  (`line_turns_of`, `plan.line_turns`) whatever its form, and `lay_turns`
+  lays each bar of the written line out between the places of one of
+  those bars, drawn on a stream of its own (`TURNS_STREAM`).
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice

@@ -257,6 +257,27 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   median (mixed 0.50, arpeggiated 0.05); the written lines repeat on
   0.44, 0.36 and 0.26 over seeds 1-60, so a riff that pecks one tone in
   the game still wanders in the writing.
+- **A block line turns where one of its song's bars does, not where its
+  own harmony does.** Since round 160 a block line with its token's
+  `turns=` word is laid out, bar by bar, between the places of one of
+  the token song's bars drawn at random, keeping the bar's own written
+  pitches, the chord's first. The places are the song's, the bar they
+  land in is not: a bar's turns are not its chord's. A bar keeps no more
+  pitches than it was written with, so the written line holds longer
+  than the game's (on The Day After's token 14 strikes at the median
+  against the game's 6), and a held note is whatever the writer drew:
+  one off the key now lasts half a bar. Mixed and arpeggiated lines have
+  no such word. The turns' places counted by the chord's change in the
+  bar would carry it.
+- **Only a voice on its line's own sample holds with the line.** Since
+  round 160 such a voice takes its note again where the line's note is
+  the one it had (FFVI's do on 0.97 of such strikes). Counting every
+  voice beside a line, FFVI's repeat their note on 0.83 of the strikes
+  where the line repeats its own and the written ones on 0.74 (0.47
+  before): a voice on another sample that the game holds with its line
+  still has each landing drawn anew. The hold runs after the tune is
+  written, as rounds 158 and 159 do; the landing kept where it is drawn,
+  in `parallel`, would carry both.
 
 - **A level step's company is its density tier alone.** Since round 101 a
   section's level step draws the part's density tier with it
