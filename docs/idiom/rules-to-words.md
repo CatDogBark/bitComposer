@@ -1,6 +1,6 @@
 # Rules to words: what the whole-song writer still decides by rule, hand number or fallback
 
-*Line numbers below are the files' as of 2026-10-25, before `rhythm.py`, `writer.py` and `whole.py` became packages of sections in 1.2.0rc4 (`rhythm/`, `writer/`, `whole/`); the names still hold. The page is current to round 156 for the items it lists, checked 2026-11-13.*
+*Line numbers below are the files' as of 2026-10-25, before `rhythm.py`, `writer.py` and `whole.py` became packages of sections in 1.2.0rc4 (`rhythm/`, `writer/`, `whole/`); the names still hold. The page is current to round 168 for the items it lists, checked 2026-11-14; the rules that rounds 158 to 164 brought in are their own section.*
 
 The vocabulary rule ([IDIOM.md](../IDIOM.md), "Rules of evidence"): a writer is
 not patched past what its vocabulary says. When the written songs miss something
@@ -188,6 +188,37 @@ rates (large). 5. The doubling voice's intervals (medium). 6. The loop's bar
 (small). 7. The widths drawn (small). 8. The note lengths (small). The meter and
 the first note stand.
 
+## The rules of rounds 158 to 164, gone over (2026-11-14)
+
+Rounds 158 to 164 fixed what was heard in the chord parts (an accompaniment
+clashing with itself, a plucked voice written as rapid fire, a piano playing
+notes that made no sense together) and each was passed by ear. Three of them
+brought counted words (`struck=`, `turns=`, `pulse=`); with them came eleven
+decisions made by hand, and all six passes run after the writing instead of in
+it. They were gone over on 2026-11-14 and four taken up at once, in rounds 165
+to 168. Classes as in the inventory below.
+
+| # | The rule | Where | Status |
+|---|---|---|---|
+| 1 | No voice of a chord part sounds a semitone from its own part, ever (a filter); where a moved note lands (a tone of the chord, then the scale, within `HEAR_REACH`) | `hear_own_voices`, rounds 158 and 163 | **R**; the filter **replaced in round 165**: the `rubs=` word, a voice's own share. Where a moved note lands is standing (**M**) |
+| 2 | A voice on its line's sample repeats its note whenever the line does (`SAMPLE_KEEPS = 1.0`), and no other voice is held | `hold_with_line`, round 160 | **R**; **replaced in round 167**: the `keeps=` word by song and the `voice_keeps` table for a voice its token gives no share |
+| 3 | Which notes a thinned bar keeps: the first beat, the middle beat, the other beats, the half beats | `keep_voice_pace`, round 164 | **R**; **replaced in round 166**: the notes nearest the token voice's places (the `struck=` word, widened to every voice) |
+| 4 | Which pitch is a bar's pedal: its own if struck twice and on the chord or half the bar's off-pulse notes, else the bar before's, else the most struck on the chord | `hold_pulse`, round 161 | **M**, standing: the share and the carry are counted, the choice is not |
+| 5 | Where a moved on-pulse note goes: a tone of the chord within a whole tone, then the scale; a leap never forced | `hold_pulse`, round 161 | **M**, standing (round 117's hold picks the same way) |
+| 6 | A voice beside a moved line note moves as far, and on to the scale | `hold_pulse`, round 161 | **M**, standing |
+| 7 | Which pitches a block bar keeps between its turns: the chord's first, then the most struck | `lay_turns`, round 160 | **R**; **replaced in round 168**: the move at each turn rides `turns=`, and the line's tone profile holds its share off the chord. The voices laid out with the line still take a note by a hand order (the chord's first): standing |
+| 8 | A struck voice takes its token voice's places only when 0.15 over its share with a bar no mask thinned (`STRUCK_OVER`) | `strike_where_token_does`, rounds 159 and 162 | **F**, standing. Gone over in round 166: ten of 160 struck voices over 400 seeds are taken, nine on one token; a test with no margin belongs where the mask is drawn, before the tune. The word a fuller fix needs is a mask counted for a voice struck with a line of that many strikes |
+| 9 | A kept struck note sounds 0.9 of the gap to the next at the most (`STRUCK_GAP`) | `strike_where_token_does`, round 159 | **C**; **removed in round 166**: the gap is the bound, a voice playing one note at a time |
+| 10 | A line has a pulse where a third of its notes or more are on a grid and a third or more off it (`PULSE_SHARE`) | `rhythm.line_pulse`, round 161 | **D** with a hand number, standing: it decides which 35 of the 68 songs have the word |
+| 11 | The six passes run in a fixed order after the tune is written; the tune's clashes share was drawn against the voices as they stood before | `settle_chord_parts`, rounds 158 to 164 | **R**, standing: each round's record calls its cause a drawing fault and fixes it after the drawing. Moving the holds into the draw changes the tune and the bass of every song |
+
+Not rules: `PLACE_GRID` and `PULSE_GRIDS` (the grids the words are written
+on, **D**) and `TURNS_STREAM` (the name of a random stream, **M**).
+
+What is left standing, in the order proposed: item 11 (and item 8 with it,
+which only makes sense in the draw), then the choices of items 4 to 6, which
+shrink once the holds are where the notes are drawn.
+
 ## The top ten rules to replace
 
 Ranked by how much of what is heard each shapes on seeds 1-20. "Size" is the
@@ -254,7 +285,7 @@ An item is standing unless it says otherwise.
 - `locks_of` (668-692) — **M**/**R** (#4): the planned band's voice count makes the threshold; the accompaniment got a lock in 29 of 257 drawn bars, the harmony and drums in none, the bass in 72 of 346 (its own word's accents).
 - `double_theme`, `carry_theme` (702-774) — **M**: the copied cell folded into the part's register by octaves; `(24, 100)` a fallback register; 23 bars doubled and 1 phrase carried over the seeds (the words' rates).
 - `copy_repeats` (777-806) — a repeated part of the form note for note (20 parts).
-- `write` (809-1011) — the order drums, bass, upper parts, tune, counter is a choice: the tune clears the band's tones, the band never follows the tune except by `theme_doubling`. `harness.UPPER_SOUNDS` (894, 898; `harness.py:649`) pins the harmony's sounded share at 1.0 over the `sounds` and `gap_sounds` words — **R** in form, nothing in effect: FFVI's harmony sounds 0.99 of its gap (431 of 478 notes at 1.0). The counter's second voice apart is not written (987-988): fired in 4 songs. The second counter-line of its own (989-1002) runs only when the counter is not written beside the tune (never now).
+- `write` (809-1011) — the order drums, bass, upper parts, tune, counter is a choice: the tune clears the band's tones, the band never follows the tune except by `theme_doubling`; since round 158 the chord parts' lines and voices are settled after the tune and the counter are written (`settle_chord_parts`: see the section on rounds 158 to 164), a fixed order of its own. `harness.UPPER_SOUNDS` (894, 898; `harness.py:649`) pins the harmony's sounded share at 1.0 over the `sounds` and `gap_sounds` words — **R** in form, nothing in effect: FFVI's harmony sounds 0.99 of its gap (431 of 478 notes at 1.0). The counter's second voice apart is not written (987-988): fired in 4 songs. The second counter-line of its own (989-1002) runs only when the counter is not written beside the tune (never now).
 - `REACH = 7`, `SPEED_WEIGHT = 3` (1016-1020) — **M**, hand.
 - `sample_speed`, `sample_floor` (1023-1041) — **M**: "faster" stands for 48 a second, "long" for 400 ms (bin tops as values).
 - `best_sample` (1044-1094) — **M**: the fit is overlap minus twice the top's shortfall minus the bottom's (hand weights); the pool is left for the pack's other tonal samples in 17 of 86 choices (20 %: a fallback firing as a rule, mostly the counter's and second voices' registers the pool never reaches); the random draw with nothing known fired 0 times. The counter's "other" sample no longer comes through it except as the fallback (round 30, below); the second voices' choices still do.
