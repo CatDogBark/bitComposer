@@ -718,7 +718,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   half beat alone; `p42/3/3` Spinach Rag's; none under sixteen
   onsets. 65 of the 66 melody tokens carry one and 53 of the 54
   counter tokens; 35 tunes play on no quarter of the beat and 15 on
-  nothing finer than the half beat. The token also says its song's
+  nothing finer than the half beat. Since round 169 a fourth number,
+  the percent on the half beat (`p0/41/5/0` for Slam Shuffle's tune):
+  the half beat is the duple feel's own division of the beat and is
+  not held there, as the third is not in a triple feel (`FEEL_PLACE`);
+  a song in triple feel holds its tune to it. The token also says its song's
   feel where that is not duple (`feel=triple`, `cells.song_feel`: 14
   of the 68 songs). The plan keeps both (`tune_places`, `token_feel`),
   writes the song in its token song's feel (round 148; the pooled

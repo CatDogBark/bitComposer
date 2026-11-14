@@ -938,9 +938,10 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
     share the tune stood on its bar with it, which the game's tune does
     in two songs. `places` (round
     147, plan.own_places): the share of the token song's tune's onsets
-    on a quarter of the beat, on a third and finer than either
-    (rhythm.FINE_PLACES; None for the third in a song written in triple
-    feel, whose own division of the beat it is; no places at all where
+    on a quarter of the beat, on a third, finer than either and, since
+    round 169, on the half beat (rhythm.FINE_PLACES; None for the third
+    in a song written in triple feel and for the half beat in a duple
+    one, whose own division of the beat it is; no places at all where
     the song is written in another feel than its token song's). Each
     is a ceiling on the written tune over the song (rhythm.keeps_places:
     of its notes so far, or of the least it will play where that is
@@ -2061,7 +2062,7 @@ def melody(song: rhythm.Song, voice_notes: list, register: tuple, models: dict, 
                    + (f", {own_new[1]} among the table's bars that fit" if own_new[1] else "") + "; a bar or a half that comes back and a phrase answered keep within them too")
     if places is not None:                                  # the tune's places in the beat against its token song's tune's (round 147)
         n_, fine_ = written_places(len(bars))
-        log.append("notes on a quarter of the beat, a third, finer: "
+        log.append("notes on a quarter of the beat, a third, finer, the half beat: "
                    + ", ".join(f"{fine_[kind]}/{n_} ({fine_[kind] / max(1, n_):.2f}; " + ("the song's feel's own, not held)" if share is None else f"the balance's song's tune {share:.2f})")
                                for kind, share in zip(rhythm.FINE_PLACES, places))
                    + f"; {len(place_moved)} bars' notes moved onto them, {sum(place_moved.values())} notes left out"

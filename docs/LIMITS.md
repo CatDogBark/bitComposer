@@ -543,8 +543,12 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   at the median: the token carries no grain of its song's tune. Since
   round 147 it carries the tune's share of notes on the places finer
   than the half beat (a quarter of the beat, a third, finer), and a
-  tune written in its token song's feel keeps under each; its share on
-  the half beat is still the bar table's.
+  tune written in its token song's feel keeps under each; since round
+  169 its share on the half beat too, in a triple feel (a shuffle's
+  tune had been given straight eighths over a swung band). In a duple
+  feel the half beat is the feel's own and its share is still the bar
+  table's. Each share is a ceiling: a tune under its song's is left
+  there.
 - **A song is written in its token song's feel; its parts' bars are
   still each drawn on their own.** Until round 148 a written song's feel
   was the pooled `feels` word's draw: 21 of the 68 Song Check 100 songs

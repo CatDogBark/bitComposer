@@ -160,6 +160,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 166 | 2026-11-14 | a voice thinned to its token voice's pace keeps the notes at that voice's places | - |
 | 167 | 2026-11-14 | a voice keeps its note with its line as often as its token voice does | - |
 | 168 | 2026-11-14 | a block line turns by the move its token song's line makes there | - |
+| 169 | 2026-11-14 | a tune keeps its token song's tune's share of notes on the half beat, in a triple feel | - |
 
 ## Goal
 
@@ -11976,3 +11977,73 @@ against 0.91), as it was. The places are the song's and the bar
 they land in is not.
 
 **Heard.** Not yet: it waits for the ear with rounds 165 to 167.
+
+### Round 169: a tune keeps its token song's tune's share of notes on the half beat, in a triple feel (2026-11-14, from a tune heard off the beat in a shuffle)
+
+**Why.** By ear, on the song on Slam Shuffle's token (seed 1232):
+the melody plays off the beat now and then and breaks the rhythm.
+Investigated first; this is the first of the two words picked.
+
+**Found.** The song is a shuffle: its accompaniment strikes the
+beat and the third after it in every bar. Six of the tune's 70
+notes fall on the half beat, a sixth of a beat ahead of the band's
+off-beat (bars 11 and 12, and the part played again). The game's
+Slam Shuffle plays 0.41 of its tune on the swung off-beat and no
+note on the half beat. A song's feel is duple or triple, and a
+triple song draws its bars among every triple song's. FFVI's
+fourteen are two kinds: four play no note of their tune on the half
+beat (the shuffles), seven play 0.15 of them or more there
+(triplets among straight eighths). The token's places word (round
+147) counts the tune's notes on a quarter of the beat, a third and
+finer, and not the half beat (LIMITS: "its share on the half beat
+is still the bar table's"). Over 400 seeds, 84 songs are on a
+triple song's token: the tune is 0.15 or more over its song's share
+on the half beat in 24, the counter-line in 27; of the 29 whose
+song's tune plays none there, 22 play some. The kit is not: none of
+69 is 0.15 over. The accompaniment's line is in 7 of 65.
+
+**Built.** The word says one place more. The half beat is a place
+of the tune's places field (`rhythm.FINE_PLACES`, a fourth number:
+`p0/41/5/0` for Slam Shuffle's tune), and `beat_place` names it.
+It is the duple feel's own division of the beat, as the third is
+the triple feel's (`FEEL_PLACE`), so a duple song does not hold it
+and is written as it was; a song in triple feel on a triple song's
+token holds its tune and its counter-line to their song's shares
+there, by the hold round 147 built: a bar that would put the line
+over is moved onto the nearest rhythm the table knows that keeps
+the places. A moved bar may still go onto the half beat, within
+the share, as it could before; onto a quarter or a third it was
+not on it may not (round 147). A vocabulary counted before the
+round says three numbers and holds three.
+
+**Measured.** Suite 632 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order; 195 differ, by the
+tune's and the counter-line's field. Over 400 seeds (1000 to 1399,
+the player's asking), against round 168: a note changes in 67
+songs, every one on a triple song's token (twelve songs' tokens),
+246 notes at the median and 1,331 at the most: the tune in 56, the
+counter-line in 52, and with them the bass in 34 and the
+accompaniment in 33 (the parts that come back with the tune, and
+the chord parts' voices settled against it); the other 333 are the
+same note for note. The tune on the half beat, by token song, the
+written songs' median before and after against the game's: Slam
+Shuffle 0.20 and 0.00 (0.00), The Phantom Train 0.17 and 0.00
+(0.01), Gogo 0.09 and 0.00 (0.00), Overture (part 3) 0.13 and 0.01
+(0.02), Dancing Mad (part 1) 0.38 and 0.15 (0.16), Johnny C. Bad
+0.31 and 0.26 (0.26), The Day After 0.26 and 0.26 (0.36). No tune
+is 0.05 over its song's share (47 before); the counter-line in 3
+songs (42 before). The song heard (seed 1232): three bars' notes
+moved, none of its 70 notes on the half beat.
+
+**Open.** The share is a ceiling: a tune under its song's share is
+left there (New Continent's tunes 0.08 against the game's 0.34).
+The first cut let no moved bar onto the half beat at all, and a
+tune moved for another place fell far under its song's share there
+(Johnny C. Bad's 0.18 against 0.26): put right before the round was
+heard. The bars are still drawn among every triple song's
+and moved after: a third feel would draw a shuffle's among
+shuffles', and four songs is few to draw from. The bass has no
+places word (round 170). The accompaniment's line is on the half
+beat 0.15 or more over its song's in 7 of 65 songs.
+
+**Heard.** Not yet: it waits for the ear with round 170.
