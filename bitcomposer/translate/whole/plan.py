@@ -20,7 +20,11 @@ bass, the upper parts (harmony, accompaniment, arp), the melody and the
 counter-line, each reading the band written before it (its shared hits
 to lock to, counted against the band the plan has playing in the bar; its
 sounding tones to stay clear of), as a part substituted into a game's
-song reads the song. The band's energy is not read here: the texture is
+song reads the song. Once every part is written the chord parts' lines
+and the voices beside them are settled against their token song's own
+words (settle_chord_parts, rounds 158 to 168): after the tune, since a
+chord part changed before it re-writes it. The band's energy is not read
+here: the texture is
 the arrangement, and a part the plan has play alone plays. Last the notes
 become a score on the pack's samples, rendered by the converter's back
 end as a game's song is (spc.convert.render), and the score is read back
@@ -3873,8 +3877,9 @@ def copy_repeats(plan: Plan, song: rhythm.Song, written: dict) -> list:
 
 def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None) -> dict:
     """The parts written in turn on the song: the drums, the bass, the upper
-    parts, the melody; each put into song.notes for the next to read.
-    {role: Part}."""
+    parts, the melody; each put into song.notes for the next to read. Then
+    the chord parts' lines and voices are settled (settle_chord_parts) and
+    everything is put under the SNES chip's ceilings. {role: Part}."""
     written, key = {}, (plan.tonic, plan.mode)
     held_bars = {}                                          # (part, voice) -> the bars it holds on its loop's figure (round 121, hold_loop)
     kit_letters = {rhythm.LETTERS[p] for p in song.pieces.values() if p in rhythm.LETTERS}
