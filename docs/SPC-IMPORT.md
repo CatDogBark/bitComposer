@@ -393,7 +393,11 @@ volume is its two sides' sum and its pan the right side's share (followed
 row by row where the driver moves it while the note sounds: EarthBound
 pans held notes slowly from side to side); the SNES chip's master volume is
 the IT global volume, its changes (a driver's fade-out) on a channel of
-their own, and the two traded where one has room, since a note's loudness
+their own (the module's last; its message names it, `master channel: 44`,
+counted from 1, and each sending voice's echo repeats, `echo channels:
+1=8-16, 2=17-25`, so that a player muting a voice can take its echo with
+it and never silences the master's channel, whose moves an IT player
+leaves out while it is muted), and the two traded where one has room, since a note's loudness
 is their product and both are whole numbers: the channels up and the global
 volume down as far as the loudest voice allows (IT's volumes are coarse at
 the bottom: EarthBound's quiet voices rounded to silence), or the other way
