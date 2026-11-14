@@ -1755,12 +1755,16 @@ def struck_places_field(song) -> str:
     strikes seven times a bar after it, on the first beat and the half beats but the one after it, each note 0.45 of
     a beat. "" for a song with no form carried or no such voice. The struck facts say what share of the followed
     voice's onsets the voice strikes, and the writer holds a drawn mask toward it (round 108); under a voice that
-    strikes 24 times a bar the mask word has one mask, every strike, and the plucked voice was written on all 24."""
-    if not form_field(song):
-        return ""
-    _, struck, _ = _relations(song)
+    strikes 24 times a bar the mask word has one mask, every strike, and the plucked voice was written on all 24.
+    Since round 166 the word says every voice beside a chord part's line, struck with another or not, and what the
+    voice plays where its usual bar is a rest: after the "-", "/" and the bar most of the bars it plays in are
+    ("A-/0.24": it rests in most of A's bars and strikes the first and the third beat in the others). A song with no
+    form says one bar with no letter, the bar most of the bars the voice plays in are, the song through
+    ("a2~30:0.12"). A voice in its own bars had its notes a bar from the token (round 125) and no places: round 164
+    kept the notes on the bar's strong beats, a rule of the hand."""
+    formed = bool(form_field(song))
     first = {}
-    for bar, n, of, label in song.parts:
+    for bar, n, of, label in (song.parts if formed else ()):
         if label not in first or (of is None and first[label][2] is not None):
             first[label] = (bar, n, of)
     out = []
@@ -1772,19 +1776,23 @@ def struck_places_field(song) -> str:
         others = sorted((v for v in voices if v != line), key=lambda v: (-len(voices[v]), v))
         for rank, v in enumerate(others, start=2):
             notes = sorted(n for n in voices[v] if not math.isnan(n[2]))
-            if not struck.get(v) or not notes:
+            if not notes:
                 continue
             lengths = sorted(n[1] for n in notes)
             words = []
-            for label, (bar, n, _) in first.items():
+            for label, (bar, n, _) in (first.items() if formed else [("", (0, len(song.bars), None))]):
                 bars = []
                 for k in range(bar, min(bar + n, len(song.bars))):
                     a, b = song.bars[k]
                     at = [round((x[0] - a) * PLACE_GRID) for x in notes if a - readings_mod.NEAR <= x[0] < b - readings_mod.NEAR]
                     bars.append(".".join(str(x) for x in at) or "-")
-                if bars:
-                    usual = Counter(bars)
-                    words.append(label + max(bars, key=lambda x: (usual[x], -bars.index(x))))   # its usual bar there, the earliest of equals
+                played = [x for x in bars if x != "-"]
+                usual = (lambda xs, c: max(xs, key=lambda x: (c[x], -xs.index(x))))   # noqa: E731  the usual bar, the earliest of equals
+                if bars and formed:
+                    word = usual(bars, Counter(bars))       # its usual bar there, and where that is a rest the bar it plays (round 166)
+                    words.append(label + word + ("/" + usual(played, Counter(played)) if word == "-" and played else ""))
+                elif played:
+                    words.append(usual(played, Counter(played)))   # no form: the bar it plays, the song through (round 166)
             if words:
                 out.append(f"{RELATION_LETTERS[role]}{rank}~{round(lengths[len(lengths) // 2] * 100)}:" + "+".join(words))
     return ",".join(out)
