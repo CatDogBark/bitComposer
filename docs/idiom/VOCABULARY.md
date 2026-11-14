@@ -1273,6 +1273,17 @@ The words are grouped by where the writing draws them, in the order the song is 
   tokens carry it. The plan reads it (`plan.voice_keeps`) whatever its
   form, and `hold_with_line` holds the voice to it; a voice it says
   nothing of draws its share from the `voice_keeps` table.
+  Since round 171 a `follows=` word comes last for a song whose tune
+  or counter-line has sixteen notes or more to count
+  (`chord_follows_field`): the line's letter (`m`, `c`) and two shares
+  in hundredths, `/` between them and `-` for one with too few notes:
+  of its notes on a tone a chord has off the key or on the key's tone a
+  semitone over it, the share on the chord's tone; and the same against
+  the key's tone a semitone under it (`m85/60,c70/-`). 28 of the 68
+  tokens carry it. The plan reads it (`plan.chord_follows`) and
+  `follow_chords` takes the line's notes onto the chord's tone within
+  those shares; a line it says nothing of draws its pair from the
+  `chord_follows` table.
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
@@ -2442,6 +2453,19 @@ The words are grouped by where the writing draws them, in the order the song is 
   line's sample over 400 seeds. Until round 167 a voice on its line's
   sample was held to a hand share of 1.0 and no other voice was held.
   *`voice_keeps`: shape (sample); drawn in settle_chord_parts; conditions nothing.*
+- **chord_follows** — how far a tune or a counter-line goes with a
+  chord that has a tone off the key (round 171). A unit is a song's
+  line with sixteen notes or more to count; its outcome two shares to a
+  twentieth, `/` between them and `-` for one with too few notes: of
+  the line's notes on such a tone of the chord or on the key's tone a
+  semitone over it, the share on the chord's tone; and the same against
+  the key's tone a semitone under it. FFVI's tunes play a chord's tone
+  off the key five times as often over that chord as elsewhere, the
+  key's tone over it a third as often and the one under it three fifths
+  as often. A song's own pairs ride its balance token (`follows=`);
+  this table is drawn, once a line on a stream of its own, for a line
+  whose token song has too few such notes.
+  *`chord_follows`: shape (part); drawn in follow_share; conditions nothing.*
 
 ## The upper parts (accompaniment, harmony, arp)
 

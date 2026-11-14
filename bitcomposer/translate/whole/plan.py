@@ -349,6 +349,8 @@ class Plan:
     layer_onsets: dict = field(default_factory=dict)    # a layered part -> {a voice beside its line: {the form's letter, or WHOLE_SONG: (its token
                                       # voice's onsets a bar there, those of the part's last bar or None)}} (round 164: the ninth sub-field of the
                                       # voice's token entry, round 125's, kept for keep_voice_pace; by the letters only where the form is the token's)
+    chord_follows: dict = field(default_factory=dict)   # the melody, the counter -> its token song's line's two shares of notes on a chord's tone
+                                      # off the key: against the key's tone over it, and under it; None for one not said (round 171: `follows=`)
     voice_keeps: dict = field(default_factory=dict)     # a chord part -> {a voice beside its line: the share of its token voice's strikes, where
                                       # the line keeps its note, on which the voice keeps its own} (round 167: the `keeps=` word, voice_rubs_of)
     voice_rubs: dict = field(default_factory=dict)      # a chord part -> {a voice beside its line: the share of its token voice's notes that sit a
@@ -2585,6 +2587,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_pulse = {}                                        # a moving line by its place in the beat in the token song (round 161)
     token_rubs = {}                                         # how often a voice sits a semitone from its own part in the token song (round 165)
     token_keeps = {}                                        # how often a voice keeps its note where its line keeps its own (round 167)
+    token_follows = {}                                      # how far the tune and the counter go with a chord off the key (round 171)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
@@ -2596,6 +2599,13 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         role, _, rest = token.partition("=")
         if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
             token_loop = int(rest) if rest.isdigit() else None
+            continue
+        if role == "follows":                               # how far the token's song's tune and counter go with a chord off the key (round 171)
+            by = {v: k for k, v in rhythm.FOLLOW_LETTERS.items()}
+            for w in rest.split(","):
+                pair = follow_pair(w[1:], 100)
+                if w[:1] in by and pair:
+                    token_follows[by[w[:1]]] = pair
             continue
         if role == "keeps":                                 # how often the token's song's voices keep their note with their line (round 167)
             token_keeps = voice_rubs_of(rest)
@@ -3231,7 +3241,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, chord_follows=token_follows, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -4279,6 +4289,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         + f"; {place_said['moved']} bars' own onsets moved onto them, {place_said['again']} bars' masks drawn again for them"
                         + (f", {place_said['none']} with none that keeps them" if place_said["none"] else "") + " (round 147)")
         notes = fold_line(plan, role, notes, song.meter)   # the line in each stretch's register (round 91)
+        follow = follow_share(plan, role, models, seed, plog)   # and with a chord that leaves the key, as far as its token song's line goes (round 171):
+        notes, bent, on_chord, on_key = follow_chords(plan, song.meter, notes, follow)   # here, so the counter-line is written beside the tune as it will sound
+        if on_chord + on_key:
+            plog.append(f"the line with a chord that leaves the key (round 171): {bent} notes taken a semitone onto the chord's tone; on it {on_chord}, on the key's tone "
+                        f"beside it {on_key} (the song's shares, over it and under it: " + "/".join("-" if x is None else f"{x:.2f}" for x in follow) + ")")
         song.notes[role] = [(a, b - a, m, role) for a, b, m in notes]
         line = [(a, b, m, 0) for a, b, m in notes]
         log = [f"register {plan.bounds.get(role, plan.registers[role])}, habit {plan.habits[role]}, " + ", ".join(f"{k} {v}" for k, v in x.items() if k not in ("layer", "letters"))
@@ -4372,6 +4387,14 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         song.notes[role] += [(a, b - a, m, role) for a, b, m, *_ in notes_v]
         written[role].notes += notes_v
         written[role].notes.sort(key=lambda n: (n[0], n[3] if len(n) > 3 else 0))
+    for role in rhythm.FOLLOW_PARTS:                        # the voices beside the tune and the counter-line, and the bars a hold gave them since,
+        if role in written and len(written[role].notes) and role in plan.band:   # with the chord as the line went (round 171)
+            share = follow_share(plan, role, models, seed)
+            notes_f, bent, _, _ = follow_chords(plan, song.meter, written[role].notes, share)
+            if bent:
+                written[role].notes[:] = notes_f
+                song.notes[role] = sorted([(n[0], n[1] - n[0], n[2], role) for n in notes_f], key=lambda x: x[0])
+                written[role].log.append(f"the voices beside the line, and the bars given since, with a chord that leaves the key (round 171): {bent} notes more")
     # every voice under what the SNES chip can play of its sample (round 120): here, beside round 95's fold, so the theme band
     # and the form's repeats copy the voices as folded, and once more on the notes as finally played (the last line)
     hold_under_ceilings(plan, song, written)
@@ -4391,7 +4414,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS].log += hold_bass_pitch(plan, song, written, bass_as_written, held=held_bars)   # the bass's pitch continuity as finally played (round 114)
         written[R.BASS].log += double_bass(plan, song, written)   # a second voice that doubles the line: the line as finally played, again (round 126)
     hold_under_ceilings(plan, song, written)               # the notes as finally played: whatever the passes since have moved over a ceiling
-    if settle_chord_parts(plan, song, written, seed, models):   # a chord part's line and its voices, once every part is written (rounds 158 to 168)
+    if settle_chord_parts(plan, song, written, seed, models):   # a chord part's line and its voices, once every part is written (rounds 158 to 168); the tune and the counter-line with a chord off the key before it (round 171)
         hold_under_ceilings(plan, song, written)           # and what that moved, under the ceilings again
     return written
 
@@ -4820,6 +4843,81 @@ def keep_voice_pace(plan: Plan, meter: int, role: str, notes: list, bars: int) -
         if taken:
             lines.append(f"voice {v + 1} within its token voice's notes a bar in its own bars (round 164): {taken} notes taken out of {thinned} bars")
     return (out, "; ".join(lines)) if lines else (notes, "")
+
+
+def follow_pair(text: str, scale: float = 1.0) -> tuple | None:
+    """The chord_follows word's two shares read (round 171): "85/60" -> (0.85, 0.60) with `scale` 100, "0.85/-" ->
+    (0.85, None); None where it cannot be read or says neither."""
+    parts = text.split("/")
+    if len(parts) != 2:
+        return None
+    try:
+        pair = tuple(None if x == "-" else float(x) / scale for x in parts)
+    except ValueError:
+        return None
+    return pair if any(x is not None for x in pair) and all(x is None or 0 <= x <= 1 for x in pair) else None
+
+
+def follow_share(plan: Plan, role: str, models: dict | None, seed: int, log: list | None = None) -> tuple | None:
+    """How far a tune or a counter-line goes with a chord that leaves the key (round 171): its token song's line's two
+    shares (`plan.chord_follows`, the `follows=` word), else a draw from the pooled `chord_follows` word on a stream
+    of its own; None where the vocabulary has neither (one counted before the round: the line stays on the key)."""
+    if role in plan.chord_follows:
+        return plan.chord_follows[role]
+    if models and "chord_follows" in models:
+        pair = follow_pair(_draw(models, "chord_follows", (role,), random.Random(f"whole:{seed}:chord_follows:{role}")))
+        if log is not None and pair:
+            log.append(f"the token gives the {role} no shares of notes on a chord's tone off the key; drawn from the pooled word (round 171): "
+                       + "/".join("-" if x is None else f"{x:.2f}" for x in pair))
+        return pair
+    return None
+
+
+def follow_chords(plan: Plan, meter: int, notes: list, shares: tuple | None) -> tuple:
+    """A line goes with a chord that leaves the key (round 171). The tune and the counter-line are drawn on the key's
+    scale, their notes off it held to a share over the song (round 93), whatever the bar's chord: over a chord with a
+    tone off the key (a major chord on the key's seventh degree: two of its three tones) the band played the chord
+    and the tune the key, a semitone from it on over half its notes. Here a note on the key's tone that gives way to
+    such a tone of its bar's chord (rhythm.given_way: the key's tone a semitone over it, or under it) takes the
+    chord's tone, a semitone off, while the line's share of notes on the chord's tone, of those on it or on the key's
+    tone on that side of it, this one counted, is within its token song's line's share for the side (`shares`: over,
+    under; None for a side not held). Each voice of the part by its own count, in time order; a note keeps its
+    place, its length and its voice. Nothing is drawn. `notes`: (start, end, midi) or (start, end, midi, voice).
+    Returns (the notes, how many moved, how many are on a chord's tone off the key, how many stay on a key's tone
+    that gives way)."""
+    if not shares:
+        return notes, 0, 0, 0
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    ways, offs = {}, {}
+    for k, c in enumerate(plan.chords):
+        if c is not None and c[0] is not None:
+            tones = {(c[0] + x) % 12 for x in harmony.SHAPES.get(c[1], harmony.SHAPES[""])}
+            way = rhythm.given_way(scale, tones)
+            if way:
+                ways[k], offs[k] = way, tones - scale
+    if not ways:
+        return notes, 0, 0, 0
+    held = dict(zip(rhythm.FOLLOW_SIDES, shares))
+    out, moved, followed, stayed = list(notes), 0, 0, 0
+    for v in sorted({(n[3] if len(n) > 3 else 0) for n in notes}):
+        on, stay = 0, Counter()
+        for i in sorted((i for i, n in enumerate(notes) if (n[3] if len(n) > 3 else 0) == v), key=lambda i: notes[i][0]):
+            k = int((notes[i][0] + NEAR) // meter)
+            way = ways.get(k)
+            if not way:
+                continue
+            m = int(round(notes[i][2]))
+            if m % 12 in offs[k]:
+                on += 1
+            elif m % 12 in way:
+                to, side = way[m % 12]
+                if held.get(side) is not None and (on + 1) / (on + stay[side] + 1) <= held[side] + 1e-9:
+                    out[i] = notes[i][:2] + (float(m + (-1 if side == rhythm.FOLLOW_SIDES[0] else 1)),) + tuple(notes[i][3:])
+                    on, moved = on + 1, moved + 1
+                else:
+                    stay[side] += 1
+        followed, stayed = followed + on, stayed + sum(stay.values())
+    return out, moved, followed, stayed
 
 
 def follows_another_part(plan: Plan, role: str, v: int, bars: int) -> set:

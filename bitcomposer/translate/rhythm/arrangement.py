@@ -1983,6 +1983,94 @@ def voice_keep_units(songs) -> list:
             for _, share, same in voice_keep_shares(s, role)]
 
 
+FOLLOW_PARTS = (R.MELODY, R.COUNTER)   # the lines that go with a chord that leaves the key (round 171)
+FOLLOW_LETTERS = {R.MELODY: "m", R.COUNTER: "c"}
+FOLLOW_BIN = 0.05                    # the chord_follows word's grain
+FOLLOW_SIDES = ("over", "under")     # the key's tone a semitone over a chord's tone off the key, and the one under it: the word's two shares
+
+
+def given_way(scale: set, tones: set) -> dict:
+    """The key's tones that give way under a chord with a tone off the key (round 171): {the key's tone: (the chord's
+    tone it gives way to, whether it sits "over" or "under" it)}, pitch classes. For each of the chord's tones off
+    the scale, the key's tones a semitone over it and a semitone under it, but a tone of the chord itself; a key's
+    tone between two such tones gives way to the one under it. Counted on FFVI's tunes: over such a chord the tune
+    plays the chord's tone five times as often as over the chords of the key (0.169 of its notes against 0.034), the
+    key's tone over it a third as often (0.043 against 0.119) and the one under it three fifths as often (0.072
+    against 0.120): both give way, the one over it the more, so each has its own share."""
+    out = {}
+    for t in sorted(tones - scale):
+        for d, side in ((1, FOLLOW_SIDES[0]), (-1, FOLLOW_SIDES[1])):
+            x = (t + d) % 12
+            if x in scale and x not in tones and (x not in out or side == FOLLOW_SIDES[0]):
+                out[x] = (t, side)
+    return out
+
+
+def chord_follow_share(s, role: str) -> tuple:
+    """(on, over, under): over the song's chords with a tone off its key (the readings' spans at FIT or better), the
+    line's notes on such a chord's tone off the key, those on the key's tone over one that gives way to it, and those
+    on the key's tone under one (given_way). The line as its writer writes it (cells.tune_line)."""
+    from .. import harmony
+    if s.tonic is None or not s.chords:
+        return 0, 0, 0
+    scale = {(s.tonic + st) % 12 for st in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
+    on = over = under = 0
+    for n in cells_mod.tune_line(s, role):
+        if math.isnan(n[2]):
+            continue
+        c = _chord_at(s.chords, n[0])
+        if c is None or c.root is None or c.fit < FIT:
+            continue
+        tones = {(c.root + x) % 12 for x in harmony.SHAPES.get(c.shape, harmony.SHAPES[""])}
+        way = given_way(scale, tones)
+        pc = int(round(n[2])) % 12
+        on += pc in tones - scale
+        over += pc in way and way[pc][1] == FOLLOW_SIDES[0]
+        under += pc in way and way[pc][1] == FOLLOW_SIDES[1]
+    return on, over, under
+
+
+def follow_shares(s, role: str) -> tuple | None:
+    """A line's two shares of notes that go with a chord's tone off the key (chord_follow_share): of its notes on such
+    a tone or on the key's tone over it, the share on the chord's tone; the same against the key's tone under it;
+    None for one with under WORD_NOTES notes to count, and None for the pair where both are."""
+    on, over, under = chord_follow_share(s, role)
+    pair = tuple(on / (on + x) if on + x >= WORD_NOTES else None for x in (over, under))
+    return pair if any(x is not None for x in pair) else None
+
+
+def chord_follows_field(s) -> str:
+    """How far the tune and the counter-line go with a chord that leaves the key, as the balance token carries it
+    (round 171, `follows=`, after every other word): for each of the two with notes enough to count (follow_shares),
+    its letter (FOLLOW_LETTERS) and its two shares in hundredths, "/" between them and "-" for one it has too few
+    notes for: of its notes on a tone a chord has off the key or on the key's tone a semitone over it, the share on
+    the chord's tone; and the same against the key's tone a semitone under it; the lines joined by ",":
+    "m85/60,c70/-". "" for a song with neither. The tune was drawn on the key's scale whatever the chord, its notes
+    off the scale held to a share over the song (round 93) and its chord tones asked on the beat (the chord_tones
+    word): over a chord with a tone off the key the two words met and the key won. FFVI's tunes over such chords are
+    on the chord on 0.53 of their notes and on the key's scale on 0.66; the written tunes on 0.36 and 0.82."""
+    out = []
+    for role in FOLLOW_PARTS:
+        pair = follow_shares(s, role) if s.notes.get(role) else None
+        if pair:
+            out.append(FOLLOW_LETTERS[role] + "/".join("-" if x is None else str(round(x * 100)) for x in pair))
+    return ",".join(out)
+
+
+def chord_follow_units(songs) -> list:
+    """Each song's tune and counter-line with notes enough to count (follow_shares) as a unit (round 171): its outcome
+    its two shares to FOLLOW_BIN, "/" between them and "-" for one it has too few notes for, its value the part. A
+    song's own shares ride its balance token (`follows=`); a written line whose token song has too few such notes
+    draws its pair here."""
+    out = []
+    for s in songs:
+        for role in FOLLOW_PARTS:
+            pair = follow_shares(s, role) if s.notes.get(role) else None
+            if pair:
+                out.append(tables.Unit(s.sid, s.game, "/".join("-" if x is None else f"{round(x / FOLLOW_BIN) * FOLLOW_BIN:.2f}" for x in pair), {"part": role}))
+    return out
+
+
 def loop_part_field(s) -> str:
     """The form's part the song's loop returns to, as the balance token carries it (round 132, `loop=`): the index of
     the part of the token's form (form_field's, "0" the first) that holds the loop's bar; "" for a song with no loop
@@ -2991,6 +3079,8 @@ def balance_units(songs) -> list:
             tokens.append(f"rubs={voice_rubs_field(s)}")
         if voice_keeps_field(s):                             # and how often a voice keeps its note where its line keeps its own (round 167)
             tokens.append(f"keeps={voice_keeps_field(s)}")
+        if chord_follows_field(s):                           # and how far the tune and the counter go with a chord off the key (round 171)
+            tokens.append(f"follows={chord_follows_field(s)}")
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 
