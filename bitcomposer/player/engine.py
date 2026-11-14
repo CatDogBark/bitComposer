@@ -15,6 +15,7 @@ import json
 import math
 import os
 import random
+import re
 import shlex
 import struct
 import sys
@@ -105,8 +106,10 @@ def _apply_gain(raw: bytes, n: int, gain: float) -> bytes:
 def parse_message(message: str) -> dict:
     """The machine-readable lines bitcomposer writes into the song message:
     layout (every channel's role), voices (role=name), drew (what the song
-    drew), echo. Older files without a layout line get the 14-channel one."""
-    out = {"layout": None, "voices": {}, "drew": {}, "echo": "", "lines": []}
+    drew), echo; and a converted or written module's echo channels (each
+    repeat channel's voice, both counted from 0 here) and master channel.
+    Older files without a layout line get the 14-channel one."""
+    out = {"layout": None, "voices": {}, "drew": {}, "echo": "", "echo_of": {}, "master": None, "lines": []}
     for line in message.replace("\r", "\n").split("\n"):
         line = line.strip()
         if not line:
@@ -119,9 +122,48 @@ def parse_message(message: str) -> dict:
             out["drew"] = dict(p.split("=", 1) for p in line[5:].split(",") if "=" in p)
         elif line.startswith("echo:"):
             out["echo"] = line[5:].strip()
+        elif line.startswith("echo channels:"):                  # "1=8-16, 4=17-25": the voice, its repeats' channels, from 1
+            for voice, first, last in re.findall(r"(\d+)=(\d+)-(\d+)", line):
+                for ch in range(int(first), int(last) + 1):
+                    out["echo_of"][ch - 1] = int(voice) - 1
+        elif line.startswith("master channel:") and line[15:].strip().isdigit():
+            out["master"] = int(line[15:]) - 1
         else:
             out["lines"].append(line)
     return out
+
+
+def band_parts(layout: list[str], channels: int, echo_of: dict[int, int], master: int | None) -> list[int]:
+    """The channels THE BAND's M and S act on: the named ones that are a part's, not an echo's nor the master volume's."""
+    return [c for c, role in enumerate(layout[:channels]) if not role.startswith("echo.") and c not in echo_of and c != master]
+
+
+def silenced(layout: list[str], channels: int, muted: set[int], soloed: set[int],
+             echo_of: dict[int, int], master: int | None) -> tuple[set[int], bool]:
+    """The channels to silence for THE BAND's M and S. A part's channel is heard if it is soloed, where any is, and
+    otherwise if it is not muted. An echo goes with what it echoes and is never muted or soloed of its own: Classic's
+    returns ("echo.<role>") once none of the role's channels is heard, a written or converted song's repeats with their
+    voice (`echo_of`). Channels past the layout that no voice is named for (a written song from before the echo
+    channels line) are all silenced while any part is, since whose echo is whose cannot be told. The master channel is
+    never silenced: muted, its volume moves and the fade would not be played. Returns (the channels, whether an echo
+    nobody is named for went with them)."""
+    named = layout[:channels]
+    rows = band_parts(layout, channels, echo_of, master)
+    solo = soloed & set(rows)
+    heard = (lambda c: c in solo) if solo else (lambda c: c not in muted)
+    silent = {c for c in rows if not heard(c)}
+    for c, role in enumerate(named):
+        if role.startswith("echo."):
+            voices = [v for v in rows if named[v] == role[5:]]
+            if voices and not any(heard(v) for v in voices):
+                silent.add(c)
+    silent.update(c for c, v in echo_of.items() if v in rows and not heard(v) and 0 <= c < channels)
+    unnamed = [c for c in range(len(named), channels) if c not in echo_of and c != master]
+    echo_off = bool(unnamed) and any(not heard(c) for c in rows)
+    if echo_off:
+        silent.update(unnamed)
+    silent.discard(master)
+    return silent, echo_off
 
 
 def write_channel_volumes(path: str, volumes: list[int]) -> None:
@@ -167,6 +209,11 @@ class Player:
         self._generating = False
         self._title_cache: dict[str, tuple[float, str]] = {}
         self._live_mix: dict[int, int] = {}
+        self._muted: set[int] = set()        # THE BAND's M and S, for the loaded song only
+        self._soloed: set[int] = set()
+        self._silent: set[int] = set()       # the channels they silence in the module
+        self._echo_off = False
+        self._master: int | None | bool = False   # the loaded module's master volume channel; False until looked for
         self._lock = threading.Lock()
         self._out = None
         self._decode_thread = None
@@ -374,6 +421,8 @@ class Player:
             self.module = new
             self.current_index = index
             self._live_mix = {}
+            self._muted, self._soloed, self._silent, self._echo_off = set(), set(), set(), False   # a new module: every channel heard
+            self._master = False
             self._level_db = level
             self._level_gain = leveling.gain_for(level) if self.level_on else 1.0
         self._changed()
@@ -634,6 +683,35 @@ class Player:
                 return []
             return [self.module.channel_vu(ch) for ch in range(self.module.num_channels)]
 
+    def set_band(self, muted, soloed) -> None:
+        """THE BAND's M and S: the named channels muted and the ones soloed (`silenced` says what that silences). For
+        the loaded song only, and never written into the file."""
+        with self._lock:
+            if not self.module:
+                return
+            layout, echo_of, master, converted = self._channels()
+            if self._master is False:
+                # A converted or written module from before the master channel line: the master's is its last channel
+                # where it holds no note (one with no volume move to play is not in the module at all).
+                last = self.module.num_channels - 1
+                self._master = master if master is not None or not converted or self.module.channel_has_notes(last) else last
+            n = self.module.num_channels
+            parts = set(band_parts(layout, n, echo_of, self._master))       # an echo's own row, or the master's, takes neither
+            self._muted, self._soloed = set(muted) & parts, set(soloed) & parts
+            silent, self._echo_off = silenced(layout, n, self._muted, self._soloed, echo_of, self._master)
+            for ch in silent ^ self._silent:
+                self.module.set_channel_muted(ch, ch in silent)
+            self._silent = silent
+        self._changed()
+
+    def band(self) -> dict:
+        """What THE BAND's M and S are set to: {"muted", "soloed", "echoOff" (an echo no voice is named for is
+        silenced with them)}."""
+        with self._lock:
+            if not self.module:
+                return {"muted": [], "soloed": [], "echoOff": False}
+            return {"muted": sorted(self._muted), "soloed": sorted(self._soloed), "echoOff": self._echo_off}
+
     def apply_mix_to_file(self) -> bool:
         """Write the live mix into the loaded file's header so it survives a reload."""
         with self._lock:
@@ -651,16 +729,25 @@ class Player:
             return False
 
     # ── what is loaded ──
+    def _channels(self, info: dict | None = None) -> tuple[list[str], dict[int, int], int | None, bool]:
+        """The loaded module's channels, under the lock: (the layout, each echo repeat channel's voice, the master
+        channel where the message names it, whether the module is the SPC converter's: a converted or a written song)."""
+        msg = self.module.message
+        info = info or parse_message(msg)
+        n = self.module.num_channels
+        layout = info["layout"]
+        if layout is None:
+            layout = LEGACY_LAYOUT[:n] if n == 14 and "bitcomposer" in msg.lower() else [f"ch{i + 1}" for i in range(n)]
+        converted = bool(info["lines"]) and info["lines"][-1].startswith("rows ")      # the converter's own last line
+        return layout, info["echo_of"], info["master"], converted
+
     def metadata(self) -> dict:
         with self._lock:
             if not self.module:
                 return {}
-            msg = self.module.message
-            info = parse_message(msg)
+            info = parse_message(self.module.message)
             n = self.module.num_channels
-            layout = info["layout"]
-            if layout is None:
-                layout = LEGACY_LAYOUT[:n] if n == 14 and "bitcomposer" in msg.lower() else [f"ch{i + 1}" for i in range(n)]
+            layout = self._channels(info)[0]
             return {"title": self.module.title, "artist": self.module.artist, "type": self.module.type_name,
                     "duration": self.module.duration, "position": self.module.position,
                     "channels": n, "patterns": self.module.num_patterns,

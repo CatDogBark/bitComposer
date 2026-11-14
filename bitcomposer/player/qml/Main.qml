@@ -307,6 +307,19 @@ ApplicationWindow {
         }
     }
     function _resetEchoRatios() { echoBase = channelVolumes.slice(); echoBus = 1.0; echoGroupRatio = ({}); echoGroupRatioChanged(); _resetKitRatios() }
+    // THE BAND's M and S. A row is its channels (a part's one, the kit's pieces); the backend keeps what is muted and
+    // soloed, for the loaded song only, and silences each part's echo with it.
+    readonly property var mutedChannels: backend.mutedChannels
+    readonly property var soloChannels: backend.soloChannels
+    function rowIn(list, chs) { return chs.length > 0 && list.indexOf(chs[0]) >= 0 }
+    function rowHeard(chs) { return soloChannels.length > 0 ? rowIn(soloChannels, chs) : !rowIn(mutedChannels, chs) }
+    function _rowToggled(list, chs) {
+        var on = rowIn(list, chs), out = []
+        for (var i = 0; i < list.length; i++) if (chs.indexOf(list[i]) < 0) out.push(list[i])
+        return on ? out : out.concat(chs)
+    }
+    function toggleMute(chs) { backend.setBand(_rowToggled(mutedChannels, chs), soloChannels) }
+    function toggleSolo(chs) { backend.setBand(mutedChannels, _rowToggled(soloChannels, chs)) }
     function applyChannelVolume(channel, value) {
         if (channelVolumes[channel] === value) return
         channelVolumes[channel] = value
@@ -737,6 +750,22 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    // A small lit square: THE BAND's M and S.
+    component Tog: Rectangle {
+        id: tg
+        property string text: ""
+        property bool on: false
+        property color tint: root.accentPink
+        signal clicked()
+        implicitWidth: Math.round(18 * root.ui)
+        implicitHeight: Math.round(14 * root.ui)
+        color: tg.on ? tg.tint : root.raised
+        border.width: 1
+        border.color: tg.on ? tg.tint : (tgMouse.containsMouse ? root.bevelLight : root.edge)
+        Text { anchors.centerIn: parent; text: tg.text; color: tg.on ? root.bg : (tgMouse.containsMouse ? root.textColor : root.dimText); font.family: root.mono; font.bold: true; font.pixelSize: Math.round(9 * root.ui) }
+        MouseArea { id: tgMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tg.clicked() }
     }
 
     // A segmented meter: `on` of `cells` lit, stepped, never smooth.
@@ -1206,7 +1235,12 @@ ApplicationWindow {
                         ColumnLayout {
                             width: parent.width
                             spacing: Math.round(8 * root.ui)
-                            Heading { text: "THE BAND"; aside: root.liveLevels ? "what each channel plays, as it plays" : "each channel's volume; MIX changes them" }
+                            Heading {
+                                objectName: "bandHeading"
+                                text: "THE BAND"
+                                aside: backend.bandEchoOff ? "an older file: its echo is off while a part is silenced"
+                                     : root.liveLevels ? "what each channel plays, as it plays; M mutes, S solos" : "each channel's volume; MIX changes them"
+                            }
                             Repeater {
                                 model: root.partChannels
                                 RowLayout {
@@ -1214,18 +1248,25 @@ ApplicationWindow {
                                     readonly property int ch: modelData
                                     Layout.fillWidth: true
                                     spacing: Math.round(12 * root.ui)
-                                    Text { Layout.preferredWidth: Math.round(120 * root.ui); text: root.channelLabel(ch); color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui); elide: Text.ElideRight }
-                                    Meter { cells: 16; on: root.meterCells(ch, 16); tint: root.channelColor(ch) === 2 ? root.text2 : root.accentPink }
+                                    readonly property bool heard: root.rowHeard([ch])
+                                    Text { Layout.preferredWidth: Math.round(120 * root.ui); text: root.channelLabel(ch); color: heard ? root.textColor : root.edge; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui); elide: Text.ElideRight }
+                                    Tog { objectName: "bandMute" + ch; text: "M"; on: root.rowIn(root.mutedChannels, [ch]); onClicked: root.toggleMute([ch]) }
+                                    Tog { objectName: "bandSolo" + ch; text: "S"; tint: root.accentGreen; on: root.rowIn(root.soloChannels, [ch]); onClicked: root.toggleSolo([ch]) }
+                                    Meter { cells: 16; on: heard ? root.meterCells(ch, 16) : 0; tint: root.channelColor(ch) === 2 ? root.text2 : root.accentPink }
                                     Item { Layout.fillWidth: true }
                                     Text { text: root.voiceLabel(ch); color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); elide: Text.ElideRight }
                                 }
                             }
                             RowLayout {
+                                id: bandKit
                                 visible: root.kitChannels.length > 0
                                 Layout.fillWidth: true
                                 spacing: Math.round(12 * root.ui)
-                                Text { Layout.preferredWidth: Math.round(120 * root.ui); text: "the kit"; color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui) }
-                                Meter { cells: 16; on: root.kitCells(16); tint: root.text2 }
+                                readonly property bool heard: root.rowHeard(root.kitChannels)
+                                Text { Layout.preferredWidth: Math.round(120 * root.ui); text: "the kit"; color: bandKit.heard ? root.textColor : root.edge; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui) }
+                                Tog { objectName: "bandMuteKit"; text: "M"; on: root.rowIn(root.mutedChannels, root.kitChannels); onClicked: root.toggleMute(root.kitChannels) }
+                                Tog { objectName: "bandSoloKit"; text: "S"; tint: root.accentGreen; on: root.rowIn(root.soloChannels, root.kitChannels); onClicked: root.toggleSolo(root.kitChannels) }
+                                Meter { cells: 16; on: bandKit.heard ? root.kitCells(16) : 0; tint: root.text2 }
                                 Item { Layout.fillWidth: true }
                                 Text { text: root.kitChannels.length + " pieces"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
                             }

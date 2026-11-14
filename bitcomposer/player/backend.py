@@ -47,6 +47,7 @@ class Backend(QObject):
     levelsChanged = Signal()
     playlistChanged = Signal()
     channelVolumesChanged = Signal()
+    bandChanged = Signal()
     screenChanged = Signal()
     noticeChanged = Signal()
     updateChanged = Signal()
@@ -77,6 +78,7 @@ class Backend(QObject):
         self._playlist = []
         self._playlist_sig = None
         self._channel_volumes = []
+        self._band = {"muted": [], "soloed": [], "echoOff": False}
         self._file = None
         self._screen = [0, 0]
         self._notice = ""
@@ -170,6 +172,10 @@ class Backend(QObject):
             self._file = f
             self._channel_volumes = p.channel_volumes()
             self.channelVolumesChanged.emit()
+        band = p.band()
+        if band != self._band:
+            self._band = band
+            self.bandChanged.emit()
         self._update_position()
         if p.status == "Playing":
             self._tick.start()
@@ -203,6 +209,17 @@ class Backend(QObject):
 
     def _get_channel_volumes(self): return self._channel_volumes
     channelVolumes = Property("QVariantList", _get_channel_volumes, notify=channelVolumesChanged)
+
+    # THE BAND's M and S: the channels muted, the channels soloed, and whether an echo the file names no voice for is
+    # silenced with them. The engine keeps them, for the loaded song only.
+    def _get_muted(self): return self._band["muted"]
+    mutedChannels = Property("QVariantList", _get_muted, notify=bandChanged)
+
+    def _get_soloed(self): return self._band["soloed"]
+    soloChannels = Property("QVariantList", _get_soloed, notify=bandChanged)
+
+    def _get_band_echo_off(self): return self._band["echoOff"]
+    bandEchoOff = Property(bool, _get_band_echo_off, notify=bandChanged)
 
     def _get_screen(self): return self._screen
     screenAvail = Property("QVariantList", _get_screen, notify=screenChanged)
@@ -463,6 +480,10 @@ class Backend(QObject):
 
     @Slot(int, int)
     def setChannelVolume(self, ch, vol): self.player.set_channel_volume(ch, vol)
+
+    @Slot("QVariantList", "QVariantList")
+    def setBand(self, muted, soloed):
+        self.player.set_band([int(c) for c in muted], [int(c) for c in soloed])
 
     @Slot(result=bool)
     def applyMix(self):
