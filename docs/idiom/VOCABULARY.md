@@ -1216,6 +1216,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   (`line_turns_of`, `plan.line_turns`) whatever its form, and `lay_turns`
   lays each bar of the written line out between the places of one of
   those bars, drawn on a stream of its own (`TURNS_STREAM`).
+  Since round 161 a `pulse=` word comes last for a song with a moving
+  chord line that has a pulse (`line_pulse_field`): the part's letter
+  and the pulse's grid in twelfths of a beat (12 the beat, 6 its half:
+  the coarsest on which a third of the line's notes or more fall and a
+  third or more do not), then, `~` between them and `-` for one the
+  line has too few notes for, the share of its off-pulse notes that are
+  their bar's most struck such pitch, how often that pitch is the bar
+  before's, both in hundredths, and the step profile of its on-pulse
+  notes as the seventeenth field writes one (`a6~73~70~26/68/7` for
+  Johnny C. Bad's piano: a pedal on 0.73 of its off-beat notes, carried
+  over 0.70 of its bar lines, under a line that steps on 0.68 of its
+  moves). 35 of the 68 tokens carry it. The plan reads it
+  (`line_pulse_of`, `plan.line_pulse`) and `hold_pulse` holds the
+  written line to it; a line with turns is laid out by those instead.
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice

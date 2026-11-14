@@ -342,6 +342,9 @@ class Plan:
                                       # LOOP_CHORDS for the harmony) -> {the form's letter: (the figure's bars, the share of the voice's bars on it,
                                       # the bars off it counted from the part's first)} where the token song's voice loops (round 121); only where
                                       # the form is the token song's
+    line_pulse: dict = field(default_factory=dict)      # a chord part -> its token song's moving line by its place in the beat: (the pulse's grid
+                                      # in twelfths of a beat, the pedal's share, the pedal's carry, the on-pulse step profile; None for one the
+                                      # token does not say) (round 161: the `pulse=` word, line_pulse_of)
     line_turns: dict = field(default_factory=dict)      # a chord part -> its token song's block line's turns: for each bar of that song, the
                                       # places at which the line's note changes, in twelfths of a beat (round 160: the `turns=` word, line_turns_of)
     struck_places: dict = field(default_factory=dict)   # a chord part -> {a voice beside its line: (its median note length in beats, {the form's
@@ -1811,6 +1814,28 @@ def struck_places_of(text: str) -> dict:
     return out
 
 
+def line_pulse_of(text: str) -> dict:
+    """The balance token's `pulse=` word (round 161, arrangement.line_pulse_field) read: "a6~73~70~26/68/7" -> {the
+    accompaniment: (6, 0.73, 0.70, {"same": 0.26, "step": 0.68, "leap": 0.07})}: a chord part's moving line's pulse (its
+    grid in twelfths of a beat), the share of its notes off the pulse that are their bar's one pitch, how often that
+    pitch is the bar before's, and the step profile of its notes on the pulse; None for one the word leaves out ("-").
+    A part that cannot be read is left out."""
+    out = {}
+    for entry in (text or "").split(","):
+        role, fields = RELATION_PARTS.get(entry[:1]), entry[1:].split("~")
+        if not role or len(fields) != 4:
+            continue
+        try:
+            grid = int(fields[0])
+            pedal, carry = (None if x == "-" else int(x) / 100 for x in fields[1:3])
+            profile = None if fields[3] == "-" else {k: int(x) / 100 for k, x in zip(rhythm.STEP_CLASSES, fields[3].split("/"), strict=True)}
+        except ValueError:
+            continue
+        if grid > 0 and (pedal is not None or profile is not None):
+            out[role] = (grid, pedal, carry, profile)
+    return out
+
+
 def line_turns_of(text: str) -> dict:
     """The balance token's `turns=` word (round 160, arrangement.line_turns_field) read: "a-/24/12.42" -> {the
     accompaniment: [[], [24], [12, 42]]}: for a chord part's block line, bar by bar in the token song's order, the
@@ -2464,6 +2489,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_layer_struck = {}                                 # how each voice struck with another strikes (round 108)
     token_struck_places = {}                                # and where in the bar it does, by the form's letters (round 159)
     token_turns = {}                                        # where a block line's note changes in the token song, bar by bar (round 160)
+    token_pulse = {}                                        # a moving line by its place in the beat in the token song (round 161)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
@@ -2475,6 +2501,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         role, _, rest = token.partition("=")
         if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
             token_loop = int(rest) if rest.isdigit() else None
+            continue
+        if role == "pulse":                                 # the token's song's moving lines by their place in the beat (round 161), not a part
+            token_pulse = line_pulse_of(rest)
             continue
         if role == "turns":                                 # where the token's song's block lines turn (round 160), not a part
             token_turns = line_turns_of(rest)
@@ -3098,7 +3127,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_pulse=token_pulse, tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -4303,6 +4332,145 @@ def _bar_places(notes: list, v: int, meter: int) -> dict:
     return {k: sorted(x) for k, x in by.items()}
 
 
+def follows_own_line(plan: Plan, role: str, v: int, bars: int) -> set:
+    """The bars in which a part's voice `v` doubles its own part's line, runs parallel to it or is struck with it by its
+    token's relation word (rounds 90 and 107): there a note of it moves with the line's note it is struck with."""
+    word = relation_word(plan, role, v)
+    return {k for kind, target, _, a, b in (stretch_spans(relation_stretches(word), bars) if word else [])
+            if kind in ("double", "parallel", "with") and (target == ("line",) or target == role) for k in range(a, b)}
+
+
+def hold_pulse(plan: Plan, meter: int, role: str, notes: list, bars: int) -> tuple:
+    """A moving chord line held to its token song's line by its place in the beat (round 161). The step profile holds
+    the line's moves in the order they come (round 117), and of a line that is two kinds of note in turn it says
+    little: Johnny C. Bad's piano steps up and back on the beat and its half over one note between them, which reads
+    as a leap on 0.65 of its moves, and the written lines on its token leaped as often and anywhere (of their notes
+    off the pulse 0.47 were their bar's one pitch, the game's 0.73; of their moves on the pulse 0.49 were a step or
+    less, the game's 0.93). Here, once every part is written, a line with the token's `pulse=` word
+    (`plan.line_pulse`) is taken as its two lines, on the token's grid:
+    the notes on the pulse, in time order, are held to the token's step profile as hold_line_steps holds the whole
+    line: a move whose class, the move counted, is over its share by STEP_MARGIN gives way to the class most under
+    its own, "same" playing the on-pulse note before again and "step" the tone of the bar's chord within a whole tone
+    of it (the scale's where the chord has none), a leap never forced;
+    the notes off the pulse are held to the pedal: each bar with two or more has one pedal pitch, its own where it
+    has one (the pitch it strikes most off the pulse, twice or more, where that is a tone of the bar's chord or half
+    the bar's off-pulse notes), else the bar before's where that keeps the token's carry and is a tone of this bar's
+    chord, else the one of its off-pulse pitches on the chord it strikes most (not the one its on-pulse notes play
+    most, where another serves; the chord's tone nearest where none is on it);
+    and a note off the pedal moves to it while the share on it, the note counted off it, would be under the token's
+    by STEP_MARGIN. A bar's own pedal is never traded for another.
+    Nothing is drawn. A note of a voice beside the line that is struck with a moved line note, in a bar where the
+    voice follows its own part's line (follows_own_line) or sounds it in octaves, moves as far, and on to the nearest
+    tone of the scale where that leaves it; a part of the form that repeats another still does. Returns (the notes, a
+    log line or "")."""
+    word = plan.line_pulse.get(role)
+    if not word or plan.line_turns.get(role):               # a block line is laid out by its turns (round 160)
+        return notes, ""
+    grid, pedal_share, carry_share, profile = word
+    old, new = list(notes), list(notes)
+    scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}
+    rows = _bar_places(old, 0, meter)
+    line = [int(round(old[i][2])) for row in rows.values() for _, i in row]
+    if len(line) < 2:
+        return notes, ""
+    low, high = min(line), max(line)
+    pitch = lambda i: int(round(new[i][2]))                 # noqa: E731
+    chord_pcs = lambda k: ({(plan.chords[k][0] + x) % 12 for x in harmony.SHAPES.get(plan.chords[k][1], harmony.SHAPES[""])}   # noqa: E731
+                           if 0 <= k < len(plan.chords) and plan.chords[k] is not None and plan.chords[k][0] is not None else set())
+
+    def put(i, midi):
+        new[i] = new[i][:2] + (float(midi),) + tuple(new[i][3:])
+
+    stepped = 0
+    if profile:                                             # the notes on the pulse, as a line of their own
+        counts, before = Counter(), None
+        for k in sorted(rows):
+            for at, i in rows[k]:
+                if at % grid:
+                    continue
+                midi = pitch(i)
+                if before is not None:
+                    cls = rhythm.step_class(midi - before)
+                    total = sum(counts.values())
+                    if (counts[cls] + 1) / (total + 1) > profile.get(cls, 0.0) + STEP_MARGIN:
+                        room = {c: profile.get(c, 0.0) - counts[c] / (total + 1) for c in rhythm.STEP_CLASSES if c != cls}
+                        best = max(room, key=lambda c: (room[c], c == "same"))
+                        if room[best] > 0 and best != "leap":
+                            near = [before] if best == "same" else [before + d for d in (1, -1, 2, -2) if low <= before + d <= high]
+                            pcs = chord_pcs(k)
+                            to = next((m for m in near if m % 12 in pcs), None) or next((m for m in near if m % 12 in scale), None) or (near[0] if near else None)
+                            if best == "same":
+                                to = before
+                            if to is not None and to != midi:
+                                put(i, to)
+                                midi, stepped = to, stepped + 1
+                            cls = rhythm.step_class(midi - before)
+                    counts[cls] += 1
+                before = midi
+    pedalled = carried = pairs = on_pedal = seen = 0
+    if pedal_share is not None:                             # the notes off the pulse, on the bar's pedal
+        last = None
+        for k in sorted(rows):
+            offs = [i for at, i in rows[k] if at % grid]
+            if len(offs) < 2:
+                last = None
+                continue
+            pcs = chord_pcs(k)
+            struck = Counter(pitch(i) for i in offs)
+            ons = Counter(pitch(i) for at, i in rows[k] if at % grid == 0)
+            top_on = ons.most_common(1)[0][0] if ons else None
+            most = min(struck, key=lambda m: (-struck[m], m))
+            if struck[most] >= 2 and (most % 12 in pcs or 2 * struck[most] >= len(offs)):   # the bar has a pedal of its own: a pitch struck twice
+                pedal = most                                # or more off the pulse that is on the chord, or is half the bar's off-pulse notes
+            else:                                           # it has none: one of its off-pulse pitches on the chord, the most struck, and the bar
+                pedal = min((m for m in struck if m % 12 in pcs), key=lambda m: (-struck[m], m == top_on, m), default=None)   # before's where the carry asks
+                if pedal is None:                           # none of them is on the chord: the chord's tone nearest the lowest
+                    pedal = min((most + d for d in range(-6, 7) if (most + d) % 12 in pcs and low <= most + d <= high), key=lambda m: (abs(m - most), m), default=most)
+                if (last is not None and pedal != last and carry_share is not None and carried / (pairs + 1) < carry_share - STEP_MARGIN
+                        and (not pcs or last % 12 in pcs)):
+                    pedal = last
+            if last is not None:
+                pairs += 1
+                carried += pedal == last
+            for i in offs:
+                if pitch(i) != pedal and on_pedal / (seen + 1) < pedal_share - STEP_MARGIN:
+                    put(i, pedal)
+                    pedalled += 1
+                seen += 1
+                on_pedal += pitch(i) == pedal
+            last = pedal
+    if not stepped and not pedalled:
+        return notes, ""
+    with_it = 0
+    moved = {round(old[i][0], 3): (int(round(old[i][2])), pitch(i)) for row in rows.values() for _, i in row if pitch(i) != int(round(old[i][2]))}
+    for v in sorted({n[3] for n in old} - {0}):
+        own = follows_own_line(plan, role, v, bars)
+        for i, n in enumerate(old):
+            got = moved.get(round(n[0], 3)) if n[3] == v else None
+            if got is None:
+                continue
+            was, now = got
+            m = int(round(n[2]))
+            if (m - was) % 12 == 0:                         # the line in octaves: the line's new note in octaves
+                to = m + now - was
+            elif int((n[0] + NEAR) // meter) in own:        # a voice that follows the line: as far, and on to the scale
+                to = m + now - was
+                if to % 12 not in scale:
+                    to += 1 if now > was else -1
+                    if to % 12 not in scale:
+                        to += 1 if now > was else -1
+            else:
+                continue
+            if to != m:
+                put(i, to)
+                with_it += 1
+    again = _repeats_follow(plan, old, new, meter)
+    return new, (f"the line by its place in the beat, as its token song's (round 161; a pulse every {grid} twelfths of a beat): {stepped} notes on the pulse moved "
+                 f"to the song's steps, {pedalled} off it to the bar's pedal (on it {on_pedal} of {seen}, the token's {'-' if pedal_share is None else format(pedal_share, '.2f')}; "
+                 f"carried over {carried} of {pairs} bar lines)" + (f", {with_it} notes of the voices beside it with them" if with_it else "")
+                 + (f"; {again} notes of the form's repeats with them" if again else ""))
+
+
 def lay_turns(plan: Plan, meter: int, role: str, notes: list, seed: int, same: list, leave: dict | None = None) -> tuple:
     """A block line's note changes where its token song's line's does (round 160). The step profile holds how often a
     chord part's line repeats its note (round 117), a share over the line, and the changes fell wherever the share
@@ -4507,7 +4675,9 @@ def hear_own_voices(plan: Plan, meter: int, notes: list, others: list, leave: di
 
 def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict, seed: int = 0) -> bool:
     """The chord parts' voices settled once every part is written: after the tune and the counter-line, so they stand as
-    they were written over the parts (a chord part changed before the tune is written re-writes the tune). Round 160:
+    they were written over the parts (a chord part changed before the tune is written re-writes the tune). Round 161:
+    a moving line is held to its token song's line by its place in the beat, the pedal off the pulse and the steps on
+    it (hold_pulse). Round 160:
     a block line's note changes where its token song's does (lay_turns), and a voice on the line's own sample keeps
     its note where the line keeps its own (hold_with_line). Round 159: a voice struck with another that no mask could
     thin strikes where its token voice does (strike_where_token_does).
@@ -4521,6 +4691,9 @@ def settle_chord_parts(plan: Plan, song: rhythm.Song, written: dict, seed: int =
         beside = plan.layer_samples.get(role) or []
         same = [v for v in sorted({n[3] for n in notes} - {0}) if v - 1 < len(beside) and beside[v - 1] and beside[v - 1] == plan.token_samples.get(role)]
         follows = {v: follows_another_part(plan, role, v, len(song.bars)) for v in same}
+        notes, line = hold_pulse(plan, song.meter, role, notes, len(song.bars))   # round 161: a moving line by its place in the beat
+        if line:
+            part.log.append(line)
         notes, line = lay_turns(plan, song.meter, role, notes, seed, same, follows)   # round 160: the line first, and the voices on its sample
         if line:
             part.log.append(line)

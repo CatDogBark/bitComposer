@@ -152,6 +152,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 158 | 2026-11-13 | a voice beside a chord part's line hears its own part's voices | - |
 | 159 | 2026-11-13 | a struck voice no mask could thin strikes where its token voice does | - |
 | 160 | 2026-11-13 | a block line's note changes where its token song's does, and a voice on its sample holds with it | - |
+| 161 | 2026-11-14 | a moving chord line is held to its token song's line by its place in the beat | - |
 
 ## Goal
 
@@ -11439,3 +11440,94 @@ parts with rounds 158's and 159's, on the song on The Day After's
 token and, without round 158's, on the song on Strago's, each written
 both ways: passed by ear. The three rounds together write both songs
 note for note as they were heard.
+
+### Round 161: a moving chord line is held to its token song's line by its place in the beat (2026-11-14, from a piano heard playing notes that make no sense together)
+
+**Why.** By ear, on the song on Johnny C. Bad's token (seed 1018),
+after rounds 158 to 160 and two passes over it that were heard and set
+aside (a bar under its song's pace playing its part's busy bar again; a
+voice resting where its token voice rests): the piano's notes do not
+make sense together, where the game's is a blues riff. Investigated
+first; built as a new word on the pick of it.
+
+**Found.** The game's song is a boogie shuffle, and the reader counts
+it at half its speed. Every voice plays one small figure on swung
+eighths. The bass walks a note on every half beat (E G# B C# D C# B
+G#). The piano's top voice, the accompaniment's line, plays G#, A, G#
+on the beat and its half, the third, a step up and back, and one note,
+E, on every swung off-beat between them; its lower voice rocks B, C#,
+B a sixth under the top. Of the line's notes off the beat and its
+half, 0.73 are their bar's one pitch, the same pitch as the bar
+before's in 0.70 of its bars; of the moves from one note on the beat
+or its half to the next, 0.26 repeat the note, 0.68 are a step and
+0.07 a leap. The step profile the token carries (round 117) counts
+every move in the order it comes: same 0.20, step 0.16, leap 0.65. A
+pedal under a stepping line reads as leaping, and the lines written to
+it leaped wherever they went: on the two songs heard, 0.53 and 0.47 of
+their off-pulse notes are their bar's one pitch, and 0.40 and 0.43 of
+their moves on the pulse a step or less. No word says a line by its
+place in the beat; the tune has one for where its notes fall (round
+147), none for what they are there.
+
+**Built.** A new word, by song. The balance token says, after every
+other word, a moving chord line by its place (`rhythm.line_pulse`,
+`line_pulse_field`, `pulse=`): the line's pulse, the coarsest of the
+beat and its half on which a third of its notes or more fall and a
+third or more do not; the pedal's share, of its notes off the pulse in
+the bars with two or more, those on the bar's most struck such pitch;
+the pedal's carry, how often that pitch is the bar before's; and the
+step profile of its notes on the pulse as a line of their own
+(`a6~73~70~26/68/7` for this piano). A block line has its turns
+instead (round 160). The plan reads it (`line_pulse_of`,
+`plan.line_pulse`), and `plan.hold_pulse`, first in
+`settle_chord_parts` once every part is written, holds the written
+line to both. The notes on the pulse, in time order: a move whose
+class, the move counted, is over its share by `STEP_MARGIN` gives way
+to the class most under its own, as `hold_line_steps` does for the
+whole line, "same" playing the on-pulse note before again and "step"
+the chord's tone within a whole tone of it, the scale's where the
+chord has none; a leap is never forced. The notes off the pulse: each
+bar with two or more has one pedal, its own where it has one (the
+pitch it strikes most off the pulse, twice or more, on the bar's chord
+or half its off-pulse notes), else the bar before's where that keeps
+the carry and is a tone of the bar's chord, else the one of its
+off-pulse pitches on the chord it strikes most; a note off the pedal
+moves to it while the share on it would be under the token's. A note
+of a voice beside the line that is struck with a moved line note moves
+as far, where the voice follows its part's line by its relation word
+or sounds the line in octaves. Nothing is drawn; a part of the form
+that repeats another still does.
+
+**Measured.** Suite 626 (1 skip). The vocabulary is refit: 115 tables,
+the balance word alone changed, each outcome what it was but for the
+new word and in its place; 35 of the 68 tokens carry `pulse=`. Over
+400 seeds (1000 to 1399, the player's asking), against round 160: a
+note changes in 196 songs, 18.5 notes at the median and 270 at the
+most, every one a pitch in a chord part (4,158 of the accompaniment's
+line and 2,273 of its voices beside it, 25 and 2 of the arp's); the
+other 204 are the same note for note, the songs on a token with turns
+among them, and the tune, the counter-line, the bass and the kit are
+in every song. Seed 1018: the off-pulse notes on their bar's one pitch
+0.53 before and 0.68 now, the moves on the pulse a step or less 0.40
+and 0.89 (the token's 0.73 and 0.94); 224 of the accompaniment's 820
+notes moved. Seed 1234, on the same token: 0.47 and 0.68, 0.43 and
+0.89. Seed 1335, on Battle Theme's: 0.64 and 0.66, 0.39 and 0.75 (the
+token's 0.53 and 0.81).
+
+**Open.** The pedal's share is raised to the token's and never
+lowered, and a bar's own pedal is kept on the chord or off it. Both
+holds are shares over the line: a bar is held where the share asks and
+left where it does not, so a busy bar late in a song can stand as it
+was written. The pulse is the beat or its half and no finer. What the
+line plays is held, not where: seed 1018 has 0.30 of its line's notes
+off the swing's places and eight notes a bar where the game's piano
+plays thirteen, and is written at 120 for the game's 110; a chord
+part's line has no places word (the tune's is round 147's), and the
+writers hold a bar within half to one and a half times its song's
+onsets a bar. A run and a fall into a beat have no word. Like rounds
+158 to 160 the hold runs after the tune is written.
+
+**Heard.** Three pairs on the same seeds are rendered for the ear
+before the merge: the song on Johnny C. Bad's token that was heard
+(seed 1018), another on it that keeps the game's pace (seed 1234), and
+one on Battle Theme's (seed 1335).
