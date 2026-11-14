@@ -208,7 +208,10 @@ program, an application of four screens under one header:
   (the "radio": the next song is written when this one ends), gain with a
   soft limiter, WIDTH (the stereo width heard: SPEAKERS plays each voice
   where its song puts it, HEADPHONES pulls the pans toward centre), each
-  channel's level as the band, and the songs in the
+  channel's level as the band, with an M and an S on every part (M mutes
+  it, S plays it alone, or with the other parts whose S is lit; a part's
+  echo goes with it; for the song playing only, never written into the
+  file), and the songs in the
   folder with KEEP. Every song plays at one level: the player measures a
   song once and trims it as it plays, so a quiet song and a loud one sit
   side by side (SET → LEVEL turns it off; the files are not changed). Every song the player writes is provisional
