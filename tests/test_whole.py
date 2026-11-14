@@ -6224,6 +6224,12 @@ class ChordPartVoicesTests(unittest.TestCase):
         out, line = whole.hear_own_voices(plan, 4, notes, [], {1: {0}})
         self.assertEqual([n[2] for n in out], [60.0, 61.0, 60.0, 64.0])
         self.assertIn("1 notes moved", line)
+        # round 163: a note left where it follows another part is heard by every other voice of its part, the ones before it too
+        trio = [(0.0, 2.0, 60.0, 0), (0.0, 2.0, 64.0, 1), (0.0, 2.0, 65.0, 2)]                      # voice 3's F a semitone over voice 2's E
+        out, _ = whole.hear_own_voices(plan, 4, trio, [], {2: {0}})                                # voice 3 follows the tune here and is left:
+        self.assertEqual([n[2] for n in out], [60.0, 67.0, 65.0])                                  # voice 2 goes to the chord's G, clear of it
+        out, _ = whole.hear_own_voices(plan, 4, trio, [], {})                                      # voice 3 the part's own: it is the one to move
+        self.assertEqual([n[2] for n in out], [60.0, 64.0, 67.0])
 
     def test_the_token_says_where_a_struck_voice_strikes_and_the_plan_reads_it(self):
         """Round 159: after every other word the balance token says where in the bar a voice struck with another strikes,
