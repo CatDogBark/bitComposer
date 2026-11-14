@@ -204,15 +204,19 @@ them stay on your machine, in your data folder
 `bitcomposer-player` (Linux) and `bitComposer.exe` (Windows) are the same
 program, an application of four screens under one header:
 
-- **PLAY**: the song playing, its position, the transport, GENERATE, AUTO
-  (the "radio": the next song is written when this one ends), gain with a
+- **PLAY**: one panel for the song playing (its title with its key, tempo
+  and form, MORE for the rest of what its file says), its position, the
+  transport, GENERATE and AUTO
+  (the "radio": the next song is written when this one ends); gain with a
   soft limiter, WIDTH (the stereo width heard: SPEAKERS plays each voice
   where its song puts it, HEADPHONES pulls the pans toward centre), each
   channel's level as the band, with an M and an S on every part (M mutes
   it, S plays it alone, or with the other parts whose S is lit; a part's
   echo goes with it; for the song playing only, never written into the
   file), and the songs in the
-  folder with KEEP. Every song plays at one level: the player measures a
+  folder with KEEP. GAIN & WIDTH and the band fold to their headings on a
+  click, and the song list takes whatever height the window has left, so
+  the songs scroll and the screen over them stays put. Every song plays at one level: the player measures a
   song once and trims it as it plays, so a quiet song and a loud one sit
   side by side (SET → LEVEL turns it off; the files are not changed). Every song the player writes is provisional
   (`(auto) <Title>.it`, so a file browser sorts them together) and pruned
