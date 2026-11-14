@@ -155,6 +155,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 161 | 2026-11-14 | a moving chord line is held to its token song's line by its place in the beat | - |
 | 162 | 2026-11-14 | a struck voice is taken for one no mask could thin only where a mask ran out | - |
 | 163 | 2026-11-14 | a note left where it follows another part is heard by every voice of its part | - |
+| 164 | 2026-11-14 | a voice beside a line keeps its token voice's pace in the bars that are its own | - |
 
 ## Goal
 
@@ -11529,10 +11530,12 @@ writers hold a bar within half to one and a half times its song's
 onsets a bar. A run and a fall into a beat have no word. Like rounds
 158 to 160 the hold runs after the tune is written.
 
-**Heard.** Three pairs on the same seeds are rendered for the ear
-before the merge: the song on Johnny C. Bad's token that was heard
-(seed 1018), another on it that keeps the game's pace (seed 1234), and
-one on Battle Theme's (seed 1335).
+**Heard.** Three pairs on the same seeds were rendered: the song on
+Johnny C. Bad's token that was heard (seed 1018), another on it that
+keeps the game's pace (seed 1234), and one on Battle Theme's (seed
+1335). On seed 1234 the piano's line passed by ear; the voices beside
+it did not, which rounds 162 to 164 took up. No word was given on the
+other two pairs.
 
 ### Round 162: a struck voice is taken for one no mask could thin only where a mask ran out (2026-11-14, a fault in round 159's test)
 
@@ -11574,7 +11577,7 @@ where it played 70.
 left over its share by its masks' drift (0.60 to 0.67 against 0.43
 and 0.44) is not held nearer it.
 
-**Heard.** With round 163.
+**Heard.** With rounds 163 and 164, on seed 1234: passed by ear.
 
 ### Round 163: a note left where it follows another part is heard by every voice of its part (2026-11-14, a fault in round 158's pass)
 
@@ -11618,6 +11621,75 @@ voice is at 0.71, the line's note on the beat again a sixth lower; and
 it strikes 0.60 of the line's onsets against its token's 0.44, six to
 sixteen notes a bar where the game's plays six.
 
-**Heard.** One pair on the same seed is rendered for the ear before
-the merge: the song on Johnny C. Bad's token (seed 1234) as round 161
-wrote it and with rounds 162 and 163.
+**Heard.** One pair on the same seed, the song on Johnny C. Bad's
+token (seed 1234) as round 161 wrote it and with rounds 162 and 163:
+the third voice still did too much on its runs, which round 164 took
+up; with it, passed by ear.
+
+### Round 164: a voice beside a line keeps its token voice's pace in the bars that are its own (2026-11-14, from a voice heard doing too much on its runs)
+
+**Why.** By ear, on the song on Johnny C. Bad's token (seed 1234) with
+rounds 162 and 163 in: the accompaniment's third voice does too much
+on its fast runs, and clashes with the rest of the song when it goes
+off. Investigated first; built on the pick of the first of two
+candidates.
+
+**Found.** That voice follows the tune through most of the song, six
+notes a bar where its token voice plays six and a half. In part D,
+fifteen bars, its token's word is a stretch of its own, and there it
+was written at 13, 0, 9, 8, 14, 14, 13, 8, 14, 14, 8, 8, 1, 8 and 3
+notes a bar, between D3 and C4, under the piano and in the register of
+the tune and the bass, two to seven of a bar's notes off its chord.
+Its token voice, the guitar's low voice, plays one note a bar there.
+The token has it: each voice's onsets a bar by the form's letters
+(round 125, the ninth sub-field of its entry). The writers hold a
+line's bar within half to one and a half times its own (rounds 125,
+134, 138), and a voice beside the line to nothing: its own bars are
+written beside the line's, at the line's pace, and the plan read the
+word for one voice's fills alone. Over 400 seeds, of 1,480 parts of
+the form in which a voice beside a line has its token's onsets a bar,
+the written voice was over one and a half times them in 228; this one
+was the furthest over, in every song on the token. A drawing fault:
+the word exists and no writer held it.
+
+**Built.** The plan keeps the voices' onsets (`plan.layer_onsets`,
+`voices_onsets`: by the letters where its form is the token song's, a
+song with no letters' one number either way). `plan.keep_voice_pace`,
+in `settle_chord_parts` once every part is written and before the
+voices hear each other, takes each bar of a voice that is its own: a
+stretch of its own by its relation word, or a voice with no word; not
+a bar where it doubles a line, runs parallel to one or is struck with
+one, whose pace is that line's. Where the bar has more notes than
+`TIGHT`'s upper multiple of its token voice's for the part of the form
+(the part's last bar by its own count where the token gives one; one
+note at the least), the notes on the bar's strongest places are kept,
+as many as that, and the others taken out: the first beat, then the
+bar's middle beat, the other beats, the half beats, the rest, the
+earlier of equals. Nothing is drawn or moved.
+
+**Measured.** Suite 627 (1 skip). The vocabulary is as it was. Over
+400 seeds (1000 to 1399, the player's asking), against round 163: a
+note changes in 143 songs, 12 notes at the median and 154 at the most,
+every one a note of a voice beside a chord part's line taken out
+(2,831 of the accompaniment's, 227 of the arp's, 224 of the
+harmony's; 15 pitches where round 158's pass meets other notes); the
+other 257 are the same note for note, and the lines, the tune, the
+counter-line, the bass and the kit are in every song. The parts of
+the form in which a voice is over one and a half times its token's
+onsets a bar: 228 before, 99 now, every one of those in bars where it
+follows a line. Seed 1234: the third voice in D plays 1, 0, 1, 1, 1,
+1, 1, 1, 1, 1, 1, 1, 1, 1 and 3 notes a bar, the last a bar in which
+it follows the tune again.
+
+**Open.** The hold takes notes out and puts none in: a voice under
+half its token's onsets a bar (280 of the 1,480 parts) is left. A
+voice still plays where its token voice rests (189 of 267 such parts,
+four notes a bar at the median; in seed 1234 the piano's lower voice
+through D): a rest has no hold. Which notes stay is by the bar's
+places, not by the voice's figure. A bar in which a voice follows a
+line keeps that line's pace, whatever its token's.
+
+**Heard.** Two pairs on the same seeds, the song on Johnny C. Bad's
+token (seed 1234) and one on Dancing Mad (part 2)'s (seed 1305), each
+as round 163 wrote it and with this round: passed by ear, the second
+as the better for it.

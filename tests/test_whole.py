@@ -6162,7 +6162,7 @@ class ChordPartVoicesTests(unittest.TestCase):
     @staticmethod
     def a_plan(chords, parts=None, tonic=0, mode="major"):
         from types import SimpleNamespace
-        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={}, extras={}, struck_places={}, line_turns={}, line_pulse={}, layer_samples={}, token_samples={})
+        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={}, extras={}, struck_places={}, line_turns={}, line_pulse={}, layer_onsets={}, layer_samples={}, token_samples={})
 
     def test_a_voice_beside_the_line_hears_its_own_part(self):
         """Round 158: a voice beside a chord part's line is placed against the chord and the line, and its clashes word
@@ -6442,3 +6442,34 @@ class ChordPartVoicesTests(unittest.TestCase):
         plan.layer_relations = {R.ACCOMP: ["wl-9x1>o", "dm-12"]}
         self.assertEqual(whole.follows_own_line(plan, R.ACCOMP, 1, 2), {0})                        # struck with its own line in bar 1, its own after
         self.assertEqual(whole.follows_own_line(plan, R.ACCOMP, 2, 2), set())                      # a voice that doubles the tune follows that
+
+    def test_a_voice_beside_a_line_keeps_its_token_voices_pace_in_its_own_bars(self):
+        """Round 164: the token says each voice's notes a bar by the form's letters, and only the line was held to its
+        own: a voice beside it wrote its own bars at the line's pace (a voice of one note a bar at eight to fourteen).
+        In the bars that are its own a voice with more notes than one and a half times its token voice's keeps the
+        notes on the bar's strongest places, as many as that."""
+        token = ("accompaniment=main:48-55:0.9:2:0.6:1.0@sx@0.8@48-60@@@@@nA1+B6!2:::sacc0123456@44-60 "
+                 "melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium")
+        mk = lambda outcome: {"balance": tables.Table(("part",), "balance", votes=tables.SHARES).fit(      # noqa: E731
+            [tables.Unit(f"s{i}", "g", outcome, {"part": rhythm.ARRANGEMENT}) for i in range(3)])}
+        own = whole.plan(mk(token + " form=A2B8"), 7, "g")
+        self.assertEqual(own.layer_onsets, {R.ACCOMP: {1: {"A": (1.0, None), "B": (6.0, 2)}}})      # the plan keeps the word by the letters
+        self.assertEqual(whole.plan(mk(token), 7, "g").layer_onsets, {})                           # where its form is the token song's
+        plan = self.a_plan([(0, "")] * 3, parts=[(0, 1, None, "A"), (1, 2, None, "B")])
+        plan.layer_onsets = {R.ACCOMP: {1: {"A": (1.0, None), "B": (6.0, 2)}}}
+        half = [k * 0.5 for k in range(8)]
+        notes = sorted([(4.0 * b, 4.0 * b + 3.0, 60.0, 0) for b in range(3)] + [(4.0 * b + t, 4.0 * b + t + 0.2, 55.0 + i, 1) for b in range(3) for i, t in enumerate(half)])
+        out, said = whole.keep_voice_pace(plan, 4, R.ACCOMP, notes, 3)
+        at = lambda b: [n[0] - 4.0 * b for n in out if n[3] == 1 and 4.0 * b <= n[0] < 4.0 * b + 4.0]   # noqa: E731
+        self.assertEqual(at(0), [0.0])                                                             # one a bar in A: the first beat's note
+        self.assertEqual(at(1), half)                                                              # six a bar in B: eight is within one and a half
+        self.assertEqual(at(2), [0.0, 1.0, 2.0])                                                   # B's last bar by its own count, two: the first
+        self.assertIn("(round 164): 12 notes taken out of 2 bars", said)                          # beat, the third, then another beat
+        self.assertEqual([n for n in out if n[3] == 0], [n for n in notes if n[3] == 0])           # the line is not touched, and no note moves
+        self.assertTrue(all(n in notes for n in out))
+        plan.layer_relations = {R.ACCOMP: ["dm-12x1>o"]}                                           # bar 1 the tune's line again: not its own, left
+        self.assertEqual(len([n for n in whole.keep_voice_pace(plan, 4, R.ACCOMP, notes, 3)[0] if n[3] == 1 and n[0] < 4.0]), 8)
+        plan.layer_relations, plan.layer_onsets = {}, {R.ACCOMP: {1: {"": (1.0, None)}}}           # a song with no letters says one number
+        self.assertEqual(len([n for n in whole.keep_voice_pace(plan, 4, R.ACCOMP, notes, 3)[0] if n[3] == 1]), 3)
+        plan.layer_onsets = {R.ACCOMP: {1: {"C": (1.0, None)}}}                                    # nothing said of these parts: left
+        self.assertEqual(whole.keep_voice_pace(plan, 4, R.ACCOMP, notes, 3), (notes, ""))
