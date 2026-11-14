@@ -6164,7 +6164,7 @@ class ChordPartVoicesTests(unittest.TestCase):
     @staticmethod
     def a_plan(chords, parts=None, tonic=0, mode="major"):
         from types import SimpleNamespace
-        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={}, extras={}, struck_places={}, line_turns={}, line_pulse={}, voice_rubs={}, voice_keeps={}, layer_onsets={}, voice_places={}, layer_samples={},
+        return SimpleNamespace(tonic=tonic, mode=mode, chords=chords, parts=parts or [(0, len(chords), None, "A")], layer_relations={}, extras={}, struck_places={}, line_turns={}, line_turn_moves={}, tone_profiles={}, line_pulse={}, voice_rubs={}, voice_keeps={}, layer_onsets={}, voice_places={}, layer_samples={},
                                token_samples={})
 
     def test_a_voice_beside_the_line_hears_its_own_part(self):
@@ -6475,6 +6475,52 @@ class ChordPartVoicesTests(unittest.TestCase):
         plan.line_turns = {}
         self.assertEqual(whole.lay_turns(plan, 4, R.ACCOMP, notes, 1, [1]), (notes, ""))           # no turns said: nothing asked
         self.assertEqual(whole.TURNS_STREAM, "accpatch:D3")                                        # the stream the round was heard on
+
+    def test_a_block_line_turns_by_the_move_its_token_songs_line_makes(self):
+        """Round 168: each place of the `turns=` word carries the move the token song's line makes there, in semitones.
+        A bar laid out by a token bar opens on the note it was written to open on and, at each turn, goes to the one of
+        its other written pitches nearest that move from the note it is on, where round 160 kept the chord's pitches
+        before the ones the bar struck most. A stretch sits off the chord only within the token line's share of notes
+        off it (its tone profile, round 111)."""
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(3)]
+        tremolo = [60.0] * 8 + [60.0] * 4 + [63.0] * 4 + [63.0] * 2 + [61.0] * 6                   # held; up a minor third at the third beat;
+        notes = [(t / 2, 0.4, m, "g") for t, m in enumerate(tremolo)]                              # down a whole tone at the second
+        s = rhythm.Song("t", 4, 12, bars, [Span(0.0, 12.0, 0, "", 1.0)], notes={"accompaniment": notes}, sid="s", game="g", numbers=[0, 1, 2],
+                        parts=[(0, 3, None, "A")], tonic=0, mode="major")
+        s.voice_notes = {0: ("accompaniment", notes)}; s.voice_levels = {0: 0.3}; s.levels = {"accompaniment": 0.3}
+        self.assertEqual(rhythm.line_turns_field(s), "a-/24+3/12-2")
+        self.assertEqual(whole.line_turn_moves_of("a-/24+3/12-2.42+2"), {R.ACCOMP: [[], [(24, 3)], [(12, -2), (42, 2)]]})
+        self.assertEqual(whole.line_turns_of("a-/24+3/12-2.42+2"), {R.ACCOMP: [[], [24], [12, 42]]})   # round 160's reading: the places
+        self.assertEqual(whole.line_turn_moves_of("a-/24/12.42"), {R.ACCOMP: [[], [(24, None)], [(12, None), (42, None)]]})   # counted before the round
+        for bad in ("a24+x", "a24+3.", "z24+3", "a"):
+            self.assertEqual(whole.line_turn_moves_of(bad), {}, bad)
+        plan = self.a_plan([(0, ""), (0, "")])                                                     # two bars of C major, in C
+        half = [k * 0.5 for k in range(8)]
+        line = [62, 60, 62, 60, 64, 64, 60, 62]                                                    # written: opening on D, wandering to C and E
+        notes = sorted([(t, t + 0.4, float(m), 0) for t, m in zip(half, line)] + [(4.0 + t, 4.4 + t, 67.0, 0) for t in half])
+        plan.line_turns, plan.line_turn_moves = {R.ACCOMP: [[24]]}, {R.ACCOMP: [[(24, 2)]]}        # the token's one bar: up a whole tone at beat three
+        out, said = whole.lay_turns(plan, 4, R.ACCOMP, notes, 1, [])
+        self.assertEqual([n[2] for n in out if n[0] < 4], [62.0] * 4 + [64.0] * 4)                 # the note it opens on, then the E a tone over it
+        self.assertEqual([n[2] for n in out if n[0] >= 4], [67.0] * 8)                             # a bar on one note holds it
+        plan.line_turn_moves = {R.ACCOMP: [[(24, -2)]]}
+        self.assertEqual([n[2] for n in whole.lay_turns(plan, 4, R.ACCOMP, notes, 1, [])[0] if n[0] < 4], [62.0] * 4 + [60.0] * 4)   # down a tone: the C
+        plan.tone_profiles = {R.ACCOMP: {"other": 0.0}}                                            # a token line never off its chord: the bar opens
+        self.assertEqual([n[2] for n in whole.lay_turns(plan, 4, R.ACCOMP, notes, 1, [])[0] if n[0] < 4], [60.0] * 4 + [64.0] * 4)   # on its first chord
+        plan.tone_profiles = {R.ACCOMP: {"other": 0.5}}                                            # tone written, and turns to the other one
+        self.assertEqual([n[2] for n in whole.lay_turns(plan, 4, R.ACCOMP, notes, 1, [])[0] if n[0] < 4], [60.0] * 4 + [62.0] * 4)   # half off it: the
+        plan.line_turn_moves = {}                                                                  # opening on the chord, then the D may stand
+        plan.tone_profiles = {}
+        self.assertEqual([n[2] for n in whole.lay_turns(plan, 4, R.ACCOMP, notes, 1, [])[0] if n[0] < 4], [60.0] * 4 + [64.0] * 4)   # no moves said: round
+                                                                                                   # 160's order, the chord's two pitches
+        from bitcomposer import vocabularies
+        balance = vocabularies.load("default")["balance"]
+        outcomes = {o for votes in getattr(balance, "table", balance).votes.values() for o in votes}
+        said = [next(w for w in o.split() if w.startswith("turns=")) for o in outcomes if " turns=" in o]
+        self.assertEqual(len(said), 12)
+        for w in said:
+            moves = whole.line_turn_moves_of(w[6:])
+            self.assertTrue(moves and all(move for bars in moves.values() for bar in bars for _, move in bar), w[:60])   # every turn says its move
 
     def test_a_voice_on_the_lines_sample_keeps_its_note_where_the_line_does(self):
         """Round 160: a voice that runs parallel to its line had each note's landing drawn anew, so under a line that
