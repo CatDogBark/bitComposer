@@ -161,6 +161,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 167 | 2026-11-14 | a voice keeps its note with its line as often as its token voice does | - |
 | 168 | 2026-11-14 | a block line turns by the move its token song's line makes there | - |
 | 169 | 2026-11-14 | a tune keeps its token song's tune's share of notes on the half beat, in a triple feel | - |
+| 170 | 2026-11-14 | a bass keeps its token song's bass's share of notes on the half beat, in a triple feel | - |
 
 ## Goal
 
@@ -12047,3 +12048,87 @@ places word (round 170). The accompaniment's line is on the half
 beat 0.15 or more over its song's in 7 of 65 songs.
 
 **Heard.** Not yet: it waits for the ear with round 170.
+
+### Round 170: a bass keeps its token song's bass's share of notes on the half beat, in a triple feel (2026-11-14, with round 169)
+
+**Why.** The second of the two words picked after the song on Slam
+Shuffle's token was heard (round 169's Why): under the tune, the
+bass does the same and more.
+
+**Found.** In that song 48 of the bass's 126 notes are on the half
+beat (bars of straight eighths through the whole last part), where
+the game's Slam Shuffle's bass plays none. The bass has no places
+word: its bars are drawn among every triple song's, as the tune's
+are. Over 400 seeds, 77 songs on a triple song's token have a bass:
+it is 0.15 or more over its song's share on the half beat in 18,
+and plays some where its song's plays none in 19 of 21.
+Counting the game's basses showed a reader's fault on the way: a
+line played a hair off its places throughout sits on none of them
+as it is played. New Continent's bass is 0.05 of a beat early on
+every note and its field read "finer" for all of them, where half
+its notes are on the half beat. (The same holds for three tunes'
+fields since round 147: Fanatics' tune and bass, 0.04 late, and
+Under Martial Law's counter-line, 0.07 early. Those are left as
+they are counted.)
+
+**Built.** A new word for the bass, and a hold where its figures
+are drawn. The bass's token carries the places field the tunes
+carry (`rhythm.PLACE_PARTS`), counted with the line's own lag
+taken off (`rhythm.line_lag`: the median distance of its onsets
+from the nearest place). The plan holds one of its four numbers,
+the half beat, in a song written in triple feel on a triple song's
+token (`plan.bass_places`); the other three, and a duple song, are
+not held: nothing was heard of them. `writer.on_the_places` holds
+the line's figures before they are pitched, as round 149's
+`on_the_kit` does: counted over the song as it will be played, the
+bars written on one figure one case; while the line is over its
+song's share, its cases are taken from the one that puts the
+fewest of the song's notes on the half beat (a bar played once
+before a riff), and a case's notes are moved, in their order, onto
+the nearest rhythm the table knows with no note there, of as many
+onsets before fewer and never outside the part's own onsets; the
+marks ride the notes, so each is pitched on the chord where it now
+falls. The kit's hold after it puts more notes on the half beat
+only while the line is within its share. Nothing is drawn.
+
+**Measured.** Suite 633 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order; 174 differ, by the
+bass's field. Over 400 seeds (1000 to 1399, the player's asking),
+against round 169: a note changes in 36 songs, every one on a
+triple song's token (ten songs' tokens), 163 notes at the median
+and 935 at the most: the bass in all 36, and with it the
+accompaniment in 19, the counter-line in 18 and the tune in 17 (the
+parts written over the bass); the other 364 are the same note for
+note. The bass on the half beat, by token song, the written songs'
+median before and after against the game's: Slam Shuffle 0.29 and
+0.00 (0.00), The Phantom Train 0.16 and 0.00 (0.00), Dancing Mad
+(part 5) 0.32 and 0.04 (0.09), Terra 0.30 and 0.19 (0.18), Johnny
+C. Bad 0.41 and 0.41 (0.43), The Day After 0.33 and 0.28 (0.31).
+No bass is 0.15 over its song's share (18 before) and four are
+0.05 over (31). The song heard (seed 1232): eleven bars' notes
+moved, none of the bass's 126 notes on the half beat, none left
+out. Rounds 169 and 170 together, against round 168: 70 of 400
+songs change.
+The tune battery over the 68 test songs, round 168 against the two
+rounds together: of all the tunes' notes 0.268 are on the half beat
+(0.291 before, the game's 0.255) and 0.076 on a third (0.055; the
+game's 0.090); of the counter-lines' 0.265 (0.290; 0.226) and 0.093
+(0.076; 0.092). A tune's notes a bar 4.07, as before (the game's
+4.44); the bar before again in 43 of 1,621 bars (40). Bars where
+the tune plays two against the bass's three, or three against its
+two: 62 of 1,544 (74 before; the game's 95 of 1,387); against the
+counter-line's 36 of 1,119 (63; the game's 88 of 1,091), further
+under the game's than it was. No other measure of the battery moved.
+
+**Open.** The bass's share on a quarter of the beat, on a third and
+finer is on its token and not held, in either feel. A case's notes
+all move or none do, so a bass can land under its song's share
+(Dancing Mad (part 5)'s 0.04 against 0.09). The moved notes keep
+their marks and their count: a run of straight eighths becomes a
+swung run, not a bar drawn as a shuffle's. The accompaniment's line
+is still drawn among every triple song's bars and held to nothing:
+0.15 or more over its song's share on the half beat in 5 of 65
+songs (four of the 198 notes of the song heard). The tunes' fields
+are counted without the lag taken off.
+
+**Heard.** Not yet: it waits for the ear with round 169.

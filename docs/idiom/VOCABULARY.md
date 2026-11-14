@@ -722,7 +722,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   the percent on the half beat (`p0/41/5/0` for Slam Shuffle's tune):
   the half beat is the duple feel's own division of the beat and is
   not held there, as the third is not in a triple feel (`FEEL_PLACE`);
-  a song in triple feel holds its tune to it. The token also says its song's
+  a song in triple feel holds its tune to it. Since round 170 the
+  bass's token carries the field too (`PLACE_PARTS`), counted with the
+  line's own lag taken off (`line_lag`: New Continent's bass, a
+  twentieth of a beat early on every note, `p0/0/0/50` and not
+  `p0/0/100/0`); of its four numbers the plan holds the half beat, in a
+  triple feel (`bass_places`, `writer.on_the_places`). The token also says its song's
   feel where that is not duple (`feel=triple`, `cells.song_feel`: 14
   of the 68 songs). The plan keeps both (`tune_places`, `token_feel`),
   writes the song in its token song's feel (round 148; the pooled

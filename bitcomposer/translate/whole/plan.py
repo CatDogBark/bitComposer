@@ -1808,6 +1808,18 @@ def struck_values_of(text: str) -> dict | None:
     return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None, "sounding": sounding, "cell": cell}
 
 
+def bass_places(plan) -> tuple | None:
+    """The places the bass is held to (round 170): its token song's bass's share of notes on the half beat, in a song
+    written in triple feel on a triple song's token (own_places), and no other place: (None, None, None, the share),
+    in rhythm.FINE_PLACES' order; None where the token says no such share or the feel does not hold it. A shuffle's
+    bass was given straight eighths under a swung band. The quarter of the beat and the finer places are the token's
+    to say too and are not held for the bass: nothing was heard of them."""
+    places = own_places(plan, R.BASS)
+    if not places or len(places) < len(rhythm.FINE_PLACES) or places[-1] is None:
+        return None
+    return tuple(share if kind == rhythm.FINE_PLACES[-1] else None for kind, share in zip(rhythm.FINE_PLACES, places))
+
+
 def struck_places_of(text: str) -> dict:
     """The balance token's `struck=` word (round 159, arrangement.struck_places_field) read: "a3~45:A-+B0.6.18.24" ->
     {the accompaniment: {2: (0.45, {"A": [], "B": [0, 6, 18, 24]})}}: a chord part's voice beside its line (the part's
@@ -2809,7 +2821,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 said = lambda x: "by no count (under four such bars)" if x is None else f"in {x:.2f} of such bars"   # noqa: E731    # and how often
                 log.append(f"the {role} plays an earlier bar again where the bass plays one from further back again {said(far)} in the balance's song, "   # at all (round
                            f"where it plays the bar before again {said(near)}, and an earlier bar again in {overall:.2f} of its bars (round 146)")   # 146): `w48/-/29`
-            if len(fields) > 28 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"p\d+/\d+/\d+(/\d+)?", fields[28]):   # where in the beat a tune's
+            if len(fields) > 28 and role in rhythm.PLACE_PARTS and re.fullmatch(r"p\d+/\d+/\d+(/\d+)?", fields[28]):   # where in the beat a tune's
                 token_places[role] = tuple(int(x) / 100 for x in fields[28][1:].split("/"))   # notes fall (round 147): `p12/0/3`, and since round 169
                 log.append(f"the {role} plays {token_places[role][0]:.2f} of its notes on a quarter of the beat in the balance's song, {token_places[role][1]:.2f} on a third, "   # the half
                            f"{token_places[role][2]:.2f} finer (round 147)"                                                                                                   # beat: `p12/0/3/20`
@@ -3978,6 +3990,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                      continuity=plan.bass_continuity, log=bass_log,   # and its pitch held across bar lines as the song's (round 114)
                                      downbeat=getattr(plan, "bass_downbeat", None),   # and a bar's first beat on the chord's root as often as the song's (round 129)
                                      first_beat=getattr(plan, "first_beats", {}).get(R.BASS),   # and struck as often as the song's bass strikes it (round 133)
+                                     places=bass_places(plan),   # and its notes on the half beat as its song's bass's, in a triple feel (round 170)
                                      with_kit=bass_kit, kit=kit_hits(plan, song) if bass_kit else None,   # and its notes struck with the kit as often as the
                                      played_as=lambda playing: played_as(plan, song, R.BASS, playing), keeps=own_keeps(plan, R.BASS))   # song's (round 149)
         notes = fold_line(plan, R.BASS, notes, song.meter)  # the line in each stretch's register (round 91)
