@@ -278,6 +278,23 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   still has each landing drawn anew. The hold runs after the tune is
   written, as rounds 158 and 159 do; the landing kept where it is drawn,
   in `parallel`, would carry both.
+- **A moving line is held to its song's pedal and its steps on the
+  pulse, by share and after the tune.** Since round 161 a chord part's
+  moving line with its token's `pulse=` word is held to the share of its
+  off-pulse notes that are their bar's one pitch and to the step profile
+  of its on-pulse notes. The pedal's share is raised to the token's and
+  never lowered, and a bar that has a pedal of its own keeps it, on the
+  chord or off it. Both are shares over the line, so a bar is held where
+  the share asks and left where it does not: a busy bar late in a song
+  can stand as written. The pulse is the beat or its half, no finer, and
+  a line with no pulse (most of its notes on the grid, or most off it)
+  has no word. What the line plays is held, not where: a chord part's
+  line has no places word (the tune's is round 147's), so a song whose
+  line was drawn off its token song's swing stays off it, and the
+  writers hold a bar within half to one and a half times its song's
+  onsets a bar, so a figure of thirteen notes a bar can be written at
+  eight. A run, and a fall into a beat, have no word. The hold in the
+  line's writer, with the places, would carry the rest.
 
 - **A level step's company is its density tier alone.** Since round 101 a
   section's level step draws the part's density tier with it
