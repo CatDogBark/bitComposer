@@ -413,12 +413,15 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   written part plays the recording at the rates the game does. For
   FFVI's rhythm guitar the reading is the pitch heard: Battle Theme's
   riff on the SNES chip is on the reading on every note. For a drum it
-  is one reading of a sound with no single pitch. Mt. Koltz's tom, an
-  accompaniment to the role reader, sounds two semitones over its
-  reading through its strike, in the game's own audio as in a song
-  written on it; The Empire Gestahl's snare, struck at one rate there,
-  is written a line. Whether such a voice is a part or a kit piece is
-  the role reader's question; the tuning only keeps the game's rates.
+  is one reading of a sound with no single pitch. Mt. Koltz's tom,
+  an accompaniment to the role reader until round 175, sounded two
+  semitones over its reading through its strike, in the game's own
+  audio as in a song written on it; since that round a tom on the beats
+  with an instrument's voice under it is a kit piece. Fanatics' and
+  Troops March on's toms, with nothing under them, are still pitched
+  parts; The Empire Gestahl's snare, struck at one rate there, is
+  written a line. Whether such a voice is a part or a kit piece is the
+  role reader's question; the tuning only keeps the game's rates.
 - **A voice beside a line that the fold does not see sits where its
   word puts it, up to the SNES chip's ceiling.** Round 95 folds a voice
   written after the lines by its relation word into where the token song
