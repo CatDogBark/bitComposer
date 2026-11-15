@@ -177,8 +177,8 @@ everything you have imported sits beside them (`--vocabulary pack:NAME`,
 not yet the game's, so none is offered.
 
 The emulator, `bitcomposer-emu`, is a compiled package of its own with a
-wheel for Linux (x86_64 and aarch64), Windows and macOS, so no toolchain
-is needed. The Windows build carries it. On Linux,
+wheel for Linux (x86_64 and aarch64) and Windows, so no toolchain is
+needed there. The Windows build carries it. On Linux,
 `pipx install "bitcomposer[import]"` installs both, or LIBRARY's GET THE
 EMULATOR adds it to a player already installed, and UPDATE keeps both
 current (`pip install "bitcomposer[import]"` elsewhere). Where no wheel
