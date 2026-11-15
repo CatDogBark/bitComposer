@@ -175,8 +175,8 @@ emulator unless `NEEDS` moved). The version lives in `emu/Cargo.toml` and
    ```
 
    `emu.yml` runs the Rust tests with the whole instruction suite (fetched
-   from SingleStepTests), builds a wheel for Linux x86_64 and aarch64,
-   Windows x64 and macOS (one universal2 wheel for arm64 and x86_64), and
+   from SingleStepTests), builds a wheel for Linux x86_64 and aarch64 and
+   Windows x64 (no macOS wheel for now; one was built through 0.3.2), and
    the sdist, runs the SPC tests against each wheel, and uploads them all
    through trusted publishing
    (the `pypi` environment, the pending publisher registered on pypi.org

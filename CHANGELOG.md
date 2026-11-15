@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Internal: the emulator's workflow builds no macOS wheel for now (`emu.yml`). bitComposer has no macOS build, and the runner the one universal2 wheel was built on stopped being offered to the repository, which left a red job on every pull request into `main` that touches the workflow. The README, CONTRIBUTING and `docs/SPC-IMPORT.md` say Linux and Windows.
+
 ## 2.1.0 — 2026-11-14
 
 2.1: a written song is its game song's kind of song. A song takes its skeleton from one of the vocabulary's songs, and through 2.0 about twenty facts of the song as a whole were still drawn from every song's counts beside it. They are that song's own now: its mode, how its lines sit on the harmony, the tune's and the counter-line's manner, what the voices beside a line do and how long they sound, the kit's habits and a kit piece's several pitches, the vibrato, and how the counter-line goes with its tune by part of the form. The voices of a chord part hear their own part, the bass, the tune and the kit as their song's do, and a voice can be struck with another part's line. Every round was measured against the game and heard before it merged (rounds 148 to 178 in `docs/idiom/phase-4-writing.md`). The shipped vocabulary is counted from Final Fantasy VI read again, with the lead pass and with Mt. Koltz's toms as its kit. In the player: every song at one level (SET → LEVEL), M and S on each part of the band on PLAY, the song on a deck, and an import that shows how far each stage is. What follows is the record since 2.0.0, kept whole.
