@@ -54,6 +54,12 @@ from ..vocab import Span
 
 from . import render as render_mod   # noqa: E402  the package's other sections
 from . import own as own_mod         # noqa: E402
+from . import token as token_mod     # noqa: E402  the balance token's reading
+from .token import (                 # noqa: E402,F401  the token's readers, a field or a word each: used here and by the modules that import them from here
+    follow_pair, form_of, kit_onsets_of, layer_of, lengths_of, line_pulse_of, line_stretch_list, line_turn_moves_of, line_turns_of, loops_of,
+    onsets_of, quals_of, RELATION_PARTS, relation_stretches, section_levels_of, shape_profile_of, spans_of, step_profile_of, struck_places_of,
+    struck_values_of, tone_profile_of, voice_places_of, voice_rubs_of, WHOLE_SONG,
+)
 
 
 METER = 4                             # beats a bar: the form and texture tables were kept at one meter (FFVI: 64 of its 69 metered songs)
@@ -588,30 +594,8 @@ def _maybe(models: dict, name: str, context: tuple, rng: random.Random, own: str
     return float(_draw(models, name, context, rng, own=own)) if name in models else None
 
 
-def form_of(text: str) -> list | None:
-    """The balance token's `form=` field read (round 113, arrangement.form_field): "A2B8C9B8D14" -> [("A", 2), ("B", 8), ("C", 9),
-    ("B", 8), ("D", 14)]; None where it cannot be read or has fewer than FORM_PARTS parts."""
-    if not re.fullmatch(r"(?:[A-Za-z]\d+)+", text):
-        return None
-    form = [(m.group(1).upper(), int(m.group(2))) for m in re.finditer(r"([A-Za-z])(\d+)", text)]
-    return form if len(form) >= rhythm.FORM_PARTS and all(n > 0 for _, n in form) else None
-
-
 LOOP_CHORDS = "cycle"                 # the harmony's key among a plan's loops (round 121): the balance token's `cycle=` word
 FIGURE_TRIES = 20                     # draws for a figure's other chord where the chain drew its part on one root (round 156)
-
-
-def loops_of(text: str) -> dict:
-    """A voice's loops read from the balance token (round 121, arrangement.loops_text): "B1~75!3.7+D2~100" -> {"B": (1, 0.75,
-    (3, 7)), "D": (2, 1.0, ())}, by the form's letter the figure's bars, the share of the voice's bars on it and the bars off
-    it counted from the part's first; {} where it cannot be read."""
-    out = {}
-    for item in text.split("+"):
-        m = re.fullmatch(r"([A-Za-z])(\d+)~(\d+)(?:!(\d+(?:\.\d+)*))?", item)
-        if not m or int(m.group(2)) < 1:
-            return {}
-        out[m.group(1).upper()] = (int(m.group(2)), int(m.group(3)) / 100, tuple(int(x) for x in m.group(4).split(".")) if m.group(4) else ())
-    return out
 
 
 def looped_parts(parts: list, spec: dict | None) -> list:
@@ -623,19 +607,6 @@ def looped_parts(parts: list, spec: dict | None) -> list:
         got = (spec or {}).get(label)
         if got and n >= 2 * got[0]:
             out.append((bar, n, got[0], {bar + j for j in got[2] if j < n}))
-    return out
-
-
-def spans_of(text: str) -> dict:
-    """The parts of the form a part sounds in, read from the balance token (round 124, arrangement.part_spans_field):
-    "A+B2.0+D0.4" -> {"A": (0, 0), "B": (2, 0), "D": (0, 4)}, by the form's letter the bars after the part's start it
-    enters and the bars before its end it leaves; {} where it cannot be read."""
-    out = {}
-    for item in text.split("+"):
-        m = re.fullmatch(r"([A-Za-z])(?:(\d+)\.(\d+))?", item)
-        if not m:
-            return {}
-        out[m.group(1).upper()] = (int(m.group(2) or 0), int(m.group(3) or 0))
     return out
 
 
@@ -667,45 +638,6 @@ def token_textures(parts: list, band: list, spans: dict, log: list) -> tuple[lis
     if cuts:
         log.append("entrances from the balance's song (round 124): " + "; ".join(cuts))
     return textures, plays
-
-
-WHOLE_SONG = ""                       # onsets_of's key for a song with no letters: its onsets a bar the whole song through (round 153)
-
-
-def onsets_of(text: str) -> dict:
-    """A voice's onsets a bar by the form's letters, read from the balance token (round 125, arrangement.section_onsets_text):
-    "A6+B2!1+C4.5!7" -> {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)}, by the letter the median of its onsets a bar there
-    and its onsets in the part's last bar where that is a fill or a thinning; a song with no letters says one number
-    (round 153), "4" -> {WHOLE_SONG: (4.0, None)}; {} where it cannot be read."""
-    whole = re.fullmatch(r"\d+(?:\.\d)?", text)
-    if whole:
-        return {WHOLE_SONG: (float(text), None)} if float(text) > 0 else {}
-    out = {}
-    for item in text.split("+"):
-        m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)(?:!(\d+))?", item)
-        if not m or float(m.group(2)) <= 0:
-            return {}
-        out[m.group(1).upper()] = (float(m.group(2)), int(m.group(3)) if m.group(3) is not None else None)
-    return out
-
-
-def kit_onsets_of(text: str) -> dict:
-    """The kit's pieces' hits a bar by the form's letters, read from the balance token (round 125, arrangement.kit_onsets_field):
-    "AS28.5@100,c1@50+BS20@75" -> {"A": {"S": (28.5, 1.0), "c": (1.0, 0.5)}, "B": {"S": (20.0, 0.75)}}, by the letter each
-    piece's median hits a bar over the bars it plays there and the share of the part's bars it plays in; {} where it cannot
-    be read."""
-    out = {}
-    for item in text.split("+"):
-        if not item or not (item[0].isalpha() or item[0] == rhythm.WHOLE_KIT):
-            return {}
-        pieces = {}
-        for piece in item[1:].split(","):
-            m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)@(\d+)", piece)
-            if not m:
-                return {}
-            pieces[m.group(1)] = (float(m.group(2)), int(m.group(3)) / 100)
-        out[WHOLE_SONG if item[0] == rhythm.WHOLE_KIT else item[0].upper()] = pieces   # a song with no letters (round 155): "*K1@50" -> {WHOLE_SONG: ...}
-    return out
 
 
 KIT_THROUGH = 0.75                    # a kit piece the token song plays in this share of a part of the form's bars or more plays in every bar of it
@@ -1052,19 +984,6 @@ SHAPE_MARGIN = 0.05                   # how far over its share of the token song
                                       # changing chord takes the quality most under its share (round 112)
 
 
-def shape_profile_of(text: str) -> dict | None:
-    """The balance token's `shapes=` field read (round 112, arrangement.chord_shape_profile): "maj7:45/5:17/maj:3" -> {"maj7":
-    0.45, "5": 0.17, "": 0.03}; None where it cannot be read."""
-    out = {}
-    for part in text.split("/"):
-        name, _, pct = part.partition(":")
-        shape = "" if name == "maj" else name
-        if shape not in harmony.SHAPES or not pct.isdigit():
-            return None
-        out[shape] = int(pct) / 100
-    return out or None
-
-
 def with_shape(name: str, shape: str) -> str:
     """A numeral with another quality on the same degree (round 112): "IV" with "maj7" is "IVmaj7", "V7" with "m" is "v", as
     vocab.numeral spells them (a minor-family shape a lower-case numeral with its m dropped)."""
@@ -1113,20 +1032,6 @@ def chord_third(name: str, tonic: int, mode: str) -> str | None:
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]} | ({(tonic + 11) % 12} if mode != "major" else set())
     minor, major = (root + 3) % 12 in scale, (root + 4) % 12 in scale
     return "m" if minor and not major else "M" if major and not minor else None
-
-
-def quals_of(text: str) -> dict:
-    """The balance token's `quals=` field read (round 127, arrangement.chord_degree_shapes): "1~maj7:86+0~5:45/sus4:25" ->
-    {1: [("maj7", 0.86)], 0: [("5", 0.45), ("sus4", 0.25)]}, by a degree's semitones over the tonic the qualities its song
-    gives it with their share of the degree's beats, the most heard first; {} where it cannot be read."""
-    out = {}
-    for item in text.split("+"):
-        offset, _, shapes = item.partition("~")
-        pairs = [x.partition(":") for x in shapes.split("/")] if shapes else []
-        if not offset.isdigit() or not 0 <= int(offset) < 12 or not pairs or any((n != "maj" and n not in harmony.SHAPES) or not pct.isdigit() for n, _, pct in pairs):
-            return {}
-        out[int(offset)] = [("" if n == "maj" else n, int(pct) / 100) for n, _, pct in pairs]
-    return out
 
 
 DEGREE_OWN = 0.6                      # a quality a degree has on this share of its beats or more in the token song is the degree's own (round 127)
@@ -1441,21 +1346,6 @@ def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng:
     return out
 
 
-def section_levels_of(text: str) -> list:
-    """A part's level in each part of its song's form, read from the balance token (round 150, arrangement.section_levels_field):
-    "vA1.0+B0.4+C-" -> [("A", 1.0), ("B", 0.4), ("C", None)], the form's own parts in its order, None where the song's part
-    has no count; [] where it cannot be read."""
-    if not text.startswith("v"):
-        return []
-    out = []
-    for item in text[1:].split("+"):
-        m = re.fullmatch(r"([A-Za-z])(\d\.\d|-)", item)
-        if not m:
-            return []
-        out.append((m.group(1).upper(), None if m.group(2) == "-" else float(m.group(2))))
-    return out
-
-
 def tokens_say_levels(balance) -> bool:
     """Whether a vocabulary's balance tokens say their songs' parts' levels by section (round 150): one of them at least
     carries the field (arrangement.section_levels_field), so a part whose token carries none has no section of its own
@@ -1602,26 +1492,6 @@ def envelope_at_for(plan, role: str, habit=None):
     return lambda k, typical=None: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0, typical)
 
 
-def lengths_of(text: str) -> dict:
-    """A tune's note lengths as its token's twenty-sixth field carries them (round 141, rhythm.tune_lengths_field, without
-    the "h"): {rhythm.LENGTH_WHOLE or a gap class: (the share of the notes held, the share of its gap a held note sounds, a
-    detached one; None where the line has none of the kind)}, a class the field leaves out ("-") left out; {} where the
-    text is not the field's."""
-    names = [rhythm.LENGTH_WHOLE] + [name for _, name in rhythm.GAP_CLASSES]
-    entries = text.split("/")
-    if len(entries) != len(names):
-        return {}
-    out = {}
-    for name, e in zip(names, entries):
-        if e == "-":
-            continue
-        m = re.fullmatch(r"(\d+)~([\d.]+|-)~([\d.]+|-)", e)
-        if not m:
-            return {}
-        out[name] = (int(m.group(1)) / 100, None if m.group(2) == "-" else float(m.group(2)), None if m.group(3) == "-" else float(m.group(3)))
-    return out if rhythm.LENGTH_WHOLE in out else {}
-
-
 def own_lengths(plan, role: str) -> dict | None:
     """How the token song's tune sounds its notes (round 141, Plan.tune_lengths), for the tune's writer; None where the
     token carries none."""
@@ -1707,18 +1577,6 @@ def layers_of(plan: "Plan", role: str) -> list:
 
 BASS_LAYER_KINDS = ("apart", "doubling")   # what the bass writer writes of a second voice: a line of its own, the line again at an interval
                                            # (round 126); a bass whose voices alternate (one of FFVI's fifteen, Fanfare's) keeps the layers draw
-
-
-def layer_of(extras: dict) -> tuple:
-    """A part's second voice as the plan drew it: ("apart", offset, density), ("doubling", interval) or ("alternating",)."""
-    words = (extras or {}).get("layer", "").split()
-    if not words:
-        return ("stack",)
-    if words[0] == "apart" and len(words) >= 3:
-        return ("apart", int(words[1]), words[2])
-    if words[0] == "doubling" and len(words) >= 2:
-        return ("doubling", int(words[1]))
-    return (words[0],)
 
 
 def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
@@ -1825,33 +1683,10 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
     return out
 
 
-RELATION_PARTS = {"m": R.MELODY, "c": R.COUNTER, "a": R.ACCOMP, "h": R.HARMONY, "r": R.ARP, "b": R.BASS}   # the token's relation letters
-
-
 def relation_word(plan: "Plan", role: str, v: int) -> str | None:
     """The balance token's relation word for a part's voice v beside the line (round 90), None without one."""
     words = plan.layer_relations.get(role) or []
     return words[v - 1] if 0 < v <= len(words) else None
-
-
-def struck_values_of(text: str) -> dict | None:
-    """The balance token's struck sub-field (round 108, arrangement._struck_text) read: "w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53" ->
-    {"share": 0.82, "sounds": {gap class: share, or None where the token lacks it}, "longest": 4.9 beats, or None, "sounding":
-    0.53 (round 115: the beats the voice sounds over the beats of the bars it strikes in), or None, "cell": 0.72 (round 116: of
-    its notes with a note at the same position of the bar before, the share on that note's pitch again), or None}; None where
-    it cannot be read."""
-    parts = text.split("~")
-    n = len(rhythm.GAP_CLASSES)
-    if len(parts) not in (2 + n, 3 + n, 4 + n) or not parts[0].startswith("w"):
-        return None
-    try:
-        share, longest = float(parts[0][1:]), float(parts[1 + n])
-        sounds = {name: (float(x) if x != "-" else None) for (_, name), x in zip(rhythm.GAP_CLASSES, parts[1:1 + n])}
-        sounding = float(parts[2 + n]) if len(parts) >= 3 + n and parts[2 + n] != "-" else None   # the voice's sounding share (round 115)
-        cell = float(parts[3 + n]) if len(parts) >= 4 + n and parts[3 + n] != "-" else None       # its cell's repeats (round 116)
-    except ValueError:
-        return None
-    return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None, "sounding": sounding, "cell": cell}
 
 
 def bass_places(plan) -> tuple | None:
@@ -1866,170 +1701,10 @@ def bass_places(plan) -> tuple | None:
     return tuple(share if kind == rhythm.FINE_PLACES[-1] else None for kind, share in zip(rhythm.FINE_PLACES, places))
 
 
-def struck_places_of(text: str) -> dict:
-    """The balance token's `struck=` word (round 159, arrangement.struck_places_field) read: "a3~45:A-+B0.6.18.24" ->
-    {the accompaniment: {2: (0.45, {"A": [], "B": [0, 6, 18, 24]})}}: a chord part's voice beside its line (the part's
-    relation letter and the voice's number, the line 1; here by the writer's index, the line 0), its median note length
-    in beats, and for each letter of the token song's form the places it strikes at in its usual bar there, in twelfths
-    of a beat from the bar's start, none where it rests. A voice that cannot be read is left out."""
-    out = {}
-    for entry in (text or "").split(","):
-        head, _, body = entry.partition(":")
-        who, _, length = head.partition("~")
-        role = RELATION_PARTS.get(who[:1])
-        try:
-            v, beats = int(who[1:]) - 1, int(length) / 100
-            letters = {w[:1]: ([] if w[1:].partition("/")[0] == "-" else [int(x) for x in w[1:].partition("/")[0].split(".")])
-                       for w in body.split("+") if w}       # the usual bar; what follows a "/" is voice_places_of's (round 166)
-        except ValueError:
-            continue
-        if role and v > 0 and beats > 0 and letters and all(k.isalpha() for k in letters):
-            out.setdefault(role, {})[v] = (beats, letters)
-    return out
-
-
-def voice_rubs_of(text: str) -> dict:
-    """The balance token's `rubs=` word (round 165, arrangement.voice_rubs_field) read: "a2~25,a3~0" -> {the
-    accompaniment: {1: 0.25, 2: 0.0}}: for a chord part's voice beside its line (the part's relation letter and the
-    voice's number, the line 1; here by the writer's index, the line 0), the share of its token voice's notes that sit
-    a semitone from a voice of its own part before it. A voice that cannot be read is left out. The `keeps=` word
-    (round 167, arrangement.voice_keeps_field) is written the same way and read here too: the share of a voice's
-    strikes, where the line keeps its note, on which the voice keeps its own."""
-    out = {}
-    for entry in (text or "").split(","):
-        who, _, share = entry.partition("~")
-        role = RELATION_PARTS.get(who[:1])
-        try:
-            v, got = int(who[1:]) - 1, int(share) / 100
-        except ValueError:
-            continue
-        if role and v > 0 and 0 <= got <= 1:
-            out.setdefault(role, {})[v] = got
-    return out
-
-
-def voice_places_of(text: str) -> dict:
-    """The places a voice beside a line plays at, from the balance token's `struck=` word (round 166): "a3~45:A-+B0.6,
-    a2~30:A-/0.24" -> {the accompaniment: {2: {"B": [0, 6]}, 1: {"A": [0, 24]}}}: for a chord part's voice (by the
-    writer's index, the line 0) and each letter of the token song's form, the places of the bar it plays there, in
-    twelfths of a beat: its usual bar, or where that is a rest the bar after the "/"; a part it rests through is left
-    out. A song with no form says one bar with no letter, kept under WHOLE_SONG. A voice that cannot be read is left
-    out."""
-    out = {}
-    for entry in (text or "").split(","):
-        head, _, body = entry.partition(":")
-        role = RELATION_PARTS.get(head[:1])
-        try:
-            v = int(head.partition("~")[0][1:]) - 1
-            letters = {}
-            for w in body.split("+"):
-                letter, rest = (w[:1], w[1:]) if w[:1].isalpha() else (WHOLE_SONG, w)
-                bar = rest.partition("/")[2] or rest
-                if bar and bar != "-":
-                    letters[letter] = [int(x) for x in bar.split(".")]
-        except ValueError:
-            continue
-        if role and v > 0 and letters:
-            out.setdefault(role, {})[v] = letters
-    return out
-
-
-def line_pulse_of(text: str) -> dict:
-    """The balance token's `pulse=` word (round 161, arrangement.line_pulse_field) read: "a6~73~70~26/68/7" -> {the
-    accompaniment: (6, 0.73, 0.70, {"same": 0.26, "step": 0.68, "leap": 0.07})}: a chord part's moving line's pulse (its
-    grid in twelfths of a beat), the share of its notes off the pulse that are their bar's one pitch, how often that
-    pitch is the bar before's, and the step profile of its notes on the pulse; None for one the word leaves out ("-").
-    A part that cannot be read is left out."""
-    out = {}
-    for entry in (text or "").split(","):
-        role, fields = RELATION_PARTS.get(entry[:1]), entry[1:].split("~")
-        if not role or len(fields) != 4:
-            continue
-        try:
-            grid = int(fields[0])
-            pedal, carry = (None if x == "-" else int(x) / 100 for x in fields[1:3])
-            profile = None if fields[3] == "-" else {k: int(x) / 100 for k, x in zip(rhythm.STEP_CLASSES, fields[3].split("/"), strict=True)}
-        except ValueError:
-            continue
-        if grid > 0 and (pedal is not None or profile is not None):
-            out[role] = (grid, pedal, carry, profile)
-    return out
-
-
-def line_turns_of(text: str) -> dict:
-    """The balance token's `turns=` word (round 160, arrangement.line_turns_field) read: "a-/24/12.42" -> {the
-    accompaniment: [[], [24], [12, 42]]}: for a chord part's block line, bar by bar in the token song's order, the
-    places at which its note changes, in twelfths of a beat from the bar's start. Since round 168 a place carries the
-    move made there ("24+3": line_turn_moves_of reads those); here the places alone. A part that cannot be read is
-    left out."""
-    return {role: [[place for place, _ in bar] for bar in bars] for role, bars in line_turn_moves_of(text).items()}
-
-
-def line_turn_moves_of(text: str) -> dict:
-    """The balance token's `turns=` word with its moves (round 168): "a-/24+3/12-2.42+2" -> {the accompaniment: [[],
-    [(24, 3)], [(12, -2), (42, 2)]]}: for a chord part's block line, bar by bar in the token song's order, the places
-    at which its note changes and the move it makes there in semitones; None for a place with no move said (a
-    vocabulary counted before the round: "24"). A part that cannot be read is left out."""
-    out = {}
-    for entry in (text or "").split(","):
-        role = RELATION_PARTS.get(entry[:1])
-        bars = []
-        for w in (entry[1:].split("/") if entry[1:] else []):
-            got = [re.fullmatch(r"(\d+)([+-]\d+)?", x) for x in w.split(".")] if w != "-" else []
-            if not all(got):
-                bars = []
-                break
-            bars.append([(int(m.group(1)), int(m.group(2)) if m.group(2) else None) for m in got])
-        if role and bars:
-            out[role] = bars
-    return out
-
-
-def step_profile_of(text: str) -> dict | None:
-    """The balance token's step profile field (round 117, arrangement.line_step_profile) read: "j63/24/13" -> {"same": 0.63,
-    "step": 0.24, "leap": 0.13}; None where it cannot be read."""
-    m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)", text or "")
-    if not m:
-        m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)/(\d+)", text or "")   # a tune's, of four classes (round 130, arrangement.tune_step_profile)
-        return {k: int(v) / 100 for k, v in zip(rhythm.TUNE_MOVES, m.groups())} if m else None
-    return {k: int(v) / 100 for k, v in zip(rhythm.STEP_CLASSES, m.groups())}
-
-
-def tone_profile_of(text: str) -> dict | None:
-    """The balance token's chord-tone profile field (round 111, arrangement.line_tone_profile) read: "t45/2/9/30/2/12" -> {"root":
-    0.45, "third": 0.02, "fifth": 0.09, "seventh": 0.30, "sus": 0.02, "other": 0.12}; None where it cannot be read."""
-    m = re.fullmatch(r"t(\d+)/(\d+)/(\d+)/(\d+)/(\d+)/(\d+)", text)
-    if not m:
-        return None
-    return {k: int(x) / 100 for k, x in zip(rhythm.TONE_PROFILE_CLASSES, m.groups())}
-
-
 def struck_values(plan: "Plan", role: str, v: int) -> dict | None:
     """The token song's struck facts for a part's voice v beside the line (round 108), None without them."""
     xs = plan.layer_struck.get(role) or []
     return xs[v - 1] if 0 < v <= len(xs) else None
-
-
-def relation_stretches(word: str) -> list:
-    """A layer voice's relation word (round 90) as stretches: "ox9>dm-12x14>o" -> [("own", None, None, 9), ("double",
-    melody, -12, 14), ("own", None, None, None)]: the kind, the part followed, the semitones, the bars (None: to the end).
-    A stretch the writer cannot read is its own."""
-    out = []
-    for part in word.split(">"):
-        body, _, n = part.partition("x")
-        bars = int(n) if n.isdigit() else None
-        kind = {"d": "double", "p": "parallel", "w": "with"}.get(body[:1])
-        target = RELATION_PARTS.get(body[1:2])
-        if body[1:2] == "l":                                # the part's own line (round 107)
-            target = ("line",)
-        elif body[1:2].isdigit():                           # a sibling voice, by its rank among the part's voices beside the line (round 107)
-            target = ("voice", int(body[1:2]))
-        try:
-            semi = int(body[2:])
-        except ValueError:
-            semi = None
-        out.append((kind, target, semi, bars) if kind and target and semi is not None else ("own", None, None, bars))
-    return out
 
 
 STRUCK_TRIES = 6                      # draws of the second_figures mask for a bar whose mask thins nothing while the struck voice is over
@@ -2210,25 +1885,6 @@ def late_stretch_notes(plan: "Plan", song, role: str, v: int, own: list, word: s
     late = [(a, b) for kind, target, _, a, b in spans if kind in ("double", "parallel") and not isinstance(target, tuple)]
     inside = lambda t: any(a * song.meter - rhythm.NEAR <= t < b * song.meter - rhythm.NEAR for a, b in late)   # noqa: E731
     return sorted([n for n in got if not inside(n[0])] + fold_voice(plan, role, v, [n for n in got if inside(n[0])], song.meter), key=lambda n: n[0])
-
-
-def line_stretch_list(word: str) -> list:
-    """The balance token's eleventh field (round 91) as stretches: "s77ca10e2568@52-64x6>sf89f5aedfd@60-80" ->
-    [("s77ca10e2568", (52, 64), 6), ("sf89f5aedfd", (60, 80), None)]: each stretch's sample, the range it is played over
-    (None unknown), its bars (None: to the end)."""
-    out = []
-    for part in word.split(">"):
-        body, _, n = part.partition("x")
-        sid, _, rng = body.partition("@")
-        played = None
-        if "-" in rng:
-            try:
-                lo, hi = (int(x) for x in rng.split("-"))
-                played = (lo, hi)
-            except ValueError:
-                played = None
-        out.append((sid, played, int(n) if n.isdigit() else None))
-    return out
 
 
 def stretch_bars(stretches: list, bars: int) -> list:
@@ -2679,312 +2335,26 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             break
     log += form_log + ([f"the form drawn {attempt + 1} times to fit {min_bars or 0} to {max_bars or 'any'} bars"] if attempt else [])
     loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)   # the form's part the loop returns to (round 98), an own stream
-    band, weights, layout, shares, counts, token_levels, token_layers, token_kinds, token_samples, token_habits = [], {}, {}, {}, {}, {}, {}, {}, {}, {}
-    token_kit, token_kit_levels, token_kit_pitches, token_kit_rates, token_kit_holds, token_layer_samples, token_layer_shares = {}, {}, {}, {}, {}, {}, {}
-    token_kit_degrees, token_kit_tuned, token_key, token_kit_classes = {}, set(), None, {}
-    token_kit_seconds = {}                                  # each kit letter's second sample (round 99)
-    token_kit_echo, token_echo, token_pans, token_kit_pans = set(), None, {}, {}
-    token_sample_ranges, token_layer_ranges = {}, {}       # where the token song plays its own samples (round 86)
-    token_layer_relations = {}                              # what each voice beyond a line does beside which part, by stretch (round 90)
-    token_stretches = {}                                    # the line's instrument by stretch (round 91)
-    token_motions, token_tone_tiers = {}, {}                # a chord part's line motion and off-chord tier (round 103): the song's own
-    token_profiles = {}                                     # a backing line's chord-tone profile (round 111)
-    token_steps = {}                                        # a backing line's step profile (round 117)
-    token_shapes = None                                     # the token song's chord-shape profile (round 112)
-    token_quals = {}                                        # the qualities each degree has in the token song (round 127)
-    token_form = None                                       # the token song's form letters (round 113)
-    token_continuity = None                                 # the token song's bass line pitch continuity (round 114)
-    token_downbeat = None                                   # how often the token song's bass roots a bar's first beat (round 129)
-    token_first = {}                                        # and how often it strikes it (round 133), and a chord part (round 135)
-    token_shortest = {}                                     # a tune's shortest usual note in the token song, in milliseconds (round 136)
-    token_lengths = {}                                      # and how it sounds its notes, by the gap to the next (round 141)
-    token_tones = {}                                        # how often a chord part sounds a chord's tones again in the token song (round 142)
-    token_together = {}                                     # and how often a part comes back with its lead (round 144)
-    token_tune_together = {}                                # the tune's with the bass, and how often its bars come back at all (round 146)
-    token_places = {}                                       # where in the beat a tune's notes fall in the token song (round 147)
-    token_with_kit = {}                                     # how often the bass's and the tune's notes are struck with the kit there (round 149)
-    token_section_levels = {}                               # a part's level in each part of the token song's form, by its letters (round 150)
-    token_loops = {}                                        # each voice's loops by the form's letters, the harmony's among them (round 121)
-    token_spans = {}                                        # the parts of the form each part sounds in, with its entrances (round 124)
-    token_onsets, token_kit_onsets, token_layer_onsets = {}, {}, {}   # each line's onsets a bar by the form's letters, the kit's pieces', each
-                                                            # voice beside a line's (round 125)
-    token_layer_words = {}                                  # the bass's voices beside its line: what each does, the layers word's outcome (round 126)
-    token_line_company = {}                                 # where a chord part's line doubles the bass or runs parallel to it, by stretch (round 123)
-    token_periods, token_rides, token_holds = {}, {}, None   # a backing part's own period and holds, how far a chord part's line rides the
-                                                            # bass, the song's chord-hold share (round 106): the riff as the song's own
-    token_layer_stretches = {}                              # each voice beyond a line's instrument by stretch (round 92)
-    token_layer_struck = {}                                 # how each voice struck with another strikes (round 108)
-    token_struck_places = {}                                # and where in the bar it does, by the form's letters (round 159)
-    token_voice_places = {}                                 # where each voice beside a line plays in its bar, by the form's letters (round 166)
-    token_turns = {}                                        # where a block line's note changes in the token song, bar by bar (round 160)
-    token_turn_moves = {}                                   # and the move it makes there (round 168)
-    token_pulse = {}                                        # a moving line by its place in the beat in the token song (round 161)
-    token_rubs = {}                                         # how often a voice sits a semitone from its own part in the token song (round 165)
-    token_keeps = {}                                        # how often a voice keeps its note where its line keeps its own (round 167)
-    token_follows = {}                                      # how far the tune and the counter go with a chord off the key (round 171)
-    token_song = ""                                         # the token's song's id (round 172)
-    token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
-    token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
-    token_class, token_top, token_loud = None, None, None
-    token_tempo = None                                      # the token's song's own tempo, where the token carries it (round 137)
-    token_beat = 1                                          # 2 where the token's song is counted in double time (round 131)
-    token_feel = rhythm.FEELS[0]                            # the token's song's feel (round 147): duple where the token does not say
-    token_loop = None                                       # the part of its form the token's song's loop returns to (round 132)
-    for token in _draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log).split():
-        role, _, rest = token.partition("=")
-        if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
-            token_loop = int(rest) if rest.isdigit() else None
-            continue
-        if role == "follows":                               # how far the token's song's tune and counter go with a chord off the key (round 171)
-            by = {v: k for k, v in rhythm.FOLLOW_LETTERS.items()}
-            for w in rest.split(","):
-                pair = follow_pair(w[1:], 100)
-                if w[:1] in by and pair:
-                    token_follows[by[w[:1]]] = pair
-            continue
-        if role == "keeps":                                 # how often the token's song's voices keep their note with their line (round 167)
-            token_keeps = voice_rubs_of(rest)
-            continue
-        if role == "rubs":                                  # how often the token's song's voices sit a semitone from their own part (round 165)
-            token_rubs = voice_rubs_of(rest)
-            continue
-        if role == "pulse":                                 # the token's song's moving lines by their place in the beat (round 161), not a part
-            token_pulse = line_pulse_of(rest)
-            continue
-        if role == "turns":                                 # where the token's song's block lines turn (round 160), not a part
-            token_turns = line_turns_of(rest)
-            token_turn_moves = line_turn_moves_of(rest)
-            continue
-        if role == "struck":                                # where the token's song's struck voices strike (round 159), not a part
-            token_struck_places = struck_places_of(rest)
-            token_voice_places = voice_places_of(rest)      # the same word: every voice beside a line (round 166)
-            continue
-        if role == "beat":                                  # the token's song is counted in double time (round 131), not a part
-            token_beat = int(rest) if rest.isdigit() and int(rest) > 0 else 1
-            continue
-        if role == "feel":                                  # the token's song's feel (round 147), not a part
-            token_feel = rest if rest in rhythm.FEELS else rhythm.FEELS[0]
-            continue
-        if role == "tempo":                                 # the token's song's tempo class (round 54) and its own tempo (round 137:
-            token_class, _, own = rest.partition(":")       # `fast:140`), not a part
-            token_tempo = float(own) if own.replace(".", "", 1).isdigit() and float(own) > 0 else None
-            continue
-        if role == "top":                                   # the token's song's loudest part, of full (round 59), not a part
-            token_top = float(rest)
-            continue
-        if role == "holds":                                 # the token's song's chord-hold share (round 106), not a part
-            token_holds = float(rest)
-            continue
-        if role == "form":                                  # the token's song's form (round 113), not a part
-            token_form = form_of(rest)
-            if token_form:
-                log.append("the balance's song's form: " + " ".join(f"{l}{n}" for l, n in token_form))
-            continue
-        if role == "cycle":                                 # the token's song's harmony's loops (round 121), not a part
-            got = loops_of(rest)
-            if got:
-                token_loops[LOOP_CHORDS] = got
-            continue
-        if role == "quals":                                 # the qualities each degree has in the token's song (round 127), not a part
-            token_quals = quals_of(rest)
-            continue
-        if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
-            token_shapes = shape_profile_of(rest)
-            if token_shapes:
-                log.append("the balance's song's chord shapes: " + " ".join(f"{sh or 'maj'} {v:.2f}" for sh, v in token_shapes.items()))
-            continue
-        if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
-            token_loud = float(rest)
-            continue
-        if role == "song":                                  # which song the token is (round 172), not a part
-            token_song = rest
-            continue
-        if role == "key":                                   # the token's song's key (round 79): the kit's degrees and tuned rates read against it
-            t, _, m = rest.partition(":")
-            token_key = (int(t), m or "major")
-            continue
-        if role == "echo":                                  # the token's song's echo word (round 82): the written song sits in its room
-            token_echo = rest
-            continue
-        band.append(role)
-        if rest:
-            fields = rest.split(":")
-            if fields[0]:
-                weights[role] = fields[0]
-            if len(fields) > 1 and "-" in fields[1]:        # the song's layout, note lengths, voices and levels a part come with its balance
-                lo, hi = fields[1].split("-")
-                layout[role] = (int(lo), int(hi))
-            if len(fields) > 2 and fields[2]:
-                head, _, by_gap = fields[2].partition("@")   # the line voice's sounded share, and since round 95 its share by gap class
-                shares[role] = float(head)
-                if by_gap:
-                    token_gap_shares[role] = {g: (float(x) if x not in ("", "-") else None) for (_, g), x in zip(rhythm.GAP_CLASSES, by_gap.split("/"))}
-            if len(fields) > 3 and fields[3]:
-                if role == R.DRUMS:                         # the kit's channels (round 87): the pieces each game channel plays, "KS|h"
-                    token_kit_channels = fields[3].split("|")
-                else:
-                    counts[role] = int(fields[3])
-            if len(fields) > 4 and fields[4] and math.isfinite(float(fields[4])):   # a "nan" level (tables counted before the
-                token_levels[role] = float(fields[4])                             # readings skipped a kit's unread levels) falls to the levels draw
-            if len(fields) > 5 and fields[5]:               # the voices beyond the line, the busiest first, each over the line's level; since
-                parts_ = [x.split("@") for x in fields[5].split("/")]   # round 65 with each one's sample and its notes over the line's
-                token_layers[role] = [float(x[0]) for x in parts_]
-                if any(len(x) > 1 and x[1] for x in parts_):
-                    token_layer_samples[role] = [x[1] if len(x) > 1 else "" for x in parts_]
-                if any(len(x) > 2 for x in parts_):
-                    token_layer_shares[role] = [float(x[2]) if len(x) > 2 and x[2] else 1.0 for x in parts_]
-                if any(len(x) > 3 and "-" in x[3] for x in parts_):   # each voice's range on its own sample in the token song (round 86)
-                    token_layer_ranges[role] = [tuple(int(y) for y in x[3].split("-")) if len(x) > 3 and "-" in x[3] else None for x in parts_]
-                if any(len(x) > 4 and x[4] for x in parts_):   # and what each does beside which part, stretch by stretch (round 90)
-                    token_layer_relations[role] = [x[4] if len(x) > 4 and x[4] else None for x in parts_]
-                if any(len(x) > 5 and x[5] for x in parts_):   # and each one's instrument by stretch (round 92; "~" between a sample and its range)
-                    token_layer_stretches[role] = [line_stretch_list(x[5].replace("~", "@")) if len(x) > 5 and x[5] else None for x in parts_]
-                if any(len(x) > 6 and x[6] for x in parts_):   # and how a voice struck with another strikes (round 108): its share of the
-                    token_layer_struck[role] = [struck_values_of(x[6]) if len(x) > 6 and x[6] else None for x in parts_]   # followed onsets, its
-                for i, x in enumerate(parts_, start=1):     # and each one's loops by the form's letters (round 121): "lB1~75!3.7"
-                    if len(x) > 7 and x[7].startswith("l") and loops_of(x[7][1:]):
-                        token_loops[f"{role}:{i}"] = loops_of(x[7][1:])
-                    if len(x) > 8 and x[8].startswith("n") and onsets_of(x[8][1:]):   # and its onsets a bar by them (round 125)
-                        token_layer_onsets.setdefault(role, {})[i] = onsets_of(x[8][1:])
-                    if len(x) > 9 and x[9].startswith("v") and layer_of({"layer": x[9][1:].replace("_", " ")})[0] in BASS_LAYER_KINDS:   # and what a
-                        token_layer_words.setdefault(role, {})[i] = x[9][1:].replace("_", " ")   # bass's voice does beside the line (round 126)
-                                                                                                                        # lengths by the line's gap, its longest
-            if len(fields) > 6 and fields[6]:               # the counter's kind: on the tune's sample or another (round 39)
-                token_kinds[role] = fields[6]
-            if len(fields) > 7 and fields[7] and role == R.DRUMS:   # the song's kit (round 63): a piece letter and its sample, by the comma;
-                for x in fields[7].split(","):                       # since round 68 each piece's own level after an "@", where its song read one
-                    if "=" not in x:
-                        continue
-                    letter, _, value = x.partition("=")
-                    value, _, second_text = value.partition("+")   # the letter's second sample after a "+" (round 99)
-                    sid, _, rest = value.partition("@")
-                    level, _, rest = rest.partition("@")    # since round 75 the note the piece is struck at follows the level's slot,
-                    pitch, _, rest = rest.partition("@")    # since round 77 a tonal piece's hold in beats follows the note's,
-                    hold, _, rest = rest.partition("@")     # since round 81 the slot's strike class the hold's (a/s/m/d),
-                    cls, _, rest = rest.partition("@")      # since round 82 an e where the game sends the piece to echo,
-                    mark, _, pan = rest.partition("@")      # since round 84 the piece's pan after the mark (the right side's share)
-                    token_kit[letter] = sid
-                    if cls and cls[0] in rhythm.SLOT_NAMES:
-                        token_kit_classes[letter] = cls[0]
-                    if mark.startswith("e"):
-                        token_kit_echo.add(letter)
-                    if pan and math.isfinite(float(pan)):
-                        token_kit_pans[letter] = float(pan)
-                    if level and math.isfinite(float(level)):
-                        token_kit_levels[letter] = float(level)
-                    if pitch.startswith("r"):               # the chip's rate as a note (round 78), for a piece the namer called a drum;
-                        if pitch.endswith("t"):              # "t": the game tunes this sample to the key (round 79)
-                            token_kit_tuned.add(letter)
-                        token_kit_rates[letter] = int(round(float(pitch[1:].rstrip("t"))))
-                    elif pitch.startswith(("d", "c")):      # a degree of the token song's key (round 79): scale steps, or semitones off it
-                        token_kit_degrees[letter] = (pitch[0], int(pitch[1:]))
-                    elif pitch:                             # the absolute note (round 75's form, read still)
-                        token_kit_pitches[letter] = int(round(float(pitch)))
-                    if hold and float(hold) > 0:
-                        token_kit_holds[letter] = float(hold)
-                    if second_text:                         # the second sample's id, level, note or rate, hold and share (round 99)
-                        s2, l2, n2, h2, sh2 = (second_text.split("@") + [""] * 5)[:5]
-                        try:
-                            share2 = float(sh2)
-                        except ValueError:
-                            share2 = None
-                        if s2 and share2 is not None:
-                            second = {"sample": s2, "share": share2, "level": float(l2) if l2 and math.isfinite(float(l2)) else None,
-                                      "hold": float(h2) if h2 and float(h2) > 0 else None, "rate": None, "degree": None, "pitch": None, "tuned": False}
-                            if n2.startswith("r"):
-                                second["rate"] = int(round(float(n2[1:].rstrip("t"))))
-                                second["tuned"] = n2.endswith("t")
-                            elif n2.startswith(("d", "c")):
-                                second["degree"] = (n2[0], int(n2[1:]))
-                            elif n2:
-                                second["pitch"] = int(round(float(n2)))
-                            token_kit_seconds[letter] = second
-            elif len(fields) > 7 and fields[7]:             # the part's own sample (round 60): the song's instruments with its levels,
-                sid, _, played = fields[7].partition("@")   # and since round 86 the range the song plays it over ("s1d296a2572@32-52")
-                token_samples[role] = sid
-                if "-" in played:
-                    token_sample_ranges[role] = tuple(int(x) for x in played.split("-"))
-            if len(fields) > 8 and fields[8]:               # the part's habit (round 62): the song's density tiers together
-                token_habits[role] = fields[8].replace("+", " ")
-            if len(fields) > 9 and fields[9]:               # the part's voices' pans (round 84): the line's first, then the voices beyond it;
-                token_pans[role] = [float(x) if re.fullmatch(r"[0-9.]+", x) else x for x in fields[9].split("/")]   # a voice's two
-                                                            # places kept as written, "0.60x5|0.45x13" or "0.35x4>0.65" (round 85, render.pan_of)
-            if len(fields) > 10 and fields[10]:             # the line's instrument by stretch (round 91): each stretch's sample, range and bars
-                token_stretches[role] = line_stretch_list(fields[10])
-            if len(fields) > 11 and fields[11]:             # the line's motion (round 103): block, mixed or arpeggiated, the token song's own
-                token_motions[role] = fields[11]
-            if len(fields) > 12 and fields[12]:             # the line's off-chord tier (round 103): rare, some or many, the token song's own
-                token_tone_tiers[role] = fields[12]
-            if len(fields) > 13 and fields[13]:             # the part's own period and hold share (round 106): `p2/83`
-                m_ = re.fullmatch(r"p(\d+)/(\d+)", fields[13])
-                if m_:
-                    token_periods[role] = (int(m_.group(1)), int(m_.group(2)) / 100)
-            if len(fields) > 14 and fields[14]:             # how far the line rides the bass (round 106): `b75/70`, onsets with it / at its pitch class
-                m_ = re.fullmatch(r"b(\d+)/(\d+)", fields[14])
-                if m_:
-                    token_rides[role] = (int(m_.group(1)) / 100, int(m_.group(2)) / 100)
-            if len(fields) > 16 and fields[16] and role == R.BASS:   # the bass line's pitch continuity (round 114): `k58`
-                m_ = re.fullmatch(r"k(\d+)", fields[16])
-                if m_:
-                    token_continuity = int(m_.group(1)) / 100
-                    log.append(f"the bass keeps its pitch class across {token_continuity:.2f} of its bar lines in the balance's song")
-            if len(fields) > 15 and fields[15]:             # the line's chord-tone profile (round 111): `t45/2/9/30/2/12`
-                prof = tone_profile_of(fields[15])
-                if prof:
-                    token_profiles[role] = prof
-                    log.append(f"{role}'s line plays the balance's song's chord tones: " + " ".join(f"{k} {v:.2f}" for k, v in prof.items()))
-            if len(fields) > 17 and fields[17]:             # the line's step profile (round 117): `j63/24/13`
-                steps = step_profile_of(fields[17])
-                if steps:
-                    token_steps[role] = steps
-                    log.append(f"{role}'s line moves as the balance's song's: " + " ".join(f"{k} {v:.2f}" for k, v in steps.items()))
-            if len(fields) > 18 and fields[18].startswith("l") and loops_of(fields[18][1:]):   # the line's loops, the kit's (round 121): `lB1~100`
-                token_loops[role] = loops_of(fields[18][1:])
-            if len(fields) > 19 and fields[19].startswith("r") and any(st[0] != "own" for st in relation_stretches(fields[19][1:])):   # where the line
-                token_line_company[role] = fields[19][1:]   # doubles the bass, by stretch (round 123): `rdb+12x2>ox8>db+12`
-            if len(fields) > 20 and fields[20].startswith("e") and spans_of(fields[20][1:]):   # the parts of the form the part sounds
-                token_spans[role] = spans_of(fields[20][1:])   # in, with its entrances (round 124): `eA+B2.0+D0.4`
-            if len(fields) > 22 and role == R.BASS and re.fullmatch(r"d\d+", fields[22]):   # how often the bass strikes a bar's first beat on the
-                token_downbeat = int(fields[22][1:]) / 100   # chord's root (round 129): `d73`
-                log.append(f"the bass strikes a bar's first beat on the chord's root in {token_downbeat:.2f} of its bars in the balance's song")
-            if len(fields) > 23 and role in rhythm.UPPER + (R.BASS,) and re.fullmatch(r"f\d+", fields[23]):   # how often the part strikes a
-                token_first[role] = int(fields[23][1:]) / 100   # bar's first beat: the bass (round 133), a chord part (round 135): `f93`
-                log.append(f"the {role} strikes a bar's first beat in {token_first[role]:.2f} of its bars in the balance's song")
-            if len(fields) > 24 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"m\d+", fields[24]) and int(fields[24][1:]) > 0:   # a tune's
-                token_shortest[role] = int(fields[24][1:])  # shortest usual note (round 136): `m150`
-                log.append(f"the {role}'s shortest usual note sounds {token_shortest[role]} ms in the balance's song")
-            if len(fields) > 25 and role in (R.MELODY, R.COUNTER) and fields[25].startswith("h") and lengths_of(fields[25][1:]):   # how the tune
-                token_lengths[role] = lengths_of(fields[25][1:])   # sounds its notes, by the gap (round 141): `h50~0.90~0.40/-/26~0.90~0.55/...`
-                log.append(f"the {role} holds {token_lengths[role][rhythm.LENGTH_WHOLE][0]:.2f} of its notes in the balance's song; its note lengths by the gap (round 141): {fields[25][1:]}")
-            if len(fields) > 26 and role in rhythm.UPPER and re.fullmatch(r"c\d+/\d+", fields[26]):   # how often a chord part sounds again
-                token_tones[role] = tuple(int(x) / 100 for x in fields[26][1:].split("/"))   # the pitch classes it played on a chord before, and
-                log.append(f"the {role} sounds an earlier bar's pitch classes on a chord again in {token_tones[role][0]:.2f} of such bars in the balance's song, "   # how often the bar before's
-                           f"the bar before's in {token_tones[role][1]:.2f} of those (round 142)")   # (round 142): `c60/47`
-            if len(fields) > 27 and role in rhythm.UPPER + (R.COUNTER,) and re.fullmatch(r"w\d+", fields[27]):   # how often it plays an earlier bar
-                token_together[role] = int(fields[27][1:]) / 100   # again where its lead does (round 144): `w66`
-                log.append(f"the {role} plays an earlier bar again where the {'tune' if role == R.COUNTER else 'bass'} does in {token_together[role]:.2f} of such bars in the balance's song (round 144)")
-            if len(fields) > 27 and role in (R.MELODY, R.COUNTER) and re.fullmatch(r"w(\d+|-)/(\d+|-)/\d+", fields[27]):   # the tune: how often it
-                token_tune_together[role] = tuple(None if x == "-" else int(x) / 100 for x in fields[27][1:].split("/"))   # plays an earlier bar again
-                far, near, overall = token_tune_together[role]   # where the bass brings one back from further off, where it stands on the bar before,
-                said = lambda x: "by no count (under four such bars)" if x is None else f"in {x:.2f} of such bars"   # noqa: E731    # and how often
-                log.append(f"the {role} plays an earlier bar again where the bass plays one from further back again {said(far)} in the balance's song, "   # at all (round
-                           f"where it plays the bar before again {said(near)}, and an earlier bar again in {overall:.2f} of its bars (round 146)")   # 146): `w48/-/29`
-            if len(fields) > 28 and role in rhythm.PLACE_PARTS and re.fullmatch(r"p\d+/\d+/\d+(/\d+)?", fields[28]):   # where in the beat a tune's
-                token_places[role] = tuple(int(x) / 100 for x in fields[28][1:].split("/"))   # notes fall (round 147): `p12/0/3`, and since round 169
-                log.append(f"the {role} plays {token_places[role][0]:.2f} of its notes on a quarter of the beat in the balance's song, {token_places[role][1]:.2f} on a third, "   # the half
-                           f"{token_places[role][2]:.2f} finer (round 147)"                                                                                                   # beat: `p12/0/3/20`
-                           + (f", {token_places[role][3]:.2f} on the half beat (round 169)" if len(token_places[role]) > 3 else ""))
-            if len(fields) > 29 and re.fullmatch(r"x\d+/\d+" if role == R.BASS else r"x\d+", fields[29]) and role in rhythm.KIT_PARTS:   # how often its
-                token_with_kit[role] = tuple(int(x) / 100 for x in fields[29][1:].split("/"))   # notes are struck with the kit (round 149): `x100/84`, `x91`
-                log.append(f"the {role} strikes {token_with_kit[role][0]:.2f} of its notes with a kit hit in the balance's song"
-                           + (f", and {token_with_kit[role][1]:.2f} of the kit's hits carry a bass note" if role == R.BASS else "") + " (round 149)")
-            if len(fields) > 30 and role != R.DRUMS and section_levels_of(fields[30]):   # its level in each part of the form over its level in
-                token_section_levels[role] = section_levels_of(fields[30])   # the song (round 150): `vA1.0+B0.4`
-            if len(fields) > 21 and fields[21].startswith("n"):   # how busy it is in each (round 125): the line's onsets a bar `nA6+B2!1`,
-                if role == R.DRUMS:                         # the kit's pieces' hits a bar `nAS28.5@100,c1@50`
-                    token_kit_onsets = kit_onsets_of(fields[21][1:])
-                elif onsets_of(fields[21][1:]):
-                    token_onsets[role] = onsets_of(fields[21][1:])
+    tok = token_mod.read_token(_draw(models, "balance", (rhythm.ARRANGEMENT,), rng, log), log)   # the balance token, read (whole/token.py)
+    (band, counts, layout, shares, token_beat, token_class, token_continuity, token_downbeat, token_echo, token_feel, token_first, token_follows, token_form,
+     token_gap_shares, token_habits, token_holds, token_keeps, token_key, token_kinds, token_kit, token_kit_channels, token_kit_classes, token_kit_degrees,
+     token_kit_echo, token_kit_holds, token_kit_levels, token_kit_onsets, token_kit_pans, token_kit_pitches, token_kit_rates, token_kit_seconds, token_kit_tuned,
+     token_layer_onsets, token_layer_ranges, token_layer_relations, token_layer_samples, token_layer_shares, token_layer_stretches, token_layer_struck,
+     token_layer_words, token_layers, token_lengths, token_levels, token_line_company, token_loop, token_loops, token_loud, token_motions, token_onsets, token_pans,
+     token_periods, token_places, token_profiles, token_pulse, token_quals, token_rides, token_rubs, token_sample_ranges, token_samples, token_section_levels,
+     token_shapes, token_shortest, token_song, token_spans, token_steps, token_stretches, token_struck_places, token_tempo, token_together, token_tone_tiers,
+     token_tones, token_top, token_tune_together, token_turn_moves, token_turns, token_voice_places, token_with_kit, weights) = (
+        tok.band, tok.counts, tok.layout, tok.shares, tok.token_beat, tok.token_class, tok.token_continuity, tok.token_downbeat, tok.token_echo, tok.token_feel,
+        tok.token_first, tok.token_follows, tok.token_form, tok.token_gap_shares, tok.token_habits, tok.token_holds, tok.token_keeps, tok.token_key,
+        tok.token_kinds, tok.token_kit, tok.token_kit_channels, tok.token_kit_classes, tok.token_kit_degrees, tok.token_kit_echo, tok.token_kit_holds,
+        tok.token_kit_levels, tok.token_kit_onsets, tok.token_kit_pans, tok.token_kit_pitches, tok.token_kit_rates, tok.token_kit_seconds, tok.token_kit_tuned,
+        tok.token_layer_onsets, tok.token_layer_ranges, tok.token_layer_relations, tok.token_layer_samples, tok.token_layer_shares, tok.token_layer_stretches,
+        tok.token_layer_struck, tok.token_layer_words, tok.token_layers, tok.token_lengths, tok.token_levels, tok.token_line_company, tok.token_loop,
+        tok.token_loops, tok.token_loud, tok.token_motions, tok.token_onsets, tok.token_pans, tok.token_periods, tok.token_places, tok.token_profiles,
+        tok.token_pulse, tok.token_quals, tok.token_rides, tok.token_rubs, tok.token_sample_ranges, tok.token_samples, tok.token_section_levels, tok.token_shapes,
+        tok.token_shortest, tok.token_song, tok.token_spans, tok.token_steps, tok.token_stretches, tok.token_struck_places, tok.token_tempo, tok.token_together,
+        tok.token_tone_tiers, tok.token_tones, tok.token_top, tok.token_tune_together, tok.token_turn_moves, tok.token_turns, tok.token_voice_places,
+        tok.token_with_kit, tok.weights)
     log.append("band " + " ".join(f"{r}={weights[r]}" + (f" {layout[r][0]}-{layout[r][1]}" if r in layout else "") + (f" x{counts[r]}" if r in counts else "")
                                   if r in weights else r for r in band))
     own_letters = [l for l, _ in token_form or ()]          # the token song's form's letters, as the plan will play them (round 154: a short form round again)
@@ -4615,19 +3985,6 @@ def voices_onsets(token: dict, own_form: bool) -> dict:
         if kept:
             out[role] = kept
     return out
-
-
-def follow_pair(text: str, scale: float = 1.0) -> tuple | None:
-    """The chord_follows word's two shares read (round 171): "85/60" -> (0.85, 0.60) with `scale` 100, "0.85/-" ->
-    (0.85, None); None where it cannot be read or says neither."""
-    parts = text.split("/")
-    if len(parts) != 2:
-        return None
-    try:
-        pair = tuple(None if x == "-" else float(x) / scale for x in parts)
-    except ValueError:
-        return None
-    return pair if any(x is not None for x in pair) and all(x is None or 0 <= x <= 1 for x in pair) else None
 
 
 def doubling_own_of(text: str) -> tuple:

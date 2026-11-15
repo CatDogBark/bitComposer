@@ -270,9 +270,9 @@ emulator is written.
 
 **How it ships.** The emulator is a second, compiled package published
 from this repository, `bitcomposer-emu`, with a wheel per platform built
-when an `emu-v*` tag is pushed (`emu.yml`: Linux x86_64 and aarch64,
-Windows x64, macOS as one universal2 wheel for arm64 and x86_64, abi3 so
-one wheel serves every Python) and the sdist for the rest. It is
+when an `emu-v*` tag is pushed (`emu.yml`: Linux x86_64 and aarch64 and
+Windows x64, abi3 so one wheel serves every Python; a macOS universal2
+wheel was built through 0.3.2 and is not for now) and the sdist for the rest. It is
 optional, the `import` extra: the generator and the player install
 everywhere, and IMPORT says what is missing and how to get it (on a pipx
 install, LIBRARY's GET THE EMULATOR adds it). The Windows build carries
