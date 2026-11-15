@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Internal: the balance token is read in a module of its own (`translate/whole/token.py`, `read_token`). The three hundred lines that read it sat in the middle of `plan._plan_once`, each fact a local of that function; they moved statement for statement, and the plan now draws the token and takes a `Token` of named facts. The token's text is unchanged, so packs counted by earlier versions read as they did. Proven a refactor: over 400 seeds every note and every log line is the same, and the byte-identical check's 90 files match.
 - Internal: the emulator's workflow builds no macOS wheel for now (`emu.yml`). bitComposer has no macOS build, and the runner the one universal2 wheel was built on stopped being offered to the repository, which left a red job on every pull request into `main` that touches the workflow. The README, CONTRIBUTING and `docs/SPC-IMPORT.md` say Linux and Windows.
 
 ## 2.1.0 — 2026-11-14
