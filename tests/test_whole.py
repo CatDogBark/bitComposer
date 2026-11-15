@@ -3968,6 +3968,31 @@ class SongsOwnAnswersTests(unittest.TestCase):
         thirds = whole.own_shares(shipped, day, rhythm.COUNTER_INTERVALS)["counter|C|scale"]
         self.assertEqual({k: round(v, 2) for k, v in thirds.items()}, {"-2": 0.71, "-3": 0.29})
 
+    def test_the_token_is_read_in_its_own_module(self):
+        """The refactor after round 178: the balance token's reading is whole/token.py's read_token, not three hundred
+        lines of plan._plan_once. It gives a Token, each fact an attribute under the plan's name for it; the plan draws
+        the token and reads it there. The text is unchanged, so a token of any earlier round reads as it did."""
+        import importlib
+        token = importlib.import_module("bitcomposer.translate.whole.token")
+        log = []
+        t = token.read_token("bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium:88 key=9:minor feel=triple song=song1", log)
+        self.assertEqual(t.band, ["bass", "melody"])
+        self.assertEqual((t.token_song, t.token_key, t.token_feel, t.token_top, t.token_tempo), ("song1", (9, "minor"), "triple", 0.3, 88.0))
+        self.assertEqual(t.token_samples, {"melody": "slead"})
+        bare = token.read_token("bass=half:36-44:0.9:1:1.0", [])                                    # a token with none of the later words: each at its default
+        self.assertEqual((bare.token_song, bare.token_key, bare.token_feel, bare.token_form, bare.token_kit), ("", None, rhythm.FEELS[0], None, {}))
+        from bitcomposer import vocabularies
+        models = vocabularies.load("default")
+        balance = getattr(models["balance"], "table", models["balance"])
+        for text in sorted({o for votes in balance.votes.values() for o in votes}):                # every token the shipped vocabulary holds reads
+            read = token.read_token(text, [])
+            self.assertEqual(read.token_song, text.split()[-1][5:])
+            self.assertTrue(read.band)
+        plan = whole.plan(models, 70)                                                              # and a plan is what its token says
+        said = token.read_token(next(o for votes in balance.votes.values() for o in votes if o.endswith("song=" + plan.token_song)
+                                     and sorted(token.read_token(o, []).band) == sorted(plan.band)), [])
+        self.assertEqual(sorted(said.band), sorted(plan.band))
+
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
         keys = tables.Table(("part",), "keys").fit([tables.Unit(f"k{i}", "g", "0 major", {"part": "song"}) for i in range(3)])
