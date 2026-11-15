@@ -147,6 +147,21 @@ def kit_piece_rate(plan, slot: str) -> int | None:
     return rates.get(letter) if letter else None
 
 
+def kit_place_offset(plan, slot: str, at: float) -> int:
+    """How far from its slot's rate, in semitones, a hit of the kit slot's piece at beat `at` of the song is struck: the
+    balance token's song's own rate at that place in the bar (plan.kit_places, the `kit_rate_places` word; round 176), at
+    the exact place where the song struck the piece there, else the beat's; 0 where the song says nothing (a piece of one
+    rate, a place it never struck in a beat it never struck, a slot's second sample)."""
+    letter, second = slot_letter(slot)
+    places = (getattr(plan, "kit_places", None) or {}).get(letter) if letter and not second else None
+    if not places:
+        return 0
+    for place in rhythm.kit_place(at % METER):
+        if place in places:
+            return places[place]
+    return 0
+
+
 def kit_piece_degree(plan, slot: str) -> tuple | None:
     """A tonal kit piece's struck note as a degree of the balance token's song's key (round 79: `o=sfd6accf98a@2.08@d9@0.19`
     on the drums' kit field): ("d", scale steps from the tonic) or ("c", semitones from it, off the scale); None where the
@@ -336,6 +351,8 @@ class Plan:
                                                         # the beat, on a third and finer than either (rhythm.FINE_PLACES; round 147)
     token_song: str = ""                                # the balance token's song's id (round 172: the `song=` word), for its own answers to the
                                                         # once-a-song words (own.answer)
+    kit_places: dict = field(default_factory=dict)      # a kit piece's letter -> {a place in the bar (rhythm.kit_place: "3/2", or the beat
+                                                        # "b1"): semitones from the slot's rate}, the token song's own (round 176)
     token_feel: str = "duple"                           # the token song's feel (round 147): its tune's places are held where the song is written in it
     with_kit: dict = field(default_factory=dict)        # the bass -> (the share of the token song's bass line's onsets struck with a kit hit, of
                                                         # the kit's hits struck with a bass note), the melody -> (its onsets' share,), over
@@ -2537,7 +2554,27 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     _plan_counter(models, p, rng)
     _plan_speeds(models, p, rng)
     _plan_sounds(models, p, rng)
+    _plan_kit_places(models, p)
     return p
+
+
+def _plan_kit_places(models: dict, p: Plan) -> None:
+    """The rate each kit piece is struck at by its place in the bar, the balance token's song's own (round 176: the
+    `kit_rate_places` word of the song_answers table; no draw, and no pooled word behind it): semitones from the slot's
+    rate, by the piece's letter and the place. A song whose pieces are one rate each says nothing, and a kit plays each
+    slot at its one rate as before."""
+    if R.DRUMS not in p.band or not p.token_song:
+        return
+    for context, outcome in sorted(own_mod.answers(models, p.token_song, rhythm.KIT_PLACES).items()):
+        letter, _, place = context.partition("|")
+        try:
+            p.kit_places.setdefault(letter, {})[place] = int(outcome)
+        except ValueError:
+            continue
+    for letter, places in sorted(p.kit_places.items()):
+        moved = sorted({v for v in places.values() if v})
+        p.log.append(f"the kit's {letter}: its rate by its place in the bar, the balance's song's own ({rhythm.KIT_PLACES}): {len(places)} places, "
+                     + (f"struck {', '.join(f'{v:+d}' for v in moved)} semitones from its rate at some" if moved else "all at its rate"))
 
 
 def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: str | None, max_bars: int | None, min_bars: int | None,

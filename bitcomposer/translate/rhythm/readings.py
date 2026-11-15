@@ -168,6 +168,8 @@ class Song:
     voice_pans: dict = field(default_factory=dict)    # voice -> the median pan of its notes, the right side's share 0 (left) to 1 (right)
                                       # (round 84: the balance token carries each part's voices' pans, so a song's stereo picture is its own)
     kit_pans: dict = field(default_factory=dict)      # a drum sample's key -> the median pan of the hits struck on it (round 84: a kit slot's pan)
+    kit_hit_rates: dict = field(default_factory=dict)   # a percussion sample's key -> [(the hit's onset, the rate the chip strikes it at, as a
+                                      # note)], every hit (round 176: a piece struck at several rates, by its place in the bar)
     voice_pan_moves: dict = field(default_factory=dict)   # voice -> (A, bars at A, B, bars at B or None) where the voice sits in two places,
                                       # staying a bar or more in each (round 85, pan_moves); absent for a voice in one place
     loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
@@ -382,6 +384,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                             if song.pieces.get(key) in PERCUSSION:   # a piece the namer called a drum: the rate the chip strikes it at
                                 if len(r) > 6 and not math.isnan(r[6]):   # (round 78: 60 as recorded, 48 an octave under)
                                     kit_rate_rows.setdefault(key, []).append(int(round(r[6])))
+                                    song.kit_hit_rates.setdefault(key, []).append((r[0], int(round(r[6]))))   # hit by hit (round 176)
                             elif not math.isnan(r[2]):      # a tonal piece: the note it is struck at (round 75)
                                 kit_pitch_rows.setdefault(key, []).append(int(round(r[2])))
                             if not math.isnan(r[1]) and r[1] > 0:   # how long the piece is keyed for (round 77)

@@ -3778,9 +3778,12 @@ class SongsOwnAnswersTests(unittest.TestCase):
     def test_the_tables_keep_each_songs_own_answers(self):
         from bitcomposer.translate import packtables
         for word, (module, builder, shape) in rhythm.OWN.items():
+            if word == rhythm.KIT_PLACES:                                                          # round 176: a word with no pooled table behind it
+                self.assertNotIn(word, packtables.KEPT)
+                continue
             self.assertEqual(packtables.KEPT[word][:2], (module, builder), word)                   # the pooled table's own module, builder and shape
             self.assertEqual(tuple(packtables.KEPT[word][3]), shape, word)
-        self.assertEqual(len(rhythm.OWN), 18)                                                      # three in round 172, thirteen in round 173, two in 174
+        self.assertEqual(len(rhythm.OWN), 19)                                                      # three in round 172, thirteen in 173, two in 174, one in 176
         self.assertEqual(tuple(packtables.KEPT["song_answers"][3]), rhythm.OWN_SHAPE)
         self.assertEqual(rhythm.own_context(("melody", "major", "strong")), "melody|major|strong")
         units = rhythm.own_units([self._song()])
@@ -3829,6 +3832,37 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertIsNone(whole.own_answer(models, "song1", "articulation", ("melody",)))          # two answers that are not numbers: none
         self.assertIsNone(whole.own_answer(models, "song1", "gap_sounds", ("accompaniment", "second", "fast", "1-2")))
 
+    def test_a_kit_piece_is_struck_at_its_songs_rate_for_the_place_in_the_bar(self):
+        """Round 176: a kit piece a song strikes at several rates is a unit a place in the bar, its outcome the rate struck
+        most there in semitones from the slot's own, kept in the song_answers table alone (no pooled word); the plan asks
+        its token song and a hit is struck at the place's rate, the beat's where the song never struck that place."""
+        from types import SimpleNamespace
+        hits = [(bar * 4 + at, rate) for bar in range(4) for at, rate in ((0.0, 51), (1.0, 43), (1.5, 43), (2.0, 48), (3.0, 43), (3.5, 51))]
+        hits += [(-1.0, 60), (3.99, 51)]                                                           # before the first bar: no place; at the bar's end: the next bar's first
+        song = SimpleNamespace(sid="song1", game="g", bars=[(4.0 * k, 4.0 * k + 4) for k in range(4)], pieces={"tomkey": "tom", "snarekey": "snare"},
+                               notes={R.DRUMS: [(t, 0.2, float("nan"), "tomkey") for t, _ in hits] + [(1.0, 0.2, float("nan"), "snarekey")]},
+                               kit_levels={}, kit_rates={"tomkey": 43, "snarekey": 60}, kit_hit_rates={"tomkey": hits, "snarekey": [(1.0, 60), (3.0, 60)]})
+        units = {(u.values["part"], u.values["place"]): u.outcome for u in rhythm.kit_rate_place_units([song])}
+        self.assertEqual({k: v for k, v in units.items() if k[1].startswith("b")}, {("t", "b0"): "+8", ("t", "b1"): "+0", ("t", "b2"): "+5", ("t", "b3"): "+0"})
+        self.assertEqual((units[("t", "0")], units[("t", "3/2")], units[("t", "2")], units[("t", "7/2")]), ("+8", "+0", "+5", "+8"))
+        self.assertFalse(any(k[0] == "S" or k[1].startswith(("-", "b-", "4", "b4")) for k in units))   # one rate: nothing said; no place outside the bars
+        self.assertEqual(rhythm.OWN[rhythm.KIT_PLACES], ("rhythm", "kit_rate_place_units", ("part", "place")))
+        from bitcomposer import vocabularies
+        models = vocabularies.load("default")
+        self.assertNotIn(rhythm.KIT_PLACES, models)                                                # no pooled table behind the word
+        koltz = "7b6bfc4e3af61cb2d18a"                                                             # Mt. Koltz: three toms
+        said = whole.own_answers(models, koltz, rhythm.KIT_PLACES)
+        self.assertEqual({k: v for k, v in said.items() if "|b" in k}, {"t|b0": "+8", "t|b1": "+0", "t|b2": "+5", "t|b3": "+0"})
+        self.assertEqual(whole.own_answers(models, koltz, "no such word"), {})
+        self.assertEqual(whole.own_answers(models, None, rhythm.KIT_PLACES), {})
+        plan = whole.plan(models, 70)                                                              # a song on Mt. Koltz's token
+        self.assertEqual(plan.token_song, koltz)
+        self.assertEqual(plan.kit_places["t"], {k.partition("|")[2]: int(v) for k, v in said.items()})
+        self.assertEqual([whole.kit_place_offset(plan, "tom", at) for at in (0.0, 1.0, 2.0, 3.0, 4.0, 4.5, 6.0, 5.25)], [8, 0, 5, 0, 8, 8, 5, 0])
+        self.assertEqual(whole.kit_place_offset(plan, "tom2", 0.0), 0)               # a slot's second sample plays its own rate
+        self.assertEqual(whole.kit_place_offset(plan, "snare", 0.0), 0)                            # a piece the song says nothing of
+        self.assertTrue(any(l.startswith("the kit's t: its rate by its place in the bar") for l in plan.log))
+
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
         keys = tables.Table(("part",), "keys").fit([tables.Unit(f"k{i}", "g", "0 major", {"part": "song"}) for i in range(3)])
@@ -3860,7 +3894,7 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertEqual(len({o.split()[-1] for o in outcomes}), 68)
         own = getattr(vocabulary["song_answers"], "table", vocabulary["song_answers"])
         answers = [k for k in own.votes if len(k) == 3]
-        self.assertEqual(len(answers), 3252)
+        self.assertEqual(len(answers), 3539)
         self.assertEqual({k[1] for k in answers}, set(rhythm.OWN))
         many = {k[1] for k in answers if len(own.votes[k]) > 1}                                    # one answer a song, a word and a context, but for
         self.assertEqual(many, {"gap_sounds"})                                                     # the word counted a note at a time (round 174)

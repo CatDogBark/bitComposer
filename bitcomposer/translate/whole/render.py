@@ -857,7 +857,7 @@ def walled(plan: plan_mod.Plan, slot: str, offset: float) -> float:
     return max(wall[0] - 60, min(wall[1] - 60, offset)) if wall else offset
 
 
-def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: str = "") -> float:
+def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: str = "", at: float | None = None) -> float:
     """The note a kit slot's hit is written at. KIT_NOTE for the pack's own kit (a kit voice is registered to sound as
     recorded at KIT_NOTE). A percussion sample the balance token's song filled the slot with plays at the rate the game
     struck it (round 78: the token's note slot carries the chip's rate as a note, 60 as recorded, 48 an octave under, so
@@ -866,7 +866,10 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
     of its tonal samples (round 75; FFVI's "other" pieces are tonal in ten tokens of eleven: a lead struck as an accent,
     a bell, a pad) plays the note the game struck the piece at (kit_piece_pitch) and, where the readings heard none, the
     note at which the sample plays at its recording's own rate. Until round 74 such a piece hammered at KIT_NOTE, two
-    octaves under The Phantom Forest's accent; round 74 had the pack's own drum stand in, a snare for a lead."""
+    octaves under The Phantom Forest's accent; round 74 had the pack's own drum stand in, a snare for a lead. `at`: the
+    hit's beat in the song; a piece the token's song strikes at several rates is struck at its rate for that place in the
+    bar (round 176: plan.kit_place_offset, semitones from the slot's rate, added outside the wall, so the piece's drums keep
+    their distances)."""
     from ... import samples as samples_mod
     from ...drums import KIT_NOTE
     from ..harmony import MODES
@@ -878,10 +881,11 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
         return float(KIT_NOTE)
     key = plan_mod.kit_token_key(plan)                      # the token song's key (round 79): a degree or a tuned rate is read against it
     fold = ((plan.tonic - key[0] + 6) % 12) - 6 if key is not None else 0   # the written tonic's distance from the song's, within a tritone
+    place = plan_mod.kit_place_offset(plan, slot, at) if at is not None else 0   # the piece's rate at this place in the bar (round 176)
     if samples_mod.is_percussion(name) or (pack_name and samples_mod.is_percussion(f"{pack_name}_{name}")):
         rate = plan_mod.kit_piece_rate(plan, slot)        # the chip's rate as a note (round 78): 60 as recorded, 48 an octave under;
         shift = fold if plan_mod.kit_piece_tuned(plan, slot) else 0   # a tuned sample's rate moves with the key (round 79), inside the
-        return float(KIT_NOTE + walled(plan, slot, (rate - 60) + shift)) if rate is not None else float(KIT_NOTE)   # game's rates (round 88)
+        return float(KIT_NOTE + walled(plan, slot, (rate - 60) + shift) + place) if rate is not None else float(KIT_NOTE)   # game's rates (round 88)
     degree = plan_mod.kit_piece_degree(plan, slot)
     if degree is not None and key is not None:              # the degree realized in the written key (round 79), from the written tonic
         ref = 60 + key[0] + fold                            # nearest the song's own (the register the game struck it in, give or take a fourth)
@@ -896,7 +900,7 @@ def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: st
     own = 60.0 + 12.0 * math.log2(source / c5) if c5 and source else float(KIT_NOTE)   # the note at the recording's own rate
     rate = plan_mod.kit_piece_rate(plan, slot)             # a tonal sample the namer took for a drum (Another World of Beasts' pad as a
     shift = fold if plan_mod.kit_piece_tuned(plan, slot) else 0   # kick): the token carries the chip's rate, and the pitch is the rate's offset
-    return own + walled(plan, slot, (rate - 60) + shift) if rate is not None else own   # inside the game's rates for it (round 88)
+    return own + walled(plan, slot, (rate - 60) + shift) + place if rate is not None else own   # inside the game's rates for it (round 88)
 
 
 def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",
@@ -1008,7 +1012,7 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                 if role == R.DRUMS:
                     _, _, letter, v, kit_name = n
                     name, sample = samples[R.DRUMS][kit_name]
-                    put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name), name, sample, v, piece=kit_name, letter=letter)   # the piece's
+                    put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name, at=a), name, sample, v, piece=kit_name, letter=letter)   # the piece's
                 else:
                     name, sample = sample_of(samples, role, n[3], second_voice, plan_mod.stretch_at(plan, role, int(a // plan_mod.METER), n[3]))
                     if not (n[3] == 0 and role in own_lines):   # never shorter than the game plays the sample (the next key-on cuts an overlap);

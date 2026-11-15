@@ -36,3 +36,20 @@ def answer(models: dict, song: str | None, word: str, context) -> str | None:
         if run >= half - 1e-12:
             return outcome
     return ranked[-1][0]
+
+
+def answers(models: dict, song: str | None, word: str) -> dict:
+    """Every answer the song gives to a word: {the context as the table keeps it (rhythm.own_context): the answer}; empty
+    without the table, the song or an answer. For a word with no pooled table behind it (round 176: a kit piece's rate
+    by its place in the bar), whose contexts only the song knows."""
+    t = (models or {}).get(TABLE)
+    if t is None or not song:
+        return {}
+    t = t.table if hasattr(t, "table") else t
+    out = {}
+    for key in t.votes:
+        if len(key) == 3 and key[0] == song and key[1] == word:
+            mine = answer(models, song, word, (key[2],))
+            if mine is not None:
+                out[key[2]] = mine
+    return out

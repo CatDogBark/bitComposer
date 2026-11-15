@@ -38,6 +38,8 @@ OWN = {                               # the once-a-song words answered by the to
     # the vibrato the song is performed with
     "gap_sounds": ("rhythm", "gap_sound_units", ("part", "voice", "speed", "gap")),
     "vibrato": ("rhythm", "vibrato_units", ("part",)),
+    # round 176: a kit piece's rate by its place in the bar. A word with no pooled table: only the song's own answer is kept
+    "kit_rate_places": ("rhythm", "kit_rate_place_units", ("part", "place")),
 }
 
 
