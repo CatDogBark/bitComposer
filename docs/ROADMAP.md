@@ -421,7 +421,7 @@ and the hit-or-miss part. Two steps, in order.
   and the default player's sound in 2.0.0rc3, the parts' attack class in
   2.0.0, released 2026-11-01: `docs/idiom/phase-6-generator.md`; since
   then on `dev`, the kit's pieces in rounds 74 to 83 and the writer's
-  rounds through 177, recorded in `docs/idiom/phase-4-writing.md`, with
+  rounds through 178, recorded in `docs/idiom/phase-4-writing.md`, with
   what stays open in `docs/LIMITS.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
   readers scored on ground truth (phase 1), one score of voices through
@@ -452,6 +452,23 @@ and the hit-or-miss part. Two steps, in order.
   and saving each import's readings in the database waited for it
   (decided 2026-10-20); since 2.0 the writer is the default on the
   built-in sound sets too, and an import keeps its readings.
+- **A part's line struck with another part's line (asked for
+  2026-11-14, the second half of round 178).** Since round 178 a chord
+  part's voice beside its line can be written struck with another
+  part's line. The lines themselves cannot. In 22 of FFVI's 67 songs
+  voices of different parts are one figure in some part of the form,
+  and where both are their parts' lines the written song has each on
+  its own bars: Dancing Mad (part 5)'s tune and accompaniment line (the
+  game's strike together on 0.95 and 1.00 of their notes, the written
+  ones on 0.66 and 0.38), Blackjack's and Locke's, and the
+  accompaniment with the counter-line in Ending Theme (part 1),
+  Overture (part 3), Troops March on and Umaro. What it needs: a word
+  in the shape of round 177's two (the share of a line's notes struck
+  with the other line, by part of the form, the token song's own), and
+  a hold where the later-written line's bars are drawn, as the tune is
+  held to the kit since round 149 (`writer/tune.py`). It changes how
+  the tune is written, so it is a round of its own with its own
+  listening.
 - **A channel's second instrument, as a word (asked for 2026-11-13).**
   Where a bass or chord channel plays a second instrument in a register
   of its own the reader makes a voice of it (round 89) and the readings

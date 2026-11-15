@@ -1118,8 +1118,11 @@ def _relations(song: readings_mod.Song) -> tuple:
     struck = {}                                             # a struck-with voice -> its struck stretches' facts (round 108)
     struck_rows = {}                                        # a struck-with voice -> (first beat, last beat, the voice followed, semitones) per stretch (round 109)
     beside = {}                                             # a voice beside its part's line -> (its part, its rank among them, the line, the ranks)
-    for role in set(roles_of.values()) - {R.DRUMS}:
+    lines = {}                                              # a part -> its line's voice (round 178: what a voice of another part may be struck with)
+    for role in sorted(set(roles_of.values()) - {R.DRUMS}):
         voices = cells_mod.part_voices(song, role)
+        if voices:
+            lines[role] = cells_mod.line_voice(voices, role, song) if len(voices) >= 2 else next(iter(voices))
         if len(voices) < 2:
             continue
         line_v = cells_mod.line_voice(voices, role, song)
@@ -1148,6 +1151,12 @@ def _relations(song: readings_mod.Song) -> tuple:
                     w = R.with_relation(st, {line_v: pitched[line_v]})
                     if w is not None:
                         word = f"wl{w[2]:+d}"
+                if w is None and role_v in readings_mod.UPPER:   # struck with another part's line (round 178): the word could name its own
+                    others = {lines[r]: pitched[lines[r]] for r in sorted(lines)   # part's voices alone, and a voice locked to the bass at a
+                              if r != role_v and RELATION_LETTERS.get(r) and pitched.get(lines[r])}   # fifth and a fourth in turn read its own
+                    w = R.with_relation(st, others) if others else None
+                    if w is not None:
+                        word = f"w{RELATION_LETTERS[roles_of[w[1]]]}{w[2]:+d}"
                 if w is not None and pitched.get(line_v):   # how it strikes (round 108): its share of the followed onsets, its lengths by the
                     struck.setdefault(v, []).append(_struck_facts(st, pitched[w[1]], pitched[line_v], lengths[v], song.bars))   # line's gap, its
                     # longest, its sounding share (round 115)

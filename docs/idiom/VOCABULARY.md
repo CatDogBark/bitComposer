@@ -942,6 +942,16 @@ The words are grouped by where the writing draws them, in the order the song is 
   parallel of a sibling follows the sibling's written notes. FFVI: 39
   own-reading stretches of voices beside a line strike with the line, 9
   with a sibling, 71 stay their own.
+  Since round 178 a chord part's voice whose stretch is struck with
+  neither is asked of the other parts' lines and the word names the
+  part (`wb+5`, with the bass, as a double or a parallel names one):
+  Dancing Mad (part 5)'s second accompaniment voice sits a fifth and a
+  fourth over the bass in turn, every note with it. The writer plays
+  the voice on that part's line as written, at once where the part is
+  written before it and after the lines are written where it is the
+  tune or the counter-line (`plan.late_struck`). Eight of FFVI's tokens
+  say it. A voice of the bass, the tune or the counter-line is not
+  asked, and a part's own line has no such word.
   Since round 122 what a voice does is read part by part of the form
   (`_split_by_parts`): a stretch is a run of notes on one sample, so a
   voice on one sample all song had one reading, and each part of the

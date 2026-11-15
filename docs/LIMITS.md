@@ -223,6 +223,22 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   did (The Day After). A song's vibrato is its game song's part's, on
   whatever sample the written part drew: the depth that suited one
   instrument can sit on another.
+- **A song is written in bars of four at the beat its token song was
+  read at.** Three of FFVI's songs come back at a lag no bar of four
+  fits: Dancing Mad (part 5) (bars of 4/4 and 7/8 in turn, by
+  listeners' transcriptions, at about 130 beats a minute; read at 87 in
+  fours with a triple feel, the dotted beat being its one steady
+  pulse), The Unforgiven and Another World of Beasts. Every fact their
+  tokens keep by the bar is counted across the music's bars, and a song
+  written on one is in four. The reader has one bar length a song and
+  the writer one meter (`plan.METER`).
+- **A part's line struck with another part's line has no word.** Since
+  round 178 a chord part's voice beside its line can be struck with
+  another part's line. The lines themselves cannot: where a game's tune
+  and its accompaniment's line are one figure (Dancing Mad (part 5),
+  Blackjack, Locke), or the accompaniment and the counter-line (Ending
+  Theme (part 1), Overture (part 3), Troops March on), each is written
+  on its own bars.
 - **The counter-line's call and answer are not said.** Since round 177
   the counter-line strikes with its tune on its token song's own share
   of its notes for the part of the form, at that song's own intervals
