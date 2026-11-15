@@ -5,6 +5,9 @@ each fact of the song as a whole. A part's fields were known by their place alon
 out in a list, in order, and the reader took `fields[13]`. Here the places have names, in one list, and both sides go
 by it: `part_fields_text` writes a part's fields from named values, `PartFields` reads them back by name. The text is
 what it was, field for field, so a token counted by any earlier version reads as it did.
+
+The words of the song as a whole go the same way: `SONG_WORDS` is their list in the token's order, `song_words_text`
+writes the ones a song says, and `token_words` splits a token into its parts and its words.
 """
 from __future__ import annotations
 
@@ -64,3 +67,59 @@ def part_fields_text(**named: str) -> str:
     while fields and not fields[-1]:
         fields.pop()
     return ":".join(fields)
+
+
+SONG_WORDS = (                        # the words of the song as a whole, in the token's order, after its parts
+    "echo",                      # the song's echo word (round 82)
+    "key",                       # its key (round 79)
+    "holds",                     # its chord-hold share (round 106)
+    "shapes",                    # its chord shapes (round 112)
+    "quals",                     # the qualities each degree has (round 127)
+    "form",                      # its form's letters and their bars (round 113)
+    "loop",                      # the part of the form its loop returns to (round 132)
+    "cycle",                     # its harmony's loops by the form's letters (round 121)
+    "beat",                      # 2 where it is counted in double time (round 131)
+    "feel",                      # its feel where not duple (round 147)
+    "top",                       # its loudest part's level of full (round 59)
+    "loud",                      # its rendered loudness (round 59; not written since round 152)
+    "tempo",                     # its tempo class and its own tempo (rounds 54, 137)
+    "struck",                    # where its voices strike in the bar (rounds 159, 166)
+    "turns",                     # where its block lines turn, and by what move (rounds 160, 168)
+    "pulse",                     # its moving lines by their place in the beat (round 161)
+    "rubs",                      # how often a voice sits a semitone from its part (round 165)
+    "keeps",                     # how often a voice keeps its note with its line (round 167)
+    "follows",                   # how far its tune and counter go with a chord off the key (round 171)
+    "song",                      # which song it is (round 172): last, so no token's place among the outcomes moves
+)
+
+
+class SongWords:
+    """The words of the song as a whole that a token says, each under its name (SONG_WORDS): its text, the empty string
+    for a word said with nothing after it, None for a word the token does not say."""
+    __slots__ = SONG_WORDS
+
+    def __init__(self):
+        for name in SONG_WORDS:
+            setattr(self, name, None)
+
+
+def token_words(text: str) -> tuple:
+    """A balance token split: ([(a part, its fields' text)] in the token's order, its SongWords). Whatever is not one of
+    SONG_WORDS is a part, as the token has always been read; a word said twice keeps the later."""
+    parts, said = [], SongWords()
+    for token in text.split():
+        name, _, rest = token.partition("=")
+        if name in SONG_WORDS:
+            setattr(said, name, rest)
+        else:
+            parts.append((name, rest))
+    return parts, said
+
+
+def song_words_text(**named: str) -> list:
+    """The words of the song as a whole as the token carries them, from named values (SONG_WORDS; a name left out, or
+    given None, is a word the song does not say): ["key=9:minor", ...] in the list's order."""
+    unknown = sorted(set(named) - set(SONG_WORDS))
+    if unknown:
+        raise TypeError(f"not words of a song: {', '.join(unknown)}")
+    return [f"{name}={named[name]}" for name in SONG_WORDS if named.get(name) is not None]

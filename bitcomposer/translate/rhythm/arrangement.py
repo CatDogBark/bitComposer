@@ -84,7 +84,7 @@ from ..vocab import FIT, MARKS, SOUNDS, Span, _beats_at, _buckets, _median, _pct
 from ..vocab import TONES as CHORD_TONES
 
 from . import readings as readings_mod, cells as cells_mod, chords as chords_mod   # noqa: E402  the package's other sections
-from .fields import part_fields_text   # noqa: E402  a part's fields of the balance token, written by name
+from .fields import part_fields_text, song_words_text   # noqa: E402  the balance token's fields and words, written by name
 
 
 # --- the arrangement: which parts play in which bars, the band, the voices, doublings, layered basses ---
@@ -3043,54 +3043,55 @@ def balance_units(songs) -> list:
                       with_kit=with_kit_field(s, role, line_notes) if role in KIT_PARTS else "",   # and how often its notes are struck with the kit (round 149)
                       section_levels=section_levels_field(s, role))          # and its level in each part of the form (round 150)
             tokens.append(f"{role}=" + text)                 # by name, in rhythm.PART_FIELDS' order; a field a song lacks left off the end
+        said = {}                                            # the words of the song as a whole, by name (rhythm.SONG_WORDS orders them)
         if s.echo is not None:                               # the song's echo word (round 82): the written song sits in its token song's room
-            tokens.append("echo=" + echo_outcome(s))
+            said["echo"] = echo_outcome(s)
         if s.tonic is not None:                              # the song's key (round 79): what the kit's degrees and tuned rates are read against
-            tokens.append(f"key={s.tonic}:{'major' if s.mode == 'major' else 'minor'}")
+            said["key"] = f"{s.tonic}:{'major' if s.mode == 'major' else 'minor'}"
         holds = chord_hold_share(s)                          # the song's chord-hold share (round 106): how long its chords sit
         if holds is not None:
-            tokens.append(f"holds={holds:.2f}")
+            said["holds"] = f"{holds:.2f}"
         shapes = chord_shape_profile(s)                      # the song's chord shapes (round 112): which qualities its harmony has
         if shapes:
-            tokens.append(f"shapes={shapes}")
+            said["shapes"] = f"{shapes}"
         quals = chord_degree_shapes(s)                       # and which degree has which (round 127)
         if quals:
-            tokens.append(f"quals={quals}")
+            said["quals"] = f"{quals}"
         form = form_field(s)                                 # the song's form (round 113): which parts return
         if form:
-            tokens.append(f"form={form}")
+            said["form"] = f"{form}"
             if loop_part_field(s):                           # and the part of it the loop returns to (round 132)
-                tokens.append(f"loop={loop_part_field(s)}")
+                said["loop"] = f"{loop_part_field(s)}"
         cycle = chord_cycle_field(s)                         # the harmony's loops by the form's letters (round 121)
         if cycle:
-            tokens.append(f"cycle={cycle}")
+            said["cycle"] = f"{cycle}"
         if s.beat == 2:                                      # the song counted in double time (round 131): its bars are half the reading's,
-            tokens.append("beat=2")                          # so its form runs to twice the bars a song is asked
+            said["beat"] = "2"                          # so its form runs to twice the bars a song is asked
         if cells_mod.song_feel(s) != cells_mod.FEELS[0]:     # the song's feel where it is not duple (round 147): what its tune's places in the
-            tokens.append(f"feel={cells_mod.song_feel(s)}")  # beat are counted in, and held in
+            said["feel"] = f"{cells_mod.song_feel(s)}"  # beat are counted in, and held in
         if s.bpm:                                            # the song's tempo class (round 54): the band comes with the pace it was made for
             if s.levels:                                    # the song's loudest part's level of full (round 59): with its own levels, a song whose
                 top = max(s.levels.values())                # three parts share the top has a lower top (FFVI: 0.30 with one part there, 0.22 with
-                tokens.append(f"top={round(top / TOP_LEVEL_BIN) * TOP_LEVEL_BIN:.2f}")   # three, 0.10 with four); drawn apart, four at the top played at 0.68
+                said["top"] = f"{round(top / TOP_LEVEL_BIN) * TOP_LEVEL_BIN:.2f}"   # three, 0.10 with four); drawn apart, four at the top played at 0.68
             if s.loudness is not None:                      # and the song's rendered loudness (round 59): what the written song's master holds
-                tokens.append(f"loud={round(s.loudness / MIX_BIN) * MIX_BIN:.0f}")   # its own to
-            tokens.append(f"tempo={readings_mod.band(s.bpm)}:{int(round(s.bpm))}")   # and, since round 137, the song's own tempo in beats a
+                said["loud"] = f"{round(s.loudness / MIX_BIN) * MIX_BIN:.0f}"   # its own to
+            said["tempo"] = f"{readings_mod.band(s.bpm)}:{int(round(s.bpm))}"   # and, since round 137, the song's own tempo in beats a
             # minute (`tempo=fast:140`): the class alone had Edgar and Sabin's band, 90 in the game, written anywhere from 85 to 129
         if struck_places_field(s):                           # where a voice struck with another strikes, by the form's letters (round 159):
-            tokens.append(f"struck={struck_places_field(s)}")   # after every other word, so no token's place among the outcomes moves
+            said["struck"] = f"{struck_places_field(s)}"   # after every other word, so no token's place among the outcomes moves
         if line_turns_field(s):                              # and where a block line's note changes, bar by bar (round 160)
-            tokens.append(f"turns={line_turns_field(s)}")
+            said["turns"] = f"{line_turns_field(s)}"
         if line_pulse_field(s):                              # and a moving line by its place in the beat: its pedal, its steps on the pulse (round 161)
-            tokens.append(f"pulse={line_pulse_field(s)}")
+            said["pulse"] = f"{line_pulse_field(s)}"
         if voice_rubs_field(s):                              # and how often a voice sits a semitone from its own part (round 165)
-            tokens.append(f"rubs={voice_rubs_field(s)}")
+            said["rubs"] = f"{voice_rubs_field(s)}"
         if voice_keeps_field(s):                             # and how often a voice keeps its note where its line keeps its own (round 167)
-            tokens.append(f"keeps={voice_keeps_field(s)}")
+            said["keeps"] = f"{voice_keeps_field(s)}"
         if chord_follows_field(s):                           # and how far the tune and the counter go with a chord off the key (round 171)
-            tokens.append(f"follows={chord_follows_field(s)}")
+            said["follows"] = f"{chord_follows_field(s)}"
         if s.sid:                                            # and which song it is (round 172): the plan asks that song's own answers to the
-            tokens.append(f"song={s.sid}")                   # once-a-song words first (rhythm.own)
-        out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
+            said["song"] = f"{s.sid}"                   # once-a-song words first (rhythm.own)
+        out.append(tables.Unit(s.sid, s.game, " ".join(tokens + song_words_text(**said)), {"part": ARRANGEMENT}))
     return out
 
 
