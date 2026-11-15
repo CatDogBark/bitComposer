@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The vibrato is read as the game plays it (round 179 in `docs/idiom/phase-4-writing.md`). The SNES chip's pitch is two registers written one after the other, and the decoder notes the pitch after each write; where a pitch crosses a high-byte boundary the register holds a wrong value for under a tenth of a millisecond, and the vibrato reader counted each as two extra swings. A vibrato across such a boundary read about three times as fast and deeper than it is played, a slide across two read as a vibrato, and round 72's "15 to 19 Hz in a third of the songs" was this. With those values left out (`reading.VIBRATO_HALF_WRITTEN`) no tune of Final Fantasy VI's reads faster than 6 Hz, where 19 of the 41 with vibrato read 12 Hz or over. The game's vibrato is counted again and the vocabulary refit: the `vibrato` table and the vibrato answers in `song_answers` change and no other table; the word of 36 of 66 tunes and 17 of 53 counter-lines differs. Over 400 seeds no written note changes; the tune's vibrato is 12 Hz or over in no song (104 before), its depth 25 cents at the median (30) and 50 or more in none (20), and 229 tunes carry vibrato (240). Heard as ten songs each way, note for note the same, and better in every pair. A game imported with an earlier version keeps its vibrato as it was read until it is imported again.
+
 ## 2.1.1 — 2026-11-15
 
 2.1.1: no song changes. A written song is note for note what 2.1.0 writes, and the shipped vocabulary is the same file. What changed is inside: the balance token, the line of text a written song takes its skeleton from, is read in a module of its own, its fields and words by name on both the side that writes it and the side that reads it, each step proven to change no note; and the emulator's workflow builds no macOS wheel for now. A token's text is unchanged, so packs imported with an earlier version read as they did.

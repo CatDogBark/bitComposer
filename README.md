@@ -124,7 +124,7 @@ and WRITE AND PLAY on WRITE, where the two switches and a seed field sit;
 (`--classic` on the command line).
 
 Where the vocabulary comes from, plainly: the shipped one
-(`bitcomposer/vocabularies/default.json.gz`, 625 KB) was fitted on the
+(`bitcomposer/vocabularies/default.json.gz`, 624 KB) was fitted on the
 readings of Final Fantasy VI's 68 songs, the game the writing was
 measured against round by round until it held up by ear
 ([docs/idiom/phase-4-writing.md](docs/idiom/phase-4-writing.md)). It is the statistics of how that
