@@ -170,6 +170,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 176 | 2026-11-14 | a kit piece's rate by its place in the bar, the token song's own: a word with no pooled table | - |
 | 177 | 2026-11-14 | the counter-line with its tune by part of the form: its share of notes with the tune and its intervals to it, the token song's own | - |
 | 178 | 2026-11-14 | a chord part's voice struck with another part's line (the bass, the tune): the struck-with word names a part | - |
+| 179 | 2026-11-15 | the vibrato read as the game plays it: a half-written pitch is not a swing (round 72's fast rates were this); the vibrato counted again | - |
 
 ## Goal
 
@@ -4619,7 +4620,8 @@ held notes carry no bend at all. Depth (cents either side) on the tune 16.4
 / 29.9 / 45.2 at the quartiles, the counter 12.7 / 18.8 / 43.4; the rate 5.7
 Hz in most songs (the driver's usual) and 15 to 19 Hz in about a third of
 the songs with any (Blackjack 15.5, Celes 14.7, Battle Theme 18.6, Another
-World of Beasts 17.2); the onset a median 0.5 s from key-on (quartiles 0.4
+World of Beasts 17.2: a misreading, half-written pitches counted as
+swings, put right in round 179; the game plays those at 5.7 too); the onset a median 0.5 s from key-on (quartiles 0.4
 to 0.8), so a note held 0.35 to 0.5 s carries it in 0.01 of cases, 0.5 to 1
 s in 0.10, 1 to 2 s in 0.29, 2 s and over in 0.30, and 11 of 29,079 notes
 under 0.35 s carry any. The first swing is 0.41 of the note's depth at the
@@ -12723,3 +12725,77 @@ with Dancing Mad (part 5)'s voice are 0.70 where the busy parts'
 are every one. The song's bars: see LIMITS.
 
 **Heard.** Not yet.
+
+### Round 179: a half-written pitch is not a swing (2026-11-15)
+
+**Why.** Found while the default player's sound was looked into: the
+`vibrato` word gave a part a wobble of 12 Hz or over in a quarter of
+the player's songs, and the game does not play one. Round 174 made it
+plainer: a song takes its token song's own vibrato since, so the fast
+words sit on the songs whose tunes carry the most of it (fast through
+over half the tune's sounding time in 28 of 400 songs).
+
+**Found.** The SNES chip's pitch is two registers, the low byte and
+the high, and the game's driver writes one after the other. The
+decoder (`spc/notes.py`) notes a sounding voice's pitch after each
+write, so where a pitch crosses a high-byte boundary it notes a value
+made of the new low byte under the old high byte: as much as a
+semitone off at a tune's pitch, replaced under a tenth of a
+millisecond later, never heard. FFVI's 82 songs hold 23,223 pitch values replaced
+within a millisecond, and the high byte changes across every one of
+them; no other pitch write comes under a millisecond from the next.
+`reading.note_vibrato` counts turning points, and each such value is
+two: a vibrato of 5.7 Hz across a boundary read at 15 to 19, deeper
+than played (the notes read at 12 Hz or over: 55 cents at the median
+as counted, 26 with the values out), and a slide across two
+boundaries read as a vibrato. Checked on each held note by the peak
+of the pitch track's spectrum, which a value that lasts no time
+cannot move: the count as it stood is within 15 % of it on 1,578 of
+2,412 notes, and with the values left out on 2,377. The rate differs
+only on notes that hold such a value (807 of 807, none of the rest).
+Round 72's "5.7 Hz in most songs and 15 to 19 Hz in about a third"
+was this, and so was part of its depth.
+
+**Built.** `reading.VIBRATO_HALF_WRITTEN` (0.001 s): a pitch value
+the next write replaces within it is left out before the swings are
+counted. In the reader, not the decoder: the converter plays a note's
+pitch writes row by row and keys alike notes by them, and is not
+touched. FFVI's vibrato features were counted again through the
+import's own reading (60 of 82 songs' change; every other row of the
+readings as it was) and the tables refit. A reading fault put right:
+the constant is the reader's, a time no pitch the game means comes
+under; no weight or preference added.
+
+**Measured.** Suite 645 tests, 1 skipped. Two tables differ, `vibrato` and
+`song_answers`, the second in its vibrato answers alone.
+FFVI's 68 songs: the tune's word differs in 36 of 66 (the rate in
+29, the depth in 26, the shares in 15, the onset in 14), the
+counter-line's in 17 of 53. Tunes with vibrato 39 (41): Johnny C.
+Bad's, Metamorphasis's and The Fierce Battle's were half-written
+values and nothing else, and Under Martial Law's, counted a trill
+for its depth as misread, is a vibrato. Rate 12 Hz or over: no tune
+(19), two counter-lines (7); every tune's is 4.5 to 6 Hz. The tune's
+depth over the songs with any 16 / 24 / 31 cents at the quartiles
+(21 / 30 / 39); its held notes carrying vibrato 946 of 5,175 (930).
+Over 400 seeds (1000 to 1399, the player's asking), against 2.1.1:
+every song on the token it was on and no written note changed; the
+tune's word differs in 223 songs and the notes that carry vibrato in
+100; the tune's vibrato 12 Hz or over in none (104), and through
+over half its time at that rate in none (28); its depth 25 cents at
+the median (30), 50 or more in none (20); 229 tunes carry vibrato
+(240: 19 lose it, 8 take one), for 0.36 of their sounding time at
+the median (0.34). The counter-line's: 12 Hz or over in 4 songs
+(39), its depth 20 cents (30), 146 with vibrato (160). In the audio
+of ten songs, a part alone, the swing heard on a held note is the
+word's rate and depth before and after; two samples swing by
+themselves with no vibrato written (Last Dungeon's counter-line's,
+27 cents at 8 Hz).
+
+**Open.** Two counter-lines' words are still not a vibrato (Techno
+de Chocobo's, The Fierce Battle's: LIMITS). The other parts'
+vibrato is counted and not played, as before. A game imported with
+an earlier version keeps its reading until it is imported again.
+
+**Heard.** Ten songs each way, the same notes in each pair (Shadow,
+Blackjack, Celes, Cyan, Last Dungeon, Metamorphasis, Gogo, Johnny C.
+Bad, Under Martial Law, Epitaph): "its all better".
