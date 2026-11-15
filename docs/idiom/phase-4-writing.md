@@ -169,6 +169,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 175 | 2026-11-14 | the role reader: a tom on the beats over a bass is a drum (Mt. Koltz reads with its kit); the game read again | - |
 | 176 | 2026-11-14 | a kit piece's rate by its place in the bar, the token song's own: a word with no pooled table | - |
 | 177 | 2026-11-14 | the counter-line with its tune by part of the form: its share of notes with the tune and its intervals to it, the token song's own | - |
+| 178 | 2026-11-14 | a chord part's voice struck with another part's line (the bass, the tune): the struck-with word names a part | - |
 
 ## Goal
 
@@ -12637,5 +12638,88 @@ places hold. A counter-line whose song doubles the tune at the
 unison now does (Last Dungeon: 20 of its notes on the tune's own).
 The counter-line's masks are still the pooled word, held to the
 song three ways now.
+
+**Heard.** Not yet.
+
+### Round 178: a voice struck with another part's line (2026-11-14)
+
+**Why.** By ear, after rounds 174 to 177: Dancing Mad (part 5) "is
+better now it just still lacks coherence into an actual song like
+the original". Investigated that day and two things chosen from what
+was found: parts that are one figure, and the song's beat.
+
+**Found.** *One figure.* In the game's busy parts the bass and the
+accompaniment's second voice strike every note together, a fifth or
+a fourth apart, and the tune and the accompaniment's line strike
+together on 1.00 and 0.95 of their notes. Over FFVI 52 pairs of
+voices of different parts in 22 of 67 songs are one figure in some
+part of the form (each with the other on 0.9 of its notes or more,
+24 notes each, not a doubling). The songs written on those tokens
+had the first's notes with the second's on 0.91 at the median and
+the second's with the first's on 0.70, under 0.7 one way in 98 of
+254 cases. The token says what a voice beside a line does stretch by
+stretch; a double or a parallel can name a voice of any part, and
+"struck with" (round 107: together, at intervals that change with
+the chord) only the voice's own line or a sibling. Dancing Mad (part
+5)'s second voice is not at one interval, so not parallel, and the
+bass is another part: it read its own for eighteen bars. *The
+beat.* The song is read at 87 beats a minute in bars of four with a
+triple feel; phase 1's decode comparison has the written tempo at
+130 (its class "x2/3" then), and listeners' transcriptions count its
+last part in 4/4 and 7/8 in turn at about 130. A rule taking the
+written beat where the read one is a compound of it was looked at
+and not built: the reader as shipped does not see the written tempo
+(the comparison used an outside decoder, for checking only); over
+the 39 games 91 songs differ that way, and most are a bar's grouping
+(three quarters against two dotted beats), not a wrong tempo; and in
+this song the dotted beat is the one steady pulse there is, fifteen
+eighth notes to a pair of bars, so its beat cannot be put right
+without bars that are not four.
+
+**Built.** The struck-with word names a part. A chord part's voice
+whose stretch reads its own, eight notes or more, struck with
+neither a sibling nor its line, is asked of the other parts' lines
+(`roles.with_relation`, as it stood): `wb+5`, with the bass, at the
+commonest of its intervals; its struck facts are counted against
+that line. The plan writes the voice on that part's line as written
+(`struck_with`, as it stood): at once where the part is written
+before it, and after the lines are written where it follows the
+tune or the counter-line (`late_struck`). The late pass no longer
+takes a struck stretch for a double. A reading fault put right: the
+word, its reading and its writing existed, and the candidates it was
+asked of stopped at the part. No constant added.
+
+**Measured.** Suite 642 tests, 1 skipped. Eight tokens change (a voice of the
+accompaniment with the tune in Edgar and Sabin, Umaro, Last Dungeon,
+Johnny C. Bad and Dancing Mad (part 2), with the bass in Dancing Mad
+(part 5) and Slam Shuffle; a voice of the harmony with the bass in
+Searching for Friends). Two tables differ: `balance`, and
+`parallel_intervals`, which counts the struck stretches' intervals.
+Over 400 seeds (1000 to 1399, the player's asking), against round
+177: a note changes in 158 songs (the accompaniment in 100, the tune
+in 44, the counter-line in 41, the harmony in 10, the bass in 6):
+the songs on the eight tokens, and others whose parallel or struck
+voices draw from the table that moved. The game's one-figure pairs
+in the songs on their tokens: the first's notes with the second's
+0.97 at the median (0.91), 0.9 or more in 158 of 254 cases (128),
+under 0.7 in 68 (98); the second's with the first's 0.74 (0.70).
+Dancing Mad (part 5)'s accompaniment and bass: 1.00 and 0.70 (0.38
+and 0.61; the game's 1.00 each way); Last Dungeon's accompaniment
+and tune 1.00 and 0.77 (0.66 and 0.35); Umaro's 1.00 and 0.92 (0.87
+and 0.86). A song's semitone meetings between voices are within
+0.05 of its game song's in 154 songs (152). The tune battery over
+the 68 test songs: nothing moves by more than two bars or one song.
+
+**Open.** A part's own line struck with another part's line has no
+word: Dancing Mad (part 5)'s tune and accompaniment line (written
+0.66 and 0.38, the game's 0.95 and 1.00), Blackjack's and Locke's,
+and the accompaniment with the counter-line in Ending Theme (part
+1), Overture (part 3), Troops March on and Umaro stand where they
+were. A voice of the bass, the tune or the counter-line struck with
+another part is not asked (their writers follow no stretch words).
+The struck voice is thinned to its token voice's share of the
+followed notes, counted over its whole stretch, so the bass's notes
+with Dancing Mad (part 5)'s voice are 0.70 where the busy parts'
+are every one. The song's bars: see LIMITS.
 
 **Heard.** Not yet.
