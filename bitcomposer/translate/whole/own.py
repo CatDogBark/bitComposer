@@ -13,11 +13,26 @@ TABLE = "song_answers"               # the table of every song's own answers (rh
 
 
 def answer(models: dict, song: str | None, word: str, context) -> str | None:
-    """The song's own answer to a word under a context, from the `song_answers` table; None without the table, the song or an
-    answer (or with two: a word a song answers twice under one context is not a once-a-song word there)."""
+    """The song's own answer to a word under a context, from the `song_answers` table; None without the table, the song
+    or an answer. A word the song answers many times under one context (round 174: a unit a note, as the voices' note
+    lengths are counted) is answered by its middle answer where the answers are numbers, the one at the half of its
+    votes in their order; where they are not numbers there is no one answer, and None."""
     t = (models or {}).get(TABLE)
     if t is None or not song:
         return None
     t = t.table if hasattr(t, "table") else t
     votes = t.votes.get((song, word, rhythm.own_context(context)))
-    return next(iter(votes)) if votes and len(votes) == 1 else None
+    if not votes:
+        return None
+    if len(votes) == 1:
+        return next(iter(votes))
+    try:
+        ranked = sorted(votes.items(), key=lambda kv: float(kv[0]))
+    except ValueError:
+        return None
+    half, run = sum(v for _, v in ranked) / 2, 0.0
+    for outcome, v in ranked:
+        run += v
+        if run >= half - 1e-12:
+            return outcome
+    return ranked[-1][0]

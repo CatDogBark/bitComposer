@@ -126,8 +126,10 @@ class PerformanceTests(unittest.TestCase):
                 word = words[voices[n.voice]]
                 self.assertTrue(word["shares"][reading.vibrato_class(n.end - n.start)], seed)
                 self.assertGreaterEqual(n.bends[0][0] - n.start, word["onset"] - 1e-6)
-                for _, p in n.bends:
-                    self.assertLessEqual(abs(1200 * math.log2(p / n.pitch)), word["depth"] + 1.5)   # the register rounds to about a cent
+                swing = 2 ** (word["depth"] / 1200.0)
+                for _, p in n.bends:                # within the depth, to the half step the pitch register rounds by (a low
+                    self.assertGreaterEqual(p, n.pitch / swing - 0.5 - 1e-6)   # note's step is cents wide: 4.3 at 405, round 174)
+                    self.assertLessEqual(p, n.pitch * swing + 0.5 + 1e-6)
         self.assertGreater(seen_word, 0)
         self.assertGreater(seen_notes, 0)
         bare = {k: v for k, v in models.items() if k != "vibrato"}

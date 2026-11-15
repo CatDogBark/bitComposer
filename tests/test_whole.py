@@ -3780,7 +3780,7 @@ class SongsOwnAnswersTests(unittest.TestCase):
         for word, (module, builder, shape) in rhythm.OWN.items():
             self.assertEqual(packtables.KEPT[word][:2], (module, builder), word)                   # the pooled table's own module, builder and shape
             self.assertEqual(tuple(packtables.KEPT[word][3]), shape, word)
-        self.assertEqual(len(rhythm.OWN), 16)                                                      # three in round 172, thirteen more in round 173
+        self.assertEqual(len(rhythm.OWN), 18)                                                      # three in round 172, thirteen in round 173, two in 174
         self.assertEqual(tuple(packtables.KEPT["song_answers"][3]), rhythm.OWN_SHAPE)
         self.assertEqual(rhythm.own_context(("melody", "major", "strong")), "melody|major|strong")
         units = rhythm.own_units([self._song()])
@@ -3814,6 +3814,21 @@ class SongsOwnAnswersTests(unittest.TestCase):
         P._draw(both, "clashes", ("melody", "strong"), mine, own="song1"); P._draw(both, "clashes", ("melody", "strong"), state)
         self.assertEqual(mine.random(), state.random())                                            # the draw is made all the same: the stream stands
 
+    def test_a_word_answered_many_times_gives_its_middle_answer(self):
+        """Round 174: the voices' note lengths are counted a note at a time, so a song answers the word many times under
+        one context. Its answer is the middle one, at the half of its votes in the answers' order; a word whose many
+        answers are not numbers has no one answer."""
+        unit = lambda outcome, word="gap_sounds", context="accompaniment|second|slow|1-2": tables.Unit(   # noqa: E731
+            "song1", "g", outcome, {"song": "song1", "word": word, "context": context})
+        own = tables.Table(rhythm.OWN_SHAPE, "song_answers", votes=tables.SHARES).fit(
+            [unit("0.5")] + [unit("0.8")] * 2 + [unit("1.0")] * 7 + [unit("held", "articulation", "melody"), unit("detached", "articulation", "melody")])
+        models = {"song_answers": own}
+        self.assertEqual(whole.own_answer(models, "song1", "gap_sounds", ("accompaniment", "second", "slow", "1-2")), "1.0")   # seven of ten
+        low = tables.Table(rhythm.OWN_SHAPE, "song_answers", votes=tables.SHARES).fit([unit("0.5")] * 5 + [unit("0.8")] * 3 + [unit("1.0")] * 2)
+        self.assertEqual(whole.own_answer({"song_answers": low}, "song1", "gap_sounds", ("accompaniment", "second", "slow", "1-2")), "0.5")   # the half falls there
+        self.assertIsNone(whole.own_answer(models, "song1", "articulation", ("melody",)))          # two answers that are not numbers: none
+        self.assertIsNone(whole.own_answer(models, "song1", "gap_sounds", ("accompaniment", "second", "fast", "1-2")))
+
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
         keys = tables.Table(("part",), "keys").fit([tables.Unit(f"k{i}", "g", "0 major", {"part": "song"}) for i in range(3)])
@@ -3845,9 +3860,10 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertEqual(len({o.split()[-1] for o in outcomes}), 68)
         own = getattr(vocabulary["song_answers"], "table", vocabulary["song_answers"])
         answers = [k for k in own.votes if len(k) == 3]
-        self.assertEqual(len(answers), 2289)
+        self.assertEqual(len(answers), 3252)
         self.assertEqual({k[1] for k in answers}, set(rhythm.OWN))
-        self.assertTrue(all(len(own.votes[k]) == 1 for k in answers))                              # one answer a song, a word and a context
+        many = {k[1] for k in answers if len(own.votes[k]) > 1}                                    # one answer a song, a word and a context, but for
+        self.assertEqual(many, {"gap_sounds"})                                                     # the word counted a note at a time (round 174)
         self.assertEqual(len({k[0] for k in answers}), 68)                                         # every song answers some of the sixteen
         self.assertTrue({k[0] for k in answers} <= {o.split()[-1][5:] for o in outcomes})
 
