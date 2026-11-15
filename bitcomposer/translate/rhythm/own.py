@@ -40,6 +40,10 @@ OWN = {                               # the once-a-song words answered by the to
     "vibrato": ("rhythm", "vibrato_units", ("part",)),
     # round 176: a kit piece's rate by its place in the bar. A word with no pooled table: only the song's own answer is kept
     "kit_rate_places": ("rhythm", "kit_rate_place_units", ("part", "place")),
+    # round 177: the counter-line beside its tune by part of the form: its share of notes struck with a tune note, and its
+    # intervals to the tune's note (many answers a place: the song's profile). No pooled table behind either
+    "counter_with": ("rhythm", "counter_with_units", ("part", "place")),
+    "counter_intervals": ("rhythm", "counter_interval_units", ("part", "place", "line")),
 }
 
 

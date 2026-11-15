@@ -351,6 +351,12 @@ class Plan:
                                                         # the beat, on a third and finer than either (rhythm.FINE_PLACES; round 147)
     token_song: str = ""                                # the balance token's song's id (round 172: the `song=` word), for its own answers to the
                                                         # once-a-song words (own.answer)
+    form_own: bool = False                              # the form's letters are the balance token's song's (round 177 keeps it: a word by
+                                                        # the form's letters is asked by them only then)
+    counter_with: dict = field(default_factory=dict)    # a letter of the form, or rhythm.COUNTER_WHOLE -> the share of the token song's
+                                                        # counter-line's notes struck with a tune note there (round 177)
+    counter_intervals: dict = field(default_factory=dict)   # (that place, the tune note's state) -> {an interval entry: its share of the
+                                                        # token song's counter-line's notes with the tune there} (round 177)
     kit_places: dict = field(default_factory=dict)      # a kit piece's letter -> {a place in the bar (rhythm.kit_place: "3/2", or the beat
                                                         # "b1"): semitones from the slot's rate}, the token song's own (round 176)
     token_feel: str = "duple"                           # the token song's feel (round 147): its tune's places are held where the song is written in it
@@ -481,8 +487,11 @@ def mask_strikes(tune_pat: str, mask: str) -> int:
 MASK_SLACK = 0.5                      # of the song's own onsets a bar (a note at the least): how far a part of the form's bars so far may run from them
 
 
+WITH_SLACK = 1.0                      # notes: how far a part of the form's bars so far may run from the song's share with the tune (the count's grain)
+
+
 def counter_mask(models: dict, context: tuple, tune_pat: str, mask: str, bounds: tuple | None, rng: random.Random, tries: int | None = None,
-                 want: tuple | None = None, placed=None) -> tuple[str, str]:
+                 want: tuple | None = None, placed=None, shared: tuple | None = None) -> tuple[str, str]:
     """A counter-line's bar's mask within its token song's own onsets for the part of the form (round 143): `mask`, the
     counter_figures draw for the bar (`context`, over the tune's bar `tune_pat`), where the bar it makes of the tune's
     (mask_strikes) strikes within `bounds` (least, most: plan.envelope_at_for's own envelope, half to one and a half
@@ -500,10 +509,14 @@ def counter_mask(models: dict, context: tuple, tune_pat: str, mask: str, bounds:
     many onsets of its own, those moved the least in time ("moved": the line then strikes as often, and its notes
     after the bar are drawn on the draws they had). Where the table knows none, the askings are made again with the
     places asked of every mask, on the same stream; where none keeps them the first answer stands. A line with no own
-    onsets (`bounds` None) keeps its first draw unless that is off the places. Returns (the mask, how it was come by:
-    "first", "again", "among", "moved", "none")."""
-    if bounds is None and placed is None:
+    onsets (`bounds` None) keeps its first draw unless that is off the places. `shared` (round 177): (the notes of the part
+    of the form's bars so far struck with a tune note, all its notes so far, the token song's counter-line's share of
+    notes with its tune there): a mask is asked first to keep the part's bars so far within WITH_SLACK notes of that
+    share (mask_with), beside the bounds and the want; where none does, the askings are as they were. Returns (the mask,
+    how it was come by: "first", "again", "among", "moved", "none")."""
+    if bounds is None and placed is None and shared is None:
         return mask, "first"
+    with_ok = lambda m: (shared is None or abs((shared[0] + mask_with(tune_pat, m)) - shared[2] * (shared[1] + mask_strikes(tune_pat, m))) <= WITH_SLACK)   # noqa: E731
     t = models["counter_figures"]
     t = t.table if hasattr(t, "table") else t
     drawn = [mask]
@@ -511,9 +524,11 @@ def counter_mask(models: dict, context: tuple, tune_pat: str, mask: str, bounds:
 
     def asked(held: bool) -> tuple | None:
         """The mask by the askings above, the places asked too where `held`; None where no mask is within them."""
-        for both in ((True, False) if want is not None else (False,)):
+        stages = [(both, True) for both in ((True, False) if want is not None else (False,))] if shared is not None else []   # with the share first:
+        for both, with_share in stages + [(both, False) for both in ((True, False) if want is not None else (False,))]:   # it gives way last but one
             fits = lambda m: ((bounds is None or bounds[0] <= mask_strikes(tune_pat, m) <= bounds[1])   # noqa: E731,B023
-                              and (not both or want[0] <= mask_strikes(tune_pat, m) <= want[1]) and (not held or placed(made(m))))
+                              and (not both or want[0] <= mask_strikes(tune_pat, m) <= want[1]) and (not held or placed(made(m)))   # noqa: B023
+                              and (not with_share or with_ok(m)))   # noqa: B023
             if fits(mask):
                 return mask, "first"
             for i in range(writer.TRIES if tries is None else tries):
@@ -546,7 +561,7 @@ def counter_mask(models: dict, context: tuple, tune_pat: str, mask: str, bounds:
                 best = (far, m)
         return best[1] if best is not None else None
 
-    got = (asked(False) if bounds is not None else None) or (mask, "first" if bounds is None else "none")
+    got = (asked(False) if bounds is not None or shared is not None else None) or (mask, "first" if bounds is None else "none")
     if placed is None or placed(made(got[0])):
         return got
     near = nearest(got[0])
@@ -2555,7 +2570,77 @@ def plan(models: dict, seed: int, game: str = "", title: str | None = None, max_
     _plan_speeds(models, p, rng)
     _plan_sounds(models, p, rng)
     _plan_kit_places(models, p)
+    _plan_counter_own(models, p)
     return p
+
+
+def _plan_counter_own(models: dict, p: Plan) -> None:
+    """How the balance token's song's counter-line goes with its tune, by part of the form (round 177; the song_answers
+    table's `counter_with` and `counter_intervals` words, no draw and no pooled word behind them): the share of its notes
+    struck with a tune note, and its intervals to the tune's note as shares. By the form's letters where the form is the
+    token song's, the song's whole answer where it is not."""
+    if R.COUNTER not in p.band or R.MELODY not in p.band or not p.token_song:
+        return
+    for context, outcome in sorted(own_mod.answers(models, p.token_song, rhythm.COUNTER_WITH).items()):
+        place = context.partition("|")[2]
+        if p.form_own or place == rhythm.COUNTER_WHOLE:
+            try:
+                p.counter_with[place] = float(outcome)
+            except ValueError:
+                continue
+    for context, profile in sorted(own_mod.shares(models, p.token_song, rhythm.COUNTER_INTERVALS).items()):
+        _, place, state = context.split("|")
+        if p.form_own or place == rhythm.COUNTER_WHOLE:
+            p.counter_intervals[(place, state)] = dict(sorted(profile.items()))
+    if p.counter_with:
+        p.log.append("the counter-line with its tune, the balance's song's own (round 177): its notes struck with a tune note "
+                     + ", ".join(f"{place} {share:.2f}" for place, share in sorted(p.counter_with.items()))
+                     + ("" if p.form_own else "; the form not the balance's song's: the whole song's share"))
+
+
+def counter_place(plan, k: int) -> str | None:
+    """The place bar `k` of a written song asks the counter-line's two words by (round 177): the letter of its part of the
+    form where the form is the token song's and that song's counter plays in the letter, else the whole song's
+    (rhythm.COUNTER_WHOLE); None where the song says nothing."""
+    said = getattr(plan, "counter_with", None) or {}
+    if getattr(plan, "form_own", False):
+        letter = next((label for bar, n, _, label in plan.parts if bar <= k < bar + n), None)
+        if letter in said:
+            return letter
+    return rhythm.COUNTER_WHOLE if rhythm.COUNTER_WHOLE in said else None
+
+
+def counter_with_share(plan, k: int) -> float | None:
+    """The share of its notes the counter-line strikes with a tune note in bar `k`'s part of the form, its token song's own
+    (round 177); None where the song says none."""
+    place = counter_place(plan, k)
+    return (getattr(plan, "counter_with", None) or {}).get(place) if place is not None else None
+
+
+def counter_intervals_at(plan, k: int) -> dict | None:
+    """{the tune note's state: {an interval entry: its share}} for a counter-line's note in bar `k`: its token song's own
+    intervals to the tune there (round 177), the whole song's for a state the part of the form has none for (a part in
+    which the song's counter never strikes with its tune, or never against a note off the scale); None where the song
+    says none."""
+    place = counter_place(plan, k)
+    if place is None:
+        return None
+    said = getattr(plan, "counter_intervals", None) or {}
+    out = {state: profile for (at, state), profile in said.items() if at == rhythm.COUNTER_WHOLE}
+    out.update({state: profile for (at, state), profile in said.items() if at == place})
+    return out or None
+
+
+def mask_with(tune_pat: str, mask: str) -> int:
+    """How many of the tune's onsets a counter_figures mask strikes with (rhythm.apply_mask's reading of its flags); none
+    for a rest or a resting tune."""
+    if mask in (writer.REST, "-", "") or tune_pat in ("-", ""):
+        return 0
+    flags, bar, _ = mask.partition("|")
+    bits = flags.split()
+    if not bits or (not bar and all(b not in ("0", "1") for b in bits)):
+        return 0
+    return sum(1 for i in range(len(tune_pat.split())) if bits[i % len(bits)] == "1")
 
 
 def _plan_kit_places(models: dict, p: Plan) -> None:
@@ -3297,7 +3382,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, chord_follows=token_follows, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel, token_song=token_song)
+                form_own=own_form, top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, chord_follows=token_follows, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel, token_song=token_song)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
@@ -4282,23 +4367,32 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
             own_on = getattr(own_env, "own", False)         # so the line's stream is as it was wherever the first mask fits)
             places_c = own_places(plan, R.COUNTER)          # and within its token song's line's places in the beat (round 147), the same way
             place_said, line_n, line_fine = Counter(), 0, Counter()   # for the log; the line's onsets so far and those on each fine place
-            if own_on or places_c is not None:
+            with_at = [counter_with_share(plan, k) for k in range(len(song.bars))]   # its token song's share with the tune for the bar's part of the form (round 177)
+            with_said, with_n, with_all = Counter(), 0, 0   # for the log; the part of the form's notes so far struck with the tune, and all of them
+            if own_on or places_c is not None or any(w is not None for w in with_at):
                 own_c, starts, owed = (plan.section_onsets[R.COUNTER] if own_on else None), {bar for bar, *_ in plan.parts}, 0.0
                 at_of = lambda bar: [] if bar == "-" else [rhythm.position(float(Fraction(t)), song.division) for t in bar.split()]   # noqa: E731
                 least = sum((own_env(k) or (1,))[0] if own_on else 1 for k, m in enumerate(masks) if m != writer.REST)   # the least the line will play
                 for k, pat in enumerate(tune_figs + [writer.REST] * (len(song.bars) - len(tune_figs))):
                     if k in starts:
                         owed = 0.0                          # the onsets the part of the form's bars so far are short of the song's own (over: under 0)
+                        with_n = with_all = 0
                     tune_pat = "-" if pat == writer.REST else pat
+                    shared = (with_n, with_all, with_at[k]) if k < len(with_at) and with_at[k] is not None and masks[k] != writer.REST else None
                     bounds = own_env(k) if own_on and masks[k] != writer.REST else None
                     placed = ((lambda bar, was=None, n=line_n, fine=Counter(line_fine): rhythm.keeps_places(places_c, n, fine, at_of(bar), least)   # noqa: E731
                                and (was is None or not rhythm.adds_places(places_c, at_of(was), at_of(bar))))
                               if places_c is not None and masks[k] != writer.REST else None)
-                    if bounds is not None or placed is not None:
+                    if bounds is not None or placed is not None or shared is not None:
                         first = masks[k]
                         slack = max(1.0, MASK_SLACK * own_c[k]) if bounds is not None else None
                         masks[k], how = counter_mask(models, mask_ctx(pat), tune_pat, masks[k], bounds, random.Random(f"{seed}:{role}:mask {k}"),
-                                                     want=(owed + own_c[k] - slack, owed + own_c[k] + slack) if bounds is not None else None, placed=placed)
+                                                     want=(owed + own_c[k] - slack, owed + own_c[k] + slack) if bounds is not None else None, placed=placed,
+                                                     shared=shared)
+                        if shared is not None:              # whether the bar keeps its part of the form at the song's share with the tune (round 177)
+                            kept = abs((with_n + mask_with(tune_pat, masks[k])) - shared[2] * (with_all + mask_strikes(tune_pat, masks[k]))) <= WITH_SLACK
+                            with_said["kept" if kept else "none"] += 1
+                            with_said["again"] += kept and masks[k] != first
                         if bounds is not None:
                             owed += own_c[k] - mask_strikes(tune_pat, masks[k])
                             mask_said["again" if how == "moved" else how] += 1   # a mask moved onto the places (round 147) is not the first draw
@@ -4307,6 +4401,9 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                             place_said["moved"] += how == "moved"
                             place_said["again"] += how != "moved" and not placed(bar_of(first))
                             place_said["none"] += not placed(bar_of(masks[k]))
+                    if masks[k] != writer.REST:             # the bar's notes into its part of the form's count with the tune (round 177)
+                        with_n += mask_with(tune_pat, masks[k])
+                        with_all += mask_strikes(tune_pat, masks[k])
                     if masks[k] != writer.REST:             # the bar the mask makes of the tune's, into the line's places so far
                         at = at_of(rhythm.apply_mask(tune_pat, masks[k]) if masks[k] not in ("-", "") else "-")
                         line_n += len(at)
@@ -4317,7 +4414,11 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                   chord_rate=x.get("chord_tones"), tune_sounds=x.get("tune_sounds"),   # its own chord-tone share held (round 96), its note lengths (round 98)
                                                   shortest=shortest_beats(plan, R.COUNTER),   # and no note under its token song's shortest usual one (round 136)
                                                   lengths=own_lengths(plan, R.COUNTER), lengths_rng=random.Random(f"{seed}:{role}:note lengths"),   # held as its token song's line is, on an own stream (round 141)
-                                                  move_profile=(getattr(plan, "step_profiles", None) or {}).get(R.COUNTER))   # and no more far moves than its song's line (round 143)
+                                                  move_profile=(getattr(plan, "step_profiles", None) or {}).get(R.COUNTER),   # and no more far moves than its song's line (round 143)
+                                                  own_intervals=lambda k: counter_intervals_at(plan, k))   # at its token song's intervals to the tune for the part of the form (round 177)
+            if sum(with_said.values()):
+                plog.append(f"bars' masks at the balance's song's share with the tune for their part of the form (round 177): {with_said['kept']} of {with_said['kept'] + with_said['none']}"
+                            f" bars keep it, {with_said['again']} by a mask drawn again or taken among the masks that do")
         else:
             tune_kit = ((getattr(plan, "with_kit", None) or {}).get(role) or (None,))[0] if role == R.MELODY else None   # the token song's tune's share with the kit (round 149)
             notes, figures, plog = writer.melody(song, [], plan.bounds.get(role, plan.registers[role]), models, random.Random(f"{seed}:{role}"), plan.habits[role],

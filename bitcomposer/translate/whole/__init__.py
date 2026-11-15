@@ -5,3 +5,4 @@ from .render import (kit_rate_wall, pan_at, pan_of, walled, REACH, SPEED_WEIGHT,
 from .measures import (SPAN, compose, measures, tune_measures)  # noqa: F401
 from .own import answer as own_answer   # noqa: E402,F401  the balance token's song's own answers (round 172)
 from .own import answers as own_answers   # noqa: E402,F401  every answer of a song to a word (round 176)
+from .own import shares as own_shares   # noqa: E402,F401  a song's many answers to a word, as shares (round 177)
