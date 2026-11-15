@@ -858,6 +858,38 @@ class Rhythm(unittest.TestCase):
         song.samples[5].piece = "none"                                                             # an instrument held: never a drum, as before
         self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.HARMONY)
 
+    def test_a_tom_on_every_beat_over_a_bass_is_a_drum(self):
+        """Round 175: a voice on a tom sample at few pitches that sounds on half the beats or more was read a bass
+        passing for a drum, whatever played under it. It is that only where it can be the song's bass: with an
+        instrument's voice under its lowest note it is the drum the namer called it (Mt. Koltz's toms, three pitches
+        on nine beats in ten over a string bass, were read an accompaniment and the song had no kit). With nothing
+        under it, it is a pitched part as before."""
+        from bitcomposer.translate import roles
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        voices = {
+            0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                                    # the melody
+            3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # the bass, on an instrument
+            5: [(i * b, 0.2, m) for i, m in enumerate([52, 45, 45, 49, 45, 52, 52, 45] * 8)],       # toms: three pitches, on every beat
+        }
+        song = song_of(voices)
+        song.samples[5].piece = "tom"
+        song.samples[0].piece = song.samples[3].piece = "none"                                     # instruments held, as the namer says
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        feats = {v: roles._features([p for p in song.notes if p.voice == v], g) for v in voices}
+        self.assertGreaterEqual(feats[5]["presence"], roles.SPARSE)                                # on the beats: the old rule's bass
+        self.assertIsNone(roles.drum_clause(feats[5]))                                             # by itself, a bass passing for a drum
+        self.assertLess(roles.under_of(feats, 5), feats[5]["low"])                                 # the bass plays under its lowest note
+        self.assertEqual(roles.drum_clause(feats[5], roles.under_of(feats, 5)), "sound")
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.DRUMS)
+        low = dict(voices)
+        low[5] = [(s, n, m - 24) for s, n, m in voices[5]]                                         # the same voice under everything: it can be the bass
+        song = song_of(low)
+        song.samples[5].piece = "tom"
+        song.samples[0].piece = song.samples[3].piece = "none"
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        self.assertNotEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.DRUMS)
+
     def test_drum_sounds_are_named_by_how_they_play(self):
         from bitcomposer.translate.rhythm import Song, drums
         # four bars: a kick on one and three, a snare on two and four, a hat on the eighths

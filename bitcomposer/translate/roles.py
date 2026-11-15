@@ -57,7 +57,8 @@ DRUM_HOLD = 2.0                       # beats: a voice on a tonal sample taken f
                                       # (Another World of Beasts' bowed strings for seven beats, The Phantom Forest's lead for twelve),
                                       # and a kit written from them struck a pad once a bar (round 77, from Song Check 63)
 LOW_PIECES = {"kick", "tom"}          # the pieces a bass sample can pass for; a voice on them is a drum voice only
-SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on
+SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on,
+                                      # or where an instrument plays under it (round 175: it is not the song's bass then)
 
 
 @dataclass
@@ -243,15 +244,27 @@ GENERIC = (0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6)   # semitones within an octave as
                                       # 5, a fifth 6 or 7, a sixth 8 or 9, a seventh 10 or 11
 
 
-def drum_clause(f: dict) -> str | None:
+def under_of(feats: dict, voice) -> float | None:
+    """The median note of the lowest of a song's other voices on instruments held (the namer's "none" on BY_SOUND of
+    their notes), from every voice's features; None where no other voice is one. What plays under a voice, for
+    drum_clause."""
+    return min((f["median"] for v, f in feats.items() if v != voice and f["median"] is not None and f["no_drum_sound"] >= BY_SOUND),
+               default=None)
+
+
+def drum_clause(f: dict, under: float | None = None) -> str | None:
     """Which of assign's two drum clauses a voice's features meet: "sound" (a drum voice by what its samples are: the namer
     called them drums, struck at few pitches, and not a kick or tom sample sounding on half the beats, a bass passing for one),
     "play" (by how it plays them: noise, or one sample at one or two pitches, eight notes or more, held under DRUM_HOLD), or
-    None. A voice whose samples are instruments held (named "none") is no drum however it plays them (a bass pumping one
+    None. A kick or tom sample sounding on half the beats is a bass passing for a drum only where it can be the song's
+    bass: with an instrument's voice playing under it (`under`, under_of: that voice's median note below this one's
+    lowest) it is the drum the namer called it (round 175: Mt. Koltz's toms, three pitches on nine beats in ten over a
+    string bass, were read an accompaniment, the song had no kit, and its written songs played a chord line on a tom). A voice whose samples are instruments held (named "none") is no drum however it plays them (a bass pumping one
     note). A voice on drum-named samples whose notes are pitched and held DRUM_HOLD or more at the median is a pad the namer
     took for a kick (round 89: The Empire Gestahl's and Another World of Beasts' bowed strings, three and two pitches held
     eight and seven beats; FFVI's thirteen cymbal voices held two beats or more are unpitched and stay drums)."""
-    if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)
+    over_a_bass = under is not None and f["low"] is not None and under < f["low"]
+    if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE or over_a_bass)
             and not (f["unpitched"] < 0.5 and f["length_beats"] >= DRUM_HOLD)):
         return "sound"
     if f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
@@ -260,9 +273,9 @@ def drum_clause(f: dict) -> str | None:
     return None
 
 
-def is_drum_voice(f: dict) -> bool:
+def is_drum_voice(f: dict, under: float | None = None) -> bool:
     """assign's two drum clauses on a voice's features: a drum voice by what its samples are, or by how it plays them."""
-    return drum_clause(f) is not None
+    return drum_clause(f, under) is not None
 
 
 def _register(mids) -> tuple:
@@ -466,8 +479,9 @@ def split_melodic_pieces(song, grid=None) -> dict:
     for p in song.notes:
         by_voice.setdefault(p.voice, []).append(p)
     out = {}
+    feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     for v, ns in sorted(by_voice.items()):
-        if v >= SPLIT_BASE or not ns or not is_drum_voice(_features(ns, grid)):
+        if v >= SPLIT_BASE or not ns or not is_drum_voice(feats[v], under_of(feats, v)):
             continue
         by_sample = {}
         for p in ns:
@@ -508,7 +522,7 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
         # are instruments held (named "none") is no drum however it plays them (a bass pumping one note), and a
         # pitched pad held like a pad on a sample the namer took for a kick is none either (drum_clause, round 89)
-        clause = drum_clause(f)
+        clause = drum_clause(f, under_of(feats, v))
         if clause == "sound":
             roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
         elif clause == "play":                              # held like a drum, not a pad (round 77)
