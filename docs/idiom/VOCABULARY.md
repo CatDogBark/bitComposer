@@ -1601,6 +1601,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   pooled word. A song on Umaro's token had held every accompaniment note
   to the next (the pooled share for a layered line, 1.0) where Umaro's
   line pecks 0.4 of its gap.
+  Since round 174 the draw under the part's speed is given the token's
+  song (`song_answers`): a second voice's share, and a gap class the
+  token's line never played, are that song's middle answer under the
+  part, the voice, the speed and the gap, and the pooled draw only
+  where the song has no such note.
   *`gap_sounds`: shape (part, voice, speed, gap); drawn in _plan_once, _plan_sounds.*
 
 - **bass_locks** — the share of the kit's accents (positions where two
@@ -2031,7 +2036,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   behind it is drawn again. Since round 134 a bar plays its theme bar
   again only where that bar is within the token song's own onsets for
   the part of the form the return falls in (round 125's envelope, which
-  `envelope_at_for` marks `song_answers`; `_free_figures`): elsewhere the bar
+  `envelope_at_for` marks `own`; `_free_figures`): elsewhere the bar
   keeps the figure it was drawn, so no draw moves. Why: since round 124
   the tune rests where its token song's rests, a theme stated over an
   intro is stated over the intro's band, and the return put the intro's
@@ -2464,15 +2469,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   round 172, and since round 173 `articulation`, `echo_habits`,
   `step_habits`, `repeat_habits`, `repeat_rates`, `tune_grain`,
   `tune_sounds`, `layers`, `layer_sounds`, `voicing_habits`,
-  `part_speeds`, `drum_group_habits` and `bass_locks`. A unit is
+  `part_speeds`, `drum_group_habits` and `bass_locks`, and since round
+  174 `gap_sounds` and `vibrato`. A unit is
   one of those tables' own units, kept under its song's id, the table's
   name and its context joined by `|` (`melody|major|strong`). It is not
   drawn: the plan's draw of such a word is given its balance token's
   song (`plan._draw`, `own`), makes the pooled draw all the same so
   that no stream moves, and returns that song's answer where it has one
   (`whole.own.answer`); a song with no unit under a context (too few
-  notes for a share) has none and the draw stands. FFVI's songs give
-  2,289 answers, every one of the 68 songs some.
+  notes for a share) has none and the draw stands. A word a song
+  answers many times under one context (`gap_sounds`, counted a unit a
+  note: 387 of the contexts) gives its middle answer, the one at half
+  the song's units in the answers' numeric order; answers that are not
+  numbers have no middle and the draw stands. FFVI's songs give 3,252
+  answers, every one of the 68 songs some.
   A pooled draw is another song's kind of answer three times in four
   (the commonest answer under a context is 0.28 of the songs' for the
   clashes, 0.24 for the off-scale share). A word of the song as a whole
@@ -2731,6 +2741,12 @@ The words are grouped by where the writing draws them, in the order the song is 
   second in, so a note under half a second almost never has it; the
   rule had put a third of the depth on every held note a quarter of a
   second in.
+  Since round 174 the draw is given the balance token's song
+  (`song_answers`) and a part's vibrato is its game song's part's, none
+  where that part has none; the pooled draw stands where the song's
+  readings hold no vibrato for the part. Over 400 seeds the tune takes a
+  vibrato its game song's tune has where the pooled draw gave none in
+  109 songs and loses one its game song's has not in 80.
   *`vibrato`: shape (part); drawn in vibrato_words.*
 
 - **ranges** — the register a sample is played in, by the sample. Drawn at

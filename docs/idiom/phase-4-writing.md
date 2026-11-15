@@ -165,6 +165,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 171 | 2026-11-14 | a tune and a counter-line go with a chord that leaves the key | - |
 | 172 | 2026-11-14 | a song's own answers to the once-a-song words, before the pool: the mode, the clashes, the off-scale share, the chord tones | - |
 | 173 | 2026-11-14 | thirteen more words by the song: the tune's manner and note lengths, the voices, the voicing, the kit's limbs | - |
+| 174 | 2026-11-14 | the voices' note lengths by the gap and the vibrato by the song; a word a song answers many times gives its middle answer | - |
 
 ## Goal
 
@@ -9261,7 +9262,7 @@ tune rests in half its bars or more in 35, the band back with it in
 plays half as busy or less than the part of the form they land in.
 
 **Built.** `envelope_at_for` marks the envelope it builds from the
-token song's own onsets a bar (`song_answers`), apart from a density tier's
+token song's own onsets a bar (`own`), apart from a density tier's
 shift (round 101). `_free_figures`, copying a part's theme bars under a
 return (`song.copies`), leaves a bar as it was drawn where the theme's
 bar is not within that envelope, and says how many (the bass's and the
@@ -9456,7 +9457,7 @@ songs, over in 8 (to 3.75 times), under in 5: Blackjack's 2.8 against
 the tune's line too (the melody's, or the counter's in a band without
 a melody), its last bar its own where the token says a fill or a
 thinning, so `envelope_at_for` and `habit_at_for` hand the tune's
-writer the song's own envelope (round 134's `song_answers`) and the tier it
+writer the song's own envelope (round 134's `own`) and the tier it
 sits in. The writer (`tune.melody`): `keeps(k, n)`, whether a bar of
 n notes is within bar k's own onsets, and every way a bar is made asks
 it. A new bar is drawn within the envelope and asked neither the
@@ -12354,6 +12355,66 @@ voice (0.10 after round 172, 0.23 before it, the game's 0.08), by
 its own layers and voicing. The periods, the voices' note lengths by
 the gap and the counter-line's masks are still pooled: many answers
 a song, to be drawn among. The vibrato is. The token's thirty-one
+fields of text can move into the same table.
+
+**Heard.** Not yet.
+
+### Round 174: the voices' note lengths and the vibrato by the song (2026-11-14, the first of the rest of round 172's plan)
+
+**Why.** Rounds 172 and 173 were heard and passed ("this is all
+good"), and the words they left pooled were agreed as the next step:
+the ones a song answers many times, and the vibrato.
+
+**Found.** Fewer were left than round 173's record says. A riff's
+period inside a part and its hold are the token's since round 106
+(the `p2/83` field), so they were not pooled at all: round 173's
+"still pooled" was wrong about them. Of the voices' note lengths by
+the gap (`gap_sounds`), the line's and an only voice's are the
+token's since round 95; what stayed the pooled word was a second
+voice's, and any gap class the token's line never played. That word
+is counted a unit a note, so a song answers it many times under one
+context: 387 of FFVI's contexts have more than one answer. The
+vibrato is one unit a part a song, a part with none included.
+
+**Built.** Two more words in `rhythm.OWN`, eighteen now:
+`gap_sounds` and `vibrato`. `whole.own.answer` gives a word a song
+answers many times its middle answer where the answers are numbers
+(the one at half the song's notes, in order); where they are not
+numbers there is no one answer and the draw stands. The plan's
+second draw of the note lengths (under the part's speed) and the
+performance's draw of the vibrato are given the token's song. The
+pooled draws are still made, so no stream moves. A new word, twice:
+no constant, weight or filter added.
+
+**Measured.** Suite 638 tests, 1 skipped. The vocabulary: 118 tables; the
+`song_answers` table has 3,252 answers (2,289 before); no other
+table differs. Over 400 seeds (1000 to 1399, the player's asking),
+against round 173: a note changes in 265 songs (the accompaniment in
+223, the bass in 111, the tune in 101, the counter-line in 94, the
+arp in 13, the harmony in 4), every song on the token it was on. A
+song's own note length is taken over another draw 2,858 times in 391
+songs. A part's median share of its gap that a note sounds is within
+0.10 of its game song's part's in 1,140 of 1,445 parts (1,125
+before) and 0.25 or more off in 183 (199); the bass's 280 of 353
+(264) and 39 (57); the accompaniment's 226 of 336 (227) and 68 (67).
+The vibrato: an own answer over another draw in 397 songs. The tune
+takes a vibrato its game song's tune has where the draw gave none in
+109 songs, loses one its game song's tune has not in 80, and takes
+another depth in 131; the counter-line 93, 68 and 76. The tune
+battery over the 68 test songs: nothing moves by more than two bars
+or one song. Against it: a song's share of notes struck a semitone
+from a note another voice sounds is within 0.05 of its own game
+song's in 163 songs (167 after round 173): a second voice held as
+long as its song holds it sounds under more of the other parts'
+notes.
+
+**Open.** The round is small in the notes: most of the lengths were
+the token's already. The vibrato is the larger change by ear, and it
+is the tune's sample that carries it: a deep vibrato that suited its
+game song's instrument is now put on whatever sample the part drew.
+The counter-line's masks (which of the tune's notes it strikes with)
+are still the pooled word; they belong with the counter-line's
+relation to the tune by part of the form. The token's thirty-one
 fields of text can move into the same table.
 
 **Heard.** Not yet.
